@@ -1179,6 +1179,162 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// organizations
+///////////////////////////////////////////////////////////////////////////////
+
+var loggedInAccountsConnectionOrPrompt = function (action) {
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  token = auth.getSessionToken(config.getAccountsDomain());
+  var conn = auth.loggedInAccountsConnection(token);
+  if (conn === null) {
+    // Server rejected our token.
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+    token = auth.getSessionToken(config.getAccountsDomain());
+    conn = auth.loggedInAccountsConnection(token);
+  }
+
+  return conn;
+};
+
+// List the organizations of which the current user is a member.
+main.registerCommand({
+  name: 'admin list-organizations',
+  minArgs: 0,
+  maxArgs: 0
+}, function (options) {
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  var url = config.getAccountsApiUrl() + "/organizations";
+  try {
+    var result = httpHelpers.request({
+      url: url,
+      method: "GET",
+      useSessionHeader: true,
+      useAuthHeader: true
+    });
+    var body = JSON.parse(result.body);
+  } catch (err) {
+    process.stderr.write("Error listing organizations.\n");
+    return 1;
+  }
+
+  if (result.response.statusCode === 401 &&
+      body && body.error === "invalid_credential") {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    // XXX It would be nice to do a username/password prompt here like
+    // we do for the other orgs commands.
+    return 1;
+  }
+
+  if (result.response.statusCode !== 200 ||
+      ! body || ! body.organizations) {
+    process.stderr.write("Error listing organizations.\n");
+    return 1;
+  }
+
+  if (body.organizations.length === 0) {
+    process.stdout.write("You are not a member of any organizations.\n");
+  } else {
+    process.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
+  }
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin members',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    add: { type: String },
+    remove: { type: String },
+    list: { type: Boolean }
+  }
+}, function (options) {
+
+  if (options.add && options.remove) {
+    process.stderr.write(
+      "Sorry, you can only add or remove one member at a time.\n");
+    throw new main.ShowUsage;
+  }
+
+  config.printUniverseBanner();
+
+  var username = options.add || options.remove;
+
+  var conn = loggedInAccountsConnectionOrPrompt(
+    username ? "edit organizations" : "show an organization's members");
+
+  if (username ) {
+    // Adding or removing members
+    try {
+      conn.call(
+        options.add ? "addOrganizationMember": "removeOrganizationMember",
+        options.args[0], username);
+    } catch (err) {
+      process.stderr.write("Error " +
+                           (options.add ? "adding" : "removing") +
+                           " member: " + err.reason + "\n");
+      return 1;
+    }
+
+    process.stdout.write(username + " " +
+                         (options.add ? "added to" : "removed from") +
+                         " organization " + options.args[0] + ".\n");
+  } else {
+    // Showing the members of an org
+    try {
+      var result = conn.call("showOrganization", options.args[0]);
+    } catch (err) {
+      process.stderr.write("Error showing organization: " +
+                           err.reason + "\n");
+      return 1;
+    }
+
+    var members = _.pluck(result, "username");
+
+    process.stdout.write(members.join("\n") + "\n");
+  }
+
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin remove-member',
+  minArgs: 2,
+  maxArgs: 2
+}, function (options) {
+
+  var conn = loggedInAccountsConnectionOrPrompt("edit organizations");
+
+  try {
+    conn.call("removeOrganizationMember", options.args[0], options.args[1]);
+  } catch (err) {
+    process.stderr.write("Error removing member: " +
+                         err.reason + "\n");
+    return 1;
+  }
+
+  process.stdout.write(options.args[1] + " removed from organization " +
+                       options.args[0] + ".\n");
+  return 0;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
 // self-test
 ///////////////////////////////////////////////////////////////////////////////
 

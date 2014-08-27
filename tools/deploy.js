@@ -631,9 +631,7 @@ var listAuthorized = function (site) {
 
     process.stdout.write((auth.loggedInUsername() || "<you>") + "\n");
     _.each(info.authorized, function (username) {
-      if (! username)
-        process.stdout.write("<unknown>" + "\n");
-      else
+      if (username)
         process.stdout.write(username + "\n");
     });
     return 0;
