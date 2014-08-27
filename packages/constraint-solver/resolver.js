@@ -140,17 +140,41 @@ ConstraintSolver.Resolver.prototype.resolve = function (
     }
   }, options);
 
+  var resolveContext = new ResolveContext;
+
   // Mapping that assigns every package an integer priority. We compute this
   // dynamically and in the process of resolution we try to resolve packages
   // with higher priority first. This helps the resolver a lot because if some
   // package has a higher weight to the solution (like a direct dependency) or
   // is more likely to break our solution in the future than others, it would be
   // great to try out and evaluate all versions early in the decision tree.
+  // XXX this could go on ResolveContext
   var resolutionPriority = {};
 
-  var startState = new ResolverState(self);
+  var startState = new ResolverState(self, resolveContext);
   _.each(constraints, function (constraint) {
     startState = startState.addConstraint(constraint);
+
+    // Keep track of any top-level constraints that mention a pre-release.
+    // These will be the only pre-release versions that count as "reasonable"
+    // for "any-reasonable" (ie, unconstrained) constraints.
+    //
+    // Why only top-level mentions, and not mentions we find while walking the
+    // graph? The constraint solver assumes that adding a constraint to the
+    // resolver state can't make previously impossible choices now possible.  If
+    // pre-releases mentioned anywhere worked, then applying the constraints
+    // "any reasonable" followed by "1.2.3-rc1" would result in "1.2.3-rc1"
+    // ruled first impossible and then possible again. That's no good, so we
+    // have to fix the meaning based on something at the start.  (We could try
+    // to apply our prerelease-avoidance tactics solely in the cost functions,
+    // but then it becomes a much less strict rule.)
+    if (constraint.version && /-/.test(constraint.version)) {
+      if (!_.has(resolveContext.topLevelPrereleases, constraint.name)) {
+        resolveContext.topLevelPrereleases[constraint.name] = {};
+      }
+      resolveContext.topLevelPrereleases[constraint.name][constraint.version]
+        = true;
+    }
   });
   _.each(dependencies, function (unitName) {
     startState = startState.addDependency(unitName);
@@ -329,38 +353,63 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 ConstraintSolver.Constraint = function (name, versionString) {
   var self = this;
 
-  if (versionString) {
+  if (versionString !== undefined) {
     _.extend(self,
-             PackageVersion.parseVersionConstraint(
-               versionString, {allowAtLeast: true}));
+             PackageVersion.parseVersionConstraint(versionString));
     self.name = name;
   } else {
     // borrows the structure from the parseVersionConstraint format:
-    // - type - String [compatibl-with|exactly|at-least]
+    // - type - String [compatible-with|exactly|any-reasonable]
     // - version - String - semver string
-    _.extend(self, PackageVersion.parseConstraint(name, {allowAtLeast: true}));
+    _.extend(self, PackageVersion.parseConstraint(name));
   }
   // See comment in UnitVersion constructor.
-  self.version = self.version.replace(/\+.*$/, '');
+  if (self.version)
+    self.version = self.version.replace(/\+.*$/, '');
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
   var self = this;
   options = options || {};
-  var operator = "";
-  if (self.type === "exactly")
-    operator = "=";
-  if (self.type === "at-least")
-    operator = ">=";
   var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
-  return name + "@" + operator + self.version;
+  return name + "@" + PackageVersion.constraintToVersionString(self);
 };
 
 
-ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV,
-                                                              resolver) {
+ConstraintSolver.Constraint.prototype.isSatisfied = function (
+  candidateUV, resolver, resolveContext) {
   var self = this;
   check(candidateUV, ConstraintSolver.UnitVersion);
+
+  if (self.name !== candidateUV.name) {
+    throw Error("asking constraint on " + self.name + " about " +
+                candidateUV.name);
+  }
+
+  if (self.type === "any-reasonable") {
+    // Non-prerelease versions are always reasonable.
+    if (!/-/.test(candidateUV.version))
+      return true;
+
+    // Is it a pre-release version that was explicitly mentioned at the top
+    // level?
+    if (_.has(resolveContext.topLevelPrereleases, self.name) &&
+        _.has(resolveContext.topLevelPrereleases[self.name],
+              candidateUV.version)) {
+      return true;
+    }
+
+    // Otherwise, not this pre-release!
+    return false;
+  }
+
+  if (self.type === "exactly") {
+    return self.version === candidateUV.version;
+  }
+
+  if (self.type !== "compatible-with") {
+    throw Error("Unknown constraint type: " + self.type);
+  }
 
   // Pre-releases only match precisely; @1.2.3-rc1 doesn't necessarily match
   // 1.2.4, and @1.2.3 doesn't necessarily match 1.2.4-rc1.
@@ -368,18 +417,10 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV,
     return self.version === candidateUV.version;
   }
 
-  if (self.type === "exactly")
-    return self.version === candidateUV.version;
-
   // If the candidate version is less than the version named in the constraint,
   // we are not satisfied.
   if (semver.lt(candidateUV.version, self.version))
     return false;
-
-  // If we only care about "at-least" and not backwards-incompatible changes in
-  // the middle, then candidateUV is good enough.
-  if (self.type === "at-least")
-    return true;
 
   var myECV = resolver.getEarliestCompatibleVersion(self.name, self.version);
   // If the constraint is "@1.2.3" and 1.2.3 doesn't exist, then nothing can
@@ -395,17 +436,11 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV,
   return myECV === candidateUV.earliestCompatibleVersion;
 };
 
-// Returns any unit version satisfying the constraint in the resolver
-ConstraintSolver.Constraint.prototype.getSatisfyingUnitVersion = function (
-    resolver) {
+// An object that records the general context of a resolve call. It can be
+// different for different resolve calls on the same Resolver, but is the same
+// for every ResolverState in a given call.
+var ResolveContext = function () {
   var self = this;
-
-  if (self.type === "exactly") {
-    return resolver.getUnitVersion(self.name, self.version);
-  }
-
-  // XXX this chooses a random UV, not the earliest or latest. Is that OK?
-  return _.find(resolver.unitsVersions[self.name], function (uv) {
-    return self.isSatisfied(uv, resolver);
-  });
+  // unitName -> version string -> true
+  self.topLevelPrereleases = {};
 };

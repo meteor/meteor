@@ -281,7 +281,7 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", version:  null });
+      allDeps.push({packageName: "ctl", version: null, type: 'any-reasonable'});
     }
 
     return allDeps;

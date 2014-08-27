@@ -63,10 +63,12 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
   // Note that this is one of the only pieces of the constraint solver that
   // actually does logic on constraints (and thus relies on the restricted set
   // of constraints that we support).
-  var minimal = mori.get(newList.minimalVersion, c.name);
-  if (!minimal || semver.lt(c.version, minimal)) {
-    newList.minimalVersion = mori.assoc(
-      newList.minimalVersion, c.name, c.version);
+  if (c.type !== 'any-reasonable') {
+    var minimal = mori.get(newList.minimalVersion, c.name);
+    if (!minimal || semver.lt(c.version, minimal)) {
+      newList.minimalVersion = mori.assoc(
+        newList.minimalVersion, c.name, c.version);
+    }
   }
   return newList;
 };
@@ -102,13 +104,13 @@ ConstraintSolver.ConstraintsList.prototype.each = function (iter) {
 
 // Checks if the passed unit version satisfies all of the constraints.
 ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
-    uv, resolver) {
+    uv, resolver, resolveContext) {
   var self = this;
 
   var satisfied = true;
 
   self.forPackage(uv.name, function (c) {
-    if (! c.isSatisfied(uv, resolver)) {
+    if (! c.isSatisfied(uv, resolver, resolveContext)) {
       satisfied = false;
       return BREAK;
     }

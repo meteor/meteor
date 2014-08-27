@@ -565,12 +565,10 @@ function convertConstraints (inp) {
   // '>=1.2.3' => '1.2.3'
   .map(function (s) {
     if (s.indexOf(">= 0") === 0)
-      return "none";
+      return "";
     var x = s.split(' ');
-    if (x[0] === '~>')
+    if (x[0] === '~>' || x[0] === '>' || x[0] === '>=')
       x[0] = '';
-    else if (x[0] === '>' || x[0] === '>=')
-      x[0] = '>=';
     else if (x[0] === '=')
       x[0] = '=';
     else
