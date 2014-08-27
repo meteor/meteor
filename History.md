@@ -17,6 +17,11 @@
   unless explicitly requested.  `meteor list` won't suggest that you update to
   them.
 
+* Fix slow spiderable executions.
+
+* Fix dev-mode client-only restart when client files changed very soon after
+  server restart.
+
 * Fix stack trace on `meteor add` constraint solver failure.
 
 * Fix "access-denied" stack trace when publishing packages.
