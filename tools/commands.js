@@ -1312,28 +1312,6 @@ main.registerCommand({
   return 0;
 });
 
-main.registerCommand({
-  name: 'admin remove-member',
-  minArgs: 2,
-  maxArgs: 2
-}, function (options) {
-
-  var conn = loggedInAccountsConnectionOrPrompt("edit organizations");
-
-  try {
-    conn.call("removeOrganizationMember", options.args[0], options.args[1]);
-  } catch (err) {
-    process.stderr.write("Error removing member: " +
-                         err.reason + "\n");
-    return 1;
-  }
-
-  process.stdout.write(options.args[1] + " removed from organization " +
-                       options.args[0] + ".\n");
-  return 0;
-});
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // self-test
 ///////////////////////////////////////////////////////////////////////////////
