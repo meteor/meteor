@@ -19,19 +19,15 @@
 // AUTOUPDATE_VERSION.
 //
 // The server publishes a `meteor_autoupdate_clientVersions`
-// collection.  The contract of this collection is that each document
-// in the collection represents an acceptable client version, with the
-// `_id` field of the document set to the client id.
-//
-// An "unacceptable" client version, for example, might be a version
-// of the client code which has a severe UI bug, or is incompatible
-// with the server.  An "acceptable" client version could be one that
-// is older than the latest client code available on the server but
-// still works.
-//
-// One of the published documents in the collection will have its
-// `current` field set to `true`.  This is the version of the client
-// code that the browser will receive from the server if it reloads.
+// collection. There are two documents in this collection, a document
+// with _id 'version' which represnets the non refreshable client assets,
+// and a document with _id 'version-refreshable' which represents the
+// refreshable client assets. Each document has a 'version' field
+// which is equivalent to the hash of the relevant assets. The refreshable
+// document also contains a list of the refreshable assets, so that the client
+// can swap in the new assets without forcing a page refresh. Clients can
+// observe changes on these documents to detect when there is a new
+// version available.
 //
 // In this implementation only two documents are present in the collection
 // the current refreshable client version and the current nonRefreshable client
