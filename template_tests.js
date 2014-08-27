@@ -1638,8 +1638,8 @@ var runOneTwoTest = function (test, subTemplateName, optionsData) {
 
            // clean up the div
            $(div).remove();
-           test.equal(showOne.numListeners(), 0);
-           test.equal(dummy.numListeners(), 0);
+           test.equal(showOne._numListeners(), 0);
+           test.equal(dummy._numListeners(), 0);
          });
 };
 
@@ -2392,12 +2392,12 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello bbb</span><span>Bye bbb</span>");
     test.equal([created, rendered, destroyed], [true, true, false]);
-    test.equal(R.numListeners(), 3);
+    test.equal(R._numListeners(), 3);
     UI.remove(renderedTmpl);
     UI.remove(renderedTmpl2);
     UI.remove(x);
     test.equal([created, rendered, destroyed], [true, true, true]);
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
     test.equal(canonicalizeHtml(div.innerHTML), "");
   });
 
@@ -2453,9 +2453,9 @@ Tinytest.add(
                        Acalls);
             test.equal('B calls: ' + Bcalls,
                        'B calls: ' + b_calls);
-            test.equal('A listeners: ' + A.numListeners(),
+            test.equal('A listeners: ' + A._numListeners(),
                        'A listeners: ' + a_listeners);
-            test.equal('B listeners: ' + B.numListeners(),
+            test.equal('B listeners: ' + B._numListeners(),
                        'B listeners: ' + b_listeners);
             Acalls = '';
             Bcalls = 0;
@@ -2758,7 +2758,7 @@ Tinytest.add(
     Deps.flush();
 
     test.equal(autorunTemplateInstances.length, 2);
-    test.equal(rv.numListeners(), 0);
+    test.equal(rv._numListeners(), 0);
   }
 );
 

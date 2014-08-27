@@ -11,6 +11,7 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('jquery');
   api.use('test-helpers');
+  api.use('reactive-var');
   api.use('showdown');
   api.use('minimongo');
   api.use('deps');
