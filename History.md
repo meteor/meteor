@@ -1,3 +1,8 @@
+## v1.2.12
+
+* Support Meteor 0.9.0 - new packaging system (hopefully). #52
+
+
 ## v1.2.11
 
 * Add `getGroupsForUser` function. #39

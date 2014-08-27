@@ -1,8 +1,12 @@
 Package.describe({
-  summary: "Role-based authorization"
+  summary: "Role-based authorization",
+  version: "1.2.12",
+  git: "https://github.com/alanning/meteor-roles.git",
+  name: "alanning:roles"
 });
 
 Package.on_use(function (api) {
+  api.versionsFrom && api.versionsFrom("METEOR@0.9.0");
   var both = ['client', 'server'];
   api.use(['underscore', 'accounts-base'], both);
   api.use(['handlebars'], 'client', {weak: true});
@@ -25,8 +29,13 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   var both = ['client', 'server'];
 
-  // include accounts-password so Meteor.users exists
-  api.use(['roles','accounts-password','tinytest'], both);
+  // `accounts-password` is included so `Meteor.users` exists
+
+  if (api.versionsFrom) {
+    api.use(['alanning:roles','accounts-password','tinytest'], both);
+  } else {
+    api.use(['roles','accounts-password','tinytest'], both);
+  }
 
   api.add_files('tests/client.js', 'client');
   api.add_files('tests/server.js', 'server');
