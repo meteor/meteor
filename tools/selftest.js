@@ -713,7 +713,7 @@ _.extend(Sandbox.prototype, {
       ['autopublish', 'standard-app-packages', 'insecure'],
       function (name) {
         var versionRec = doOrThrow(function () {
-          return catalog.official.getLatestVersion(name);
+          return catalog.official.getLatestMainlineVersion(name);
         });
         if (!versionRec) {
           catalog.official.offline = false;
@@ -722,7 +722,7 @@ _.extend(Sandbox.prototype, {
           });
           catalog.official.offline = true;
           versionRec = doOrThrow(function () {
-            return catalog.official.getLatestVersion(name);
+            return catalog.official.getLatestMainlineVersion(name);
           });
           if (!versionRec) {
             throw new Error(" hack fails for " + name);

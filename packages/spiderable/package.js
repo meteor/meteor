@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.1"
+  version: "1.0.2"
 });
 
 Package.on_use(function (api) {
@@ -8,10 +8,12 @@ Package.on_use(function (api) {
   api.use(['templating'], 'client');
   api.use(['underscore'], ['client', 'server']);
 
-  api.export('Spiderable', 'server');
+  api.export('Spiderable');
 
   api.add_files('spiderable.html', 'client');
-  api.add_files('spiderable.js', 'server');
+  api.add_files('spiderable.js', ['client', 'server']);
+  api.add_files('spiderable_server.js', 'server');
+  api.add_files('spiderable_client.js', 'client');
 
   api.add_files('phantom_script.js', 'server', { isAsset: true });
 });

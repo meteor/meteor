@@ -1,6 +1,7 @@
-ResolverState = function (resolver) {
+ResolverState = function (resolver, resolveContext) {
   var self = this;
   self._resolver = resolver;
+  self._resolveContext = resolveContext;
   // The versions we've already chosen.
   // unitName -> UnitVersion
   self.choices = mori.hash_map();
@@ -23,7 +24,8 @@ _.extend(ResolverState.prototype, {
     self.constraints = self.constraints.push(constraint);
 
     var chosen = mori.get(self.choices, constraint.name);
-    if (chosen && !constraint.isSatisfied(chosen, self._resolver)) {
+    if (chosen &&
+        !constraint.isSatisfied(chosen, self._resolver, self._resolveContext)) {
       // This constraint conflicts with a choice we've already made!
       self.error = "conflict: " + constraint.toString({removeUnibuild: true}) +
         " vs " + chosen.version;
@@ -34,7 +36,8 @@ _.extend(ResolverState.prototype, {
     if (alternatives) {
       // Note: filter preserves order, which is important.
       var newAlternatives = filter(alternatives, function (unitVersion) {
-        return constraint.isSatisfied(unitVersion, self._resolver);
+        return constraint.isSatisfied(
+          unitVersion, self._resolver, self._resolveContext);
       });
       if (mori.is_empty(newAlternatives)) {
         // XXX we should mention other constraints that are active
@@ -68,7 +71,7 @@ _.extend(ResolverState.prototype, {
     // Note: relying on sortedness of unitsVersions so that alternatives is
     // sorted too (the estimation function uses this).
     var alternatives = filter(self._resolver.unitsVersions[unitName], function (uv) {
-      return self.constraints.isSatisfied(uv, self._resolver);
+      return self.isSatisfied(uv);
       // XXX hang on to list of violated constraints and use it in error
       // message
     });
@@ -99,7 +102,7 @@ _.extend(ResolverState.prototype, {
     self = self._clone();
 
     // Does adding this choice break some constraints we already have?
-    if (!self.constraints.isSatisfied(uv, self._resolver)) {
+    if (!self.isSatisfied(uv)) {
       // XXX improve error
       self.error = "conflict: " + uv.toString({removeUnibuild: true}) +
         " can't be chosen";
@@ -132,9 +135,13 @@ _.extend(ResolverState.prototype, {
                            mori.last(nameAndAlternatives));
     }, self._dependencies);
   },
+  isSatisfied: function (uv) {
+    var self = this;
+    return self.constraints.isSatisfied(uv, self._resolver, self._resolveContext);
+  },
   _clone: function () {
     var self = this;
-    var clone = new ResolverState(self._resolver);
+    var clone = new ResolverState(self._resolver, self._resolveContext);
     _.each(['choices', '_dependencies', 'constraints', 'error'], function (field) {
       clone[field] = self[field];
     });

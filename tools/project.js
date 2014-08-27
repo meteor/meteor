@@ -234,6 +234,7 @@ _.extend(Project.prototype, {
     var allDeps = [];
     // First, we process the contents of the .meteor/packages file. The
     // self.constraints variable is always up to date.
+    // Note that two parts of the "add" command run code that matches this.
     _.each(self.constraints, function (constraint, packageName) {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));
@@ -281,7 +282,7 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", version:  null });
+      allDeps.push({packageName: "ctl", version: null, type: 'any-reasonable'});
     }
 
     return allDeps;

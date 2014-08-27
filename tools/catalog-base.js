@@ -197,15 +197,20 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
 
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
-  getLatestVersion: function (name) {
+  // It does not include prereleases (with dashes in the version);
+  getLatestMainlineVersion: function (name) {
     var self = this;
     self._requireInitialized();
     buildmessage.assertInCapture();
 
     var versions = self.getSortedVersions(name);
-    if (versions.length === 0)
+    versions.reverse();
+    var latest = _.find(versions, function (version) {
+      return !/-/.test(version);
+    });
+    if (!latest)
       return null;
-    return self.getVersion(name, versions[versions.length - 1]);
+    return self.getVersion(name, latest);
   },
 
   // If this package has any builds at this version, return an array of builds

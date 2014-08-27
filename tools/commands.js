@@ -54,22 +54,6 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
-// Get all local packages available. Returns a map from the package name to the
-// version record for that package.
-var getLocalPackages = function () {
-  var ret = {};
-  buildmessage.assertInCapture();
-
-  var names = catalog.complete.getAllPackageNames();
-  _.each(names, function (name) {
-    if (catalog.complete.isLocalPackage(name)) {
-      ret[name] = catalog.complete.getLatestVersion(name);
-    }
-  });
-
-  return ret;
-};
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -950,18 +934,8 @@ main.registerCommand({
 }, function (options) {
   var testPackages;
   if (options.args.length === 0) {
-    // Only test local packages if no package is specified.
-    // XXX should this use the new getLocalPackageNames?
-    var packageList = commandsPackages.doOrDie(function () {
-      return getLocalPackages();
-    });
-    if (! packageList) {
-      // Couldn't load the package list, probably because some package
-      // has a parse error. Bail out -- this kind of sucks; we would
-      // like to find a way to get reloading.
-      return 1;
-    }
-    testPackages = _.keys(packageList);
+    // Test all local packages if no package is specified.
+    testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
       testPackages = _.map(options.args, function (p) {
@@ -978,16 +952,15 @@ main.registerCommand({
             }
             // Check to see if this is a real package, and if it is a real
             // package, if it has tests.
-            var versionRec = catalog.complete.getLatestVersion(p);
-            if (!versionRec) {
-              buildmessage.error(
-                "Unknown package: " + p );
-            }
             if (!catalog.complete.isLocalPackage(p)) {
               buildmessage.error(
-                "Not a local package, cannot test: " + p );
+                "Not a known local package, cannot test: " + p );
               return p;
             }
+            var versionNames = catalog.complete.getSortedVersions(p);
+            if (versionNames.length !== 1)
+              throw Error("local package should have one version?");
+            var versionRec = catalog.complete.getVersion(p, versionNames[0]);
             if (versionRec && !versionRec.testName) {
               buildmessage.error(
                 "There are no tests for package: " + p );
@@ -1058,7 +1031,10 @@ main.registerCommand({
   var tests = [];
   var messages = buildmessage.capture(function () {
     _.each(testPackages, function(name) {
-      var versionRecord = catalog.complete.getLatestVersion(name);
+      var versionNames = catalog.complete.getSortedVersions(name);
+      if (versionNames.length !== 1)
+        throw Error("local package should have one version?");
+      var versionRecord = catalog.complete.getVersion(name, versionNames[0]);
       if (versionRecord && versionRecord.testName) {
         tests.push(versionRecord.testName);
       }

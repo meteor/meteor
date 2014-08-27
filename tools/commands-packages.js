@@ -966,6 +966,7 @@ main.registerCommand({
       return _.extend({ buildArchitectures: myStringBuilds },
                       versionRecord);
     };
+    // XXX should this skip pre-releases?
     var versions = catalog.official.getSortedVersions(name);
     if (full.length > 1) {
       versions = [full[1]];
@@ -1081,7 +1082,7 @@ main.registerCommand({
 
     var vr;
     doOrDie(function () {
-      vr = catalog.official.getLatestVersion(name);
+      vr = catalog.official.getLatestMainlineVersion(name);
     });
     return vr && !vr.unmigrated;
   };
@@ -1118,7 +1119,7 @@ main.registerCommand({
   _.each(allPackages, function (pack) {
     if (selector(pack, false)) {
       var vr = doOrDie(function () {
-        return catalog.official.getLatestVersion(pack);
+        return catalog.official.getLatestMainlineVersion(pack);
       });
       if (vr) {
         matchingPackages.push(
@@ -1200,8 +1201,12 @@ main.registerCommand({
       }
 
       var versionAddendum = "" ;
-      var latest = catalog.complete.getLatestVersion(name, version);
+      var latest = catalog.complete.getLatestMainlineVersion(name, version);
+      var semver = require('semver');
       if (version !== latest.version &&
+          // If we're currently running a prerelease, "latest" may be older than
+          // what we're at, so don't tell us we're outdated!
+          semver.lt(version, latest.version) &&
           !catalog.complete.isLocalPackage(name)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
@@ -1738,6 +1743,24 @@ main.registerCommand({
         } else {
           process.stdout.write("The version constraint will be removed.\n");
         }
+        // Now remove the old constraint from what we're going to calculate
+        // with.
+        // This matches code in calculateCombinedConstraints.
+        var oldConstraint = _.extend(
+          {packageName: constraint.name},
+          utils.parseVersionConstraint(packages[constraint.name]));
+        var removed = false;
+        for (var i = 0; i < allPackages.length; ++i) {
+          if (_.isEqual(oldConstraint, allPackages[i])) {
+            removed = true;
+            allPackages.splice(i, 1);
+            break;
+          }
+        }
+        if (!removed) {
+          throw Error("Couldn't find constraint to remove: " +
+                      JSON.stringify(oldConstraint));
+        }
       }
     }
 
@@ -1761,33 +1784,44 @@ main.registerCommand({
   }
 
   var downloaded, versions, newVersions;
-  var messages = buildmessage.capture(function () {
-    // Get the contents of our versions file. We need to pass them to the
-    // constraint solver, because our contract with the user says that we will
-    // never downgrade a dependency.
-    versions = project.getVersions();
 
-    // Call the constraint solver.
-    newVersions = catalog.complete.resolveConstraints(
-      allPackages,
-      { previousSolution: versions },
-      { ignoreProjectDeps: true });
-    if ( ! newVersions) {
-      // XXX: Better error handling.
-      process.stderr.write("Cannot resolve package dependencies.\n");
-      return;
-    }
+  try {
+    var messages = buildmessage.capture(function () {
+      // Get the contents of our versions file. We need to pass them to the
+      // constraint solver, because our contract with the user says that we will
+      // never downgrade a dependency.
+      versions = project.getVersions();
 
-    // Don't tell the user what all the operations were until we finish -- we
-    // don't want to give a false sense of completeness until everything is
-    // written to disk.
-    var messageLog = [];
+      // Call the constraint solver.
+      newVersions = catalog.complete.resolveConstraints(
+        allPackages,
+        { previousSolution: versions },
+        { ignoreProjectDeps: true });
+      if ( ! newVersions) {
+        // XXX: Better error handling.
+        process.stderr.write("Cannot resolve package dependencies.\n");
+        return;
+      }
 
-    // Install the new versions. If all new versions were installed
-    // successfully, then change the .meteor/packages and .meteor/versions to
-    // match expected reality.
-    downloaded = project.addPackages(constraints, newVersions);
-  });
+      // Don't tell the user what all the operations were until we finish -- we
+      // don't want to give a false sense of completeness until everything is
+      // written to disk.
+      var messageLog = [];
+
+      // Install the new versions. If all new versions were installed
+      // successfully, then change the .meteor/packages and .meteor/versions to
+      // match expected reality.
+      downloaded = project.addPackages(constraints, newVersions);
+    });
+  } catch (e) {
+    if (!e.constraintSolverError)
+      throw e;
+    // XXX this is too many forms of error handling!
+    process.stderr.write(
+      "Could not satisfy all the specified constraints:\n"
+        + e + "\n");
+    return 1;
+  }
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
     return 1;

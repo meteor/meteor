@@ -17,7 +17,7 @@ var auth = exports;
 
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata' ]
+    packages: [ 'meteor', 'livedata', 'mongo-livedata' ]
   });
 };
 
@@ -1045,24 +1045,10 @@ exports.loggedInUsername = function () {
   return loggedIn(data) ? currentUsername(data) : false;
 };
 
-// Given a ServiceConnection, log in with OAuth using Meteor developer
-// accounts. Assumes the user is already logged in to the developer
-// accounts server.
-exports.loginWithTokenOrOAuth = function (conn, url, domain, sessionType) {
-  var setUpOnReconnect = function () {
-    conn.onReconnect = function () {
-      conn.apply('login', [{
-        resume: auth.getSessionToken(domain)
-      }], { wait: true }, function () { });
-    };
-  };
-
-  var Package = uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata' ]
-  });
-
+exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
+  var Package = getLoadedPackages();
   var serviceConfigurations = new Package.meteor.Meteor.Collection(
     'meteor_accounts_loginServiceConfiguration',
     { connection: conn.connection }
@@ -1077,6 +1063,22 @@ exports.loginWithTokenOrOAuth = function (conn, url, domain, sessionType) {
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
     throw new Error('no-accounts-configuration');
   }
+
+  return accountsConfiguration;
+};
+
+// Given a ServiceConnection, log in with OAuth using Meteor developer
+// accounts. Assumes the user is already logged in to the developer
+// accounts server.
+exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
+                                          url, domain, sessionType) {
+  var setUpOnReconnect = function () {
+    conn.onReconnect = function () {
+      conn.apply('login', [{
+        resume: auth.getSessionToken(domain)
+      }], { wait: true }, function () { });
+    };
+  };
 
   var clientId = accountsConfiguration.clientId;
   var loginResult;
