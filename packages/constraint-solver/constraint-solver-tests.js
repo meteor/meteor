@@ -515,8 +515,10 @@ function getCatalogStub (gems) {
       });
 
       var ecv = function (version) {
-        // hard-code to "x.0.0"
-        return parseInt(version) + ".0.0";
+        // hard-coded, because lots of the constraints are > or >= which we
+        // don't support anymore.  But constant ECV means that "compatible-with"
+        // is interpreted as >=.
+        return "0.0.0";
       };
 
       var packageVersion = {
