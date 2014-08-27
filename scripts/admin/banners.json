@@ -1,9 +1,9 @@
 { "track": "METEOR",
   "banners": [
     {
-      "versions": ["0.9.0-rc13", "0.9.0-rc14", "0.9.0-rc20", "0.9.0-rc21", "0.9.0-rc22"],
+      "versions": ["0.9.0"],
       "banner": {
-        "text": "=> Meteor 0.9.0 is now out! Upgrade to it with:\n     `meteor update`\n   Thanks for helping test the release candidates!"
+        "text": "=> Meteor 0.9.0.1 is now out, fixing several bugs in 0.9.0.\n\n   Meteor 0.9.0.1 is being downloaded in the background. You can update to\n   it by running 'meteor update --patch'."
        }
     }
   ]
