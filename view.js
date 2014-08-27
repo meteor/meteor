@@ -457,11 +457,18 @@ var contentAsFunc = function (content) {
   }
 };
 
-Blaze.render = function (content, parentElement, nextNode) {
+Blaze.render = function (content, parentElement, nextNode, parentView) {
   if (! parentElement) {
     // This is a deprecation error (UI.render used to take one arg)
+    // XXX make this work for back-compat
     throw new Error(
       "render requires a DOM element to insert the rendered content into");
+  }
+
+  if (nextNode instanceof Blaze.View) {
+    // handle omitted nextNode
+    parentView = nextNode;
+    nextNode = null;
   }
 
   // parentElement must be a DOM node. in particular, can't be the
@@ -472,7 +479,7 @@ Blaze.render = function (content, parentElement, nextNode) {
   if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
     throw new Error("'nextNode' must be a DOM node");
 
-  var parentView = currentViewIfRendering();
+  parentView = parentView || currentViewIfRendering();
 
   var view = contentAsView(content);
   Blaze._materializeView(view, parentView);
@@ -488,9 +495,11 @@ Blaze.insert = function () {
                   "rendered content in Blaze.render.");
 };
 
-Blaze.renderWithData = function (content, data, parentElement, nextNode) {
+Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
+  // We defer the handling of optional arguments to Blaze.render.  At this point,
+  // `nextNode` may actually be `parentView`.
   return Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
-                      parentElement, nextNode);
+                      parentElement, nextNode, parentView);
 };
 
 Blaze.remove = function (view) {
