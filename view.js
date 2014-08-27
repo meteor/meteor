@@ -457,40 +457,40 @@ var contentAsFunc = function (content) {
   }
 };
 
-Blaze.render = function (content, _parentView) {
-  var parentView = _parentView || currentViewIfRendering();
+Blaze.render = function (content, parentElement, nextNode) {
+  if (! parentElement) {
+    // This is a deprecation error (UI.render used to take one arg)
+    throw new Error(
+      "render requires a DOM element to insert the rendered content into");
+  }
+
+  // parentElement must be a DOM node. in particular, can't be the
+  // result of a call to `$`. Can't check if `parentElement instanceof
+  // Node` since 'Node' is undefined in IE8.
+  if (typeof parentElement.nodeType !== 'number')
+    throw new Error("'parentElement' must be a DOM node");
+  if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
+    throw new Error("'nextNode' must be a DOM node");
+
+  var parentView = currentViewIfRendering();
 
   var view = contentAsView(content);
   Blaze._materializeView(view, parentView);
 
-  return view;
-};
-
-Blaze.renderWithData = function (content, data, _parentView) {
-  var parentView = parentView || currentViewIfRendering();
-
-  var view = Blaze._TemplateWith(data, contentAsFunc(content));
-  Blaze._materializeView(view, parentView);
-
-  return view;
-};
-
-// The publicly documented API for inserting a View returned from
-// `UI.render` or `UI.renderWithData` into the DOM. If you then remove
-// `parentElement` using jQuery, all reactive updates on the rendered
-// template will stop.
-Blaze.insert = function (view, parentElement, nextNode) {
-  // parentElement must be a DOM node. in particular, can't be the
-  // result of a call to `$`. Can't check if `parentElement instanceof
-  // Node` since 'Node' is undefined in IE8.
-  if (! parentElement || typeof parentElement.nodeType !== 'number')
-    throw new Error("'parentElement' must be a DOM node");
-  if (nextNode && typeof nextNode.nodeType !== 'number') // 'nextNode' is optional
-    throw new Error("'nextNode' must be a DOM node");
-  if (! (view && (view._domrange instanceof Blaze._DOMRange)))
-    throw new Error("Expected template rendered with UI.render");
-
   view._domrange.attach(parentElement, nextNode);
+
+  return view;
+};
+
+Blaze.insert = function () {
+  // Deprecation error
+  throw new Error("Blaze.insert has been deprecated.  Specify where to insert the " +
+                  "rendered content in Blaze.render.");
+};
+
+Blaze.renderWithData = function (content, data, parentElement, nextNode) {
+  return Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
+                      parentElement, nextNode);
 };
 
 Blaze.remove = function (view) {
