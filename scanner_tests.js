@@ -26,7 +26,7 @@ Tinytest.add("templating - html scanner", function (test) {
   // where content is something simple like the string "Hello"
   // (passed in as a source string including the quotes).
   var simpleBody = function (content) {
-    return "\nTemplate._body_.addContent((function() {\n  var view = this;\n  return " + content + ";\n}));\nMeteor.startup(Template._body_.renderToDocument);\n";
+    return "\nTemplate.body.addContent((function() {\n  var view = this;\n  return " + content + ";\n}));\nMeteor.startup(Template.body.renderToDocument);\n";
   };
 
   // arguments are quoted strings like '"hello"'
