@@ -515,3 +515,31 @@ check_links = function() {
 
   return "DONE";
 };
+
+var basicTypes = ["String", "Number", "Boolean", "Function", "Any", "Object",
+  "Array", "null", "undefined", "Integer"];
+
+// are all types either normal types or links?
+check_types = function () {
+  $(".new-api-box .type").each(function () {
+    var typeSpan = this;
+    _.each($(typeSpan).text().split("|"), function (text) {
+      text = text.replace(/^\s+|\s+$/g, '');
+
+      if (_.contains(basicTypes, text)) {
+        return; // all good
+      }
+
+      var hasLink = false;
+      $(typeSpan).find("a").each(function () {
+        if ($(this).text().replace(/^\s+|\s+$/g, '') === text) {
+          hasLink = true;
+        }
+      });
+
+      if (! hasLink) {
+        console.log("No link for: " + text);
+      }
+    });
+  });
+};

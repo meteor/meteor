@@ -12,6 +12,10 @@ var apiData = function (longname) {
   return root;
 };
 
+var typeLink = function (displayName, id) {
+  return "<a href='#" + id + "'>" + displayName + "</a>";
+};
+
 Template.autoApiBox.helpers({
   apiData: apiData,
   typeNames: function (nameList) {
@@ -19,14 +23,24 @@ Template.autoApiBox.helpers({
     nameList = _.map(nameList, function (name) {
       if (name === "function") {
         return "Function";
-      } else if (name === "EJSONable") {
-        return "EJSON-able object";
+      } else if (name === "EJSONable" || name === "EJSON") {
+        return typeLink("EJSON-able object", "ejson");
+      } else if (name === "Deps.Computation") {
+        return typeLink("Deps.Computation", "deps_computation");
+      } else if (name === "MongoSelector") {
+        return typeLink("Mongo Selector", "selectors");
+      } else if (name === "MongoModifier") {
+        return typeLink("Mongo Modifier", "modifiers");
+      } else if (name === "MongoSortSpecifier") {
+        return typeLink("Mongo Sort Specifier", "sortspecifiers");
+      } else if (name === "MongoFieldSpecifier") {
+        return typeLink("Mongo Field Specifier", "fieldspecifiers");
       }
 
       return name;
     });
 
-    return nameList.join(" or ");
+    return nameList.join(" | ");
   },
   signature: function () {
     var signature;

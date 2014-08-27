@@ -26,7 +26,7 @@
 </template>
 
 <template name="apiBoxTitle">
-  <h3 id="{{id}}">
+  <h3 id="{{id}}" class="api-title">
     <a class="name selflink" href="#{{id}}">{{{name}}}</a>
     {{#if locus}}
       <span class="locus">{{locus}}</span>
@@ -36,7 +36,7 @@
 
 <template name="autoApiBox">
 {{#with apiData this}}
-<div class="api {{bare}}">
+<div class="api {{bare}} new-api-box">
   {{> apiBoxTitle name=signature locus=locus id=link}}
 
   <div class="desc">
@@ -49,7 +49,7 @@
       {{#each paramsNoOptions}}
         <dt>
           <span class="name">{{name}}</span>
-          <span class="type">{{typeNames type.names}}</span>
+          <span class="type">{{{typeNames type.names}}}</span>
         </dt>
         <dd>
           {{{description}}}
@@ -64,7 +64,7 @@
       {{#each options}}
         <dt>
           <span class="name">{{name}}</span>
-          <span class="type">{{typeNames type.names}}</span>
+          <span class="type">{{{typeNames type.names}}}</span>
         </dt>
         <dd>
           {{{description}}}
