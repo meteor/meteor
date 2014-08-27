@@ -2379,10 +2379,6 @@ Tinytest.add(
     var x = UI.render(tmpl, otherDiv);
     // note: we'll have clean up `x` below
 
-    test.throws(function () {
-      UI.render(tmpl); // no second argument
-    });
-
     var renderedTmpl2 = UI.renderWithData(
       tmpl, {greeting: 'Bye'}, div);
     test.equal(canonicalizeHtml(div.innerHTML),
