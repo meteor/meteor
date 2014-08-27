@@ -23,7 +23,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use(["spacebars", "tinytest", "test-helpers"]);
+  api.use(["spacebars", "tinytest", "test-helpers", "reactive-var"]);
   api.use("templating", "client");
   api.add_files(["dynamic_tests.html", "dynamic_tests.js"], "client");
 });
