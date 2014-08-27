@@ -36,8 +36,8 @@ Then there are optional packages like `email`, which lets your app
 send emails, or the Meteor Accounts series (`accounts-password`,
 `accounts-facebook`, `accounts-ui`, and others) which provide a
 full-featured user account system that you can drop right into your
-app. And beyond these "official" packages, there are hundreds of
-community-written packages in [Atmosphere](https://atmosphere.meteor.com/),
+app. In addition to these "core" packages, there are thousands of
+community-written packages in [Atmosphere](https://atmospherejs.com/),
 one of which might do just what you need.
 
 * A _command-line tool_ called `meteor`.<br>
@@ -57,16 +57,6 @@ work identically in the browser and on the server_ (wherever it makes
 sense, of course: browsers can't send email and servers can't capture
 mouse events). Our whole ecosystem has been built from the ground up
 to support this.
-
-{{#note}}
-`meteor` cannot yet fetch packages from Atmosphere. If you are using
-Atmosphere packages you should take a look at
-[Meteorite](http://oortcloud.github.io/meteorite/), a tool that will
-help you download and manage your Atmosphere packages.
-
-In Meteor 1.0, the `meteor` build tool will have full support for
-Atmosphere.
-{{/note}}
 
 {{/markdown}}
 </template>
@@ -569,31 +559,35 @@ the browser and on the server, and packages can contain plugins that
 extend the build process, such as `coffeescript` ([CoffeeScript](http://coffeescript.org)
 compilation) or `templating` (compiling HTML templates).
 
-You can see a list of available packages
-with [`meteor list`](#meteorlist), add packages to your project
-with [`meteor add`](#meteoradd), and remove them
-with [`meteor remove`](#meteorremove).
+Anyone can publish a Meteor package, and thousands of community-written packages
+have been published to date. The easiest way to browse these packages
+is <a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio. You can
+also use [`meteor search`](#meteorsearch) and [`meteor show`](#meteorshow) commands.
+
+You can add packages to your project with [`meteor add`](#meteoradd) and remove
+them with [`meteor remove`](#meteorremove).
+Additionally, [`meteor list`](#meteorlist) will tell you what
+packages your project is using, and [`meteor update`](#meteorupdate)
+will help keep them up to date.
 
 By default all apps include the `standard-app-packages` package. This
 automatically pulls in the packages that make up the core Meteor
-stack. To keep things simple, these core packages are also hidden in
-the output for `meteor list`, but you can read the
-[source code of `standard-app-packages`](https://github.com/meteor/meteor/blob/master/packages/standard-app-packages/package.js)
-to see what they are (as Meteor is pre-1.0, they may change from release to
-release). If you want to build your own custom stack, just remove
+stack. If you want to build your own custom stack, just remove
 `standard-app-packages` from your app and add back in whichever of the standard
 packages you want to keep.
 
-In addition to the packages in the official Meteor release being used
-by your app, `meteor list` and `meteor add` also search the `packages`
-directory at the top of your app. If you've downloaded an unofficial
-package from Atmosphere you should unpack it into that directory (the
-unofficial [Meteorite](http://oortcloud.github.io/meteorite/) tool
-streamlines this process). You can also use the `packages` directory
-to break your app into subpackages for your convenience &mdash; if you
-are willing to brave the fact that the Meteor package format is not
-documented yet and will change significantly before Meteor 1.0. See
-[Writing Packages](#writingpackages).
+Meteor uses a single-loading packaging system, meaning that it loads just one
+version of every package. Before adding or upgrading to a particular version of
+a package, Meteor uses a constraint solver to check if doing so will cause
+other packages to break. By default, Meteor will choose conservatively. When
+adding transitive dependencies (packages that other packages, but not the
+application itself) depend on, Meteor will try to choose the earlier version.
+
+In addition to the packages in the official Meteor release being used by your
+app, `meteor list` and `meteor add` also search the `packages` directory at the
+top of your app. You can also use the `packages` directory to break your app
+into subpackages for your convenience, or to test packages that you might want
+to publish. See [Writing Packages](#writingpackages).
 
 {{/markdown}}
 </template>
@@ -761,100 +755,60 @@ package requires a `MAIL_URL` environment variable).
 
   <h2 id="writingpackages">Writing packages</h2>
 
-The Meteor package format isn't officially documented and will change
-before Meteor 1.0. But that hasn't stopped people like you from
-creating hundreds of packages by reading the source code of existing
-packages and following the model. If you do decide to create your own
-packages, you will have to do some detective work, but here are some
-quick tips:
+Writing Meteor packages is easy. To initialize a meteor package, run
+`meteor create --package username:packagename`, where `username` is your Meteor
+Developer username. This will create a package from scratch and prefill the
+directory with a package.js control file and some javascript. By default, Meteor
+will take the package name from the name of the directory that contains the
+package.js file.
 
-* A package is simply a directory with a `package.js` file in it. Look in the
-  [`packages` directory of the Meteor source
-  tree](https://github.com/meteor/meteor/tree/master/packages/) for example
-  `package.js` files. The format and name of the `package.js` file will change
-  significantly before Meteor 1.0, but the functionality will be basically the
-  same even though the syntax is different, so it will be easy to port your
-  code.
+Meteor promises repeatable builds for both packages and applications. This means
+that, if you built your package on a machine, then checked the code into a
+repository and checked it out elsewhere, you should get the same result. In your
+package directory, you will find an automatically generated versions.json
+file. This file specifies the versions of all packages used to build your
+package and is part of the source. Check it into version control to ensure
+repeatable builds across machines.
 
-* Packages explicitly list all of their source files using `api.addFiles`, and
-  the files are loaded exactly in the order specified. (This is different from
-  apps, where Meteor scans a directory tree to find the source files.)  Don't
-  forget to include any build plugin packages (such as `coffeescript` or, if
-  using HTML templates, `templating`) that you require.
+{{#note}}
 
-* Exporting a symbol from your package (see
-  [Namespacing](#namespacing)) is accomplished with an `api.export` call
-  from inside your `on_use` handler.
+Sometimes, packages do not just stand on their own, but function in the context
+of an app (specifically, packages in the packages directory of an app). In that
+case, the app's context will take precedence. Rather than using the
+versions.json file as a guide, we will build the package with the same
+dependencies as used by the app (we think that, in practice, it would be
+confusing to find your local packages built with different versions of
+things). However, we will still write the new versions.json file.
 
-* An esoteric point about exports: they are not lvalues. You can't set
-  an exported variable to a new value after exporting it. If you
-  export `a = {name: 'alice'}` then you can change `a.name` anytime
-  you want, but if after startup you set `a` to a whole new object
-  then the packages that import `a` won't see the change. Since your
-  exports are most always objects or functions, this is hardly ever an
-  issue.
+{{/note}}
 
-* Packages can use [npm modules](https://npmjs.org/). Use `Npm.depends` in your
-  `package.js` to list the npm modules that you need and the specific
-  versions that you want to use. Then use `Npm.require` inside your
-  package to pull in the modules when you need them. Meteor strives to
-  have 100% repeatable builds so that everyone on your team is always
-  running the same code, and that's why you must explicitly lock your
-  npm dependencies to specific versions. Behind the scenes, Meteor
-  will use `npm shrinkwrap` to also lock down the versions of the
-  transitive dependencies of all of the npm modules that you use.
+You can read more about [`package.js`](#packagejs) files in the API
+section.
 
-* Whenever your package changes, Meteor will rebuild it (compiling
-  non-JavaScript source files, fetching npm dependencies, constructing
-  namespace wrappers, and so on). The built package will be cached and
-  rebuilt only when a source file changes (tracked by SHA1) or when
-  other dependencies such as build plugins change. To force a rebuild
-  you can use the undocumented command `meteor rebuild-all`, but this
-  should never be necessary (if it is, please send a
-  [bug report](https://github.com/meteor/meteor/blob/devel/Contributing.md#filing-bug-reports)!).
+A word on testing: since testing is an important part of the development process,
+there are two common ways to test a package:
 
-* Build plugins are created with `_transitional_registerBuildPlugin`,
-  an API that is very much in flux. See the `coffeescript` package for
-  an example. Build plugins are fully-fledged Meteor programs in their
-  own right and have their own namespace, package dependencies, source
-  files and npm requirements. The old `register_extension` API is
-  removed.
+* Integration tests (putting a package directly into an application, and writing
+tests against the application) is the most common way to test a package. After
+creating your package, add it to your app's /packages directory and run `meteor
+add`. This will add your package to your app as a local package. You can then
+test and run your app as usual. Meteor will detect and respond to changes to
+your local package, just as it does to your app files.
 
-* It is possible to create weak dependencies between packages. If
-  package A has a weak dependency on package B, it means that
-  including A in an app does not force B to be included too &mdash;
-  but, if B _is_ included, say by the app developer or by another
-  package, then B will load before A. You can use this to make
-  packages that optionally integrate with or enhance other packages if
-  those packages are present. To create a weak dependency, pass
-  `{weak: true}` as the third argument to `api.use`. When you weakly
-  depend on a package you don't see its exports. You can detect if
-  the possibly-present weakly-depended-on package is there by seeing
-  if `Package.foo` exists, and get its exports from the same place.
+* Unit tests are run with the command [`meteor test-packages
+package-name`](#meteortestpackages). As described in the [`package.js`](#packagejs)
+section, you can use the `package.js` file to specify where your unit tests are
+located. If you have a repository that contains only the package source, you can
+test your package by specifying the path to the package directory (which must
+contain a slash), such as `meteor test-packages ./`.
 
-* It is also possible to create unordered dependencies by passing
-  `{unordered: true}`. An unordered dependency is the exact opposite
-  of a weak dependency. If A has an unordered dependency on B, then
-  including A forces B to be included as well, but doesn't require B
-  to load before A. This is occasionally useful for resolving circular
-  dependencies.
-
-* The build system also supports package implication. If package A
-  implies package B, then it means that when someone depends on
-  package A, it's as if they also depended on package B as well. In
-  particular, they get B's exports. This is done with `api.imply` and
-  can be used to create umbrella packages such as
-  `standard-app-packages` that are a shortcut for pulling in a set of
-  packages, or it can be helpful in factoring common code out of a set
-  of packages as with `accounts-base`.
-
-* The build system understands the idea of native code and has a
-  system of architecture names to ensure that packages that are
-  specific to one architecture aren't run on the wrong
-  architecture. For example, if you include an npm module that has a
-  native extension, your built Meteor package will be specific to your
-  machine architecture, but if not your built Meteor package will be
-  portable.
+To publish a package, run [`meteor publish`](#meteorpublish) from the package
+directory.  There are some extra restrictions on published packages: they must
+contain a version (Meteor packages are versioned using
+strict <a href="http://www.semver.org">semver</a> versioning) and their names
+must be prefixed with the username of the author and a colon, like so:
+`iron:router`. This namespacing allows for more descriptive and on-topic package
+names.
 
 {{/markdown}}
 </template>

@@ -1,5 +1,6 @@
 Template.headline.release = function () {
-  return Meteor.release || "(checkout)";
+  return Meteor.release ? "0.9.0" : "(checkout)";
+
 };
 
 Meteor.startup(function () {
@@ -122,7 +123,6 @@ var toc = [
     "Core", [
       "Meteor.isClient",
       "Meteor.isServer",
-      "Meteor.isCordova",
       "Meteor.startup",
       "Meteor.absoluteUrl",
       "Meteor.settings",
@@ -347,6 +347,18 @@ var toc = [
     {name: "Assets", id: "assets"}, [
       {name: "Assets.getText", id: "assets_getText"},
       {name: "Assets.getBinary", id: "assets_getBinary"}
+    ],
+
+    {name: "Package.js", id: "packagejs"}, [
+      {name: "Package.describe", id: "packagedescription"},
+      {name: "Package.onUse", id: "packagedefinition"}, [
+        {name: "api.versionsFrom", id: "pack_versions"},
+        {name: "api.use", id: "pack_use"},
+        {name: "api.imply", id: "pack_api_imply"},
+        {name: "api.export", id: "pack_export"},
+        {name: "api.addFiles", id: "pack_addFiles"}
+      ],
+      {name: "Package.onTest", id: "packagetests"}
     ]
   ],
 
@@ -381,12 +393,16 @@ var toc = [
     "meteor add",
     "meteor remove",
     "meteor list",
-    "meteor add-platform",
-    "meteor remove-platform",
-    "meteor list-platforms",
     "meteor mongo",
     "meteor reset",
-    "meteor build"
+    "meteor bundle",
+    "meteor search",
+    "meteor show",
+    "meteor publish",
+    "meteor publish-for-arch",
+    "meteor publish-release",
+    "meteor test-packages",
+    "meteor admin"
   ] ]
 ];
 
