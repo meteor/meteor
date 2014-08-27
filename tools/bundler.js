@@ -908,9 +908,6 @@ _.extend(ClientTarget.prototype, {
     eachResource(function (file, type) {
       var fileContents = file.contents();
 
-      file.targetPath = file.targetPath.replace(/:/g, "_");
-      file.url = file.url.replace(/:/g, "_");
-
       var manifestItem = {
         path: file.targetPath,
         where: "client",
