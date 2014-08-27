@@ -90,17 +90,20 @@ var onNewVersion = function () {
 
     _.each(manifest, function (item) {
       if (! item.url) return;
-      var uri = encodeURI(urlPrefix + item.url);
+
+      // Add a cache buster to ensure that we don't cache an old asset.
+      var uri = encodeURI(urlPrefix + item.url + '?' + Random.id());
 
       // Try to dowload the file a few times.
       var tries = 0;
       var tryDownload = function () {
+        console.log('downloading', uri)
         ft.download(uri, versionPrefix + item.url, function (entry) {
           if (entry) {
             afterAllFilesDownloaded();
           }
         }, function (err) {
-          // It failed, try again if we have tries less than 5 times.
+          // It failed, try again if we have tried less than 5 times.
           if (tries++ < 5) {
             tryDownload();
           } else {

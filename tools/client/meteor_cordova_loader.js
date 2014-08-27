@@ -93,9 +93,23 @@
     document.getElementsByTagName('head')[0].appendChild(styleTag);
   };
 
+  var stripLeadingSlash = function (p) {
+    if (p.charAt(0) !== '/')
+      throw new Error("bad path: " + p);
+    return p.slice(1);
+  };
+
   var loadAssetsFromManifest = function (manifest, urlPrefix) {
+    // Set the base href so that relative paths point to the correct version
+    // of the app.
+    var newBase = document.createElement("base");
+    newBase.setAttribute("href", urlPrefix);
+    document.getElementsByTagName("head")[0].appendChild(newBase);
+
     each(manifest, function (item) {
-      var url = urlPrefix + (item.url ? item.url.substring(1) : '');
+      // We want to use relative paths so that our base href is taken into
+      // account.
+      var url = item.url ? stripLeadingSlash(item.url) : '';
       if (item.type === 'js')
         queue.push(function () {
           loadScript(url);
