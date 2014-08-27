@@ -23,31 +23,27 @@ var __ = inTool ? require('underscore') : _;
 // 2. "exactly" - A@=x.y.z - constraints package A only to version x.y.z and
 //    nothing else.
 //    "pick A exactly at x.y.z"
-// 3. "at-least" - A@>=x.y.z - constraints package A to version x.y.z or higher.
-//    "pick A at least at x.y.z"
-//    This one is only used internally by the constraint solver --- end users
-//    shouldn't be allowed to specify it, and you need to specially request it
-//    with the "allowAtLeast" option.
+// 3. "any-reasonable" - "A"
+//    Basically, this means any version of A ... other than ones that have
+//    dashes in the version (ie, are prerelease) ... unless the prerelease
+//    version has been explicitly selected (which at this stage in the game
+//    means they are mentioned in a top-level constraint in the top-level
+//    call to the resolver).
 PV.parseVersionConstraint = function (versionString, options) {
   options = options || {};
-  var versionDesc = { version: null, type: "compatible-with",
+  var versionDesc = { version: null, type: "any-reasonable",
                       constraintString: versionString };
 
-  if (versionString === "none" || versionString === null) {
-    versionDesc.type = "at-least";
-    versionDesc.version = "0.0.0";
+  if (!versionString) {
     return versionDesc;
   }
 
   if (versionString.charAt(0) === '=') {
     versionDesc.type = "exactly";
     versionString = versionString.substr(1);
-  } else if (options.allowAtLeast && versionString.substr(0, 2) === '>=') {
-    versionDesc.type = "at-least";
-    versionString = versionString.substr(2);
+  } else {
+    versionDesc.type = "compatible-with";
   }
-
-  // XXX check for a dash in the version in case of foo@1.2.3-rc0
 
   if (! semver.valid(versionString)) {
     throwVersionParserError(
@@ -68,7 +64,7 @@ PV.parseConstraint = function (constraintString, options) {
   var splitted = constraintString.split('@');
 
   var constraint = { name: "", version: null,
-                     type: "compatible-with", constraintString: null };
+                     type: "any-reasonable", constraintString: null };
   var name = splitted[0];
   var versionString = splitted[1];
 
@@ -123,4 +119,21 @@ var throwVersionParserError = function (message) {
   var e = new Error(message);
   e.versionParserError = true;
   throw e;
+};
+
+// XXX if we were better about consistently only using functions in this file,
+// we could just do this using the constraintString field
+PV.constraintToVersionString = function (parsedConstraint) {
+  if (parsedConstraint.type === "any-reasonable")
+    return "";
+  if (parsedConstraint.type === "compatible-with")
+    return parsedConstraint.version;
+  if (parsedConstraint.type === "exactly")
+    return "=" + parsedConstraint.version;
+  throw Error("Unknown constraint type: " + parsedConstraint.type);
+};
+
+PV.constraintToFullString = function (parsedConstraint) {
+  return parsedConstraint.name + "@" + PV.constraintToVersionString(
+    parsedConstraint);
 };

@@ -453,7 +453,8 @@ _.extend(CompleteCatalog.prototype, {
 
         // Constraints for uniload should just be packages with no version
         // constraint and one local version (since they should all be in core).
-        if (!_.has(constraint, 'packageName') || _.size(constraint) !== 1) {
+        if (!_.has(constraint, 'packageName') ||
+            constraint.type !== 'any-reasonable') {
           throw Error("Surprising constraint: " + JSON.stringify(constraint));
         }
         if (!_.has(self.versions, constraint.packageName)) {
@@ -499,9 +500,7 @@ _.extend(CompleteCatalog.prototype, {
         deps.push(constraint.packageName);
       }
       delete constraint.weak;
-      if (constraint.version) {
-        constr.push(constraint);
-      }
+      constr.push(constraint);
     });
 
     // If we are called with 'ignore projectDeps', then we don't even look to
@@ -518,6 +517,13 @@ _.extend(CompleteCatalog.prototype, {
         constr.push({packageName: name, version: version, type: 'exactly'});
       });
     }
+
+    // Local packages can only be loaded from the version we have the source
+    // for: that's a weak exact constraint.
+    _.each(self.packageSources, function (packageSource, name) {
+      constr.push({packageName: name, version: packageSource.version,
+                   type: 'exactly'});
+    });
 
     var patience = new utils.Patience({
       messageAfterMs: 1000,
@@ -1004,8 +1010,9 @@ _.extend(CompleteCatalog.prototype, {
         }
       });
     }
-    // And put a build record for it in the catalog
-    var versionId = self.getLatestVersion(name);
+    // And put a build record for it in the catalog. There is only one version
+    // for this package!
+    var versionId = _.values(self.versions[name])._id;
 
     // XXX why isn't this build just happening through the package cache
     // directly?

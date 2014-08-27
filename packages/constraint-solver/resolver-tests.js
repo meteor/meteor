@@ -153,22 +153,29 @@ Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
 
   resolver.addUnitVersion(A100rc1);
   resolver.addUnitVersion(A100);
-  var initialConstraint = resolver.getConstraint("A", ">=0.0.0");
+  var basicConstraint = resolver.getConstraint("A", "");
+  var rcConstraint = resolver.getConstraint("A", "1.0.0-rc1");
 
-  var solution = resolver.resolve(["A"], [initialConstraint], {
-    costFunction: function (state) {
-      return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-        var name = mori.first(nameAndUv);
-        var uv = mori.last(nameAndUv);
-        // Make the non-rc one more costly. But we still shouldn't choose it!
-        if (uv.version === "1.0.0")
-          return 100;
-        return 0;
-      }, state.choices));
-    }
-  });
+  // Make the non-rc one more costly. But we still shouldn't choose it unless it
+  // was specified in an initial constraint!
+  var proRcCostFunction = function (state) {
+    return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+      var name = mori.first(nameAndUv);
+      var uv = mori.last(nameAndUv);
+      // Make the non-rc one more costly. But we still shouldn't choose it!
+      if (uv.version === "1.0.0")
+        return 100;
+      return 0;
+    }, state.choices));
+  };
 
+  var solution = resolver.resolve(
+    ["A"], [basicConstraint], {costFunction: proRcCostFunction });
   resultEquals(test, solution, [A100]);
+
+  solution = resolver.resolve(
+    ["A"], [rcConstraint], {costFunction: proRcCostFunction });
+  resultEquals(test, solution, [A100rc1]);
 });
 
 function semver2number (semverStr) {
