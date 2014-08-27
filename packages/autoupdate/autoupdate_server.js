@@ -49,11 +49,12 @@ ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
 // runtime config before using the client hash as our default auto
 // update version id.
 
+// Note: Tests allow people to override Autoupdate.autoupdateVersion before
+// startup.
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
 
 var syncQueue = new Meteor._SynchronousQueue();
-var startupVersion = null;
 
 // updateVersions can only be called after the server has fully loaded.
 var updateVersions = function (shouldReloadClientProgram) {
@@ -64,13 +65,18 @@ var updateVersions = function (shouldReloadClientProgram) {
       WebAppInternals.reloadClientProgram();
     }
 
-    if (startupVersion === null) {
+    // If we just re-read the client program, or if we don't have an autoupdate
+    // version, calculate it.
+    if (shouldReloadClientProgram || Autoupdate.autoupdateVersion === null) {
       Autoupdate.autoupdateVersion =
-        __meteor_runtime_config__.autoupdateVersion =
-          process.env.AUTOUPDATE_VERSION ||
-          process.env.SERVER_ID || // XXX COMPAT 0.6.6
-          WebApp.calculateClientHashNonRefreshable();
+        process.env.AUTOUPDATE_VERSION ||
+        process.env.SERVER_ID || // XXX COMPAT 0.6.6
+        WebApp.calculateClientHashNonRefreshable();
     }
+    // If we just recalculated it OR if it was set by (eg) test-in-browser,
+    // ensure it ends up in __meteor_runtime_config__.
+    __meteor_runtime_config__.autoupdateVersion =
+      Autoupdate.autoupdateVersion;
 
     Autoupdate.autoupdateVersionRefreshable =
       __meteor_runtime_config__.autoupdateVersionRefreshable =
@@ -111,9 +117,6 @@ var updateVersions = function (shouldReloadClientProgram) {
 };
 
 Meteor.startup(function () {
-  // Allow people to override Autoupdate.autoupdateVersion before startup.
-  // Tests do this.
-  startupVersion = Autoupdate.autoupdateVersion;
   updateVersions(false);
 });
 
