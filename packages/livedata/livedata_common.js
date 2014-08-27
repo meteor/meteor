@@ -40,7 +40,7 @@ MethodInvocation = function (options) {
   
   /**
    * @summary The id of the user that made this method call, or `null` if no user was logged in.
-   * @locus Server
+   * @locus Anywhere
    * @name  userId
    * @memberOf MethodInvocation
    * @instance

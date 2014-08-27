@@ -257,7 +257,7 @@ var fromJSONValueHelper = function (value) {
 /**
  * @summary Deserialize an EJSON value from its plain JSON representation.
  * @locus Anywhere
- * @param {Object} val A value to deserialize into EJSON.
+ * @param {JSONCompatible} val A value to deserialize into EJSON.
  */
 EJSON.fromJSONValue = function (item) {
   var changed = fromJSONValueHelper(item);

@@ -248,7 +248,7 @@ _.extend(Meteor.Collection.prototype, {
    * @method find
    * @memberOf Meteor.Collection
    * @instance
-   * @param {MongoSelector} selector The query
+   * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
    * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
    * @param {Number} options.skip Number of results to skip at the beginning
@@ -273,7 +273,7 @@ _.extend(Meteor.Collection.prototype, {
    * @method findOne
    * @memberOf Meteor.Collection
    * @instance
-   * @param {MongoSelector} selector The query
+   * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
    * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
    * @param {Number} options.skip Number of results to skip at the beginning
@@ -434,7 +434,7 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @method remove
  * @memberOf Meteor.Collection
  * @instance
- * @param {MongoSelector | String} selector A Mongo selector or ID which specifies documents to remove
+ * @param {MongoSelector} selector Specifies which documents to remove
  * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
  */
 
@@ -584,7 +584,7 @@ _.each(["insert", "update", "remove"], function (name) {
 /**
  * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
  * @locus Anywhere
- * @param {MongoSelector | String} selector Mongo Selector or ID which specifies documents to modify
+ * @param {MongoSelector} selector Specifies which documents to modify
  * @param {MongoModifier} modifier Specifies how to modify the documents
  * @param {Object} [options]
  * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).

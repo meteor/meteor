@@ -45,7 +45,7 @@ CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 /**
  * @summary Set global accounts options.
  * @locus Anywhere
- * @param {Object} [options]
+ * @param {Object} options
  * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
  * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available.
  * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
