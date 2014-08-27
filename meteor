@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.49 # warning! 0.3.50 used on cordova-hcp branch
+BUNDLE_VERSION=0.3.51 # warning! 0.3.50 used on cordova-hcp branch
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
