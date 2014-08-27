@@ -288,12 +288,37 @@ exports.loggedInPackagesConnection = function () {
   }
 
   var conn = openPackageServerConnection();
-  auth.loginWithTokenOrOAuth(
-    conn,
-    config.getPackageServerUrl(),
-    config.getPackageServerDomain(),
-    "package-server"
-  );
+
+  var accountsConfiguration = auth.getAccountsConfiguration(conn);
+
+  try {
+    auth.loginWithTokenOrOAuth(
+      conn,
+      accountsConfiguration,
+      config.getPackageServerUrl(),
+      config.getPackageServerDomain(),
+      "package-server"
+    );
+  } catch (err) {
+    if (err.message === "access-denied") {
+      // Maybe we thought we were logged in, but our token had been
+      // revoked.
+      process.stderr.write(
+"It looks like you have been logged out! Please log in with your Meteor\n" +
+"developer account. If you don't have one, you can quickly create one\n" +
+"at www.meteor.com.\n");
+      auth.doUsernamePasswordLogin({ retry: true });
+      auth.loginWithTokenOrOAuth(
+        conn,
+        accountsConfiguration,
+        config.getPackageServerUrl(),
+        config.getPackageServerDomain(),
+        "package-server"
+      );
+    } else {
+      throw err;
+    }
+  }
   return conn;
 };
 
