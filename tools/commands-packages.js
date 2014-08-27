@@ -1738,6 +1738,24 @@ main.registerCommand({
         } else {
           process.stdout.write("The version constraint will be removed.\n");
         }
+        // Now remove the old constraint from what we're going to calculate
+        // with.
+        // This matches code in calculateCombinedConstraints.
+        var oldConstraint = _.extend(
+          {packageName: constraint.name},
+          utils.parseVersionConstraint(packages[constraint.name]));
+        var removed = false;
+        for (var i = 0; i < allPackages.length; ++i) {
+          if (_.isEqual(oldConstraint, allPackages[i])) {
+            removed = true;
+            allPackages.splice(i, 1);
+            break;
+          }
+        }
+        if (!removed) {
+          throw Error("Couldn't find constraint to remove: " +
+                      JSON.stringify(oldConstraint));
+        }
       }
     }
 

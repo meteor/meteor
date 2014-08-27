@@ -234,6 +234,7 @@ _.extend(Project.prototype, {
     var allDeps = [];
     // First, we process the contents of the .meteor/packages file. The
     // self.constraints variable is always up to date.
+    // Note that two parts of the "add" command run code that matches this.
     _.each(self.constraints, function (constraint, packageName) {
       allDeps.push(_.extend({packageName: packageName},
                             utils.parseVersionConstraint(constraint)));

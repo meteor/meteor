@@ -194,6 +194,29 @@ selftest.define("list-with-a-new-version",
     run.match("New versions");
     run.match("meteor update");
     run.expectExit(0);
+
+    // Switch to the other version.
+    run = s.run("add", fullPackageName + "@1.0.1");
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.1");
+    run.forbidAll("New versions");
+    run.expectExit(0);
+
+    // Switch back to the first version.
+    run = s.run("add", fullPackageName + "@=1.0.0");
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.0*");
+    run.match("New versions");
+    run.match("meteor update");
+    run.expectExit(0);
   });
 
 });
