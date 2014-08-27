@@ -6,10 +6,10 @@
   two cases: when the old app was a pre-0.9.0 app, and when the app used
   appcache. (In both cases, an explicit reload still worked.)
 
-* Fix publishing packaging containing a plugin with platform-specific code but
+* Fix publishing packages containing a plugin with platform-specific code but
   no platform-specific code in the main package.
 
-* Fix 'meteor add package@version' when the package was already added with a
+* Fix `meteor add package@version` when the package was already added with a
   different version constraint.
 
 * Improve treatment of pre-release packages (packages with a dash in their
