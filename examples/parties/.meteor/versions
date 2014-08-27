@@ -7,7 +7,7 @@ accounts-ui-unstyled@1.0.0
 accounts-ui@1.0.0
 application-configuration@1.0.0
 audit-argument-checks@1.0.0
-autoupdate@1.0.4
+autoupdate@1.0.5-rc1
 binary-heap@1.0.0
 blaze-tools@1.0.0
 blaze@1.0.3
@@ -25,11 +25,11 @@ follower-livedata@1.0.0
 geojson-utils@1.0.0
 html-tools@1.0.0
 htmljs@1.0.0
-http@1.0.2
+http@1.0.3-rc1
 id-map@1.0.0
 jquery@1.0.0
 json@1.0.0
-less@1.0.5
+less@1.0.6-rc1
 livedata@1.0.7
 localstorage@1.0.0
 logging@1.0.2
