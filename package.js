@@ -11,6 +11,7 @@ Package.on_use(function (api) {
   api.use('htmljs');
   api.imply('htmljs');
   api.use('observe-sequence');
+  api.use('reactive-var');
 
   api.add_files([
     'preamble.js'
@@ -28,7 +29,6 @@ Package.on_use(function (api) {
   // client and server
   api.add_files([
     'exceptions.js',
-    'reactivevar.js',
     'view.js',
     'builtins.js',
     'lookup.js',
@@ -45,6 +45,7 @@ Package.on_test(function (api) {
   api.use('underscore');
   api.use('blaze-tools'); // for BlazeTools.toJS
   api.use('html-tools');
+  api.use('reactive-var');
 
   api.add_files('view_tests.js');
   api.add_files('render_tests.js', 'client');
