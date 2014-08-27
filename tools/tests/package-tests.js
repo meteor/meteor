@@ -584,3 +584,44 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.match("overriding accounts-base!");
   run.stop();
 });
+
+selftest.define("talk to package server with expired or no accounts token", ['net', 'test-package-server'], function () {
+  var s = new Sandbox();
+  testUtils.login(s, "test", "testtest");
+
+  // Revoke our credential by logging out.
+  var session = s.readSessionFile();
+  testUtils.logout(s);
+
+  // When we are not logged in, we should get prompted to log in when we
+  // run 'meteor admin maintainers --add'.
+  var run = s.run("admin", "maintainers", "standard-app-packages",
+                  "--add", "foo");
+  run.waitSecs(15);
+  run.matchErr("Username:");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(15);
+  // The 'test' user should not be a maintainer of
+  // standard-app-packages. So this command should fail.
+  run.matchErr("You are not an authorized maintainer");
+  run.expectExit(1);
+
+  // Now restore our previous session, so that we now have an expired
+  // accounts token.
+  s.writeSessionFile(session);
+
+  run = s.run("admin", "maintainers", "standard-app-packages", "--add", "foo");
+  run.waitSecs(15);
+  run.matchErr("have been logged out");
+  run.matchErr("Please log in");
+  run.matchErr("Username");
+  run.write("test\n");
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(15);
+
+  run.matchErr("You are not an authorized maintainer");
+  run.expectExit(1);
+});

@@ -54,22 +54,6 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
-// Get all local packages available. Returns a map from the package name to the
-// version record for that package.
-var getLocalPackages = function () {
-  var ret = {};
-  buildmessage.assertInCapture();
-
-  var names = catalog.complete.getAllPackageNames();
-  _.each(names, function (name) {
-    if (catalog.complete.isLocalPackage(name)) {
-      ret[name] = catalog.complete.getLatestVersion(name);
-    }
-  });
-
-  return ret;
-};
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -950,18 +934,8 @@ main.registerCommand({
 }, function (options) {
   var testPackages;
   if (options.args.length === 0) {
-    // Only test local packages if no package is specified.
-    // XXX should this use the new getLocalPackageNames?
-    var packageList = commandsPackages.doOrDie(function () {
-      return getLocalPackages();
-    });
-    if (! packageList) {
-      // Couldn't load the package list, probably because some package
-      // has a parse error. Bail out -- this kind of sucks; we would
-      // like to find a way to get reloading.
-      return 1;
-    }
-    testPackages = _.keys(packageList);
+    // Test all local packages if no package is specified.
+    testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
       testPackages = _.map(options.args, function (p) {
@@ -978,16 +952,15 @@ main.registerCommand({
             }
             // Check to see if this is a real package, and if it is a real
             // package, if it has tests.
-            var versionRec = catalog.complete.getLatestVersion(p);
-            if (!versionRec) {
-              buildmessage.error(
-                "Unknown package: " + p );
-            }
             if (!catalog.complete.isLocalPackage(p)) {
               buildmessage.error(
-                "Not a local package, cannot test: " + p );
+                "Not a known local package, cannot test: " + p );
               return p;
             }
+            var versionNames = catalog.complete.getSortedVersions(p);
+            if (versionNames.length !== 1)
+              throw Error("local package should have one version?");
+            var versionRec = catalog.complete.getVersion(p, versionNames[0]);
             if (versionRec && !versionRec.testName) {
               buildmessage.error(
                 "There are no tests for package: " + p );
@@ -1058,7 +1031,10 @@ main.registerCommand({
   var tests = [];
   var messages = buildmessage.capture(function () {
     _.each(testPackages, function(name) {
-      var versionRecord = catalog.complete.getLatestVersion(name);
+      var versionNames = catalog.complete.getSortedVersions(name);
+      if (versionNames.length !== 1)
+        throw Error("local package should have one version?");
+      var versionRecord = catalog.complete.getVersion(name, versionNames[0]);
       if (versionRecord && versionRecord.testName) {
         tests.push(versionRecord.testName);
       }
@@ -1200,6 +1176,140 @@ main.registerCommand({
   name: 'whoami'
 }, function (options) {
   return auth.whoAmICommand(options);
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// organizations
+///////////////////////////////////////////////////////////////////////////////
+
+var loggedInAccountsConnectionOrPrompt = function (action) {
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  token = auth.getSessionToken(config.getAccountsDomain());
+  var conn = auth.loggedInAccountsConnection(token);
+  if (conn === null) {
+    // Server rejected our token.
+    process.stderr.write("You must be logged in to " + action + ".\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+    token = auth.getSessionToken(config.getAccountsDomain());
+    conn = auth.loggedInAccountsConnection(token);
+  }
+
+  return conn;
+};
+
+// List the organizations of which the current user is a member.
+main.registerCommand({
+  name: 'admin list-organizations',
+  minArgs: 0,
+  maxArgs: 0
+}, function (options) {
+
+  var token = auth.getSessionToken(config.getAccountsDomain());
+  if (! token) {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    auth.doUsernamePasswordLogin({ retry: true });
+    process.stdout.write("\n");
+  }
+
+  var url = config.getAccountsApiUrl() + "/organizations";
+  try {
+    var result = httpHelpers.request({
+      url: url,
+      method: "GET",
+      useSessionHeader: true,
+      useAuthHeader: true
+    });
+    var body = JSON.parse(result.body);
+  } catch (err) {
+    process.stderr.write("Error listing organizations.\n");
+    return 1;
+  }
+
+  if (result.response.statusCode === 401 &&
+      body && body.error === "invalid_credential") {
+    process.stderr.write("You must be logged in to list your organizations.\n");
+    // XXX It would be nice to do a username/password prompt here like
+    // we do for the other orgs commands.
+    return 1;
+  }
+
+  if (result.response.statusCode !== 200 ||
+      ! body || ! body.organizations) {
+    process.stderr.write("Error listing organizations.\n");
+    return 1;
+  }
+
+  if (body.organizations.length === 0) {
+    process.stdout.write("You are not a member of any organizations.\n");
+  } else {
+    process.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
+  }
+  return 0;
+});
+
+main.registerCommand({
+  name: 'admin members',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    add: { type: String },
+    remove: { type: String },
+    list: { type: Boolean }
+  }
+}, function (options) {
+
+  if (options.add && options.remove) {
+    process.stderr.write(
+      "Sorry, you can only add or remove one member at a time.\n");
+    throw new main.ShowUsage;
+  }
+
+  config.printUniverseBanner();
+
+  var username = options.add || options.remove;
+
+  var conn = loggedInAccountsConnectionOrPrompt(
+    username ? "edit organizations" : "show an organization's members");
+
+  if (username ) {
+    // Adding or removing members
+    try {
+      conn.call(
+        options.add ? "addOrganizationMember": "removeOrganizationMember",
+        options.args[0], username);
+    } catch (err) {
+      process.stderr.write("Error " +
+                           (options.add ? "adding" : "removing") +
+                           " member: " + err.reason + "\n");
+      return 1;
+    }
+
+    process.stdout.write(username + " " +
+                         (options.add ? "added to" : "removed from") +
+                         " organization " + options.args[0] + ".\n");
+  } else {
+    // Showing the members of an org
+    try {
+      var result = conn.call("showOrganization", options.args[0]);
+    } catch (err) {
+      process.stderr.write("Error showing organization: " +
+                           err.reason + "\n");
+      return 1;
+    }
+
+    var members = _.pluck(result, "username");
+
+    process.stdout.write(members.join("\n") + "\n");
+  }
+
+  return 0;
 });
 
 ///////////////////////////////////////////////////////////////////////////////
