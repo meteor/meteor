@@ -2460,16 +2460,11 @@ The "current view" is used by [`UI.data()`](#ui_data) and
 [`UI.templateInstance()`](#ui_templateinstance) to determine
 the contextually relevant data context and template instance.
 
-{{> api_box ui_findview}}
+{{> api_box ui_getview}}
 
-For example, to find the nearest enclosing View for a DOM element, use
-`UI.findView(element)`.  To search for a View by name, starting with the
-current View, use `UI.findView(viewName)`.
-
-If you don't specify `elementOrView`, there must be a current View or
-an error will be thrown.  `UI.findView()` with no arguments is like
-`UI.currentView` except that it will throw an error if there is no
-current View.
+If you don't specify an `element`, there must be a current View or an
+error will be thrown.  This is in contrast to
+[`UI.currentView`](#ui_currentview).
 
 {{> api_box ui_with}}
 
