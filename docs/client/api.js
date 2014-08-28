@@ -2038,19 +2038,15 @@ Template.api.ui_currentview = {
   descr: ["The View corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
 };
 
-Template.api.ui_findview = {
-  id: "ui_findview",
-  name: "UI.findView([elementOrView], [viewName])",
+Template.api.ui_getview = {
+  id: "ui_getview",
+  name: "UI.getView([element])",
   locus: "Client",
-  descr: ["Finds a View, starting with the current View or the one enclosing the given DOM element or View."],
+  descr: ["Gets either the current View, or the View enclosing the given DOM element."],
   args: [
-    {name: "elementOrView",
-     type: "DOM Element or View",
-     descr: "Optional.  The search starts with the enclosing View of `elementOrView`.  If omitted, the search starts with the current View."
-    },
-    {name: "viewName",
-     type: "String",
-     descr: "Optional.  If specified, look for a View whose `.name` is `viewName`.  Otherwise, simply return the current or enclosing View."
+    {name: "element",
+     type: "DOM Element",
+     descr: "Optional.  If specified, the View enclosing `element` is returned."
     }
   ]
 };

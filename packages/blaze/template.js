@@ -165,13 +165,13 @@ Template.prototype.events = function (eventMap) {
 };
 
 Blaze.templateInstance = function () {
-  var view = Blaze.getView();
+  var view = Blaze.currentView;
 
   while (view && ! view.template)
     view = view.parentView;
 
   if (! view)
-    throw new Error("No current template");
+    return null;
 
   return view.templateInstance();
 };
