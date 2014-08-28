@@ -2140,9 +2140,9 @@ Template.api.ui_istemplate = {
   ]
 };
 
-Template.api.ui_reactivevar = {
-  id: "ui_reactivevar",
-  name: "[new] UI.ReactiveVar(initialValue, [equalsFunc])",
+Template.api.reactivevar = {
+  id: "reactivevar",
+  name: "[new] ReactiveVar(initialValue, [equalsFunc])",
   locus: "Client",
   descr: ["Constructor for a ReactiveVar, which represents a single reactive variable."],
   args: [
@@ -2153,6 +2153,24 @@ Template.api.ui_reactivevar = {
      type: "Function",
      descr: "Optional.  A function of two arguments, called on the old value and the new value whenever the ReactiveVar is set.  If it returns true, no set is performed.  If omitted, the default `equalsFunc` returns true if its arguments are `===` and are of type number, boolean, string, undefined, or null."
     }
+  ]
+};
+
+Template.api.reactivevar_get = {
+  id: "reactivevar_get",
+  name: "<em>reactiveVar</em>.get()",
+  locus: "Client",
+  descr: ["Returns the current value of the ReactiveVar, establishing a reactive dependency."]
+};
+
+Template.api.reactivevar_set = {
+  id: "reactivevar_set",
+  name: "<em>reactiveVar</em>.set(newValue)",
+  locus: "Client",
+  descr: ["Sets the current value of the ReactiveVar, invalidating the Computations that called `get` if `newValue` is different from the old value."],
+  args: [
+    {name: "newValue",
+     type: "Any"}
   ]
 };
 

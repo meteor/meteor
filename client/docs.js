@@ -281,7 +281,6 @@ var toc = [
       ],
       "UI.Template",
       "UI.isTemplate",
-      "UI.ReactiveVar",
       {type: "spacer"},
       {name: "Event maps", style: "noncode"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
@@ -321,6 +320,12 @@ var toc = [
         {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
+    ],
+
+    {name: "ReactiveVar", id: "reactivevar_pkg"}, [
+      "ReactiveVar",
+      {instance: "reactiveVar", name: "get", id: "reactivevar_get"},
+      {instance: "reactiveVar", name: "set", id: "reactivevar_set"}
     ],
 
     // "Environment Variables", [
