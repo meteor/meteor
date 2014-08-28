@@ -1,5 +1,7 @@
 Blaze._globalHelpers = {};
 
+// Documented as Template.registerHelper.
+// This definition also provides back-compat for `UI.registerHelper`.
 Blaze.registerHelper = function (name, func) {
   Blaze._globalHelpers[name] = func;
 };
@@ -18,7 +20,7 @@ var bindIfIsFunction = function (x, target) {
 var bindDataContext = function (x) {
   if (typeof x === 'function') {
     return function () {
-      var data = Blaze.data();
+      var data = Blaze.getData();
       if (data == null)
         data = {};
       return x.apply(data, arguments);
@@ -55,7 +57,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
     if (!/^(\.)+$/.test(name))
       throw new Error("id starting with dot must be a series of dots");
 
-    return Blaze.parentData(name.length - 1, true /*_functionWrapped*/);
+    return Blaze._parentData(name.length - 1, true /*_functionWrapped*/);
 
   } else if (template && (name in template)) {
     return wrapHelper(bindDataContext(template[name]));
@@ -67,7 +69,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
   } else {
     return function () {
       var isCalledAsFunction = (arguments.length > 0);
-      var data = Blaze.data();
+      var data = Blaze.getData();
       if (lookupTemplate && ! (data && data[name])) {
         throw new Error("No such template: " + name);
       }
@@ -91,7 +93,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
 // Implement Spacebars' {{../..}}.
 // @param height {Number} The number of '..'s
-Blaze.parentData = function (height, _functionWrapped) {
+Blaze._parentData = function (height, _functionWrapped) {
   var theWith = Blaze.getView('with');
   for (var i = 0; (i < height) && theWith; i++) {
     theWith = Blaze.getView(theWith, 'with');

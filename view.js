@@ -552,7 +552,7 @@ Blaze._toText = function (htmljs, parentView, textMode) {
   return HTML.toText(Blaze._expand(htmljs, parentView), textMode);
 };
 
-Blaze.data = function (elementOrView) {
+Blaze.getData = function (elementOrView) {
   var theWith;
 
   if (! elementOrView) {
@@ -575,12 +575,12 @@ Blaze.data = function (elementOrView) {
 // For back-compat
 Blaze.getElementData = function (element) {
   Blaze._warn("Blaze.getElementData has been deprecated.  Use " +
-              "Blaze.data(element) instead.");
+              "Blaze.getData(element) instead.");
 
   if (element.nodeType !== 1)
     throw new Error("Expected DOM element");
 
-  return Blaze.data(element);
+  return Blaze.getData(element);
 };
 
 // Both arguments are optional.

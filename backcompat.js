@@ -1,6 +1,7 @@
 UI = Blaze;
 
 Blaze.ReactiveVar = ReactiveVar;
+UI._templateInstance = Blaze.Template.instance;
 
 Handlebars = {};
 Handlebars.registerHelper = Blaze.registerHelper;
