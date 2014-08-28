@@ -20,8 +20,8 @@ Package.on_use(function(api) {
     'webapp',
     // It's Log! It's better than bad, it's good!
     'logging',
-    // Deps.autorun and friends. What's Meteor without reactivity?
-    'deps',
+    // Tracker.autorun and friends. What's Meteor without reactivity?
+    'tracker',
     // The easiest way to get a little reactivity into your app.
     'session',
     // DDP: Meteor's client/server protocol.

@@ -33,7 +33,7 @@ Blaze.ReactiveVar = function (initialValue, equalsFunc) {
 
   this.curValue = initialValue;
   this.equalsFunc = equalsFunc;
-  this.dep = new Deps.Dependency;
+  this.dep = new Tracker.Dependency;
 };
 
 Blaze.ReactiveVar._isEqual = function (oldValue, newValue) {
@@ -48,7 +48,7 @@ Blaze.ReactiveVar._isEqual = function (oldValue, newValue) {
 };
 
 Blaze.ReactiveVar.prototype.get = function () {
-  if (Deps.active)
+  if (Tracker.active)
     this.dep.depend();
 
   return this.curValue;

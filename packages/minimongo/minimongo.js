@@ -121,7 +121,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self._transform = LocalCollection.wrapTransform(options.transform);
 
   // by default, queries register w/ Deps when it is available.
-  if (typeof Deps !== "undefined")
+  if (typeof Tracker !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
@@ -417,13 +417,13 @@ _.extend(LocalCollection.Cursor.prototype, {
       }
     });
 
-    if (self.reactive && Deps.active) {
+    if (self.reactive && Tracker.active) {
       // XXX in many cases, the same observe will be recreated when
       // the current autorun is rerun.  we could save work by
       // letting it linger across rerun and potentially get
       // repurposed if the same observe is performed, using logic
       // similar to that of Meteor.subscribe.
-      Deps.onInvalidate(function () {
+      Tracker.onInvalidate(function () {
         handle.stop();
       });
     }
@@ -528,8 +528,8 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
 LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered) {
   var self = this;
 
-  if (Deps.active) {
-    var v = new Deps.Dependency;
+  if (Tracker.active) {
+    var v = new Tracker.Dependency;
     v.depend();
     var notifyChange = _.bind(v.changed, v);
 

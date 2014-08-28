@@ -20,7 +20,7 @@ LocalCollection.wrapTransform = function (transform) {
 
     var id = doc._id;
     // XXX consider making deps a weak dependency and checking Package.deps here
-    var transformed = Deps.nonreactive(function () {
+    var transformed = Tracker.nonreactive(function () {
       return transform(doc);
     });
 

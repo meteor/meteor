@@ -18,7 +18,7 @@ ReactiveVar = function(initialValue) {
 
   this._value = (typeof initialValue === "undefined" ? null :
                  initialValue);
-  this._deps = new Deps.Dependency;
+  this._deps = new Tracker.Dependency;
 };
 
 ReactiveVar.prototype.get = function() {

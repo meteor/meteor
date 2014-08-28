@@ -20,7 +20,7 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
-  api.use(['check', 'random', 'ejson', 'json', 'underscore', 'deps',
+  api.use(['check', 'random', 'ejson', 'json', 'underscore', 'tracker',
            'logging', 'retry'],
           ['client', 'server']);
 
@@ -80,7 +80,7 @@ Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo-livedata', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use(['underscore', 'tinytest', 'random', 'deps', 'minimongo']);
+  api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo']);
 
   api.add_files('stub_stream.js');
   api.add_files('livedata_server_tests.js', 'server');

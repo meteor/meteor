@@ -23,7 +23,7 @@ Package.on_use(function(api) {
 });
 
 Package.on_test(function(api) {
-  api.use(['accounts-password', 'tinytest', 'test-helpers', 'deps',
+  api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'underscore', 'check',
            'livedata']);
   api.add_files('password_tests_setup.js', 'server');

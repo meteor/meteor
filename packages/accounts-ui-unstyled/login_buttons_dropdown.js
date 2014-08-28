@@ -6,7 +6,7 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 Template.loginButtons.events({
   'click #login-name-link, click #login-sign-in-link': function () {
     loginButtonsSession.set('dropdownVisible', true);
-    Deps.flush();
+    Tracker.flush();
     correctDropdownZIndexes();
   },
   'click .login-close-text': function () {
@@ -82,7 +82,7 @@ Template._loginButtonsLoggedOutDropdown.events({
     loginButtonsSession.set('inSignupFlow', true);
     loginButtonsSession.set('inForgotPasswordFlow', false);
     // force the ui to update so that we have the approprate fields to fill in
-    Deps.flush();
+    Tracker.flush();
 
     // update new fields with appropriate defaults
     if (username !== null)
@@ -120,7 +120,7 @@ Template._loginButtonsLoggedOutDropdown.events({
     loginButtonsSession.set('inSignupFlow', false);
     loginButtonsSession.set('inForgotPasswordFlow', true);
     // force the ui to update so that we have the approprate fields to fill in
-    Deps.flush();
+    Tracker.flush();
 
     // update new fields with appropriate defaults
     if (email !== null)
@@ -142,7 +142,7 @@ Template._loginButtonsLoggedOutDropdown.events({
     loginButtonsSession.set('inSignupFlow', false);
     loginButtonsSession.set('inForgotPasswordFlow', false);
     // force the ui to update so that we have the approprate fields to fill in
-    Deps.flush();
+    Tracker.flush();
 
     if (document.getElementById('login-username'))
       document.getElementById('login-username').value = username;

@@ -256,7 +256,7 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
       // of the #with get stopped sooner.  It reaches inside
       // our ReactiveVar to access its dep.
 
-      Deps.onInvalidate(function () {
+      Tracker.onInvalidate(function () {
         argVar.dep.changed();
       });
 
@@ -273,9 +273,9 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
       // 5. The template tag `{{B}}`
       //
       // When (3) is invalidated, it immediately stops (4) and (5)
-      // because of a Deps.onInvalidate built into materializeView.
+      // because of a Tracker.onInvalidate built into materializeView.
       // (When a View's render method is invalidated, it immediately
-      // tears down all the subviews, via a Deps.onInvalidate much
+      // tears down all the subviews, via a Tracker.onInvalidate much
       // like this one.
       //
       // Suppose `A` changes to become falsy, and `B` changes at the

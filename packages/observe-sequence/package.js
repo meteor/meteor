@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use('deps');
+  api.use('tracker');
   api.use('minimongo');  // for idStringify
   api.use('underscore');
   api.use('random');

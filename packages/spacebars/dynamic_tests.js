@@ -18,12 +18,12 @@ Tinytest.add(
     // Choose the "ui-dynamic-test-sub" template, with no data context
     // passed in.
     nameVar.set("ui_dynamic_test_sub");
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "test");
 
     // Set a data context.
     dataVar.set({ foo: "bar" });
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "testbar");
   });
 
@@ -43,7 +43,7 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "");
 
     nameVar.set("ui_dynamic_test_sub");
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "test");
   });
 
@@ -67,14 +67,14 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "");
 
     nameVar.set("ui_dynamic_test_sub");
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "test");
 
     // Set the top-level template's data context; this should be
     // inherited by the dynamically-chosen template, since the {{>
     // UI.dynamic}} inclusion didn't include a data argument.
     dataVar.set({ foo: "bar" });
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "testbar");
   }
 );
@@ -99,7 +99,7 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "");
 
     nameVar.set("ui_dynamic_test_sub");
-    Deps.flush();
+    Tracker.flush();
     // Even though the data context is falsey, we DON'T expect the
     // subtemplate to inherit the data context from the parent template.
     test.equal(canonicalizeHtml(div.innerHTML), "test");
