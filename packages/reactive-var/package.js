@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.export('ReactiveVar');
 
-  api.use('deps');
+  api.use('tracker');
 
   api.add_files('reactive-var.js');
 });

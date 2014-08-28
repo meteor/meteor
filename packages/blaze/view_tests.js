@@ -38,11 +38,11 @@ if (Meteor.isClient) {
     test.isTrue(v._isAttached);
     test.equal(buf, 'c0r1');
     test.equal(canonicalizeHtml(div.innerHTML), "foo");
-    Deps.flush();
+    Tracker.flush();
     test.equal(buf, 'c0r1y1');
 
     R.set("bar");
-    Deps.flush();
+    Tracker.flush();
     test.equal(buf, 'c0r1y1r2y2');
     test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
@@ -52,7 +52,7 @@ if (Meteor.isClient) {
 
     buf = "";
     R.set("baz");
-    Deps.flush();
+    Tracker.flush();
     test.equal(buf, "");
   });
 
