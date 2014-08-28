@@ -10,7 +10,6 @@ code-prettify@1.0.0
 coffeescript@1.0.2
 ctl-helper@1.0.2
 ctl@1.0.0
-deps@1.0.1
 ejson@1.0.0
 follower-livedata@1.0.0
 geojson-utils@1.0.0
@@ -42,6 +41,7 @@ spacebars@1.0.0
 spiderable@1.0.2
 standard-app-packages@1.0.0
 templating@1.0.4
+tracker@1.0.1
 ui@1.0.0
 underscore@1.0.0
 webapp@1.0.2
