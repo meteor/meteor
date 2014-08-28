@@ -1,1 +1,1 @@
-OAuth._localStorageTokenPrefix = "Meteor.oauth.";
+OAuth._storageTokenPrefix = "Meteor.oauth.credentialSecret-";

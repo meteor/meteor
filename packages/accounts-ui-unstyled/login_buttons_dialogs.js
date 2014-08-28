@@ -189,6 +189,10 @@ Template._configureLoginServiceDialog.events({
           .replace(/^\s*|\s*$/g, ""); // trim() doesnt work on IE8;
       });
 
+      configuration.loginStyle =
+        $('#configure-login-service-dialog input[name="loginStyle"]:checked')
+        .val();
+
       // Configure this login service
       Accounts.connection.call(
         "configureLoginService", configuration, function (error, result) {

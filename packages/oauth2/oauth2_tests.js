@@ -23,7 +23,7 @@ var testPendingCredential = function (test) {
     var req = {method: "POST",
                url: "/_oauth/" + serviceName + "?close",
                query: {
-                 state: credentialToken,
+                 state: OAuth._generateState('popup', credentialToken),
                  close: 1,
                  only_credential_secret_for_test: 1
                }};

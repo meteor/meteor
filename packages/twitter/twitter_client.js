@@ -24,13 +24,16 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   // a credentialToken parameter to the url and the callback url that we'll be returned
   // to by oauth provider
 
+  var loginStyle = OAuth._loginStyle('twitter', config);
+
   // url to app, enters "step 1" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
   var loginUrl = '/_oauth/twitter/?requestTokenAndRedirect=true'
-        + '&state=' + credentialToken;
+        + '&state=' + OAuth._stateParam(loginStyle, credentialToken);
 
-  OAuth.showPopup(
+  OAuth.launchLogin(
+    loginStyle,
     loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken)
-  );
+    credentialRequestCompleteCallback,
+    credentialToken);
 };

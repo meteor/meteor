@@ -5,6 +5,107 @@ var credentialSecrets = {};
 
 OAuth = {};
 
+// Determine the login style (popup or redirect) for this login flow.
+//
+// This could be overridden to for example choose the redirect login
+// style in a UIWebView and the popup style otherwise.
+//
+OAuth._loginStyle = function (service, config) {
+  var loginStyle = config.loginStyle || 'popup';
+
+  if (loginStyle === 'redirect') {
+    // Safari in private mode doesn't support session storage, so
+    // force the popup style when session storage is unavailable.
+    try {
+      sessionStorage.setItem('Meteor.oauth.test', 'test');
+      sessionStorage.removeItem('Meteor.oauth.test');
+    } catch (e) {
+      loginStyle = 'popup';
+    }
+  }
+
+  return loginStyle;
+};
+
+OAuth._stateParam = function (loginStyle, credentialToken) {
+  state = {
+    loginStyle: loginStyle,
+    credentialToken: credentialToken
+  };
+
+  if (loginStyle === 'redirect')
+    state.redirectUrl = '' + window.location;
+
+  // Encode base64 as not all login services URI-encode the state
+  // parameter when they pass it back to us.
+
+  return btoa(JSON.stringify(state));
+};
+
+
+// At the beginning of the redirect login flow, before we redirect to
+// the login service, save the credential token for this login attempt
+// in the reload migration data.
+//
+OAuth.saveDataForRedirect = function (credentialToken) {
+  Reload._onMigrate('oauth', function () {
+    return [true, {credentialToken: credentialToken}];
+  });
+  Reload._migrate(null, {immediateMigration: true});
+};
+
+// At the end of the redirect login flow, when we've redirected back
+// to the application, retrieve the credentialToken and (if the login
+// was successful) the credentialSecret.
+//
+// Called at application startup.  Returns null if this is normal
+// application startup and we weren't just redirected at the end of
+// the login flow).
+//
+OAuth.getDataAfterRedirect = function () {
+  var migrationData = Reload._migrationData('oauth');
+
+  if (! (migrationData && migrationData.credentialToken))
+    return null;
+
+  var credentialToken = migrationData.credentialToken;
+  var key = OAuth._storageTokenPrefix + credentialToken;
+  var credentialSecret;
+  try {
+    credentialSecret = sessionStorage.getItem(key);
+    sessionStorage.removeItem(key);
+  } catch (e) {
+    Meteor._debug('error retrieving credentialSecret', e);
+  }
+  return {
+    credentialToken: credentialToken,
+    credentialSecret: credentialSecret
+  };
+}
+
+// Launch an OAuth login flow.  For the popup login style, show the
+// popup.  For the redirect login style, save the credential token for
+// this login attempt in the reload migration data, and redirect to
+// the service for the login.
+//
+OAuth.launchLogin = function (
+  loginStyle, loginUrl, credentialRequestCompleteCallback, credentialToken,
+  popupOptions)
+{
+  if (loginStyle === 'popup') {
+    OAuth.showPopup(
+      loginUrl,
+      _.bind(credentialRequestCompleteCallback, null, credentialToken),
+      popupOptions);
+  } else if (loginStyle === 'redirect') {
+    OAuth.saveDataForRedirect(credentialToken);
+    window.location = loginUrl;
+  } else {
+    throw new Error('invalid login style');
+  }
+};
+
+
 // Open a popup window, centered on the screen, and call a callback when it
 // closes.
 //
@@ -97,8 +198,7 @@ OAuth._retrieveCredentialSecret = function (credentialToken) {
   // end_of_login_response.html.
   var secret = credentialSecrets[credentialToken];
   if (! secret) {
-    var localStorageKey = OAuth._localStorageTokenPrefix +
-          credentialToken;
+    var localStorageKey = OAuth._storageTokenPrefix + credentialToken;
     secret = Meteor._localStorage.getItem(localStorageKey);
     Meteor._localStorage.removeItem(localStorageKey);
   } else {
