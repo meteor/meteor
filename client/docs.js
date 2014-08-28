@@ -248,14 +248,14 @@ var toc = [
         {name: "destroyed", id: "template_destroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
-        {instance: "this", name: "findAll", id: "template_findAll"},
-        {instance: "this", name: "$", id: "template_findAll"},
-        {instance: "this", name: "find", id: "template_find"},
-        {instance: "this", name: "firstNode", id: "template_firstNode"},
-        {instance: "this", name: "lastNode", id: "template_lastNode"},
-        {instance: "this", name: "data", id: "template_data"},
-        {instance: "this", name: "autorun", id: "template_autorun"},
-        {instance: "this", name: "view", id: "template_view"}
+        {instance: "template", name: "findAll", id: "template_findAll"},
+        {instance: "template", name: "$", id: "template_findAll"},
+        {instance: "template", name: "find", id: "template_find"},
+        {instance: "template", name: "firstNode", id: "template_firstNode"},
+        {instance: "template", name: "lastNode", id: "template_lastNode"},
+        {instance: "template", name: "data", id: "template_data"},
+        {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "view", id: "template_view"}
       ],
       "Template.body",
       "UI", [
