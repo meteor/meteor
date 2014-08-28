@@ -232,7 +232,7 @@ main.registerCommand({
       cordova.runPlatforms(localPath, options.args, options);
     } catch (err) {
       if (options.verbose) {
-        process.stderr.write('Error while running for mobile platforms' +
+        process.stderr.write('Error while running for mobile platforms ' +
                              err.stack + '\n');
       } else {
         process.stderr.write(err.message + '\n');
