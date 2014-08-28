@@ -19,7 +19,7 @@ var ROOT_PACKAGES = [
   'meteor',
   'minifiers',
   'minimongo',
-  'mongo-livedata',
+  'mongo',
   'package-version-parser'
 ];
 

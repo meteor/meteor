@@ -369,10 +369,10 @@ var launchMongo = function (options) {
 
   var initiateReplSetAndWaitForReady = function () {
     try {
-      // Load mongo-livedata so we'll be able to talk to it.
+      // Load mongo so we'll be able to talk to it.
       var mongoNpmModule = uniload.load({
-        packages: [ 'mongo-livedata' ]
-      })['mongo-livedata'].MongoInternals.NpmModule;
+        packages: [ 'mongo' ]
+      })['mongo'].MongoInternals.NpmModule;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(

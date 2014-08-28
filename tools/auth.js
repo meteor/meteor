@@ -17,7 +17,7 @@ var auth = exports;
 
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata' ]
+    packages: [ 'meteor', 'livedata', 'mongo' ]
   });
 };
 
