@@ -17,7 +17,7 @@ Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server'], { unordered: true });
 
   // needed for getting the currently logged-in user
-  api.use('livedata', ['client', 'server']);
+  api.use('ddp', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away

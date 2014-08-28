@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'livedata', 'ejson']);
+  api.use(['logging', 'underscore', 'ddp', 'ejson']);
   api.add_files(['follower.js'], 'server');
   api.export('Follower');
 });

@@ -25,7 +25,7 @@ Package.on_use(function(api) {
     // The easiest way to get a little reactivity into your app.
     'session',
     // DDP: Meteor's client/server protocol.
-    'livedata',
+    'ddp',
     // You want to keep your data somewhere? How about MongoDB?
     'mongo',
     // Blaze: Reactive DOM!

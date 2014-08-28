@@ -1,6 +1,6 @@
 var withoutInvocation = function (f) {
-  if (Package.livedata) {
-    var _CurrentInvocation = Package.livedata.DDP._CurrentInvocation;
+  if (Package.ddp) {
+    var _CurrentInvocation = Package.ddp.DDP._CurrentInvocation;
     if (_CurrentInvocation.get() && _CurrentInvocation.get().isSimulation)
       throw new Error("Can't set timers inside simulations");
     return function () { _CurrentInvocation.withValue(null, f); };
