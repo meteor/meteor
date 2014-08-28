@@ -7,6 +7,7 @@ Npm.depends({request: "2.33.0"});
 
 Package.on_use(function (api) {
   api.use('underscore');
+  api.use('url');
   api.export('HTTP');
   api.add_files('httpcall_common.js', ['client', 'server']);
   api.add_files('httpcall_client.js', 'client');

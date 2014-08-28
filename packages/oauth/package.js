@@ -7,12 +7,14 @@ Package.on_use(function (api) {
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
   api.use('mongo-livedata', 'server');
+  api.use('reload', 'client');
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 
   api.use('oauth-encryption', 'server', {weak: true});
 
   api.use('localstorage');
+  api.use('url');
 
   api.export('OAuth');
   api.export('OAuthTest', 'server', {testOnly: true});
@@ -21,7 +23,8 @@ Package.on_use(function (api) {
   api.add_files('oauth_server.js', 'server');
   api.add_files('pending_credentials.js', 'server');
 
-  api.add_files('end_of_login_response.html', 'server', { isAsset: true });
+  api.add_files('end_of_popup_response.html', 'server', { isAsset: true });
+  api.add_files('end_of_redirect_response.html', 'server', {isAsset: true});
 
   api.add_files('oauth_common.js');
 
