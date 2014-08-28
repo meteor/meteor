@@ -7,6 +7,5 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use('tracker');
-  api.export('Deps');
-  api.add_files('deps.js');
+  api.imply('tracker');
 });
