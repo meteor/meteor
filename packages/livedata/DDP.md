@@ -21,6 +21,15 @@ DDP messages are JSON objects, with some fields specified to be EJSON.  Each one
 has a `msg` field that specifies the message type, as well as other fields
 depending on message type.
 
+Extra fields may be included by the client and the server; this must not be an
+error.  Future minor revisions of DDP might add extra fields without changing
+the DDP version; the client must therefore silently ignore unknown fields.
+However, the client must not send extra fields other than those documented here
+or in future versions, in case these extra fields have meaning to future
+servers.  On the server, all field changes must be optional/ignorable for
+compatability with older clients; otherwise a new protocol version would be
+required.
+
 ## Establishing a DDP Connection:
 
 ### Messages:
