@@ -34,6 +34,9 @@ var localCordova = path.join(files.getCurrentToolsDir(),
 var localAdb = path.join(files.getCurrentToolsDir(),
   "tools", "cordova-scripts", "adb.sh");
 
+var localAndroid = path.join(files.getCurrentToolsDir(),
+  "tools", "cordova-scripts", "android.sh");
+
 var execFileAsyncOrThrow = function (file, args, opts, cb) {
   if (_.isFunction(opts)) {
     cb = opts;
@@ -740,3 +743,13 @@ main.registerCommand({
     process.stdout.write("\n");
   }
 });
+
+main.registerCommand({
+  name: "configure-android",
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  }
+}, function (options) {
+  return execFileSyncOrThrow(localAndroid, [], options);
+});
+

@@ -170,6 +170,13 @@ Usage: meteor list-packages
 
 Lists all of the platforms that have been explicitly added to your project.
 
+>>> configure-android
+Run the Android configuration tool from Meteor's ADK environment.
+Usage: meteor configure-android
+
+Runs the Android configuration tool from Meteor's ADK environment.
+This command can be useful to configure AVDs, HAX and update the SDK.
+
 >>> bundle
 Deprecated command. Use 'build' instead.
 Deprecated command. Use 'build' instead.
