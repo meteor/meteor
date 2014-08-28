@@ -510,10 +510,12 @@ Blaze.remove = function (view) {
   if (! (view && (view._domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with UI.render");
 
-  var range = view._domrange;
-  if (range.attached)
-    range.detach();
-  range.destroy();
+  if (! view.isDestroyed) {
+    var range = view._domrange;
+    if (range.attached && ! range.parentRange)
+      range.detach();
+    range.destroy();
+  }
 };
 
 Blaze.toHTML = function (content, parentView) {
