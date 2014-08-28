@@ -952,10 +952,7 @@ _.extend(Unipackage.prototype, {
       'HEAD',
       // The actual trees to copy!
       'tools', 'examples', 'LICENSE.txt', 'meteor',
-      'scripts/admin/launch-meteor',
-      'scripts/cordova.sh',
-      'scripts/android.sh',
-      'scripts/ensure_android_bundle.sh');
+      'scripts/admin/launch-meteor');
 
     // Trim blank line and unnecessary examples.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {

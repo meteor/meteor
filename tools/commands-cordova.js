@@ -19,22 +19,30 @@ var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var unipackage = require('./unipackage.js');
+var tropohouse = require('./tropohouse.js');
+
+// XXX hard-coded the use of default tropohouse
+var tropo = tropohouse.default;
 
 var cordova = exports;
 
 var supportedPlatforms = ['ios', 'android', 'firefoxos'];
 
 var localCordova = path.join(files.getCurrentToolsDir(),
-  "scripts", "cordova.sh");
+  "tools", "cordova-scripts", "cordova.sh");
 
 var localAdb = path.join(files.getCurrentToolsDir(),
-  "android_bundle", "android-sdk", "platform-tools", "adb");
+  "tools", "cordova-scripts", "adb.sh");
 
 var execFileAsyncOrThrow = function (file, args, opts, cb) {
   if (_.isFunction(opts)) {
     cb = opts;
     opts = undefined;
   }
+
+  // XXX a hack to always tell the scripts where warehouse is
+  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root }, opts.env);
+
   var execFileAsync = require('./utils.js').execFileAsync;
   if (_.contains([localCordova, localAdb], file) &&
       _.contains(project.getCordovaPlatforms(), 'android'))
@@ -60,6 +68,9 @@ var execFileSyncOrThrow = function (file, args, opts) {
     ensureAndroidBundle();
   }
 
+  // XXX a hack to always tell the scripts where warehouse is
+  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root }, opts.env);
+
   var process = execFileSync(file, args, opts);
   if (! process.success)
     throw new Error(process.stderr + '\n\n' + process.stdout);
@@ -67,8 +78,9 @@ var execFileSyncOrThrow = function (file, args, opts) {
 };
 
 var ensureAndroidBundle = function () {
-  var ensureScriptPath = path.join(files.getCurrentToolsDir(),
-                                   'scripts', 'ensure_android_bundle.sh');
+  var ensureScriptPath =
+    path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
+              'ensure_android_bundle.sh');
 
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });

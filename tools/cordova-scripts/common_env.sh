@@ -1,4 +1,11 @@
-#!/bin/bash
+# to be sourced by other scripts
+
+# WAREHOUSE_DIR variable check.
+if [ x == x"$WAREHOUSE_DIR" ]; then
+  echo "Set WAREHOUSE_DIR environment variable pointing at current warehouse."
+  echo $0
+  exit 1
+fi
 
 # Find the script dir, following one level of symlink. Note that symlink
 # can be relative or absolute. Too bad 'readlink -f' is not portable.
@@ -7,10 +14,23 @@ cd "$(dirname "$0")"
 if [ -L "$(basename "$0")" ] ; then
     cd "$(dirname $(readlink $(basename "$0") ) )"
 fi
-SCRIPT_DIR="$(pwd -P)/.."
+
+# SCRIPT_DIR is a directory containing the called `meteor` script
+SCRIPT_DIR="$(pwd -P)/../.."
 cd "$ORIG_DIR"
 
-ANDROID_BUNDLE="$SCRIPT_DIR/android_bundle"
+
+if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
+  BUNDLE_ROOT_DIR=$SCRIPT_DIR
+else
+  BUNDLE_ROOT_DIR=$WAREHOUSE_DIR
+fi
+
+# XXX is android_bundle still stored this way? Fix this line once it is a
+# separate package that is a dependency of meteor-tool.
+ANDROID_BUNDLE="$BUNDLE_ROOT_DIR/android_bundle"
+
+# Devbundle is still stored in meteor-tool
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 
 # Put Android build tool-chain into path
@@ -28,6 +48,4 @@ export PATH="${DEV_BUNDLE}/bin:${PATH}"
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
 
 export HOME="${ANDROID_BUNDLE}"
-
-exec "${DEV_BUNDLE}/lib/node_modules/cordova/bin/cordova" "$@"
 
