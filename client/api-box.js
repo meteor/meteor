@@ -35,8 +35,8 @@ Template.autoApiBox.helpers({
         return "Function";
       } else if (name === "EJSONable" || name === "EJSON") {
         return typeLink("EJSON-able Object", "ejson");
-      } else if (name === "Deps.Computation") {
-        return typeLink("Deps.Computation", "deps_computation");
+      } else if (name === "Tracker.Computation") {
+        return typeLink("Tracker.Computation", "tracker_computation");
       } else if (name === "MongoSelector") {
         return [
           typeLink("Mongo Selector", "selectors"),
