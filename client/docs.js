@@ -262,7 +262,6 @@ var toc = [
         "UI.registerHelper",
         "UI.render",
         "UI.renderWithData",
-        "UI.insert",
         "UI.remove",
         "UI.data",
         "UI.templateInstance",
