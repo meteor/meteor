@@ -517,13 +517,23 @@ check_links = function() {
 };
 
 var basicTypes = ["String", "Number", "Boolean", "Function", "Any", "Object",
-  "Array", "null", "undefined", "Integer"];
+  "Array", "null", "undefined", "Integer", "Error"];
 
 // are all types either normal types or links?
 check_types = function () {
   $(".new-api-box .type").each(function () {
     var typeSpan = this;
-    _.each($(typeSpan).text().split("|"), function (text) {
+
+    var typesPipeSeparated =
+      $(typeSpan).text().replace(/, or /g, "|").replace(/( or )/g, "|")
+        .replace(/, /g, "|");
+
+    _.each(typesPipeSeparated.split("|"), function (text) {
+      if (! text) {
+        console.log(typeSpan);
+        return;
+      }
+
       text = text.replace(/^\s+|\s+$/g, '');
 
       if (_.contains(basicTypes, text)) {
