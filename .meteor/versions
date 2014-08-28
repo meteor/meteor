@@ -10,7 +10,6 @@ code-prettify@1.0.0
 coffeescript@1.0.2
 ctl-helper@1.0.2
 ctl@1.0.0
-deps@1.0.1
 ejson@1.0.0
 follower-livedata@1.0.0
 geojson-utils@1.0.0
@@ -23,6 +22,7 @@ json@1.0.0
 less@1.0.6
 livedata@1.0.7
 logging@1.0.2
+meteor-platform@1.0.0
 meteor@1.0.2
 minifiers@1.0.2
 minimongo@1.0.1
@@ -31,6 +31,7 @@ observe-sequence@1.0.1
 ordered-dict@1.0.0
 random@1.0.0
 reactive-dict@1.0.0
+reactive-var@1.0.0
 reload-safetybelt@1.0.0
 reload@1.0.0
 retry@1.0.0
@@ -43,5 +44,6 @@ spiderable@1.0.2
 standard-app-packages@1.0.0
 templating@1.0.4
 ui@1.0.0
+tracker@1.0.1
 underscore@1.0.0
 webapp@1.0.2
