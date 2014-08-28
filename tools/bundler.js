@@ -830,7 +830,9 @@ _.extend(ClientTarget.prototype, {
     };
 
     // Other build phases might need this AST later
-    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
+    // For cordova, we do not want to rewrite relative paths in css.
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb,
+      self.arch === 'web.cordova');
 
     // Overwrite the CSS files list with the new concatenated file
     var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
