@@ -184,15 +184,24 @@ main.registerCommand({
     return 1;
   }
 
+  cordova.setVerboseness(options.verbose);
+
+  cordova.verboseLog('Parsing the --port option');
   try {
     var parsedHostPort = parseHostPort(options.port);
   } catch (err) {
-    process.stderr.write(err.message);
+    if (options.verbose) {
+      process.stderr.write('Error while parsing --port option: '
+                           + err.stack + '\n');
+    } else {
+      process.stderr.write(err.message + '\n');
+    }
     return 1;
   }
 
   // If we are targeting the remote devices
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
+    cordova.verboseLog('A run on a device requested');
     // ... and if you didn't specify your ip address as host, print a warning
     if (parsedHostPort.host === 'localhost')
       process.stderr.write(
@@ -213,20 +222,28 @@ main.registerCommand({
         options.once = true;
       }
 
+      cordova.verboseLog('Will compile mobile builds');
       var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
+
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
                  options, parsedHostPort));
       cordova.runPlatforms(localPath, options.args, options);
     } catch (err) {
-      process.stderr.write(err.message + '\n');
+      if (options.verbose) {
+        process.stderr.write('Error while running for mobile platforms' +
+                             err.stack + '\n');
+      } else {
+        process.stderr.write(err.message + '\n');
+      }
       return 1;
     }
   }
 
-  if (options['no-server'])
+  if (options['no-server']) {
     return 0;
+  }
 
   var appHost, appPort;
   if (options['app-port']) {

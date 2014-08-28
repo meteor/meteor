@@ -2,6 +2,7 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
+var util = require('util');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
@@ -36,6 +37,16 @@ var localAdb = path.join(files.getCurrentToolsDir(),
 
 var localAndroid = path.join(files.getCurrentToolsDir(),
   "tools", "cordova-scripts", "android.sh");
+
+var verboseness = false;
+var setVerboseness = cordova.setVerboseness = function (v) {
+  verboseness = !!v;
+};
+var verboseLog = cordova.verboseLog = function (/* args */) {
+  if (verboseness)
+    process.stderr.write('%% ' + util.format.apply(null, arguments) + '\n');
+};
+
 
 var execFileAsyncOrThrow = function (file, args, opts, cb) {
   if (_.isFunction(opts)) {
@@ -147,6 +158,7 @@ var generateCordovaBoilerplate = function (clientDir, options) {
 
 var fetchCordovaPluginFromShaUrl =
     function (urlWithSha, localPluginsDir, pluginName) {
+  verboseLog('Fetching a tarball from url:', urlWithSha);
   var pluginPath = path.join(localPluginsDir, pluginName);
   var pluginTarballPath = pluginPath + '.tgz';
 
@@ -156,9 +168,11 @@ var fetchCordovaPluginFromShaUrl =
   var downloadProcess = null;
 
   if (whichCurl.success) {
+    verboseLog('Downloading with curl');
     downloadProcess =
       execFileSyncOrThrow('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
   } else {
+    verboseLog('Downloading with wget');
     downloadProcess =
       execFileSyncOrThrow('wget', ['-O', pluginTarballPath, urlWithSha]);
   }
@@ -167,12 +181,16 @@ var fetchCordovaPluginFromShaUrl =
     throw new Error("Failed to fetch the tarball from " + urlWithSha + ": " +
                     downloadProcess.stderr);
 
+  verboseLog('Create a folder for the plugin', pluginPath);
   files.mkdir_p(pluginPath);
+
+  verboseLog('Untarring the tarball with plugin');
   var tarProcess = execFileSyncOrThrow('tar',
     ['xf', pluginTarballPath, '-C', pluginPath, '--strip-components=1']);
   if (! tarProcess.success)
     throw new Error("Failed to untar the tarball from " + urlWithSha + ": " +
                     tarProcess.stderr);
+  verboseLog('Untarring succeeded, removing the tarball');
   files.rm_recursive(pluginTarballPath);
   return pluginPath;
 };
@@ -223,9 +241,11 @@ var localPluginsPathFromCordovaPath = function (cordovaPath) {
 
 // Creates a Cordova project if necessary.
 cordova.ensureCordovaProject = function (localPath, appName) {
+  verboseLog('Ensuring the cordova build project');
   var cordovaPath = path.join(localPath, 'cordova-build');
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
   if (! fs.existsSync(cordovaPath)) {
+    verboseLog('Cordova build project doesn\'t exist, creating one');
     try {
       var creation = execFileSyncOrThrow(localCordova,
         ['create', path.basename(cordovaPath), 'com.meteor.' + appName, appName.replace(/\s/g, '')],
@@ -244,10 +264,13 @@ cordova.ensureCordovaProject = function (localPath, appName) {
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
 cordova.ensureCordovaPlatforms = function (localPath) {
+  verboseLog('Ensuring that platforms in cordova build project are in sync');
   var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
   var platformsList = execFileSyncOrThrow(localCordova, ['platform', 'list'],
                                    { cwd: cordovaPath });
+
+  verboseLog('The output of `cordova platforms list`:', platformsList.stdout);
 
   // eg. ['android 3.5.0', 'ios 3.5.0']
   var platformsOutput = platformsList.stdout.split('\n')[0];
@@ -263,14 +286,20 @@ cordova.ensureCordovaPlatforms = function (localPath) {
 
   _.each(platforms, function (platform) {
     if (! _.contains(installedPlatforms, platform) &&
-          _.contains(supportedPlatforms, platform))
-      execFileSyncOrThrow(localCordova, ['platform', 'add', platform], { cwd: cordovaPath });
+        _.contains(supportedPlatforms, platform)) {
+      verboseLog('Adding a platform', platform);
+      execFileSyncOrThrow(localCordova, ['platform', 'add', platform],
+                          { cwd: cordovaPath });
+    }
   });
 
   _.each(installedPlatforms, function (platform) {
     if (! _.contains(platforms, platform) &&
-          _.contains(supportedPlatforms, platform))
-      execFileSyncOrThrow(localCordova, ['platform', 'rm', platform], { cwd: cordovaPath });
+        _.contains(supportedPlatforms, platform)) {
+      verboseLog('Removing a platform', platform);
+      execFileSyncOrThrow(localCordova, ['platform', 'rm', platform],
+                          { cwd: cordovaPath });
+    }
   });
 
   return true;
@@ -278,6 +307,8 @@ cordova.ensureCordovaPlatforms = function (localPath) {
 
 
 var installPlugin = function (cordovaPath, name, version, settings) {
+  verboseLog('Installing a plugin', name, version);
+
   // XXX do something different for plugins fetched from a url.
   var pluginInstallCommand = version ? name + '@' + version : name;
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
@@ -309,6 +340,7 @@ var installPlugin = function (cordovaPath, name, version, settings) {
 };
 
 var uninstallPlugin = function (cordovaPath, name) {
+  verboseLog('Uninstalling a plugin', name);
   try {
     execFileSyncOrThrow(localCordova, ['plugin', 'rm', name],
       { cwd: cordovaPath });
@@ -316,15 +348,20 @@ var uninstallPlugin = function (cordovaPath, name) {
     // Catch when an uninstall fails, because it might just be a dependency
     // issue. For example, plugin A depends on plugin B and we try to remove
     // plugin B. In this case, we will loop and remove plugin A first.
+    verboseLog('Plugin removal threw an error:', err.message);
   }
 };
 
 // Returns the list of installed plugins as a hash from plugin name to version.
 var getInstalledPlugins = function (cordovaPath) {
+  verboseLog('Getting installed plugins for project');
   var installedPlugins = {};
 
   var pluginsOutput = execFileSyncOrThrow(localCordova, ['plugin', 'list'],
                                    { cwd: cordovaPath }).stdout;
+
+  verboseLog('The output of `cordova plugins list`:', pluginsOutput);
+
   // Check if there are any plugins
   if (! pluginsOutput.match(/No plugins added/)) {
     _.each(pluginsOutput.split('\n'), function (line) {
@@ -346,6 +383,10 @@ var getInstalledPlugins = function (cordovaPath) {
 var ensureCordovaPlugins = function (localPath, options) {
   options = options || {};
   var plugins = options.packagePlugins;
+
+  verboseLog('Ensuring plugins in the cordova build project are in sync',
+             plugins);
+
   if (! plugins) {
     // Bundle to gather the plugin dependencies from packages.
     // XXX slow - perhaps we should only do this lazily
@@ -457,6 +498,7 @@ var ensureCordovaPlugins = function (localPath, options) {
 
 // Build a Cordova project, creating a Cordova project if necessary.
 var buildCordova = function (localPath, buildCommand, options) {
+  verboseLog('Building the cordova build project');
   var webArchName = "web.cordova";
 
   var bundlePath = path.join(localPath, 'build-cordova-temp');
@@ -467,6 +509,7 @@ var buildCordova = function (localPath, buildCommand, options) {
   var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
+  verboseLog('Bundling the web.cordova program of the app');
   var bundle = getBundle(bundlePath, [webArchName], options);
 
   cordova.ensureCordovaProject(localPath, options.appName);
@@ -477,16 +520,20 @@ var buildCordova = function (localPath, buildCommand, options) {
 
   // XXX hack, copy files from app folder one level up
   if (fs.existsSync(cordovaProgramAppPath)) {
+    verboseLog('Copying the JS/CSS files one level up');
     files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
     files.rm_recursive(cordovaProgramAppPath);
   }
 
+  verboseLog('Rewriting the www folder');
   // rewrite the www folder
   files.rm_recursive(wwwPath);
   files.cp_r(cordovaProgramPath, wwwPath);
 
   // clean up the temporary bundle directory
   files.rm_recursive(bundlePath);
+
+  verboseLog('Writing index.html, cordova_loader.js');
 
   // generate index.html
   var indexHtml = generateCordovaBoilerplate(wwwPath, options);
@@ -496,9 +543,12 @@ var buildCordova = function (localPath, buildCommand, options) {
   var loaderCode = fs.readFileSync(loaderPath);
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
+  verboseLog('Running the build command');
   // Give the buffer more space as the output of the build is really huge
   execFileSyncOrThrow(localCordova, [buildCommand],
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
+
+  verboseLog('Done building the cordova build project');
 };
 
 // checks that every requested platform such as 'android' or 'ios' is already
@@ -531,11 +581,13 @@ var checkRequestedPlatforms = function (platforms) {
 //   - host
 //   - port
 cordova.buildPlatforms = function (localPath, platforms, options) {
+  verboseLog('Running build for platforms:', platforms);
   checkRequestedPlatforms(platforms);
   buildCordova(localPath, 'build', options);
 };
 
 cordova.preparePlatforms = function (localPath, platforms, options) {
+  verboseLog('Running prepare for platforms:', platforms);
   checkRequestedPlatforms(platforms);
   buildCordova(localPath, 'prepare', options);
 };
@@ -546,11 +598,15 @@ cordova.preparePlatforms = function (localPath, platforms, options) {
 // options:
 //    - verbose: print all logs
 var execCordovaOnPlatform = function (localPath, platformName, options) {
+  verboseLog('Execing cordova for platform', platformName);
+
   var cordovaPath = path.join(localPath, 'cordova-build');
 
   // XXX error if an invalid platform
   var platform = platformName.split('-')[0];
   var isDevice = platformName.split('-')[1] === 'device';
+
+  verboseLog('isDevice:', isDevice);
 
   var args = [ 'run',
                isDevice ? '--device' : '--emulator',
@@ -558,12 +614,14 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
   // XXX assert we have a valid Cordova project
   if (platform === 'ios' && isDevice) {
+    verboseLog('It is ios-device, just opening the Xcode project with `open` command');
     // ios-deploy is super buggy, so we just open xcode and let the user
     // start the app themselves. XXX print a message about this?
     execFileSyncOrThrow('sh',
       ['-c', 'open ' + path.join(localPath, 'cordova-build',
              'platforms', 'ios', '*.xcodeproj')]);
   } else {
+    verboseLog('Running emulator:', localCordova, args);
     execFileAsyncOrThrow(
       localCordova, args,
       { verbose: options.verbose, cwd: cordovaPath });
@@ -610,6 +668,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   if (platform === 'ios') {
     var logFilePath =
       path.join(cordovaPath, 'platforms', 'ios', 'cordova', 'console.log');
+    verboseLog('Printing logs for ios emulator, tailing file', logFilePath);
 
     // overwrite the file so we don't have to print the old logs
     fs.writeFileSync(logFilePath, '');
@@ -619,6 +678,8 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       lineMapper: iosMapper
     });
   } else if (platform === 'android') {
+    verboseLog('Clearing logs for Android with `adb logcat -c`, should time-out in 5 seconds');
+
     // clear the logcat logs from the previous run
     // set a timeout for this command for 5s
     var future = new Future;
@@ -630,11 +691,14 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     }, 5000);
     future.wait();
 
+    verboseLog('Tailing logs for android with `adb logcat -s CordovaLog`');
     execFileAsyncOrThrow(localAdb, ['logcat', '-s', 'CordovaLog'], {
       verbose: true,
       lineMapper: androidMapper
     });
   }
+
+  verboseLog('Done execing cordova for platform', platformName);
   return 0;
 };
 
