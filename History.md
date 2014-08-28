@@ -2,6 +2,34 @@
 
 * Allow query parameters in OAuth1 URLs.
 
+
+## v0.9.0.1
+
+* Fix issues preventing hot code reload from automatically reloading webapps in
+  two cases: when the old app was a pre-0.9.0 app, and when the app used
+  appcache. (In both cases, an explicit reload still worked.)
+
+* Fix publishing packages containing a plugin with platform-specific code but
+  no platform-specific code in the main package.
+
+* Fix `meteor add package@version` when the package was already added with a
+  different version constraint.
+
+* Improve treatment of pre-release packages (packages with a dash in their
+  version). Guarantee that they will not be chosen by the constraint solver
+  unless explicitly requested.  `meteor list` won't suggest that you update to
+  them.
+
+* Fix slow spiderable executions.
+
+* Fix dev-mode client-only restart when client files changed very soon after
+  server restart.
+
+* Fix stack trace on `meteor add` constraint solver failure.
+
+* Fix "access-denied" stack trace when publishing packages.
+
+
 ## v0.9.0
 
 Meteor 0.9.0 introduces the Meteor Package Server. Incorporating lessons from

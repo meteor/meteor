@@ -76,10 +76,10 @@ ObserveSequence = {
     // general 'key' argument which could be a function, a dotted
     // field name, or the special @index value.
     var lastSeqArray = []; // elements are objects of form {_id, item}
-    var computation = Deps.autorun(function () {
+    var computation = Tracker.autorun(function () {
       var seq = sequenceFunc();
 
-      Deps.nonreactive(function () {
+      Tracker.nonreactive(function () {
         var seqArray; // same structure as `lastSeqArray` above.
 
         if (activeObserveHandle) {

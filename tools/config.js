@@ -131,7 +131,20 @@ _.extend(exports, {
     if (isLocalUniverse()) {
       return localhostOffset(20);
     } else {
-      return getUniverse().replace(/^www\./, 'packages.');
+      if (process.env.METEOR_PACKAGE_SERVER_URL) {
+        var parsed = url.parse(process.env.METEOR_PACKAGE_SERVER_URL);
+        return parsed.host;
+      } else {
+        return getUniverse().replace(/^www\./, 'packages.');
+      }
+    }
+  },
+
+  getTestPackageServerUrl: function () {
+    if (isLocalUniverse()) {
+      return localhostOffset(20);
+    } else {
+      return addScheme(getUniverse().replace(/^www\./, 'test-packages.'));
     }
   },
 

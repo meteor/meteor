@@ -185,7 +185,7 @@ var Connection = function (url, options) {
 
   // Reactive userId.
   self._userId = null;
-  self._userIdDeps = new Deps.Dependency;
+  self._userIdDeps = new Tracker.Dependency;
 
   // Block auto-reload while we're waiting for method responses.
   if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
@@ -481,7 +481,7 @@ _.extend(Connection.prototype, {
     //
     // For example, consider a rerun of:
     //
-    //     Deps.autorun(function () {
+    //     Tracker.autorun(function () {
     //       Meteor.subscribe("foo", Session.get("foo"));
     //       Meteor.subscribe("bar", Session.get("bar"));
     //     });
@@ -526,7 +526,7 @@ _.extend(Connection.prototype, {
         params: EJSON.clone(params),
         inactive: false,
         ready: false,
-        readyDeps: new Deps.Dependency,
+        readyDeps: new Tracker.Dependency,
         readyCallback: callbacks.onReady,
         errorCallback: callbacks.onError,
         connection: self,
@@ -560,18 +560,18 @@ _.extend(Connection.prototype, {
       }
     };
 
-    if (Deps.active) {
+    if (Tracker.active) {
       // We're in a reactive computation, so we'd like to unsubscribe when the
       // computation is invalidated... but not if the rerun just re-subscribes
       // to the same subscription!  When a rerun happens, we use onInvalidate
       // as a change to mark the subscription "inactive" so that it can
       // be reused from the rerun.  If it isn't reused, it's killed from
       // an afterFlush.
-      Deps.onInvalidate(function (c) {
+      Tracker.onInvalidate(function (c) {
         if (_.has(self._subscriptions, id))
           self._subscriptions[id].inactive = true;
 
-        Deps.afterFlush(function () {
+        Tracker.afterFlush(function () {
           if (_.has(self._subscriptions, id) &&
               self._subscriptions[id].inactive)
             handle.stop();
@@ -927,16 +927,33 @@ _.extend(Connection.prototype, {
     self._stream._lostConnection();
   },
 
+  /**
+   * @summary Get the current connection status. A reactive data source.
+   * @locus Client
+   * @memberOf Meteor
+   */
   status: function (/*passthrough args*/) {
     var self = this;
     return self._stream.status.apply(self._stream, arguments);
   },
 
+  /**
+   * @summary Force an immediate reconnection attempt if the client is not connected to the server.
+
+  This method does nothing if the client is already connected.
+   * @locus Client
+   * @memberOf Meteor
+   */
   reconnect: function (/*passthrough args*/) {
     var self = this;
     return self._stream.reconnect.apply(self._stream, arguments);
   },
 
+  /**
+   * @summary Disconnect the client from the server.
+   * @locus Client
+   * @memberOf Meteor
+   */
   disconnect: function (/*passthrough args*/) {
     var self = this;
     return self._stream.disconnect.apply(self._stream, arguments);
@@ -1533,7 +1550,12 @@ LivedataTest.Connection = Connection;
 //     "http://subdomain.meteor.com",
 //     "/",
 //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"
-//
+
+/**
+ * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.
+ * @locus Anywhere
+ * @param {String} url The URL of another Meteor application.
+ */
 DDP.connect = function (url, options) {
   var ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.

@@ -152,6 +152,9 @@ npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c8
 # https://github.com/williamwicks/node-eachline/pull/4
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
+# Install jsdoc
+npm install jsdoc@3.3.0-alpha9
+
 # Checkout and build mongodb.
 # We want to build a binary that includes SSL support but does not depend on a
 # particular version of openssl on the host system.

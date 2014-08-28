@@ -47,11 +47,11 @@ Tinytest.add("minimongo - wrapTransform", function (test) {
 
   // test that wrapped transform functions are nonreactive
   var unwrapped = function (doc) {
-    test.isFalse(Deps.active);
+    test.isFalse(Tracker.active);
     return doc;
   };
-  var handle = Deps.autorun(function () {
-    test.isTrue(Deps.active);
+  var handle = Tracker.autorun(function () {
+    test.isTrue(Tracker.active);
     wrap(unwrapped)({_id: "xxx"});
   });
   handle.stop();

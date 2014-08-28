@@ -45,7 +45,7 @@ testAsyncMulti("stream - basic disconnect", [
       }
     });
 
-    Deps.autorun(function() {
+    Tracker.autorun(function() {
       var status = stream.status();
 
       if (_.last(history) !== status.status) {
@@ -84,7 +84,7 @@ testAsyncMulti("stream - disconnect remains offline", [
       }
     });
 
-    Deps.autorun(function() {
+    Tracker.autorun(function() {
       var status = stream.status();
 
       if (_.last(history) !== status.status) {

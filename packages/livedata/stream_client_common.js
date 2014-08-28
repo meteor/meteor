@@ -118,7 +118,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     };
 
 
-    self.statusListeners = typeof Deps !== 'undefined' && new Deps.Dependency;
+    self.statusListeners = typeof Tracker !== 'undefined' && new Tracker.Dependency;
     self.statusChanged = function () {
       if (self.statusListeners)
         self.statusListeners.changed();

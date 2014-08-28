@@ -84,15 +84,15 @@ _.extend(ReactiveDict.prototype, {
       throw new Error("ReactiveDict.equals: value must be scalar");
     var serializedValue = stringify(value);
 
-    if (Deps.active) {
+    if (Tracker.active) {
       self._ensureKey(key);
 
       if (! _.has(self.keyValueDeps[key], serializedValue))
-        self.keyValueDeps[key][serializedValue] = new Deps.Dependency;
+        self.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
 
       var isNew = self.keyValueDeps[key][serializedValue].depend();
       if (isNew) {
-        Deps.onInvalidate(function () {
+        Tracker.onInvalidate(function () {
           // clean up [key][serializedValue] if it's now empty, so we don't
           // use O(n) memory for n = values seen ever
           if (! self.keyValueDeps[key][serializedValue].hasDependents())
@@ -109,7 +109,7 @@ _.extend(ReactiveDict.prototype, {
   _ensureKey: function (key) {
     var self = this;
     if (!(key in self.keyDeps)) {
-      self.keyDeps[key] = new Deps.Dependency;
+      self.keyDeps[key] = new Tracker.Dependency;
       self.keyValueDeps[key] = {};
     }
   },

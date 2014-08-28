@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use('underscore', ['client', 'server']);
   api.use('localstorage', 'client');
-  api.use('deps', 'client');
+  api.use('tracker', 'client');
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');

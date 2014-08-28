@@ -33,7 +33,7 @@ ReactiveVar = function (initialValue, equalsFunc) {
 
   this.curValue = initialValue;
   this.equalsFunc = equalsFunc;
-  this.dep = new Deps.Dependency;
+  this.dep = new Tracker.Dependency;
 };
 
 ReactiveVar._isEqual = function (oldValue, newValue) {
@@ -48,7 +48,7 @@ ReactiveVar._isEqual = function (oldValue, newValue) {
 };
 
 ReactiveVar.prototype.get = function () {
-  if (Deps.active)
+  if (Tracker.active)
     this.dep.depend();
 
   return this.curValue;
@@ -71,7 +71,7 @@ ReactiveVar.prototype.toString = function () {
 
 ReactiveVar.prototype._numListeners = function() {
   // Tests want to know.
-  // Accesses a private field of Deps.Dependency.
+  // Accesses a private field of Tracker.Dependency.
   var count = 0;
   for (var id in this.dep._dependentsById)
     count++;

@@ -14,7 +14,7 @@ Package.on_use(function (api) {
   api.use('reload');
 
   api.use(['blaze', 'templating', 'spacebars',
-           'livedata', 'deps'], 'client');
+           'livedata', 'tracker'], 'client');
 
   api.add_files('diff_match_patch_uncompressed.js', 'client');
 

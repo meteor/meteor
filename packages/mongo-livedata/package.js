@@ -18,7 +18,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'livedata', 'deps', 'application-configuration'],
+           'livedata', 'tracker', 'application-configuration'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 

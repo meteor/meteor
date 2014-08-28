@@ -1,5 +1,5 @@
 var divRendersTo = function (test, div, html) {
-  Deps.flush({_throwFirstError: true});
+  Tracker.flush({_throwFirstError: true});
   var actual = canonicalizeHtml(div.innerHTML);
   test.equal(actual, html);
 };
@@ -32,7 +32,7 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
 
   test.equal(canonicalizeHtml(div.innerHTML), "124");
   R.set(2);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "125");
 
   // Test that `{{foo bar}}` throws if `foo` is missing or not a function.
@@ -60,7 +60,7 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
   } });
   test.equal(canonicalizeHtml(div.innerHTML), "124");
   R.set(2);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "125");
 
   test.throws(function () {
@@ -88,7 +88,7 @@ Tinytest.add("spacebars-tests - template_tests - dynamic template", function (te
   test.equal(canonicalizeHtml(div.innerHTML), "aaa");
 
   R.set('bbb');
-  Deps.flush();
+  Tracker.flush();
 
   test.equal(canonicalizeHtml(div.innerHTML), "bbb");
 });
@@ -122,7 +122,7 @@ Tinytest.add("spacebars-tests - template_tests - dynamic attrs", function (test)
 
   R2.set({y: "Y", z: "Z"});
   R3.set('');
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(span.innerHTML), 'hi');
   test.isFalse(span.hasAttribute('selected'));
   test.isFalse(span.hasAttribute('x'));
@@ -145,13 +145,13 @@ Tinytest.add("spacebars-tests - template_tests - triple", function (test) {
   test.equal(span.innerHTML, 'blah');
 
   R.set('asdf');
-  Deps.flush();
+  Tracker.flush();
   elems = $(div).find("> *");
   test.equal(elems.length, 0);
   test.equal(canonicalizeHtml(div.innerHTML), 'asdf');
 
   R.set('<span class="hi">blah</span>');
-  Deps.flush();
+  Tracker.flush();
   elems = $(div).find("> *");
   test.equal(elems.length, 1);
   test.equal(elems[0].nodeName, 'SPAN');
@@ -178,7 +178,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args", function (test
   // which consists of "aaa"
   test.equal(canonicalizeHtml(div.innerHTML), 'aaa');
   R.set(Template.spacebars_template_test_bbb);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'bbb');
 
   ////// Ok, now `foo` *is* Template.aaa
@@ -200,7 +200,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args", function (test
   test.equal(canonicalizeHtml(div.innerHTML), '<span>david</span>');
   var span1 = div.querySelector('span');
   R.set('avi');
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), '<span>avi</span>');
   var span2 = div.querySelector('span');
   test.isTrue(span1 === span2);
@@ -221,7 +221,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
   test.equal(canonicalizeHtml(div.innerHTML), '<span>david</span>');
   var span1 = div.querySelector('span');
   R.set('brillo');
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), '<span>brill</span>');
   var span2 = div.querySelector('span');
   test.isTrue(span1 === span2);
@@ -258,7 +258,7 @@ Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", functio
   test.equal(canonicalizeHtml(div.innerHTML), '[%david]');
 
   R.set('avi');
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), '[%avi]');
   // check that invalidating the argument to `foo` doesn't require
   // creating a new `foo`.
@@ -297,7 +297,7 @@ Tinytest.add("spacebars-tests - template_tests - block helper", function (test) 
   test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
   R.set(Template.spacebars_template_test_elsecontent);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "baz");
 });
 
@@ -328,7 +328,7 @@ Tinytest.add("spacebars-tests - template_tests - block helper function with one 
   test.equal(canonicalizeHtml(div.innerHTML), "content");
 
   R.set("baz");
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "");
 });
 
@@ -340,7 +340,7 @@ Tinytest.add("spacebars-tests - template_tests - block helper component with one
   test.equal(canonicalizeHtml(div.innerHTML), "content");
 
   R.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "");
 });
 
@@ -357,7 +357,7 @@ Tinytest.add("spacebars-tests - template_tests - block helper component with thr
   test.equal(canonicalizeHtml(div.innerHTML), "content");
 
   R.set("baz");
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "");
 });
 
@@ -386,32 +386,32 @@ Tinytest.add("spacebars-tests - template_tests - block helper with dotted arg", 
   test.equal(initCount, 1);
 
   R1.set(2);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "[112]");
   test.equal(initCount, 1);
 
   R2.set(20);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "[122]");
   test.equal(initCount, 1);
 
   R3.set(200);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "[222]");
   test.equal(initCount, 1);
 
   R2.set(30);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "[232]");
   test.equal(initCount, 1);
 
   R1.set(3);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "[233]");
   test.equal(initCount, 1);
 
   R3.set(300);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "[333]");
   test.equal(initCount, 1);
 });
@@ -445,10 +445,10 @@ Tinytest.add("spacebars-tests - template_tests - nested content", function (test
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
   R.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'world');
   R.set(true);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 
   // Also test that `{{> UI.contentBlock}}` in a custom block helper works.
@@ -460,10 +460,10 @@ Tinytest.add("spacebars-tests - template_tests - nested content", function (test
   div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
   R.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'world');
   R.set(true);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 });
 
@@ -620,7 +620,7 @@ Tinytest.add("spacebars-tests - template_tests - select tags", function (test) {
   // swap selection
   options.update({value: "value1"}, {$set: {selected: true}});
   options.update({value: "value2"}, {$set: {selected: false}});
-  Deps.flush();
+  Tracker.flush();
 
   test.equal(divContent(), [
     '<select>',
@@ -639,7 +639,7 @@ Tinytest.add("spacebars-tests - template_tests - select tags", function (test) {
   // change value and label
   options.update({value: "value1"}, {$set: {value: "value1.0"}});
   options.update({value: "value2"}, {$set: {label: "label2.0"}});
-  Deps.flush();
+  Tracker.flush();
 
   test.equal(divContent(), [
     '<select>',
@@ -659,18 +659,18 @@ Tinytest.add("spacebars-tests - template_tests - select tags", function (test) {
   // selected (since it got selected later). then switch to <select
   // multiple="">. both should be selected.
   options.update({}, {$set: {selected: false}}, {multi: true});
-  Deps.flush();
+  Tracker.flush();
   options.update({}, {$set: {selected: true}}, {multi: true});
-  Deps.flush();
+  Tracker.flush();
   test.equal($(selectEl).find('option')[0].selected, false);
   test.equal($(selectEl).find('option')[1].selected, true);
 
   selectEl.multiple = true; // allow multiple selection
   options.update({}, {$set: {selected: false}}, {multi: true});
-  Deps.flush();
+  Tracker.flush();
   options.update({}, {$set: {selected: true}}, {multi: true});
   window.avital = true;
-  Deps.flush();
+  Tracker.flush();
   test.equal($(selectEl).find('option')[0].selected, true);
   test.equal($(selectEl).find('option')[1].selected, true);
 });
@@ -694,7 +694,7 @@ Tinytest.add("spacebars-tests - template_tests - tricky attrs", function (test) 
              '<input type="text"><input class="foo" type="checkbox">'.slice(0, 30));
 
   R.set('bar');
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML),
              '<input type="text"><input class="bar" type="checkbox">');
 
@@ -722,7 +722,7 @@ Tinytest.add('spacebars-tests - template_tests - textarea', function (test) {
   test.equal(textarea.value, 'hello');
 
   R.set('world');
-  Deps.flush();
+  Tracker.flush();
   test.equal(textarea.value, 'world');
 
 });
@@ -741,11 +741,11 @@ Tinytest.add('spacebars-tests - template_tests - textarea 2', function (test) {
   test.equal(textarea.value, '</not a tag>');
 
   R.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(textarea.value, '<also not a tag>');
 
   R.set(true);
-  Deps.flush();
+  Tracker.flush();
   test.equal(textarea.value, '</not a tag>');
 
 });
@@ -765,7 +765,7 @@ Tinytest.add('spacebars-tests - template_tests - textarea 3', function (test) {
   test.equal(textarea.value, 'hello');
 
   R.set('world');
-  Deps.flush();
+  Tracker.flush();
   test.equal(textarea.value, 'world');
 
 });
@@ -784,11 +784,11 @@ Tinytest.add('spacebars-tests - template_tests - textarea each', function (test)
   test.equal(textarea.value, '<not a tag APPLE <not a tag BANANA ');
 
   R.set([]);
-  Deps.flush();
+  Tracker.flush();
   test.equal(textarea.value, '<>');
 
   R.set(['CUCUMBER']);
-  Deps.flush();
+  Tracker.flush();
   test.equal(textarea.value, '<not a tag CUCUMBER ');
 
 });
@@ -839,7 +839,7 @@ testAsyncMulti('spacebars-tests - template_tests - rendered template is DOM in r
       test.equal(canonicalizeHtml(div.innerHTML), "aaa");
     });
     var div = renderToDiv(tmpl);
-    Deps.flush();
+    Tracker.flush();
   }
 ]);
 
@@ -875,12 +875,12 @@ Tinytest.add('spacebars-tests - template_tests - with someData', function (test)
   test.equal(canonicalizeHtml(div.innerHTML), 'AAA YO');
 
   foo.set('BBB');
-  Deps.flush();
+  Tracker.flush();
   test.equal(someDataRuns, 1);
   test.equal(canonicalizeHtml(div.innerHTML), 'BBB YO');
 
   foo.set('CCC');
-  Deps.flush();
+  Tracker.flush();
   test.equal(someDataRuns, 1);
   test.equal(canonicalizeHtml(div.innerHTML), 'CCC YO');
 });
@@ -923,7 +923,7 @@ Tinytest.add('spacebars-tests - template_tests - block helpers in attribute', fu
   var div = containerDiv.querySelector('div');
 
   var shouldBe = function (className) {
-    Deps.flush();
+    Tracker.flush();
     test.equal(div.innerHTML, "Smurf");
     test.equal(div.className, className);
     var result = canonicalizeHtml(containerDiv.innerHTML);
@@ -957,7 +957,7 @@ Tinytest.add('spacebars-tests - template_tests - block helpers in attribute 2', 
 
   test.equal(input.value, '"');
   R.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(input.value, '&<></x>');
 });
 
@@ -987,7 +987,7 @@ Tinytest.add('spacebars-tests - template_tests - constant #each argument', funct
              'foo bar 1');
 
   R.set(2);
-  Deps.flush();
+  Tracker.flush();
 
   test.equal(justReturnRuns, 2); // still 2, no new runs!
   test.equal(canonicalizeHtml(div.innerHTML).replace(/\s+/g, ' '),
@@ -1032,7 +1032,7 @@ testAsyncMulti('spacebars-tests - template_tests - #markdown - if', [
     var div = renderToDiv(tmpl);
     test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
     R.set(true);
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
   }
 ]);
@@ -1060,7 +1060,7 @@ testAsyncMulti('spacebars-tests - template_tests - #markdown - each', [
     test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html1));
 
     R.set(["item"]);
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), canonicalizeHtml(self.html2));
   }
 ]);
@@ -1093,7 +1093,7 @@ Tinytest.add('spacebars-tests - template_tests - simple helpers are isolated', f
 
   _.each(runs, function (run) {
     var tmpl = Template.spacebars_template_test_simple_helpers_are_isolated;
-    var dep = new Deps.Dependency;
+    var dep = new Tracker.Dependency;
     tmpl.foo = function () {
       dep.depend();
       return run.helper();
@@ -1106,7 +1106,7 @@ Tinytest.add('spacebars-tests - template_tests - simple helpers are isolated', f
     test.isTrue(fooTextNode);
 
     dep.changed();
-    Deps.flush();
+    Tracker.flush();
     var newFooTextNode = _.find(div.childNodes, function (node) {
       return node.nodeValue === run.nodeValue;
     });
@@ -1120,7 +1120,7 @@ Tinytest.add('spacebars-tests - template_tests - simple helpers are isolated', f
 // value is not set.
 Tinytest.add('spacebars-tests - template_tests - attribute helpers are isolated', function (test) {
   var tmpl = Template.spacebars_template_test_attr_helpers_are_isolated;
-  var dep = new Deps.Dependency;
+  var dep = new Tracker.Dependency;
   tmpl.foo = function () {
     dep.depend();
     return "foo";
@@ -1134,7 +1134,7 @@ Tinytest.add('spacebars-tests - template_tests - attribute helpers are isolated'
   // hasn't been updated back to the correct value.
   pElement.setAttribute('attr', 'not-foo');
   dep.changed();
-  Deps.flush();
+  Tracker.flush();
   test.equal(pElement.getAttribute('attr'), 'not-foo');
 });
 
@@ -1144,7 +1144,7 @@ Tinytest.add('spacebars-tests - template_tests - attribute helpers are isolated'
 // attribute is not set on the DOM element.
 Tinytest.add('spacebars-tests - template_tests - attribute object helpers are isolated', function (test) {
   var tmpl = Template.spacebars_template_test_attr_object_helpers_are_isolated;
-  var dep = new Deps.Dependency;
+  var dep = new Tracker.Dependency;
   tmpl.attrs = function () {
     dep.depend();
     return {foo: "bar"};
@@ -1158,7 +1158,7 @@ Tinytest.add('spacebars-tests - template_tests - attribute object helpers are is
   // hasn't been updated back to the correct value.
   pElement.setAttribute('foo', 'not-bar');
   dep.changed();
-  Deps.flush();
+  Tracker.flush();
   test.equal(pElement.getAttribute('foo'), 'not-bar');
 });
 
@@ -1170,7 +1170,7 @@ Tinytest.add('spacebars-tests - template_tests - attribute object helpers are is
 // a helper is not a component.
 Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated', function (test) {
   var tmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated;
-  var dep = new Deps.Dependency;
+  var dep = new Tracker.Dependency;
   var subtmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated_subtemplate;
   // make a copy so we can set "rendered" without mutating the original
   var subtmplCopy = new Template(subtmpl.viewName, subtmpl.renderFunction);
@@ -1187,15 +1187,15 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   };
 
   dep.changed();
-  Deps.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
+  Tracker.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
 
   R.set(null);
-  Deps.flush({_throwFirstError: true}); // no error thrown
+  Tracker.flush({_throwFirstError: true}); // no error thrown
 
   R.set("neither a component nor null");
 
   test.throws(function () {
-    Deps.flush({_throwFirstError: true});
+    Tracker.flush({_throwFirstError: true});
   }, /Expected template or null/);
 });
 
@@ -1319,7 +1319,7 @@ Tinytest.add("spacebars-tests - template_tests - content context", function (tes
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'BO');
   R.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'FA');
 });
 
@@ -1377,7 +1377,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
 
     // value updates reactively
     R.set({x:"fridge"});
-    Deps.flush();
+    Tracker.flush();
     test.equal(DomUtils.getElementValue(input), "This is a fridge");
 
     if (canFocus) {
@@ -1386,7 +1386,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
       DomUtils.setElementValue(input, "something else");
       R.set({x:"frog"});
 
-      Deps.flush();
+      Tracker.flush();
       test.equal(DomUtils.getElementValue(input), "This is a frog");
       test.equal(document.activeElement, input);
     }
@@ -1396,12 +1396,12 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
     // not change.
     DomUtils.setElementValue(input, "foobar");
     R2.set("change");
-    Deps.flush();
+    Tracker.flush();
     test.equal(DomUtils.getElementValue(input), "foobar");
 
     // ... but if the actual rendered value changes, that should take effect.
     R.set({x:"photograph"});
-    Deps.flush();
+    Tracker.flush();
     test.equal(DomUtils.getElementValue(input), "This is a photograph");
 
     document.body.removeChild(div);
@@ -1445,12 +1445,12 @@ Tinytest.add("spacebars-tests - template_tests - radio", function(test) {
   clickIt(btns[0]);
   test.equal(change_buf, ['AM']);
   change_buf.length = 0;
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(text(), "Band: AM");
 
   R2.set("change");
-  Deps.flush();
+  Tracker.flush();
   test.length(change_buf, 0);
   test.equal(_.pluck(btns, 'checked'), [true, false, false]);
   test.equal(text(), "Band: AM");
@@ -1458,21 +1458,21 @@ Tinytest.add("spacebars-tests - template_tests - radio", function(test) {
   clickIt(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(btns, 'checked'), [false, true, false]);
   test.equal(text(), "Band: FM");
 
   clickIt(btns[2]);
   test.equal(change_buf, ['XM']);
   change_buf.length = 0;
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(btns, 'checked'), [false, false, true]);
   test.equal(text(), "Band: XM");
 
   clickIt(btns[1]);
   test.equal(change_buf, ['FM']);
   change_buf.length = 0;
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(btns, 'checked'), [false, true, false]);
   test.equal(text(), "Band: FM");
 
@@ -1500,42 +1500,42 @@ Tinytest.add("spacebars-tests - template_tests - checkbox", function(test) {
 
   // Re-render with first one checked.
   Rs.Foo.set(true);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
 
   // Re-render with first one unchecked again.
   Rs.Foo.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   // User clicks the second one.
   clickElement(boxes[1]);
   test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, true, false]);
 
   // Re-render with third one checked. Second one should stay checked because
   // it's a user update!
   Rs.Baz.set(true);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, true, true]);
 
   // User turns second and third off.
   clickElement(boxes[1]);
   clickElement(boxes[2]);
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   // Re-render with first one checked. Third should stay off because it's a user
   // update!
   Rs.Foo.set(true);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [true, false, false]);
 
   // Re-render with first one unchecked. Third should still stay off.
   Rs.Foo.set(false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(_.pluck(boxes, 'checked'), [false, false, false]);
 
   document.body.removeChild(div);
@@ -1551,7 +1551,7 @@ Tinytest.add('spacebars-tests - template_tests - helper passed to #if called exa
   var tmpl = Template.spacebars_test_if_helper;
 
   var count = 0;
-  var d = new Deps.Dependency;
+  var d = new Tracker.Dependency;
   tmpl.foo = function () {
     d.depend();
     count++;
@@ -1573,7 +1573,7 @@ Tinytest.add('spacebars-tests - template_tests - custom block helper functions c
   var tmpl = Template.spacebars_test_block_helper_function;
 
   var count = 0;
-  var d = new Deps.Dependency;
+  var d = new Tracker.Dependency;
   tmpl.foo = function () {
     d.depend();
     count++;
@@ -1582,12 +1582,12 @@ Tinytest.add('spacebars-tests - template_tests - custom block helper functions c
 
   foo = false;
   renderToDiv(tmpl);
-  Deps.flush();
+  Tracker.flush();
   test.equal(count, 1);
 
   foo = true;
   d.changed();
-  Deps.flush();
+  Tracker.flush();
   test.equal(count, 2);
 });
 
@@ -1623,17 +1623,17 @@ var runOneTwoTest = function (test, subTemplateName, optionsData) {
            };
 
            var div = renderToDiv(tmpl);
-           Deps.flush();
+           Tracker.flush();
            test.equal(buf, '1');
 
            showOne.set(false);
            dummy.set(1);
-           Deps.flush();
+           Tracker.flush();
            test.equal(buf, '12');
 
            showOne.set(true);
            dummy.set(2);
-           Deps.flush();
+           Tracker.flush();
            test.equal(buf, '121');
 
            // clean up the div
@@ -1706,7 +1706,7 @@ Tinytest.add('spacebars-tests - template_tests - no data context is seen as an e
   var div = renderToDiv(tmpl);
   document.body.appendChild(div);
   clickElement(div.querySelector('button'));
-  Deps.flush(); // rendered gets called afterFlush
+  Tracker.flush(); // rendered gets called afterFlush
   $(div).remove();
 
   test.isFalse(dataInHelper === window);
@@ -1861,7 +1861,7 @@ Tinytest.add("spacebars-tests - template_tests - jQuery.trigger extraParameters 
     };
 
     renderToDiv(tmpl);
-    Deps.flush();
+    Tracker.flush();
     test.equal(captured, true);
   }
 );
@@ -1881,7 +1881,7 @@ Tinytest.add("spacebars-tests - template_tests - toHTML", function (test) {
     test.equal(canonicalizeHtml(Blaze.toHTML(tmplToRender)), "bar");
     test.equal(count, 1);
     R.set("");
-    Deps.flush();
+    Tracker.flush();
     test.equal(count, 1); // all autoruns stopped
   };
 
@@ -1913,7 +1913,7 @@ Tinytest.add("spacebars-tests - template_tests - {{#with}} with mutated data con
   function (test) {
     var tmpl = Template.spacebars_test_with_mutated_data_context;
     var foo = {value: 0};
-    var dep = new Deps.Dependency;
+    var dep = new Tracker.Dependency;
     tmpl.foo = function () {
       dep.depend();
       return foo;
@@ -1924,7 +1924,7 @@ Tinytest.add("spacebars-tests - template_tests - {{#with}} with mutated data con
 
     foo.value = 1;
     dep.changed();
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '1');
   });
 
@@ -1948,7 +1948,7 @@ Tinytest.add("spacebars-tests - template_tests - javascript scheme urls",
         Meteor._suppress_log(numUrlAttrs);
       }
       Session.set(sessionKey, url);
-      Deps.flush();
+      Tracker.flush();
       _.each(
         attrsList,
         function (attrInfo) {
@@ -2018,7 +2018,7 @@ Tinytest.add("spacebars-tests - template_tests - event handlers get cleaned up w
     test.equal(div.$blaze_events["mouseover"].handlers.length, 1);
 
     rv.set(false);
-    Deps.flush();
+    Tracker.flush();
 
     test.equal(div.$blaze_events["click"].handlers.length, 0);
     test.equal(div.$blaze_events["mouseover"].handlers.length, 0);
@@ -2059,23 +2059,23 @@ Tinytest.add(
 
     var div = renderToDiv(tmpl);
 
-    Deps.autorun(function () {
+    Tracker.autorun(function () {
       if (rv.get()) {
         coll.insert({ name: rv.get() });
       }
     });
 
     rv.set("foo1");
-    Deps.flush();
+    Tracker.flush();
     var firstId = coll.findOne()._id;
 
     rv.set("foo2");
-    Deps.flush();
+    Tracker.flush();
 
     test.equal(canonicalizeHtml(div.innerHTML), "foo1 foo2");
 
     coll.update(firstId, { $set: { name: "foo3" } });
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "foo3 foo2");
   }
 );
@@ -2097,7 +2097,7 @@ Tinytest.add(
     // Before we attach the ui hooks, put two items in the DOM.
     var origVal = [{ _id: 'foo1' }, { _id: 'foo2' }];
     rv.set(origVal);
-    Deps.flush();
+    Tracker.flush();
 
     container._uihooks = {
       insertElement: function (n, next) {
@@ -2129,19 +2129,19 @@ Tinytest.add(
     var newVal = _.clone(origVal);
     newVal.push({ _id: 'foo3' });
     rv.set(newVal);
-    Deps.flush();
+    Tracker.flush();
     test.equal(hooks, ['insert']);
     testDomUnchanged();
 
     newVal.reverse();
     rv.set(newVal);
-    Deps.flush();
+    Tracker.flush();
     test.equal(hooks, ['insert', 'move']);
     testDomUnchanged();
 
     newVal = [origVal[0]];
     rv.set(newVal);
-    Deps.flush();
+    Tracker.flush();
     test.equal(hooks, ['insert', 'move', 'remove']);
     testDomUnchanged();
   }
@@ -2169,11 +2169,11 @@ Tinytest.add(
 
     var div = renderToDiv(tmpl);
     document.body.appendChild(div);
-    Deps.flush();
+    Tracker.flush();
 
     var htmlBeforeRemove = canonicalizeHtml(div.innerHTML);
     rv.set(false);
-    Deps.flush();
+    Tracker.flush();
     test.isTrue(uiHookCalled);
     var htmlAfterRemove = canonicalizeHtml(div.innerHTML);
     test.equal(htmlBeforeRemove, htmlAfterRemove);
@@ -2220,7 +2220,7 @@ Tinytest.add(
     divRendersTo(test, div, "first");
 
     rv.set("second");
-    Deps.flush();
+    Tracker.flush();
     divRendersTo(test, div, "second");
 
     // UI.templateInstance() should throw when called from not within a
@@ -2244,14 +2244,14 @@ Tinytest.add(
 
     var div = renderToDiv(tmpl);
     rv.set("first");
-    Deps.flush();
+    Tracker.flush();
     test.equal(helperCalled, true);
 
     helperCalled = false;
     $(div).find(".test-with-cleanup").remove();
 
     rv.set("second");
-    Deps.flush();
+    Tracker.flush();
     test.equal(helperCalled, false);
   }
 );
@@ -2277,21 +2277,21 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "d");
 
     height.set(1);
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
     // Test UI.parentData() reactivity
 
     bar.set("baz");
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "baz");
 
     height.set(2);
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "a");
 
     height.set(3);
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
   }
 );
@@ -2371,7 +2371,7 @@ Tinytest.add(
 
     // Flush now. We fire the rendered callback in an afterFlush block,
     // to ensure that the DOM is completely updated.
-    Deps.flush();
+    Tracker.flush();
     test.equal([created, rendered, destroyed], [true, true, false]);
 
     var otherDiv = document.createElement("DIV");
@@ -2384,7 +2384,7 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello aaa</span><span>Bye aaa</span>");
     R.set('bbb');
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello bbb</span><span>Bye bbb</span>");
     test.equal([created, rendered, destroyed], [true, true, false]);
@@ -2461,12 +2461,12 @@ Tinytest.add(
     var div = renderToDiv(tmpl);
     assertCallsAndListeners(10, 1, 10, 1);
     A.set('');
-    Deps.flush();
+    Tracker.flush();
     // Confirm that #4, #5, #6, and #9 are not re-run.
     // #a is newly run, for a total of 10 - 4 + 1 = 7,
     assertCallsAndListeners(7, 0, 7, 1);
     A.set('hi');
-    Deps.flush();
+    Tracker.flush();
     assertCallsAndListeners(10, 0, 10, 1);
 
     // Now see that removing the DOM with jQuery, below
@@ -2533,7 +2533,7 @@ Tinytest.add(
     // the console and cause our handler not to fire.
     cond.set(false);
     buf.length = 0;
-    Deps.flush();
+    Tracker.flush();
     test.equal(div.querySelectorAll('input').length, 1);
     focusElement(input = div.querySelector('input'));
     if (borken)
@@ -2571,7 +2571,7 @@ Tinytest.add(
     test.equal(eventDiv.$blaze_events.click.handlers.length, 1);
 
     cond.set(false);
-    Deps.flush();
+    Tracker.flush();
     test.equal(eventDiv.$blaze_events.click.handlers.length, 0);
 
     document.body.removeChild(div);
@@ -2602,7 +2602,7 @@ _.each([1, 2, 3], function (n) {
       test.equal(canonicalizeHtml(div.innerHTML), 'aaa--x');
       test.equal(buf, 'C');
       R.set(Template.spacebars_template_test_bbb);
-      Deps.flush();
+      Tracker.flush();
       test.equal(canonicalizeHtml(div.innerHTML), 'bbb--x');
       test.equal(buf, 'C');
     }
@@ -2683,13 +2683,13 @@ Tinytest.add(
 
         // Change the id, check that the attribute updates reactively.
         attrs.set({ id: "textarea-" + Random.id() });
-        Deps.flush();
+        Tracker.flush();
         test.equal(textarea.id, attrs.get().id);
 
         // Change the name variable, check that the textarea value
         // updates reactively.
         name.set("two");
-        Deps.flush();
+        Tracker.flush();
         test.equal(
           textarea.value, tmplInfo.hasTextAreaContents ? "Hello two" : "");
 
@@ -2738,21 +2738,21 @@ Tinytest.add(
 
     // Test that the autorun returned a computation and received a
     // computation as an argument.
-    test.isTrue(returnedComputation instanceof Deps.Computation);
+    test.isTrue(returnedComputation instanceof Tracker.Computation);
     test.equal(returnedComputation, computationArg);
 
     // Make sure the autorun re-runs when `rv` changes, and that it has
     // the correct current view.
     rv.set("bar");
-    Deps.flush();
+    Tracker.flush();
     test.equal(autorunTemplateInstances.length, 2);
     test.equal(autorunTemplateInstances[1], actualTemplateInstance);
 
     // If the inner template is destroyed, the autorun should be stopped.
     show.set(false);
-    Deps.flush();
+    Tracker.flush();
     rv.set("baz");
-    Deps.flush();
+    Tracker.flush();
 
     test.equal(autorunTemplateInstances.length, 2);
     test.equal(rv._numListeners(), 0);
@@ -2845,13 +2845,13 @@ Tinytest.add(
     // now make the input say "BLAH" but the AttributeHandler
     // says "OTHER" (so we can make it do the no-op update)
     R.set("OTHER");
-    Deps.flush();
+    Tracker.flush();
     test.equal(input.value, "OTHER");
     input.value = "BLAH";
     setSelection("2 2");
 
     R.set("BLAH");
-    Deps.flush();
+    Tracker.flush();
     test.equal(input.value, "BLAH");
     // test that didn't lose insertion point!
     test.equal(getSelection(), "2 2");

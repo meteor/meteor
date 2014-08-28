@@ -1,6 +1,6 @@
 appcache@1.0.0
 application-configuration@1.0.0
-autoupdate@1.0.4
+autoupdate@1.0.5
 binary-heap@1.0.0
 blaze-tools@1.0.0
 blaze@1.0.3
@@ -10,7 +10,6 @@ code-prettify@1.0.0
 coffeescript@1.0.2
 ctl-helper@1.0.2
 ctl@1.0.0
-deps@1.0.1
 ejson@1.0.0
 follower-livedata@1.0.0
 geojson-utils@1.0.0
@@ -20,9 +19,10 @@ id-map@1.0.0
 jquery-waypoints@1.0.0
 jquery@1.0.0
 json@1.0.0
-less@1.0.5
+less@1.0.6
 livedata@1.0.7
 logging@1.0.2
+meteor-platform@1.0.0
 meteor@1.0.2
 minifiers@1.0.2
 minimongo@1.0.1
@@ -40,8 +40,9 @@ session@1.0.0
 showdown@1.0.0
 spacebars-compiler@1.0.1
 spacebars@1.0.0
-spiderable@1.0.1
+spiderable@1.0.2
 standard-app-packages@1.0.0
 templating@1.0.4
+tracker@1.0.1
 underscore@1.0.0
 webapp@1.0.2
