@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
-  api.use('mongo-livedata', 'server');
+  api.use('mongo', 'server');
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 

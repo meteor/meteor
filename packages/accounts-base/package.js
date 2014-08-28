@@ -21,7 +21,7 @@ Package.on_use(function (api) {
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
-  api.use('mongo-livedata', ['client', 'server']);
+  api.use('mongo', ['client', 'server']);
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.

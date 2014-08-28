@@ -78,7 +78,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
-  api.use('mongo-livedata', ['client', 'server']);
+  api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
   api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
 

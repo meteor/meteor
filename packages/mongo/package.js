@@ -61,7 +61,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('mongo-livedata');
+  api.use('mongo');
   api.use('check');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'livedata']);
