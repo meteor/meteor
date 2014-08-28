@@ -690,7 +690,13 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
         future.throw(new Error("clearing logs of Android device timed out: adb logcat -c"));
       }
     }, 5000);
-    future.wait();
+
+    try {
+      future.wait();
+    } catch (err) {
+      // ignore errors from clearing logs, too much trouble baby-sitting logcat
+      verboseLog('Clearing logs failed:', err.stack);
+    }
     verboseLog('Done clearing Android logs.');
 
     verboseLog('Tailing logs for android with `adb logcat -s CordovaLog`');
