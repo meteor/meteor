@@ -2338,7 +2338,7 @@ You can obtain a View object by calling [`UI.render`](#ui_render) on a
 template, or by accessing [`this.view`](#template_view) on a template
 instance.
 
-At the heart of a View is an [autorun](#deps_autorun) that calls the View's
+At the heart of a View is an [autorun](#tracker_autorun) that calls the View's
 `renderFunction`, uses the result to create DOM nodes, and replaces the
 contents of the View with these new DOM nodes.  A View's content may consist
 of any number of consecutive DOM nodes (though if it is zero, a placeholder
@@ -2421,7 +2421,7 @@ by Meteor have names like "Template.foo" and "if".
 {{/dtdd}}
 
 {{#dtdd name="autorun(runFunc)" id="view_autorun"}}
-  Like [`Deps.autorun`](#deps_autorun), except that the autorun is
+  Like [`Tracker.autorun`](#tracker_autorun), except that the autorun is
   automatically stopped when the View is destroyed, and the
   [current View](#ui_currentview) is always set when running `runFunc`.
   There is no relationship to the View's internal autorun or render
@@ -2439,7 +2439,7 @@ by Meteor have names like "Template.foo" and "if".
 {{#dtdd name="onViewReady(func)" id="view_onviewready"}}
   Calls `func` when the View is rendered, after waiting for the
   View to be attached, and then until the end of
-  [flush time](#deps_afterflush).  Does not fire if the View
+  [flush time](#tracker_afterflush).  Does not fire if the View
   is destroyed at any point before it would fire.
   May fire multiple times (if the View re-renders).
   In `func`, the View is bound to `this`.
