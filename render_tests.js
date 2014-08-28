@@ -476,7 +476,7 @@ Tinytest.add("blaze - render - templates and views", function (test) {
     };
 
     myTemplate.created = function () {
-      test.isFalse(Deps.active);
+      test.isFalse(Tracker.active);
       var view = this.view;
       var parent = Blaze.getView(view, 'myTemplate');
       if (parent) {
@@ -488,7 +488,7 @@ Tinytest.add("blaze - render - templates and views", function (test) {
     };
 
     myTemplate.rendered = function () {
-      test.isFalse(Deps.active);
+      test.isFalse(Tracker.active);
       var nodeDescr = function (node) {
         if (node.nodeType === 8) // comment
           return '';
@@ -513,7 +513,7 @@ Tinytest.add("blaze - render - templates and views", function (test) {
     };
 
     myTemplate.destroyed = function () {
-      test.isFalse(Deps.active);
+      test.isFalse(Tracker.active);
       buf.push('destroyed ' + UI.data());
     };
 

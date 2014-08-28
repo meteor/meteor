@@ -81,7 +81,7 @@ Blaze.View.prototype._onViewRendered = function (cb) {
 Blaze.View.prototype.onViewReady = function (cb) {
   var self = this;
   var fire = function () {
-    Deps.afterFlush(function () {
+    Tracker.afterFlush(function () {
       if (! self.isDestroyed) {
         Blaze._withCurrentView(self, function () {
           cb.call(self);
@@ -106,7 +106,7 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
 
 /// View#autorun(func)
 ///
-/// Sets up a Deps autorun that is "scoped" to this View in two
+/// Sets up a Tracker autorun that is "scoped" to this View in two
 /// important ways: 1) Blaze.currentView is automatically set
 /// on every re-run, and 2) the autorun is stopped when the
 /// View is destroyed.  As with Tracker.autorun, the first run of
@@ -154,7 +154,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
     throw new Error("Can't call View#autorun from inside render(); try calling it from the created or rendered callback");
   }
   if (Tracker.active) {
-    throw new Error("Can't call View#autorun from a Deps Computation; try calling it from the created or rendered callback");
+    throw new Error("Can't call View#autorun from a Tracker Computation; try calling it from the created or rendered callback");
   }
 
   var c = Tracker.autorun(function viewAutorun(c) {
@@ -270,9 +270,9 @@ Blaze._materializeView = function (view, parentView) {
 // Expands a View to HTMLjs, calling `render` recursively on all
 // Views and evaluating any dynamic attributes.  Calls the `created`
 // callback, but not the `materialized` or `rendered` callbacks.
-// Destroys the view immediately, unless called in a Deps Computation,
+// Destroys the view immediately, unless called in a Tracker Computation,
 // in which case the view will be destroyed when the Computation is
-// invalidated.  If called in a Deps Computation, the result is a
+// invalidated.  If called in a Tracker Computation, the result is a
 // reactive string; that is, the Computation will be invalidated
 // if any changes are made to the view or subviews that might affect
 // the HTML.
