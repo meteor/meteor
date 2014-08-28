@@ -1901,9 +1901,9 @@ Template.api.ui_dynamic = {
     }]
 };
 
-Template.api.ui_body = {
-  id: "ui_body",
-  name: "UI.body",
+Template.api.template_body = {
+  id: "template_body",
+  name: "Template.body",
   locus: "Client",
   descr: ["The [template object](#templates_api) representing your `<body>` tag."]
 };

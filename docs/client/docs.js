@@ -1,6 +1,5 @@
 Template.headline.release = function () {
   return Meteor.release ? "0.9.0" : "(checkout)";
-
 };
 
 Meteor.startup(function () {
@@ -258,9 +257,9 @@ var toc = [
         {instance: "this", name: "autorun", id: "template_autorun"},
         {instance: "this", name: "view", id: "template_view"}
       ],
+      "Template.body",
       "UI", [
         "UI.registerHelper",
-        "UI.body",
         "UI.render",
         "UI.renderWithData",
         "UI.insert",
