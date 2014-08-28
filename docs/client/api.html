@@ -2700,16 +2700,17 @@ browsers.
 
 {{#api_box renderable_content}}
 
-*Renderable content* is a type of value that is used to describe the contents
-of a View in terms of DOM nodes and sub-Views.
+A value is *renderable content* if it is one of the following:
 
-In the current version of Meteor, the exact form of renderable content is not
-part of the officially-supported API.  However, the following values are
-guaranteed to be valid renderable content:
+* A [template object](#templates_api) like `Template.myTemplate`
+* An unrendered [View](#ui_view) object, like the return value of `UI.With`
+* `null` or `undefined`
 
-* Template objects, like `Template.myTemplate`
-* Unrendered View objects, like the return value of `UI.With`
-* `null` and `undefined`
+{{#note}}
+Internally, renderable content includes objects representing HTML tags
+as well, but these objects are not yet part of the officially-supported,
+public API.
+{{/note}}
 
 {{/api_box}}
 
