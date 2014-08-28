@@ -80,7 +80,7 @@ Package.on_test(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo-livedata', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo']);
+  api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
 
   api.add_files('stub_stream.js');
   api.add_files('livedata_server_tests.js', 'server');

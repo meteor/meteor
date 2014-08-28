@@ -64,7 +64,7 @@ MinimongoError = function (message) {
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
 //
-// reactive: if given, and false, don't register with Deps (default
+// reactive: if given, and false, don't register with Tracker (default
 // is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
@@ -120,7 +120,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
-  // by default, queries register w/ Deps when it is available.
+  // by default, queries register w/ Tracker when it is available.
   if (typeof Tracker !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };

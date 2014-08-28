@@ -1,10 +1,10 @@
 //////////////////////////////////////////////////
-// Package docs at http://docs.meteor.com/#deps //
+// Package docs at http://docs.meteor.com/#tracker //
 //////////////////////////////////////////////////
 
 Tracker = {};
 
-// http://docs.meteor.com/#deps_active
+// http://docs.meteor.com/#tracker_active
 
 /**
  * @summary True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun.
@@ -12,10 +12,10 @@ Tracker = {};
  */
 Tracker.active = false;
 
-// http://docs.meteor.com/#deps_currentcomputation
+// http://docs.meteor.com/#tracker_currentcomputation
 
 /**
- * @summary The current computation, or `null` if there isn't one.  The current computation is the [`Tracker.Computation`](#deps_computation) object created by the innermost active call to `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed.
+ * @summary The current computation, or `null` if there isn't one.  The current computation is the [`Tracker.Computation`](#tracker_computation) object created by the innermost active call to `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed.
  * @locus Client
  */
 Tracker.currentComputation = null;
@@ -108,7 +108,7 @@ var requireFlush = function () {
 var constructingComputation = false;
 
 //
-// http://docs.meteor.com/#deps_computation
+// http://docs.meteor.com/#tracker_computation
 
 /**
  * @summary A Computation object represents code that is repeatedly rerun
@@ -128,7 +128,7 @@ Tracker.Computation = function (f, parent) {
   var self = this;
 
   // http://docs.meteor.com/#computation_stopped
-  
+
   /**
    * @summary True if this computation has been stopped.
    * @locus Client
@@ -139,7 +139,7 @@ Tracker.Computation = function (f, parent) {
   self.stopped = false;
 
   // http://docs.meteor.com/#computation_invalidated
-  
+
   /**
    * @summary True if this computation has been invalidated (and not yet rerun), or if it has been stopped.
    * @locus Client
@@ -150,7 +150,7 @@ Tracker.Computation = function (f, parent) {
   self.invalidated = false;
 
   // http://docs.meteor.com/#computation_firstrun
-  
+
   /**
    * @summary True during the initial run of the computation at the time `Tracker.autorun` is called, and false on subsequent reruns and at other times.
    * @locus Client
@@ -283,7 +283,7 @@ Tracker.Computation.prototype._recompute = function () {
 };
 
 //
-// http://docs.meteor.com/#deps_dependency
+// http://docs.meteor.com/#tracker_dependency
 
 /**
  * @summary A Dependency represents an atomic unit of reactive data that a
@@ -358,7 +358,7 @@ Tracker.Dependency.prototype.hasDependents = function () {
   return false;
 };
 
-// http://docs.meteor.com/#deps_flush
+// http://docs.meteor.com/#tracker_flush
 
 /**
  * @summary Process all reactive updates immediately and ensure that all invalidated computations are rerun.
@@ -420,7 +420,7 @@ Tracker.flush = function (_opts) {
   }
 };
 
-// http://docs.meteor.com/#deps_autorun
+// http://docs.meteor.com/#tracker_autorun
 //
 // Run f(). Record its dependencies. Rerun it whenever the
 // dependencies change.
@@ -450,7 +450,7 @@ Tracker.autorun = function (f) {
   return c;
 };
 
-// http://docs.meteor.com/#deps_nonreactive
+// http://docs.meteor.com/#tracker_nonreactive
 //
 // Run `f` with no current computation, returning the return value
 // of `f`.  Used to turn off reactivity for the duration of `f`,
@@ -472,7 +472,7 @@ Tracker.nonreactive = function (f) {
   }
 };
 
-// http://docs.meteor.com/#deps_oninvalidate
+// http://docs.meteor.com/#tracker_oninvalidate
 
 /**
  * @summary Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped.
@@ -486,7 +486,7 @@ Tracker.onInvalidate = function (f) {
   Tracker.currentComputation.onInvalidate(f);
 };
 
-// http://docs.meteor.com/#deps_afterflush
+// http://docs.meteor.com/#tracker_afterflush
 
 /**
  * @summary Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again.

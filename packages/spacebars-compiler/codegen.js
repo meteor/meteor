@@ -133,13 +133,13 @@ _.extend(CodeGen.prototype, {
           // `{{#foo bar}}` is sugar for `{{#with bar}}{{#foo}}...`.
           if (dataCode) {
             includeCode =
-              'Spacebars.TemplateWith(' + dataCode + ', function () { return ' +
+              'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
               includeCode + '; })';
           }
 
           if (path[0] === 'UI' &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
-            includeCode = 'Blaze.InOuterTemplateScope(view, function () { return '
+            includeCode = 'Blaze._InOuterTemplateScope(view, function () { return '
               + includeCode + '; })';
           }
 

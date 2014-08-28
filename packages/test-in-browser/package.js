@@ -13,7 +13,7 @@ Package.on_use(function (api) {
   api.use('session');
   api.use('reload');
 
-  api.use(['ui', 'templating', 'spacebars',
+  api.use(['blaze', 'templating', 'spacebars',
            'livedata', 'tracker'], 'client');
 
   api.add_files('diff_match_patch_uncompressed.js', 'client');

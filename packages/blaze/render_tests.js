@@ -20,12 +20,12 @@ var materialize = function (content, parent) {
       return content;
     };
   }
-  Blaze.render(func).attach(parent);
+  UI.render(func, parent);
 };
 
 var toHTML = Blaze.toHTML;
 
-Tinytest.add("ui - render - basic", function (test) {
+Tinytest.add("blaze - render - basic", function (test) {
   var run = function (input, expectedInnerHTML, expectedHTML, expectedCode) {
     var div = document.createElement("DIV");
     materialize(input, div);
@@ -40,7 +40,6 @@ Tinytest.add("ui - render - basic", function (test) {
       '<p>Hello</p>',
       'HTML.P("Hello")');
 
-  run(null, '', '', 'null');
   run([], '', '', '[]');
   run([null, null], '', '', '[null, null]');
 
@@ -103,7 +102,7 @@ Tinytest.add("ui - render - basic", function (test) {
 // test that we correctly update the 'value' property on input fields
 // rather than the 'value' attribute. the 'value' attribute only sets
 // the initial value.
-Tinytest.add("ui - render - input - value", function (test) {
+Tinytest.add("blaze - render - input - value", function (test) {
   var R = ReactiveVar("hello");
   var div = document.createElement("DIV");
   materialize(INPUT({value: function () { return R.get(); }}), div);
@@ -118,7 +117,7 @@ Tinytest.add("ui - render - input - value", function (test) {
 // test that we correctly update the 'checked' property rather than
 // the 'checked' attribute on input fields of type 'checkbox'. the
 // 'checked' attribute only sets the initial value.
-Tinytest.add("ui - render - input - checked", function (test) {
+Tinytest.add("blaze - render - input - checked", function (test) {
   var R = ReactiveVar(null);
   var div = document.createElement("DIV");
   materialize(INPUT({type: "checkbox", checked: function () { return R.get(); }}), div);
@@ -133,7 +132,7 @@ Tinytest.add("ui - render - input - checked", function (test) {
   test.equal(inputEl.checked, false);
 });
 
-Tinytest.add("ui - render - textarea", function (test) {
+Tinytest.add("blaze - render - textarea", function (test) {
   var run = function (optNode, text, html, code) {
     if (typeof optNode === 'string') {
       // called with args (text, html, code)
@@ -212,7 +211,7 @@ Tinytest.add("ui - render - textarea", function (test) {
   })();
 });
 
-Tinytest.add("ui - render - view isolation", function (test) {
+Tinytest.add("blaze - render - view isolation", function (test) {
 
   // Reactively change a text node
   (function () {
@@ -261,7 +260,7 @@ var malformedStylesAllowed = function () {
   return (div.getAttribute("style") === "bar::d;");
 };
 
-Tinytest.add("ui - render - view GC", function (test) {
+Tinytest.add("blaze - render - view GC", function (test) {
   // test that removing parent element removes listeners and stops autoruns.
   (function () {
     var R = ReactiveVar('Hello');
@@ -275,11 +274,11 @@ Tinytest.add("ui - render - view GC", function (test) {
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
 
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
 
     $(div).remove();
 
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
 
     R.set('Steve');
     Tracker.flush();
@@ -289,7 +288,7 @@ Tinytest.add("ui - render - view GC", function (test) {
 
 });
 
-Tinytest.add("ui - render - reactive attributes", function (test) {
+Tinytest.add("blaze - render - reactive attributes", function (test) {
   (function () {
     var R = ReactiveVar({'class': ['david gre', CharRef({html: '&euml;', str: '\u00eb'}), 'nspan'],
                          id: 'foo'});
@@ -302,13 +301,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(Blaze.toHTML(spanFunc()),
                '<span class="david gre&euml;nspan" id="foo"></span>');
 
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
 
     var div = document.createElement("DIV");
-    Blaze.render(spanFunc).attach(div);
+    UI.render(spanFunc, div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david gre\u00ebnspan" id="foo"></span>');
 
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
 
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
@@ -317,16 +316,16 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     R.set({'class': 'david smith', id: 'bar'});
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david blah smith" id="bar"></span>');
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
 
     R.set({});
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="blah"></span>');
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
 
     $(div).remove();
 
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
   })();
 
   // Test styles.
@@ -341,13 +340,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     test.equal(Blaze.toHTML(spanFunc()), '<span style="foo: &quot;a;aa&quot;; bar: b;" id="foo"></span>');
 
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
 
     var div = document.createElement("DIV");
-    Blaze.render(spanFunc).attach(div);
+    UI.render(spanFunc, div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b"></span>');
 
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
 
@@ -356,16 +355,16 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     R.set({'style': 'foo: "a;zz;aa";', id: 'bar'});
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML, true), '<span id="bar" style="foo: &quot;a;zz;aa&quot;; jquery-style: hidden"></span>');
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
 
     R.set({});
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style: hidden"></span>');
-    test.equal(R.numListeners(), 1);
+    test.equal(R._numListeners(), 1);
 
     $(div).remove();
 
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
   })();
 
   // Test that identical styles are successfully overwritten.
@@ -379,7 +378,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     var div = document.createElement("DIV");
     document.body.appendChild(div);
-    Blaze.render(spanFunc).attach(div);
+    UI.render(spanFunc, div);
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a"></span>');
 
     var span = div.firstChild;
@@ -435,7 +434,7 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
                'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
-    Blaze.render(spanFunc).attach(div);
+    UI.render(spanFunc, div);
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
 
@@ -454,67 +453,80 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     $(div).remove();
 
-    test.equal(R.numListeners(), 0);
+    test.equal(R._numListeners(), 0);
   })();
 });
 
-Tinytest.add("ui - render - views", function (test) {
+Tinytest.add("blaze - render - templates and views", function (test) {
   (function () {
     var counter = 1;
     var buf = [];
 
-    var makeView = function () {
-      var view = Blaze.View('myView', function () {
+    var myTemplate = Blaze.Template(
+      'myTemplate',
+      function () {
         return [String(this.number),
                 (this.number < 3 ? makeView() : HR())];
       });
 
-      var number = counter++;
+    myTemplate.constructView = function (number) {
+      var view = Template.prototype.constructView.call(this);
       view.number = number;
+      return view;
+    };
 
-      view.onCreated(function () {
-        var parent = Blaze.getParentView(view, 'myView');
-        if (parent) {
-          buf.push('parent of ' + view.number + ' is ' +
-                   parent.number);
-        }
+    myTemplate.created = function () {
+      test.isFalse(Tracker.active);
+      var view = this.view;
+      var parent = Blaze.getView(view, 'myTemplate');
+      if (parent) {
+        buf.push('parent of ' + view.number + ' is ' +
+                 parent.number);
+      }
 
-        buf.push('created ' + Blaze.getCurrentData());
+      buf.push('created ' + Template.currentData());
+    };
+
+    myTemplate.rendered = function () {
+      test.isFalse(Tracker.active);
+      var nodeDescr = function (node) {
+        if (node.nodeType === 8) // comment
+          return '';
+        if (node.nodeType === 3) // text
+          return node.nodeValue;
+
+        return node.nodeName;
+      };
+
+      var view = this.view;
+      var start = view.firstNode();
+      var end = view.lastNode();
+      // skip marker nodes
+      while (start !== end && ! nodeDescr(start))
+        start = start.nextSibling;
+      while (end !== start && ! nodeDescr(end))
+        end = end.previousSibling;
+
+      buf.push('dom-' + Template.currentData() +
+               ' is ' + nodeDescr(start) +'..' +
+               nodeDescr(end));
+    };
+
+    myTemplate.destroyed = function () {
+      test.isFalse(Tracker.active);
+      buf.push('destroyed ' + Template.currentData());
+    };
+
+    var makeView = function () {
+      var number = counter++;
+      return UI.With(number, function () {
+        return myTemplate.constructView(number);
       });
-
-      view.onRendered(function () {
-        var nodeDescr = function (node) {
-          if (node.nodeType === 8) // comment
-            return '';
-          if (node.nodeType === 3) // text
-            return node.nodeValue;
-
-          return node.nodeName;
-        };
-
-        var start = this.domrange.firstNode();
-        var end = this.domrange.lastNode();
-        // skip marker nodes
-        while (start !== end && ! nodeDescr(start))
-          start = start.nextSibling;
-        while (end !== start && ! nodeDescr(end))
-          end = end.previousSibling;
-
-        buf.push('dom-' + Blaze.getCurrentData() +
-                 ' is ' + nodeDescr(start) +'..' +
-                 nodeDescr(end));
-      });
-
-      view.onDestroyed(function () {
-        buf.push('destroyed ' + Blaze.getCurrentData());
-      });
-
-      return Blaze.With(number, function () { return view; });
     };
 
     var div = document.createElement("DIV");
 
-    Blaze.render(makeView).attach(div);
+    UI.render(makeView, div);
     buf.push('---flush---');
     Tracker.flush();
     test.equal(buf, ['created 1',
@@ -555,11 +567,11 @@ Tinytest.add("ui - render - views", function (test) {
   })();
 });
 
-Tinytest.add("ui - render - findAll", function (test) {
+Tinytest.add("blaze - render - findAll", function (test) {
   var found = null;
   var $found = null;
 
-  var myTemplate = Template.__create__(
+  var myTemplate = new Template(
     'findAllTest',
     function() {
       return DIV([P('first'), P('second')]);
@@ -571,7 +583,7 @@ Tinytest.add("ui - render - findAll", function (test) {
 
   var div = document.createElement("DIV");
 
-  Blaze.render(myTemplate).attach(div);
+  Blaze.render(myTemplate, div);
   Tracker.flush();
 
   test.equal(_.isArray(found), true);
@@ -580,7 +592,7 @@ Tinytest.add("ui - render - findAll", function (test) {
   test.equal($found.length, 2);
 });
 
-Tinytest.add("ui - render - reactive attributes 2", function (test) {
+Tinytest.add("blaze - render - reactive attributes 2", function (test) {
   var R1 = ReactiveVar(['foo']);
   var R2 = ReactiveVar(['bar']);
 
@@ -591,15 +603,15 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   };
 
   var div = document.createElement("DIV");
-  Blaze.render(spanFunc).attach(div);
+  UI.render(spanFunc, div);
   var check = function (expected) {
     test.equal(Blaze.toHTML(spanFunc()), expected);
     test.equal(canonicalizeHtml(div.innerHTML), expected);
   };
   check('<span blah="bar"></span>');
 
-  test.equal(R1.numListeners(), 1);
-  test.equal(R2.numListeners(), 1);
+  test.equal(R1._numListeners(), 1);
+  test.equal(R2._numListeners(), 1);
 
   R2.set([[]]);
   Tracker.flush();
@@ -629,11 +641,11 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
 
   $(div).remove();
 
-  test.equal(R1.numListeners(), 0);
-  test.equal(R2.numListeners(), 0);
+  test.equal(R1._numListeners(), 0);
+  test.equal(R2._numListeners(), 0);
 });
 
-Tinytest.add("ui - render - SVG", function (test) {
+Tinytest.add("blaze - render - SVG", function (test) {
   if (! document.createElementNS) {
     // IE 8
     return;

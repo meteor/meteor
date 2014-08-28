@@ -16,5 +16,5 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use("ui", "client");
+  api.use("blaze", "client");
 });

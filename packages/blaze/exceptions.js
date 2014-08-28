@@ -22,14 +22,14 @@ var debugFunc;
 // useful in unit tests that test error messages.
 Blaze._throwNextException = false;
 
-Blaze.reportException = function (e, msg) {
+Blaze._reportException = function (e, msg) {
   if (Blaze._throwNextException) {
     Blaze._throwNextException = false;
     throw e;
   }
 
   if (! debugFunc)
-    // adapted from Deps
+    // adapted from Tracker
     debugFunc = function () {
       return (typeof Meteor !== "undefined" ? Meteor._debug :
               ((typeof console !== "undefined") && console.log ? console.log :
@@ -42,7 +42,7 @@ Blaze.reportException = function (e, msg) {
   debugFunc()(msg || 'Exception caught in template:', e.stack || e.message);
 };
 
-Blaze.wrapCatchingExceptions = function (f, where) {
+Blaze._wrapCatchingExceptions = function (f, where) {
   if (typeof f !== 'function')
     return f;
 
@@ -50,7 +50,7 @@ Blaze.wrapCatchingExceptions = function (f, where) {
     try {
       return f.apply(this, arguments);
     } catch (e) {
-      Blaze.reportException(e, 'Exception in ' + where + ':');
+      Blaze._reportException(e, 'Exception in ' + where + ':');
     }
   };
 };

@@ -2051,7 +2051,6 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
-
 {{> api_box template_events}}
 
 Declare event handlers for instances of this template. Multiple calls add
@@ -2083,7 +2082,7 @@ The following syntax is a shorthand for when you only have one helper to define:
     };
 
 To create a helper that can be used in any template, use
-[`UI.registerHelper`](#ui_registerhelper).
+[`Template.registerHelper`](#template_registerhelper).
 
 
 {{> api_box template_rendered}}
@@ -2098,7 +2097,7 @@ the template and persists across re-renderings.  Use the `created` and
 object.
 
 Because your template has been rendered, you can use functions like
-`this.findAll` which look at its DOM nodes.
+[`this.findAll`](#template_findAll) which look at its DOM nodes.
 
 {{> api_box template_created}}
 
@@ -2138,13 +2137,8 @@ assigned properties that persist as the template is reactively updated.
 
 Template instance objects are found as the value of `this` in the
 `created`, `rendered`, and `destroyed` template callbacks, and as an
-argument to event handlers.
-
-{{#note}}
-  You cannot currently access the template instance object from helpers.
-  We plan to refactor how template instances work and make them more
-  universally accessible.
-{{/note}}
+argument to event handlers.  You can access the current template instance
+from helpers using [`Template.instance()`](#template_instance).
 
 In addition to the properties and functions described below, you can assign
 additional properties of your choice to the object. Use the
@@ -2156,11 +2150,13 @@ from the `rendered` callback and event handlers, not from `created`
 and `destroyed`, because they require the template instance to be
 in the DOM.
 
+Template instance objects are `instanceof Blaze.TemplateInstance`.
+
 {{> api_box template_findAll}}
 
-`this.findAll` returns an array of DOM elements matching `selector`.
+`template.findAll` returns an array of DOM elements matching `selector`.
 
-`this.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
+`template.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
 those same elements. jQuery objects are similar to arrays, with
 additional methods defined by the jQuery library.
 
@@ -2200,62 +2196,34 @@ You can use `this.autorun` from a [`created`](#template_created) or
 or the template instance.  The Computation is automatically stopped
 when the template is destroyed.
 
-<h2 id="ui"><span>Template utilities</span></h2>
+Alias for `template.view.autorun`.
 
-The `UI` namespace contains several utilities that are helpful when writing your
-user interface.  `UI.registerHelper` allows you to define helper functions which
-you can use in every template.  `UI.render`, `UI.renderWithData`, and
-`UI.insert` allow you to manually render templates and insert them directly into
-any part of the DOM for finer control than just using template inclusions.
+{{> api_box template_view}}
 
-{{> api_box ui_registerhelper}}
+{{> api_box template_registerhelper}}
 
-{{> api_box ui_body}}
+{{> api_box template_instance}}
 
-You can define helpers and event maps on `UI.body` just like on any
-`Template.myTemplate` object.
+{{> api_box template_currentdata}}
 
-Helpers on `UI.body` are only available in the `<body>` tags of your
-app.  To register a global helper, use
-[UI.registerHelper](#ui_registerhelper).
+{{> api_box template_parentdata}}
 
-Event maps on `UI.body` don't apply to elements added to the body via
-`UI.insert`, jQuery, or the DOM API, or to the body element itself.
-To handle events on the body, window, or document, use jQuery or the
-DOM API.
+For example, `Template.parentData(0)` is equivalent to `Template.currentData()`.  `Template.parentData(2)`
+is equivalent to `{{dstache}}../..}}` in a template.
 
-{{> api_box ui_render}}
+{{> api_box template_body}}
 
-This returns an "rendered template" object, which can be passed to
-[`UI.insert`](#ui_insert). The template's
-[`created`](#template_created) callback will be invoked.  The rendered
-template will continue to be updated reactively as the data used
-changes.
+You can define helpers and event maps on `Template.body` just like on
+any `Template.myTemplate` object.
 
-{{#warning}}
-  Future releases will provide a richer API for working with rendered
-  templates, for example unifying them "template instances."  For now, all you
-  can do with them is pass them to `UI.insert`.
-{{/warning}}
+Helpers on `Template.body` are only available in the `<body>` tags of
+your app.  To register a global helper, use
+[Template.registerHelper](#template_registerhelper).
 
-{{#warning}}
-  Most users will not need to manually render templates or manually insert them
-  into the DOM at all.  As of 0.8.x, if you call `UI.render` and never insert
-  the result into the DOM, the logic to keep the rendered template updated
-  will continue running in your browser forever. Additionally, if you remove any
-  part of your DOM using any mechanism other than Meteor or jQuery, the logic
-  to keep that  part of the the DOM updated will continue running.  To avoid these
-  issues, either avoid directly updating the DOM or ensure that any removals go
-  through Meteor or jQuery.
-{{/warning}}
-
-{{> api_box ui_renderwithdata}}
-
-{{> api_box ui_insert}}
-
-{{> api_box ui_remove}}
-
-{{> api_box ui_getelementdata}}
+Event maps on `Template.body` don't apply to elements added to the
+body via `Blaze.render`, jQuery, or the DOM API, or to the body element
+itself.  To handle events on the body, window, or document, use jQuery
+or the DOM API.
 
 {{> api_box ui_dynamic}}
 
@@ -2269,7 +2237,7 @@ template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
 
 {{> apiBoxTitle name="Event Maps" id="eventmaps"}}
 
-Several functions take event maps. An event map is an object where
+An event map is an object where
 the properties specify a set of events to handle, and the values are
 the handlers for those events. The property can be in one of several
 forms:
@@ -2434,7 +2402,313 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
+        
+<h2 id="blaze"><span>Blaze</span></h2>
 
+Blaze is the package that makes reactive templates possible.
+You can use the Blaze API directly in order to render templates programmatically
+and manipulate "Views," the building blocks of reactive templates.
+
+{{> api_box blaze_render}}
+
+When you render a template, the
+template's [`created`](#template_created) callback is invoked
+immediately, before evaluating the content of the template.
+The [`rendered`](#template_rendered) callback is
+invoked after the View is rendered and inserted into the DOM.
+
+The rendered template
+will update reactively in response to data changes until the View is
+removed using [`Blaze.remove`](#blaze_remove) or the View's
+parent element is removed by Meteor or jQuery.
+
+{{#warning}}
+If the View is removed by some other mechanism
+besides Meteor or jQuery (which Meteor integrates with by default),
+the View may continue to update indefinitely.  Most users will not need to
+manually render templates and insert them into the DOM, but if you do,
+be mindful to always call [`Blaze.remove`](#blaze_remove) when the View is
+no longer needed.
+{{/warning}}
+
+{{> api_box blaze_renderwithdata}}
+
+`Blaze.renderWithData(Template.myTemplate, data)` is essentially the same as
+`Blaze.render(Blaze.With(data, function () { return Template.myTemplate; }))`.
+
+{{> api_box blaze_remove}}
+
+Use `Blaze.remove` to remove a template or View previously inserted with
+`Blaze.render`, in such a way that any behaviors attached to the DOM by
+Meteor are cleaned up.  The rendered template or View is now considered
+["destroyed"](#template_destroyed), along with all nested templates and
+Views.  In addition, any data assigned via
+jQuery to the DOM nodes is removed, as if the nodes were passed to
+jQuery's `$(...).remove()`.
+
+As mentioned in [`Blaze.render`](#blaze_render), it is important to "remove"
+all content rendered via `Blaze.render` using `Blaze.remove`, unless the
+parent node of `renderedView` is removed by a Meteor reactive
+update or with jQuery.
+
+`Blaze.remove` can be used even if the DOM nodes in question have already
+been removed from the document, to tell Blaze to stop tracking and
+updating these nodes.
+
+{{> api_box blaze_getdata}}
+
+{{> api_box blaze_tohtml}}
+
+Rendering a template to HTML loses all fine-grained reactivity.  The
+normal way to render a template is to either include it from another
+template (`{{dstache}}> myTemplate}}`) or render and insert it
+programmatically using `Blaze.render`.  Only occasionally
+is generating HTML useful.
+
+Because `Blaze.toHTML` returns a string, it is not able to update the DOM
+in response to reactive data changes.  Instead, any reactive data
+changes will invalidate the current Computation if there is one
+(for example, an autorun that is the caller of `Blaze.toHTML`).
+
+{{> api_box blaze_tohtmlwithdata}}
+
+{{> api_box blaze_view}}
+
+Behind every template or part of a template &mdash; a template tag, say, like `{{dstache}}foo}}` or `{{dstache}}#if}}` &mdash; is
+a View object, which is a reactively updating region of DOM.
+
+Most applications do not need to be aware of these Views, but they offer a
+way to understand and customize Meteor's rendering behavior for more
+advanced applications and packages.
+
+You can obtain a View object by calling [`Blaze.render`](#blaze_render) on a
+template, or by accessing [`template.view`](#template_view) on a template
+instance.
+
+At the heart of a View is an [autorun](#tracker_autorun) that calls the View's
+`renderFunction`, uses the result to create DOM nodes, and replaces the
+contents of the View with these new DOM nodes.  A View's content may consist
+of any number of consecutive DOM nodes (though if it is zero, a placeholder
+node such as a comment or an empty text node is automatically supplied).  Any
+reactive dependency established by `renderFunction` causes a full recalculation
+of the View's contents when the dependency is invalidated.  Templates, however,
+are compiled in such a way that they do not have top-level dependencies and so
+will only ever render once, while their parts may re-render many times.
+
+When a `Blaze.View` is constructed by calling the constructor, no hooks
+are fired and no rendering is performed.  In particular, the View is
+not yet considered to be "created."  Only when the View is actually
+used, by a call to `Blaze.render` or `Blaze.toHTML` or by inclusion in
+another View, is it "created," right before it is rendered for the
+first time.  When a View is created, its `.parentView` is set if
+appropriate, and then the `onViewCreated` hook is fired.  The term
+"unrendered View" means a newly constructed View that has not been
+"created" or rendered.
+
+The "current View" is kept in [`Blaze.currentView`](#blaze_currentview) and
+is set during View rendering, callbacks, autoruns, and template event
+handlers.  It affects calls such as [`Template.currentData()`](#template_currentdata).
+
+The following properties and methods are available on Blaze.View:
+
+<dl class="objdesc">
+{{#dtdd name="name" type="String" id="view_name"}}
+  The name of this type of View.  View names may be used to identify
+particular kinds of Views in code, but more often they simply aid in
+debugging and comprehensibility of the View tree.  Views generated
+by Meteor have names like "Template.foo" and "if".
+{{/dtdd}}
+
+{{#dtdd name="parentView" type="View or null" id="view_parentview"}}
+  The enclosing View that caused this View to be rendered, if any.
+{{/dtdd}}
+
+{{#dtdd name="isCreated" type="Boolean" id="view_iscreated"}}
+  True if this View has been called on to be rendered by `Blaze.render`
+  or `Blaze.toHTML` or another View.  Once it becomes true, never
+  becomes false again.  A "created" View's `.parentView` has been
+  set to its final value.  `isCreated` is set to true before
+  `onViewCreated` hooks are called.
+{{/dtdd}}
+
+{{#dtdd name="isRendered" type="Boolean" id="view_isrendered"}}
+  True if this View has been rendered to DOM by `Blaze.render` or
+  by the rendering of an enclosing View.  Conversion to HTML by
+  `Blaze.toHTML` doesn't count.  Once true, never becomes false.
+{{/dtdd}}
+
+{{#dtdd name="isDestroyed" type="Boolean" id="view_isdestroyed"}}
+  True if this View has been destroyed, such as by `Blaze.remove()` or
+  by a reactive update that removes it.  A destroyed View's autoruns
+  have been stopped, and its DOM nodes have generally been cleaned
+  of all Meteor reactivity and possibly dismantled.
+{{/dtdd}}
+
+{{#dtdd name="renderCount" type="Integer" id="view_rendercount"}}
+  The number of times the View has been rendered, including the
+  current time is the View is in the process of being rendered
+  or re-rendered.
+{{/dtdd}}
+
+{{#dtdd name="autorun(runFunc)" id="view_autorun"}}
+  Like [`Tracker.autorun`](#tracker_autorun), except that the autorun is
+  automatically stopped when the View is destroyed, and the
+  [current View](#blaze_currentview) is always set when running `runFunc`.
+  There is no relationship to the View's internal autorun or render
+  cycle.  In `runFunc`, the View is bound to `this`.
+{{/dtdd}}
+
+{{#dtdd name="onViewCreated(func)" id="view_onviewcreated"}}
+  If the View hasn't been created yet, calls `func` when the View
+  is created.  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`created`](#template_created)
+  template callback.
+{{/dtdd}}
+
+{{#dtdd name="onViewReady(func)" id="view_onviewready"}}
+  Calls `func` when the View is rendered and inserted into the DOM,
+  after waiting for the end of
+  [flush time](#tracker_afterflush).  Does not fire if the View
+  is destroyed at any point before it would fire.
+  May fire multiple times (if the View re-renders).
+  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`rendered`](#template_rendered)
+  template callback.  
+{{/dtdd}}
+
+{{#dtdd name="onViewDestroyed(func)" id="view_onviewdestroyed"}}
+  If the View hasn't been destroyed yet, calls `func` when the
+  View is destroyed.  A View may be destroyed without ever becoming
+  "ready."  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`destroyed`](#template_destroyed)
+  template callback.
+{{/dtdd}}
+
+{{#dtdd name="firstNode()" type="DOM node" id="view_firstnode"}}
+The first node of the View's rendered content.  Note that this may
+be a text node.  Requires that the View be rendered.
+If the View rendered to zero DOM nodes, it may be a placeholder
+node (comment or text node).  The DOM extent of a View consists
+of the nodes between `view.firstNode()` and `view.lastNode()`,
+inclusive.
+{{/dtdd}}
+
+{{#dtdd name="lastNode()" type="DOM node" id="view_lastnode"}}
+The last node of the View's rendered content.
+
+See [`firstNode()`](#view_firstnode).
+{{/dtdd}}
+
+{{#dtdd name="template" type="Template" id="view_template"}}
+For Views created by invoking templates, the original Template
+object.  For example, `Blaze.render(Template.foo).template === Template.foo`.
+{{/dtdd}}
+
+{{#dtdd name="templateInstance()" type="Template instance"
+id="view_templateinstance"}} For Views created by invoking templates,
+returns the [template instance](#template_inst) object for this
+particular View.  For example, in a [`created`](#template_created)
+callback, `this.view.templateInstance() === this`.
+
+Template instance objects have fields like `data`, `firstNode`, and
+`lastNode` which are not reactive and which are also not automatically
+kept up to date.  Calling `templateInstance()` causes these fields to
+be updated.
+
+{{/dtdd}}
+
+</dl>
+
+{{> api_box blaze_currentview}}
+
+The "current view" is used by [`Template.currentData()`](#template_currentdata) and
+[`Template.instance()`](#template_instance) to determine
+the contextually relevant data context and template instance.
+
+{{> api_box blaze_getview}}
+
+If you don't specify an `element`, there must be a current View or an
+error will be thrown.  This is in contrast to
+[`Blaze.currentView`](#blaze_currentview).
+
+{{> api_box blaze_with}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Unlike `{{dstache}}#with}}` (as used in templates), `Blaze.With` has no "else" case, and
+a falsy value for the data context will not prevent the content from
+rendering.
+
+{{> api_box blaze_if}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{{dstache}}#if}}` in templates.
+
+{{> api_box blaze_unless}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{{dstache}}#unless}}` in templates.
+
+{{> api_box blaze_each}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{{dstache}}#each}}` in templates.
+
+{{> api_box blaze_template}}
+
+Templates defined by the template compiler, such as `Template.myTemplate`,
+are objects of type `Blaze.Template` (aliased as `Template`).
+
+In addition to methods like `events` and `helpers`, documented as part of
+the [Template API](#templates_api), the following fields and methods are
+present on template objects:
+
+<dl class="objdesc">
+
+{{#dtdd name="viewName" type="String" id="template_viewname"}}
+  Same as the constructor argument.
+{{/dtdd}}
+
+{{#dtdd name="renderFunction" type="Function" id="template_renderfunction"}}
+  Same as the constructor argument.
+{{/dtdd}}
+
+{{#dtdd name="constructView()" id="template_constructview"}}
+  Constructs and returns an unrendered View object.  This method is invoked
+  by Meteor whenever the template is used, such as by `Blaze.render` or by
+  `{{dstache}}> foo}}` where `foo` resolves to a Template object.
+  
+  `constructView()` constructs a View using `viewName` and `renderFunction`
+  as constructor arguments, and then configures it as a template
+  View, setting up `view.template`, `view.templateInstance()`, event maps, and so on.
+{{/dtdd}}
+
+</dl>
+
+{{> api_box blaze_istemplate}}
+
+
+{{#api_box renderable_content}}
+
+A value is *renderable content* if it is one of the following:
+
+* A [template object](#templates_api) like `Template.myTemplate`
+* An unrendered [View](#blaze_view) object, like the return value of `Blaze.With`
+* `null` or `undefined`
+
+{{#note}}
+Internally, renderable content includes objects representing HTML tags
+as well, but these objects are not yet part of the officially-supported,
+public API.
+{{/note}}
+
+{{/api_box}}
 
 <h2 id="match"><span>Match</span></h2>
 
@@ -2885,6 +3159,43 @@ For reactive data sources that create many internal Dependencies,
 this function is useful to determine whether a particular Dependency is
 still tracking any dependency relationships or if it can be cleaned up
 to save memory.
+
+<h2 id="reactivevar_pkg"><span>ReactiveVar</span></h2>
+
+To use `ReactiveVar`, add the `reactive-var` package to your project with
+`$ meteor add reactive-var`.
+
+{{> api_box reactivevar}}
+
+A ReactiveVar holds a single value that can be get and set, such that calling
+`set` will invalidate any Computations that called `get`, according to the
+usual contract for reactive data sources.
+
+A ReactiveVar is similar to a Session variable, with a few differences:
+
+* ReactiveVars don't have global names, like the "foo" in `Session.get("foo")`.
+  Instead, they may be created and used locally, for example attached to a
+  template instance, as in: `this.foo.get()`.
+
+* ReactiveVars are not automatically migrated across hot code pushes,
+  whereas Session state is.
+
+* ReactiveVars can hold any value, while Session variables are limited to
+  JSON or EJSON.
+
+An important property of ReactiveVars &mdash; which is sometimes a
+reason for using one &mdash; is that setting the value to the same
+value as before has no effect; it does not trigger any invalidations.
+So if one autorun sets a ReactiveVar, and another autorun gets the
+ReactiveVar, a re-run of the first autorun won't necessarily trigger
+the second.  By default, only primitive values are compared this way,
+while calling `set` on an argument that is an *object* (not a
+primitive) always counts as a change.  You can configure this behavior
+using the `equalsFunc` argument.
+
+{{> api_box reactivevar_get}}
+
+{{> api_box reactivevar_set}}
 
 <h2 id="ejson"><span>EJSON</span></h2>
 

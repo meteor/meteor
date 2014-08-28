@@ -1,10 +1,10 @@
-// new Blaze.DOMMaterializer(options)
+// new Blaze._DOMMaterializer(options)
 //
 // An HTML.Visitor that turns HTMLjs into DOM nodes and DOMRanges.
 //
 // Options: `parentView`
-Blaze.DOMMaterializer = HTML.Visitor.extend();
-Blaze.DOMMaterializer.def({
+Blaze._DOMMaterializer = HTML.Visitor.extend();
+Blaze._DOMMaterializer.def({
   visitNull: function (x, intoArray) {
     return intoArray;
   },
@@ -28,7 +28,7 @@ Blaze.DOMMaterializer.def({
   visitRaw: function (raw, intoArray) {
     // Get an array of DOM nodes by using the browser's HTML parser
     // (like innerHTML).
-    var nodes = Blaze.DOMBackend.parseHTML(raw.value);
+    var nodes = Blaze._DOMBackend.parseHTML(raw.value);
     for (var i = 0; i < nodes.length; i++)
       intoArray.push(nodes[i]);
 
@@ -75,9 +75,9 @@ Blaze.DOMMaterializer.def({
         var flattenedAttrs = HTML.flattenAttributes(expandedAttrs);
         var stringAttrs = {};
         for (var attrName in flattenedAttrs) {
-          stringAttrs[attrName] = Blaze.toText(flattenedAttrs[attrName],
-                                               parentView,
-                                               HTML.TEXTMODE.STRING);
+          stringAttrs[attrName] = Blaze._toText(flattenedAttrs[attrName],
+                                                parentView,
+                                                HTML.TEXTMODE.STRING);
         }
         attrUpdater.update(stringAttrs);
       };
@@ -87,11 +87,11 @@ Blaze.DOMMaterializer.def({
       } else {
         updaterComputation = Tracker.nonreactive(function () {
           return Tracker.autorun(function () {
-            Tracker.withCurrentView(self.parentView, updateAttributes);
+            Tracker._withCurrentView(self.parentView, updateAttributes);
           });
         });
       }
-      Blaze.DOMBackend.Teardown.onElementTeardown(elem, function attrTeardown() {
+      Blaze._DOMBackend.Teardown.onElementTeardown(elem, function attrTeardown() {
         updaterComputation.stop();
       });
     }
@@ -99,7 +99,7 @@ Blaze.DOMMaterializer.def({
     var childNodesAndRanges = self.visit(children, []);
     for (var i = 0; i < childNodesAndRanges.length; i++) {
       var x = childNodesAndRanges[i];
-      if (x instanceof Blaze.DOMRange)
+      if (x instanceof Blaze._DOMRange)
         x.attach(elem);
       else
         elem.appendChild(x);
@@ -110,10 +110,11 @@ Blaze.DOMMaterializer.def({
     return intoArray;
   },
   visitObject: function (x, intoArray) {
-    if (Blaze.isTemplate(x))
-      x = Blaze.runTemplate(x);
+    if (x instanceof Blaze.Template)
+      x = x.constructView();
+
     if (x instanceof Blaze.View) {
-      intoArray.push(Blaze.materializeView(x, this.parentView));
+      intoArray.push(Blaze._materializeView(x, this.parentView));
       return intoArray;
     }
 
