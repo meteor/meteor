@@ -1830,12 +1830,12 @@ Template.api.template_view = {
   id: "template_view",
   name: "<em>template</em>.view",
   locus: "Client",
-  descr: ["The [View](#ui_view) object for this invocation of the template."]
+  descr: ["The [View](#blaze_view) object for this invocation of the template."]
 };
 
-Template.api.ui_registerhelper = {
-  id: "ui_registerhelper",
-  name: "UI.registerHelper(name, function)",
+Template.api.template_registerhelper = {
+  id: "template_registerhelper",
+  name: "Template.registerHelper(name, function)",
   locus: "Client",
   descr: ["Defines a [helper function](#template_helpers) which can be used from all templates."],
   args: [
@@ -1872,11 +1872,11 @@ Template.api.template_body = {
   descr: ["The [template object](#templates_api) representing your `<body>` tag."]
 };
 
-Template.api.ui_render = {
-  id: "ui_render",
-  name: "UI.render(templateOrView, parentNode, [nextNode], [parentView])",
+Template.api.blaze_render = {
+  id: "blaze_render",
+  name: "Blaze.render(templateOrView, parentNode, [nextNode], [parentView])",
   locus: "Client",
-  descr: ["Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#ui_view) which can be passed to [`UI.remove`](#ui_remove)."],
+  descr: ["Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#blaze_view) which can be passed to [`Blaze.remove`](#blaze_remove)."],
   args: [
     {name: "templateOrView",
      type: "Template or View",
@@ -1897,11 +1897,11 @@ Template.api.ui_render = {
   ]
 };
 
-Template.api.ui_renderwithdata = {
-  id: "ui_renderwithdata",
-  name: "UI.renderWithData(templateOrView, data, parentNode, [nextNode], [parentView])",
+Template.api.blaze_renderwithdata = {
+  id: "blaze_renderwithdata",
+  name: "Blaze.renderWithData(templateOrView, data, parentNode, [nextNode], [parentView])",
   locus: "Client",
-  descr: ["Renders a template or View to DOM nodes with a data context.  Otherwise identical to `UI.render`."],
+  descr: ["Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`."],
   args: [
     {name: "templateOrView",
      type: "Template or View",
@@ -1926,22 +1926,22 @@ Template.api.ui_renderwithdata = {
   ]
 };
 
-Template.api.ui_remove = {
-  id: "ui_remove",
-  name: "UI.remove(renderedView)",
+Template.api.blaze_remove = {
+  id: "blaze_remove",
+  name: "Blaze.remove(renderedView)",
   locus: "Client",
   descr: ["Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it."],
   args: [
     {name: "renderedView",
      type: "View",
-     descr: "The return value from `UI.render` or `UI.renderWithData`."
+     descr: "The return value from `Blaze.render` or `Blaze.renderWithData`."
     }
   ]
 };
 
-Template.api.ui_with = {
-  id: "ui_with",
-  name: "UI.With(data, contentFunc)",
+Template.api.blaze_with = {
+  id: "blaze_with",
+  name: "Blaze.With(data, contentFunc)",
   locus: "Client",
   descr: ["Constructs a View that renders content with a data context."],
   args: [
@@ -1956,9 +1956,9 @@ Template.api.ui_with = {
   ]
 };
 
-Template.api.ui_if = {
-  id: "ui_if",
-  name: "UI.If(conditionFunc, contentFunc, [elseFunc])",
+Template.api.blaze_if = {
+  id: "blaze_if",
+  name: "Blaze.If(conditionFunc, contentFunc, [elseFunc])",
   locus: "Client",
   descr: ["Constructs a View that renders content conditionally."],
   args: [
@@ -1977,11 +1977,11 @@ Template.api.ui_if = {
   ]
 };
 
-Template.api.ui_unless = {
-  id: "ui_unless",
-  name: "UI.Unless(conditionFunc, contentFunc, [elseFunc])",
+Template.api.blaze_unless = {
+  id: "blaze_unless",
+  name: "Blaze.Unless(conditionFunc, contentFunc, [elseFunc])",
   locus: "Client",
-  descr: ["An inverted [`UI.If`](#ui_if)."],
+  descr: ["An inverted [`Blaze.If`](#blaze_if)."],
   args: [
     {name: "conditionFunc",
      type: "Function",
@@ -1998,9 +1998,9 @@ Template.api.ui_unless = {
   ]
 };
 
-Template.api.ui_each = {
-  id: "ui_each",
-  name: "UI.Each(argFunc, contentFunc, [elseFunc])",
+Template.api.blaze_each = {
+  id: "blaze_each",
+  name: "Blaze.Each(argFunc, contentFunc, [elseFunc])",
   locus: "Client",
   descr: ["Constructs a View that renders `contentFunc` for each item in a sequence."],
   args: [
@@ -2019,9 +2019,16 @@ Template.api.ui_each = {
   ]
 };
 
-Template.api.ui_data = {
-  id: "ui_data",
-  name: "UI.data([elementOrView])",
+Template.api.template_currentdata = {
+  id: "template_currentdata",
+  name: "Template.currentData()",
+  locus: "Client",
+  descr: ["Returns the data context of the current helper, or the data context of the template that declares the current event handler or callback.  Establishes a reactive dependency on the result."]
+};
+
+Template.api.blaze_getdata = {
+  id: "blaze_getdata",
+  name: "Blaze.getData([elementOrView])",
   locus: "Client",
   descr: ["Returns the current data context, or the data context that was used when rendering a particular DOM element or View from a Meteor template."],
   args: [
@@ -2031,16 +2038,16 @@ Template.api.ui_data = {
     }]
 };
 
-Template.api.ui_currentview = {
-  id: "ui_currentview",
-  name: "UI.currentView",
+Template.api.blaze_currentview = {
+  id: "blaze_currentview",
+  name: "Blaze.currentView",
   locus: "Client",
   descr: ["The View corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
 };
 
-Template.api.ui_getview = {
-  id: "ui_getview",
-  name: "UI.getView([element])",
+Template.api.blaze_getview = {
+  id: "blaze_getview",
+  name: "Blaze.getView([element])",
   locus: "Client",
   descr: ["Gets either the current View, or the View enclosing the given DOM element."],
   args: [
@@ -2051,16 +2058,16 @@ Template.api.ui_getview = {
   ]
 };
 
-Template.api.ui_templateinstance = {
-  id: "ui_templateinstance",
-  name: "UI.templateInstance()",
+Template.api.template_instance = {
+  id: "template_instance",
+  name: "Template.instance()",
   locus: "Client",
   descr: ["The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
 };
 
-Template.api.ui_parentdata = {
-  id: "ui_parentdata",
-  name: "UI.parentData(numLevels)",
+Template.api.template_parentdata = {
+  id: "template_parentdata",
+  name: "Template.parentData(numLevels)",
   locus: "Client",
   descr: ["Accesses other data contexts that enclose the current data context."],
   args: [
@@ -2070,9 +2077,9 @@ Template.api.ui_parentdata = {
     }]
 };
 
-Template.api.ui_tohtml = {
-  id: "ui_tohtml",
-  name: "UI.toHTML(templateOrView)",
+Template.api.blaze_tohtml = {
+  id: "blaze_tohtml",
+  name: "Blaze.toHTML(templateOrView)",
   locus: "Client",
   descr: ["Renders a template or View to a string of HTML."],
   args: [
@@ -2082,11 +2089,11 @@ Template.api.ui_tohtml = {
     }]
 };
 
-Template.api.ui_tohtmlwithdata = {
-  id: "ui_tohtmlwithdata",
-  name: "UI.toHTMLWithData(templateOrView, data)",
+Template.api.blaze_tohtmlwithdata = {
+  id: "blaze_tohtmlwithdata",
+  name: "Blaze.toHTMLWithData(templateOrView, data)",
   locus: "Client",
-  descr: ["Renders a template or View to HTML with a data context.  Otherwise identical to `UI.toHTML`."],
+  descr: ["Renders a template or View to HTML with a data context.  Otherwise identical to `Blaze.toHTML`."],
   args: [
     {name: "templateOrView",
      type: "Template or View",
@@ -2098,9 +2105,9 @@ Template.api.ui_tohtmlwithdata = {
     }]
 };
 
-Template.api.ui_view = {
-  id: "ui_view",
-  name: "[new] UI.View([name], renderFunction)",
+Template.api.blaze_view = {
+  id: "blaze_view",
+  name: "[new] Blaze.View([name], renderFunction)",
   locus: "Client",
   descr: ["Constructor for a View, which represents a reactive region of DOM."],
   args: [
@@ -2114,9 +2121,9 @@ Template.api.ui_view = {
   ]
 };
 
-Template.api.ui_template = {
-  id: "ui_template",
-  name: "[new] UI.Template([viewName], renderFunction)",
+Template.api.blaze_template = {
+  id: "blaze_template",
+  name: "[new] Blaze.Template([viewName], renderFunction)",
   locus: "Client",
   descr: ["Constructor for a Template, which is used to construct Views with particular name and content."],
   args: [
@@ -2130,9 +2137,9 @@ Template.api.ui_template = {
   ]
 };
 
-Template.api.ui_istemplate = {
-  id: "ui_istemplate",
-  name: "UI.isTemplate(value)",
+Template.api.blaze_istemplate = {
+  id: "blaze_istemplate",
+  name: "Blaze.isTemplate(value)",
   locus: "Client",
   descr: ["Returns true if `value` is a template object like `Template.myTemplate`."],
   args: [

@@ -257,31 +257,33 @@ var toc = [
         {instance: "template", name: "autorun", id: "template_autorun"},
         {instance: "template", name: "view", id: "template_view"}
       ],
+      "Template.registerHelper",
+      "Template.instance",
+      "Template.currentData",
+      "Template.parentData",
       "Template.body",
-      "UI", [
-        "UI.registerHelper",
-        "UI.render",
-        "UI.renderWithData",
-        "UI.remove",
-        "UI.data",
-        "UI.templateInstance",
-        "UI.parentData",
-        "UI.toHTML",
-        "UI.toHTMLWithData",
-        {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
-      ],
-      {name: "Views", id: "ui_view"}, [
-        "UI.currentView",
-        "UI.getView",
-        "UI.With",
-        "UI.If",
-        "UI.Unless",
-        "UI.Each"
-      ],
-      "UI.Template",
-      "UI.isTemplate",
+      {name: "{{> UI.dynamic}}", id: "ui_dynamic"},
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"},
+      {name: "Event maps", style: "noncode"}
+    ],
+    "Blaze", [
+      "Blaze.render",
+      "Blaze.renderWithData",
+      "Blaze.remove",
+      "Blaze.getData",
+      "Blaze.toHTML",
+      "Blaze.toHTMLWithData",
+      "Blaze.View", [
+        "Blaze.currentView",
+        "Blaze.getView",
+        "Blaze.With",
+        "Blaze.If",
+        "Blaze.Unless",
+        "Blaze.Each"
+      ],
+      "Blaze.Template",
+      "Blaze.isTemplate",
+      {type: "spacer"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
 

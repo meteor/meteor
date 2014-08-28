@@ -3,7 +3,7 @@ if (Package.templating) {
   var Blaze = Package.blaze.Blaze; // implied by `templating`
   var HTML = Package.htmljs.HTML; // implied by `blaze`
 
-  Blaze.registerHelper("markdown", new Template('markdown', function () {
+  Blaze.Template.registerHelper("markdown", new Template('markdown', function () {
     var view = this;
     var content = '';
     if (view.templateContentBlock) {

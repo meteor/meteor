@@ -299,10 +299,10 @@ Accounts.loginServicesConfigured = function () {
 // If our app has a Blaze, register the {{currentUser}} and {{loggingIn}}
 // global helpers.
 if (Package.blaze) {
-  Package.blaze.Blaze.registerHelper('currentUser', function () {
+  Package.blaze.Blaze.Template.registerHelper('currentUser', function () {
     return Meteor.user();
   });
-  Package.blaze.Blaze.registerHelper('loggingIn', function () {
+  Package.blaze.Blaze.Template.registerHelper('loggingIn', function () {
     return Meteor.loggingIn();
   });
 }

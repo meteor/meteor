@@ -68,7 +68,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     // object.
     var inst = view._templateInstance;
 
-    inst.data = Blaze.data(view);
+    inst.data = Blaze.getData(view);
 
     if (view._domrange && !view.isDestroyed) {
       inst.firstNode = view._domrange.firstNode();
@@ -150,7 +150,7 @@ Template.prototype.events = function (eventMap) {
     eventMap2[k] = (function (k, v) {
       return function (event/*, ...*/) {
         var view = this; // passed by EventAugmenter
-        var data = Blaze.data(event.currentTarget);
+        var data = Blaze.getData(event.currentTarget);
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
@@ -164,7 +164,7 @@ Template.prototype.events = function (eventMap) {
   template.__eventMaps.push(eventMap2);
 };
 
-Blaze.templateInstance = function () {
+Template.instance = function () {
   var view = Blaze.currentView;
 
   while (view && ! view.template)
@@ -175,3 +175,11 @@ Blaze.templateInstance = function () {
 
   return view.templateInstance();
 };
+
+// Note: Template.currentData() is documented to take zero arguments,
+// while Blaze.getData takes up to one.
+Template.currentData = Blaze.getData;
+
+Template.parentData = Blaze._parentData;
+
+Template.registerHelper = Blaze.registerHelper;
