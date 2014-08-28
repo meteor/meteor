@@ -2059,7 +2059,7 @@ Template.api.ui_templateinstance = {
   id: "ui_templateinstance",
   name: "UI.templateInstance()",
   locus: "Client",
-  descr: ["The template instance corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
+  descr: ["The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
 };
 
 Template.api.ui_parentdata = {
