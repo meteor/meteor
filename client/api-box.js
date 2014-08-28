@@ -50,7 +50,7 @@ Template.autoApiBox.helpers({
       } else if (name === "MongoFieldSpecifier") {
         return typeLink("Mongo Field Specifier", "fieldspecifiers");
       } else if (name === "JSONCompatible") {
-        return "JSON-combpatible Object";
+        return "JSON-compatible Object";
       }
 
       return name;
