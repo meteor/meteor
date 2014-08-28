@@ -5,12 +5,23 @@ Template = {};
 // `Template` is not a function so this is not a real function prototype,
 // but it is used as the prototype of all `Template.foo` objects.
 // Naming a template "prototype" will cause an error.
+
+/**
+ * @summary Template "class"
+ * @class Template
+ * @instanceName template
+ */
 Template.prototype = (function () {
   // IE 8 exposes function names in the enclosing scope, so
   // use this IIFE to catch it.
   return (function Template() {}).prototype;
 })();
 
+/**
+ * @summary Specify template helpers available to this template.
+ * @locus Client
+ * @param {Object} helpers Dictionary of helper functions by name.
+ */
 Template.prototype.helpers = function (dict) {
   for (var k in dict)
     this[k] = dict[k];
@@ -66,6 +77,11 @@ UI._templateInstance = function () {
   return Template.__updateTemplateInstance(templateView);
 };
 
+/**
+ * @summary Specify event handlers for this template.
+ * @locus Client
+ * @param {Object.<String, Function>} eventMap Event handlers to associate with this template.
+ */
 Template.prototype.events = function (eventMap) {
   var template = this;
   template.__eventMaps = (template.__eventMaps || []);
@@ -121,6 +137,13 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
   if (template.__initView)
     template.__initView(view);
 
+  /**
+   * @summary Provide a callback when an instance of a template is created.
+   * @locus Client
+   * @memberOf Template
+   * @name  created
+   * @instance
+   */
   if (template.created) {
     view.onCreated(function () {
       var inst = Template.__updateTemplateInstance(view);
@@ -128,6 +151,13 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
     });
   }
 
+  /**
+   * @summary Provide a callback when an instance of a template is rendered.
+   * @locus Client
+   * @memberOf Template
+   * @name  rendered
+   * @instance
+   */
   if (template.rendered) {
     view.onRendered(function () {
       var inst = Template.__updateTemplateInstance(view);
@@ -135,6 +165,13 @@ Template.prototype.__makeView = function (contentFunc, elseFunc) {
     });
   }
 
+  /**
+   * @summary Provide a callback when an instance of a template is destroyed.
+   * @locus Client
+   * @instance
+   * @name  destroyed
+   * @memberOf Template
+   */
   if (template.destroyed) {
     view.onDestroyed(function () {
       var inst = Template.__updateTemplateInstance(view);

@@ -3,6 +3,11 @@
 ///
 
 // This is reactive.
+
+/**
+ * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ */
 Meteor.userId = function () {
   return Accounts.connection.userId();
 };
@@ -18,12 +23,22 @@ Accounts._setLoggingIn = function (x) {
     loggingInDeps.changed();
   }
 };
+
+/**
+ * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.
+ * @locus Client
+ */
 Meteor.loggingIn = function () {
   loggingInDeps.depend();
   return loggingIn;
 };
 
 // This calls userId, which is reactive.
+
+/**
+ * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ */
 Meteor.user = function () {
   var userId = Meteor.userId();
   if (!userId)
@@ -203,6 +218,11 @@ makeClientLoggedIn = function(userId, token, tokenExpires) {
   Accounts.connection.setUserId(userId);
 };
 
+/**
+ * @summary Log the user out.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Meteor.logout = function (callback) {
   Accounts.connection.apply('logout', [], {wait: true}, function(error, result) {
     if (error) {
@@ -214,6 +234,11 @@ Meteor.logout = function (callback) {
   });
 };
 
+/**
+ * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Meteor.logoutOtherClients = function (callback) {
   // We need to make two method calls: one to replace our current token,
   // and another to remove all tokens except the current one. We want to
