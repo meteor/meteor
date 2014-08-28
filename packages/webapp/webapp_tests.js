@@ -82,7 +82,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
-    }, "client.browser");
+    }, "web.browser");
 
     // When inline scripts are allowed, the script should be inlined.
     test.isTrue(boilerplate.indexOf(additionalScript) !== -1);

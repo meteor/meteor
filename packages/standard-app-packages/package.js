@@ -60,5 +60,5 @@ Package.on_use(function(api) {
     'fastclick',
     // Good defaults for the mobile status bar
     'mobile-status-bar'
-  ], 'client.cordova');
+  ], 'web.cordova');
 });

@@ -4,6 +4,6 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['reload', 'deps'], 'client.cordova');
-  api.add_files("reload-on-resume.js", 'client.cordova');
+  api.use(['reload', 'deps'], 'web.cordova');
+  api.add_files("reload-on-resume.js", 'web.cordova');
 });

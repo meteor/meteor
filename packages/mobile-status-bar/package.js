@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.addFiles('mobile-status-bar.js', 'client.cordova');
+  api.addFiles('mobile-status-bar.js', 'web.cordova');
 });
 
 Cordova.depends({

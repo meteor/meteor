@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.export('FastClick', 'client.cordova');
+  api.export('FastClick', 'web.cordova');
 
-  api.addFiles(['pre.js', 'fastclick.js', 'post.js'], 'client.cordova');
+  api.addFiles(['pre.js', 'fastclick.js', 'post.js'], 'web.cordova');
 });

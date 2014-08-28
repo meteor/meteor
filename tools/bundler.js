@@ -1399,7 +1399,7 @@ _.extend(ServerTarget.prototype, {
     builder.reserve('dependencies');
 
     // Mapping from arch to relative path to the client program, if we have any
-    // (hack). Ex.: { 'client.browser': '../client.browser/program.json', ... }
+    // (hack). Ex.: { 'web.browser': '../web.browser/program.json', ... }
     var clientTargetPaths = {};
     if (self.clientTargets) {
       _.each(self.clientTargets, function (target) {

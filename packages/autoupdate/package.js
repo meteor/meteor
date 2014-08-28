@@ -14,10 +14,10 @@ Package.on_use(function (api) {
   api.use(['livedata', 'mongo-livedata', 'underscore'], ['client', 'server']);
   api.use('deps', 'client');
   api.use('reload', 'client', {weak: true});
-  api.use('http', 'client.cordova');
+  api.use('http', 'web.cordova');
 
   api.export('Autoupdate');
   api.add_files('autoupdate_server.js', 'server');
-  api.add_files('autoupdate_client.js', 'client.browser');
-  api.add_files('autoupdate_cordova.js', 'client.cordova');
+  api.add_files('autoupdate_client.js', 'web.browser');
+  api.add_files('autoupdate_cordova.js', 'web.cordova');
 });
