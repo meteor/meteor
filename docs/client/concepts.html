@@ -9,7 +9,7 @@ when writing those apps.
 
 {{> whatismeteor }}
 {{> structure }}
-{{> data }}
+{{> data_ }}
 {{> reactivity }}
 {{> livehtmltemplates }}
 {{> packages_concept }}
@@ -158,7 +158,7 @@ application are loaded according to these rules:
 {{/markdown}}
 </template>
 
-<template name="data">
+<template name="data_">
 {{#markdown}}
 
 <h2 id="dataandsecurity">Data and security</h2>
@@ -376,7 +376,7 @@ These Meteor functions run your code as a reactive computation:
 
 * [Templates](#livehtmltemplates)
 * [`Tracker.autorun`](#tracker_autorun)
-* [`UI.render`](#ui_render) and [`UI.renderWithData`](#ui_renderwithdata)
+* [`Blaze.render`](#blaze_render) and [`Blaze.renderWithData`](#blaze_renderwithdata)
 
 And the reactive data sources that can trigger changes are:
 

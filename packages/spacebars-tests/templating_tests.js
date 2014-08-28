@@ -588,8 +588,21 @@ Tinytest.add('spacebars-tests - templating_tests - each falsy Issue #801', funct
 });
 
 Tinytest.add('spacebars-tests - templating_tests - duplicate template error', function (test) {
-  Template.__define__("test_duplicate_template", function () {});
+  Template.__checkName("test_duplicate_template");
+  Template.test_duplicate_template = new Template(
+    "dup", function () { return null; });
+
   test.throws(function () {
-    Template.__define__("test_duplicate_template", function () {});
+    Template.__checkName("test_duplicate_template");
   });
+});
+
+Tinytest.add('spacebars-tests - templating_tests - reserved template name error', function (test) {
+
+  _.each('length __proto__ prototype name body currentData instance'.split(' '),
+         function (name) {
+           test.throws(function () {
+             Template.__checkName(name);
+           });
+         });
 });

@@ -1,3 +1,10 @@
+var jsUrlsAllowed = false;
+Blaze._allowJavascriptUrls = function () {
+  jsUrlsAllowed = true;
+};
+Blaze._javascriptUrlsAllowed = function () {
+  return jsUrlsAllowed;
+};
 
 // An AttributeHandler object is responsible for updating a particular attribute
 // of a particular element.  AttributeHandler subclasses implement
@@ -26,6 +33,7 @@ AttributeHandler = function (name, value) {
   this.name = name;
   this.value = value;
 };
+Blaze._AttributeHandler = AttributeHandler;
 
 AttributeHandler.prototype.update = function (element, oldValue, value) {
   if (value === null) {
@@ -245,7 +253,7 @@ var getUrlProtocol = function (url) {
 
 // UrlHandler is an attribute handler for all HTML attributes that take
 // URL values. It disallows javascript: URLs, unless
-// UI._allowJavascriptUrls() has been called. To detect javascript:
+// Blaze._allowJavascriptUrls() has been called. To detect javascript:
 // urls, we set the attribute on a dummy anchor element and then read
 // out the 'protocol' property of the attribute.
 var origUpdate = AttributeHandler.prototype.update;
@@ -254,15 +262,15 @@ var UrlHandler = AttributeHandler.extend({
     var self = this;
     var args = arguments;
 
-    if (UI._javascriptUrlsAllowed()) {
+    if (Blaze._javascriptUrlsAllowed()) {
       origUpdate.apply(self, args);
     } else {
       var isJavascriptProtocol = (getUrlProtocol(value) === "javascript:");
       if (isJavascriptProtocol) {
-        Meteor._debug("URLs that use the 'javascript:' protocol are not " +
-                      "allowed in URL attribute values. " +
-                      "Call UI._allowJavascriptUrls() " +
-                      "to enable them.");
+        Blaze._warn("URLs that use the 'javascript:' protocol are not " +
+                    "allowed in URL attribute values. " +
+                    "Call Blaze._allowJavascriptUrls() " +
+                    "to enable them.");
         origUpdate.apply(self, [element, oldValue, null]);
       } else {
         origUpdate.apply(self, args);

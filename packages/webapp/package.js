@@ -9,7 +9,7 @@ Npm.depends({connect: "2.9.0",
 
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'spacebars-compiler',
-           'spacebars', 'htmljs', 'ui'],
+           'spacebars', 'htmljs', 'blaze'],
           'server');
   api.use(['underscore'], 'client');
   api.use(['application-configuration', 'follower-livedata'], {

@@ -12,7 +12,7 @@ if (Package.reload) {
 /**
  * @memberOf Session
  * @method set
- * @summary Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Tracker.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)
+ * @summary Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Tracker.autorun`](#tracker_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)
  * @locus Client
  * @param {String} key The key to set, eg, `selectedItem`
  * @param {EJSONable | undefined} value The new value for `key`

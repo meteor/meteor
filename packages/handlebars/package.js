@@ -9,5 +9,5 @@ Package.on_use(function (api) {
 //
 //  throw new Error(
 //    "The 'handlebars' package is deprecated. "
-//      + "`Handlebars.registerHelper` is now `UI.registerHelper` in the 'ui' package.");
+//      + "`Handlebars.registerHelper` is now `Template.registerHelper`.");
 });

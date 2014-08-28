@@ -2,13 +2,13 @@
 // A constant empty array (frozen if the JS engine supports it).
 var _emptyArray = Object.freeze ? Object.freeze([]) : [];
 
-// `[new] Blaze.DOMRange([nodeAndRangeArray])`
+// `[new] Blaze._DOMRange([nodeAndRangeArray])`
 //
 // A DOMRange consists of an array of consecutive nodes and DOMRanges,
 // which may be replaced at any time with a new array.  If the DOMRange
 // has been attached to the DOM at some location, then updating
 // the array will cause the DOM to be updated at that location.
-Blaze.DOMRange = function (nodeAndRangeArray) {
+Blaze._DOMRange = function (nodeAndRangeArray) {
   if (! (this instanceof DOMRange))
     // called without `new`
     return new DOMRange(nodeAndRangeArray);
@@ -27,7 +27,7 @@ Blaze.DOMRange = function (nodeAndRangeArray) {
   this.parentRange = null;
   this.attachedCallbacks = _emptyArray;
 };
-var DOMRange = Blaze.DOMRange;
+var DOMRange = Blaze._DOMRange;
 
 // In IE 8, don't use empty text nodes as placeholders
 // in empty DOMRanges, use comment nodes instead.  Using
@@ -120,17 +120,17 @@ DOMRange.forElement = function (elem) {
   return range;
 };
 
-DOMRange.prototype.attach = function (parentElement, nextNode, _isMove) {
+DOMRange.prototype.attach = function (parentElement, nextNode, _isMove, _isReplace) {
   // This method is called to insert the DOMRange into the DOM for
   // the first time, but it's also used internally when
   // updating the DOM.
   //
   // If _isMove is true, move this attached range to a different
   // location under the same parentElement.
-  if (_isMove) {
+  if (_isMove || _isReplace) {
     if (! (this.parentElement === parentElement &&
            this.attached))
-      throw new Error("Can only move an attached DOMRange, and only under the same parent element");
+      throw new Error("Can only move or replace an attached DOMRange, and only under the same parent element");
   }
 
   var members = this.members;
@@ -150,7 +150,7 @@ DOMRange.prototype.attach = function (parentElement, nextNode, _isMove) {
   this.attached = true;
   this.parentElement = parentElement;
 
-  if (! _isMove) {
+  if (! (_isMove || _isReplace)) {
     for(var i = 0; i < this.attachedCallbacks.length; i++) {
       var obj = this.attachedCallbacks[i];
       obj.attached && obj.attached(this, parentElement);
@@ -178,9 +178,10 @@ DOMRange.prototype.setMembers = function (newNodeAndRangeArray) {
       // detach the old members and insert the new members
       var nextNode = this.lastNode().nextSibling;
       var parentElement = this.parentElement;
-      this.detach();
+      // Use detach/attach, but don't fire attached/detached hooks
+      this.detach(true /*_isReplace*/);
       this.members = newMembers;
-      this.attach(parentElement, nextNode);
+      this.attach(parentElement, nextNode, false, true /*_isReplace*/);
     }
   }
 };
@@ -207,7 +208,7 @@ DOMRange.prototype.lastNode = function () {
   return (m instanceof DOMRange) ? m.lastNode() : m;
 };
 
-DOMRange.prototype.detach = function () {
+DOMRange.prototype.detach = function (_isReplace) {
   if (! this.attached)
     throw new Error("Must be attached");
 
@@ -222,12 +223,15 @@ DOMRange.prototype.detach = function () {
     this.parentElement.removeChild(placeholder);
     this.emptyRangePlaceholder = null;
   }
-  this.attached = false;
-  this.parentElement = null;
 
-  for(var i = 0; i < this.attachedCallbacks.length; i++) {
-    var obj = this.attachedCallbacks[i];
-    obj.detached && obj.detached(this, oldParentElement);
+  if (! _isReplace) {
+    this.attached = false;
+    this.parentElement = null;
+
+    for(var i = 0; i < this.attachedCallbacks.length; i++) {
+      var obj = this.attachedCallbacks[i];
+      obj.detached && obj.detached(this, oldParentElement);
+    }
   }
 };
 
@@ -304,12 +308,11 @@ DOMRange.prototype._memberIn = function (m) {
 DOMRange._destroy = function (m, _skipNodes) {
   if (m instanceof DOMRange) {
     if (m.view)
-      Blaze.destroyView(m.view, _skipNodes);
-    m.parentRange = null;
+      Blaze._destroyView(m.view, _skipNodes);
   } else if ((! _skipNodes) && m.nodeType === 1) {
     // DOM Element
     if (m.$blaze_range) {
-      Blaze.destroyNode(m);
+      Blaze._destroyNode(m);
       m.$blaze_range = null;
     }
   }
@@ -417,7 +420,7 @@ DOMRange.prototype.$ = function (selector) {
   if (parentNode.nodeType === 11 /* DocumentFragment */)
     throw new Error("Can't use $ on an offscreen range");
 
-  var results = Blaze.DOMBackend.findBySelector(selector, parentNode);
+  var results = Blaze._DOMBackend.findBySelector(selector, parentNode);
 
   // We don't assume `results` has jQuery API; a plain array
   // should do just as well.  However, if we do have a jQuery

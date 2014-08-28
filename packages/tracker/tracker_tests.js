@@ -1,4 +1,4 @@
-Tinytest.add('deps - run', function (test) {
+Tinytest.add('tracker - run', function (test) {
   var d = new Tracker.Dependency;
   var x = 0;
   var handle = Tracker.autorun(function (handle) {
@@ -52,7 +52,7 @@ Tinytest.add('deps - run', function (test) {
   });
 });
 
-Tinytest.add("deps - nested run", function (test) {
+Tinytest.add("tracker - nested run", function (test) {
   var a = new Tracker.Dependency;
   var b = new Tracker.Dependency;
   var c = new Tracker.Dependency;
@@ -149,7 +149,7 @@ Tinytest.add("deps - nested run", function (test) {
   test.isFalse(f.hasDependents());
 });
 
-Tinytest.add("deps - flush", function (test) {
+Tinytest.add("tracker - flush", function (test) {
 
   var buf = "";
 
@@ -244,7 +244,7 @@ Tinytest.add("deps - flush", function (test) {
   });
 });
 
-Tinytest.add("deps - lifecycle", function (test) {
+Tinytest.add("tracker - lifecycle", function (test) {
 
   test.isFalse(Tracker.active);
   test.equal(null, Tracker.currentComputation);
@@ -312,7 +312,7 @@ Tinytest.add("deps - lifecycle", function (test) {
 
 });
 
-Tinytest.add("deps - onInvalidate", function (test) {
+Tinytest.add("tracker - onInvalidate", function (test) {
   var buf = "";
 
   var c1 = Tracker.autorun(function () {
@@ -373,7 +373,7 @@ Tinytest.add("deps - onInvalidate", function (test) {
   Tracker.flush();
 });
 
-Tinytest.add('deps - invalidate at flush time', function (test) {
+Tinytest.add('tracker - invalidate at flush time', function (test) {
   // Test this sentence of the docs: Functions are guaranteed to be
   // called at a time when there are no invalidated computations that
   // need rerunning.
@@ -409,7 +409,7 @@ Tinytest.add('deps - invalidate at flush time', function (test) {
 
 });
 
-Tinytest.add('deps - throwFirstError', function (test) {
+Tinytest.add('tracker - throwFirstError', function (test) {
   var d = new Tracker.Dependency;
   Tracker.autorun(function (c) {
     d.depend();

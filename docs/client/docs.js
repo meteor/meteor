@@ -1,6 +1,5 @@
 Template.headline.release = function () {
   return Meteor.release ? "0.9.0.1" : "(checkout)";
-
 };
 
 Meteor.startup(function () {
@@ -249,26 +248,43 @@ var toc = [
         {name: "destroyed", id: "template_destroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
-        {instance: "this", name: "findAll", id: "template_findAll"},
-        {instance: "this", name: "$", id: "template_findAll"},
-        {instance: "this", name: "find", id: "template_find"},
-        {instance: "this", name: "firstNode", id: "template_firstNode"},
-        {instance: "this", name: "lastNode", id: "template_lastNode"},
-        {instance: "this", name: "data", id: "template_data"},
-        {instance: "this", name: "autorun", id: "template_autorun"}
+        {instance: "template", name: "findAll", id: "template_findAll"},
+        {instance: "template", name: "$", id: "template_findAll"},
+        {instance: "template", name: "find", id: "template_find"},
+        {instance: "template", name: "firstNode", id: "template_firstNode"},
+        {instance: "template", name: "lastNode", id: "template_lastNode"},
+        {instance: "template", name: "data", id: "template_data"},
+        {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "view", id: "template_view"}
       ],
-      "UI", [
-        "UI.registerHelper",
-        "UI.body",
-        "UI.render",
-        "UI.renderWithData",
-        "UI.insert",
-        "UI.remove",
-        "UI.getElementData",
-        {name: "{{> UI.dynamic}}", id: "ui_dynamic"}
-      ],
+      "Template.registerHelper",
+      "Template.instance",
+      "Template.currentData",
+      "Template.parentData",
+      "Template.body",
+      {name: "{{> UI.dynamic}}", id: "ui_dynamic"},
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
+    ],
+    "Blaze", [
+      "Blaze.render",
+      "Blaze.renderWithData",
+      "Blaze.remove",
+      "Blaze.getData",
+      "Blaze.toHTML",
+      "Blaze.toHTMLWithData",
+      "Blaze.View", [
+        "Blaze.currentView",
+        "Blaze.getView",
+        "Blaze.With",
+        "Blaze.If",
+        "Blaze.Unless",
+        "Blaze.Each"
+      ],
+      "Blaze.Template",
+      "Blaze.isTemplate",
+      {type: "spacer"},
+      {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
 
     "Match", [
@@ -305,6 +321,12 @@ var toc = [
         {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
+    ],
+
+    {name: "ReactiveVar", id: "reactivevar_pkg"}, [
+      "ReactiveVar",
+      {instance: "reactiveVar", name: "get", id: "reactivevar_get"},
+      {instance: "reactiveVar", name: "set", id: "reactivevar_set"}
     ],
 
     // "Environment Variables", [
