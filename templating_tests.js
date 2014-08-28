@@ -27,9 +27,9 @@ Tinytest.add("spacebars-tests - templating_tests - assembly", function (test) {
   var onscreen = renderToDiv(Template.test_assembly_b0);
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xyhi");
   Session.set("stuff", false);
-  Deps.flush();
+  Tracker.flush();
   test.equal(canonicalizeHtml(onscreen.innerHTML), "xhi");
-  Deps.flush();
+  Tracker.flush();
 });
 
 // Test that if a template throws an error, then pending_partials is
@@ -66,7 +66,7 @@ Tinytest.add("spacebars-tests - templating_tests - table assembly", function(tes
   test.equal(canonicalizeHtml(tds[1].innerHTML), "b");
   test.equal(canonicalizeHtml(tds[2].innerHTML), "c");
 
-  Deps.flush();
+  Tracker.flush();
 });
 
 Tinytest.add("spacebars-tests - templating_tests - event handler this", function(test) {
@@ -104,7 +104,7 @@ Tinytest.add("spacebars-tests - templating_tests - event handler this", function
   event_buf.length = 0;
 
   cleanupDiv();
-  Deps.flush();
+  Tracker.flush();
 });
 
 
@@ -158,7 +158,7 @@ if (document.addEventListener) {
 
     // clean up DOM
     cleanupDiv();
-    Deps.flush();
+    Tracker.flush();
   });
 }
 
@@ -368,7 +368,7 @@ Tinytest.add("spacebars-tests - templating_tests - rendered template", function(
   test.isTrue(hr1);
 
   R.set('bar');
-  Deps.flush();
+  Tracker.flush();
   var br2 = div.getElementsByTagName('br')[0];
   var hr2 = div.getElementsByTagName('hr')[0];
   test.isTrue(br2);
@@ -376,7 +376,7 @@ Tinytest.add("spacebars-tests - templating_tests - rendered template", function(
   test.isTrue(hr2);
   test.isTrue(hr1 === hr2);
 
-  Deps.flush();
+  Tracker.flush();
 
   /////
 
@@ -396,7 +396,7 @@ Tinytest.add("spacebars-tests - templating_tests - rendered template", function(
   test.isTrue(hr1);
 
   R.set('bar');
-  Deps.flush();
+  Tracker.flush();
   var br2 = div.getElementsByTagName('br')[0];
   var hr2 = div.getElementsByTagName('hr')[0];
   test.isTrue(br2);
@@ -404,7 +404,7 @@ Tinytest.add("spacebars-tests - templating_tests - rendered template", function(
   test.isTrue(hr2);
   test.isTrue(hr1 === hr2);
 
-  Deps.flush();
+  Tracker.flush();
 
 });
 
@@ -447,13 +447,13 @@ Tinytest.add("spacebars-tests - templating_tests - template arg", function (test
 
   var div = renderToDiv(Template.test_template_arg_a, {food: "pie"});
   var cleanupDiv = addToBody(div);
-  Deps.flush(); // cause `rendered` to be called
+  Tracker.flush(); // cause `rendered` to be called
   test.equal($(div).text(), "Greetings 1-bold Line");
   clickElement(div.querySelector('i'));
   test.equal($(div).text(), "Hello 3-element World (the secret is strawberry pie)");
 
   cleanupDiv();
-  Deps.flush();
+  Tracker.flush();
 });
 
 Tinytest.add("spacebars-tests - templating_tests - helpers", function (test) {
@@ -466,7 +466,7 @@ Tinytest.add("spacebars-tests - templating_tests - helpers", function (test) {
 
   var div = renderToDiv(tmpl);
   test.equal($(div).text().match(/\S+/)[0], 'abc');
-  Deps.flush();
+  Tracker.flush();
 
   tmpl = Template.test_template_helpers_b;
 
@@ -486,13 +486,13 @@ Tinytest.add("spacebars-tests - templating_tests - helpers", function (test) {
   // We don't make helpers with names like toString work in IE 8.
   test.expect_fail();
   test.equal(txt, 'ABC4D');
-  Deps.flush();
+  Tracker.flush();
 
   // test that helpers don't "leak"
   tmpl = Template.test_template_helpers_c;
   div = renderToDiv(tmpl);
   test.equal($(div).text(), 'x');
-  Deps.flush();
+  Tracker.flush();
 });
 
 Tinytest.add("spacebars-tests - templating_tests - events", function (test) {
@@ -510,7 +510,7 @@ Tinytest.add("spacebars-tests - templating_tests - events", function (test) {
   clickElement($(div).find('b')[0]);
   test.equal(buf, ['b']);
   cleanupDiv();
-  Deps.flush();
+  Tracker.flush();
 
   ///
 
@@ -530,7 +530,7 @@ Tinytest.add("spacebars-tests - templating_tests - events", function (test) {
   clickElement($(div).find('i')[0]);
   test.equal(buf, ['u', 'i']);
   cleanupDiv();
-  Deps.flush();
+  Tracker.flush();
 
   //Test for identical callbacks for issue #650
   tmpl = Template.test_template_events_c;
@@ -549,7 +549,7 @@ Tinytest.add("spacebars-tests - templating_tests - events", function (test) {
   test.isTrue(_.contains(buf, 'a'));
   test.isTrue(_.contains(buf, 'b'));
   cleanupDiv();
-  Deps.flush();
+  Tracker.flush();
 });
 
 
