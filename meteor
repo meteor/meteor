@@ -58,7 +58,7 @@ function install_dev_bundle {
     # It still only does this if the version number has changed
     # (setting it won't cause it to automatically delete a prod dev bundle).
     if [ -n "$USE_TEST_DEV_BUNDLE_SERVER" ] ; then
-        DEV_BUNDLE_URL_ROOT="https://com.meteor.static.s3.amazonaws.com/test/"
+        DEV_BUNDLE_URL_ROOT="https://s3.amazonaws.com/com.meteor.static/test/"
     fi
 
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
