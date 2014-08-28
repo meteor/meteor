@@ -2182,7 +2182,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.templateInstance from helper",
+  "spacebars-tests - template_tests - Template.instance from helper",
   function (test) {
     // Set a property on the template instance; check that it's still
     // there from a helper.
@@ -2195,7 +2195,7 @@ Tinytest.add(
       this.value = value;
     };
     tmpl.foo = function () {
-      instanceFromHelper = UI.templateInstance();
+      instanceFromHelper = Template.instance();
     };
 
     var div = renderToDiv(tmpl);
@@ -2204,7 +2204,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.templateInstance from helper, " +
+  "spacebars-tests - template_tests - Template.instance from helper, " +
     "template instance is kept up-to-date",
   function (test) {
     var tmpl = Template.spacebars_test_template_instance_helper;
@@ -2212,7 +2212,7 @@ Tinytest.add(
     var instanceFromHelper;
 
     tmpl.foo = function () {
-      return UI.templateInstance().data;
+      return Template.instance().data;
     };
 
     var div = renderToDiv(tmpl, function () { return rv.get(); });
@@ -2223,11 +2223,8 @@ Tinytest.add(
     Tracker.flush();
     divRendersTo(test, div, "second");
 
-    // UI.templateInstance() should throw when called from not within a
-    // helper.
-    test.throws(function () {
-      UI.templateInstance();
-    });
+    // Template.instance() returns null when no template instance
+    test.isTrue(Template.instance() === null);
   }
 );
 
@@ -2270,7 +2267,10 @@ Tinytest.add(
     childTmpl.c = ["c"];
 
     childTmpl.foo = function () {
-      return UI.parentData(height.get());
+      var a = Template.parentData(height.get());
+      var b = UI._parentData(height.get()); // back-compat
+      test.equal(a, b);
+      return a;
     };
 
     var div = renderToDiv(parentTmpl);
@@ -2420,7 +2420,7 @@ Tinytest.add(
     var span = div.querySelector('SPAN');
     test.isTrue(span);
     test.equal(UI.getElementData(span), {foo: "bar"});
-    test.equal(UI.data(span), {foo: "bar"});
+    test.equal(Blaze.getData(span), {foo: "bar"});
   });
 
 Tinytest.add(
@@ -2618,7 +2618,7 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
   tmpl.events({
     'click span': function () {
       currentView = Blaze.getView();
-      currentData = Blaze.data();
+      currentData = Blaze.getData();
     }
   });
 
@@ -2707,7 +2707,7 @@ Tinytest.add(
     var tmpl = Template.spacebars_test_autorun;
     var tmplInner = Template.spacebars_test_autorun_inner;
 
-    // Keep track of the value of `UI.templateInstance()` inside the
+    // Keep track of the value of `Template.instance()` inside the
     // autorun each time it runs.
     var autorunTemplateInstances = [];
     var actualTemplateInstance;
@@ -2722,7 +2722,7 @@ Tinytest.add(
       returnedComputation = this.autorun(function (c) {
         computationArg = c;
         rv.get();
-        autorunTemplateInstances.push(UI.templateInstance());
+        autorunTemplateInstances.push(Template.instance());
       });
     };
 
