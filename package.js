@@ -37,7 +37,7 @@ Package.on_test(function (api) {
   api.use('htmljs');
   api.use('templating');
   api.use('underscore');
-  api.use(['test-helpers', 'session', 'deps',
+  api.use(['test-helpers', 'session', 'tracker',
            'minimongo'], 'client');
   api.use('spacebars-compiler');
 
