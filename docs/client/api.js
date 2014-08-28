@@ -1874,19 +1874,32 @@ Template.api.template_body = {
 
 Template.api.ui_render = {
   id: "ui_render",
-  name: "UI.render(templateOrView)",
+  name: "UI.render(templateOrView, parentNode, [nextNode], [parentView])",
   locus: "Client",
-  descr: ["Renders a template or View to DOM nodes, returning a rendered View."],
+  descr: ["Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#ui_view) which can be passed to [`UI.remove`](#ui_remove)."],
   args: [
     {name: "templateOrView",
      type: "Template or View",
-     descr: "The template (e.g. `Template.myTemplate`) or View object to render."
-    }]
+     descr: "The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned."
+    },
+    {name: "parentNode",
+     type: "DOM Node",
+     descr: "The node that will be the parent of the rendered template.  It must be an Element node."
+    },
+    {name: "nextNode",
+     type: "DOM Node",
+     descr: "Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode."
+    },
+    {name: "parentView",
+     type: "View",
+     descr: "Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview)."
+    }
+  ]
 };
 
 Template.api.ui_renderwithdata = {
   id: "ui_renderwithdata",
-  name: "UI.renderWithData(templateOrView, data)",
+  name: "UI.renderWithData(templateOrView, data, parentNode, [nextNode], [parentView])",
   locus: "Client",
   descr: ["Renders a template or View to DOM nodes with a data context.  Otherwise identical to `UI.render`."],
   args: [
@@ -1897,18 +1910,6 @@ Template.api.ui_renderwithdata = {
     {name: "data",
      type: "Object or Function",
      descr: "The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run."
-    }]
-};
-
-Template.api.ui_insert = {
-  id: "ui_insert",
-  name: "UI.insert(renderedView, parentNode[, nextNode])",
-  locus: "Client",
-  descr: ["Inserts a rendered View (such as the result of `UI.render` on a template) into the DOM."],
-  args: [
-    {name: "renderedView",
-     type: "View",
-     descr: "The return value from `UI.render` or `UI.renderWithData`."
     },
     {name: "parentNode",
      type: "DOM Node",
@@ -1916,15 +1917,20 @@ Template.api.ui_insert = {
     },
     {name: "nextNode",
      type: "DOM Node",
-     descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode."
-    }]
+     descr: "Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode."
+    },
+    {name: "parentView",
+     type: "View",
+     descr: "Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview)."
+    }
+  ]
 };
 
 Template.api.ui_remove = {
   id: "ui_remove",
   name: "UI.remove(renderedView)",
   locus: "Client",
-  descr: ["Removes a rendered View from the DOM and destroys it."],
+  descr: ["Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it."],
   args: [
     {name: "renderedView",
      type: "View",

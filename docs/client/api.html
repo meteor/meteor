@@ -2210,7 +2210,7 @@ your app.  To register a global helper, use
 [UI.registerHelper](#ui_registerhelper).
 
 Event maps on `Template.body` don't apply to elements added to the
-body via `UI.insert`, jQuery, or the DOM API, or to the body element
+body via `UI.render`, jQuery, or the DOM API, or to the body element
 itself.  To handle events on the body, window, or document, use jQuery
 or the DOM API.
 
@@ -2219,32 +2219,31 @@ or the DOM API.
 The `UI` namespace contains several utilities that are helpful when writing your
 user interface.  For example, `UI.registerHelper` allows you to define helper
 functions which
-you can use in every template.  `UI.render`, `UI.renderWithData`, and
-`UI.insert` allow you to manually render templates and insert them directly into
+you can use in every template.  `UI.render` and `UI.renderWithData` allow you to manually render templates and insert them directly into
 any part of the DOM for finer control than just using template inclusions.
 
 {{> api_box ui_registerhelper}}
 
 {{> api_box ui_render}}
 
-This returns a "rendered View," which you can insert into the DOM
-using [`UI.insert`](#ui_insert).  If you render a template, the
-template's [`created`](#template_created) callback will be invoked
-immediately.  The [`rendered`](#template_rendered) callback will be
-invoked when the View is inserted into the DOM.  The rendered template
+When you render a template, the
+template's [`created`](#template_created) callback is invoked
+immediately, before evaluating the content of the template.
+The [`rendered`](#template_rendered) callback is
+invoked after the View is rendered and inserted into the DOM.
+
+The rendered template
 will update reactively in response to data changes until the View is
-destroyed, either by [`UI.destroy`](#ui_destroy) or when the View's
+removed using [`UI.remove`](#ui_remove) or the View's
 parent element is removed by Meteor or jQuery.
 
-If `templateOrView` is a View, it must be an unrendered View.  The
-return value is this same View object, which is now a rendered View.
-
 {{#warning}}
-If the View is never inserted, or if it is removed by some other mechanism
+If the View is removed by some other mechanism
 besides Meteor or jQuery (which Meteor integrates with by default),
 the View may continue to update indefinitely.  Most users will not need to
 manually render templates and insert them into the DOM, but if you do,
-be mindful to always destroy the View when it is no longer needed.
+be mindful to always call [`UI.remove`](#ui_remove) when the View is
+no longer needed.
 {{/warning}}
 
 {{> api_box ui_renderwithdata}}
@@ -2252,44 +2251,24 @@ be mindful to always destroy the View when it is no longer needed.
 `UI.renderWithData(Template.myTemplate, data)` is essentially the same as
 `UI.render(UI.With(data, function () { return Template.myTemplate; }))`.
 
-{{> api_box ui_insert}}
-
-`UI.insert` attaches a View under a particular parent element in the
-DOM.  The View may represent a rendered template, or it may be another
-kind of view (such as [`UI.With`](#ui_with)).  If the View represents
-a template, the template's [`rendered`](#template_rendered) callback
-will be called.
-
-See [`UI.render`](#ui_render).
-
-Example:
-
-```
-UI.insert(UI.render(Template.foo), document.body);
-```
-
 {{> api_box ui_remove}}
 
-Removing a View removes the View's top-level DOM nodes from its parent
-element in the DOM and then destroys the View as per
-[`UI.destroy`](#ui_destroy).
+Use `UI.remove` to remove a template or View previously inserted with
+`UI.render`, in such a way that any behaviors attached to the DOM by
+Meteor are cleaned up.  The rendered template or View is now considered
+["destroyed"](#template_destroyed), along with all nested templates and
+Views.  In addition, any data assigned via
+jQuery to the DOM nodes is removed, as if the nodes were passed to
+jQuery's `$(...).remove()`.
 
-XXX Remove all references to "destroying" a View.
+As mentioned in [`UI.render`](#ui_render), it is important to "remove"
+all content rendered via `UI.render` using `UI.remove`, unless the
+parent node of `renderedView` is removed by a Meteor reactive
+update or with jQuery.
 
-Destroying a View stops all reactive updates to its DOM,
-removes any event listeners, and deletes any other
-bookkeeping information pertaining to the View.  Other views nested
-in the destroyed View are destroyed as well, and nodes are stripped
-of any jQuery data that has been assigned.  The View's DOM nodes
-are left in place and not removed from their parent element (in the
-case of a rendered and attached View).  If the View represents a template,
-the template's [`destroyed`](#template_destroyed) callback is invoked.
-
-If `viewOrNode` is a DOM element, all Views contained in that element are
-destroyed.
-
-See [`UI.render`](#ui_render) for more information on making sure
-templates rendered with `UI.render` are destroyed.
+`UI.remove` can be used even if the DOM nodes in question have already
+been removed from the document, to tell Blaze to stop tracking and
+updating these nodes.
 
 {{> api_box ui_data}}
 
@@ -2305,7 +2284,7 @@ is equivalent to `{{dstache}}../..}}` in a template.
 Rendering a template to HTML loses all fine-grained reactivity.  The
 normal way to render a template is to either include it from another
 template (`{{dstache}}> myTemplate}}`) or render and insert it
-programmatically using `UI.render` and `UI.insert`.  Only occasionally
+programmatically using `UI.render`.  Only occasionally
 is generating HTML useful.
 
 Because `UI.toHTML` returns a string, it is not able to update the DOM
@@ -2358,15 +2337,6 @@ appropriate, and then the `onViewCreated` hook is fired.  The term
 "unrendered View" means a newly constructed View that has not been
 "created" or rendered.
 
-When a View is first rendered into DOM nodes, it is not yet
-"attached," and the DOM nodes are held in a temporary array until a
-parent element is specified.  Once a parent element is provided for
-the View and the View's DOM node are inserted as children of this
-element (for example, by a call to `UI.insert`), the View is
-considered "attached," and any reactive updates to the View will write
-through to the DOM.  Once a View is attached, its DOM nodes may also
-be accessed and modified directly via the DOM API.
-
 The "current View" is kept in [`UI.currentView`](#ui_currentview) and
 is set during View rendering, callbacks, autoruns, and template event
 handlers.  It affects calls such as [`UI.data()`](#ui_data).
@@ -2396,19 +2366,11 @@ by Meteor have names like "Template.foo" and "if".
 {{#dtdd name="isRendered" type="Boolean" id="view_isrendered"}}
   True if this View has been rendered to DOM by `UI.render` or
   by the rendering of an enclosing View.  Conversion to HTML by
-  `UI.toHTML` doesn't count.  A rendered View is not necessarily
-  attached.  Once true, never becomes false.
-{{/dtdd}}
-
-{{#dtdd name="isAttached" type="Boolean" id="view_isattached"}}
-  True if this View has been rendered to DOM and attached under
-  some parent element, such as by `UI.insert`.  An "attached" View's
-  DOM can be inspected via [`view.firstNode()`](#view_firstnode) and
-  [`view.lastNode()`](#view_lastnode).  Once true, never becomes false.
+  `UI.toHTML` doesn't count.  Once true, never becomes false.
 {{/dtdd}}
 
 {{#dtdd name="isDestroyed" type="Boolean" id="view_isdestroyed"}}
-  True if this View has been destroyed, such as by `UI.destroy()` or
+  True if this View has been destroyed, such as by `UI.remove()` or
   by a reactive update that removes it.  A destroyed View's autoruns
   have been stopped, and its DOM nodes have generally been cleaned
   of all Meteor reactivity and possibly dismantled.
@@ -2437,8 +2399,8 @@ by Meteor have names like "Template.foo" and "if".
 {{/dtdd}}
 
 {{#dtdd name="onViewReady(func)" id="view_onviewready"}}
-  Calls `func` when the View is rendered, after waiting for the
-  View to be attached, and then until the end of
+  Calls `func` when the View is rendered and inserted into the DOM,
+  after waiting for the end of
   [flush time](#tracker_afterflush).  Does not fire if the View
   is destroyed at any point before it would fire.
   May fire multiple times (if the View re-renders).
@@ -2459,7 +2421,7 @@ by Meteor have names like "Template.foo" and "if".
 
 {{#dtdd name="firstNode()" type="DOM node" id="view_firstnode"}}
 The first node of the View's rendered content.  Note that this may
-be a text node.  Requires that the View be rendered and attached.
+be a text node.  Requires that the View be rendered.
 If the View rendered to zero DOM nodes, it may be a placeholder
 node (comment or text node).  The DOM extent of a View consists
 of the nodes between `view.firstNode()` and `view.lastNode()`,
