@@ -22,6 +22,7 @@ json@1.0.0
 less@1.0.6
 livedata@1.0.7
 logging@1.0.2
+meteor-platform@1.0.0
 meteor@1.0.2
 minifiers@1.0.2
 minimongo@1.0.1
