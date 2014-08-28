@@ -1,5 +1,4 @@
 
-
 // Packages and apps add templates on to this object.
 Template = Blaze.Template;
 
