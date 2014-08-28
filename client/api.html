@@ -2196,6 +2196,20 @@ Alias for `this.view.autorun`.
 
 {{> api_box template_view}}
 
+{{> api_box template_body}}
+
+You can define helpers and event maps on `Template.body` just like on
+any `Template.myTemplate` object.
+
+Helpers on `Template.body` are only available in the `<body>` tags of
+your app.  To register a global helper, use
+[UI.registerHelper](#ui_registerhelper).
+
+Event maps on `Template.body` don't apply to elements added to the
+body via `UI.insert`, jQuery, or the DOM API, or to the body element
+itself.  To handle events on the body, window, or document, use jQuery
+or the DOM API.
+
 <h2 id="ui"><span>Template utilities</span></h2>
 
 The `UI` namespace contains several utilities that are helpful when writing your
@@ -2206,20 +2220,6 @@ you can use in every template.  `UI.render`, `UI.renderWithData`, and
 any part of the DOM for finer control than just using template inclusions.
 
 {{> api_box ui_registerhelper}}
-
-{{> api_box ui_body}}
-
-You can define helpers and event maps on `UI.body` just like on any
-`Template.myTemplate` object.
-
-Helpers on `UI.body` are only available in the `<body>` tags of your
-app.  To register a global helper, use
-[UI.registerHelper](#ui_registerhelper).
-
-Event maps on `UI.body` don't apply to elements added to the body via
-`UI.insert`, jQuery, or the DOM API, or to the body element itself.
-To handle events on the body, window, or document, use jQuery or the
-DOM API.
 
 {{> api_box ui_render}}
 
