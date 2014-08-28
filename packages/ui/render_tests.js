@@ -111,7 +111,7 @@ Tinytest.add("ui - render - input - value", function (test) {
   test.equal(inputEl.value, "hello");
   inputEl.value = "goodbye";
   R.set("hola");
-  Deps.flush();
+  Tracker.flush();
   test.equal(inputEl.value, "hola");
 });
 
@@ -127,9 +127,9 @@ Tinytest.add("ui - render - input - checked", function (test) {
   inputEl.checked = true;
 
   R.set("checked");
-  Deps.flush();
+  Tracker.flush();
   R.set(null);
-  Deps.flush();
+  Tracker.flush();
   test.equal(inputEl.checked, false);
 });
 
@@ -191,7 +191,7 @@ Tinytest.add("ui - render - textarea", function (test) {
     var textarea = div.querySelector('textarea');
     test.equal(textarea.value, 'one');
     R.set('two');
-    Deps.flush();
+    Tracker.flush();
     test.equal(textarea.value, 'two');
   })();
 
@@ -207,7 +207,7 @@ Tinytest.add("ui - render - textarea", function (test) {
     var textarea = div.querySelector('textarea');
     test.equal(textarea.value, 'one');
     R.set('two');
-    Deps.flush({_throwFirstError: true});
+    Tracker.flush({_throwFirstError: true});
     test.equal(textarea.value, 'one');
   })();
 });
@@ -228,7 +228,7 @@ Tinytest.add("ui - render - view isolation", function (test) {
     test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello</p>");
 
     R.set('World');
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
   })();
 
@@ -246,7 +246,7 @@ Tinytest.add("ui - render - view isolation", function (test) {
     test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello World</p>");
 
     R.set(['Goodbye', ' World']);
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "<p>Goodbye World</p>");
   })();
 
@@ -272,7 +272,7 @@ Tinytest.add("ui - render - view GC", function (test) {
     test.equal(canonicalizeHtml(div.innerHTML), "<p>Hello</p>");
 
     R.set('World');
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
 
     test.equal(R.numListeners(), 1);
@@ -282,7 +282,7 @@ Tinytest.add("ui - render - view GC", function (test) {
     test.equal(R.numListeners(), 0);
 
     R.set('Steve');
-    Deps.flush();
+    Tracker.flush();
     // should not have changed:
     test.equal(canonicalizeHtml(div.innerHTML), "<p>World</p>");
   })();
@@ -315,12 +315,12 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     span.className += ' blah'; // change the element's class outside of Blaze. this simulates what a jQuery could do
 
     R.set({'class': 'david smith', id: 'bar'});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david blah smith" id="bar"></span>');
     test.equal(R.numListeners(), 1);
 
     R.set({});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="blah"></span>');
     test.equal(R.numListeners(), 1);
 
@@ -354,12 +354,12 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     span.setAttribute('style', span.getAttribute('style') + '; jquery-style: hidden');
 
     R.set({'style': 'foo: "a;zz;aa";', id: 'bar'});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML, true), '<span id="bar" style="foo: &quot;a;zz;aa&quot;; jquery-style: hidden"></span>');
     test.equal(R.numListeners(), 1);
 
     R.set({});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="jquery-style: hidden"></span>');
     test.equal(R.numListeners(), 1);
 
@@ -388,13 +388,13 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: b"></span>');
 
     R.set({'style': 'foo: c;'});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c"></span>');
 
     // test malformed styles - different expectations in IE (which
     // strips malformed styles) from other browsers
     R.set({'style': 'foo: a; bar::d;:e; baz: c;'});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML),
       malformedStylesAllowed() ?
                '<span style="foo: a; bar::d; baz: c"></span>' :
@@ -402,15 +402,15 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     // Test strange styles
     R.set({'style': ' foo: c; constructor: a; __proto__: b;'});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: c; constructor: a; __proto__: b"></span>');
 
     R.set({});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span></span>');
 
     R.set({'style': 'foo: bar;'});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: bar"></span>');
   })();
 
@@ -441,15 +441,15 @@ Tinytest.add("ui - render - reactive attributes", function (test) {
 
     test.equal(canonicalizeHtml(div.innerHTML), '<span ggg="xyz" id="foo"></span>');
     R.set({id: 'foo', ggg: [[], [], []]});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo"></span>');
 
     R.set({id: 'foo', ggg: null});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo"></span>');
 
     R.set({id: 'foo', ggg: ''});
-    Deps.flush();
+    Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), '<span ggg="" id="foo"></span>');
 
     $(div).remove();
@@ -516,7 +516,7 @@ Tinytest.add("ui - render - views", function (test) {
 
     Blaze.render(makeView).attach(div);
     buf.push('---flush---');
-    Deps.flush();
+    Tracker.flush();
     test.equal(buf, ['created 1',
                      'parent of 2 is 1',
                      'created 2',
@@ -572,7 +572,7 @@ Tinytest.add("ui - render - findAll", function (test) {
   var div = document.createElement("DIV");
 
   Blaze.render(myTemplate).attach(div);
-  Deps.flush();
+  Tracker.flush();
 
   test.equal(_.isArray(found), true);
   test.equal(_.isArray($found), false);
@@ -602,27 +602,27 @@ Tinytest.add("ui - render - reactive attributes 2", function (test) {
   test.equal(R2.numListeners(), 1);
 
   R2.set([[]]);
-  Deps.flush();
+  Tracker.flush();
   // We combine `['foo']` with what evaluates to `[[[]]]`, which is nully.
   check('<span blah="foo"></span>');
 
   R2.set([['']]);
-  Deps.flush();
+  Tracker.flush();
   // We combine `['foo']` with what evaluates to `[[['']]]`, which is non-nully.
   check('<span blah=""></span>');
 
   R2.set(null);
-  Deps.flush();
+  Tracker.flush();
   // We combine `['foo']` with `[null]`, which is nully.
   check('<span blah="foo"></span>');
 
   R1.set([[], []]);
-  Deps.flush();
+  Tracker.flush();
   // We combine two nully values.
   check('<span></span>');
 
   R1.set([[], ['foo']]);
-  Deps.flush();
+  Tracker.flush();
   check('<span blah="foo"></span>');
 
   // clean up
@@ -658,7 +658,7 @@ Tinytest.add("ui - render - SVG", function (test) {
 
   fillColor.set('green');
   classes.set('two three');
-  Deps.flush();
+  Tracker.flush();
   test.equal(circle.getAttribute('fill'), 'green');
   test.equal(circle.className.baseVal, 'two three');
 

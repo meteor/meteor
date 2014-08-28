@@ -85,9 +85,9 @@ Blaze.DOMMaterializer.def({
       if (self.parentView) {
         updaterComputation = self.parentView.autorun(updateAttributes);
       } else {
-        updaterComputation = Deps.nonreactive(function () {
-          return Deps.autorun(function () {
-            Deps.withCurrentView(self.parentView, updateAttributes);
+        updaterComputation = Tracker.nonreactive(function () {
+          return Tracker.autorun(function () {
+            Tracker.withCurrentView(self.parentView, updateAttributes);
           });
         });
       }

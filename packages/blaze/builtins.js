@@ -50,7 +50,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     var subviews = this.initialSubviews;
     this.initialSubviews = null;
     if (this.isCreatedForExpansion) {
-      this.expandedValueDep = new Deps.Dependency;
+      this.expandedValueDep = new Tracker.Dependency;
       this.expandedValueDep.depend();
     }
     return subviews;
@@ -75,7 +75,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
       return eachView.argVar.get();
     }, {
       addedAt: function (id, item, index) {
-        Deps.nonreactive(function () {
+        Tracker.nonreactive(function () {
           var newItemView = Blaze.With(item, eachView.contentFunc);
           eachView.numItems++;
 
@@ -95,7 +95,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
         });
       },
       removedAt: function (id, item, index) {
-        Deps.nonreactive(function () {
+        Tracker.nonreactive(function () {
           eachView.numItems--;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
@@ -114,7 +114,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
         });
       },
       changedAt: function (id, newItem, oldItem, index) {
-        Deps.nonreactive(function () {
+        Tracker.nonreactive(function () {
           var itemView;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
@@ -127,7 +127,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
         });
       },
       movedTo: function (id, item, fromIndex, toIndex) {
-        Deps.nonreactive(function () {
+        Tracker.nonreactive(function () {
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
           } else if (eachView.domrange) {

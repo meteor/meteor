@@ -89,7 +89,7 @@ Blaze.View.prototype.onDestroyed = function (cb) {
 /// Sets up a Deps autorun that is "scoped" to this View in two
 /// important ways: 1) Blaze.currentView is automatically set
 /// on every re-run, and 2) the autorun is stopped when the
-/// View is destroyed.  As with Deps.autorun, the first run of
+/// View is destroyed.  As with Tracker.autorun, the first run of
 /// the function is immediate, and a Computation object that can
 /// be used to stop the autorun is returned.
 ///
@@ -133,11 +133,11 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
   if (this.isInRender) {
     throw new Error("Can't call View#autorun from inside render(); try calling it from the created or rendered callback");
   }
-  if (Deps.active) {
+  if (Tracker.active) {
     throw new Error("Can't call View#autorun from a Deps Computation; try calling it from the created or rendered callback");
   }
 
-  var c = Deps.autorun(function viewAutorun(c) {
+  var c = Tracker.autorun(function viewAutorun(c) {
     return Blaze.withCurrentView(_inViewScope || self, function () {
       return f.call(self, c);
     });
@@ -149,7 +149,7 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
 
 Blaze._fireCallbacks = function (view, which) {
   Blaze.withCurrentView(view, function () {
-    Deps.nonreactive(function fireCallbacks() {
+    Tracker.nonreactive(function fireCallbacks() {
       var cbs = view._callbacks[which];
       for (var i = 0, N = (cbs && cbs.length); i < N; i++)
         cbs[i].call(view);
@@ -172,7 +172,7 @@ Blaze.materializeView = function (view, parentView) {
   var scheduleRenderedCallback = function () {
     if (needsRenderedCallback && ! view.isDestroyed &&
         view._callbacks.rendered && view._callbacks.rendered.length) {
-      Deps.afterFlush(function callRendered() {
+      Tracker.afterFlush(function callRendered() {
         if (needsRenderedCallback && ! view.isDestroyed) {
           needsRenderedCallback = false;
           Blaze._fireCallbacks(view, 'rendered');
@@ -183,8 +183,8 @@ Blaze.materializeView = function (view, parentView) {
 
   var lastHtmljs;
   // We don't expect to be called in a Computation, but just in case,
-  // wrap in Deps.nonreactive.
-  Deps.nonreactive(function () {
+  // wrap in Tracker.nonreactive.
+  Tracker.nonreactive(function () {
     view.autorun(function doRender(c) {
       // `view.autorun` sets the current view.
       // Any dependencies that should invalidate this Computation come
@@ -194,7 +194,7 @@ Blaze.materializeView = function (view, parentView) {
       var htmljs = view.render();
       view.isInRender = false;
 
-      Deps.nonreactive(function doMaterialize() {
+      Tracker.nonreactive(function doMaterialize() {
         var materializer = new Blaze.DOMMaterializer({parentView: view});
         var rangesAndNodes = materializer.visit(htmljs, []);
         if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
@@ -217,7 +217,7 @@ Blaze.materializeView = function (view, parentView) {
       // `setMembers` the next time around the autorun.  Otherwise,
       // helpers in the DOM tree to be replaced might be scheduled
       // to re-run before we have a chance to stop them.
-      Deps.onInvalidate(function () {
+      Tracker.onInvalidate(function () {
         domrange.destroyMembers();
       });
     });
@@ -270,8 +270,8 @@ Blaze._expandView = function (view, parentView) {
 
   var result = Blaze._expand(htmljs, view);
 
-  if (Deps.active) {
-    Deps.onInvalidate(function () {
+  if (Tracker.active) {
+    Tracker.onInvalidate(function () {
       Blaze.destroyView(view);
     });
   } else {

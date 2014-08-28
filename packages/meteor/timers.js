@@ -61,7 +61,7 @@ _.extend(Meteor, {
   },
 
   // XXX consider making this guarantee ordering of defer'd callbacks, like
-  // Deps.afterFlush or Node's nextTick (in practice). Then tests can do:
+  // Tracker.afterFlush or Node's nextTick (in practice). Then tests can do:
   //    callSomethingThatDefersSomeWork();
   //    Meteor.defer(expect(somethingThatValidatesThatTheWorkHappened));
   defer: function (f) {

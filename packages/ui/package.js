@@ -9,7 +9,7 @@ Package.on_use(function (api) {
   // XXX StyleHandler uses $.trim since Safari 4 doesn't support
   // `String.trim`. We should just replace this with our own `trim` if
   // we want to make jquery a weak dep.
-  api.use('deps');
+  api.use('tracker');
   api.use('random');
   api.use('ejson');
   api.use('underscore'); // slight

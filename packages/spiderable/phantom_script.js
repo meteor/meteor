@@ -14,7 +14,7 @@ var isReady = function () {
         || !Package.spiderable.Spiderable._initialSubscriptionsStarted) {
       return false;
     }
-    Deps.flush();
+    Tracker.flush();
     return DDP._allSubscriptionsReady();
   });
 };

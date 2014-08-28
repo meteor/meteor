@@ -284,15 +284,15 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Deps", [
-      "Deps.autorun",
-      "Deps.flush",
-      "Deps.nonreactive",
-      "Deps.active",
-      "Deps.currentComputation",
-      "Deps.onInvalidate",
-      "Deps.afterFlush",
-      "Deps.Computation", [
+    "Tracker", [
+      "Tracker.autorun",
+      "Tracker.flush",
+      "Tracker.nonreactive",
+      "Tracker.active",
+      "Tracker.currentComputation",
+      "Tracker.onInvalidate",
+      "Tracker.afterFlush",
+      "Tracker.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
         {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
@@ -300,7 +300,7 @@ var toc = [
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
         {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      "Deps.Dependency", [
+      "Tracker.Dependency", [
         {instance: "dependency", name: "changed", id: "dependency_changed"},
         {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
