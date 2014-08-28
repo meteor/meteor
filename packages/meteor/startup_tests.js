@@ -1,3 +1,14 @@
+Tinytest.addAsync("startup - runs after startup", function (test, onComplete) {
+  // After startup, Meteor.startup should call the callback (though asynchronously)
+  var called = false;
+  Meteor.startup(Meteor.bindEnvironment(function () {
+    called = true;
+    onComplete();
+  }));
+  test.isFalse(called);
+});
+
+
 Tinytest.addAsync("startup - ordering", function(test, onComplete) {
   var state = 0;
 
