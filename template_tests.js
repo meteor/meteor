@@ -2390,6 +2390,7 @@ Tinytest.add(
     test.equal([created, rendered, destroyed], [true, true, false]);
     test.equal(R._numListeners(), 3);
     UI.remove(renderedTmpl);
+    UI.remove(renderedTmpl); // test that double-remove doesn't throw
     UI.remove(renderedTmpl2);
     UI.remove(x);
     test.equal([created, rendered, destroyed], [true, true, true]);
