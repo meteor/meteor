@@ -1771,7 +1771,7 @@ Template.api.template_helpers = {
 
 Template.api.template_findAll = {
   id: "template_findAll",
-  name: "<em>this</em>.findAll(selector) and <em>this</em>.$(selector)",
+  name: "<em>template</em>.findAll(selector) and <em>template</em>.$(selector)",
   locus: "Client",
   descr: ["Find all elements matching `selector` in this template instance."],
   args: [
@@ -1783,7 +1783,7 @@ Template.api.template_findAll = {
 
 Template.api.template_find = {
   id: "template_find",
-  name: "<em>this</em>.find(selector)",
+  name: "<em>template</em>.find(selector)",
   locus: "Client",
   descr: ["Find one element matching `selector` in this template instance."],
   args: [
@@ -1795,28 +1795,28 @@ Template.api.template_find = {
 
 Template.api.template_firstNode = {
   id: "template_firstNode",
-  name: "<em>this</em>.firstNode",
+  name: "<em>template</em>.firstNode",
   locus: "Client",
   descr: ["The first top-level DOM node in this template instance."]
 };
 
 Template.api.template_lastNode = {
   id: "template_lastNode",
-  name: "<em>this</em>.lastNode",
+  name: "<em>template</em>.lastNode",
   locus: "Client",
   descr: ["The last top-level DOM node in this template instance."]
 };
 
 Template.api.template_data = {
   id: "template_data",
-  name: "<em>this</em>.data",
+  name: "<em>template</em>.data",
   locus: "Client",
   descr: ["The data context of this instance's latest invocation."]
 };
 
 Template.api.template_autorun = {
   id: "template_autorun",
-  name: "<em>this</em>.autorun(runFunc)",
+  name: "<em>template</em>.autorun(runFunc)",
   locus: "Client",
   descr: ["A version of [Tracker.autorun](#tracker_autorun) that is stopped when the template is destroyed."],
   args: [
@@ -1828,7 +1828,7 @@ Template.api.template_autorun = {
 
 Template.api.template_view = {
   id: "template_view",
-  name: "<em>this</em>.view",
+  name: "<em>template</em>.view",
   locus: "Client",
   descr: ["The [View](#ui_view) object for this invocation of the template."]
 };

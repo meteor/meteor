@@ -2097,7 +2097,7 @@ the template and persists across re-renderings.  Use the `created` and
 object.
 
 Because your template has been rendered, you can use functions like
-`this.findAll` which look at its DOM nodes.
+[`this.findAll`](#template_findAll) which look at its DOM nodes.
 
 {{> api_box template_created}}
 
@@ -2154,9 +2154,9 @@ Template instance objects are `instanceof UI.TemplateInstance`.
 
 {{> api_box template_findAll}}
 
-`this.findAll` returns an array of DOM elements matching `selector`.
+`template.findAll` returns an array of DOM elements matching `selector`.
 
-`this.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
+`template.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
 those same elements. jQuery objects are similar to arrays, with
 additional methods defined by the jQuery library.
 
@@ -2196,7 +2196,7 @@ You can use `this.autorun` from a [`created`](#template_created) or
 or the template instance.  The Computation is automatically stopped
 when the template is destroyed.
 
-Alias for `this.view.autorun`.
+Alias for `template.view.autorun`.
 
 {{> api_box template_view}}
 
@@ -2335,7 +2335,7 @@ way to understand and customize Meteor's rendering behavior for more
 advanced applications and packages.
 
 You can obtain a View object by calling [`UI.render`](#ui_render) on a
-template, or by accessing [`this.view`](#template_view) on a template
+template, or by accessing [`template.view`](#template_view) on a template
 instance.
 
 At the heart of a View is an [autorun](#tracker_autorun) that calls the View's
