@@ -24,36 +24,6 @@ Template.api.startup = {
   ]
 };
 
-Template.api.absoluteUrl = {
-  id: "meteor_absoluteurl",
-  name: "Meteor.absoluteUrl([path], [options])",
-  locus: "Anywhere",
-  descr: ["Generate an absolute URL pointing to the application. The server "
-          + "reads from the `ROOT_URL` environment variable to determine "
-          + "where it is running. This is taken care of automatically for "
-          + "apps deployed with `meteor deploy`, but must be provided when "
-          + "using `meteor bundle`."],
-  args: [
-    {name: "path",
-     type: "String",
-     descr: 'A path to append to the root URL. Do not include a leading "`/`".'
-    }
-  ],
-  options: [
-    {name: "secure",
-     type: "Boolean",
-     descr: "Create an HTTPS URL."
-    },
-    {name: "replaceLocalhost",
-     type: "Boolean",
-     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
-    {name: "rootUrl",
-     type: "String",
-     descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
-    }
-  ]
-};
-
 Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
@@ -845,9 +815,9 @@ Template.api.fieldspecifiers = {
 
 ////// DEPS
 
-Template.api.deps_autorun = {
-  id: "deps_autorun",
-  name: "Deps.autorun(runFunc)",
+Template.api.tracker_autorun = {
+  id: "tracker_autorun",
+  name: "Tracker.autorun(runFunc)",
   locus: "Client",
   descr: ["Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."],
   args: [
@@ -857,16 +827,16 @@ Template.api.deps_autorun = {
   ]
 };
 
-Template.api.deps_flush = {
-  id: "deps_flush",
-  name: "Deps.flush()",
+Template.api.tracker_flush = {
+  id: "tracker_flush",
+  name: "Tracker.flush()",
   locus: "Client",
   descr: ["Process all reactive updates immediately and ensure that all invalidated computations are rerun."]
 };
 
-Template.api.deps_nonreactive = {
-  id: "deps_nonreactive",
-  name: "Deps.nonreactive(func)",
+Template.api.tracker_nonreactive = {
+  id: "tracker_nonreactive",
+  name: "Tracker.nonreactive(func)",
   locus: "Client",
   descr: ["Run a function without tracking dependencies."],
   args: [
@@ -876,23 +846,23 @@ Template.api.deps_nonreactive = {
   ]
 };
 
-Template.api.deps_active = {
-  id: "deps_active",
-  name: "Deps.active",
+Template.api.tracker_active = {
+  id: "tracker_active",
+  name: "Tracker.active",
   locus: "Client",
   descr: ["True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun."]
 };
 
-Template.api.deps_currentcomputation = {
-  id: "deps_currentcomputation",
-  name: "Deps.currentComputation",
+Template.api.tracker_currentcomputation = {
+  id: "tracker_currentcomputation",
+  name: "Tracker.currentComputation",
   locus: "Client",
-  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed."]
+  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Tracker.Computation`](#tracker_computation) object created by the innermost active call to `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed."]
 };
 
-Template.api.deps_oninvalidate = {
-  id: "deps_oninvalidate",
-  name: "Deps.onInvalidate(callback)",
+Template.api.tracker_oninvalidate = {
+  id: "tracker_oninvalidate",
+  name: "Tracker.onInvalidate(callback)",
   locus: "Client",
   descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped."],
   args: [
@@ -902,9 +872,9 @@ Template.api.deps_oninvalidate = {
   ]
 };
 
-Template.api.deps_afterflush = {
-  id: "deps_afterflush",
-  name: "Deps.afterFlush(callback)",
+Template.api.tracker_afterflush = {
+  id: "tracker_afterflush",
+  name: "Tracker.afterFlush(callback)",
   locus: "Client",
   descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again."],
   args: [
@@ -958,7 +928,7 @@ Template.api.computation_firstrun = {
   id: "computation_firstrun",
   name: "<em>computation</em>.firstRun",
   locus: "Client",
-  descr: ["True during the initial run of the computation at the time `Deps.autorun` is called, and false on subsequent reruns and at other times."]
+  descr: ["True during the initial run of the computation at the time `Tracker.autorun` is called, and false on subsequent reruns and at other times."]
 };
 
 Template.api.dependency_changed = {
@@ -975,7 +945,7 @@ Template.api.dependency_depend = {
   descr: ["Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.", "If there is no current computation and `depend()` is called with no arguments, it does nothing and returns false.", "Returns true if the computation is a new dependent of `dependency` rather than an existing one."],
   args: [
     {name: "fromComputation",
-     type: "Deps.Computation",
+     type: "Tracker.Computation",
      descr: "An optional computation declared to depend on `dependency` instead of the current computation."}
   ]
 };
@@ -991,12 +961,6 @@ Template.api.dependency_hasdependents = {
 
 // writeFence
 // invalidationCrossbar
-
-
-Template.api.eventmaps = {
-  id: "eventmaps",
-  name: "Event Maps"
-};
 
 
 Template.api.user = {
@@ -1629,7 +1593,7 @@ Template.api.session_set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Tracker.autorun`](#tracker_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
@@ -1854,11 +1818,11 @@ Template.api.template_autorun = {
   id: "template_autorun",
   name: "<em>this</em>.autorun(runFunc)",
   locus: "Client",
-  descr: ["A version of [Deps.autorun](#deps_autorun) that is stopped when the template is destroyed."],
+  descr: ["A version of [Tracker.autorun](#tracker_autorun) that is stopped when the template is destroyed."],
   args: [
     {name: "runFunc",
      type: "Function",
-     descr: "The function to run. It receives one argument: a Deps.Computation object."}
+     descr: "The function to run. It receives one argument: a Tracker.Computation object."}
   ]
 };
 

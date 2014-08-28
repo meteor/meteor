@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.0" : "(checkout)";
+  return Meteor.release ? "0.9.0.1" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -300,15 +300,15 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Deps", [
-      "Deps.autorun",
-      "Deps.flush",
-      "Deps.nonreactive",
-      "Deps.active",
-      "Deps.currentComputation",
-      "Deps.onInvalidate",
-      "Deps.afterFlush",
-      "Deps.Computation", [
+    "Tracker", [
+      "Tracker.autorun",
+      "Tracker.flush",
+      "Tracker.nonreactive",
+      "Tracker.active",
+      "Tracker.currentComputation",
+      "Tracker.onInvalidate",
+      "Tracker.afterFlush",
+      "Tracker.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
         {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
@@ -316,7 +316,7 @@ var toc = [
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
         {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      "Deps.Dependency", [
+      "Tracker.Dependency", [
         {instance: "dependency", name: "changed", id: "dependency_changed"},
         {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
@@ -530,4 +530,42 @@ check_links = function() {
   });
 
   return "DONE";
+};
+
+var basicTypes = ["String", "Number", "Boolean", "Function", "Any", "Object",
+  "Array", "null", "undefined", "Integer", "Error"];
+
+// are all types either normal types or links?
+check_types = function () {
+  $(".new-api-box .type").each(function () {
+    var typeSpan = this;
+
+    var typesPipeSeparated =
+      $(typeSpan).text().replace(/, or /g, "|").replace(/( or )/g, "|")
+        .replace(/, /g, "|");
+
+    _.each(typesPipeSeparated.split("|"), function (text) {
+      if (! text) {
+        console.log(typeSpan);
+        return;
+      }
+
+      text = text.replace(/^\s+|\s+$/g, '');
+
+      if (_.contains(basicTypes, text)) {
+        return; // all good
+      }
+
+      var hasLink = false;
+      $(typeSpan).find("a").each(function () {
+        if ($(this).text().replace(/^\s+|\s+$/g, '') === text) {
+          hasLink = true;
+        }
+      });
+
+      if (! hasLink) {
+        console.log("No link for: " + text);
+      }
+    });
+  });
 };
