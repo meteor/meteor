@@ -34,6 +34,8 @@
 // version.  Developers can easily experiment with different versioning and
 // updating models by forking this package.
 
+var Future = Npm.require("fibers/future");
+
 Autoupdate = {};
 
 // The collection of acceptable client versions.
@@ -54,75 +56,69 @@ var syncQueue = new Meteor._SynchronousQueue();
 
 // updateVersions can only be called after the server has fully loaded.
 var updateVersions = function (shouldReloadClientProgram) {
-  syncQueue.runTask(function () {
-    // Step 1: load the current client program on the server and update the
-    // hash values in __meteor_runtime_config__.
-    if (shouldReloadClientProgram) {
-      WebAppInternals.reloadClientProgram();
-    }
+  // Step 1: load the current client program on the server and update the
+  // hash values in __meteor_runtime_config__.
+  if (shouldReloadClientProgram) {
+    WebAppInternals.reloadClientProgram();
+  }
 
-    // If we just re-read the client program, or if we don't have an autoupdate
-    // version, calculate it.
-    if (shouldReloadClientProgram || Autoupdate.autoupdateVersion === null) {
-      Autoupdate.autoupdateVersion =
-        process.env.AUTOUPDATE_VERSION ||
-        process.env.SERVER_ID || // XXX COMPAT 0.6.6
-        WebApp.calculateClientHashNonRefreshable();
-    }
-    // If we just recalculated it OR if it was set by (eg) test-in-browser,
-    // ensure it ends up in __meteor_runtime_config__.
-    __meteor_runtime_config__.autoupdateVersion =
-      Autoupdate.autoupdateVersion;
+  // If we just re-read the client program, or if we don't have an autoupdate
+  // version, calculate it.
+  if (shouldReloadClientProgram || Autoupdate.autoupdateVersion === null) {
+    Autoupdate.autoupdateVersion =
+      process.env.AUTOUPDATE_VERSION ||
+      process.env.SERVER_ID || // XXX COMPAT 0.6.6
+      WebApp.calculateClientHashNonRefreshable();
+  }
+  // If we just recalculated it OR if it was set by (eg) test-in-browser,
+  // ensure it ends up in __meteor_runtime_config__.
+  __meteor_runtime_config__.autoupdateVersion =
+    Autoupdate.autoupdateVersion;
 
-    Autoupdate.autoupdateVersionRefreshable =
-      __meteor_runtime_config__.autoupdateVersionRefreshable =
-        process.env.AUTOUPDATE_VERSION ||
-        process.env.SERVER_ID || // XXX COMPAT 0.6.6
-        WebApp.calculateClientHashRefreshable();
+  Autoupdate.autoupdateVersionRefreshable =
+    __meteor_runtime_config__.autoupdateVersionRefreshable =
+      process.env.AUTOUPDATE_VERSION ||
+      process.env.SERVER_ID || // XXX COMPAT 0.6.6
+      WebApp.calculateClientHashRefreshable();
 
-    // Step 2: form the new client boilerplate which contains the updated
-    // assets and __meteor_runtime_config__.
-    if (shouldReloadClientProgram) {
-      WebAppInternals.generateBoilerplate();
-    }
+  // Step 2: form the new client boilerplate which contains the updated
+  // assets and __meteor_runtime_config__.
+  if (shouldReloadClientProgram) {
+    WebAppInternals.generateBoilerplate();
+  }
 
-    // XXX COMPAT WITH 0.8.3
-    if (! ClientVersions.findOne({current: true})) {
-      // To ensure apps with version of Meteor prior to 0.9.0 (in
-      // which the structure of documents in `ClientVersions` was
-      // different) also reload.
-      ClientVersions.insert({current: true});
-    }
+  // XXX COMPAT WITH 0.8.3
+  if (! ClientVersions.findOne({current: true})) {
+    // To ensure apps with version of Meteor prior to 0.9.0 (in
+    // which the structure of documents in `ClientVersions` was
+    // different) also reload.
+    ClientVersions.insert({current: true});
+  }
 
-    if (! ClientVersions.findOne({_id: "version"})) {
-      ClientVersions.insert({
-        _id: "version",
-        version: Autoupdate.autoupdateVersion,
-      });
-    } else {
-      ClientVersions.update("version", { $set: {
-        version: Autoupdate.autoupdateVersion,
-      }});
-    }
+  if (! ClientVersions.findOne({_id: "version"})) {
+    ClientVersions.insert({
+      _id: "version",
+      version: Autoupdate.autoupdateVersion,
+    });
+  } else {
+    ClientVersions.update("version", { $set: {
+      version: Autoupdate.autoupdateVersion,
+    }});
+  }
 
-    if (! ClientVersions.findOne({_id: "version-refreshable"})) {
-      ClientVersions.insert({
-        _id: "version-refreshable",
-        version: Autoupdate.autoupdateVersionRefreshable,
-        assets: WebAppInternals.refreshableAssets
-      });
-    } else {
-      ClientVersions.update("version-refreshable", { $set: {
-        version: Autoupdate.autoupdateVersionRefreshable,
-        assets: WebAppInternals.refreshableAssets
-      }});
-    }
-  });
+  if (! ClientVersions.findOne({_id: "version-refreshable"})) {
+    ClientVersions.insert({
+      _id: "version-refreshable",
+      version: Autoupdate.autoupdateVersionRefreshable,
+      assets: WebAppInternals.refreshableAssets
+    });
+  } else {
+    ClientVersions.update("version-refreshable", { $set: {
+      version: Autoupdate.autoupdateVersionRefreshable,
+      assets: WebAppInternals.refreshableAssets
+    }});
+  }
 };
-
-Meteor.startup(function () {
-  updateVersions(false);
-});
 
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
@@ -132,7 +128,29 @@ Meteor.publish(
   {is_auto: true}
 );
 
+Meteor.startup(function () {
+  updateVersions(false);
+});
+
+var fut = new Future();
+
+// We only want SIGUSR2 to trigger 'updateVersions' AFTER onListen,
+// so we add a queued task that waits for onListen before SIGUSR2 can queue
+// tasks. Note that the `onListening` callbacks do not fire until after
+// Meteor.startup, so there is no concern that the 'updateVersions' calls
+// from SIGUSR2 will overlap with the `updateVersions` call from Meteor.startup.
+
+syncQueue.queueTask(function () {
+  fut.wait();
+});
+
+WebApp.onListening(function () {
+  fut.return();
+});
+
 // Listen for SIGUSR2, which signals that a client asset has changed.
 process.on('SIGUSR2', Meteor.bindEnvironment(function () {
-  updateVersions(true);
+  syncQueue.queueTask(function () {
+    updateVersions(true);
+  });
 }));

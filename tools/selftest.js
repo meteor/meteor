@@ -1601,5 +1601,5 @@ _.extend(exports, {
   getToolsPackage: getToolsPackage,
   execFileSync: execFileSync,
   doOrThrow: doOrThrow,
-  testPackageServerUrl: 'https://test-packages.meteor.com'
+  testPackageServerUrl: config.getTestPackageServerUrl()
 });

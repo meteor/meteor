@@ -1,20 +1,15 @@
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
-var auth = require("../auth.js");
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
-
-var randomOrgName = function () {
-  return "selftestorg" + testUtils.randomString(10);
-};
 
 // XXX tests for missing args for all commands
 
 selftest.define("organizations - logged out", function () {
   var s = new Sandbox;
 
-  var orgName = randomOrgName();
+  var orgName = testUtils.randomOrgName();
 
   var run = s.run("admin", "members", orgName, "--add", "testtest");
   run.waitSecs(commandTimeoutSecs);
@@ -51,24 +46,7 @@ selftest.define("organizations", ["net", "slow", "checkout"], function () {
   testUtils.login(s, "test", "testtest");
 
   // Create an organization for the test.
-  var orgName = randomOrgName();
-  auth.withAccountsConnection(function (conn) {
-    try {
-      var result = conn.call("login", {
-        meteorAccountsLoginInfo: { username: "test", password: "testtest" },
-        clientInfo: {}
-      });
-    } catch (err) {
-      selftest.fail("Failed to log in to Meteor developer accounts\n" +
-                    "with test user: " + err);
-    }
-
-    try {
-      conn.call("createOrganization", orgName);
-    } catch (err) {
-      selftest.fail("Failed to create organization: " + err);
-    }
-  })();
+  var orgName = testUtils.createOrganization("test", "testtest");
 
   // Add a nonexistent user.
   var run = s.run("admin", "members",

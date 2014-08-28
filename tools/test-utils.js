@@ -3,6 +3,8 @@ var release = require('./release.js');
 var uniload = require('./uniload.js');
 var config = require('./config.js');
 var utils = require('./utils.js');
+var auth = require('./auth.js');
+var selftest = require('./selftest.js');
 
 var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -218,4 +220,34 @@ exports.registerWithToken = function (token, username, password, email) {
     code: registrationCode
   });
   accountsConn.close();
+};
+
+exports.randomOrgName = function () {
+  return "selftestorg" + exports.randomString(10);
+};
+
+// Logs in as the specified user and creates a randomly named
+// organization. Returns the organization name. Calls selftest.fail if
+// the organization can't be created.
+exports.createOrganization = function (username, password) {
+  var orgName = exports.randomOrgName();
+  auth.withAccountsConnection(function (conn) {
+    try {
+      var result = conn.call("login", {
+        meteorAccountsLoginInfo: { username: username, password: password },
+        clientInfo: {}
+      });
+    } catch (err) {
+      selftest.fail("Failed to log in to Meteor developer accounts\n" +
+                    "with test user: " + err);
+    }
+
+    try {
+      conn.call("createOrganization", orgName);
+    } catch (err) {
+      selftest.fail("Failed to create organization: " + err);
+    }
+  })();
+
+  return orgName;
 };
