@@ -10,6 +10,7 @@ code-prettify@1.0.0
 coffeescript@1.0.2
 ctl-helper@1.0.2
 ctl@1.0.0
+ddp@1.0.7
 ejson@1.0.1-rc0
 follower-livedata@1.0.0
 geojson-utils@1.0.0
@@ -20,13 +21,12 @@ jquery-waypoints@1.0.0
 jquery@1.0.0
 json@1.0.0
 less@1.0.7-rc0
-livedata@1.0.8-rc0
 logging@1.0.2
 meteor-platform@1.0.1-rc0
 meteor@1.0.3-rc0
 minifiers@1.0.2
 minimongo@1.0.2-rc0
-mongo-livedata@1.0.4-rc0
+mongo@1.0.3
 observe-sequence@1.0.2-rc0
 ordered-dict@1.0.0
 random@1.0.0
