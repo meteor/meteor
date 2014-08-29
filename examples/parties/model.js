@@ -13,7 +13,7 @@
     invited: Array of user id's that are invited (only if !public)
     rsvps: Array of objects like {user: userId, rsvp: "yes"} (or "no"/"maybe")
 */
-Parties = new Mongo.Collection("parties");
+Parties = new Meteor.Collection("parties");
 
 Parties.allow({
   insert: function (userId, party) {

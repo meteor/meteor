@@ -1,10 +1,8 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
-Mongo = {};
-
 /**
- * @summary Constructor for a MongoDB Collection
+ * @summary Constructor for a Collection
  * @locus Anywhere
  * @instancename collection
  * @class
@@ -19,10 +17,10 @@ Mongo = {};
 The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
  */
-Mongo.Collection = function (name, options) {
+Meteor.Collection = function (name, options) {
   var self = this;
-  if (! (self instanceof Mongo.Collection))
-    throw new Error('use "new" to construct a Mongo.Collection');
+  if (! (self instanceof Meteor.Collection))
+    throw new Error('use "new" to construct a Meteor.Collection');
 
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
@@ -33,7 +31,7 @@ Mongo.Collection = function (name, options) {
 
   if (name !== null && typeof name !== "string") {
     throw new Error(
-      "First argument to new Mongo.Collection must be a string or null");
+      "First argument to new Meteor.Collection must be a string or null");
   }
 
   if (options && options.methods) {
@@ -217,7 +215,7 @@ Mongo.Collection = function (name, options) {
 ///
 
 
-_.extend(Mongo.Collection.prototype, {
+_.extend(Meteor.Collection.prototype, {
 
   _getFindSelector: function (args) {
     if (args.length == 0)
@@ -248,7 +246,7 @@ _.extend(Mongo.Collection.prototype, {
    * @summary Find the documents in a collection that match the selector.
    * @locus Anywhere
    * @method find
-   * @memberOf Mongo.Collection
+   * @memberOf Meteor.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
@@ -273,7 +271,7 @@ _.extend(Mongo.Collection.prototype, {
    * @summary Finds the first document that matches the selector, as ordered by sort and skip options.
    * @locus Anywhere
    * @method findOne
-   * @memberOf Mongo.Collection
+   * @memberOf Meteor.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
@@ -292,7 +290,7 @@ _.extend(Mongo.Collection.prototype, {
 
 });
 
-Mongo.Collection._publishCursor = function (cursor, sub, collection) {
+Meteor.Collection._publishCursor = function (cursor, sub, collection) {
   var observeHandle = cursor.observeChanges({
     added: function (id, fields) {
       sub.added(collection, id, fields);
@@ -316,7 +314,7 @@ Mongo.Collection._publishCursor = function (cursor, sub, collection) {
 // likely programmer error, and not what you want, particularly for destructive
 // operations.  JS regexps don't serialize over DDP but can be trivially
 // replaced by $regex.
-Mongo.Collection._rewriteSelector = function (selector) {
+Meteor.Collection._rewriteSelector = function (selector) {
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
@@ -340,7 +338,7 @@ Mongo.Collection._rewriteSelector = function (selector) {
     else if (_.contains(['$or','$and','$nor'], key)) {
       // Translate lower levels of $and/$or/$nor
       ret[key] = _.map(value, function (v) {
-        return Mongo.Collection._rewriteSelector(v);
+        return Meteor.Collection._rewriteSelector(v);
       });
     } else {
       ret[key] = value;
@@ -410,7 +408,7 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @summary Insert a document in the collection.  Returns its unique _id.
  * @locus Anywhere
  * @method  insert
- * @memberOf Mongo.Collection
+ * @memberOf Meteor.Collection
  * @instance
  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
@@ -420,7 +418,7 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @summary Modify one or more documents in the collection. Returns the number of affected documents.
  * @locus Anywhere
  * @method update
- * @memberOf Mongo.Collection
+ * @memberOf Meteor.Collection
  * @instance
  * @param {MongoSelector} selector Specifies which documents to modify
  * @param {MongoModifier} modifier Specifies how to modify the documents
@@ -434,14 +432,14 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
  * @summary Remove documents from the collection
  * @locus Anywhere
  * @method remove
- * @memberOf Mongo.Collection
+ * @memberOf Meteor.Collection
  * @instance
  * @param {MongoSelector} selector Specifies which documents to remove
  * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
  */
 
 _.each(["insert", "update", "remove"], function (name) {
-  Mongo.Collection.prototype[name] = function (/* arguments */) {
+  Meteor.Collection.prototype[name] = function (/* arguments */) {
     var self = this;
     var args = _.toArray(arguments);
     var callback;
@@ -482,7 +480,7 @@ _.each(["insert", "update", "remove"], function (name) {
         }
       }
     } else {
-      args[0] = Mongo.Collection._rewriteSelector(args[0]);
+      args[0] = Meteor.Collection._rewriteSelector(args[0]);
 
       if (name === "update") {
         // Mutate args but copy the original options object. We need to add
@@ -592,7 +590,7 @@ _.each(["insert", "update", "remove"], function (name) {
  * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
  */
-Mongo.Collection.prototype.upsert = function (selector, modifier,
+Meteor.Collection.prototype.upsert = function (selector, modifier,
                                                options, callback) {
   var self = this;
   if (! callback && typeof options === "function") {
@@ -606,25 +604,25 @@ Mongo.Collection.prototype.upsert = function (selector, modifier,
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-Mongo.Collection.prototype._ensureIndex = function (index, options) {
+Meteor.Collection.prototype._ensureIndex = function (index, options) {
   var self = this;
   if (!self._collection._ensureIndex)
     throw new Error("Can only call _ensureIndex on server collections");
   self._collection._ensureIndex(index, options);
 };
-Mongo.Collection.prototype._dropIndex = function (index) {
+Meteor.Collection.prototype._dropIndex = function (index) {
   var self = this;
   if (!self._collection._dropIndex)
     throw new Error("Can only call _dropIndex on server collections");
   self._collection._dropIndex(index);
 };
-Mongo.Collection.prototype._dropCollection = function () {
+Meteor.Collection.prototype._dropCollection = function () {
   var self = this;
   if (!self._collection.dropCollection)
     throw new Error("Can only call _dropCollection on server collections");
   self._collection.dropCollection();
 };
-Mongo.Collection.prototype._createCappedCollection = function (byteSize) {
+Meteor.Collection.prototype._createCappedCollection = function (byteSize) {
   var self = this;
   if (!self._collection._createCappedCollection)
     throw new Error("Can only call _createCappedCollection on server collections");
@@ -738,7 +736,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
    * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
    */
-  Mongo.Collection.prototype.allow = function(options) {
+  Meteor.Collection.prototype.allow = function(options) {
     addValidator.call(this, 'allow', options);
   };
 
@@ -752,13 +750,13 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
    * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
    */
-  Mongo.Collection.prototype.deny = function(options) {
+  Meteor.Collection.prototype.deny = function(options) {
     addValidator.call(this, 'deny', options);
   };
 })();
 
 
-Mongo.Collection.prototype._defineMutationMethods = function() {
+Meteor.Collection.prototype._defineMutationMethods = function() {
   var self = this;
 
   // set to true once we call any allow or deny methods. If true, use
@@ -881,7 +879,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
 };
 
 
-Mongo.Collection.prototype._updateFetch = function (fields) {
+Meteor.Collection.prototype._updateFetch = function (fields) {
   var self = this;
 
   if (!self._validators.fetchAllFields) {
@@ -895,7 +893,7 @@ Mongo.Collection.prototype._updateFetch = function (fields) {
   }
 };
 
-Mongo.Collection.prototype._isInsecure = function () {
+Meteor.Collection.prototype._isInsecure = function () {
   var self = this;
   if (self._insecure === undefined)
     return !!Package.insecure;
@@ -919,7 +917,7 @@ var docToValidate = function (validator, doc, generatedId) {
   return ret;
 };
 
-Mongo.Collection.prototype._validatedInsert = function (userId, doc,
+Meteor.Collection.prototype._validatedInsert = function (userId, doc,
                                                          generatedId) {
   var self = this;
 
@@ -955,7 +953,7 @@ var transformDoc = function (validator, doc) {
 // control rules set by calls to `allow/deny` are satisfied. If all
 // pass, rewrite the mongo operation to use $in to set the list of
 // document ids to change ##ValidatedChange
-Mongo.Collection.prototype._validatedUpdate = function(
+Meteor.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
@@ -1053,7 +1051,7 @@ var ALLOWED_UPDATE_OPERATIONS = {
 
 // Simulate a mongo `remove` operation while validating access control
 // rules. See #ValidatedChange
-Mongo.Collection.prototype._validatedRemove = function(userId, selector) {
+Meteor.Collection.prototype._validatedRemove = function(userId, selector) {
   var self = this;
 
   var findOptions = {transform: null};
@@ -1089,8 +1087,3 @@ Mongo.Collection.prototype._validatedRemove = function(userId, selector) {
 
   return self._collection.remove.call(self._collection, selector);
 };
-
-/**
- * @deprecated in 0.9.1
- */
-Meteor.Collection = Mongo.Collection;

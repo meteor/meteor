@@ -5,7 +5,7 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
   function (test, expect) {
     var self = this;
     var collName = "docfetcher-" + Random.id();
-    var collection = new Mongo.Collection(collName);
+    var collection = new Meteor.Collection(collName);
     var id1 = collection.insert({x: 1});
     var id2 = collection.insert({y: 2});
 

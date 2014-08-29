@@ -67,7 +67,7 @@ var generateDoc = function () {
 
 var Collections = [];
 _.times(PARAMS.numCollections, function (n) {
-  Collections.push(new Mongo.Collection("Collection" + n));
+  Collections.push(new Meteor.Collection("Collection" + n));
 });
 
 

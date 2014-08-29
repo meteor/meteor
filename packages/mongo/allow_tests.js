@@ -16,7 +16,7 @@ if (Meteor.isServer) {
     var needToConfigure = undefined;
 
     // helper for defining a collection. we are careful to create just one
-    // Mongo.Collection even if the sub body is rerun, by caching them.
+    // Meteor.Collection even if the sub body is rerun, by caching them.
     var defineCollection = function(name, insecure, transform) {
       var fullName = name + idGeneration + nonce;
 
@@ -27,7 +27,7 @@ if (Meteor.isServer) {
           throw new Error("collections inconsistently exist");
         needToConfigure = false;
       } else {
-        collection = new Mongo.Collection(
+        collection = new Meteor.Collection(
           fullName, {idGeneration: idGeneration, transform: transform});
         allowCollections[fullName] = collection;
         if (needToConfigure === false)
@@ -232,7 +232,7 @@ if (Meteor.isClient) {
     // a method to clear it
     var defineCollection = function(name, transform) {
       var fullName = name + idGeneration + nonce;
-      var collection = new Mongo.Collection(
+      var collection = new Meteor.Collection(
         fullName, {idGeneration: idGeneration, transform: transform});
 
       collection.callClearMethod = function (callback) {
@@ -790,7 +790,7 @@ if (Meteor.isClient) {
 // with the client..
 if (Meteor.isServer) {
   Tinytest.add("collection - allow and deny validate options", function (test) {
-    var collection = new Mongo.Collection(null);
+    var collection = new Meteor.Collection(null);
 
     test.throws(function () {
       collection.allow({invalidOption: true});
@@ -827,7 +827,7 @@ if (Meteor.isServer) {
   });
 
   Tinytest.add("collection - calling allow restricts", function (test) {
-    var collection = new Mongo.Collection(null);
+    var collection = new Meteor.Collection(null);
     test.equal(collection._restricted, false);
     collection.allow({
       insert: function() {}
@@ -841,7 +841,7 @@ if (Meteor.isServer) {
     var insecurePackage = Package.insecure;
 
     Package.insecure = {};
-    var collection = new Mongo.Collection(null);
+    var collection = new Meteor.Collection(null);
     test.equal(collection._isInsecure(), true);
 
     Package.insecure = undefined;

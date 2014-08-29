@@ -1,11 +1,11 @@
 Tinytest.add(
-  'collection - call Mongo.Collection without new',
+  'collection - call Meteor.Collection without new',
   function (test) {
     test.throws(
       function () {
-        Mongo.Collection(null);
+        Meteor.Collection(null);
       },
-      /use "new" to construct a Mongo\.Collection/
+      /use "new" to construct a Meteor\.Collection/
     );
   }
 );

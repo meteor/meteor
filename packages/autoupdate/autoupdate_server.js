@@ -39,7 +39,7 @@ var Future = Npm.require("fibers/future");
 Autoupdate = {};
 
 // The collection of acceptable client versions.
-ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions",
+ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions",
   { connection: null });
 
 // The client hash includes __meteor_runtime_config__, so wait until

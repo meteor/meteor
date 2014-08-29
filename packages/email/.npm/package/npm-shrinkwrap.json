@@ -12,7 +12,7 @@
       "version": "0.3.10",
       "dependencies": {
         "rai": {
-          "version": "0.1.11"
+          "version": "0.1.7"
         },
         "xoauth2": {
           "version": "0.1.8"

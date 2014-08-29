@@ -7,7 +7,7 @@
       "version": "https://github.com/reworkcss/css-stringify/tarball/a7fe6de82e055d41d1c5923ec2ccef06f2a45efa",
       "dependencies": {
         "source-map": {
-          "version": "0.1.38",
+          "version": "0.1.33",
           "dependencies": {
             "amdefine": {
               "version": "0.1.0"
@@ -23,7 +23,7 @@
           "version": "0.2.10"
         },
         "source-map": {
-          "version": "0.1.38",
+          "version": "0.1.33",
           "dependencies": {
             "amdefine": {
               "version": "0.1.0"

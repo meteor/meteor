@@ -5,7 +5,7 @@ if (typeof ServiceConfiguration === 'undefined') {
 
 // Table containing documents with configuration options for each
 // login service
-ServiceConfiguration.configurations = new Mongo.Collection(
+ServiceConfiguration.configurations = new Meteor.Collection(
   "meteor_accounts_loginServiceConfiguration", {
     _preventAutopublish: true,
     connection: Meteor.isClient ? Accounts.connection : Meteor.connection

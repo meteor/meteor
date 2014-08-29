@@ -1,13 +1,13 @@
 ////////// Shared code (client and server) //////////
 
-Games = new Mongo.Collection('games');
+Games = new Meteor.Collection('games');
 // { board: ['A','I',...], clock: 60,
 //   players: [{player_id, name}], winners: [player_id] }
 
-Words = new Mongo.Collection('words');
+Words = new Meteor.Collection('words');
 // {player_id: 10, game_id: 123, word: 'hello', state: 'good', score: 4}
 
-Players = new Mongo.Collection('players');
+Players = new Meteor.Collection('players');
 // {name: 'matt', game_id: 123}
 
 // 6 faces per die, 16 dice.  Q really means Qu.

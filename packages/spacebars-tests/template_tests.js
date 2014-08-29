@@ -494,7 +494,7 @@ Tinytest.add("spacebars-tests - template_tests - if in with", function (test) {
 
 Tinytest.add("spacebars-tests - template_tests - each on cursor", function (test) {
   var tmpl = Template.spacebars_template_test_each;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   tmpl.items = function () {
     return coll.find({}, {sort: {pos: 1}});
   };
@@ -566,10 +566,10 @@ Tinytest.add("spacebars-tests - template_tests - select tags", function (test) {
   var tmpl = Template.spacebars_template_test_select_tag;
 
   // {label: (string)}
-  var optgroups = new Mongo.Collection(null);
+  var optgroups = new Meteor.Collection(null);
 
   // {optgroup: (id), value: (string), selected: (boolean), label: (string)}
-  var options = new Mongo.Collection(null);
+  var options = new Meteor.Collection(null);
 
   tmpl.optgroups = function () { return optgroups.find(); };
   tmpl.options = function () { return options.find({optgroup: this._id}); };
@@ -802,7 +802,7 @@ Tinytest.add('spacebars-tests - template_tests - textarea each', function (test)
 // callbacks don't fire synchronously as part of a method stub.
 testAsyncMulti('spacebars-tests - template_tests - defer in rendered callbacks', [function (test, expect) {
   var tmpl = Template.spacebars_template_test_defer_in_rendered;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
 
   Meteor.methods({
     spacebarsTestInsertEmptyObject: function () {
@@ -887,7 +887,7 @@ Tinytest.add('spacebars-tests - template_tests - with someData', function (test)
 
 Tinytest.add('spacebars-tests - template_tests - #each stops when rendered element is removed', function (test) {
   var tmpl = Template.spacebars_template_test_each_stops;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({});
   tmpl.items = function () { return coll.find(); };
 
@@ -906,7 +906,7 @@ Tinytest.add('spacebars-tests - template_tests - #each stops when rendered eleme
 Tinytest.add('spacebars-tests - template_tests - block helpers in attribute', function (test) {
   var tmpl = Template.spacebars_template_test_block_helpers_in_attribute;
 
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   tmpl.classes = function () {
     return coll.find({}, {sort: {name: 1}});
   };
@@ -2050,7 +2050,7 @@ Tinytest.add(
   "spacebars-tests - template_tests - each with inserts inside autorun",
   function (test) {
     var tmpl = Template.spacebars_test_each_with_autorun_insert;
-    var coll = new Mongo.Collection(null);
+    var coll = new Meteor.Collection(null);
     var rv = new ReactiveVar;
 
     tmpl.items = function () {

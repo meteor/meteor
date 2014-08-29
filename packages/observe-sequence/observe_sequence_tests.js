@@ -117,7 +117,7 @@ Tinytest.add('observe-sequence - initial data for all sequence types', function 
   ]);
 
   runOneObserveSequenceTestCase(test, function () {
-    var coll = new Mongo.Collection(null);
+    var coll = new Meteor.Collection(null);
     coll.insert({_id: "13", foo: 1});
     coll.insert({_id: "37", bar: 2});
     var cursor = coll.find({}, {sort: {_id: 1}});
@@ -270,7 +270,7 @@ Tinytest.add('observe-sequence - array to cursor', function (test) {
     dep.depend();
     return seq;
   }, function () {
-    var coll = new Mongo.Collection(null);
+    var coll = new Meteor.Collection(null);
     coll.insert({_id: "13", foo: 1});
     coll.insert({_id: "38", bar: 2});
     var cursor = coll.find({}, {sort: {_id: 1}});
@@ -288,7 +288,7 @@ Tinytest.add('observe-sequence - array to cursor', function (test) {
 
 Tinytest.add('observe-sequence - cursor to null', function (test) {
   var dep = new Tracker.Dependency;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
   coll.insert({_id: "37", bar: 2});
   var cursor = coll.find({}, {sort: {_id: 1}});
@@ -310,7 +310,7 @@ Tinytest.add('observe-sequence - cursor to null', function (test) {
 
 Tinytest.add('observe-sequence - cursor to array', function (test) {
   var dep = new Tracker.Dependency;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
@@ -332,7 +332,7 @@ Tinytest.add('observe-sequence - cursor to array', function (test) {
 });
 
 Tinytest.add('observe-sequence - cursor', function (test) {
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
@@ -363,7 +363,7 @@ Tinytest.add('observe-sequence - cursor', function (test) {
 
 Tinytest.add('observe-sequence - cursor to other cursor', function (test) {
   var dep = new Tracker.Dependency;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
@@ -374,7 +374,7 @@ Tinytest.add('observe-sequence - cursor to other cursor', function (test) {
   }, function () {
     coll.insert({_id: "37", bar: 2});
 
-    var newColl = new Mongo.Collection(null);
+    var newColl = new Meteor.Collection(null);
     newColl.insert({_id: "13", foo: 1});
     newColl.insert({_id: "38", bar: 2});
     var newCursor = newColl.find({}, {sort: {_id: 1}});
@@ -395,7 +395,7 @@ Tinytest.add('observe-sequence - cursor to other cursor with transform', functio
     return _.extend({idCopy: doc._id}, doc);
   };
 
-  var coll = new Mongo.Collection(null, {transform: transform});
+  var coll = new Meteor.Collection(null, {transform: transform});
   coll.insert({_id: "13", foo: 1});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
@@ -406,7 +406,7 @@ Tinytest.add('observe-sequence - cursor to other cursor with transform', functio
   }, function () {
     coll.insert({_id: "37", bar: 2});
 
-    var newColl = new Mongo.Collection(null, {transform: transform});
+    var newColl = new Meteor.Collection(null, {transform: transform});
     newColl.insert({_id: "13", foo: 1});
     newColl.insert({_id: "38", bar: 2});
     var newCursor = newColl.find({}, {sort: {_id: 1}});
@@ -422,7 +422,7 @@ Tinytest.add('observe-sequence - cursor to other cursor with transform', functio
 });
 
 Tinytest.add('observe-sequence - cursor to same cursor', function (test) {
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
@@ -487,7 +487,7 @@ Tinytest.add('observe-sequence - number arrays', function (test) {
 
 Tinytest.add('observe-sequence - cursor to other cursor, same collection', function (test) {
   var dep = new Tracker.Dependency;
-  var coll = new Mongo.Collection(null);
+  var coll = new Meteor.Collection(null);
   coll.insert({_id: "13", foo: 1});
   coll.insert({_id: "37", foo: 2});
   var cursor = coll.find({foo: 1});

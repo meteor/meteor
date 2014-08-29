@@ -174,7 +174,7 @@ $(function () {
   // support aggregate queries, construct a local collection to serve
   // the same purpose, and drive the renderList() off of it.
 
-  var LocalTags = new Mongo.Collection;
+  var LocalTags = new Meteor.Collection;
   (function () {
     function updateLocalTags() {
       var real = _(Todos.find()).chain().pluck('tags').compact().flatten().uniq().value();

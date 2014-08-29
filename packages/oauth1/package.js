@@ -9,7 +9,6 @@ Package.on_use(function (api) {
   api.use('oauth', ['client', 'server']);
   api.use('underscore', 'server');
   api.use('http', 'server');
-  api.use('mongo', 'server');
 
   api.export('OAuth1Binding', 'server');
   api.export('OAuth1Test', 'server', {testOnly: true});

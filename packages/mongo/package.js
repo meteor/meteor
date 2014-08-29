@@ -51,8 +51,6 @@ Package.on_use(function (api) {
   // For tests only.
   api.export('MongoTest', 'server', {testOnly: true});
 
-  api.export("Mongo");
-
   api.add_files(['mongo_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
                  'polling_observe_driver.js','oplog_observe_driver.js'],

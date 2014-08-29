@@ -11,7 +11,7 @@
 
 // Collection containing pending credentials of oauth credential requests
 // Has key, credential, and createdAt fields.
-OAuth._pendingCredentials = new Mongo.Collection(
+OAuth._pendingCredentials = new Meteor.Collection(
   "meteor_oauth_pendingCredentials", {
     _preventAutopublish: true
   });

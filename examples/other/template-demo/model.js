@@ -1,1 +1,1 @@
-Circles = new Mongo.Collection("circles");
+Circles = new Meteor.Collection("circles");

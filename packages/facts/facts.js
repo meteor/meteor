@@ -65,7 +65,7 @@ if (Meteor.isServer) {
     }, {is_auto: true});
   });
 } else {
-  Facts.server = new Mongo.Collection(serverFactsCollection);
+  Facts.server = new Meteor.Collection(serverFactsCollection);
 
   Template.serverFacts.factsByPackage = function () {
     return Facts.server.find();
