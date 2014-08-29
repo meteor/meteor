@@ -10,8 +10,8 @@ on the client, just on the server, or *Anywhere*.
 
 <h2 id="core"><span>Meteor Core</span></h2>
 
-{{> api_box isClient}}
-{{> api_box isServer}}
+{{> autoApiBox "Meteor.isClient"}}
+{{> autoApiBox "Meteor.isServer"}}
 
 {{#note}}
 `Meteor.isServer` can be used to limit where code runs, but it does not
@@ -22,7 +22,7 @@ authentication mechanisms, should be kept in the `server` directory.
 
 {{> api_box isCordova}}
 
-{{> api_box startup}}
+{{> autoApiBox "Meteor.startup"}}
 
 On a server, the function will run as soon as the server process is
 finished starting. On a client, the function will run as soon as the DOM
@@ -44,21 +44,18 @@ followed by your application code.
       });
     }
 
-For mobile builds, the `startup` callback will only be called after the
-application has fully loaded.
+{{> autoApiBox "Meteor.absoluteUrl"}}
 
-{{> api_box absoluteUrl}}
+{{> autoApiBox "Meteor.settings"}}
 
-{{> api_box settings}}
-
-{{> api_box release}}
+{{> autoApiBox "Meteor.release"}}
 
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 
 These functions control how Meteor servers publish sets of records and
 how clients can subscribe to those sets.
 
-{{> api_box publish}}
+{{> autoApiBox "Meteor.publish"}}
 
 To publish records to clients, call `Meteor.publish` on the server with
 two parameters: the name of the record set, and a *publish function*
@@ -153,7 +150,7 @@ Example:
     Counts = new Meteor.Collection("counts");
 
     // client: subscribe to the count for the current room
-    Deps.autorun(function () {
+    Tracker.autorun(function () {
       Meteor.subscribe("counts-by-room", Session.get("roomId"));
     });
 
@@ -181,25 +178,23 @@ project that includes the `autopublish` package.  Your publish function
 will still work.
 {{/warning}}
 
-{{> api_box subscription_userId}}
+{{> autoApiBox "Subscription#userId"}}
 
 This is constant. However, if the logged-in user changes, the publish
 function is rerun with the new value.
 
-{{> api_box subscription_added}}
-{{> api_box subscription_changed}}
-{{> api_box subscription_removed}}
-{{> api_box subscription_ready}}
-
-{{> api_box subscription_onStop}}
+{{> autoApiBox "Subscription#added"}}
+{{> autoApiBox "Subscription#changed"}}
+{{> autoApiBox "Subscription#removed"}}
+{{> autoApiBox "Subscription#ready"}}
+{{> autoApiBox "Subscription#onStop"}}
 
 If you call [`observe`](#observe) or [`observeChanges`](#observe_changes) in your
 publish handler, this is the place to stop the observes.
 
-{{> api_box subscription_error}}
-{{> api_box subscription_stop}}
-
-{{> api_box subscription_connection}}
+{{> autoApiBox "Subscription#error"}}
+{{> autoApiBox "Subscription#stop"}}
+{{> autoApiBox "Subscription#connection"}}
 
 {{> api_box subscribe}}
 
@@ -246,7 +241,7 @@ reactive data source.
 
 If you call `Meteor.subscribe` within a [reactive computation](#reactivity),
 for example using
-[`Deps.autorun`](#deps_autorun), the subscription will automatically be
+[`Tracker.autorun`](#tracker_autorun), the subscription will automatically be
 cancelled when the computation is invalidated or stopped; it's not necessary
 to call `stop` on
 subscriptions made from inside `autorun`. However, if the next iteration
@@ -254,7 +249,7 @@ of your run function subscribes to the same record set (same name and
 parameters), Meteor is smart enough to skip a wasteful
 unsubscribe/resubscribe. For example:
 
-    Deps.autorun(function () {
+    Tracker.autorun(function () {
       Meteor.subscribe("chat", {room: Session.get("current-room")});
       Meteor.subscribe("privateMessages");
     });
@@ -273,7 +268,7 @@ be one of the published values, chosen arbitrarily.
 
 Methods are remote functions that Meteor clients can invoke.
 
-{{> api_box methods}}
+{{> autoApiBox "Meteor.methods"}}
 
 Example:
 
@@ -325,13 +320,13 @@ their stub version that update the local cache, and sending the same write
 request to the server. When the server responds, the client updates the local
 cache with the writes that actually occurred on the server.
 
-{{> api_box method_invocation_userId}}
+{{> autoApiBox "MethodInvocation#userId"}}
 
 The user id is an arbitrary string &mdash; typically the id of the user record
 in the database. You can set it with the `setUserId` function. If you're using
 the [Meteor accounts system](#accounts_api) then this is handled for you.
 
-{{> api_box method_invocation_setUserId}}
+{{> autoApiBox "MethodInvocation#setUserId"}}
 
 Call this function to change the currently logged in user on the
 connection that made this method call. This simply sets the value of
@@ -347,18 +342,18 @@ any future method calls on the connection. Any previous method calls on
 this connection will still see the value of `userId` that was in effect
 when they started.
 
-{{> api_box method_invocation_isSimulation}}
+{{> autoApiBox "MethodInvocation#isSimulation"}}
 
-{{> api_box method_invocation_unblock}}
+{{> autoApiBox "MethodInvocation#unblock"}}
 
 On the server, methods from a given client run one at a time. The N+1th
 invocation from a client won't start until the Nth invocation
 returns. However, you can change this by calling `this.unblock`. This
 will allow the N+1th invocation to start running in a new fiber.
 
-{{> api_box method_invocation_connection}}
+{{> autoApiBox "MethodInvocation#connection"}}
 
-{{> api_box error}}
+{{> autoApiBox "Meteor.Error"}}
 
 If you want to return an error from a method, throw an exception.  Methods can
 throw any kind of exception.  But `Meteor.Error` is the only kind of error that
@@ -434,7 +429,7 @@ options about how the client executes the method.
 These functions manage and inspect the network connection between the
 Meteor client and server.
 
-{{> api_box status}}
+{{> autoApiBox "Meteor.status"}}
 
 This method returns the status of the connection between the client and
 the server. The return value is an object with the following fields:
@@ -474,12 +469,12 @@ the server. The return value is an object with the following fields:
 
 Instead of using callbacks to notify you on changes, this is
 a [reactive](#reactivity) data source. You can use it in a
-[template](#livehtmltemplates) or [computation](#deps_autorun)
+[template](#livehtmltemplates) or [computation](#tracker_autorun)
 to get realtime updates.
 
-{{> api_box reconnect}}
+{{> autoApiBox "Meteor.reconnect"}}
 
-{{> api_box disconnect}}
+{{> autoApiBox "Meteor.disconnect"}}
 
 Call this method to disconnect from the server and stop all
 live data updates. While the client is disconnected it will not receive
@@ -493,7 +488,7 @@ This can be used to save battery on mobile devices when real time
 updates are not required.
 
 
-{{> api_box onConnection}}
+{{> autoApiBox "Meteor.onConnection"}}
 
 `onConnection` returns an object with a single method `stop`.  Calling
 `stop` unregisters the callback, so that this callback will no longer
@@ -557,7 +552,7 @@ connection `id`.
 {{/note}}
 
 
-{{> api_box connect}}
+{{> autoApiBox "DDP.connect"}}
 
 To call methods on another Meteor application or subscribe to its data
 sets, call `DDP.connect` with the URL of the application.
@@ -597,7 +592,7 @@ server.
 Meteor stores data in *collections*.  To get started, declare a
 collection with `new Meteor.Collection`.
 
-{{> api_box meteor_collection}}
+{{> autoApiBox "Meteor.Collection"}}
 
 Calling this function is analogous to declaring a model in a traditional ORM
 (Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
@@ -607,7 +602,7 @@ your application.  Each document is a EJSON object.  It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
 first create the document.
 
-    // common code on client and server declares livedata-managed mongo
+    // common code on client and server declares a DDP-managed mongo
     // collection.
     Chatrooms = new Meteor.Collection("chatrooms");
     Messages = new Meteor.Collection("messages");
@@ -752,7 +747,7 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 {{/warning}}
 
-{{> api_box find}}
+{{> autoApiBox "Meteor.Collection#find"}}
 
 `find` returns a cursor.  It does not immediately access the database or return
 documents.  Cursors provide `fetch` to return all matching documents, `map` and
@@ -770,7 +765,7 @@ those changes may or may not appear in the result set.
 Cursors are a reactive data source. On the client, the first time you retrieve a
 cursor's documents with `fetch`, `map`, or `forEach` inside a
 reactive computation (eg, a template or
-[`autorun`](#deps_autorun)), Meteor will register a
+[`autorun`](#tracker_autorun)), Meteor will register a
 dependency on the underlying data.  Any change to the collection that
 changes the documents in a cursor will trigger a recomputation.  To
 disable this behavior, pass `{reactive: false}` as an option to
@@ -782,12 +777,12 @@ invalidations in reactive computations using this cursor. Careful use
 of `fields` allows for more fine-grained reactivity for computations
 that don't depend on an entire document.
 
-{{> api_box findone}}
+{{> autoApiBox "Meteor.Collection#findOne"}}
 
 Equivalent to `find(selector, options).fetch()[0]` with
 `options.limit = 1`.
 
-{{> api_box insert}}
+{{> autoApiBox "Meteor.Collection#insert"}}
 
 Add a document to the collection. A document is just an object, and
 its fields can contain any combination of EJSON-compatible datatypes
@@ -819,7 +814,7 @@ Example:
     Items.insert({list: groceriesId, name: "Watercress"});
     Items.insert({list: groceriesId, name: "Persimmons"});
 
-{{> api_box update}}
+{{> autoApiBox "Meteor.Collection#update"}}
 
 Modify documents that match `selector` according to `modifier` (see
 [modifier documentation](#modifiers)).
@@ -884,7 +879,7 @@ option to true. You can also use the [`upsert`](#upsert) method to perform an
 upsert that returns the _id of the document that was inserted (if there was one)
 in addition to the number of affected documents.
 
-{{> api_box upsert}}
+{{> autoApiBox "Meteor.Collection#upsert"}}
 
 Modify documents that match `selector` according to `modifier`, or insert
 a document if no documents were modified. `upsert` is the same as calling
@@ -892,7 +887,7 @@ a document if no documents were modified. `upsert` is the same as calling
 value of `upsert` is an object that contain the keys `numberAffected`
 and `insertedId`. (`update` returns only the number of affected documents.)
 
-{{> api_box remove}}
+{{> autoApiBox "Meteor.Collection#remove"}}
 
 Find all of the documents that match `selector` and delete them from
 the collection.
@@ -1095,7 +1090,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 To create a cursor, use [`find`](#find).  To access the documents in a
 cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
-{{> api_box cursor_foreach}}
+{{> autoApiBox "Meteor.Collection.Cursor#forEach"}}
 
 This interface is compatible with [Array.forEach](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
 
@@ -1112,7 +1107,7 @@ Examples:
       count += 1;
     });
 
-{{> api_box cursor_map}}
+{{> autoApiBox "Meteor.Collection.Cursor#map"}}
 
 This interface is compatible with [Array.map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
 
@@ -1125,18 +1120,18 @@ On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
-{{> api_box cursor_fetch}}
+{{> autoApiBox "Meteor.Collection.Cursor#fetch"}}
 
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
-{{> api_box cursor_count}}
+{{> autoApiBox "Meteor.Collection.Cursor#count"}}
 
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
-{{> api_box cursor_observe}}
+{{> autoApiBox "Meteor.Collection.Cursor#observe"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
@@ -1194,14 +1189,14 @@ or more times to deliver the initial results of the query.
 `observe` returns a live query handle, which is an object with a `stop` method.
 Call `stop` with no arguments to stop calling the callback functions and tear
 down the query. **The query will run forever until you call this.**  If
-`observe` is called from a `Deps.autorun` computation, it is automatically
+`observe` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
 
-{{> api_box cursor_observe_changes}}
+{{> autoApiBox "Meteor.Collection.Cursor#observeChanges"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. In contrast to [`observe`](#observe),
@@ -1250,7 +1245,7 @@ zero or more times to deliver the initial results of the query.
 method.  Call `stop` with no arguments to stop calling the callback functions
 and tear down the query. **The query will run forever until you call this.**
 If
-`observeChanges` is called from a `Deps.autorun` computation, it is automatically
+`observeChanges` is called from a `Tracker.autorun` computation, it is automatically
 stopped when the computation is rerun or stopped.
 (If the cursor was created with the option `reactive` set to false, it will
 only deliver the initial results and will not call any further callbacks;
@@ -1281,7 +1276,7 @@ Example:
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
 
-{{> api_box collection_object_id}}
+{{> autoApiBox "Meteor.Collection.ObjectID"}}
 
 `Meteor.Collection.ObjectID` follows the same API as the [Node MongoDB driver
 `ObjectID`](http://mongodb.github.com/node-mongodb-native/api-bson-generated/objectid.html)
@@ -1295,7 +1290,9 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
   method, since Meteor currently constructs them fully randomly.
 {{/note}}
 
-{{#api_box selectors}}
+
+
+{{> apiBoxTitle name="Mongo-Style Selectors" id="selectors"}}
 
 The simplest selectors are just a string or
 [`Meteor.Collection.ObjectID`](#collection_object_id). These selectors match the
@@ -1327,9 +1324,7 @@ But they can also contain more complicated tests:
 See the [complete
 documentation](http://docs.mongodb.org/manual/reference/operator/).
 
-{{/api_box}}
-
-{{#api_box modifiers}}
+{{> apiBoxTitle name="Mongo-Style Modifiers" id="modifiers"}}
 
 A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
@@ -1352,9 +1347,8 @@ supported by [validated updates](#allow).)
 See the [full list of
 modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
 
-{{/api_box}}
 
-{{#api_box sortspecifiers}}
+{{> apiBoxTitle name="Sort Specifiers" id="sortspecifiers"}}
 
 Sorts may be specified using your choice of several syntaxes:
 
@@ -1369,9 +1363,9 @@ The last form will only work if your JavaScript implementation
 preserves the order of keys in objects. Most do, most of the time, but
 it's up to you to be sure.
 
-{{/api_box}}
 
-{{#api_box fieldspecifiers}}
+
+{{> apiBoxTitle name="Field Specifiers" id="fieldspecifiers"}}
 
 Queries can specify a particular set of fields to include or exclude from the
 result object.
@@ -1414,7 +1408,7 @@ A more advanced example:
 See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
 the MongoDB docs</a> for details of the nested field rules and array behavior.
 
-{{/api_box}}
+
 
 <h2 id="session"><span>Session</span></h2>
 
@@ -1427,24 +1421,24 @@ you call [`Session.get`](#session_get)`("currentList")`
 from inside a template, the template will automatically be rerendered
 whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
-{{> api_box session_set}}
+{{> autoApiBox "Session.set"}}
 
 Example:
 
-    Deps.autorun(function () {
+    Tracker.autorun(function () {
       Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
     });
 
-    // Causes the function passed to Deps.autorun to be re-run, so
+    // Causes the function passed to Tracker.autorun to be re-run, so
     // that the chat-history subscription is moved to the room "home".
     Session.set("currentRoomId", "home");
 
-{{> api_box setDefault}}
+{{> autoApiBox "Session.setDefault"}}
 
 This is useful in initialization code, to avoid re-initializing a session
 variable every time a new version of your app is loaded.
 
-{{> api_box session_get}}
+{{> autoApiBox "Session.get"}}
 
 Example:
 
@@ -1467,7 +1461,7 @@ Example:
     // Page will change to say "We've always been at war with Eurasia"
 
 
-{{> api_box equals}}
+{{> autoApiBox "Session.equals"}}
 
 If value is a scalar, then these two expressions do the same thing:
 
@@ -1539,7 +1533,7 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-twitter`, or `accounts-weibo`.
 
 
-{{> api_box user}}
+{{> autoApiBox "Meteor.user"}}
 
 Retrieves the user record for the current user from
 the [`Meteor.users`](#meteor_users) collection.
@@ -1550,9 +1544,9 @@ client). By default the server publishes `username`, `emails`, and
 `profile`. See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
-{{> api_box userId}}
+{{> autoApiBox "Meteor.userId"}}
 
-{{> api_box users}}
+{{> autoApiBox "Meteor.users"}}
 
 This collection contains one document per registered user. Here's an example
 user document:
@@ -1640,20 +1634,20 @@ their user document:
     Meteor.users.deny({update: function () { return true; }});
 
 
-{{> api_box loggingIn}}
+{{> autoApiBox "Meteor.loggingIn"}}
 
 For example, [the `accounts-ui` package](#accountsui) uses this to display an
 animation while the login request is being processed.
 
-{{> api_box logout}}
+{{> autoApiBox "Meteor.logout"}}
 
-{{> api_box logoutOtherClients}}
+{{> autoApiBox "Meteor.logoutOtherClients"}}
 
 For example, when called in a user's browser, connections in that browser
 remain logged in, but any other browsers or DDP clients logged in as that user
 will be logged out.
 
-{{> api_box loginWithPassword}}
+{{> autoApiBox "Meteor.loginWithPassword"}}
 
 This function is provided by the `accounts-password` package. See the
 [Passwords](#accounts_passwords) section below.
@@ -1736,8 +1730,9 @@ not make login buttons visible or active until it is true.
 
 {{> api_box currentUser}}
 {{> api_box loggingInTemplate}}
-{{> api_box accounts_config}}
-{{> api_box accounts_ui_config}}
+
+{{> autoApiBox "Accounts.config"}}
+{{> autoApiBox "Accounts.ui.config"}}
 
 Example:
 
@@ -1752,7 +1747,7 @@ Example:
       passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
     });
 
-{{> api_box accounts_validateNewUser}}
+{{> autoApiBox "Accounts.validateNewUser"}}
 
 This can be called multiple times. If any of the functions return `false` or
 throw an error, the new user creation is aborted. To set a specific error
@@ -1780,7 +1775,7 @@ the [`Accounts.validateLoginAttempt`](#accounts_validateloginattempt)
 callbacks. If these callbacks succeed but those fail, the user will still be
 created but the connection will not be logged in as that user.
 
-{{> api_box accounts_onCreateUser}}
+{{> autoApiBox "Accounts.onCreateUser"}}
 
 Use this when you need to do more than simply accept or reject new user
 creation. With this function you can programatically control the
@@ -1818,7 +1813,7 @@ Example:
     });
 
 
-{{> api_box accounts_validateLoginAttempt}}
+{{> autoApiBox "Accounts.validateLoginAttempt"}}
 
 Call `validateLoginAttempt` with a callback to be called on login
 attempts.  It returns an object with a single method, `stop`.  Calling
@@ -1884,7 +1879,12 @@ to fail, and should start with
       return false;
 
 
-{{> api_box accounts_onLogin}}
+{{> autoApiBox "Accounts.onLogin"}}
+
+See description of [Accounts.onLoginFailure](#accounts_onloginfailure)
+for details.
+
+{{> autoApiBox "Accounts.onLoginFailure"}}
 
 Either the `onLogin` or the `onLoginFailure` callbacks will be called
 for each login attempt. The `onLogin` callbacks are called after the
@@ -1916,7 +1916,7 @@ functions below, or use the [`accounts-ui` package](#accountsui) to
 include a turn-key user interface for password-based sign-in.
 
 
-{{> api_box accounts_createUser}}
+{{> autoApiBox "Accounts.createUser"}}
 
 On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
@@ -1941,9 +1941,9 @@ This function is only used for creating users with passwords. The external
 service login flows do not use this function.
 
 
-{{> api_box accounts_changePassword}}
+{{> autoApiBox "Accounts.changePassword"}}
 
-{{> api_box accounts_forgotPassword}}
+{{> autoApiBox "Accounts.forgotPassword"}}
 
 This triggers a call
 to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
@@ -1955,22 +1955,22 @@ If you are using the [`accounts-ui` package](#accountsui), this is handled
 automatically. Otherwise, it is your responsiblity to prompt the user for the
 new password and call `resetPassword`.
 
-{{> api_box accounts_resetPassword}}
+{{> autoApiBox "Accounts.resetPassword"}}
 
 This function accepts tokens generated
 by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
 and
 [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
 
-{{> api_box accounts_setPassword}}
+{{> autoApiBox "Accounts.setPassword"}}
 
-{{> api_box accounts_verifyEmail}}
+{{> autoApiBox "Accounts.verifyEmail"}}
 
 This function accepts tokens generated
 by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
 sets the `emails.verified` field in the user record.
 
-{{> api_box accounts_sendResetPasswordEmail}}
+{{> autoApiBox "Accounts.sendResetPasswordEmail"}}
 
 The token in this email should be passed
 to [`Accounts.resetPassword`](#accounts_resetpassword).
@@ -1978,7 +1978,7 @@ to [`Accounts.resetPassword`](#accounts_resetpassword).
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
-{{> api_box accounts_sendEnrollmentEmail}}
+{{> autoApiBox "Accounts.sendEnrollmentEmail"}}
 
 The token in this email should be passed
 to [`Accounts.resetPassword`](#accounts_resetpassword).
@@ -1986,7 +1986,7 @@ to [`Accounts.resetPassword`](#accounts_resetpassword).
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
-{{> api_box accounts_sendVerificationEmail}}
+{{> autoApiBox "Accounts.sendVerificationEmail"}}
 
 The token in this email should be passed
 to [`Accounts.verifyEmail`](#accounts_verifyemail).
@@ -1994,7 +1994,7 @@ to [`Accounts.verifyEmail`](#accounts_verifyemail).
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
-{{> api_box accounts_emailTemplates}}
+{{> autoApiBox "Accounts.emailTemplates"}}
 
 This is an `Object` with several fields that are used to generate text/html
 for the emails sent by `sendResetPasswordEmail`, `sendEnrollmentEmail`,
@@ -2051,7 +2051,6 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
-
 {{> api_box template_events}}
 
 Declare event handlers for instances of this template. Multiple calls add
@@ -2083,7 +2082,7 @@ The following syntax is a shorthand for when you only have one helper to define:
     };
 
 To create a helper that can be used in any template, use
-[`UI.registerHelper`](#ui_registerhelper).
+[`Template.registerHelper`](#template_registerhelper).
 
 
 {{> api_box template_rendered}}
@@ -2098,7 +2097,7 @@ the template and persists across re-renderings.  Use the `created` and
 object.
 
 Because your template has been rendered, you can use functions like
-`this.findAll` which look at its DOM nodes.
+[`this.findAll`](#template_findAll) which look at its DOM nodes.
 
 {{> api_box template_created}}
 
@@ -2138,13 +2137,8 @@ assigned properties that persist as the template is reactively updated.
 
 Template instance objects are found as the value of `this` in the
 `created`, `rendered`, and `destroyed` template callbacks, and as an
-argument to event handlers.
-
-{{#note}}
-  You cannot currently access the template instance object from helpers.
-  We plan to refactor how template instances work and make them more
-  universally accessible.
-{{/note}}
+argument to event handlers.  You can access the current template instance
+from helpers using [`Template.instance()`](#template_instance).
 
 In addition to the properties and functions described below, you can assign
 additional properties of your choice to the object. Use the
@@ -2156,11 +2150,13 @@ from the `rendered` callback and event handlers, not from `created`
 and `destroyed`, because they require the template instance to be
 in the DOM.
 
+Template instance objects are `instanceof Blaze.TemplateInstance`.
+
 {{> api_box template_findAll}}
 
-`this.findAll` returns an array of DOM elements matching `selector`.
+`template.findAll` returns an array of DOM elements matching `selector`.
 
-`this.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
+`template.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
 those same elements. jQuery objects are similar to arrays, with
 additional methods defined by the jQuery library.
 
@@ -2200,62 +2196,34 @@ You can use `this.autorun` from a [`created`](#template_created) or
 or the template instance.  The Computation is automatically stopped
 when the template is destroyed.
 
-<h2 id="ui"><span>Template utilities</span></h2>
+Alias for `template.view.autorun`.
 
-The `UI` namespace contains several utilities that are helpful when writing your
-user interface.  `UI.registerHelper` allows you to define helper functions which
-you can use in every template.  `UI.render`, `UI.renderWithData`, and
-`UI.insert` allow you to manually render templates and insert them directly into
-any part of the DOM for finer control than just using template inclusions.
+{{> api_box template_view}}
 
-{{> api_box ui_registerhelper}}
+{{> api_box template_registerhelper}}
 
-{{> api_box ui_body}}
+{{> api_box template_instance}}
 
-You can define helpers and event maps on `UI.body` just like on any
-`Template.myTemplate` object.
+{{> api_box template_currentdata}}
 
-Helpers on `UI.body` are only available in the `<body>` tags of your
-app.  To register a global helper, use
-[UI.registerHelper](#ui_registerhelper).
+{{> api_box template_parentdata}}
 
-Event maps on `UI.body` don't apply to elements added to the body via
-`UI.insert`, jQuery, or the DOM API, or to the body element itself.
-To handle events on the body, window, or document, use jQuery or the
-DOM API.
+For example, `Template.parentData(0)` is equivalent to `Template.currentData()`.  `Template.parentData(2)`
+is equivalent to `{{dstache}}../..}}` in a template.
 
-{{> api_box ui_render}}
+{{> api_box template_body}}
 
-This returns an "rendered template" object, which can be passed to
-[`UI.insert`](#ui_insert). The template's
-[`created`](#template_created) callback will be invoked.  The rendered
-template will continue to be updated reactively as the data used
-changes.
+You can define helpers and event maps on `Template.body` just like on
+any `Template.myTemplate` object.
 
-{{#warning}}
-  Future releases will provide a richer API for working with rendered
-  templates, for example unifying them "template instances."  For now, all you
-  can do with them is pass them to `UI.insert`.
-{{/warning}}
+Helpers on `Template.body` are only available in the `<body>` tags of
+your app.  To register a global helper, use
+[Template.registerHelper](#template_registerhelper).
+Event maps on `Template.body` don't apply to elements added to the
 
-{{#warning}}
-  Most users will not need to manually render templates or manually insert them
-  into the DOM at all.  As of 0.8.x, if you call `UI.render` and never insert
-  the result into the DOM, the logic to keep the rendered template updated
-  will continue running in your browser forever. Additionally, if you remove any
-  part of your DOM using any mechanism other than Meteor or jQuery, the logic
-  to keep that  part of the the DOM updated will continue running.  To avoid these
-  issues, either avoid directly updating the DOM or ensure that any removals go
-  through Meteor or jQuery.
-{{/warning}}
-
-{{> api_box ui_renderwithdata}}
-
-{{> api_box ui_insert}}
-
-{{> api_box ui_remove}}
-
-{{> api_box ui_getelementdata}}
+body via `Blaze.render`, jQuery, or the DOM API, or to the body element
+itself.  To handle events on the body, window, or document, use jQuery
+or the DOM API.
 
 {{> api_box ui_dynamic}}
 
@@ -2267,9 +2235,9 @@ is used.
 For example, if there is a template named "foo", `{{dstache}}> UI.dynamic
 template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
 
-{{#api_box eventmaps}}
+{{> apiBoxTitle name="Event Maps" id="eventmaps"}}
 
-Several functions take event maps. An event map is an object where
+An event map is an object where
 the properties specify a set of events to handle, and the values are
 the handlers for those events. The property can be in one of several
 forms:
@@ -2434,8 +2402,313 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
-{{/api_box}}
+        
+<h2 id="blaze"><span>Blaze</span></h2>
 
+Blaze is the package that makes reactive templates possible.
+You can use the Blaze API directly in order to render templates programmatically
+and manipulate "Views," the building blocks of reactive templates.
+
+{{> api_box blaze_render}}
+
+When you render a template, the
+template's [`created`](#template_created) callback is invoked
+immediately, before evaluating the content of the template.
+The [`rendered`](#template_rendered) callback is
+invoked after the View is rendered and inserted into the DOM.
+
+The rendered template
+will update reactively in response to data changes until the View is
+removed using [`Blaze.remove`](#blaze_remove) or the View's
+parent element is removed by Meteor or jQuery.
+
+{{#warning}}
+If the View is removed by some other mechanism
+besides Meteor or jQuery (which Meteor integrates with by default),
+the View may continue to update indefinitely.  Most users will not need to
+manually render templates and insert them into the DOM, but if you do,
+be mindful to always call [`Blaze.remove`](#blaze_remove) when the View is
+no longer needed.
+{{/warning}}
+
+{{> api_box blaze_renderwithdata}}
+
+`Blaze.renderWithData(Template.myTemplate, data)` is essentially the same as
+`Blaze.render(Blaze.With(data, function () { return Template.myTemplate; }))`.
+
+{{> api_box blaze_remove}}
+
+Use `Blaze.remove` to remove a template or View previously inserted with
+`Blaze.render`, in such a way that any behaviors attached to the DOM by
+Meteor are cleaned up.  The rendered template or View is now considered
+["destroyed"](#template_destroyed), along with all nested templates and
+Views.  In addition, any data assigned via
+jQuery to the DOM nodes is removed, as if the nodes were passed to
+jQuery's `$(...).remove()`.
+
+As mentioned in [`Blaze.render`](#blaze_render), it is important to "remove"
+all content rendered via `Blaze.render` using `Blaze.remove`, unless the
+parent node of `renderedView` is removed by a Meteor reactive
+update or with jQuery.
+
+`Blaze.remove` can be used even if the DOM nodes in question have already
+been removed from the document, to tell Blaze to stop tracking and
+updating these nodes.
+
+{{> api_box blaze_getdata}}
+
+{{> api_box blaze_tohtml}}
+
+Rendering a template to HTML loses all fine-grained reactivity.  The
+normal way to render a template is to either include it from another
+template (`{{dstache}}> myTemplate}}`) or render and insert it
+programmatically using `Blaze.render`.  Only occasionally
+is generating HTML useful.
+
+Because `Blaze.toHTML` returns a string, it is not able to update the DOM
+in response to reactive data changes.  Instead, any reactive data
+changes will invalidate the current Computation if there is one
+(for example, an autorun that is the caller of `Blaze.toHTML`).
+
+{{> api_box blaze_tohtmlwithdata}}
+
+{{> api_box blaze_view}}
+
+Behind every template or part of a template &mdash; a template tag, say, like `{{dstache}}foo}}` or `{{dstache}}#if}}` &mdash; is
+a View object, which is a reactively updating region of DOM.
+
+Most applications do not need to be aware of these Views, but they offer a
+way to understand and customize Meteor's rendering behavior for more
+advanced applications and packages.
+
+You can obtain a View object by calling [`Blaze.render`](#blaze_render) on a
+template, or by accessing [`template.view`](#template_view) on a template
+instance.
+
+At the heart of a View is an [autorun](#tracker_autorun) that calls the View's
+`renderFunction`, uses the result to create DOM nodes, and replaces the
+contents of the View with these new DOM nodes.  A View's content may consist
+of any number of consecutive DOM nodes (though if it is zero, a placeholder
+node such as a comment or an empty text node is automatically supplied).  Any
+reactive dependency established by `renderFunction` causes a full recalculation
+of the View's contents when the dependency is invalidated.  Templates, however,
+are compiled in such a way that they do not have top-level dependencies and so
+will only ever render once, while their parts may re-render many times.
+
+When a `Blaze.View` is constructed by calling the constructor, no hooks
+are fired and no rendering is performed.  In particular, the View is
+not yet considered to be "created."  Only when the View is actually
+used, by a call to `Blaze.render` or `Blaze.toHTML` or by inclusion in
+another View, is it "created," right before it is rendered for the
+first time.  When a View is created, its `.parentView` is set if
+appropriate, and then the `onViewCreated` hook is fired.  The term
+"unrendered View" means a newly constructed View that has not been
+"created" or rendered.
+
+The "current View" is kept in [`Blaze.currentView`](#blaze_currentview) and
+is set during View rendering, callbacks, autoruns, and template event
+handlers.  It affects calls such as [`Template.currentData()`](#template_currentdata).
+
+The following properties and methods are available on Blaze.View:
+
+<dl class="objdesc">
+{{#dtdd name="name" type="String" id="view_name"}}
+  The name of this type of View.  View names may be used to identify
+particular kinds of Views in code, but more often they simply aid in
+debugging and comprehensibility of the View tree.  Views generated
+by Meteor have names like "Template.foo" and "if".
+{{/dtdd}}
+
+{{#dtdd name="parentView" type="View or null" id="view_parentview"}}
+  The enclosing View that caused this View to be rendered, if any.
+{{/dtdd}}
+
+{{#dtdd name="isCreated" type="Boolean" id="view_iscreated"}}
+  True if this View has been called on to be rendered by `Blaze.render`
+  or `Blaze.toHTML` or another View.  Once it becomes true, never
+  becomes false again.  A "created" View's `.parentView` has been
+  set to its final value.  `isCreated` is set to true before
+  `onViewCreated` hooks are called.
+{{/dtdd}}
+
+{{#dtdd name="isRendered" type="Boolean" id="view_isrendered"}}
+  True if this View has been rendered to DOM by `Blaze.render` or
+  by the rendering of an enclosing View.  Conversion to HTML by
+  `Blaze.toHTML` doesn't count.  Once true, never becomes false.
+{{/dtdd}}
+
+{{#dtdd name="isDestroyed" type="Boolean" id="view_isdestroyed"}}
+  True if this View has been destroyed, such as by `Blaze.remove()` or
+  by a reactive update that removes it.  A destroyed View's autoruns
+  have been stopped, and its DOM nodes have generally been cleaned
+  of all Meteor reactivity and possibly dismantled.
+{{/dtdd}}
+
+{{#dtdd name="renderCount" type="Integer" id="view_rendercount"}}
+  The number of times the View has been rendered, including the
+  current time is the View is in the process of being rendered
+  or re-rendered.
+{{/dtdd}}
+
+{{#dtdd name="autorun(runFunc)" id="view_autorun"}}
+  Like [`Tracker.autorun`](#tracker_autorun), except that the autorun is
+  automatically stopped when the View is destroyed, and the
+  [current View](#blaze_currentview) is always set when running `runFunc`.
+  There is no relationship to the View's internal autorun or render
+  cycle.  In `runFunc`, the View is bound to `this`.
+{{/dtdd}}
+
+{{#dtdd name="onViewCreated(func)" id="view_onviewcreated"}}
+  If the View hasn't been created yet, calls `func` when the View
+  is created.  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`created`](#template_created)
+  template callback.
+{{/dtdd}}
+
+{{#dtdd name="onViewReady(func)" id="view_onviewready"}}
+  Calls `func` when the View is rendered and inserted into the DOM,
+  after waiting for the end of
+  [flush time](#tracker_afterflush).  Does not fire if the View
+  is destroyed at any point before it would fire.
+  May fire multiple times (if the View re-renders).
+  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`rendered`](#template_rendered)
+  template callback.  
+{{/dtdd}}
+
+{{#dtdd name="onViewDestroyed(func)" id="view_onviewdestroyed"}}
+  If the View hasn't been destroyed yet, calls `func` when the
+  View is destroyed.  A View may be destroyed without ever becoming
+  "ready."  In `func`, the View is bound to `this`.
+
+  This hook is the basis for the [`destroyed`](#template_destroyed)
+  template callback.
+{{/dtdd}}
+
+{{#dtdd name="firstNode()" type="DOM node" id="view_firstnode"}}
+The first node of the View's rendered content.  Note that this may
+be a text node.  Requires that the View be rendered.
+If the View rendered to zero DOM nodes, it may be a placeholder
+node (comment or text node).  The DOM extent of a View consists
+of the nodes between `view.firstNode()` and `view.lastNode()`,
+inclusive.
+{{/dtdd}}
+
+{{#dtdd name="lastNode()" type="DOM node" id="view_lastnode"}}
+The last node of the View's rendered content.
+
+See [`firstNode()`](#view_firstnode).
+{{/dtdd}}
+
+{{#dtdd name="template" type="Template" id="view_template"}}
+For Views created by invoking templates, the original Template
+object.  For example, `Blaze.render(Template.foo).template === Template.foo`.
+{{/dtdd}}
+
+{{#dtdd name="templateInstance()" type="Template instance"
+id="view_templateinstance"}} For Views created by invoking templates,
+returns the [template instance](#template_inst) object for this
+particular View.  For example, in a [`created`](#template_created)
+callback, `this.view.templateInstance() === this`.
+
+Template instance objects have fields like `data`, `firstNode`, and
+`lastNode` which are not reactive and which are also not automatically
+kept up to date.  Calling `templateInstance()` causes these fields to
+be updated.
+
+{{/dtdd}}
+
+</dl>
+
+{{> api_box blaze_currentview}}
+
+The "current view" is used by [`Template.currentData()`](#template_currentdata) and
+[`Template.instance()`](#template_instance) to determine
+the contextually relevant data context and template instance.
+
+{{> api_box blaze_getview}}
+
+If you don't specify an `element`, there must be a current View or an
+error will be thrown.  This is in contrast to
+[`Blaze.currentView`](#blaze_currentview).
+
+{{> api_box blaze_with}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Unlike `{{dstache}}#with}}` (as used in templates), `Blaze.With` has no "else" case, and
+a falsy value for the data context will not prevent the content from
+rendering.
+
+{{> api_box blaze_if}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{{dstache}}#if}}` in templates.
+
+{{> api_box blaze_unless}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{{dstache}}#unless}}` in templates.
+
+{{> api_box blaze_each}}
+
+Returns an unrendered View object you can pass to `Blaze.render`.
+
+Matches the behavior of `{{dstache}}#each}}` in templates.
+
+{{> api_box blaze_template}}
+
+Templates defined by the template compiler, such as `Template.myTemplate`,
+are objects of type `Blaze.Template` (aliased as `Template`).
+
+In addition to methods like `events` and `helpers`, documented as part of
+the [Template API](#templates_api), the following fields and methods are
+present on template objects:
+
+<dl class="objdesc">
+
+{{#dtdd name="viewName" type="String" id="template_viewname"}}
+  Same as the constructor argument.
+{{/dtdd}}
+
+{{#dtdd name="renderFunction" type="Function" id="template_renderfunction"}}
+  Same as the constructor argument.
+{{/dtdd}}
+
+{{#dtdd name="constructView()" id="template_constructview"}}
+  Constructs and returns an unrendered View object.  This method is invoked
+  by Meteor whenever the template is used, such as by `Blaze.render` or by
+  `{{dstache}}> foo}}` where `foo` resolves to a Template object.
+  
+  `constructView()` constructs a View using `viewName` and `renderFunction`
+  as constructor arguments, and then configures it as a template
+  View, setting up `view.template`, `view.templateInstance()`, event maps, and so on.
+{{/dtdd}}
+
+</dl>
+
+{{> api_box blaze_istemplate}}
+
+
+{{#api_box renderable_content}}
+
+A value is *renderable content* if it is one of the following:
+
+* A [template object](#templates_api) like `Template.myTemplate`
+* An unrendered [View](#blaze_view) object, like the return value of `Blaze.With`
+* `null` or `undefined`
+
+{{#note}}
+Internally, renderable content includes objects representing HTML tags
+as well, but these objects are not yet part of the officially-supported,
+public API.
+{{/note}}
+
+{{/api_box}}
 
 <h2 id="match"><span>Match</span></h2>
 
@@ -2566,18 +2839,18 @@ If you call the native function, you'll get an error stating that Meteor
 code must always run within a Fiber, and advising to use
 `Meteor.bindEnvironment`.
 
-{{> api_box setTimeout}}
+{{> autoApiBox "Meteor.setTimeout"}}
 
 Returns a handle that can be used by `Meteor.clearTimeout`.
 
-{{> api_box setInterval}}
+{{> autoApiBox "Meteor.setInterval"}}
 
 Returns a handle that can be used by `Meteor.clearInterval`.
 
-{{> api_box clearTimeout}}
-{{> api_box clearInterval}}
+{{> autoApiBox "Meteor.clearTimeout"}}
+{{> autoApiBox "Meteor.clearInterval"}}
 
-<h2 id="deps"><span>Deps</span></h2>
+<h2 id="tracker"><span>Tracker</span></h2>
 
 Meteor has a simple dependency tracking system which allows it to
 automatically rerun templates and other computations whenever
@@ -2593,26 +2866,26 @@ template being rendered).  Later, when the data changes, the function
 can "invalidate" the Computation, causing it to rerun (rerendering the
 template).
 
-Applications will find [`Deps.autorun`](#deps_autorun) useful, while more
-advanced facilities such as `Deps.Dependency` and `onInvalidate`
+Applications will find [`Tracker.autorun`](#tracker_autorun) useful, while more
+advanced facilities such as `Tracker.Dependency` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
-To learn more about how Deps works and to explore advanced ways to use it,
-visit the <a href="http://manual.meteor.com/#deps"> Deps</a> chapter in the
+To learn more about how Tracker works and to explore advanced ways to use it,
+visit the <a href="http://manual.meteor.com/#tracker"> Tracker</a> chapter in the
 <a href="http://manual.meteor.com/">Meteor Manual</a>, which describes it in
 complete detail.
 
-{{> api_box deps_autorun }}
+{{> autoApiBox "Tracker.autorun" }}
 
-`Deps.autorun` allows you to run a function that depends on reactive data
+`Tracker.autorun` allows you to run a function that depends on reactive data
 sources, in such a way that if there are changes to the data later,
 the function will be rerun.
 
 For example, you can monitor a cursor (which is a reactive data
 source) and aggregate it into a session variable:
 
-    Deps.autorun(function () {
+    Tracker.autorun(function () {
       var oldest = _.max(Monkeys.find().fetch(), function (monkey) {
         return monkey.age;
       });
@@ -2624,7 +2897,7 @@ Or you can wait for a session variable to have a certain value, and do
 something the first time it does, calling `stop` on the computation to
 prevent further rerunning:
 
-    Deps.autorun(function (c) {
+    Tracker.autorun(function (c) {
       if (! Session.equals("shouldAlert", true))
         return;
 
@@ -2640,10 +2913,10 @@ A change to a data dependency does not cause an immediate rerun, but
 rather "invalidates" the computation, causing it to rerun the next
 time a flush occurs.  A flush will occur automatically as soon as
 the system is idle if there are invalidated computations.  You can
-also use [`Deps.flush`](#deps_flush) to cause an immediate flush of
+also use [`Tracker.flush`](#tracker_flush) to cause an immediate flush of
 all pending reruns.
 
-If you nest calls to `Deps.autorun`, then when the outer call stops or
+If you nest calls to `Tracker.autorun`, then when the outer call stops or
 reruns, the inner call will stop automatically.  Subscriptions and
 observers are also automatically stopped when used as part of a
 computation that is rerun, allowing new ones to be established.  See
@@ -2653,7 +2926,7 @@ subscriptions and reactivity.
 If the initial run of an autorun throws an exception, the computation
 is automatically stopped and won't be rerun.
 
-{{> api_box deps_flush }}
+{{> autoApiBox "Tracker.flush" }}
 
 Normally, when you make changes (like writing to the database),
 their impact (like updating the DOM) is delayed until the system is
@@ -2661,54 +2934,54 @@ idle. This keeps things predictable &mdash; you can know that the DOM
 won't go changing out from under your code as it runs. It's also one
 of the things that makes Meteor fast.
 
-`Deps.flush` forces all of the pending reactive updates to complete.
+`Tracker.flush` forces all of the pending reactive updates to complete.
 For example, if an event handler changes a Session
 variable that will cause part of the user interface to rerender, the
 handler can call `flush` to perform the rerender immediately and then
 access the resulting DOM.
 
 An automatic flush occurs whenever the system is idle which performs
-exactly the same work as `Deps.flush`.  The flushing process consists
+exactly the same work as `Tracker.flush`.  The flushing process consists
 of rerunning any invalidated computations.  If additional
 invalidations happen while flushing, they are processed as part of the
 same flush until there is no more work to be done.  Callbacks
-registered with [`Deps.afterFlush`](#deps_afterflush) are called
+registered with [`Tracker.afterFlush`](#tracker_afterflush) are called
 after processing outstanding invalidations.
 
 It is illegal to call `flush` from inside a `flush` or from a running
 computation.
 
-The <a href="http://manual.meteor.com/#deps-theflushcycle">Meteor Manual</a>
+The <a href="http://manual.meteor.com/#tracker-theflushcycle">Meteor Manual</a>
 describes the motivation for the flush cycle and the guarantees made by
-`Deps.flush` and `Deps.afterFlush`.
+`Tracker.flush` and `Tracker.afterFlush`.
 
-{{> api_box deps_nonreactive }}
+{{> autoApiBox "Tracker.nonreactive" }}
 
-Calls `func` with `Deps.currentComputation` temporarily set to `null`
+Calls `func` with `Tracker.currentComputation` temporarily set to `null`
 and returns `func`'s own return value.  If `func` accesses reactive data
 sources, these data sources will never cause a rerun of the enclosing
 computation.
 
-{{> api_box deps_active }}
+{{> autoApiBox "Tracker.active" }}
 
 This value is useful for data source implementations to determine
 whether they are being accessed reactively or not.
 
-{{> api_box deps_currentcomputation }}
+{{> autoApiBox "Tracker.currentComputation" }}
 
 It's very rare to need to access `currentComputation` directly.  The
 current computation is used implicitly by
-[`Deps.active`](#deps_active) (which tests whether there is one),
+[`Tracker.active`](#tracker_active) (which tests whether there is one),
 [`dependency.depend()`](#dependency_depend) (which registers that it depends on a
-dependency), and [`Deps.onInvalidate`](#deps_oninvalidate) (which
+dependency), and [`Tracker.onInvalidate`](#tracker_oninvalidate) (which
 registers a callback with it).
 
-{{> api_box deps_oninvalidate }}
+{{> autoApiBox "Tracker.onInvalidate" }}
 
 See [*`computation`*`.onInvalidate`](#computation_oninvalidate) for more
 details.
 
-{{> api_box deps_afterflush }}
+{{> autoApiBox "Tracker.afterFlush" }}
 
 Functions scheduled by multiple calls to `afterFlush` are guaranteed
 to run in the order that `afterFlush` was called.  Functions are
@@ -2717,12 +2990,12 @@ computations that need rerunning.  This means that if an `afterFlush`
 function invalidates a computation, that computation will be rerun
 before any other `afterFlush` functions are called.
 
-<h2 id="deps_computation"><span>Deps.Computation</span></h2>
+<h2 id="tracker_computation"><span>Tracker.Computation</span></h2>
 
 A Computation object represents code that is repeatedly rerun in
 response to reactive data changes.  Computations don't have return
 values; they just perform actions, such as rerendering a template on
-the screen.  Computations are created using [`Deps.autorun`](#deps_autorun).
+the screen.  Computations are created using [`Tracker.autorun`](#tracker_autorun).
 Use [`stop`](#computation_stop) to prevent further rerunning of a
 computation.
 
@@ -2734,19 +3007,19 @@ happens, the dependencies are cleared, and the computation is
 scheduled to be rerun at flush time.
 
 The *current computation*
-([`Deps.currentComputation`](#deps_currentcomputation)) is the
+([`Tracker.currentComputation`](#tracker_currentcomputation)) is the
 computation that is currently being run or rerun (computed), and the
 one that gains a dependency when a reactive data source is accessed.
 Data sources are responsible for tracking these dependencies using
-[`Deps.Dependency`](#deps_dependency) objects.
+[`Tracker.Dependency`](#tracker_dependency) objects.
 
 Invalidating a computation sets its `invalidated` property to true
 and immediately calls all of the computation's `onInvalidate`
 callbacks.  When a flush occurs, if the computation has been invalidated
 and not stopped, then the computation is rerun by setting the
 `invalidated` property to `false` and calling the original function
-that was passed to `Deps.autorun`.  A flush will occur when the current
-code finishes running, or sooner if `Deps.flush` is called.
+that was passed to `Tracker.autorun`.  A flush will occur when the current
+code finishes running, or sooner if `Tracker.flush` is called.
 
 Stopping a computation invalidates it (if it is valid) for the purpose
 of calling callbacks, but ensures that it will never be rerun.
@@ -2756,14 +3029,14 @@ Example:
     // if we're in a computation, then perform some clean-up
     // when the current computation is invalidated (rerun or
     // stopped)
-    if (Deps.active) {
-      Deps.onInvalidate(function () {
+    if (Tracker.active) {
+      Tracker.onInvalidate(function () {
         x.destroy();
         y.finalize();
       });
     }
 
-{{> api_box computation_stop}}
+{{> autoApiBox "Tracker.Computation#stop"}}
 
 Stopping a computation is irreversible and guarantees that it will
 never be rerun.  You can stop a computation at any time, including
@@ -2776,15 +3049,15 @@ immediately if it is not currently invalidated.
 Nested computations are stopped automatically when their enclosing
 computation is rerun.
 
-{{> api_box computation_invalidate }}
+{{> autoApiBox "Tracker.Computation#invalidate" }}
 
 Invalidating a computation marks it to be rerun at
-[flush time](#deps_flush), at
+[flush time](#tracker_flush), at
 which point the computation becomes valid again.  It is rare to
 invalidate a computation manually, because reactive data sources
 invalidate their calling computations when they change.  Reactive data
 sources in turn perform this invalidation using one or more
-[`Deps.Dependency`](#deps_dependency) objects.
+[`Tracker.Dependency`](#tracker_dependency) objects.
 
 Invalidating a computation immediately calls all `onInvalidate`
 callbacks registered on it.  Invalidating a computation that is
@@ -2792,7 +3065,7 @@ currently invalidated or is stopped has no effect.  A computation can
 invalidate itself, but if it continues to do so indefinitely, the
 result will be an infinite loop.
 
-{{> api_box computation_oninvalidate }}
+{{> autoApiBox "Tracker.Computation#onInvalidate" }}
 
 `onInvalidate` registers a one-time callback that either fires
 immediately or as soon as the computation is next invalidated or
@@ -2800,22 +3073,22 @@ stopped.  It is used by reactive data sources to clean up resources or
 break dependencies when a computation is rerun or stopped.
 
 To get a callback after a computation has been recomputed, you can
-call [`Deps.afterFlush`](#deps_afterflush) from `onInvalidate`.
+call [`Tracker.afterFlush`](#tracker_afterflush) from `onInvalidate`.
 
-{{> api_box computation_stopped }}
+{{> autoApiBox "Tracker.Computation#stopped" }}
 
-{{> api_box computation_invalidated }}
+{{> autoApiBox "Tracker.Computation#invalidated" }}
 
 This property is initially false.  It is set to true by `stop()` and
 `invalidate()`.  It is reset to false when the computation is
 recomputed at flush time.
 
-{{> api_box computation_firstrun }}
+{{> autoApiBox "Tracker.Computation#firstRun" }}
 
 This property is a convenience to support the common pattern where a
 computation has logic specific to the first run.
 
-<h2 id="deps_dependency"><span>Deps.Dependency</span></h2>
+<h2 id="tracker_dependency"><span>Tracker.Dependency</span></h2>
 
 A Dependency represents an atomic unit of reactive data that a
 computation might depend on.  Reactive data sources such as Session or
@@ -2830,7 +3103,7 @@ accompanied by a Dependency object that tracks the computations that depend
 on it, as in this example:
 
     var weather = "sunny";
-    var weatherDep = new Deps.Dependency;
+    var weatherDep = new Tracker.Dependency;
 
     var getWeather = function () {
       weatherDep.depend()
@@ -2869,23 +3142,60 @@ A Dependency's dependent computations are always valid (they have
 either by the Dependency itself or some other way, it is immediately
 removed.
 
-See the <a href="http://manual.meteor.com/#deps-reactivevaluewithdependency">
+See the <a href="http://manual.meteor.com/#tracker-reactivevaluewithdependency">
 Meteor Manual</a> to learn how to create a reactive data source using
-  Deps.Dependency.
+  Tracker.Dependency.
 
-{{> api_box dependency_changed }}
+{{> autoApiBox "Tracker.Dependency#changed" }}
 
-{{> api_box dependency_depend }}
+{{> autoApiBox "Tracker.Dependency#depend" }}
 
 `dep.depend()` is used in reactive data source implementations to record
 the fact that `dep` is being accessed from the current computation.
 
-{{> api_box dependency_hasdependents }}
+{{> autoApiBox "Tracker.Dependency#hasDependents" }}
 
 For reactive data sources that create many internal Dependencies,
 this function is useful to determine whether a particular Dependency is
 still tracking any dependency relationships or if it can be cleaned up
 to save memory.
+
+<h2 id="reactivevar_pkg"><span>ReactiveVar</span></h2>
+
+To use `ReactiveVar`, add the `reactive-var` package to your project with
+`$ meteor add reactive-var`.
+
+{{> api_box reactivevar}}
+
+A ReactiveVar holds a single value that can be get and set, such that calling
+`set` will invalidate any Computations that called `get`, according to the
+usual contract for reactive data sources.
+
+A ReactiveVar is similar to a Session variable, with a few differences:
+
+* ReactiveVars don't have global names, like the "foo" in `Session.get("foo")`.
+  Instead, they may be created and used locally, for example attached to a
+  template instance, as in: `this.foo.get()`.
+
+* ReactiveVars are not automatically migrated across hot code pushes,
+  whereas Session state is.
+
+* ReactiveVars can hold any value, while Session variables are limited to
+  JSON or EJSON.
+
+An important property of ReactiveVars &mdash; which is sometimes a
+reason for using one &mdash; is that setting the value to the same
+value as before has no effect; it does not trigger any invalidations.
+So if one autorun sets a ReactiveVar, and another autorun gets the
+ReactiveVar, a re-run of the first autorun won't necessarily trigger
+the second.  By default, only primitive values are compared this way,
+while calling `set` on an argument that is an *object* (not a
+primitive) always counts as a change.  You can configure this behavior
+using the `equalsFunc` argument.
+
+{{> api_box reactivevar_get}}
+
+{{> api_box reactivevar_set}}
 
 <h2 id="ejson"><span>EJSON</span></h2>
 
@@ -2909,19 +3219,19 @@ and a binary buffer would be serialized in EJSON as:
 Meteor supports all built-in EJSON data types in publishers, method arguments
 and results, Mongo databases, and [`Session`](#session) variables.
 
-{{> api_box ejsonParse}}
+{{> autoApiBox "EJSON.parse"}}
 
-{{> api_box ejsonStringify}}
+{{> autoApiBox "EJSON.stringify"}}
 
-{{> api_box ejsonFromJSONValue}}
+{{> autoApiBox "EJSON.fromJSONValue"}}
 
-{{> api_box ejsonToJSONValue}}
+{{> autoApiBox "EJSON.toJSONValue"}}
 
-{{> api_box ejsonEquals}}
+{{> autoApiBox "EJSON.equals"}}
 
-{{> api_box ejsonClone}}
+{{> autoApiBox "EJSON.clone"}}
 
-{{> api_box ejsonNewBinary}}
+{{> autoApiBox "EJSON.newBinary"}}
 
 Buffers of binary data are represented by `Uint8Array` instances on JavaScript
 platforms that support them.  On implementations of JavaScript that do not
@@ -2929,9 +3239,9 @@ support `Uint8Array`, binary data buffers are represented by standard arrays
 containing numbers ranging from 0 to 255, and the `$Uint8ArrayPolyfill` key
 set to `true`.
 
-{{> api_box ejsonIsBinary}}
+{{> autoApiBox "EJSON.isBinary"}}
 
-{{> api_box ejsonAddType}}
+{{> autoApiBox "EJSON.addType"}}
 
 When you add a type to EJSON, Meteor will be able to use that type in:
 
@@ -2989,7 +3299,7 @@ result of calling [`toJSONValue`](#ejson_type_toJSONValue) instead.
 `HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project with `$ meteor add http`.
 
-{{> api_box httpcall}}
+{{> autoApiBox "HTTP.call"}}
 
 This function initiates an HTTP request to a remote server.
 
@@ -3265,55 +3575,4 @@ in the `_test.js` file that was created.
 
 {{> api_box pack_onTest }}
 
-</template>
-
-
-<template name="api_box">
-<div class="api {{bare}}">
-
-<h3 id="{{id}}">
-  <a class="name selflink" href="#{{id}}">{{{name}}}</a>
-{{#if locus}}
-  <span class="locus">{{locus}}</span>
-{{/if}}
-</h3>
-
-<div class="desc">
-{{#each descr}}{{#markdown}}{{{this}}}{{/markdown}}{{/each}}
-</div>
-
-{{#if args}}
-<h4>Arguments</h4>
-{{> api_box_args args}}
-{{/if}}
-
-{{#if options}}
-<h4>Options</h4>
-{{> api_box_args options}}
-{{/if}}
-
-{{#if UI.contentBlock}}
-{{#markdown}}{{> UI.contentBlock}}{{/markdown}}
-{{/if}}
-
-</div>
-
-</template>
-
-
-
-<template name="api_box_args">
-<dl class="args">
-{{#each this}}
-<dt><span class="name">{{{name}}}</span>
-  <span class="type">
-    {{#if type_link}}
-      <a href="#{{type_link}}">{{{type}}}</a>
-    {{else}}
-      {{{type}}}
-    {{/if}}
-  </span></dt>
-<dd>{{#markdown}}{{{descr}}}{{/markdown}}</dd>
-{{/each}}
-</dl>
 </template>
