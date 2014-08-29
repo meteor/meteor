@@ -165,7 +165,7 @@ var toc = [
     ],
 
     {name: "Collections", id: "collections"}, [
-      "Meteor.Collection", [
+      "Mongo.Collection", [
         {instance: "collection", name: "find"},
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
@@ -176,7 +176,7 @@ var toc = [
         {instance: "collection", name: "deny"}
       ],
 
-      "Meteor.Collection.Cursor", [
+      "Mongo.Cursor", [
         {instance: "cursor", name: "forEach"},
         {instance: "cursor", name: "map"},
         {instance: "cursor", name: "fetch"},
@@ -185,7 +185,7 @@ var toc = [
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
       {type: "spacer"},
-      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
+      {name: "Mongo.ObjectID", id: "mongo_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
