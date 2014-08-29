@@ -13,7 +13,7 @@ Package.on_use(function (api) {
   // other package tests and not included in the non-test bundle. One
   // idea would be to make a new separate package 'ddp-test-helpers' or
   // the like.
-  api.use('livedata');
+  api.use('ddp');
 
 
   api.export([

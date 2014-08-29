@@ -18,7 +18,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'livedata', 'tracker', 'application-configuration'],
+           'ddp', 'tracker', 'application-configuration'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 
@@ -64,7 +64,7 @@ Package.on_test(function (api) {
   api.use('mongo');
   api.use('check');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
-           'livedata']);
+           'ddp']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.add_files('mongo_livedata_tests.js', ['client', 'server']);

@@ -190,12 +190,12 @@ exports.deployWithNewEmail = function (s, email, appName) {
 
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: ['livedata']
+    packages: ['ddp']
   });
 };
 
 var ddpConnect = function (url) {
-  var DDP = getLoadedPackages().livedata.DDP;
+  var DDP = getLoadedPackages().ddp.DDP;
   return DDP.connect(url);
 };
 

@@ -15,7 +15,7 @@ Package.on_use(function(api) {
   api.use('random', ['server']);
   api.use('check');
   api.use('underscore');
-  api.use('livedata', ['client', 'server']);
+  api.use('ddp', ['client', 'server']);
 
   api.add_files('email_templates.js', 'server');
   api.add_files('password_server.js', 'server');
@@ -25,7 +25,7 @@ Package.on_use(function(api) {
 Package.on_test(function(api) {
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'underscore', 'check',
-           'livedata']);
+           'ddp']);
   api.add_files('password_tests_setup.js', 'server');
   api.add_files('password_tests.js', ['client', 'server']);
   api.add_files('email_tests_setup.js', 'server');

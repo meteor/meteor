@@ -8,7 +8,7 @@ Package.on_use(function (api) {
   api.use('underscore');
   // make sure we come after livedata, so we load after the sockjs
   // server has been instantiated.
-  api.use('livedata', 'server');
+  api.use('ddp', 'server');
 
   api.add_files('force_ssl_common.js', ['client', 'server']);
   api.add_files('force_ssl_server.js', 'server');
