@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Adaptor for using MongoDB and Minimongo over DDP",
+  summary: "Moved to the 'mongo' package",
   version: '1.0.4-rc0'
 });
 
