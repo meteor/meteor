@@ -1,6 +1,6 @@
 Package.describe({
-  summary: "Moved to the mongo package",
-  version: '1.0.3'
+  summary: "Adaptor for using MongoDB and Minimongo over DDP",
+  version: '1.0.4-rc0'
 });
 
 Package.on_use(function (api) {
