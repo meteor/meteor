@@ -2462,31 +2462,3 @@ Template.api.pack_addFiles = {
   ]
 };
 
-Template.api.pack_api_describe = {
-  id: "pack_describe",
-  name: "Package.describe(options)",
-  locus: "package.js",
-  descr: ["Provide basic package information."],
-  args: [
-   {name: "summary",
-    type: "String",
-    descr: "A concise 1-2 sentence description of the package, " +
-     "required for publication."
-   },
-   {name: "version",
-    type: "String",
-    descr: "The <a href='http://www.semver.org'> semver </a> version for " +
-"your package. If no version is specified, defaults to `0.0.0`. You need to " +
-"specify a version to publish to the package server.",
-   },
-   {name: "name",
-    type: "String",
-    descr: "Optional name override. By default, the package name comes from " +
-"the name of its directory."
-   },
-   {name: "git",
-    type: "String",
-    descr: "Optional Git URL to the source repository."
-   }
-  ]
-};
