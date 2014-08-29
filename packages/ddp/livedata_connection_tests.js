@@ -79,7 +79,7 @@ Tinytest.add("livedata stub - receive data", function (test) {
 
   // XXX: Test that the old signature of passing manager directly instead of in
   // options works.
-  var coll = new Meteor.Collection(coll_name, conn);
+  var coll = new Mongo.Collection(coll_name, conn);
 
   // queue has been emptied and doc is in db.
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
@@ -386,7 +386,7 @@ if (Meteor.isClient) {
     startAndConnect(test, stream);
 
     var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {connection: conn});
+    var coll = new Mongo.Collection(collName, {connection: conn});
 
     // setup method
     conn.methods({do_something: function (x) {
@@ -533,7 +533,7 @@ if (Meteor.isClient) {
     startAndConnect(test, stream);
 
     var coll_name = Random.id();
-    var coll = new Meteor.Collection(coll_name, {connection: conn});
+    var coll = new Mongo.Collection(coll_name, {connection: conn});
 
     // setup methods
     conn.methods({
@@ -619,7 +619,7 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   startAndConnect(test, stream);
 
   var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {connection: conn});
+  var coll = new Mongo.Collection(collName, {connection: conn});
 
   var o = observeCursor(test, coll.find());
 
@@ -750,7 +750,7 @@ if (Meteor.isClient) {
     startAndConnect(test, stream);
 
     var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {connection: conn});
+    var coll = new Mongo.Collection(collName, {connection: conn});
     var o = observeCursor(test, coll.find());
 
     conn.methods({writeSomething: function () {
@@ -923,7 +923,7 @@ Tinytest.add("livedata stub - reconnect method which only got data", function (t
   startAndConnect(test, stream);
 
   var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {connection: conn});
+  var coll = new Mongo.Collection(collName, {connection: conn});
   var o = observeCursor(test, coll.find());
 
   // Call a method. We'll get the data-done message but not the result before
@@ -1009,7 +1009,7 @@ if (Meteor.isClient) {
     startAndConnect(test, stream);
 
     var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {connection: conn});
+    var coll = new Mongo.Collection(collName, {connection: conn});
     var o = observeCursor(test, coll.find());
 
     conn.methods({
@@ -1096,7 +1096,7 @@ if (Meteor.isClient) {
     startAndConnect(test, stream);
 
     var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {connection: conn});
+    var coll = new Mongo.Collection(collName, {connection: conn});
 
     conn.methods({
       insertSomething: function () {
@@ -1238,7 +1238,7 @@ Tinytest.add("livedata connection - two wait methods", function (test) {
   startAndConnect(test, stream);
 
   var collName = Random.id();
-  var coll = new Meteor.Collection(collName, {connection: conn});
+  var coll = new Mongo.Collection(collName, {connection: conn});
 
   // setup method
   conn.methods({do_something: function (x) {}});
@@ -1716,7 +1716,7 @@ if (Meteor.isClient) {
     var conn = newConnection(stream);
 
     var collName = Random.id();
-    var coll = new Meteor.Collection(collName, {connection: conn});
+    var coll = new Mongo.Collection(collName, {connection: conn});
 
     // Start and send "connect", but DON'T get 'connected' quite yet.
     stream.reset(); // initial connection start.

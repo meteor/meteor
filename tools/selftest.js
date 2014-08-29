@@ -710,7 +710,7 @@ _.extend(Sandbox.prototype, {
       catalog.official.refresh();
     });
     _.each(
-      ['autopublish', 'standard-app-packages', 'insecure'],
+      ['autopublish', 'meteor-platform', 'insecure'],
       function (name) {
         var versionRec = doOrThrow(function () {
           return catalog.official.getLatestMainlineVersion(name);

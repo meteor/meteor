@@ -1049,7 +1049,7 @@ exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var Package = getLoadedPackages();
-  var serviceConfigurations = new Package.meteor.Meteor.Collection(
+  var serviceConfigurations = new Package.mongo.Mongo.Collection(
     'meteor_accounts_loginServiceConfiguration',
     { connection: conn.connection }
   );
