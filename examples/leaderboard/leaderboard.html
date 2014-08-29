@@ -1,9 +1,10 @@
 <head>
   <title>Leaderboard</title>
+  <meta name="viewport" content="width=device-width, user-scalable=no">
 </head>
 
 <body>
-  <div id="outer">
+  <div class="outer">
     {{> leaderboard}}
   </div>
 </body>
@@ -18,7 +19,7 @@
   {{#if selected_name}}
   <div class="details">
     <div class="name">{{selected_name}}</div>
-    <input type="button" class="inc" value="Give 5 points" />
+    <button class="inc">Give 5 points</button>
   </div>
   {{else}}
   <div class="none">Click a player to select</div>
