@@ -14,7 +14,6 @@ selftest.define("css hot code push", function (options) {
   s.createApp("myapp", "css-injection-test");
   s.cd("myapp");
   s.testWithAllClients(function (run) {
-    run.baseTimeout = 20;
     run.match("myapp");
     run.match("proxy");
     run.match("MongoDB");
@@ -41,18 +40,45 @@ selftest.define("css hot code push", function (options) {
     s.write("test.css", "body { background-color: red; }");
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 1");
-    run.match("background-color: rgb(255, 0, 0)");
+    run.match(/background-color: (red|rgb\(255, 0, 0\))/);
 
     s.write("test.css", "body { background-color: blue; }");
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 2");
-    run.match("background-color: rgb(0, 0, 255)");
+    run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
 
     // The server does NOT restart if a css file is removed.
     s.unlink("test.css");
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 3");
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
+
+    s.write(".meteor/packages", "standard-app-packages \n my-package");
+    run.match("added my-package");
+    run.match("client connected");
+    run.match("numCssChanges: 0");
+
+    s.write("packages/my-package/foo.css", "body { background-color: blue; }");
+    run.match("numCssChanges: 1");
+    run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
+
+    // Add appcache and ensure that the browser still reloads.
+    s.write(".meteor/packages", "standard-app-packages \n my-package \n appcache");
+    run.match("added appcache");
+    run.match("server restarted");
+    run.match("numCssChanges: 0");
+    run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
+
+    s.write("packages/my-package/foo.css", "body { background-color: red; }");
+    run.match("Client modified -- refreshing");
+    run.match("numCssChanges: 1");
+    run.match(/background-color: (red|rgb\(255, 0, 0\))/);
+
+    s.write(".meteor/packages", "standard-app-packages");
+    run.match("removed my-package");
+    run.match("numCssChanges: 0");
+    run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
+
     run.stop();
   });
 });
@@ -90,7 +116,6 @@ selftest.define("javascript hot code push", function (options) {
   s.createApp("myapp", "hot-code-push-test");
   s.cd("myapp");
   s.testWithAllClients(function (run) {
-    run.baseTimeout = 20;
     run.match("myapp");
     run.match("proxy");
     run.match("MongoDB");
@@ -98,11 +123,12 @@ selftest.define("javascript hot code push", function (options) {
     run.match("localhost");
 
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(40);
 
     // There is initially no JavaScript file.
     run.match("client connected: 0");
     run.match("jsVar: undefined");
+    run.match("sessionVar: null");
 
     // The server and client both restart if a shared js file is added
     // or removed.
@@ -110,6 +136,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: foo");
+    run.match("sessionVar: true");
 
     s.unlink("test.js");
     run.match("server restarted");
@@ -119,6 +146,7 @@ selftest.define("javascript hot code push", function (options) {
     // Only the client should refresh if a client js file is added. Thus,
     // "client connected" variable will be incremented.
     s.mkdir("client");
+
     s.write("client/test.js", "jsVar = 'bar'");
     run.match("client connected: 1");
     run.match("jsVar: bar");
@@ -162,12 +190,37 @@ selftest.define("javascript hot code push", function (options) {
     run.match("client connected: 1");
     run.match("jsVar: undefined");
 
+    s.write(".meteor/packages", "standard-app-packages \n my-package");
+    run.match("added my-package");
+    run.match("server restarted");
+    run.match("client connected: 0");
+    run.match("jsVar: undefined");
+    run.match("packageVar: foo");
+
+    s.write("packages/my-package/foo.js", "packageVar = 'bar'");
+    run.match("client connected: 1");
+    run.match("jsVar: undefined");
+    run.match("packageVar: bar");
+
+    // Add appcache and ensure that the browser still reloads.
+    s.write(".meteor/packages", "standard-app-packages \n appcache");
+    run.match("added appcache");
+    run.match("server restarted");
+    run.match("client connected: 0");
+    run.match("jsVar: undefined");
+
     s.write("client/test.js", "jsVar = 'bar'");
-    run.match("client connected: 2");
+    run.match("client connected: 1");
     run.match("jsVar: bar");
 
+    // Remove appcache and ensure that the browser still reloads.
+    s.write(".meteor/packages", "standard-app-packages");
+    run.match("removed appcache");
+    run.match("server restarted");
+    run.match("client connected: 0");
+
     s.write("client/test.js", "jsVar = 'baz'");
-    run.match("client connected: 3");
+    run.match("client connected: 1");
     run.match("jsVar: baz");
 
     s.unlink("client/test.js");
