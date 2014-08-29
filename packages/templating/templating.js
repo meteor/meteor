@@ -11,6 +11,12 @@ Template.__checkName = function (name) {
   }
 };
 
+// XXX COMPAT WITH 0.8.3
+Template.__define__ = function (name, renderFunc) {
+  Template.__checkName(name);
+  Template[name] = new Template("Template." + name, renderFunc);
+};
+
 // Define a template `Template.body` that renders its
 // `contentViews`.  `<body>` tags (of which there may be
 // multiple) will have their contents added to it.
