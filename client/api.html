@@ -61,7 +61,7 @@ two parameters: the name of the record set, and a *publish function*
 that Meteor will call each time a client subscribes to the name.
 
 Publish functions can return a
-[`Collection.Cursor`](#meteor_collection_cursor), in which case Meteor
+[`Collection.Cursor`](#mongo_cursor), in which case Meteor
 will publish that cursor's documents to each subscribed client. You can
 also return an array of `Collection.Cursor`s, in which case Meteor will
 publish all of the cursors.
@@ -199,11 +199,11 @@ publish handler, this is the place to stop the observes.
 
 When you subscribe to a record set, it tells the server to send records to the
 client.  The client stores these records in local [Minimongo
-collections](#meteor_collection), with the same name as the `collection`
+collections](#mongo_collection), with the same name as the `collection`
 argument used in the publish handler's [`added`](#publish_added),
 [`changed`](#publish_changed), and [`removed`](#publish_removed)
 callbacks.  Meteor will queue incoming records until you declare the
-[`Mongo.Collection`](#meteor_collection) on the client with the matching
+[`Mongo.Collection`](#mongo_collection) on the client with the matching
 collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
@@ -1084,12 +1084,12 @@ it checks the collection's `allow` rules. Meteor allows the write only
 if no `deny` rules return `true` and at least one `allow` rule returns
 `true`.
 
-<h2 id="meteor_collection_cursor"><span>Cursors</span></h2>
+<h2 id="mongo_cursor"><span>Cursors</span></h2>
 
 To create a cursor, use [`find`](#find).  To access the documents in a
 cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
-{{> autoApiBox "Mongo.Collection.Cursor#forEach"}}
+{{> autoApiBox "Mongo.Cursor#forEach"}}
 
 This interface is compatible with [Array.forEach](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
 
@@ -1106,7 +1106,7 @@ Examples:
       count += 1;
     });
 
-{{> autoApiBox "Mongo.Collection.Cursor#map"}}
+{{> autoApiBox "Mongo.Cursor#map"}}
 
 This interface is compatible with [Array.map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
 
@@ -1119,18 +1119,18 @@ On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
-{{> autoApiBox "Mongo.Collection.Cursor#fetch"}}
+{{> autoApiBox "Mongo.Cursor#fetch"}}
 
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
-{{> autoApiBox "Mongo.Collection.Cursor#count"}}
+{{> autoApiBox "Mongo.Cursor#count"}}
 
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
-{{> autoApiBox "Mongo.Collection.Cursor#observe"}}
+{{> autoApiBox "Mongo.Cursor#observe"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
@@ -1195,7 +1195,7 @@ only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
 
-{{> autoApiBox "Mongo.Collection.Cursor#observeChanges"}}
+{{> autoApiBox "Mongo.Cursor#observeChanges"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. In contrast to [`observe`](#observe),
@@ -1294,7 +1294,7 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
 {{> apiBoxTitle name="Mongo-Style Selectors" id="selectors"}}
 
 The simplest selectors are just a string or
-[`Mongo.ObjectID`](#collection_object_id). These selectors match the
+[`Mongo.ObjectID`](#mongo_object_id). These selectors match the
 document with that value in its `_id` field.
 
 A slightly more complex form of selector is an object containing a set of keys
@@ -3206,7 +3206,7 @@ types, as well as:
  - **Binary** (JavaScript `Uint8Array` or the
    result of [`EJSON.newBinary`](#ejson_new_binary))
  - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
- [`Mongo.ObjectID`](#collection_object_id) is implemented this way.)
+ [`Mongo.ObjectID`](#mongo_object_id) is implemented this way.)
 
 All EJSON serializations are also valid JSON.  For example an object with a date
 and a binary buffer would be serialized in EJSON as:
@@ -3269,7 +3269,7 @@ default implementations are not sufficient.
 {{> api_box ejsonTypeToJSONValue}}
 
 For example, the `toJSONValue` method for
-[`Mongo.ObjectID`](#collection_object_id) could be:
+[`Mongo.ObjectID`](#mongo_object_id) could be:
 
     function () {
       return this.toHexString();

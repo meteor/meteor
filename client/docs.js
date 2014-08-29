@@ -176,7 +176,7 @@ var toc = [
         {instance: "collection", name: "deny"}
       ],
 
-      "Mongo.Collection.Cursor", [
+      "Mongo.Cursor", [
         {instance: "cursor", name: "forEach"},
         {instance: "cursor", name: "map"},
         {instance: "cursor", name: "fetch"},
