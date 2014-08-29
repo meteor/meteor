@@ -5,7 +5,7 @@ Template = Blaze.Template;
 // Check for duplicate template names and illegal names that won't work.
 Template.__checkName = function (name) {
   if (name in Template) {
-    if (Template[name] instanceof Template)
+    if ((Template[name] instanceof Template) && name !== "body")
       throw new Error("There are multiple templates named '" + name + "'. Each template needs a unique name.");
     throw new Error("This template name is reserved: " + name);
   }
