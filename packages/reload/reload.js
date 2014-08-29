@@ -45,7 +45,7 @@ var old_data = {};
 var old_json;
 
 // This logic for sessionStorage detection is based on browserstate/history.js
-var sessionStorage = null;
+var safeSessionStorage = null;
 try {
   // This throws a SecurityError on Chrome if cookies & localStorage are
   // explicitly disabled
@@ -55,24 +55,24 @@ try {
   // We can't even do (typeof sessionStorage) on Chrome, it throws.  So we rely
   // on the throw if sessionStorage == null; the alternative is browser
   // detection, but this seems better.
-  sessionStorage = window.sessionStorage;
+  safeSessionStorage = window.sessionStorage;
 
   // Check we can actually use it
-  if (sessionStorage) {
-    sessionStorage.setItem('__dummy__', '1');
-    sessionStorage.removeItem('__dummy__');
+  if (safeSessionStorage) {
+    safeSessionStorage.setItem('__dummy__', '1');
+    safeSessionStorage.removeItem('__dummy__');
   } else {
     // Be consistently null, for safety
-    sessionStorage = null;
+    safeSessionStorage = null;
   }
 } catch(e) {
   // Expected on chrome with strict security, or if sessionStorage not supported
-  sessionStorage = null;
+  safeSessionStorage = null;
 }
 
-if (sessionStorage) {
-  old_json = sessionStorage.getItem(KEY_NAME);
-  sessionStorage.removeItem(KEY_NAME);
+if (safeSessionStorage) {
+  old_json = safeSessionStorage.getItem(KEY_NAME);
+  safeSessionStorage.removeItem(KEY_NAME);
 } else {
   // Unsupported browser (IE 6,7) or locked down security settings.
   // No session resumption.
@@ -170,9 +170,9 @@ Reload._reload = function () {
       throw err;
     }
 
-    if (sessionStorage) {
+    if (safeSessionStorage) {
       try {
-        sessionStorage.setItem(KEY_NAME, json);
+        safeSessionStorage.setItem(KEY_NAME, json);
       } catch (err) {
         // We should have already checked this, but just log - don't throw
         Meteor._debug("Couldn't save data for migration to sessionStorage", err);
