@@ -188,10 +188,6 @@ npm install jsdoc@3.3.0-alpha9
 #npm install cordova@3.5.0-0.2.6
 npm install "https://github.com/meteor/cordova-cli/tarball/898040e71f6d6900cac4d477986b0451fb196ff1"
 
-# Below needs rake, getting rid of it
-# npm install ios-sim@2.0.1
-
-
 # Checkout and build mongodb.
 # We want to build a binary that includes SSL support but does not depend on a
 # particular version of openssl on the host system.
