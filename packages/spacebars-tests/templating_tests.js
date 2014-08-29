@@ -603,6 +603,6 @@ Tinytest.add('spacebars-tests - templating_tests - reserved template name error'
          function (name) {
            test.throws(function () {
              Template.__checkName(name);
-           });
+           }, /This template name is reserved: /);
          });
 });
