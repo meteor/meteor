@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.3'
+  version: '1.0.4-rc0'
 });
 
 Package.on_use(function (api) {

@@ -113,7 +113,7 @@ var runTest = function () {
     // verify that contents are not minified
     var manifest = readManifest(tmpOutputDir);
     var foundMeteor = false;
-    var foundDeps = false;
+    var foundTracker = false;
     _.each(manifest, function (item) {
       if (item.type !== 'js')
         return;
@@ -123,11 +123,11 @@ var runTest = function () {
       assert(!/:tests/.test(item.path));
       if (item.path === 'packages/meteor.js')
         foundMeteor = true;
-      if (item.path === 'packages/deps.js')
-        foundDeps = true;
+      if (item.path === 'packages/tracker.js')
+        foundTracker = true;
     });
     assert(foundMeteor);
-    assert(foundDeps);
+    assert(foundTracker);
   });
 
   console.log("includeNodeModulesSymlink");

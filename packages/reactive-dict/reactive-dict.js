@@ -63,7 +63,7 @@ _.extend(ReactiveDict.prototype, {
     var self = this;
 
     // Meteor.Collection.ObjectID is in the 'mongo' package
-    var ObjectID = Meteor && Meteor.Collection && Meteor.Collection.ObjectID;
+    var ObjectID = Meteor.Collection && Meteor.Collection.ObjectID;
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key

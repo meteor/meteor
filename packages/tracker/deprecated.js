@@ -16,3 +16,5 @@ Meteor.autosubscribe = Tracker.autorun;
 Tracker.depend = function (d) {
   return d.depend();
 };
+
+Deps = Tracker;
