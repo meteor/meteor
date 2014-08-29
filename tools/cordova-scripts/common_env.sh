@@ -45,9 +45,11 @@ if [ -z "$USE_GLOBAL_ADK" ] ; then
   export PATH="${ANT_HOME}/bin:${PATH}"
 
   export HOME="${ANDROID_BUNDLE}"
+  export ANDROID_SDK_HOME="${ANDROID_BUNDLE}"
 else
   # to use a global ADK we don't set PATH, ANT_HOME
   # relying that they are installed and available globally
+  export ANDROID_SDK_HOME="${HOME}"
   true
 fi
 
