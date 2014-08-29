@@ -601,7 +601,7 @@ your application.  Each document is a EJSON object.  It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
 first create the document.
 
-    // common code on client and server declares livedata-managed mongo
+    // common code on client and server declares a DDP-managed mongo
     // collection.
     Chatrooms = new Meteor.Collection("chatrooms");
     Messages = new Meteor.Collection("messages");
