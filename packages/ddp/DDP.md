@@ -7,7 +7,7 @@ DDP is a protocol between a client and a server that supports two operations:
    client informed about the contents of those documents as they change over
    time.
 
-This document specifies the version "pre2" of DDP. It's a rough description of
+This document specifies the version "1" of DDP. It's a rough description of
 the protocol and not intended to be entirely definitive.
 
 ## General Message Structure:
@@ -20,6 +20,14 @@ WebSocket subprotocol.)
 DDP messages are JSON objects, with some fields specified to be EJSON.  Each one
 has a `msg` field that specifies the message type, as well as other fields
 depending on message type.
+
+The client and the server must ignore any unknown fields in messages.  Future
+minor revisions of DDP might add extra fields without changing the DDP version;
+the client must therefore silently ignore unknown fields.  However, the client
+must not send extra fields other than those documented in the DDP protocol, in
+case these extra fields have meaning to future servers.  On the server, all
+field changes must be optional/ignorable for compatability with older clients;
+otherwise a new protocol version would be required.
 
 ## Establishing a DDP Connection:
 
@@ -324,3 +332,14 @@ behaves differently to the server, then syncing will fix this.
 
 * If both client and server support randomSeed, in the normal case the ids
 generated will be the same, and syncing will be a no-op.
+
+
+## Version History
+
+```pre1``` was the first version of DDP
+
+```pre2``` added keep-alive (ping & pong messages), and randomSeed.
+
+```1``` should be considered the first official version of DDP.  It is
+currently identical to pre2, although non-incompatible changes may be made to
+it in future.
