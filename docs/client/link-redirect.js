@@ -6,6 +6,10 @@ Meteor.startup(function () {
       return hash.replace("deps", "tracker");
     }
 
+    if (hash === "meteor_collection") {
+      return "mongo_collection";
+    }
+
     if (hash === "collection_object_id") {
       return "mongo_object_id";
     }
