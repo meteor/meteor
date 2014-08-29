@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.10"
+  version: "1.0.12-cordova6"
 });
 
 Npm.depends({

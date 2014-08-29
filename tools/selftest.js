@@ -80,10 +80,10 @@ var getToolsPackage = function () {
 };
 
 // Execute a command synchronously, discarding stderr.
-var execFileSync = function (binary, args) {
+var execFileSync = function (binary, args, opts) {
   return Future.wrap(function(cb) {
     var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
-    child_process.execFile(binary, args, cb2);
+    child_process.execFile(binary, args, opts, cb2);
   })().wait();
 };
 

@@ -277,6 +277,47 @@ selftest.define("add packages to app", ["net"], function () {
   run.expectExit(0);
 });
 
+// Add a package that adds files to specific client architectures.
+selftest.define("add packages client archs", function (options) {
+  var runTestWithArgs = function (clientType, args, port) {
+    var s = new Sandbox({
+      clients: _.extend(options.clients, { port: port }),
+    });
+
+    // Starting a run
+    s.createApp("myapp", "package-tests");
+    s.cd("myapp");
+    s.set("METEOR_TEST_TMP", files.mkdtemp());
+    s.set("METEOR_OFFLINE_CATALOG", "t");
+
+    var outerRun = s.run("add", "say-something-client-targets");
+    outerRun.match("added");
+    outerRun.expectExit(0);
+    checkPackages(s,
+                  ["standard-app-packages", "say-something-client-targets"]);
+
+    var expectedLogNum = 0;
+    s.testWithAllClients(function (run) {
+      run.waitSecs(5);
+      run.match("myapp");
+      run.match("proxy");
+      run.waitSecs(5);
+      run.match("MongoDB");
+      run.waitSecs(5);
+      run.match("running at");
+      run.match("localhost");
+
+      run.connectClient();
+      run.waitSecs(20);
+      run.match("all clients " + (expectedLogNum++));
+      run.match(clientType + " client " + (expectedLogNum++));
+      run.stop();
+    }, args);
+  };
+
+  runTestWithArgs("browser", [], 3000);
+});
+
 // Removes the local data.json file from disk.
 var cleanLocalCache = function () {
   var config = require("../config.js");

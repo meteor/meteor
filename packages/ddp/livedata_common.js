@@ -1,4 +1,6 @@
-SUPPORTED_DDP_VERSIONS = [ 'pre2', 'pre1' ];
+// All the supported versions (for both the client and server)
+// These must be in order of preference; most favored-first
+SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
 
 LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
 

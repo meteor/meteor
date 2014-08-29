@@ -1,11 +1,10 @@
 var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
-var fs = require("fs");
+var fs = require('fs');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var uniload = require('./uniload.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
@@ -22,7 +21,9 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+var cordova = require('./commands-cordova.js');
 var commandsPackages = require('./commands-packages.js');
+var execFileSync = require('./utils.js').execFileSync;
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -54,6 +55,23 @@ var hostedWithGalaxy = function (site) {
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
+var parseHostPort = function (str) {
+  // XXX factor this out into a {type: host/port}?
+  var portMatch = str.match(/^(?:(.+):)?([0-9]+)$/);
+  if (!portMatch) {
+    throw new Error(
+"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
+"port is a number. Try 'meteor help run' for help.\n");
+  }
+
+  var host = portMatch[1] || 'localhost';
+  var port = parseInt(portMatch[2]);
+
+  return {
+    host: host,
+    port: port
+  };
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -129,18 +147,25 @@ main.registerCommand({
 main.registerCommand({
   name: 'run',
   requiresApp: true,
+  maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: '3000' },
     'app-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
+    'no-server': { type: Boolean },
     program: { type: String },
+    verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
     // undocumented: intended for automated testing (eg, cli-test.sh),
     // not end-user use. #Once
-    once: { type: Boolean }
+    once: { type: Boolean },
+    // With --clean, meteor cleans the application directory and uses the
+    // bundled assets only. Encapsulates the behavior of once (does not rerun)
+    // and does not monitor for file changes. Not for end-user use.
+    clean: { type: Boolean}
   }
 }, function (options) {
 
@@ -159,16 +184,66 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX factor this out into a {type: host/port}?
-  var portMatch = options.port.match(/^(?:(.+):)?([0-9]+)$/);
-  if (!portMatch) {
-    process.stderr.write(
-"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
-"port is a number. Try 'meteor help run' for help.\n");
+  cordova.setVerboseness(options.verbose);
+
+  cordova.verboseLog('Parsing the --port option');
+  try {
+    var parsedHostPort = parseHostPort(options.port);
+  } catch (err) {
+    if (options.verbose) {
+      process.stderr.write('Error while parsing --port option: '
+                           + err.stack + '\n');
+    } else {
+      process.stderr.write(err.message + '\n');
+    }
     return 1;
   }
-  var proxyHost = portMatch[1] || null;
-  var proxyPort = parseInt(portMatch[2]);
+
+  // If we are targeting the remote devices
+  if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
+    cordova.verboseLog('A run on a device requested');
+    // ... and if you didn't specify your ip address as host, print a warning
+    if (parsedHostPort.host === 'localhost')
+      process.stderr.write(
+        "WARN: You are testing your app on a remote device but your host option\n" +
+        "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
+        "WARN: network's IP address with the -p option?\n");
+  }
+
+  // Always bundle for the browser by default.
+  var webArchs = project.getWebArchs();
+
+  // If additional args were specified, then also start a mobile build.
+  if (options.args.length) {
+    // will asynchronously start mobile emulators/devices
+    try {
+      // --clean encpasulates the behavior of once
+      if (options.clean) {
+        options.once = true;
+      }
+
+      cordova.verboseLog('Will compile mobile builds');
+      var appName = path.basename(options.appDir);
+      var localPath = path.join(options.appDir, '.meteor', 'local');
+
+      cordova.buildPlatforms(localPath, options.args,
+        _.extend({ appName: appName, debug: ! options.production },
+                 options, parsedHostPort));
+      cordova.runPlatforms(localPath, options.args, options);
+    } catch (err) {
+      if (options.verbose) {
+        process.stderr.write('Error while running for mobile platforms ' +
+                             err.stack + '\n');
+      } else {
+        process.stderr.write(err.message + '\n');
+      }
+      return 1;
+    }
+  }
+
+  if (options['no-server']) {
+    return 0;
+  }
 
   var appHost, appPort;
   if (options['app-port']) {
@@ -201,14 +276,15 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    proxyPort: proxyPort,
-    proxyHost: proxyHost,
+    proxyPort: parsedHostPort.port,
+    proxyHost: parsedHostPort.host,
     appPort: appPort,
     appHost: appHost,
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
-      minify: options.production
+      minify: options.production,
+      webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -445,11 +521,10 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// bundle
+// build
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand({
-  name: 'bundle',
+var buildCommands = {
   minArgs: 1,
   maxArgs: 1,
   requiresApp: true,
@@ -457,10 +532,133 @@ main.registerCommand({
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
+    port: { type: String, short: "p", default: "localhost:3000" },
+    settings: { type: String },
     // Undocumented
-    'for-deploy': { type: Boolean }
+    'for-deploy': { type: Boolean },
   }
-}, function (options) {
+};
+
+main.registerCommand(_.extend({ name: 'build' }, buildCommands),
+    function (options) {
+  // XXX output, to stderr, the name of the file written to (for human
+  // comfort, especially since we might change the name)
+
+  // XXX name the root directory in the bundle based on the basename
+  // of the file, not a constant 'bundle' (a bit obnoxious for
+  // machines, but worth it for humans)
+
+  // Error handling for options.architecture. We must pass in only one of three
+  // architectures. See archinfo.js for more information on what the
+  // architectures are, what they mean, et cetera.
+  var VALID_ARCHITECTURES =
+  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
+  if (options.architecture &&
+      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
+    process.stderr.write("Invalid architecture: " + options.architecture + "\n");
+    process.stderr.write(
+      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
+    return 1;
+  }
+
+  var bundleArch =  options.architecture || archinfo.host();
+  var webArchs = project.getWebArchs();
+
+  var localPath = path.join(options.appDir, '.meteor', 'local');
+
+  var mobilePlatforms = project.getCordovaPlatforms();
+  var appName = path.basename(options.appDir);
+
+  if (! _.isEmpty(mobilePlatforms)) {
+    if (options.port === buildCommands.options.port.default) {
+      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
+                           "Pass a -p argument to specify a host URL.\n");
+    }
+    var cordovaSettings = {};
+
+    try {
+      var parsedHostPort = parseHostPort(options.port);
+    } catch (err) {
+      process.stderr.write(err.message);
+      return 1;
+    }
+
+    cordova.buildPlatforms(localPath, mobilePlatforms,
+      _.extend({}, options, parsedHostPort, { appName: appName }));
+  }
+
+  var buildDir = path.join(localPath, 'build_tar');
+  var outputPath = path.resolve(options.args[0]); // get absolute path
+  var bundlePath = options['directory'] ?
+      path.join(outputPath, 'bundle') : path.join(buildDir, 'bundle');
+
+  var loader;
+  var messages = buildmessage.capture(function () {
+    loader = project.getPackageLoader();
+  });
+  if (messages.hasMessages()) {
+    process.stderr.write("Errors prevented bundling your app:\n");
+    process.stderr.write(messages.formatMessages());
+    return 1;
+  }
+
+  var statsMessages = buildmessage.capture(function () {
+    stats.recordPackages();
+  });
+  if (statsMessages.hasMessages()) {
+    process.stdout.write("Error recording package list:\n" +
+                         statsMessages.formatMessages());
+    // ... but continue;
+  }
+
+  var bundler = require(path.join(__dirname, 'bundler.js'));
+  var bundleResult = bundler.bundle({
+    outputPath: bundlePath,
+    buildOptions: {
+      minify: ! options.debug,
+      // XXX is this a good idea, or should linux be the default since
+      //     that's where most people are deploying
+      //     default?  i guess the problem with using DEPLOY_ARCH as default
+      //     is then 'meteor bundle' with no args fails if you have any local
+      //     packages with binary npm dependencies
+      serverArch: bundleArch,
+      webArchs: webArchs
+    }
+  });
+  if (bundleResult.errors) {
+    process.stderr.write("Errors prevented bundling:\n");
+    process.stderr.write(bundleResult.errors.formatMessages());
+    return 1;
+  }
+
+  files.mkdir_p(outputPath);
+  if (!options['directory']) {
+    try {
+      var outputTar = path.join(outputPath, appName + '.tar.gz');
+      files.createTarball(path.join(buildDir, 'bundle'), outputTar);
+    } catch (err) {
+      console.log(JSON.stringify(err));
+      process.stderr.write("Couldn't create tarball\n");
+    }
+  }
+
+  // Copy over the Cordova builds AFTER we bundle so that they are not included
+  // in the main bundle.
+  _.each(mobilePlatforms, function (platformName) {
+    var buildPath = path.join(localPath, 'cordova-build',
+                              'platforms', platformName);
+    var platformPath = path.join(outputPath, platformName);
+    files.cp_r(buildPath, platformPath);
+  });
+
+  files.rm_recursive(buildDir);
+});
+
+// Deprecated -- identical functionality to 'build'
+main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
+    function (options) {
+  process.stdout.write("WARNING: 'bundle' has been deprecated. " +
+                       "Use 'build' instead.\n");
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
   // the former for them
 
@@ -755,9 +953,12 @@ main.registerCommand({
     buildArch = archinfo.host();
   }
 
+  var webArchs = project.getWebArchs();
+
   var buildOptions = {
     minify: ! options.debug,
-    serverArch: buildArch
+    serverArch: buildArch,
+    webArchs: webArchs
   };
 
   var deployResult;
@@ -917,10 +1118,12 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: Number, short: "p", default: 3000 },
+    port: { type: String, short: "p", default: "localhost:3000" },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
+    verbose: { type: Boolean, short: "v" },
+
     // Undocumented. See #Once
     once: { type: Boolean },
     // Undocumented. To ensure that QA covers both
@@ -929,19 +1132,132 @@ main.registerCommand({
     // doesn't do oplog tailing.)
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
-    'driver-package': { type: String }
+    'driver-package': { type: String },
+
+    // Undocumented, sets the path of where the temp app should be created
+    'test-app-path': { type: String },
+
+    // hard-coded options with all known Cordova platforms
+    ios: { type: Boolean },
+    'ios-device': { type: Boolean },
+    android: { type: Boolean },
+    'android-device': { type: Boolean }
   }
 }, function (options) {
+  try {
+    var parsedHostPort = parseHostPort(options.port);
+  } catch (err) {
+    process.stderr.write(err.message);
+    return 1;
+  }
+
+  // XXX not good to change the options this way
+  _.extend(options, parsedHostPort);
+
+  var testPackages = null;
+  try {
+    var packages = getPackagesForTest(options.args);
+    testPackages = packages.testPackages;
+    localPackages = packages.localPackages;
+    options.localPackageNames = packages.localPackages;
+  } catch (err) {
+    process.stderr.write('\n' + err.message);
+    return 1;
+  }
+
+  // Make a temporary app dir (based on the test runner app). This will be
+  // cleaned up on process exit. Using a temporary app dir means that we can
+  // run multiple "test-packages" commands in parallel without them stomping
+  // on each other.
+  //
+  // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
+  // package search path baked into release.current.catalog: we are
+  // bundling the test runner app, but finding app packages from the
+  // current app (if any).
+  var testRunnerAppDir =
+    options['test-app-path'] || files.mkdtemp('meteor-test-run');
+  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+
+  // We are going to operate in the special test project, so let's remap our
+  // main project to the test directory.
+  project.setRootDir(testRunnerAppDir);
+  project.setMuted(true); // Mute output where applicable
+  project.writeMeteorReleaseVersion(release.current.name || 'none');
+  project.forceEditPackages(
+    [options['driver-package'] || 'test-in-browser'],
+    'add');
+
+  var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
+  var mobilePlatforms = [];
+
+  _.each(mobileOptions, function (option) {
+    if (options[option])
+      mobilePlatforms.push(option);
+  });
+
+  if (! _.isEmpty(mobilePlatforms)) {
+    var localPath = path.join(testRunnerAppDir, '.meteor', 'local');
+
+    var platforms =
+      _.map(mobilePlatforms, function (t) { return t.replace(/-device$/, ''); });
+
+    platforms = _.uniq(platforms);
+
+    project.addCordovaPlatforms(platforms);
+
+    try {
+      cordova.buildPlatforms(localPath, mobilePlatforms,
+        _.extend({}, options, {
+          appName: path.basename(testRunnerAppDir),
+          debug: ! options.production
+        }));
+      cordova.runPlatforms(localPath, mobilePlatforms, options);
+    } catch (err) {
+      process.stderr.write(err.message + '\n');
+      return 1;
+    }
+  }
+
+  return runTestAppForPackages(testPackages, testRunnerAppDir, options);
+});
+
+var getLocalPackages = function () {
+  var ret = {};
+  buildmessage.assertInCapture();
+
+  var names = catalog.complete.getAllPackageNames();
+  _.each(names, function (name) {
+    if (catalog.complete.isLocalPackage(name)) {
+      ret[name] = catalog.complete.getLatestMainlineVersion(name);
+    }
+  });
+
+  return ret;
+};
+
+// Ensures that packages are prepared and built for testing
+var getPackagesForTest = function (packages) {
   var testPackages;
-  if (options.args.length === 0) {
+  var localPackageNames = [];
+  if (packages.length === 0) {
     // Test all local packages if no package is specified.
+    // XXX should this use the new getLocalPackageNames?
+    var packageList = commandsPackages.doOrDie(function () {
+      return getLocalPackages();
+    });
+    if (! packageList) {
+      // Couldn't load the package list, probably because some package
+      // has a parse error. Bail out -- this kind of sucks; we would
+      // like to find a way to get reloading.
+      throw new Error("No packages to test");
+    }
     testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
-      testPackages = _.map(options.args, function (p) {
+      testPackages = _.map(packages, function (p) {
         return buildmessage.enterJob({
           title: "trying to test package `" + p + "`"
-        },  function () {
+        }, function () {
 
           // If it's a package name, just pass it through.
           if (p.indexOf('/') === -1) {
@@ -1015,15 +1331,10 @@ main.registerCommand({
   var testRunnerAppDir = files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
 
-  // We are going to operate in the special test project, so let's remap our
-  // main project to the test directory.
-  project.setRootDir(testRunnerAppDir);
-  project.setMuted(true); // Mute output where applicable
-  project.writeMeteorReleaseVersion(release.current.name || 'none');
-  project.forceEditPackages(
-    [options['driver-package'] || 'test-in-browser'],
-    'add');
+  return { testPackages: testPackages, localPackages: localPackageNames };
+};
 
+var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
   // When we test packages, we need to know their versions and all of their
   // dependencies. We are going to add them to the project and have the project
   // compute them for us. This means that right now, we are testing all packages
@@ -1092,8 +1403,12 @@ main.registerCommand({
     });
   }
 
+  _.each(options.localPackageNames || [], function (name) {
+    catalog.complete.removeLocalPackage(name);
+  });
+
   return ret;
-});
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // rebuild
@@ -1424,3 +1739,4 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
+

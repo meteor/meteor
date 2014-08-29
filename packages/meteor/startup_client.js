@@ -1,6 +1,6 @@
 var queue = [];
-var loaded = document.readyState === "loaded" ||
-  document.readyState == "complete";
+var loaded = !Meteor.isCordova &&
+  (document.readyState === "loaded" || document.readyState == "complete");
 
 var ready = function() {
   loaded = true;
@@ -9,7 +9,8 @@ var ready = function() {
 };
 
 if (document.addEventListener) {
-  document.addEventListener('DOMContentLoaded', ready, false);
+  var event = Meteor.isCordova ? 'meteor-cordova-loaded' : 'DOMContentLoaded';
+  document.addEventListener(event, ready, false);
   window.addEventListener('load', ready, false);
 } else {
   document.attachEvent('onreadystatechange', function () {

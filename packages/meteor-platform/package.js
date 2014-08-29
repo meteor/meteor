@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.0.0'
+  version: '1.0.1-rc0'
 });
 
 Package.on_use(function(api) {
@@ -25,9 +25,9 @@ Package.on_use(function(api) {
     // The easiest way to get a little reactivity into your app.
     'session',
     // DDP: Meteor's client/server protocol.
-    'livedata',
+    'ddp',
     // You want to keep your data somewhere? How about MongoDB?
-    'mongo-livedata',
+    'mongo',
     // Blaze: Reactive DOM!
     'blaze',
     // A great template language!
@@ -54,4 +54,15 @@ Package.on_use(function(api) {
     // And update automatically when new client code is available!
     'autoupdate'
   ], ['client', 'server']);
+
+  api.use([
+    // Remove the 300ms click delay on mobile
+    'fastclick',
+    // Good defaults for the mobile status bar
+    'mobile-status-bar'
+  ], 'web.cordova');
+});
+
+Cordova.depends({
+  'org.apache.cordova.device': '0.2.11'
 });

@@ -13,6 +13,7 @@ var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
+var semver = require('semver');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -92,14 +93,17 @@ var loadOrderSort = function (templateExtensions) {
   };
 };
 
-// XXX We currently have a 1 to 1 mapping between 'where' and 'arch'.
-// In the future, we may let people specify different 'where' and 'arch'.
+// We currently have a 1 to 1 mapping between 'where' and 'arch'.
+// 'client' -> 'web'
+// 'server' -> 'os'
+// '*' -> '*'
 var mapWhereToArch = function (where) {
   if (where === 'server') {
     return 'os';
+  } else if (where === 'client') {
+    return 'web';
   } else {
-    // Transform client.* into web.*
-    return 'web.' + where.split('.').slice(1).join('.');
+    return where;
   }
 };
 
@@ -260,6 +264,11 @@ var PackageSource = function (catalog) {
   // ever could have had them in the past.
   self.npmCacheDirectory = null;
 
+  // cordova plugins used by this package (on os.* architectures only).
+  // Map from cordova plugin name to the required version of the package
+  // as a string.
+  self.cordovaDependencies = {};
+
   // Dependency versions that we used last time that we built this package. If
   // the constraint solver thinks that they are still a valid set of
   // dependencies, we will use them again to build this package. This makes
@@ -309,9 +318,9 @@ var PackageSource = function (catalog) {
   // this option transparent to the user in package.js.
   self.noVersionFile = false;
 
-  // The list of where that we can target. Doesn't include 'client' because
-  // it is expanded into 'client.*'.
-  self.allWheres = ['server', 'client.browser', 'client.cordova'];
+  // The list of archs that we can target. Doesn't include 'web' because
+  // it is expanded into 'web.*'.
+  self.allArchs = ['os', 'web.browser', 'web.cordova'];
 };
 
 
@@ -344,6 +353,7 @@ _.extend(PackageSource.prototype, {
   // - use
   // - sources (array of paths or relPath/fileOptions objects)
   // - npmDependencies
+  // - cordovaDependencies
   // - npmDir
   // - dependencyVersions
   initFromOptions: function (name, options) {
@@ -358,9 +368,12 @@ _.extend(PackageSource.prototype, {
     self.serveRoot = options.serveRoot || path.sep;
 
     var nodeModulesPath = null;
-    meteorNpm.ensureOnlyExactVersions(options.npmDependencies);
+    utils.ensureOnlyExactVersions(options.npmDependencies);
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
+
+    utils.ensureOnlyExactVersions(options.cordovaDependencies);
+    self.cordovaDependencies = options.cordovaDependencies;
 
     var sources = _.map(options.sources, function (source) {
       if (typeof source === "string")
@@ -440,6 +453,7 @@ _.extend(PackageSource.prototype, {
 
     var fileAndDepLoader = null;
     var npmDependencies = null;
+    var cordovaDependencies = null;
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
@@ -624,7 +638,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          meteorNpm.ensureOnlyExactVersions(_npmDependencies);
+          utils.ensureOnlyExactVersions(_npmDependencies);
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line
@@ -654,12 +668,51 @@ _.extend(PackageSource.prototype, {
       }
     };
 
+    // == 'Cordova' object visible in package.js ==
+    var Cordova = {
+      depends: function (_cordovaDependencies) {
+        // XXX make cordovaDependencies be separate between use and test, so that
+        // production doesn't have to ship all of the npm modules used by test
+        // code
+        if (cordovaDependencies) {
+          buildmessage.error("Cordova.depends may only be called once per package",
+                             { useMyCaller: true });
+          // recover by ignoring the Cordova.depends line
+          return;
+        }
+        if (typeof _cordovaDependencies !== 'object') {
+          buildmessage.error("the argument to Cordova.depends should be an " +
+                             "object, like this: {gcd: '0.0.0'}",
+                             { useMyCaller: true });
+          // recover by ignoring the Cordova.depends line
+          return;
+        }
+
+        // don't allow cordova fuzzy versions so that there is complete
+        // consistency when deploying a meteor app
+        //
+        // XXX use something like seal or lockdown to have *complete*
+        // confidence we're running the same code?
+        try {
+          utils.ensureOnlyExactVersions(_cordovaDependencies);
+        } catch (e) {
+          buildmessage.error(e.message, { useMyCaller: true, downcase: true });
+          // recover by ignoring the Npm.depends line
+          return;
+        }
+
+        cordovaDependencies = _cordovaDependencies;
+      },
+    };
+
     try {
       files.runJavaScript(code.toString('utf8'), {
         filename: 'package.js',
-        symbols: { Package: Package, Npm: Npm }
+        symbols: { Package: Package, Npm: Npm, Cordova: Cordova }
       });
     } catch (e) {
+      console.log(e.stack); // XXX should we keep this here -- or do we want broken
+                            // packages to fail silently?
       buildmessage.exception(e);
 
       // Could be a syntax error or an exception. Recover by
@@ -671,6 +724,7 @@ _.extend(PackageSource.prototype, {
       fileAndDepLoader = null;
       self.pluginInfo = {};
       npmDependencies = null;
+      cordovaDependencies = null;
     }
 
     // In the past, we did not require a Package.Describe.name field. So, it is
@@ -762,20 +816,20 @@ _.extend(PackageSource.prototype, {
     var uses = {};
     var implies = {};
 
-    _.each(self.allWheres, function (where) {
-      sources[where] = [];
-      exports[where] = [];
-      uses[where] = [];
-      implies[where] = [];
+    _.each(self.allArchs, function (arch) {
+      sources[arch] = [];
+      exports[arch] = [];
+      uses[arch] = [];
+      implies[arch] = [];
     });
 
     // Iterates over the list of target archs and calls f(arch) for all archs
-    // that match an element of 'wheres'.
-    var forAllMatchingWheres = function (wheres, f) {
-      _.each(wheres, function (where) {
-        _.each(self.allWheres, function (matchWhere) {
-          if (archinfo.matches(matchWhere, where)) {
-            f(matchWhere);
+    // that match an element of self.allarchs.
+    var forAllMatchingArchs = function (archs, f) {
+      _.each(archs, function (arch) {
+        _.each(self.allArchs, function (matchArch) {
+          if (archinfo.matches(matchArch, arch)) {
+            f(matchArch);
           }
         });
       });
@@ -801,23 +855,24 @@ _.extend(PackageSource.prototype, {
         return x ? [x] : [];
       };
 
-      var toWhereArray = function (where) {
-        if (!(where instanceof Array)) {
-          where = where ? [where] : self.allWheres;
+      var toArchArray = function (arch) {
+        if (!(arch instanceof Array)) {
+          arch = arch ? [arch] : self.allArchs;
         }
-        where = _.uniq(where);
-        _.each(where, function (inputWhere) {
-          var isMatch = _.any(_.map(self.allWheres, function (actualWhere) {
-            return archinfo.matches(actualWhere, inputWhere);
+        arch = _.uniq(arch);
+        arch = _.map(arch, mapWhereToArch);
+        _.each(arch, function (inputArch) {
+          var isMatch = _.any(_.map(self.allArchs, function (actualArch) {
+            return archinfo.matches(actualArch, inputArch);
           }));
           if (! isMatch) {
             buildmessage.error(
-              "Invalid 'where' argument: '" + inputWhere + "'",
-              // skip toWhereArray in addition to the actual API function
+              "Invalid 'where' argument: '" + inputArch + "'",
+              // skip toArchArray in addition to the actual API function
               {useMyCaller: 2});
           }
         });
-        return where;
+        return arch;
       };
 
       var api = {
@@ -825,7 +880,7 @@ _.extend(PackageSource.prototype, {
         // used. Can also take literal package objects, if you have
         // anonymous packages you want to use (eg, app packages)
         //
-        // @param where 'web', 'web.browser', 'web.cordova', 'server',
+        // @param arch 'web', 'web.browser', 'web.cordova', 'server',
         // or an array of those.
         // The default is ['web', 'server'].
         //
@@ -851,16 +906,16 @@ _.extend(PackageSource.prototype, {
         //   its plugins. (Has the same limitation as "unordered" that this
         //   flag is not tracked per-environment or per-role; this may
         //   change.)
-        use: function (names, where, options) {
-          // Support `api.use(package, {weak: true})` without where.
-          if (_.isObject(where) && !_.isArray(where) && !options) {
-            options = where;
-            where = null;
+        use: function (names, arch, options) {
+          // Support `api.use(package, {weak: true})` without arch.
+          if (_.isObject(arch) && !_.isArray(arch) && !options) {
+            options = arch;
+            arch = null;
           }
           options = options || {};
 
           names = toArray(names);
-          where = toWhereArray(where);
+          arch = toArchArray(arch);
 
           // A normal dependency creates an ordering constraint and a "if I'm
           // used, use that" constraint. Unordered dependencies lack the
@@ -887,8 +942,8 @@ _.extend(PackageSource.prototype, {
               continue;
             }
 
-            forAllMatchingWheres(where, function (w) {
-              uses[w].push({
+            forAllMatchingArchs(arch, function (a) {
+              uses[a].push({
                 package: parsed.name,
                 constraint: parsed.constraintString,
                 unordered: options.unordered || false,
@@ -901,9 +956,9 @@ _.extend(PackageSource.prototype, {
         // Called when this package wants packages using it to also use
         // another package.  eg, for umbrella packages which want packages
         // using them to also get symbols or plugins from their components.
-        imply: function (names, where) {
+        imply: function (names, arch) {
           names = toArray(names);
-          where = toWhereArray(where);
+          arch = toArchArray(arch);
 
           // using for loop rather than underscore to help with useMyCaller
           for (var i = 0; i < names.length; ++i) {
@@ -918,10 +973,10 @@ _.extend(PackageSource.prototype, {
               continue;
             }
 
-            forAllMatchingWheres(where, function (w) {
+            forAllMatchingArchs(arch, function (a) {
               // We don't allow weak or unordered implies, since the main
               // purpose of imply is to provide imports and plugins.
-              implies[w].push({
+              implies[a].push({
                 package: parsed.name,
                 constraint: parsed.constraintString
               });
@@ -932,16 +987,16 @@ _.extend(PackageSource.prototype, {
         // Top-level call to add a source file to a package. It will
         // be processed according to its extension (eg, *.coffee
         // files will be compiled to JavaScript).
-        addFiles: function (paths, where, fileOptions) {
+        addFiles: function (paths, arch, fileOptions) {
           paths = toArray(paths);
-          where = toWhereArray(where);
+          arch = toArchArray(arch);
 
           _.each(paths, function (path) {
-            forAllMatchingWheres(where, function (w) {
+            forAllMatchingArchs(arch, function (a) {
               var source = {relPath: path};
               if (fileOptions)
                 source.fileOptions = fileOptions;
-              sources[w].push(source);
+              sources[a].push(source);
             });
           });
         },
@@ -990,21 +1045,21 @@ _.extend(PackageSource.prototype, {
         // Export symbols from this package.
         //
         // @param symbols String (eg "Foo") or array of String
-        // @param where 'web', 'server', 'web.browser', 'web.cordova'
+        // @param arch 'web', 'server', 'web.browser', 'web.cordova'
         // or an array of those.
         // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
-        export: function (symbols, where, options) {
+        export: function (symbols, arch, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
-          // where.
-          if (_.isObject(where) && !_.isArray(where) && !options) {
-            options = where;
-            where = null;
+          // arch.
+          if (_.isObject(arch) && !_.isArray(arch) && !options) {
+            options = arch;
+            arch = null;
           }
           options = options || {};
 
           symbols = toArray(symbols);
-          where = toWhereArray(where);
+          arch = toArchArray(arch);
 
           _.each(symbols, function (symbol) {
             // XXX be unicode-friendlier
@@ -1014,7 +1069,7 @@ _.extend(PackageSource.prototype, {
               // recover by ignoring
               return;
             }
-            forAllMatchingWheres(where, function (w) {
+            forAllMatchingArchs(arch, function (w) {
               exports[w].push({name: symbol, testOnly: !!options.testOnly});
             });
           });
@@ -1027,19 +1082,22 @@ _.extend(PackageSource.prototype, {
       try {
         buildmessage.markBoundary(fileAndDepLoader)(api);
       } catch (e) {
+        console.log(e.stack); // XXX should we keep this here -- or do we want broken
+                              // packages to fail silently?
         buildmessage.exception(e);
         // Recover by ignoring all of the source files in the
         // packages and any remaining handlers. It violates the
         // principle of least surprise to half-run a handler
         // and then continue.
         sources = {};
-        _.each(self.allWheres, function (where) {
-          sources[where] = [];
+        _.each(self.allArchs, function (arch) {
+          sources[arch] = [];
         });
 
         fileAndDepLoader = null;
         self.pluginInfo = {};
         npmDependencies = null;
+        cordovaDependencies = null;
       }
     }
 
@@ -1062,7 +1120,7 @@ _.extend(PackageSource.prototype, {
 
       // For all implies and uses, fill in the unspecified dependencies from the
       // release.
-      _.each(self.allWheres, function (label) {
+      _.each(self.allArchs, function (label) {
         uses[label] = _.map(uses[label], setFromRel);
         implies[label] = _.map(implies[label], setFromRel);
       });
@@ -1089,6 +1147,8 @@ _.extend(PackageSource.prototype, {
       path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
     self.npmDependencies = npmDependencies;
 
+    self.cordovaDependencies = cordovaDependencies;
+
     // If this package was previously built with pre-linker versions,
     // it may have files directly inside `.npm` instead of nested
     // inside `.npm/package`. Clean them up if they are there. (Kind
@@ -1103,9 +1163,7 @@ _.extend(PackageSource.prototype, {
 
     // Create source architectures, one for the server and one for each web
     // arch.
-    _.each(self.allWheres, function (where) {
-      var arch = mapWhereToArch(where);
-
+    _.each(self.allArchs, function (arch) {
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
@@ -1119,11 +1177,11 @@ _.extend(PackageSource.prototype, {
         // dependency on meteor dating from when the .js extension handler was
         // in the "meteor" package).
         var alreadyDependsOnMeteor =
-              !! _.find(uses[where], function (u) {
+              !! _.find(uses[arch], function (u) {
                 return u.package === "meteor";
               });
         if (! alreadyDependsOnMeteor)
-          uses[where].unshift({ package: "meteor" });
+          uses[arch].unshift({ package: "meteor" });
       }
 
       // Each unibuild has its own separate WatchSet. This is so that, eg, a test
@@ -1136,10 +1194,10 @@ _.extend(PackageSource.prototype, {
       self.architectures.push(new SourceArch(self, {
         name: "main",
         arch: arch,
-        uses: uses[where],
-        implies: implies[where],
-        getSourcesFunc: function () { return sources[where]; },
-        declaredExports: exports[where],
+        uses: uses[arch],
+        implies: implies[arch],
+        getSourcesFunc: function () { return sources[arch]; },
+        declaredExports: exports[arch],
         watchSet: watchSet
       }));
     });
@@ -1191,17 +1249,17 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
-    _.each(self.allWheres, function (where) {
+    _.each(self.allArchs, function (arch) {
       // Determine used packages
       var project = require('./project.js').project;
       var names = project.getConstraints();
-      var arch = mapWhereToArch(where);
-      // XXX what about /client.browser/* etc, these directories could also
+
+      // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {
-        name: where,
+        name: arch,
         arch: arch,
         uses: _.map(names, utils.dealConstraint)
       });
@@ -1246,7 +1304,7 @@ _.extend(PackageSource.prototype, {
         });
 
         var otherUnibuildRegExp =
-              (where === "server" ? /^client\/$/ : /^server\/$/);
+              (arch === "os" ? /^client\/$/ : /^server\/$/);
 
         // The paths that we've called checkForInfiniteRecursion on.
         var seenPaths = {};
@@ -1462,7 +1520,7 @@ _.extend(PackageSource.prototype, {
         });
     };
 
-    // Both plugins and direct dependencies are objects mapping package name to
+    // Both plugins and direct dependencies are objectsmapping package name to
     // version number. When we write them on disk, we will convert them to
     // arrays of <packageName, version> and alphabetized by packageName.
     versions["dependencies"] = alphabetize(versions["dependencies"]);

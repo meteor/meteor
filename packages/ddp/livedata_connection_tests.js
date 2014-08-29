@@ -1407,6 +1407,40 @@ Tinytest.add("livedata connection - ping with id", function (test) {
   testGotMessage(test, stream, {msg: 'pong', id: id});
 });
 
+_.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function (version) {
+  Tinytest.addAsync("livedata connection - ping from " + version,
+                    function (test, onComplete) {
+    var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
+      reloadWithOutstanding: true,
+      supportedDDPVersions: [version],
+      onDDPVersionNegotiationFailure: function () { test.fail(); onComplete(); },
+      onConnected: function () {
+        test.equal(connection._version, version);
+        // It's a little naughty to access _stream and _send, but it works...
+        connection._stream.on('message', function (json) {
+          var msg = JSON.parse(json);
+          var done = false;
+          if (msg.msg === 'pong') {
+            test.notEqual(version, "pre1");
+            done = true;
+          } else if (msg.msg === 'error') {
+            // Version pre1 does not play ping-pong
+            test.equal(version, "pre1");
+            done = true;
+          } else {
+            Meteor._debug("Got unexpected message: " + json);
+          }
+          if (done) {
+            connection._stream.disconnect({_permanent: true});
+            onComplete();
+          }
+        });
+        connection._send({msg: 'ping'});
+      }
+    });
+  });
+});
+
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
     return Meteor._relativeToSiteRootUrl("/");

@@ -1,0 +1,29 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi">
+  <meta name="msapplication-tap-highlight" content="no">
+
+  <script type='text/javascript'>
+    __meteor_runtime_config__ = {{meteorRuntimeConfig}};
+
+    if (/Android/i.test(navigator.userAgent)) {
+      // When Android app is emulated, it cannot connect to localhost,
+      // instead it should connect to 10.0.2.2
+      __meteor_runtime_config__.ROOT_URL = (__meteor_runtime_config__.ROOT_URL || '').replace(/localhost/i, '10.0.2.2');
+      __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL = (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL || '').replace(/localhost/i, '10.0.2.2');
+    }
+
+    __meteor_manifest__ = {{meteorManifest}};
+  </script>
+
+  <script type="text/javascript" src="cordova.js"></script>
+  <script type="text/javascript" src="meteor_cordova_loader.js"></script>
+  {{{head}}}
+</head>
+
+<body>
+  {{{body}}}
+</body>
+</html>

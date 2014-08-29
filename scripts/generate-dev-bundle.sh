@@ -71,6 +71,31 @@ umask 022
 mkdir build
 cd build
 
+# ios-sim is used to run iPhone simulator from the command-line. Doesn't make
+# sense to build it for linux.
+if [ "$OS" == "osx" ]; then
+    # the build from source is not going to work on old OS X versions, until we
+    # upgrade our Mac OS X Jenkins machine, download the precompiled tarball
+
+    # which rake # rake is required to build ios-sim
+    # git clone https://github.com/phonegap/ios-sim.git
+    # cd ios-sim
+    # git checkout 2.0.1
+    # rake build
+    # which build/Release/ios-sim # check that we have in fact got the binary
+    # mkdir -p "$DIR/lib/ios-sim"
+    # cp -r build/Release/* "$DIR/lib/ios-sim/"
+
+    # Download the precompiled tarball
+    IOS_SIM_URL="http://android-bundle.s3.amazonaws.com/ios-sim.tgz"
+    curl "$IOS_SIM_URL" | tar xfz -
+    mkdir -p "$DIR/lib/ios-sim"
+    cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
+fi
+
+
+cd "$DIR/build"
+
 # For now, use our fork with https://github.com/npm/npm/pull/5821/files
 git clone https://github.com/meteor/node.git
 cd node
@@ -154,6 +179,14 @@ npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a0865
 
 # Install jsdoc
 npm install jsdoc@3.3.0-alpha9
+
+# Cordova npm tool for mobile integration
+# XXX We install our own fork of cordova because we need a particular patch that
+# didn't land to cordova-android yet. As soon as it lands, we can switch back to
+# upstream.
+# https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
+#npm install cordova@3.5.0-0.2.6
+npm install "https://github.com/meteor/cordova-cli/tarball/898040e71f6d6900cac4d477986b0451fb196ff1"
 
 # Checkout and build mongodb.
 # We want to build a binary that includes SSL support but does not depend on a

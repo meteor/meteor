@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.0.0"
+  version: "1.0.1-rc0"
 });
 
 Package.on_use(function (api) {
@@ -17,11 +17,11 @@ Package.on_use(function (api) {
   api.use('service-configuration', ['client', 'server'], { unordered: true });
 
   // needed for getting the currently logged-in user
-  api.use('livedata', ['client', 'server']);
+  api.use('ddp', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
-  api.use('mongo-livedata', ['client', 'server']);
+  api.use('mongo', ['client', 'server']);
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.

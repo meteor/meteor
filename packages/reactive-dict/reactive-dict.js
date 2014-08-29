@@ -62,8 +62,8 @@ _.extend(ReactiveDict.prototype, {
   equals: function (key, value) {
     var self = this;
 
-    // XXX hardcoded awareness of the 'mongo-livedata' package is not ideal
-    var ObjectID = Package['mongo-livedata'] && Meteor.Collection.ObjectID;
+    // Meteor.Collection.ObjectID is in the 'mongo' package
+    var ObjectID = Meteor.Collection && Meteor.Collection.ObjectID;
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key

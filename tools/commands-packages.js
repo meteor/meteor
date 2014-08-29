@@ -23,6 +23,7 @@ var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
+var cordova = require('./commands-cordova.js');
 var packageLoader = require('./package-loader.js');
 
 // Returns an object with keys:
@@ -84,8 +85,8 @@ var doOrDie = exports.doOrDie = function (f) {
     throw main.ExitWithCode(1);
   }
   return ret;
-};
 
+};
 var refreshOfficialCatalogOrDie = function () {
   doOrDie(function () {
     catalog.official.refresh();
@@ -154,8 +155,8 @@ main.registerCommand({
                                          catalog: catalog.complete}));
     }
   });
-
   if (messages.hasMessages()) {
+
     process.stderr.write("\n" + messages.formatMessages());
     return 1;
   };
@@ -1203,7 +1204,8 @@ main.registerCommand({
       var versionAddendum = "" ;
       var latest = catalog.complete.getLatestMainlineVersion(name, version);
       var semver = require('semver');
-      if (version !== latest.version &&
+      if (latest &&
+          version !== latest.version &&
           // If we're currently running a prerelease, "latest" may be older than
           // what we're at, so don't tell us we're outdated!
           semver.lt(version, latest.version) &&
@@ -1225,6 +1227,13 @@ main.registerCommand({
     process.stderr.write("\n" + messages.formatMessages());
     return 1;
   }
+
+  // Append extra information about special packages such as Cordova plugins
+  // to the list.
+  var plugins = project.getCordovaPlugins();
+  _.each(plugins, function (version, name) {
+    items.push({ name: 'cordova:' + name, description: version });
+  });
 
   process.stdout.write(formatList(items));
 
@@ -1650,6 +1659,40 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
+  // Special case on reserved package namespaces, such as 'cordova'
+  var cordovaPlugins;
+  try {
+    var filteredPackages = cordova.filterPackages(options.args);
+    cordovaPlugins = filteredPackages.plugins;
+
+    _.each(cordovaPlugins, function (plugin) {
+      cordova.checkIsValidPlugin(plugin);
+    });
+  } catch (err) {
+    process.stderr.write(err.message + '\n');
+    return 1;
+  }
+
+  var oldPlugins = project.getCordovaPlugins();
+
+  var pluginsDict = {};
+  _.each(cordovaPlugins, function (s) {
+    var splt = s.split('@');
+    if (splt.length !== 2)
+      throw new Error(s + ': exact version or tarball url is required');
+    pluginsDict[splt[0]] = splt[1];
+  });
+  project.addCordovaPlugins(pluginsDict);
+
+  _.each(cordovaPlugins, function (plugin) {
+    process.stdout.write("added cordova plugin " + plugin + "\n");
+  });
+
+  var args = filteredPackages.rest;
+
+  if (_.isEmpty(args))
+    return 0;
+
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
   // them -- add should be an atomic operation regardless of the package
@@ -1690,6 +1733,16 @@ main.registerCommand({
     process.stderr.write(messages.formatMessages());
     return 1;
   }
+
+  // For every package name specified, add it to our list of package
+  // constraints. Don't run the constraint solver until you have added all of
+  // them -- add should be an atomic operation regardless of the package
+  // order. Even though the package file should specify versions of its inputs,
+  // we don't specify these constraints until we get them back from the
+  // constraint solver.
+  var constraints = _.map(args, function (packageReq) {
+    return utils.parseConstraint(packageReq);
+  });
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
@@ -1862,6 +1915,22 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
+  // Special case on reserved package namespaces, such as 'cordova'
+  var filteredPackages = cordova.filterPackages(options.args);
+  var cordovaPlugins = filteredPackages.plugins;
+
+  // Update the plugins list
+  project.removeCordovaPlugins(cordovaPlugins);
+
+  _.each(cordovaPlugins, function (plugin) {
+    process.stdout.write("removed cordova plugin " + plugin + "\n");
+  });
+
+  var args = filteredPackages.rest;
+
+  if (_.isEmpty(args))
+    return 0;
+
   // As user may expect this to update the catalog, but we con't actually need
   // to, and it takes frustratingly long.
   // refreshOfficialCatalogOrDie();
@@ -1874,7 +1943,7 @@ main.registerCommand({
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
   var packagesToRemove = [];
-  _.each(options.args, function (packageName) {
+  _.each(args, function (packageName) {
     if (/@/.test(packageName)) {
       process.stderr.write(packageName + ": do not specify version constraints.\n");
     } else if (! _.has(packages, packageName)) {

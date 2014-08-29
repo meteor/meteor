@@ -216,12 +216,23 @@ selftest.define("argument parsing", function () {
 
   run = s.run("bundle");
   run.matchErr("not enough arguments");
-  run.matchErr("Usage: meteor bundle");
+  run.matchErr("Deprecated command");
   run.expectExit(1);
 
   run = s.run("bundle", "a", "b");
   run.matchErr("too many arguments");
-  run.matchErr("Usage: meteor bundle");
+  run.matchErr("Deprecated command");
+  run.expectExit(1);
+
+
+  run = s.run("build");
+  run.matchErr("not enough arguments");
+  run.matchErr("Usage: meteor build");
+  run.expectExit(1);
+
+  run = s.run("build", "a", "b");
+  run.matchErr("too many arguments");
+  run.matchErr("Usage: meteor build");
   run.expectExit(1);
 
   // '--' to end parsing

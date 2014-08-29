@@ -20,6 +20,7 @@ don't want served to the client, such as code containing passwords or
 authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
+{{> api_box isCordova}}
 
 {{> autoApiBox "Meteor.startup"}}
 
@@ -601,7 +602,7 @@ your application.  Each document is a EJSON object.  It includes an `_id`
 property whose value is unique in the collection, which Meteor will set when you
 first create the document.
 
-    // common code on client and server declares livedata-managed mongo
+    // common code on client and server declares a DDP-managed mongo
     // collection.
     Chatrooms = new Meteor.Collection("chatrooms");
     Messages = new Meteor.Collection("messages");
@@ -1345,7 +1346,6 @@ supported by [validated updates](#allow).)
 
 See the [full list of
 modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
-
 
 
 {{> apiBoxTitle name="Sort Specifiers" id="sortspecifiers"}}
@@ -2219,8 +2219,8 @@ any `Template.myTemplate` object.
 Helpers on `Template.body` are only available in the `<body>` tags of
 your app.  To register a global helper, use
 [Template.registerHelper](#template_registerhelper).
-
 Event maps on `Template.body` don't apply to elements added to the
+
 body via `Blaze.render`, jQuery, or the DOM API, or to the body element
 itself.  To handle events on the body, window, or document, use jQuery
 or the DOM API.

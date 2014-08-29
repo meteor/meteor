@@ -151,6 +151,7 @@
 
 var path = require('path');
 var util = require('util');
+var semver = require('semver');
 var files = require(path.join(__dirname, 'files.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
@@ -343,6 +344,9 @@ _.extend(File.prototype, {
     if (url.charAt(0) !== '/')
       url = '/' + url;
 
+    // XXX replacing colons with underscores as colon is hard to escape later
+    // on different targets and generally is not a good separator for web.
+    url = url.replace(/:/g, '_');
     self.url = url;
   },
 
@@ -353,6 +357,11 @@ _.extend(File.prototype, {
       self.targetPath = relPath;
     else
       self.targetPath = path.join('app', relPath);
+
+    // XXX same as in setUrlFromRelPath, we replace colons with a different
+    // separator to avoid difficulties further. E.g.: on Windows it is not a
+    // valid char in filename, Cordova also rejects it, etc.
+    self.targetPath = self.targetPath.replace(/:/g, '_');
   },
 
   // Set a source map for this File. sourceMap is given as a string.
@@ -418,6 +427,8 @@ var Target = function (options) {
   // Static assets to include in the bundle. List of File.
   // For client targets, these are served over HTTP.
   self.asset = [];
+
+  self.cordovaDependencies = {};
 };
 
 _.extend(Target.prototype, {
@@ -589,6 +600,16 @@ _.extend(Target.prototype, {
 
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
+      _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+        // XXX if the plugin dependency conflicts with an existing dependency,
+        // use the newer version
+        if (_.has(self.cordovaDependencies, name)) {
+          var existingVersion = self.cordovaDependencies[name];
+          version = semver.lt(existingVersion, version) ? version : existingVersion;
+        }
+        self.cordovaDependencies[name] = version;
+      });
+
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
@@ -809,7 +830,9 @@ _.extend(ClientTarget.prototype, {
     };
 
     // Other build phases might need this AST later
-    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
+    // For cordova, we do not want to rewrite relative paths in css.
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb,
+      self.arch === 'web.cordova');
 
     // Overwrite the CSS files list with the new concatenated file
     var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
@@ -1345,7 +1368,7 @@ var ServerTarget = function (options) {
   var self = this;
   JsImageTarget.apply(this, arguments);
 
-  self.clientTarget = options.clientTarget;
+  self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
   self.packageLoader = options.packageLoader;
 
@@ -1377,19 +1400,21 @@ _.extend(ServerTarget.prototype, {
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
-    // Relative path to our client, if we have one (hack)
-    var clientTargetPath;
-    if (self.clientTarget) {
-      clientTargetPath = path.join(options.getRelativeTargetPath({
-        forTarget: self.clientTarget, relativeTo: self}),
-                                   'program.json');
+    // Mapping from arch to relative path to the client program, if we have any
+    // (hack). Ex.: { 'web.browser': '../web.browser/program.json', ... }
+    var clientTargetPaths = {};
+    if (self.clientTargets) {
+      _.each(self.clientTargets, function (target) {
+        clientTargetPaths[target.arch] = path.join(options.getRelativeTargetPath({
+          forTarget: target, relativeTo: self}), 'program.json');
+      });
     }
 
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
-      client: clientTargetPath || undefined
+      clientPaths: clientTargetPaths
     });
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
@@ -1481,7 +1506,8 @@ var writeTargetToPath = function (name, target, outputPath, options) {
   return {
     name: name,
     arch: target.mostCompatibleArch(),
-    path: path.join('programs', name, relControlFilePath)
+    path: path.join('programs', name, relControlFilePath),
+    cordovaDependencies: target.cordovaDependencies
   };
 };
 
@@ -1525,7 +1551,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builtBy: options.builtBy,
       programs: [],
       control: options.controlProgram || undefined,
-      meteorRelease: options.releaseName
+      meteorRelease: options.releaseName,
+      cordovaDependencies: {}
     };
 
     // Tell Galaxy what version of the dependency kit we're using, so
@@ -1575,13 +1602,15 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
+      var targetJson = writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModulesSymlink: options.includeNodeModulesSymlink,
         builtBy: options.builtBy,
         controlProgram: options.controlProgram,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
-      }));
+      });
+      json.programs.push(_.omit(targetJson, 'cordovaDependencies'));
+      _.extend(json.cordovaDependencies, targetJson.cordovaDependencies);
     });
 
     // Control file
@@ -1624,6 +1653,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
+ *   - arch: the server architecture to target (defaults to archinfo.host())
  *   - serverArch: the server architecture to target
  *                   (defaults to archinfo.host())
  *   - webArchs: an array of web archs to target
@@ -1722,14 +1752,14 @@ exports.bundle = function (options) {
       return client;
     };
 
-    var makeServerTarget = function (app, clientTarget) {
+    var makeServerTarget = function (app, clientTargets) {
       var targetOptions = {
         packageLoader: packageLoader,
         arch: serverArch,
         releaseName: releaseName
       };
-      if (clientTarget)
-        targetOptions.clientTarget = clientTarget;
+      if (clientTargets)
+        targetOptions.clientTargets = clientTargets;
 
       var server = new ServerTarget(targetOptions);
 
@@ -1755,24 +1785,17 @@ exports.bundle = function (options) {
       packageSource.initFromAppDir(appDir, exports.ignoreFiles);
       var app = compiler.compile(packageSource).unipackage;
 
+      var clientTargets = [];
       // Client
       _.each(webArchs, function (arch) {
         var client = makeClientTarget(app, arch);
+        clientTargets.push(client);
         targets[arch] = client;
       });
 
-      // Create a browser client if one doesn't exist already.
-      var browserClient = targets["web.browser"];
-
-      if (! browserClient) {
-        browserClient = makeBlankClientTarget(app);
-        targets["web.browser"] = browserClient;
-      }
-
       // Server
       if (! options.hasCachedBundle) {
-        var server = makeServerTarget(app, browserClient);
-        server.clientTarget = browserClient;
+        var server = makeServerTarget(app, clientTargets);
         targets.server = server;
       }
     }
@@ -1903,7 +1926,9 @@ exports.bundle = function (options) {
         // We don't check whether targets[p.client] is actually a
         // ClientTarget. If you want to be clever, go ahead.
 
-        target = makeServerTarget(pkg, clientTarget);
+        // XXX doesn't pass the cordova target, but right now Galaxy doesn't
+        // serve any Cordova supportted apps
+        target = makeServerTarget(pkg, [clientTarget]);
         break;
       case "client":
         target = makeClientTarget(pkg, "web.browser");
@@ -2004,6 +2029,7 @@ exports.bundle = function (options) {
 //   interpreted. please set it to something reasonable so that any error
 //   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
+// - cordovaDependencies: map from cordova plugin name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
 //
@@ -2032,6 +2058,7 @@ exports.buildJsImage = function (options) {
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
+    cordovaDependencies: options.cordovaDependencies,
     npmDir: options.npmDir,
     dependencyVersions: options.dependencyVersions,
     noVersionFile: true

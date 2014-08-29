@@ -17,14 +17,14 @@ var auth = exports;
 
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata' ]
+    packages: [ 'meteor', 'ddp', 'mongo' ]
   });
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
 var openAccountsConnection = function () {
-  var DDP = getLoadedPackages().livedata.DDP;
+  var DDP = getLoadedPackages().ddp.DDP;
   return DDP.connect(config.getAuthDDPUrl(), {
     headers: { 'User-Agent': httpHelpers.getUserAgent() }
   });
@@ -54,7 +54,7 @@ var withAccountsConnection = function (f) {
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
 var loggedInAccountsConnection = function (token) {
-  var connection = getLoadedPackages().livedata.DDP.connect(
+  var connection = getLoadedPackages().ddp.DDP.connect(
     config.getAuthDDPUrl()
   );
 

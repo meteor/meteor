@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.0.2'
+  version: '1.0.3-rc0'
 });
 
 Npm.depends({connect: "2.9.0",
@@ -8,9 +8,8 @@ Npm.depends({connect: "2.9.0",
              useragent: "2.0.7"});
 
 Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'routepolicy', 'spacebars-compiler',
-           'spacebars', 'htmljs', 'blaze'],
-          'server');
+  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
+           'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
   api.use(['application-configuration', 'follower-livedata'], {
     unordered: true
@@ -23,11 +22,6 @@ Package.on_use(function (api) {
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.export(['WebApp'], 'client');
   api.add_files('webapp_server.js', 'server');
-  // This is a spacebars template, but we process it manually with the spacebars
-  // compiler rather than letting the 'templating' package (which isn't fully
-  // supported on the server yet) handle it. That also means that it doesn't
-  // contain the outer "<template>" tag.
-  api.add_files('boilerplate.html', 'server', {isAsset: true});
   api.add_files('webapp_client.js', 'client');
 });
 

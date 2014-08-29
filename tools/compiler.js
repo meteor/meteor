@@ -498,6 +498,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
     //   file as a Buffer. If n is omitted you get the rest of the
     //   file.
     // - appendDocument({ section: "head", data: "my markup" })
+    //   Browser targets only. Add markup to the "head" or "body"
     //   Web targets only. Add markup to the "head" or "body"
     //   section of the document.
     // - addStylesheet({ path: "my/stylesheet.css", data: "my css",
@@ -861,6 +862,7 @@ compiler.compile = function (packageSource, options) {
     isTest: packageSource.isTest,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
+    cordovaDependencies: packageSource.cordovaDependencies,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
     includeTool: packageSource.includeTool

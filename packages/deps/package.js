@@ -2,11 +2,10 @@
 
 Package.describe({
   summary: "Deprecated package, please use tracker instead.",
-  version: '1.0.1'
+  version: '1.0.2-rc1'
 });
 
 Package.on_use(function (api) {
   api.use('tracker');
-  api.export('Deps');
-  api.add_files('deps.js');
+  api.imply('tracker');
 });
