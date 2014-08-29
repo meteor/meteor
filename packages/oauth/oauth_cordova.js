@@ -9,36 +9,31 @@
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
 OAuth.showPopup = function (url, callback, dimensions) {
-  console.log("showing url", url);
-  var popup = window.open(url, '_blank', 'location=yes,hidden=yes');
-  popup.addEventListener('loadstart', pageStartLoad);
-  popup.addEventListener('loadstop', pageLoaded);
-  popup.addEventListener('loaderror', fail);
-  popup.addEventListener('exit', close);
-  popup.show();
+  var fail = function (err) {
+    Meteor._debug("Error from OAuth popup:", err);
+  };
 
-  function pageStartLoad (event) {
-    console.log("page start load", JSON.stringify(event));
-  }
-  function fail (err) {
-    Meteor._debug(err);
-  }
+  var pageLoaded = function (event) {
+    if (event.url.indexOf(Meteor.absoluteUrl('_oauth')) === 0) {
+      var splitUrl = event.url.split("#");
+      var hashFragment = splitUrl[1];
 
-  function close () {
-    console.log("close");
-  }
-  function pageLoaded (event) {
-    console.log("loaded", event.url);
-    console.log("comparing to", Meteor.absoluteUrl('_oauth'));
-    var url = decodeURI(event.url);
-    console.log("decoded", url);
-    if (url.indexOf(Meteor.absoluteUrl('_oauth')) === 0) {
-      var credentials = JSON.parse(url.split('#')[1]);
+      if (! hashFragment) {
+        throw new Error("No hash fragment in OAuth popup?");
+      }
+
+      var credentials = JSON.parse(decodeURIComponent(hashFragment));
       OAuth._handleCredentialSecret(credentials.credentialToken,
-        credentials.credentialSecret);
+                                    credentials.credentialSecret);
 
       popup.close();
       callback();
     }
-  }
+  };
+
+  var popup = window.open(url, '_blank', 'location=yes,hidden=yes');
+  popup.addEventListener('loadstop', pageLoaded);
+  popup.addEventListener('loaderror', fail);
+  popup.show();
+
 };

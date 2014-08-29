@@ -13,6 +13,11 @@ OAuth.showPopup = function (url, callback, dimensions) {
 //
 //
 OAuth._loginStyle = function (service, config, options) {
+
+  if (Meteor.isCordova) {
+    return "popup";
+  }
+
   var loginStyle = (options && options.loginStyle) || config.loginStyle || 'popup';
 
   if (! _.contains(["popup", "redirect"], loginStyle))
@@ -34,9 +39,10 @@ OAuth._loginStyle = function (service, config, options) {
 };
 
 OAuth._stateParam = function (loginStyle, credentialToken) {
-  state = {
+  var state = {
     loginStyle: loginStyle,
-    credentialToken: credentialToken
+    credentialToken: credentialToken,
+    isCordova: Meteor.isCordova
   };
 
   if (loginStyle === 'redirect')
@@ -88,7 +94,7 @@ OAuth.getDataAfterRedirect = function () {
     credentialToken: credentialToken,
     credentialSecret: credentialSecret
   };
-}
+};
 
 // Launch an OAuth login flow.  For the popup login style, show the
 // popup.  For the redirect login style, save the credential token for
@@ -155,6 +161,5 @@ OAuth._retrieveCredentialSecret = function (credentialToken) {
   } else {
     delete credentialSecrets[credentialToken];
   }
-  console.log("new secret: ", secret);
   return secret;
 };

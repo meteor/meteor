@@ -1,17 +1,24 @@
 <html>
 <head>
 <script type="text/javascript">
-  var config = ##CONFIG##;
 
-  if (config.setCredentialToken) {
-    sessionStorage[config.sessionStoragePrefix + config.credentialToken] =
+  function storeAndRedirect () {
+
+    var config = JSON.parse(document.getElementById("config").innerHTML);
+
+    if (config.setCredentialToken) {
+      sessionStorage[config.storagePrefix + config.credentialToken] =
       config.credentialSecret;
-  }
+    }
 
-  window.location = config.redirectUrl;
+    window.location = config.redirectUrl;
+
+  };
+
 </script>
 </head>
-<body>
+<body onload="storeAndRedirect()">
   <h1>Logging In</h1>
+  <div id="config" style="display:none;">##CONFIG##</div>
 </body>
 </html>

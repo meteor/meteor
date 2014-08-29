@@ -81,11 +81,19 @@ OAuth._stateFromQuery = function (query) {
 }
 
 OAuth._loginStyleFromQuery = function (query) {
-  return OAuth._stateFromQuery(query).loginStyle;
+  var style = OAuth._stateFromQuery(query).loginStyle;
+  if (style !== "popup" && style !== "redirect") {
+    throw new Error("Unrecognized login style: " + style);
+  }
+  return style;
 };
 
 OAuth._credentialTokenFromQuery = function (query) {
   return OAuth._stateFromQuery(query).credentialToken;
+};
+
+OAuth._isCordovaFromQuery = function (query) {
+  return !! OAuth._stateFromQuery(query).isCordova;
 };
 
 
@@ -93,7 +101,6 @@ OAuth._credentialTokenFromQuery = function (query) {
 WebApp.connectHandlers.use(function(req, res, next) {
   // Need to create a Fiber since we're using synchronous http calls and nothing
   // else is wrapping this in a fiber automatically
-  console.log(req.url);
   Fiber(function () {
     middleware(req, res, next);
   }).run();
@@ -124,7 +131,6 @@ var middleware = function (req, res, next) {
       throw new Error("Unexpected OAuth version " + service.version);
     handler(service, req.query, res);
   } catch (err) {
-    console.log("error in middlware:", err.stack, req.url);
     // if we got thrown an error, save it off, it will get passed to
     // the appropriate login call (if any) and reported there.
     //
@@ -231,7 +237,7 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
         details.error = "invalid_credential_token_or_secret";
       }
     }
-    console.log("writing response to client");
+
     OAuth._endOfLoginResponse(res, details);
   }
 };
@@ -247,40 +253,56 @@ var endOfRedirectResponseTemplate = Assets.getText(
 
 // Renders the end of login response template into some HTML and JavaScript
 // that closes the popup or redirects at the end of the OAuth flow.
-var renderEndOfLoginResponse = function (loginStyle, setCredentialToken, token, secret, redirectUrl) {
+//
+// options are:
+//   - loginStyle ("popup" or "redirect")
+//   - setCredentialToken (boolean)
+//   - credentialToken
+//   - credentialSecret
+//   - redirectUrl
+//   - isCordova (boolean)
+//
+var renderEndOfLoginResponse = function (options) {
   // It would be nice to use Blaze here, but it's a little tricky
   // because our mustaches would be inside a <script> tag, and Blaze
   // would treat the <script> tag contents as text (e.g. encode '&' as
   // '&amp;'). So we just do a simple replace.
 
-  var result;
-  if (loginStyle === 'popup') {
-    result = OAuth._endOfPopupResponseTemplate.replace(
-      /##SET_CREDENTIAL_TOKEN##/,
-      JSON.stringify(setCredentialToken));
-    result = result.replace(
-      /##TOKEN##/, JSON.stringify(token));
-    result = result.replace(
-      /##SECRET##/, JSON.stringify(secret));
-    result = result.replace(
-      /##LOCAL_STORAGE_PREFIX##/,
-      JSON.stringify(OAuth._storageTokenPrefix));
-  } else if (loginStyle === 'redirect') {
-    var config = {
-      sessionStoragePrefix: OAuth._storageTokenPrefix,
-      setCredentialToken: setCredentialToken,
-      credentialToken: token,
-      credentialSecret: secret,
-      redirectUrl: redirectUrl
-    };
-    result = endOfRedirectResponseTemplate.replace(
-      /##CONFIG##/,
-      JSON.stringify(config)
-    );
+  var escape = function (s) {
+    if (s) {
+      return s.replace(/&/g, "&amp;").
+        replace(/</g, "&lt;").
+        replace(/>/g, "&gt;").
+        replace(/\"/g, "&quot;").
+        replace(/\'/g, "&#x27;").
+        replace(/\//g, "&#x2F;");
+    } else {
+      return s;
+    }
+  };
+
+  // Escape everything just to be safe (we've already checked that some
+  // of this data -- the token and secret -- are safe).
+  var config = {
+    setCredentialToken: !! options.setCredentialToken,
+    credentialToken: escape(options.credentialToken),
+    credentialSecret: escape(options.credentialSecret),
+    storagePrefix: escape(OAuth._storageTokenPrefix),
+    redirectUrl: escape(options.redirectUrl),
+    isCordova: !! options.isCordova
+  };
+
+  var template;
+  if (options.loginStyle === 'popup') {
+    template = OAuth._endOfPopupResponseTemplate;
+  } else if (options.loginStyle === 'redirect') {
+    template = endOfRedirectResponseTemplate;
+  } else {
+    throw new Error('invalid loginStyle: ' + options.loginStyle);
   }
-  else
-    throw new Error('invalid loginStyle');
-  console.log("results of login response", result);
+
+  var result = template.replace(/##CONFIG##/, JSON.stringify(config));
+
   return "<!DOCTYPE html>\n" + result;
 };
 
@@ -323,28 +345,38 @@ OAuth._endOfLoginResponse = function (res, details) {
     redirectUrl = OAuth._stateFromQuery(details.query).redirectUrl;
     var appHost = Meteor.absoluteUrl();
     if (redirectUrl.substr(0, appHost.length) !== appHost) {
-      details.error = "redirectUrl (" + redirectUrl + ") is not on the same host as the app (" + appHost + ")";
+      details.error = "redirectUrl (" + redirectUrl +
+        ") is not on the same host as the app (" + appHost + ")";
       redirectUrl = appHost;
     }
   }
+
+  var isCordova = OAuth._isCordovaFromQuery(details.query);
 
   if (details.error) {
     Log.warn("Error in OAuth Server: " +
              (details.error instanceof Error ?
               details.error.message : details.error));
-    res.end(renderEndOfLoginResponse(details.loginStyle, false, null, null, redirectUrl), "utf-8");
+    res.end(renderEndOfLoginResponse({
+      loginStyle: details.loginStyle,
+      setCredentialToken: false,
+      redirectUrl: redirectUrl,
+      isCordova: isCordova
+    }), "utf-8");
     return;
   }
 
   // If we have a credentialSecret, report it back to the parent
   // window, with the corresponding credentialToken. The parent window
   // uses the credentialToken and credentialSecret to log in over DDP.
-  res.end(renderEndOfLoginResponse(details.loginStyle,
-                                   true,
-                                   details.credentials.token,
-                                   details.credentials.secret,
-                                   redirectUrl),
-          "utf-8");
+  res.end(renderEndOfLoginResponse({
+    loginStyle: details.loginStyle,
+    setCredentialToken: true,
+    credentialToken: details.credentials.token,
+    credentialSecret: details.credentials.secret,
+    redirectUrl: redirectUrl,
+    isCordova: isCordova
+  }), "utf-8");
 };
 
 
