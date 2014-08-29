@@ -6,7 +6,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.use('webapp', 'server');
   api.use(['tracker', 'retry'], 'client');
-  api.use(['livedata', 'mongo-livedata', 'underscore'], ['client', 'server']);
+  api.use(['livedata', 'mongo', 'underscore'], ['client', 'server']);
   api.use('tracker', 'client');
   api.use('reload', 'client', {weak: true});
 

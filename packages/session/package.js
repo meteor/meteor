@@ -19,6 +19,6 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('session', 'client');
   api.use('tracker');
-  api.use('mongo-livedata');
+  api.use('mongo');
   api.add_files('session_tests.js', 'client');
 });

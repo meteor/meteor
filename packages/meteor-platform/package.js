@@ -27,7 +27,7 @@ Package.on_use(function(api) {
     // DDP: Meteor's client/server protocol.
     'livedata',
     // You want to keep your data somewhere? How about MongoDB?
-    'mongo-livedata',
+    'mongo',
     // Blaze: Reactive DOM!
     'blaze',
     // A great template language!
