@@ -108,6 +108,59 @@ Reload._migrationData = function (name) {
   return old_data[name];
 };
 
+
+var pollProviders = function (tryReload, options) {
+  tryReload = tryReload || function () {};
+  var migrationData = {};
+  var remaining = _.clone(providers);
+  var allReady = true;
+  while (remaining.length) {
+    var p = remaining.shift();
+    var status = p.callback(tryReload, options);
+    if (!status[0])
+      allReady = false;
+    if (status.length > 1 && p.name)
+      migrationData[p.name] = status[1];
+  };
+  if (allReady || options.immediateMigration)
+    return migrationData;
+  else
+    return null;
+};
+
+
+Reload._migrate = function (tryReload, options) {
+  // Make sure each package is ready to go, and collect their
+  // migration data
+  var migrationData = pollProviders(tryReload, options);
+  if (migrationData === null)
+    return false; // not ready yet..
+
+  try {
+    // Persist the migration data
+    var json = JSON.stringify({
+      time: (new Date()).getTime(), data: migrationData, reload: true
+    });
+  } catch (err) {
+    Meteor._debug("Couldn't serialize data for migration", migrationData);
+    throw err;
+  }
+
+  if (typeof sessionStorage !== "undefined" && sessionStorage) {
+    try {
+      sessionStorage.setItem(KEY_NAME, json);
+    } catch (err) {
+      // happens in safari with private browsing
+      Meteor._debug("Couldn't save data for migration to sessionStorage", err);
+    }
+  } else {
+    Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
+  }
+
+  return true;
+};
+
+
 // Migrating reload: reload this page (presumably to pick up a new
 // version of the code or assets), but save the program state and
 // migrate it over. This function returns immediately. The reload
@@ -115,48 +168,17 @@ Reload._migrationData = function (name) {
 // are ready to migrate.
 //
 var reloading = false;
-Reload._reload = function () {
+Reload._reload = function (options) {
+  options = options || {};
+
   if (reloading)
     return;
   reloading = true;
 
   var tryReload = function () { _.defer(function () {
-    // Make sure each package is ready to go, and collect their
-    // migration data
-    var migrationData = {};
-    var remaining = _.clone(providers);
-    while (remaining.length) {
-      var p = remaining.shift();
-      var status = p.callback(tryReload);
-      if (!status[0])
-        return; // not ready yet..
-      if (status.length > 1 && p.name)
-        migrationData[p.name] = status[1];
-    };
-
-    try {
-      // Persist the migration data
-      var json = JSON.stringify({
-        time: (new Date()).getTime(), data: migrationData, reload: true
-      });
-    } catch (err) {
-      Meteor._debug("Couldn't serialize data for migration", migrationData);
-      throw err;
-    }
-
-    if (typeof sessionStorage !== "undefined" && sessionStorage) {
-      try {
-        sessionStorage.setItem(KEY_NAME, json);
-      } catch (err) {
-        // happens in safari with private browsing
-        Meteor._debug("Couldn't save data for migration to sessionStorage", err);
-      }
-    } else {
-      Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
-    }
-
-    // Tell the browser to shut down this VM and make a new one
-    window.location.reload();
+    if (Reload._migrate(tryReload, options))
+      // Tell the browser to shut down this VM and make a new one
+      window.location.reload();
   }); };
 
   tryReload();

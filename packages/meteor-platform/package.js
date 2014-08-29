@@ -62,3 +62,7 @@ Package.on_use(function(api) {
     'mobile-status-bar'
   ], 'web.cordova');
 });
+
+Cordova.depends({
+  'org.apache.cordova.device': '0.2.11'
+});
