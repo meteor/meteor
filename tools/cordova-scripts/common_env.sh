@@ -33,19 +33,25 @@ ANDROID_BUNDLE="$BUNDLE_ROOT_DIR/android_bundle"
 # Devbundle is still stored in meteor-tool
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 
-# Put Android build tool-chain into path
-export PATH="${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH}"
-
 # Put ios-sim and ios-deploy binaries' paths into path
 export PATH="${DEV_BUNDLE}/lib/ios-sim:${DEV_BUNDLE}/lib/ios-deploy:${PATH}"
 
-# add ant
-export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
-export PATH="${ANT_HOME}/bin:${PATH}"
+if [ -z "$USE_GLOBAL_ADK" ] ; then
+  # Put Android build tool-chain into path
+  export PATH="${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH}"
+
+  # add ant
+  export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
+  export PATH="${ANT_HOME}/bin:${PATH}"
+
+  export HOME="${ANDROID_BUNDLE}"
+else
+  # to use a global ADK we don't set PATH, ANT_HOME and HOME
+  # relying that they are installed and available globally
+  true
+fi
 
 # add node
 export PATH="${DEV_BUNDLE}/bin:${PATH}"
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
-
-export HOME="${ANDROID_BUNDLE}"
 

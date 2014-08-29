@@ -27,6 +27,25 @@ command -v java >/dev/null 2>&1 || {
 
 cd "$ORIG_DIR"
 
+
+if [ -z "$USE_GLOBAL_ADK" ] ; then
+  # not using global ADK
+  true
+else
+  # using global ADK, check all utilities
+  set -e
+  trap "echo One of the required utilities wasn't found in global PATH: java javac ant android" EXIT
+
+  which java
+  which javac
+  which ant
+  which android
+
+  trap - EXIT
+  set +e
+  exit 0
+fi
+
 install_android_bundle () {
   echo "Going to install Android Bundle (300M-400M)."
   echo "This might take a while, please hold on."
