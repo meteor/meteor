@@ -1,4 +1,4 @@
-var OplogCollection = new Meteor.Collection("oplog-" + Random.id());
+var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var oplogEnabled =

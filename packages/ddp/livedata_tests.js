@@ -471,7 +471,7 @@ if (Meteor.isClient) {
         Meteor.call('livedata/setup', id, expect(function () {}));
       },
       function (test, expect) {
-        MultiPub = new Meteor.Collection("MultiPubCollection" + id);
+        MultiPub = new Mongo.Collection("MultiPubCollection" + id);
         var sub1 = Meteor.subscribe("pub1"+id, expect(function () {}));
         var sub2 = Meteor.subscribe("pub2"+id, expect(function () {}));
       },
@@ -494,7 +494,7 @@ if (Meteor.isClient) {
 if (Meteor.isClient) {
   testAsyncMulti("livedata - overlapping universal subs", [
     function (test, expect) {
-      var coll = new Meteor.Collection("overlappingUniversalSubs");
+      var coll = new Mongo.Collection("overlappingUniversalSubs");
       var token = Random.id();
       test.isFalse(coll.findOne(token));
       Meteor.call("testOverlappingSubs", token, expect(function (err) {
@@ -506,7 +506,7 @@ if (Meteor.isClient) {
 
   testAsyncMulti("livedata - runtime universal sub creation", [
     function (test, expect) {
-      var coll = new Meteor.Collection("runtimeSubCreation");
+      var coll = new Mongo.Collection("runtimeSubCreation");
       var token = Random.id();
       test.isFalse(coll.findOne(token));
       Meteor.call("runtimeUniversalSubCreation", token, expect(function (err) {
@@ -536,7 +536,7 @@ if (Meteor.isClient) {
         conn = new LivedataTest.Connection('/',
                                            {reloadWithOutstanding: true});
         collName = Random.id();
-        coll = new Meteor.Collection(collName, {connection: conn});
+        coll = new Mongo.Collection(collName, {connection: conn});
 
         var testSubError = function (options) {
           conn.subscribe("publisherErrors", collName, options, {
@@ -704,7 +704,7 @@ if (Meteor.isServer) {
     self.ready();
   });
 } else {
-  var PublisherCloningCollection = new Meteor.Collection("publisherCloning");
+  var PublisherCloningCollection = new Mongo.Collection("publisherCloning");
   testAsyncMulti("livedata - publish callbacks clone", [
     function (test, expect) {
       Meteor.subscribe("publisherCloning", {normal: 1}, {

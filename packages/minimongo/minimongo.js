@@ -243,7 +243,7 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var collection = self.collection.name;
 
   // XXX minimongo should not depend on mongo-livedata!
-  return Meteor.Collection._publishCursor(self, sub, collection);
+  return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection.Cursor.prototype._getCollectionName = function () {
@@ -552,7 +552,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
-    // Meteor.Collection specifies its own ids and does not use this code.
+    // Mongo.Collection specifies its own ids and does not use this code.
     doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
                                       : Random.id();
   }

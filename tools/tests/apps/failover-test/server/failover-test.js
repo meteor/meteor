@@ -6,7 +6,7 @@
 // Prints various things. On success, prints SUCCESS and exits 0. On failure,
 // exits non-0.
 
-var C = new Meteor.Collection(Random.id());
+var C = new Mongo.Collection(Random.id());
 
 var steps = {};
 var nextStepTimeout = null;

@@ -686,7 +686,7 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 // which includes fully-synchronous versions of forEach, etc.
 //
 // Cursor is the cursor object returned from find(), which implements the
-// documented Meteor.Collection cursor API.  It wraps a CursorDescription and a
+// documented Mongo.Collection cursor API.  It wraps a CursorDescription and a
 // SynchronousCursor (lazily: it doesn't contact Mongo until you call a method
 // like fetch or forEach on it).
 //
@@ -708,7 +708,7 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 CursorDescription = function (collectionName, selector, options) {
   var self = this;
   self.collectionName = collectionName;
-  self.selector = Meteor.Collection._rewriteSelector(selector);
+  self.selector = Mongo.Collection._rewriteSelector(selector);
   self.options = options || {};
 };
 
@@ -761,7 +761,7 @@ Cursor.prototype.getTransform = function () {
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
-  return Meteor.Collection._publishCursor(self, sub, collection);
+  return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 // Used to guarantee that publish functions return at most one cursor per
