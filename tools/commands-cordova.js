@@ -49,16 +49,17 @@ var verboseLog = cordova.verboseLog = function (/* args */) {
 
 
 var execFileAsyncOrThrow = function (file, args, opts, cb) {
+  verboseLog('Running asynchronously: ', file, args);
   if (_.isFunction(opts)) {
     cb = opts;
     opts = undefined;
   }
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root }, opts.env);
+  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK }, opts.env);
 
   var execFileAsync = require('./utils.js').execFileAsync;
-  if (_.contains([localCordova, localAdb], file) &&
+  if (_.contains([localAdb, localAndroid], file) &&
       _.contains(project.getCordovaPlatforms(), 'android'))
     ensureAndroidBundle();
 
@@ -77,21 +78,25 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 
 var execFileSyncOrThrow = function (file, args, opts) {
   var execFileSync = require('./utils.js').execFileSync;
-  if (_.contains([localCordova, localAdb], file) &&
+  if (_.contains([localAdb, localAndroid], file) &&
       _.contains(project.getCordovaPlatforms(), 'android')) {
     ensureAndroidBundle();
   }
 
-  // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root }, opts.env);
+  verboseLog('Running synchronously: ', file, args);
 
-  var process = execFileSync(file, args, opts);
-  if (! process.success)
-    throw new Error(process.stderr + '\n\n' + process.stdout);
-  return process;
+  // XXX a hack to always tell the scripts where warehouse is
+  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK }, opts.env);
+
+  var childProcess = execFileSync(file, args, opts);
+  if (! childProcess.success)
+    throw new Error('Failed to run ' + file + '\n' + childProcess.stderr + '\n\n' + childProcess.stdout);
+
+  return childProcess;
 };
 
 var ensureAndroidBundle = function () {
+  verboseLog('Ensuring android_bundle');
   var ensureScriptPath =
     path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
               'ensure_android_bundle.sh');
@@ -99,7 +104,8 @@ var ensureAndroidBundle = function () {
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
   } catch (err) {
-    process.exit();
+    verboseLog('Failed to install android_bundle: ', err.stack);
+    throw new Error('Failed to install android_bundle: ' + err.message);
   }
 };
 
