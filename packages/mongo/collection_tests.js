@@ -5,7 +5,7 @@ Tinytest.add(
       function () {
         Mongo.Collection(null);
       },
-      /use "new" to construct a Meteor\.Collection/
+      /use "new" to construct a Mongo\.Collection/
     );
   }
 );
