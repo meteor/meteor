@@ -19,7 +19,9 @@ Package.on_use(function (api) {
   api.export('OAuth');
   api.export('OAuthTest', 'server', {testOnly: true});
 
-  api.add_files('oauth_client.js', 'client');
+  api.add_files('oauth_client.js', 'web');
+  api.add_files('oauth_browser.js', 'web.browser');
+  api.add_files('oauth_cordova.js', 'web.cordova');
   api.add_files('oauth_server.js', 'server');
   api.add_files('pending_credentials.js', 'server');
 
@@ -40,4 +42,8 @@ Package.on_test(function (api) {
   api.use('service-configuration', 'server');
   api.use('oauth', 'server');
   api.add_files("oauth_tests.js", 'server');
+});
+
+Cordova.depends({
+  'org.apache.cordova.inappbrowser': '0.5.1'
 });

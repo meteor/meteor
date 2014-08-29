@@ -93,6 +93,7 @@ OAuth._credentialTokenFromQuery = function (query) {
 WebApp.connectHandlers.use(function(req, res, next) {
   // Need to create a Fiber since we're using synchronous http calls and nothing
   // else is wrapping this in a fiber automatically
+  console.log(req.url);
   Fiber(function () {
     middleware(req, res, next);
   }).run();
@@ -123,6 +124,7 @@ var middleware = function (req, res, next) {
       throw new Error("Unexpected OAuth version " + service.version);
     handler(service, req.query, res);
   } catch (err) {
+    console.log("error in middlware:", err.stack, req.url);
     // if we got thrown an error, save it off, it will get passed to
     // the appropriate login call (if any) and reported there.
     //
@@ -229,7 +231,7 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
         details.error = "invalid_credential_token_or_secret";
       }
     }
-
+    console.log("writing response to client");
     OAuth._endOfLoginResponse(res, details);
   }
 };
@@ -278,7 +280,7 @@ var renderEndOfLoginResponse = function (loginStyle, setCredentialToken, token, 
   }
   else
     throw new Error('invalid loginStyle');
-
+  console.log("results of login response", result);
   return "<!DOCTYPE html>\n" + result;
 };
 

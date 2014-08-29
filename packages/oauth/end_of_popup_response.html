@@ -4,6 +4,14 @@
   if (##SET_CREDENTIAL_TOKEN##) {
     var credentialToken = ##TOKEN##;
     var credentialSecret = ##SECRET##;
+
+    var credentialString = JSON.stringify({
+      credentialToken: credentialToken,
+      credentialSecret: credentialSecret
+    });
+
+    window.location.hash = credentialString;
+
     if (window.opener && window.opener.Package &&
           window.opener.Package.oauth) {
       window.opener.Package.oauth.OAuth._handleCredentialSecret(
@@ -17,7 +25,7 @@
       }
     }
   }
-  window.close();
+  //window.close();
 </script>
 </head>
 <body>
@@ -25,7 +33,5 @@
     Login completed. <a href="#" onclick="window.close()">
       Click here</a> to close this window.
   </p>
-  <img src="not-a-real-image-for-oauth" style="width:1px;height:1px"
-       onerror="window.close();" />
 </body>
 </html>
