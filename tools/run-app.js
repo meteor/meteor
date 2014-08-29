@@ -389,7 +389,7 @@ _.extend(AppRunner.prototype, {
 
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
-  _runOnce: function (onListen) {
+  _runOnce: function (onListen, beforeRun) {
     var self = this;
 
     // We need to reset our workspace for hotcodepush. Specifically, we need to
@@ -530,6 +530,7 @@ _.extend(AppRunner.prototype, {
     var runFuture = self.runFuture = new Future;
 
     // Run the program
+    beforeRun && beforeRun();
     var appProcess = new AppProcess({
       bundlePath: bundlePath,
       port: self.port,
@@ -663,15 +664,17 @@ _.extend(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
-      crashTimer = setTimeout(function () {
-        crashCount = 0;
-      }, 3000);
+      var resetCrashCount = function () {
+        crashTimer = setTimeout(function () {
+          crashCount = 0;
+        }, 3000);
+      };
 
       var runResult = self._runOnce(function () {
         /* onListen */
         if (! self.noRestartBanner && ! firstRun)
           runLog.logRestart();
-      });
+      }, resetCrashCount /* beforeRun */);
       firstRun = false;
 
       clearTimeout(crashTimer);

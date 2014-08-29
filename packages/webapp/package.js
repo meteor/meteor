@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.0.2-cordova4'
+  version: '1.0.3-rc0'
 });
 
 Npm.depends({connect: "2.9.0",
@@ -9,7 +9,7 @@ Npm.depends({connect: "2.9.0",
 
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
-           'webapp-hashing' ], 'server');
+           'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
   api.use(['application-configuration', 'follower-livedata'], {
     unordered: true

@@ -112,7 +112,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.equal(message, {msg: 'sub', name: 'my_data', params: []});
 
   var reactivelyReady = false;
-  var autorunHandle = Deps.autorun(function () {
+  var autorunHandle = Tracker.autorun(function () {
     reactivelyReady = sub.ready();
   });
   test.isFalse(reactivelyReady);
@@ -120,7 +120,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   // get the sub satisfied. callback fires.
   stream.receive({msg: 'ready', 'subs': [id]});
   test.isTrue(callback_fired);
-  Deps.flush();
+  Tracker.flush();
   test.isTrue(reactivelyReady);
 
   // Unsubscribe.
@@ -128,7 +128,7 @@ Tinytest.add("livedata stub - subscribe", function (test) {
   test.length(stream.sent, 1);
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: id});
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(reactivelyReady);
 
   // Resubscribe.
@@ -163,7 +163,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Subscribe to some subs.
   var stopperHandle, completerHandle;
-  var autorunHandle = Deps.autorun(function () {
+  var autorunHandle = Tracker.autorun(function () {
     conn.subscribe("foo", rFoo.get(), onReady(rFoo.get()));
     conn.subscribe("bar", rBar.get(), onReady(rBar.get()));
     completerHandle = conn.subscribe("completer", onReady("completer"));
@@ -171,7 +171,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   });
 
   var completerReady;
-  var readyAutorunHandle = Deps.autorun(function() {
+  var readyAutorunHandle = Tracker.autorun(function() {
     completerReady = completerHandle.ready();
   });
 
@@ -199,14 +199,14 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
 
   // Haven't hit onReady yet.
   test.equal(onReadyCount, {});
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(completerReady);
 
   // "completer" gets ready now. its callback should fire.
   stream.receive({msg: 'ready', 'subs': [idCompleter]});
   test.equal(onReadyCount, {completer: 1});
   test.length(stream.sent, 0);
-  Deps.flush();
+  Tracker.flush();
   test.isTrue(completerReady);
 
   // Stop 'stopper'.
@@ -216,7 +216,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   test.equal(message, {msg: 'unsub', id: idStopper});
 
   test.equal(onReadyCount, {completer: 1});
-  Deps.flush();
+  Tracker.flush();
   test.isTrue(completerReady);
 
   // Change the foo subscription and flush. We should sub to the new foo
@@ -226,7 +226,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // call at most one onReady for a given reactively-saved subscription.
   // The completerHandle should have been reestablished to the ready handle.
   rFoo.set("foo2");
-  Deps.flush();
+  Tracker.flush();
   test.length(stream.sent, 3);
 
   message = JSON.parse(stream.sent.shift());
@@ -257,7 +257,7 @@ Tinytest.add("livedata stub - reactive subscribe", function (test) {
   // Shut down the autorun. This should unsub us from all current subs at flush
   // time.
   autorunHandle.stop();
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(completerReady);
   readyAutorunHandle.stop();
 
@@ -283,9 +283,9 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
 
   // Subscribe to some subs.
   var fooHandle, fooReady;
-  var autorunHandle = Deps.autorun(function () {
+  var autorunHandle = Tracker.autorun(function () {
     fooHandle = conn.subscribe("foo", rFoo.get());
-    Deps.autorun(function() {
+    Tracker.autorun(function() {
       fooReady = fooHandle.ready();
     });
   });
@@ -296,7 +296,7 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   test.equal(message, {msg: 'sub', name: 'foo', params: ['foo1']});
 
   // Not ready yet
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(fooHandle.ready());
   test.isFalse(fooReady);
 
@@ -304,7 +304,7 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   // the ready autorun should invalidate, reading the new false value, and
   // setting up a new dep which goes true soon
   rFoo.set("foo2");
-  Deps.flush();
+  Tracker.flush();
   test.length(stream.sent, 2);
 
   message = JSON.parse(stream.sent.shift());
@@ -315,21 +315,21 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: idFoo1});
 
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(fooHandle.ready());
   test.isFalse(fooReady);
 
   // "foo" gets ready now. The handle should be ready and the autorun rerun
   stream.receive({msg: 'ready', 'subs': [idFoo2]});
   test.length(stream.sent, 0);
-  Deps.flush();
+  Tracker.flush();
   test.isTrue(fooHandle.ready());
   test.isTrue(fooReady);
 
   // change the argument to foo. This will make a new handle, which isn't ready
   // the ready autorun should invalidate, making fooReady false too
   rFoo.set("foo3");
-  Deps.flush();
+  Tracker.flush();
   test.length(stream.sent, 2);
 
   message = JSON.parse(stream.sent.shift());
@@ -340,14 +340,14 @@ Tinytest.add("livedata stub - reactive subscribe handle correct", function (test
   message = JSON.parse(stream.sent.shift());
   test.equal(message, {msg: 'unsub', id: idFoo2});
 
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(fooHandle.ready());
   test.isFalse(fooReady);
 
   // "foo" gets ready again
   stream.receive({msg: 'ready', 'subs': [idFoo3]});
   test.length(stream.sent, 0);
-  Deps.flush();
+  Tracker.flush();
   test.isTrue(fooHandle.ready());
   test.isTrue(fooReady);
 
@@ -1177,8 +1177,8 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   var fooReady = 0;
 
   var inner;
-  var outer = Deps.autorun(function () {
-    inner = Deps.autorun(function () {
+  var outer = Tracker.autorun(function () {
+    inner = Tracker.autorun(function () {
       conn.subscribe("foo-sub", fooArg.get(),
                      function () { fooReady++; });
     });
@@ -1191,7 +1191,7 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   // arguments.  Detect the re-sub via onReady.
   fooArg.set('B');
   test.isTrue(inner.invalidated);
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(inner.invalidated);
   markAllReady();
   test.equal(fooReady, 2);
@@ -1199,7 +1199,7 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   // Rerun inner again with same args; should be no re-sub.
   inner.invalidate();
   test.isTrue(inner.invalidated);
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(inner.invalidated);
   markAllReady();
   test.equal(fooReady, 2);
@@ -1209,14 +1209,14 @@ Tinytest.add("livedata stub - reactive resub", function (test) {
   // started.
   outer.invalidate();
   test.isTrue(inner.invalidated);
-  Deps.flush();
+  Tracker.flush();
   test.isFalse(inner.invalidated);
   markAllReady();
   test.equal(fooReady, 2);
 
   // Change the subscription.  Now we should get an onReady.
   fooArg.set('C');
-  Deps.flush();
+  Tracker.flush();
   markAllReady();
   test.equal(fooReady, 3);
 });
@@ -1405,6 +1405,40 @@ Tinytest.add("livedata connection - ping with id", function (test) {
   var id = Random.id();
   stream.receive({msg: 'ping', id: id});
   testGotMessage(test, stream, {msg: 'pong', id: id});
+});
+
+_.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function (version) {
+  Tinytest.addAsync("livedata connection - ping from " + version,
+                    function (test, onComplete) {
+    var connection = new LivedataTest.Connection(getSelfConnectionUrl(), {
+      reloadWithOutstanding: true,
+      supportedDDPVersions: [version],
+      onDDPVersionNegotiationFailure: function () { test.fail(); onComplete(); },
+      onConnected: function () {
+        test.equal(connection._version, version);
+        // It's a little naughty to access _stream and _send, but it works...
+        connection._stream.on('message', function (json) {
+          var msg = JSON.parse(json);
+          var done = false;
+          if (msg.msg === 'pong') {
+            test.notEqual(version, "pre1");
+            done = true;
+          } else if (msg.msg === 'error') {
+            // Version pre1 does not play ping-pong
+            test.equal(version, "pre1");
+            done = true;
+          } else {
+            Meteor._debug("Got unexpected message: " + json);
+          }
+          if (done) {
+            connection._stream.disconnect({_permanent: true});
+            onComplete();
+          }
+        });
+        connection._send({msg: 'ping'});
+      }
+    });
+  });
 });
 
 var getSelfConnectionUrl = function () {

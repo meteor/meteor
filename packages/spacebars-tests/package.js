@@ -11,9 +11,10 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('jquery');
   api.use('test-helpers');
+  api.use('reactive-var');
   api.use('showdown');
   api.use('minimongo');
-  api.use('deps');
+  api.use('tracker');
 
   api.use('templating', 'client');
   api.add_files([

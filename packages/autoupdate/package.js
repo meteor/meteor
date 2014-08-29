@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.0.5-cordova5'
+  version: '1.0.7-cordova6'
 });
 
 Cordova.depends({
@@ -10,9 +10,9 @@ Cordova.depends({
 
 Package.on_use(function (api) {
   api.use('webapp', 'server');
-  api.use(['deps', 'retry', 'random'], 'client');
-  api.use(['livedata', 'mongo-livedata', 'underscore'], ['client', 'server']);
-  api.use('deps', 'client');
+  api.use(['tracker', 'retry'], 'client');
+  api.use(['ddp', 'mongo', 'underscore'], ['client', 'server']);
+  api.use('tracker', 'client');
   api.use('reload', 'client', {weak: true});
   api.use('http', 'web.cordova');
 

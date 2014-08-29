@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.4-cordova4'
+  version: '1.0.5-rc0'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
@@ -26,10 +26,10 @@ Package.on_use(function (api) {
   api.export('Template', 'client');
 
   // html_scanner.js emits client code that calls Meteor.startup and
-  // UI, so anybody using templating (eg apps) need to implicitly use
-  // 'meteor' and 'ui'.
-  api.use('ui');
-  api.imply(['meteor', 'ui'], 'client');
+  // Blaze, so anybody using templating (eg apps) need to implicitly use
+  // 'meteor' and 'blaze'.
+  api.use('blaze');
+  api.imply(['meteor', 'blaze'], 'client');
 });
 
 Package.on_test(function (api) {
@@ -37,7 +37,7 @@ Package.on_test(function (api) {
   api.use('htmljs');
   api.use('templating');
   api.use('underscore');
-  api.use(['test-helpers', 'session', 'deps',
+  api.use(['test-helpers', 'session', 'tracker',
            'minimongo'], 'client');
   api.use('spacebars-compiler');
 

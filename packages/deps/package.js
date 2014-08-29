@@ -1,18 +1,11 @@
 // XXX rename package?
 
 Package.describe({
-  summary: "Dependency mananger to allow reactive callbacks",
-  version: '1.0.1'
+  summary: "Deprecated package, please use tracker instead.",
+  version: '1.0.2-rc1'
 });
 
 Package.on_use(function (api) {
-  api.export('Deps');
-  api.add_files('deps.js');
-  api.add_files('deprecated.js');
-});
-
-Package.on_test(function (api) {
-  api.use('tinytest');
-  api.use('deps');
-  api.add_files('deps_tests.js', 'client');
+  api.use('tracker');
+  api.imply('tracker');
 });

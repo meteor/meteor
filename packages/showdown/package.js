@@ -4,7 +4,7 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.0"
+  version: "1.0.1-rc0"
 });
 
 Package.on_use(function (api) {
@@ -16,5 +16,5 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use("ui", "client");
+  api.use("blaze", "client");
 });

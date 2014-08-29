@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The dynamic stylesheet language",
-  version: "1.0.5-cordova4"
+  version: "1.0.8-cordova6"
 });
 
 Package._transitional_registerBuildPlugin({

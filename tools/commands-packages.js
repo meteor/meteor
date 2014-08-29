@@ -1204,7 +1204,8 @@ main.registerCommand({
       var versionAddendum = "" ;
       var latest = catalog.complete.getLatestMainlineVersion(name, version);
       var semver = require('semver');
-      if (version !== latest.version &&
+      if (latest &&
+          version !== latest.version &&
           // If we're currently running a prerelease, "latest" may be older than
           // what we're at, so don't tell us we're outdated!
           semver.lt(version, latest.version) &&

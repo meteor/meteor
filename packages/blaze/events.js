@@ -1,6 +1,6 @@
-var EventSupport = Blaze.EventSupport = {};
+var EventSupport = Blaze._EventSupport = {};
 
-var DOMBackend = Blaze.DOMBackend;
+var DOMBackend = Blaze._DOMBackend;
 
 // List of events to always delegate, never capture.
 // Since jQuery fakes bubbling for certain events in

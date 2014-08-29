@@ -100,7 +100,12 @@ _.extend(SessionDocumentView.prototype, {
   }
 });
 
-// Represents a client's view of a single collection
+/**
+ * Represents a client's view of a single collection
+ * @param {String} collectionName Name of the collection it represents
+ * @param {Object.<String, Function>} sessionCallbacks The callbacks for added, changed, removed
+ * @class SessionCollectionView
+ */
 var SessionCollectionView = function (collectionName, sessionCallbacks) {
   var self = this;
   self.collectionName = collectionName;
@@ -842,10 +847,26 @@ _.extend(Session.prototype, {
 /******************************************************************************/
 
 // ctor for a sub handle: the input to each publish function
+
+// Instance name is this because it's usually referred to as this inside a
+// publish
+/**
+ * @summary The server's side of a subscription
+ * @class Subscription
+ * @instanceName this
+ */
 var Subscription = function (
     session, handler, subscriptionId, params, name) {
   var self = this;
   self._session = session; // type is Session
+
+  /**
+   * @summary Access inside the publish function. The incoming [connection](#meteor_onconnection) for this subscription.
+   * @locus Server
+   * @name  connection
+   * @memberOf Subscription
+   * @instance
+   */
   self.connection = session.connectionHandle; // public API object
 
   self._handler = handler;
@@ -880,6 +901,14 @@ var Subscription = function (
   self._ready = false;
 
   // Part of the public API: the user of this sub.
+  
+  /**
+   * @summary Access inside the publish function. The id of the logged-in user, or `null` if no user is logged in.
+   * @locus Server
+   * @memberOf Subscription
+   * @name  userId
+   * @instance
+   */
   self.userId = session.userId;
 
   // For now, the id filter is going to default to
@@ -1035,6 +1064,13 @@ _.extend(Subscription.prototype, {
       self._name);
   },
 
+  /**
+   * @summary Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error).
+   * @locus Server
+   * @param {Error} error The error to pass to the client.
+   * @instance
+   * @memberOf Subscription
+   */
   error: function (error) {
     var self = this;
     if (self._isDeactivated())
@@ -1046,6 +1082,13 @@ _.extend(Subscription.prototype, {
   // server (and clean up its _subscriptions table) we don't actually provide a
   // mechanism for an app to notice this (the subscribe onError callback only
   // triggers if there is an error).
+  
+  /**
+   * @summary Call inside the publish function.  Stops this client's subscription; the `onError` callback is *not* invoked on the client.
+   * @locus Server
+   * @instance
+   * @memberOf Subscription
+   */
   stop: function () {
     var self = this;
     if (self._isDeactivated())
@@ -1053,6 +1096,13 @@ _.extend(Subscription.prototype, {
     self._session._stopSubscription(self._subscriptionId);
   },
 
+  /**
+   * @summary Call inside the publish function.  Registers a callback function to run when the subscription is stopped.
+   * @locus Server
+   * @memberOf Subscription
+   * @instance
+   * @param {Function} func The callback function
+   */
   onStop: function (callback) {
     var self = this;
     if (self._isDeactivated())
@@ -1069,6 +1119,15 @@ _.extend(Subscription.prototype, {
     return self._deactivated || self._session.inQueue === null;
   },
 
+  /**
+   * @summary Call inside the publish function.  Informs the subscriber that a document has been added to the record set.
+   * @locus Server
+   * @memberOf Subscription
+   * @instance
+   * @param {String} collection The name of the collection that contains the new document.
+   * @param {String} id The new document's ID.
+   * @param {Object} fields The fields in the new document.  If `_id` is present it is ignored.
+   */
   added: function (collectionName, id, fields) {
     var self = this;
     if (self._isDeactivated())
@@ -1078,6 +1137,15 @@ _.extend(Subscription.prototype, {
     self._session.added(self._subscriptionHandle, collectionName, id, fields);
   },
 
+  /**
+   * @summary Call inside the publish function.  Informs the subscriber that a document in the record set has been modified.
+   * @locus Server
+   * @memberOf Subscription
+   * @instance
+   * @param {String} collection The name of the collection that contains the changed document.
+   * @param {String} id The changed document's ID.
+   * @param {Object} fields The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored.
+   */
   changed: function (collectionName, id, fields) {
     var self = this;
     if (self._isDeactivated())
@@ -1086,6 +1154,14 @@ _.extend(Subscription.prototype, {
     self._session.changed(self._subscriptionHandle, collectionName, id, fields);
   },
 
+  /**
+   * @summary Call inside the publish function.  Informs the subscriber that a document has been removed from the record set.
+   * @locus Server
+   * @memberOf Subscription
+   * @instance
+   * @param {String} collection The name of the collection that the document has been removed from.
+   * @param {String} id The ID of the document that has been removed.
+   */
   removed: function (collectionName, id) {
     var self = this;
     if (self._isDeactivated())
@@ -1097,6 +1173,12 @@ _.extend(Subscription.prototype, {
     self._session.removed(self._subscriptionHandle, collectionName, id);
   },
 
+  /**
+   * @summary Call inside the publish function.  Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady` callback passed to  [`Meteor.subscribe`](#meteor_subscribe), if any.
+   * @locus Server
+   * @memberOf Subscription
+   * @instance
+   */
   ready: function () {
     var self = this;
     if (self._isDeactivated())
@@ -1207,6 +1289,12 @@ Server = function (options) {
 
 _.extend(Server.prototype, {
 
+  /**
+   * @summary Register a callback to be called when a new DDP connection is made to the server.
+   * @locus Server
+   * @param {function} callback The function to call when a new DDP connection is established.
+   * @memberOf Meteor
+   */
   onConnection: function (fn) {
     var self = this;
     return self.onConnectionHook.register(fn);
@@ -1271,6 +1359,14 @@ _.extend(Server.prototype, {
    *    (it lets us determine whether to print a warning suggesting
    *    that you turn off autopublish.)
    */
+  
+  /**
+   * @summary Publish a record set.
+   * @memberOf Meteor
+   * @locus Server
+   * @param {String} name Name of the record set.  If `null`, the set has no name, and the record set is automatically sent to all connected clients.
+   * @param {Function} func Function called on the server each time a client subscribes.  Inside the function, `this` is the publish handler object, described below.  If the client passed arguments to `subscribe`, the function is called with the same arguments.
+   */
   publish: function (name, handler, options) {
     var self = this;
 
@@ -1330,6 +1426,12 @@ _.extend(Server.prototype, {
     }
   },
 
+  /**
+   * @summary Defines functions that can be invoked over the network by clients.
+   * @locus Anywhere
+   * @param {Object} methods Dictionary whose keys are method names and values are functions.
+   * @memberOf Meteor
+   */
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {

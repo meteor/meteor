@@ -14,12 +14,12 @@ var ROOT_PACKAGES = [
   'dev-bundle-fetcher',
   'ejson',
   'js-analyze',
-  'livedata',
+  'ddp',
   'logging',
   'meteor',
   'minifiers',
   'minimongo',
-  'mongo-livedata',
+  'mongo',
   'package-version-parser',
   'boilerplate-generator',
   'webapp-hashing'
@@ -56,9 +56,9 @@ var ROOT_PACKAGES = [
 //
 // Example usage:
 //   var DDP = require('./uniload.js').load({
-//     packages: ['livedata'],
+//     packages: ['ddp'],
 //     release: release.current.name
-//   }).livedata.DDP;
+//   }).ddp.DDP;
 //   var reverse = DDP.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));
 

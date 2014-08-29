@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests noninteractively, with results going to the console.",
-  version: '1.0.0-cordova4'
+  version: '1.0.1-rc0'
 });
 
 Package.on_use(function (api) {

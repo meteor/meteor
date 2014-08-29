@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'livedata', 'ejson', 'follower-livedata']);
-  api.use(['mongo-livedata'], {
+  api.use(['logging', 'underscore', 'ddp', 'ejson', 'follower-livedata']);
+  api.use(['mongo'], {
     unordered: true
   });
   api.add_files(['config.js'], 'server');

@@ -1,5 +1,5 @@
 var DOMBackend = {};
-Blaze.DOMBackend = DOMBackend;
+Blaze._DOMBackend = DOMBackend;
 
 var $jq = (typeof jQuery !== 'undefined' ? jQuery :
            (typeof Package !== 'undefined' ?
