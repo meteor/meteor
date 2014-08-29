@@ -2,6 +2,12 @@
 // XXX presently there is no way to destroy/clean up a Collection
 
 /**
+ * @summary Namespace for MongoDB-related items
+ * @namespace
+ */
+Mongo = {};
+
+/**
  * @summary Constructor for a Collection
  * @locus Anywhere
  * @instancename collection
@@ -647,6 +653,11 @@ Mongo.Cursor = LocalCollection.Cursor;
 /**
  * @deprecated in 0.9.1
  */
+Mongo.Collection.Cursor = Mongo.Cursor;
+
+/**
+ * @deprecated in 0.9.1
+ */
 Mongo.Collection.ObjectID = Mongo.ObjectID;
 
 ///
@@ -1087,3 +1098,8 @@ Mongo.Collection.prototype._validatedRemove = function(userId, selector) {
 
   return self._collection.remove.call(self._collection, selector);
 };
+
+/**
+ * @deprecated in 0.9.1
+ */
+Meteor.Collection = Mongo.Collection;
