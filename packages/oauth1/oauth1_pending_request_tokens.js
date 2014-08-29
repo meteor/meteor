@@ -20,7 +20,7 @@
 
 // Collection containing pending request tokens
 // Has key, requestToken, requestTokenSecret, and createdAt fields.
-OAuth._pendingRequestTokens = new Meteor.Collection(
+OAuth._pendingRequestTokens = new Mongo.Collection(
   "meteor_oauth_pendingRequestTokens", {
     _preventAutopublish: true
   });

@@ -15,6 +15,17 @@
         "cookie": {
           "version": "0.1.0"
         },
+        "send": {
+          "version": "0.1.4",
+          "dependencies": {
+            "mime": {
+              "version": "1.2.11"
+            },
+            "range-parser": {
+              "version": "0.0.4"
+            }
+          }
+        },
         "bytes": {
           "version": "0.2.0"
         },
@@ -28,7 +39,12 @@
           "version": "0.0.2"
         },
         "debug": {
-          "version": "0.7.2"
+          "version": "1.0.4",
+          "dependencies": {
+            "ms": {
+              "version": "0.6.2"
+            }
+          }
         },
         "methods": {
           "version": "0.0.1"
@@ -37,7 +53,21 @@
           "version": "2.1.8",
           "dependencies": {
             "readable-stream": {
-              "version": "1.0.17"
+              "version": "1.0.31",
+              "dependencies": {
+                "core-util-is": {
+                  "version": "1.0.1"
+                },
+                "isarray": {
+                  "version": "0.0.1"
+                },
+                "string_decoder": {
+                  "version": "0.10.31"
+                },
+                "inherits": {
+                  "version": "2.0.1"
+                }
+              }
             },
             "stream-counter": {
               "version": "0.1.0"
@@ -50,7 +80,12 @@
       "version": "0.1.4",
       "dependencies": {
         "debug": {
-          "version": "0.7.2"
+          "version": "1.0.4",
+          "dependencies": {
+            "ms": {
+              "version": "0.6.2"
+            }
+          }
         },
         "mime": {
           "version": "1.2.11"

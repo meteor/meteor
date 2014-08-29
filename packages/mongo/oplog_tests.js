@@ -1,4 +1,4 @@
-var OplogCollection = new Meteor.Collection("oplog-" + Random.id());
+var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var oplogEnabled =
@@ -16,15 +16,15 @@ Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
 
   supported(true, "asdf");
   supported(true, 1234);
-  supported(true, new Meteor.Collection.ObjectID());
+  supported(true, new Mongo.Collection.ObjectID());
 
   supported(true, {_id: "asdf"});
   supported(true, {_id: 1234});
-  supported(true, {_id: new Meteor.Collection.ObjectID()});
+  supported(true, {_id: new Mongo.Collection.ObjectID()});
 
   supported(true, {foo: "asdf",
                    bar: 1234,
-                   baz: new Meteor.Collection.ObjectID(),
+                   baz: new Mongo.Collection.ObjectID(),
                    eeney: true,
                    miney: false,
                    moe: null});

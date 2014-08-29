@@ -89,7 +89,7 @@ LocalCollection.prototype.find = function (selector, options) {
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.
  * @class  Cursor
- * @memberOf Meteor.Collection
+ * @memberOf Mongo.Collection
  * @instanceName cursor
  */
 LocalCollection.Cursor = function (collection, selector, options) {
@@ -155,7 +155,7 @@ LocalCollection.prototype.findOne = function (selector, options) {
  * @locus Anywhere
  * @method  forEach
  * @instance
- * @memberOf Meteor.Collection.Cursor
+ * @memberOf Mongo.Collection.Cursor
  * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
  * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
  */
@@ -196,7 +196,7 @@ LocalCollection.Cursor.prototype.getTransform = function () {
  * @locus Anywhere
  * @method map
  * @instance
- * @memberOf Meteor.Collection.Cursor
+ * @memberOf Mongo.Collection.Cursor
  * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
  * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
  */
@@ -211,7 +211,7 @@ LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
 
 /**
  * @summary Return all matching documents as an Array.
- * @memberOf Meteor.Collection.Cursor
+ * @memberOf Mongo.Collection.Cursor
  * @method  fetch
  * @instance
  * @locus Anywhere
@@ -227,7 +227,7 @@ LocalCollection.Cursor.prototype.fetch = function () {
 
 /**
  * @summary Returns the number of documents that match a query.
- * @memberOf Meteor.Collection.Cursor
+ * @memberOf Mongo.Collection.Cursor
  * @method  count
  * @instance
  * @locus Anywhere
@@ -249,7 +249,7 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var collection = self.collection.name;
 
   // XXX minimongo should not depend on mongo-livedata!
-  return Meteor.Collection._publishCursor(self, sub, collection);
+  return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection.Cursor.prototype._getCollectionName = function () {
@@ -303,7 +303,7 @@ _.extend(LocalCollection.Cursor.prototype, {
   /**
    * @summary Watch a query.  Receive callbacks as the result set changes.
    * @locus Anywhere
-   * @memberOf Meteor.Collection.Cursor
+   * @memberOf Mongo.Collection.Cursor
    * @instance
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
@@ -315,7 +315,7 @@ _.extend(LocalCollection.Cursor.prototype, {
   /**
    * @summary Watch a query.  Receive callbacks as the result set changes.  Only the differences between the old and new documents are passed to the callbacks.
    * @locus Anywhere
-   * @memberOf Meteor.Collection.Cursor
+   * @memberOf Mongo.Collection.Cursor
    * @instance
    * @param {Object} callbacks Functions to call to deliver the result set as it changes
    */
@@ -558,7 +558,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
-    // Meteor.Collection specifies its own ids and does not use this code.
+    // Mongo.Collection specifies its own ids and does not use this code.
     doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
                                       : Random.id();
   }

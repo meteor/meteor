@@ -4,7 +4,7 @@
       "version": "https://github.com/meteor/faye-websocket-node/tarball/ccc180998b1396093c24d0df7ebc1d199c276552",
       "dependencies": {
         "websocket-driver": {
-          "version": "0.3.4"
+          "version": "git+https://github.com/meteor/websocket-driver-node#dcd7c278b6661ec27b0960198185295e1aa81f33"
         }
       }
     },

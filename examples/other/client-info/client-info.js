@@ -11,7 +11,7 @@ if (Meteor.isServer) {
 
 if (Meteor.isClient) {
   Meteor.subscribe("clientInfo");
-  var ClientInfo = new Meteor.Collection("clientInfo");
+  var ClientInfo = new Mongo.Collection("clientInfo");
 
   Template.info.info = function () {
     return EJSON.stringify(ClientInfo.findOne("info"), {indent: true});
