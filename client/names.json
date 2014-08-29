@@ -60,6 +60,7 @@
   "MethodInvocation#setUserId",
   "MethodInvocation#unblock",
   "MethodInvocation#userId",
+  "Mongo",
   "Mongo.Collection",
   "Mongo.Collection#allow",
   "Mongo.Collection#deny",
