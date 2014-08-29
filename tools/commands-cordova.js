@@ -59,7 +59,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
   if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
 
   var execFileAsync = require('./utils.js').execFileAsync;
-  if (_.contains([localAdb, localAndroid], file) &&
+  if (_.contains([localCordova, localAdb, localAndroid], file) &&
       _.contains(project.getCordovaPlatforms(), 'android'))
     ensureAndroidBundle();
 
@@ -78,7 +78,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 
 var execFileSyncOrThrow = function (file, args, opts) {
   var execFileSync = require('./utils.js').execFileSync;
-  if (_.contains([localAdb, localAndroid], file) &&
+  if (_.contains([localCordova, localAdb, localAndroid], file) &&
       _.contains(project.getCordovaPlatforms(), 'android')) {
     ensureAndroidBundle();
   }
