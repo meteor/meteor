@@ -20,8 +20,13 @@
     var eventName = 'meteor-cordova-loaded';
     var event;
     if (usingEventConstructor) {
-      event = new Event(eventName);
-    } else {
+      try {
+        event = new Event(eventName);
+      } catch (err) {
+        usingEventConstructor = false;
+      }
+    }
+    if (! usingEventConstructor) {
       event = document.createEvent('Event');
       event.initEvent(eventName, true, true);
     }
