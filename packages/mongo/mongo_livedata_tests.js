@@ -1663,8 +1663,8 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 
         // Test values that require transformation to go into Mongo:
 
-        var t1 = new Mongo.Collection.ObjectID();
-        var t2 = new Mongo.Collection.ObjectID();
+        var t1 = new Mongo.ObjectID();
+        var t2 = new Mongo.ObjectID();
         var result3 = upsert(coll, useUpdate, {foo: t1}, {foo: t1});
         test.equal(result3.numberAffected, 1);
         if (! skipIds)
@@ -1853,8 +1853,8 @@ _.each(Meteor.isServer ? [false] : [true, false], function (useNetwork) {
 
           // Test values that require transformation to go into Mongo:
 
-          t1 = new Mongo.Collection.ObjectID();
-          t2 = new Mongo.Collection.ObjectID();
+          t1 = new Mongo.ObjectID();
+          t2 = new Mongo.ObjectID();
           upsert(coll, useUpdate, {_id: t1}, {_id: t1, foo: 'bar'}, next3);
         };
 
@@ -2173,7 +2173,7 @@ Tinytest.add('mongo-livedata - rewrite selector', function (test) {
     ]}
   );
 
-  var oid = new Mongo.Collection.ObjectID();
+  var oid = new Mongo.ObjectID();
   test.equal(Mongo.Collection._rewriteSelector(oid),
              {_id: oid});
 });
@@ -2857,7 +2857,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
     self.collection = new Mongo.Collection(collectionName);
     self.date = new Date;
-    self.objId = new Mongo.Collection.ObjectID;
+    self.objId = new Mongo.ObjectID;
 
     self.id = self.collection.insert(
       {d: self.date, oi: self.objId,
@@ -2922,7 +2922,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
     // Update a date and an ObjectID too.
     self.date2 = new Date(self.date.valueOf() + 1000);
-    self.objId2 = new Mongo.Collection.ObjectID;
+    self.objId2 = new Mongo.ObjectID;
     runInFence(function () {
       self.collection.update(
         self.id, {$set: {d: self.date2, oi: self.objId2}},

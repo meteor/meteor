@@ -146,7 +146,7 @@ Example:
     });
 
     // client: declare collection to hold count object
-    Counts = new Meteor.Collection("counts");
+    Counts = new Mongo.Collection("counts");
 
     // client: subscribe to the count for the current room
     Tracker.autorun(function () {
@@ -203,7 +203,7 @@ collections](#meteor_collection), with the same name as the `collection`
 argument used in the publish handler's [`added`](#publish_added),
 [`changed`](#publish_changed), and [`removed`](#publish_removed)
 callbacks.  Meteor will queue incoming records until you declare the
-[`Meteor.Collection`](#meteor_collection) on the client with the matching
+[`Mongo.Collection`](#meteor_collection) on the client with the matching
 collection name.
 
     // okay to subscribe (and possibly receive data) before declaring
@@ -213,7 +213,7 @@ collection name.
     ...
     // client queues incoming players records until ...
     ...
-    Players = new Meteor.Collection("players");
+    Players = new Mongo.Collection("players");
 
 The client will see a document if the document is currently in the published
 record set of any of its subscriptions.
@@ -589,9 +589,9 @@ server.
 <h2 id="collections"><span>Collections</span></h2>
 
 Meteor stores data in *collections*.  To get started, declare a
-collection with `new Meteor.Collection`.
+collection with `new Mongo.Collection`.
 
-{{> autoApiBox "Meteor.Collection"}}
+{{> autoApiBox "Mongo.Collection"}}
 
 Calling this function is analogous to declaring a model in a traditional ORM
 (Object-Relation Mapper)-centric framework. It sets up a *collection* (a storage
@@ -603,8 +603,8 @@ first create the document.
 
     // common code on client and server declares a DDP-managed mongo
     // collection.
-    Chatrooms = new Meteor.Collection("chatrooms");
-    Messages = new Meteor.Collection("messages");
+    Chatrooms = new Mongo.Collection("chatrooms");
+    Messages = new Mongo.Collection("messages");
 
 The function returns an object with methods to [`insert`](#insert)
 documents in the collection, [`update`](#update) their properties, and
@@ -676,7 +676,7 @@ your collection should be published to which users.
     // after that, it will be synchronized down to any other clients
     // that are subscribed to a query that includes it (see
     // Meteor.subscribe and autopublish)
-    Posts = new Meteor.Collection("posts");
+    Posts = new Mongo.Collection("posts");
     Posts.insert({title: "Hello world", body: "First post"});
 
     // Changes are visible immediately -- no waiting for a round trip to
@@ -686,13 +686,13 @@ your collection should be published to which users.
     // Create a temporary, local collection. It works just like any other
     // collection, but it doesn't send changes to the server, and it
     // can't receive any data from subscriptions.
-    Scratchpad = new Meteor.Collection;
+    Scratchpad = new Mongo.Collection;
     for (var i = 0; i < 10; i++)
       Scratchpad.insert({number: i * 2});
     assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
 
-Generally, you'll assign `Meteor.Collection` objects in your app to global
-variables.  You can only create one `Meteor.Collection` object for each
+Generally, you'll assign `Mongo.Collection` objects in your app to global
+variables.  You can only create one `Mongo.Collection` object for each
 underlying Mongo collection.
 
 If you specify a `transform` option to the `Collection` or any of its retrieval
@@ -714,7 +714,7 @@ the value of the document's `_id` field (though it's OK to leave it out).
     });
 
     // Define a Collection that uses Animal as its document
-    Animals = new Meteor.Collection("Animals", {
+    Animals = new Mongo.Collection("Animals", {
       transform: function (doc) { return new Animal(doc); }
     });
 
@@ -746,7 +746,7 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 {{/warning}}
 
-{{> autoApiBox "Meteor.Collection#find"}}
+{{> autoApiBox "Mongo.Collection#find"}}
 
 `find` returns a cursor.  It does not immediately access the database or return
 documents.  Cursors provide `fetch` to return all matching documents, `map` and
@@ -776,12 +776,12 @@ invalidations in reactive computations using this cursor. Careful use
 of `fields` allows for more fine-grained reactivity for computations
 that don't depend on an entire document.
 
-{{> autoApiBox "Meteor.Collection#findOne"}}
+{{> autoApiBox "Mongo.Collection#findOne"}}
 
 Equivalent to `find(selector, options).fetch()[0]` with
 `options.limit = 1`.
 
-{{> autoApiBox "Meteor.Collection#insert"}}
+{{> autoApiBox "Mongo.Collection#insert"}}
 
 Add a document to the collection. A document is just an object, and
 its fields can contain any combination of EJSON-compatible datatypes
@@ -813,7 +813,7 @@ Example:
     Items.insert({list: groceriesId, name: "Watercress"});
     Items.insert({list: groceriesId, name: "Persimmons"});
 
-{{> autoApiBox "Meteor.Collection#update"}}
+{{> autoApiBox "Mongo.Collection#update"}}
 
 Modify documents that match `selector` according to `modifier` (see
 [modifier documentation](#modifiers)).
@@ -878,7 +878,7 @@ option to true. You can also use the [`upsert`](#upsert) method to perform an
 upsert that returns the _id of the document that was inserted (if there was one)
 in addition to the number of affected documents.
 
-{{> autoApiBox "Meteor.Collection#upsert"}}
+{{> autoApiBox "Mongo.Collection#upsert"}}
 
 Modify documents that match `selector` according to `modifier`, or insert
 a document if no documents were modified. `upsert` is the same as calling
@@ -886,7 +886,7 @@ a document if no documents were modified. `upsert` is the same as calling
 value of `upsert` is an object that contain the keys `numberAffected`
 and `insertedId`. (`update` returns only the number of affected documents.)
 
-{{> autoApiBox "Meteor.Collection#remove"}}
+{{> autoApiBox "Mongo.Collection#remove"}}
 
 Find all of the documents that match `selector` and delete them from
 the collection.
@@ -1026,7 +1026,7 @@ Example:
     // is allowed to delete it, and the 'locked' attribute can be
     // set on a document to prevent its accidental deletion.
 
-    Posts = new Meteor.Collection("posts");
+    Posts = new Mongo.Collection("posts");
 
     Posts.allow({
       insert: function (userId, doc) {
@@ -1089,7 +1089,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 To create a cursor, use [`find`](#find).  To access the documents in a
 cursor, use [`forEach`](#foreach), [`map`](#map), or [`fetch`](#fetch).
 
-{{> autoApiBox "Meteor.Collection.Cursor#forEach"}}
+{{> autoApiBox "Mongo.Collection.Cursor#forEach"}}
 
 This interface is compatible with [Array.forEach](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach).
 
@@ -1106,7 +1106,7 @@ Examples:
       count += 1;
     });
 
-{{> autoApiBox "Meteor.Collection.Cursor#map"}}
+{{> autoApiBox "Mongo.Collection.Cursor#map"}}
 
 This interface is compatible with [Array.map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map).
 
@@ -1119,18 +1119,18 @@ On the server, if `callback` yields, other calls to `callback` may occur while
 the first call is waiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
-{{> autoApiBox "Meteor.Collection.Cursor#fetch"}}
+{{> autoApiBox "Mongo.Collection.Cursor#fetch"}}
 
 When called from a reactive computation, `fetch` registers dependencies on
 the matching documents.
 
-{{> autoApiBox "Meteor.Collection.Cursor#count"}}
+{{> autoApiBox "Mongo.Collection.Cursor#count"}}
 
 Unlike the other functions, `count` registers a dependency only on the
 number of matching documents.  (Updates that just change or reorder the
 documents in the result set will not trigger a recomputation.)
 
-{{> autoApiBox "Meteor.Collection.Cursor#observe"}}
+{{> autoApiBox "Mongo.Collection.Cursor#observe"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. The callbacks receive the entire contents of the
@@ -1195,7 +1195,7 @@ only deliver the initial results and will not call any further callbacks;
 it is not necessary to call `stop` on the handle.)
 
 
-{{> autoApiBox "Meteor.Collection.Cursor#observeChanges"}}
+{{> autoApiBox "Mongo.Collection.Cursor#observeChanges"}}
 
 Establishes a *live query* that invokes callbacks when the result of
 the query changes. In contrast to [`observe`](#observe),
@@ -1275,9 +1275,9 @@ Example:
     // After five seconds, stop keeping the count.
     setTimeout(function () {handle.stop();}, 5000);
 
-{{> autoApiBox "Meteor.Collection.ObjectID"}}
+{{> autoApiBox "Mongo.ObjectID"}}
 
-`Meteor.Collection.ObjectID` follows the same API as the [Node MongoDB driver
+`Mongo.ObjectID` follows the same API as the [Node MongoDB driver
 `ObjectID`](http://mongodb.github.com/node-mongodb-native/api-bson-generated/objectid.html)
 class. Note that you must use the `equals` method (or [`EJSON.equals`](#ejson_equals)) to
 compare them; the `===` operator will not work. If you are writing generic code
@@ -1294,7 +1294,7 @@ that needs to deal with `_id` fields that may be either strings or `ObjectID`s, 
 {{> apiBoxTitle name="Mongo-Style Selectors" id="selectors"}}
 
 The simplest selectors are just a string or
-[`Meteor.Collection.ObjectID`](#collection_object_id). These selectors match the
+[`Mongo.ObjectID`](#collection_object_id). These selectors match the
 document with that value in its `_id` field.
 
 A slightly more complex form of selector is an object containing a set of keys
@@ -1595,7 +1595,7 @@ treats the following fields specially:
   and its `resume` field contains tokens used to keep you
   logged in between sessions.
 
-Like all [Meteor.Collection](#collections)s, you can access all
+Like all [Mongo.Collection](#collections)s, you can access all
 documents on the server, but only those specifically published by the server are
 available on the client.
 
@@ -3206,7 +3206,7 @@ types, as well as:
  - **Binary** (JavaScript `Uint8Array` or the
    result of [`EJSON.newBinary`](#ejson_new_binary))
  - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
- [`Meteor.Collection.ObjectID`](#collection_object_id) is implemented this way.)
+ [`Mongo.ObjectID`](#collection_object_id) is implemented this way.)
 
 All EJSON serializations are also valid JSON.  For example an object with a date
 and a binary buffer would be serialized in EJSON as:
@@ -3269,7 +3269,7 @@ default implementations are not sufficient.
 {{> api_box ejsonTypeToJSONValue}}
 
 For example, the `toJSONValue` method for
-[`Meteor.Collection.ObjectID`](#collection_object_id) could be:
+[`Mongo.ObjectID`](#collection_object_id) could be:
 
     function () {
       return this.toHexString();

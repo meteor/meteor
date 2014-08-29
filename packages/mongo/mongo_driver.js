@@ -48,7 +48,7 @@ var replaceMongoAtomWithMeteor = function (document) {
     return new Uint8Array(buffer);
   }
   if (document instanceof MongoDB.ObjectID) {
-    return new Mongo.Collection.ObjectID(document.toHexString());
+    return new Mongo.ObjectID(document.toHexString());
   }
   if (document["EJSON$type"] && document["EJSON$value"]
       && _.size(document) === 2) {
@@ -71,7 +71,7 @@ var replaceMeteorAtomWithMongo = function (document) {
     // serialize it correctly).
     return new MongoDB.Binary(new Buffer(document));
   }
-  if (document instanceof Mongo.Collection.ObjectID) {
+  if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
   }
   if (document instanceof MongoDB.Timestamp) {

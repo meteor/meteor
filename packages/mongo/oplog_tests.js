@@ -16,15 +16,15 @@ Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
 
   supported(true, "asdf");
   supported(true, 1234);
-  supported(true, new Mongo.Collection.ObjectID());
+  supported(true, new Mongo.ObjectID());
 
   supported(true, {_id: "asdf"});
   supported(true, {_id: 1234});
-  supported(true, {_id: new Mongo.Collection.ObjectID()});
+  supported(true, {_id: new Mongo.ObjectID()});
 
   supported(true, {foo: "asdf",
                    bar: 1234,
-                   baz: new Mongo.Collection.ObjectID(),
+                   baz: new Mongo.ObjectID(),
                    eeney: true,
                    miney: false,
                    moe: null});

@@ -62,8 +62,8 @@ _.extend(ReactiveDict.prototype, {
   equals: function (key, value) {
     var self = this;
 
-    // Mongo.Collection.ObjectID is in the 'mongo' package
-    var ObjectID = Mongo.Collection && Mongo.Collection.ObjectID;
+    // Mongo.ObjectID is in the 'mongo' package
+    var ObjectID = Mongo.Collection && Mongo.ObjectID;
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key

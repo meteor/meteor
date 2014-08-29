@@ -119,8 +119,8 @@ testAsyncMulti("livedata - basic method invocation", [
   echoTest(new Date()),
   echoTest({d: new Date(), s: "foobarbaz"}),
   echoTest([new Date(), "foobarbaz"]),
-  echoTest(new Mongo.Collection.ObjectID()),
-  echoTest({o: new Mongo.Collection.ObjectID()}),
+  echoTest(new Mongo.ObjectID()),
+  echoTest({o: new Mongo.ObjectID()}),
   echoTest({$date: 30}), // literal
   echoTest({$literal: {$date: 30}}),
   echoTest(12),

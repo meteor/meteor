@@ -14,7 +14,7 @@ Mongo = {};
  * @param {String} options.idGeneration The method of generating the `_id` fields of new documents in this collection.  Possible values:
 
  - **`'STRING'`**: random strings
- - **`'MONGO'`**:  random [`Mongo.Collection.ObjectID`](#collection_object_id) values
+ - **`'MONGO'`**:  random [`Mongo.ObjectID`](#collection_object_id) values
 
 The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
@@ -59,7 +59,7 @@ Mongo.Collection = function (name, options) {
   case 'MONGO':
     self._makeNewID = function () {
       var src = name ? DDP.randomStream('/collection/' + name) : Random;
-      return new Mongo.Collection.ObjectID(src.hexString(24));
+      return new Mongo.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
@@ -464,7 +464,7 @@ _.each(["insert", "update", "remove"], function (name) {
       if ('_id' in args[0]) {
         insertId = args[0]._id;
         if (!insertId || !(typeof insertId === 'string'
-              || insertId instanceof Mongo.Collection.ObjectID))
+              || insertId instanceof Mongo.ObjectID))
           throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       } else {
         var generateId = true;
@@ -494,7 +494,7 @@ _.each(["insert", "update", "remove"], function (name) {
           // set `insertedId` if absent.  `insertedId` is a Meteor extension.
           if (options.insertedId) {
             if (!(typeof options.insertedId === 'string'
-                  || options.insertedId instanceof Mongo.Collection.ObjectID))
+                  || options.insertedId instanceof Mongo.ObjectID))
               throw new Error("insertedId must be string or ObjectID");
           } else {
             options.insertedId = self._makeNewID();
@@ -637,7 +637,19 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize) {
  * @class
  * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.Collection.ObjectID = LocalCollection._ObjectID;
+Mongo.ObjectID = LocalCollection._ObjectID;
+
+/**
+ * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.
+ * @class
+ * @instanceName cursor
+ */
+Mongo.Cursor = LocalCollection.Cursor;
+
+/**
+ * @deprecated in 0.9.1
+ */
+Mongo.Collection.ObjectID = Mongo.ObjectID;
 
 ///
 /// Remote methods and access control.
