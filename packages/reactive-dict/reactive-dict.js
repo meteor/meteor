@@ -11,10 +11,26 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
-// migrationData, if present, should be data previously returned from
-// getMigrationData()
-ReactiveDict = function (migrationData) {
-  this.keys = migrationData || {}; // key -> value
+// XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
+ReactiveDict = function (dictName) {
+  // this.keys: key -> value
+  if (dictName) {
+    if (typeof dictName === 'object') {
+      // back-compat case: dictName is actually migrationData
+      this.keys = dictName;
+    } else if (typeof dictName === 'string') {
+      // the normal case, argument is a string name.
+      // _registerDictForMigrate will throw an error on duplicate name.
+      ReactiveDict._registerDictForMigrate(dictName, this);
+      this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
+    } else {
+      throw new Error("Invalid ReactiveDict argument: " + dictName);
+    }
+  } else {
+    // no name given; no migration will be performed
+    this.keys = {};
+  }
+
   this.keyDeps = {}; // key -> Dependency
   this.keyValueDeps = {}; // key -> Dependency
 };

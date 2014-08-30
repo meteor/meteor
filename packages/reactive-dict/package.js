@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('mongo', {weak: true});
   api.export('ReactiveDict');
   api.add_files('reactive-dict.js');
+  api.add_files('migration.js');
 });
 
 Package.on_test(function (api) {
