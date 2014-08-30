@@ -30,12 +30,6 @@ Template.body = new Template('body', function () {
 Template.body.contentViews = []; // array of Blaze.Views
 Template.body.view = null;
 
-// XXX COMPAT WITH 0.9.0
-// (<body> tags in packages built with 0.9.0)
-Template.__body__ = Template.body;
-Template.__body__.__contentParts = Template.body.contentViews;
-Template.__body__.__instantiate = Template.body.renderToDocument;
-
 Template.body.addContent = function (renderFunc) {
   var kind = 'body_content_' + Template.body.contentViews.length;
 
@@ -53,5 +47,11 @@ Template.body.renderToDocument = function () {
   Template.body.view = view;
 };
 
-// back-compat (we no longer document UI.body)
+// XXX COMPAT WITH 0.9.0
 UI.body = Template.body;
+
+// XXX COMPAT WITH 0.9.0
+// (<body> tags in packages built with 0.9.0)
+Template.__body__ = Template.body;
+Template.__body__.__contentParts = Template.body.contentViews;
+Template.__body__.__instantiate = Template.body.renderToDocument;
