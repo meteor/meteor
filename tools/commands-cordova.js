@@ -592,13 +592,6 @@ cordova.buildPlatforms = function (localPath, platforms, options) {
   buildCordova(localPath, 'build', options);
 };
 
-cordova.preparePlatforms = function (localPath, platforms, options) {
-  verboseLog('Running prepare for platforms:', platforms);
-  checkRequestedPlatforms(platforms);
-  buildCordova(localPath, 'prepare', options);
-};
-
-
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
 // options:
