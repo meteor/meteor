@@ -1334,6 +1334,7 @@ _.extend(PackageSource.prototype, {
           include: [/\/$/],
           exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
                     /^public\/$/, /^private\/$/,
+                    /^cordova-build-override\/$/,
                     otherUnibuildRegExp].concat(sourceExclude)
         });
         checkForInfiniteRecursion('');

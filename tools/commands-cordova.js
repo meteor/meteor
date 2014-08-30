@@ -549,7 +549,15 @@ var buildCordova = function (localPath, buildCommand, options) {
   var loaderCode = fs.readFileSync(loaderPath);
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
-  verboseLog('Running the build command');
+  var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
+
+  if (fs.existsSync(buildOverridePath) &&
+      fs.statSync(buildOverridePath).isDirectory()) {
+    verboseLog('Copying over the cordova-build-override');
+    files.cp_r(buildOverridePath, cordovaPath);
+  }
+
+  verboseLog('Running the build command:', buildCommand);
   // Give the buffer more space as the output of the build is really huge
   execFileSyncOrThrow(localCordova, [buildCommand],
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
