@@ -35,6 +35,14 @@ Returns a random element of the given array or string.
 {{#dtdd "Random.hexString(n)"}}
 Returns a random string of `n` hexadecimal digits.
 {{/dtdd}}
+
+{{#dtdd "Random.createWithSeeds(arrayOrString)"}}
+Returns a random number generator. The value passed in is used to seed 
+pseudo-random number generation. By using the same seed with the same 
+algorithm, the same pseudo-random values can be generated on the client 
+and the server. In particular, this is used for generating ids for newly 
+created documents.
+{{/dtdd}}
 </dl>
 
 {{/markdown}}
