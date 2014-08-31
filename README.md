@@ -62,8 +62,9 @@ referenced by `jobName` will run next.
 
 ```
 SyncedCron.options: {
-  debug: true, // log debug info to the console
-  collectionName: 'cronHistory' // default name of the collection used to store job history
+  log: true, // log debug info to the console
+  collectionName: 'cronHistory' // default name of the collection used to store job history,
+  utc: false // use UTC for evaluating schedules (default: local time)
 }
 ```
 

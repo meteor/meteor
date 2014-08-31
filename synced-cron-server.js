@@ -2,12 +2,19 @@
 SyncedCron = {
   _entries: [],
   options: {
-    debug: true,
-    collectionName: 'cronHistory'
+    log: true,
+    collectionName: 'cronHistory',
+    utc: false //default to using localTime
   }
 }
 
 Later = Npm.require('later');
+
+// Use UTC or localtime for evaluating schedules
+if (SyncedCron.options.utc)
+  Later.date.UTC();
+else
+  Later.date.localTime();
 
 // collection holding the job history records
 SyncedCron._collection = 
@@ -16,7 +23,7 @@ SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
 
 var log = {
   info: function(message) {
-    if (SyncedCron.options.debug)
+    if (SyncedCron.options.log)
       console.log(message);
   }
 }
