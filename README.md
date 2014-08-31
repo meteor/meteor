@@ -58,6 +58,15 @@ parameter on an entry to specify the number of days of logs to keep.
 Call `SyncedCron.nextScheduledAtDate(jobName)` to find the date that the job
 referenced by `jobName` will run next.
 
+### Configuration
+
+```
+SyncedCron.options: {
+  debug: true, // log debug info to the console
+  collectionName: 'cronHistory' // default name of the collection used to store job history
+}
+```
+
 
 ## Contributing
 

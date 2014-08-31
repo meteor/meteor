@@ -1,14 +1,25 @@
 // A package for running jobs synchronized across multiple processes
 SyncedCron = {
   _entries: [],
+  options: {
+    debug: true,
+    collectionName: 'cronHistory'
+  }
 }
 
 Later = Npm.require('later');
 
 // collection holding the job history records
-SyncedCron._collection = new Meteor.Collection('cronHistory');
+SyncedCron._collection = 
+  new Meteor.Collection(SyncedCron.options.collectionName);
 SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
 
+var log = {
+  info: function(message) {
+    if (SyncedCron.options.debug)
+      console.log(message);
+  }
+}
 
 // add a scheduled job
 // SyncedCron.add({
@@ -34,7 +45,7 @@ SyncedCron.start = function() {
     var schedule = entry.schedule(Later.parse);
     self._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
 
-    console.log('SyncedCron: scheduled "' + entry.name + '" next run @' 
+    log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
       + Later.schedule(schedule).next(1));
   });
 }
@@ -77,7 +88,7 @@ SyncedCron._entryWrapper = function(entry) {
       // http://www.mongodb.org/about/contributors/error-codes/
       // 11000 == duplicate key error
       if (e.name === 'MongoError' && e.code === 11000) {
-        console.log('SyncedCron: Not running "' + entry.name + '" again.');
+        log.info('SyncedCron: Not running "' + entry.name + '" again.');
         return;
       }
 
@@ -86,10 +97,10 @@ SyncedCron._entryWrapper = function(entry) {
 
     // run and record the job
     try {
-      console.log('SyncedCron: Starting "' + entry.name + '".');
+      log.info('SyncedCron: Starting "' + entry.name + '".');
       var output = entry.job(intendedAt); // <- Run the actual job
   
-      console.log('SyncedCron: Finished "' + entry.name + '".');
+      log.info('SyncedCron: Finished "' + entry.name + '".');
       self._collection.update({_id: jobHistory._id}, {
         $set: {
           finishedAt: new Date(),
@@ -100,7 +111,7 @@ SyncedCron._entryWrapper = function(entry) {
       if (entry.purgeLogsAfterDays)
         SyncedCron._purgeEntries(entry.name, entry.purgeLogsAfterDays);
     } catch(e) {
-      console.log('SyncedCron: Exception "' + entry.name +'" ' + e.stack);
+      log.info('SyncedCron: Exception "' + entry.name +'" ' + e.stack);
       self._collection.update({_id: jobHistory._id}, {
         $set: {
           finishedAt: new Date(),
