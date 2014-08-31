@@ -50,7 +50,7 @@ SyncedCron.start = function() {
   // Schedule each job with later.js
   this._entries.forEach(function(entry) {
     var schedule = entry.schedule(Later.parse);
-    self._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
+    entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
 
     log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
       + Later.schedule(schedule).next(1));
