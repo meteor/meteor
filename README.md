@@ -52,6 +52,8 @@ SyncedCron uses a collection called `cronHistory` to syncronize between processe
 }
 ```
 
+If you want old entries in the log cleaned out, simply set the `purgeLogsAfterDays`
+parameter on an entry to specify the number of days of logs to keep.
 
 
 ## Contributing

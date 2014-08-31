@@ -86,6 +86,9 @@ SyncedCron._entryWrapper = function(entry) {
           result: output
         }
       });
+
+      if (entry.purgeLogsAfterDays)
+        SyncedCron._purgeEntries(entry.name, entry.purgeLogsAfterDays);
     } catch(e) {
       console.log('SyncedCron: Exception "' + entry.name +'" ' + e.stack);
       self._collection.update({_id: jobHistory._id}, {
@@ -96,6 +99,14 @@ SyncedCron._entryWrapper = function(entry) {
       });
     }
   };
+}
+
+// remove entries that are older than daysBefore
+SyncedCron._purgeEntries = function(name, daysBefore) {
+  var beforeDate = new Date;
+  beforeDate.setDate(beforeDate.getDate() - daysBefore);
+  
+  this._collection.remove({name: name, startedAt: {$lte: beforeDate}});
 }
 
 // for tests

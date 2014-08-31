@@ -1,0 +1,7 @@
+{
+  "packages": {
+    "synced-cron": {
+      "path" : ".."
+    }
+  }
+}

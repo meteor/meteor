@@ -2,7 +2,7 @@ Package.describe({
   summary: "Allows you to define and run scheduled jobs across multiple servers."
 });
 
-Npm.depends({later: "1.1.6"});
+Npm.depends({later: "1.1.6", sinon: "1.10.2"});
 
 Package.on_use(function (api) {
   api.use(['underscore', 'check'], 'server');

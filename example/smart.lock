@@ -1,0 +1,15 @@
+{
+  "meteor": {},
+  "dependencies": {
+    "basePackages": {
+      "synced-cron": {
+        "path": ".."
+      }
+    },
+    "packages": {
+      "synced-cron": {
+        "path": ".."
+      }
+    }
+  }
+}
