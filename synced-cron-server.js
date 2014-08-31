@@ -39,20 +39,14 @@ SyncedCron.start = function() {
   });
 }
 
-// Return the scheduled date of the first matching entry
-SyncedCron.getNext = function (jobName) {
-  var self = this;
-  var scheduledAt;
-
-  this._entries.some(function(entry) {
-    if(entry.name === jobName){
-      var schedule = entry.schedule(Later.parse);
-      scheduledAt = Later.schedule(schedule).next(1);
-      return true;
-    }
+// Return the next scheduled date of the first matching entry or undefined
+SyncedCron.nextScheduledAtDate = function (jobName) {
+  var entry = _.find(this._entries, function(entry) {
+    return entry.name === jobName;
   });
-
-  return scheduledAt;
+  
+  if (entry)
+    return Later.schedule(entry.schedule(Later.parse)).next(1);
 }
 
 // Stop processing jobs
