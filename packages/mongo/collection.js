@@ -628,11 +628,11 @@ Mongo.Collection.prototype._dropCollection = function () {
     throw new Error("Can only call _dropCollection on server collections");
   self._collection.dropCollection();
 };
-Mongo.Collection.prototype._createCappedCollection = function (byteSize) {
+Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocuments) {
   var self = this;
   if (!self._collection._createCappedCollection)
     throw new Error("Can only call _createCappedCollection on server collections");
-  self._collection._createCappedCollection(byteSize);
+  self._collection._createCappedCollection(byteSize, maxDocuments);
 };
 
 /**
