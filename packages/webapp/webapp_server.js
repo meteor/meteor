@@ -266,8 +266,9 @@ var getBoilerplate = function (request, arch) {
     // scripts are allowed, so we can memoize based on that.
     return JSON.stringify({
       inlineScriptsAllowed: inlineScriptsAllowed,
-      htmlAttributes: htmlAttributes
-    }) + '-arch:' + arch;
+      htmlAttributes: htmlAttributes,
+      arch: arch
+    });
   };
 
   var memHash = calculateMemoizationHash(request, arch);
