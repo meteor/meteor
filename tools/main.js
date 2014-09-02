@@ -2,6 +2,8 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
   require('./profile-require.js').start();
 
+process.title = 'meteor';
+
 var _ = require('underscore');
 var Fiber = require('fibers');
 var files = require('./files.js');
