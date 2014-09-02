@@ -95,7 +95,7 @@ if (Meteor.isServer) {
 
 /*****/
 
-Ledger = new Meteor.Collection("ledger");
+Ledger = new Mongo.Collection("ledger");
 Ledger.allow({
   insert: function() { return true; },
   update: function() { return true; },
@@ -147,7 +147,7 @@ Meteor.methods({
 
 /// Helpers for "livedata - changing userid reruns subscriptions..."
 
-objectsWithUsers = new Meteor.Collection("objectsWithUsers");
+objectsWithUsers = new Mongo.Collection("objectsWithUsers");
 
 if (Meteor.isServer) {
   objectsWithUsers.remove({});
@@ -313,8 +313,8 @@ if (Meteor.isServer) {
 /*****/
 
 /// Helpers for "livedata - publish multiple cursors"
-One = new Meteor.Collection("collectionOne");
-Two = new Meteor.Collection("collectionTwo");
+One = new Mongo.Collection("collectionOne");
+Two = new Mongo.Collection("collectionTwo");
 
 if (Meteor.isServer) {
   One.remove({});

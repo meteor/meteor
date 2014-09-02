@@ -1,5 +1,5 @@
 // Lists -- {name: String}
-Lists = new Meteor.Collection("lists");
+Lists = new Mongo.Collection("lists");
 
 // Publish complete set of lists to all clients.
 Meteor.publish('lists', function () {
@@ -12,7 +12,7 @@ Meteor.publish('lists', function () {
 //           tags: [String, ...],
 //           list_id: String,
 //           timestamp: Number}
-Todos = new Meteor.Collection("todos");
+Todos = new Mongo.Collection("todos");
 
 // Publish all items for requested list_id.
 Meteor.publish('todos', function (list_id) {

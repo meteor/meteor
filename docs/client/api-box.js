@@ -40,7 +40,7 @@ Template.autoApiBox.helpers({
       } else if (name === "MongoSelector") {
         return [
           typeLink("Mongo Selector", "selectors"),
-          typeLink("Object ID", "collection_object_id"),
+          typeLink("Object ID", "mongo_object_id"),
           "String"
         ];
       } else if (name === "MongoModifier") {
