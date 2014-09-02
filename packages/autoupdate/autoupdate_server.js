@@ -105,11 +105,11 @@ var updateVersions = function (shouldReloadClientProgram) {
   if (! ClientVersions.findOne({_id: "version"})) {
     ClientVersions.insert({
       _id: "version",
-      version: Autoupdate.autoupdateVersion,
+      version: Autoupdate.autoupdateVersion
     });
   } else {
     ClientVersions.update("version", { $set: {
-      version: Autoupdate.autoupdateVersion,
+      version: Autoupdate.autoupdateVersion
     }});
   }
 
