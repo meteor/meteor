@@ -15,8 +15,8 @@ curl "docs.meteor.com/?_escaped_fragment_=key1=value1" > old
 
 # use our handy canonicalize script copy-pasted from the test-helpers package
 # maybe there is a way to use the actual package?
-${METEOR_FOLDER}/scripts/node.sh "${DOCS_FOLDER}/public/canonicalize.js" new > new1
-${METEOR_FOLDER}/scripts/node.sh "${DOCS_FOLDER}/public/canonicalize.js" old > old1
+${METEOR_FOLDER}/scripts/node.sh "${DOCS_FOLDER}/private/canonicalize.js" new > new1
+${METEOR_FOLDER}/scripts/node.sh "${DOCS_FOLDER}/private/canonicalize.js" old > old1
 
 # remove some of the things we want to ignore, you might want to change these
 cat new1 | sed "s/new-api-box//g" | sed "s/ class=\"api-title\"//g" > new2
