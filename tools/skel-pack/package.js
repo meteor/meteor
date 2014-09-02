@@ -1,4 +1,5 @@
 Package.describe({
+  name: "~name~",
   summary: " \* Fill me in! *\ ",
   version: "1.0.0",
   git: " \* Fill me in! *\ "
