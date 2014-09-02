@@ -256,18 +256,26 @@ var boilerplateByArch = {};
 // boilerplate HTML to serve for that request. Memoizes on HTML
 // attributes (used by, eg, appcache) and whether inline scripts are
 // currently allowed.
-var getBoilerplate = _.memoize(function (request, arch) {
-  return boilerplateByArch[arch].toHTML();
-}, function (request) {
-  var htmlAttributes = getHtmlAttributes(request);
-  // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
-  return JSON.stringify({
-    inlineScriptsAllowed: inlineScriptsAllowed,
-    htmlAttributes: htmlAttributes
-  });
-});
+// XXX so far this function is always called with arch === 'web.browser'
+var memoizedBoilerplate = {};
+var getBoilerplate = function (request, arch) {
+  var calculateMemoizationHash = function (request, arch) {
+    var htmlAttributes = getHtmlAttributes(request);
+    // The only thing that changes from request to request (for now) are
+    // the HTML attributes (used by, eg, appcache) and whether inline
+    // scripts are allowed, so we can memoize based on that.
+    return JSON.stringify({
+      inlineScriptsAllowed: inlineScriptsAllowed,
+      htmlAttributes: htmlAttributes
+    }) + '-arch:' + arch;
+  };
+
+  var memHash = calculateMemoizationHash(request, arch);
+
+  if (! memoizedBoilerplate[memHash])
+    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML();
+  return memoizedBoilerplate[memHash];
+};
 
 var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
   additionalOptions = additionalOptions || {};
@@ -520,6 +528,9 @@ var runWebAppServer = function () {
         boilerplateByArch[archName] =
           generateBoilerplateInstance(archName, program.manifest);
       });
+
+      // Clear the memoized boilerplate cache.
+      memoizedBoilerplate = {};
 
       // Configure CSS injection for the default arch
       // XXX implement the CSS injection for all archs?
