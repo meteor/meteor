@@ -119,7 +119,7 @@ Usage: meteor add <package> [package] [package..]
 
 Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
-the meteor --search command.
+the meteor search command.
 
 
 >>> remove
