@@ -29,7 +29,7 @@ if (Package.reload) {
     var dataToMigrate = {};
 
     for (var dictName in dictsToMigrate)
-      dataToMigrate[dictName] = dictsToMigrate[dictName].getMigrationData();
+      dataToMigrate[dictName] = dictsToMigrate[dictName]._getMigrationData();
 
     return [true, {dicts: dataToMigrate}];
   });

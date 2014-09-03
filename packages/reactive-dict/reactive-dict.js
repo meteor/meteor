@@ -132,7 +132,7 @@ _.extend(ReactiveDict.prototype, {
 
   // Get a JSON value that can be passed to the constructor to
   // create a new ReactiveDict with the same contents as this one
-  getMigrationData: function () {
+  _getMigrationData: function () {
     // XXX sanitize and make sure it's JSONible?
     return this.keys;
   }
