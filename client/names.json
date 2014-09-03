@@ -29,6 +29,7 @@
   "EJSON.stringify",
   "EJSON.toJSONValue",
   "HTTP.call",
+  "Match.test",
   "Meteor",
   "Meteor.Collection",
   "Meteor.Collection#allow",

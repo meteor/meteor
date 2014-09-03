@@ -153,7 +153,8 @@ var toc = [
       ],
       "Meteor.Error",
       "Meteor.call",
-      "Meteor.apply"
+      "Meteor.apply",
+      "check"
     ],
 
     {name: "Server connections", id: "connections"}, [
@@ -288,7 +289,6 @@ var toc = [
      ],
 
     "Match", [
-      "check",
       "Match.test",
       {name: "Match patterns", style: "noncode"}
     ],
