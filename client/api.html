@@ -320,10 +320,9 @@ their stub version that update the local cache, and sending the same write
 request to the server. When the server responds, the client updates the local
 cache with the writes that actually occurred on the server.
 
-The [`check` package](#match) allows you to use the [`check` function](#check)
-to ensure your method arguments have the correct
-[types and structure](#matchpatterns). Use it liberally
-to catch unexpected input.
+Since methods usually expect particular types as arguments,
+use [`check`](#check) liberally to ensure your method arguments have
+the correct [types and structure](#matchpatterns).
 
 {{> autoApiBox "MethodInvocation#userId"}}
 
