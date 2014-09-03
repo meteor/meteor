@@ -76,6 +76,13 @@ Match = {
   // XXX maybe also implement a Match.match which returns more information about
   //     failures but without using exception handling or doing what check()
   //     does with _failIfArgumentsAreNotAllChecked and Meteor.Error conversion
+  
+  /**
+   * @summary Returns true if the value matches the pattern.
+   * @locus Anywhere
+   * @param {Any} value The value to check
+   * @param {MatchPattern} pattern The pattern to match `value` against
+   */
   test: function (value, pattern) {
     try {
       checkSubtree(value, pattern);

@@ -429,6 +429,36 @@ even if the method's writes are not available yet, you can specify an
 passed as an array rather than directly as arguments, and you can specify
 options about how the client executes the method.
 
+{{> autoApiBox "check"}}
+
+Meteor methods and publish functions take arbitrary [EJSON](#ejson) types as
+arguments, but most arguments are expected to be of a particular type. `check`
+is a lightweight function for checking that arguments and other
+values are of the expected type. For example:
+
+    Meteor.publish("chats-in-room", function (roomId) {
+      // Make sure roomId is a string, not an arbitrary mongo selector object.
+      check(roomId, String);
+      return Chats.find({room: roomId});
+    });
+
+    Meteor.methods({addChat: function (roomId, message) {
+      check(roomId, String);
+      check(message, {
+        text: String,
+        timestamp: Date,
+        // Optional, but if present must be an array of strings.
+        tags: Match.Optional([String])
+      });
+
+      // ... do something with the message ...
+    }});
+
+If the match fails, `check` throws a `Match.Error` describing how it failed. If
+this error gets sent over the wire to the client, it will appear only as
+`Meteor.Error(400, "Match Failed")`; the failure details will be written to the
+server logs but not revealed to the client.
+
 <h2 id="connections"><span>Server connections</span></h2>
 
 These functions manage and inspect the network connection between the
@@ -2717,41 +2747,16 @@ public API.
 
 <h2 id="match"><span>Match</span></h2>
 
-Meteor methods and publish functions take arbitrary [EJSON](#ejson) types as
-arguments, but most arguments are expected to be of a particular type. Meteor's
-`check` package is a lightweight library for checking that arguments and other
-values are of the expected type. For example:
+The `check` package which exports the [`check`](#check) function for checking
+method arguments also includes an extensible library of patterns to specify
+which types and values you are expecting.
 
-    Meteor.publish("chats-in-room", function (roomId) {
-      // Make sure roomId is a string, not an arbitrary mongo selector object.
-      check(roomId, String);
-      return Chats.find({room: roomId});
-    });
+{{> autoApiBox "Match.test"}}
 
-    Meteor.methods({addChat: function (roomId, message) {
-      check(roomId, String);
-      check(message, {
-        text: String,
-        timestamp: Date,
-        // Optional, but if present must be an array of strings.
-        tags: Match.Optional([String])
-      });
+{{> apiBoxTitle name="Match Patterns" id="matchpatterns"}}
 
-      // ... do something with the message ...
-    }});
-
-{{> autoApiBox "check"}}
-
-If the match fails, `check` throws a `Match.Error` describing how it failed. If
-this error gets sent over the wire to the client, it will appear only as
-`Meteor.Error(400, "Match Failed")`; the failure details will be written to the
-server logs but not revealed to the client.
-
-{{> api_box match_test}}
-
-{{#api_box matchpatterns}}
-
-The following patterns can be used as pattern arguments to `check` and `Match.test`:
+The following patterns can be used as pattern arguments to
+[`check`](#check) and `Match.test`:
 
 
 <dl>
@@ -2828,8 +2833,6 @@ from the call to `check` or `Match.test`. Examples:
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
-
-{{/api_box}}
 
 <h2 id="timers"><span>Timers</span></h2>
 
