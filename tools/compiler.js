@@ -422,8 +422,6 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
       servePath: path.join(inputSourceArch.pkg.serveRoot, relPath),
       hash: hash
     });
-
-    sources.push(relPath);
   };
 
   _.each(sourceItems, function (source) {
