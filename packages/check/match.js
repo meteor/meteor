@@ -6,8 +6,8 @@
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
 /**
- * @summary Checks that a value matches a [pattern](#matchpatterns).
- * If the value does not match the pattern, throws a `Match.Error`.
+ * @summary Check that a value matches a [pattern](#matchpatterns).
+ * If the value does not match the pattern, throw a `Match.Error`.
  * 
  * Particularly useful to assert that arguments to a function have the right
  * types and structure.
