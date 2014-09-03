@@ -5,10 +5,16 @@ Template = Blaze.Template;
 // Check for duplicate template names and illegal names that won't work.
 Template.__checkName = function (name) {
   if (name in Template) {
-    if (Template[name] instanceof Template)
+    if ((Template[name] instanceof Template) && name !== "body")
       throw new Error("There are multiple templates named '" + name + "'. Each template needs a unique name.");
     throw new Error("This template name is reserved: " + name);
   }
+};
+
+// XXX COMPAT WITH 0.8.3
+Template.__define__ = function (name, renderFunc) {
+  Template.__checkName(name);
+  Template[name] = new Template("Template." + name, renderFunc);
 };
 
 // Define a template `Template.body` that renders its
@@ -41,5 +47,11 @@ Template.body.renderToDocument = function () {
   Template.body.view = view;
 };
 
-// back-compat (we no longer document UI.body)
+// XXX COMPAT WITH 0.9.0
 UI.body = Template.body;
+
+// XXX COMPAT WITH 0.9.0
+// (<body> tags in packages built with 0.9.0)
+Template.__body__ = Template.body;
+Template.__body__.__contentParts = Template.body.contentViews;
+Template.__body__.__instantiate = Template.body.renderToDocument;

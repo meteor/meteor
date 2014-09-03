@@ -18,7 +18,7 @@ var password = "testtest";
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    standard-app-packages (ie: name), in which case this will match any
+//    meteor-platform (ie: name), in which case this will match any
 //    version of that package as long as it is included.
 //
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
@@ -50,7 +50,7 @@ var checkPackages = function(sand, packages) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    standard-app-packages (ie: name), in which case this will match any
+//    meteor-platform (ie: name), in which case this will match any
 //    version of that package as long as it is included. This is for packages
 //    external to the app, since we don't want this test to fail when we push a
 //    new version.
@@ -105,7 +105,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("running at");
   run.match("localhost");
   // Add the local package 'say-something'. It should print a message.
-  s.write(".meteor/packages", "standard-app-packages \n say-something");
+  s.write(".meteor/packages", "meteor-platform \n say-something");
   run.waitSecs(3);
   run.match("initial");
   run.match("restarted");
@@ -119,7 +119,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("restarted");
 
   // Add a local package depends-on-plugin.
-  s.write(".meteor/packages", "standard-app-packages \n depends-on-plugin");
+  s.write(".meteor/packages", "meteor-platform \n depends-on-plugin");
   run.waitSecs(2);
   run.match("foobar");
   run.match("restarted");
@@ -151,14 +151,14 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("restarted");
 
   // Switch back to say-something for a moment.
-  s.write(".meteor/packages", "standard-app-packages \n say-something");
+  s.write(".meteor/packages", "meteor-platform \n say-something");
   run.waitSecs(3);
   run.match("another");
   run.match("restarted");
   run.stop();
 
   s.rename('packages/say-something', 'packages/shout-something');
-  s.write(".meteor/packages", "standard-app-packages \n shout-something");
+  s.write(".meteor/packages", "meteor-platform \n shout-something");
   s.cd("packages/shout-something", function () {
     s.write("foo.js", "console.log(\"louder\");");
   });
@@ -210,7 +210,7 @@ selftest.define("add packages to app", ["net"], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["standard-app-packages", "accounts-base"]);
+                ["meteor-platform", "accounts-base"]);
 
   run = s.run("--once");
 
@@ -219,7 +219,7 @@ selftest.define("add packages to app", ["net"], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["standard-app-packages", "accounts-base",  "say-something@1.0.0"]);
+                ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
   run.match(" added");
@@ -227,19 +227,19 @@ selftest.define("add packages to app", ["net"], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["standard-app-packages", "accounts-base",
+                ["meteor-platform", "accounts-base",
                  "say-something@1.0.0", "depends-on-plugin"]);
 
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "say-something",  "standard-app-packages",
+                 "say-something",  "meteor-platform",
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
   run.match("Removed top-level dependency on say-something.");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "standard-app-packages",
+                 "meteor-platform",
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
@@ -249,9 +249,9 @@ selftest.define("add packages to app", ["net"], function () {
 
   checkVersions(s,
                 ["accounts-base",
-                 "standard-app-packages"]);
+                 "meteor-platform"]);
   run = s.run("list");
-  run.match("standard-app-packages");
+  run.match("meteor-platform");
   run.match("accounts-base");
 
   // Add packages to sub-programs of an app. Make sure that the correct change
@@ -260,13 +260,13 @@ selftest.define("add packages to app", ["net"], function () {
 
   // Don't add the file to packages.
   run = s.run("list");
-  run.match("standard-app-packages");
+  run.match("meteor-platform");
   run.match("accounts-base");
 
   // Do add the file to versions.
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "standard-app-packages",
+                 "meteor-platform",
                  "contains-plugin"]);
 
   // Add a description-less package. Check that no weird things get
@@ -650,7 +650,7 @@ selftest.define("talk to package server with expired or no accounts token", ['ne
   run.write("testtest\n");
   run.waitSecs(15);
   // The 'test' user should not be a maintainer of
-  // standard-app-packages. So this command should fail.
+  // meteor-platform. So this command should fail.
   run.matchErr("You are not an authorized maintainer");
   run.expectExit(1);
 

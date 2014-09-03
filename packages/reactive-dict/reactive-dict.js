@@ -11,10 +11,26 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
-// migrationData, if present, should be data previously returned from
-// getMigrationData()
-ReactiveDict = function (migrationData) {
-  this.keys = migrationData || {}; // key -> value
+// XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
+ReactiveDict = function (dictName) {
+  // this.keys: key -> value
+  if (dictName) {
+    if (typeof dictName === 'string') {
+      // the normal case, argument is a string name.
+      // _registerDictForMigrate will throw an error on duplicate name.
+      ReactiveDict._registerDictForMigrate(dictName, this);
+      this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
+    } else if (typeof dictName === 'object') {
+      // back-compat case: dictName is actually migrationData
+      this.keys = dictName;
+    } else {
+      throw new Error("Invalid ReactiveDict argument: " + dictName);
+    }
+  } else {
+    // no name given; no migration will be performed
+    this.keys = {};
+  }
+
   this.keyDeps = {}; // key -> Dependency
   this.keyValueDeps = {}; // key -> Dependency
 };
@@ -62,8 +78,8 @@ _.extend(ReactiveDict.prototype, {
   equals: function (key, value) {
     var self = this;
 
-    // Meteor.Collection.ObjectID is in the 'mongo' package
-    var ObjectID = Meteor.Collection && Meteor.Collection.ObjectID;
+    // Mongo.ObjectID is in the 'mongo' package
+    var ObjectID = Mongo.Collection && Mongo.ObjectID;
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key
@@ -116,7 +132,7 @@ _.extend(ReactiveDict.prototype, {
 
   // Get a JSON value that can be passed to the constructor to
   // create a new ReactiveDict with the same contents as this one
-  getMigrationData: function () {
+  _getMigrationData: function () {
     // XXX sanitize and make sure it's JSONible?
     return this.keys;
   }

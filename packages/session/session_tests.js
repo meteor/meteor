@@ -85,10 +85,10 @@ Tinytest.add('session - get/set/equals types', function (test) {
   test.isFalse(Session.equals('date', new Date(3455)));
   test.isTrue(Session.equals('date', new Date(1234)));
 
-  Session.set('oid', new Meteor.Collection.ObjectID('ffffffffffffffffffffffff'));
-  test.equal(Session.get('oid'),  new Meteor.Collection.ObjectID('ffffffffffffffffffffffff'));
-  test.isFalse(Session.equals('oid',  new Meteor.Collection.ObjectID('fffffffffffffffffffffffa')));
-  test.isTrue(Session.equals('oid', new Meteor.Collection.ObjectID('ffffffffffffffffffffffff')));
+  Session.set('oid', new Mongo.ObjectID('ffffffffffffffffffffffff'));
+  test.equal(Session.get('oid'),  new Mongo.ObjectID('ffffffffffffffffffffffff'));
+  test.isFalse(Session.equals('oid',  new Mongo.ObjectID('fffffffffffffffffffffffa')));
+  test.isTrue(Session.equals('oid', new Mongo.ObjectID('ffffffffffffffffffffffff')));
 });
 
 Tinytest.add('session - objects are cloned', function (test) {

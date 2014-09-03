@@ -1,6 +1,6 @@
-Time = new Meteor.Collection("time");
-Results = new Meteor.Collection("results");
-Magic = new Meteor.Collection("magic");
+Time = new Mongo.Collection("time");
+Results = new Mongo.Collection("results");
+Magic = new Mongo.Collection("magic");
 
 if (Meteor.isServer) {
   Meteor.publish("time", function () {
