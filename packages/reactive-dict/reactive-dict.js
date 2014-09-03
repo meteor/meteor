@@ -15,14 +15,14 @@ var parse = function (serialized) {
 ReactiveDict = function (dictName) {
   // this.keys: key -> value
   if (dictName) {
-    if (typeof dictName === 'object') {
-      // back-compat case: dictName is actually migrationData
-      this.keys = dictName;
-    } else if (typeof dictName === 'string') {
+    if (typeof dictName === 'string') {
       // the normal case, argument is a string name.
       // _registerDictForMigrate will throw an error on duplicate name.
       ReactiveDict._registerDictForMigrate(dictName, this);
       this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
+    } else if (typeof dictName === 'object') {
+      // back-compat case: dictName is actually migrationData
+      this.keys = dictName;
     } else {
       throw new Error("Invalid ReactiveDict argument: " + dictName);
     }
