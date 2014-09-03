@@ -8,6 +8,9 @@ var currentArgumentChecker = new Meteor.EnvironmentVariable;
 /**
  * @summary Checks that a value matches a [pattern](#matchpatterns).
  * If the value does not match the pattern, throws a `Match.Error`.
+ * 
+ * Particularly useful to assert that arguments to a function have the right
+ * types and structure.
  * @locus Anywhere
  * @param {Any} value The value to check
  * @param {MatchPattern} pattern The pattern to match
