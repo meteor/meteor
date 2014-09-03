@@ -11,7 +11,6 @@ var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
-var packageClient = require('./package-client.js');
 var utils = require('./utils.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
