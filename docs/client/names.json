@@ -108,5 +108,6 @@
   "Tracker.currentComputation",
   "Tracker.flush",
   "Tracker.nonreactive",
-  "Tracker.onInvalidate"
+  "Tracker.onInvalidate",
+  "check"
 ]
