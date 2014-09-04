@@ -59,12 +59,20 @@ prefix instead of your own username.
   * `standard-app-packages` -> `meteor-platform`
 * Symbol renames
   * `Meteor.Collection` -> `Mongo.Collection`
+  * `Meteor.Collection.Cursor` -> `Mongo.Cursor`
+  * `Meteor.Collection.ObjectID` -> `Mongo.ObjectID`
   * `Deps` -> `Tracker`
 
 #### Other
 
 * Add `reactive-var` package. Lets you define a single reactive
   variable, like a single key in `Session`.
+
+* Don't throw an exception in Chrome when cookies and local storage
+  are blocked.
+
+* Bump DDP version to "1". Clients connecting with version "pre1" or
+  "pre2" should still work.
 
 * Allow query parameters in OAuth1 URLs. #2404
 
