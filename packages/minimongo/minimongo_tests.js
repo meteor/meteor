@@ -1705,6 +1705,11 @@ Tinytest.add("minimongo - ordering", function (test) {
     {a: [{x: 0, y: 4}]},
     {a: [{x: 0, y: 5}, {x: 1, y: 3}]}
   ]);
+
+  verify({'a.0.s': 1}, [
+    {a: [ {s: 1} ]},
+    {a: [ {s: 2} ]}
+  ]);
 });
 
 Tinytest.add("minimongo - sort", function (test) {
