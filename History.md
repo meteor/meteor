@@ -9,13 +9,14 @@ Meteor 0.9.1 ships with organizations support in Meteor developer
 accounts. Organizations are teams of users that make it easy to
 collaborate on apps and packages.
 
-To create an organization, visit
-https://www.meteor.com/account-settings/organizations and log in. Once
-you've created an organization, you can authorize it to administer
-your apps with the `meteor authorized` command, and add it as a
-maintainer of your packages with the `meteor admin maintainers`
-command. You can also publish packages with an organization's name in
-the package name prefix instead of your own username.
+Create an organization at
+https://www.meteor.com/account-settings/organizations. Run the `meteor
+authorized` command in your terminal to give an organization
+permissions to your apps. To add an organization as a maintainer of
+your packages, use the `meteor admin maintainers` command. You can
+also publish packages with an organization's name in the package name
+prefix instead of your own username.
+
 
 #### One backwards incompatible change for templates
 
@@ -52,19 +53,18 @@ the package name prefix instead of your own username.
 
 #### Backwards compatible renames
 
-* livedata -> ddp
-
-* mongo-livedata -> mongo
-
-* standard-app-packages -> meteor-platform
-
-* Meteor.Collection -> Mongo.Collection
-
-* Deps -> Tracker
+* Package renames
+  * livedata -> ddp
+  * mongo-livedata -> mongo
+  * standard-app-packages -> meteor-platform
+* Symbol renames
+  * Meteor.Collection -> Mongo.Collection
+  * Deps -> Tracker
 
 #### Other
 
-* Add 'reactive-var' package
+* Add 'reactive-var' package. Let's you define a single reactive
+  variable, like a single key in `Session`.
 
 * Allow query parameters in OAuth1 URLs. #2404
 
