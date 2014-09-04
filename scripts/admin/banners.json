@@ -1,9 +1,10 @@
 { "track": "METEOR",
   "banners": [
     {
-      "versions": ["0.9.0"],
+      "versions": ["0.9.0", "0.9.0.1"],
       "banner": {
-        "text": "=> Meteor 0.9.0.1 is now out, fixing several bugs in 0.9.0.\n\n   Meteor 0.9.0.1 is being downloaded in the background. You can update to\n   it by running 'meteor update --patch'."
+        "text": "=> Meteor 0.9.1 is out, adding support for organizations in Meteor\n
+   developer accounts.\n\n   Meteor 0.9.1 is being downloading in the background. You can update\n   to it by running 'meteor update'."
        }
     }
   ]
