@@ -28,7 +28,7 @@ prefix instead of your own username.
   * `Blaze.toHTMLWithData()`
   * `Template.currentData()`
   * `Blaze.getView()`
-  * `UI.parentData()` (previously `UI._parentData()`)
+  * `Template.parentData()` (previously `UI._parentData()`)
   * `Template.instance()` (previously `UI._templateInstance()`)
   * `Template.body` (previously `UI.body`)
   * `new Template` (previously `Template.__create__`)
@@ -44,7 +44,7 @@ prefix instead of your own username.
   internal. Notably: `Blaze._materializeView`, `Blaze._createView`,
   `Blaze._toText`, `Blaze._destroyView`, `Blaze._destroyNode`,
   `Blaze._withCurrentView`, `Blaze._DOMBackend`,
-  `Spacebars._TemplateWith`
+  `Blaze._TemplateWith`
 
 * Document Views. Views are the machinery powering DOM updates in
   Blaze.
