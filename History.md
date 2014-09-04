@@ -24,10 +24,10 @@ the package name prefix instead of your own username.
 
 #### Backwards compatible Blaze API changes
 
-* UI.body -> Template.body ("body" is now a reserved name for
+* `UI.body` -> `Template.body` ("body" is now a reserved name for
   templates)
 
-* UI._templateInstance() -> Template.instance() ("instance" is now a
+* `UI._templateInstance()` -> `Template.instance()` ("instance" is now a
   reserved name for templates)
 
 * Deprecate the 'ui' package. Instead, use the 'blaze' package. The
@@ -36,15 +36,15 @@ the package name prefix instead of your own username.
 * Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now
   render and place into the DOM.
 
-* Add an underscore to some Blaze APIs to make them internal. Notably:
-  Blaze._materializeView, Blaze._createView, Blaze._toText,
-  Blaze._destroyView, Blaze._destroyNode, Blaze._withCurrentView,
-  Blaze._DOMBackend, Spacebars._TemplateWith
+* Add an underscore to some undocumented Blaze APIs to make them
+  internal. Notably: `Blaze._materializeView`, `Blaze._createView`,
+  `Blaze._toText`, `Blaze._destroyView`, `Blaze._destroyNode`,
+  `Blaze._withCurrentView`, `Blaze._DOMBackend`, `Spacebars._TemplateWith`
 
-* New public and documented APIs: Blaze.toHTMLWithData(),
-  Template.currentData(), UI.parentData(), Blaze.getView()
+* New public and documented APIs: `Blaze.toHTMLWithData()`,
+  `Template.currentData()`, `UI.parentData()`, `Blaze.getView()`
 
-* Template.__create__ -> new Template
+* `Template.__create__` -> `new Template`
 
 * Document Views. Views are the machinery powering DOM updates in
   Blaze.
