@@ -5,9 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'ddp', 'ejson', 'follower-livedata']);
-  api.use(['mongo'], {
-    unordered: true
-  });
+  api.use('mongo', {unordered: true});
   api.add_files(['config.js'], 'server');
   api.export('AppConfig', 'server');
 });
