@@ -1,6 +1,65 @@
 ## v.NEXT
 
-* Allow query parameters in OAuth1 URLs.
+
+## v0.9.1
+
+XXX this is the exhaustive list, need to wordsmith/organize
+
+
+* Meteor Developer Accounts organizations! XXX
+
+* Allow query parameters in OAuth1 URLs. #2404
+
+* Do login prompt when talking to package server with expired credential
+
+* Add 'reactive-var' package
+
+
+BLAZE CHANGES!
+
+* Make the following Blaze APIs internal:
+  - Blaze._materializeView
+  - Blaze._createView
+  - Blaze._toText
+  - Blaze._destroyView
+  - Blaze._destroyNode
+  - Blaze._withCurrentView
+  - Spacebars._TemplateWith
+
+* Introduce Blaze.toHTMLWithData
+
+* Template.__create__ -> new Template
+
+* Expose `view` property on template instances
+
+* Blaze.DOMBackend -> Blaze._DOMBackend
+
+* Template.currentdata
+
+* Deprecate 'ui' package (into 'blaze').  (the 'UI' and 'Blaze'
+  symbols are the same now)
+
+* Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now render and place
+  into the DOM.
+
+* UI.parentData() is now public
+
+* UI.body -> Template.body
+
+* Blaze.findView -> Blaze.getView
+
+* Deps -> Tracker
+
+* standard-app-packages -> meteor-platform
+
+* UI._templateInstance -> Template.instance
+
+* Fix 'meteor list' if not all packages on server. Fixes #2468
+
+* livedata -> ddp
+
+* mongo-livedata -> mongo
+
 
 
 ## v0.9.0.1
