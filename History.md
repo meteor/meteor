@@ -10,8 +10,6 @@ XXX this is the exhaustive list, need to wordsmith/organize
 
 * Allow query parameters in OAuth1 URLs. #2404
 
-* Do login prompt when talking to package server with expired credential
-
 * Fix 'meteor list' if not all packages on server. Fixes #2468
 
 
