@@ -70,7 +70,7 @@ prefix instead of your own username.
 
 * Fix 'meteor list' if not all packages on server. Fixes #2468
 
-Patches by Github user mitar.
+Patch by Github user mitar.
 
 
 ## v0.9.0.1
