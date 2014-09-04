@@ -63,7 +63,7 @@ prefix instead of your own username.
 
 #### Other
 
-* Add 'reactive-var' package. Let's you define a single reactive
+* Add 'reactive-var' package. Lets you define a single reactive
   variable, like a single key in `Session`.
 
 * Allow query parameters in OAuth1 URLs. #2404
