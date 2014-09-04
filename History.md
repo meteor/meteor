@@ -19,17 +19,19 @@ the package name prefix instead of your own username.
 
 #### One backwards incompatible change for templates
 
-* Backwards incompatible change: Templates can no longer be named
-  "body" or "instance".
+* Templates can no longer be named "body" or "instance".
 
 #### Backwards compatible Blaze API changes
 
-* New public and documented APIs: `Blaze.toHTMLWithData()`,
-  `Template.currentData()`, `Blaze.getView()`, `UI.parentData()`
-  (previously `UI._parentData()`), `Template.instance()` (previously
-  `UI._templateInstance()`), `Template.body` (previously `UI.body`),
-  `new Template` (previously `Template.__create__`), `Blaze.getData()`
-  (previously `UI.getElementData`)
+* New public and documented APIs:
+  * `Blaze.toHTMLWithData()`
+  * `Template.currentData()`
+  * `Blaze.getView()`
+  * `UI.parentData()` (previously `UI._parentData()`)
+  * `Template.instance()` (previously `UI._templateInstance()`)
+  * `Template.body` (previously `UI.body`)
+  * `new Template` (previously `Template.__create__`)
+  * `Blaze.getData()` (previously `UI.getElementData`)
 
 * Deprecate the 'ui' package. Instead, use the 'blaze' package. The
   'UI' and 'Blaze' symbols are now the same.
@@ -40,7 +42,8 @@ the package name prefix instead of your own username.
 * Add an underscore to some undocumented Blaze APIs to make them
   internal. Notably: `Blaze._materializeView`, `Blaze._createView`,
   `Blaze._toText`, `Blaze._destroyView`, `Blaze._destroyNode`,
-  `Blaze._withCurrentView`, `Blaze._DOMBackend`, `Spacebars._TemplateWith`
+  `Blaze._withCurrentView`, `Blaze._DOMBackend`,
+  `Spacebars._TemplateWith`
 
 * Document Views. Views are the machinery powering DOM updates in
   Blaze.
