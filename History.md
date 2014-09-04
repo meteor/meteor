@@ -3,66 +3,73 @@
 
 ## v0.9.1
 
-XXX this is the exhaustive list, need to wordsmith/organize
+#### Organizations in Meteor developer accounts
 
+Meteor 0.9.1 ships with organizations support in Meteor developer
+accounts. Organizations are teams of users that make it easy to
+collaborate on apps and packages.
 
-* Meteor Developer Accounts organizations! XXX
+To create an organization, visit
+https://www.meteor.com/account-settings/organizations and log in. Once
+you've created an organization, you can authorize it to administer
+your apps with the `meteor authorized` command, and add it as a
+maintainer of your packages with the `meteor admin maintainers`
+command. You can also publish packages with an organization's name in
+the package name prefix instead of your own username.
 
-* Allow query parameters in OAuth1 URLs. #2404
+#### One backwards incompatible change for templates
 
-* Fix 'meteor list' if not all packages on server. Fixes #2468
+* Backwards incompatible change: Templates can no longer be named
+  "body" or "instance".
 
+#### Backwards compatible Blaze API changes
 
-PACKAGE RENAMES!
+* UI.body -> Template.body ("body" is now a reserved name for
+  templates)
+
+* UI._templateInstance() -> Template.instance() ("instance" is now a
+  reserved name for templates)
+
+* Deprecate the 'ui' package. Instead, use the 'blaze' package. The
+  'UI' and 'Blaze' symbols are now the same.
+
+* Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now
+  render and place into the DOM.
+
+* Add an underscore to some Blaze APIs to make them internal. Notably:
+  Blaze._materializeView, Blaze._createView, Blaze._toText,
+  Blaze._destroyView, Blaze._destroyNode, Blaze._withCurrentView,
+  Blaze._DOMBackend, Spacebars._TemplateWith
+
+* New public and documented APIs: Blaze.toHTMLWithData(),
+  Template.currentData(), UI.parentData(), Blaze.getView()
+
+* Template.__create__ -> new Template
+
+* Document Views. Views are the machinery powering DOM updates in
+  Blaze.
+
+* Expose `view` property on template instances.
+
+#### Backwards compatible renames
 
 * livedata -> ddp
 
 * mongo-livedata -> mongo
 
+* standard-app-packages -> meteor-platform
+
 * Meteor.Collection -> Mongo.Collection
 
 * Deps -> Tracker
 
+#### Other
+
 * Add 'reactive-var' package
 
-* standard-app-packages -> meteor-platform
+* Allow query parameters in OAuth1 URLs. #2404
 
-
-BLAZE CHANGES!
-
-* Make the following Blaze APIs internal (by adding an underscore):
-  - Blaze._materializeView
-  - Blaze._createView
-  - Blaze._toText
-  - Blaze._destroyView
-  - Blaze._destroyNode
-  - Blaze._withCurrentView
-  - Spacebars._TemplateWith
-
-* Introduce Blaze.toHTMLWithData
-
-* Template.__create__ -> new Template
-
-* Expose `view` property on template instances
-
-* Blaze.DOMBackend -> Blaze._DOMBackend
-
-* Template.currentdata
-
-* Deprecate 'ui' package (into 'blaze').  (the 'UI' and 'Blaze'
-  symbols are the same now)
-
-* Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now render and place
-  into the DOM.
-
-* UI.parentData() is now public
-
-* UI.body -> Template.body ("body" is now a reserved name for templates)
-
-* Blaze.findView -> Blaze.getView
-
-* UI._templateInstance -> Template.instance ("instance" is now a reserved name for templates)
-
+* Fix 'meteor list' if not all packages on server. Fixes #2468
 
 Patches by Github user mitar.
 
