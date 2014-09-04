@@ -28,7 +28,7 @@ PACKAGE RENAMES!
 
 BLAZE CHANGES!
 
-* Make the following Blaze APIs internal:
+* Make the following Blaze APIs internal (by adding an underscore):
   - Blaze._materializeView
   - Blaze._createView
   - Blaze._toText
@@ -55,11 +55,11 @@ BLAZE CHANGES!
 
 * UI.parentData() is now public
 
-* UI.body -> Template.body
+* UI.body -> Template.body ("body" is now a reserved name for templates)
 
 * Blaze.findView -> Blaze.getView
 
-* UI._templateInstance -> Template.instance
+* UI._templateInstance -> Template.instance ("instance" is now a reserved name for templates)
 
 
 Patches by Github user mitar.
