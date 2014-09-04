@@ -12,7 +12,20 @@ XXX this is the exhaustive list, need to wordsmith/organize
 
 * Do login prompt when talking to package server with expired credential
 
+* Fix 'meteor list' if not all packages on server. Fixes #2468
+
+
+PACKAGE RENAMES!
+
+* livedata -> ddp
+
+* mongo-livedata -> mongo
+
+* Deps -> Tracker
+
 * Add 'reactive-var' package
+
+* standard-app-packages -> meteor-platform
 
 
 BLAZE CHANGES!
@@ -48,18 +61,10 @@ BLAZE CHANGES!
 
 * Blaze.findView -> Blaze.getView
 
-* Deps -> Tracker
-
-* standard-app-packages -> meteor-platform
-
 * UI._templateInstance -> Template.instance
 
-* Fix 'meteor list' if not all packages on server. Fixes #2468
 
-* livedata -> ddp
-
-* mongo-livedata -> mongo
-
+Patches by Github user mitar.
 
 
 ## v0.9.0.1
