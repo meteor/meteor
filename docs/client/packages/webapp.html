@@ -2,9 +2,15 @@
 {{#markdown}}
 ## `webapp`
 
-This package allows you to add handlers for HTTP requests to your app. This lets
-other services access your app's data through an HTTP API, allowing it to easily
-interoperate with tools and frameworks that don't yet support DDP.
+The `webapp` package is what lets your Meteor app serve content to a web
+browser. It is included in the `meteor-platform` set of packages that is
+automatically added when you run `meteor create`. You can easily build a
+Meteor app without it - for example if you wanted to make a command-line
+tool that still used the Meteor package system and DDP.
+
+This package also allows you to add handlers for HTTP requests.
+This lets other services access your app's data through an HTTP API, allowing
+it to easily interoperate with tools and frameworks that don't yet support DDP.
 
 `webapp` exposes the [connect](https://github.com/senchalabs/connect) API for
 handling requests through `WebApp.connectHandlers`.
