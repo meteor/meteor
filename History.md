@@ -19,6 +19,8 @@ PACKAGE RENAMES!
 
 * mongo-livedata -> mongo
 
+* Meteor.Collection -> Mongo.Collection
+
 * Deps -> Tracker
 
 * Add 'reactive-var' package
