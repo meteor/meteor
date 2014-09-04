@@ -515,7 +515,7 @@ Usage: meteor admin maintainers <package name> [--list]
        meteor admin maintainers <package name> --add <username>
        meteor admin maintainers <package name> --remove <username>
 
-Without an argument (or with --list), list the users and organizations that are
+Without options (or with --list), list the users and organizations that are
 maintainers for a particular package.
 
 With --add, add an authorized maintainer to a package. Use this to give your
@@ -566,7 +566,7 @@ when there is a new release available or a patch release has been published.
 List the organizations of which you are a member.
 Usage: meteor list-organizations
 
-List the names of organizations of which you are a member.
+List the organizations of which you are a member.
 
 >>> admin members
 View or change the members of an organization.

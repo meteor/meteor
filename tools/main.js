@@ -270,6 +270,9 @@ var longHelp = exports.longHelp = function (commandName) {
       // not appear in the top-level help. If we one day want to make
       // these kinds of commands visible to casual users, we'll need a
       // way to mark them as visible or hidden.
+      
+      // Also, use helpDict to only include commands that have help text,
+      // otherwise there is nothing to display
       if (n instanceof Command && ! n.hidden && helpDict[fullName])
         commandsWanted[fullName] = { name: shortName };
     });
