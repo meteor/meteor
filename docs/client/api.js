@@ -24,36 +24,6 @@ Template.api.startup = {
   ]
 };
 
-Template.api.absoluteUrl = {
-  id: "meteor_absoluteurl",
-  name: "Meteor.absoluteUrl([path], [options])",
-  locus: "Anywhere",
-  descr: ["Generate an absolute URL pointing to the application. The server "
-          + "reads from the `ROOT_URL` environment variable to determine "
-          + "where it is running. This is taken care of automatically for "
-          + "apps deployed with `meteor deploy`, but must be provided when "
-          + "using `meteor bundle`."],
-  args: [
-    {name: "path",
-     type: "String",
-     descr: 'A path to append to the root URL. Do not include a leading "`/`".'
-    }
-  ],
-  options: [
-    {name: "secure",
-     type: "Boolean",
-     descr: "Create an HTTPS URL."
-    },
-    {name: "replaceLocalhost",
-     type: "Boolean",
-     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
-    {name: "rootUrl",
-     type: "String",
-     descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
-    }
-  ]
-};
-
 Template.api.settings = {
   id: "meteor_settings",
   name: "Meteor.settings",
@@ -191,7 +161,7 @@ Template.api.ejsonTypeClone = {
 Template.api.ejsonTypeEquals = {
   id: "ejson_type_equals",
   name: "<i>instance</i>.equals(other)",
-  args: [ {name: "other", type: "object", descr: "Another object to compare this to."}],
+  args: [ {name: "other", type: "Object", descr: "Another object to compare this to."}],
   descr: ["Return `true` if `other` has a value equal to `this`; `false` otherwise."]
 };
 
@@ -507,7 +477,7 @@ Template.api.onConnection = {
   descr: ["Register a callback to be called when a new DDP connection is made to the server."],
   args: [
     {name: "callback",
-     type: "function",
+     type: "Function",
      descr: "The function to call when a new DDP connection is established."}
   ]
 };
@@ -845,9 +815,9 @@ Template.api.fieldspecifiers = {
 
 ////// DEPS
 
-Template.api.deps_autorun = {
-  id: "deps_autorun",
-  name: "Deps.autorun(runFunc)",
+Template.api.tracker_autorun = {
+  id: "tracker_autorun",
+  name: "Tracker.autorun(runFunc)",
   locus: "Client",
   descr: ["Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."],
   args: [
@@ -857,16 +827,16 @@ Template.api.deps_autorun = {
   ]
 };
 
-Template.api.deps_flush = {
-  id: "deps_flush",
-  name: "Deps.flush()",
+Template.api.tracker_flush = {
+  id: "tracker_flush",
+  name: "Tracker.flush()",
   locus: "Client",
   descr: ["Process all reactive updates immediately and ensure that all invalidated computations are rerun."]
 };
 
-Template.api.deps_nonreactive = {
-  id: "deps_nonreactive",
-  name: "Deps.nonreactive(func)",
+Template.api.tracker_nonreactive = {
+  id: "tracker_nonreactive",
+  name: "Tracker.nonreactive(func)",
   locus: "Client",
   descr: ["Run a function without tracking dependencies."],
   args: [
@@ -876,23 +846,23 @@ Template.api.deps_nonreactive = {
   ]
 };
 
-Template.api.deps_active = {
-  id: "deps_active",
-  name: "Deps.active",
+Template.api.tracker_active = {
+  id: "tracker_active",
+  name: "Tracker.active",
   locus: "Client",
   descr: ["True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun."]
 };
 
-Template.api.deps_currentcomputation = {
-  id: "deps_currentcomputation",
-  name: "Deps.currentComputation",
+Template.api.tracker_currentcomputation = {
+  id: "tracker_currentcomputation",
+  name: "Tracker.currentComputation",
   locus: "Client",
-  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Deps.Computation`](#deps_computation) object created by the innermost active call to `Deps.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed."]
+  descr: ["The current computation, or `null` if there isn't one.  The current computation is the [`Tracker.Computation`](#tracker_computation) object created by the innermost active call to `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed."]
 };
 
-Template.api.deps_oninvalidate = {
-  id: "deps_oninvalidate",
-  name: "Deps.onInvalidate(callback)",
+Template.api.tracker_oninvalidate = {
+  id: "tracker_oninvalidate",
+  name: "Tracker.onInvalidate(callback)",
   locus: "Client",
   descr: ["Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped."],
   args: [
@@ -902,9 +872,9 @@ Template.api.deps_oninvalidate = {
   ]
 };
 
-Template.api.deps_afterflush = {
-  id: "deps_afterflush",
-  name: "Deps.afterFlush(callback)",
+Template.api.tracker_afterflush = {
+  id: "tracker_afterflush",
+  name: "Tracker.afterFlush(callback)",
   locus: "Client",
   descr: ["Schedules a function to be called during the next flush, or later in the current flush if one is in progress, after all invalidated computations have been rerun.  The function will be run once and not on subsequent flushes unless `afterFlush` is called again."],
   args: [
@@ -958,7 +928,7 @@ Template.api.computation_firstrun = {
   id: "computation_firstrun",
   name: "<em>computation</em>.firstRun",
   locus: "Client",
-  descr: ["True during the initial run of the computation at the time `Deps.autorun` is called, and false on subsequent reruns and at other times."]
+  descr: ["True during the initial run of the computation at the time `Tracker.autorun` is called, and false on subsequent reruns and at other times."]
 };
 
 Template.api.dependency_changed = {
@@ -975,7 +945,7 @@ Template.api.dependency_depend = {
   descr: ["Declares that the current computation (or `fromComputation` if given) depends on `dependency`.  The computation will be invalidated the next time `dependency` changes.", "If there is no current computation and `depend()` is called with no arguments, it does nothing and returns false.", "Returns true if the computation is a new dependent of `dependency` rather than an existing one."],
   args: [
     {name: "fromComputation",
-     type: "Deps.Computation",
+     type: "Tracker.Computation",
      descr: "An optional computation declared to depend on `dependency` instead of the current computation."}
   ]
 };
@@ -991,12 +961,6 @@ Template.api.dependency_hasdependents = {
 
 // writeFence
 // invalidationCrossbar
-
-
-Template.api.eventmaps = {
-  id: "eventmaps",
-  name: "Event Maps"
-};
 
 
 Template.api.user = {
@@ -1629,7 +1593,7 @@ Template.api.session_set = {
   id: "session_set",
   name: "Session.set(key, value)",
   locus: "Client",
-  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Deps.autorun`](#deps_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"],
+  descr: ["Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Tracker.autorun`](#tracker_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"],
   args: [
     {name: "key",
      type: "String",
@@ -1807,7 +1771,7 @@ Template.api.template_helpers = {
 
 Template.api.template_findAll = {
   id: "template_findAll",
-  name: "<em>this</em>.findAll(selector) and <em>this</em>.$(selector)",
+  name: "<em>template</em>.findAll(selector) and <em>template</em>.$(selector)",
   locus: "Client",
   descr: ["Find all elements matching `selector` in this template instance."],
   args: [
@@ -1819,7 +1783,7 @@ Template.api.template_findAll = {
 
 Template.api.template_find = {
   id: "template_find",
-  name: "<em>this</em>.find(selector)",
+  name: "<em>template</em>.find(selector)",
   locus: "Client",
   descr: ["Find one element matching `selector` in this template instance."],
   args: [
@@ -1831,40 +1795,47 @@ Template.api.template_find = {
 
 Template.api.template_firstNode = {
   id: "template_firstNode",
-  name: "<em>this</em>.firstNode",
+  name: "<em>template</em>.firstNode",
   locus: "Client",
   descr: ["The first top-level DOM node in this template instance."]
 };
 
 Template.api.template_lastNode = {
   id: "template_lastNode",
-  name: "<em>this</em>.lastNode",
+  name: "<em>template</em>.lastNode",
   locus: "Client",
   descr: ["The last top-level DOM node in this template instance."]
 };
 
 Template.api.template_data = {
   id: "template_data",
-  name: "<em>this</em>.data",
+  name: "<em>template</em>.data",
   locus: "Client",
   descr: ["The data context of this instance's latest invocation."]
 };
 
 Template.api.template_autorun = {
   id: "template_autorun",
-  name: "<em>this</em>.autorun(runFunc)",
+  name: "<em>template</em>.autorun(runFunc)",
   locus: "Client",
-  descr: ["A version of [Deps.autorun](#deps_autorun) that is stopped when the template is destroyed."],
+  descr: ["A version of [Tracker.autorun](#tracker_autorun) that is stopped when the template is destroyed."],
   args: [
     {name: "runFunc",
      type: "Function",
-     descr: "The function to run. It receives one argument: a Deps.Computation object."}
+     descr: "The function to run. It receives one argument: a Tracker.Computation object."}
   ]
 };
 
-Template.api.ui_registerhelper = {
-  id: "ui_registerhelper",
-  name: "UI.registerHelper(name, function)",
+Template.api.template_view = {
+  id: "template_view",
+  name: "<em>template</em>.view",
+  locus: "Client",
+  descr: ["The [View](#blaze_view) object for this invocation of the template."]
+};
+
+Template.api.template_registerhelper = {
+  id: "template_registerhelper",
+  name: "Template.registerHelper(name, function)",
   locus: "Client",
   descr: ["Defines a [helper function](#template_helpers) which can be used from all templates."],
   args: [
@@ -1894,87 +1865,328 @@ Template.api.ui_dynamic = {
     }]
 };
 
-Template.api.ui_body = {
-  id: "ui_body",
-  name: "UI.body",
+Template.api.template_body = {
+  id: "template_body",
+  name: "Template.body",
   locus: "Client",
   descr: ["The [template object](#templates_api) representing your `<body>` tag."]
 };
 
-Template.api.ui_render = {
-  id: "ui_render",
-  name: "UI.render(Template.<em>myTemplate</em>)",
+Template.api.blaze_render = {
+  id: "blaze_render",
+  name: "Blaze.render(templateOrView, parentNode, [nextNode], [parentView])",
   locus: "Client",
-  descr: ["Executes a template's logic."],
+  descr: ["Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#blaze_view) which can be passed to [`Blaze.remove`](#blaze_remove)."],
   args: [
-    {name: "template",
-     type: "Template",
-     descr: "The particular template to evaluate."
-    }]
-};
-
-Template.api.ui_renderwithdata = {
-  id: "ui_renderwithdata",
-  name: "UI.renderWithData(Template.<em>myTemplate</em>, data)",
-  locus: "Client",
-  descr: ["Executes a template's logic with a data context. Otherwise identical to `UI.render`."],
-  args: [
-    {name: "template",
-     type: "Template",
-     descr: "The particular template to evaluate."
-    },
-    {name: "data",
-     type: "Object",
-     descr: "The data context that will be used when evaluating the template."
-    }]
-};
-
-Template.api.ui_insert = {
-  id: "ui_insert",
-  name: "UI.insert(renderedTemplate, parentNode[, nextNode])",
-  locus: "Client",
-  descr: ["Inserts a rendered template into the DOM and calls its [`rendered`](#template_rendered) callback."],
-  args: [
-    {name: "renderedTemplate",
-     type: "Rendered template object",
-     descr: "The return value from `UI.render` or `UI.renderWithData`."
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned."
     },
     {name: "parentNode",
      type: "DOM Node",
-     descr: "The node that will be the parent of the rendered template."
+     descr: "The node that will be the parent of the rendered template.  It must be an Element node."
     },
     {name: "nextNode",
      type: "DOM Node",
-     descr: "If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child."
-    }]
-};
-
-Template.api.ui_remove = {
-  id: "ui_remove",
-  name: "UI.remove(renderedTemplate)",
-  locus: "Client",
-  descr: ["Removes a rendered template from the DOM and destroys it, calling the [`destroyed`](#template_destroyed) callback and stopping the logic that reactively updates the template."],
-  args: [
-    {name: "renderedTemplate",
-     type: "Rendered template object",
-     descr: "The return value from `UI.render` or `UI.renderWithData`."
+     descr: "Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode."
+    },
+    {name: "parentView",
+     type: "View",
+     descr: "Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview)."
     }
   ]
 };
 
-Template.api.ui_getelementdata = {
-  id: "ui_getelementdata",
-  name: "UI.getElementData(el)",
+Template.api.blaze_renderwithdata = {
+  id: "blaze_renderwithdata",
+  name: "Blaze.renderWithData(templateOrView, data, parentNode, [nextNode], [parentView])",
   locus: "Client",
-  descr: ["Returns the data context that was used when rendering a DOM element from a Meteor template."],
+  descr: ["Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`."],
   args: [
-    {name: "el",
-     type: "DOM Element",
-     descr: "An element that was rendered by a Meteor template"
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object to render."
+    },
+    {name: "data",
+     type: "Object or Function",
+     descr: "The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run."
+    },
+    {name: "parentNode",
+     type: "DOM Node",
+     descr: "The node that will be the parent of the rendered template.  It must be an Element node."
+    },
+    {name: "nextNode",
+     type: "DOM Node",
+     descr: "Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode."
+    },
+    {name: "parentView",
+     type: "View",
+     descr: "Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview)."
+    }
+  ]
+};
+
+Template.api.blaze_remove = {
+  id: "blaze_remove",
+  name: "Blaze.remove(renderedView)",
+  locus: "Client",
+  descr: ["Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it."],
+  args: [
+    {name: "renderedView",
+     type: "View",
+     descr: "The return value from `Blaze.render` or `Blaze.renderWithData`."
+    }
+  ]
+};
+
+Template.api.blaze_with = {
+  id: "blaze_with",
+  name: "Blaze.With(data, contentFunc)",
+  locus: "Client",
+  descr: ["Constructs a View that renders content with a data context."],
+  args: [
+    {name: "data",
+     type: "Object or Function",
+     descr: "An object to use as the data context, or a function returning such an object.  If a function is provided, it will be reactively re-run."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    }
+  ]
+};
+
+Template.api.blaze_if = {
+  id: "blaze_if",
+  name: "Blaze.If(conditionFunc, contentFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["Constructs a View that renders content conditionally."],
+  args: [
+    {name: "conditionFunc",
+     type: "Function",
+     descr: "A function to reactively re-run.  Whether the result is truthy or falsy determines whether `contentFunc` or `elseFunc` is shown.  An empty array is considered falsy."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    },
+    {name: "elseFunc",
+     type: "Function",
+     descr: "Optional.  A Function that returns [*renderable content*](#renderable_content).  If no `elseFunc` is supplied, no content is shown in the \"else\" case."
+    }
+  ]
+};
+
+Template.api.blaze_unless = {
+  id: "blaze_unless",
+  name: "Blaze.Unless(conditionFunc, contentFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["An inverted [`Blaze.If`](#blaze_if)."],
+  args: [
+    {name: "conditionFunc",
+     type: "Function",
+     descr: "A function to reactively re-run.  If the result is falsy, `contentFunc` is shown, otherwise `elseFunc` is shown.  An empty array is considered falsy."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    },
+    {name: "elseFunc",
+     type: "Function",
+     descr: "Optional.  A Function that returns [*renderable content*](#renderable_content).  If no `elseFunc` is supplied, no content is shown in the \"else\" case."
+    }
+  ]
+};
+
+Template.api.blaze_each = {
+  id: "blaze_each",
+  name: "Blaze.Each(argFunc, contentFunc, [elseFunc])",
+  locus: "Client",
+  descr: ["Constructs a View that renders `contentFunc` for each item in a sequence."],
+  args: [
+    {name: "argFunc",
+     type: "Function",
+     descr: "A function to reactively re-run.  The function may return a Cursor, an array, null, or undefined."
+    },
+    {name: "contentFunc",
+     type: "Function",
+     descr: "A Function that returns [*renderable content*](#renderable_content)."
+    },
+    {name: "elseFunc",
+     type: "Function",
+     descr: "Optional.  A Function that returns [*renderable content*](#renderable_content) to display in the case when there are no items to display."
+    }
+  ]
+};
+
+Template.api.template_currentdata = {
+  id: "template_currentdata",
+  name: "Template.currentData()",
+  locus: "Client",
+  descr: ["Returns the data context of the current helper, or the data context of the template that declares the current event handler or callback.  Establishes a reactive dependency on the result."]
+};
+
+Template.api.blaze_getdata = {
+  id: "blaze_getdata",
+  name: "Blaze.getData([elementOrView])",
+  locus: "Client",
+  descr: ["Returns the current data context, or the data context that was used when rendering a particular DOM element or View from a Meteor template."],
+  args: [
+    {name: "elementOrView",
+     type: "DOM Element or View",
+     descr: "Optional.  An element that was rendered by a Meteor, or a View."
     }]
 };
 
+Template.api.blaze_currentview = {
+  id: "blaze_currentview",
+  name: "Blaze.currentView",
+  locus: "Client",
+  descr: ["The View corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
+};
 
+Template.api.blaze_getview = {
+  id: "blaze_getview",
+  name: "Blaze.getView([element])",
+  locus: "Client",
+  descr: ["Gets either the current View, or the View enclosing the given DOM element."],
+  args: [
+    {name: "element",
+     type: "DOM Element",
+     descr: "Optional.  If specified, the View enclosing `element` is returned."
+    }
+  ]
+};
+
+Template.api.template_instance = {
+  id: "template_instance",
+  name: "Template.instance()",
+  locus: "Client",
+  descr: ["The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`."]
+};
+
+Template.api.template_parentdata = {
+  id: "template_parentdata",
+  name: "Template.parentData(numLevels)",
+  locus: "Client",
+  descr: ["Accesses other data contexts that enclose the current data context."],
+  args: [
+    {name: "numLevels",
+     type: "Integer",
+     descr: "The number of levels beyond the current data context to look."
+    }]
+};
+
+Template.api.blaze_tohtml = {
+  id: "blaze_tohtml",
+  name: "Blaze.toHTML(templateOrView)",
+  locus: "Client",
+  descr: ["Renders a template or View to a string of HTML."],
+  args: [
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object from which to generate HTML."
+    }]
+};
+
+Template.api.blaze_tohtmlwithdata = {
+  id: "blaze_tohtmlwithdata",
+  name: "Blaze.toHTMLWithData(templateOrView, data)",
+  locus: "Client",
+  descr: ["Renders a template or View to HTML with a data context.  Otherwise identical to `Blaze.toHTML`."],
+  args: [
+    {name: "templateOrView",
+     type: "Template or View",
+     descr: "The template (e.g. `Template.myTemplate`) or View object from which to generate HTML."
+    },
+    {name: "data",
+     type: "Object or Function",
+     descr: "The data context to use, or a function returning a data context."
+    }]
+};
+
+Template.api.blaze_view = {
+  id: "blaze_view",
+  name: "[new] Blaze.View([name], renderFunction)",
+  locus: "Client",
+  descr: ["Constructor for a View, which represents a reactive region of DOM."],
+  args: [
+    {name: "name",
+     type: "String",
+     descr: "Optional.  A name for this type of View.  See [`view.name`](#view_name)."},
+    {name: "renderFunction",
+     type: "Function",
+     descr: "A function that returns [*renderable content*](#renderable_content).  In this function, `this` is bound to the View."
+    }
+  ]
+};
+
+Template.api.blaze_template = {
+  id: "blaze_template",
+  name: "[new] Blaze.Template([viewName], renderFunction)",
+  locus: "Client",
+  descr: ["Constructor for a Template, which is used to construct Views with particular name and content."],
+  args: [
+    {name: "viewName",
+     type: "String",
+     descr: "Optional.  A name for Views constructed by this Template.  See [`view.name`](#view_name)."},
+    {name: "renderFunction",
+     type: "Function",
+     descr: "A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template."
+    }
+  ]
+};
+
+Template.api.blaze_istemplate = {
+  id: "blaze_istemplate",
+  name: "Blaze.isTemplate(value)",
+  locus: "Client",
+  descr: ["Returns true if `value` is a template object like `Template.myTemplate`."],
+  args: [
+    {name: "value",
+     type: "Any",
+     descr: "The value to test."}
+  ]
+};
+
+Template.api.reactivevar = {
+  id: "reactivevar",
+  name: "[new] ReactiveVar(initialValue, [equalsFunc])",
+  locus: "Client",
+  descr: ["Constructor for a ReactiveVar, which represents a single reactive variable."],
+  args: [
+    {name: "initialValue",
+     type: "Any",
+     descr: "The initial value to set.  `equalsFunc` is ignored when setting the initial value."},
+    {name: "equalsFunc",
+     type: "Function",
+     descr: "Optional.  A function of two arguments, called on the old value and the new value whenever the ReactiveVar is set.  If it returns true, no set is performed.  If omitted, the default `equalsFunc` returns true if its arguments are `===` and are of type number, boolean, string, undefined, or null."
+    }
+  ]
+};
+
+Template.api.reactivevar_get = {
+  id: "reactivevar_get",
+  name: "<em>reactiveVar</em>.get()",
+  locus: "Client",
+  descr: ["Returns the current value of the ReactiveVar, establishing a reactive dependency."]
+};
+
+Template.api.reactivevar_set = {
+  id: "reactivevar_set",
+  name: "<em>reactiveVar</em>.set(newValue)",
+  locus: "Client",
+  descr: ["Sets the current value of the ReactiveVar, invalidating the Computations that called `get` if `newValue` is different from the old value."],
+  args: [
+    {name: "newValue",
+     type: "Any"}
+  ]
+};
+
+Template.api.renderable_content = {
+  id: "renderable_content",
+  name: "Renderable content"
+};
 
 var rfc = function (descr) {
   return '[RFC5322](http://tools.ietf.org/html/rfc5322) ' + descr;

@@ -17,14 +17,14 @@ var auth = exports;
 
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata', 'mongo-livedata' ]
+    packages: [ 'meteor', 'ddp', 'mongo' ]
   });
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
 var openAccountsConnection = function () {
-  var DDP = getLoadedPackages().livedata.DDP;
+  var DDP = getLoadedPackages().ddp.DDP;
   return DDP.connect(config.getAuthDDPUrl(), {
     headers: { 'User-Agent': httpHelpers.getUserAgent() }
   });
@@ -54,7 +54,7 @@ var withAccountsConnection = function (f) {
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
 var loggedInAccountsConnection = function (token) {
-  var connection = getLoadedPackages().livedata.DDP.connect(
+  var connection = getLoadedPackages().ddp.DDP.connect(
     config.getAuthDDPUrl()
   );
 
@@ -1049,7 +1049,7 @@ exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var Package = getLoadedPackages();
-  var serviceConfigurations = new Package.meteor.Meteor.Collection(
+  var serviceConfigurations = new Package.mongo.Mongo.Collection(
     'meteor_accounts_loginServiceConfiguration',
     { connection: conn.connection }
   );
@@ -1118,3 +1118,6 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 
   setUpOnReconnect();
 };
+
+exports.loggedInAccountsConnection = loggedInAccountsConnection;
+exports.withAccountsConnection = withAccountsConnection;

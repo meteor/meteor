@@ -2,7 +2,7 @@
   "dependencies": [
     [
       "meteor",
-      "1.0.2"
+      "1.0.3-rc0"
     ],
     [
       "underscore",

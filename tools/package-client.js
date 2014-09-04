@@ -18,10 +18,10 @@ var uniload = require('./uniload.js');
 // packages.
 //
 // meteor: base package and prerequsite for all others.
-// livedata: DDP client interface to make a connection to the package server.
+// ddp: DDP client interface to make a connection to the package server.
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata']
+    packages: [ 'meteor', 'ddp']
   });
 };
 

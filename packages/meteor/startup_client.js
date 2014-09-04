@@ -19,6 +19,11 @@ if (document.addEventListener) {
   window.attachEvent('load', ready);
 }
 
+/**
+ * @summary Run code when a client or a server starts.
+ * @locus Anywhere
+ * @param {Function} func A function to run on startup.
+ */
 Meteor.startup = function (cb) {
   var doScroll = !document.addEventListener &&
     document.documentElement.doScroll;

@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.0.0"
+  version: "1.0.1"
 });
 
 Package.on_use(function (api) {
-  api.use(['deps', 'service-configuration', 'accounts-base',
+  api.use(['tracker', 'service-configuration', 'accounts-base',
            'underscore', 'templating', 'session'], 'client');
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);

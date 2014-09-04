@@ -16,7 +16,7 @@ var uniload = require("./uniload.js");
 // fast.
 //
 // - Package: a Package object as returned from uniload.load, containing
-//   the livedata and meteor packages
+//   the ddp and meteor packages
 // - endpointUrl: the url to connect to
 // - options:
 //   - headers: an object containing extra headers to use when opening the
@@ -45,7 +45,7 @@ var ServiceConnection = function (Package, endpointUrl, options) {
     }
   });
 
-  self.connection = Package.livedata.DDP.connect(endpointUrl, options);
+  self.connection = Package.ddp.DDP.connect(endpointUrl, options);
 
   // Wait until we have some sort of initial connection or error (including the
   // 10-second timeout built into our DDP client).
@@ -105,7 +105,7 @@ _.extend(ServiceConnection.prototype, {
     return self.currentFuture.wait();
   },
 
-  // XXX derived from _subscribeAndWait in livedata_connection.js
+  // XXX derived from _subscribeAndWait in ddp_connection.js
   // -- but with a different signature..
   subscribeAndWait: function (/* arguments */) {
     var self = this;

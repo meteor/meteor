@@ -1,5 +1,86 @@
 ## v.NEXT
 
+
+## v0.9.1
+
+#### Organizations in Meteor developer accounts
+
+Meteor 0.9.1 ships with organizations support in Meteor developer
+accounts. Organizations are teams of users that make it easy to
+collaborate on apps and packages.
+
+Create an organization at
+https://www.meteor.com/account-settings/organizations. Run the `meteor
+authorized` command in your terminal to give an organization
+permissions to your apps. To add an organization as a maintainer of
+your packages, use the `meteor admin maintainers` command. You can
+also publish packages with an organization's name in the package name
+prefix instead of your own username.
+
+
+#### One backwards incompatible change for templates
+
+* Templates can no longer be named "body" or "instance".
+
+#### Backwards compatible Blaze API changes
+
+* New public and documented APIs:
+  * `Blaze.toHTMLWithData()`
+  * `Template.currentData()`
+  * `Blaze.getView()`
+  * `Template.parentData()` (previously `UI._parentData()`)
+  * `Template.instance()` (previously `UI._templateInstance()`)
+  * `Template.body` (previously `UI.body`)
+  * `new Template` (previously `Template.__create__`)
+  * `Blaze.getData()` (previously `UI.getElementData`)
+
+* Deprecate the `ui` package. Instead, use the `blaze` package. The
+  `UI` and `Blaze` symbols are now the same.
+
+* Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now
+  render a template and place it in the DOM.
+
+* Add an underscore to some undocumented Blaze APIs to make them
+  internal. Notably: `Blaze._materializeView`, `Blaze._createView`,
+  `Blaze._toText`, `Blaze._destroyView`, `Blaze._destroyNode`,
+  `Blaze._withCurrentView`, `Blaze._DOMBackend`,
+  `Blaze._TemplateWith`
+
+* Document Views. Views are the machinery powering DOM updates in
+  Blaze.
+
+* Expose `view` property on template instances.
+
+#### Backwards compatible renames
+
+* Package renames
+  * `livedata` -> `ddp`
+  * `mongo-livedata` -> `mongo`
+  * `standard-app-packages` -> `meteor-platform`
+* Symbol renames
+  * `Meteor.Collection` -> `Mongo.Collection`
+  * `Meteor.Collection.Cursor` -> `Mongo.Cursor`
+  * `Meteor.Collection.ObjectID` -> `Mongo.ObjectID`
+  * `Deps` -> `Tracker`
+
+#### Other
+
+* Add `reactive-var` package. Lets you define a single reactive
+  variable, like a single key in `Session`.
+
+* Don't throw an exception in Chrome when cookies and local storage
+  are blocked.
+
+* Bump DDP version to "1". Clients connecting with version "pre1" or
+  "pre2" should still work.
+
+* Allow query parameters in OAuth1 URLs. #2404
+
+* Fix `meteor list` if not all packages on server. Fixes #2468
+
+Patch by Github user mitar.
+
+
 ## v0.9.0.1
 
 * Fix issues preventing hot code reload from automatically reloading webapps in
@@ -37,7 +118,7 @@ can specify version constraints on the packages you use. Binary packages can be
 published for additional architectures with `meteor publish-for-arch`, which
 allows cross-platform deploys and bundling.  You can search for packages with
 `meteor search` and display information on them with `meteor show`, or you can
-use the Atmosphere web interface developed by Percolate Studios at
+use the Atmosphere web interface developed by Percolate Studio at
 https://atmospherejs.com/
 
 See https://docs.meteor.com/#writingpackages and

@@ -62,8 +62,8 @@ _.extend(ReactiveDict.prototype, {
   equals: function (key, value) {
     var self = this;
 
-    // XXX hardcoded awareness of the 'mongo-livedata' package is not ideal
-    var ObjectID = Package['mongo-livedata'] && Meteor.Collection.ObjectID;
+    // Mongo.ObjectID is in the 'mongo' package
+    var ObjectID = Mongo.Collection && Mongo.ObjectID;
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key
@@ -84,15 +84,15 @@ _.extend(ReactiveDict.prototype, {
       throw new Error("ReactiveDict.equals: value must be scalar");
     var serializedValue = stringify(value);
 
-    if (Deps.active) {
+    if (Tracker.active) {
       self._ensureKey(key);
 
       if (! _.has(self.keyValueDeps[key], serializedValue))
-        self.keyValueDeps[key][serializedValue] = new Deps.Dependency;
+        self.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
 
       var isNew = self.keyValueDeps[key][serializedValue].depend();
       if (isNew) {
-        Deps.onInvalidate(function () {
+        Tracker.onInvalidate(function () {
           // clean up [key][serializedValue] if it's now empty, so we don't
           // use O(n) memory for n = values seen ever
           if (! self.keyValueDeps[key][serializedValue].hasDependents())
@@ -109,7 +109,7 @@ _.extend(ReactiveDict.prototype, {
   _ensureKey: function (key) {
     var self = this;
     if (!(key in self.keyDeps)) {
-      self.keyDeps[key] = new Deps.Dependency;
+      self.keyDeps[key] = new Tracker.Dependency;
       self.keyValueDeps[key] = {};
     }
   },

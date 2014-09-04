@@ -249,11 +249,19 @@ var longHelp = exports.longHelp = function (commandName) {
   });
 
   var help = loadHelp();
+
+  // can use to see if there is help text for a particular command
+  var helpDict = {};
+  _.each(help, function (helpEntry) {
+    helpDict[helpEntry.name] = helpEntry;
+  });
+
   var commandList = null;
   if (! (node instanceof Command)) {
     commandList = '';
     var items = [];
     var commandsWanted = {};
+
     _.each(node, function (n, shortName) {
       var fullName = commandName + (commandName.length > 0 ? " " : "") +
         shortName;
@@ -262,9 +270,13 @@ var longHelp = exports.longHelp = function (commandName) {
       // not appear in the top-level help. If we one day want to make
       // these kinds of commands visible to casual users, we'll need a
       // way to mark them as visible or hidden.
-      if (n instanceof Command && ! n.hidden)
+      
+      // Also, use helpDict to only include commands that have help text,
+      // otherwise there is nothing to display
+      if (n instanceof Command && ! n.hidden && helpDict[fullName])
         commandsWanted[fullName] = { name: shortName };
     });
+
     var maxNameLength = _.max(_.map(commandsWanted, function (c) {
       return c.name.length;
     }));

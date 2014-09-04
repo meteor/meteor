@@ -11,16 +11,20 @@ Package.on_test(function (api) {
   api.use('tinytest');
   api.use('jquery');
   api.use('test-helpers');
+  api.use('reactive-var');
   api.use('showdown');
   api.use('minimongo');
-  api.use('deps');
+  api.use('tracker');
 
   api.use('templating', 'client');
   api.add_files([
     'template_tests.html',
     'template_tests.js',
     'templating_tests.html',
-    'templating_tests.js'
+    'templating_tests.js',
+
+    'old_templates.js', // backcompat for packages built with old Blaze APIs.
+    'old_templates_tests.js'
   ], 'client');
 
   api.add_files('template_tests_server.js', 'server');

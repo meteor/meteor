@@ -64,7 +64,7 @@ MinimongoError = function (message) {
 //   (in the first form you're beholden to key enumeration order in
 //   your javascript VM)
 //
-// reactive: if given, and false, don't register with Deps (default
+// reactive: if given, and false, don't register with Tracker (default
 // is true)
 //
 // XXX possibly should support retrieving a subset of fields? and
@@ -85,6 +85,7 @@ LocalCollection.prototype.find = function (selector, options) {
 };
 
 // don't call this ctor directly.  use LocalCollection.find().
+
 LocalCollection.Cursor = function (collection, selector, options) {
   var self = this;
   if (!options) options = {};
@@ -113,8 +114,8 @@ LocalCollection.Cursor = function (collection, selector, options) {
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
-  // by default, queries register w/ Deps when it is available.
-  if (typeof Deps !== "undefined")
+  // by default, queries register w/ Tracker when it is available.
+  if (typeof Tracker !== "undefined")
     self.reactive = (options.reactive === undefined) ? true : options.reactive;
 };
 
@@ -143,6 +144,15 @@ LocalCollection.prototype.findOne = function (selector, options) {
   return this.find(selector, options).fetch()[0];
 };
 
+/**
+ * @summary Call `callback` once for each matching document, sequentially and synchronously.
+ * @locus Anywhere
+ * @method  forEach
+ * @instance
+ * @memberOf Mongo.Cursor
+ * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
+ */
 LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   var self = this;
 
@@ -175,6 +185,15 @@ LocalCollection.Cursor.prototype.getTransform = function () {
   return this._transform;
 };
 
+/**
+ * @summary Map callback over all matching documents.  Returns an Array.
+ * @locus Anywhere
+ * @method map
+ * @instance
+ * @memberOf Mongo.Cursor
+ * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
+ */
 LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   var self = this;
   var res = [];
@@ -184,6 +203,13 @@ LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
   return res;
 };
 
+/**
+ * @summary Return all matching documents as an Array.
+ * @memberOf Mongo.Cursor
+ * @method  fetch
+ * @instance
+ * @locus Anywhere
+ */
 LocalCollection.Cursor.prototype.fetch = function () {
   var self = this;
   var res = [];
@@ -193,6 +219,13 @@ LocalCollection.Cursor.prototype.fetch = function () {
   return res;
 };
 
+/**
+ * @summary Returns the number of documents that match a query.
+ * @memberOf Mongo.Cursor
+ * @method  count
+ * @instance
+ * @locus Anywhere
+ */
 LocalCollection.Cursor.prototype.count = function () {
   var self = this;
 
@@ -210,7 +243,7 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var collection = self.collection.name;
 
   // XXX minimongo should not depend on mongo-livedata!
-  return Meteor.Collection._publishCursor(self, sub, collection);
+  return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection.Cursor.prototype._getCollectionName = function () {
@@ -261,10 +294,25 @@ LocalCollection.ObserveHandle = function () {};
 // XXX maybe support field limiting (to limit what you're notified on)
 
 _.extend(LocalCollection.Cursor.prototype, {
+  /**
+   * @summary Watch a query.  Receive callbacks as the result set changes.
+   * @locus Anywhere
+   * @memberOf Mongo.Cursor
+   * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it changes
+   */
   observe: function (options) {
     var self = this;
     return LocalCollection._observeFromObserveChanges(self, options);
   },
+
+  /**
+   * @summary Watch a query.  Receive callbacks as the result set changes.  Only the differences between the old and new documents are passed to the callbacks.
+   * @locus Anywhere
+   * @memberOf Mongo.Cursor
+   * @instance
+   * @param {Object} callbacks Functions to call to deliver the result set as it changes
+   */
   observeChanges: function (options) {
     var self = this;
 
@@ -363,13 +411,13 @@ _.extend(LocalCollection.Cursor.prototype, {
       }
     });
 
-    if (self.reactive && Deps.active) {
+    if (self.reactive && Tracker.active) {
       // XXX in many cases, the same observe will be recreated when
       // the current autorun is rerun.  we could save work by
       // letting it linger across rerun and potentially get
       // repurposed if the same observe is performed, using logic
       // similar to that of Meteor.subscribe.
-      Deps.onInvalidate(function () {
+      Tracker.onInvalidate(function () {
         handle.stop();
       });
     }
@@ -474,8 +522,8 @@ LocalCollection.Cursor.prototype._getRawObjects = function (options) {
 LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered) {
   var self = this;
 
-  if (Deps.active) {
-    var v = new Deps.Dependency;
+  if (Tracker.active) {
+    var v = new Tracker.Dependency;
     v.depend();
     var notifyChange = _.bind(v.changed, v);
 
@@ -504,7 +552,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
-    // Meteor.Collection specifies its own ids and does not use this code.
+    // Mongo.Collection specifies its own ids and does not use this code.
     doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
                                       : Random.id();
   }

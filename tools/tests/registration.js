@@ -178,8 +178,7 @@ selftest.define('deferred registration revocation', ['net'], function () {
   var sessionState = s.readSessionFile();
   run = s.run('logout');
   run.waitSecs(15);
-  run.readErr("Logged out.\n");
-  run.expectEnd();
+  run.matchErr("Logged out.\n");
   run.expectExit(0);
   s.writeSessionFile(sessionState);
 
@@ -187,7 +186,6 @@ selftest.define('deferred registration revocation', ['net'], function () {
   run = s.run('whoami');
   run.waitSecs(15);
   run.readErr("Not logged in. 'meteor login' to log in.\n");
-  run.expectEnd();
   run.expectExit(1);
 });
 

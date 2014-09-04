@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.0.0"
+  version: "1.0.1"
 });
 
 Package.on_use(function (api) {
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
-  api.use('mongo-livedata', 'server');
+  api.use('mongo', 'server');
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 

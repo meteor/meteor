@@ -17,7 +17,7 @@ var stats = require('./stats.js');
 // a bit of a hack
 var getPackage = function () {
   return uniload.load({
-    packages: [ 'meteor', 'livedata' ]
+    packages: [ 'meteor', 'ddp' ]
   });
 };
 

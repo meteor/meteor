@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Default control program for an application",
-  version: "1.0.0"
+  version: "1.0.1"
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'livedata', 'mongo-livedata', 'ctl-helper', 'application-configuration', 'follower-livedata'], 'server');
+  api.use(['underscore', 'ddp', 'mongo', 'ctl-helper', 'application-configuration', 'follower-livedata'], 'server');
   api.export('main', 'server');
   api.add_files('ctl.js', 'server');
 });

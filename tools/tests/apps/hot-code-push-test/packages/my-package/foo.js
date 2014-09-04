@@ -1,0 +1,1 @@
+packageVar = 'foo';

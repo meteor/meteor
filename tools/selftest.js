@@ -388,16 +388,33 @@ var Sandbox = function (options) {
     self._makeWarehouse(options.warehouse);
   }
 
-  self.clients = [ new PhantomClient({
+  self.clients = [new PhantomClient({
     host: 'localhost',
     port: options.clients.port || 3000
   })];
 
   if (options.clients && options.clients.browserstack) {
-    self.clients.push(new BrowserStackClient({
-      host: 'localhost',
-      port: options.clients.port || 3000
-    }));
+    var browsers = [
+      { browserName: 'firefox' },
+      { browserName: 'chrome' },
+      { browserName: 'internet explorer',
+        browserVersion: '11' },
+      { browserName: 'internet explorer',
+        browserVersion: '8',
+        timeout: 60 },
+      { browserName: 'safari' },
+      { browserName: 'android' }
+    ];
+
+    _.each(browsers, function (browser) {
+      self.clients.push(new BrowserStackClient({
+        host: 'localhost',
+        port: 3000,
+        browserName: browser.browserName,
+        browserVersion: browser.browserVersion,
+        timeout: browser.timeout
+      }));
+    });
   }
 
   // Figure out the 'meteor' to run
@@ -433,22 +450,20 @@ _.extend(Sandbox.prototype, {
     var self = this;
     var argsArray = _.compact(_.toArray(arguments).slice(1));
 
-    if (self.clients.length) {
-      console.log("running test with " + self.clients.length + " client(s).");
-    } else {
-      console.log("running a client test with no clients. Use --browserstack" +
-                  " to run against clients." );
-    }
+    console.log("running test with " + self.clients.length + " client(s).");
+
     _.each(self.clients, function (client) {
       console.log("testing with " + client.name + "...");
-      f(new Run(self.execPath, {
+      var run = new Run(self.execPath, {
         sandbox: self,
         args: argsArray,
         cwd: self.cwd,
         env: self._makeEnv(),
         fakeMongo: self.fakeMongo,
         client: client
-      }));
+      });
+      run.baseTimeout = client.timeout;
+      f(run);
     });
   },
 
@@ -550,7 +565,7 @@ _.extend(Sandbox.prototype, {
     };
     self.write(to, contents);
   },
-  
+
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink: function (filename) {
     var self = this;
@@ -560,7 +575,10 @@ _.extend(Sandbox.prototype, {
   // Make a directory in the sandbox. 'filename' is as in write().
   mkdir: function (dirname) {
     var self = this;
-    fs.mkdirSync(path.join(self.cwd, dirname));
+    var dirPath = path.join(self.cwd, dirname);
+    if (! fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath);
+    }
   },
 
   // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
@@ -710,7 +728,7 @@ _.extend(Sandbox.prototype, {
       catalog.official.refresh();
     });
     _.each(
-      ['autopublish', 'standard-app-packages', 'insecure'],
+      ['autopublish', 'meteor-platform', 'insecure'],
       function (name) {
         var versionRec = doOrThrow(function () {
           return catalog.official.getLatestMainlineVersion(name);
@@ -784,7 +802,9 @@ var Client = function (options) {
 
   self.host = options.host;
   self.port = options.port;
-  self.url = "http://" + self.host + ":" + self.port;
+  self.url = "http://" + self.host + ":" + self.port + '/' +
+    (Math.random() * 0x100000000 + 1).toString(36);
+  self.timeout = options.timeout || 40;
 
   if (! self.connect || ! self.stop) {
     console.log("Missing methods in subclass of Client.");
@@ -828,9 +848,16 @@ var BrowserStackClient = function (options) {
   var self = this;
   Client.apply(this, arguments);
 
-  self.name = "BrowserStack";
   self.tunnelProcess = null;
   self.driver = null;
+
+  self.browserName = options.browserName;
+  self.browserVersion = options.browserVersion;
+
+  self.name = "BrowserStack - " + self.browserName;
+  if (self.browserVersion) {
+    self.name += " " + self.browserVersion;
+  }
 };
 
 util.inherits(BrowserStackClient, Client);
@@ -847,11 +874,15 @@ _.extend(BrowserStackClient.prototype, {
         "have installed your S3 credentials.");
 
     var capabilities = {
-      'browserName' : 'firefox',
+      'browserName' : self.browserName,
       'browserstack.user' : 'meteor',
       'browserstack.local' : 'true',
       'browserstack.key' : browserStackKey
     };
+
+    if (self.browserVersion) {
+      capabilities.browserVersion = self.browserVersion;
+    }
 
     self._launchBrowserStackTunnel(function (error) {
       if (error)
@@ -1098,17 +1129,20 @@ _.extend(Run.prototype, {
   // there may not be any benefit since the usual way to use this is
   // to call it after expectExit or expectEnd.
   forbid: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');
   }),
 
   // As forbid(), but for stderr instead of stdout.
   forbidErr: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern, 'stderr');
   }),
 
   // Combination of forbid() and forbidErr(). Forbids the pattern on
   // both stdout and stderr.
   forbidAll: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern);
   }),
 
@@ -1598,5 +1632,5 @@ _.extend(exports, {
   getToolsPackage: getToolsPackage,
   execFileSync: execFileSync,
   doOrThrow: doOrThrow,
-  testPackageServerUrl: 'https://test-packages.meteor.com'
+  testPackageServerUrl: config.getTestPackageServerUrl()
 });

@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Easily create arbitrary multicolumn layouts",
-  version: "1.0.0"
+  version: "1.0.1"
 });
 
 Package.on_use(function (api) {

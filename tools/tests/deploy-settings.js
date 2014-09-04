@@ -9,10 +9,10 @@ var httpHelpers = require('../http-helpers.js');
 // if the settings aren't found after a timeout.
 var checkForSettings = function (appName, settings, timeoutSecs) {
   var timer = setTimeout(function () {
-    throw new Error('Expected settings not found on app ', appName);
+    selftest.fail('Expected settings not found on app ' + appName);
   }, timeoutSecs * 1000);
   while (true) {
-    var result = httpHelpers.request('http://' + appName + '.meteor.com');
+    var result = httpHelpers.request('http://' + appName);
 
     // XXX This is brittle; the test will break if we start formatting the
     // __meteor_runtime_config__ JS differently. Ideally we'd do something

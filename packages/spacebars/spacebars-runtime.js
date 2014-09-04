@@ -10,7 +10,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     var template = templateOrFunction;
     if (! Blaze.isTemplate(template))
       throw new Error("Expected template or null, found: " + template);
-    return Blaze.runTemplate(templateOrFunction, contentFunc, elseFunc);
+    return templateOrFunction.constructView(contentFunc, elseFunc);
   }
 
   var templateVar = Blaze.ReactiveVar(null, tripleEquals);
@@ -19,13 +19,13 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     if (template === null)
       return null;
 
-    if (! Template.__isTemplate__(template))
+    if (! Blaze.isTemplate(template))
       throw new Error("Expected template or null, found: " + template);
 
-    return Blaze.runTemplate(template, contentFunc, elseFunc);
+    return template.constructView(contentFunc, elseFunc);
   });
   view.__templateVar = templateVar;
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     this.autorun(function () {
       templateVar.set(templateOrFunction());
     });
@@ -204,37 +204,6 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
   };
 };
 
-Spacebars.TemplateWith = function (argFunc, contentBlock) {
-  var w;
-
-  // This is a little messy.  When we compile `{{> UI.contentBlock}}`, we
-  // wrap it in Blaze.InOuterTemplateScope in order to skip the intermediate
-  // parent Views in the current template.  However, when there's an argument
-  // (`{{> UI.contentBlock arg}}`), the argument needs to be evaluated
-  // in the original scope.  There's no good order to nest
-  // Blaze.InOuterTemplateScope and Spacebars.TemplateWith to achieve this,
-  // so we wrap argFunc to run it in the "original parentView" of the
-  // Blaze.InOuterTemplateScope.
-  //
-  // To make this better, reconsider InOuterTemplateScope as a primitive.
-  // Longer term, evaluate expressions in the proper lexical scope.
-  var wrappedArgFunc = function () {
-    var viewToEvaluateArg = null;
-    if (w.parentView && w.parentView.kind === 'InOuterTemplateScope') {
-      viewToEvaluateArg = w.parentView.originalParentView;
-    }
-    if (viewToEvaluateArg) {
-      return Blaze.withCurrentView(viewToEvaluateArg, argFunc);
-    } else {
-      return argFunc();
-    }
-  };
-
-  w = Blaze.With(wrappedArgFunc, contentBlock);
-  w.__isTemplateWith = true;
-  return w;
-};
-
 // Spacebars.With implements the conditional logic of rendering
 // the `{{else}}` block if the argument is falsy.  It combines
 // a Blaze.If with a Blaze.With (the latter only in the truthy
@@ -248,7 +217,7 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
                       return argVar.get(); }, contentFunc); },
                     elseFunc);
   });
-  view.onCreated(function () {
+  view.onViewCreated(function () {
     this.autorun(function () {
       argVar.set(argFunc());
 
@@ -256,7 +225,7 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
       // of the #with get stopped sooner.  It reaches inside
       // our ReactiveVar to access its dep.
 
-      Deps.onInvalidate(function () {
+      Tracker.onInvalidate(function () {
         argVar.dep.changed();
       });
 
@@ -273,9 +242,9 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
       // 5. The template tag `{{B}}`
       //
       // When (3) is invalidated, it immediately stops (4) and (5)
-      // because of a Deps.onInvalidate built into materializeView.
+      // because of a Tracker.onInvalidate built into materializeView.
       // (When a View's render method is invalidated, it immediately
-      // tears down all the subviews, via a Deps.onInvalidate much
+      // tears down all the subviews, via a Tracker.onInvalidate much
       // like this one.
       //
       // Suppose `A` changes to become falsy, and `B` changes at the
@@ -303,3 +272,6 @@ Spacebars.With = function (argFunc, contentFunc, elseFunc) {
 
   return view;
 };
+
+// XXX COMPAT WITH 0.9.0
+Spacebars.TemplateWith = Blaze._TemplateWith;
