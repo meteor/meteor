@@ -63,8 +63,8 @@ PV.getValidSemverVersion = function (versionString) {
 
   // NPM's semver spec supports things like 'v1.0.0' and considers them valid,
   // but we don't. Everything before the + or - should be of the x.x.x form.
-  var mainVersion = versionString.split('-')[0].split('+')[0];
-  if (! /^\d*\.\d*\.\d*$/.test(mainVersion)) {
+  var mainVersion = versionString.split('+')[0].split('-')[0];
+  if (! /^\d+\.\d+\.\d+$/.test(mainVersion)) {
       throwVersionParserError(
         "Version string must look like semver (eg '1.2.3'), not '"
           + versionString + "'.");
