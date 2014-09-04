@@ -1,4 +1,4 @@
-Todos = new Meteor.Collection("todos");
+Todos = new Mongo.Collection("todos");
 //Todos.schema({text: String, done: Boolean, order: Number});
 
 if (Meteor.isServer) {
