@@ -510,7 +510,7 @@ Options:
 
 
 >>> admin maintainers
-View or change authorized maintainers for a package
+View or change package maintainers
 Usage: meteor admin maintainers <package name> [--list]
        meteor admin maintainers <package name> --add <username>
        meteor admin maintainers <package name> --remove <username>
