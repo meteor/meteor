@@ -34,8 +34,8 @@ prefix instead of your own username.
   * `new Template` (previously `Template.__create__`)
   * `Blaze.getData()` (previously `UI.getElementData`)
 
-* Deprecate the 'ui' package. Instead, use the 'blaze' package. The
-  'UI' and 'Blaze' symbols are now the same.
+* Deprecate the `ui` package. Instead, use the `blaze` package. The
+  `UI` and `Blaze` symbols are now the same.
 
 * Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now
   render a template and place it in the DOM.
@@ -54,21 +54,21 @@ prefix instead of your own username.
 #### Backwards compatible renames
 
 * Package renames
-  * livedata -> ddp
-  * mongo-livedata -> mongo
-  * standard-app-packages -> meteor-platform
+  * `livedata` -> `ddp`
+  * `mongo-livedata` -> `mongo`
+  * `standard-app-packages` -> `meteor-platform`
 * Symbol renames
-  * Meteor.Collection -> Mongo.Collection
-  * Deps -> Tracker
+  * `Meteor.Collection` -> `Mongo.Collection`
+  * `Deps` -> `Tracker`
 
 #### Other
 
-* Add 'reactive-var' package. Lets you define a single reactive
+* Add `reactive-var` package. Lets you define a single reactive
   variable, like a single key in `Session`.
 
 * Allow query parameters in OAuth1 URLs. #2404
 
-* Fix 'meteor list' if not all packages on server. Fixes #2468
+* Fix `meteor list` if not all packages on server. Fixes #2468
 
 Patch by Github user mitar.
 
