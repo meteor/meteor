@@ -28,7 +28,8 @@ the package name prefix instead of your own username.
   `Template.currentData()`, `Blaze.getView()`, `UI.parentData()`
   (previously `UI._parentData()`), `Template.instance()` (previously
   `UI._templateInstance()`), `Template.body` (previously `UI.body`),
-  `new Template` (previously `Template.__create__`)
+  `new Template` (previously `Template.__create__`), `Blaze.getData()`
+  (previously `UI.getElementData`)
 
 * Deprecate the 'ui' package. Instead, use the 'blaze' package. The
   'UI' and 'Blaze' symbols are now the same.
