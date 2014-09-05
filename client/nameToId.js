@@ -154,5 +154,11 @@ nameToId = {
   "PackageAPI#imply": "pack_api_imply",
   "PackageAPI#export": "pack_export",
   "PackageAPI#addFiles": "pack_addFiles",
-  "Package.onUse": "pack_onUse"
+  "PackageAPI#use": "pack_use",
+  "Package.onUse": "pack_onUse",
+  "Meteor.loginWith<ExternalService>": "meteor_loginwithexternalservice",
+  "EJSON.CustomType#typeName": "ejson_type_typeName",
+  "EJSON.CustomType#toJSONValue": "ejson_type_toJSONValue",
+  "EJSON.CustomType#clone": "ejson_type_clone",
+  "EJSON.CustomType#equals": "ejson_type_equals"
 };
