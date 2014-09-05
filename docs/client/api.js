@@ -1,3 +1,9 @@
+// WARNING: this file is deprecated, do not use this to document new API
+// methods. This is only here as part of the transition proces.
+// 
+// The new method is described here:
+// https://mdg.hackpad.com/Automatically-Generating-API-Docs-using-JSDoc-rW8Sq1NGVE9
+
 Template.api.isClient = {
   id: "meteor_isclient",
   name: "Meteor.isClient",
