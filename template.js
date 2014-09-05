@@ -198,7 +198,7 @@ Blaze.TemplateInstance.prototype.findAll = function (selector) {
 };
 
 /**
- * @summary Find all elements matching `selector` in this template instance.
+ * @summary Find one element matching `selector` in this template instance.
  * @locus Client
  * @param {String} selector The CSS selector to match, scoped to the template contents.
  */
@@ -229,7 +229,7 @@ Template.prototype.helpers = function (dict) {
 /**
  * @summary Specify event handlers for this template.
  * @locus Client
- * @param {Object} eventMap Event handlers to associate with this template.
+ * @param {EventMap} eventMap Event handlers to associate with this template.
  */
 Template.prototype.events = function (eventMap) {
   var template = this;
@@ -276,12 +276,14 @@ instance = function () {
 /**
  * @summary Returns the data context of the current helper, or the data context of the template that declares the current event handler or callback.  Establishes a reactive dependency on the result.
  * @locus Client
+ * @function
  */
 Template.currentData = Blaze.getData;
 
 /**
  * @summary Accesses other data contexts that enclose the current data context.
  * @locus Client
+ * @function
  * @param {Integer} numLevels The number of levels beyond the current data context to look.
  */
 Template.parentData = Blaze._parentData;
@@ -289,6 +291,7 @@ Template.parentData = Blaze._parentData;
 /**
  * @summary Defines a [helper function](#template_helpers) which can be used from all templates.
  * @locus Client
+ * @function
  * @param {String} name The name of the helper function you are defining.
  * @param {Function} function The helper function itself.
  */
