@@ -2411,7 +2411,7 @@ Blaze is the package that makes reactive templates possible.
 You can use the Blaze API directly in order to render templates programmatically
 and manipulate "Views," the building blocks of reactive templates.
 
-{{> api_box blaze_render}}
+{{> autoApiBox "Blaze.render"}}
 
 When you render a template, the
 template's [`created`](#template_created) callback is invoked
@@ -2433,12 +2433,12 @@ be mindful to always call [`Blaze.remove`](#blaze_remove) when the View is
 no longer needed.
 {{/warning}}
 
-{{> api_box blaze_renderwithdata}}
+{{> autoApiBox "Blaze.renderWithData"}}
 
 `Blaze.renderWithData(Template.myTemplate, data)` is essentially the same as
 `Blaze.render(Blaze.With(data, function () { return Template.myTemplate; }))`.
 
-{{> api_box blaze_remove}}
+{{> autoApiBox "Blaze.remove"}}
 
 Use `Blaze.remove` to remove a template or View previously inserted with
 `Blaze.render`, in such a way that any behaviors attached to the DOM by
@@ -2457,9 +2457,9 @@ update or with jQuery.
 been removed from the document, to tell Blaze to stop tracking and
 updating these nodes.
 
-{{> api_box blaze_getdata}}
+{{> autoApiBox "Blaze.getData"}}
 
-{{> api_box blaze_tohtml}}
+{{> autoApiBox "Blaze.toHTML"}}
 
 Rendering a template to HTML loses all fine-grained reactivity.  The
 normal way to render a template is to either include it from another
@@ -2472,9 +2472,9 @@ in response to reactive data changes.  Instead, any reactive data
 changes will invalidate the current Computation if there is one
 (for example, an autorun that is the caller of `Blaze.toHTML`).
 
-{{> api_box blaze_tohtmlwithdata}}
+{{> autoApiBox "Blaze.toHTMLWithData"}}
 
-{{> api_box blaze_view}}
+{{> autoApiBox "Blaze.View"}}
 
 Behind every template or part of a template &mdash; a template tag, say, like `{{dstache}}foo}}` or `{{dstache}}#if}}` &mdash; is
 a View object, which is a reactively updating region of DOM.
@@ -2624,19 +2624,19 @@ be updated.
 
 </dl>
 
-{{> api_box blaze_currentview}}
+{{> autoApiBox "Blaze.currentView"}}
 
 The "current view" is used by [`Template.currentData()`](#template_currentdata) and
 [`Template.instance()`](#template_instance) to determine
 the contextually relevant data context and template instance.
 
-{{> api_box blaze_getview}}
+{{> autoApiBox "Blaze.getView"}}
 
 If you don't specify an `element`, there must be a current View or an
 error will be thrown.  This is in contrast to
 [`Blaze.currentView`](#blaze_currentview).
 
-{{> api_box blaze_with}}
+{{> autoApiBox "Blaze.With"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
@@ -2644,25 +2644,25 @@ Unlike `{{dstache}}#with}}` (as used in templates), `Blaze.With` has no "else" c
 a falsy value for the data context will not prevent the content from
 rendering.
 
-{{> api_box blaze_if}}
+{{> autoApiBox "Blaze.If"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
 Matches the behavior of `{{dstache}}#if}}` in templates.
 
-{{> api_box blaze_unless}}
+{{> autoApiBox "Blaze.Unless"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
 Matches the behavior of `{{dstache}}#unless}}` in templates.
 
-{{> api_box blaze_each}}
+{{> autoApiBox "Blaze.Each"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
 Matches the behavior of `{{dstache}}#each}}` in templates.
 
-{{> api_box blaze_template}}
+{{> autoApiBox "Blaze.Template"}}
 
 Templates defined by the template compiler, such as `Template.myTemplate`,
 are objects of type `Blaze.Template` (aliased as `Template`).
@@ -2693,7 +2693,7 @@ present on template objects:
 
 </dl>
 
-{{> api_box blaze_istemplate}}
+{{> autoApiBox "Blaze.isTemplate"}}
 
 
 {{#api_box renderable_content}}
@@ -3167,7 +3167,7 @@ to save memory.
 To use `ReactiveVar`, add the `reactive-var` package to your project with
 `$ meteor add reactive-var`.
 
-{{> api_box reactivevar}}
+{{> autoApiBox "ReactiveVar"}}
 
 A ReactiveVar holds a single value that can be get and set, such that calling
 `set` will invalidate any Computations that called `get`, according to the
@@ -3195,9 +3195,9 @@ while calling `set` on an argument that is an *object* (not a
 primitive) always counts as a change.  You can configure this behavior
 using the `equalsFunc` argument.
 
-{{> api_box reactivevar_get}}
+{{> autoApiBox "ReactiveVar#get"}}
 
-{{> api_box reactivevar_set}}
+{{> autoApiBox "ReactiveVar#set"}}
 
 <h2 id="ejson"><span>EJSON</span></h2>
 
@@ -3391,10 +3391,10 @@ Example asynchronous HTTP call:
               });
 
 
-{{> api_box http_get}}
-{{> api_box http_post}}
-{{> api_box http_put}}
-{{> api_box http_del}}
+{{> autoApiBox "HTTP.get"}}
+{{> autoApiBox "HTTP.post"}}
+{{> autoApiBox "HTTP.put"}}
+{{> autoApiBox "HTTP.del"}}
 
 
 <h2 id="email"><span>Email</span></h2>
@@ -3414,7 +3414,7 @@ before your first call to `Email.send`.
 If `MAIL_URL` is not set (eg, when running your application locally),
 `Email.send` outputs the message to standard output instead.
 
-{{> api_box email_send }}
+{{> autoApiBox "Email.send"}}
 
 You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
 all other options are optional.
@@ -3459,8 +3459,8 @@ by spammers.)
 assets, which are located in the `private` subdirectory of an application's
 tree.
 
-{{> api_box assets_getText }}
-{{> api_box assets_getBinary }}
+{{> autoApiBox "Assets.getText"}}
+{{> autoApiBox "Assets.getBinary"}}
 
 Static server assets are included by placing them in the application's `private`
 subdirectory. For example, if an application's `private` subdirectory includes a
@@ -3540,7 +3540,7 @@ package, you must define `summary` and `version`.
 
 {{/markdown}}
 
-{{> api_box pack_describe }}
+{{> autoApiBox "Package.describe"}}
 
 
 <h3 id="packagedefinition"><span>Package Definition</span></h3>
@@ -3552,7 +3552,7 @@ depends on, what packages are implied by your package, and what object your
 package is exported to.
 {{/markdown}}
 
-{{> api_box pack_onUse }}
+{{> autoApiBox "Package.onUse"}}
 
 {{> api_box pack_versions }}
 {{> api_box pack_use }}
@@ -3575,6 +3575,6 @@ required scaffolding in `package.js`, and you'll only need to add unit test code
 in the `_test.js` file that was created.
 {{/markdown}}
 
-{{> api_box pack_onTest }}
+{{> autoApiBox "Package.onTest"}}
 
 </template>
