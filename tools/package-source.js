@@ -1003,7 +1003,7 @@ _.extend(PackageSource.prototype, {
          * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
          * @locus package.js
          * @instance
-         * @param {String|String[]} packagespec Name of a package, or array of package names, with an optional @version component for each.
+         * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
          */
         imply: function (names, arch) {
           names = toArray(names);

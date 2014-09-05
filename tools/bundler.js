@@ -1119,7 +1119,7 @@ _.extend(JsImage.prototype, {
            * @locus Server
            * @memberOf Assets
            * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
-           * @param {Function} asyncCallback Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+           * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
            */
           getBinary: function (assetPath, callback) {
             return getAsset(item.assets, assetPath, undefined, callback);

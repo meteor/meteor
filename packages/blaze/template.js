@@ -266,6 +266,7 @@ Template.prototype.events = function (eventMap) {
 };
 
 /**
+ * @function
  * @name instance
  * @memberOf Template
  * @summary The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
