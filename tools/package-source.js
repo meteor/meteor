@@ -913,6 +913,7 @@ _.extend(PackageSource.prototype, {
       /**
        * @class PackageAPI
        * @instanceName api
+       * @global
        * @summary The API object passed into the Packages.onUse function.
        */
       var api = {
@@ -996,6 +997,14 @@ _.extend(PackageSource.prototype, {
         // Called when this package wants packages using it to also use
         // another package.  eg, for umbrella packages which want packages
         // using them to also get symbols or plugins from their components.
+        
+        /**
+         * @memberOf PackageAPI
+         * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
+         * @locus package.js
+         * @instance
+         * @param {String|String[]} packagespec Name of a package, or array of package names, with an optional @version component for each.
+         */
         imply: function (names, arch) {
           names = toArray(names);
           arch = toArchArray(arch);
@@ -1027,6 +1036,15 @@ _.extend(PackageSource.prototype, {
         // Top-level call to add a source file to a package. It will
         // be processed according to its extension (eg, *.coffee
         // files will be compiled to JavaScript).
+        
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Specify the source code for your package.
+         * @locus package.js
+         * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
+         * @param {String} [architecture] If you only want to export the file on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the file is used with.
+         */
         addFiles: function (paths, arch, fileOptions) {
           paths = toArray(paths);
           arch = toArchArray(arch);
@@ -1044,6 +1062,12 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
+        
+        /**
+         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published.
+         * @locus package.js
+         * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
+         */
         versionsFrom: function (release) {
           if (releaseRecord) {
             buildmessage.error("api.versionsFrom may only be specified once.",
@@ -1089,6 +1113,13 @@ _.extend(PackageSource.prototype, {
         // or an array of those.
         // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
+        
+        /**
+         * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
+         * @locus package.js
+         * @param {String} exportedObject Name of the object.
+         * @param {String} [architecture] If you only want to export the object on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the export is used with.
+         */
         export: function (symbols, arch, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
           // arch.

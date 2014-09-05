@@ -119,6 +119,8 @@
   "Package.onTest",
   "Package.onUse",
   "PackageAPI",
+  "PackageAPI#addFiles",
+  "PackageAPI#imply",
   "ReactiveVar",
   "ReactiveVar#get",
   "ReactiveVar#set",
@@ -164,5 +166,7 @@
   "Tracker.currentComputation",
   "Tracker.flush",
   "Tracker.nonreactive",
-  "Tracker.onInvalidate"
+  "Tracker.onInvalidate",
+  "initFromPackageDir~api.export",
+  "initFromPackageDir~api.versionsFrom"
 ]
