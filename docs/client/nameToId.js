@@ -146,5 +146,13 @@ nameToId = {
   "Blaze.Unless": "blaze_unless",
   "Blaze.Each": "blaze_each",
   "Blaze.Template": "blaze_template",
-  "Blaze.isTemplate": "blaze_istemplate"
+  "Blaze.isTemplate": "blaze_istemplate",
+  "Meteor.subscribe": "meteor_subscribe",
+  "Meteor.call": "meteor_call",
+  "Meteor.apply": "meteor_apply",
+  "PackageAPI#versionsFrom": "pack_versions",
+  "PackageAPI#imply": "pack_api_imply",
+  "PackageAPI#export": "pack_export",
+  "PackageAPI#addFiles": "pack_addFiles"
+
 };

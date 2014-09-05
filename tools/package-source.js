@@ -1064,6 +1064,8 @@ _.extend(PackageSource.prototype, {
         // look at the packages listed in the release to figure that out.
         
         /**
+         * @memberOf PackageAPI
+         * @instance
          * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published.
          * @locus package.js
          * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
@@ -1115,6 +1117,8 @@ _.extend(PackageSource.prototype, {
         // @param options 'testOnly', boolean.
         
         /**
+         * @memberOf PackageAPI
+         * @instance
          * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
          * @locus package.js
          * @param {String} exportedObject Name of the object.
