@@ -20,7 +20,7 @@ don't want served to the client, such as code containing passwords or
 authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
-{{> api_box isCordova}}
+{{> autoApiBox "Meteor.isCordova"}}
 
 {{> autoApiBox "Meteor.startup"}}
 
@@ -2051,7 +2051,7 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
-{{> api_box template_events}}
+{{> autoApiBox "Template#events"}}
 
 Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
@@ -2059,7 +2059,7 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{{> api_box template_helpers}}
+{{> autoApiBox "Template#helpers"}}
 
 Each template has a local dictionary of helpers that are made available to it,
 and this call specifies helpers to add to the template's dictionary.
@@ -2085,7 +2085,7 @@ To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
 
 
-{{> api_box template_rendered}}
+{{> autoApiBox "Template#rendered"}}
 
 This callback is called once when an instance of Template.*myTemplate* is
 rendered into DOM nodes and put into the document for the first time.
@@ -2099,7 +2099,7 @@ object.
 Because your template has been rendered, you can use functions like
 [`this.findAll`](#template_findAll) which look at its DOM nodes.
 
-{{> api_box template_created}}
+{{> autoApiBox "Template#created"}}
 
 This callback is called before your template's logic is evaluated for the first
 time.  Inside the callback, `this` is the new [template
@@ -2118,7 +2118,7 @@ you will eventually get a `destroyed` callback for the same object.
   from helpers. For now, you probably just want to use `rendered`.
 {{/note}}
 
-{{> api_box template_destroyed}}
+{{> autoApiBox "Template#destroyed"}}
 
 This callback is called when an occurrence of a template is taken off
 the page for any reason and not replaced with a re-rendering.  Inside
@@ -2152,7 +2152,7 @@ in the DOM.
 
 Template instance objects are `instanceof Blaze.TemplateInstance`.
 
-{{> api_box template_findAll}}
+{{> autoApiBox "Blaze.TemplateInstance#findAll"}}
 
 `template.findAll` returns an array of DOM elements matching `selector`.
 
@@ -2164,7 +2164,7 @@ The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
 the selector.
 
-{{> api_box template_find}}
+{{> autoApiBox "Blaze.TemplateInstance#find"}}
 
 Returns one DOM element matching `selector`, or `null` if there are no
 such elements.
@@ -2173,7 +2173,7 @@ The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
 the selector.
 
-{{> api_box template_firstNode}}
+{{> autoApiBox "Blaze.TemplateInstance#firstNode"}}
 
 The two nodes `firstNode` and `lastNode` indicate the extent of the
 rendered template in the DOM.  The rendered template includes these
@@ -2181,15 +2181,15 @@ nodes, their intervening siblings, and their descendents.  These two
 nodes are siblings (they have the same parent), and `lastNode` comes
 after `firstNode`, or else they are the same node.
 
-{{> api_box template_lastNode}}
+{{> autoApiBox "Blaze.TemplateInstance#lastNode"}}
 
-{{> api_box template_data}}
+{{> autoApiBox "Blaze.TemplateInstance#data"}}
 
 This property provides access to the data context at the top level of
 the template.  It is updated each time the template is re-rendered.
 Access is read-only and non-reactive.
 
-{{> api_box template_autorun}}
+{{> autoApiBox "Blaze.TemplateInstance#autorun"}}
 
 You can use `this.autorun` from a [`created`](#template_created) or
 [`rendered`](#template_rendered) callback to reactively update the DOM
@@ -2198,20 +2198,20 @@ when the template is destroyed.
 
 Alias for `template.view.autorun`.
 
-{{> api_box template_view}}
+{{> autoApiBox "Blaze.TemplateInstance#view"}}
 
-{{> api_box template_registerhelper}}
+{{> autoApiBox "Template.registerHelper"}}
 
-{{> api_box template_instance}}
+{{> autoApiBox "Template.instance"}}
 
-{{> api_box template_currentdata}}
+{{> autoApiBox "Template.currentData"}}
 
-{{> api_box template_parentdata}}
+{{> autoApiBox "Template.parentData"}}
 
 For example, `Template.parentData(0)` is equivalent to `Template.currentData()`.  `Template.parentData(2)`
 is equivalent to `{{dstache}}../..}}` in a template.
 
-{{> api_box template_body}}
+{{> autoApiBox "Template.body"}}
 
 You can define helpers and event maps on `Template.body` just like on
 any `Template.myTemplate` object.
