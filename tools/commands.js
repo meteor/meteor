@@ -1369,8 +1369,11 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
     return 1;
   }
 
+  var webArchs = project.getWebArchs();
+
   var buildOptions = {
-    minify: options.production
+    minify: options.production,
+    webArchs: webArchs
   };
 
   var ret;
