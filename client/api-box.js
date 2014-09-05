@@ -55,6 +55,11 @@ Template.autoApiBox.helpers({
         return typeLink("Event Map", "eventmaps");
       }
 
+      // decode the "Array.<Type>" syntax
+      if (name.slice(0, 7) === "Array.<") {
+        return "Array of " + name.match(/<([^>]+)>/)[1] + "s";
+      }
+
       return name;
     });
 
