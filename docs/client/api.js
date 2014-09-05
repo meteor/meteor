@@ -37,6 +37,28 @@ Template.api.startup = {
   ]
 };
 
+Template.api.wrapAsync = {
+  id: "meteor_wrapasync",
+  name: "Meteor.wrapAsync(func, [context])",
+  locus: "Anywhere",
+  descr: ["Wrap a function that takes a callback function as its final "
+          + "parameter so that the wrapper function can be used "
+          + "either synchronously (without passing a callback) or "
+          + "asynchronously (when a callback is passed). If a callback is "
+          + "provided, the environment captured when the original function "
+          + "was called will be restored in the callback."],
+  args: [{
+    name: "func",
+    type: "Function",
+    descr: "A function that takes a callback as its final parameter"
+  }, {
+    name: "context",
+    type: "Object",
+    descr: "Optional `this` object against which the original function " +
+      "will be invoked"
+  }]
+};
+
 Template.api.absoluteUrl = {
   id: "meteor_absoluteurl",
   name: "Meteor.absoluteUrl([path], [options])",

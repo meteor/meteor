@@ -71,7 +71,7 @@ _.extend(Meteor, {
     }
   },
 
-  // _wrapAsync can wrap any function that takes some number of arguments that
+  // wrapAsync can wrap any function that takes some number of arguments that
   // can't be undefined, followed by some optional arguments, where the callback
   // is the last optional argument.
   // e.g. fs.readFile(pathname, [callback]),
@@ -79,42 +79,36 @@ _.extend(Meteor, {
   // For maximum effectiveness and least confusion, wrapAsync should be used on
   // functions where the callback is the only argument of type Function.
   //
-  _wrapAsync: function (fn) {
+  wrapAsync: function (fn, context) {
     return function (/* arguments */) {
-      var self = this;
-      var callback;
-      var fut;
+      var self = context || this;
       var newArgs = _.toArray(arguments);
+      var callback;
 
-      var logErr = function (err) {
-        if (err)
-          return Meteor._debug("Exception in callback of async function",
-                               err.stack ? err.stack : err);
-      };
-
-      // Pop off optional args that are undefined
-      while (newArgs.length > 0 &&
-             typeof(newArgs[newArgs.length - 1]) === "undefined") {
-        newArgs.pop();
+      for (var i = newArgs.length - 1; i >= 0; --i) {
+        var arg = newArgs[i];
+        var type = typeof arg;
+        if (type !== "undefined") {
+          if (type === "function") {
+            callback = arg;
+          }
+          break;
+        }
       }
-      // If we have any left and the last one is a function, then that's our
-      // callback; otherwise, we don't have one.
-      if (newArgs.length > 0 &&
-          newArgs[newArgs.length - 1] instanceof Function) {
-        callback = newArgs.pop();
-      } else {
+
+      if (! callback) {
         if (Meteor.isClient) {
           callback = logErr;
         } else {
-          fut = new Future();
+          var fut = new Future();
           callback = fut.resolver();
         }
+        ++i; // Insert the callback just after arg.
       }
-      newArgs.push(Meteor.bindEnvironment(callback));
+
+      newArgs[i] = Meteor.bindEnvironment(callback);
       var result = fn.apply(self, newArgs);
-      if (fut)
-        return fut.wait();
-      return result;
+      return fut ? fut.wait() : result;
     };
   },
 
@@ -142,3 +136,25 @@ _.extend(Meteor, {
     return Child;
   }
 });
+
+var warnedAboutWrapAsync = false;
+
+/**
+ * @deprecated in 1.0.0
+ */
+Meteor._wrapAsync = function(fn, context) {
+  if (! warnedAboutWrapAsync) {
+    Meteor._debug("Meteor._wrapAsync has been renamed to Meteor.wrapAsync");
+    warnedAboutWrapAsync = true;
+  }
+  return Meteor.wrapAsync.apply(Meteor, arguments);
+};
+
+function logErr(err) {
+  if (err) {
+    return Meteor._debug(
+      "Exception in callback of async function",
+      err.stack ? err.stack : err
+    );
+  }
+}
