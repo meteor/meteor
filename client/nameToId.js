@@ -153,6 +153,6 @@ nameToId = {
   "PackageAPI#versionsFrom": "pack_versions",
   "PackageAPI#imply": "pack_api_imply",
   "PackageAPI#export": "pack_export",
-  "PackageAPI#addFiles": "pack_addFiles"
-
+  "PackageAPI#addFiles": "pack_addFiles",
+  "Package.onUse": "pack_onUse"
 };
