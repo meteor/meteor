@@ -469,6 +469,14 @@ _.extend(PackageSource.prototype, {
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
     // == 'Package' object visible in package.js ==
+    
+    /**
+     * @global
+     * @name  Package
+     * @summary The Package object in package.js
+     * @namespace
+     * @locus package.js
+     */
     var Package = {
       // Set package metadata. Options:
       // - summary: for 'meteor list' & package server
@@ -477,6 +485,17 @@ _.extend(PackageSource.prototype, {
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
+      
+      /**
+       * @summary Provide basic package information.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Object} options
+       * @param {String} options.summary A concise 1-2 sentence description of the package, required for publication.
+       * @param {String} options.version The [semver](http://www.semver.org) version for your package. If no version is specified, defaults to `0.0.0`. You need to specify a version to publish to the package server.
+       * @param {String} options.name Optional name override. By default, the package name comes from the name of its directory.
+       * @param {String} options.git Optional Git URL to the source repository.
+       */
       describe: function (options) {
         _.each(options, function (value, key) {
           if (key === "summary" ||
@@ -505,6 +524,12 @@ _.extend(PackageSource.prototype, {
         });
       },
 
+      /**
+       * @summary Define package dependencies and expose package methods.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       */
       onUse: function (f) {
         if (!self.isTest) {
           if (fileAndDepLoader) {
@@ -517,11 +542,19 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      // Backwards compatibility for old interfaces.
+      /**
+       * @deprecated in 0.9.0
+       */
       on_use: function (f) {
         this.onUse(f);
       },
 
+      /**
+       * @summary Define dependencies and expose package methods for unit tests.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       */
       onTest: function (f) {
         // If we are not initializing the test package, then we are initializing
         // the normal package and have now noticed that it has tests. So, let's
@@ -544,7 +577,9 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      // Backwards compatibility for old interfaces.
+      /**
+       * @deprecated in 0.9.0
+       */
       on_test: function (f) {
         this.onTest(f);
       },
@@ -875,6 +910,11 @@ _.extend(PackageSource.prototype, {
         return arch;
       };
 
+      /**
+       * @class PackageAPI
+       * @instanceName api
+       * @summary The API object passed into the Packages.onUse function.
+       */
       var api = {
         // Called when this package wants to make another package be
         // used. Can also take literal package objects, if you have

@@ -11,7 +11,9 @@
       "packages/jquery/jquery.js",
       "packages/underscore/underscore.js",
       "packages/json/json2.js",
-      "packages/minimongo/minimongo_tests.js"
+      "packages/minimongo/minimongo_tests.js",
+      "tools/node_modules",
+      "tools/skel-pack/package.js"
     ]
   }
 }

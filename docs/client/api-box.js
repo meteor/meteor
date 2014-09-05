@@ -53,6 +53,8 @@ Template.autoApiBox.helpers({
         return "JSON-compatible Object";
       } else if (name === "EventMap") {
         return typeLink("Event Map", "eventmaps");
+      } else if (name === "DOMNode") {
+        return "DOM Node";
       }
 
       // decode the "Array.<Type>" syntax

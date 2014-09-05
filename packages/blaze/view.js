@@ -32,6 +32,14 @@
 /// of name "with".  Names are also useful when debugging, so in
 /// general it's good for functions that create Views to set the name.
 /// Views associated with templates have names of the form "Template.foo".
+
+/**
+ * @class
+ * @summary Constructor for a View, which represents a reactive region of DOM.
+ * @locus Client
+ * @param {String} [name] Optional.  A name for this type of View.  See [`view.name`](#view_name).
+ * @param {Function} renderFunction A function that returns [*renderable content*](#renderable_content).  In this function, `this` is bound to the View.
+ */
 Blaze.View = function (name, render) {
   if (! (this instanceof Blaze.View))
     // called without `new`
@@ -383,6 +391,10 @@ Blaze._isContentEqual = function (a, b) {
   }
 };
 
+/**
+ * @summary The View corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
+ * @locus Client
+ */
 Blaze.currentView = null;
 
 Blaze._withCurrentView = function (view, func) {
@@ -457,6 +469,14 @@ var contentAsFunc = function (content) {
   }
 };
 
+/**
+ * @summary Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#blaze_view) which can be passed to [`Blaze.remove`](#blaze_remove).
+ * @locus Client
+ * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned.
+ * @param {DOMNode} parentNode The node that will be the parent of the rendered template.  It must be an Element node.
+ * @param {DOMNode} [nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
+ * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
+ */
 Blaze.render = function (content, parentElement, nextNode, parentView) {
   if (! parentElement) {
     Blaze._warn("Blaze.render without a parent element is deprecated. " +
@@ -499,6 +519,15 @@ Blaze.insert = function (view, parentElement, nextNode) {
   view._domrange.attach(parentElement, nextNode);
 };
 
+/**
+ * @summary Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`.
+ * @locus Client
+ * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object to render.
+ * @param {Object|Function} data The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run.
+ * @param {DOMNode} parentNode The node that will be the parent of the rendered template.  It must be an Element node.
+ * @param {DOMNode} [nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
+ * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
+ */
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
   // We defer the handling of optional arguments to Blaze.render.  At this point,
   // `nextNode` may actually be `parentView`.
@@ -506,6 +535,11 @@ Blaze.renderWithData = function (content, data, parentElement, nextNode, parentV
                       parentElement, nextNode, parentView);
 };
 
+/**
+ * @summary Removes a rendered View from the DOM, stopping all reactive updates and event listeners on it.
+ * @locus Client
+ * @param {Blaze.View} renderedView The return value from `Blaze.render` or `Blaze.renderWithData`.
+ */
 Blaze.remove = function (view) {
   if (! (view && (view._domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with UI.render");
@@ -518,12 +552,23 @@ Blaze.remove = function (view) {
   }
 };
 
+/**
+ * @summary Renders a template or View to a string of HTML.
+ * @locus Client
+ * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object from which to generate HTML.
+ */
 Blaze.toHTML = function (content, parentView) {
   parentView = parentView || currentViewIfRendering();
 
   return HTML.toHTML(Blaze._expandView(contentAsView(content), parentView));
 };
 
+/**
+ * @summary Renders a template or View to HTML with a data context.  Otherwise identical to `Blaze.toHTML`.
+ * @locus Client
+ * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object from which to generate HTML.
+ * @param {Object|Function} data The data context to use, or a function returning a data context.
+ */
 Blaze.toHTMLWithData = function (content, data, parentView) {
   parentView = parentView || currentViewIfRendering();
 
@@ -552,6 +597,11 @@ Blaze._toText = function (htmljs, parentView, textMode) {
   return HTML.toText(Blaze._expand(htmljs, parentView), textMode);
 };
 
+/**
+ * @summary Returns the current data context, or the data context that was used when rendering a particular DOM element or View from a Meteor template.
+ * @locus Client
+ * @param {DOMElement|Blaze.View} [elementOrView] Optional.  An element that was rendered by a Meteor, or a View.
+ */
 Blaze.getData = function (elementOrView) {
   var theWith;
 
@@ -584,6 +634,12 @@ Blaze.getElementData = function (element) {
 };
 
 // Both arguments are optional.
+
+/**
+ * @summary Gets either the current View, or the View enclosing the given DOM element.
+ * @locus Client
+ * @param {DOMElement} [element] Optional.  If specified, the View enclosing `element` is returned.
+ */
 Blaze.getView = function (elementOrView, _viewName) {
   var viewName = _viewName;
 
