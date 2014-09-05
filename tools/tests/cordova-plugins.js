@@ -110,7 +110,7 @@ selftest.define("change cordova plugins", function () {
   run.match("localhost");
 
   // Add a local package contains-cordova-plugin.
-  s.write(".meteor/packages", "standard-app-packages \n contains-cordova-plugin");
+  s.write(".meteor/packages", "meteor-platform \n contains-cordova-plugin");
   run.waitSecs(2);
   run.match("restarted");
 
@@ -137,7 +137,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  run = s.run("remove", "standard-app-packages");
+  run = s.run("remove", "meteor-platform");
   run.match("removed");
 
   run = s.run("run", "android");
