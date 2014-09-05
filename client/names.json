@@ -31,6 +31,7 @@
   "HTTP.call",
   "Meteor",
   "Meteor.Error",
+  "Meteor.wrapAsync",
   "Meteor.absoluteUrl",
   "Meteor.clearInterval",
   "Meteor.clearTimeout",

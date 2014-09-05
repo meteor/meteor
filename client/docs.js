@@ -123,6 +123,7 @@ var toc = [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.startup",
+      "Meteor.wrapAsync",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
