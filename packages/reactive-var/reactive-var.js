@@ -27,6 +27,8 @@
  */
 
 /**
+ * @class 
+ * @instanceName reactiveVar
  * @summary Constructor for a ReactiveVar, which represents a single reactive variable.
  * @locus Client
  * @param {Any} initialValue The initial value to set.  `equalsFunc` is ignored when setting the initial value.
