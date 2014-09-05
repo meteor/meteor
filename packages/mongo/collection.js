@@ -25,7 +25,7 @@ The default id generation technique is `'STRING'`.
  */
 Mongo.Collection = function (name, options) {
   var self = this;
-  if (! (self instanceof Mongo.Collection))
+  if (! (self instanceof Mongo.Collection || self instanceof Meteor.Collection))
     throw new Error('use "new" to construct a Mongo.Collection');
 
   if (!name && (name !== null)) {
