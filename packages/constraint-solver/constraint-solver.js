@@ -219,13 +219,19 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // constraints without changing any of the previous versions (though we may
   // add more choices in addition, or remove some now-unnecessary choices) then
   // that's our first try.
-  if (!_.isEmpty(options.previousSolution)) {
+  //
+  // If we're intentionally trying to upgrade some or all packages, we just skip
+  // this step. We used to try to do this step but just leaving off pins from
+  // the packages we're trying to upgrade, but this tended to not lead to actual
+  // upgrades since we were still pinning things that the to-upgrade package
+  // depended on.  (We still use the specific contents of options.upgrade to
+  // guide which things are encouraged to be upgraded vs stay the same in the
+  // heuristic.)
+  if (!_.isEmpty(options.previousSolution) && _.isEmpty(options.upgrade)) {
     var constraintsWithPreviousSolutionLock = _.clone(dc.constraints);
     _.each(options.previousSolution, function (uv) {
-      if (!_.has(options.upgrade, uv.name)) {
-        constraintsWithPreviousSolutionLock.push(
-          self.resolver.getConstraint(uv.name, '=' + uv.version));
-      }
+      constraintsWithPreviousSolutionLock.push(
+        self.resolver.getConstraint(uv.name, '=' + uv.version));
     });
     try {
       // Try running the resolver. If it fails to resolve, that's OK, we'll keep
