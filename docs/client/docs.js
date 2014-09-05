@@ -122,6 +122,7 @@ var toc = [
     "Core", [
       "Meteor.isClient",
       "Meteor.isServer",
+      "Meteor.isCordova",
       "Meteor.startup",
       "Meteor.absoluteUrl",
       "Meteor.settings",
