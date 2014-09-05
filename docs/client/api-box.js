@@ -26,40 +26,53 @@ var toOrSentence = function (array) {
   return _.initial(array).join(", ") + ", or " + _.last(array);
 };
 
+var typeNameTranslation = {
+  "function": "Function",
+  EJSON: typeLink("EJSON-able Object", "ejson"),
+  EJSONable: typeLink("EJSON-able Object", "ejson"),
+  "Tracker.Computation": typeLink("Tracker.Computation", "tracker_computation"),
+  MongoSelector: [
+    typeLink("Mongo Selector", "selectors"),
+    typeLink("Object ID", "mongo_object_id"),
+    "String"
+  ],
+  MongoModifier: typeLink("Mongo Modifier", "modifiers"),
+  MongoSortSpecifier: typeLink("Mongo Sort Specifier", "sortspecifiers"),
+  MongoFieldSpecifier: typeLink("Mongo Field Specifier", "fieldspecifiers"),
+  JSONCompatible: "JSON-compatible Object",
+  EventMap: typeLink("Event Map", "eventmaps"),
+  DOMNode: "DOM Node",
+  "Blaze.View": typeLink("Blaze.View", "blaze_view"),
+  Template: typeLink("Blaze.Template", "blaze_template")
+};
+
+console.log(typeNameTranslation);
+
 Template.autoApiBox.helpers({
   apiData: apiData,
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
-      if (name === "function") {
-        return "Function";
-      } else if (name === "EJSONable" || name === "EJSON") {
-        return typeLink("EJSON-able Object", "ejson");
-      } else if (name === "Tracker.Computation") {
-        return typeLink("Tracker.Computation", "tracker_computation");
-      } else if (name === "MongoSelector") {
-        return [
-          typeLink("Mongo Selector", "selectors"),
-          typeLink("Object ID", "mongo_object_id"),
-          "String"
-        ];
-      } else if (name === "MongoModifier") {
-        return typeLink("Mongo Modifier", "modifiers");
-      } else if (name === "MongoSortSpecifier") {
-        return typeLink("Mongo Sort Specifier", "sortspecifiers");
-      } else if (name === "MongoFieldSpecifier") {
-        return typeLink("Mongo Field Specifier", "fieldspecifiers");
-      } else if (name === "JSONCompatible") {
-        return "JSON-compatible Object";
-      } else if (name === "EventMap") {
-        return typeLink("Event Map", "eventmaps");
-      } else if (name === "DOMNode") {
-        return "DOM Node";
-      }
 
       // decode the "Array.<Type>" syntax
       if (name.slice(0, 7) === "Array.<") {
-        return "Array of " + name.match(/<([^>]+)>/)[1] + "s";
+        // get the part inside angle brackets like in Array<String>
+        name = name.match(/<([^>]+)>/)[1];
+
+        if (name && typeNameTranslation.hasOwnProperty(name)) {
+          return "Array of " + typeNameTranslation[name] + "s";
+        }
+
+        if (name) {
+          return "Array of " + name + "s";
+        }
+
+        console.log("no array type defined");
+        return "Array";
+      }
+
+      if (typeNameTranslation.hasOwnProperty(name)) {
+        return typeNameTranslation[name];
       }
 
       return name;
