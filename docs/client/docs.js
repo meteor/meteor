@@ -250,7 +250,7 @@ var toc = [
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "template", name: "findAll", id: "template_findAll"},
-        {instance: "template", name: "$", id: "template_findAll"},
+        {instance: "template", name: "$", id: "template_$"},
         {instance: "template", name: "find", id: "template_find"},
         {instance: "template", name: "firstNode", id: "template_firstNode"},
         {instance: "template", name: "lastNode", id: "template_lastNode"},
