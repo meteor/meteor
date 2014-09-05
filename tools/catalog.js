@@ -386,7 +386,7 @@ _.extend(CompleteCatalog.prototype, {
 
     // Lastly, let's read through the data.json file and then put through the
     // local overrides.
-    self.refresh({forceRefresh: true});
+    self.refresh({initializing: true});
   },
 
   _refreshingIsProductive: function () {
@@ -569,10 +569,20 @@ _.extend(CompleteCatalog.prototype, {
 
     // We need to limit the rate of refresh, or, at least, prevent any sort of
     // loops. ForceRefresh will override either one.
-    if (!options.forceRefresh &&
+    if (!options.forceRefresh && !options.initializing &&
         (catalog.official._refreshFutures || self.refreshing)) {
 
       return;
+    }
+
+    if (options.initializing && !self.forUniload) {
+      // If we are doing the top level initialization in main.js, everything
+      // sure had better be in a relaxed state, since we're about to hackily
+      // steal some data from catalog.official.
+      if (self.refreshing)
+        throw Error("initializing catalog.complete re-entrantly?");
+      if (catalog.official._refreshFutures)
+        throw Error("initializing catalog.complete during official refresh?");
     }
 
     if (self.refreshing) {
@@ -591,8 +601,23 @@ _.extend(CompleteCatalog.prototype, {
       self.reset();
 
       if (!self.forUniload) {
-        var localData = packageClient.loadCachedServerData();
-        self._insertServerPackages(localData);
+        if (options.initializing) {
+          // It's our first time! Everything ought to be at rest. Let's just
+          // steal data (without even a deep clone!) from catalog.official.
+          // XXX this is horrible. restructure to have a reference to
+          // catalog.official instead.
+          self.packages = _.clone(catalog.official.packages);
+          self.builds = _.clone(catalog.official.builds);
+          _.each(catalog.official.versions, function (versions, name) {
+            self.versions[name] = _.clone(versions);
+          });
+        } else {
+          // Not the first time. Slowly load data from disk.
+          // XXX restructure this class to just have a reference to
+          // catalog.official instead of a copy of its data.
+          var localData = packageClient.loadCachedServerData();
+          self._insertServerPackages(localData);
+        }
       }
 
       self._recomputeEffectiveLocalPackages();
