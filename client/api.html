@@ -3549,11 +3549,11 @@ package is exported to.
 
 {{> autoApiBox "Package.onUse"}}
 
-{{> api_box pack_versions }}
+{{> autoApiBox "PackageAPI#versionsFrom" }}
 {{> api_box pack_use }}
-{{> api_box pack_api_imply }}
-{{> api_box pack_export }}
-{{> api_box pack_addFiles }}
+{{> autoApiBox "PackageAPI#imply" }}
+{{> autoApiBox "PackageAPI#export" }}
+{{> autoApiBox "PackageAPI#addFiles" }}
 
 
 <h3 id="packagetests"><span>Unit Tests</span></h3>
