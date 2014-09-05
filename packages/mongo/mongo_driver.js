@@ -604,7 +604,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 _.each(["insert", "update", "remove", "dropCollection"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
+    return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
 

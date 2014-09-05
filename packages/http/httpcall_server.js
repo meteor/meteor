@@ -100,4 +100,4 @@ var _call = function(method, url, options, callback) {
   });
 };
 
-HTTP.call = Meteor._wrapAsync(_call);
+HTTP.call = Meteor.wrapAsync(_call);
