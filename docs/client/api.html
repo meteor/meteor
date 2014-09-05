@@ -948,7 +948,7 @@ Server example:
       }
     });
 
-{{> api_box allow}}
+{{> autoApiBox "Mongo.Collection#allow"}}
 
 When a client calls `insert`, `update`, or `remove` on a collection, the
 collection's `allow` and [`deny`](#deny) callbacks are called
@@ -1073,7 +1073,7 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
-{{> api_box deny}}
+{{> autoApiBox "Mongo.Collection#deny"}}
 
 This works just like [`allow`](#allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an

@@ -92,6 +92,8 @@
       var filteredParams = [];
 
       _.each(func.params, function (param) {
+        param.name = param.name.replace(/\|/g, ", ");
+
         var splitName = param.name.split(".");
 
         if (splitName.length < 2 || splitName[0] !== "options") {
