@@ -402,7 +402,8 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "underscore"
+    "underscore",
+    "webapp"
   ] ],
 
   "Command line", [ [
