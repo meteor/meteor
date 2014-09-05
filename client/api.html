@@ -196,7 +196,7 @@ publish handler, this is the place to stop the observes.
 {{> autoApiBox "Subscription#stop"}}
 {{> autoApiBox "Subscription#connection"}}
 
-{{> api_box subscribe}}
+{{> autoApiBox "Meteor.subscribe"}}
 
 When you subscribe to a record set, it tells the server to send records to the
 client.  The client stores these records in local [Minimongo
@@ -364,7 +364,7 @@ a `Meteor.Error`, then that error will be sent to the client. Otherwise, if no
 sanitized version is available, the client gets
 `Meteor.Error(500, 'Internal server error')`.
 
-{{> api_box meteor_call}}
+{{> autoApiBox "Meteor.call"}}
 
 This is how to invoke a method.  It will run the method on the server.  If a
 stub is available, it will also run the stub on the client.  (See also
@@ -418,7 +418,7 @@ you want to process the method's result as soon as it arrives from the server,
 even if the method's writes are not available yet, you can specify an
 `onResultReceived` callback to [`Meteor.apply`](#meteor_apply).
 
-{{> api_box meteor_apply}}
+{{> autoApiBox "Meteor.apply"}}
 
 `Meteor.apply` is just like `Meteor.call`, except that the method arguments are
 passed as an array rather than directly as arguments, and you can specify
@@ -2695,8 +2695,7 @@ present on template objects:
 
 {{> autoApiBox "Blaze.isTemplate"}}
 
-
-{{#api_box renderable_content}}
+{{> apiBoxTitle name="Renderable Content" id="renderable_content"}}
 
 A value is *renderable content* if it is one of the following:
 
@@ -2709,8 +2708,6 @@ Internally, renderable content includes objects representing HTML tags
 as well, but these objects are not yet part of the officially-supported,
 public API.
 {{/note}}
-
-{{/api_box}}
 
 <h2 id="match"><span>Match</span></h2>
 
@@ -2746,7 +2743,7 @@ server logs but not revealed to the client.
 
 {{> api_box match_test}}
 
-{{#api_box matchpatterns}}
+{{> apiBoxTitle name="Match Patterns" id="matchpatterns"}}
 
 The following patterns can be used as pattern arguments to `check` and `Match.test`:
 
@@ -2825,8 +2822,6 @@ from the call to `check` or `Match.test`. Examples:
     check(arg, NonEmptyString);
 {{/dtdd}}
 </dl>
-
-{{/api_box}}
 
 <h2 id="timers"><span>Timers</span></h2>
 

@@ -64,6 +64,8 @@
   "Meteor",
   "Meteor.Error",
   "Meteor.absoluteUrl",
+  "Meteor.apply",
+  "Meteor.call",
   "Meteor.clearInterval",
   "Meteor.clearTimeout",
   "Meteor.disconnect",
@@ -84,6 +86,7 @@
   "Meteor.settings",
   "Meteor.startup",
   "Meteor.status",
+  "Meteor.subscribe",
   "Meteor.user",
   "Meteor.userId",
   "Meteor.users",
@@ -161,6 +164,5 @@
   "Tracker.currentComputation",
   "Tracker.flush",
   "Tracker.nonreactive",
-  "Tracker.onInvalidate",
-  "initFromPackageDir~api.use"
+  "Tracker.onInvalidate"
 ]
