@@ -2,7 +2,7 @@
 // methods. This is only here as part of the transition proces.
 // 
 // The new method is described here:
-// https://mdg.hackpad.com/Automatically-Generating-API-Docs-using-JSDoc-rW8Sq1NGVE9
+// https://meteor.hackpad.com/Automatically-Generating-API-Docs-using-JSDoc-EpPmd2iuFEH
 
 Template.api.isClient = {
   id: "meteor_isclient",
