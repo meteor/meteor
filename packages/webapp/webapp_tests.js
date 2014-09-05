@@ -133,4 +133,5 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   });
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+  WebAppInternals.generateBoilerplate();
 });
