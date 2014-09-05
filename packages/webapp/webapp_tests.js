@@ -106,7 +106,6 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   // inlined, and the script should be included in a <script src="..">
   // tag.
   WebAppInternals.setInlineScriptsAllowed(false);
-  WebAppInternals.generateBoilerplate();
 
   Meteor._noYieldsAllowed(function () {
     var boilerplate = WebAppInternals.getBoilerplate({
@@ -133,5 +132,4 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   });
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
-  WebAppInternals.generateBoilerplate();
 });

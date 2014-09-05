@@ -1102,10 +1102,12 @@ WebAppInternals.inlineScriptsAllowed = function () {
 
 WebAppInternals.setInlineScriptsAllowed = function (value) {
   inlineScriptsAllowed = value;
+  WebAppInternals.generateBoilerplate();
 };
 
 WebAppInternals.setBundledJsCssPrefix = function (prefix) {
   bundledJsCssPrefix = prefix;
+  WebAppInternals.generateBoilerplate();
 };
 
 // Packages can call `WebAppInternals.addStaticJs` to specify static
