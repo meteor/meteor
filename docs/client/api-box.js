@@ -46,8 +46,6 @@ var typeNameTranslation = {
   Template: typeLink("Blaze.Template", "blaze_template")
 };
 
-console.log(typeNameTranslation);
-
 Template.autoApiBox.helpers({
   apiData: apiData,
   typeNames: function (nameList) {
@@ -84,14 +82,15 @@ Template.autoApiBox.helpers({
   },
   signature: function () {
     var signature;
+    var escapedLongname = _.escape(this.longname);
 
     var beforeParens;
     if (this.scope === "instance") {
       beforeParens = "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
     } else if (this.kind === "class") {
-      beforeParens = "new " + this.longname;
+      beforeParens = "new " + escapedLongname;
     } else {
-      beforeParens = this.longname;
+      beforeParens = escapedLongname;
     }
 
     signature = beforeParens;

@@ -947,6 +947,41 @@ _.extend(PackageSource.prototype, {
         //   its plugins. (Has the same limitation as "unordered" that this
         //   flag is not tracked per-environment or per-role; this may
         //   change.)
+        
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Depend on package `packagename`.
+         * @locus package.js
+         * @param {String|String[]} packageNames Packages being depended on.
+         * Package names may be suffixed with an @version tag.
+         * 
+         * In general, you must specify a package's version (e.g.,
+         * `'accounts@1.0.0'` to use version 1.0.0 or a higher
+         * compatible version (ex: 1.0.1, 1.5.0, etc.)  of the
+         * `accounts` package). If you are sourcing core
+         * packages from a Meteor release with `versionsFrom`, you may leave
+         * off version names for core packages.
+         * @param {String} [architecture] If you only use the package on the
+         * server (or the client), you can pass in the second argument (e.g.,
+         * `'server'` or `'client'`) to specify what architecture the package is
+         * used with.
+         * @param {Object} [options]
+         * @param {Boolean} options.weak Establish a weak dependency on a
+         * package. If package A has a weak dependency on package B, it means
+         * that including A in an app does not force B to be included too — but,
+         * if B is included or by another package, then B will load before A.
+         * You can use this to make packages that optionally integrate with or
+         * enhance other packages if those packages are present.
+         * When you weakly depend on a package you don't see its exports.
+         * You can detect if the possibly-present weakly-depended-on package
+         * is there by seeing if `Package.foo` exists, and get its exports
+         * from the same place.
+         * @param {Boolean} options.unordered It's okay to load this dependency
+         * after your package. (In general, dependencies specified by `api.use`
+         * are loaded before your package.) You can use this option to break
+         * circular dependencies.
+         */
         use: function (names, arch, options) {
           // Support `api.use(package, {weak: true})` without arch.
           if (_.isObject(arch) && !_.isArray(arch) && !options) {

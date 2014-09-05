@@ -1653,7 +1653,7 @@ This function is provided by the `accounts-password` package. See the
 [Passwords](#accounts_passwords) section below.
 
 
-{{> api_box loginWithExternalService}}
+{{> autoApiBox "Meteor.loginWith<ExternalService>"}}
 
 Available functions are:
 
@@ -3267,8 +3267,8 @@ Instances of your type must implement [`typeName`](#ejson_type_typeName) and
 [`clone`](#ejson_type_clone) and [`equals`](#ejson_type_equals) methods if the
 default implementations are not sufficient.
 
-{{> api_box ejsonTypeName}}
-{{> api_box ejsonTypeToJSONValue}}
+{{> autoApiBox "EJSON.CustomType#typeName"}}
+{{> autoApiBox "EJSON.CustomType#toJSONValue"}}
 
 For example, the `toJSONValue` method for
 [`Mongo.ObjectID`](#mongo_object_id) could be:
@@ -3277,12 +3277,12 @@ For example, the `toJSONValue` method for
       return this.toHexString();
     };
 
-{{> api_box ejsonTypeClone}}
+{{> autoApiBox "EJSON.CustomType#clone"}}
 
 If your type does not have a `clone` method, `EJSON.clone` will use
 [`toJSONValue`](#ejson_type_toJSONValue) and the factory instead.
 
-{{> api_box ejsonTypeEquals}}
+{{> autoApiBox "EJSON.CustomType#equals"}}
 
 The `equals` method should define an [equivalence
 relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have
@@ -3555,7 +3555,7 @@ package is exported to.
 {{> autoApiBox "Package.onUse"}}
 
 {{> autoApiBox "PackageAPI#versionsFrom" }}
-{{> api_box pack_use }}
+{{> autoApiBox "PackageAPI#use" }}
 {{> autoApiBox "PackageAPI#imply" }}
 {{> autoApiBox "PackageAPI#export" }}
 {{> autoApiBox "PackageAPI#addFiles" }}
