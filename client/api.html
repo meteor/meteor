@@ -1727,9 +1727,14 @@ is loaded. The function `Accounts.loginServicesConfigured()` is a reactive data
 source that will return true once the login service is configured; you should
 not make login buttons visible or active until it is true.
 
+{{> apiBoxTitle name="{{currentUser}}" id="template_currentuser" locus="Templates"}}
 
-{{> api_box currentUser}}
-{{> api_box loggingInTemplate}}
+Calls [Meteor.user()](#meteor_user). Use `{{dstache}}#if currentUser}}`
+to check whether the user is logged in.
+
+{{> apiBoxTitle name="{{loggingIn}}" id="template_loggingin" locus="Templates"}}
+
+Calls [Meteor.loggingIn()](#meteor_loggingin).
 
 {{> autoApiBox "Accounts.config"}}
 {{> autoApiBox "Accounts.ui.config"}}
