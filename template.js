@@ -68,6 +68,13 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     // object.
     var inst = view._templateInstance;
 
+    /**
+     * @instance
+     * @memberOf Blaze.TemplateInstance
+     * @name  data
+     * @summary The data context of this instance's latest invocation.
+     * @locus Client
+     */
     inst.data = Blaze.getData(view);
 
     if (view._domrange && !view.isDestroyed) {
@@ -82,18 +89,39 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     return inst;
   };
 
+  /**
+   * @name  created
+   * @instance
+   * @memberOf Template
+   * @summary Provide a callback when an instance of a template is created.
+   * @locus Client
+   */
   if (self.created) {
     view.onViewCreated(function () {
       self.created.call(view.templateInstance());
     });
   }
 
+  /**
+   * @name  rendered
+   * @instance
+   * @memberOf Template
+   * @summary Provide a callback when an instance of a template is rendered.
+   * @locus Client
+   */
   if (self.rendered) {
     view.onViewReady(function () {
       self.rendered.call(view.templateInstance());
     });
   }
 
+  /**
+   * @name  destroyed
+   * @instance
+   * @memberOf Template
+   * @summary Provide a callback when an instance of a template is destroyed.
+   * @locus Client
+   */
   if (self.destroyed) {
     view.onViewDestroyed(function () {
       self.destroyed.call(view.templateInstance());
@@ -103,6 +131,12 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
   return view;
 };
 
+/**
+ * @class
+ * @summary The class for template instances
+ * @param {Blaze.View} view
+ * @instanceName template
+ */
 Blaze.TemplateInstance = function (view) {
   if (! (this instanceof Blaze.TemplateInstance))
     // called without `new`
@@ -112,12 +146,41 @@ Blaze.TemplateInstance = function (view) {
     throw new Error("View required");
 
   view._templateInstance = this;
+
+  /**
+   * @name view
+   * @memberOf Blaze.TemplateInstance
+   * @instance
+   * @summary The [View](#blaze_view) object for this invocation of the template.
+   * @locus Client
+   */
   this.view = view;
   this.data = null;
+
+  /**
+   * @name firstNode
+   * @memberOf Blaze.TemplateInstance
+   * @instance
+   * @summary The first top-level DOM node in this template instance.
+   * @locus Client
+   */
   this.firstNode = null;
+
+  /**
+   * @name lastNode
+   * @memberOf Blaze.TemplateInstance
+   * @instance
+   * @summary The last top-level DOM node in this template instance.
+   * @locus Client
+   */
   this.lastNode = null;
 };
 
+/**
+ * @summary Find all elements matching `selector` in this template instance, and return them as a JQuery object.
+ * @locus Client
+ * @param {String} selector The CSS selector to match, scoped to the template contents.
+ */
 Blaze.TemplateInstance.prototype.$ = function (selector) {
   var view = this.view;
   if (! view._domrange)
@@ -125,24 +188,49 @@ Blaze.TemplateInstance.prototype.$ = function (selector) {
   return view._domrange.$(selector);
 };
 
+/**
+ * @summary Find all elements matching `selector` in this template instance.
+ * @locus Client
+ * @param {String} selector The CSS selector to match, scoped to the template contents.
+ */
 Blaze.TemplateInstance.prototype.findAll = function (selector) {
   return Array.prototype.slice.call(this.$(selector));
 };
 
+/**
+ * @summary Find all elements matching `selector` in this template instance.
+ * @locus Client
+ * @param {String} selector The CSS selector to match, scoped to the template contents.
+ */
 Blaze.TemplateInstance.prototype.find = function (selector) {
   var result = this.$(selector);
   return result[0] || null;
 };
 
+/**
+ * @summary A version of [Tracker.autorun](#tracker_autorun) that is stopped when the template is destroyed.
+ * @locus Client
+ * @param {Function} runFunc The function to run. It receives one argument: a Tracker.Computation object.
+ */
 Blaze.TemplateInstance.prototype.autorun = function (f) {
   return this.view.autorun(f);
 };
 
+/**
+ * @summary Specify template helpers available to this template.
+ * @locus Client
+ * @param {Object} helpers Dictionary of helper functions by name.
+ */
 Template.prototype.helpers = function (dict) {
   for (var k in dict)
     this[k] = dict[k];
 };
 
+/**
+ * @summary Specify event handlers for this template.
+ * @locus Client
+ * @param {Object} eventMap Event handlers to associate with this template.
+ */
 Template.prototype.events = function (eventMap) {
   var template = this;
   var eventMap2 = {};
@@ -164,7 +252,13 @@ Template.prototype.events = function (eventMap) {
   template.__eventMaps.push(eventMap2);
 };
 
-Template.instance = function () {
+/**
+ * @name instance
+ * @memberOf Template
+ * @summary The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
+ * @locus Client
+ */
+instance = function () {
   var view = Blaze.currentView;
 
   while (view && ! view.template)
@@ -178,8 +272,24 @@ Template.instance = function () {
 
 // Note: Template.currentData() is documented to take zero arguments,
 // while Blaze.getData takes up to one.
+
+/**
+ * @summary Returns the data context of the current helper, or the data context of the template that declares the current event handler or callback.  Establishes a reactive dependency on the result.
+ * @locus Client
+ */
 Template.currentData = Blaze.getData;
 
+/**
+ * @summary Accesses other data contexts that enclose the current data context.
+ * @locus Client
+ * @param {Integer} numLevels The number of levels beyond the current data context to look.
+ */
 Template.parentData = Blaze._parentData;
 
+/**
+ * @summary Defines a [helper function](#template_helpers) which can be used from all templates.
+ * @locus Client
+ * @param {String} name The name of the helper function you are defining.
+ * @param {Function} function The helper function itself.
+ */
 Template.registerHelper = Blaze.registerHelper;
