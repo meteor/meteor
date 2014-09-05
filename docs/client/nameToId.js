@@ -69,6 +69,7 @@ nameToId = {
   "Accounts.ui.config": "accounts_ui_config",
   "Meteor.settings": "meteor_settings",
   "undefined": "meteorpublishforarch",
+  "Meteor.wrapAsync": "meteor_wrapAsync",
   "Meteor.absoluteUrl": "meteor_absoluteurl",
   "Meteor.release": "meteor_release",
   "Subscription#onStop": "publish_onstop",

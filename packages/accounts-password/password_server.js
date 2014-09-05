@@ -1,8 +1,8 @@
 /// BCRYPT
 
 var bcrypt = NpmModuleBcrypt;
-var bcryptHash = Meteor._wrapAsync(bcrypt.hash);
-var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
+var bcryptHash = Meteor.wrapAsync(bcrypt.hash);
+var bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 
 // User records have a 'services.password.bcrypt' field on them to hold
 // their hashed passwords (unless they have a 'services.password.srp'
