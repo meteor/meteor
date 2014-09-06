@@ -6,6 +6,10 @@ Meteor.startup(function () {
       return hash.replace("deps", "tracker");
     }
 
+    if (hash === "match") {
+      return "check_package";
+    }
+
     // don't redirect
     return false;
   };
