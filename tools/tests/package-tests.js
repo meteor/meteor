@@ -294,7 +294,7 @@ selftest.define("add packages client archs", function (options) {
     outerRun.match("added");
     outerRun.expectExit(0);
     checkPackages(s,
-                  ["standard-app-packages", "say-something-client-targets"]);
+                  ["meteor-platform", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
@@ -614,7 +614,7 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.stop();
 
   run = s.run('list');
-  run.match("standard");
+  run.match("meteor");
   run.match("accounts-base");
 
   // What about test-packages?
