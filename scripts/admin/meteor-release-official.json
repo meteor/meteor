@@ -3,5 +3,6 @@
     "version": "0.9.1.1",
     "recommended": false,
     "official": true,
-    "description": "The official Meteor Distribution"
+    "description": "The official Meteor Distribution",
+    "patchFrom": ["0.9.1"]
 }
