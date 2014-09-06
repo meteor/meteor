@@ -179,5 +179,6 @@
   "Tracker.flush",
   "Tracker.nonreactive",
   "Tracker.onInvalidate",
+  "UI.dynamic",
   "check"
 ]

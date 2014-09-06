@@ -162,5 +162,6 @@ nameToId = {
   "EJSON.CustomType#toJSONValue": "ejson_type_toJSONValue",
   "EJSON.CustomType#clone": "ejson_type_clone",
   "EJSON.CustomType#equals": "ejson_type_equals",
-  "Match.test": "match_test"
+  "Match.test": "match_test",
+  "UI.dynamic": "ui_dynamic"
 };

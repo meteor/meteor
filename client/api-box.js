@@ -83,30 +83,54 @@ Template.autoApiBox.helpers({
     var signature;
     var escapedLongname = _.escape(this.longname);
 
-    var beforeParens;
-    if (this.scope === "instance") {
-      beforeParens = "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
-    } else if (this.kind === "class") {
-      beforeParens = "new " + escapedLongname;
-    } else {
-      beforeParens = escapedLongname;
-    }
+    if (this.istemplate) {
+      signature = "{{> ";
 
-    signature = beforeParens;
+      signature += escapedLongname;
 
-    // if it is a function, and therefore has arguments
-    if (_.contains(["function", "class"], this.kind)) {
       var params = this.params;
 
       var paramNames = _.map(params, function (param) {
+        var name = param.name;
+
+        name = name + "=" + name;
+
         if (param.optional) {
-          return "[" + param.name + "]";
+          return "[" + name + "]";
         }
 
-        return param.name;
+        return name;
       });
 
-      signature += "(" + paramNames.join(", ") + ")";
+      signature += " " + paramNames.join(" ");
+
+      signature += " }}";
+    } else {
+      var beforeParens;
+      if (this.scope === "instance") {
+        beforeParens = "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
+      } else if (this.kind === "class") {
+        beforeParens = "new " + escapedLongname;
+      } else {
+        beforeParens = escapedLongname;
+      }
+
+      signature = beforeParens;
+
+      // if it is a function, and therefore has arguments
+      if (_.contains(["function", "class"], this.kind)) {
+        var params = this.params;
+
+        var paramNames = _.map(params, function (param) {
+          if (param.optional) {
+            return "[" + param.name + "]";
+          }
+
+          return param.name;
+        });
+
+        signature += "(" + paramNames.join(", ") + ")";
+      }
     }
 
     return signature;
