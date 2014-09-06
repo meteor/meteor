@@ -1,6 +1,15 @@
 ## v.NEXT
 
 
+## v0.9.1.1
+
+* Fix backwards compatibility for packages that had weak dependencies
+  on packages renamed in 0.9.1 (`ui`, `deps`, `livedata`). #2521
+
+* Fix error when using the `reactive-dict` package without the `mongo`
+  package.
+
+
 ## v0.9.1
 
 #### Organizations in Meteor developer accounts
