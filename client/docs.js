@@ -153,8 +153,13 @@ var toc = [
       ],
       "Meteor.Error",
       "Meteor.call",
-      "Meteor.apply",
-      "check"
+      "Meteor.apply"
+    ],
+
+    {name: "Check", id: "check_package"}, [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
     ],
 
     {name: "Server connections", id: "connections"}, [
@@ -287,11 +292,6 @@ var toc = [
       {type: "spacer"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
-
-    "Match", [
-      "Match.test",
-      {name: "Match patterns", style: "noncode"}
-    ],
 
     "Timers", [
       "Meteor.setTimeout",
