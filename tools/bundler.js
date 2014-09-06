@@ -428,6 +428,7 @@ var Target = function (options) {
   // For client targets, these are served over HTTP.
   self.asset = [];
 
+  // A mapping from Cordova plugin name to Cordova plugin version number.
   self.cordovaDependencies = {};
 };
 
@@ -1534,8 +1535,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
       builtBy: options.builtBy,
       programs: [],
       control: options.controlProgram || undefined,
-      meteorRelease: options.releaseName,
-      cordovaDependencies: {}
+      meteorRelease: options.releaseName
     };
 
     // Tell Galaxy what version of the dependency kit we're using, so
@@ -1585,15 +1585,13 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      var targetJson = writeTargetToPath(name, target, builder.buildPath, {
+      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModulesSymlink: options.includeNodeModulesSymlink,
         builtBy: options.builtBy,
         controlProgram: options.controlProgram,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
-      });
-      json.programs.push(_.omit(targetJson, 'cordovaDependencies'));
-      _.extend(json.cordovaDependencies, targetJson.cordovaDependencies);
+      }));
     });
 
     // Control file

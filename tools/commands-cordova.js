@@ -28,6 +28,7 @@ var tropo = tropohouse.default;
 var cordova = exports;
 
 var supportedPlatforms = ['ios', 'android', 'firefoxos'];
+var webArchName = "web.cordova";
 
 var localCordova = path.join(files.getCurrentToolsDir(),
   "tools", "cordova-scripts", "cordova.sh");
@@ -152,7 +153,7 @@ var generateCordovaBoilerplate = function (clientDir, options) {
   if (publicSettings)
     runtimeConfig.PUBLIC_SETTINGS = publicSettings;
 
-  var boilerplate = new Boilerplate('web.cordova', manifest, {
+  var boilerplate = new Boilerplate(webArchName, manifest, {
     urlMapper: function (url) { return url ? url.substr(1) : ''; },
     pathMapper: function (p) { return path.join(clientDir, p); },
     baseDataExtension: {
@@ -398,9 +399,8 @@ var ensureCordovaPlugins = function (localPath, options) {
     // XXX slow - perhaps we should only do this lazily
     // XXX code copied from buildCordova
     var bundlePath = path.join(localPath, 'build-tar');
-    var webArchName = 'web.cordova';
-    plugins =
-      getBundle(bundlePath, [webArchName], options).starManifest.cordovaDependencies;
+    var bundle = getBundle(bundlePath, [webArchName], options);
+    plugins = getCordovaDependenciesFromStar(bundle.starManifest);
     files.rm_recursive(bundlePath);
   }
   // XXX the project-level cordova plugins deps override the package-level ones
@@ -502,10 +502,15 @@ var ensureCordovaPlugins = function (localPath, options) {
   }
 };
 
+// Returns the cordovaDependencies of the Cordova arch from a star json.
+var getCordovaDependenciesFromStar = function (star) {
+  var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
+  return cordovaProgram.cordovaDependencies;
+};
+
 // Build a Cordova project, creating a Cordova project if necessary.
 var buildCordova = function (localPath, buildCommand, options) {
   verboseLog('Building the cordova build project');
-  var webArchName = "web.cordova";
 
   var bundlePath = path.join(localPath, 'build-cordova-temp');
   var programPath = path.join(bundlePath, 'programs');
@@ -521,7 +526,7 @@ var buildCordova = function (localPath, buildCommand, options) {
   cordova.ensureCordovaProject(localPath, options.appName);
   cordova.ensureCordovaPlatforms(localPath);
   ensureCordovaPlugins(localPath, _.extend({}, options, {
-    packagePlugins: bundle.starManifest.cordovaDependencies
+    packagePlugins: getCordovaDependenciesFromStar(bundle.starManifest)
   }));
 
   // XXX hack, copy files from app folder one level up
