@@ -27,11 +27,7 @@ Collection will appear to be empty in the client until the Internet
 becomes available and the browser is able to establish a DDP
 connection).
 
-The application cache works transparently in all supported browsers
-except for Firefox, which pops up a message saying "This website is
-asking to store data on your computer for offline use" and asks the
-user whether to allow or deny the request. To turn AppCache off for
-Firefox or other specific browsers use:
+To turn AppCache off for specific browsers use:
 
     Meteor.AppCache.config({
       chrome: false,

@@ -68,6 +68,7 @@ nameToId = {
   "Accounts.ui.config": "accounts_ui_config",
   "Meteor.settings": "meteor_settings",
   "undefined": "meteorpublishforarch",
+  "Meteor.wrapAsync": "meteor_wrapAsync",
   "Meteor.absoluteUrl": "meteor_absoluteurl",
   "Meteor.release": "meteor_release",
   "Subscription#onStop": "publish_onstop",
@@ -160,5 +161,6 @@ nameToId = {
   "EJSON.CustomType#typeName": "ejson_type_typeName",
   "EJSON.CustomType#toJSONValue": "ejson_type_toJSONValue",
   "EJSON.CustomType#clone": "ejson_type_clone",
-  "EJSON.CustomType#equals": "ejson_type_equals"
+  "EJSON.CustomType#equals": "ejson_type_equals",
+  "Match.test": "match_test"
 };

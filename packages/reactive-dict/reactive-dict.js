@@ -79,7 +79,10 @@ _.extend(ReactiveDict.prototype, {
     var self = this;
 
     // Mongo.ObjectID is in the 'mongo' package
-    var ObjectID = Mongo.Collection && Mongo.ObjectID;
+    var ObjectID = null;
+    if (typeof Mongo !== 'undefined') {
+      ObjectID = Mongo.ObjectID;
+    }
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key
