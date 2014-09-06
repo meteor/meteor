@@ -98,6 +98,7 @@
   "Meteor.user",
   "Meteor.userId",
   "Meteor.users",
+  "Meteor.wrapAsync",
   "MethodInvocation",
   "MethodInvocation#connection",
   "MethodInvocation#isSimulation",
