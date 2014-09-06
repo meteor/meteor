@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Deprecated: Use the 'blaze' package",
-  version: '1.0.1'
+  version: '1.0.2'
 });
 
 Package.on_use(function (api) {
