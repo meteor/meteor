@@ -67,6 +67,7 @@
   "HTTP.get",
   "HTTP.post",
   "HTTP.put",
+  "Match.test",
   "Meteor",
   "Meteor.Error",
   "Meteor.absoluteUrl",
@@ -176,5 +177,6 @@
   "Tracker.currentComputation",
   "Tracker.flush",
   "Tracker.nonreactive",
-  "Tracker.onInvalidate"
+  "Tracker.onInvalidate",
+  "check"
 ]

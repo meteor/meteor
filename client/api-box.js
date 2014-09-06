@@ -51,7 +51,6 @@ Template.autoApiBox.helpers({
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
-
       // decode the "Array.<Type>" syntax
       if (name.slice(0, 7) === "Array.<") {
         // get the part inside angle brackets like in Array<String>
