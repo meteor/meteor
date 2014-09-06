@@ -29,9 +29,9 @@
   "EJSON.stringify",
   "EJSON.toJSONValue",
   "HTTP.call",
+  "Match.test",
   "Meteor",
   "Meteor.Error",
-  "Meteor.wrapAsync",
   "Meteor.absoluteUrl",
   "Meteor.clearInterval",
   "Meteor.clearTimeout",
@@ -110,5 +110,6 @@
   "Tracker.currentComputation",
   "Tracker.flush",
   "Tracker.nonreactive",
-  "Tracker.onInvalidate"
+  "Tracker.onInvalidate",
+  "check"
 ]

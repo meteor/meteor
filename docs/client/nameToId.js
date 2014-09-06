@@ -105,5 +105,6 @@ nameToId = {
   "EJSON.toJSONValue": "ejson_to_json_value",
   "EJSON.clone": "ejson_clone",
   "EJSON.isBinary": "ejson_is_binary",
-  "HTTP.call": "http_call"
+  "HTTP.call": "http_call",
+  "Match.test": "match_test"
 };
