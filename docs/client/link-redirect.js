@@ -10,6 +10,10 @@ Meteor.startup(function () {
       return "check_package";
     }
 
+    if (hash === "meteorbundle") {
+      return "meteorbuild";
+    }
+
     // don't redirect
     return false;
   };
