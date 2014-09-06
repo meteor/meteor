@@ -14,6 +14,14 @@ Meteor.startup(function () {
       return "mongo_object_id";
     }
 
+    if (hash === "match") {
+      return "check_package";
+    }
+
+    if (hash === "meteorbundle") {
+      return "meteorbuild";
+    }
+
     // don't redirect
     return false;
   };

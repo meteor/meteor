@@ -157,6 +157,12 @@ var toc = [
       "Meteor.apply"
     ],
 
+    {name: "Check", id: "check_package"}, [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
+    ],
+
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
@@ -288,12 +294,6 @@ var toc = [
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
 
-    "Match", [
-      "check",
-      "Match.test",
-      {name: "Match patterns", style: "noncode"}
-    ],
-
     "Timers", [
       "Meteor.setTimeout",
       "Meteor.setInterval",
@@ -419,7 +419,7 @@ var toc = [
     "meteor list",
     "meteor mongo",
     "meteor reset",
-    "meteor bundle",
+    "meteor build",
     "meteor search",
     "meteor show",
     "meteor publish",
