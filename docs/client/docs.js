@@ -499,12 +499,6 @@ UI.registerHelper('lt', function () {
   return '<';
 });
 
-Template.api_box.bare = function() {
-  return ((this.descr && this.descr.length) ||
-          (this.args && this.args.length) ||
-          (this.options && this.options.length)) ? "" : "bareapi";
-};
-
 check_links = function() {
   var body = document.body.innerHTML;
 
