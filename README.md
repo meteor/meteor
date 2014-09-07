@@ -7,15 +7,15 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 <a name="toc">
 ### Table of Contents
-* [Contributors](#contributors)
-* [Authorization](#authorization)
-* [Permissions vs roles](#naming)
-* [Changes to default Meteor](#changes)
-* [Installation](#installing)
-* [Usage examples](#usage)
-* [Online API docs](#docs)
-* [Example apps](#example-apps)
-* [Running tests](#testing)
+* [Contributors](#user-content-contributors)
+* [Authorization](#user-content-authorization)
+* [Permissions vs roles](#user-content-naming)
+* [Changes to default Meteor](#user-content-changes)
+* [Installation](#user-content-installing)
+* [Usage examples](#user-content-usage)
+* [Online API docs](#user-content-docs)
+* [Example apps](#user-content-example-apps)
+* [Running tests](#user-content-testing)
 
 
 <br />
