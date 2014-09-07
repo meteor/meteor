@@ -4,11 +4,11 @@ Package.describe({
 });
 
 Package.on_use(function(api) {
-  // The "imply" here means that if your app uses "standard-app-packages", it is
+  // The "imply" here means that if your app uses "meteor-platform", it is
   // treated as if it also directly included all of these packages (and it gets
   // their exports, plugins, etc).
   //
-  // If you want, you can "meteor remove standard-app-packages" and add some of
+  // If you want, you can "meteor remove meteor-platform" and add some of
   // these back in individually. We haven't tested every subset, though :)
   api.imply([
     // The normal "every package uses 'meteor'" rule only applies to packages
