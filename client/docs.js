@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.1-rc3" : "(checkout)";
+  return Meteor.release ? "0.9.1.1" : "(checkout)";
 };
 
 Meteor.startup(function () {
