@@ -66,6 +66,6 @@
     ]
   ],
   "pluginDependencies": [],
-  "toolVersion": "meteor-tool@1.0.27",
+  "toolVersion": "meteor-tool@CHECKOUT",
   "format": "1.0"
 }
