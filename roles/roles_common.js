@@ -15,7 +15,7 @@ if (!Meteor.roles) {
 }
 
 /**
- * Role-based authorization compatible with built-in Meteor accounts package.
+ * Authorization package compatible with built-in Meteor accounts system.
  *
  * Stores user's current roles in a 'roles' field on the user object.
  *
