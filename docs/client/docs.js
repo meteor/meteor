@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release || "(checkout)";
+  return Meteor.release ? "0.9.1" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -123,6 +123,7 @@ var toc = [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.startup",
+      "Meteor.wrapAsync",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
@@ -156,6 +157,12 @@ var toc = [
       "Meteor.apply"
     ],
 
+    {name: "Check", id: "check_package"}, [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
+    ],
+
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
@@ -165,7 +172,7 @@ var toc = [
     ],
 
     {name: "Collections", id: "collections"}, [
-      "Meteor.Collection", [
+      "Mongo.Collection", [
         {instance: "collection", name: "find"},
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
@@ -176,7 +183,7 @@ var toc = [
         {instance: "collection", name: "deny"}
       ],
 
-      "Meteor.Collection.Cursor", [
+      "Mongo.Cursor", [
         {instance: "cursor", name: "forEach"},
         {instance: "cursor", name: "map"},
         {instance: "cursor", name: "fetch"},
@@ -185,7 +192,7 @@ var toc = [
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
       {type: "spacer"},
-      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
+      {name: "Mongo.ObjectID", id: "mongo_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
@@ -248,30 +255,44 @@ var toc = [
         {name: "destroyed", id: "template_destroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
-        {instance: "this", name: "findAll", id: "template_findAll"},
-        {instance: "this", name: "$", id: "template_findAll"},
-        {instance: "this", name: "find", id: "template_find"},
-        {instance: "this", name: "firstNode", id: "template_firstNode"},
-        {instance: "this", name: "lastNode", id: "template_lastNode"},
-        {instance: "this", name: "data", id: "template_data"}
+        {instance: "template", name: "findAll", id: "template_findAll"},
+        {instance: "template", name: "$", id: "template_findAll"},
+        {instance: "template", name: "find", id: "template_find"},
+        {instance: "template", name: "firstNode", id: "template_firstNode"},
+        {instance: "template", name: "lastNode", id: "template_lastNode"},
+        {instance: "template", name: "data", id: "template_data"},
+        {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "view", id: "template_view"}
       ],
-      "UI", [
-        "UI.registerHelper",
-        "UI.body",
-        "UI.render",
-        "UI.renderWithData",
-        "UI.insert",
-        "UI.getElementData"
-      ],
+      "Template.registerHelper",
+      "Template.instance",
+      "Template.currentData",
+      "Template.parentData",
+      "Template.body",
+      {name: "{{> UI.dynamic}}", id: "ui_dynamic"},
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
-     ],
-
-    "Match", [
-      "check",
-      "Match.test",
-      {name: "Match patterns", style: "noncode"}
     ],
+    "Blaze", [
+      "Blaze.render",
+      "Blaze.renderWithData",
+      "Blaze.remove",
+      "Blaze.getData",
+      "Blaze.toHTML",
+      "Blaze.toHTMLWithData",
+      "Blaze.View", [
+        "Blaze.currentView",
+        "Blaze.getView",
+        "Blaze.With",
+        "Blaze.If",
+        "Blaze.Unless",
+        "Blaze.Each"
+      ],
+      "Blaze.Template",
+      "Blaze.isTemplate",
+      {type: "spacer"},
+      {name: "Renderable content", id: "renderable_content", style: "noncode"}
+     ],
 
     "Timers", [
       "Meteor.setTimeout",
@@ -280,15 +301,15 @@ var toc = [
       "Meteor.clearInterval"
     ],
 
-    "Deps", [
-      "Deps.autorun",
-      "Deps.flush",
-      "Deps.nonreactive",
-      "Deps.active",
-      "Deps.currentComputation",
-      "Deps.onInvalidate",
-      "Deps.afterFlush",
-      "Deps.Computation", [
+    "Tracker", [
+      "Tracker.autorun",
+      "Tracker.flush",
+      "Tracker.nonreactive",
+      "Tracker.active",
+      "Tracker.currentComputation",
+      "Tracker.onInvalidate",
+      "Tracker.afterFlush",
+      "Tracker.Computation", [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
         {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
@@ -296,11 +317,17 @@ var toc = [
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
         {instance: "computation", name: "firstRun", id: "computation_firstrun"}
       ],
-      "Deps.Dependency", [
+      "Tracker.Dependency", [
         {instance: "dependency", name: "changed", id: "dependency_changed"},
         {instance: "dependency", name: "depend", id: "dependency_depend"},
         {instance: "dependency", name: "hasDependents", id: "dependency_hasdependents"}
       ]
+    ],
+
+    {name: "ReactiveVar", id: "reactivevar_pkg"}, [
+      "ReactiveVar",
+      {instance: "reactiveVar", name: "get", id: "reactivevar_get"},
+      {instance: "reactiveVar", name: "set", id: "reactivevar_set"}
     ],
 
     // "Environment Variables", [
@@ -343,6 +370,18 @@ var toc = [
     {name: "Assets", id: "assets"}, [
       {name: "Assets.getText", id: "assets_getText"},
       {name: "Assets.getBinary", id: "assets_getBinary"}
+    ],
+
+    {name: "Package.js", id: "packagejs"}, [
+      {name: "Package.describe", id: "packagedescription"},
+      {name: "Package.onUse", id: "packagedefinition"}, [
+        {name: "api.versionsFrom", id: "pack_versions"},
+        {name: "api.use", id: "pack_use"},
+        {name: "api.imply", id: "pack_api_imply"},
+        {name: "api.export", id: "pack_export"},
+        {name: "api.addFiles", id: "pack_addFiles"}
+      ],
+      {name: "Package.onTest", id: "packagetests"}
     ]
   ],
 
@@ -364,7 +403,8 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "underscore"
+    "underscore",
+    "webapp"
   ] ],
 
   "Command line", [ [
@@ -379,7 +419,14 @@ var toc = [
     "meteor list",
     "meteor mongo",
     "meteor reset",
-    "meteor bundle"
+    "meteor build",
+    "meteor search",
+    "meteor show",
+    "meteor publish",
+    "meteor publish-for-arch",
+    "meteor publish-release",
+    "meteor test-packages",
+    "meteor admin"
   ] ]
 ];
 
@@ -491,4 +538,42 @@ check_links = function() {
   });
 
   return "DONE";
+};
+
+var basicTypes = ["String", "Number", "Boolean", "Function", "Any", "Object",
+  "Array", "null", "undefined", "Integer", "Error"];
+
+// are all types either normal types or links?
+check_types = function () {
+  $(".new-api-box .type").each(function () {
+    var typeSpan = this;
+
+    var typesPipeSeparated =
+      $(typeSpan).text().replace(/, or /g, "|").replace(/( or )/g, "|")
+        .replace(/, /g, "|");
+
+    _.each(typesPipeSeparated.split("|"), function (text) {
+      if (! text) {
+        console.log(typeSpan);
+        return;
+      }
+
+      text = text.replace(/^\s+|\s+$/g, '');
+
+      if (_.contains(basicTypes, text)) {
+        return; // all good
+      }
+
+      var hasLink = false;
+      $(typeSpan).find("a").each(function () {
+        if ($(this).text().replace(/^\s+|\s+$/g, '') === text) {
+          hasLink = true;
+        }
+      });
+
+      if (! hasLink) {
+        console.log("No link for: " + text);
+      }
+    });
+  });
 };

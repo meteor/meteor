@@ -1,6 +1,6 @@
 // XXX SECTION: Meta tests
 
-Tinytest.add("try_all_permutations", function (test) {
+Tinytest.add("test-helpers - try_all_permutations", function (test) {
   // Have a good test of try_all_permutations, because it would suck
   // if try_all_permutations didn't actually run anything and so none
   // of our other tests actually did any testing.

@@ -5,7 +5,21 @@ var files = require('./files.js');
 var utils = require('./utils.js');
 var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
+var catalog = require('./catalog.js');
+var archinfo = require('./archinfo.js');
+var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
+var uniload = require('./uniload.js');
+var config = require('./config.js');
+var buildmessage = require('./buildmessage.js');
+var util = require('util');
+var child_process = require('child_process');
+var webdriver = require('browserstack-webdriver');
+var phantomjs = require('phantomjs');
+
+var Package = uniload.load({ packages: ["ejson"] });
+
+var toolPackageName = "meteor-tool";
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -22,6 +36,67 @@ var markStack = function (f) {
   return parseStack.markTop(f);
 };
 
+// Call from a test to throw a TestFailure exception and bail out of the test
+var fail = markStack(function (reason) {
+  throw new TestFailure(reason);
+});
+
+// Call from a test to assert that 'actual' is equal to 'expected',
+// with 'actual' being the value that the test got and 'expected'
+// being the expected value
+var expectEqual = markStack(function (actual, expected) {
+  if (! Package.ejson.EJSON.equals(actual, expected)) {
+    throw new TestFailure("not-equal", {
+      expected: expected,
+      actual: actual
+    });
+  }
+});
+
+var expectThrows = markStack(function (f) {
+  var threw = false;
+  try {
+    f();
+  } catch (e) {
+    threw = true;
+  }
+
+  if (! threw)
+    throw new TestFailure("expected-exception");
+});
+
+var getToolsPackage = function () {
+  buildmessage.assertInCapture();
+  // Rebuild the tool package --- necessary because we don't actually
+  // rebuild the tool in the cached version every time.
+  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
+    throw Error("didn't rebuild meteor-tool?");
+  }
+  var loader = new packageLoader.PackageLoader({
+    versions: null,
+    catalog: catalog.complete
+  });
+  return loader.getPackage(toolPackageName);
+};
+
+// Execute a command synchronously, discarding stderr.
+var execFileSync = function (binary, args, opts) {
+  return Future.wrap(function(cb) {
+    var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
+    child_process.execFile(binary, args, opts, cb2);
+  })().wait();
+};
+
+var doOrThrow = function (f) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+  return ret;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
@@ -278,10 +353,15 @@ _.extend(OutputLog.prototype, {
 //   'fake-mongod' stub process to be started instead of 'mongod'. The
 //   tellMongo method then becomes available on Runs for controlling
 //   the stub.
+// - clients
+//   - browserstack: true if browserstack clients should be used
+//   - port: the port that the clients should run on
 
 var Sandbox = function (options) {
   var self = this;
-  options = options || {};
+  // default options
+  options = _.extend({ clients: {} }, options);
+
   self.root = files.mkdtemp();
   self.warehouse = null;
 
@@ -291,90 +371,57 @@ var Sandbox = function (options) {
   self.env = {};
   self.fakeMongo = options.fakeMongo;
 
+  // By default, tests use the package server that this meteor binary is built
+  // with. If a test is tagged 'test-package-server', it uses the test
+  // server. Tests that publish packages should have this flag; tests that
+  // assume that the release's packages can be found on the server should not.
+  // Note that this only affects subprocess meteor runs, not direct invocation
+  // of packageClient!
+  if (runningTest.tags['test-package-server']) {
+    self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
+  }
+
   if (_.has(options, 'warehouse')) {
-    // Make a directory to hold our new warehouse
-    self.warehouse = path.join(self.root, 'warehouse');
-    fs.mkdirSync(self.warehouse, 0755);
-    fs.mkdirSync(path.join(self.warehouse, 'releases'), 0755);
-    fs.mkdirSync(path.join(self.warehouse, 'tools'), 0755);
-    fs.mkdirSync(path.join(self.warehouse, 'packages'), 0755);
+    if (!files.inCheckout())
+      throw Error("make only use a fake warehouse in a checkout");
+    self.warehouse = path.join(self.root, 'tropohouse');
+    self._makeWarehouse(options.warehouse);
+  }
 
-    // Build all packages and symlink them into the warehouse. Make up
-    // random version names for each one.
-    var listResult = release.current.library.list();
-    var pkgVersions = {};
-    if (! listResult.packages)
-      throw new TestFailure('build-failure', { messages: listResult.messages });
-    var packages = listResult.packages;
-    _.each(packages, function (pkg, name) {
-      // XXX we rely on the fact that library.list() forces all of the
-      // packages to be built. #ListingPackagesImpliesBuildingThem
-      var version = 'v' + ('' + Math.random()).substr(2, 4); // eg, "v5324"
-      pkgVersions[name] = version;
-      fs.mkdirSync(path.join(self.warehouse, 'packages', name), 0755);
-      fs.symlinkSync(
-        path.resolve(files.getCurrentToolsDir(), 'packages', name, '.build'),
-        path.join(self.warehouse, 'packages', name, version)
-      );
+  self.clients = [new PhantomClient({
+    host: 'localhost',
+    port: options.clients.port || 3000
+  })];
+
+  if (options.clients && options.clients.browserstack) {
+    var browsers = [
+      { browserName: 'firefox' },
+      { browserName: 'chrome' },
+      { browserName: 'internet explorer',
+        browserVersion: '11' },
+      { browserName: 'internet explorer',
+        browserVersion: '8',
+        timeout: 60 },
+      { browserName: 'safari' },
+      { browserName: 'android' }
+    ];
+
+    _.each(browsers, function (browser) {
+      self.clients.push(new BrowserStackClient({
+        host: 'localhost',
+        port: 3000,
+        browserName: browser.browserName,
+        browserVersion: browser.browserVersion,
+        timeout: browser.timeout
+      }));
     });
-
-    // Now create each requested release.
-    var seenLatest = false;
-    var createdTools = {};
-    _.each(options.warehouse, function (config, releaseName) {
-      var toolsVersion = config.tools || releaseName;
-
-      // Release info
-      var manifest = {
-        tools: toolsVersion,
-        packages: pkgVersions,
-        upgraders: config.upgraders
-      };
-      fs.writeFileSync(path.join(self.warehouse, 'releases',
-                                 releaseName + ".release.json"),
-                       JSON.stringify(manifest), 'utf8');
-      if (config.notices) {
-        fs.writeFileSync(path.join(self.warehouse, 'releases',
-                                   releaseName + ".notices.json"),
-                         JSON.stringify(config.notices), 'utf8');
-      }
-
-      // Tools
-      if (! createdTools[toolsVersion]) {
-        fs.symlinkSync(buildTools(toolsVersion),
-                       path.join(self.warehouse, 'tools', toolsVersion));
-        createdTools[toolsVersion] = true;
-      }
-
-      // Latest?
-      if (config.latest) {
-        if (seenLatest)
-          throw new Error("multiple releases marked as latest?");
-        fs.symlinkSync(
-          releaseName + ".release.json",
-          path.join(self.warehouse, 'releases', 'latest')
-        );
-        fs.symlinkSync(toolsVersion,
-                       path.join(self.warehouse, 'tools', 'latest'));
-        seenLatest = true;
-      }
-    });
-
-    if (! seenLatest)
-      throw new Error("no release marked as latest?");
-
-    // And a cherry on top
-    fs.symlinkSync("tools/latest/bin/meteor",
-                   path.join(self.warehouse, 'meteor'));
   }
 
   // Figure out the 'meteor' to run
   if (self.warehouse)
     self.execPath = path.join(self.warehouse, 'meteor');
-  else if (release.current.isCheckout())
-    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
   else
-    self.execPath = path.join(files.getCurrentToolsDir(), 'bin', 'meteor');
+    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
 };
 
 _.extend(Sandbox.prototype, {
@@ -382,22 +429,41 @@ _.extend(Sandbox.prototype, {
   run: function (/* arguments */) {
     var self = this;
 
-    var env = _.clone(self.env);
-    env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
-    if (self.warehouse)
-      env.METEOR_WAREHOUSE_DIR = self.warehouse;
-    // By default (ie, with no mock warehouse and no --release arg) we should be
-    // testing the actual release this is built in, so we pretend that it is the
-    // latest release.
-    if (!self.warehouse && release.current.isProperRelease())
-      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
-
     return new Run(self.execPath, {
       sandbox: self,
       args: _.toArray(arguments),
       cwd: self.cwd,
-      env: env,
+      env: self._makeEnv(),
       fakeMongo: self.fakeMongo
+    });
+  },
+
+  // Tests a set of clients with the argument function. Each call to f(run)
+  // instantiates a Run with a different client.
+  // Use:
+  // sandbox.testWithAllClients(function (run) {
+  //   // pre-connection checks
+  //   run.connectClient();
+  //   // post-connection checks
+  // });
+  testWithAllClients: function (f) {
+    var self = this;
+    var argsArray = _.compact(_.toArray(arguments).slice(1));
+
+    console.log("running test with " + self.clients.length + " client(s).");
+
+    _.each(self.clients, function (client) {
+      console.log("testing with " + client.name + "...");
+      var run = new Run(self.execPath, {
+        sandbox: self,
+        args: argsArray,
+        cwd: self.cwd,
+        env: self._makeEnv(),
+        fakeMongo: self.fakeMongo,
+        client: client
+      });
+      run.baseTimeout = client.timeout;
+      f(run);
     });
   },
 
@@ -414,12 +480,24 @@ _.extend(Sandbox.prototype, {
   createApp: function (to, template) {
     var self = this;
     files.cp_r(path.join(__dirname, 'tests', 'apps', template),
-               path.join(self.cwd, to));
+               path.join(self.cwd, to),
+               { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (!self.warehouse && release.current.isProperRelease()) {
       self.write(path.join(to, '.meteor/release'), release.current.name);
     }
+  },
+
+  // Same as createApp, but with a package.
+  //
+  // For example:
+  //   s.createPackage('mypack', 'empty');
+  //   s.cd('mypack');
+  createPackage: function (to, template) {
+    var self = this;
+    files.cp_r(path.join(__dirname, 'tests', 'packages', template),
+               path.join(self.cwd, to));
   },
 
   // Change the cwd to be used for subsequent runs. For example:
@@ -476,10 +554,38 @@ _.extend(Sandbox.prototype, {
       return fs.readFileSync(path.join(self.cwd, filename), 'utf8');
   },
 
+  // Copy the contents of one file to another.  In these series of tests, we often
+  // want to switch contents of package.js files. It is more legible to copy in
+  // the backup file rather than trying to write into it manually.
+  cp: function(from, to) {
+    var self = this;
+    var contents = self.read(from);
+    if (!contents) {
+      throw new Error("File " + from + " does not exist.");
+    };
+    self.write(to, contents);
+  },
+
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink: function (filename) {
     var self = this;
     fs.unlinkSync(path.join(self.cwd, filename));
+  },
+
+  // Make a directory in the sandbox. 'filename' is as in write().
+  mkdir: function (dirname) {
+    var self = this;
+    var dirPath = path.join(self.cwd, dirname);
+    if (! fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath);
+    }
+  },
+
+  // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
+  rename: function (oldName, newName) {
+    var self = this;
+    fs.renameSync(path.join(self.cwd, oldName),
+                  path.join(self.cwd, newName));
   },
 
   // Return the current contents of .meteorsession in the sandbox.
@@ -495,76 +601,352 @@ _.extend(Sandbox.prototype, {
     var self = this;
     return fs.writeFileSync(path.join(self.root, '.meteorsession'),
                             contents, 'utf8');
+  },
+
+  _makeEnv: function () {
+    var self = this;
+    var env = _.clone(self.env);
+    env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
+
+    if (self.warehouse) {
+      // Tell it where the warehouse lives.
+      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      // Don't ever try to refresh the stub catalog we made.
+      env.METEOR_OFFLINE_CATALOG = "t";
+    }
+
+    // By default (ie, with no mock warehouse and no --release arg) we should be
+    // testing the actual release this is built in, so we pretend that it is the
+    // latest release.
+    if (!self.warehouse && release.current.isProperRelease())
+      env.METEOR_TEST_LATEST_RELEASE = release.current.name;
+    return env;
+  },
+
+  // Writes a stub warehouse (really a tropohouse) to the directory
+  // self.warehouse. This warehouse only contains a meteor-tool package and some
+  // releases containing that tool only (and no packages).
+  //
+  // packageServerUrl indicates which package server we think we are using. Use
+  // the default, if we do not pass this in; you should pass it in any case that
+  // you will be specifying $METEOR_PACKAGE_SERVER_URL in the environment of a
+  // command you are running in this sandbox.
+  _makeWarehouse: function (releases) {
+    var self = this;
+    var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
+    var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
+    files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
+
+    var stubCatalog = {
+      syncToken: {},
+      formatVersion: "1.0",
+      collections: {
+        packages: [],
+        versions: [],
+        builds: [],
+        releaseTracks: [],
+        releaseVersions: []
+      }
+    };
+
+    // Build all packages and symlink them into the warehouse. Remember
+    // their versions (which happen to contain build IDs).
+    // XXX Not sure where this comment comes from. We should presumably
+    // be building some packages besides meteor-tool (so that we can
+    // build apps that contain core packages).
+
+    var toolPackage, toolPackageDirectory;
+    doOrThrow(function () {
+      toolPackage = getToolsPackage();
+      toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
+        + toolPackage.buildArchitectures();
+      toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
+                                       toolPackageName, toolPackageDirectory),
+                             { elideBuildInfo: true });
+    });
+
+    fs.symlinkSync(toolPackageDirectory,
+                   path.join(self.warehouse, packagesDirectoryName,
+                             toolPackageName, toolPackage.version));
+    stubCatalog.collections.packages.push({
+      name: toolPackageName,
+      _id: utils.randomToken()
+    });
+    var toolVersionId = utils.randomToken();
+    stubCatalog.collections.versions.push({
+      packageName: toolPackageName,
+      version: toolPackage.version,
+      earliestCompatibleVersion: toolPackage.version,
+      containsPlugins: false,
+      description: toolPackage.metadata.summary,
+      dependencies: {},
+      compilerVersion: require('./compiler.js').BUILT_BY,
+      _id: toolVersionId
+    });
+
+    self.toolPackageVersion = toolPackage.version;
+
+    stubCatalog.collections.builds.push({
+      architecture: toolPackage.buildArchitectures(),
+      versionId: toolVersionId,
+      _id: utils.randomToken()
+    });
+    stubCatalog.collections.releaseTracks.push({
+      name: catalog.DEFAULT_TRACK,
+      _id: utils.randomToken()
+    });
+
+    // Now create each requested release.
+    _.each(releases, function (configuration, releaseName) {
+      // Release info
+      stubCatalog.collections.releaseVersions.push({
+        track: catalog.DEFAULT_TRACK,
+        version: releaseName,
+        orderKey: releaseName,
+        description: "test release " + releaseName,
+        recommended: !!configuration.recommended,
+        // XXX support multiple tools packages for springboard tests
+        tool: toolPackageName + "@" + toolPackage.version,
+        packages: {}
+      });
+    });
+
+    // XXX: This is an incremental hack to be able to create apps from the
+    // warehouse. We need the constraint solver that runs are create-time to be
+    // able to solve for the starting app packages (standrd-app-packages,
+    // insecure & autopublish). But the solution doesn't have to be
+    // accurate. Later, when we care about the solution making sense, we should
+    // consider actually importing real data.
+
+    // XXXX: HACK.  We are going to cheat and assume that these are already
+    // in the official catalog. Since we don't care about the contents, we
+    // should be OK.
+    var oldOffline = catalog.official.offline;
+    catalog.official.offline = true;
+    doOrThrow(function () {
+      catalog.official.refresh();
+    });
+    _.each(
+      ['autopublish', 'meteor-platform', 'insecure'],
+      function (name) {
+        var versionRec = doOrThrow(function () {
+          return catalog.official.getLatestMainlineVersion(name);
+        });
+        if (!versionRec) {
+          catalog.official.offline = false;
+          doOrThrow(function () {
+            catalog.official.refresh();
+          });
+          catalog.official.offline = true;
+          versionRec = doOrThrow(function () {
+            return catalog.official.getLatestMainlineVersion(name);
+          });
+          if (!versionRec) {
+            throw new Error(" hack fails for " + name);
+          }
+        }
+        var buildRec = doOrThrow(function () {
+          return catalog.official.getAllBuilds(name, versionRec.version)[0];
+        });
+
+        // Insert into packages.
+        stubCatalog.collections.packages.push({
+          name: name,
+          _id: utils.randomToken()
+        });
+
+        // Insert into versions. We are making up a lot of this data.
+        var versionId = utils.randomToken();
+        stubCatalog.collections.versions.push({
+          packageName: name,
+          version: versionRec.version,
+          earliestCompatibleVersion: versionRec.earliestCompatibleVersion,
+          containsPlugins: false,
+          description: "warehouse test",
+          dependencies: {},
+          compilerVersion: require('./compiler.js').BUILT_BY,
+          _id: versionRec._id
+        });
+
+        // Insert into builds. Assume the package is available for all
+        // architectures.
+        stubCatalog.collections.builds.push({
+          buildArchitectures: "web.browser+os",
+          versionId: versionRec._id,
+          build: buildRec.build,
+          _id: utils.randomToken()
+        });
+    });
+    catalog.official.offline = oldOffline;
+
+    var dataFile = config.getLocalPackageCacheFilename(serverUrl);
+    fs.writeFileSync(
+      path.join(self.warehouse, 'package-metadata', 'v1', dataFile),
+      JSON.stringify(stubCatalog, null, 2));
+
+    // And a cherry on top
+    fs.symlinkSync(path.join(packagesDirectoryName,
+                             toolPackageName, toolPackage.version,
+                             'meteor-tool-' + archinfo.host(), 'meteor'),
+                   path.join(self.warehouse, 'meteor'));
   }
 });
 
+///////////////////////////////////////////////////////////////////////////////
+// Client
+///////////////////////////////////////////////////////////////////////////////
 
-// Build a tools release into a temporary directory (based on the
-// current checkout), and gives it a version name of
-// 'version'. Returns the directory.
-//
-// This is memoized for speed (multiple calls with the same version
-// name may return the same directory), and furthermore I'm not going
-// to promise that it doesn't contain symlinks to your dev_bundle and
-// so forth. So don't modify anything in the returned directory.
-//
-// This function is not reentrant.
-var toolBuildRoot = null;
-var toolBuildCache = {};
-var buildTools = function (version) {
-  if (_.has(toolBuildCache, version))
-    return toolBuildCache[version];
+var Client = function (options) {
+  var self = this;
 
-  if (! toolBuildRoot)
-    toolBuildRoot = files.mkdtemp();
-  var outputDir = path.join(toolBuildRoot, version);
+  self.host = options.host;
+  self.port = options.port;
+  self.url = "http://" + self.host + ":" + self.port + '/' +
+    (Math.random() * 0x100000000 + 1).toString(36);
+  self.timeout = options.timeout || 40;
 
-  var child_process = require("child_process");
-  var fut = new Future;
-
-  if (! files.inCheckout())
-    throw new Error("not in checkout?");
-
-  var execPath = path.join(files.getCurrentToolsDir(),
-                           'scripts', 'admin', 'build-tools-tree.sh');
-  var env = _.clone(process.env);
-  env['TARGET_DIR'] = outputDir;
-
-  // XXX in the future, for speed, might want to duplicate the logic
-  // rather than shelling out to build-tools-tree.sh, so that we can
-  // symlink the dev_bundle (as best we're able) and avoid copying the
-  // node and mongo each time we do this. or, better yet, move all of
-  // the release building scripts into javascript (make them tool
-  // commands?).
-  var proc = child_process.spawn(execPath, [], {
-    env: env,
-    stdio: 'ignore'
-  });
-
-  proc.on('exit', function (code, signal) {
-    if (fut) {
-      fut['return'](code === 0);
-    }
-  });
-
-  proc.on('error', function (err) {
-    if (fut) {
-      fut['return'](false);
-    }
-  });
-
-  var success = fut.wait();
-  fut = null;
-  if (! success)
-    throw new Error("failed to run scripts/admin/build-tools.sh?");
-
-  fs.writeFileSync(path.join(outputDir, ".tools_version.txt"),
-                   version, 'utf8');
-
-  toolBuildCache[version] = outputDir;
-  return outputDir;
+  if (! self.connect || ! self.stop) {
+    console.log("Missing methods in subclass of Client.");
+  }
 };
 
+// PhantomClient
+var PhantomClient = function (options) {
+  var self = this;
+  Client.apply(this, arguments);
+
+  self.name = "phantomjs";
+  self.process = null;
+};
+
+util.inherits(PhantomClient, Client);
+
+_.extend(PhantomClient.prototype, {
+  connect: function () {
+    var self = this;
+
+    var phantomScript = "require('webpage').create().open('" + self.url + "');";
+    var phantomPath = phantomjs.path;
+    self.process = child_process.execFile(
+      '/bin/bash',
+      ['-c',
+       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
+        phantomScript + "END\n")]);
+  },
+  stop: function() {
+    var self = this;
+    self.process && self.process.kill();
+    self.process = null;
+  }
+});
+
+// BrowserStackClient
+var browserStackKey = null;
+
+var BrowserStackClient = function (options) {
+  var self = this;
+  Client.apply(this, arguments);
+
+  self.tunnelProcess = null;
+  self.driver = null;
+
+  self.browserName = options.browserName;
+  self.browserVersion = options.browserVersion;
+
+  self.name = "BrowserStack - " + self.browserName;
+  if (self.browserVersion) {
+    self.name += " " + self.browserVersion;
+  }
+};
+
+util.inherits(BrowserStackClient, Client);
+
+_.extend(BrowserStackClient.prototype, {
+  connect: function () {
+    var self = this;
+
+    // memoize the key
+    if (browserStackKey === null)
+      browserStackKey = self._getBrowserStackKey();
+    if (! browserStackKey)
+      throw new Error("BrowserStack key not found. Ensure that you " +
+        "have installed your S3 credentials.");
+
+    var capabilities = {
+      'browserName' : self.browserName,
+      'browserstack.user' : 'meteor',
+      'browserstack.local' : 'true',
+      'browserstack.key' : browserStackKey
+    };
+
+    if (self.browserVersion) {
+      capabilities.browserVersion = self.browserVersion;
+    }
+
+    self._launchBrowserStackTunnel(function (error) {
+      if (error)
+        throw error;
+
+      self.driver = new webdriver.Builder().
+        usingServer('http://hub.browserstack.com/wd/hub').
+        withCapabilities(capabilities).
+        build();
+      self.driver.get(self.url);
+    });
+  },
+
+  stop: function() {
+    var self = this;
+    self.tunnelProcess && self.tunnelProcess.kill();
+    self.tunnelProcess = null;
+
+    self.driver && self.driver.quit();
+    self.driver = null;
+  },
+
+  _getBrowserStackKey: function () {
+    var outputDir = path.join(files.mkdtemp(), "key");
+
+    try {
+      execFileSync("s3cmd", ["get",
+        "s3://meteor-browserstack-keys/browserstack-key",
+        outputDir
+      ]);
+
+      return fs.readFileSync(outputDir, "utf8").trim();
+    } catch (e) {
+      return null;
+    }
+  },
+
+  _launchBrowserStackTunnel: function (callback) {
+    var self = this;
+    var browserStackPath =
+      path.join(files.getDevBundle(), 'bin', 'BrowserStackLocal');
+    fs.chmodSync(browserStackPath, 0755);
+
+    var args = [
+      browserStackPath,
+      browserStackKey,
+      [self.host, self.port, 0].join(','),
+      // Disable Live Testing and Screenshots, just test with Automate.
+      '-onlyAutomate',
+      // Do not wait for the server to be ready to spawn the process.
+      '-skipCheck'
+    ];
+    self.tunnelProcess = child_process.execFile(
+      '/bin/bash',
+      ['-c', args.join(' ')]
+    );
+
+    // Called when the SSH tunnel is established.
+    self.tunnelProcess.stdout.on('data', function(data) {
+      if (data.toString().match(/You can now access your local server/))
+        callback();
+    });
+  }
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Run
@@ -584,8 +966,9 @@ var Run = function (execPath, options) {
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
-  self.baseTimeout = 1;
+  self.baseTimeout = 20;
   self.extraTime = 0;
+  self.client = options.client;
 
   self.stdoutMatcher = new Matcher(self);
   self.stderrMatcher = new Matcher(self);
@@ -594,7 +977,8 @@ var Run = function (execPath, options) {
   self.exitStatus = undefined; // 'null' means failed rather than exited
   self.exitFutures = [];
 
-  self.args.apply(self, options.args || []);
+  var opts = options.args || [];
+  self.args.apply(self, opts || []);
 
   self.fakeMongoPort = null;
   self.fakeMongoConnection = null;
@@ -634,11 +1018,22 @@ _.extend(Run.prototype, {
     });
   },
 
+  connectClient: function () {
+    var self = this;
+    if (! self.client)
+      throw new Error("Must create Run with a client to use connectClient().");
+
+    self._ensureStarted();
+    self.client.connect();
+  },
+
   _exited: function (status) {
     var self = this;
 
     if (self.exitStatus !== undefined)
       throw new Error("already exited?");
+
+    self.client && self.client.stop();
 
     self.exitStatus = status;
     var exitFutures = self.exitFutures;
@@ -698,6 +1093,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stdoutMatcher.match(pattern, timeout, _strict);
   }),
@@ -708,6 +1104,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     return self.stderrMatcher.match(pattern, timeout, _strict);
   }),
@@ -732,17 +1129,20 @@ _.extend(Run.prototype, {
   // there may not be any benefit since the usual way to use this is
   // to call it after expectExit or expectEnd.
   forbid: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');
   }),
 
   // As forbid(), but for stderr instead of stdout.
   forbidErr: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern, 'stderr');
   }),
 
   // Combination of forbid() and forbidErr(). Forbids the pattern on
   // both stdout and stderr.
   forbidAll: markStack(function (pattern) {
+    this._ensureStarted();
     this.outputLog.forbid(pattern);
   }),
 
@@ -753,6 +1153,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     var timeout = self.baseTimeout + self.extraTime;
+    timeout *= utils.timeoutScaleFactor;
     self.extraTime = 0;
     self.expectExit();
 
@@ -770,6 +1171,7 @@ _.extend(Run.prototype, {
 
     if (self.exitStatus === undefined) {
       var timeout = self.baseTimeout + self.extraTime;
+      timeout *= utils.timeoutScaleFactor;
       self.extraTime = 0;
 
       var fut = new Future;
@@ -814,6 +1216,8 @@ _.extend(Run.prototype, {
   stop: markStack(function () {
     var self = this;
     if (self.exitStatus === undefined) {
+      self._ensureStarted();
+      self.client && self.client.stop();
       self.proc.kill();
       self.expectExit();
     }
@@ -822,7 +1226,8 @@ _.extend(Run.prototype, {
   // Like stop, but doesn't wait for it to exit.
   _stopWithoutWaiting: function () {
     var self = this;
-    if (self.exitStatus === undefined) {
+    if (self.exitStatus === undefined && self.proc) {
+      self.client && self.client.stop();
       self.proc.kill();
     }
   },
@@ -1004,6 +1409,8 @@ var tagDescriptions = {
 };
 
 // options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
+//          clients:
+//             - browserstack (need s3cmd credentials)
 var runTests = function (options) {
   var failureCount = 0;
 
@@ -1075,7 +1482,7 @@ var runTests = function (options) {
     var failure = null;
     try {
       runningTest = test;
-      test.f();
+      test.f(options);
     } catch (e) {
       if (e instanceof TestFailure) {
         failure = e;
@@ -1106,6 +1513,13 @@ var runTests = function (options) {
         process.stderr.write("  => Expected: " + s(failure.details.expected) +
                              "; actual: " + s(failure.details.actual) + "\n");
       }
+      if (failure.reason === 'expected-exception') {
+      }
+      if (failure.reason === 'not-equal') {
+        process.stderr.write(
+"  => Expected: " + JSON.stringify(failure.details.expected) +
+"; actual: " + JSON.stringify(failure.details.actual) + "\n");
+      }
 
       if (failure.details.run) {
         failure.details.run.outputLog.end();
@@ -1113,7 +1527,7 @@ var runTests = function (options) {
         if (! lines.length) {
           process.stderr.write("  => No output\n");
         } else {
-          var historyLines = options.historyLines || 10;
+          var historyLines = options.historyLines || 100;
 
           process.stderr.write("  => Last " + historyLines + " lines:\n");
           _.each(lines.slice(-historyLines), function (line) {
@@ -1211,5 +1625,12 @@ _.extend(exports, {
   markStack: markStack,
   define: define,
   Sandbox: Sandbox,
-  Run: Run
+  Run: Run,
+  fail: fail,
+  expectEqual: expectEqual,
+  expectThrows: expectThrows,
+  getToolsPackage: getToolsPackage,
+  execFileSync: execFileSync,
+  doOrThrow: doOrThrow,
+  testPackageServerUrl: config.getTestPackageServerUrl()
 });

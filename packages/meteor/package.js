@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  internal: true
+  version: '1.0.4-cordova6'
 });
 
 Package._transitional_registerBuildPlugin({
@@ -16,6 +16,7 @@ Package.on_use(function (api) {
   api.export('Meteor');
 
   api.add_files('client_environment.js', 'client');
+  api.add_files('cordova_environment.js', 'web.cordova');
   api.add_files('server_environment.js', 'server');
   api.add_files('helpers.js', ['client', 'server']);
   api.add_files('setimmediate.js', ['client', 'server']);
@@ -41,7 +42,9 @@ Package.on_use(function (api) {
 Package.on_test(function (api) {
   api.use(['underscore', 'tinytest', 'test-helpers']);
 
+  api.add_files('browser_environment_test.js', 'web.browser');
   api.add_files('client_environment_test.js', 'client');
+  api.add_files('cordova_environment_test.js', 'web.cordova');
   api.add_files('server_environment_test.js', 'server');
 
   api.add_files('helpers_test.js', ['client', 'server']);

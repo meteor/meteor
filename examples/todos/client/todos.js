@@ -1,8 +1,8 @@
 // Client-side JavaScript, bundled and sent to client.
 
 // Define Minimongo collections to match server/publish.js.
-Lists = new Meteor.Collection("lists");
-Todos = new Meteor.Collection("todos");
+Lists = new Mongo.Collection("lists");
+Todos = new Mongo.Collection("todos");
 
 // ID of currently selected list
 Session.setDefault('list_id', null);
@@ -167,7 +167,7 @@ Template.todos.todos = function () {
 
   var list_id = Session.get('list_id');
   if (!list_id)
-    return {};
+    return [];
 
   var sel = {list_id: list_id};
   var tag_filter = Session.get('tag_filter');

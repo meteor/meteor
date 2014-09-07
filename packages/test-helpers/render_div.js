@@ -1,5 +1,9 @@
-renderToDiv = function (comp) {
+renderToDiv = function (template, optData) {
   var div = document.createElement("DIV");
-  UI.materialize(comp, div);
+  if (optData == null) {
+    UI.render(template, div);
+  } else {
+    UI.renderWithData(template, optData, div);
+  }
   return div;
 };

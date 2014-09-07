@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Enable the application cache in the browser"
+  summary: "Enable the application cache in the browser",
+  version: "1.0.0-cordova1"
 });
 
 Package.on_use(function (api) {

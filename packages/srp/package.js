@@ -5,7 +5,7 @@
 
 Package.describe({
   summary: "Library for Secure Remote Password (SRP) exchanges",
-  internal: true
+  version: "1.0.0"
 });
 
 Package.on_use(function (api) {

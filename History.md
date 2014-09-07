@@ -1,7 +1,282 @@
 ## v.NEXT
 
+
+## v0.9.1
+
+#### Organizations in Meteor developer accounts
+
+Meteor 0.9.1 ships with organizations support in Meteor developer
+accounts. Organizations are teams of users that make it easy to
+collaborate on apps and packages.
+
+Create an organization at
+https://www.meteor.com/account-settings/organizations. Run the `meteor
+authorized` command in your terminal to give an organization
+permissions to your apps. To add an organization as a maintainer of
+your packages, use the `meteor admin maintainers` command. You can
+also publish packages with an organization's name in the package name
+prefix instead of your own username.
+
+
+#### One backwards incompatible change for templates
+
+* Templates can no longer be named "body" or "instance".
+
+#### Backwards compatible Blaze API changes
+
+* New public and documented APIs:
+  * `Blaze.toHTMLWithData()`
+  * `Template.currentData()`
+  * `Blaze.getView()`
+  * `Template.parentData()` (previously `UI._parentData()`)
+  * `Template.instance()` (previously `UI._templateInstance()`)
+  * `Template.body` (previously `UI.body`)
+  * `new Template` (previously `Template.__create__`)
+  * `Blaze.getData()` (previously `UI.getElementData`)
+
+* Deprecate the `ui` package. Instead, use the `blaze` package. The
+  `UI` and `Blaze` symbols are now the same.
+
+* Deprecate `UI.insert`. `UI.render` and `UI.renderWithData` now
+  render a template and place it in the DOM.
+
+* Add an underscore to some undocumented Blaze APIs to make them
+  internal. Notably: `Blaze._materializeView`, `Blaze._createView`,
+  `Blaze._toText`, `Blaze._destroyView`, `Blaze._destroyNode`,
+  `Blaze._withCurrentView`, `Blaze._DOMBackend`,
+  `Blaze._TemplateWith`
+
+* Document Views. Views are the machinery powering DOM updates in
+  Blaze.
+
+* Expose `view` property on template instances.
+
+#### Backwards compatible renames
+
+* Package renames
+  * `livedata` -> `ddp`
+  * `mongo-livedata` -> `mongo`
+  * `standard-app-packages` -> `meteor-platform`
+* Symbol renames
+  * `Meteor.Collection` -> `Mongo.Collection`
+  * `Meteor.Collection.Cursor` -> `Mongo.Cursor`
+  * `Meteor.Collection.ObjectID` -> `Mongo.ObjectID`
+  * `Deps` -> `Tracker`
+
+#### Other
+
+* Add `reactive-var` package. Lets you define a single reactive
+  variable, like a single key in `Session`.
+
+* Don't throw an exception in Chrome when cookies and local storage
+  are blocked.
+
+* Bump DDP version to "1". Clients connecting with version "pre1" or
+  "pre2" should still work.
+
+* Allow query parameters in OAuth1 URLs. #2404
+
+* Fix `meteor list` if not all packages on server. Fixes #2468
+
+Patch by Github user mitar.
+
+
+## v0.9.0.1
+
+* Fix issues preventing hot code reload from automatically reloading webapps in
+  two cases: when the old app was a pre-0.9.0 app, and when the app used
+  appcache. (In both cases, an explicit reload still worked.)
+
+* Fix publishing packages containing a plugin with platform-specific code but
+  no platform-specific code in the main package.
+
+* Fix `meteor add package@version` when the package was already added with a
+  different version constraint.
+
+* Improve treatment of pre-release packages (packages with a dash in their
+  version). Guarantee that they will not be chosen by the constraint solver
+  unless explicitly requested.  `meteor list` won't suggest that you update to
+  them.
+
+* Fix slow spiderable executions.
+
+* Fix dev-mode client-only restart when client files changed very soon after
+  server restart.
+
+* Fix stack trace on `meteor add` constraint solver failure.
+
+* Fix "access-denied" stack trace when publishing packages.
+
+
+## v0.9.0
+
+Meteor 0.9.0 introduces the Meteor Package Server. Incorporating lessons from
+our community's Meteorite tool, Meteor 0.9.0 allows users to develop and publish
+Meteor packages to a central repository. The `meteor publish` command is used to
+publish packages. Non-core packages can now be added with `meteor add`, and you
+can specify version constraints on the packages you use. Binary packages can be
+published for additional architectures with `meteor publish-for-arch`, which
+allows cross-platform deploys and bundling.  You can search for packages with
+`meteor search` and display information on them with `meteor show`, or you can
+use the Atmosphere web interface developed by Percolate Studio at
+https://atmospherejs.com/
+
+See https://docs.meteor.com/#writingpackages and
+https://docs.meteor.com/#packagejs for more details.
+
+Other packaging-related changes:
+
+* `meteor list` now lists the packages your app is using, which was formerly the
+  behavior of `meteor list --using`. To search for packages you are not
+  currently using, use `meteor search`.  The concept of an "internal" package
+  (which did not show up in `meteor list`) no longer exists.
+
+* To prepare a bundle created with `meteor bundle` for execution on a
+  server, you now run `npm install` with no arguments instead of having
+  to specify a few specific npm modules and their versions
+  explicitly. See the README in the generated bundle for more details.
+
+* All `under_score`-style `package.js` APIs (`Package.on_use`, `api.add_files`,
+  etc) have been replaced with `camelCase` names (`Package.onUse`,
+  `api.addFiles`, etc).  The old names continue to work for now.
+
+* There's a new `archMatching` option to `Plugin.registerSourceHandler`, which
+  should be used by any plugin whose output is only for the client or only for
+  the server (eg, CSS and HTML templating packages); this allows Meteor to avoid
+  restarting the server when files processed by these plugins change.
+
+Other changes:
+
+* When running your app with the local development server, changes that only
+  affect the client no longer require restarting the server.  Changes that only
+  affect CSS no longer require the browser to refresh the page, both in local
+  development and in some production environments.  #490
+
+* When a call to `match` fails in a method or subscription, log the
+  failure on the server. (This matches the behavior described in our docs)
+
+* The `appcache` package now defaults to functioning on all browsers
+  that support the AppCache API, rather than a whitelist of browsers.
+  The main effect of this change is that `appcache` is now enabled by
+  default on Firefox, because Firefox no longer makes a confusing
+  popup. You can still disable individual browsers with
+  `AppCache.config`.  #2241
+
+* The `forceApprovalPrompt` option can now be specified in `Accounts.ui.config`
+  in addition to `Meteor.loginWithGoogle`.  #2149
+
+* Don't leak websocket clients in server-to-server DDP in some cases (and fix
+  "Got open from inactive client"
+  error). https://github.com/faye/websocket-driver-node/pull/8
+
+* Updated OAuth url for login with Meetup.
+
+* Allow minimongo `changed` callbacks to mutate their `oldDocument`
+  argument. #2231
+
+* Fix upsert called from client with no callback.  #2413
+
+* Avoid a few harmless exceptions in OplogObserveDriver.
+
+* Refactor `observe-sequence` package.
+
+* Fix `spiderable` race condition.
+
+* Re-apply our fix of NPM bug https://github.com/npm/npm/issues/3265 which got
+  accidentally reverted upstream.
+
+* Workaround for a crash in recent Safari
+  versions. https://github.com/meteor/meteor/commit/e897539adb
+
 * Upgraded dependencies:
+  - less: 1.7.4 (from 1.7.1)
+  - tar: 1.0.1 (from 0.1.19)
+  - fstream: 1.0.2 (from 0.1.25)
+
+Patches by Github users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
+mquandalle, rcy, RichardLitt, thatneat, and twhy.
+
+
+
+## v0.8.3
+
+#### Blaze
+
+* Refactor Blaze to simplify internals while preserving the public
+  API. `UI.Component` has been replaced with `Blaze.View.`
+
+* Fix performance issues and memory leaks concerning event handlers.
+
+* Add `UI.remove`, which removes a template after `UI.render`/`UI.insert`.
+
+* Add `this.autorun` to the template instance, which is like `Deps.autorun`
+  but is automatically stopped when the template is destroyed.
+
+* Create `<a>` tags as SVG elements when they have `xlink:href`
+  attributes. (Previously, `<a>` tags inside SVGs were never created as
+  SVG elements.)  #2178
+
+* Throw an error in `{{foo bar}}` if `foo` is missing or not a function.
+
+* Cursors returned from template helpers for #each should implement
+  the `observeChanges` method and don't have to be Minimongo cursors
+  (allowing new custom data stores for Blaze like Miniredis).
+
+* Remove warnings when {{#each}} iterates over a list of strings,
+  numbers, or other items that contains duplicates.  #1980
+
+#### Meteor Accounts
+
+* Fix regression in 0.8.2 where an exception would be thrown if
+  `Meteor.loginWithPassword` didn't have a callback. Callbacks to
+  `Meteor.loginWithPassword` are now optional again.  #2255
+
+* Fix OAuth popup flow in mobile apps that don't support
+  `window.opener`.  #2302
+
+* Fix "Email already exists" error with MongoDB 2.6.  #2238
+
+
+#### mongo-livedata and minimongo
+
+* Fix performance issue where a large batch of oplog updates could block
+  the node event loop for long periods.  #2299.
+
+* Fix oplog bug resulting in error message "Buffer inexplicably empty".  #2274
+
+* Fix regression from 0.8.2 that caused collections to appear empty in
+  reactive `findOne()` or `fetch` queries that run before a mutator
+  returns.  #2275
+
+
+#### Miscellaneous
+
+* Stop including code by default that automatically refreshes the page
+  if JavaScript and CSS don't load correctly. While this code is useful
+  in some multi-server deployments, it can cause infinite refresh loops
+  if there are errors on the page. Add the `reload-safetybelt` package
+  to your app if you want to include this code.
+
+* On the server, `Meteor.startup(c)` now calls `c` immediately if the
+  server has already started up, matching the client behavior.  #2239
+
+* Add support for server-side source maps when debugging with
+  `node-inspector`.
+
+* Add `WebAppInternals.addStaticJs()` for adding static JavaScript code
+  to be served in the app, inline if allowed by `browser-policy`.
+
+* Make the `tinytest/run` method return immediately, so that `wait`
+  method calls from client tests don't block on server tests completing.
+
+* Log errors from method invocations on the client if there is no
+  callback provided.
+
+* Upgraded dependencies:
+  - node: 0.10.29 (from 0.10.28)
   - less: 1.7.1 (from 1.6.1)
+
+Patches contributed by GitHub users Cangit, cmather, duckspeaker, zol.
 
 
 ## v0.8.2
@@ -52,7 +327,7 @@
 * Blaze now tracks individual CSS rules in `style` attributes and won't
   overwrite changes to them made by other JavaScript libraries.
 
-* Add {{> UI.dynamic}} to make it easier to dynamically render a
+* Add `{{> UI.dynamic}}` to make it easier to dynamically render a
   template with a data context.
 
 * Add `UI._templateInstance()` for accessing the current template

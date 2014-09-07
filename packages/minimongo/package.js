@@ -1,13 +1,13 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  internal: true
+  version: '1.0.2'
 });
 
 Package.on_use(function (api) {
   api.export('LocalCollection');
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
-  api.use(['underscore', 'json', 'ejson', 'id-map', 'ordered-dict', 'deps',
+  api.use(['underscore', 'json', 'ejson', 'id-map', 'ordered-dict', 'tracker',
            'random', 'ordered-dict']);
   // This package is used for geo-location queries such as $near
   api.use('geojson-utils');
@@ -37,7 +37,7 @@ Package.on_test(function (api) {
   api.use('minimongo', ['client', 'server']);
   api.use('test-helpers', 'client');
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
-           'random', 'deps']);
+           'random', 'tracker', 'reactive-var']);
   api.add_files('minimongo_tests.js', 'client');
   api.add_files('wrap_transform_tests.js');
   api.add_files('minimongo_server_tests.js', 'server');

@@ -1,7 +1,10 @@
 var _ = require('underscore');
 var release = require('./release.js');
-var unipackage = require('./unipackage.js');
+var uniload = require('./uniload.js');
 var config = require('./config.js');
+var utils = require('./utils.js');
+var auth = require('./auth.js');
+var selftest = require('./selftest.js');
 
 var randomString = function (charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -12,7 +15,7 @@ var randomString = function (charsCount) {
   return str;
 };
 
-exports.accountsCommandTimeoutSecs = 15;
+exports.accountsCommandTimeoutSecs = 15 * utils.timeoutScaleFactor;
 
 exports.randomString = randomString;
 
@@ -45,6 +48,7 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
 
   ensureLegacyReleaseDownloaded(sandbox);
 
+  name = name + "." + config.getDeployHostname();
   var runArgs = ['deploy', '--release', '0.7.0.1', name];
   if (password)
     runArgs.push('-P');
@@ -60,7 +64,7 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
   }
 
   run.waitSecs(90);
-  run.match('Now serving at ' + name + '.meteor.com');
+  run.match('Now serving at ' + name);
   // XXX: We should wait for it to exit with code 0, but it times out for some reason.
   run.stop();
   return name;
@@ -68,6 +72,10 @@ exports.createAndDeployLegacyApp = function (sandbox, password) {
 
 exports.cleanUpLegacyApp = function (sandbox, name, password) {
   ensureLegacyReleaseDownloaded(sandbox);
+
+  if (name.indexOf(".") === -1) {
+    name = name + "." + config.getDeployHostname();
+  }
 
   var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
   if (password) {
@@ -93,6 +101,11 @@ exports.createAndDeployApp = function (sandbox, options) {
   var name = options.appName || randomAppName();
   sandbox.createApp(name, options.templateApp || 'empty');
   sandbox.cd(name);
+
+  if (name.indexOf(".") === -1) {
+    name = name + "." + config.getDeployHostname();
+  }
+
   var runArgs = ['deploy', name];
   if (options.settingsFile) {
     runArgs.push('--settings');
@@ -100,13 +113,17 @@ exports.createAndDeployApp = function (sandbox, options) {
   }
   var run = sandbox.run.apply(sandbox, runArgs);
   run.waitSecs(90);
-  run.match('Now serving at ' + name + '.meteor.com');
+  run.match('Now serving at ' + name);
   run.waitSecs(10);
   run.expectExit(0);
   return name;
 };
 
 exports.cleanUpApp = function (sandbox, name) {
+  if (name.indexOf(".") === -1) {
+    name = name + "." + config.getDeployHostname();
+  }
+
   var run = sandbox.run('deploy', '-D', name);
   run.waitSecs(90);
   run.match('Deleted');
@@ -133,6 +150,11 @@ exports.logout = function (s) {
   run.expectExit(0);
 };
 
+exports.getUserId = function (s) {
+  var data = JSON.parse(s.readSessionFile());
+  return data.sessions[config.getUniverse()].userId;
+};
+
 var registrationUrlRegexp =
       /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
 exports.registrationUrlRegexp = registrationUrlRegexp;
@@ -143,6 +165,11 @@ exports.registrationUrlRegexp = registrationUrlRegexp;
 exports.deployWithNewEmail = function (s, email, appName) {
   s.createApp('deployapp', 'empty');
   s.cd('deployapp');
+
+  if (appName.indexOf(".") === -1) {
+    appName = appName + "." + config.getDeployHostname();
+  }
+
   var run = s.run('deploy', appName);
   run.waitSecs(exports.accountsCommandTimeoutSecs);
   run.matchErr('Email:');
@@ -161,16 +188,14 @@ exports.deployWithNewEmail = function (s, email, appName) {
   return token;
 };
 
-var getLoadedPackages = _.once(function () {
-  return unipackage.load({
-    library: release.current.library,
-    packages: ['meteor', 'livedata'],
-    release: release.current.name
+var getLoadedPackages = function () {
+  return uniload.load({
+    packages: ['ddp']
   });
-});
+};
 
 var ddpConnect = function (url) {
-  var DDP = getLoadedPackages().livedata.DDP;
+  var DDP = getLoadedPackages().ddp.DDP;
   return DDP.connect(url);
 };
 
@@ -195,4 +220,34 @@ exports.registerWithToken = function (token, username, password, email) {
     code: registrationCode
   });
   accountsConn.close();
+};
+
+exports.randomOrgName = function () {
+  return "selftestorg" + exports.randomString(10);
+};
+
+// Logs in as the specified user and creates a randomly named
+// organization. Returns the organization name. Calls selftest.fail if
+// the organization can't be created.
+exports.createOrganization = function (username, password) {
+  var orgName = exports.randomOrgName();
+  auth.withAccountsConnection(function (conn) {
+    try {
+      var result = conn.call("login", {
+        meteorAccountsLoginInfo: { username: username, password: password },
+        clientInfo: {}
+      });
+    } catch (err) {
+      selftest.fail("Failed to log in to Meteor developer accounts\n" +
+                    "with test user: " + err);
+    }
+
+    try {
+      conn.call("createOrganization", orgName);
+    } catch (err) {
+      selftest.fail("Failed to create organization: " + err);
+    }
+  })();
+
+  return orgName;
 };

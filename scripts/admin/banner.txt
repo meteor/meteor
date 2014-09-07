@@ -1,7 +1,0 @@
-=> Meteor 0.8.2: Switch `accounts-password` to use bcrypt on the
-   server. User accounts will seamlessly transition to bcrypt on the
-   next login, but this transition is one-way, so you cannot downgrade a
-   production app once you upgrade to 0.8.2.
-
-   This release is being downloaded in the background. Update your
-   project to Meteor 0.8.2 by running 'meteor update'.

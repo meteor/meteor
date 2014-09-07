@@ -1,0 +1,224 @@
+<template name="test_assembly_a0">
+  {{> test_assembly_a1}}
+</template>
+
+<template name="test_assembly_a1">
+  {{> test_assembly_a2}}
+</template>
+
+<template name="test_assembly_a2">
+  {{> test_assembly_a3}}
+</template>
+
+<template name="test_assembly_a3">
+  Hi
+</template>
+
+
+
+<template name="test_assembly_b0">
+  {{> test_assembly_b1}}
+</template>
+
+<template name="test_assembly_b1">
+  x{{#if stuff}}y{{/if}}{{> test_assembly_b2}}
+</template>
+
+<template name="test_assembly_b2">
+  hi
+</template>
+
+
+
+<template name="test_table_b0">
+  <table>
+    <tbody>
+      {{> test_table_b1}}
+      {{> test_table_b1}}
+      {{> test_table_b1}}
+    </tbody>
+  </table>
+</template>
+
+<template name="test_table_b1">
+  <tr>
+    {{> test_table_b2}}
+  </tr>
+</template>
+
+<template name="test_table_b2">
+  <td>
+    {{> test_table_b3}}
+  </td>
+</template>
+
+<template name="test_table_b3">
+  Foo.
+</template>
+
+
+<template name="test_table_each">
+  <table>
+    <tbody>
+      {{#each foo}}
+        <tr><td>{{bar}}</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</template>
+
+<template name="test_event_data_with">
+<div>
+  xxx
+  {{#with TWO}}
+    <div>
+      xxx
+      {{#with THREE}}
+        <div>
+          xxx
+        </div>
+      {{/with}}
+    </div>
+  {{/with}}
+</div>
+</template>
+
+<template name="test_capture_events">
+  <video class='video1'>
+    <source id='mp4'
+      src=""
+      type='video/mp4'>
+  </video>
+  <video class='video2'>
+    <source id='mp4'
+      src=""
+      type='video/mp4'>
+  </video>
+  <video class='video2'>
+    <source id='mp4'
+      src=""
+      type='video/mp4'>
+  </video>
+</template>
+
+<template name="test_safestring_a">
+  {{foo}} {{{foo}}} {{bar}} {{{bar}}}
+  {{fooprop}} {{{fooprop}}} {{barprop}} {{{barprop}}}
+</template>
+
+<template name="test_helpers_a">
+  platypus={{platypus}}
+  watermelon={{watermelon}}
+  daisy={{daisy}}
+  tree={{tree}}
+  warthog={{warthog}}
+</template>
+
+<template name="test_helpers_b">
+  unknown={{unknown}}
+  zero={{zero}}
+</template>
+
+<template name="test_helpers_c">
+  platypus.X={{platypus.X}}
+  watermelon.X={{watermelon.X}}
+  daisy.X={{daisy.X}}
+  tree.X={{tree.X}}
+  warthog.X={{warthog.X}}
+  getNull.X={{getNull.X}}
+  getUndefined.X={{getUndefined.X}}
+  getUndefined.X.Y={{getUndefined.X.Y}}
+</template>
+
+<template name="test_helpers_d">
+  daisygetter={{daisygetter}}
+  thisTest={{thisTest}}
+  {{#with fancy}}
+    ../thisTest={{../thisTest}}
+  {{/with}}
+  {{#with "foo"}}
+    ../fancy.currentFruit={{../fancy.currentFruit}}
+  {{/with}}
+</template>
+
+<template name="test_helpers_e">
+  fancy.foo={{fancy.foo}}
+  fancy.apple.banana={{fancy.apple.banana}}
+  fancy.currentFruit={{fancy.currentFruit}}
+  fancy.currentCountry.name={{fancy.currentCountry.name}}
+  fancy.currentCountry.population={{fancy.currentCountry.population}}
+  fancy.currentCountry.unicorns={{fancy.currentCountry.unicorns}}
+</template>
+
+<template name="test_helpers_f">
+  fancyhelper.foo={{fancyhelper.foo}}
+  fancyhelper.apple.banana={{fancyhelper.apple.banana}}
+  fancyhelper.currentFruit={{fancyhelper.currentFruit}}
+  fancyhelper.currentCountry.name={{fancyhelper.currentCountry.name}}
+  fancyhelper.currentCountry.population={{fancyhelper.currentCountry.population}}
+  fancyhelper.currentCountry.unicorns={{fancyhelper.currentCountry.unicorns}}
+</template>
+
+<template name="test_helpers_g">
+  platypus={{platypus}}
+  this.platypus={{this.platypus}}
+</template>
+
+<template name="test_helpers_h">
+  (methodListFour 6 7 8 9={{methodListFour 6 7 8 9}})
+  (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
+  (methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{methodListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
+  (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns}})
+  (helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns={{helperListFour platypus thisTest fancyhelper.currentFruit fancyhelper.currentCountry.unicorns a=platypus b=thisTest c=fancyhelper.currentFruit d=fancyhelper.currentCountry.unicorns}})
+</template>
+
+<template name="test_render_a">
+  {{foo}}<br><hr>
+</template>
+
+<template name="test_render_b">
+  {{#with 200}}{{foo}}<br><hr>{{/with}}
+</template>
+
+<template name="test_render_c">
+  <br><hr>
+</template>
+
+<template name="test_template_arg_a">
+  <b>Foo</b> <i>Bar</i> <u>Baz</u>
+</template>
+
+<template name="test_template_helpers_a">
+  {{foo}}{{bar}}{{baz}}
+</template>
+
+<template name="test_template_helpers_b">
+  {{name}}{{arity}}{{toString}}{{length}}{{var}}
+</template>
+
+<template name="test_template_helpers_c">
+  {{name}}{{arity}}{{length}}{{var}}x
+</template>
+
+<template name="test_template_events_a">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>
+
+<template name="test_template_events_b">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>
+
+<template name="test_template_events_c">
+  <b>foo</b><u>bar</u><i>baz</i>
+</template>
+
+<!-- Test for Issue 617 - Type casting for helpers -->
+<template name="test_type_casting">
+{{testTypeCasting 'true' 'false' true false 0 1 -1 10 -10}}
+</template>
+
+<!-- Test for issue #801 - Each handling of falsy values eg. [1, 2, null, undefined] -->
+<template name="test_template_issue801">
+{{#each values}}{{this}}{{/each}}
+</template>
+

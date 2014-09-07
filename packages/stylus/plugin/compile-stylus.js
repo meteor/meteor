@@ -4,16 +4,7 @@ var nib = Npm.require('nib');
 var path = Npm.require('path');
 var Future = Npm.require('fibers/future');
 
-Plugin.registerSourceHandler("styl", function (compileStep) {
-  // XXX annoying that this is replicated in .css, .less, and .styl
-  if (! compileStep.archMatches('browser')) {
-    // XXX in the future, might be better to emit some kind of a
-    // warning if a stylesheet is included on the server, rather than
-    // silently ignoring it. but that would mean you can't stick .css
-    // at the top level of your app, which is kind of silly.
-    return;
-  }
-
+Plugin.registerSourceHandler("styl", {archMatching: 'web'}, function (compileStep) {
   var f = new Future;
   stylus(compileStep.read().toString('utf8'))
     .use(nib())

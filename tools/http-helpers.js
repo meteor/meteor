@@ -186,7 +186,7 @@ _.extend(exports, {
     var body = result.body;
 
     if (response.statusCode >= 400 && response.statusCode < 600)
-      throw response;
+      throw body;
     else
       return body;
   }

@@ -14,7 +14,13 @@ var customTypes = {};
 // used instead.
 // Similarly, EJSON.equals will use toJSONValue to make comparisons,
 // but you may provide a method equals() instead.
-//
+
+/**
+ * @summary Add a custom datatype to EJSON.
+ * @locus Anywhere
+ * @param {String} name A tag for your custom type; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method.
+ * @param {Function} factory A function that deserializes a JSON-compatible value into an instance of your type.  This should match the serialization performed by your type's `toJSONValue` method.
+ */
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
@@ -179,6 +185,11 @@ var toJSONValueHelper = function (item) {
   return undefined;
 };
 
+/**
+ * @summary Serialize an EJSON-compatible value into its plain JSON representation.
+ * @locus Anywhere
+ * @param {EJSON} val A value to serialize to plain JSON.
+ */
 EJSON.toJSONValue = function (item) {
   var changed = toJSONValueHelper(item);
   if (changed !== undefined)
@@ -243,6 +254,11 @@ var fromJSONValueHelper = function (value) {
   return value;
 };
 
+/**
+ * @summary Deserialize an EJSON value from its plain JSON representation.
+ * @locus Anywhere
+ * @param {JSONCompatible} val A value to deserialize into EJSON.
+ */
 EJSON.fromJSONValue = function (item) {
   var changed = fromJSONValueHelper(item);
   if (changed === item && typeof item === 'object') {
@@ -254,6 +270,16 @@ EJSON.fromJSONValue = function (item) {
   }
 };
 
+/**
+ * @summary Serialize a value to a string.
+
+For EJSON values, the serialization fully represents the value. For non-EJSON values, serializes the same way as `JSON.stringify`.
+ * @locus Anywhere
+ * @param {EJSON} val A value to stringify.
+ * @param {Object} [options]
+ * @param {Boolean | Integer | String} options.indent Indents objects and arrays for easy readability.  When `true`, indents by 2 spaces; when an integer, indents by that number of spaces; and when a string, uses the string as the indentation pattern.
+ * @param {Boolean} options.canonical When `true`, stringifies keys in an object in sorted order.
+ */
 EJSON.stringify = function (item, options) {
   var json = EJSON.toJSONValue(item);
   if (options && (options.canonical || options.indent)) {
@@ -263,17 +289,35 @@ EJSON.stringify = function (item, options) {
   }
 };
 
+/**
+ * @summary Parse a string into an EJSON value. Throws an error if the string is not valid EJSON.
+ * @locus Anywhere
+ * @param {String} str A string to parse into an EJSON value.
+ */
 EJSON.parse = function (item) {
   if (typeof item !== 'string')
     throw new Error("EJSON.parse argument should be a string");
   return EJSON.fromJSONValue(JSON.parse(item));
 };
 
+/**
+ * @summary Returns true if `x` is a buffer of binary data, as returned from [`EJSON.newBinary`](#ejson_new_binary).
+ * @param {Object} x The variable to check.
+ * @locus Anywhere
+ */
 EJSON.isBinary = function (obj) {
   return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
     (obj && obj.$Uint8ArrayPolyfill));
 };
 
+/**
+ * @summary Return true if `a` and `b` are equal to each other.  Return false otherwise.  Uses the `equals` method on `a` if present, otherwise performs a deep comparison.
+ * @locus Anywhere
+ * @param {EJSON} a
+ * @param {EJSON} b
+ * @param {Object} [options]
+ * @param {Boolean} options.keyOrderSensitive Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is equal to `{b: 2, a: 1}` only when `keyOrderSensitive` is `false`.  The default is `false`.
+ */
 EJSON.equals = function (a, b, options) {
   var i;
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
@@ -355,6 +399,11 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
+/**
+ * @summary Return a deep copy of `val`.
+ * @locus Anywhere
+ * @param {EJSON} val A value to copy.
+ */
 EJSON.clone = function (v) {
   var ret;
   if (typeof v !== "object")

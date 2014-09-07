@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Utility functions for tests",
-  internal: true
+  version: '1.0.1'
 });
 
 Package.on_use(function (api) {
-  api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random']);
+  api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random']);
   api.use(['jquery'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in
@@ -13,12 +13,12 @@ Package.on_use(function (api) {
   // other package tests and not included in the non-test bundle. One
   // idea would be to make a new separate package 'ddp-test-helpers' or
   // the like.
-  api.use('livedata');
+  api.use('ddp');
 
 
   api.export([
     'pollUntil', 'try_all_permutations',
-    'SeededRandom', 'ReactiveVar', 'clickElement', 'blurElement',
+    'SeededRandom', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'renderToDiv',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
@@ -31,7 +31,6 @@ Package.on_use(function (api) {
   api.add_files('canonicalize_html.js');
   api.add_files('render_div.js');
   api.add_files('current_style.js');
-  api.add_files('reactivevar.js');
   api.add_files('callback_logger.js');
   api.add_files('domutils.js', 'client');
   api.add_files('connection.js', 'server');

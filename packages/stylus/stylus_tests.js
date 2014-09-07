@@ -2,7 +2,7 @@
 Tinytest.add("stylus - presence", function(test) {
 
   var div = document.createElement('div');
-  UI.materialize(Template.stylus_test_presence, div);
+  UI.render(Template.stylus_test_presence, div);
   div.style.display = 'block';
   document.body.appendChild(div);
 
@@ -15,7 +15,7 @@ Tinytest.add("stylus - presence", function(test) {
 
 Tinytest.add("stylus - @import", function(test) {
   var div = document.createElement('div');
-  UI.materialize(Template.stylus_test_import, div);
+  UI.render(Template.stylus_test_import, div);
   div.style.display = 'block';
   document.body.appendChild(div);
 

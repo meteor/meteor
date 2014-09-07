@@ -28,13 +28,19 @@ Facebook.requestCredential = function (options, credentialRequestCompleteCallbac
   if (options && options.requestPermissions)
     scope = options.requestPermissions.join(',');
 
+  var loginStyle = OAuth._loginStyle('facebook', config, options);
+
   var loginUrl =
         'https://www.facebook.com/dialog/oauth?client_id=' + config.appId +
-        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/facebook?close') +
-        '&display=' + display + '&scope=' + scope + '&state=' + credentialToken;
+        '&redirect_uri=' + OAuth._redirectUri('facebook', config) +
+        '&display=' + display + '&scope=' + scope +
+        '&state=' + OAuth._stateParam(loginStyle, credentialToken);
 
-  OAuth.showPopup(
-    loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken)
-  );
+  OAuth.launchLogin({
+    loginService: "facebook",
+    loginStyle: loginStyle,
+    loginUrl: loginUrl,
+    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
+    credentialToken: credentialToken
+  });
 };

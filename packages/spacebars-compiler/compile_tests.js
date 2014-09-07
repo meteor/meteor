@@ -1,4 +1,4 @@
-Tinytest.add("spacebars - compiler output", function (test) {
+Tinytest.add("spacebars-compiler - compiler output", function (test) {
 
   var run = function (input, expected) {
     if (expected.fail) {
@@ -7,7 +7,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       var msg = '';
       test.throws(function () {
         try {
-          Spacebars.compile(input);
+          SpacebarsCompiler.compile(input, {isTemplate: true});
         } catch (e) {
           msg = e.message;
           throw e;
@@ -16,7 +16,7 @@ Tinytest.add("spacebars - compiler output", function (test) {
       test.equal(msg.slice(0, expectedMessage.length),
                  expectedMessage);
     } else {
-      var output = Spacebars.compile(input);
+      var output = SpacebarsCompiler.compile(input, {isTemplate: true});
       var postProcess = function (string) {
         // remove initial and trailing parens
         string = string.replace(/^\(([\S\s]*)\)$/, '$1');
@@ -28,8 +28,6 @@ Tinytest.add("spacebars - compiler output", function (test) {
           // Remove single-line comments, including line nums from build system.
           string = string.replace(/\/\/.*$/mg, '');
           string = string.replace(/\s+/g, ''); // kill whitespace
-          // collapse identical consecutive parens
-          string = string.replace(/\(+/g, '(').replace(/\)+/g, ')');
         }
         return string;
       };
@@ -37,241 +35,24 @@ Tinytest.add("spacebars - compiler output", function (test) {
       test._stringEqual(
         postProcess(output.toString()),
         postProcess(
-          Spacebars._beautify('(' + expected.toString() + ')')),
+          SpacebarsCompiler._beautify('(' + expected.toString() + ')')),
         input);
     }
   };
 
-
-
-  run("abc",
-      function () {
-        var self = this;
-        return "abc";
-      });
-
-  run("{{foo}}",
-      function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"));
-        };
-      });
-
-  run("{{foo bar}}",
-      function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), self.lookup("bar"));
-        };
-      });
-
-  run("{{foo x=bar}}",
-      function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), Spacebars.kw({
-            x: self.lookup("bar")
-          }));
-        };
-      });
-
-  run("{{foo.bar baz}}",
-      function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(Spacebars.dot(self.lookup("foo"), "bar"), self.lookup("baz"));
-        };
-      });
-
-  run("{{foo bar.baz}}",
-      function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), Spacebars.dot(self.lookup("bar"), "baz"));
-        };
-      });
-
-  run("{{foo x=bar.baz}}",
-      function() {
-        var self = this;
-        return function() {
-          return Spacebars.mustache(self.lookup("foo"), Spacebars.kw({
-            x: Spacebars.dot(self.lookup("bar"), "baz")
-          }));
-        };
-      });
-
-  run("{{#foo}}abc{{/foo}}",
-      function() {
-        var self = this;
-        return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
-          var self = this;
-          return "abc";
-        }));
-      });
-
-  run("{{#if cond}}aaa{{else}}bbb{{/if}}",
-      function() {
-        var self = this;
-        return UI.If(function () {
-          return Spacebars.call(self.lookup("cond"));
-        }, UI.block(function() {
-          var self = this;
-          return "aaa";
-        }), UI.block(function() {
-          var self = this;
-          return "bbb";
-        }));
-      });
-
-  run("{{!-- --}}{{#if cond}}aaa{{!\n}}{{else}}{{!}}bbb{{!-- --}}{{/if}}{{!}}",
-    function() {
-      var self = this;
-      return UI.If(function () {
-        return Spacebars.call(self.lookup("cond"));
-      }, UI.block(function() {
-        var self = this;
-        return "aaa";
-      }), UI.block(function() {
-        var self = this;
-        return "bbb";
-      }));
-    });
-
-  run("{{> foo bar}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.call(self.lookup("bar"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
-      });
-
-  run("{{> foo x=bar}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return {
-            x: Spacebars.call(self.lookup("bar"))
-          };
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
-      });
-
-  run("{{> foo bar.baz}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
-      });
-
-  run("{{> foo x=bar.baz}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return {
-            x: Spacebars.call(Spacebars.dot(self.lookup("bar"), "baz"))
-          };
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
-      });
-
-  run("{{> foo bar baz}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"));
-        }));
-      });
-
-  run("{{#foo bar baz}}aaa{{/foo}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(self.lookup("bar"), self.lookup("baz"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
-            var self = this;
-            return "aaa";
-          }));
-        }));
-      });
-
-  run("{{#foo p.q r.s}}aaa{{/foo}}",
-      function() {
-        var self = this;
-        return Spacebars.TemplateWith(function() {
-          return Spacebars.dataMustache(Spacebars.dot(self.lookup("p"), "q"), Spacebars.dot(self.lookup("r"), "s"));
-        }, UI.block(function() {
-          var self = this;
-          return Spacebars.include(self.lookupTemplate("foo"), UI.block(function() {
-            var self = this;
-            return "aaa";
-          }));
-        }));
-      });
-
-  run("<a {{b}}></a>",
-      function() {
-        var self = this;
-        return HTML.A({
-          $dynamic: [ function() {
-            return Spacebars.attrMustache(self.lookup("b"));
-          } ]
-        });
-      });
-
-  run("<a {{b}} c=d{{e}}f></a>",
-      function() {
-        var self = this;
-        return HTML.A({
-          c: [ "d", function() {
-            return Spacebars.mustache(self.lookup("e"));
-          }, "f" ],
-          $dynamic: [ function() {
-            return Spacebars.attrMustache(self.lookup("b"));
-          } ]
-        });
-      });
-
-  run("<asdf>{{foo}}</asdf>",
-      function () {
-        var self = this;
-        return HTML.getTag("asdf")(function () {
-          return Spacebars.mustache(self.lookup("foo"));
-        });
-      });
-
-  run("<textarea>{{foo}}</textarea>",
-      function () {
-        var self = this;
-        return HTML.TEXTAREA(function () {
-          return Spacebars.mustache(self.lookup("foo"));
-        });
-      });
-
+  coffee.runCompilerOutputTests(run);
 });
 
-Tinytest.add("spacebars - compiler errors", function (test) {
+coffee = {
+  runCompilerOutputTests: null // implemented in compiler_output_tests.coffee
+};
+
+
+Tinytest.add("spacebars-compiler - compiler errors", function (test) {
 
   var getError = function (input) {
     try {
-      Spacebars.compile(input);
+      SpacebarsCompiler.compile(input);
     } catch (e) {
       return e.message;
     }

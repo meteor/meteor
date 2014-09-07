@@ -30,19 +30,33 @@ var runOldTest = function (filename) {
   run.expectExit(0);
 };
 
+// XXX Why are these tests from checkout?
+//
+// Most of the self-test framework works by calling a meteor command and waiting
+// for something to happen. Instead, the old tests call isolated functions (ex:
+// bundler.bundle) and skip the (now, somewhat complicated) initialization
+// process that would usually happen before these functions are called. We have
+// managed to hack together some stuff to tide this over when running from
+// checkout, but dealing with release overrides in not-checkout has mostly been
+// a failure.
+//
+// It would be nice if these tests were to work from release, and maybe ekate
+// will take another look at them later, but it is not worth that much more time
+// before 0.9.0.
+//
 selftest.define("watch", ["slow"], function () {
   runOldTest('test-watch.js');
 });
 
-selftest.define("bundler-assets", function () {
+selftest.define("bundler-assets", ["checkout"], function () {
   runOldTest('test-bundler-assets.js');
 });
 
-selftest.define("bundler-options", function () {
+selftest.define("bundler-options", ["checkout"], function () {
   runOldTest('test-bundler-options.js');
 });
 
-selftest.define("bundler-npm", ["slow", "net"], function () {
+selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
   runOldTest('test-bundler-npm.js');
 });
 
@@ -69,7 +83,7 @@ selftest.define("old cli tests", ["slow", "net"], function () {
 selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { tools: 'tools1', latest: true }
+      v1: { recommended: true }
     }
   });
 
@@ -84,4 +98,3 @@ selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], functi
   run.match("PASSED\n");
   run.expectExit(0);
 });
-

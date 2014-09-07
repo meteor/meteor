@@ -187,7 +187,7 @@ _.extend(Ctl, {
   },
 
   jobsCollection: _.once(function () {
-    return new Meteor.Collection("jobs", {manager: Ctl.findGalaxy()});
+    return new Mongo.Collection("jobs", {manager: Ctl.findGalaxy()});
   }),
 
   // use _.memoize so that this is called only once per app.

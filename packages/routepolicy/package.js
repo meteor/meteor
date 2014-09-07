@@ -1,6 +1,6 @@
 Package.describe({
   summary: "route policy declarations",
-  internal: true
+  version: '1.0.0-cordova1'
 });
 
 Package.on_use(function (api) {

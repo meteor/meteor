@@ -1,16 +1,21 @@
 Package.describe({
   summary: "Logging facility.",
-  internal: true
+  version: '1.0.2-cordova2'
 });
 
 Npm.depends({
   "cli-color": "0.2.3"
 });
 
+Cordova.depends({
+  'org.apache.cordova.console': '0.2.10'
+});
+
 Package.on_use(function (api) {
   api.export('Log');
   api.use(['underscore', 'ejson']);
   api.add_files('logging.js');
+  api.add_files('logging_cordova.js', 'web.cordova');
 });
 
 Package.on_test(function (api) {

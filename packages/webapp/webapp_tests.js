@@ -82,7 +82,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
-    });
+    }, "web.browser");
 
     // When inline scripts are allowed, the script should be inlined.
     test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
@@ -100,15 +100,19 @@ Tinytest.add("webapp - additional static javascript", function (test) {
         nextCalled = true;
       });
     test.isTrue(nextCalled);
+  });
 
-    // When inline scripts are disallowed, the script body should not be
-    // inlined, and the script should be included in a <script src="..">
-    // tag.
-    WebAppInternals.setInlineScriptsAllowed(false);
-    boilerplate = WebAppInternals.getBoilerplate({
+  // When inline scripts are disallowed, the script body should not be
+  // inlined, and the script should be included in a <script src="..">
+  // tag.
+  WebAppInternals.setInlineScriptsAllowed(false);
+  WebAppInternals.generateBoilerplate();
+
+  Meteor._noYieldsAllowed(function () {
+    var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
-    });
+    }, "web.browser");
 
     // The script contents itself should not be present; the pathname
     // where the script is served should be.
@@ -116,7 +120,11 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
 
     // And the static file handler should serve the script at that pathname.
-    res = new MockResponse();
+    var res = new MockResponse();
+    var req = new http.IncomingMessage();
+    req.headers = {};
+    req.method = "GET";
+    req.url = "/" + additionalScriptPathname;
     WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
                                      function () { });
     var resBody = res.getBody();

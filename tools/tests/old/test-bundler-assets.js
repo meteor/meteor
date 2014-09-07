@@ -5,8 +5,11 @@ var assert = require('assert');
 var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
-var unipackage = require('../../unipackage.js');
+var uniload = require('../../uniload.js');
 var release = require('../../release.js');
+var project = require('../../project.js');
+var catalog = require('../../catalog.js');
+var buildmessage = require('../../buildmessage.js');
 
 var appWithPublic = path.join(__dirname, 'app-with-public');
 var appWithPrivate = path.join(__dirname, 'app-with-private');
@@ -16,26 +19,52 @@ var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
+var setAppDir = function (appDir) {
+  project.project.setRootDir(appDir);
+
+  if (files.usesWarehouse()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
+  var appPackageDir = path.join(appDir, 'packages');
+  var checkoutPackageDir = path.join(
+    files.getCurrentToolsDir(), 'packages');
+
+  doOrThrow(function () {
+    catalog.uniload.initialize({
+      localPackageDirs: [checkoutPackageDir]
+    });
+    catalog.complete.initialize({
+      localPackageDirs: [appPackageDir, checkoutPackageDir]
+    });
+  });
+};
+
+var doOrThrow = function (f) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+  return ret;
+};
+
 // These tests make some assumptions about the structure of stars: that there
 // are client and server programs inside programs/.
 
 var runTest = function () {
   console.log("Bundle app with public/ directory");
   assert.doesNotThrow(function () {
+    setAppDir(appWithPublic);
+
     var tmpOutputDir = tmpDir();
-
-    // XXX This (and other calls to this function in the file) is
-    // pretty terrible. see release.js, #HandlePackageDirsDifferently
-    release._resetPackageDirs();
-
     var result = bundler.bundle({
-      appDir: appWithPublic,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
-    })
+      outputPath: tmpOutputDir
+    });
     var clientManifest = JSON.parse(
       fs.readFileSync(
-        path.join(tmpOutputDir, "programs", "client", "program.json")
+        path.join(tmpOutputDir, "programs", "web.browser", "program.json")
       )
     );
 
@@ -46,7 +75,7 @@ var runTest = function () {
         return m.url === file[0];
       });
       assert(manifestItem);
-      var diskPath = path.join(tmpOutputDir, "programs", "client",
+      var diskPath = path.join(tmpOutputDir, "programs", "web.browser",
                                manifestItem.path);
       assert(fs.existsSync(diskPath));
       assert.strictEqual(fs.readFileSync(diskPath, "utf8"), file[1]);
@@ -55,17 +84,18 @@ var runTest = function () {
 
   console.log("Bundle app with private/ directory and package asset");
   assert.doesNotThrow(function () {
+    setAppDir(appWithPrivate);
+
     // Make sure we rebuild this app package.
     files.rm_recursive(
       path.join(appWithPrivate, "packages", "test-package", ".build"));
 
     var tmpOutputDir = tmpDir();
-    release._resetPackageDirs([ path.join(appWithPrivate, "packages") ]);
+
     var result = bundler.bundle({
-      appDir: appWithPrivate,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
-    })
+      outputPath: tmpOutputDir
+    });
+
     var serverManifest = JSON.parse(
       fs.readFileSync(
         path.join(tmpOutputDir, "programs", "server",
@@ -116,24 +146,13 @@ var runTest = function () {
     });
     assert.strictEqual(fut.wait(), 0);
   });
-
-  console.log("Use Assets API from unipackage");
-  assert.doesNotThrow(function () {
-    release._resetPackageDirs([ path.join(appWithPrivate, "packages") ]);
-    var testPackage = unipackage.load({
-      library: release.current.library,
-      packages: ['test-package']
-    })['test-package'].TestAsset;
-    testPackage.go(false /* don't exit when done */);
-  });
-
-  // Be sure to clean up!
-  release._resetPackageDirs();
 };
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  doOrThrow(function () {
+    release._setCurrentForOldTest();
+  });
 
   try {
     runTest();
