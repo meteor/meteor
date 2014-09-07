@@ -5,10 +5,28 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 <br />
 
+<a name="toc">
+### Table of Contents
+* [Contributors](#contributors)
+* [Authorization](#authorization)
+* [Permissions vs roles](#naming)
+* [Changes to default Meteor](#changes)
+* [Installation](#installing)
+* [Usage examples](#usage)
+* [Online API docs](#docs)
+* [Example apps](#example-apps)
+* [Running tests](#testing)
+
+
+<br />
+
+
+<a name="contributors">
 ### Contributors
 
 Thanks to:
 
+  * [@aldeed](https://github.com/aldeed)
   * [@kevb](https://github.com/kevb)
   * [@zimme](https://github.com/zimme)
   * [@danieljonce](https://github.com/danieljonce)
@@ -19,60 +37,27 @@ Thanks to:
 
 <br />
 
-### Blaze Support
-
-v1.2.7 adds support for Blaze UI (Meteor 0.8.0+)!  Older versions of
-Meteor are still supported as are ui-less apps.
-
-NOTE: The 'roles' package must come after 'ui' or 'standard-app-packages' 
-in '.meteor/packages' for the 'isInRole' helper to be registered.
-
-<br />
-
+<a name="authorization">
 ### Authorization
 
 This package lets you attach permissions to a user which you can then check against later when deciding whether to grant access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching strings to a user object and then checking for the existance of those strings later. In some sense, it is very similar to tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying those permissions easier.
 
+Meteor versions 0.5 - 0.9.1.1 are supported (with the exception of 0.9.1).  UI-less apps are supported as well.
 
-    Now with per-group support!
-
-    v1.1.0 - adds support for per-group assignment of roles/permissions
+    v1.1.0 - adds support for per-group assignment of permissions
 
     v1.2.0 - adds the special Roles.GLOBAL_GROUP, used to provide blanket permissions across all groups
 
 <br />
 
+<a name="naming">
 ### What's in a name...
 
 Although the name of this package is 'roles', you can define your permissions however you like.  You can have traditional roles like, "admin" or "webmaster".  But you can also assign more granular permissions such as, "view-secrets" or "manage-users".  Often times this is actually better because you are able to handle all those pesky edge cases that come up in real life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
 
 <br />
 
-### Example Apps
-
-The `examples` directory contains Meteor apps which show off the following features:
-* Server-side publishing with authorization to secure sensitive data
-* Client-side navigation with link visibility based on user permissions
-* 'Sign-in required' app with up-front login page using `accounts-ui`
-* Client-side routing
-
-The only difference between the two example apps is the routing packages used: one uses `meteor-router` and the other uses `meteor-mini-pages`.
-(If anyone wants to update the iron-router example, that would be a big help!)
-
-View the `meteor-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
-  
-Run locally:
-  1. install [Meteorite][1]
-  2. `git clone https://github.com/alanning/meteor-roles.git`
-  3. either
-    * `cd meteor-roles/examples/router` or
-    * `cd meteor-roles/examples/mini-pages`
-  4. `mrt update`
-  5. `meteor`
-  6. point browser to `http://localhost:3000`
-
-<br />
-
+<a name="changes">
 ### Changes to default Meteor behavior
 
   1. User entries in the `Meteor.users` collection gain a new field named `roles` corresponding to the user's roles. †
@@ -113,7 +98,27 @@ Meteor.publish(null, function (){
 
 <br />
 
-### Usage
+<a name="installing">
+### Installing
+
+#### Meteor 0.9+ (new packaging system)
+
+1. Add one of the built-in accounts packages so the Meteor.users collection exists.  From a command prompt:
+    ```bash
+    meteor add accounts-password
+    ```
+
+3. Add this package to your project.  From a command prompt:
+    ```bash
+    meteor add alanning:roles
+    ```
+
+4. Run your application:
+    ```bash
+    meteor
+    ```
+
+#### Meteor 0.8.3 and below (meteorite)
 
 1. Add one of the built-in accounts packages so the Meteor.users collection exists.  From a command prompt:
     ```bash
@@ -132,6 +137,15 @@ Meteor.publish(null, function (){
     meteor
     ```
 
+
+NOTE for Meteor 0.8-0.8.3:  Manually add the 'ui' package to your '.meteor/packages' file so that roles knows you are using it.  Otherwise, the 'isInRole' client-side helper will not be registered.  Since some versions of Meteor had 'standard-app-packages' without 'ui' there is no other way to detect its use.
+
+
+<br />
+
+
+<a name="usage">
+### Usage Examples
 
 <br />
 
@@ -304,9 +318,9 @@ The same with group:
 
 <br />
 
-Note that 
 
-### Documentation
+<a name="docs">
+### API Docs
 
 Online API docs found here: http://alanning.github.io/meteor-roles/classes/Roles.html
 
@@ -326,6 +340,37 @@ To serve documentation locally:
 
 <br />
 
+
+<a name="example-apps">
+### Example Apps
+
+The `examples` directory contains Meteor apps which show off the following features:
+* Server-side publishing with authorization to secure sensitive data
+* Client-side navigation with link visibility based on user permissions
+* 'Sign-in required' app with up-front login page using `accounts-ui`
+* Client-side routing
+
+The only difference between the two example apps is the routing packages used: one uses `meteor-router` and the other uses `meteor-mini-pages`.
+(If anyone wants to update the iron-router example, that would be a big help!)
+
+View the `meteor-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
+  
+Run locally:
+  1. install [Meteorite][1]
+  2. `git clone https://github.com/alanning/meteor-roles.git`
+  3. either
+    * `cd meteor-roles/examples/router` or
+    * `cd meteor-roles/examples/mini-pages`
+  4. `mrt update`
+  5. `meteor`
+  6. point browser to `http://localhost:3000`
+
+<br />
+
+
+
+
+<a name="testing">
 ### Tests
 
 
