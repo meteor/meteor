@@ -1031,15 +1031,36 @@ main.registerCommand({
     process.stdout.write("\n");
   }
 
-  var metamessage = "Maintained by " +
-        _.pluck(record.maintainers, 'username');
-  if (lastVersion && lastVersion.git) {
-    metamessage = metamessage + " at " + lastVersion.git;
+  // Creating the maintainer string. We have anywhere between 1 and lots of
+  // maintainers on a package. We probably want output along the lines of
+  // "bob", "bob and alice" or "bob, alex and alice".
+  var myMaintainerString = "";
+  var myMaintainers = _.pluck(record.maintainers, 'username');
+  if (myMaintainers.length === 1) {
+    myMaintainerString = myMaintainers[0];
+  } else {
+    var myTotal = myMaintainers.length;
+    // If we have two maintainers exactly, this is a no-op. Otherwise, it will
+    // produce a list of the first (n-2) maintainers, separated by comas.
+    _.each(myMaintainers.slice(0, myTotal - 2), function (name) {
+      myMaintainerString += name + ", ";
+    });
+    myMaintainerString +=  myMaintainers[myTotal - 2];
+    myMaintainerString +=  " and " +  myMaintainers[myTotal - 1];
   }
-  metamessage += ".";
+
+  var metamessage = "Maintained by " + myMaintainerString + ".";
+        ;
+  if (lastVersion && lastVersion.git) {
+    metamessage += "\nYou can find the git repository at " +
+        lastVersion.git;
+    metamessage += ".";
+  }
+
   if (record && record.homepage) {
     metamessage = metamessage + "\nYou can find more information at "
       + record.homepage;
+    metamessage += ".";
   }
   process.stdout.write(metamessage + "\n");
 });
