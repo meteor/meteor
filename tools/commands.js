@@ -151,6 +151,7 @@ main.registerCommand({
   options: {
     port: { type: String, short: "p", default: '3000' },
     'app-port': { type: String },
+    'http-proxy-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
@@ -278,6 +279,7 @@ main.registerCommand({
   return runAll.run(options.appDir, {
     proxyPort: parsedHostPort.port,
     proxyHost: parsedHostPort.host,
+    httpProxyPort: options['http-proxy-port'],
     appPort: appPort,
     appHost: appHost,
     settingsFile: options.settings,
@@ -1119,6 +1121,7 @@ main.registerCommand({
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: "localhost:3000" },
+    'http-proxy-port': { type: String },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1394,6 +1397,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       // a switch to a different release
       appDirForVersionCheck: options.appDir,
       proxyPort: options.port,
+      httpProxyPort: options['http-proxy-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",

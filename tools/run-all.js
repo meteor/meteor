@@ -5,6 +5,7 @@ var release = require('./release.js');
 
 var runLog = require('./run-log.js');
 var Proxy = require('./run-proxy.js').Proxy;
+var HttpProxy = require('./run-httpproxy.js').HttpProxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
@@ -43,6 +44,13 @@ var Runner = function (appDir, options) {
     proxyToHost: options.appHost,
     onFailure: options.onFailure
   });
+
+  self.httpProxy = null;
+  if (options.httpProxyPort) {
+    self.httpProxy = new HttpProxy({
+      listenPort: options.httpProxyPort
+    })
+  }
 
   self.mongoRunner = null;
   var mongoUrl, oplogUrl;
@@ -97,6 +105,14 @@ _.extend(Runner.prototype, {
 
     if (! self.stopped) {
       self.updater.start();
+    }
+
+    // print the banner only once we've successfully bound the port
+    if (! self.stopped && self.httpProxy) {
+      self.httpProxy.start();
+      if (! self.quiet) {
+        runLog.log("=> Started http proxy.");
+      }
     }
 
     if (! self.stopped && self.mongoRunner) {
@@ -161,6 +177,7 @@ _.extend(Runner.prototype, {
 
     self.stopped = true;
     self.proxy.stop();
+    self.httpProxy && self.httpProxy.stop();
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
     self.appRunner.stop();
