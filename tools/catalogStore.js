@@ -54,7 +54,7 @@ var CatalogStore = function () {
     db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
   });
   //TODO verify that we get back from here everything is really created
-}
+};
 
 _.extend(CatalogStore.prototype, {
   getVersion: function (name, version) {
@@ -118,7 +118,7 @@ _.extend(CatalogStore.prototype, {
   getReleaseTrack: function (name) {
     var self = this;
     var result = self._syncQuery("SELECT content FROM releaseTracks WHERE name=?", name);
-    if (result.length == 0)
+    if (result.length === 0)
       return null;
     return result[0];
   },
@@ -126,7 +126,7 @@ _.extend(CatalogStore.prototype, {
   getReleaseVersion: function (track, version) {
     var self = this;
     var result = self._syncQuery("SELECT content FROM releaseVersions WHERE track=? AND version=?", [track, version]);
-    if (result.length == 0)
+    if (result.length === 0)
       return null;
     return result[0];
   },
@@ -159,9 +159,14 @@ _.extend(CatalogStore.prototype, {
     throw new Exception("RESTTING THE DB, REALLY??!?!");
   },
 
+  refresh: function () {
+
+  },
+
   refreshInProgress: function () {
-    var self = this;
-    return self._refreshFiber === Fiber.current;
+    return false;
+    // var self = this;
+    // return self._refreshFiber === Fiber.current;
   },
 
   // Given a release track, return all recommended versions for this track, sorted
@@ -205,11 +210,15 @@ _.extend(CatalogStore.prototype, {
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 
-  _syncQuery : function (query, values) {
+  isLocalPackage : function() {
+    return false;
+  },
+
+  _syncQuery: function (query, values) {
      var future = new Future;
      var result = [];
      db.all(query, values, function(err, rows) {
-      if (!(err === null)) {
+      if ( !(err === null) ) {
         future.return();
         return;
       }
@@ -221,10 +230,6 @@ _.extend(CatalogStore.prototype, {
     });
     future.wait();
     return result;
-  },
-  
-  isLocalPackage : function() {
-    return false;
   },
 
   _generateQuestionMarks : function (nbr) {
