@@ -8,8 +8,6 @@ var Unipackage = require('./unipackage.js').Unipackage;
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
-var watch = require('./watch.js');
-var files = require('./files.js');
 var utils = require('./utils.js');
 
 var baseCatalog = exports;
