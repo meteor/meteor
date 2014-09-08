@@ -200,6 +200,8 @@ main.registerCommand({
     return 1;
   }
 
+  options.httpProxyPort = options['http-proxy-port'];
+
   // If we are targeting the remote devices
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
@@ -218,9 +220,14 @@ main.registerCommand({
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
-      // --clean encpasulates the behavior of once
+      // --clean encapsulates the behavior of once
       if (options.clean) {
         options.once = true;
+      }
+
+      if (!options.httpProxyPort) {
+        console.log('Forcing http proxy on port 3002 for mobile');
+        options.httpProxyPort = '3002';
       }
 
       cordova.verboseLog('Will compile mobile builds');
@@ -279,7 +286,7 @@ main.registerCommand({
   return runAll.run(options.appDir, {
     proxyPort: parsedHostPort.port,
     proxyHost: parsedHostPort.host,
-    httpProxyPort: options['http-proxy-port'],
+    httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
     settingsFile: options.settings,
@@ -1154,6 +1161,8 @@ main.registerCommand({
     return 1;
   }
 
+  options.httpProxyPort = options['http-proxy-port'];
+
   // XXX not good to change the options this way
   _.extend(options, parsedHostPort);
 
@@ -1199,6 +1208,11 @@ main.registerCommand({
   });
 
   if (! _.isEmpty(mobilePlatforms)) {
+    if (!options.httpProxyPort) {
+      console.log('Forcing http proxy on port 3002 for mobile');
+      options.httpProxyPort = '3002'
+    }
+
     var localPath = path.join(testRunnerAppDir, '.meteor', 'local');
 
     var platforms =
@@ -1209,11 +1223,13 @@ main.registerCommand({
     project.addCordovaPlatforms(platforms);
 
     try {
-      cordova.buildPlatforms(localPath, mobilePlatforms,
-        _.extend({}, options, {
-          appName: path.basename(testRunnerAppDir),
-          debug: ! options.production
-        }));
+      var cordovaOptions = _.extend({}, options, {
+        appName: path.basename(testRunnerAppDir),
+        debug: ! options.production
+      });
+
+      cordova.buildPlatforms(localPath, mobilePlatforms, cordovaOptions);
+
       cordova.runPlatforms(localPath, mobilePlatforms, options);
     } catch (err) {
       process.stderr.write(err.message + '\n');
@@ -1397,7 +1413,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       // a switch to a different release
       appDirForVersionCheck: options.appDir,
       proxyPort: options.port,
-      httpProxyPort: options['http-proxy-port'],
+      httpProxyPort: options.httpProxyPort,
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",

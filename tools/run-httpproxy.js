@@ -7,7 +7,7 @@ var Future = require('fibers/future');
 var runLog = require('./run-log.js');
 var url = require('url');
 
-// options: listenPort, proxyToPort, proxyToHost, onFailure
+// options: listenPort, listenHost, onFailure
 var HttpProxy = function (options) {
   var self = this;
 

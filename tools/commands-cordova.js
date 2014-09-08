@@ -634,9 +634,16 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
              'platforms', 'ios', '*.xcodeproj')]);
   } else {
     verboseLog('Running emulator:', localCordova, args);
+    var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
+    emulatorOptions.env = {};
+    if (options.httpProxyPort) {
+      // XXX: Is this Android only?
+      // XXX: Is 10.0.2.2 always the IP?
+      emulatorOptions.env['http_proxy'] = '10.0.2.2:' + options.httpProxyPort;
+    }
     execFileAsyncOrThrow(
       localCordova, args,
-      { verbose: options.verbose, cwd: cordovaPath });
+      emulatorOptions);
   }
 
   var Log = getLoadedPackages().logging.Log;
