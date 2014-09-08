@@ -824,7 +824,11 @@ _.extend(OplogObserveDriver.prototype, {
       // there.
       // XXX if this is slow, remove it later
       if (self._published.size() !== newResults.size()) {
-        throw Error("failed to copy newResults into _published!");
+        throw Error(
+          "The Mongo server and the Meteor query disagree on how " +
+            "many documents match your query. Maybe it is hitting a Mongo " +
+            "edge case? The query is: " +
+            EJSON.stringify(self._cursorDescription.selector));
       }
       self._published.forEach(function (doc, id) {
         if (!newResults.has(id))

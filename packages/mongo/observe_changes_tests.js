@@ -1,8 +1,8 @@
 var makeCollection = function () {
   if (Meteor.isServer)
-    return new Meteor.Collection(Random.id());
+    return new Mongo.Collection(Random.id());
   else
-    return new Meteor.Collection(null);
+    return new Mongo.Collection(null);
 };
 
 _.each ([{added:'added', forceOrdered: true},
@@ -265,7 +265,7 @@ if (Meteor.isServer) {
     function (test, expect) {
       var self = this;
       var collName = "cap_" + Random.id();
-      var coll = new Meteor.Collection(collName);
+      var coll = new Mongo.Collection(collName);
       coll._createCappedCollection(1000000);
       self.xs = [];
       self.expects = [];

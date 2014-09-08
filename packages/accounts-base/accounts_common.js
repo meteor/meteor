@@ -134,10 +134,10 @@ if (Meteor.isClient) {
 // XXX Allow users to configure this collection name.
 
 /**
- * @summary A [Meteor.Collection](#collections) containing user documents.
+ * @summary A [Mongo.Collection](#collections) containing user documents.
  * @locus Anywhere
  */
-Meteor.users = new Meteor.Collection("users", {
+Meteor.users = new Mongo.Collection("users", {
   _preventAutopublish: true,
   connection: Meteor.isClient ? Accounts.connection : Meteor.connection
 });

@@ -29,7 +29,7 @@ Meteor is two things:
 * A _library of packages_: pre-written, self-contained modules that
 you might need in your app.<br>
 There are about a dozen core Meteor
-packages that most any app will use (for example `webapp`, which
+packages that most any app will use (for example [`webapp`](#webapp), which
 handles incoming HTTP connections, and `templating`, which lets you
 make HTML templates that automatically update live as data changes).
 Then there are optional packages like `email`, which lets your app
@@ -322,7 +322,7 @@ to declare precise types of every variable in your app, but it's usually helpful
 to ensure that the arguments that clients are passing to your methods and
 publish functions are of the type that you expect.
 
-Meteor provides a [lightweight library](#match) for checking that arguments and
+Meteor provides a [lightweight library](#check_package) for checking that arguments and
 other values are the type you expect them to be. Simply start your functions
 with statements like `check(username, String)` or
 `check(office, {building: String, room: Number})`. The `check` call will

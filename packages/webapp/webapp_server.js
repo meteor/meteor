@@ -256,18 +256,26 @@ var boilerplateByArch = {};
 // boilerplate HTML to serve for that request. Memoizes on HTML
 // attributes (used by, eg, appcache) and whether inline scripts are
 // currently allowed.
-var getBoilerplate = _.memoize(function (request, arch) {
-  return boilerplateByArch[arch].toHTML();
-}, function (request) {
-  var htmlAttributes = getHtmlAttributes(request);
-  // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
-  return JSON.stringify({
-    inlineScriptsAllowed: inlineScriptsAllowed,
-    htmlAttributes: htmlAttributes
-  });
-});
+// XXX so far this function is always called with arch === 'web.browser'
+var memoizedBoilerplate = {};
+var getBoilerplate = function (request, arch) {
+  var calculateMemoizationHash = function (request, arch) {
+    var htmlAttributes = getHtmlAttributes(request);
+    // The only thing that changes from request to request (for now) are
+    // the HTML attributes (used by, eg, appcache) and whether inline
+    // scripts are allowed, so we can memoize based on that.
+    return JSON.stringify({
+      inlineScriptsAllowed: inlineScriptsAllowed,
+      htmlAttributes: htmlAttributes
+    }) + '-arch:' + arch;
+  };
+
+  var memHash = calculateMemoizationHash(request, arch);
+
+  if (! memoizedBoilerplate[memHash])
+    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML();
+  return memoizedBoilerplate[memHash];
+};
 
 var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
   additionalOptions = additionalOptions || {};
@@ -379,34 +387,12 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
         ? 1000 * 60 * 60 * 24 * 365
         : 1000 * 60 * 60 * 24;
 
-  // Set the X-SourceMap header, which current Chrome understands.
-  // (The files also contain '//#' comments which FF 24 understands and
-  // Chrome doesn't understand yet.)
+  // Set the X-SourceMap header, which current Chrome, FireFox, and Safari
+  // understand.  (The SourceMap header is slightly more spec-correct but FF
+  // doesn't understand it.)
   //
-  // Eventually we should set the SourceMap header but the current version of
-  // Chrome and no version of FF supports it.
-  //
-  // To figure out if your version of Chrome should support the SourceMap
-  // header,
-  //   - go to chrome://version. Let's say the Chrome version is
-  //      28.0.1500.71 and the Blink version is 537.36 (@153022)
-  //   - go to http://src.chromium.org/viewvc/blink/branches/chromium/1500/Source/core/inspector/InspectorPageAgent.cpp?view=log
-  //     where the "1500" is the third part of your Chrome version
-  //   - find the first revision that is no greater than the "153022"
-  //     number.  That's probably the first one and it probably has
-  //     a message of the form "Branch 1500 - blink@r149738"
-  //   - If *that* revision number (149738) is at least 151755,
-  //     then Chrome should support SourceMap (not just X-SourceMap)
-  // (The change is https://codereview.chromium.org/15832007)
-  //
-  // You also need to enable source maps in Chrome: open dev tools, click
+  // You may also need to enable source maps in Chrome: open dev tools, click
   // the gear in the bottom right corner, and select "enable source maps".
-  //
-  // Firefox 23+ supports source maps but doesn't support either header yet,
-  // so we include the '//#' comment for it:
-  //   https://bugzilla.mozilla.org/show_bug.cgi?id=765993
-  // In FF 23 you need to turn on `devtools.debugger.source-maps-enabled`
-  // in `about:config` (it is on by default in FF 24).
   if (info.sourceMapUrl)
     res.setHeader('X-SourceMap', info.sourceMapUrl);
 
@@ -520,6 +506,9 @@ var runWebAppServer = function () {
         boilerplateByArch[archName] =
           generateBoilerplateInstance(archName, program.manifest);
       });
+
+      // Clear the memoized boilerplate cache.
+      memoizedBoilerplate = {};
 
       // Configure CSS injection for the default arch
       // XXX implement the CSS injection for all archs?

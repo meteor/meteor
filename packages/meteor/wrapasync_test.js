@@ -18,10 +18,23 @@ var asyncFunction3 = function (opt, cb) {
 var asyncFunction4 = function (cb) {
   asyncFunction1(3, cb);
 };
-var wrapped1 = Meteor._wrapAsync(asyncFunction1);
-var wrapped2 = Meteor._wrapAsync(asyncFunction2);
-var wrapped3 = Meteor._wrapAsync(asyncFunction3);
-var wrapped4 = Meteor._wrapAsync(asyncFunction4);
+
+var asyncFunction5 = function (cb) {
+  var self = this;
+  setTimeout(function() {
+    cb(null, self);
+  }, 5);
+}
+asyncFunction5.context = {};
+
+var wrapped1 = Meteor.wrapAsync(asyncFunction1);
+var wrapped2 = Meteor.wrapAsync(asyncFunction2);
+var wrapped3 = Meteor.wrapAsync(asyncFunction3);
+var wrapped4 = Meteor.wrapAsync(asyncFunction4);
+var wrapped5 = Meteor.wrapAsync(
+  asyncFunction5,
+  asyncFunction5.context
+);
 
 Tinytest.add("environment - wrapAsync sync", function (test) {
   // one required arg and callback
@@ -40,6 +53,7 @@ Tinytest.add("environment - wrapAsync sync", function (test) {
   // only callback
   test.equal(wrapped4(), 3);
   test.equal(wrapped4(undefined), 3);
+  test.equal(wrapped5(), asyncFunction5.context);
 });
 
 testAsyncMulti("environment - wrapAsync async", [

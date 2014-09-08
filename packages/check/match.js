@@ -5,6 +5,17 @@
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
+/**
+ * @summary Check that a value matches a [pattern](#matchpatterns).
+ * If the value does not match the pattern, throw a `Match.Error`.
+ * 
+ * Particularly useful to assert that arguments to a function have the right
+ * types and structure.
+ * @locus Anywhere
+ * @param {Any} value The value to check
+ * @param {MatchPattern} pattern The pattern to match
+ * `value` against
+ */
 check = function (value, pattern) {
   // Record that check got called, if somebody cared.
   //
@@ -65,6 +76,13 @@ Match = {
   // XXX maybe also implement a Match.match which returns more information about
   //     failures but without using exception handling or doing what check()
   //     does with _failIfArgumentsAreNotAllChecked and Meteor.Error conversion
+  
+  /**
+   * @summary Returns true if the value matches the pattern.
+   * @locus Anywhere
+   * @param {Any} value The value to check
+   * @param {MatchPattern} pattern The pattern to match `value` against
+   */
   test: function (value, pattern) {
     try {
       checkSubtree(value, pattern);

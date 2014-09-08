@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.0.1" : "(checkout)";
+  return Meteor.release ? "0.9.1.1" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -123,6 +123,7 @@ var toc = [
       "Meteor.isClient",
       "Meteor.isServer",
       "Meteor.startup",
+      "Meteor.wrapAsync",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
@@ -156,6 +157,12 @@ var toc = [
       "Meteor.apply"
     ],
 
+    {name: "Check", id: "check_package"}, [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
+    ],
+
     {name: "Server connections", id: "connections"}, [
       "Meteor.status",
       "Meteor.reconnect",
@@ -165,7 +172,7 @@ var toc = [
     ],
 
     {name: "Collections", id: "collections"}, [
-      "Meteor.Collection", [
+      "Mongo.Collection", [
         {instance: "collection", name: "find"},
         {instance: "collection", name: "findOne"},
         {instance: "collection", name: "insert"},
@@ -176,7 +183,7 @@ var toc = [
         {instance: "collection", name: "deny"}
       ],
 
-      "Meteor.Collection.Cursor", [
+      "Mongo.Cursor", [
         {instance: "cursor", name: "forEach"},
         {instance: "cursor", name: "map"},
         {instance: "cursor", name: "fetch"},
@@ -185,7 +192,7 @@ var toc = [
         {instance: "cursor", name: "observeChanges", id: "observe_changes"}
       ],
       {type: "spacer"},
-      {name: "Meteor.Collection.ObjectID", id: "collection_object_id"},
+      {name: "Mongo.ObjectID", id: "mongo_object_id"},
       {type: "spacer"},
       {name: "Selectors", style: "noncode"},
       {name: "Modifiers", style: "noncode"},
@@ -286,12 +293,6 @@ var toc = [
       {type: "spacer"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
-
-    "Match", [
-      "check",
-      "Match.test",
-      {name: "Match patterns", style: "noncode"}
-    ],
 
     "Timers", [
       "Meteor.setTimeout",
@@ -402,7 +403,8 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "underscore"
+    "underscore",
+    "webapp"
   ] ],
 
   "Command line", [ [
@@ -417,7 +419,7 @@ var toc = [
     "meteor list",
     "meteor mongo",
     "meteor reset",
-    "meteor bundle",
+    "meteor build",
     "meteor search",
     "meteor show",
     "meteor publish",

@@ -48,7 +48,7 @@ var replaceMongoAtomWithMeteor = function (document) {
     return new Uint8Array(buffer);
   }
   if (document instanceof MongoDB.ObjectID) {
-    return new Meteor.Collection.ObjectID(document.toHexString());
+    return new Mongo.ObjectID(document.toHexString());
   }
   if (document["EJSON$type"] && document["EJSON$value"]
       && _.size(document) === 2) {
@@ -71,7 +71,7 @@ var replaceMeteorAtomWithMongo = function (document) {
     // serialize it correctly).
     return new MongoDB.Binary(new Buffer(document));
   }
-  if (document instanceof Meteor.Collection.ObjectID) {
+  if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
   }
   if (document instanceof MongoDB.Timestamp) {
@@ -233,11 +233,11 @@ MongoConnection.prototype._getCollection = function (collectionName) {
 };
 
 MongoConnection.prototype._createCappedCollection = function (collectionName,
-                                                              byteSize) {
+                                                              byteSize, maxDocuments) {
   var self = this;
   var future = new Future();
   self._withDb(function (db) {
-    db.createCollection(collectionName, {capped: true, size: byteSize},
+    db.createCollection(collectionName, {capped: true, size: byteSize, max: maxDocuments},
                         future.resolver());
   });
   future.wait();
@@ -604,7 +604,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 _.each(["insert", "update", "remove", "dropCollection"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor._wrapAsync(self["_" + method]).apply(self, arguments);
+    return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
 
@@ -686,7 +686,7 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 // which includes fully-synchronous versions of forEach, etc.
 //
 // Cursor is the cursor object returned from find(), which implements the
-// documented Meteor.Collection cursor API.  It wraps a CursorDescription and a
+// documented Mongo.Collection cursor API.  It wraps a CursorDescription and a
 // SynchronousCursor (lazily: it doesn't contact Mongo until you call a method
 // like fetch or forEach on it).
 //
@@ -708,7 +708,7 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 CursorDescription = function (collectionName, selector, options) {
   var self = this;
   self.collectionName = collectionName;
-  self.selector = Meteor.Collection._rewriteSelector(selector);
+  self.selector = Mongo.Collection._rewriteSelector(selector);
   self.options = options || {};
 };
 
@@ -761,7 +761,7 @@ Cursor.prototype.getTransform = function () {
 Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collection = self._cursorDescription.collectionName;
-  return Meteor.Collection._publishCursor(self, sub, collection);
+  return Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 // Used to guarantee that publish functions return at most one cursor per
