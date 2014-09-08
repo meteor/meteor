@@ -41,7 +41,7 @@ prefix instead of your own username.
   * `Template.instance()` (previously `UI._templateInstance()`)
   * `Template.body` (previously `UI.body`)
   * `new Template` (previously `Template.__create__`)
-  * `Blaze.getData()` (previously `UI.getElementData`)
+  * `Blaze.getData()` (previously `UI.getElementData`, or `Blaze.getCurrentData` with no arguments)
 
 * Deprecate the `ui` package. Instead, use the `blaze` package. The
   `UI` and `Blaze` symbols are now the same.
