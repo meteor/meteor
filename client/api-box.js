@@ -12,8 +12,8 @@ var apiData = function (longname) {
   return root;
 };
 
-var typeLink = function (displayName, id) {
-  return "<a href='#" + id + "'>" + displayName + "</a>";
+var typeLink = function (displayName, url) {
+  return "<a href='" + url + "'>" + displayName + "</a>";
 };
 
 var toOrSentence = function (array) {
@@ -28,22 +28,24 @@ var toOrSentence = function (array) {
 
 var typeNameTranslation = {
   "function": "Function",
-  EJSON: typeLink("EJSON-able Object", "ejson"),
-  EJSONable: typeLink("EJSON-able Object", "ejson"),
-  "Tracker.Computation": typeLink("Tracker.Computation", "tracker_computation"),
+  EJSON: typeLink("EJSON-able Object", "#ejson"),
+  EJSONable: typeLink("EJSON-able Object", "#ejson"),
+  "Tracker.Computation": typeLink("Tracker.Computation", "#tracker_computation"),
   MongoSelector: [
-    typeLink("Mongo Selector", "selectors"),
-    typeLink("Object ID", "mongo_object_id"),
+    typeLink("Mongo Selector", "#selectors"),
+    typeLink("Object ID", "#mongo_object_id"),
     "String"
   ],
-  MongoModifier: typeLink("Mongo Modifier", "modifiers"),
-  MongoSortSpecifier: typeLink("Mongo Sort Specifier", "sortspecifiers"),
-  MongoFieldSpecifier: typeLink("Mongo Field Specifier", "fieldspecifiers"),
+  MongoModifier: typeLink("Mongo Modifier", "#modifiers"),
+  MongoSortSpecifier: typeLink("Mongo Sort Specifier", "#sortspecifiers"),
+  MongoFieldSpecifier: typeLink("Mongo Field Specifier", "#fieldspecifiers"),
   JSONCompatible: "JSON-compatible Object",
-  EventMap: typeLink("Event Map", "eventmaps"),
-  DOMNode: "DOM Node",
-  "Blaze.View": typeLink("Blaze.View", "blaze_view"),
-  Template: typeLink("Blaze.Template", "blaze_template")
+  EventMap: typeLink("Event Map", "#eventmaps"),
+  DOMNode: typeLink("DOM Node", "https://developer.mozilla.org/en-US/docs/Web/API/Node"),
+  "Blaze.View": typeLink("Blaze.View", "#blaze_view"),
+  Template: typeLink("Blaze.Template", "#blaze_template"),
+  DOMElement: typeLink("DOM Element", "https://developer.mozilla.org/en-US/docs/Web/API/element"),
+  MatchPattern: typeLink("Match Pattern", "#matchpatterns")
 };
 
 Template.autoApiBox.helpers({
