@@ -217,7 +217,7 @@ selftest.define("run errors", function () {
   // This time, prevent the proxy from starting. (This time, leaving out the
   // interface name matches.)
   f = new Future;
-  server = net.createServer().listen(proxyPort, f.resolver());
+  server = net.createServer().listen(proxyPort, 'localhost', f.resolver());
   f.wait();
 
   run = s.run("-p", proxyPort);
