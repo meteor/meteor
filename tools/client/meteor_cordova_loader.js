@@ -42,6 +42,7 @@
   };
 
   var loadFromLocation = function (location) {
+    var cordovaRoot = decodeURI(window.location.href).replace(/\/index.html$/, '/').replace(/^file:\/\/?/, '');
     var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
     httpd.getURL(function(url){
       if(url.length > 0) {
@@ -49,7 +50,8 @@
       } else {
         httpd.startServer({
           'www_root' : location,
-          'port' : 8080
+          'port' : 8080,
+          'cordovajs_root': cordovaRoot
         }, function(url) {
           // go to the new proxy url
           window.location = url;
