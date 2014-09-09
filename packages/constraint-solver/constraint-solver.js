@@ -153,7 +153,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 ConstraintSolver.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
-
   // clone because we mutate options
   options = _.extend({
     _testing: false,
@@ -211,7 +210,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   options.rootDependencies = dc.dependencies;
   var resolverOptions = self._getResolverOptions(options);
-
   var res = null;
   // If a previous solution existed, try resolving with additional (weak)
   // equality constraints on all the versions from the previous solution (except
@@ -244,12 +242,30 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     }
   }
 
+  // Either we didn't have a previous solution, or it doesn't work. Try again
+  // without locking in the previous solution as strict equality.
   if (!res) {
-    // Either we didn't have a previous solution, or it doesn't work. Try again
-    // without locking in the previous solution as strict equality.
+    try {
+      res = self.resolver.resolve(
+        dc.dependencies, dc.constraints, resolverOptions);
+    } catch (e) {
+      if (!(e.constraintSolverError))
+        throw e;
+    }
+  }
 
-    res = self.resolver.resolve(
-      dc.dependencies, dc.constraints, resolverOptions);
+  // As a last-ditch effort, let's take a look at all the prerelease
+  // versions. Is it possible that a pre-release version will satisfy our
+  // constraints?
+  if (!res) {
+    try {
+      resolverOptions["useRCs"] = true;
+      res = self.resolver.resolve(
+        dc.dependencies, dc.constraints, resolverOptions);
+    } catch (e) {
+      if (!(e.constraintSolverError))
+        throw e;
+    }
   }
 
   return resolverResultToPackageMap(res);
