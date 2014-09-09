@@ -21,8 +21,8 @@ var copyFile = function(from, to, sand) {
 };
 
 
-var localCordova = path.join(files.getCurrentToolsDir(),
-  "scripts", "cordova.sh");
+var localCordova = path.join(files.getCurrentToolsDir(), "tools",
+  "cordova-scripts", "cordova.sh");
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and check that it contains the plugins that we are looking for. We don't
 // check the order, we just want to make sure that the right dependencies are
@@ -32,7 +32,12 @@ var localCordova = path.join(files.getCurrentToolsDir(),
 // plugins: an array of plugins in order.
 var checkCordovaPlugins = function(sand, plugins) {
   var lines = selftest.execFileSync(localCordova, ['plugins'],
-    { cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build') }).split("\n");
+    {
+      cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build'),
+      env: {
+        METEOR_WAREHOUSE_DIR: sand.warehouse
+      }
+    }).split("\n");
   if (lines[0].match(/No plugins/)) {
     lines = [];
   }
@@ -186,39 +191,34 @@ selftest.define("add cordova plugins", ["slow"], function () {
 
   checkCordovaPlugins(s,
     ["org.apache.cordova.camera",
-     "com.phonegap.plugins.facebookconnect",
-     "org.apache.cordova.console"]); // XXX we don't understand why
-                                     // but this shows up always, probably
-                                     // because of the 'logging' package
+     "com.phonegap.plugins.facebookconnect"]);
 
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
   run = s.run("build", "../a", "--settings", "settings.json");
-  run.waitSecs(30);
+  run.waitSecs(60);
   run.expectExit(0);
 
-  checkCordovaPlugins(s, ["org.apache.cordova.camera",
-                          "org.apache.cordova.console"]);
+  checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("remove", "cordova:org.apache.cordova.camera");
   run.match("removed");
   run.expectExit(0);
 
   run = s.run("build", "../a", "--settings", "settings.json");
-  run.waitSecs(30);
+  run.waitSecs(60);
   run.expectExit(0);
 
-  checkCordovaPlugins(s, ["org.apache.cordova.console"]);
+  checkCordovaPlugins(s, []);
 
   run = s.run("add", "cordova:org.apache.cordova.device@0.2.11");
   run.match("added");
   run.expectExit(0);
 
   run = s.run("build", "../a", "--settings", "settings.json");
-  run.waitSecs(30);
+  run.waitSecs(60);
   run.expectExit(0);
-  checkCordovaPlugins(s, ["org.apache.cordova.console",
-                          "org.apache.cordova.device"]);
+  checkCordovaPlugins(s, ["org.apache.cordova.device"]);
 });
