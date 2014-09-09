@@ -453,4 +453,9 @@ EJSON.clone = function (v) {
  * @locus Anywhere
  * @param {Number} size The number of bytes of binary data to allocate.
  */
+// EJSON.newBinary is the public documented API for this functionality,
+// but the implementation is in the 'base64' package to avoid
+// introducing a circular dependency. (If the implementation were here,
+// then 'base64' would have to use EJSON.newBinary, and 'ejson' would
+// also have to use 'base64'.)
 EJSON.newBinary = Base64.newBinary;
