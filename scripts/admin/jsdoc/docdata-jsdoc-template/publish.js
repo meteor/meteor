@@ -56,7 +56,6 @@
   exports.publish = function(taffyData) {
     var data = helper.prune(taffyData);
     var docTree = {};
-    var nameTree = {};
 
     var namespaces = helper.find(data, {kind: "namespace"});
 
@@ -92,6 +91,8 @@
       var filteredParams = [];
 
       _.each(func.params, function (param) {
+        param.name = param.name.replace(/,|\|/g, ", ");
+
         var splitName = param.name.split(".");
 
         if (splitName.length < 2 || splitName[0] !== "options") {

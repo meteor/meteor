@@ -34,18 +34,46 @@ populateData = function(response) {
 
 HTTP = {};
 
+/**
+ * @summary Send an HTTP `GET` request. Equivalent to calling [`HTTP.call`](#http_call) with "GET" as the first argument.
+ * @param {String} url The URL to which the request should be sent.
+ * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
+ * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
+ * @locus Anywhere
+ */
 HTTP.get = function (/* varargs */) {
   return HTTP.call.apply(this, ["GET"].concat(_.toArray(arguments)));
 };
 
+/**
+ * @summary Send an HTTP `POST` request. Equivalent to calling [`HTTP.call`](#http_call) with "POST" as the first argument.
+ * @param {String} url The URL to which the request should be sent.
+ * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
+ * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
+ * @locus Anywhere
+ */
 HTTP.post = function (/* varargs */) {
   return HTTP.call.apply(this, ["POST"].concat(_.toArray(arguments)));
 };
 
+/**
+ * @summary Send an HTTP `PUT` request. Equivalent to calling [`HTTP.call`](#http_call) with "PUT" as the first argument.
+ * @param {String} url The URL to which the request should be sent.
+ * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
+ * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
+ * @locus Anywhere
+ */
 HTTP.put = function (/* varargs */) {
   return HTTP.call.apply(this, ["PUT"].concat(_.toArray(arguments)));
 };
 
+/**
+ * @summary Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with "DELETE" as the first argument. (Named `del` to avoid conflic with the Javascript keyword `delete`)
+ * @param {String} url The URL to which the request should be sent.
+ * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
+ * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
+ * @locus Anywhere
+ */
 HTTP.del = function (/* varargs */) {
   return HTTP.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
 };

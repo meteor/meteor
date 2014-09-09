@@ -34,11 +34,11 @@
     ],
     [
       "logging",
-      "1.0.2"
+      "1.0.2-cordova2"
     ],
     [
       "meteor",
-      "1.0.3"
+      "1.0.4-cordova6"
     ],
     [
       "minimongo",

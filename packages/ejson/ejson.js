@@ -1,5 +1,54 @@
+/**
+ * @namespace
+ * @summary Namespace for EJSON functions
+ */
 EJSON = {};
 EJSONTest = {};
+
+
+
+// Custom type interface definition
+/**
+ * @class CustomType
+ * @instanceName customType
+ * @memberOf EJSON
+ * @summary The interface that a class must satisfy to be able to become an
+ * EJSON custom type via EJSON.addType.
+ */
+
+/**
+ * @function typeName
+ * @memberOf EJSON.CustomType
+ * @summary Return the tag used to identify this type.  This must match the tag used to register this type with [`EJSON.addType`](#ejson_add_type).
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function toJSONValue
+ * @memberOf EJSON.CustomType
+ * @summary Serialize this instance into a JSON-compatible value.
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function clone
+ * @memberOf EJSON.CustomType
+ * @summary Return a value `r` such that `this.equals(r)` is true, and modifications to `r` do not affect `this` and vice versa.
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function equals
+ * @memberOf EJSON.CustomType
+ * @summary Return `true` if `other` has a value equal to `this`; `false` otherwise.
+ * @locus Anywhere
+ * @param {Object} other Another object to compare this to.
+ * @instance
+ */
+
 
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
@@ -14,7 +63,6 @@ var customTypes = {};
 // used instead.
 // Similarly, EJSON.equals will use toJSONValue to make comparisons,
 // but you may provide a method equals() instead.
-
 /**
  * @summary Add a custom datatype to EJSON.
  * @locus Anywhere

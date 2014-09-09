@@ -469,6 +469,14 @@ _.extend(PackageSource.prototype, {
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
     // == 'Package' object visible in package.js ==
+    
+    /**
+     * @global
+     * @name  Package
+     * @summary The Package object in package.js
+     * @namespace
+     * @locus package.js
+     */
     var Package = {
       // Set package metadata. Options:
       // - summary: for 'meteor list' & package server
@@ -477,6 +485,17 @@ _.extend(PackageSource.prototype, {
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
+      
+      /**
+       * @summary Provide basic package information.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Object} options
+       * @param {String} options.summary A concise 1-2 sentence description of the package, required for publication.
+       * @param {String} options.version The [semver](http://www.semver.org) version for your package. If no version is specified, defaults to `0.0.0`. You need to specify a version to publish to the package server.
+       * @param {String} options.name Optional name override. By default, the package name comes from the name of its directory.
+       * @param {String} options.git Optional Git URL to the source repository.
+       */
       describe: function (options) {
         _.each(options, function (value, key) {
           if (key === "summary" ||
@@ -505,6 +524,12 @@ _.extend(PackageSource.prototype, {
         });
       },
 
+      /**
+       * @summary Define package dependencies and expose package methods.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       */
       onUse: function (f) {
         if (!self.isTest) {
           if (fileAndDepLoader) {
@@ -517,11 +542,19 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      // Backwards compatibility for old interfaces.
+      /**
+       * @deprecated in 0.9.0
+       */
       on_use: function (f) {
         this.onUse(f);
       },
 
+      /**
+       * @summary Define dependencies and expose package methods for unit tests.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       */
       onTest: function (f) {
         // If we are not initializing the test package, then we are initializing
         // the normal package and have now noticed that it has tests. So, let's
@@ -544,7 +577,9 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      // Backwards compatibility for old interfaces.
+      /**
+       * @deprecated in 0.9.0
+       */
       on_test: function (f) {
         this.onTest(f);
       },
@@ -875,6 +910,12 @@ _.extend(PackageSource.prototype, {
         return arch;
       };
 
+      /**
+       * @class PackageAPI
+       * @instanceName api
+       * @global
+       * @summary The API object passed into the Packages.onUse function.
+       */
       var api = {
         // Called when this package wants to make another package be
         // used. Can also take literal package objects, if you have
@@ -906,6 +947,41 @@ _.extend(PackageSource.prototype, {
         //   its plugins. (Has the same limitation as "unordered" that this
         //   flag is not tracked per-environment or per-role; this may
         //   change.)
+        
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Depend on package `packagename`.
+         * @locus package.js
+         * @param {String|String[]} packageNames Packages being depended on.
+         * Package names may be suffixed with an @version tag.
+         * 
+         * In general, you must specify a package's version (e.g.,
+         * `'accounts@1.0.0'` to use version 1.0.0 or a higher
+         * compatible version (ex: 1.0.1, 1.5.0, etc.)  of the
+         * `accounts` package). If you are sourcing core
+         * packages from a Meteor release with `versionsFrom`, you may leave
+         * off version names for core packages.
+         * @param {String} [architecture] If you only use the package on the
+         * server (or the client), you can pass in the second argument (e.g.,
+         * `'server'` or `'client'`) to specify what architecture the package is
+         * used with.
+         * @param {Object} [options]
+         * @param {Boolean} options.weak Establish a weak dependency on a
+         * package. If package A has a weak dependency on package B, it means
+         * that including A in an app does not force B to be included too — but,
+         * if B is included or by another package, then B will load before A.
+         * You can use this to make packages that optionally integrate with or
+         * enhance other packages if those packages are present.
+         * When you weakly depend on a package you don't see its exports.
+         * You can detect if the possibly-present weakly-depended-on package
+         * is there by seeing if `Package.foo` exists, and get its exports
+         * from the same place.
+         * @param {Boolean} options.unordered It's okay to load this dependency
+         * after your package. (In general, dependencies specified by `api.use`
+         * are loaded before your package.) You can use this option to break
+         * circular dependencies.
+         */
         use: function (names, arch, options) {
           // Support `api.use(package, {weak: true})` without arch.
           if (_.isObject(arch) && !_.isArray(arch) && !options) {
@@ -956,6 +1032,14 @@ _.extend(PackageSource.prototype, {
         // Called when this package wants packages using it to also use
         // another package.  eg, for umbrella packages which want packages
         // using them to also get symbols or plugins from their components.
+        
+        /**
+         * @memberOf PackageAPI
+         * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
+         * @locus package.js
+         * @instance
+         * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
+         */
         imply: function (names, arch) {
           names = toArray(names);
           arch = toArchArray(arch);
@@ -987,6 +1071,15 @@ _.extend(PackageSource.prototype, {
         // Top-level call to add a source file to a package. It will
         // be processed according to its extension (eg, *.coffee
         // files will be compiled to JavaScript).
+        
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Specify the source code for your package.
+         * @locus package.js
+         * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
+         * @param {String} [architecture] If you only want to export the file on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the file is used with.
+         */
         addFiles: function (paths, arch, fileOptions) {
           paths = toArray(paths);
           arch = toArchArray(arch);
@@ -1004,6 +1097,14 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
+        
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published.
+         * @locus package.js
+         * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
+         */
         versionsFrom: function (release) {
           if (releaseRecord) {
             buildmessage.error("api.versionsFrom may only be specified once.",
@@ -1049,6 +1150,15 @@ _.extend(PackageSource.prototype, {
         // or an array of those.
         // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
+        
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
+         * @locus package.js
+         * @param {String} exportedObject Name of the object.
+         * @param {String} [architecture] If you only want to export the object on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the export is used with.
+         */
         export: function (symbols, arch, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
           // arch.

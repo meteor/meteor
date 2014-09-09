@@ -26,6 +26,14 @@
  * it into the ReactiveVar of Geoff's Lickable Forms proposal.
  */
 
+/**
+ * @class 
+ * @instanceName reactiveVar
+ * @summary Constructor for a ReactiveVar, which represents a single reactive variable.
+ * @locus Client
+ * @param {Any} initialValue The initial value to set.  `equalsFunc` is ignored when setting the initial value.
+ * @param {Function} [equalsFunc] Optional.  A function of two arguments, called on the old value and the new value whenever the ReactiveVar is set.  If it returns true, no set is performed.  If omitted, the default `equalsFunc` returns true if its arguments are `===` and are of type number, boolean, string, undefined, or null.
+ */
 ReactiveVar = function (initialValue, equalsFunc) {
   if (! (this instanceof ReactiveVar))
     // called without `new`
@@ -47,6 +55,10 @@ ReactiveVar._isEqual = function (oldValue, newValue) {
             (typeof a === 'string'));
 };
 
+/**
+ * @summary Returns the current value of the ReactiveVar, establishing a reactive dependency.
+ * @locus Client
+ */
 ReactiveVar.prototype.get = function () {
   if (Tracker.active)
     this.dep.depend();
@@ -54,6 +66,11 @@ ReactiveVar.prototype.get = function () {
   return this.curValue;
 };
 
+/**
+ * @summary Sets the current value of the ReactiveVar, invalidating the Computations that called `get` if `newValue` is different from the old value.
+ * @locus Client
+ * @param {Any} newValue
+ */
 ReactiveVar.prototype.set = function (newValue) {
   var oldValue = this.curValue;
 
