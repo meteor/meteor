@@ -34,6 +34,47 @@ var writeFile = function (directoryPath, fileName, content, cb) {
     }, fail);
 };
 
+var restartServer = function (location) {
+  console.log('restartserver with location ' + location);
+  var fail = function (err) { console.log('something failed: ' + err.message) };
+  var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
+
+  if (! httpd) {
+    fail(new Error('no httpd'));
+    return;
+  }
+
+  var startServer = function (cordovajsRoot, prevUrl) {
+    var port;
+    if (prevUrl) {
+      var parts = prevUrl.split(':');
+      if (parts.length)
+        port = parseInt(parts[parts.length - 1], 10);
+    }
+    httpd.startServer({
+      'www_root' : location,
+      'port' : port,
+      'cordovajs_root': cordovajsRoot
+    }, function (url) {
+      Package.reload.Reload._reload();
+    }, fail);
+  };
+
+  httpd.getCordovajsRoot(function (cordovajsRoot) {
+    httpd.getURL(function (url) {
+      if (url.length > 0) {
+        // already have a server running, stop it
+        httpd.stopServer(function () {
+          startServer(cordovajsRoot, url);
+        }, fail);
+      } else {
+        // just start a server
+        startServer(cordovajsRoot);
+      }
+    }, fail);
+  }, fail);
+};
+
 var hasCalledReload = false;
 var onNewVersion = function () {
   var ft = new FileTransfer();
@@ -50,9 +91,12 @@ var onNewVersion = function () {
     }
 
     var program = res.data;
-    var manifest = program.manifest;
+    var manifest = _.clone(program.manifest);
     var version = program.version;
     var ft = new FileTransfer();
+
+    manifest.push({ url: '/index.html?' + Random.id() });
+
     var downloads = 0;
     _.each(manifest, function (item) {
       if (item.url) downloads++;
@@ -82,7 +126,9 @@ var onNewVersion = function () {
 
           // don't call reload twice!
           if (! hasCalledReload) {
-            Package.reload.Reload._reload();
+            // relative to 'bundle.app/www'
+            var location = '../../Documents/meteor/' + version;
+            restartServer(location);
           }
         });
       });
@@ -91,13 +137,16 @@ var onNewVersion = function () {
     _.each(manifest, function (item) {
       if (! item.url) return;
 
+      var url = item.url;
+      url = url.replace(/\?.+$/, '');
+
       // Add a cache buster to ensure that we don't cache an old asset.
-      var uri = encodeURI(urlPrefix + item.url + '?' + Random.id());
+      var uri = encodeURI(urlPrefix + url + '?' + Random.id());
 
       // Try to dowload the file a few times.
       var tries = 0;
       var tryDownload = function () {
-        ft.download(uri, versionPrefix + item.url, function (entry) {
+        ft.download(uri, versionPrefix + url, function (entry) {
           if (entry) {
             afterAllFilesDownloaded();
           }

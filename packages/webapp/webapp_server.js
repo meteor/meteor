@@ -286,8 +286,6 @@ var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
 
   return new Boilerplate(arch, manifest,
     _.extend({
-      urlMapper:
-        function (url) { return getUrlPrefixForArch(arch) + url; },
       pathMapper: function (itemPath) {
         return path.join(archPath[arch], itemPath); },
       baseDataExtension: {
@@ -419,6 +417,10 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
+    // XXX if it is a manifest we are serving, set additional headers
+    if (/\/manifest.json$/.test(pathname)) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
   }
 
   if (info.content) {
@@ -531,10 +533,23 @@ var runWebAppServer = function () {
   };
 
   WebAppInternals.generateBoilerplate = function () {
+    // This boilerplate will be served to the mobile devices when used with
+    // Meteor/Cordova for the Hot-Code Push and since the file will be served by
+    // the device's server, it is important to set the DDP url to the actual
+    // Meteor server accepting DDP connections and not the device's file server.
+    var defaultOptionsForArch = {
+      'web.cordova': {
+        runtimeConfigDefaults: {
+          DDP_DEFAULT_CONNECTION_URL: __meteor_runtime_config__.ROOT_URL
+        }
+      }
+    };
+
     syncQueue.runTask(function() {
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
-          generateBoilerplateInstance(archName, program.manifest);
+          generateBoilerplateInstance(archName, program.manifest,
+                                      defaultOptionsForArch[archName]);
       });
 
       // Clear the memoized boilerplate cache.

@@ -109,7 +109,9 @@
   var loadVersion = function (version, localPathPrefix) {
     var versionPrefix = localPathPrefix + version + '/';
     // We have a version string, now read the new version
-    loadFromLocation(versionPrefix);
+    // Relative to "bundle.app/www"
+    var location = '../../Documents/meteor/' + version;
+    loadFromLocation(location);
   };
 
   var loadApp = function (localPathPrefix) {
