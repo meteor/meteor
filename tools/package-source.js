@@ -874,8 +874,9 @@ _.extend(PackageSource.prototype, {
         if (!buildmessage.jobHasMessages()) {
           buildmessage.error(
             "The package version " + self.version + " (specified with Package.describe) "
-            + " is not valid semver (see http://semver.org/)"
-            + " with an optional '~' followed by wrap number.");
+            + "is not a valid Meteor package version.\n"
+            + "Valid package versions are semver (see http://semvar.org/), "
+            + "optionally followed by '~' and an integer.");
         }
         // Recover by pretending there was no version (see above).
         self.version = null;
@@ -893,7 +894,7 @@ _.extend(PackageSource.prototype, {
 
     if (self.version !== null && ! self.earliestCompatibleVersion) {
       self.earliestCompatibleVersion =
-        packageVersionParser.computeECV(self.version);
+        packageVersionParser.defaultECV(self.version);
     }
 
     // source files used

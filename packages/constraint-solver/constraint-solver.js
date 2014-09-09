@@ -337,7 +337,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   if (options._testing) {
     resolverOptions.costFunction = function (state) {
       return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-        return PackageVersion.hashVersion(mori.last(nameAndUv).version);
+        return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
       }, state.choices));
     };
   } else {
@@ -370,8 +370,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           // The package was present in the previous solution
           var prev = prevSolMapping[uv.name];
           var versionsDistance =
-            PackageVersion.hashVersion(uv.version) -
-            PackageVersion.hashVersion(prev.version);
+            PackageVersion.versionMagnitude(uv.version) -
+            PackageVersion.versionMagnitude(prev.version);
 
           var isCompatible =
                 prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
@@ -399,8 +399,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            PackageVersion.hashVersion(_.last(self.resolver.unitsVersions[uv.name]).version) -
-            PackageVersion.hashVersion(uv.version);
+            PackageVersion.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
+            PackageVersion.versionMagnitude(uv.version);
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -413,7 +413,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             // How far is our choice from the most conservative version that
             // also matches our constraints?
             var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
-            cost[MINOR] += PackageVersion.hashVersion(uv.version) - PackageVersion.hashVersion(minimal);
+            cost[MINOR] += PackageVersion.versionMagnitude(uv.version) - PackageVersion.versionMagnitude(minimal);
             options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }
@@ -454,8 +454,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
 
           var versionsDistance =
-            PackageVersion.hashVersion(earliestMatching.version) -
-            PackageVersion.hashVersion(prev.version);
+            PackageVersion.versionMagnitude(earliestMatching.version) -
+            PackageVersion.versionMagnitude(prev.version);
           if (versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
@@ -467,8 +467,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
-            PackageVersion.hashVersion(_.last(self.resolver.unitsVersions[dep]).version) -
-            PackageVersion.hashVersion(latestMatching.version);
+            PackageVersion.versionMagnitude(
+              _.last(self.resolver.unitsVersions[dep]).version) -
+            PackageVersion.versionMagnitude(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;
         }
