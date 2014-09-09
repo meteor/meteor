@@ -180,5 +180,7 @@
   "Tracker.nonreactive",
   "Tracker.onInvalidate",
   "UI.dynamic",
-  "check"
+  "check",
+  "currentUser",
+  "loggingIn"
 ]

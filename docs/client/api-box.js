@@ -85,8 +85,12 @@ Template.autoApiBox.helpers({
     var signature;
     var escapedLongname = _.escape(this.longname);
 
-    if (this.istemplate) {
-      signature = "{{> ";
+    if (this.istemplate || this.ishelper) {
+      if (this.istemplate) {
+        signature = "{{> ";
+      } else {
+        signature = "{{ ";
+      }
 
       signature += escapedLongname;
 
