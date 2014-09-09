@@ -78,7 +78,7 @@ var restartServer = function (location) {
 var hasCalledReload = false;
 var onNewVersion = function () {
   var ft = new FileTransfer();
-  var urlPrefix = Meteor.absoluteUrl() + 'cordova';
+  var urlPrefix = Meteor.absoluteUrl() + '__cordova';
 
   var localPathPrefix = cordova.file.applicationStorageDirectory +
                         'Documents/meteor/';

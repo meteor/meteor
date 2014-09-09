@@ -447,7 +447,11 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
 var getUrlPrefixForArch = function (arch) {
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
-  return arch === WebApp.defaultArch ? '' : '/' + arch.replace(/^web\./, '');
+
+  // We add '__' to the beginning of non-standard archs to "scope" the url
+  // to Meteor internals.
+  return arch === WebApp.defaultArch ?
+    '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
 var runWebAppServer = function () {
