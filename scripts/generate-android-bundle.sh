@@ -58,8 +58,11 @@ fi
     # the platform that cordova likes
     echo y | android-sdk/tools/android update sdk -t android-19 -u
 
-    # system image for android 19
+    # system image for android 19 - arm
     echo y | android-sdk/tools/android update sdk -t sys-img-armeabi-v7a-android-19 --all -u
+
+    # system image for android 19 - x86
+    echo y | android-sdk/tools/android update sdk -t sys-img-x86-android-19 --all -u
 
     # build tools
     echo y | android-sdk/tools/android update sdk -t "build-tools-20.0.0" -u

@@ -95,8 +95,11 @@ command -v javac >/dev/null 2>&1 || {
 
 # create avd if necessary
 if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]] ; then
+  #ABI="default/armeabi-v7a"
+  ABI="default/x86"
+
   echo "
-" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
+" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
 fi
 
 
