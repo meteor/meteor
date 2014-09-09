@@ -656,11 +656,15 @@ var runWebAppServer = function () {
       return undefined;
     }
 
-    // /packages/asdfsad ... /cordova/dafsdf.js
+    // /packages/asdfsad ... /__cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
-    var archKey = 'web.' + pathname.split('/')[1];
-    if (!_.has(archPath, archKey)) {
+    var archKey = pathname.split('/')[1];
+    var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
+
+    if (! /^__/.test(archKey) || ! _.has(archPath, archKeyCleaned)) {
       archKey = WebApp.defaultArch;
+    } else {
+      archKey = archKeyCleaned;
     }
 
     var boilerplate;
