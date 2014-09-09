@@ -107,10 +107,19 @@ set_config () {
   mv -f ${TEMP_FILE} ${CONFIG_FILE}
 }
 
+install_x86 () {
+    echo "Android x86 System image not found.  Found targets:"
+    android list target
+    echo "Downloading x86 system image..."
+    echo y | android update sdk -t sys-img-x86-android-19 --all -u
+}
+
 # create avd if necessary
 if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]] ; then
   #ABI="default/armeabi-v7a"
   ABI="default/x86"
+
+  (android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
 
   echo "
 " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
