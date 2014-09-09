@@ -57,7 +57,11 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
   }
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
+  opts = opts || {};
+  opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      process.env,
+                      opts.env || {},
+                      { "WAREHOUSE_DIR": tropo.root });
 
   var execFileAsync = require('./utils.js').execFileAsync;
   if (_.contains([localCordova, localAdb, localAndroid], file) &&
@@ -87,7 +91,11 @@ var execFileSyncOrThrow = function (file, args, opts) {
   verboseLog('Running synchronously: ', file, args);
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
+  opts = opts || {};
+  opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      process.env,
+                      opts.env || {},
+                      { "WAREHOUSE_DIR": tropo.root });
 
   var childProcess = execFileSync(file, args, opts);
   if (! childProcess.success)
