@@ -11,6 +11,20 @@ for (var i = 0; i < BASE_64_CHARS.length; i++) {
 Base64 = {};
 
 Base64.encode = function (array) {
+
+  if (typeof array === "string") {
+    var str = array;
+    array = Base64.newBinary(str.length);
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charCodeAt(i);
+      if (ch > 0xFF) {
+        throw new Error(
+          "Not ascii. Base64.encode can only take ascii strings.");
+      }
+      array[i] = ch;
+    }
+  }
+
   var answer = [];
   var a = null;
   var b = null;
