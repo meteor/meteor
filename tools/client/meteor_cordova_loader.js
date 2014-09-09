@@ -72,7 +72,7 @@
       console.log('No new versions saved to disk.');
     }
 
-    loadFromLocation('application/');
+    loadFromLocation('application');
   };
 
   var listDirectory = function (url, options, cb) {
