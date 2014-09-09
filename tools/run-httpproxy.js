@@ -7,7 +7,7 @@ var Future = require('fibers/future');
 var runLog = require('./run-log.js');
 var url = require('url');
 
-// options: listenPort, proxyToPort, proxyToHost, onFailure
+// options: listenPort, listenHost, onFailure
 var HttpProxy = function (options) {
   var self = this;
 
@@ -19,6 +19,7 @@ var HttpProxy = function (options) {
   self.mode = "proxy";
   self.httpQueue = []; // keys: req, res
   self.websocketQueue = []; // keys: req, socket, head
+  self.connectQueue = [];  // keys: req, socket, head
 
   self.proxy = null;
   self.server = null;
@@ -50,6 +51,11 @@ _.extend(HttpProxy.prototype, {
     var server = self.server = http.createServer(function (req, res) {
       // Normal HTTP request
       self.httpQueue.push({ req: req, res: res });
+      self._tryHandleConnections();
+    });
+
+    self.server.on('connect', function (req, socket, head) {
+      self.connectQueue.push({ req: req, socket: socket, head: head });
       self._tryHandleConnections();
     });
 
@@ -148,6 +154,11 @@ _.extend(HttpProxy.prototype, {
     });
     self.websocketQueue = [];
 
+    _.each(self.connectQueue, function (c) {
+      c.socket.destroy();
+    });
+    self.connectQueue = [];
+
     self.mode = "hold";
   },
 
@@ -180,6 +191,15 @@ _.extend(HttpProxy.prototype, {
         target: targetUrl
       });
     }
+
+    while (self.connectQueue.length) {
+      if (self.mode !== "proxy")
+        break;
+
+      var c = self.connectQueue.shift();
+      runLog.log("Proxy request (connect): " + c.req.method + " " + c.req.url);
+      proxyConnectMethod(c.req, c.socket, c.head);
+    }
   },
 
   // The proxy can be in one of three modes:
@@ -192,5 +212,69 @@ _.extend(HttpProxy.prototype, {
     self._tryHandleConnections();
   }
 });
+
+
+
+// This is what http-proxy does
+// XXX: We should submit connect support upstream
+var setupSocket = function(socket) {
+  socket.setTimeout(0);
+  socket.setNoDelay(true);
+
+  socket.setKeepAlive(true, 0);
+
+  return socket;
+};
+
+
+var proxyConnectMethod = function (req, socket, options, head, server, clb) {
+  if (req.method !== 'CONNECT') {
+    socket.destroy();
+    return true;
+  }
+
+  var tokens = req.url.split(':');
+
+  if (tokens.length != 2) {
+    runLog.log("Bad request: " + req.url);
+    socket.destroy();
+    return true;
+  }
+
+  var host = tokens[0];
+  var port = tokens[1];
+
+  if (port != 443) {
+    runLog.log("Blocking request to non-443 port: " + req.url);
+    socket.destroy();
+    return true;
+  }
+
+  setupSocket(socket);
+
+  // XXX: Needed?
+  // if (head && head.length) socket.unshift(head);
+
+  var net = require('net');
+  var proxySocket = net.createConnection(port, host);
+  setupSocket(proxySocket);
+
+  socket.on('error', function (err) {
+    runLog.log("Error on socket: " + err);
+    proxySocket.end();
+  });
+  proxySocket.on('error', function (err) {
+    runLog.log("Error on proxySocket: " + err);
+    socket.end();
+  });
+
+  proxySocket.on('connect', function(connect) {
+    runLog.log("Connection established to " + host + ":" + port);
+    socket.write("HTTP/1.0 200 Connection established\n\n");
+    socket.pipe(proxySocket);
+    proxySocket.pipe(socket);
+  });
+};
+
 
 exports.HttpProxy = HttpProxy;
