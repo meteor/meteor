@@ -159,7 +159,7 @@ _.extend(Runner.prototype, {
         var title = extraRunner.title;
         if (! self.quiet)
           runLog.logTemporary("=> Starting " + title + "...");
-        self.extraRunner.start();
+        extraRunner.start();
         if (! self.quiet && ! self.stopped)
           runLog.log("=> Started " + title + ".");
       }
