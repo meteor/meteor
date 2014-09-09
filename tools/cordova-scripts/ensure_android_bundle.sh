@@ -116,13 +116,16 @@ if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]]
   set_config "hw.keyboard" "yes"
   set_config "hw.mainKeys" "no"
 
-  # Look like a nexus 4, but with 1GB not 2GB (so we don't kill a 4GB machine)
+  # More RAM than the default
   set_config "hw.ramSize" "1024"
   set_config "vm.heapSize" "64"
-  set_config "skin.dynamic" "yes"
-  set_config "skin.name" "768x1280"
-  set_config "skin.path" "768x1280"
-  set_config "hw.lcd.density" "320"
+
+  # These are the settings for a Nexus 4, but it's a bit big for some screens
+  #  (and likely a bit slow without GPU & KVM/HAXM acceleration)
+  #set_config "skin.dynamic" "yes"
+  #set_config "hw.lcd.density" "320"
+  #set_config "hw.device.name" "Nexus 4"
+  #set_config "hw.device.manufacturer" "Google"
 
   # XXX: hw.gpu.enabled=yes ?
 
