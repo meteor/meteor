@@ -1,10 +1,9 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.12-cordova6"
+  version: "1.0.13"
 });
 
 Npm.depends({
-  'semver': '2.2.1',
   'mori': '0.2.6'
 });
 
@@ -18,7 +17,7 @@ Package.on_use(function (api) {
 
 Package.on_test(function (api) {
   api.use('constraint-solver', ['server']);
-  api.use(['tinytest', 'minimongo']);
+  api.use(['tinytest', 'minimongo', 'package-version-parser']);
   // data for big benchmarky tests
   api.add_files('test-data.js', ['server']);
   api.add_files('constraint-solver-tests.js', ['server']);

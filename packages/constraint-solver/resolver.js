@@ -1,5 +1,3 @@
-var semver = Npm.require('semver');
-
 mori = Npm.require('mori');
 
 BREAK = {};  // used by our 'each' functions
@@ -53,7 +51,7 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
     self.unitsVersions[unitVersion.name] = [];
   } else {
     var latest = _.last(self.unitsVersions[unitVersion.name]).version;
-    if (!semver.lt(latest, unitVersion.version)) {
+    if (!PackageVersion.lessThan(latest, unitVersion.version)) {
       throw Error("adding uv out of order: " + latest + " vs "
                   + unitVersion.version);
     }
@@ -365,7 +363,7 @@ ConstraintSolver.Constraint = function (name, versionString) {
   } else {
     // borrows the structure from the parseVersionConstraint format:
     // - type - String [compatible-with|exactly|any-reasonable]
-    // - version - String - semver string
+    // - version - String - meteor version string
     _.extend(self, PackageVersion.parseConstraint(name));
   }
   // See comment in UnitVersion constructor.
@@ -437,7 +435,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
 
   // If the candidate version is less than the version named in the constraint,
   // we are not satisfied.
-  if (semver.lt(candidateUV.version, self.version))
+  if (PackageVersion.lessThan(candidateUV.version, self.version))
     return false;
 
   var myECV = resolver.getEarliestCompatibleVersion(self.name, self.version);

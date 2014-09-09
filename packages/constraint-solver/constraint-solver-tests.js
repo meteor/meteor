@@ -1,5 +1,3 @@
-var semver = Npm.require('semver');
-
 // Setup mock data for tests
 var Packages = new LocalCollection;
 var Versions = new LocalCollection;
@@ -62,7 +60,7 @@ var catalogStub = {
         packageName: name
       }, { fields: { version: 1 } }).fetch(),
       'version'
-    ).sort(semver.compare);
+    ).sort(PackageVersion.compare);
   },
   getVersion: function (name, version) {
     return this.versions.findOne({
@@ -503,9 +501,9 @@ function getCatalogStub (gems) {
           return nv;
         })
         .filter(function (v) {
-          return semver.valid(v);
+          return PackageVersion.getValidServerVersion(v);
         })
-        .sort(semver.compare)
+        .sort(PackageVersion.compare)
         .uniq(true)
         .value();
     },
@@ -589,4 +587,3 @@ function exactVersion (s) {
     s += ".0";
   return s;
 }
-

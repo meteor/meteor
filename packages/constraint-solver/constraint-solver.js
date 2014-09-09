@@ -1,5 +1,3 @@
-var semver = Npm.require('semver');
-
 // Copied from archinfo.matches() in tools/
 var archMatches = function (arch, baseArch) {
   return arch.substr(0, baseArch.length) === baseArch &&
@@ -334,17 +332,12 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   function (options) {
   var self = this;
 
-  var semverToNum = function (version) {
-    var v = semver.parse(version);
-    return v.major * 10000 + v.minor * 100 + v.patch;
-  };
-
   var resolverOptions = {};
 
   if (options._testing) {
     resolverOptions.costFunction = function (state) {
       return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-        return semverToNum(mori.last(nameAndUv).version);
+        return PackageVersion.hashVersion(mori.last(nameAndUv).version);
       }, state.choices));
     };
   } else {
@@ -377,8 +370,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           // The package was present in the previous solution
           var prev = prevSolMapping[uv.name];
           var versionsDistance =
-            semverToNum(uv.version) -
-            semverToNum(prev.version);
+            PackageVersion.hashVersion(uv.version) -
+            PackageVersion.hashVersion(prev.version);
 
           var isCompatible =
                 prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
@@ -406,8 +399,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            semverToNum(_.last(self.resolver.unitsVersions[uv.name]).version) -
-            semverToNum(uv.version);
+            PackageVersion.hashVersion(_.last(self.resolver.unitsVersions[uv.name]).version) -
+            PackageVersion.hashVersion(uv.version);
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -420,7 +413,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             // How far is our choice from the most conservative version that
             // also matches our constraints?
             var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
-            cost[MINOR] += semverToNum(uv.version) - semverToNum(minimal);
+            cost[MINOR] += PackageVersion.hashVersion(uv.version) - PackageVersion.hashVersion(minimal);
             options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }
@@ -461,8 +454,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
 
           var versionsDistance =
-            semverToNum(earliestMatching.version) -
-            semverToNum(prev.version);
+            PackageVersion.hashVersion(earliestMatching.version) -
+            PackageVersion.hashVersion(prev.version);
           if (versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
@@ -474,8 +467,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
-            semverToNum(_.last(self.resolver.unitsVersions[dep]).version) -
-            semverToNum(latestMatching.version);
+            PackageVersion.hashVersion(_.last(self.resolver.unitsVersions[dep]).version) -
+            PackageVersion.hashVersion(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;
         }

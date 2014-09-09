@@ -15,6 +15,60 @@ if (inTool) {
 var semver = inTool ? require ('semver') : Npm.require('semver');
 var __ = inTool ? require('underscore') : _;
 
+// Takes in a meteor version, for example 1.2.3-rc5+1234~1.
+//
+// Returns an object composed of the following:
+//   semver: (ex: 1.2.3)
+//   wrapNum: Optional. (ex: 1)
+var extractSemverPart = function (versionString) {
+  var splitVersion = versionString.split('~');
+  return {
+    semver: splitVersion[0],
+    wrapNum: (splitVersion.length > 1) ? splitVersion[1] : 0
+  };
+};
+
+// Converts a meteor version into a very large number, unique to that version.
+PV.hashVersion = function (versionString) {
+ // var v = semver.parse(versionString);
+ // return v.major * 10000 + v.minor * 100 + v.patch;
+
+  var version = extractSemverPart(versionString);
+  var v = semver.parse(version.semver);
+  // XXX: This is kind of hacky and relies on not having more than 100 wrap
+  // numbers, for example. Probably OK.
+  return v.major * 1000000 + v.minor * 10000 +
+    v.patch * 100 + version.wrapNum;
+};
+
+// Takes in two meteor versions. Returns true if the first one is less than the second.
+PV.lessThan = function (versionOne, versionTwo) {
+  return PV.compare(versionOne, versionTwo) === -1;
+};
+
+
+// Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
+// v2 is greater.
+PV.compare = function (versionOne, versionTwo) {
+  var meteorVOne = extractSemverPart(versionOne);
+  var meteorVTwo = extractSemverPart(versionTwo);
+
+  // Wrap numbers only matter if the semver is equal, so if they don't even have
+  // wrap numbers, or if their semver is not equal, then we should let the
+  // semver library resolve this one.
+  if ((!meteorVOne.wrapNum && !meteorVTwo.wrapNum) ||
+     (meteorVOne.semver !== meteorVTwo.semver)) {
+    return semver.compare(meteorVOne.semver, meteorVTwo.semver);
+  }
+
+  // If their semver components are equal, then the one with the smaller wrap
+  // numbers is smaller.
+  var diff = meteorVOne.wrapNum - meteorVTwo.wrapNum;
+  if (diff === 0) return 0;
+  if (diff > 0) return 1;
+  return -1;
+};
+
 // Conceptually we have three types of constraints:
 // 1. "compatible-with" - A@x.y.z - constraints package A to version x.y.z or
 //    higher, as long as the version is backwards compatible with x.y.z.
@@ -46,7 +100,7 @@ PV.parseVersionConstraint = function (versionString, options) {
   }
 
   // This will throw if the version string is invalid.
-  PV.getValidSemverVersion(versionString);
+  PV.getValidServerVersion(versionString);
 
   versionDesc.version = versionString;
 
@@ -54,13 +108,22 @@ PV.parseVersionConstraint = function (versionString, options) {
 };
 
 
-// Check to see if the versionString that we pass in is valid semver, as far as
-// Meteor is concerned.
+// Check to see if the versionString that we pass in is a valid meteor version.
 //
-// Returns the output of semver.valid, which is a valid semver string (if
-// versionString is valid semver) WITHOUT THE BUILD ID. Otherwise, throws.
-PV.getValidSemverVersion = function (versionString) {
+// Returns a valid meteor version string that can be included in the
+// server. That means that it has everything EXCEPT the build id. Throws if the
+// entered string was invalid.
+PV.getValidServerVersion = function (meteorVersionString) {
 
+  // Strip out the wrapper num, if present and check that it is valid.
+  var version = extractSemverPart(meteorVersionString);
+  if ( version.wrapNum && !/^\d+$/.test(version.wrapNum)) {
+    throwVersionParserError(
+      "The wrap number (after ~) goes last and must only contain digits, so " +
+        meteorVersionString + " is invalid.");
+  }
+
+  var versionString = version.semver;
   // NPM's semver spec supports things like 'v1.0.0' and considers them valid,
   // but we don't. Everything before the + or - should be of the x.x.x form.
   var mainVersion = versionString.split('+')[0].split('-')[0];
@@ -75,6 +138,10 @@ PV.getValidSemverVersion = function (versionString) {
     throwVersionParserError(
       "Version string must look like semver (eg '1.2.3'), not '"
         + versionString + "'.");
+  }
+
+  if (version.wrapNum) {
+    cleanVersion = cleanVersion + "~" + version.wrapNum;
   }
 
   return cleanVersion;
