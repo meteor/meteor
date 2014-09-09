@@ -878,8 +878,14 @@ main.registerCommand({
   name: "configure-android",
   options: {
     verbose: { type: Boolean, short: "v" }
-  }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
 }, function (options) {
-  return execFileSyncOrThrow(localAndroid, [], options);
+  cordova.setVerboseness(options.verbose);
+
+  var androidArgs = options.args || [];
+  var execOptions = { pipeOutput: true, verbose: options.verbose };
+  execFileSyncOrThrow(localAndroid, androidArgs, execOptions);
 });
 
