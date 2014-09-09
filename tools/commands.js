@@ -535,7 +535,7 @@ var buildCommands = {
     port: { type: String, short: "p", default: "localhost:3000" },
     settings: { type: String },
     // Undocumented
-    'for-deploy': { type: Boolean },
+    'for-deploy': { type: Boolean }
   }
 };
 
