@@ -46,7 +46,7 @@ else
 fi
 
 {
-    curl -O http://www.motorlogy.com/apache//ant/binaries/apache-ant-1.9.4-bin.tar.gz
+    curl -O http://apache.osuosl.org/ant/binaries/apache-ant-1.9.4-bin.tar.gz
     tar xzf apache-ant-1.9.4-bin.tar.gz
     rm apache-ant-1.9.4-bin.tar.gz
 
