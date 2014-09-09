@@ -151,7 +151,6 @@
 
 var path = require('path');
 var util = require('util');
-var semver = require('semver');
 var files = require(path.join(__dirname, 'files.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
@@ -170,6 +169,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
+var packageVersionParser = require('./package-version-parser.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -605,7 +605,8 @@ _.extend(Target.prototype, {
         // use the newer version
         if (_.has(self.cordovaDependencies, name)) {
           var existingVersion = self.cordovaDependencies[name];
-          version = semver.lt(existingVersion, version) ? version : existingVersion;
+          version = packageVersionParser.
+            lessThan(existingVersion, version) ? version : existingVersion;
         }
         self.cordovaDependencies[name] = version;
       });

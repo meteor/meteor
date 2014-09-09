@@ -1,6 +1,5 @@
 var fs = require('fs');
 var path = require('path');
-var semver = require('semver');
 var _ = require('underscore');
 var util = require('util');
 var packageClient = require('./package-client.js');

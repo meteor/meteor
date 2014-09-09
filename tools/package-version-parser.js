@@ -21,9 +21,13 @@ var __ = inTool ? require('underscore') : _;
 //   semver: (ex: 1.2.3)
 //   wrapNum: Optional. (ex: 1)
 var extractSemverPart = function (versionString) {
-  var splitVersion = versionString.split('~');
+  if (!versionString) return { semver: "", wrapNum: 0 };
+  var noBuild = versionString.split('+');
+  var splitVersion = noBuild[0].split('~');
   return {
-    semver: splitVersion[0],
+    semver: (noBuild.length > 1) ?
+        splitVersion[0] + "+" + noBuild[1] :
+        splitVersion[0],
     wrapNum: (splitVersion.length > 1) ? splitVersion[1] : 0
   };
 };
@@ -46,6 +50,16 @@ PV.lessThan = function (versionOne, versionTwo) {
   return PV.compare(versionOne, versionTwo) === -1;
 };
 
+// Given a string version, computes its default ECV (not counting any overrides).
+//
+// versionString: valid meteor version string.
+PV.computeECV = function (versionString) {
+  var version = extractSemverPart(versionString).semver;
+  var parsed = semver.parse(version);
+  if (! parsed)
+     throwVersionParserError("not a valid version: " + version);
+  return parsed.major + ".0.0";
+}
 
 // Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
 // v2 is greater.

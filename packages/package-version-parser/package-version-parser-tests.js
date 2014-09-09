@@ -38,13 +38,13 @@ Tinytest.add("Smart Package version string parsing - compatible version, compati
   FAIL("foo@<1.2");
   FAIL("foo<1.2");
   FAIL("foo@1.2.3~abc");
-  FAIL("foo@1.2.3~1+1234");
+  FAIL("foo@1.2.3+1234~1");
   FAIL("foo@1.2.3~1-rc1");
 
   t("foo@1.2.3~1", { name: "foo", version: "1.2.3~1", type: "compatible-with" });
   t("foo-1233@1.2.3~0", { name: "foo-1233", version: "1.2.3~0", type: "compatible-with" });
   t("foo-bar@3.2.1-rc0~123", { name: "foo-bar", version: "3.2.1-rc0~123", type: "compatible-with" });
-  t("foo-1233@1.2.3+1234~0", { name: "foo-1233", version: "1.2.3+1234~0", type: "compatible-with" });
+  t("foo-1233@1.2.3~0+1234", { name: "foo-1233", version: "1.2.3~0+1234", type: "compatible-with" });
   t("foo", { name: "foo", version: null, type: "any-reasonable" });
 });
 

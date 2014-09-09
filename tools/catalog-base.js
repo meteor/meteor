@@ -1,6 +1,5 @@
 var fs = require('fs');
 var path = require('path');
-var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
@@ -11,6 +10,7 @@ var tropohouse = require('./tropohouse.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
+var packageVersionParser = require('./package-version-parser.js');
 
 var baseCatalog = exports;
 
@@ -153,7 +153,7 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
       return [];
     }
     var ret = _.keys(self.versions[name]);
-    ret.sort(semver.compare);
+    ret.sort(packageVersionParser.compare);
     return ret;
   },
 

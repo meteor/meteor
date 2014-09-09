@@ -201,7 +201,7 @@ _.extend(exports.Tropohouse.prototype, {
       // is if it's a directory containing a pre-0.9.0 package (ie, this is a
       // warehouse package not a tropohouse package). But the versions should
       // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-      // versions should be semver.
+      // versions should be semver-like.
       if (e.code !== 'ENOENT')
         throw e;
     }

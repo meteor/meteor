@@ -1,7 +1,6 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
-var semver = require('semver');
 var sourcemap = require('source-map');
 
 var files = require('./files.js');
@@ -13,7 +12,7 @@ var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
-var semver = require('semver');
+var packageVersionParser = require('./package-version-parser.js');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -25,20 +24,6 @@ var isTestName = function (name) {
 };
 var genTestName = function (name) {
   return AUTO_TEST_PREFIX + name;
-};
-
-// Given a semver version string, return the earliest semver for which
-// we are a replacement. This is used to compute the default
-// earliestCompatibleVersion.
-// XXX: move to utils?
-var earliestCompatible = function (version) {
-  // This is not the place to check to see if version parses as
-  // semver. That should have been done when we first received it from
-  // the user.
-  var parsed = semver.parse(version);
-  if (! parsed)
-    throw new Error("not a valid version: " + version);
-  return parsed.major + ".0.0";
 };
 
 // Returns a sort comparator to order files into load order.
@@ -231,7 +216,7 @@ var PackageSource = function (catalog) {
   // optional.
   self.metadata = {};
 
-  // Package version as a semver string. Optional; not all packages
+  // Package version as a meteor-version string. Optional; not all packages
   // (for example, the app) have versions.
   // XXX when we have names, maybe we want to say that all packages
   // with names have versions? certainly the reverse is true
@@ -480,7 +465,7 @@ _.extend(PackageSource.prototype, {
     var Package = {
       // Set package metadata. Options:
       // - summary: for 'meteor list' & package server
-      // - version: package version string (semver)
+      // - version: package version string
       // - earliestCompatibleVersion: version string
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
@@ -865,7 +850,7 @@ _.extend(PackageSource.prototype, {
       // version is not set) but short of failing the build we have no
       // alternative. Using a dummy version like "1.0.0" would cause
       // endless confusion and a fake version like "unknown" wouldn't
-      // parse as semver. Anyway, apps don't have versions, so it's
+      // parse correctly. Anyway, apps don't have versions, so it's
       // not like we didn't already have to think about this case.
     }
 
@@ -879,16 +864,23 @@ _.extend(PackageSource.prototype, {
     }
 
     if (self.version !== null) {
-      var parsedVersion = semver.parse(self.version);
-      if (!parsedVersion) {
+      var parsedVersion;
+      try {
+        parsedVersion =
+          packageVersionParser.getValidServerVersion(self.version);
+      } catch (e) {
+        if (!e.versionParserError)
+          throw e;
         if (!buildmessage.jobHasMessages()) {
           buildmessage.error(
-            "The package version (specified with Package.describe) must be "
-              + "valid semver (see http://semver.org/).");
+            "The package version " + self.version + " (specified with Package.describe) "
+            + " is not valid semver (see http://semver.org/)"
+            + " with an optional '~' followed by wrap number.");
         }
         // Recover by pretending there was no version (see above).
         self.version = null;
-      } else if (parsedVersion.build.length) {
+      }
+      if (parsedVersion && parsedVersion !== self.version) {
         if (!buildmessage.jobHasMessages()) {
           buildmessage.error(
             "The package version (specified with Package.describe) may not "
@@ -901,7 +893,7 @@ _.extend(PackageSource.prototype, {
 
     if (self.version !== null && ! self.earliestCompatibleVersion) {
       self.earliestCompatibleVersion =
-        earliestCompatible(self.version);
+        packageVersionParser.computeECV(self.version);
     }
 
     // source files used

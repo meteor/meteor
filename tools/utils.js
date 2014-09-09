@@ -360,6 +360,9 @@ exports.isUrlWithSha = function (x) {
 // If there is a version that isn't exact, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
+//
+// This is talking about NPM versions specifically, not Meteor versions.
+// It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
@@ -564,4 +567,3 @@ _.extend(exports.Patience.prototype, {
     self._whenMessage = null;
   }
 });
-
