@@ -666,9 +666,12 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
   verboseLog('isDevice:', isDevice);
 
-  var args = [ 'run',
-               isDevice ? '--device' : '--emulator',
-               platform ];
+  var args = [ 'run' ];
+  if (options.verbose) {
+      args.push('--verbose');
+  }
+  args.push(isDevice ? '--device' : '--emulator');
+  args.push(platform);
 
   // XXX assert we have a valid Cordova project
   if (platform === 'ios' && isDevice) {
