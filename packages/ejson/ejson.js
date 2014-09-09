@@ -453,6 +453,4 @@ EJSON.clone = function (v) {
  * @locus Anywhere
  * @param {Number} size The number of bytes of binary data to allocate.
  */
-EJSON.newBinary = function (len) {
-  return new Base64.newBinary(len);
-};
+EJSON.newBinary = Base64.newBinary;
