@@ -60,9 +60,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
   if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
 
   var execFileAsync = require('./utils.js').execFileAsync;
-  if (_.contains([localCordova, localAdb, localAndroid], file) &&
-      _.contains(project.getCordovaPlatforms(), 'android'))
-    ensureAndroidBundle();
+  ensureAndroidBundle(file);
 
   var p = execFileAsync(file, args, opts);
   p.on('close', function (code) {
@@ -79,10 +77,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 
 var execFileSyncOrThrow = function (file, args, opts) {
   var execFileSync = require('./utils.js').execFileSync;
-  if (_.contains([localCordova, localAdb, localAndroid], file) &&
-      _.contains(project.getCordovaPlatforms(), 'android')) {
-    ensureAndroidBundle();
-  }
+  ensureAndroidBundle(file);
 
   verboseLog('Running synchronously: ', file, args);
 
@@ -96,7 +91,13 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
-var ensureAndroidBundle = function () {
+var ensureAndroidBundle = function (command) {
+  if (! _.contains([localAdb, localAndroid], command)) {
+    if (command !== localCordova ||
+        ! _.contains(project.getCordovaPlatforms(), 'android'))
+      return;
+  }
+
   verboseLog('Ensuring android_bundle');
   var ensureScriptPath =
     path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
@@ -844,6 +845,11 @@ main.registerCommand({
     verbose: { type: Boolean, short: "v" }
   }
 }, function (options) {
-  return execFileSyncOrThrow(localAndroid, [], options);
+  try {
+    execFileSyncOrThrow(localAndroid, [], options);
+  } catch (err) {
+    // this tool can crash for whatever reason, ignore its failures
+  }
+  return 0;
 });
 
