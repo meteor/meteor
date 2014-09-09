@@ -37,6 +37,8 @@ var Runner = function (appDir, options) {
     self.rootUrl = 'http://localhost:' + listenPort + '/';
   }
 
+  self.extraRunners = options.extraRunners;
+
   self.proxy = new Proxy({
     listenPort: listenPort,
     listenHost: options.proxyHost,
@@ -152,6 +154,17 @@ _.extend(Runner.prototype, {
       }
     }
 
+    _.forEach(self.extraRunners, function (extraRunner) {
+      if (! self.stopped) {
+        var title = extraRunner.title;
+        if (! self.quiet)
+          runLog.logTemporary("=> Starting " + title + "...");
+        self.extraRunner.start();
+        if (! self.quiet && ! self.stopped)
+          runLog.log("=> Started " + title + ".");
+      }
+    });
+
     if (! self.stopped) {
       if (! self.quiet)
         runLog.logTemporary("=> Starting your app...");
@@ -180,6 +193,9 @@ _.extend(Runner.prototype, {
     self.httpProxy && self.httpProxy.stop();
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
+    _.forEach(self.extraRunners, function (extraRunner) {
+      extraRunner.stop();
+    });
     self.appRunner.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?

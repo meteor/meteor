@@ -216,6 +216,8 @@ main.registerCommand({
   // Always bundle for the browser by default.
   var webArchs = project.getWebArchs();
 
+  var runners = [];
+
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
@@ -237,7 +239,7 @@ main.registerCommand({
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
                  options, parsedHostPort));
-      cordova.runPlatforms(localPath, options.args, options);
+      runners = runners.concat(cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
       if (options.verbose) {
         process.stderr.write('Error while running for mobile platforms ' +
@@ -298,7 +300,8 @@ main.registerCommand({
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
-    once: options.once
+    once: options.once,
+    extraRunners: runners
   });
 });
 
@@ -1199,6 +1202,8 @@ main.registerCommand({
     [options['driver-package'] || 'test-in-browser'],
     'add');
 
+  var runners = [];
+
   var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
   var mobilePlatforms = [];
 
@@ -1223,20 +1228,19 @@ main.registerCommand({
     project.addCordovaPlatforms(platforms);
 
     try {
-      var cordovaOptions = _.extend({}, options, {
-        appName: path.basename(testRunnerAppDir),
-        debug: ! options.production
-      });
-
-      cordova.buildPlatforms(localPath, mobilePlatforms, cordovaOptions);
-
-      cordova.runPlatforms(localPath, mobilePlatforms, options);
+      cordova.buildPlatforms(localPath, mobilePlatforms,
+        _.extend({}, options, {
+          appName: path.basename(testRunnerAppDir),
+          debug: ! options.production
+        }));
+      runners = runners.concat(cordova.buildPlatformRunners(localPath, mobilePlatforms, options));
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
     }
   }
 
+  options.extraRunners = runners;
   return runTestAppForPackages(testPackages, testRunnerAppDir, options);
 });
 
@@ -1422,7 +1426,8 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       mongoUrl: process.env.MONGO_URL,
       oplogUrl: process.env.MONGO_OPLOG_URL,
       once: options.once,
-      recordPackageUsage: false
+      recordPackageUsage: false,
+      extraRunners: options.extraRunners
     });
   }
 

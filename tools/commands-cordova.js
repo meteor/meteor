@@ -605,6 +605,44 @@ cordova.buildPlatforms = function (localPath, platforms, options) {
   buildCordova(localPath, 'build', options);
 };
 
+
+cordova.buildPlatformRunners = function (localPath, platforms, options) {
+  var runners = [];
+  _.each(platforms, function (platformName) {
+    runners.push(new CordovaRunner(localPath, platformName, options));
+  });
+  return runners;
+};
+
+
+// This is a runner, that we pass to Runner (run-all.js)
+var CordovaRunner = function (localPath, platformName, options) {
+  var self = this;
+
+  self.localPath = localPath;
+  self.platformName = platformName;
+  self.options = options;
+
+  self.title = 'Cordova (' + self.platformName + ')';
+};
+
+_.extend(CordovaRunner.prototype, {
+  start: function () {
+    var self = this;
+
+    execCordovaOnPlatform(self.localPath,
+                          self.platformName,
+                          self.options);
+  },
+
+  stop: function () {
+    var self = this;
+
+    // XXX: A no-op for now (we leave it running because it's slow!)
+  }
+});
+
+
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
 // options:
@@ -729,14 +767,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   return 0;
 };
 
-// Start the simulator or physical device for a list of platforms
-// options:
-//   - verbose: print all build logs
-cordova.runPlatforms = function (localPath, platforms, options) {
-  _.each(platforms, function (platformName) {
-    execCordovaOnPlatform(localPath, platformName, options);
-  });
-};
+
 
 // packages - list of strings
 cordova.filterPackages = function (packages) {
