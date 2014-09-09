@@ -603,7 +603,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   }
 
   var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages();
+    stats.recordPackages("sdk.bundle");
   });
   if (statsMessages.hasMessages()) {
     process.stdout.write("Error recording package list:\n" +
