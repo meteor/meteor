@@ -122,7 +122,7 @@ if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]]
   set_config "skin.dynamic" "yes"
   set_config "skin.name" "768x1280"
   set_config "skin.path" "768x1280"
-  set_config "hw.lcd.density" "7320"
+  set_config "hw.lcd.density" "320"
 
   # XXX: hw.gpu.enabled=yes ?
 
