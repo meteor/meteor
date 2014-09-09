@@ -75,10 +75,10 @@ var builtinConverters = [
         || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
     },
     toJSONValue: function (obj) {
-      return {$binary: base64Encode(obj)};
+      return {$binary: Base64.encode(obj)};
     },
     fromJSONValue: function (obj) {
-      return base64Decode(obj.$binary);
+      return Base64.decode(obj.$binary);
     }
   },
   { // Escaping one level
@@ -446,4 +446,13 @@ EJSON.clone = function (v) {
     ret[key] = EJSON.clone(value);
   });
   return ret;
+};
+
+/**
+ * @summary Allocate a new buffer of binary data that EJSON can serialize.
+ * @locus Anywhere
+ * @param {Number} size The number of bytes of binary data to allocate.
+ */
+EJSON.newBinary = function (len) {
+  return new Base64.newBinary(len);
 };

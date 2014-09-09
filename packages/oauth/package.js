@@ -8,6 +8,7 @@ Package.on_use(function (api) {
   api.use('webapp', 'server');
   api.use('mongo', 'server');
   api.use('reload', 'client');
+  api.use('base64', 'client');
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 

@@ -50,8 +50,8 @@ OAuth._stateParam = function (loginStyle, credentialToken) {
 
   // Encode base64 as not all login services URI-encode the state
   // parameter when they pass it back to us.
-
-  return btoa(JSON.stringify(state));
+  // Use the 'base64' package here because 'btoa' isn't supported in IE8/9.
+  return Base64.encode(JSON.stringify(state));
 };
 
 
