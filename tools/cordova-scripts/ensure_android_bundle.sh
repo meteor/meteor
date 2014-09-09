@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e
+
 BUNDLE_VERSION=0.1
 
 # OS Check. Put here because here is where we download the precompiled
