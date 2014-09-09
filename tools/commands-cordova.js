@@ -684,11 +684,11 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   } else {
     verboseLog('Running emulator:', localCordova, args);
     var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
-    emulatorOptions.env = {};
+    emulatorOptions.env =  _.extend({}, process.env);
     if (options.httpProxyPort) {
       // XXX: Is this Android only?
-      // XXX: Is 10.0.2.2 always the IP?
-      emulatorOptions.env['http_proxy'] = '10.0.2.2:' + options.httpProxyPort;
+      // This is odd; the IP address is on the host, not inside the emulator
+      emulatorOptions.env['http_proxy'] = '127.0.0.1:' + options.httpProxyPort;
     }
     execFileAsyncOrThrow(
       localCordova, args,
