@@ -165,7 +165,7 @@ var getPackagesForAppIdInTest = function (currentProject) {
 
 var connectToPackagesStatsServer = function () {
   var Package = uniload.load({
-    packages: ["ddp"]
+    packages: ["meteor", "ddp"]
   });
   var conn = new ServiceConnection(
     Package,
