@@ -92,6 +92,17 @@ command -v javac >/dev/null 2>&1 || {
   echo >&2 "To add the android platform, please install a JDK. Here are some directions: http://openjdk.java.net/install/"; exit 1;
 }
 
+set_config () {
+  KEY=$1
+  VALUE=$2
+
+  CONFIG_FILE=${ANDROID_BUNDLE}/meteor_avd/config.ini
+
+  TEMP_FILE=`mktemp`
+  grep -v "^${KEY}=" ${CONFIG_FILE} > ${TEMP_FILE}
+  echo "${KEY}=${VALUE}" >> ${TEMP_FILE}
+  mv -f ${TEMP_FILE} ${CONFIG_FILE}
+}
 
 # create avd if necessary
 if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]] ; then
@@ -100,6 +111,21 @@ if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]]
 
   echo "
 " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
+
+  # Nice keyboard support
+  set_config "hw.keyboard" "yes"
+  set_config "hw.mainKeys" "no"
+
+  # Look like a nexus 4, but with 1GB not 2GB (so we don't kill a 4GB machine)
+  set_config "hw.ramSize" "1024"
+  set_config "vm.heapSize" "64"
+  set_config "skin.dynamic" "yes"
+  set_config "skin.name" "768x1280"
+  set_config "skin.path" "768x1280"
+  set_config "hw.lcd.density" "7320"
+
+  # XXX: hw.gpu.enabled=yes ?
+
 fi
 
 
