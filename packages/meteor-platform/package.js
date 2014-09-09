@@ -67,5 +67,7 @@ Package.on_use(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.device': '0.2.11'
+  'org.apache.cordova.device': '0.2.11',
+  'com.rjfun.cordova.httpd': 'https://github.com/floatinghotpot/cordova-httpd/tarball/d0c35b5f0af356c662580791a770ee655b2e3f34'
 });
+

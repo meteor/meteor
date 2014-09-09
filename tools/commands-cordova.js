@@ -516,7 +516,8 @@ var buildCordova = function (localPath, buildCommand, options) {
   var programPath = path.join(bundlePath, 'programs');
 
   var cordovaPath = path.join(localPath, 'cordova-build');
-  var wwwPath = path.join(cordovaPath, "www");
+  var wwwPath = path.join(cordovaPath, 'www');
+  var applicationPath = path.join(wwwPath, 'application');
   var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
@@ -536,23 +537,32 @@ var buildCordova = function (localPath, buildCommand, options) {
     files.rm_recursive(cordovaProgramAppPath);
   }
 
-  verboseLog('Rewriting the www folder');
+  verboseLog('Removing the www folder');
   // rewrite the www folder
   files.rm_recursive(wwwPath);
-  files.cp_r(cordovaProgramPath, wwwPath);
+
+  files.mkdir_p(applicationPath);
+  verboseLog('Writing www/application folder');
+  files.cp_r(cordovaProgramPath, applicationPath);
 
   // clean up the temporary bundle directory
   files.rm_recursive(bundlePath);
 
-  verboseLog('Writing index.html, cordova_loader.js');
+  verboseLog('Writing index.html');
 
   // generate index.html
-  var indexHtml = generateCordovaBoilerplate(wwwPath, options);
-  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
+  var indexHtml = generateCordovaBoilerplate(applicationPath, options);
+  fs.writeFileSync(path.join(applicationPath, 'index.html'), indexHtml, 'utf8');
 
+  verboseLog('Writing meteor_cordova_loader');
   var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
   var loaderCode = fs.readFileSync(loaderPath);
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
+
+  verboseLog('Writing a default index.html for cordova app');
+  var indexPath = path.join(__dirname, 'client', 'cordova_index.html');
+  var indexContent = fs.readFileSync(indexPath);
+  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexContent);
 
   var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
 
