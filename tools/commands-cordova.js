@@ -98,8 +98,17 @@ var execFileSyncOrThrow = function (file, args, opts) {
                       { "WAREHOUSE_DIR": tropo.root });
 
   var childProcess = execFileSync(file, args, opts);
-  if (! childProcess.success)
-    throw new Error('Failed to run ' + file + '\n' + childProcess.stderr + '\n\n' + childProcess.stdout);
+  if (! childProcess.success) {
+    // XXX: Include args
+    var message = 'Error running ' + file;
+    if (childProcess.stderr) {
+      message = message + "\n" + childProcess.stderr + "\n";
+    }
+    if (childProcess.stdout) {
+      message = message + "\n" + childProcess.stdout + "\n";
+    }
+    throw new Error(message);
+  }
 
   return childProcess;
 };
