@@ -12,7 +12,7 @@
   /**
    * Get a tag dictionary from the tags field on the object, for custom fields
    * like package
-   * @param  {JSDoc object} data The thing you get in the TaffyDB from JSDoc
+   * @param  {JSDocData} data The thing you get in the TaffyDB from JSDoc
    * @return {Object}      Keys are the parameter names, values are the values.
    */
   var getTagDict = function (data) {
