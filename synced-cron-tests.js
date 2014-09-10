@@ -1,6 +1,8 @@
 Sinon = Npm.require('sinon');
 Later = Npm.require('later');
 
+Later.date.localTime(); // corresponds to SyncedCron.options.utc: true;
+
 var TestEntry = {
   name: 'Test Job',
   schedule: function(parser) {
@@ -98,7 +100,7 @@ Tinytest.add('SyncedCron.nextScheduledAtDate works', function(test) {
   var entry2 = _.extend({}, TestEntry, {
     name: 'Test Job2',
     schedule: function(parser) {
-      return parser.cron('15 11 * * ? *');
+      return parser.cron('30 11 * * ? *');
     }
   });
   SyncedCron.add(entry2);
@@ -107,33 +109,9 @@ Tinytest.add('SyncedCron.nextScheduledAtDate works', function(test) {
 
   SyncedCron.start();
 
-  var date = SyncedCron.nextScheduledAtDate(TestEntry.name);
-  var correctDate = Later.schedule(TestEntry.schedule(Later.parse)).next(1);
+  var date = SyncedCron.nextScheduledAtDate(entry2.name);
+  var correctDate = Later.schedule(entry2.schedule(Later.parse)).next(1);
   
   test.equal(date, correctDate);
-  
-  // console.log('job:');
-  // console.log(job);
-
-  // var entry = SyncedCron._entries[0];
-  // var intendedAt = new Date(); //whatever
-  //
-  // // two runs
-  // SyncedCron._entryWrapper(entry)(intendedAt);
-  // intendedAt.setMinutes(intendedAt.getMinutes() + 1);
-  // SyncedCron._entryWrapper(entry)(intendedAt);
-  // test.equal(SyncedCron._collection.find().count(), 2);
-  //
-  // var job = SyncedCron.getNext(TestEntry.name);
-  // console.log(job);
-
-  // var jobHistory1 = SyncedCron._collection.findOne();
-  // test.equal(jobHistory1.result, 'ran');
-  //
-  // // second run
-  // SyncedCron._entryWrapper(entry)(intendedAt);
-  // test.equal(SyncedCron._collection.find().count(), 1); // should still be 1
-  // var jobHistory2 = SyncedCron._collection.findOne();
-  // test.equal(jobHistory1._id, jobHistory2._id);
 });
 

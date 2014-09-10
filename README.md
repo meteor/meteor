@@ -72,7 +72,7 @@ SyncedCron.options: {
 Write some code. Write some tests. To run the tests, do:
 
 ``` sh
-$ mrt test-packages synced-cron
+$ meteor test-packages percolatestudio:synced-cron
 ```
 
 ## License 

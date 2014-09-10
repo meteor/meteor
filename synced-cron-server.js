@@ -18,7 +18,7 @@ else
 
 // collection holding the job history records
 SyncedCron._collection = 
-  new Meteor.Collection(SyncedCron.options.collectionName);
+  new Mongo.Collection(SyncedCron.options.collectionName);
 SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
 
 var log = {
