@@ -1,83 +1,82 @@
-// Setup mock data for tests
-var Packages = new LocalCollection;
-var Versions = new LocalCollection;
-var Builds = new LocalCollection;
+var makeResolver = function (data) {
+  var Packages = new LocalCollection;
+  var Versions = new LocalCollection;
+  var Builds = new LocalCollection;
 
-var insertVersion = function (name, version, ecv, deps) {
-  if (!Packages.findOne({name: name})) {
-    Packages.insert({name: name});
-  }
+  _.each(data, function (versionDescription) {
+    var packageName = versionDescription.shift();
+    var version = versionDescription.shift();
+    var ecv = (typeof versionDescription[0] === "string"
+               ? versionDescription.shift()
+               : PackageVersion.defaultECV(version));
+    var deps = versionDescription.shift();
 
-  var constructedDeps = {};
-  _.each(deps, function (constraint, name) {
-    constructedDeps[name] = {
-      constraint: constraint,
-      references: [
-        { arch: "os", targetSlice: "main", weak: false,
-          implied: false, unordered: false },
-        { arch: "web", targetSlice: "main", weak: false,
-          implied: false, unordered: false }]
-    };
-  });
-  Versions.insert({ packageName: name, version: version,
-                    earliestCompatibleVersion: ecv,
-                    dependencies: constructedDeps });
-  Builds.insert({ packageName: name, version: version,
-                  buildArchitectures: "web+os" });
-};
-insertVersion("sparky-forms", "1.1.2", "1.0.0", {"forms": "=1.0.1", "sparkle": "=2.1.1"});
-insertVersion("sparky-forms", "1.0.0", "1.0.0", {"awesome-dropdown": "=1.4.0"});
-insertVersion("forms", "1.0.1", "1.0.0", {"sparkle": "2.1.0", "jquery-widgets": "1.0.0"});
-insertVersion("sparkle", "2.1.0", "2.1.0", {"jquery": "1.8.2"});
-insertVersion("sparkle", "2.1.1", "2.1.0", {"jquery": "1.8.2"});
-insertVersion("sparkle", "1.0.0", "1.0.0");
-insertVersion("awesome-dropdown", "1.4.0", "1.0.0", {"dropdown": "=1.2.2"});
-insertVersion("awesome-dropdown", "1.5.0", "1.0.0", {"dropdown": "=1.2.2"});
-insertVersion("dropdown", "1.2.2", "1.0.0", {"jquery-widgets": "1.0.0"});
-insertVersion("jquery-widgets", "1.0.0", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"});
-insertVersion("jquery-widgets", "1.0.2", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"});
-insertVersion("jquery", "1.8.0", "1.8.0");
-insertVersion("jquery", "1.8.2", "1.8.0");
-insertVersion("foobar1", "1.0.0", "1.0.0", {foobar2: "=1.0.0"});
-insertVersion("foobar2", "1.0.0", "1.0.0", {foobar1: "=1.0.0"});
-insertVersion("bad-1", "1.0.0", "1.0.0", {indirect: "1.0.0"});
-insertVersion("bad-2", "1.0.0", "1.0.0", {indirect: "2.0.0"});
-insertVersion("indirect", "1.0.0", "1.0.0");
-insertVersion("indirect", "2.0.0", "2.0.0");
+    if (!Packages.findOne({name: packageName})) {
+      Packages.insert({name: packageName});
+    }
 
-
-// XXX Temporary hack: make a catalog stub to pass in to the constraint
-// solver. We'll soon move constraint-solver into tools and just run
-// tests with self-test, passing a real Catalog object.
-var catalogStub = {
-  packages: Packages,
-  versions: Versions,
-  builds: Builds,
-  getAllPackageNames: function () {
-    return _.pluck(Packages.find().fetch(), 'name');
-  },
-  getPackage: function (name) {
-    return this.packages.findOne({ name: name });
-  },
-  getSortedVersions: function (name) {
-    return _.pluck(
-      this.versions.find({
-        packageName: name
-      }, { fields: { version: 1 } }).fetch(),
-      'version'
-    ).sort(PackageVersion.compare);
-  },
-  getVersion: function (name, version) {
-    return this.versions.findOne({
-      packageName: name,
-      version: version
+    var constructedDeps = {};
+    _.each(deps, function (constraint, name) {
+      constructedDeps[name] = {
+        constraint: constraint,
+        references: [
+          { arch: "os" },
+          { arch: "web.browser"},
+          { arch: "web.cordova"},
+        ]
+      };
     });
-  }
+    Versions.insert({ packageName: packageName, version: version,
+                      earliestCompatibleVersion: ecv,
+                    dependencies: constructedDeps });
+    Builds.insert({ packageName: packageName, version: version,
+                    buildArchitectures: "os+web.cordova+web.browser" });
+  });
+
+  var catalogStub = {
+    packages: Packages,
+    versions: Versions,
+    builds: Builds,
+    getAllPackageNames: function () {
+      return _.pluck(Packages.find().fetch(), 'name');
+    },
+    getPackage: function (name) {
+      return this.packages.findOne({ name: name });
+    },
+    getSortedVersions: function (name) {
+      return _.pluck(
+        this.versions.find({
+          packageName: name
+        }, { fields: { version: 1 } }).fetch(),
+        'version'
+      ).sort(PackageVersion.compare);
+    },
+    getVersion: function (name, version) {
+      return this.versions.findOne({
+        packageName: name,
+        version: version
+      });
+    }
+  };
+  return new ConstraintSolver.PackagesResolver(catalogStub);
 };
 
-var resolver = new ConstraintSolver.PackagesResolver(catalogStub);
+var defaultResolver = makeResolver([
+  ["sparky-forms", "1.1.2", {"forms": "=1.0.1", "sparkle": "=2.1.1"}],
+  ["sparky-forms", "1.0.0", {"awesome-dropdown": "=1.4.0"}],
+  ["forms", "1.0.1", {"sparkle": "2.1.0", "jquery-widgets": "1.0.0"}],
+  ["sparkle", "2.1.0", "2.1.0", {"jquery": "1.8.2"}],
+  ["sparkle", "2.1.1", "2.1.0", {"jquery": "1.8.2"}],
+  ["sparkle", "1.0.0"],
+  ["awesome-dropdown", "1.4.0", {"dropdown": "=1.2.2"}],
+  ["awesome-dropdown", "1.5.0", {"dropdown": "=1.2.2"}],
+  ["dropdown", "1.2.2", {"jquery-widgets": "1.0.0"}],
+  ["jquery-widgets", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"}],
+  ["jquery-widgets", "1.0.2", {"jquery": "1.8.0", "sparkle": "2.1.1"}],
+  ["jquery", "1.8.0", "1.8.0"],
+  ["jquery", "1.8.2", "1.8.0"]
+]);
 
-var currentTest = null;
 var splitArgs = function (deps) {
   var dependencies = [], constraints = [];
 
@@ -89,128 +88,140 @@ var splitArgs = function (deps) {
   return {dependencies: dependencies, constraints: constraints};
 };
 
-var t = function (deps, expected, options) {
-  var dependencies = splitArgs(deps).dependencies;
-  var constraints = splitArgs(deps).constraints;
-
-  var resolvedDeps = resolver.resolve(dependencies, constraints, options);
-  currentTest.equal(resolvedDeps, {answer: expected});
-};
-
-var FAIL = function (deps, regexp) {
-  currentTest.throws(function () {
+var testWithResolver = function (test, resolver, f) {
+  var t = function (deps, expected, options) {
     var dependencies = splitArgs(deps).dependencies;
     var constraints = splitArgs(deps).constraints;
 
-    var resolvedDeps = resolver.resolve(dependencies, constraints,
-                                        {_testing: true});
-  }, regexp);
+    var resolvedDeps = resolver.resolve(dependencies, constraints, options);
+    test.equal(resolvedDeps, { answer: expected });
+  };
+
+  var FAIL = function (deps, regexp) {
+    test.throws(function () {
+      var dependencies = splitArgs(deps).dependencies;
+      var constraints = splitArgs(deps).constraints;
+
+      var resolvedDeps = resolver.resolve(dependencies, constraints,
+                                          {_testing: true});
+    }, regexp);
+  };
+  f(t, FAIL);
 };
 
 Tinytest.add("constraint solver - simple exact + regular deps", function (test) {
-  currentTest = test;
+  testWithResolver(test, defaultResolver, function (t) {
+    t({ "sparky-forms": "=1.1.2" }, {
+      "sparky-forms": "1.1.2",
+      "forms": "1.0.1",
+      "sparkle": "2.1.1",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2"
+    }, { _testing: true });
 
-  t({ "sparky-forms": "=1.1.2" }, {
-    "sparky-forms": "1.1.2",
-    "forms": "1.0.1",
-    "sparkle": "2.1.1",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2"
-  }, { _testing: true });
-
-  t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
-    "sparky-forms": "1.1.2",
-    "forms": "1.0.1",
-    "sparkle": "2.1.1",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2",
-    "awesome-dropdown": "1.5.0",
-    "dropdown": "1.2.2"
-  }, { _testing: true });
+    t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
+      "sparky-forms": "1.1.2",
+      "forms": "1.0.1",
+      "sparkle": "2.1.1",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2",
+      "awesome-dropdown": "1.5.0",
+      "dropdown": "1.2.2"
+    }, { _testing: true });
+  });
 });
 
 Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
-  currentTest = test;
-  // sparky-forms 1.0.0 won't be chosen because it depends on a very old
-  // jquery, which is not compatible with the jquery that
-  // awesome-dropdown uses.
-  t({ "sparky-forms": "1.0.0", "awesome-dropdown": "=1.5.0" }, {
-    "sparky-forms": "1.1.2",
-    "forms": "1.0.1",
-    "sparkle": "2.1.1",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2",
-    "awesome-dropdown": "1.5.0",
-    "dropdown": "1.2.2"
-  }, { _testing: true });
+  testWithResolver(test, defaultResolver, function (t) {
+    // sparky-forms 1.0.0 won't be chosen because it depends on a very old
+    // jquery, which is not compatible with the jquery that
+    // awesome-dropdown uses.
+    t({ "sparky-forms": "1.0.0", "awesome-dropdown": "=1.5.0" }, {
+      "sparky-forms": "1.1.2",
+      "forms": "1.0.1",
+      "sparkle": "2.1.1",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2",
+      "awesome-dropdown": "1.5.0",
+      "dropdown": "1.2.2"
+    }, { _testing: true });
+  });
 });
 
 Tinytest.add("constraint solver - no results", function (test) {
-  currentTest = test;
-  FAIL({ "bad-1": "1.0.0", "bad-2": "" },
-       /indirect@2\.0\.0 is not satisfied by 1.0.0[^]+bad-1[^]+bad-2/);
+  var resolver = makeResolver([
+    ["bad-1", "1.0.0", {indirect: "1.0.0"}],
+    ["bad-2", "1.0.0", {indirect: "2.0.0"}],
+    ["indirect", "1.0.0"],
+    ["indirect", "2.0.0"]
+  ]);
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({ "bad-1": "1.0.0", "bad-2": "" },
+         /indirect@2\.0\.0 is not satisfied by 1.0.0[^]+bad-1[^]+bad-2/);
+  });
 });
 
 Tinytest.add("constraint solver - previousSolution", function (test) {
-  currentTest = test;
-  // This is what you get if you lock sparky-forms to 1.0.0.
-  t({ "sparky-forms": "=1.0.0" }, {
-    "sparky-forms": "1.0.0",
-    "awesome-dropdown": "1.4.0",
-    "dropdown": "1.2.2",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2",
-    "sparkle": "2.1.1"
-  }, { _testing: true });
+  testWithResolver(test, defaultResolver, function (t, FAIL) {
+    // This is what you get if you lock sparky-forms to 1.0.0.
+    t({ "sparky-forms": "=1.0.0" }, {
+      "sparky-forms": "1.0.0",
+      "awesome-dropdown": "1.4.0",
+      "dropdown": "1.2.2",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2",
+      "sparkle": "2.1.1"
+    }, { _testing: true });
 
-  // If you just requires something compatible with 1.0.0, we end up choosing
-  // 1.1.2.
-  t({ "sparky-forms": "1.0.0" }, {
-    "sparky-forms": "1.1.2",
-    "forms": "1.0.1",
-    "sparkle": "2.1.1",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2"
-  }, { _testing: true });
+    // If you just requires something compatible with 1.0.0, we end up choosing
+    // 1.1.2.
+    t({ "sparky-forms": "1.0.0" }, {
+      "sparky-forms": "1.1.2",
+      "forms": "1.0.1",
+      "sparkle": "2.1.1",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2"
+    }, { _testing: true });
 
-  // But if you ask for something compatible with 1.0.0 and have a previous
-  // solution with 1.0.0, the previous solution works (since it is achievable).
-  t({ "sparky-forms": "1.0.0" }, {
-    "sparky-forms": "1.0.0",
-    "awesome-dropdown": "1.4.0",
-    "dropdown": "1.2.2",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2",
-    "sparkle": "2.1.1"
-  }, { _testing: true, previousSolution: {
-    "sparky-forms": "1.0.0"
-  }});
+    // But if you ask for something compatible with 1.0.0 and have a previous
+    // solution with 1.0.0, the previous solution works (since it is achievable).
+    t({ "sparky-forms": "1.0.0" }, {
+      "sparky-forms": "1.0.0",
+      "awesome-dropdown": "1.4.0",
+      "dropdown": "1.2.2",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2",
+      "sparkle": "2.1.1"
+    }, { _testing: true, previousSolution: {
+      "sparky-forms": "1.0.0"
+    }});
 
-  // On the other hand, if the previous solution is incompatible with the
-  // constraints, it's not an error: we can try something that isn't the
-  // previous solution in this case!
-  t({ "sparky-forms": "1.1.2" }, {
-    "sparky-forms": "1.1.2",
-    "forms": "1.0.1",
-    "sparkle": "2.1.1",
-    "jquery-widgets": "1.0.0",
-    "jquery": "1.8.2"
-  }, { _testing: true, previousSolution: {
-    "sparky-forms": "1.0.0"
-  }});
-
+    // On the other hand, if the previous solution is incompatible with the
+    // constraints, it's not an error: we can try something that isn't the
+    // previous solution in this case!
+    t({ "sparky-forms": "1.1.2" }, {
+      "sparky-forms": "1.1.2",
+      "forms": "1.0.1",
+      "sparkle": "2.1.1",
+      "jquery-widgets": "1.0.0",
+      "jquery": "1.8.2"
+    }, { _testing: true, previousSolution: {
+      "sparky-forms": "1.0.0"
+    }});
+  });
 });
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
-  currentTest = test;
-  var versions = resolver.resolve(["sparkle"], [], { _testing: true }).answer;
+  var versions = defaultResolver.resolve(["sparkle"], [], { _testing: true }).answer;
   test.isTrue(_.isString(versions.sparkle));
 });
 
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
-  currentTest = test;
-  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", type: "compatible-with" }], { _testing: true }).answer;
+  var versions = defaultResolver.resolve(
+    ["sparkle", "sparky-forms"],
+    [{ packageName: "sparky-forms", version: "1.1.2", type: "compatible-with" }],
+    { _testing: true }).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
 
