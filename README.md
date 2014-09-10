@@ -4,10 +4,8 @@ A simple cron system for [Meteor](http://meteor.com). It supports syncronizing j
 
 ## Installation
 
-SyncedCron can be installed with [Meteorite](https://github.com/oortcloud/meteorite/). From inside a Meteorite-managed app:
-
 ``` sh
-$ mrt add synced-cron
+$ meteor add percolatestudio:synced-cron
 ```
 
 ## API
