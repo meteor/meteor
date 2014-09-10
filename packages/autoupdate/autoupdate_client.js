@@ -107,13 +107,13 @@ Autoupdate._retrySubscription = function () {
               }
             };
 
-            var attachStylesheetLink = function (newLink) {
-              var removeOldLinks = _.after(newCss.length, function () {
-                _.each(oldLinks, function (oldLink) {
-                  oldLink.parentNode.removeChild(oldLink);
-                });
+            var removeOldLinks = _.after(newCss.length, function () {
+              _.each(oldLinks, function (oldLink) {
+                oldLink.parentNode.removeChild(oldLink);
               });
+            });
 
+            var attachStylesheetLink = function (newLink) {
               document.getElementsByTagName("head").item(0).appendChild(newLink);
 
               waitUntilCssLoads(newLink, function () {
@@ -121,14 +121,19 @@ Autoupdate._retrySubscription = function () {
               });
             };
 
-            _.each(newCss, function (css) {
-              var newLink = document.createElement("link");
-              newLink.setAttribute("rel", "stylesheet");
-              newLink.setAttribute("type", "text/css");
-              newLink.setAttribute("class", "__meteor-css__");
-              newLink.setAttribute("href", css.url);
-              attachStylesheetLink(newLink);
-            });
+            if (newCss.length !== 0) {
+              _.each(newCss, function (css) {
+                var newLink = document.createElement("link");
+                newLink.setAttribute("rel", "stylesheet");
+                newLink.setAttribute("type", "text/css");
+                newLink.setAttribute("class", "__meteor-css__");
+                newLink.setAttribute("href", css.url);
+                attachStylesheetLink(newLink);
+              });
+            } else {
+              removeOldLinks();
+            }
+
           }
           else if (doc._id === 'version' && doc.version !== autoupdateVersion) {
             handle && handle.stop();
