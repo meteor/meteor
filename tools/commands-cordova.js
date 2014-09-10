@@ -93,8 +93,17 @@ var execFileSyncOrThrow = function (file, args, opts) {
                       opts.env || {});
 
   var childProcess = execFileSync(file, args, opts);
-  if (! childProcess.success)
-    throw new Error('Failed to run ' + file + '\n' + childProcess.stderr + '\n\n' + childProcess.stdout);
+  if (! childProcess.success) {
+    // XXX: Include args
+    var message = 'Error running ' + file;
+    if (childProcess.stderr) {
+      message = message + "\n" + childProcess.stderr + "\n";
+    }
+    if (childProcess.stdout) {
+      message = message + "\n" + childProcess.stdout + "\n";
+    }
+    throw new Error(message);
+  }
 
   return childProcess;
 };
@@ -114,8 +123,9 @@ var ensureAndroidBundle = function (command) {
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
   } catch (err) {
-    verboseLog('Failed to install android_bundle: ', err.stack);
-    throw new Error('Failed to install android_bundle: ' + err.message);
+    verboseLog('Failed to install android_bundle ', err.stack);
+    process.stderr.write("Failed to install android_bundle\n");
+    throw new main.ExitWithCode(2);
   }
 };
 
@@ -272,6 +282,9 @@ cordova.ensureCordovaProject = function (localPath, appName) {
       // XXX cache them there
       files.mkdir_p(localPluginsPath);
     } catch (err) {
+      if (err instanceof main.ExitWithCode) {
+        process.exit(err.code);
+      }
       process.stderr.write("Error creating Cordova project: " +
         err.message + "\n" + err.stack + "\n");
     }

@@ -17,10 +17,10 @@ source $(dirname $0)/common_env.sh
 
 command -v java >/dev/null 2>&1 || {
   if [ ${UNAME} == "Linux" ] ; then
-    echo "Please install Java before running this command.";
+    echo "Please install a Java JDK before running this command.";
     echo "Directions can be found at: http://openjdk.java.net/install/"
   else
-    echo "The android platform needs Java to be installed on your system."
+    echo "The android platform needs a Java JDK to be installed on your system."
     java -version
   fi
 
