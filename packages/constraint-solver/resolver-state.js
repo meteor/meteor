@@ -19,9 +19,15 @@ _.extend(ResolverState.prototype, {
     var self = this;
     if (self.error)
       return self;
-    self = self._clone();
 
-    self.constraints = self.constraints.push(constraint);
+    // Add the constraint.
+    var newConstraints = self.constraints.push(constraint);
+    // If we already had the constraint, we're done.
+    if (self.constraints === newConstraints)
+      return self;
+
+    self = self._clone();
+    self.constraints = newConstraints;
 
     var chosen = mori.get(self.choices, constraint.name);
     if (chosen &&
