@@ -648,7 +648,26 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Npm' object visible in package.js ==
+    
+    /**
+     * @namespace Npm
+     * @global
+     * @summary The Npm object in package.js and package source files.
+     */
     var Npm = {
+      /**
+       * @summary Specify which [NPM](https://www.npmjs.org/) packages
+       * your Meteor package depends on.
+       * @param  {Object} dependencies An object where the keys are package
+       * names and the values are version numbers in string form.
+       * You can only depend on exact versions of NPM packages. Example:
+       *
+       * ```js
+       * Npm.depends({moment: "2.8.3"});
+       * ```
+       * @locus package.js
+       * @memberOf  Npm
+       */
       depends: function (_npmDependencies) {
         // XXX make npmDependencies be separate between use and test, so that
         // production doesn't have to ship all of the npm modules used by test
@@ -683,6 +702,13 @@ _.extend(PackageSource.prototype, {
         npmDependencies = _npmDependencies;
       },
 
+      /**
+       * @summary Require a package that was specified using
+       * `Npm.depends()`.
+       * @param  {String} name The name of the package to require.
+       * @locus Server
+       * @memberOf Npm
+       */
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);
@@ -704,7 +730,46 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Cordova' object visible in package.js ==
+    
+    /**
+     * @namespace Cordova
+     * @global
+     * @summary The Cordova object in package.js.
+     */
     var Cordova = {
+      /**
+       * @summary Specify which [Cordova / PhoneGap](http://cordova.apache.org/)
+       * plugins your Meteor package depends on.
+       * 
+       * Plugins are installed from
+       * [plugins.cordova.io](http://plugins.cordova.io/), so the plugins and
+       * versions specified must exist there. Alternatively, the version
+       * can be replaced with a GitHub tarball URL as described in the
+       * [Cordova / PhoneGap](https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration#meteor-packages-with-cordovaphonegap-dependencies)
+       * page of the Meteor wiki on GitHub.
+       * @param  {Object} dependencies An object where the keys are plugin
+       * names and the values are version numbers or GitHub tarball URLs
+       * in string form.
+       * Example:
+       *
+       * ```js
+       * Cordova.depends({
+       *   "org.apache.cordova.camera": "0.3.0"
+       * });
+       * ```
+       *
+       * Alternatively, with a GitHub URL:
+       *
+       * ```js
+       * Cordova.depends({
+       *   "org.apache.cordova.camera":
+       *     "https://github.com/apache/cordova-plugin-camera/tarball/d84b875c"
+       * });
+       * ```
+       * 
+       * @locus package.js
+       * @memberOf  Cordova
+       */
       depends: function (_cordovaDependencies) {
         // XXX make cordovaDependencies be separate between use and test, so that
         // production doesn't have to ship all of the npm modules used by test

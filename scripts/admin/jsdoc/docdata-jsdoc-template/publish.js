@@ -44,6 +44,14 @@
       }
     }
 
+    root.comment = undefined;
+    root.meta = undefined;
+    root.___id = undefined;
+    root.___s = undefined;
+    root.name = undefined;
+    root.tags = undefined;
+    root.scope = undefined;
+
     _.extend(root, getTagDict(data));
     names.push(location);
   };
