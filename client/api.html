@@ -3279,15 +3279,6 @@ When you add a type to EJSON, Meteor will be able to use that type in:
  - storing your type client-side in Minimongo.
  - allowing your type in [`Session`](#session) variables.
 
-{{#note}}
-
-  MongoDB cannot store most user-defined types natively on the server.  Your
-  type will work in Minimongo, and you can send it to the client using a custom
-  publisher, but MongoDB can only store the types defined in
-  [BSON](http://bsonspec.org/).
-
-{{/note}}
-
 Instances of your type must implement [`typeName`](#ejson_type_typeName) and
 [`toJSONValue`](#ejson_type_toJSONValue) methods, and may implement
 [`clone`](#ejson_type_clone) and [`equals`](#ejson_type_equals) methods if the
