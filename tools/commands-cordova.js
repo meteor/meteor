@@ -59,9 +59,9 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
   // XXX a hack to always tell the scripts where warehouse is
   opts = opts || {};
   opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      { "METEOR_WAREHOUSE_DIR": tropo.root },
                       process.env,
-                      opts.env || {},
-                      { "WAREHOUSE_DIR": tropo.root });
+                      opts.env || {});
 
   var execFileAsync = require('./utils.js').execFileAsync;
   ensureAndroidBundle(file);
@@ -88,9 +88,9 @@ var execFileSyncOrThrow = function (file, args, opts) {
   // XXX a hack to always tell the scripts where warehouse is
   opts = opts || {};
   opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      { "METEOR_WAREHOUSE_DIR": tropo.root },
                       process.env,
-                      opts.env || {},
-                      { "WAREHOUSE_DIR": tropo.root });
+                      opts.env || {});
 
   var childProcess = execFileSync(file, args, opts);
   if (! childProcess.success)
