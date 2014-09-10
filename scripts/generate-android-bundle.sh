@@ -30,13 +30,6 @@ if [ "$UNAME" == "Linux" ]; then
     rm android-sdk_r23.0.2-linux.tgz
 
     mv android-sdk-linux android-sdk
-
-    curl -O s3.amazonaws.com/android-bundle/jre-7u67-linux-i586.gz
-    tar zxvf jre-7u67-linux-i586.gz > /dev/null
-    rm jre-7u67-linux-i586.gz
-
-    mv jre1.7.0_67 jre
-
 else
     curl -O http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip
     unzip android-sdk_r23.0.2-macosx.zip > /dev/null
@@ -50,7 +43,7 @@ fi
     tar xzf apache-ant-1.9.4-bin.tar.gz
     rm apache-ant-1.9.4-bin.tar.gz
 
-    # the below asks for confirmation... echo y seems to work lol
+    # the below asks for confirmation... echo y seems to work
 
     # platform tools
     echo y | android-sdk/tools/android update sdk -t platform-tools -u
@@ -58,11 +51,11 @@ fi
     # the platform that cordova likes
     echo y | android-sdk/tools/android update sdk -t android-19 -u
 
+    # We now download system images only if needed, before starting the avd
     # system image for android 19 - arm
-    echo y | android-sdk/tools/android update sdk -t sys-img-armeabi-v7a-android-19 --all -u
-
+    #echo y | android-sdk/tools/android update sdk -t sys-img-armeabi-v7a-android-19 --all -u
     # system image for android 19 - x86
-    echo y | android-sdk/tools/android update sdk -t sys-img-x86-android-19 --all -u
+    #echo y | android-sdk/tools/android update sdk -t sys-img-x86-android-19 --all -u
 
     # build tools
     echo y | android-sdk/tools/android update sdk -t "build-tools-20.0.0" -u
