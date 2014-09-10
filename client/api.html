@@ -3558,6 +3558,10 @@ package is exported to.
 {{> api_box pack_export }}
 {{> api_box pack_addFiles }}
 
+{{#markdown}}
+Packages can also use NPM packages and Cordova/PhoneGap plugins. These will be automatically installed when someone adds the package.
+{{/markdown}}
+
 
 <h3 id="packagetests"><span>Unit Tests</span></h3>
 
@@ -3574,5 +3578,15 @@ in the `_test.js` file that was created.
 {{/markdown}}
 
 {{> api_box pack_onTest }}
+
+<h3><span>External Packages and Plugins</span></h3>
+
+{{#markdown}}
+Meteor packages can include NPM packages and Cordova plugins by using `Npm.depends` and `Cordova.depends` in the `package.js` file.
+{{/markdown}}
+
+{{> autoApiBox "Npm.depends"}}
+{{> autoApiBox "Npm.require"}}
+{{> autoApiBox "Cordova.depends"}}
 
 </template>
