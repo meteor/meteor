@@ -30,13 +30,6 @@ if [ "$UNAME" == "Linux" ]; then
     rm android-sdk_r23.0.2-linux.tgz
 
     mv android-sdk-linux android-sdk
-
-    curl -O s3.amazonaws.com/android-bundle/jre-7u67-linux-i586.gz
-    tar zxvf jre-7u67-linux-i586.gz > /dev/null
-    rm jre-7u67-linux-i586.gz
-
-    mv jre1.7.0_67 jre
-
 else
     curl -O http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip
     unzip android-sdk_r23.0.2-macosx.zip > /dev/null
