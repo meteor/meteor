@@ -57,7 +57,11 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
   }
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
+  opts = opts || {};
+  opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      process.env,
+                      opts.env || {},
+                      { "WAREHOUSE_DIR": tropo.root });
 
   var execFileAsync = require('./utils.js').execFileAsync;
   ensureAndroidBundle(file);
@@ -82,7 +86,11 @@ var execFileSyncOrThrow = function (file, args, opts) {
   verboseLog('Running synchronously: ', file, args);
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
+  opts = opts || {};
+  opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      process.env,
+                      opts.env || {},
+                      { "WAREHOUSE_DIR": tropo.root });
 
   var childProcess = execFileSync(file, args, opts);
   if (! childProcess.success)
@@ -616,6 +624,44 @@ cordova.buildPlatforms = function (localPath, platforms, options) {
   buildCordova(localPath, 'build', options);
 };
 
+
+cordova.buildPlatformRunners = function (localPath, platforms, options) {
+  var runners = [];
+  _.each(platforms, function (platformName) {
+    runners.push(new CordovaRunner(localPath, platformName, options));
+  });
+  return runners;
+};
+
+
+// This is a runner, that we pass to Runner (run-all.js)
+var CordovaRunner = function (localPath, platformName, options) {
+  var self = this;
+
+  self.localPath = localPath;
+  self.platformName = platformName;
+  self.options = options;
+
+  self.title = 'Cordova (' + self.platformName + ')';
+};
+
+_.extend(CordovaRunner.prototype, {
+  start: function () {
+    var self = this;
+
+    execCordovaOnPlatform(self.localPath,
+                          self.platformName,
+                          self.options);
+  },
+
+  stop: function () {
+    var self = this;
+
+    // XXX: A no-op for now (we leave it running because it's slow!)
+  }
+});
+
+
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
 // options:
@@ -631,9 +677,12 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
   verboseLog('isDevice:', isDevice);
 
-  var args = [ 'run',
-               isDevice ? '--device' : '--emulator',
-               platform ];
+  var args = [ 'run' ];
+  if (options.verbose) {
+      args.push('--verbose');
+  }
+  args.push(isDevice ? '--device' : '--emulator');
+  args.push(platform);
 
   // XXX assert we have a valid Cordova project
   if (platform === 'ios' && isDevice) {
@@ -645,9 +694,16 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
              'platforms', 'ios', '*.xcodeproj')]);
   } else {
     verboseLog('Running emulator:', localCordova, args);
+    var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
+    emulatorOptions.env =  _.extend({}, process.env);
+    if (options.httpProxyPort) {
+      // XXX: Is this Android only?
+      // This is odd; the IP address is on the host, not inside the emulator
+      emulatorOptions.env['http_proxy'] = '127.0.0.1:' + options.httpProxyPort;
+    }
     execFileAsyncOrThrow(
       localCordova, args,
-      { verbose: options.verbose, cwd: cordovaPath });
+      emulatorOptions);
   }
 
   var Log = getLoadedPackages().logging.Log;
@@ -733,14 +789,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   return 0;
 };
 
-// Start the simulator or physical device for a list of platforms
-// options:
-//   - verbose: print all build logs
-cordova.runPlatforms = function (localPath, platforms, options) {
-  _.each(platforms, function (platformName) {
-    execCordovaOnPlatform(localPath, platformName, options);
-  });
-};
+
 
 // packages - list of strings
 cordova.filterPackages = function (packages) {
@@ -843,10 +892,16 @@ main.registerCommand({
   name: "configure-android",
   options: {
     verbose: { type: Boolean, short: "v" }
-  }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
 }, function (options) {
+  cordova.setVerboseness(options.verbose);
+
+  var androidArgs = options.args || [];
   try {
-    execFileSyncOrThrow(localAndroid, [], options);
+    var execOptions = { pipeOutput: true, verbose: options.verbose };
+    execFileSyncOrThrow(localAndroid, androidArgs, execOptions);
   } catch (err) {
     // this tool can crash for whatever reason, ignore its failures
   }

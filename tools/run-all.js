@@ -5,6 +5,7 @@ var release = require('./release.js');
 
 var runLog = require('./run-log.js');
 var Proxy = require('./run-proxy.js').Proxy;
+var HttpProxy = require('./run-httpproxy.js').HttpProxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
@@ -36,6 +37,8 @@ var Runner = function (appDir, options) {
     self.rootUrl = 'http://localhost:' + listenPort + '/';
   }
 
+  self.extraRunners = options.extraRunners;
+
   self.proxy = new Proxy({
     listenPort: listenPort,
     listenHost: options.proxyHost,
@@ -43,6 +46,13 @@ var Runner = function (appDir, options) {
     proxyToHost: options.appHost,
     onFailure: options.onFailure
   });
+
+  self.httpProxy = null;
+  if (options.httpProxyPort) {
+    self.httpProxy = new HttpProxy({
+      listenPort: options.httpProxyPort
+    })
+  }
 
   self.mongoRunner = null;
   var mongoUrl, oplogUrl;
@@ -99,6 +109,14 @@ _.extend(Runner.prototype, {
       self.updater.start();
     }
 
+    // print the banner only once we've successfully bound the port
+    if (! self.stopped && self.httpProxy) {
+      self.httpProxy.start();
+      if (! self.quiet) {
+        runLog.log("=> Started http proxy.");
+      }
+    }
+
     if (! self.stopped && self.mongoRunner) {
       var spinner = ['-', '\\', '|', '/'];
       // I looked at some Unicode indeterminate progress indicators, such as:
@@ -136,6 +154,17 @@ _.extend(Runner.prototype, {
       }
     }
 
+    _.forEach(self.extraRunners, function (extraRunner) {
+      if (! self.stopped) {
+        var title = extraRunner.title;
+        if (! self.quiet)
+          runLog.logTemporary("=> Starting " + title + "...");
+        extraRunner.start();
+        if (! self.quiet && ! self.stopped)
+          runLog.log("=> Started " + title + ".");
+      }
+    });
+
     if (! self.stopped) {
       if (! self.quiet)
         runLog.logTemporary("=> Starting your app...");
@@ -161,8 +190,12 @@ _.extend(Runner.prototype, {
 
     self.stopped = true;
     self.proxy.stop();
+    self.httpProxy && self.httpProxy.stop();
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
+    _.forEach(self.extraRunners, function (extraRunner) {
+      extraRunner.stop();
+    });
     self.appRunner.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
