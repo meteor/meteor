@@ -40,6 +40,11 @@ insertVersion("jquery", "1.8.0", "1.8.0");
 insertVersion("jquery", "1.8.2", "1.8.0");
 insertVersion("foobar1", "1.0.0", "1.0.0", {foobar2: "=1.0.0"});
 insertVersion("foobar2", "1.0.0", "1.0.0", {foobar1: "=1.0.0"});
+insertVersion("bad-1", "1.0.0", "1.0.0", {indirect: "1.0.0"});
+insertVersion("bad-2", "1.0.0", "1.0.0", {indirect: "2.0.0"});
+insertVersion("indirect", "1.0.0", "1.0.0");
+insertVersion("indirect", "2.0.0", "2.0.0");
+
 
 // XXX Temporary hack: make a catalog stub to pass in to the constraint
 // solver. We'll soon move constraint-solver into tools and just run
@@ -97,7 +102,8 @@ var FAIL = function (deps, regexp) {
     var dependencies = splitArgs(deps).dependencies;
     var constraints = splitArgs(deps).constraints;
 
-    var resolvedDeps = resolver.resolve(dependencies, constraints);
+    var resolvedDeps = resolver.resolve(dependencies, constraints,
+                                        {_testing: true});
   }, regexp);
 };
 
@@ -137,6 +143,12 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
     "awesome-dropdown": "1.5.0",
     "dropdown": "1.2.2"
   }, { _testing: true });
+});
+
+Tinytest.add("constraint solver - no results", function (test) {
+  currentTest = test;
+  FAIL({ "bad-1": "1.0.0", "bad-2": "" },
+       /indirect@2\.0\.0 is not satisfied by 1.0.0[^]+bad-1[^]+bad-2/);
 });
 
 Tinytest.add("constraint solver - previousSolution", function (test) {
