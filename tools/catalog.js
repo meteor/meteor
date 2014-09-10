@@ -552,17 +552,30 @@ _.extend(CompleteCatalog.prototype, {
       patience.stop();
     }
     if (ret["usedRCs"]) {
-      process.stderr.write(
-"\nWARNING: In order to resolve constraints, we had to use the following "+
- "experimental package versions:\n");
-      var packages = "";
+      var expPackages = [];
       _.each(ret.answer, function(version, package) {
-        if (version.split('-').length > 1) {
-          packages+= package + "@" + version + ", ";
+        if (version.split('-').length > 1 &&
+            !_.findWhere(constr,
+                { packageName: package, version: version })) {
+          expPackages.push({
+              name: "  " + package + "@" + version,
+              description: self.getVersion(package, version).description
+            });
         }
       });
-      packages = packages.slice(0, packages.length - 2);
-      process.stderr.write(packages + "\n\n");
+      if (!_.isEmpty(expPackages)) {
+        // XXX: Couldn't figure out how to word this better for better tenses.
+        process.stderr.write(
+          "------------------------------------------------------------ \n");
+        process.stderr.write(
+          "In order to resolve constraints, we had to use the following\n"+
+            "experimental package versions:\n");
+        process.stderr.write(utils.formatList(expPackages));
+        process.stderr.write(
+          "------------------------------------------------------------ \n");
+
+        process.stderr.write("\n");
+      }
     }
     return ret.answer;
   },

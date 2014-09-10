@@ -43,36 +43,6 @@ var getReleaseOrPackageRecord = function(name) {
   return { record: rec, isRelease: rel };
 };
 
-// Returns a pretty list suitable for showing to the user. Input is an
-// array of objects with keys 'name' and 'description'.
-var formatList = function (items) {
-  var longest = '';
-  _.each(items, function (item) {
-    if (item.name.length > longest.length)
-      longest = item.name;
-  });
-
-  var pad = longest.replace(/./g, ' ');
-  // it'd be nice to read the actual terminal width, but I tried
-  // several methods and none of them work (COLUMNS isn't set in
-  // node's environment; `tput cols` returns a constant 80). maybe
-  // node is doing something weird with ptys.
-  var width = 80;
-
-  var out = '';
-  _.each(items, function (item) {
-    var name = item.name + pad.substr(item.name.length);
-    var description = item.description || 'No description';
-    var line = name + "  " + description;
-    if (line.length > width) {
-      line = line.substr(0, width - 3) + '...';
-    }
-    out += line + "\n";
-  });
-
-  return out;
-};
-
 // Seriously, this dies if it can't refresh. Only call it if you're sure you're
 // OK that the command doesn't work while offline.
 var doOrDie = exports.doOrDie = function (f) {
@@ -1168,13 +1138,13 @@ main.registerCommand({
   if (!_.isEqual(matchingPackages, [])) {
     output = true;
     process.stdout.write("Found the following packages:" + "\n");
-    process.stdout.write(formatList(matchingPackages) + "\n");
+    process.stdout.write(utils.formatList(matchingPackages) + "\n");
   }
 
   if (!_.isEqual(matchingReleases, [])) {
     output = true;
     process.stdout.write("Found the following releases:" + "\n");
-    process.stdout.write(formatList(matchingReleases) + "\n");
+    process.stdout.write(utils.formatList(matchingReleases) + "\n");
   }
 
   if (!output) {
@@ -1254,7 +1224,7 @@ main.registerCommand({
     items.push({ name: 'cordova:' + name, description: version });
   });
 
-  process.stdout.write(formatList(items));
+  process.stdout.write(utils.formatList(items));
 
   if (newVersionsAvailable) {
     process.stdout.write(

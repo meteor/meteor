@@ -11,6 +11,38 @@ var fs = require('fs');
 
 var utils = exports;
 
+
+// Returns a pretty list suitable for showing to the user. Input is an
+// array of objects with keys 'name' and 'description'.
+exports.formatList = function (items) {
+  var longest = '';
+  _.each(items, function (item) {
+    if (item.name.length > longest.length)
+      longest = item.name;
+  });
+
+  var pad = longest.replace(/./g, ' ');
+  // it'd be nice to read the actual terminal width, but I tried
+  // several methods and none of them work (COLUMNS isn't set in
+  // node's environment; `tput cols` returns a constant 80). maybe
+  // node is doing something weird with ptys.
+  var width = 80;
+
+  var out = '';
+  _.each(items, function (item) {
+    var name = item.name + pad.substr(item.name.length);
+    var description = item.description || 'No description';
+    var line = name + "  " + description;
+    if (line.length > width) {
+      line = line.substr(0, width - 3) + '...';
+    }
+    out += line + "\n";
+  });
+
+  return out;
+};
+
+
 // options:
 //   - echo (boolean): defaults to true
 //   - prompt (string)
