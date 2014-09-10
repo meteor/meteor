@@ -10,12 +10,14 @@ function storeAndClose() {
     var credentialToken = config.credentialToken;
     var credentialSecret = config.credentialSecret;
 
-    var credentialString = JSON.stringify({
-      credentialToken: credentialToken,
-      credentialSecret: credentialSecret
-    });
+    if (config.isCordova) {
+      var credentialString = JSON.stringify({
+        credentialToken: credentialToken,
+        credentialSecret: credentialSecret
+      });
 
-    window.location.hash = credentialString;
+      window.location.hash = credentialString;
+    }
 
     if (window.opener && window.opener.Package &&
           window.opener.Package.oauth) {
