@@ -1,6 +1,7 @@
 application-configuration@1.0.2-rc0
 autopublish@1.0.0
 autoupdate@1.0.7-cordova6
+base64@1.0.0-rc0
 binary-heap@1.0.0
 blaze-tools@1.0.0
 blaze@2.0.0
@@ -11,7 +12,7 @@ ctl-helper@1.0.3
 ctl@1.0.1
 ddp@1.0.8
 deps@1.0.3
-ejson@1.0.1
+ejson@1.0.2-rc0
 fastclick@1.0.0-cordova1
 follower-livedata@1.0.1
 geojson-utils@1.0.0
@@ -24,7 +25,7 @@ jquery@1.0.0
 json@1.0.0
 livedata@1.0.9
 logging@1.0.2-cordova2
-meteor-platform@1.1.0-rc0
+meteor-platform@1.1.0-rc1
 meteor@1.1.0-rc1
 minifiers@1.1.0-rc0
 minimongo@1.0.3-rc1
@@ -42,10 +43,10 @@ session@1.0.1
 spacebars-compiler@1.0.2
 spacebars@1.0.1
 standard-app-packages@1.0.1
-templating@1.0.6-rc1
+templating@1.0.6-rc2
 tracker@1.0.2
 ui@1.0.2
 underscore@1.0.0
 url@1.0.0-rc0
 webapp-hashing@1.0.0-cordova1
-webapp@1.1.1-rc1
+webapp@1.1.1-rc2
