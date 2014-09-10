@@ -155,7 +155,8 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     ROOT_URL_PATH_PREFIX: '',
     DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port,
     autoupdateVersionCordova: version,
-    cleanCache: options.clean
+    cleanCache: options.clean,
+    httpProxyPort: options.httpProxyPort
   };
 
   if (publicSettings)
