@@ -122,8 +122,8 @@ var ensureAndroidBundle = function () {
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
   } catch (err) {
-    verboseLog('Failed to install android_bundle: ', err.stack);
-    throw new Error('Failed to install android_bundle: ' + err.message);
+    verboseLog('Failed to install android_bundle ', err.stack);
+    throw new Error('Failed to install android_bundle');
   }
 };
 
