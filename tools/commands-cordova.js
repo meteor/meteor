@@ -281,6 +281,9 @@ cordova.ensureCordovaProject = function (localPath, appName) {
       // XXX cache them there
       files.mkdir_p(localPluginsPath);
     } catch (err) {
+      if (err instanceof main.ExitWithCode) {
+        process.exit(err.code);
+      }
       process.stderr.write("Error creating Cordova project: " +
         err.message + "\n" + err.stack + "\n");
     }
