@@ -703,10 +703,10 @@ _.extend(PackageSource.prototype, {
       },
 
       /**
-       * @summary Require a package that was specified in your package.js using
+       * @summary Require a package that was specified using
        * `Npm.depends()`.
        * @param  {String} name The name of the package to require.
-       * @locus package.js
+       * @locus Server
        * @memberOf Npm
        */
       require: function (name) {
@@ -738,14 +738,16 @@ _.extend(PackageSource.prototype, {
      */
     var Cordova = {
       /**
-       * @summary Specify which [Cordova / PhoneGap](https://www.npmjs.org/)
+       * @summary Specify which [Cordova / PhoneGap](http://cordova.apache.org/)
        * packages your Meteor package depends on.
        * @param  {Object} dependencies An object where the keys are package
        * names and the values are version numbers in string form.
        * Example:
        *
        * ```js
-       * Cordova.depends({ "org.apache.cordova.camera":"0.3.0" });
+       * Cordova.depends({
+       *   "org.apache.cordova.camera":"0.3.0"
+       * });
        * ```
        * @locus package.js
        * @memberOf  Cordova
