@@ -380,7 +380,10 @@ var toc = [
         {name: "api.export", id: "pack_export"},
         {name: "api.addFiles", id: "pack_addFiles"}
       ],
-      {name: "Package.onTest", id: "packagetests"}
+      {name: "Package.onTest", id: "packagetests"},
+      {name: "Npm.depends", id: "Npm-depends"},
+      {name: "Npm.require", id: "Npm-require"},
+      {name: "Cordova.depends", id: "Cordova-depends"}
     ]
   ],
 
