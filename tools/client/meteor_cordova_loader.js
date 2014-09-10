@@ -7,37 +7,6 @@
  */
 
 (function () {
-
-  var loadedEvent = (function () {
-    var usingEventConstructor = false;
-
-    // some browsers don't support the Event constructor
-    // eg Cordova on Android JellyBean
-    if (window.Event) {
-      usingEventConstructor = true;
-    }
-
-    var eventName = 'meteor-cordova-loaded';
-    var event;
-    if (usingEventConstructor) {
-      try {
-        event = new Event(eventName);
-      } catch (err) {
-        usingEventConstructor = false;
-      }
-    }
-    if (! usingEventConstructor) {
-      event = document.createEvent('Event');
-      event.initEvent(eventName, true, true);
-    }
-
-    return {
-      dispatch: function () {
-        document.dispatchEvent(event);
-      }
-    };
-  })();
-
   var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
@@ -66,68 +35,32 @@
   };
 
 
-  // To ensure that all our <script> tags are loaded in the correct order we add
-  // them to DOM one by one.
-  // The assumption here is that every element in the queue is a function that
-  // calls loadScript only once. Because loadScript makes sure to call
-  // launchNext after the async operation is done, it works as intended. We
-  // allow the last function to be something different (like trigger the
-  // document event).
-  var queue = [];
-  var launchNext = function () {
-    if (! queue.length)
-      return;
-    var fun = queue.shift();
-    fun();
-  };
-
-  var loadScript = function (url) {
-    var scriptTag = document.createElement('script');
-    scriptTag.type = "text/javascript";
-    scriptTag.src = url;
-    scriptTag.onload = launchNext;
-
-    document.getElementsByTagName('head')[0].appendChild(scriptTag);
-  };
-
-  var loadStyle = function (url) {
-    var styleTag = document.createElement('link');
-    styleTag.rel = "stylesheet";
-    styleTag.type = "text/css";
-    styleTag.href = url;
-    document.getElementsByTagName('head')[0].appendChild(styleTag);
-  };
-
   var stripLeadingSlash = function (p) {
     if (p.charAt(0) !== '/')
       throw new Error("bad path: " + p);
     return p.slice(1);
   };
 
-  var loadAssetsFromManifest = function (manifest, urlPrefix) {
-    // Set the base href so that relative paths point to the correct version
-    // of the app.
-    var newBase = document.createElement("base");
-    newBase.setAttribute("href", urlPrefix);
-    document.getElementsByTagName("head")[0].appendChild(newBase);
-
-    each(manifest, function (item) {
-      // We want to use relative paths so that our base href is taken into
-      // account.
-      var url = item.url ? stripLeadingSlash(item.url) : '';
-      if (item.type === 'js')
-        queue.push(function () {
-          loadScript(url);
+  var loadFromLocation = function (location) {
+    var cordovaRoot = decodeURI(window.location.href).replace(/\/index.html$/, '/').replace(/^file:\/\/?/, '');
+    var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
+    httpd.getURL(function(url){
+      if(url.length > 0) {
+        // XXX shut down the server
+      } else {
+        httpd.startServer({
+          'www_root' : location,
+          'port' : 8080,
+          'cordovajs_root': cordovaRoot
+        }, function(url) {
+          // go to the new proxy url
+          window.location = url;
+        }, function( error ){
+          console.error('Failed to start a proxy');
         });
-      else if (item.type === 'css')
-        loadStyle(url);
-    });
+      }
 
-    queue.push(function () {
-      loadedEvent.dispatch();
-    });
-
-    launchNext();
+    },function(){});
   };
 
   // Fallback to the bundled assets from the disk. If an error is passed as an
@@ -141,7 +74,7 @@
       console.log('No new versions saved to disk.');
     }
 
-    loadAssetsFromManifest(__meteor_manifest__, '');
+    loadFromLocation('application');
   };
 
   var listDirectory = function (url, options, cb) {
@@ -176,21 +109,9 @@
   var loadVersion = function (version, localPathPrefix) {
     var versionPrefix = localPathPrefix + version + '/';
     // We have a version string, now read the new version
-    readFile(versionPrefix + 'manifest.json',
-        function (err, res) {
-      if (err) {
-        fallback(err);
-        return;
-      }
-
-      var program = JSON.parse(res);
-      // update the version we are loading
-      __meteor_runtime_config__.autoupdateVersionCordova = version;
-      // update the public settings
-      __meteor_runtime_config__.PUBLIC_SETTINGS = program.PUBLIC_SETTINGS;
-
-      loadAssetsFromManifest(program.manifest, versionPrefix);
-    });
+    // Relative to "bundle.app/www"
+    var location = '../../Documents/meteor/' + version;
+    loadFromLocation(location);
   };
 
   var loadApp = function (localPathPrefix) {
@@ -230,19 +151,12 @@
   };
 
   document.addEventListener("deviceready", function () {
+    if (window.cordova.logger)
+      window.cordova.logger.__onDeviceReady();
+
     var localPathPrefix = cordova.file.applicationStorageDirectory +
                           'Documents/meteor/';
-    if (__meteor_runtime_config__.cleanCache) {
-      // If cleanCache is enabled, clean the cache and then load the app.
-      removeDirectory(localPathPrefix, function (err) {
-        if (err) console.log('Failed to clear cache: ' + err.message);
-        else console.log('Successfully cleared the cache.');
-
-        loadApp(localPathPrefix);
-      });
-    } else {
-      loadApp(localPathPrefix);
-    }
+    loadApp(localPathPrefix);
   }, false);
 })();
 

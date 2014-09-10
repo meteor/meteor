@@ -67,5 +67,7 @@ Package.on_use(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.device': '0.2.11'
+  'org.apache.cordova.device': '0.2.11',
+  'com.rjfun.cordova.httpd': 'https://github.com/meteor/cordova-httpd/tarball/813c92d2475e0d476ef4e013c6de8a470fc94be1'
 });
+

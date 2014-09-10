@@ -286,8 +286,6 @@ var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
 
   return new Boilerplate(arch, manifest,
     _.extend({
-      urlMapper:
-        function (url) { return getUrlPrefixForArch(arch) + url; },
       pathMapper: function (itemPath) {
         return path.join(archPath[arch], itemPath); },
       baseDataExtension: {
@@ -419,6 +417,10 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
+    // XXX if it is a manifest we are serving, set additional headers
+    if (/\/manifest.json$/.test(pathname)) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
   }
 
   if (info.content) {
@@ -445,7 +447,11 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
 var getUrlPrefixForArch = function (arch) {
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
-  return arch === WebApp.defaultArch ? '' : '/' + arch.replace(/^web\./, '');
+
+  // We add '__' to the beginning of non-standard archs to "scope" the url
+  // to Meteor internals.
+  return arch === WebApp.defaultArch ?
+    '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
 var runWebAppServer = function () {
@@ -531,10 +537,23 @@ var runWebAppServer = function () {
   };
 
   WebAppInternals.generateBoilerplate = function () {
+    // This boilerplate will be served to the mobile devices when used with
+    // Meteor/Cordova for the Hot-Code Push and since the file will be served by
+    // the device's server, it is important to set the DDP url to the actual
+    // Meteor server accepting DDP connections and not the device's file server.
+    var defaultOptionsForArch = {
+      'web.cordova': {
+        runtimeConfigDefaults: {
+          DDP_DEFAULT_CONNECTION_URL: __meteor_runtime_config__.ROOT_URL
+        }
+      }
+    };
+
     syncQueue.runTask(function() {
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
-          generateBoilerplateInstance(archName, program.manifest);
+          generateBoilerplateInstance(archName, program.manifest,
+                                      defaultOptionsForArch[archName]);
       });
 
       // Clear the memoized boilerplate cache.
@@ -637,11 +656,15 @@ var runWebAppServer = function () {
       return undefined;
     }
 
-    // /packages/asdfsad ... /cordova/dafsdf.js
+    // /packages/asdfsad ... /__cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
-    var archKey = 'web.' + pathname.split('/')[1];
-    if (!_.has(archPath, archKey)) {
+    var archKey = pathname.split('/')[1];
+    var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
+
+    if (! /^__/.test(archKey) || ! _.has(archPath, archKeyCleaned)) {
       archKey = WebApp.defaultArch;
+    } else {
+      archKey = archKeyCleaned;
     }
 
     var boilerplate;
