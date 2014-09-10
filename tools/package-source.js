@@ -739,16 +739,34 @@ _.extend(PackageSource.prototype, {
     var Cordova = {
       /**
        * @summary Specify which [Cordova / PhoneGap](http://cordova.apache.org/)
-       * packages your Meteor package depends on.
-       * @param  {Object} dependencies An object where the keys are package
-       * names and the values are version numbers in string form.
+       * plugins your Meteor package depends on.
+       * 
+       * Plugins are installed from
+       * [plugins.cordova.io](http://plugins.cordova.io/), so the plugins and
+       * versions specified must exist there. Alternatively, the version
+       * can be replaced with a GitHub tarball URL as described in the
+       * [Cordova / PhoneGap](https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration#meteor-packages-with-cordovaphonegap-dependencies)
+       * page of the Meteor wiki on GitHub.
+       * @param  {Object} dependencies An object where the keys are plugin
+       * names and the values are version numbers or GitHub tarball URLs
+       * in string form.
        * Example:
        *
        * ```js
        * Cordova.depends({
-       *   "org.apache.cordova.camera":"0.3.0"
+       *   "org.apache.cordova.camera": "0.3.0"
        * });
        * ```
+       *
+       * Alternatively, with a GitHub URL:
+       *
+       * ```js
+       * Cordova.depends({
+       *   "org.apache.cordova.camera":
+       *     "https://github.com/apache/cordova-plugin-camera/tarball/d84b875c"
+       * });
+       * ```
+       * 
        * @locus package.js
        * @memberOf  Cordova
        */
