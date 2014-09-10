@@ -256,14 +256,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // versions. Is it possible that a pre-release version will satisfy our
   // constraints?
   if (!res) {
-    try {
-      resolverOptions["useRCs"] = true;
-      res = self.resolver.resolve(
-        dc.dependencies, dc.constraints, resolverOptions);
-    } catch (e) {
-      if (!(e.constraintSolverError))
-        throw e;
-    }
+    resolverOptions["useRCs"] = true;
+    res = self.resolver.resolve(
+      dc.dependencies, dc.constraints, resolverOptions);
   }
   var ret = { answer:  resolverResultToPackageMap(res) };
   if (resolverOptions.useRCs)
