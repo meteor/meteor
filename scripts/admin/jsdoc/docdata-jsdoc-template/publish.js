@@ -44,6 +44,8 @@
       }
     }
 
+    data.comment = null;
+
     _.extend(root, getTagDict(data));
     names.push(location);
   };
