@@ -253,48 +253,49 @@ _.extend(exports.Tropohouse.prototype, {
         var dlTimer = setInterval(printUpdate, 200);
     }
 
-    var buildTempDirs = [];
-    // If there's already a package in the tropohouse, start with it.
-    if (packageLinkTarget) {
-      buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
-                                      packageLinkTarget));
+    try {
+      var buildTempDirs = [];
+      // If there's already a package in the tropohouse, start with it.
+      if (packageLinkTarget) {
+        buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
+                                        packageLinkTarget));
+      }
+      // XXX how does concurrency work here?  we could just get errors if we try
+      // to rename over the other thing?  but that's the same as in warehouse?
+      _.each(buildsToDownload, function (build) {
+        buildTempDirs.push(self.downloadBuildToTempDir(
+          {packageName: packageName, version: version}, build));
+      });
+
+      // We need to turn our builds into a single unipackage.
+      var unipackage = new Unipackage;
+      _.each(buildTempDirs, function (buildTempDir, i) {
+        unipackage._loadUnibuildsFromPath(
+          packageName,
+          buildTempDir,
+          {firstUnipackage: i === 0});
+      });
+      // Note: wipeAllPackages depends on this filename structure, as does the
+      // part above which readlinks.
+      var newPackageLinkTarget = '.' + version + '.'
+            + utils.randomToken() + '++' + unipackage.buildArchitectures();
+      var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
+      unipackage.saveToPath(combinedDirectory, {
+        // We got this from the server, so we can't rebuild it.
+        elideBuildInfo: true
+      });
+      files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+      // Clean up old version.
+      if (packageLinkTarget) {
+        files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
+      }
+    } finally {
+      if (!options.silent) {
+        clearInterval(dlTimer);
+        process.stderr.write(header + " done\n");
+      }
     }
-    // XXX how does concurrency work here?  we could just get errors if we try
-    // to rename over the other thing?  but that's the same as in warehouse?
-    _.each(buildsToDownload, function (build) {
-      buildTempDirs.push(self.downloadBuildToTempDir(
-        {packageName: packageName, version: version}, build));
-    });
-
-    // We need to turn our builds into a single unipackage.
-    var unipackage = new Unipackage;
-    _.each(buildTempDirs, function (buildTempDir, i) {
-      unipackage._loadUnibuildsFromPath(
-        packageName,
-        buildTempDir,
-        {firstUnipackage: i === 0});
-    });
-    // Note: wipeAllPackages depends on this filename structure, as does the
-    // part above which readlinks.
-    var newPackageLinkTarget = '.' + version + '.'
-          + utils.randomToken() + '++' + unipackage.buildArchitectures();
-    var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
-    unipackage.saveToPath(combinedDirectory, {
-      // We got this from the server, so we can't rebuild it.
-      elideBuildInfo: true
-    });
-    files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
-
-    // Clean up old version.
-    if (packageLinkTarget) {
-      files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
-    }
-
-    if (!options.silent) {
-      clearInterval(dlTimer);
-      process.stderr.write(header + " done\n");
-    }
-
 
     return;
   },
