@@ -1,7 +1,7 @@
-if (StatusBar) {
-  StatusBar.overlaysWebView(false);
-  StatusBar.show();
-  StatusBar.styleDefault();
-  StatusBar.backgroundColorByName('white');
+if (window.StatusBar) {
+  window.StatusBar.overlaysWebView(false);
+  window.StatusBar.show();
+  window.StatusBar.styleDefault();
+  window.StatusBar.backgroundColorByName('white');
 }
 
