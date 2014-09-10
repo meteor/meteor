@@ -394,6 +394,7 @@ var toc = [
     "browser-policy",
     "coffeescript",
     "d3",
+    "fastclick",
     "force-ssl",
     "jquery",
     "less",
