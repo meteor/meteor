@@ -281,7 +281,7 @@ selftest.define("add packages to app", ["net"], function () {
 selftest.define("add packages client archs", function (options) {
   var runTestWithArgs = function (clientType, args, port) {
     var s = new Sandbox({
-      clients: _.extend(options.clients, { port: port }),
+      clients: _.extend(options.clients, { port: port })
     });
 
     // Starting a run
@@ -294,7 +294,7 @@ selftest.define("add packages client archs", function (options) {
     outerRun.match("added");
     outerRun.expectExit(0);
     checkPackages(s,
-                  ["standard-app-packages", "say-something-client-targets"]);
+                  ["meteor-platform", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
