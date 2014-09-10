@@ -12,13 +12,13 @@ var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
+var tropohouse = require('./tropohouse.js');
 
 var semver = require('semver');
 var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 
 //PASCAL NOTES
 //offline mode?
-//refresh??
 //What are the options that are passed to the initialize method in catalog?
 //Do we care about a case where the user completely busts the storage (e.g. deletes it?)
 //Do we want to close the DB explicitely? Do we have good opportunities to do this?
@@ -220,7 +220,7 @@ _.extend(CatalogStore.prototype, {
      db.all(query, values, function(err, rows) {
       if ( !(err === null) ) {
         future.return();
-        return;
+        return result;
       }
 
       result = _.map(rows, function(entity) {
@@ -301,6 +301,14 @@ _.extend(CatalogStore.prototype, {
       //timestamps
     });
     future.wait();
+  },
+
+  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
+    var packageDir = tropohouse.default.packagePath(name, version);
+    if (fs.existsSync(packageDir)) {
+      return packageDir;
+    }
+    return null;
   }
 });
 exports.CatalogStore = CatalogStore;
