@@ -265,11 +265,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
         throw e;
     }
   }
-  var ret = {
-    answer:  resolverResultToPackageMap(res),
-    usedRCs: resolverOptions["useRCs"]
-  };
-
+  var ret = { answer:  resolverResultToPackageMap(res) };
+  if (resolverOptions.useRCs)
+    ret.usedRCs = true;
   return ret;
 };
 

@@ -89,7 +89,7 @@ var t = function (deps, expected, options) {
   var constraints = splitArgs(deps).constraints;
 
   var resolvedDeps = resolver.resolve(dependencies, constraints, options);
-  currentTest.equal(resolvedDeps, expected);
+  currentTest.equal(resolvedDeps, {answer: expected});
 };
 
 var FAIL = function (deps, regexp) {
@@ -191,14 +191,14 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   currentTest = test;
-  var versions = resolver.resolve(["sparkle"], [], { _testing: true });
+  var versions = resolver.resolve(["sparkle"], [], { _testing: true }).answer;
   test.isTrue(_.isString(versions.sparkle));
 });
 
 
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   currentTest = test;
-  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", type: "compatible-with" }], { _testing: true });
+  var versions = resolver.resolve(["sparkle", "sparky-forms"], [{ packageName: "sparky-forms", version: "1.1.2", type: "compatible-with" }], { _testing: true }).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
 
