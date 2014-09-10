@@ -481,7 +481,9 @@ main.registerCommand({
   });
 
   var messages = buildmessage.capture(function () {
-    project._ensureDepsUpToDate();
+    // Run the constraint solver. Override the assumption that using '--release'
+    // means we shouldn't update .meteor/versions.
+    project._ensureDepsUpToDate({alwaysRecord: true});
   });
 
 

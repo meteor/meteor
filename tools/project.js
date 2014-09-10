@@ -177,8 +177,9 @@ _.extend(Project.prototype, {
   // If the project's dependencies are up to date, this does nothing. Otherwise,
   // it recomputes the combined constraints, the versions to use and initializes
   // the package loader for this project. This WILL REWRITE THE VERSIONS FILE.
-  _ensureDepsUpToDate : function () {
+  _ensureDepsUpToDate : function (options) {
     var self = this;
+    options = options || {};
     buildmessage.assertInCapture();
 
     // To calculate project dependencies, we need to know what release we are
@@ -223,7 +224,8 @@ _.extend(Project.prototype, {
       // Download packages to disk, and rewrite .meteor/versions if it has
       // changed.
       var oldVersions = self.dependencies;
-      var setV = self.setVersions(newVersions);
+      var setV = self.setVersions(newVersions,
+                                  {alwaysRecord: options.alwaysRecord});
       self.showPackageChanges(oldVersions, newVersions, {
         onDiskPackages: setV.downloaded
       });
@@ -683,7 +685,8 @@ _.extend(Project.prototype, {
     options = options || {};
 
     // If the user forced us to an explicit release, then maybe we shouldn't
-    // record versions, unless we are updating, in which case, we should.
+    // record versions, unless we are updating or creating, in which case, we
+    // should.
     if (release.explicit && !options.alwaysRecord) {
       return;
     }
