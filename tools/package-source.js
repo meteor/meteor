@@ -648,7 +648,26 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Npm' object visible in package.js ==
+    
+    /**
+     * @namespace Npm
+     * @global
+     * @summary The Npm object in package.js and package source files.
+     */
     var Npm = {
+      /**
+       * @summary Specify which [NPM](https://www.npmjs.org/) packages
+       * your Meteor package depends on.
+       * @param  {Object} dependencies An object where the keys are package
+       * names and the values are version numbers in string form.
+       * You can only depend on exact versions of NPM packages. Example:
+       *
+       * ```js
+       * Npm.depends({moment: "2.8.3"});
+       * ```
+       * @locus package.js
+       * @memberOf  Npm
+       */
       depends: function (_npmDependencies) {
         // XXX make npmDependencies be separate between use and test, so that
         // production doesn't have to ship all of the npm modules used by test
@@ -683,6 +702,13 @@ _.extend(PackageSource.prototype, {
         npmDependencies = _npmDependencies;
       },
 
+      /**
+       * @summary Require a package that was specified in your package.js using
+       * `Npm.depends()`.
+       * @param  {String} name The name of the package to require.
+       * @locus package.js
+       * @memberOf Npm
+       */
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);
@@ -704,7 +730,26 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Cordova' object visible in package.js ==
+    
+    /**
+     * @namespace Cordova
+     * @global
+     * @summary The Cordova object in package.js.
+     */
     var Cordova = {
+      /**
+       * @summary Specify which [Cordova / PhoneGap](https://www.npmjs.org/)
+       * packages your Meteor package depends on.
+       * @param  {Object} dependencies An object where the keys are package
+       * names and the values are version numbers in string form.
+       * Example:
+       *
+       * ```js
+       * Cordova.depends({ "org.apache.cordova.camera":"0.3.0" });
+       * ```
+       * @locus package.js
+       * @memberOf  Cordova
+       */
       depends: function (_cordovaDependencies) {
         // XXX make cordovaDependencies be separate between use and test, so that
         // production doesn't have to ship all of the npm modules used by test
