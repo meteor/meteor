@@ -265,8 +265,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
         throw e;
     }
   }
+  var ret = {
+    answer:  resolverResultToPackageMap(res),
+    usedRCs: resolverOptions["useRCs"]
+  };
 
-  return resolverResultToPackageMap(res);
+  return ret;
 };
 
 var removeUnibuild = function (unitName) {

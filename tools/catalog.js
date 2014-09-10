@@ -528,13 +528,15 @@ _.extend(CompleteCatalog.prototype, {
       messageAfterMs: 1000,
       message: "Figuring out the best package versions to use. This may take a moment."
     });
+
+    var ret;
     try {
       // Then, call the constraint solver, to get the valid transitive subset of
       // those versions to record for our solution. (We don't just return the
       // original version lock because we want to record the correct transitive
       // dependencies)
       try {
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        ret = self.resolver.resolve(deps, constr, resolverOpts);
       } catch (e) {
         // Maybe we only failed because we need to refresh. Try to refresh
         // (unless we already are) and retry.
@@ -544,12 +546,27 @@ _.extend(CompleteCatalog.prototype, {
         }
         catalog.official.refresh();
         self.resolver || self._initializeResolver();
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        ret = self.resolver.resolve(deps, constr, resolverOpts);
       }
     } finally {
       patience.stop();
     }
+    if (ret["usedRCs"]) {
+      process.stderr.write(
+"\nWARNING: In order to resolve constraints, we had to use the following "+
+ "experimental package versions:\n");
+      var packages = "";
+      _.each(ret.answer, function(version, package) {
+        if (version.split('-').length > 1) {
+          packages+= package + "@" + version + ", ";
+        }
+      });
+      packages = packages.slice(0, packages.length - 2);
+      process.stderr.write(packages + "\n\n");
+    }
+    return ret.answer;
   },
+
   // Refresh the packages in the catalog.
   //
   // Reread server data from data.json on disk, then load local overrides on top

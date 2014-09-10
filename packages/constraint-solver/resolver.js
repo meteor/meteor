@@ -390,7 +390,8 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
   }
 
   if (self.type === "any-reasonable") {
-    // Non-prerelease versions are always reasonable.
+    // Non-prerelease versions are always reasonable, and if we are OK with
+    // using RCs all the time, then they are reasonable too.
     if (!/-/.test(candidateUV.version) ||
         resolveContext.useRCsOK)
       return true;
@@ -421,9 +422,10 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
     return self.version === candidateUV.version;
   }
 
-  // If you're not asking for a pre-release, you'll only get it if it was a top
-  // level explicit mention (eg, in the release).
-  if (/-/.test(candidateUV.version)) {
+  // If you're not asking for a pre-release (and you are not in pre-releases-OK
+  // mode), you'll only get it if it was a top level explicit mention (eg, in
+  // the release).
+  if (/-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
     if (self.version === candidateUV.version)
       return true;
     if (!_.has(resolveContext.topLevelPrereleases, self.name) ||
