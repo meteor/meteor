@@ -1,5 +1,5 @@
 var selftest = require('../selftest.js');
-var CatalogStore = require('../catalogStore.js');
+var CatalogStore = require('../catalog-remote.js');
 var fs = require('fs');
 var _ = require('underscore');
 
@@ -15,7 +15,7 @@ selftest.define("catalogStoreInsert", [], function () {
 	var data = fs.readFileSync('/Users/pascalrapicault/.meteor/package-metadata/v1/packages.data.json', 'utf8');
 	var ret = JSON.parse(data)
 	
-	var cs = new CatalogStore.CatalogStore();
+    var cs = new CatalogStore.RemoteCatalog();
 	cs.insertData(ret);
 });
 

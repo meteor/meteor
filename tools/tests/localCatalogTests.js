@@ -3,6 +3,7 @@ var cata = require('../catalog-local.js');
 var fs = require('fs');
 var _ = require('underscore');
 var buildmessage = require('../buildmessage.js');
+var layeredCata = require('../catalog-layered.js');
 
 //TODO
 //Tests to write
@@ -25,6 +26,19 @@ selftest.define("localCatalogTest", [], function () {
     console.log(lc.isLocalPackage("url"));
      var messages = buildmessage.capture(function () {
       lc.rebuildLocalPackages("url");
+      lc.getPackage
     });
 });
 
+
+selftest.define("testFunctions", [], function () {
+  var lac = new layeredCata.LayeredCatalog();
+  var lc = new cata.LocalCatalog();
+  var messages = buildmessage.capture(function () {
+      lc.initialize({localPackageDirs: ["/Users/pascalrapicault/dev/meteor/packages"]});
+    });
+  lac.setCatalogs(lc, lc);
+  var messages = buildmessage.capture(function () {
+    console.log(lac.getAllBuilds("a", "1.0"));
+  });
+});
