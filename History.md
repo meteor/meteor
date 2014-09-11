@@ -20,7 +20,8 @@
 
 * Improved error reporting for misbehaving oplog observe driver. #2033 #2244
 
-* Drop deprecated sourcemap linking format used for older versions of Firefox.
+* Drop deprecated source map linking format used for older versions of Firefox.
+  #2385
 
 * Allow Meteor tool to run from a symlink. #2462
 
