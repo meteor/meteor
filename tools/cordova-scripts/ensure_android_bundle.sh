@@ -24,10 +24,10 @@ command -v java >/dev/null 2>&1 || {
     DISTRO=`lsb_release --id --short 2>/dev/null` || DISTRO=""
     PROCESSOR=`uname --processor 2>/dev/null` || PROCESSOR=""
 
-    if [ "${DISTRO}" == "Ubuntu" || "${DISTRO}" == "Debian" ] ; then
+    if [[ "${DISTRO}" == "Ubuntu" || "${DISTRO}" == "Debian" ]] ; then
        echo "You can install the JDK using:"
        echo "  apt-get install openjdk-7-jdk"
-       if [ "${PROCESSOR}" == "x86_64" ] ; then
+       if [[ "${PROCESSOR}" == "x86_64" ]] ; then
          echo ""
          echo "You will also the 32 bit libraries:"
          echo "  apt-get install lib32z1 lib32stdc++6"
