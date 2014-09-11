@@ -627,7 +627,7 @@ _.extend(AppRunner.prototype, {
         var oldFuture = self.runFuture = new Future;
 
         // Notify the server that new client assets have been added to the build.
-        process.kill(appProcess.proc.pid, 'SIGUSR2');
+        appProcess.proc.kill('SIGUSR2');
 
         // Establish a watcher on the new files.
         setupClientWatcher();
