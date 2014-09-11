@@ -272,7 +272,7 @@ Template.prototype.events = function (eventMap) {
  * @summary The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
  * @locus Client
  */
-instance = function () {
+Template.instance = function () {
   var view = Blaze.currentView;
 
   while (view && ! view.template)
