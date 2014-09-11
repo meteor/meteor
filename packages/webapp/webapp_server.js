@@ -259,22 +259,23 @@ var boilerplateByArch = {};
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-  var calculateMemoizationHash = function (request, arch) {
-    var htmlAttributes = getHtmlAttributes(request);
-    // The only thing that changes from request to request (for now) are
-    // the HTML attributes (used by, eg, appcache) and whether inline
-    // scripts are allowed, so we can memoize based on that.
-    return JSON.stringify({
-      inlineScriptsAllowed: inlineScriptsAllowed,
-      htmlAttributes: htmlAttributes,
-      arch: arch
+
+  var htmlAttributes = getHtmlAttributes(request);
+
+  // The only thing that changes from request to request (for now) are
+  // the HTML attributes (used by, eg, appcache) and whether inline
+  // scripts are allowed, so we can memoize based on that.
+  var memHash = JSON.stringify({
+    inlineScriptsAllowed: inlineScriptsAllowed,
+    htmlAttributes: htmlAttributes,
+    arch: arch
+  });
+
+  if (! memoizedBoilerplate[memHash]) {
+    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
+      htmlAttributes: htmlAttributes
     });
-  };
-
-  var memHash = calculateMemoizationHash(request, arch);
-
-  if (! memoizedBoilerplate[memHash])
-    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML();
+  }
   return memoizedBoilerplate[memHash];
 };
 
