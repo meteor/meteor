@@ -32,7 +32,7 @@ command -v java >/dev/null 2>&1 || {
 
       if [[ "${PROCESSOR}" == "x86_64" ]] ; then
         echo ""
-        echo "You will also the 32 bit libraries:"
+        echo "You will also need some 32-bit libraries:"
         echo "  apt-get install lib32z1 lib32stdc++6"
       fi
     fi
@@ -40,6 +40,12 @@ command -v java >/dev/null 2>&1 || {
     if [[ "${HAS_YUM}" != "" ]] ; then
       echo "You can install the JDK using:"
       echo "  yum install -y java-1.7.0-openjdk-devel"
+
+      if [[ "${PROCESSOR}" == "x86_64" ]] ; then
+        echo ""
+        echo "You will also need some 32-bit libraries:"
+        echo "  yum install -y glibc.i686 zlib.i686 libstdc++.i686 ncurses-libs.i686"
+      fi
     fi
 
 
