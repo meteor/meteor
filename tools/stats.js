@@ -42,7 +42,7 @@ var packageList = function (_currentProjectForTest) {
   if (_currentProjectForTest) {
     versions = _currentProjectForTest.dependencies;
   } else {
-    versions = project.project.getVersions();
+    versions = project.project.getVersions({ dontRunConstraintSolver: true });
   }
 
   return _.map(
