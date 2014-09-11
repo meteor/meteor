@@ -547,6 +547,7 @@ var buildCommands = {
     architecture: { type: String },
     port: { type: String, short: "p", default: "localhost:3000" },
     settings: { type: String },
+    verbose: { type: Boolean, short: "v" },
     // Undocumented
     'for-deploy': { type: Boolean }
   }
@@ -554,6 +555,7 @@ var buildCommands = {
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     function (options) {
+  cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
@@ -670,6 +672,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // Deprecated -- identical functionality to 'build'
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
+  cordova.setVerboseness(options.verbose);
   process.stdout.write("WARNING: 'bundle' has been deprecated. " +
                        "Use 'build' instead.\n");
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
