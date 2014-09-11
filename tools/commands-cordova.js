@@ -177,9 +177,7 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     WebAppHashing.calculateClientHash(manifest, null, configDummy);
 
   // XXX partially copied from autoupdate package
-  var version = process.env.AUTOUPDATE_VERSION ||
-        process.env.SERVER_ID || // XXX COMPAT 0.6.6
-        calculatedHash;
+  var version = process.env.AUTOUPDATE_VERSION || calculatedHash;
 
   var runtimeConfig = {
     meteorRelease: meteorRelease,
