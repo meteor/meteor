@@ -143,7 +143,7 @@ install_x86 () {
     echo "Android x86 System image not found.  Found targets:"
     android list target
     echo "Downloading x86 system image..."
-    echo y | android update sdk -t sys-img-x86-android-19 --all -u
+    echo y | android update sdk -t sys-img-x86-android-19 --all -u > /dev/null 2>&1
 }
 
 # create avd if necessary
@@ -154,7 +154,7 @@ if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]]
   (android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
 
   echo "
-" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
+" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ > /dev/null 2>&1
 
   # Nice keyboard support
   set_config "hw.keyboard" "yes"
