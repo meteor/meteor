@@ -153,6 +153,10 @@ if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]]
 
   (android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
 
+  # XXX if this command fails, it would be really hard to debug or understand
+  # for the end user. But the output is also very misleading. Later we should
+  # save the output to a log file and tell user where to find it in case of
+  # failure.
   echo "
 " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ > /dev/null 2>&1
 
