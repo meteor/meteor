@@ -161,6 +161,8 @@ _.extend(Project.prototype, {
   },
 
   // Rereads all the on-disk files by reinitalizing the project with the same directory.
+  // Caches the old versions, in case we were running with --release (and they don't
+  // match the ones on disk).
   //
   // We don't automatically reinitialize this singleton when an app is
   // restarted, but an app restart is very likely caused by changes to our
@@ -168,7 +170,9 @@ _.extend(Project.prototype, {
   // dependencies here.
   reload : function () {
     var self = this;
+    var oldDependencies = self.dependencies;
     self.setRootDir(self.rootDir);
+    self.dependencies = oldDependencies;
   },
 
   // Several fields in project are derived from constraints. Whenever we change
