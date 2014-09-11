@@ -1,5 +1,18 @@
 ## v.NEXT
 
+## v0.9.2
+
+* XXX Phonegap/Cordova support in packages, build tool and Hot-Code Push
+
+* XXX Oauth redirect flow
+
+Bug fixes and minor improvements:
+
+* Fix sorting on non-trivial keys in Minimongo. #2439
+* Bug fixes and performance speed-up for the packages constraints resolver.
+* Improved error reporting for misbehaving Oplog Observe Driver. #2033 #2244
+* Drop deprecated sourcemap linking format used for older versions of Firefox.
+* Allow Meteor tool to run from a symlink. #2462
 
 ## v0.9.1.1
 
