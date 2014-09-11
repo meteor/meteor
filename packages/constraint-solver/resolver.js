@@ -152,32 +152,32 @@ ConstraintSolver.Resolver.prototype.resolve = function (
 
   if (options.useRCs) {
     resolveContext.useRCsOK = true;
-  } else {
-    _.each(constraints, function (constraint) {
-      startState = startState.addConstraint(constraint);
-
-      // Keep track of any top-level constraints that mention a pre-release.
-      // These will be the only pre-release versions that count as "reasonable"
-      // for "any-reasonable" (ie, unconstrained) constraints.
-      //
-      // Why only top-level mentions, and not mentions we find while walking the
-      // graph? The constraint solver assumes that adding a constraint to the
-      // resolver state can't make previously impossible choices now possible.  If
-      // pre-releases mentioned anywhere worked, then applying the constraints
-      // "any reasonable" followed by "1.2.3-rc1" would result in "1.2.3-rc1"
-      // ruled first impossible and then possible again. That's no good, so we
-      // have to fix the meaning based on something at the start.  (We could try
-      // to apply our prerelease-avoidance tactics solely in the cost functions,
-      // but then it becomes a much less strict rule.)
-      if (constraint.version && /-/.test(constraint.version)) {
-        if (!_.has(resolveContext.topLevelPrereleases, constraint.name)) {
-          resolveContext.topLevelPrereleases[constraint.name] = {};
-        }
-        resolveContext.topLevelPrereleases[constraint.name][constraint.version]
-          = true;
-      }
-    });
   }
+
+  _.each(constraints, function (constraint) {
+    startState = startState.addConstraint(constraint);
+
+    // Keep track of any top-level constraints that mention a pre-release.
+    // These will be the only pre-release versions that count as "reasonable"
+    // for "any-reasonable" (ie, unconstrained) constraints.
+    //
+    // Why only top-level mentions, and not mentions we find while walking the
+    // graph? The constraint solver assumes that adding a constraint to the
+    // resolver state can't make previously impossible choices now possible.  If
+    // pre-releases mentioned anywhere worked, then applying the constraints
+    // "any reasonable" followed by "1.2.3-rc1" would result in "1.2.3-rc1"
+    // ruled first impossible and then possible again. That's no good, so we
+    // have to fix the meaning based on something at the start.  (We could try
+    // to apply our prerelease-avoidance tactics solely in the cost functions,
+    // but then it becomes a much less strict rule.)
+    if (constraint.version && /-/.test(constraint.version)) {
+      if (!_.has(resolveContext.topLevelPrereleases, constraint.name)) {
+        resolveContext.topLevelPrereleases[constraint.name] = {};
+      }
+      resolveContext.topLevelPrereleases[constraint.name][constraint.version]
+        = true;
+    }
+  });
 
   _.each(dependencies, function (unitName) {
     startState = startState.addDependency(unitName);
