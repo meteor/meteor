@@ -4,6 +4,9 @@
 
 * XXX Phonegap/Cordova support in packages, build tool and Hot-Code Push
 
+* The `bundle` command has been renamed to `build` and now outputs build
+  projects for the mobile version of the targeted app.
+
 * XXX Oauth redirect flow
 
 Bug fixes and minor improvements:
