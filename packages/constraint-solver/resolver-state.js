@@ -96,9 +96,11 @@ _.extend(ResolverState.prototype, {
     });
 
     if (mori.is_empty(alternatives)) {
-      // XXX mention constraints or something
-      self.error = "conflict: " + removeUnibuild(unitName) +
-        " can't be satisfied" + showPathway(pathway);
+      self.error = util.format(
+        "conflict: constraints on %s cannot be satisfied.\n" +
+          "Constraints come from:\n%s",
+        removeUnibuild(unitName),
+        self._shownPathwaysForConstraintsIndented(unitName));
       return self;
     } else if (mori.count(alternatives) === 1) {
       // There's only one choice, so we can immediately choose it.

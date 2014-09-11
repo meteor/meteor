@@ -81,7 +81,11 @@ var splitArgs = function (deps) {
   var dependencies = [], constraints = [];
 
   _.each(deps, function (constr, dep) {
-    dependencies.push(dep);
+    if (constr && constr[0] === 'w') {
+      constr = constr.slice(1);
+    } else {
+      dependencies.push(dep);
+    }
     if (constr)
       constraints.push({ packageName: dep, type: (constr.indexOf("=") !== -1 ? "exactly" : "compatible-with"), version: constr.replace("=", "")});
   });
@@ -174,6 +178,15 @@ Tinytest.add("constraint solver - no results", function (test) {
 
   testWithResolver(test, makeResolver([]), function (t, FAIL) {
     FAIL({foo: "1.0.0"}, /unknown package: foo/);
+  });
+
+  resolver = makeResolver([
+    ["foo", "2.0.0"],
+    ["bar", "1.0.0", {foo: ""}]
+  ]);
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({foo: "w1.0.0", bar: "1.0.0"},
+         /constraints on foo[^]+top level/);
   });
 });
 
