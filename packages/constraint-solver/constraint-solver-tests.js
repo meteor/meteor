@@ -472,7 +472,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
     "warden": "1.2.3"
   };
 
-  var solution = r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution });
+  var solution = r.resolve(args.dependencies, args.constraints, { previousSolution: previousSolution }).answer;
 
   // check that root deps are the same
   _.each(args.dependencies, function (dep) {
