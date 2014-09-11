@@ -19,8 +19,24 @@ command -v java >/dev/null 2>&1 || {
   if [ ${UNAME} == "Linux" ] ; then
     echo "Please install a Java JDK before running this command.";
     echo "Directions can be found at: http://openjdk.java.net/install/"
+    echo ""
+
+    DISTRO=`lsb_release --id --short 2>/dev/null` || DISTRO=""
+    PROCESSOR=`uname --processor 2>/dev/null` || PROCESSOR=""
+
+    if [ "${DISTRO}" == "Ubuntu" || "${DISTRO}" == "Debian" ] ; then
+       echo "You can install the JDK using:"
+       echo "  apt-get install openjdk-7-jdk"
+       if [ "${PROCESSOR}" == "x86_64" ] ; then
+         echo ""
+         echo "You will also the 32 bit libraries:"
+         echo "  apt-get install lib32z1 lib32stdc++6"
+       fi
+    fi
   else
     echo "The android platform needs a Java JDK to be installed on your system."
+    # This effectively does this...
+    # open "http://www.oracle.com/technetwork/java/javase/downloads/index.html"
     java -version
   fi
 
