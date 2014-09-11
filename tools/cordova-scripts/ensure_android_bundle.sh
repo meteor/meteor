@@ -39,7 +39,7 @@ command -v java >/dev/null 2>&1 || {
 
     if [[ "${HAS_YUM}" != "" ]] ; then
       echo "You can install the JDK using:"
-      echo "  yum install -y java-1.7.0-openjdk"
+      echo "  yum install -y java-1.7.0-openjdk-devel"
     fi
 
 
