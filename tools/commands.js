@@ -150,12 +150,12 @@ main.registerCommand({
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: '3000' },
+    'mobile-port': { type: String },
     'app-port': { type: String },
     'http-proxy-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
-    'no-server': { type: Boolean },
     program: { type: String },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -200,6 +200,20 @@ main.registerCommand({
     return 1;
   }
 
+  var mobilePort = options["mobile-port"] || options.port;
+  try {
+    var parsedMobileHostPort = parseHostPort(mobilePort);
+  } catch (err) {
+    if (options.verbose) {
+      process.stderr.write('Error while parsing --mobile-port option: '
+                           + err.stack + '\n');
+    } else {
+      process.stderr.write(err.message + '\n');
+    }
+    return 1;
+  }
+
+
   options.httpProxyPort = options['http-proxy-port'];
 
   // If we are targeting the remote devices
@@ -239,7 +253,7 @@ main.registerCommand({
 
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
-                 options, parsedHostPort));
+                 options, parsedMobileHostPort));
       runners = runners.concat(cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
       if (options.verbose) {
@@ -250,10 +264,6 @@ main.registerCommand({
       }
       return 1;
     }
-  }
-
-  if (options['no-server']) {
-    return 0;
   }
 
   var appHost, appPort;
@@ -1771,4 +1781,3 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
-
