@@ -159,6 +159,7 @@ Tinytest.add("constraint solver - no results", function (test) {
     FAIL({ "bad-1": "1.0.0", "bad-2": "" },
          /indirect@2\.0\.0 is not satisfied by 1.0.0[^]+bad-1[^]+bad-2/);
   });
+
   resolver = makeResolver([
     ["foo", "1.0.0"],
     ["foo", "1.1.0"],
@@ -169,6 +170,10 @@ Tinytest.add("constraint solver - no results", function (test) {
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({foo: "2.0.0", bar: "1.0.0"},
          /constraints on foo[^]+top level[^]+bar@1.0.0/);
+  });
+
+  testWithResolver(test, makeResolver([]), function (t, FAIL) {
+    FAIL({foo: "1.0.0"}, /unknown package: foo/);
   });
 });
 
