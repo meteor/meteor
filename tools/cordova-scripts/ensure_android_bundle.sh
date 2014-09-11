@@ -21,18 +21,28 @@ command -v java >/dev/null 2>&1 || {
     echo "Directions can be found at: http://openjdk.java.net/install/"
     echo ""
 
-    DISTRO=`lsb_release --id --short 2>/dev/null` || DISTRO=""
+    #DISTRO=`lsb_release --id --short 2>/dev/null` || DISTRO=""
     PROCESSOR=`uname --processor 2>/dev/null` || PROCESSOR=""
+    HAS_YUM=`yum --version 2>/dev/null` || HAS_YUM=""
+    HAS_APT_GET=`apt-get --help 2>/dev/null` || HAS_APT_GET=""
 
-    if [[ "${DISTRO}" == "Ubuntu" || "${DISTRO}" == "Debian" ]] ; then
-       echo "You can install the JDK using:"
-       echo "  apt-get install openjdk-7-jdk"
-       if [[ "${PROCESSOR}" == "x86_64" ]] ; then
-         echo ""
-         echo "You will also the 32 bit libraries:"
-         echo "  apt-get install lib32z1 lib32stdc++6"
-       fi
+    if [[ "${HAS_APT_GET}" != "" ]] ; then
+      echo "You can install the JDK using:"
+      echo "  apt-get install openjdk-7-jdk"
+
+      if [[ "${PROCESSOR}" == "x86_64" ]] ; then
+        echo ""
+        echo "You will also the 32 bit libraries:"
+        echo "  apt-get install lib32z1 lib32stdc++6"
+      fi
     fi
+
+    if [[ "${HAS_YUM}" != "" ]] ; then
+      echo "You can install the JDK using:"
+      echo "  yum install -y java-1.7.0-openjdk"
+    fi
+
+
   else
     echo "The android platform needs a Java JDK to be installed on your system."
     # This effectively does this...
