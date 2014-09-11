@@ -113,6 +113,16 @@ var execFileSyncOrThrow = function (file, args, opts) {
       process.exit(2);
     }
 
+    // XXX special case if Cordova complains about Xcode license
+    errorMatch =
+      message.match(/Xcode\/iOS license/gm);
+
+    if (file === localCordova && errorMatch) {
+      process.stderr.write(
+        'Please open Xcode and activate it by agreeing to the license.');
+      process.exit(2);
+    }
+
     throw new Error(message);
   }
 
