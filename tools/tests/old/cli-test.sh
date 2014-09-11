@@ -49,7 +49,8 @@ $METEOR update --help | grep "Updates the meteor release" >> $OUTPUT
 $METEOR add --help | grep "Adds packages" >> $OUTPUT
 $METEOR remove --help | grep "Removes a package" >> $OUTPUT
 $METEOR list --help | grep "This will not list transitive dependencies" >> $OUTPUT
-$METEOR bundle --help | grep "Package this project" >> $OUTPUT
+$METEOR bundle --help | grep "Deprecated command. Use 'build' instead" >> $OUTPUT
+$METEOR build --help | grep "Package this project" >> $OUTPUT
 $METEOR mongo --help | grep "Opens a Mongo" >> $OUTPUT
 $METEOR deploy --help | grep "Deploys the project" >> $OUTPUT
 $METEOR logs --help | grep "Retrieves the" >> $OUTPUT
@@ -64,6 +65,7 @@ $METEOR add foo 2>&1 | grep "add: You're not in" >> $OUTPUT
 $METEOR remove foo 2>&1 | grep "remove: You're not in" >> $OUTPUT
 $METEOR list 2>&1 | grep "list: You're not in" >> $OUTPUT
 $METEOR bundle foo.tar.gz 2>&1 | grep "bundle: You're not in" >> $OUTPUT
+$METEOR build foo.tar.gz 2>&1 | grep "build: You're not in" >> $OUTPUT
 $METEOR mongo 2>&1 | grep "mongo: You're not in" >> $OUTPUT
 $METEOR deploy automated-test 2>&1 | grep "deploy: You're not in" >> $OUTPUT
 $METEOR reset 2>&1 | grep "reset: You're not in" >> $OUTPUT
@@ -93,6 +95,9 @@ $METEOR remove backbone 2>&1 | grep "Removed top-level dependency on backbone" >
 echo "... bundle"
 
 $METEOR bundle foo.tar.gz
+tar tvzf foo.tar.gz >>$OUTPUT
+
+$METEOR build foo.tar.gz
 tar tvzf foo.tar.gz >>$OUTPUT
 
 cd .. # we're now back to $DIR
@@ -259,6 +264,7 @@ PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $O
 $METEOR -p $PORT --once 2>&1 | grep "unknown package: a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR build $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
 tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
