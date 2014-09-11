@@ -102,6 +102,17 @@ var execFileSyncOrThrow = function (file, args, opts) {
     if (childProcess.stdout) {
       message = message + "\n" + childProcess.stdout + "\n";
     }
+
+    // XXX special case if Cordova complains about Xcode
+    var errorMatch =
+      message.match(/Cordova can only run in Xcode version/gm);
+
+    if (file === localCordova && errorMatch) {
+      process.stderr.write(
+        'Xcode 4.6 or greater is required to run iOS commands.\n');
+      process.exit(2);
+    }
+
     throw new Error(message);
   }
 
