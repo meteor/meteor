@@ -120,7 +120,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
 
     if (file === localCordova && errorMatch) {
       process.stderr.write(
-        'Please open Xcode and activate it by agreeing to the license.');
+        'Please open Xcode and activate it by agreeing to the license.\n');
       process.exit(2);
     }
 
