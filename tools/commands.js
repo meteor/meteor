@@ -1159,6 +1159,8 @@ main.registerCommand({
   var testPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
+    if (typeof packages === "number")
+      return packages;
     testPackages = packages.testPackages;
     localPackages = packages.localPackages;
     options.localPackageNames = packages.localPackages;
