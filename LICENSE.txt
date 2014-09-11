@@ -853,6 +853,21 @@ foo: https://github.com/coolaj86/node-pakman
 Copyright (c) 2011 AJ ONeal
 
 
+----------
+ios-sim: https://github.com/phonegap/ios-sim
+----------
+
+Author: Landon Fuller <landonf@plausiblelabs.com>
+Copyright (c) 2008-2011 Plausible Labs Cooperative, Inc.
+All rights reserved.
+
+Modifications made by the following entities are licensed as above:
+- Jeff Haynie, Appcelerator, Inc.
+- https://github.com/hborders
+- http://pivotallabs.com/users/scoward/blog
+- Eloy Duran, Fingertips <eloy@fngtps.com>
+
+
 
 ==============
 Apache License
