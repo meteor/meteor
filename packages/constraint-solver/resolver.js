@@ -155,7 +155,7 @@ ConstraintSolver.Resolver.prototype.resolve = function (
   }
 
   _.each(constraints, function (constraint) {
-    startState = startState.addConstraint(constraint);
+    startState = startState.addConstraint(constraint, mori.list());
 
     // Keep track of any top-level constraints that mention a pre-release.
     // These will be the only pre-release versions that count as "reasonable"
@@ -180,7 +180,7 @@ ConstraintSolver.Resolver.prototype.resolve = function (
   });
 
   _.each(dependencies, function (unitName) {
-    startState = startState.addDependency(unitName);
+    startState = startState.addDependency(unitName, mori.list());
     // Direct dependencies start on higher priority
     resolutionPriority[unitName] = 100;
   });
@@ -273,10 +273,12 @@ ConstraintSolver.Resolver.prototype._stateNeighbors = function (
   if (mori.is_empty(candidateVersions))
     throw Error("empty candidate set? should have detected earlier");
 
+  var pathway = state.somePathwayForUnitName(candidateName);
+
   var neighbors = [];
   var firstError = null;
   mori.each(candidateVersions, function (unitVersion) {
-    var neighborState = state.addChoice(unitVersion);
+    var neighborState = state.addChoice(unitVersion, pathway);
     if (!neighborState.error) {
       neighbors.push(neighborState);
     } else if (!firstError) {
@@ -339,9 +341,11 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     self.constraints = self.constraints.push(constraint);
   },
 
-  toString: function () {
+  toString: function (options) {
     var self = this;
-    return self.name + "@" + self.version;
+    options = options || {};
+    var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
+    return name + "@" + self.version;
   }
 });
 
@@ -461,4 +465,5 @@ var ResolveContext = function () {
   var self = this;
   // unitName -> version string -> true
   self.topLevelPrereleases = {};
+  self.useRCsOK = false;
 };
