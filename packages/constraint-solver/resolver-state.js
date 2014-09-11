@@ -57,9 +57,11 @@ _.extend(ResolverState.prototype, {
           unitVersion, self._resolver, self._resolveContext);
       });
       if (mori.is_empty(newAlternatives)) {
-        // XXX we should mention other constraints that are active
-        self.error = "conflict: " +
-          constraint.toString({removeUnibuild: true}) + " cannot be satisfied";
+        self.error = util.format(
+          "conflict: constraints on %s cannot all be satisfied.\n" +
+            "Constraints come from:\n%s",
+          removeUnibuild(constraint.name),
+          self._shownPathwaysForConstraintsIndented(constraint.name));
       } else if (mori.count(newAlternatives) === 1) {
         // There's only one choice, so we can immediately choose it.
         self = self.addChoice(mori.first(newAlternatives), pathway);
@@ -192,7 +194,7 @@ _.extend(ResolverState.prototype, {
   _shownPathwaysForConstraintsIndented: function (unitName) {
     var self = this;
     return _.map(self._shownPathwaysForConstraints(unitName), function (pathway) {
-      return "  " + pathway;
+      return "  " + (pathway ? pathway : "<top level>");
     }).join("\n");
   }
 });

@@ -465,4 +465,5 @@ var ResolveContext = function () {
   var self = this;
   // unitName -> version string -> true
   self.topLevelPrereleases = {};
+  self.useRCsOK = false;
 };
