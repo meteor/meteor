@@ -82,7 +82,7 @@ else
 fi
 
 install_android_bundle () {
-  echo "Going to install Android Bundle (300M-400M)."
+  echo "Installing Android development bundle."
   echo "This might take a while, please hold on."
 
   set -e
