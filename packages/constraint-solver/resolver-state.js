@@ -123,10 +123,9 @@ _.extend(ResolverState.prototype, {
 
     // Does adding this choice break some constraints we already have?
     if (!self.isSatisfied(uv)) {
-      // XXX improve error
-      self.error = "conflict: " + uv.toString({removeUnibuild: true}) +
-        " can't be chosen";
-      return self;
+      // This shouldn't happen: all calls to addChoice should occur based on
+      // choosing it from a list of satisfied alternatives.
+      throw new Error("try to choose an unsatisfied version?");
     }
 
     // Great, move it from dependencies to choices.
