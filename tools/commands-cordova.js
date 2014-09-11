@@ -893,7 +893,11 @@ var checkAgreePlatformTerms = function (platform) {
 
   var line = utils.readLine({ prompt: "Do you agree (Y/N)? "});
   line = line.trim().toLowerCase();
-  if (line == "y" || line == "yes") {
+  if (line === "") {
+    // Default to yes
+    line = "y";
+  }
+  if (line === "y" || line === "yes") {
     agreed = true;
   }
 
