@@ -7,15 +7,23 @@
 * The `bundle` command has been renamed to `build` and now outputs build
   projects for the mobile version of the targeted app.
 
-* XXX Oauth redirect flow
+* Better mobile support for OAuth login: you can now use a
+  redirect-based flow inside UIWebViews, and the existing popup-based
+  flow has been adapted to work in Phonegap/Cordova apps.
 
-Bug fixes and minor improvements:
+#### Bug fixes and minor improvements
 
 * Fix sorting on non-trivial keys in Minimongo. #2439
-* Bug fixes and performance speed-up for the packages constraints resolver.
-* Improved error reporting for misbehaving Oplog Observe Driver. #2033 #2244
+
+* Bug fixes and performance improvements for the package system's
+  constraint solver.
+
+* Improved error reporting for misbehaving oplog observe driver. #2033 #2244
+
 * Drop deprecated sourcemap linking format used for older versions of Firefox.
+
 * Allow Meteor tool to run from a symlink. #2462
+
 
 ## v0.9.1.1
 
