@@ -226,9 +226,19 @@ main.registerCommand({
 
     if (!options['top-level'] && !packageName.match(/:/)) {
       process.stderr.write(
-"To confirm that you wish to create a top-level package with no account\n" +
-"prefix, please run this command again with the --top-level option.\n" +
-"(Only administrators can create top-level packages without an account prefix)\n");
+"Only administrators can create top-level packages without an account prefix.\n" +
+"(To confirm that you wish to create a top-level package with no account\n" +
+"prefix, please run this command again with the --top-level option.)\n");
+
+      // You actually shouldn't be able to get here without being logged in, but
+      // it seems poor form to assume anything like that for the point of a
+      // brief error message.
+      if (auth.isLoggedIn()) {
+        var properName =  auth.loggedInUsername() + ":" + packageName;
+        process.stderr.write(
+          "\nDid you mean to create " + properName + " instead?\n"
+       );
+      }
       return 2;
     }
   };
