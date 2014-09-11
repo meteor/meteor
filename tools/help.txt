@@ -194,7 +194,7 @@ build artifacts:
   (see README in the tarball for details)
 - an unassigned apk bundle and a project source if Android is targeted as a
   mobile platform
-- a directory with an Xcode project source if iOS is targetted as a mobile
+- a directory with an Xcode project source if iOS is targeted as a mobile
   platform
 
 
