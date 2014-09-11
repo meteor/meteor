@@ -21,6 +21,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var unipackage = require('./unipackage.js');
 var tropohouse = require('./tropohouse.js');
+var httpHelpers = require('./http-helpers.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -847,19 +848,88 @@ cordova.filterPackages = function (packages) {
   return ret;
 };
 
+var getTermsForPlatform = function (platform) {
+  var url = 'http://s3.amazonaws.com/android-bundle/license_cordova_' + platform + '.txt';
+  var result = httpHelpers.request({
+    url: url
+  });
+
+  var response = result.response;
+  // S3 returns 403 if not found
+  if (response.statusCode === 404 || response.statusCode === 403) {
+    verboseLog("License URL not found: " + url);
+    process.stderr.write("No licensing file found for platform: " + platform + ".\n");
+    return null;
+  }
+  if (response.statusCode !== 200) {
+    throw new Error("Unexpected response code: " + response.statusCode);
+  }
+  return response.body;
+};
+
+var checkAgreePlatformTerms = function (platform) {
+  try {
+    var terms = getTermsForPlatform(platform);
+  } catch (e) {
+    verboseLog("Error while downloading license terms: " + e);
+
+    // most likely we don't have a net connection
+    process.stderr.write("Unable to download license terms for platform: " + platform + ".\n" +
+    "Please make sure you are online.\n")
+    throw new main.ExitWithCode(2);
+  }
+
+  if (terms === null || terms.trim() === "") {
+    // No terms required
+    return true;
+  }
+
+  process.stdout.write("The following terms apply to the '" + platform + "' platform:\n\n");
+  process.stdout.write(terms + "\n\n");
+  process.stdout.write("You must agree to the terms to proceed.\n");
+  process.stdout.write("Do you agree (Y/N)? ");
+
+  var agreed = false;
+
+  var line = utils.readLine({ prompt: "Do you agree (Y/N)? "});
+  line = line.trim().toLowerCase();
+  if (line == "y" || line == "yes") {
+    agreed = true;
+  }
+
+  return agreed;
+};
+
 // add one or more Cordova platforms
 main.registerCommand({
   name: "add-platform",
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
+  cordova.setVerboseness(options.verbose);
+
   var platforms = options.args;
 
   try {
     _.each(platforms, function (platform) {
       cordova.checkIsValidPlatform(platform);
     });
+  } catch (err) {
+    process.stderr.write(err.message + "\n");
+    return 1;
+  }
+
+  try {
+    var agreed = _.every(platforms, function (platform, options) {
+      return checkAgreePlatformTerms(platform, options);
+    });
+    if (!agreed) {
+      return 2;
+    }
   } catch (err) {
     process.stderr.write(err.message + "\n");
     return 1;
