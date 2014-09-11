@@ -133,7 +133,7 @@ set_config () {
 
   CONFIG_FILE=${ANDROID_BUNDLE}/meteor_avd/config.ini
 
-  TEMP_FILE=`mktemp tmp.XXXXXXXXXX`
+  TEMP_FILE=`mktemp -t tmp.XXXXXXXXXX`
   grep -v "^${KEY}=" ${CONFIG_FILE} > ${TEMP_FILE}
   echo "${KEY}=${VALUE}" >> ${TEMP_FILE}
   mv -f ${TEMP_FILE} ${CONFIG_FILE}
