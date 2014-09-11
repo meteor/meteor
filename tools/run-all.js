@@ -5,6 +5,7 @@ var release = require('./release.js');
 
 var runLog = require('./run-log.js');
 var Proxy = require('./run-proxy.js').Proxy;
+var Selenium = require('./run-selenium.js').Selenium;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
@@ -81,6 +82,14 @@ var Runner = function (appDir, options) {
     noRestartBanner: self.quiet,
     recordPackageUsage: options.recordPackageUsage
   });
+
+  self.selenium = null;
+  if (options.selenium) {
+    self.selenium = new Selenium({
+      runner: self,
+      browser: options.seleniumBrowser
+    });
+  }
 };
 
 _.extend(Runner.prototype, {
@@ -147,6 +156,14 @@ _.extend(Runner.prototype, {
     if (! self.stopped && ! self.quiet)
       runLog.log("\n=> App running at: " + self.rootUrl);
 
+    if (self.selenium && ! self.stopped) {
+      if (! self.quiet)
+        runLog.logTemporary("=> Starting Selenium...");
+      self.selenium.start();
+      if (! self.quiet && ! self.stopped)
+        runLog.log("=> Started Selenium.");
+    }
+
     // XXX It'd be nice to (cosmetically) handle failure better. Right
     // now we overwrite the "starting foo..." message with the
     // error. It'd be better to overwrite it with "failed to start
@@ -164,6 +181,7 @@ _.extend(Runner.prototype, {
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
     self.appRunner.stop();
+    self.selenium && self.selenium.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();

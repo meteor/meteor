@@ -1139,6 +1139,10 @@ main.registerCommand({
     // Undocumented, sets the path of where the temp app should be created
     'test-app-path': { type: String },
 
+    // Undocumented, runs tests under selenium
+    'selenium': { type: Boolean },
+    'selenium-browser': { type: String },
+
     // hard-coded options with all known Cordova platforms
     ios: { type: Boolean },
     'ios-device': { type: Boolean },
@@ -1401,7 +1405,9 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       mongoUrl: process.env.MONGO_URL,
       oplogUrl: process.env.MONGO_OPLOG_URL,
       once: options.once,
-      recordPackageUsage: false
+      recordPackageUsage: false,
+      selenium: options.selenium,
+      seleniumBrowser: options['selenium-browser']
     });
   }
 
