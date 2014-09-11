@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.0-cordova1'
+  version: '1.0.0-rc0'
 });
 
 Package.on_use(function (api) {

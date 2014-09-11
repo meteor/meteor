@@ -10,8 +10,3 @@ if (! /Android/i.test(navigator.userAgent)) {
   };
 }
 
-document.addEventListener('deviceready', function () {
-  if (window.cordova.logger)
-    window.cordova.logger.__onDeviceReady();
-});
-
