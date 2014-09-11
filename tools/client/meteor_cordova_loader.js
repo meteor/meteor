@@ -41,26 +41,49 @@
     return p.slice(1);
   };
 
+  var randomInt = function (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  };
+
+  var loadTries = 0;
   var loadFromLocation = function (location) {
     var cordovaRoot = decodeURI(window.location.href).replace(/\/index.html$/, '/').replace(/^file:\/\/?/, '');
     var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
-    httpd.getURL(function(url){
-      if(url.length > 0) {
-        // XXX shut down the server
+    var port = randomInt(10000, 50000);
+
+    var retry = function () {
+      loadTries++;
+      if (loadTries > 10) {
+        console.log('Giving up on starting the server.');
       } else {
+        console.log('Retrying to to start the server.');
+        loadFromLocation(location);
+      }
+    };
+
+    httpd.getURL(function(url){
+      if (url.length > 0) {
+        // if server is already running, stop it and retry
+        httpd.stopServer(retry, retry);
+      } else {
+        console.log('Starting the server on port ' + port);
         httpd.startServer({
           'www_root' : location,
-          'port' : 8080,
+          'port' : port,
           'cordovajs_root': cordovaRoot
-        }, function(url) {
+        }, function (url) {
           // go to the new proxy url
           window.location = url;
-        }, function( error ){
-          console.error('Failed to start a proxy');
+        }, function (error) {
+          // failed to start a server, is port already in use?
+          retry();
         });
       }
 
-    },function(){});
+    }, function () {
+      // failed to call to server: retry
+      retry();
+    });
   };
 
   // Fallback to the bundled assets from the disk. If an error is passed as an
