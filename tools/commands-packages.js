@@ -1670,8 +1670,16 @@ main.registerCommand({
                          messages.formatMessages());
     return 1;
   }
+
+  // Sometimes, we don't show changes -- for example, if you don't have a
+  // versions file. However, I think that if you don't have a versions file, and
+  // you are running update, it is OK to show you a bunch of output (and
+  // confusing not to).
   var showExitCode = project.showPackageChanges(
-    versions, newVersions, { onDiskPackages: setV.downloaded });
+    versions, newVersions,
+    { onDiskPackages: setV.downloaded,
+      alwaysShow: true });
+
   if (!setV.success) {
     process.stderr.write("Could not install all the requested packages.\n");
     return 1;

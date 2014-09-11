@@ -11,6 +11,7 @@ var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
+var packageVersionParser = require('./package-version-parser.js');
 
 var project = exports;
 
@@ -361,9 +362,16 @@ _.extend(Project.prototype, {
       // If the previous versions file had this, then we are upgrading, if it did
       // not, then we must be adding this package anew.
       if (_.has(versions, packageName)) {
-        messageLog.push("  upgraded " + packageName + " from version " +
-                        versions[packageName] +
-                        " to version " + newVersions[packageName]);
+        if (packageVersionParser.lessThan(
+          newVersions[packageName], versions[packageName])) {
+          messageLog.push("  downgraded " + packageName + " from version " +
+                          versions[packageName] +
+                          " to version " + newVersions[packageName]);
+        } else {
+          messageLog.push("  upgraded " + packageName + " from version " +
+                          versions[packageName] +
+                          " to version " + newVersions[packageName]);
+        }
       } else {
         messageLog.push("  added " + packageName +
                         " at version " + newVersions[packageName]);
@@ -374,10 +382,67 @@ _.extend(Project.prototype, {
       return 1;
 
     // Show the user the messageLog of packages we added.
-    if (!self.muted && !_.isEmpty(versions)) {
+    if ((!self.muted && !_.isEmpty(versions))
+        || options.alwaysShow) {
       _.each(messageLog, function (msg) {
         process.stdout.write(msg + "\n");
       });
+
+      // Pay special attention to non-backwards-compatible changes.
+      var incompatibleUpdates = [];
+      _.each(self.constraints, function (constraint, package) {
+        var oldV = versions[package];
+        var newV = newVersions[package];
+        // Did we not actually have a version before? We don't care.
+        if (!oldV) {
+          return;
+        }
+        // If this is a local package, then we are aware that this happened and it
+        // is not news.
+        if (catalog.complete.isLocalPackage(package)) {
+          return;
+        }
+        // If we can't find the old version, then maybe that was a local package and
+        // now is not, and that is also not news.
+        var oldVersion;
+        var newRec;
+        var messages = buildmessage.capture(function () {
+          // XXX: Lack of rate limiting, means that this could refresh a lot and
+          // be slow. Hopefully, that will not be happening often, and be fixed
+          // with sql stuff using a better pattern.
+          oldVersion = catalog.complete.getVersion(package, oldV);
+          newRec =
+            catalog.complete.getVersion(package, newV);
+        });
+        if (messages.hasMessages()) {
+          // It would be very weird for us to end up here! But it is
+          // theoretically possible. If it happens, we should probably not crash
+          // (since we have already done all the operations) and logging a
+          // confusing message will just be confusing, so ... recover by
+          // skipping, I guess.
+          return;
+        };
+
+        // The new version has to exist, or we wouldn't have chosen it.
+        if (!oldVersion) {
+          return;
+        }
+        var oldECV = oldVersion.earliestCompatibleVersion;
+        if (oldECV !== newRec.earliestCompatibleVersion) {
+          incompatibleUpdates.push({
+            name: package,
+            description: "(" + oldV + "->" + newV + ") " + newRec.description
+          });
+        }
+      });
+
+      if (!_.isEmpty(incompatibleUpdates)) {
+        process.stderr.write(
+          "\nThe following packages have been updated to new versions that are not " +
+            "backwards compatible:\n");
+        process.stderr.write(utils.formatList(incompatibleUpdates));
+        process.stderr.write("\n");
+      };
     }
     return 0;
   },
