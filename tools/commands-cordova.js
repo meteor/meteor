@@ -243,8 +243,10 @@ var fetchCordovaPluginFromShaUrl =
 };
 
 cordova.checkIsValidPlatform = function (name) {
+  if (name.match(/ios/i) && process.platform !== 'darwin')
+    throw new Error(name + ': not available on your system');
   if (! _.contains(supportedPlatforms, name))
-    throw new Error(name + ": no such platform");
+    throw new Error(name + ': no such platform');
 };
 
 cordova.checkIsValidPlugin = function (name) {
