@@ -1227,7 +1227,8 @@ main.registerCommand({
   });
 
   if (! _.isEmpty(mobilePlatforms)) {
-    if (!options.httpProxyPort) {
+    // For this release; we won't force-enable the httpProxy
+    if (false) { //!options.httpProxyPort) {
       console.log('Forcing http proxy on port 3002 for mobile');
       options.httpProxyPort = '3002'
     }
