@@ -207,18 +207,14 @@ _.extend(exports, {
 
     // Should look like 'packages.data.json' in the default case
     // (test-packages.data.json before 0.9.0).
-    return prefix + ".data.json";
+    return prefix + ".data.db";
   },
 
   getPackageStorage: function (tropo) {
     var self = this;
     tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v1",
+    return path.join(tropo.root, "package-metadata", "v2",
                      self.getLocalPackageCacheFilename());
-  },
-
-  getPackageStorageVersion: function() {
-    return "1.0";
   },
 
   getBannersShownFilename: function() {

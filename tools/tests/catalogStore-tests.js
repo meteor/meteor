@@ -13,10 +13,17 @@ selftest.define("catalogStoreInsert", [], function () {
 	// console.log(typeof CatalogStore);
 	
 	var data = fs.readFileSync('/Users/pascalrapicault/.meteor/package-metadata/v1/packages.data.json', 'utf8');
-	var ret = JSON.parse(data)
+	var ret = JSON.parse(data);
 	
-    var cs = new CatalogStore.RemoteCatalog();
+    var cs = new CatalogStore.RemoteCatalog({packageStorage :  "/Users/pascalrapicault/tmp/ppp"});
+    cs.initialize();
 	cs.insertData(ret);
+});
+
+selftest.define("getSyncToken", [], function() {
+	var cs = new CatalogStore.RemoteCatalog({packageStorage : "/Users/pascalrapicault/tmp/packages"});
+	cs.refresh();
+	console.log(cs.getSyncToken());
 });
 
 selftest.define("catalogGetName", [], function () {
@@ -26,7 +33,7 @@ selftest.define("catalogGetName", [], function () {
 	var data = fs.readFileSync('/Users/pascalrapicault/.meteor/package-metadata/v1/packages.data.json', 'utf8');
 	var ret = JSON.parse(data)
 	
-	var cs = new CatalogStore.CatalogStore();
+	var cs = new CatalogStore.RemoteCatalog({packageStorage :  "/Users/pascalrapicault/tmp/ppp"});
 
 	selftest.expectEqual(4, cs.getPackage("accounts-base").length);
 	console.log( cs.getVersion("accounts-base", "1.0.1-rc0"));

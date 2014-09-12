@@ -20,7 +20,7 @@ var PackageSource = require('./package-source.js');
 // YOU MUST SET self.initialized = true BEFORE USING THIS CATALOG. In fact, the
 // protolog is not even intended to be used by itself -- there is a server
 // catalog and a constraint solving catalog, which inherit from it.
-var LocalCatalog = function () {
+var LocalCatalog = function (options) {
   var self = this;
 
   // Package server data. Mostly arrays of objects.
@@ -48,7 +48,7 @@ var LocalCatalog = function () {
   self.effectiveLocalPackages = [];
 
    // Each catalog needs its own package cache.
-  self.packageCache = new packageCache.PackageCache(self);
+  self.packageCache = new packageCache.PackageCache(options ? options.containingCatalog : self);
 
   self.packageSources = null;
   self.built = null;

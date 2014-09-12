@@ -1,11 +1,15 @@
 var _ = require('underscore');
 var util = require('util');
 var buildmessage = require('./buildmessage.js');
+var tropohouse = require('./tropohouse.js');
 var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
 var files = require('./files.js');
 var prebuiltBootstrap = require('./catalog-bootstrap-prebuilt.js');
 var checkoutBootstrap = require('./catalog-bootstrap-checkout.js');
+var project = require('./project.js');
+var utils = require('./utils.js');
+var config = require('./config.js');
 
 var LayeredCatalog = function() {
 	var self = this;
@@ -210,11 +214,12 @@ _.extend(LayeredCatalog.prototype, {
       } catch (e) {
         // Maybe we only failed because we need to refresh. Try to refresh
         // (unless we already are) and retry.
+        //PASCAL review
         if (!self._refreshingIsProductive() ||
-            catalog.official.refreshInProgress()) {
+            exports.official.refreshInProgress()) {
           throw e;
         }
-        catalog.official.refresh();
+        exports.official.refresh();
         self.resolver || self._initializeResolver();
         return self.resolver.resolve(deps, constr, resolverOpts);
       }
@@ -245,6 +250,11 @@ _.extend(LayeredCatalog.prototype, {
     //PASCAL
   },
 
+ _refreshingIsProductive: function() {
+    //PASCAL REVIEW
+    return true;
+ }
+
 });
 
 
@@ -263,7 +273,7 @@ exports.official = new remoteCatalog.RemoteCatalog();
 // packages, it doesn't contain any information about the server version of
 // local packages.
 exports.complete = new LayeredCatalog();
-exports.complete.setCatalogs(new localCatalog.LocalCatalog(), exports.official);
+exports.complete.setCatalogs(new localCatalog.LocalCatalog({containingCatalog : exports.complete}), exports.official);
 
 
 

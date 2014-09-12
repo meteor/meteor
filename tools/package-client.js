@@ -43,48 +43,6 @@ var emptyCachedServerDataJson = function () {
   };
 };
 
-// Load the package data that was saved in the local data.json
-// collection from the last time we did a sync to the server. Takes an
-// optional `packageStorageFile` argument (defaults to
-// `config.getPackageStorage()`). This return object consists of
-//
-//  - collections: an object keyed by the name of server collections, with the
-//    records as an array of javascript objects.
-//  - syncToken: a syncToken object representing the last time that we talked to
-//    the server, to pass into the getRemotePackageData to get the latest
-//    updates.
-// If there is no data.json file, or the file cannot be parsed, return null for
-// the collections and a default syncToken to ask the server for all the data
-// from the beginning of time.
-exports.loadCachedServerData = function (packageStorageFile) {
-  var noDataToken = emptyCachedServerDataJson();
-
-  packageStorageFile = packageStorageFile || config.getPackageStorage();
-
-  try {
-    var data = fs.readFileSync(packageStorageFile, 'utf8');
-  } catch (e) {
-    if (e.code == 'ENOENT') {
-      return noDataToken;
-    }
-    // XXX we should probably return an error to the caller here to
-    // figure out how to handle it
-    process.stderr.write("ERROR " + e.message + "\n");
-    process.exit(1);
-  }
-  var ret = noDataToken;
-  try {
-    ret = JSON.parse(data);
-  } catch (err) {
-    // XXX error handling
-    process.stderr.write(
-      "ERROR: Could not parse JSON for local package-metadata cache. \n");
-    // This should only happen if you decided to manually edit this or
-    // whatever. Regardless, go on and treat this as an empty file.
-  }
-  return ret;
-};
-
 // Requests and returns one page of new package data that we haven't cached on
 // disk. We assume that data is cached chronologically, so essentially, we are
 // asking for a diff from the last time that we did this.
@@ -118,51 +76,6 @@ var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   return collectionData;
 };
 
-// Take in an ordered list of javascript objects representing collections of
-// package data. In each object, the server-side names of collections are keys
-// and the values are the mongo records for that collection stored as an
-// array. Goes through the the list in order and merges it into the single
-// object, with collection names as keys and the arrays of records as
-// corresponding values. The inputs list is ordered and records in the later
-// collections will override the records in the earlier collections.
-var mergeCollections = function (sources) {
-  var collections = {}; // map from collection to _id to object
-
-  _.each(sources, function (source) {
-    _.each(source, function (records, collectionName) {
-      if (! _.has(collections, collectionName))
-        collections[collectionName] = {};
-
-      _.each(records, function (record) {
-        collections[collectionName][record._id] = record;
-      });
-    });
-  });
-
-  var ret = {};
-  _.each(collections, function (records, collectionName) {
-    ret[collectionName] = _.values(records);
-  });
-
-  return ret;
-};
-
-// Writes the cached package data to the on-disk cache.
-//
-// Returns nothing, but
-// XXXX: Does what on errors?
-//
-// options include:
-//   - packageStorageFile: String. A file to write the data to instead of
-//     `config.getPackageStorage()`.
-var writePackageDataToDisk = function (syncToken, data, options) {
-  var filename = (options && options.packageStorageFile) ||
-        config.getPackageStorage();
-  // XXX think about permissions?
-  files.mkdir_p(path.dirname(filename));
-  files.writeFileAtomically(filename, JSON.stringify(data, null, 2));
-};
-
 // Contacts the package server to get the latest diff and writes changes to
 // disk.
 //
@@ -181,10 +94,11 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //    `config.getPackageServerUrl()`)
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
-exports.updateServerPackageData = function (cachedServerData, options) {
+exports.updateServerPackageData = function (dataStore, options) {
   var self = this;
   options = options || {};
-  cachedServerData = cachedServerData || emptyCachedServerDataJson();
+  if (dataStore === null)
+    throw Error("Data store expected");
 
   var done = false;
   var ret = {resetData: false};
@@ -198,7 +112,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   }
 
   var getSomeData = function () {
-    var syncToken = cachedServerData.syncToken;
+    var syncToken = dataStore.getSyncToken() || {};
     var remoteData;
     try {
       remoteData = loadRemotePackageData(conn, syncToken, {
@@ -207,7 +121,6 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     } catch (err) {
       exports.handlePackageServerConnectionError(err);
       if (err.errorType === "DDP.ConnectionError") {
-        cachedServerData = null;
         done = true;
         return;
       } else {
@@ -218,7 +131,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     // Is the remote server telling us to ignore everything we've heard before?
     // OK, we can do that.
     if (remoteData.resetData) {
-      cachedServerData.collections = null;
+      dataStore.reset();
       // The caller may want to take this as a cue to delete packages from the
       // tropohouse.
       ret.resetData = true;
@@ -231,22 +144,9 @@ exports.updateServerPackageData = function (cachedServerData, options) {
       return;
     }
 
-    var sources = [];
-    if (cachedServerData.collections) {
-      sources.push(cachedServerData.collections);
-    }
-    sources.push(remoteData.collections);
-    var allCollections = mergeCollections(sources);
-    var data = {
-      syncToken: remoteData.syncToken,
-      formatVersion: "1.0",
-      collections: allCollections
-    };
-    writePackageDataToDisk(remoteData.syncToken, data, {
-      packageStorageFile: options.packageStorageFile
-    });
+    //Actually add the data to the data store
+    dataStore.insertData(remoteData);
 
-    cachedServerData = data;
     if (remoteData.upToDate)
       done = true;
   };
@@ -259,7 +159,6 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     conn.close();
   }
 
-  ret.data = cachedServerData;
   return ret;
 };
 

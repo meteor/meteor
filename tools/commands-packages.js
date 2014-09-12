@@ -2223,11 +2223,10 @@ main.registerCommand({
 
   // Get a copy of the data.json.
   var dataTmpdir = files.mkdtemp();
-  var tmpDataJson = path.join(dataTmpdir, 'data.json');
+  var tmpDataJson = path.join(dataTmpdir, 'data.db');
 
-  var savedData = packageClient.updateServerPackageData(null, {
-    packageStorageFile: tmpDataJson
-  }).data;
+  var tmpCatalog = new catalog.Remote({packageStorage : tmpDataJson});
+  var savedData = packageClient.updateServerPackageData(tmpCatalog, null);
   if (!savedData) {
     // will have already printed an error
     return 2;

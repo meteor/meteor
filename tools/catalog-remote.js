@@ -3,7 +3,6 @@ var path = require('path');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var auth = require('./auth.js');
-var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
@@ -13,8 +12,9 @@ var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
 var tropohouse = require('./tropohouse.js');
-
+var config = require('./config.js');
 var semver = require('semver');
+var packageClient = require('./package-client.js');
 var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 
 //PASCAL NOTES
@@ -27,7 +27,7 @@ var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 //WDo we want to worry about the lifecycle of the connection or just open / close everytime?
 //Wehn we do transaction, then we should also need to see if there are errors reading
 
-var RemoteCatalog = function () {
+var RemoteCatalog = function (options) {
   var self = this;
 
   // We inherit from the BaseCatalog class.
@@ -39,21 +39,7 @@ var RemoteCatalog = function () {
   // developments.
   self.offline = null;
 
-  //TODO deal with error cases?
-  db = new sqlite3.Database('/Users/pascalrapicault/tmp/packages');
-  db.serialize(function() {
-    db.run("CREATE TABLE IF NOT EXISTS versions (name STRING, version STRING, id String, content STRING)");
-    db.run("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(name)");
-
-    db.run("CREATE TABLE IF NOT EXISTS builds (versionId STRING, id STRING, content STRING)");
-    db.run("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON builds(versionId)");
-
-    db.run("CREATE TABLE IF NOT EXISTS releaseTracks (name STRING, id STRING, content STRING)");
-    db.run("CREATE TABLE IF NOT EXISTS releaseVersions (track STRING, version STRING, id STRING, content STRING)");
-    db.run("CREATE TABLE IF NOT EXISTS packages (name STRING, id STRING, content STRING)");
-    db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
-  });
-  //TODO verify that we get back from here everything is really created
+  self.options = options || {};
 };
 
 _.extend(RemoteCatalog.prototype, {
@@ -152,15 +138,43 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   initialize: function () {
-    //Do nothing
+    //PASCAL deal with offline mode?
+    var self = this;
+    var dbFile = self.options.packageStorage || config.getPackageStorage();
+    db = new sqlite3.Database(dbFile);
+    if ( !fs.existsSync(path.dirname(dbFile)) ) {
+      fs.mkdirSync(path.dirname(dbFile));
+    }
+
+    db.serialize(function() {
+      db.run("CREATE TABLE IF NOT EXISTS versions (name STRING, version STRING, id String, content STRING)");
+      db.run("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(name)");
+
+      db.run("CREATE TABLE IF NOT EXISTS builds (versionId STRING, id STRING, content STRING)");
+      db.run("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON builds(versionId)");
+
+      db.run("CREATE TABLE IF NOT EXISTS releaseTracks (name STRING, id STRING, content STRING)");
+      db.run("CREATE TABLE IF NOT EXISTS releaseVersions (track STRING, version STRING, id STRING, content STRING)");
+      db.run("CREATE TABLE IF NOT EXISTS packages (name STRING, id STRING, content STRING)");
+      db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
+    });
   },
 
   reset: function () {
-    throw new Exception("RESTTING THE DB, REALLY??!?!");
+    var self = this;
+    
+    db.serialize(function() {
+      db.run("DELETE FROM versions");
+      db.run("DELETE FROM builds");
+      db.run("DELETE FROM releaseTracks");
+      db.run("DELETE FROM releaseVersions");
+      db.run("DELETE FROM packages");
+      db.run("DELETE FROM syncToken");
+    });
   },
 
   refresh: function () {
-
+    packageClient.updateServerPackageData(this);
   },
 
   refreshInProgress: function () {
@@ -283,7 +297,7 @@ _.extend(RemoteCatalog.prototype, {
 
   _insertTimestamps : function(syncToken, db) {
     syncToken._id="1"; //Add fake _id so it fits the pattern
-    this._insertInTable(syncToken, "syncToken", ['_id'], db);
+    this._insertInTable([syncToken], "syncToken", ['_id'], db);
   },
 
   insertData : function(serverData) {
@@ -299,16 +313,26 @@ _.extend(RemoteCatalog.prototype, {
       self._insertTimestamps(serverData.syncToken, db);
       // db.prepare("BEGIN COMMIT");
       //timestamps
+      // future.return();
     });
     future.wait();
   },
 
-  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
+  getLoadPathForPackage : function (name, version, constraintSolverOpts) {
     var packageDir = tropohouse.default.packagePath(name, version);
     if (fs.existsSync(packageDir)) {
       return packageDir;
     }
     return null;
+  },
+
+  getSyncToken : function() {
+    var self = this;
+    var result = self._syncQuery("SELECT content FROM syncToken", []);
+    if (result.length === 0)
+      return {};
+    return result[0];
   }
+
 });
 exports.RemoteCatalog = RemoteCatalog;
