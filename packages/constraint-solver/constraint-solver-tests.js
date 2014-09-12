@@ -160,8 +160,20 @@ Tinytest.add("constraint solver - no results", function (test) {
     ["indirect", "2.0.0"]
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
-    FAIL({ "bad-1": "1.0.0", "bad-2": "" },
-         /indirect@2\.0\.0 is not satisfied by 1.0.0[^]+bad-1[^]+bad-2/);
+    FAIL({ "bad-1": "1.0.0", "bad-2": "" }, function (error) {
+      return error.message.match(/indirect@2\.0\.0 is not satisfied by 1\.0\.0/)
+        && error.message.match(/bad-1@1\.0\.0/)
+        && error.message.match(/bad-2@1\.0\.0/)
+        // We shouldn't get shown indirect itself in a pathway: that would just
+        // be an artifact of there being a path that passes through another
+        // unibuild.  (Note: we might change our mind and decide that all these
+        // lines should end in the relevant constraint, which would probably be
+        // nice! But in that case, we should test that no line ends with TWO
+        // mentions of indirect.)
+        && ! error.message.match(/-> indirect/)
+        // Lines should be unique.
+        && ! error.message.match(/bad-1[^]+bad-1/);
+    });
   });
 
   resolver = makeResolver([

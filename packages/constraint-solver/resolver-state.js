@@ -188,9 +188,12 @@ _.extend(ResolverState.prototype, {
   },
   _shownPathwaysForConstraints: function (unitName) {
     var self = this;
-    return mori.into_array(mori.map(function (pathway) {
-      return showPathway(pathway);
+    var pathways = mori.into_array(mori.map(function (pathway) {
+      return showPathway(pathway, unitName);
     }, mori.get(self._unitPathways, unitName)));
+    pathways.sort();
+    pathways = _.uniq(pathways, true);
+    return pathways;
   },
   _shownPathwaysForConstraintsIndented: function (unitName) {
     var self = this;
@@ -217,8 +220,27 @@ removeUnibuild = function (unitName) {
   return unitName.split('#')[0];
 };
 
-var showPathway = function (pathway) {
-  return mori.into_array(mori.map(function (uv) {
+// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
+// XXX how many copies of this do we have in Meteor?
+var startsWith = function(str, starts) {
+  return str.length >= starts.length &&
+    str.substring(0, starts.length) === starts;
+};
+
+var showPathway = function (pathway, dropIfFinal) {
+  var pathUnits = mori.into_array(mori.map(function (uv) {
     return uv.toString({removeUnibuild: true});
-  }, mori.reverse(pathway))).join(' -> ');
+  }, mori.reverse(pathway)));
+
+  var dropPrefix = removeUnibuild(dropIfFinal) + '@';
+  while (pathUnits.length && startsWith(_.last(pathUnits), dropPrefix)) {
+    pathUnits.pop();
+  }
+
+  // This is a bit of a hack: we're using _.uniq in "it's sorted" mode, whose
+  // implementation is "drop adjacent duplicates". This is what we want (we're
+  // trying to avoid seeing "foo -> foo" which represents "foo#os ->
+  // foo#web.browser") even though it's not actually sorted.
+  pathUnits = _.uniq(pathUnits, true);
+  return pathUnits.join(' -> ');
 };
