@@ -4,10 +4,11 @@ var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
-var Unipackage = require('./unipackage.js').Unipackage;
+var unipackage = require('./unipackage.js');
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
+var files = require('./files.js');
 var utils = require('./utils.js');
 
 var packageCache = require('./package-cache.js');
@@ -144,8 +145,7 @@ _.extend(LocalCatalog.prototype, {
   },
 
   _refreshingIsProductive: function () {
-    // Refreshing is productive for catalog.official and catalog.complete only.
-    return false;
+    return true;
   },
 
   // Return an array with the names of all of the packages that we
@@ -327,6 +327,21 @@ _.extend(LocalCatalog.prototype, {
     options = options || {};
     buildmessage.assertInCapture();
 
+    //PASCAL Review the this option checking logic
+    // We need to limit the rate of refresh, or, at least, prevent any sort of
+    // loops. ForceRefresh will override either one.
+    if (!options.forceRefresh && !options.initializing && self.refreshing) {
+      return;
+    }
+
+    if (options.initializing) {
+      // If we are doing the top level initialization in main.js, everything
+      // sure had better be in a relaxed state, since we're about to hackily
+      // steal some data from catalog.official.
+      if (self.refreshing)
+        throw Error("initializing local catalog re-entrantly?");
+    }
+
     self.refreshing = true;
     console.log("refreshing the local catalog");
     try {
@@ -341,7 +356,7 @@ _.extend(LocalCatalog.prototype, {
     }
   },
 
-    // Compute self.effectiveLocalPackages from self.localPackageDirs
+  // Compute self.effectiveLocalPackages from self.localPackageDirs
   // and self.localPackages.
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
@@ -560,15 +575,30 @@ _.extend(LocalCatalog.prototype, {
   // we asked for. This is to support unipackage loader not having a version
   // manifest.
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
-    //PASCAL Do we need constraintSolverOpts? This seems out of place
-    //PASCAL I don't think we are dealing with prebuilt packages properly
-    //The loading of local packages and unipackages is different...
     var self = this;
     self._requireInitialized();
-    if (_.has(self._knownPackages, name)) {
-      return path.join(self.uniloadDir, name);
+    buildmessage.assertInCapture();
+    constraintSolverOpts =  constraintSolverOpts || {};
+
+    // Check local packages first.
+    if (_.has(self.packageSources, name)) {
+
+      // If we don't have a build of this package, we need to rebuild it.
+      self._build(name, {}, constraintSolverOpts);
+
+      // Return the path.
+      return self.packageSources[name].sourceRoot;
     }
-    return null;
+
+    if (! version) {
+      throw new Error(name + " not a local package, and no version specified?");
+    }
+
+    var packageDir = tropohouse.default.packagePath(name, version);
+    if (fs.existsSync(packageDir)) {
+      return packageDir;
+    }
+     return null;
   },
 
   getLocalPackageNames: function () {
@@ -821,6 +851,16 @@ _.extend(LocalCatalog.prototype, {
     });
   },
 
+ 
+  // Given a version string that may or may not have a build ID, convert it into
+  // the catalog's internal format for local versions -- [version
+  // number]+local. (for example, 1.0.0+local).
+  _getLocalVersion: function (version) {
+    if (version)
+      return version.split("+")[0] + "+local";
+    return version;
+  },
+
   // Returns the latest unipackage build if the package has already been
   // compiled and built in the directory, and null otherwise.
   _maybeGetUpToDateBuild : function (name, constraintSolverOpts) {
@@ -845,8 +885,7 @@ _.extend(LocalCatalog.prototype, {
       }
     }
     return null;
-  },
-
+  }
 });
 
 exports.LocalCatalog = LocalCatalog;

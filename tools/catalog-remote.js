@@ -27,7 +27,7 @@ var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 //WDo we want to worry about the lifecycle of the connection or just open / close everytime?
 //Wehn we do transaction, then we should also need to see if there are errors reading
 
-var CatalogStore = function () {
+var RemoteCatalog = function () {
   var self = this;
 
   // We inherit from the BaseCatalog class.
@@ -56,7 +56,7 @@ var CatalogStore = function () {
   //TODO verify that we get back from here everything is really created
 };
 
-_.extend(CatalogStore.prototype, {
+_.extend(RemoteCatalog.prototype, {
   getVersion: function (name, version) {
     var result = this._syncQuery("SELECT content FROM versions WHERE name=? AND version=?", [name, version]);
     if(result.length === 0) {
@@ -311,4 +311,4 @@ _.extend(CatalogStore.prototype, {
     return null;
   }
 });
-exports.CatalogStore = CatalogStore;
+exports.RemoteCatalog = RemoteCatalog;
