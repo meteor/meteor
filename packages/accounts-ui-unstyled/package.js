@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.0.1"
+  version: "1.0.2-ekate"
 });
 
 Package.on_use(function (api) {

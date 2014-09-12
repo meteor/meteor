@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript and CSS minifiers",
-  version: "1.0.2"
+  version: "1.0.3-ekate"
 });
 
 Npm.depends({

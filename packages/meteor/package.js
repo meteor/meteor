@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.0.4-cordova6'
+  version: '1.0.5-ekate'
 });
 
 Package._transitional_registerBuildPlugin({

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A package for translating old bundles into stars",
-  version: "1.0.2"
+  version: "1.0.3-ekate"
 });
 
 Package.on_use(function (api) {

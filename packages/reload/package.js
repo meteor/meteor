@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.0.1'
+  version: '1.0.2-ekate'
 });
 
 Package.on_use(function (api) {
