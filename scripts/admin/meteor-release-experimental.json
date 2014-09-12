@@ -1,6 +1,6 @@
 {
  "track": "METEOR",
- "version": "0.9.2-rc6",
+ "version": "0.9.2-rc7",
  "recommended": false,
  "official": false,
  "description": "A release candidate of Meteor 0.9.2."
