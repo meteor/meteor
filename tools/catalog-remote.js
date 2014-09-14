@@ -304,16 +304,17 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     var future = new Future;
     db.serialize(function() {
-      // db.prepare("BEGIN COMMIT");
+      db.run("BEGIN TRANSACTION");
       self._insertPackages(serverData.collections.packages, db);
       self._insertBuilds(serverData.collections.builds, db);
       self._insertVersions(serverData.collections.versions, db);
       self._insertReleaseTracks(serverData.collections.releaseTracks, db);
       self._insertReleaseVersions(serverData.collections.releaseVersions, db);
       self._insertTimestamps(serverData.syncToken, db);
-      // db.prepare("BEGIN COMMIT");
-      //timestamps
-      // future.return();
+      db.run("END TRANSACTION", function(err, row) {
+        //PASCAL check errors
+        future.return();
+      });
     });
     future.wait();
   },
@@ -331,6 +332,7 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._syncQuery("SELECT content FROM syncToken", []);
     if (result.length === 0)
       return {};
+    delete result[0]._id;
     return result[0];
   }
 
