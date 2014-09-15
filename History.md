@@ -35,12 +35,22 @@ integration with Apache's Cordova/PhoneGap project.
 
 * Improved error reporting for misbehaving oplog observe driver. #2033 #2244
 
-* Drop deprecated source map linking format used for older versions of Firefox.
-  #2385
+* Drop deprecated source map linking format used for older versions of
+  Firefox.  #2385
 
 * Allow Meteor tool to run from a symlink. #2462
 
-Patch by Github user mquandalle.
+* Assets added via a plugin are no longer considered source files. #2488
+
+* Remove support for long deprecated `SERVER_ID` environment variable. Use `AUTOUPDATE_VERSION` instead.
+
+* Fix bug in reload-safetybelt package that resulted in reload loops in Chrome with cookies disabled.
+
+* Rename `WAREHOUSE_DIR` environment variable to `METEOR_WAREHOUSE_DIR` to be consistent with the rest of the environment variable names that control tool test behavior.
+
+
+Patches by Github users awwx, mizzao, and mquandalle.
+
 
 
 ## v0.9.1.1
