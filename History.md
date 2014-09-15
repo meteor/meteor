@@ -1,5 +1,13 @@
 ## v.NEXT
 
+
+## v0.9.2.1
+
+* Fix versions of packages that were published with `-cordova` versions
+  in 0.9.2 (appcache, fastclick, htmljs, logging, mobile-status-bar,
+  routepolicy, webapp-hashing).
+
+
 ## v0.9.2
 
 This release contains our first support for building mobile apps in
