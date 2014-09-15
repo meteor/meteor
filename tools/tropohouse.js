@@ -149,18 +149,22 @@ _.extend(exports.Tropohouse.prototype, {
   // buildRecord into a temporary directory, whose path is returned.
   //
   // XXX: Error handling.
-  downloadBuildToTempDir: function (versionInfo, buildRecord) {
+  downloadBuildToTempDir: function (progress, versionInfo, buildRecord) {
     var self = this;
     var targetDirectory = files.mkdtemp();
 
-    var progressCallback = function (state) {
-      console.log("Download: " + JSON.stringify(state));
-    };
+    var url = buildRecord.build.url;
+    var downloadTask = progress ? progress.addChildTask('http:get:' + url) : null;
+
+    if (!progress) {
+      throw new Error("WE WANT TO TRACK PROGRESS ON THIS TRACE");
+    }
 
     var packageTarball = httpHelpers.getUrl({
-      url: buildRecord.build.url,
+      url: url,
       encoding: null,
-      progressCallback: progressCallback
+      progress: downloadTask,
+      wait: false
     });
     files.extractTarGz(packageTarball, targetDirectory);
     return targetDirectory;
@@ -269,7 +273,7 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
-        buildTempDirs.push(self.downloadBuildToTempDir(
+        buildTempDirs.push(self.downloadBuildToTempDir(options.progress,
           {packageName: packageName, version: version}, build));
       });
 
@@ -327,7 +331,8 @@ _.extend(exports.Tropohouse.prototype, {
         self.maybeDownloadPackageForArchitectures({
           packageName: name,
           version: version,
-          architectures: [serverArch]
+          architectures: [serverArch],
+          progress: options.progress
         });
         downloadedPackages[name] = version;
       } catch (err) {

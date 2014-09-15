@@ -114,7 +114,8 @@ _.extend(exports.PackageLoader.prototype, {
     if (self.catalog === catalog.uniload)
       return;
     tropohouse.default.downloadMissingPackages(self.versions, {
-      serverArch: options.serverArch
+      serverArch: options.serverArch,
+      progress: options.progress
     });
   }
 });

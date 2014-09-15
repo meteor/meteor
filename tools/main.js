@@ -325,6 +325,9 @@ var springboard = function (rel, releaseOverride) {
   if (process.env.METEOR_DEBUG_SPRINGBOARD)
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
+  // XXX: TODO?
+  var progress = null;
+
   var archinfo = require('./archinfo.js');
   var unipackage = require('./unipackage.js');
 
@@ -340,7 +343,8 @@ var springboard = function (rel, releaseOverride) {
         packageName: toolsPkg,
         version: toolsVersion,
         architectures: [archinfo.host()],
-        definitelyNotLocal: true
+        definitelyNotLocal: true,
+        progress: progress
       });
     });
   } catch (err) {

@@ -230,7 +230,8 @@ _.extend(Project.prototype, {
       // changed.
       var oldVersions = self.dependencies;
       var setV = self.setVersions(newVersions,
-                                  {alwaysRecord: options.alwaysRecord});
+                                  {alwaysRecord: options.alwaysRecord,
+                                   progress: options.progress});
       self.showPackageChanges(oldVersions, newVersions, {
         onDiskPackages: setV.downloaded
       });
@@ -508,10 +509,12 @@ _.extend(Project.prototype, {
   //
   // Returns an object mapping package name to an optional string constraint, or
   // null if the package is unconstrained.
-  getCurrentCombinedConstraints : function () {
+  getCurrentCombinedConstraints : function (options) {
     var self = this;
+    options = options || {};
+
     buildmessage.assertInCapture();
-    self._ensureDepsUpToDate();
+    self._ensureDepsUpToDate({progress: options.progress});
     return self.combinedConstraints;
   },
 
@@ -723,7 +726,8 @@ _.extend(Project.prototype, {
     options = options || {};
     buildmessage.assertInCapture();
 
-    var downloaded = tropohouse.default.downloadMissingPackages(newVersions);
+    var downloaded = tropohouse.default.downloadMissingPackages(newVersions,
+                                                                { progress: options.progress });
     var ret = {
       success: true,
       downloaded: downloaded
@@ -784,14 +788,17 @@ _.extend(Project.prototype, {
   // available on disk. If this object does not contain all the keys of
   // newVersions, then we haven't written the new versions&packages files to
   // disk and the operation has failed.
-  addPackages : function (moreDeps, newVersions) {
+  addPackages : function (moreDeps, newVersions, options) {
     var self = this;
     buildmessage.assertInCapture();
+
+    options = options || {};
 
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to
     // make sure that we have them.
-    var downloadedPackages = tropohouse.default.downloadMissingPackages(newVersions);
+    var downloadedPackages = tropohouse.default.downloadMissingPackages(newVersions,
+                                                                        { progress: options.progress });
 
     // Return the packages that we have downloaded successfully and let the
     // client deal with reporting the error to the user.
