@@ -707,10 +707,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       dependencies: packageDeps
     };
     try {
-console.log(conn.connected);
-//var conn2 = exports.loggedInPackagesConnection();
-//console.log(conn2.connection);
-
       var uploadInfo = exports.callPackageServer(conn,
         'createPackageVersion', uploadRec);
     } catch (err) {
