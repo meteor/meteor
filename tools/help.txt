@@ -557,9 +557,14 @@ By default, meteor search will not show packages that, due to migration issues,
 are known to not be compatible with Meteor 0.9.0 and later. If you
 want to see those packages anyway, use the --show-old option.
 
+By default, meteor search will not show packages that have no official versions
+(ie: non-pre-release versions) If you want to see those packages anyway, use
+the --show-rcs option.
+
 Options:
   --maintainer    filter by authorized maintainer
   --show-old      show packages incompatible with Meteor 0.9.0 and later.
+  --show-rcs      show packages with no non-prerelease versions
 
 
 >>> show

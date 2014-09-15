@@ -1053,9 +1053,16 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
-    "show-old": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false },
+    "show-rcs": {type: Boolean, required: false}
   }
 }, function (options) {
+
+  // Show all means don't do any filtering at all. So, don't do any filtering
+  // for anything at all.
+  if (options["show-rcs"]) {
+    options["show-old"] = true;
+  }
 
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
@@ -1083,10 +1090,13 @@ main.registerCommand({
     // don't want to filter anyway, we do not care.
     if (!match || isRelease || options["show-old"])
       return match;
-
     var vr;
     doOrDie(function () {
-      vr = catalog.official.getLatestMainlineVersion(name);
+      if (!options["show-rcs"]) {
+        vr = catalog.official.getLatestMainlineVersion(name);
+      } else {
+        vr = catalog.official.getLatestVersion(name);
+      }
     });
     return vr && !vr.unmigrated;
   };
@@ -1123,7 +1133,10 @@ main.registerCommand({
   _.each(allPackages, function (pack) {
     if (selector(pack, false)) {
       var vr = doOrDie(function () {
-        return catalog.official.getLatestMainlineVersion(pack);
+        if (!options['show-rcs']) {
+          return catalog.official.getLatestMainlineVersion(pack);
+        }
+        return catalog.official.getLatestVersion(pack);
       });
       if (vr) {
         matchingPackages.push(

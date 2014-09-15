@@ -213,6 +213,18 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     return self.getVersion(name, latest);
   },
 
+  // As getVersion, but returns info on the latest version of the
+  // package, or null if the package doesn't exist or has no versions.
+  getLatestVersion: function (name) {
+    var self = this;
+    self._requireInitialized();
+    buildmessage.assertInCapture();
+
+    var versions = self.getSortedVersions(name);
+    versions.reverse();
+    return self.getVersion(name, versions[0]);
+  },
+
   // If this package has any builds at this version, return an array of builds
   // which cover all of the required arches, or null if it is impossible to
   // cover them all (or if the version does not exist).

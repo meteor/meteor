@@ -14,7 +14,11 @@ var utils = exports;
 
 // Returns a pretty list suitable for showing to the user. Input is an
 // array of objects with keys 'name' and 'description'.
-exports.formatList = function (items) {
+exports.formatList = function (unsortedItems) {
+  var alphaSort = function (item) {
+    return item.name;
+  };
+  var items = _.sortBy(unsortedItems, alphaSort);
   var longest = '';
   _.each(items, function (item) {
     if (item.name.length > longest.length)
