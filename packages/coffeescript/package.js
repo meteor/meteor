@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.2-ekate"
+  version: "1.0.3-ekate"
 });
 
 Package._transitional_registerBuildPlugin({
