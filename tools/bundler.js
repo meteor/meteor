@@ -269,12 +269,6 @@ var File = function (options) {
   self._hash = options.hash || null; // hash, if known, as a hex string
 };
 
-var getAssetsEscaping = _.once(function () {
-  return uniload.load({
-    packages: ['assets-escaping']
-  })['assets-escaping'].AssetsEscaping;
-});
-
 _.extend(File.prototype, {
   hash: function () {
     var self = this;
@@ -350,7 +344,7 @@ _.extend(File.prototype, {
     if (url.charAt(0) !== '/')
       url = '/' + url;
 
-    url = getAssetsEscaping().escape(url);
+    url = assetsEscape(url);
     self.url = url;
   },
 
@@ -362,7 +356,7 @@ _.extend(File.prototype, {
     else
       self.targetPath = path.join('app', relPath);
 
-    self.targetPath = getAssetsEscaping().escape(self.targetPath);
+    self.targetPath = assetsEscape(self.targetPath);
   },
 
   // Set a source map for this File. sourceMap is given as a string.
@@ -382,6 +376,13 @@ _.extend(File.prototype, {
       self.assets = assets;
   }
 });
+
+var assetsEscape = function (url) {
+  // XXX copied from assets-escaping package
+  // Cannot uniload this package as in order to build it we need to use it.
+  // If you modify this function, be sure to apply changes accordingly there.
+  return url.replace(/:/g, '_');
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Target

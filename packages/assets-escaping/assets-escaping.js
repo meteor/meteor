@@ -1,4 +1,7 @@
 AssetsEscaping = {};
+
+// this is duplicated in tools/bundler.js:assetsEscape function
+// if you modify this package, be sure to apply changes there accordingly.
 AssetsEscaping.escape = function (url) {
   // XXX replacing colons with underscores as colon is hard to escape later
   // on different targets and generally is not a good separator for web and

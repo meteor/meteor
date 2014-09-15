@@ -10,7 +10,6 @@ var catalog = require('./catalog.js');
 // more to the list if you need to uniload more things! (You don't have to
 // include the dependencies of the packages you directly load in this list.)
 var ROOT_PACKAGES = [
-  'assets-escaping',
   'constraint-solver',
   'dev-bundle-fetcher',
   'ejson',
