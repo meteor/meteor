@@ -40,6 +40,8 @@ integration with Apache's Cordova/Phonegap project.
 
 * Allow Meteor tool to run from a symlink. #2462
 
+Patch by Github user mquandalle.
+
 
 ## v0.9.1.1
 
