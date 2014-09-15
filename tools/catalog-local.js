@@ -31,7 +31,7 @@ var LocalCatalog = function (options) {
   // We use the initialization design pattern because it makes it easier to use
   // both of our catalogs as singletons.
   self.initialized = false;
-  self.otherCatalog = null;
+  self.containingCatalog = options ? options.containingCatalog : self;
 
     // Local directories to search for package source trees
   self.localPackageDirs = null;
@@ -48,7 +48,7 @@ var LocalCatalog = function (options) {
   self.effectiveLocalPackages = [];
 
    // Each catalog needs its own package cache.
-  self.packageCache = new packageCache.PackageCache(options ? options.containingCatalog : self);
+  self.packageCache = new packageCache.PackageCache(self.containingCatalog);
 
   self.packageSources = null;
   self.built = null;
@@ -415,7 +415,7 @@ _.extend(LocalCatalog.prototype, {
     //  It is not clear that you get good UX if you have two packages with the same
     //  name in your app. We don't check that.)
     var initSourceFromDir =  function (packageDir, definiteName) {
-      var packageSource = new PackageSource(self);
+      var packageSource = new PackageSource(self.containingCatalog);
       var broken = false;
       buildmessage.enterJob({
         title: "reading package from `" + packageDir + "`",
