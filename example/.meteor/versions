@@ -28,7 +28,7 @@ minimongo@1.0.2
 mongo@1.0.4
 observe-sequence@1.0.2
 ordered-dict@1.0.0
-percolatestudio:percolatestudio-migrations@0.2.0
+percolatestudio:percolatestudio-migrations@0.7.1
 random@1.0.0
 reactive-dict@1.0.2
 reactive-var@1.0.1

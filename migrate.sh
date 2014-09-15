@@ -19,5 +19,5 @@ else
   export MIGRATE="$1,exit"
   shift
 
-  meteor --once --run $@
+  meteor run --once $@
 fi
