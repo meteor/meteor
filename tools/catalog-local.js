@@ -10,7 +10,7 @@ var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
-
+var catalog = require('./catalog.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 

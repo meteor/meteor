@@ -47,37 +47,26 @@ _.extend(LayeredCatalog.prototype, {
     return _.union(self.localCatalog.getAllPackageNames(), self.otherCatalog.getAllPackageNames());
   },
 
-  getAllReleaseTracks: function () {
-    return this._returnFirst("getAllReleaseTracks", arguments, [[]]);
-  },
-
   _returnFirst: function(f, args, unacceptableValues) {
     var self = this;
-    var result = self.localCatalog[f](args);
+    var splittedArgs = Array.prototype.slice.call(args,0);
+    var result = self.localCatalog[f].apply(self.localCatalog, splittedArgs);
     if ( ! (_.contains(unacceptableValues, result) )) {
       return result;
     }
-    return self.otherCatalog[f](args);
+    return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
   },
 
   getBuildsForArches: function (name, version, arches) {
-    return this._returnFirst("getBuildsForArches", arguements, [[], null]);
+    return this._returnFirst("getBuildsForArches", arguments, [[], null]);
   },
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
-    return this._returnFirst("getBuildWithPreciseBuildArchitectures", arguements, [[], null]);
-  },
-
-  getDefaultReleaseVersion: function (track) {
-    return this.otherCatalog.getDefaultReleaseVersion(track);
+    return this._returnFirst("getBuildWithPreciseBuildArchitectures", arguments, [[], null]);
   },
 
   getForgottenECVs: function (packageName) {
     return this.forgottenECVs[packageName];
-  },
-
-  getLatestMainlineVersion: function (name) {
-    return this._returnFirst("getLatestMainlineVersion", arguements, [[], null]);
   },
 
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
@@ -90,7 +79,7 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getPackage: function (name, options) {
-    return this._returnFirst("getPackage", arguements, [[], null]);
+    return this._returnFirst("getPackage", arguments, [[], null]);
   },
 
   getReleaseTrack: function (name) {
@@ -102,15 +91,15 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
-    return this.otherCatalog.getSortedRecommendedReleaseVersions(track, version);
+    return this.otherCatalog.getSortedRecommendedReleaseVersions(track, laterThanOrderKey);
   },
 
   getSortedVersions: function (name) {
-    return this._returnFirst("getSortedVersions", arguements, [[], null]);
+    return this._returnFirst("getSortedVersions", arguments, [[], null]);
   },
 
   getVersion: function (name, version) {
-    return this._returnFirst("getVersion", arguements, [[], null]);
+    return this._returnFirst("getVersion", arguments, [[], null]);
   },
 
   initialize: function (options) {
@@ -257,6 +246,7 @@ _.extend(LayeredCatalog.prototype, {
 
 });
 
+exports.DEFAULT_TRACK = remoteCatalog.DEFAULT_TRACK;
 
 //Instantiate the various catalogs
 if (files.inCheckout()) {

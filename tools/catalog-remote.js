@@ -52,7 +52,11 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getSortedVersions: function (name) {
-    return _.pluck(this.getPackage(name), 'version').sort(semver.compare);
+    var self = this;
+    var match = this._getPackage(name);
+    if (match === null)
+      return [];
+    return _.pluck(match, 'version').sort(semver.compare);
   },
 
   //copied from base-catalog
@@ -69,11 +73,21 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getPackage: function (name) {
+    var result = this._getPackage(name);
+    if (result.length === 0)
+      return null;
+    return result[0];
+  },
+  
+  _getPackage: function (name) {
     return this._syncQuery("SELECT content FROM versions WHERE name=?", name);
   },
 
   getAllBuilds: function (name, version) {
-    return this._syncQuery("SELECT * FROM builds WHERE builds.versionId = (SELECT id FROM versions WHERE versions.name=? AND versions.version=?)", [name, version]);
+    var result = this._syncQuery("SELECT * FROM builds WHERE builds.versionId = (SELECT id FROM versions WHERE versions.name=? AND versions.version=?)", [name, version]);
+    if (result.length === 0)
+      return null;
+    return result[0];
   },
 
   getBuildsForArches: function (name, version, arches) {
@@ -134,7 +148,18 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getAllPackageNames: function () {
-    throw new Exception("CALLING GET ALL PACKAGES NAMES");
+     var future = new Future;
+     var result = [];
+     db.all("SELECT name FROM packages", function(err, rows) {
+      if ( ! (err === null) ) {
+        future.return();
+        return;
+      }
+      result = _.pluck(rows, 'name');
+      future.return();
+    });
+    future.wait();
+    return result;
   },
 
   initialize: function () {
@@ -207,7 +232,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
 
     if (!track)
-      track = catalog.DEFAULT_TRACK;
+      track = exports.DEFAULT_TRACK;
 
     var versions = self.getSortedRecommendedReleaseVersions(track);
     if (!versions.length)
@@ -338,3 +363,4 @@ _.extend(RemoteCatalog.prototype, {
 
 });
 exports.RemoteCatalog = RemoteCatalog;
+exports.DEFAULT_TRACK = 'METEOR';
