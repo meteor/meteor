@@ -85,6 +85,12 @@ _.extend(exports, {
       delete options.bodyStream;
     }
 
+    var progressCallback;
+    if (_.has(options, 'progressCallback')) {
+      progressCallback = options.progressCallback;
+      delete options.progressCallback;
+    }
+
     options.headers = _.extend({
       'User-Agent': getUserAgent()
     }, options.headers || {});
@@ -164,10 +170,48 @@ _.extend(exports, {
     if (bodyStream)
       bodyStream.pipe(req);
 
+    if (progressCallback) {
+      httpHelpers._addProgressEvents(req);
+      req.on('progress', progressCallback);
+    }
+
     if (fut)
       return fut.wait();
     else
       return req;
+  },
+
+  // Adds progress callbacks to a request
+  // Based on request-progress
+  _addProgressEvents: function (request) {
+    var state;
+
+    var emitProgress = function () {
+      request.emit('progress', state);
+    };
+
+    request
+      .on('response', function (response) {
+        state = {};
+        state.total = undefined;
+        state.done = false;
+        state.received = 0;
+        var contentLength = response.headers['content-length'];
+        if (contentLength) {
+          state.total = Number(contentLength);
+        } else {
+          state.total = undefined;
+        }
+        emitProgress();
+      })
+      .on('data', function (data) {
+        state.received += data.length;
+        emitProgress();
+      })
+      .on('end', function (data) {
+        state.done = true;
+        emitProgress();
+      });
   },
 
   // A synchronous wrapper around request(...) that returns the response "body"

@@ -152,9 +152,15 @@ _.extend(exports.Tropohouse.prototype, {
   downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
     var targetDirectory = files.mkdtemp();
+
+    var progressCallback = function (state) {
+      console.log("Download: " + JSON.stringify(state));
+    };
+
     var packageTarball = httpHelpers.getUrl({
       url: buildRecord.build.url,
-      encoding: null
+      encoding: null,
+      progressCallback: progressCallback
     });
     files.extractTarGz(packageTarball, targetDirectory);
     return targetDirectory;
