@@ -847,9 +847,11 @@ main.registerCommand({
   var uploadInfo;
   try {
     if (!relConf.patchFrom) {
-      uploadInfo = conn.call('createReleaseVersion', record);
+      uploadInfo = packageClient.callPackageServer(
+        conn, 'createReleaseVersion', record);
     } else {
-      uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
+      uploadInfo = packageClient.callPackageServer(
+        conn, 'createPatchReleaseVersion', record, relConf.patchFrom);
     }
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
@@ -2079,16 +2081,20 @@ main.registerCommand({
       if (options.add) {
         process.stdout.write("Adding a maintainer to " + name + "...\n");
         if (fullRecord.release) {
-          conn.call('addReleaseMaintainer', name, options.add);
+          packageClient.callPackageServer(
+            conn, 'addReleaseMaintainer', name, options.add);
         } else {
-          conn.call('addMaintainer', name, options.add);
+          packageClient.callPackageServer(
+            conn, 'addMaintainer', name, options.add);
         }
       } else if (options.remove) {
         process.stdout.write("Removing a maintainer from " + name + "...\n");
         if (fullRecord.release) {
-          conn.call('removeReleaseMaintainer', name, options.remove);
+          packageClient.callPackageServer(
+            conn, 'removeReleaseMaintainer', name, options.remove);
         } else {
-          conn.call('removeMaintainer', name, options.remove);
+          packageClient.callPackageServer(
+            conn, 'removeMaintainer', name, options.remove);
         }
         process.stdout.write(" Done!\n");
       }
@@ -2333,8 +2339,9 @@ main.registerCommand({
   }
 
   try {
-    conn.call('setBannersOnReleases', bannersData.track,
-              bannersData.banners);
+    packageClient.callPackageServer(
+      conn, 'setBannersOnReleases',
+      bannersData.track, bannersData.banners);
   } catch (e) {
     packageClient.handlePackageServerConnectionError(e);
     return 1;
@@ -2384,12 +2391,12 @@ main.registerCommand({
   try {
     if (options.unrecommend) {
       process.stdout.write("Unrecommending " + name + "@" + version + "...\n");
-      conn.call('unrecommendVersion', name, version);
+      packageClient.callPackageServer(conn, 'unrecommendVersion', name, version);
       process.stdout.write("Done!\n " + name + "@" + version  +
                            " is no longer a recommended release\n");
     } else {
       process.stdout.write("Recommending " + options.args[0] + "...\n");
-      conn.call('recommendVersion', name, version);
+      packageClient.callPackageServer(conn, 'recommendVersion', name, version);
       process.stdout.write("Done!\n " +  name + "@" + version +
                            " is now  a recommended release\n");
     }
@@ -2443,7 +2450,8 @@ main.registerCommand({
           + options.args[0] + " to " + ecv + "...\n");
       var versionInfo = { name : name,
                           version : version };
-      conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
+      packageClient.callPackageServer(conn,
+          '_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
@@ -2487,7 +2495,8 @@ main.registerCommand({
       process.stdout.write(
         "Changing homepage on  "
           + name + " to " + url + "...\n");
-      conn.call('_changePackageHomepage', name, url);
+      packageClient.callPackageServer(conn,
+          '_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);

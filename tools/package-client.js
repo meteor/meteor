@@ -43,6 +43,19 @@ var emptyCachedServerDataJson = function () {
   };
 };
 
+// Given a connection, makes a call to the package server.  (Checks to see if
+// the connection is connected, and reconnectes if needed -- a workaround for
+// the fact that connections in the tool do not reconnect)
+exports.callPackageServer = function (conn) {
+  if (!conn.connected) {
+    conn.close();
+    conn = exports.loggedInPackagesConnection();
+  }
+  var args = _.values(arguments)
+    .slice(1, arguments.length);
+  return conn.call.apply(conn, args);
+};
+
 // Load the package data that was saved in the local data.json
 // collection from the last time we did a sync to the server. Takes an
 // optional `packageStorageFile` argument (defaults to
@@ -109,11 +122,11 @@ var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   }
   var collectionData;
   if (syncOpts) {
-    collectionData = conn.call(
-      'syncNewPackageData', syncToken, syncOpts);
+    collectionData = exports.callPackageServer(conn,
+        'syncNewPackageData', syncToken, syncOpts);
   } else {
-    collectionData = conn.call(
-      'syncNewPackageData', syncToken);
+    collectionData = exports.callPackageServer(conn,
+        'syncNewPackageData', syncToken);
   }
   return collectionData;
 };
@@ -460,10 +473,11 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
     return;
 
   process.stdout.write('Creating package build...\n');
-  var uploadInfo = conn.call('createPackageBuild', {
-    packageName: unipackage.name,
-    version: unipackage.version,
-    buildArchitectures: unipackage.buildArchitectures()
+  var uploadInfo = exports.callPackageServer(conn,
+    'createPackageBuild', {
+      packageName: unipackage.name,
+      version: unipackage.version,
+      buildArchitectures: unipackage.buildArchitectures()
   });
 
   process.stdout.write('Uploading build...\n');
@@ -471,7 +485,8 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
                 bundleResult.buildTarball);
 
   process.stdout.write('Publishing package build...\n');
-  conn.call('publishPackageBuild',
+  exports.callPackageServer(conn,
+            'publishPackageBuild',
             uploadInfo.uploadToken,
             bundleResult.tarballHash,
             bundleResult.treeHash);
@@ -655,9 +670,10 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   if (options.new) {
     process.stdout.write('Creating package...\n');
     try {
-      var packageId = conn.call('createPackage', {
-        name: packageSource.name
-      });
+      var packageId = exports.callPackageServer(conn,
+        'createPackage', {
+            name: packageSource.name
+        });
     } catch (err) {
       process.stderr.write(err.message + "\n");
       return 3;
@@ -691,7 +707,12 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       dependencies: packageDeps
     };
     try {
-      var uploadInfo = conn.call('createPackageVersion', uploadRec);
+console.log(conn.connected);
+//var conn2 = exports.loggedInPackagesConnection();
+//console.log(conn2.connection);
+
+      var uploadInfo = exports.callPackageServer(conn,
+        'createPackageVersion', uploadRec);
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
       return 3;
@@ -706,10 +727,11 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 
     process.stdout.write('Publishing package version...\n');
     try {
-      conn.call('publishPackageVersion',
-                uploadInfo.uploadToken,
-                { tarballHash: sourceBundleResult.tarballHash,
-                  treeHash: sourceBundleResult.treeHash });
+      exports.callPackageServer(conn,
+                        'publishPackageVersion',
+                        uploadInfo.uploadToken,
+                        { tarballHash: sourceBundleResult.tarballHash,
+                          treeHash: sourceBundleResult.treeHash });
     } catch (err) {
       process.stderr.write("ERROR " + err.message + "\n");
       return 3;
@@ -734,7 +756,7 @@ exports.amIAuthorized = function (name, conn, isRelease) {
     (isRelease ? "Release" : "Package");
 
   try {
-     conn.call(methodName, name);
+    exports.callPackageServer(conn, methodName, name);
   } catch (err) {
     if (err.error === 401) {
       return false;
