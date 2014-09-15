@@ -2549,7 +2549,7 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
-        
+
 <h2 id="blaze"><span>Blaze</span></h2>
 
 Blaze is the package that makes reactive templates possible.
@@ -2722,7 +2722,7 @@ by Meteor have names like "Template.foo" and "if".
   In `func`, the View is bound to `this`.
 
   This hook is the basis for the [`rendered`](#template_rendered)
-  template callback.  
+  template callback.
 {{/dtdd}}
 
 {{#dtdd name="onViewDestroyed(func)" id="view_onviewdestroyed"}}
@@ -2830,7 +2830,7 @@ present on template objects:
   Constructs and returns an unrendered View object.  This method is invoked
   by Meteor whenever the template is used, such as by `Blaze.render` or by
   `{{dstache}}> foo}}` where `foo` resolves to a Template object.
-  
+
   `constructView()` constructs a View using `viewName` and `renderFunction`
   as constructor arguments, and then configures it as a template
   View, setting up `view.template`, `view.templateInstance()`, event maps, and so on.
@@ -3592,6 +3592,16 @@ in the `_test.js` file that was created.
 {{/markdown}}
 
 {{> autoApiBox "Package.onTest"}}
+
+<h3><span>External Packages and Plugins</span></h3>
+
+{{#markdown}}
+Meteor packages can include NPM packages and Cordova plugins by using `Npm.depends` and `Cordova.depends` in the `package.js` file.
+{{/markdown}}
+
+{{> autoApiBox "Npm.depends"}}
+{{> autoApiBox "Npm.require"}}
+{{> autoApiBox "Cordova.depends"}}
 
 <h3><span>External Packages and Plugins</span></h3>
 
