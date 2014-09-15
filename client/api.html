@@ -20,6 +20,7 @@ don't want served to the client, such as code containing passwords or
 authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
+{{> api_box isCordova}}
 
 {{> autoApiBox "Meteor.startup"}}
 
@@ -1347,7 +1348,6 @@ See the [full list of
 modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
 
 
-
 {{> apiBoxTitle name="Sort Specifiers" id="sortspecifiers"}}
 
 Sorts may be specified using your choice of several syntaxes:
@@ -2219,8 +2219,8 @@ any `Template.myTemplate` object.
 Helpers on `Template.body` are only available in the `<body>` tags of
 your app.  To register a global helper, use
 [Template.registerHelper](#template_registerhelper).
-
 Event maps on `Template.body` don't apply to elements added to the
+
 body via `Blaze.render`, jQuery, or the DOM API, or to the body element
 itself.  To handle events on the body, window, or document, use jQuery
 or the DOM API.
@@ -3558,7 +3558,6 @@ package is exported to.
 {{> api_box pack_export }}
 {{> api_box pack_addFiles }}
 
-
 <h3 id="packagetests"><span>Unit Tests</span></h3>
 
 {{#markdown}}
@@ -3574,5 +3573,15 @@ in the `_test.js` file that was created.
 {{/markdown}}
 
 {{> api_box pack_onTest }}
+
+<h3><span>External Packages and Plugins</span></h3>
+
+{{#markdown}}
+Meteor packages can include NPM packages and Cordova plugins by using `Npm.depends` and `Cordova.depends` in the `package.js` file.
+{{/markdown}}
+
+{{> autoApiBox "Npm.depends"}}
+{{> autoApiBox "Npm.require"}}
+{{> autoApiBox "Cordova.depends"}}
 
 </template>

@@ -191,16 +191,16 @@ server patches each client's cache.
 Today most Meteor apps use MongoDB as their database because it is the
 best supported, though support for other databases is coming in the
 future. The
-[`Meteor.Collection`](http://docs.meteor.com/#meteor_collection) class
+[`Mongo.Collection`](http://docs.meteor.com/#mongo_collection) class
 is used to declare Mongo collections and to manipulate them. Thanks to
-`minimongo`, Meteor's client-side Mongo emulator, `Meteor.Collection`
+`minimongo`, Meteor's client-side Mongo emulator, `Mongo.Collection`
 can be used from both client and server code.
 
     // declare collections
     // this code should be included in both the client and the server
-    Rooms = new Meteor.Collection("rooms");
-    Messages = new Meteor.Collection("messages");
-    Parties = new Meteor.Collection("parties");
+    Rooms = new Mongo.Collection("rooms");
+    Messages = new Mongo.Collection("messages");
+    Parties = new Mongo.Collection("parties");
 
     // server: populate collections with some initial documents
     Rooms.insert({name: "Conference Room A"});
