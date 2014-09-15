@@ -487,7 +487,8 @@ Fiber(function () {
             if (_.has(isBoolean, name)) {
               if (isBoolean[name] !== optionIsBoolean)  {
                 throw new Error("conflict: option '" + name + "' is used " +
-                                "both as a boolean and as another type");
+                                "both as a boolean and as another type for " +
+                                "command " + key);
               }
             } else {
               isBoolean[name] = optionIsBoolean;

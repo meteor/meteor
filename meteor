@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.51
+BUNDLE_VERSION=0.3.52
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -29,14 +29,23 @@ elif [ "$UNAME" = "Linux" ] ; then
 fi
 PLATFORM="${UNAME}_${ARCH}"
 
-# Find the script dir, following one level of symlink. Note that symlink
-# can be relative or absolute. Too bad 'readlink -f' is not portable.
-ORIG_DIR=$(pwd)
-cd "$(dirname "$0")"
-if [ -L "$(basename "$0")" ] ; then
-    cd "$(dirname $(readlink $(basename "$0") ) )"
-fi
-SCRIPT_DIR=$(pwd -P)
+# Find the script dir, following symlinks. Note that symlink can be relative or
+# absolute. Too bad 'readlink -f' and 'realpath' (the command-line program) are
+# not portable.  We don't stress about infinite loops or bad links, because the
+# OS has already resolved this symlink chain once in order to actually run the
+# shell script.
+ORIG_DIR="$(pwd)"
+SCRIPT="$0"
+while true; do
+  # The symlink might be relative, so we have to actually cd to the right place
+  # each time in order to resolve it.
+  cd "$(dirname "$SCRIPT")"
+  if [ ! -L "$(basename "$SCRIPT")" ]; then
+    SCRIPT_DIR="$(pwd -P)"
+    break
+  fi
+  SCRIPT="$(readlink "$(basename "$SCRIPT")")"
+done
 cd "$ORIG_DIR"
 
 

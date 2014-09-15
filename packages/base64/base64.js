@@ -8,7 +8,23 @@ for (var i = 0; i < BASE_64_CHARS.length; i++) {
   BASE_64_VALS[BASE_64_CHARS.charAt(i)] = i;
 };
 
-base64Encode = function (array) {
+Base64 = {};
+
+Base64.encode = function (array) {
+
+  if (typeof array === "string") {
+    var str = array;
+    array = Base64.newBinary(str.length);
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charCodeAt(i);
+      if (ch > 0xFF) {
+        throw new Error(
+          "Not ascii. Base64.encode can only take ascii strings.");
+      }
+      array[i] = ch;
+    }
+  }
+
   var answer = [];
   var a = null;
   var b = null;
@@ -62,12 +78,12 @@ var getVal = function (ch) {
   return BASE_64_VALS[ch];
 };
 
-/**
- * @summary Allocate a new buffer of binary data that EJSON can serialize.
- * @locus Anywhere
- * @param {Number} size The number of bytes of binary data to allocate.
- */
-EJSON.newBinary = function (len) {
+// XXX This is a weird place for this to live, but it's used both by
+// this package and 'ejson', and we can't put it in 'ejson' without
+// introducing a circular dependency. It should probably be in its own
+// package or as a helper in a package that both 'base64' and 'ejson'
+// use.
+Base64.newBinary = function (len) {
   if (typeof Uint8Array === 'undefined' || typeof ArrayBuffer === 'undefined') {
     var ret = [];
     for (var i = 0; i < len; i++) {
@@ -79,14 +95,14 @@ EJSON.newBinary = function (len) {
   return new Uint8Array(new ArrayBuffer(len));
 };
 
-base64Decode = function (str) {
+Base64.decode = function (str) {
   var len = Math.floor((str.length*3)/4);
   if (str.charAt(str.length - 1) == '=') {
     len--;
     if (str.charAt(str.length - 2) == '=')
       len--;
   }
-  var arr = EJSON.newBinary(len);
+  var arr = Base64.newBinary(len);
 
   var one = null;
   var two = null;
@@ -126,7 +142,3 @@ base64Decode = function (str) {
   }
   return arr;
 };
-
-EJSONTest.base64Encode = base64Encode;
-
-EJSONTest.base64Decode = base64Decode;

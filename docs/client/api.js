@@ -12,6 +12,13 @@ Template.api.isServer = {
   descr: ["Boolean variable.  True if running in server environment."]
 };
 
+Template.api.isCordova = {
+  id: "meteor_iscordova",
+  name: "Meteor.isCordova",
+  locus: "Anywhere",
+  descr: ["Boolean variable.  True if running in a Cordova mobile environment."]
+};
+
 Template.api.startup = {
   id: "meteor_startup",
   name: "Meteor.startup(func)",
@@ -21,6 +28,36 @@ Template.api.startup = {
     {name: "func",
      type: "Function",
      descr: "A function to run on startup."}
+  ]
+};
+
+Template.api.absoluteUrl = {
+  id: "meteor_absoluteurl",
+  name: "Meteor.absoluteUrl([path], [options])",
+  locus: "Anywhere",
+  descr: ["Generate an absolute URL pointing to the application. The server "
+          + "reads from the `ROOT_URL` environment variable to determine "
+          + "where it is running. This is taken care of automatically for "
+          + "apps deployed with `meteor deploy`, but must be provided when "
+          + "using `meteor build`."],
+  args: [
+    {name: "path",
+     type: "String",
+     descr: 'A path to append to the root URL. Do not include a leading "`/`".'
+    }
+  ],
+  options: [
+    {name: "secure",
+     type: "Boolean",
+     descr: "Create an HTTPS URL."
+    },
+    {name: "replaceLocalhost",
+     type: "Boolean",
+     descr: "Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name."},
+    {name: "rootUrl",
+     type: "String",
+     descr: "Override the default ROOT_URL from the server environment. For example: \"`http://foo.example.com`\""
+    }
   ]
 };
 
@@ -1094,6 +1131,11 @@ Template.api.loginWithExternalService = {
       name: "userEmail",
       type: "String",
       descr: "An email address that the external service will use to pre-fill the login prompt. Currently only supported with Meteor developer accounts."
+    },
+    {
+      name: "loginStyle",
+      type: "String",
+      descr: 'Login style ("popup" or "redirect", defaults to the login service configuration).  The "popup" style opens the login page in a separate popup window, which is generally preferred because the Meteor application doesn\'t need to be reloaded.  The "redirect" style redirects the Meteor application\'s window to the login page, and the login service provider redirects back to the Meteor application which is then reloaded.  The "redirect" style can be used in situations where a popup window can\'t be opened, such as in a mobile UIWebView.  The "redirect" style however relies on session storage which isn\'t available in Safari private mode, so the "popup" style will be forced if session storage can\'t be used.'
     }
   ]
 };

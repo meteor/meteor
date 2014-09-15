@@ -235,9 +235,12 @@ Log.format = function (obj, options) {
   if (originApp && originApp !== appName) appInfo += ' via ' + originApp;
   if (appInfo) appInfo = '[' + appInfo + '] ';
 
-  var sourceInfo = (file && lineNumber) ?
-      ['(', (program ? program + ':' : ''), file, ':', lineNumber, ') '].join('')
-      : '';
+  var sourceInfoParts = [];
+  if (program) sourceInfoParts.push(program);
+  if (file) sourceInfoParts.push(file);
+  if (lineNumber) sourceInfoParts.push(lineNumber);
+  var sourceInfo = _.isEmpty(sourceInfoParts) ?
+    '' : '(' + sourceInfoParts.join(':') + ') ';
 
   if (satellite)
     sourceInfo += ['[', satellite, ']'].join('');
@@ -260,8 +263,8 @@ Log.format = function (obj, options) {
       Npm.require('cli-color')[color](line) : line;
   };
 
-  return prettify(metaPrefix, META_COLOR)
-    + prettify(message, LEVEL_COLORS[level]);
+  return prettify(metaPrefix, options.metaColor || META_COLOR) +
+    prettify(message, LEVEL_COLORS[level]);
 };
 
 // Turn a line of text into a loggable object.

@@ -17,8 +17,8 @@ See 'meteor help <command>' for details on a command.
 
 
 >>> run
-[default] Run this project in local development mode
-Usage: meteor run [options]
+[default] Run this project in local development mode.
+Usage: meteor run [platform..] [options]
 
 Searches upward from the current directory for the root directory of a
 Meteor project, then runs that project in local development
@@ -31,19 +31,30 @@ are automatically detected and applied to the running application.
 The application's database persists between runs. It's stored under
 the .meteor directory in the root of the project.
 
+You can specify additional platforms where the app should be run if they have
+been previously added with 'meteor add-platform'.
+By default, Meteor will run the app in an emulator. Appending "-device" to the
+end of a platform string (such as "android-device") will run the app on a
+physical device. "ios-device" will open XCode and allow you to manually run
+the app on a device.
+
 Options:
-  --port, -p    Port to listen on (instead of the default 3000). Also
-                uses port N+1 and a port specified by --app-port.
-                Specify as --port=host:port to bind to a specific interface.
-  --production  Simulate production mode. Minify and bundle CSS and JS files.
-  --raw-logs    Run without parsing logs from stdout and stderr.
-  --settings    Set optional data for Meteor.settings on the server
-  --release     Specify the release of Meteor to use
-  --program     The program in the app to run (Advanced)
+  --port, -p     Port to listen on (instead of the default 3000). Also
+                 uses port N+1 and a port specified by --app-port.
+                 Specify as --port=host:port to bind to a specific interface.
+  --mobile-port  Port (or interface, if specified as --mobile-port=host:port)
+                 where mobile builds connect to the Meteor server. Defaults
+                 to the host and port that the Meteor server binds to.
+  --production   Simulate production mode. Minify and bundle CSS and JS files.
+  --raw-logs     Run without parsing logs from stdout and stderr.
+  --settings     Set optional data for Meteor.settings on the server
+  --release      Specify the release of Meteor to use
+  --program      The program in the app to run (Advanced)
+  --verbose      Print all output from builds logs.
 
 
 >>> create
-Create a new project
+Create a new project.
 Usage: meteor create [--release <release>] <name>
        meteor create [--release <release>] --example <example_name> [<name>]
        meteor create --list
@@ -114,7 +125,7 @@ internal functionality of Meteor.
 
 
 >>> add
-Add a package to this project
+Add a package to this project.
 Usage: meteor add <package> [package] [package..]
 
 Adds packages to your Meteor project. You can add multiple
@@ -123,7 +134,7 @@ the meteor search command.
 
 
 >>> remove
-Remove a package from this project
+Remove a package from this project.
 Usage: meteor remove <package> [package] [package..]
 
 Removes a package previously added to your Meteor project. For a
@@ -138,22 +149,66 @@ Usage: meteor list
 List the packages that you have explicitly added to your project.
 This will not list transitive dependencies.
 
->>> bundle
-Pack this project up into a tarball
-Usage: meteor bundle <output_file.tar.gz>
+>>> add-platform
+Add a platform to this project.
+Usage: meteor add-platform <platform> [platform..]
 
-Package this project up for deployment. The output is a tarball that
-includes everything necessary to run the application. See README in
-the tarball for details.
+Adds platforms to your Meteor project. You can add multiple
+platforms with one command. Once a platform has been added, you
+can use 'meteor run <platform>' to run on the platform, and 'meteor build'
+to build the Meteor project for every added platform.
+
+>>> remove-platform
+Remove a platform from this project.
+Usage: meteor remove-platform <platform> [platform..]
+
+Removes a platform previously added to your Meteor project. For a
+list of the platforms that your application is currently using, see
+'meteor list-platforms'.
+
+>>> list-platforms
+List the platforms added to your project.
+Usage: meteor list-packages
+
+Lists all of the platforms that have been explicitly added to your project.
+
+>>> configure-android
+Run the Android configuration tool from Meteor's ADK environment.
+Usage: meteor configure-android
+
+Runs the Android configuration tool from Meteor's ADK environment.
+This command can be useful to configure AVDs, HAX and update the SDK.
+
+>>> bundle
+Deprecated command. Use 'build' instead.
+Deprecated command. Use 'build' instead.
+
+>>> build
+Outputs builds for all targeted platforms.
+Usage: meteor build <output path> [--debug] [--directory] [--settings settings.json]
+
+Package this project up for deployment. The output is a directory with several
+build artifacts:
+
+- a tarball that includes everything necessary to run the application server
+  (see README in the tarball for details)
+- an unassigned apk bundle and a project source if Android is targeted as a
+  mobile platform
+- a directory with an Xcode project source if iOS is targeted as a mobile
+  platform
+
 
 Options:
-  --debug      bundle in debug mode (don't minify, etc)
-  --directory  output a directory (rather than a tarball). If the output
-               location exists, it will be recursively deleted first.
+  --debug        build in debug mode (don't minify, etc)
+  --directory    output a directory (rather than a tarball) for the
+                 application server bundle. If the output location exists,
+                 it will be recursively deleted first.
+  --settings     set optional data for Meteor.settings for the build-time
+                 settings (such as settings required by Cordova plugins).
 
 
 >>> mongo
-Connect to the Mongo database for the specified site
+Connect to the Mongo database for the specified site.
 Usage: meteor mongo [--url] [site]
 
 Opens a Mongo shell to view or manipulate collections.
@@ -182,7 +237,7 @@ Reset the current project to a fresh state. Removes all local data.
 
 
 >>> deploy
-Deploy this project to Meteor
+Deploy this project to Meteor.
 Usage: meteor deploy <site> [--settings settings.json] [--debug] [--delete]
 
 Deploys the project in your current directory to Meteor's servers.
@@ -212,7 +267,7 @@ Options:
 
 
 >>> logs
-Show logs for specified site
+Show logs for specified site.
 Usage: meteor logs <site>
 
 Retrieves the server logs for the requested site.
@@ -242,7 +297,7 @@ Options:
 
 
 >>> claim
-Claim a site deployed with an old Meteor version
+Claim a site deployed with an old Meteor version.
 Usage: meteor claim <site>
 
 If you deployed a site with an old version of Meteor that did not have
@@ -252,7 +307,7 @@ be prompted for it one last time.
 
 
 >>> login
-Log in to your Meteor developer account
+Log in to your Meteor developer account.
 Usage: meteor login [--email]
 
 Prompts for your username and password and logs you in to your Meteor
@@ -261,14 +316,14 @@ by username.
 
 
 >>> logout
-Log out of your Meteor developer account
+Log out of your Meteor developer account.
 Usage: meteor logout
 
 Log out of your Meteor developer account.
 
 
 >>> whoami
-Prints the username of your Meteor developer account
+Prints the username of your Meteor developer account.
 Usage: meteor whoami
 
 Prints the username of the currently logged-in Meteor developer.
@@ -278,7 +333,7 @@ Meteor developer account.
 
 
 >>> test-packages
-Test one or more packages
+Test one or more packages.
 Usage: meteor test-packages [--release <release>] [options] [package...]
 
 Runs unit tests for one or more packages. The results are shown in
@@ -301,12 +356,18 @@ can use in conjunction with a service like Browserling or BrowserStack
 to try the tests against many different browser versions.
 
 Options:
-  --port, -p    Port to listen on (instead of the default 3000). Also
-                uses port N+1 and N+2.
-  --deploy      Optionally, specify a domain to deploy to, rather than
-                running locally.
-  --production  Simulate production mode. Minify and bundle CSS and JS files.
-  --settings    Set optional data for Meteor.settings on the server
+  --port, -p        Port to listen on (instead of the default 3000). Also
+                    uses port N+1 and N+2.
+  --deploy          Optionally, specify a domain to deploy to, rather than
+                    running locally.
+  --production      Simulate production mode. Minify and bundle CSS and JS files.
+  --settings        Set optional data for Meteor.settings on the server
+
+  --ios,            Run tests in an emulator or on a mobile device. All of
+  --android,        the tests for client and server will run in addition to
+  --ios-device,     mobile-specific tests.
+  --android-device
+  --verbose         Print all output from builds logs.
 
 
 >>> self-test
@@ -339,8 +400,16 @@ Pass --browserstack to enable client side tests using BrowserStack.
 --browserstack requires s3cmd credentials.
 
 
+
+>>> open-ide
+Open mobile build project in associated IDE.
+Usage: meteor open-ide [ios]
+
+Open mobile build project in associated IDE.
+
+
 >>> admin
-Administrative commands
+Administrative commands.
 Usage: meteor admin <command> [args]
        meteor help admin <command>
 
@@ -352,14 +421,14 @@ Commands:
 See 'meteor help admin <command>' for details on an admin command.
 
 >>> admin make-bootstrap-tarballs
-Makes bootstrap tarballs
+Makes bootstrap tarballs.
 Usage: meteor admin make-bootstrap-tarballs release@version /tmp/tarballdir
 
 For internal use only.
 
 
 >>> dummy
-Dummy command used for automated testing
+Dummy command used for automated testing.
 Usage: meteor dummy [options]
 
 Dummy command used for automated testing.
@@ -370,8 +439,13 @@ Options:
   --changed    A boolean option.
 
 
+>>> cordova
+Run cordova commands.
+Usage: meteor cordova <command>
+
+
 >>> list-sites
-List sites for which you are authorized
+List sites for which you are authorized.
 Usage: meteor list-sites
 
 List the sites that you have deployed with 'meteor deploy', and sites
@@ -380,7 +454,7 @@ command.
 
 
 >>> publish-release
-Publish a new meteor release to the package server
+Publish a new meteor release to the package server.
 
 Usage: meteor publish-release <path to json config> [--create-track]
 
@@ -409,7 +483,7 @@ Options:
 
 
 >>> publish
-Publish a new version of a package to the package server
+Publish a new version of a package to the package server.
 
 Usage: meteor publish [--create]
 
@@ -434,7 +508,7 @@ Options:
 
 
 >>> publish-for-arch
-Builds an already-published package for a new platform
+Builds an already-published package for a new platform.
 
 Usage: meteor publish-for-arch packageName@version
 
@@ -455,7 +529,7 @@ server.
 
 
 >>> rebuild
-Rebuild local packages
+Rebuild local packages.
 Usage: meteor rebuild [<package name>]
 
 Rebuild a specified local packages. Deletes the package's build directory

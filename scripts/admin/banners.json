@@ -1,15 +1,9 @@
 { "track": "METEOR",
   "banners": [
     {
-      "versions": ["0.9.0", "0.9.0.1"],
+      "versions": ["0.9.0", "0.9.0.1", "0.9.1", "0.9.1.1"],
       "banner": {
-        "text": "=> Meteor 0.9.1.1 is out, adding support for organizations in Meteor\n   developer accounts.\n\n   Meteor 0.9.1.1 is being downloading in the background. You can update\n   to it by running 'meteor update'."
-       }
-    },
-    {
-      "versions": ["0.9.1"],
-      "banner": {
-        "text": "=> Meteor 0.9.1.1 is out, with better compatibility with 0.9.0 for some packages.\n\n   Meteor 0.9.1.1 is being downloading in the background. You can update\n   to it by running 'meteor update'."
+        "text": "=> Meteor 0.9.2 is out, with our first support for building mobile apps\n   in Meteor. This support comes via an integration with Apache's\n   Cordova/PhoneGap project.\n\n   Meteor 0.9.2 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
        }
     }
   ]

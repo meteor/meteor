@@ -1,6 +1,7 @@
 var Future = require('fibers/future');
 var readline = require('readline');
 var _ = require('underscore');
+var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
 var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
@@ -350,6 +351,86 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
+exports.isUrlWithSha = function (x) {
+  // For now, just support http/https, which is at least less restrictive than
+  // the old "github only" rule.
+  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+};
+
+// If there is a version that isn't exact, throws an Error with a
+// human-readable message that is suitable for showing to the user.
+// dependencies may be falsey or empty.
+exports.ensureOnlyExactVersions = function (dependencies) {
+  _.each(dependencies, function (version, name) {
+    // We want a given version of a smart package (package.js +
+    // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
+    // don't want anything too vague. For now, we support semvers and urls that
+    // name a specific commit by SHA.
+    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+      throw new Error(
+        "Must declare exact version of dependency: " +
+          name + '@' + version);
+  });
+};
+
+exports.execFileSync = function (file, args, opts) {
+  var future = new Future;
+
+  var child_process = require('child_process');
+  var eachline = require('eachline');
+
+  if (opts && opts.pipeOutput) {
+    var p = child_process.spawn(file, args, opts);
+
+    eachline(p.stdout, fiberHelpers.bindEnvironment(function (line) {
+      process.stdout.write(line + '\n');
+    }));
+
+    eachline(p.stderr, fiberHelpers.bindEnvironment(function (line) {
+      process.stderr.write(line + '\n');
+    }));
+
+    p.on('exit', function (code) {
+      future.return(code);
+    });
+
+    return {
+      success: !future.wait(),
+      stdout: "",
+      stderr: ""
+    };
+  }
+
+  child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+    future.return({
+      success: ! err,
+      stdout: stdout,
+      stderr: stderr
+    });
+  });
+
+  return future.wait();
+};
+
+exports.execFileAsync = function (file, args, opts) {
+  opts = opts || {};
+  var child_process = require('child_process');
+  var eachline = require('eachline');
+  var p = child_process.spawn(file, args, opts);
+  var mapper = opts.lineMapper || _.identity;
+
+  var logOutput = fiberHelpers.bindEnvironment(function (line) {
+    if (opts.verbose) {
+      line = mapper(line);
+      console.log(line);
+    }
+  });
+
+  eachline(p.stdout, logOutput);
+  eachline(p.stderr, logOutput);
+
+  return p;
+};
 
 // Patience: a way to make slow operations a little more bearable.
 //
@@ -483,3 +564,4 @@ _.extend(exports.Patience.prototype, {
     self._whenMessage = null;
   }
 });
+

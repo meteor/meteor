@@ -1,5 +1,57 @@
 ## v.NEXT
 
+## v0.9.2
+
+This release contains our first support for building mobile apps in
+Meteor, for both iOS and Android. This support comes via an
+integration with Apache's Cordova/PhoneGap project.
+
+  * You can use Cordova/PhoneGap packages in your application or inside
+    a Meteor package to access a device's native functions directly from
+    JavaScript code.
+  * The `meteor add-platform` and `meteor run` commands now let you
+    launch the app in the iOS or Android simulator or run it on an
+    attached hardware device.
+  * This release extends hot code push to support live updates into
+    installed native apps.
+  * The `meteor bundle` command has been renamed to `meteor build` and
+    now outputs build projects for the mobile version of the targeted
+    app.
+  * See
+    https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration
+    for more information about how to get started building mobile apps
+    with Meteor.
+
+* Better mobile support for OAuth login: you can now use a
+  redirect-based flow inside UIWebViews, and the existing popup-based
+  flow has been adapted to work in Cordova/PhoneGap apps.
+
+#### Bug fixes and minor improvements
+
+* Fix sorting on non-trivial keys in Minimongo. #2439
+
+* Bug fixes and performance improvements for the package system's
+  constraint solver.
+
+* Improved error reporting for misbehaving oplog observe driver. #2033 #2244
+
+* Drop deprecated source map linking format used for older versions of
+  Firefox.  #2385
+
+* Allow Meteor tool to run from a symlink. #2462
+
+* Assets added via a plugin are no longer considered source files. #2488
+
+* Remove support for long deprecated `SERVER_ID` environment
+  variable. Use `AUTOUPDATE_VERSION` instead.
+
+* Fix bug in reload-safetybelt package that resulted in reload loops in
+  Chrome with cookies disabled.
+
+
+Patches by Github users awwx, mizzao, and mquandalle.
+
+
 
 ## v0.9.1.1
 

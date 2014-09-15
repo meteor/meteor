@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.1.1" : "(checkout)";
+  return Meteor.release ? "0.9.2" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -380,7 +380,10 @@ var toc = [
         {name: "api.export", id: "pack_export"},
         {name: "api.addFiles", id: "pack_addFiles"}
       ],
-      {name: "Package.onTest", id: "packagetests"}
+      {name: "Package.onTest", id: "packagetests"},
+      {name: "Npm.depends", id: "Npm-depends"},
+      {name: "Npm.require", id: "Npm-require"},
+      {name: "Cordova.depends", id: "Cordova-depends"}
     ]
   ],
 
@@ -394,6 +397,7 @@ var toc = [
     "browser-policy",
     "coffeescript",
     "d3",
+    "fastclick",
     "force-ssl",
     "jquery",
     "less",

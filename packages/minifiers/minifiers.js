@@ -14,7 +14,7 @@ CssTools = {
   minifyCssAst: function (cssAst) {
     return MinifyAst(cssAst);
   },
-  mergeCssAsts: function (cssAsts, warnCb) {
+  mergeCssAsts: function (cssAsts, warnCb, shouldKeepRelPaths) {
     var rulesPredicate = function (rules) {
       if (! _.isArray(rules))
         rules = [rules];
@@ -54,7 +54,9 @@ CssTools = {
           break;
         }
 
-      CssTools.rewriteCssUrls(ast);
+      if (! shouldKeepRelPaths) {
+        CssTools.rewriteCssUrls(ast);
+      }
 
       var imports = ast.stylesheet.rules.splice(0, importCount);
       newAst.stylesheet.rules = newAst.stylesheet.rules.concat(imports);

@@ -20,7 +20,9 @@ var ROOT_PACKAGES = [
   'minifiers',
   'minimongo',
   'mongo',
-  'package-version-parser'
+  'package-version-parser',
+  'boilerplate-generator',
+  'webapp-hashing'
 ];
 
 // Load unipackages into the currently running node.js process. Use

@@ -14,6 +14,18 @@ var PackageSource = require('./package-source.js');
 
 var project = exports;
 
+// Given a set of lines, each of the form "foo@bar", return an object of form
+// {foo: "bar", bar: null}. If there is "bar", value of the corresponding key is
+// null.
+// Trims whitespace & other filler characters of a line in a project file.
+var trimLine = function (line) {
+  var match = line.match(/^([^#]*)#/);
+  if (match)
+    line = match[1];
+  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
+  return line;
+};
+
 // Given a set of lines, each of the form "foo@bar", return an array of form
 // [{packageName: foo, versionConstraint: bar}]. If there is bar,
 // versionConstraint is null.
@@ -57,6 +69,15 @@ var Project = function () {
   // package name to its string version. Derived from self.combinedConstraints
   // and recorded in the .meteor/versions file.
   self.dependencies = null;
+
+  // Plugins & versions of all Cordova plugins dependencies.
+  // A mapping from the Cordova plugin identifier to a semver string or a
+  // tarball url with sha.
+  // XXX Ignores the transitive dependencies.
+  self.cordovaPlugins = null;
+
+  // Platfroms & versions used by the Cordova project.
+  self.cordovaPlatforms = null;
 
   // The package loader for this project, with the project's dependencies as its
   // version file. (See package-loader.js for more information about package
@@ -121,6 +142,12 @@ _.extend(Project.prototype, {
       files.getLinesOrEmpty(self._getVersionsFile()));
     // Also, make sure we have an app identifier for this app.
     self.ensureAppIdentifier();
+
+    self.cordovaPlugins = processPerConstraintLines(
+      files.getLinesOrEmpty(self._getCordovaPluginsFile()));
+
+    self.cordovaPlatforms =
+      files.getLinesOrEmpty(self._getCordovaPlatformsFile());
 
     // Lastly, invalidate everything that we have computed -- obviously the
     // dependencies that we counted with the previous rootPath are wrong and we
@@ -444,6 +471,40 @@ _.extend(Project.prototype, {
   _getVersionsFile : function () {
     var self = this;
     return path.join(self.rootDir, '.meteor', 'versions');
+  },
+
+  getCordovaPlugins: function () {
+    var self = this;
+    return _.clone(self.cordovaPlugins);
+  },
+
+  getCordovaPlatforms: function () {
+    var self = this;
+    return _.clone(self.cordovaPlatforms);
+  },
+
+  // Returns the set of web archs that are targeted by the project
+  getWebArchs: function () {
+    var self = this;
+    var archs = [ "web.browser" ];
+    if (! _.isEmpty(self.getCordovaPlatforms())) {
+      archs.push("web.cordova");
+    }
+    return archs;
+  },
+
+  // Returns the file path to the .meteor/cordova-plugins file, containing the
+  // Cordova plugins dependencies for this specific project.
+  _getCordovaPluginsFile: function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'cordova-plugins');
+  },
+
+  // Returns the file path to the .meteor/cordova-platforms file, containing the
+  // targetted Cordova platforms for this specific project.
+  _getCordovaPlatformsFile: function () {
+    var self = this;
+    return path.join(self.rootDir, '.meteor', 'cordova-platforms');
   },
 
   // Give the package loader attached to this project to the caller.
@@ -791,6 +852,63 @@ _.extend(Project.prototype, {
     appendText += upgrader + '\n';
 
     fs.appendFileSync(self._finishedUpgradersFile(), appendText);
+  },
+
+  // Adds the passed plugins to the cordovaPlugins list. If the plugin was
+  // already in the list, just updates it in-place.
+  // newPlugins is an object with a mapping from the Cordova plugin identifier
+  // to an semver string or a tarball url with a sha.
+  addCordovaPlugins: function (newPlugins) {
+    var self = this;
+    self.cordovaPlugins = _.extend(self.cordovaPlugins, newPlugins);
+
+    var plugins = self._getCordovaPluginsFile();
+    var lines = [];
+    _.each(self.cordovaPlugins, function (versionString, plugin) {
+      if (versionString)
+        lines.push(plugin + '@' + versionString);
+      else
+        lines.push(plugin);
+    });
+    lines.push('\n');
+    fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
+  },
+
+  // Removes the plugins from the cordova-plugins file if they existed.
+  // pluginsToRemove - array of Cordova plugin identifiers
+  removeCordovaPlugins: function (pluginsToRemove) {
+    var self = this;
+
+    self.cordovaPlugins =
+      _.omit.apply(null, [self.cordovaPlugins].concat(pluginsToRemove));
+
+    var plugins = self._getCordovaPluginsFile();
+    var lines = [];
+
+    _.each(self.cordovaPlugins, function (versionString, plugin) {
+      if (versionString)
+        lines.push(plugin + '@' + versionString);
+      else
+        lines.push(plugin);
+    });
+    lines.push('\n');
+    fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
+  },
+
+  // platforms - a list of strings
+  addCordovaPlatforms: function (platforms) {
+    var self = this;
+    self.cordovaPlatforms = _.uniq(platforms.concat(self.cordovaPlatforms));
+    fs.writeFileSync(self._getCordovaPlatformsFile(),
+                     self.cordovaPlatforms.join('\n'), 'utf8');
+  },
+
+  // platforms - a list of strings
+  removeCordovaPlatforms: function (platforms) {
+    var self = this;
+    self.cordovaPlatforms = _.difference(self.cordovaPlatforms, platforms);
+    fs.writeFileSync(self._getCordovaPlatformsFile(),
+                     self.cordovaPlatforms.join('\n'), 'utf8');
   }
 });
 

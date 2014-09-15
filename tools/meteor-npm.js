@@ -32,28 +32,6 @@ cleanup.onExit(function () {
 // something goes wrong
 var NpmFailure = function () {};
 
-var isUrlWithSha = function (x) {
-  // For now, just support http/https, which is at least less restrictive than
-  // the old "github only" rule.
-  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
-};
-
-// If there is a version that isn't exact, throws an Error with a
-// human-readable message that is suitable for showing to the user.
-// npmDependencies may be falsey or empty.
-meteorNpm.ensureOnlyExactVersions = function (npmDependencies) {
-  _.each(npmDependencies, function (version, name) {
-    // We want a given version of a smart package (package.js +
-    // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
-    // don't want anything too vague. For now, we support semvers and urls that
-    // name a specific commit by SHA.
-    if (!semver.valid(version) && ! isUrlWithSha(version))
-      throw new Error(
-        "Must declare exact version of npm package dependency: " +
-          name + '@' + version);
-  });
-};
-
 // Creates a temporary directory in which the new contents of the
 // package's .npm directory will be assembled. If all is successful,
 // renames that directory back to .npm. Returns true if there are NPM
@@ -450,7 +428,7 @@ var getShrinkwrappedDependenciesTree = function (dir) {
 //
 // If more logic is added here, it should probably go in minimizeModule too.
 var canonicalVersion = function (depObj) {
-  if (isUrlWithSha(depObj.from))
+  if (utils.isUrlWithSha(depObj.from))
     return depObj.from;
   else
     return depObj.version;
@@ -479,7 +457,7 @@ var getShrinkwrappedDependencies = function (dir) {
 var installNpmModule = function (name, version, dir) {
   ensureConnected();
 
-  var installArg = isUrlWithSha(version)
+  var installArg = utils.isUrlWithSha(version)
     ? version : (name + "@" + version);
 
   // We don't use npm.commands.install since we couldn't figure out
@@ -608,7 +586,7 @@ var minimizeDependencyTree = function (tree) {
     if (module.resolved &&
         !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
       version = module.resolved;
-    } else if (isUrlWithSha(module.from)) {
+    } else if (utils.isUrlWithSha(module.from)) {
       version = module.from;
     } else {
       version = module.version;

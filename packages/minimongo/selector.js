@@ -766,10 +766,12 @@ ELEMENT_OPERATORS = {
 //
 // See the test 'minimongo - lookup' for some examples of what lookup functions
 // return.
-makeLookupFunction = function (key) {
+makeLookupFunction = function (key, options) {
+  options = options || {};
   var parts = key.split('.');
   var firstPart = parts.length ? parts[0] : '';
   var firstPartIsNumeric = isNumericKey(firstPart);
+  var nextPartIsNumeric = parts.length >= 2 && isNumericKey(parts[1]);
   var lookupRest;
   if (parts.length > 1) {
     lookupRest = makeLookupFunction(parts.slice(1).join('.'));
@@ -857,7 +859,12 @@ makeLookupFunction = function (key) {
     // objects. And it would be weird to dig into an array: it's simpler to have
     // a rule that explicit integer indexes only apply to an outer array, not to
     // an array you find after a branching search.
-    if (isArray(firstLevel)) {
+    //
+    // In the special case of a numeric part in a *sort selector* (not a query
+    // selector), we skip the branching: we ONLY allow the numeric part to mean
+    // "look up this index" in that case, not "also look up this index in all
+    // the elements of the array".
+    if (isArray(firstLevel) && !(nextPartIsNumeric && options.forSort)) {
       _.each(firstLevel, function (branch, arrayIndex) {
         if (isPlainObject(branch)) {
           appendToResult(lookupRest(

@@ -89,7 +89,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   manifest += "CACHE:" + "\n";
   manifest += "/" + "\n";
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
       manifest += resource.url;
@@ -118,7 +118,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         !resource.cacheable) {
@@ -154,7 +154,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
 var sizeCheck = function() {
   var totalSize = 0;
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
       totalSize += resource.size;

@@ -20,26 +20,28 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
 
   var credentialToken = Random.secret();
 
+  var loginStyle = OAuth._loginStyle('facebook', config, options);
+
   var loginUrl =
         MeteorDeveloperAccounts._server +
         "/oauth2/authorize?" +
-        "state=" + credentialToken +
+        "state=" + OAuth._stateParam(loginStyle, credentialToken) +
         "&response_type=code&" +
         "client_id=" + config.clientId;
 
   if (options && options.userEmail)
     loginUrl += '&user_email=' + encodeURIComponent(options.userEmail);
 
-  loginUrl += "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteor-developer?close");
+  loginUrl += "&redirect_uri=" + OAuth._redirectUri('meteor-developer', config);
 
-  OAuth.showPopup(
-    loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken),
-    {
-      width: 470,
-      height: 420
-    }
-  );
+  OAuth.launchLogin({
+    loginService: "meteor-developer",
+    loginStyle: loginStyle,
+    loginUrl: loginUrl,
+    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
+    credentialToken: credentialToken,
+    popupOptions: {width: 470, height: 420}
+  });
 };
 
 MeteorDeveloperAccounts.requestCredential = requestCredential;

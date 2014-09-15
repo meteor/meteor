@@ -25,6 +25,7 @@ var Services;
 var collectionFuture = new Future();
 
 Meteor.startup(function () {
+  var Mongo = Package.mongo.Mongo;
   if (ultra) {
     Apps = new Mongo.Collection("apps", {
       connection: ultra

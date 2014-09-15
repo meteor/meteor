@@ -15,9 +15,6 @@
 // which you only change when something worth pushing to clients
 // immediately happens.
 //
-// For backwards compatibility, SERVER_ID can be used instead of
-// AUTOUPDATE_VERSION.
-//
 // The server publishes a `meteor_autoupdate_clientVersions`
 // collection. There are two documents in this collection, a document
 // with _id 'version' which represnets the non refreshable client assets,
@@ -51,6 +48,7 @@ ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions",
 // startup.
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
+Autoupdate.autoupdateVersionCordova = null;
 
 var syncQueue = new Meteor._SynchronousQueue();
 
@@ -59,7 +57,7 @@ var updateVersions = function (shouldReloadClientProgram) {
   // Step 1: load the current client program on the server and update the
   // hash values in __meteor_runtime_config__.
   if (shouldReloadClientProgram) {
-    WebAppInternals.reloadClientProgram();
+    WebAppInternals.reloadClientPrograms();
   }
 
   // If we just re-read the client program, or if we don't have an autoupdate
@@ -67,7 +65,6 @@ var updateVersions = function (shouldReloadClientProgram) {
   if (shouldReloadClientProgram || Autoupdate.autoupdateVersion === null) {
     Autoupdate.autoupdateVersion =
       process.env.AUTOUPDATE_VERSION ||
-      process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.calculateClientHashNonRefreshable();
   }
   // If we just recalculated it OR if it was set by (eg) test-in-browser,
@@ -78,8 +75,12 @@ var updateVersions = function (shouldReloadClientProgram) {
   Autoupdate.autoupdateVersionRefreshable =
     __meteor_runtime_config__.autoupdateVersionRefreshable =
       process.env.AUTOUPDATE_VERSION ||
-      process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.calculateClientHashRefreshable();
+
+    Autoupdate.autoupdateVersionCordova =
+      __meteor_runtime_config__.autoupdateVersionCordova =
+        process.env.AUTOUPDATE_VERSION ||
+        WebApp.calculateClientHashCordova();
 
   // Step 2: form the new client boilerplate which contains the updated
   // assets and __meteor_runtime_config__.
@@ -98,11 +99,11 @@ var updateVersions = function (shouldReloadClientProgram) {
   if (! ClientVersions.findOne({_id: "version"})) {
     ClientVersions.insert({
       _id: "version",
-      version: Autoupdate.autoupdateVersion,
+      version: Autoupdate.autoupdateVersion
     });
   } else {
     ClientVersions.update("version", { $set: {
-      version: Autoupdate.autoupdateVersion,
+      version: Autoupdate.autoupdateVersion
     }});
   }
 
@@ -116,6 +117,18 @@ var updateVersions = function (shouldReloadClientProgram) {
     ClientVersions.update("version-refreshable", { $set: {
       version: Autoupdate.autoupdateVersionRefreshable,
       assets: WebAppInternals.refreshableAssets
+      }});
+  }
+
+  if (! ClientVersions.findOne({_id: "version-cordova"})) {
+    ClientVersions.insert({
+      _id: "version-cordova",
+      version: Autoupdate.autoupdateVersionCordova,
+      refreshable: false
+    });
+  } else {
+    ClientVersions.update("version-cordova", { $set: {
+      version: Autoupdate.autoupdateVersionCordova
     }});
   }
 };

@@ -23,16 +23,21 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
   var scope = (options && options.requestPermissions) || [];
   var flatScope = _.map(scope, encodeURIComponent).join('+');
 
-  var loginUrl =
-        'https://github.com/login/oauth/authorize' +
-        '?client_id=' + config.clientId +
-        '&scope=' + flatScope +
-        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/github?close') +
-        '&state=' + credentialToken;
+  var loginStyle = OAuth._loginStyle('github', config, options);
 
-  OAuth.showPopup(
-    loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken),
-    {width: 900, height: 450}
-  );
+  var loginUrl =
+    'https://github.com/login/oauth/authorize' +
+    '?client_id=' + config.clientId +
+    '&scope=' + flatScope +
+    '&redirect_uri=' + OAuth._redirectUri('github', config) +
+    '&state=' + OAuth._stateParam(loginStyle, credentialToken);
+
+  OAuth.launchLogin({
+    loginService: "github",
+    loginStyle: loginStyle,
+    loginUrl: loginUrl,
+    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
+    credentialToken: credentialToken,
+    popupOptions: {width: 900, height: 450}
+  });
 };
