@@ -269,6 +269,12 @@ var File = function (options) {
   self._hash = options.hash || null; // hash, if known, as a hex string
 };
 
+var getAssetsEscaping = _.once(function () {
+  return uniload.load({
+    packages: ['assets-escaping']
+  })['assets-escaping'].AssetsEscaping;
+});
+
 _.extend(File.prototype, {
   hash: function () {
     var self = this;
@@ -344,9 +350,7 @@ _.extend(File.prototype, {
     if (url.charAt(0) !== '/')
       url = '/' + url;
 
-    // XXX replacing colons with underscores as colon is hard to escape later
-    // on different targets and generally is not a good separator for web.
-    url = url.replace(/:/g, '_');
+    url = getAssetsEscaping().escape(url);
     self.url = url;
   },
 
@@ -358,10 +362,7 @@ _.extend(File.prototype, {
     else
       self.targetPath = path.join('app', relPath);
 
-    // XXX same as in setUrlFromRelPath, we replace colons with a different
-    // separator to avoid difficulties further. E.g.: on Windows it is not a
-    // valid char in filename, Cordova also rejects it, etc.
-    self.targetPath = self.targetPath.replace(/:/g, '_');
+    self.targetPath = getAssetsEscaping().escape(self.targetPath);
   },
 
   // Set a source map for this File. sourceMap is given as a string.
