@@ -259,21 +259,23 @@ var boilerplateByArch = {};
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-  var calculateMemoizationHash = function (request, arch) {
-    var htmlAttributes = getHtmlAttributes(request);
-    // The only thing that changes from request to request (for now) are
-    // the HTML attributes (used by, eg, appcache) and whether inline
-    // scripts are allowed, so we can memoize based on that.
-    return JSON.stringify({
-      inlineScriptsAllowed: inlineScriptsAllowed,
+
+  var htmlAttributes = getHtmlAttributes(request);
+
+  // The only thing that changes from request to request (for now) are
+  // the HTML attributes (used by, eg, appcache) and whether inline
+  // scripts are allowed, so we can memoize based on that.
+  var memHash = JSON.stringify({
+    inlineScriptsAllowed: inlineScriptsAllowed,
+    htmlAttributes: htmlAttributes,
+    arch: arch
+  });
+
+  if (! memoizedBoilerplate[memHash]) {
+    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
       htmlAttributes: htmlAttributes
-    }) + '-arch:' + arch;
-  };
-
-  var memHash = calculateMemoizationHash(request, arch);
-
-  if (! memoizedBoilerplate[memHash])
-    memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML();
+    });
+  }
   return memoizedBoilerplate[memHash];
 };
 
@@ -285,8 +287,6 @@ var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
 
   return new Boilerplate(arch, manifest,
     _.extend({
-      urlMapper:
-        function (url) { return getUrlPrefixForArch(arch) + url; },
       pathMapper: function (itemPath) {
         return path.join(archPath[arch], itemPath); },
       baseDataExtension: {
@@ -310,6 +310,17 @@ var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
   );
 };
 
+// A mapping from url path to "info". Where "info" has the following fields:
+// - type: the type of file to be served
+// - cacheable: optionally, whether the file should be cached or not
+// - sourceMapUrl: optionally, the url of the source map
+//
+// Info also contains one of the following:
+// - content: the stringified content that should be served at this path
+// - absolutePath: the absolute path on disk to the file
+
+var staticFiles;
+
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
@@ -323,23 +334,6 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   } catch (e) {
     next();
     return;
-  }
-
-  // XXX think of a better name
-  if (pathname === "/cordova/manifest.json") {
-    var cordovaArch = "web.cordova";
-    var program = WebApp.clientPrograms[cordovaArch];
-
-    if (program) {
-      res.writeHead(200, {
-        'Content-type': 'application/json; charset=UTF-8',
-        'Access-Control-Allow-Origin': '*'
-      });
-      // Only send the inlineManifest
-      res.write(JSON.stringify(program));
-      res.end();
-      return;
-    }
   }
 
   var serveStaticJs = function (s) {
@@ -400,28 +394,43 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.setHeader("Content-Type", "application/javascript; charset=UTF-8");
   } else if (info.type === "css") {
     res.setHeader("Content-Type", "text/css; charset=UTF-8");
+  } else if (info.type === "json") {
+    res.setHeader("Content-Type", "application/json; charset=UTF-8");
+    // XXX if it is a manifest we are serving, set additional headers
+    if (/\/manifest.json$/.test(pathname)) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
   }
 
-  send(req, info.absolutePath)
-    .maxage(maxAge)
-    .hidden(true)  // if we specified a dotfile in the manifest, serve it
-    .on('error', function (err) {
-      Log.error("Error serving static file " + err);
-      res.writeHead(500);
-      res.end();
-    })
-    .on('directory', function () {
-      Log.error("Unexpected directory " + info.absolutePath);
-      res.writeHead(500);
-      res.end();
-    })
-    .pipe(res);
+  if (info.content) {
+    res.write(info.content);
+    res.end();
+  } else {
+    send(req, info.absolutePath)
+      .maxage(maxAge)
+      .hidden(true)  // if we specified a dotfile in the manifest, serve it
+      .on('error', function (err) {
+        Log.error("Error serving static file " + err);
+        res.writeHead(500);
+        res.end();
+      })
+      .on('directory', function () {
+        Log.error("Unexpected directory " + info.absolutePath);
+        res.writeHead(500);
+        res.end();
+      })
+      .pipe(res);
+  }
 };
 
 var getUrlPrefixForArch = function (arch) {
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
-  return arch === WebApp.defaultArch ? '' : '/' + arch.replace(/^web\./, '');
+
+  // We add '__' to the beginning of non-standard archs to "scope" the url
+  // to Meteor internals.
+  return arch === WebApp.defaultArch ?
+    '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
 var runWebAppServer = function () {
@@ -432,27 +441,28 @@ var runWebAppServer = function () {
     return decodeURIComponent(url.parse(itemUrl).pathname);
   };
 
-  var staticFiles;
-
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
       staticFiles = {};
-      var getClientManifest = function (clientPath, arch) {
+      var generateClientProgram = function (clientPath, arch) {
         // read the control for the client we'll be serving up
-        clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
+        var clientJsonPath = path.join(__meteor_bootstrap__.serverDir,
                                    clientPath);
-        clientDir = path.dirname(clientJsonPath);
-        clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
+        var clientDir = path.dirname(clientJsonPath);
+        var clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
         if (clientJson.format !== "web-program-pre1")
           throw new Error("Unsupported format for client assets: " +
                           JSON.stringify(clientJson.format));
 
+        if (! clientJsonPath || ! clientDir || ! clientJson)
+          throw new Error("Client config file not parsed.");
+
         var urlPrefix = getUrlPrefixForArch(arch);
 
-        _.each(clientJson.manifest, function (item) {
+        var manifest = clientJson.manifest;
+        _.each(manifest, function (item) {
           if (item.url && item.where === "client") {
             staticFiles[urlPrefix + getItemPathname(item.url)] = {
-              path: item.path,
               absolutePath: path.join(clientDir, item.path),
               cacheable: item.cacheable,
               // Link from source to its map
@@ -464,7 +474,6 @@ var runWebAppServer = function () {
               // Serve the source map too, under the specified URL. We assume all
               // source maps are cacheable.
               staticFiles[urlPrefix + getItemPathname(item.sourceMapUrl)] = {
-                path: item.sourceMap,
                 absolutePath: path.join(clientDir, item.sourceMap),
                 cacheable: true
               };
@@ -472,23 +481,29 @@ var runWebAppServer = function () {
           }
         });
 
-        if (! clientJsonPath || ! clientDir || ! clientJson)
-          throw new Error("Client config file not parsed.");
+        var program = {
+          manifest: manifest,
+          version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
+            __meteor_runtime_config__, 'PUBLIC_SETTINGS')),
+          PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
+        };
 
-        return clientJson.manifest;
+        WebApp.clientPrograms[arch] = program;
+
+        // Serve the program as a string at /foo/<arch>/manifest.json
+        // XXX change manifest.json -> program.json
+        staticFiles[path.join(urlPrefix, 'manifest.json')] = {
+          content: JSON.stringify(program),
+          cacheable: true,
+          type: "json"
+        };
       };
 
       try {
         var clientPaths = __meteor_bootstrap__.configJson.clientPaths;
         _.each(clientPaths, function (clientPath, arch) {
           archPath[arch] = path.dirname(clientPath);
-          var manifest = getClientManifest(clientPath, arch);
-          WebApp.clientPrograms[arch] = {
-            manifest: manifest,
-            version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
-              __meteor_runtime_config__, 'PUBLIC_SETTINGS')),
-            PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
-          };
+          generateClientProgram(clientPath, arch);
         });
 
         // Exported for tests.
@@ -501,10 +516,23 @@ var runWebAppServer = function () {
   };
 
   WebAppInternals.generateBoilerplate = function () {
+    // This boilerplate will be served to the mobile devices when used with
+    // Meteor/Cordova for the Hot-Code Push and since the file will be served by
+    // the device's server, it is important to set the DDP url to the actual
+    // Meteor server accepting DDP connections and not the device's file server.
+    var defaultOptionsForArch = {
+      'web.cordova': {
+        runtimeConfigDefaults: {
+          DDP_DEFAULT_CONNECTION_URL: __meteor_runtime_config__.ROOT_URL
+        }
+      }
+    };
+
     syncQueue.runTask(function() {
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
-          generateBoilerplateInstance(archName, program.manifest);
+          generateBoilerplateInstance(archName, program.manifest,
+                                      defaultOptionsForArch[archName]);
       });
 
       // Clear the memoized boilerplate cache.
@@ -607,11 +635,15 @@ var runWebAppServer = function () {
       return undefined;
     }
 
-    // /packages/asdfsad ... /cordova/dafsdf.js
+    // /packages/asdfsad ... /__cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
-    var archKey = 'web.' + pathname.split('/')[1];
-    if (!_.has(archPath, archKey)) {
+    var archKey = pathname.split('/')[1];
+    var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
+
+    if (! /^__/.test(archKey) || ! _.has(archPath, archKeyCleaned)) {
       archKey = WebApp.defaultArch;
+    } else {
+      archKey = archKeyCleaned;
     }
 
     var boilerplate;
@@ -1079,10 +1111,12 @@ WebAppInternals.inlineScriptsAllowed = function () {
 
 WebAppInternals.setInlineScriptsAllowed = function (value) {
   inlineScriptsAllowed = value;
+  WebAppInternals.generateBoilerplate();
 };
 
 WebAppInternals.setBundledJsCssPrefix = function (prefix) {
   bundledJsCssPrefix = prefix;
+  WebAppInternals.generateBoilerplate();
 };
 
 // Packages can call `WebAppInternals.addStaticJs` to specify static

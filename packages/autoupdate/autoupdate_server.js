@@ -15,9 +15,6 @@
 // which you only change when something worth pushing to clients
 // immediately happens.
 //
-// For backwards compatibility, SERVER_ID can be used instead of
-// AUTOUPDATE_VERSION.
-//
 // The server publishes a `meteor_autoupdate_clientVersions`
 // collection. There are two documents in this collection, a document
 // with _id 'version' which represnets the non refreshable client assets,
@@ -68,7 +65,6 @@ var updateVersions = function (shouldReloadClientProgram) {
   if (shouldReloadClientProgram || Autoupdate.autoupdateVersion === null) {
     Autoupdate.autoupdateVersion =
       process.env.AUTOUPDATE_VERSION ||
-      process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.calculateClientHashNonRefreshable();
   }
   // If we just recalculated it OR if it was set by (eg) test-in-browser,
@@ -79,13 +75,11 @@ var updateVersions = function (shouldReloadClientProgram) {
   Autoupdate.autoupdateVersionRefreshable =
     __meteor_runtime_config__.autoupdateVersionRefreshable =
       process.env.AUTOUPDATE_VERSION ||
-      process.env.SERVER_ID || // XXX COMPAT 0.6.6
       WebApp.calculateClientHashRefreshable();
 
     Autoupdate.autoupdateVersionCordova =
       __meteor_runtime_config__.autoupdateVersionCordova =
         process.env.AUTOUPDATE_VERSION ||
-        process.env.SERVER_ID || // XXX COMPAT 0.6.6
         WebApp.calculateClientHashCordova();
 
   // Step 2: form the new client boilerplate which contains the updated
@@ -105,11 +99,11 @@ var updateVersions = function (shouldReloadClientProgram) {
   if (! ClientVersions.findOne({_id: "version"})) {
     ClientVersions.insert({
       _id: "version",
-      version: Autoupdate.autoupdateVersion,
+      version: Autoupdate.autoupdateVersion
     });
   } else {
     ClientVersions.update("version", { $set: {
-      version: Autoupdate.autoupdateVersion,
+      version: Autoupdate.autoupdateVersion
     }});
   }
 

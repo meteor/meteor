@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.0-cordova1'
+  version: '1.0.0'
 });
 
 Package.on_use(function (api) {
@@ -16,4 +16,3 @@ Package.on_use(function (api) {
                  'boilerplate_web.cordova.html'],
                  'server', {isAsset: true});
 });
-

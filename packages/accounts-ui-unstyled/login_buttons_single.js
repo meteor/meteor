@@ -24,7 +24,7 @@ var loginResultCallback = function (serviceName, err) {
 Accounts.onPageLoadLogin(function (attemptInfo) {
   // Ignore if we have a left over login attempt for a service that is no longer registered.
   if (_.contains(_.pluck(getLoginServices(), "name"), attemptInfo.type))
-    loginResultCallback(attemptInfo.type, attemptInfo.err);
+    loginResultCallback(attemptInfo.type, attemptInfo.error);
 });
 
 

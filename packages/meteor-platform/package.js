@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.0.2'
+  version: '1.1.0'
 });
 
 Package.on_use(function(api) {
@@ -67,5 +67,6 @@ Package.on_use(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.device': '0.2.11'
+  'org.apache.cordova.device': '0.2.11',
+  'com.rjfun.cordova.httpd': 'https://github.com/meteor/cordova-httpd/tarball/0f1c8bc17e567c57a68427b0fe5e692ab6568d7f'
 });

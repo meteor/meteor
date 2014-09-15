@@ -9,7 +9,7 @@ var ready = function() {
 };
 
 if (document.addEventListener) {
-  var event = Meteor.isCordova ? 'meteor-cordova-loaded' : 'DOMContentLoaded';
+  var event = Meteor.isCordova ? 'deviceready' : 'DOMContentLoaded';
   document.addEventListener(event, ready, false);
   window.addEventListener('load', ready, false);
 } else {

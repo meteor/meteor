@@ -10,25 +10,25 @@ body {
     user-select: none;
 }
 
-#outer {
-    width: 600px;
+.outer {
+    max-width: 400px;
     margin: 0 auto;
 }
 
 .player {
     cursor: pointer;
-    padding: 5px;
+    padding: 5px 10px;
 }
 
 .player .name {
     display: inline-block;
-    width: 300px;
-    font-size: 1.75em;
+    width: 70%;
+    font-size: 1.6em;
 }
 
 .player .score {
     display: inline-block;
-    width: 100px;
+    width: 28%;
     text-align: right;
     font-size: 2em;
     font-weight: bold;
@@ -50,7 +50,7 @@ body {
     border-color: #ccc;
     border-width: 4px;
     margin: 50px 10px;
-    padding: 10px 0px;
+    padding: 10px 0;
 }
 
 .none {
@@ -58,5 +58,6 @@ body {
 }
 
 .inc {
-  cursor: pointer;
+    margin: 5px 0;
+    font-size: 0.6em;
 }

@@ -1,5 +1,5 @@
 Meteor.setInterval(function () {
-  Session.set('time', new Date);
+  Session.set('time', new Date());
 }, 1000);
 
 UI.body.helpers({
@@ -11,7 +11,7 @@ UI.body.helpers({
   },
 
   handData: function () {
-    var time = Session.get('time') || new Date;
+    var time = Session.get('time') || new Date();
     return { hourDegrees: time.getHours() * 30,
              minuteDegrees: time.getMinutes() * 6,
              secondDegrees: time.getSeconds() * 6 };

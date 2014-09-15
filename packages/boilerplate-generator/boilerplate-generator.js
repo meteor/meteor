@@ -21,14 +21,18 @@ Boilerplate = function (arch, manifest, options) {
   );
 };
 
-Boilerplate.prototype.toHTML = function () {
+// The 'extraData' argument can be used to extend 'self.baseData'. Its
+// purpose is to allow you to specify data that you might not know at
+// the time that you construct the Boilerplate object. (e.g. it is used
+// by 'webapp' to specify data that is only known at request-time).
+Boilerplate.prototype.toHTML = function (extraData) {
   var self = this;
 
   if (! self.baseData || ! self.func)
     throw new Error('Boilerplate did not instantiate correctly.');
 
   return  "<!DOCTYPE html>\n" +
-    Blaze.toHTML(Blaze.With(self.baseData,
+    Blaze.toHTML(Blaze.With(_.extend(self.baseData, extraData),
                             self.func));
 };
 
@@ -98,5 +102,3 @@ var _getTemplate = _.memoize(function (arch) {
   var filename = 'boilerplate_' + arch + '.html';
   return Assets.getText(filename);
 });
-
-
