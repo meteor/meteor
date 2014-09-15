@@ -48,10 +48,6 @@ integration with Apache's Cordova/PhoneGap project.
 * Fix bug in reload-safetybelt package that resulted in reload loops in
   Chrome with cookies disabled.
 
-* Rename `WAREHOUSE_DIR` environment variable to `METEOR_WAREHOUSE_DIR`
-  to be consistent with the rest of the environment variable names that
-  control tool test behavior.
-
 
 Patches by Github users awwx, mizzao, and mquandalle.
 
