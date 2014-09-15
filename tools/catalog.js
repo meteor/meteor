@@ -2,6 +2,7 @@ var _ = require('underscore');
 var util = require('util');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
+var packageCache = require('./package-cache.js');
 var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
 var files = require('./files.js');
@@ -23,6 +24,9 @@ var LayeredCatalog = function() {
   // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
   // Maps packageName -> version -> its ECV
   self.forgottenECVs = {};
+
+  // Each complete catalog needs its own package cache.
+  self.packageCache = new packageCache.PackageCache(self);
 };
 
 _.extend(LayeredCatalog.prototype, {
