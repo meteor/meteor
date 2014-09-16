@@ -29,6 +29,11 @@ var execFileSync = require('./utils.js').execFileSync;
 // by 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
+// The default host to use when building apps. (Specifically, for mobile
+// builds, we need a host to use for DDP_DEFAULT_CONNECTION_URL if the
+// user doesn't specify one with -p or --mobile-port).
+var DEFAULT_BUILD_HOST = "localhost";
+
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
 //
@@ -64,7 +69,7 @@ var parseHostPort = function (str) {
 "port is a number. Try 'meteor help run' for help.\n");
   }
 
-  var host = portMatch[1] || 'localhost';
+  var host = portMatch[1];
   var port = parseInt(portMatch[2]);
 
   return {
@@ -213,6 +218,7 @@ main.registerCommand({
     return 1;
   }
 
+  parsedMobileHostPort.host = parsedMobileHostPort.host || DEFAULT_BUILD_HOST;
 
   options.httpProxyPort = options['http-proxy-port'];
 
@@ -220,11 +226,11 @@ main.registerCommand({
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
     // ... and if you didn't specify your ip address as host, print a warning
-    if (parsedHostPort.host === 'localhost')
+    if (parsedMobileHostPort.host === DEFAULT_BUILD_HOST)
       process.stderr.write(
         "WARN: You are testing your app on a remote device but your host option\n" +
         "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
-        "WARN: network's IP address with the -p option?\n");
+        "WARN: network's IP address with the -p or --mobile-port option?\n");
   }
 
   // Always bundle for the browser by default.
@@ -557,7 +563,7 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
-    port: { type: String, short: "p", default: "localhost:3000" },
+    port: { type: String, short: "p", default: DEFAULT_BUILD_HOST + ":3000" },
     settings: { type: String },
     verbose: { type: Boolean, short: "v" },
     // Undocumented
@@ -597,11 +603,6 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   var appName = path.basename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms)) {
-    if (options.port === buildCommands.options.port.default) {
-      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
-                           "Pass a -p argument to specify a host URL.\n");
-    }
-    var cordovaSettings = {};
 
     try {
       var parsedHostPort = parseHostPort(options.port);
@@ -610,8 +611,21 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
       return 1;
     }
 
+    // For Cordova builds, if a host isn't specified, use localhost, but
+    // warn about it.
+    var cordovaBuildHost = parsedHostPort.host || DEFAULT_BUILD_HOST;
+    if (cordovaBuildHost === DEFAULT_BUILD_HOST) {
+      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
+                           "Pass a -p argument to specify a host URL.\n");
+    }
+    var cordovaSettings = {};
+
     cordova.buildPlatforms(localPath, mobilePlatforms,
-      _.extend({}, options, parsedHostPort, { appName: appName }));
+      _.extend({}, options, {
+        host: cordovaBuildHost,
+        port: parsedHostPort.port,
+        appName: appName
+      }));
   }
 
   var buildDir = path.join(localPath, 'build_tar');
@@ -1190,6 +1204,7 @@ main.registerCommand({
   _.extend(options, parsedHostPort);
 
   var testPackages = null;
+  var localPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
     if (typeof packages === "number")
@@ -1238,7 +1253,7 @@ main.registerCommand({
     // For this release; we won't force-enable the httpProxy
     if (false) { //!options.httpProxyPort) {
       console.log('Forcing http proxy on port 3002 for mobile');
-      options.httpProxyPort = '3002'
+      options.httpProxyPort = '3002';
     }
 
     var localPath = path.join(testRunnerAppDir, '.meteor', 'local');
@@ -1254,9 +1269,12 @@ main.registerCommand({
       cordova.buildPlatforms(localPath, mobilePlatforms,
         _.extend({}, options, {
           appName: path.basename(testRunnerAppDir),
-          debug: ! options.production
+          debug: ! options.production,
+          // Default to localhost for mobile builds.
+          host: parsedHostPort.host || DEFAULT_BUILD_HOST
         }));
-      runners = runners.concat(cordova.buildPlatformRunners(localPath, mobilePlatforms, options));
+      runners = runners.concat(cordova.buildPlatformRunners(
+        localPath, mobilePlatforms, options));
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
