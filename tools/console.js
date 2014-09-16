@@ -32,6 +32,15 @@ _.extend(Console.prototype, {
     self._print(message);
   },
 
+  warn: function(/*arguments*/) {
+    var self = this;
+
+    var message = self._format(arguments);
+    self._print(message);
+  },
+
+  warning: warn,
+
   error: function(/*arguments*/) {
     var self = this;
 

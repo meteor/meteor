@@ -278,10 +278,10 @@ main.registerCommand({
   if (_.any(allArchs, function (arch) {
     return arch.match(/^os\./);
   })) {
-    process.stdout.write(
+    Console.warning(
       "\nWARNING: Your package contains binary code and is only compatible with " +
         archinfo.host() + " architecture.\n" +
-        "Please use publish-for-arch to publish new builds of the package.\n\n");
+        "Please use publish-for-arch to publish new builds of the package.\n");
   }
 
   // Refresh, so that we actually learn about the thing we just published.
@@ -438,7 +438,7 @@ main.registerCommand({
   }
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
-  process.stdout.write("Resyncing with package server...\n");
+  Console.info("Resyncing with package server...");
   refreshOfficialCatalogOrDie();
 
   try {
@@ -462,7 +462,7 @@ main.registerCommand({
   }
 
   // Fill in the order key and any other generated release.json fields.
-  process.stdout.write("Double-checking release schema .");
+  Console.info("Double-checking release schema .");
 
   // Check that the schema is valid -- release.json contains all the required
   // fields, does not contain contradicting information, etc. Output all
@@ -525,7 +525,7 @@ main.registerCommand({
   if (badSchema) {
     return 1;
   }
-  process.stdout.write(".");
+  Console.info(".");
 
   // Let's check if this is a known release track/ a track to which we are
   // authorized to publish before we do any complicated/long operations, and
@@ -551,7 +551,8 @@ main.registerCommand({
     };
   }
 
-  process.stdout.write(". OK!\n");
+  // XXX: Messages that start with . :-(
+  Console.info(". OK!");
 
   // This is sort of a hidden option to just take your entire meteor checkout
   // and make a release out of it. That's what we do now (that's what releases
@@ -610,7 +611,7 @@ main.registerCommand({
     var messages = buildmessage.capture(
       {title: "rebuilding local packages"},
       function () {
-        process.stdout.write("Rebuilding local packages...\n");
+        Console.info("Rebuilding local packages...");
         _.each(contents, function (item) {
           // We expect the meteor/packages directory to only contain a lot of
           // directories, each of which is a package. This may one day be false,
@@ -628,7 +629,7 @@ main.registerCommand({
             buildmessage.enterJob(
               { title: "building package " + item },
               function () {
-                process.stdout.write("  checking consistency of " + item + " ");
+                Console.info("  checking consistency of " + item + " ");
 
                 // Initialize the package source. Core packages have the same
                 // name as their corresponding directories, because otherwise we
@@ -640,7 +641,7 @@ main.registerCommand({
                   name: item });
 
                 if (buildmessage.jobHasMessages()) {
-                  process.stdout.write("\n ...Error reading package:" + item + "\n");
+                  Console.warning("\n ...Error reading package:" + item);
                   canBuild = false;
                   return;
                 };
@@ -654,7 +655,7 @@ main.registerCommand({
                     path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
-                process.stdout.write(".");
+                Console.info(".");
 
                 // Now compile it! Once again, everything should compile, and if
                 // it doesn't we should fail. Hopefully, of course, we have
@@ -666,11 +667,11 @@ main.registerCommand({
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  process.stdout.write("\n ... Error compiling unipackage: " + item + "\n");
+                  Console.warning("\n ... Error compiling unipackage: " + item );
                   canBuild = false;
                   return;
                 };
-                process.stdout.write(".");
+                Console.info(".");
 
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
@@ -680,7 +681,7 @@ main.registerCommand({
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
-                process.stdout.write(".");
+                Console.info(".");
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
@@ -697,12 +698,12 @@ main.registerCommand({
                                        "at the end (ex: 1.0.0-dev). If this is an " +
                                        "official release, please set official to true " +
                                        "in the release configuration file.");
-                    process.stdout.write("NOT OK unofficial\n");
+                    Console.warning("NOT OK unofficial");
                     return;
                   }
                   toPublish[item] = {source: packageSource,
                                      compileResult: compileResult};
-                  process.stdout.write("new package or version\n");
+                  Console.info("new package or version");
                   return;
                 } else {
                   // If we can't build some of our packages, then we care about
@@ -710,7 +711,7 @@ main.registerCommand({
                   // the errors will change the hashes as well). Don't even
                   // bother checking until that happens.
                   if (!canBuild) {
-                    process.stdout.write("hash comparison skipped\n");
+                    Console.info("hash comparison skipped");
                     return;
                   }
 
@@ -750,9 +751,9 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number.");
-                    process.stdout.write("NOT OK\n");
+                    Console.error("NOT OK");
                   } else {
-                    process.stdout.write("ok\n");
+                    Console.info("ok");
                   }
                 }
               });
@@ -772,7 +773,7 @@ main.registerCommand({
         continue;
       var prebuilt = toPublish[name];
 
-      process.stdout.write("Publishing package: " + name + "\n");
+      Console.info("Publishing package: " + name);
 
       // XXX merge with messages? having THREE kinds of error handling here is
       // um something.
@@ -821,7 +822,7 @@ main.registerCommand({
 
   // Create the new track, if we have been told to.
   if (options['create-track']) {
-    process.stdout.write("Creating a new release track...\n");
+    Console.info("Creating a new release track...");
     try {
       var track = conn.call('createReleaseTrack',
                             { name: relConf.track } );
@@ -831,7 +832,7 @@ main.registerCommand({
     }
   }
 
-  process.stdout.write("Creating a new release version...\n");
+  Console.info("Creating a new release version...");
   var record = {
     track: relConf.track,
     version: relConf.version,
@@ -858,25 +859,25 @@ main.registerCommand({
 
   // Get it back.
   refreshOfficialCatalogOrDie();
-  process.stdout.write("Done creating " + relConf.track  + "@" +
-                       relConf.version + "!\n");
+  Console.info("Done creating " + relConf.track  + "@" +
+                       relConf.version + "!");
 
   if (options['from-checkout']) {
     // XXX maybe should discourage publishing if git status says we're dirty?
     var gitTag = "release/" + relConf.track  + "@" + relConf.version;
     if (config.getPackageServerFilePrefix() !== 'packages') {
       // Only make a git tag if we're on the default branch.
-      process.stdout.write("Skipping git tag: not using the main package server.\n");
+      Console.info("Skipping git tag: not using the main package server.");
     } else if (gitTag.indexOf(':') !== -1) {
       // XXX could run `git check-ref-format --allow-onelevel $gitTag` like we
       //     used to, instead of this simple check
       // XXX could convert : to / ?
-      process.stdout.write("Skipping git tag: bad format for git.\n");
+      Console.info("Skipping git tag: bad format for git.");
     } else {
-      process.stdout.write("Creating git tag " + gitTag + "\n");
+      Console.info("Creating git tag " + gitTag);
       files.runGitInCheckout('tag', gitTag);
-      process.stdout.write(
-        "Pushing git tag (this should fail if you are not from MDG)\n");
+      Console.info(
+        "Pushing git tag (this should fail if you are not from MDG)");
       files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
                              'refs/tags/' + gitTag);
     }
@@ -994,21 +995,21 @@ main.registerCommand({
       var versionDesc = "Version " + v.version;
       if (v.description)
         versionDesc = versionDesc + " : " + v.description;
-      process.stdout.write(versionDesc + "\n");
+      Console.info(versionDesc + "");
       if (v.buildArchitectures && full.length > 1)
-        process.stdout.write("      Architectures: "
-                             + v.buildArchitectures + "\n");
+        Console.info("      Architectures: "
+                             + v.buildArchitectures);
       if (v.packages && full.length > 1) {
-        process.stdout.write("      tool: " + v.tool + "\n");
-        process.stdout.write("      packages:" + "\n");
+        Console.info("      tool: " + v.tool);
+        Console.info("      packages:");
 
         versionDesc = versionDesc + "\n      packages:\n";
         _.each(v.packages, function(pv, pn) {
-          process.stdout.write("          " + pn + ":" + pv + "\n");
+          Console.info("          " + pn + ":" + pv);
         });
       }
     });
-    process.stdout.write("\n");
+    Console.info("\n");
   }
 
   // Creating the maintainer string. We have anywhere between 1 and lots of
@@ -1042,7 +1043,7 @@ main.registerCommand({
       + record.homepage;
     metamessage += ".";
   }
-  process.stdout.write(metamessage + "\n");
+  Console.info(metamessage);
 });
 
 main.registerCommand({
@@ -1160,14 +1161,14 @@ main.registerCommand({
   var output = false;
   if (!_.isEqual(matchingPackages, [])) {
     output = true;
-    process.stdout.write("Found the following packages:" + "\n");
-    process.stdout.write(utils.formatList(matchingPackages) + "\n");
+    Console.info("Found the following packages:");
+    Console.info(utils.formatList(matchingPackages) + "");
   }
 
   if (!_.isEqual(matchingReleases, [])) {
     output = true;
-    process.stdout.write("Found the following releases:" + "\n");
-    process.stdout.write(utils.formatList(matchingReleases) + "\n");
+    Console.info("Found the following releases:");
+    Console.info(utils.formatList(matchingReleases) + "");
   }
 
   if (!output) {
@@ -1175,8 +1176,8 @@ main.registerCommand({
       "Neither packages nor releases matching \'" +
         search + "\' could be found.");
   } else {
-    process.stdout.write(
-      "To get more information on a specific item, use meteor show. \n");
+    Console.info(
+      "To get more information on a specific item, use meteor show.");
   }
 });
 
@@ -1247,13 +1248,13 @@ main.registerCommand({
     items.push({ name: 'cordova:' + name, description: version });
   });
 
-  process.stdout.write(utils.formatList(items));
+  Console.info(utils.formatList(items));
 
   if (newVersionsAvailable) {
-    process.stdout.write(
+    Console.info(
       "\n * New versions of these packages are available! " +
         "Run 'meteor update' to try to update\n" +
-        "   those packages to their latest versions.\n");
+        "   those packages to their latest versions.");
   }
   return 0;
 });
@@ -1348,19 +1349,19 @@ var maybeUpdateRelease = function (options) {
       // the requested release in the initialization code, before the
       // command even ran. They could equivalently have run 'meteor
       // help --release xyz'.
-      process.stdout.write(
+      Console.info(
         "Installed. Run 'meteor update' inside of a particular project\n" +
           "directory to update that project to Meteor " +
-          release.current.name + ".\n");
+          release.current.name + ".");
     } else {
       // We get here if the user ran 'meteor update' and we didn't
       // find a new version.
-      process.stdout.write(
+      Console.info(
         "The latest version of Meteor, " + release.current.name +
           ", is already installed on this\n" +
           "computer. Run 'meteor update' inside of a particular project\n" +
           "directory to update that project to Meteor " +
-          release.current.name + "\n");
+          release.current.name);
     }
     return 0;
   }
@@ -1369,9 +1370,9 @@ var maybeUpdateRelease = function (options) {
   var appRelease = project.getMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
-    process.stdout.write(
+    Console.info(
       "This project is already at " +
-        release.current.getDisplayName() + maybeTheLatestRelease + ".\n");
+        release.current.getDisplayName() + maybeTheLatestRelease + ".");
     return 0;
   }
 
@@ -1443,9 +1444,9 @@ var maybeUpdateRelease = function (options) {
     if (!releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
-      process.stdout.write(
+      Console.info(
         "This project is already at Meteor " + appRelease +
-          ", which is newer than the latest release.\n");
+          ", which is newer than the latest release.");
       return 0;
     }
   }
@@ -1500,14 +1501,14 @@ var maybeUpdateRelease = function (options) {
   });
 
   if (!solutionReleaseVersion) {
-    process.stdout.write(
+    Console.info(
       "This project is at the latest release which is compatible with your\n" +
-        "current package constraints.\n");
+        "current package constraints.");
     return 0;
   } else  if (solutionReleaseVersion !== releaseVersionsToTry[0]) {
-    process.stdout.write(
+    Console.info(
       "(Newer releases are available but are not compatible with your\n" +
-        "current package constraints.)\n");
+        "current package constraints.)");
   }
 
   var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
@@ -1543,9 +1544,9 @@ var maybeUpdateRelease = function (options) {
   // Write the release to .meteor/release.
   project.writeMeteorReleaseVersion(solutionReleaseName);
 
-  process.stdout.write(path.basename(options.appDir) + ": updated to " +
+  Console.info(path.basename(options.appDir) + ": updated to " +
                        utils.displayRelease(releaseTrack, solutionReleaseVersion) +
-                       ".\n");
+                       ".");
 
   // Now run the upgraders.
   // XXX should we also run upgraders on other random commands, in case there
@@ -1668,7 +1669,7 @@ main.registerCommand({
 
   // Just for the sake of good messages, check to see if anything changed.
   if (_.isEqual(newVersions, versions)) {
-    process.stdout.write("All your package dependencies are already up to date.\n");
+    Console.info("All your package dependencies are already up to date.");
     return 0;
   }
 
@@ -1737,7 +1738,7 @@ main.registerCommand({
   project.addCordovaPlugins(pluginsDict);
 
   _.each(cordovaPlugins, function (plugin) {
-    process.stdout.write("added cordova plugin " + plugin + "\n");
+    Console.info("added cordova plugin " + plugin);
   });
 
   var args = filteredPackages.rest;
@@ -1834,19 +1835,19 @@ main.registerCommand({
         failed = true;
       } else {
         if (packages[constraint.name]) {
-          process.stdout.write(
+          Console.info(
             "Currently using " + constraint.name +
               " with version constraint " + packages[constraint.name]
-              + ".\n");
+              + ".");
         } else {
-          process.stdout.write("Currently using "+  constraint.name +
-                               " without any version constraint.\n");
+          Console.info("Currently using "+  constraint.name +
+                               " without any version constraint.");
         }
         if (constraint.constraintString) {
-          process.stdout.write("The version constraint will be changed to " +
-                               constraint.constraintString + ".\n");
+          Console.info("The version constraint will be changed to " +
+                               constraint.constraintString + ".");
         } else {
-          process.stdout.write("The version constraint will be removed.\n");
+          Console.info("The version constraint will be removed.");
         }
         // Now remove the old constraint from what we're going to calculate
         // with.
@@ -1937,7 +1938,7 @@ main.registerCommand({
   if (ret !== 0) return ret;
 
   // Show the user the messageLog of the packages that they installed.
-  process.stdout.write("\n");
+  Console.info("");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
     var versionRecord = doOrDie(function () {
@@ -1945,13 +1946,13 @@ main.registerCommand({
     });
     if (constraint.constraintString !== null &&
         version !== constraint.version) {
-      process.stdout.write("Added " + constraint.name + " at version " + version +
-                           " to avoid conflicting dependencies.\n");
+      Console.info("Added " + constraint.name + " at version " + version +
+                           " to avoid conflicting dependencies.");
     }
-    process.stdout.write(constraint.name +
+    Console.info(constraint.name +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :
-                          "") + "\n");
+                          ""));
   });
 
   return 0;
@@ -1975,7 +1976,7 @@ main.registerCommand({
   project.removeCordovaPlugins(cordovaPlugins);
 
   _.each(cordovaPlugins, function (plugin) {
-    process.stdout.write("removed cordova plugin " + plugin + "\n");
+    Console.info("removed cordova plugin " + plugin);
   });
 
   var args = filteredPackages.rest;
@@ -2031,7 +2032,7 @@ main.registerCommand({
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
   _.each(packagesToRemove, function (packageName) {
-      process.stdout.write("Removed top-level dependency on " + packageName + ".\n");
+    Console.info("Removed top-level dependency on " + packageName + ".");
   });
 
   return 0;
@@ -2091,7 +2092,7 @@ main.registerCommand({
 
     try {
       if (options.add) {
-        process.stdout.write("Adding a maintainer to " + name + "...\n");
+        Console.info("Adding a maintainer to " + name + "...");
         if (fullRecord.release) {
           packageClient.callPackageServer(
             conn, 'addReleaseMaintainer', name, options.add);
@@ -2100,7 +2101,7 @@ main.registerCommand({
             conn, 'addMaintainer', name, options.add);
         }
       } else if (options.remove) {
-        process.stdout.write("Removing a maintainer from " + name + "...\n");
+        Console.info("Removing a maintainer from " + name + "...");
         if (fullRecord.release) {
           packageClient.callPackageServer(
             conn, 'removeReleaseMaintainer', name, options.remove);
@@ -2108,7 +2109,7 @@ main.registerCommand({
           packageClient.callPackageServer(
             conn, 'removeMaintainer', name, options.remove);
         }
-        process.stdout.write(" Done!\n");
+        Console.info(" Done!");
       }
     } catch (err) {
       packageClient.handlePackageServerConnectionError(err);
@@ -2125,12 +2126,12 @@ main.registerCommand({
     record = fullRecord.record;
   }
 
-  process.stdout.write("\n The maintainers for " + name + " are:\n");
+  Console.info("\n The maintainers for " + name + " are:");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
-      process.stdout.write("<unknown>" + "\n");
+      Console.info("<unknown>");
     else
-      process.stdout.write(user.username + "\n");
+      Console.info(user.username + "");
   });
   return 0;
 });
@@ -2402,15 +2403,15 @@ main.registerCommand({
 
   try {
     if (options.unrecommend) {
-      process.stdout.write("Unrecommending " + name + "@" + version + "...\n");
+      Console.info("Unrecommending " + name + "@" + version + "...");
       packageClient.callPackageServer(conn, 'unrecommendVersion', name, version);
-      process.stdout.write("Done!\n " + name + "@" + version  +
-                           " is no longer a recommended release\n");
+      Console.info("Done!\n " + name + "@" + version  +
+                           " is no longer a recommended release");
     } else {
-      process.stdout.write("Recommending " + options.args[0] + "...\n");
+      Console.info("Recommending " + options.args[0] + "...");
       packageClient.callPackageServer(conn, 'recommendVersion', name, version);
-      process.stdout.write("Done!\n " +  name + "@" + version +
-                           " is now  a recommended release\n");
+      Console.info("Done!\n " +  name + "@" + version +
+                           " is now  a recommended release");
     }
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
@@ -2457,14 +2458,14 @@ main.registerCommand({
   }
 
   try {
-      process.stdout.write(
+      Console.info(
         "Setting earliest compatible version on "
-          + options.args[0] + " to " + ecv + "...\n");
+          + options.args[0] + " to " + ecv + "...");
       var versionInfo = { name : name,
                           version : version };
       packageClient.callPackageServer(conn,
           '_setEarliestCompatibleVersion', versionInfo, ecv);
-      process.stdout.write("Done!\n");
+      Console.info("Done!");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
@@ -2504,12 +2505,12 @@ main.registerCommand({
   }
 
   try {
-      process.stdout.write(
+    Console.info(
         "Changing homepage on  "
-          + name + " to " + url + "...\n");
+          + name + " to " + url + "...");
       packageClient.callPackageServer(conn,
           '_changePackageHomepage', name, url);
-      process.stdout.write("Done!\n");
+      Console.info("Done!");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
