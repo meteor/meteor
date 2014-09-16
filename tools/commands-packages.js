@@ -1726,8 +1726,6 @@ main.registerCommand({
     return 1;
   }
 
-  buildmessage.showProgressBar();
-
   var oldPlugins = project.getCordovaPlugins();
 
   var pluginsDict = {};

@@ -1224,10 +1224,14 @@ commandName + ": You're not in a Meteor project directory.\n" +
   if (showRequireProfile)
     require('./profile-require.js').printReport();
 
+  var progressBar = buildmessage.showProgressBar();
+
   // Run the command!
   try {
     var ret = command.func(options);
   } catch (e) {
+    progressBar.terminate();
+
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
         e === main.WaitForExit) {
@@ -1259,6 +1263,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
       throw e;
     }
   }
+
+  progressBar.terminate();
 
   // Exit. (We will not get here if the command threw an exception
   // such as main.WaitForExit).
