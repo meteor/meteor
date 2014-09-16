@@ -149,16 +149,12 @@ _.extend(exports.Tropohouse.prototype, {
   // buildRecord into a temporary directory, whose path is returned.
   //
   // XXX: Error handling.
-  downloadBuildToTempDir: function (progress, versionInfo, buildRecord) {
+  downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
     var targetDirectory = files.mkdtemp();
 
     var url = buildRecord.build.url;
     var downloadTask = buildmessage.createProgressTracker('http:get:' + url);
-
-    if (!progress) {
-      throw new Error("WE WANT TO TRACK PROGRESS ON THIS TRACE");
-    }
 
     var packageTarball = httpHelpers.getUrl({
       url: url,
@@ -261,8 +257,7 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
-        buildTempDirs.push(self.downloadBuildToTempDir(options.progress,
-          {packageName: packageName, version: version}, build));
+        buildTempDirs.push(self.downloadBuildToTempDir({packageName: packageName, version: version}, build));
       });
 
       // We need to turn our builds into a single unipackage.
@@ -314,8 +309,7 @@ _.extend(exports.Tropohouse.prototype, {
         self.maybeDownloadPackageForArchitectures({
           packageName: name,
           version: version,
-          architectures: [serverArch],
-          progress: options.progress
+          architectures: [serverArch]
         });
         downloadedPackages[name] = version;
       } catch (err) {

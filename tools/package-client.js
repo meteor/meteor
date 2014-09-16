@@ -206,7 +206,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   var refreshTask = buildmessage.createProgressTracker('refresh packages');
 
   var start = undefined;
-  var state = { current: 0, end: Date.now(), done: false};
+  var state = { current: 0, end: 0, done: false};
   refreshTask.reportState(state);
 
   try {
@@ -222,6 +222,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
 
     if (!start) {
       start = syncToken.packages;
+      state.end = Date.now() - start;
     }
     // XXX: Is packages the best progess indicator?
     state.current = syncToken.packages - start;

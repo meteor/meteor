@@ -24,7 +24,7 @@ var Progress = function (options) {
 
   self._completedChildren = { current: 0, end: 0};
   self._activeChildTasks = [];
-  self._selfState = { current: 0, end: undefined, done: false };
+  self._selfState = { current: 0, end: 0, done: false };
   if (options.estimate) {
     self._selfState.end = options.estimate;
   }

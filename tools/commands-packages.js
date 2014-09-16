@@ -25,8 +25,6 @@ var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
 var cordova = require('./commands-cordova.js');
 var packageLoader = require('./package-loader.js');
-var Progress = require('./progress.js').Progress;
-var ProgressBar = require('progress');
 
 // Returns an object with keys:
 //  record : (a package or version record)
@@ -85,8 +83,6 @@ var refreshOfficialCatalogOrDie = function () {
 main.registerCommand({
   name: '--get-ready'
 }, function (options) {
-  var progress = options.progress;
-
   // It is not strictly needed, but it is thematically a good idea to refresh
   // the official catalog when we call get-ready, since it is an
   // internet-requiring action.
@@ -161,9 +157,6 @@ main.registerCommand({
   },
   requiresPackage: true
 }, function (options) {
-  // XXX: Track progress?
-  var progress = null;
-
   if (options.create && options['existing-version']) {
     // Make up your mind!
     process.stderr.write("The --create and --existing-version options cannot " +
@@ -206,7 +199,7 @@ main.registerCommand({
 
       var deps =
             compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
-      tropohouse.default.downloadMissingPackages(deps, { progress: progress });
+      tropohouse.default.downloadMissingPackages(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
@@ -303,9 +296,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1
 }, function (options) {
-  // XXX: Track progress?
-  var progress = null;
-
   // argument processing
   var all = options.args[0].split('@');
   if (all.length !== 2) {
@@ -396,7 +386,7 @@ main.registerCommand({
     //     should springboard here...
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
-    tropohouse.default.downloadMissingPackages(deps, { progress: progress });
+    tropohouse.default.downloadMissingPackages(deps);
 
     unipkg = compiler.compile(packageSource, {
       officialBuild: true
@@ -447,9 +437,6 @@ main.registerCommand({
     'from-checkout': { type: Boolean, required: false }
   }
 }, function (options) {
-  // XXX: Track progress?
-  var progress = null;
-
   // Refresh the catalog, cacheing the remote package data on the server.
   process.stdout.write("Resyncing with package server...\n");
   refreshOfficialCatalogOrDie();
@@ -676,7 +663,7 @@ main.registerCommand({
                 // server, but we need to be careful.
                 var directDeps =
                       compiler.determineBuildTimeDependencies(packageSource).directDependencies;
-                tropohouse.default.downloadMissingPackages(directDeps, { progress: progress })
+                tropohouse.default.downloadMissingPackages(directDeps);
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
@@ -1739,42 +1726,7 @@ main.registerCommand({
     return 1;
   }
 
-  var progressBar = new ProgressBar('  downloading [:bar] :percent :etas', {
-    complete: '=',
-    incomplete: ' ',
-    width: 20,
-    total: 100
-  });
-
-  progressBar.start = new Date;
-
-  var progress = buildmessage.getRootProgress()
-  progress.addWatcher(function (state) {
-    var fraction;
-
-    //progress.dump(process.stderr);
-    //return;
-    if (state.done) {
-      //progressBar.terminate();
-      //progressBar.update(1.0);
-      fraction = 1.0;
-    } else {
-      var current = state.current;
-      var end = state.end;
-      if (end === undefined || end == 0 || current == 0) {
-        fraction = progressBar.curr / progressBar.total;
-      } else {
-        fraction = current / end;
-      }
-    }
-
-    // XXX: isNan
-    //if (fraction > 0 && fraction <= 1.0) {
-      progressBar.curr = Math.floor(fraction * progressBar.total);
-      progressBar.render();
-    //}
-
-  });
+  buildmessage.showProgressBar();
 
   var oldPlugins = project.getCordovaPlugins();
 
@@ -1830,7 +1782,7 @@ main.registerCommand({
   var messages = buildmessage.capture(function () {
     // Combine into one object mapping package name to list of constraints, to
     // pass in to the constraint solver.
-    allPackages = project.getCurrentCombinedConstraints({ progress: progress });
+    allPackages = project.getCurrentCombinedConstraints();
   });
   if (messages.hasMessages()) {
     process.stderr.write(messages.formatMessages());
@@ -2199,8 +2151,6 @@ main.registerCommand({
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
 
-  var progress = null;
-
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
@@ -2324,8 +2274,7 @@ main.registerCommand({
         tmpTropo.maybeDownloadPackageForArchitectures({
           packageName: toolPkg.package,
           version: toolPkg.constraint,
-          architectures: [osArch],  // XXX 'web.browser' too?
-          progress: progress
+          architectures: [osArch]  // XXX 'web.browser' too?
         });
       });
       _.each(release.packages, function (pkgVersion, pkgName) {
@@ -2335,8 +2284,7 @@ main.registerCommand({
           tmpTropo.maybeDownloadPackageForArchitectures({
             packageName: pkgName,
             version: pkgVersion,
-            architectures: [osArch],  // XXX 'web.browser' too?
-            progress: progress
+            architectures: [osArch]  // XXX 'web.browser' too?
           });
         });
       });
