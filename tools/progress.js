@@ -31,9 +31,9 @@ var Progress = function (options) {
 
 _.extend(Progress.prototype, {
   // Creates a subtask that must be completed as part of this (bigger) task
-  addChildTask: function (key, estimate) {
+  addChildTask: function (name, estimate) {
     var self = this;
-    var childOptions = { parent: self };
+    var childOptions = { name: name, parent: self };
     if (estimate) {
       childOptions.estimate = estimate;
     }
@@ -41,6 +41,20 @@ _.extend(Progress.prototype, {
     self._activeChildTasks.push(child);
     self._reportChildState(child, child._state);
     return child;
+  },
+
+  dump: function (stream, prefix) {
+    var self = this;
+
+    if (prefix) {
+      stream.write(prefix);
+    }
+    stream.write("Task [" + self._name + "] " + self._state.current + "/" + self._state.end + (self._state.done ? " done" : "") + "\n");
+    if (self._activeChildTasks.length) {
+      _.each(self._activeChildTasks, function (child) {
+        child.dump(stream, (prefix || '') + '  ');
+      });
+    }
   },
 
   // Receives a state report indicating progress of self
