@@ -28,13 +28,20 @@ _.extend(Console.prototype, {
   info: function(/*arguments*/) {
     var self = this;
 
-    self._print(arguments);
+    var message = self._format(arguments);
+    self._print(message);
   },
 
-  _print: function(logArguments) {
+  error: function(/*arguments*/) {
     var self = this;
 
-    var message = self._format(logArguments);
+    var message = self._format(arguments);
+    self._print(message);
+  },
+
+  _print: function(message) {
+    var self = this;
+
     var progressBar = self._progressBar;
     if (progressBar) {
       progressBar.terminate();
@@ -46,10 +53,20 @@ _.extend(Console.prototype, {
   },
 
   _format: function (logArguments) {
+    var self = this;
+
     var message = '';
     var format = logArguments[0];
     message = format;
     return message;
+  },
+
+  printMessages: function (messages) {
+    var self = this;
+
+    if (messages.hasMessages()) {
+      self._print("\n" + messages.formatMessages());
+    }
   },
 
   showProgressBar: function () {

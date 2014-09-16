@@ -52,7 +52,7 @@ var doOrDie = exports.doOrDie = function (f) {
     ret = f();
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     throw main.ExitWithCode(1);
   }
   return ret;
@@ -127,12 +127,11 @@ main.registerCommand({
     }
   });
   if (messages.hasMessages()) {
-
-    process.stderr.write("\n" + messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   };
 
-  console.log("You are ready!");
+  Console.info("You are ready!");
   return 0;
 });
 
@@ -160,8 +159,8 @@ main.registerCommand({
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
-    process.stderr.write("The --create and --existing-version options cannot " +
-                         "both be specified.\n");
+    Console.error("The --create and --existing-version options cannot " +
+                         "both be specified.");
     return 1;
   }
 
@@ -177,11 +176,11 @@ main.registerCommand({
     return 1;
   }
   if (! conn) {
-    process.stderr.write('No connection: Publish failed.\n');
+    Console.error('No connection: Publish failed.');
     return 1;
   }
 
-  process.stdout.write('Reading package...\n');
+  Console.info('Reading package...');
 
   // XXX Prettify error messages
 
@@ -206,7 +205,7 @@ main.registerCommand({
     });
 
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -219,25 +218,25 @@ main.registerCommand({
       return catalog.official.getPackage(packageName);
     });
     if (packageInfo) {
-      process.stderr.write(
+      Console.error(
         "Package already exists. To create a new version of an existing "+
-        "package, do not use the --create flag! \n");
+        "package, do not use the --create flag!");
       return 2;
     }
 
     if (!options['top-level'] && !packageName.match(/:/)) {
-      process.stderr.write(
+      Console.error(
 "Only administrators can create top-level packages without an account prefix.\n" +
 "(To confirm that you wish to create a top-level package with no account\n" +
-"prefix, please run this command again with the --top-level option.)\n");
+"prefix, please run this command again with the --top-level option.)");
 
       // You actually shouldn't be able to get here without being logged in, but
       // it seems poor form to assume anything like that for the point of a
       // brief error message.
       if (auth.isLoggedIn()) {
         var properName =  auth.loggedInUsername() + ":" + packageName;
-        process.stderr.write(
-          "\nDid you mean to create " + properName + " instead?\n"
+        Console.error(
+          "\nDid you mean to create " + properName + " instead?"
        );
       }
       return 2;
@@ -261,7 +260,7 @@ main.registerCommand({
     return 1;
   }
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return ec || 1;
   }
 
@@ -300,8 +299,8 @@ main.registerCommand({
   // argument processing
   var all = options.args[0].split('@');
   if (all.length !== 2) {
-    process.stderr.write(
-      'Incorrect argument. Please use the form of <packageName>@<version>\n');
+    Console.error(
+      'Incorrect argument. Please use the form of <packageName>@<version>');
     throw new main.ShowUsage;
   }
   var name = all[0];
@@ -314,10 +313,10 @@ main.registerCommand({
     return catalog.complete.getPackage(name);
   });
   if (! packageInfo) {
-    process.stderr.write(
+    Console.error(
 "You can't call `meteor publish-for-arch` on package '" + name + "' without\n" +
 "publishing it first.\n\n" +
-"To publish the package, run `meteor publish --create` from the package directory.\n\n");
+"To publish the package, run `meteor publish --create` from the package directory.\n");
 
     return 1;
   }
@@ -325,7 +324,7 @@ main.registerCommand({
     return catalog.official.getVersion(name, versionString);
   });
   if (! pkgVersion) {
-    process.stderr.write(
+    Console.error(
 "You can't call `meteor publish-for-arch` on version " + versionString + " of\n" +
 "package '" + name + "' without publishing it first.\n\n" +
 "To publish the version, run `meteor publish` from the package directory.\n\n");
@@ -334,8 +333,8 @@ main.registerCommand({
   }
 
   if (! pkgVersion.source || ! pkgVersion.source.url) {
-    process.stderr.write('There is no source uploaded for ' +
-                         name + '@' + versionString + "\n");
+    Console.error('There is no source uploaded for ' +
+                         name + '@' + versionString);
     return 1;
   }
 
@@ -353,7 +352,7 @@ main.registerCommand({
   var packageDir = path.join(sourcePath, name);
 
   if (! fs.existsSync(packageDir)) {
-    process.stderr.write('Malformed source tarball\n');
+    Console.error('Malformed source tarball');
     return 1;
   }
 
@@ -397,7 +396,7 @@ main.registerCommand({
   });
 
   if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -421,7 +420,7 @@ main.registerCommand({
   }
 
   if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -458,8 +457,7 @@ main.registerCommand({
     var data = fs.readFileSync(options.args[0], 'utf8');
     relConf = JSON.parse(data);
   } catch (e) {
-    process.stderr.write("Could not parse release file: ");
-    process.stderr.write(e.message + "\n");
+    Console.error("Could not parse release file: " + e.message);
     return 1;
   }
 
@@ -473,8 +471,8 @@ main.registerCommand({
   var badSchema = false;
   var bad = function (message) {
     if (!badSchema)
-      process.stderr.write("\n");
-    process.stderr.write(message + "\n");
+      Console.error("");
+    Console.error(message);
     badSchema = true;
   };
   if (!_.has(relConf, 'track')) {
@@ -538,8 +536,8 @@ main.registerCommand({
       trackRecord = catalog.official.getReleaseTrack(relConf.track);
     });
     if (!trackRecord) {
-      process.stderr.write('\n There is no release track named ' + relConf.track +
-                           '. If you are creating a new track, use the --create-track flag.\n');
+      Console.error('\n There is no release track named ' + relConf.track +
+                           '. If you are creating a new track, use the --create-track flag.');
       return 1;
     }
 
@@ -547,8 +545,8 @@ main.registerCommand({
     // we implement things like organizations, we are not handicapped by the
     // user's meteor version.
     if (!packageClient.amIAuthorized(relConf.track,conn,  true)) {
-      process.stderr.write('\n You are not an authorized maintainer of ' + relConf.track + ".\n");
-      process.stderr.write('Only authorized maintainers may publish new versions.\n');
+      Console.error('\n You are not an authorized maintainer of ' + relConf.track + ".");
+      Console.error('Only authorized maintainers may publish new versions.');
       return 1;
     };
   }
@@ -571,7 +569,7 @@ main.registerCommand({
   if (options['from-checkout']) {
     // You must be running from checkout to bundle up your checkout as a release.
     if (!files.inCheckout()) {
-      process.stderr.write("Must run from checkout to make release from checkout.\n");
+      Console.error("Must run from checkout to make release from checkout.");
       return 1;
     };
 
@@ -580,9 +578,9 @@ main.registerCommand({
     // why you would do that, and maybe you are confused about what you are
     // trying to do.
     if (options.appDir) {
-      process.stderr.write("Trying to publish from checkout while in an application " +
+      Console.error("Trying to publish from checkout while in an application " +
                            "directory is a bad idea." +
-                           " Please try again from somewhere else.\n");
+                           " Please try again from somewhere else.");
       return 1;
     }
 
@@ -591,10 +589,10 @@ main.registerCommand({
     // (which ones did you mean to use) and makes it likely that you did one of
     // these by accident. So, we will disallow it for now.
     if (relConf.packages || relConf.tool) {
-      process.stderr.write(
+      Console.error(
         "Setting the --from-checkout option will use the tool and packages in your meteor " +
           "checkout.\n" +
-          "Your release configuration file should not contain that information.\n");
+          "Your release configuration file should not contain that information.");
       return 1;
     }
 
@@ -763,7 +761,7 @@ main.registerCommand({
       });
 
     if (messages.hasMessages()) {
-      process.stderr.write("\n" + messages.formatMessages());
+      Console.printMessages(messages);
       return 1;
     };
 
@@ -802,13 +800,13 @@ main.registerCommand({
           return 1;
       }
       if (messages.hasMessages()) {
-        process.stderr.write(messages.formatMessages());
+        Console.printMessages(messages);
         return pubEC || 1;
       }
 
       // If we fail to publish, just exit outright, something has gone wrong.
       if (pubEC > 0) {
-        process.stderr.write("Failed to publish: " + name + "\n");
+        Console.error("Failed to publish: " + name);
         return pubEC;
       }
     }
@@ -919,7 +917,7 @@ main.registerCommand({
 
   var record = allRecord.record;
   if (!record) {
-    process.stderr.write("Unknown package or release: " +  name + "\n");
+    Console.error("Unknown package or release: " +  name);
     return 1;
   }
 
@@ -974,16 +972,16 @@ main.registerCommand({
   }
   if (_.isEqual(versionRecords, [])) {
     if (allRecord.release) {
-      process.stderr.write(
-        "No recommended versions of release " + name + " exist.\n");
+      Console.error(
+        "No recommended versions of release " + name + " exist.");
     } else {
-      process.stderr.write("No versions of package" + name + " exist.\n");
+      Console.error("No versions of package" + name + " exist.");
     }
   } else {
     var lastVersion = versionRecords[versionRecords.length - 1];
     if (!lastVersion && full.length > 1) {
-      process.stderr.write(
-        "Unknown version of" + name + ":" + full[1] + "\n");
+      Console.error(
+        "Unknown version of" + name + ":" + full[1]);
       return 1;;
     }
     var unknown = "< unknown >";
@@ -1080,7 +1078,7 @@ main.registerCommand({
   try {
     search = new RegExp(options.args[0]);
   } catch (err) {
-    process.stderr.write(err + "\n");
+    Console.error(err + "");
     return 1;
   }
 
@@ -1173,9 +1171,9 @@ main.registerCommand({
   }
 
   if (!output) {
-    process.stderr.write(
+    Console.error(
       "Neither packages nor releases matching \'" +
-        search + "\' could be found.\n");
+        search + "\' could be found.");
   } else {
     process.stdout.write(
       "To get more information on a specific item, use meteor show. \n");
@@ -1238,7 +1236,7 @@ main.registerCommand({
     });
   });
   if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -1278,9 +1276,9 @@ var maybeUpdateRelease = function (options) {
 
   // We are running from checkout, so we are not updating the release.
   if (release.current.isCheckout()) {
-    process.stderr.write(
+    Console.error(
 "You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
-"Checking to see if we can update your packages.\n");
+"Checking to see if we can update your packages.");
     return 0;
   }
 
@@ -1311,9 +1309,9 @@ var maybeUpdateRelease = function (options) {
     // and the user ran 'meteor update' without specifying a release? We
     // really can't do much here.
     if (!latestRelease) {
-      process.stderr.write(
+      Console.error(
         "There are no recommended releases on release track " +
-          releaseTrack + ".\n");
+          releaseTrack + ".");
       return 1;
     }
     if (! release.current || release.current.name !== latestRelease) {
@@ -1390,8 +1388,8 @@ var maybeUpdateRelease = function (options) {
     // release. In fact, you are doing something wrong, so we should tell you
     // to stop.
     if (appRelease == null) {
-      process.stderr.write(
-        "Cannot patch update unless a release is set.\n");
+      Console.error(
+        "Cannot patch update unless a release is set.");
       return 1;
     }
     var r = appRelease.split('@');
@@ -1400,8 +1398,8 @@ var maybeUpdateRelease = function (options) {
     });
     var updateTo = record.patchReleaseVersion;
     if (!updateTo) {
-      process.stderr.write(
-        "You are at the latest patch version.\n");
+      Console.error(
+        "You are at the latest patch version.");
       return 0;
     }
     var patchRecord = doOrDie(function () {
@@ -1416,8 +1414,8 @@ var maybeUpdateRelease = function (options) {
     // not try to patch you to an unfriendly release. So, either way, as far
     // as we are concerned you are at the 'latest patch version'
     if (!patchRecord || !patchRecord.recommended ) {
-      process.stderr.write(
-        "You are at the latest patch version.\n");
+      Console.error(
+        "You are at the latest patch version.");
       return 0;
     }
     // Great, we found a patch version. You can only have one latest patch for
@@ -1460,7 +1458,7 @@ var maybeUpdateRelease = function (options) {
     previousVersions = project.getVersions({dontRunConstraintSolver: true});
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     // We couldn't figure out our current versions, so updating is not going to work.
     return 1;
   }
@@ -1483,7 +1481,7 @@ var maybeUpdateRelease = function (options) {
       });
       if (messages.hasMessages()) {
         if (process.env.METEOR_UPDATE_DEBUG) {
-          process.stderr.write(
+          Console.error(
             "Update to release " + releaseTrack + "@" + versionToTry +
               " is impossible:\n" + messages.formatMessages());
         }
@@ -1491,9 +1489,9 @@ var maybeUpdateRelease = function (options) {
       }
     } catch (e) {
       if (process.env.METEOR_UPDATE_DEBUG) {
-        process.stderr.write(
+        Console.error(
           "Update to release " + releaseTrack +
-            "@" + versionToTry + " impossible: " + e.message + "\n");
+            "@" + versionToTry + " impossible: " + e.message );
       }
       return false;
     }
@@ -1530,7 +1528,7 @@ var maybeUpdateRelease = function (options) {
                                { alwaysRecord : true });
   });
   if (messages.hasMessages()) {
-    process.stderr.write("Error while setting versions:\n" +
+    Console.error("Error while setting versions:\n" +
                          messages.formatMessages());
     return 1;
   }
@@ -1538,7 +1536,7 @@ var maybeUpdateRelease = function (options) {
     onDiskPackages: setV.downloaded
   });
   if (!setV.success) {
-    process.stderr.write("Could not install all the requested packages.\n");
+    Console.error("Could not install all the requested packages.");
     return 1;
   }
 
@@ -1587,12 +1585,12 @@ main.registerCommand({
 
   // Some basic checks to make sure that this command is being used correctly.
   if (options["packages-only"] && options["patch"]) {
-    process.stderr.write("There is no such thing as a patch update to packages.");
+    Console.error("There is no such thing as a patch update to packages.");
     return 1;
   }
 
   if (release.explicit && options["patch"]) {
-    process.stderr.write("You cannot patch update to a specific release.");
+    Console.error("You cannot patch update to a specific release.");
     return 1;
   }
 
@@ -1637,7 +1635,7 @@ main.registerCommand({
     allPackages = project.calculateCombinedConstraints(releasePackages);
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -1663,7 +1661,7 @@ main.registerCommand({
     });
   });
   if (messages.hasMessages()) {
-    process.stderr.write("Error resolving constraints for packages:\n"
+    Console.error("Error resolving constraints for packages:\n"
                          + messages.formatMessages());
     return 1;
   }
@@ -1681,7 +1679,7 @@ main.registerCommand({
   });
   // XXX cleanup this madness of error handling
   if (messages.hasMessages()) {
-    process.stderr.write("Error while setting package versions:\n" +
+    Console.error("Error while setting package versions:\n" +
                          messages.formatMessages());
     return 1;
   }
@@ -1696,7 +1694,7 @@ main.registerCommand({
       alwaysShow: true });
 
   if (!setV.success) {
-    process.stderr.write("Could not install all the requested packages.\n");
+    Console.error("Could not install all the requested packages.");
     return 1;
   }
   return showExitCode;
@@ -1723,7 +1721,7 @@ main.registerCommand({
       cordova.checkIsValidPlugin(plugin);
     });
   } catch (err) {
-    process.stderr.write(err.message + '\n');
+    Console.error(err.message + '');
     return 1;
   }
 
@@ -1784,7 +1782,7 @@ main.registerCommand({
     allPackages = project.getCurrentCombinedConstraints();
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -1802,7 +1800,7 @@ main.registerCommand({
     // Check that the package exists.
     doOrDie(function () {
       if (! catalog.complete.getPackage(constraint.name)) {
-        process.stderr.write(constraint.name + ": no such package\n");
+        Console.error(constraint.name + ": no such package");
         failed = true;
         return;
       }
@@ -1814,8 +1812,8 @@ main.registerCommand({
         return catalog.complete.getVersion(constraint.name, constraint.version);
       });
       if (! versionInfo) {
-        process.stderr.write(
-          constraint.name + "@" + constraint.version  + ": no such version\n");
+        Console.error(
+          constraint.name + "@" + constraint.version  + ": no such version");
         failed = true;
         return;
       }
@@ -1906,7 +1904,7 @@ main.registerCommand({
         { ignoreProjectDeps: true });
       if ( ! newVersions) {
         // XXX: Better error handling.
-        process.stderr.write("Cannot resolve package dependencies.\n");
+        Console.error("Cannot resolve package dependencies.");
         return;
       }
 
@@ -1924,13 +1922,13 @@ main.registerCommand({
     if (!e.constraintSolverError)
       throw e;
     // XXX this is too many forms of error handling!
-    process.stderr.write(
+    Console.error(
       "Could not satisfy all the specified constraints:\n"
-        + e + "\n");
+        + e + "");
     return 1;
   }
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -1999,11 +1997,11 @@ main.registerCommand({
   var packagesToRemove = [];
   _.each(args, function (packageName) {
     if (/@/.test(packageName)) {
-      process.stderr.write(packageName + ": do not specify version constraints.\n");
+      Console.error(packageName + ": do not specify version constraints.");
     } else if (! _.has(packages, packageName)) {
       // Check that we are using the package. We don't check if the package
       // exists. You should be able to remove non-existent packages.
-      process.stderr.write(packageName  + " is not in this project.\n");
+      Console.error(packageName  + " is not in this project.");
     } else {
       packagesToRemove.push(packageName);
     }
@@ -2025,7 +2023,7 @@ main.registerCommand({
     var newVersions = project.getVersions();
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
@@ -2066,13 +2064,13 @@ main.registerCommand({
 
   // Yay, checking that options are correct.
   if (options.add && options.remove) {
-    process.stderr.write(
-      "Sorry, you can only add or remove one user at a time.\n");
+    Console.error(
+      "Sorry, you can only add or remove one user at a time.");
     return 1;
   }
   if ((options.add || options.remove) && options.list) {
-    process.stderr.write(
-"Sorry, you can't change the users at the same time as you're listing them.\n");
+    Console.error(
+"Sorry, you can't change the users at the same time as you're listing them.");
     return 1;
   }
 
@@ -2167,7 +2165,7 @@ main.registerCommand({
   });
   if (!release) {
     // XXX this could also mean package unknown.
-    process.stderr.write('Release unknown: ' + releaseNameAndVersion + '\n');
+    Console.error('Release unknown: ' + releaseNameAndVersion + '');
     return 1;
   }
 
@@ -2180,11 +2178,11 @@ main.registerCommand({
   });
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
-    process.stderr.write('Tool version unknown: ' + release.tool + '\n');
+    Console.error('Tool version unknown: ' + release.tool + '');
     return 1;
   }
   if (!toolPkgBuilds.length) {
-    process.stderr.write('Tool version has no builds: ' + release.tool + '\n');
+    Console.error('Tool version has no builds: ' + release.tool + '');
     return 1;
   }
 
@@ -2203,9 +2201,9 @@ main.registerCommand({
     return osArches[0];
   });
 
-  process.stderr.write(
+  Console.error(
     'Building bootstrap tarballs for architectures ' +
-      osArches.join(', ') + '\n');
+      osArches.join(', ') + '');
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
   var messages = buildmessage.capture(function () {
@@ -2224,7 +2222,7 @@ main.registerCommand({
   });
 
   if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
+    Console.error("\n" + messages.formatMessages());
     return 1;
   };
 
@@ -2251,7 +2249,7 @@ main.registerCommand({
     track: parsed.package, version: parsed.constraint
   });
   if (!releaseInData) {
-    process.stderr.write("Can't find release in data!\n");
+    Console.error("Can't find release in data!");
     return 3;
   }
   releaseInData.recommended = true;
@@ -2289,7 +2287,7 @@ main.registerCommand({
       });
     });
     if (messages.hasMessages()) {
-      process.stderr.write("\n" + messages.formatMessages());
+      Console.error("\n" + messages.formatMessages());
       return 1;
     }
 
@@ -2332,16 +2330,16 @@ main.registerCommand({
     var bannersData = fs.readFileSync(bannersFile, 'utf8');
     bannersData = JSON.parse(bannersData);
   } catch (e) {
-    process.stderr.write("Could not parse banners file: ");
-    process.stderr.write(e.message + "\n");
+    Console.error("Could not parse banners file: ");
+    Console.error(e.message + "");
     return 1;
   }
   if (!bannersData.track) {
-    process.stderr.write("Banners file should have a 'track' key.\n");
+    Console.error("Banners file should have a 'track' key.");
     return 1;
   }
   if (!bannersData.banners) {
-    process.stderr.write("Banners file should have a 'banners' key.\n");
+    Console.error("Banners file should have a 'banners' key.");
     return 1;
   }
 
@@ -2381,8 +2379,8 @@ main.registerCommand({
   var name = release[0];
   var version = release[1];
   if (!version) {
-      process.stderr.write('\n Must specify release version (track@version)\n');
-      return 1;
+    Console.error('\n Must specify release version (track@version)');
+    return 1;
   }
 
   // Now let's get down to business! Fetching the thing.
@@ -2391,8 +2389,8 @@ main.registerCommand({
       record = catalog.official.getReleaseTrack(name);
   });
   if (!record) {
-      process.stderr.write('\n There is no release track named ' + name + '\n');
-      return 1;
+    Console.error('\n There is no release track named ' + name);
+    return 1;
   }
 
   try {
@@ -2437,8 +2435,8 @@ main.registerCommand({
   var name = package[0];
   var version = package[1];
   if (!version) {
-      process.stderr.write('\n Must specify release version (track@version)\n');
-      return 1;
+    Console.error('\n Must specify release version (track@version)');
+    return 1;
   }
   var ecv = options.args[1];
 
@@ -2447,8 +2445,8 @@ main.registerCommand({
     return catalog.official.getPackage(name);
   });
   if (!record) {
-      process.stderr.write('\n There is no package named ' + name + '\n');
-      return 1;
+    Console.error('\n There is no package named ' + name);
+    return 1;
   }
 
   try {
@@ -2494,8 +2492,8 @@ main.registerCommand({
     return catalog.official.getPackage(name);
   });
   if (!record) {
-      process.stderr.write('\n There is no package named ' + name + '\n');
-      return 1;
+    Console.error('\n There is no package named ' + name);
+    return 1;
   }
 
   try {
