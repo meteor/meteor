@@ -1,3 +1,5 @@
+var Fiber = require('fibers');
+var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('./files.js');
 var parseStack = require('./parse-stack.js');
@@ -366,6 +368,57 @@ var assertInCapture = function () {
     throw new Error("Expected to be in a buildmessage capture");
 };
 
+
+var forkJoin = function (iterable, fn) {
+  var job = currentJob.get();
+  var messageSet = currentMessageSet.get();
+
+  var futures = [];
+  _.each(iterable, function (/*arguments*/) {
+    var fut = new Future();
+    var fnArguments = arguments;
+    Fiber(function() {
+      currentMessageSet.withValue(messageSet, function () {
+        currentJob.withValue(job, function () {
+          try {
+            var result = fn.apply(null, fnArguments);
+            fut['return'](result);
+          } catch (e) {
+            fut['throw'](e);
+          }
+        });
+      });
+    }).run();
+    futures.push(fut);
+  });
+
+  var results = [];
+  var errors = [];
+  var firstError = null;
+
+  _.each(futures, function (future) {
+    try {
+      var result = future.wait();
+      results.push(result);
+      errors.push(null);
+    } catch (e) {
+      results.push(null);
+      errors.push(e);
+
+      if (firstError === null) {
+        firstError = e;
+      }
+    }
+  });
+
+  if (firstError) {
+    throw firstError;
+  }
+
+  return results;
+};
+
+
 var buildmessage = exports;
 _.extend(exports, {
   capture: capture,
@@ -375,5 +428,6 @@ _.extend(exports, {
   exception: exception,
   jobHasMessages: jobHasMessages,
   assertInJob: assertInJob,
-  assertInCapture: assertInCapture
+  assertInCapture: assertInCapture,
+  forkJoin: forkJoin
 });
