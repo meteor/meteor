@@ -201,8 +201,6 @@ _.extend(exports, {
         var contentLength = response.headers['content-length'];
         if (contentLength) {
           state.end = Number(contentLength);
-        } else {
-          state.end = undefined;
         }
         emitProgress();
       })
