@@ -5,7 +5,6 @@ var files = require('./files.js');
 var parseStack = require('./parse-stack.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Progress = require('./progress.js').Progress;
-var ProgressBar = require('progress');
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 
 
@@ -164,6 +163,10 @@ var currentJob = new fiberHelpers.EnvironmentVariable;
 var currentNestingLevel = new fiberHelpers.EnvironmentVariable(0);
 
 var rootProgress = new Progress();
+
+var getRootProgress = function () {
+  return rootProgress;
+};
 
 // Create a new MessageSet, run `f` with that as the current
 // MessageSet for the purpose of accumulating and recovering from
@@ -439,45 +442,6 @@ var forkJoin = function (iterable, fn) {
   return results;
 };
 
-var showProgressBar = function () {
-  var progressBar = new ProgressBar('  downloading [:bar] :percent :etas', {
-    complete: '=',
-    incomplete: ' ',
-    width: 20,
-    total: 100
-  });
-  progressBar.start = new Date;
-
-  var progress = rootProgress;
-  progress.addWatcher(function (state) {
-    var fraction;
-
-    //progress.dump(process.stderr);
-    //return;
-    if (state.done) {
-      //progressBar.terminate();
-      //progressBar.update(1.0);
-      fraction = 1.0;
-    } else {
-      var current = state.current;
-      var end = state.end;
-      if (end === undefined || end == 0 || current == 0) {
-        fraction = progressBar.curr / progressBar.total;
-      } else {
-        fraction = current / end;
-      }
-    }
-
-    // XXX: isNan
-    //if (fraction > 0 && fraction <= 1.0) {
-    progressBar.curr = Math.floor(fraction * progressBar.total);
-    progressBar.render();
-    //}
-  });
-
-  return progressBar;
-};
-
 
 var buildmessage = exports;
 _.extend(exports, {
@@ -491,5 +455,5 @@ _.extend(exports, {
   assertInCapture: assertInCapture,
   forkJoin: forkJoin,
   createProgressTracker: createProgressTracker,
-  showProgressBar: showProgressBar
+  getRootProgress: getRootProgress
 });
