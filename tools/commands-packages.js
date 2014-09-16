@@ -422,14 +422,7 @@ main.registerCommand({
           "This package was published from a built version of meteor," +
             "but you are running from checkout!\nConsider running from a " +
             "proper Meteor release, so we can springboard correctly.\n");
-       // process.stderr.exit(1);
-        var sufficientlyReasonableReleaseVersion =
-          catalog.official.getReleaseWithTool(versionLock.toolVersion);
-        throw new
-          main.SpringboardToSpecificRelease(
-            sufficientlyReasonableReleaseVersion,
-            "Errors while trying to publish for arch");
-
+        process.stderr.exit(1);
       }
       var currentToolPackage = release.current.getToolsPackage();
       var currentToolVersion = release.current.getToolsVersion();
