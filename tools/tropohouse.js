@@ -249,21 +249,9 @@ _.extend(exports.Tropohouse.prototype, {
       throw e;
     }
 
-    // XXX replace with a real progress bar in downloadMissingPackages
-    var header = "  downloading " + packageName + " at version " + version + " ...";
-    if (!options.silent) {
-        var animationFrame = 0;
-        var spinner = ['..-', '..\\', '..|', '../'];
-
-        var printUpdate = function () {
-          process.stderr.write(header + spinner[animationFrame] + "\r");
-          animationFrame = (animationFrame + 1) % spinner.length;
-        };
-        printUpdate();
-        var dlTimer = setInterval(printUpdate, 200);
-    }
-
-    try {
+    buildmessage.enterJob({
+      title: "  downloading " + packageName + " at version " + version + " ...",
+    }, function() {
       var buildTempDirs = [];
       // If there's already a package in the tropohouse, start with it.
       if (packageLinkTarget) {
@@ -300,12 +288,7 @@ _.extend(exports.Tropohouse.prototype, {
       if (packageLinkTarget) {
         files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
       }
-    } finally {
-      if (!options.silent) {
-        clearInterval(dlTimer);
-        process.stderr.write(header + " done\n");
-      }
-    }
+    });
 
     return;
   },
