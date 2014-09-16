@@ -686,14 +686,7 @@ _.extend(PackageSource.prototype, {
 
         npmDependencies = _npmDependencies;
       },
-
-      /**
-       * @summary Require a package that was specified using
-       * `Npm.depends()`.
-       * @param  {String} name The name of the package to require.
-       * @locus Server
-       * @memberOf Npm
-       */
+      
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);
