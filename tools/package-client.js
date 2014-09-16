@@ -202,6 +202,13 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   var done = false;
   var ret = {resetData: false};
 
+
+  var refreshTask = buildmessage.createProgressTracker('refresh packages');
+
+  var start = undefined;
+  var state = { current: 0, end: Date.now(), done: false};
+  refreshTask.reportState(state);
+
   try {
     var conn = openPackageServerConnection(options.packageServerUrl);
   } catch (err) {
@@ -212,6 +219,14 @@ exports.updateServerPackageData = function (cachedServerData, options) {
 
   var getSomeData = function () {
     var syncToken = cachedServerData.syncToken;
+
+    if (!start) {
+      start = syncToken.packages;
+    }
+    // XXX: Is packages the best progess indicator?
+    state.current = syncToken.packages - start;
+    refreshTask.reportState(state);
+
     var remoteData;
     try {
       remoteData = loadRemotePackageData(conn, syncToken, {
@@ -271,6 +286,9 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   } finally {
     conn.close();
   }
+
+  state.done = true;
+  refreshTask.reportState(state);
 
   ret.data = cachedServerData;
   return ret;
