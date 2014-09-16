@@ -1749,15 +1749,26 @@ main.registerCommand({
     total: 100
   });
 
+  progressBar.start = new Date;
   progress.addWatcher(function (state) {
+    var fraction;
     if (state.done) {
-      progressBar.terminate();
+      //progressBar.terminate();
+      //progressBar.update(1.0);
+      fraction = 1.0;
     } else {
       var current = state.current;
       var end = state.end;
-      var fraction = current / end;
-      progressBar.update(fraction);
+      if (end === undefined || end == 0 || current == 0) {
+        fraction = progressBar.curr / progressBar.total;
+      } else {
+        fraction = current / end;
+      }
     }
+
+    progressBar.curr = Math.floor(fraction * progressBar.total);
+    progressBar.render();
+
   });
 
   var oldPlugins = project.getCordovaPlugins();
