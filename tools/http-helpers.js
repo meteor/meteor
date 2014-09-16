@@ -85,7 +85,7 @@ _.extend(exports, {
       delete options.bodyStream;
     }
 
-    var progress;
+    var progress = null;
     if (_.has(options, 'progress')) {
       progress = options.progress;
       delete options.progress;

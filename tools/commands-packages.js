@@ -1724,9 +1724,6 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
-  var progress = null;
-
-  progress = new Progress();
 
   // Special case on reserved package namespaces, such as 'cordova'
   var cordovaPlugins;
@@ -1750,8 +1747,13 @@ main.registerCommand({
   });
 
   progressBar.start = new Date;
+
+  var progress = buildmessage.getRootProgress()
   progress.addWatcher(function (state) {
     var fraction;
+
+    //progress.dump(process.stderr);
+    //return;
     if (state.done) {
       //progressBar.terminate();
       //progressBar.update(1.0);
@@ -1766,8 +1768,11 @@ main.registerCommand({
       }
     }
 
-    progressBar.curr = Math.floor(fraction * progressBar.total);
-    progressBar.render();
+    // XXX: isNan
+    //if (fraction > 0 && fraction <= 1.0) {
+      progressBar.curr = Math.floor(fraction * progressBar.total);
+      progressBar.render();
+    //}
 
   });
 

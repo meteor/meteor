@@ -154,7 +154,7 @@ _.extend(exports.Tropohouse.prototype, {
     var targetDirectory = files.mkdtemp();
 
     var url = buildRecord.build.url;
-    var downloadTask = progress ? progress.addChildTask('http:get:' + url) : null;
+    var downloadTask = buildmessage.createProgressTracker('http:get:' + url);
 
     if (!progress) {
       throw new Error("WE WANT TO TRACK PROGRESS ON THIS TRACE");

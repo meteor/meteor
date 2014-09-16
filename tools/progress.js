@@ -31,13 +31,10 @@ var Progress = function (options) {
 
 _.extend(Progress.prototype, {
   // Creates a subtask that must be completed as part of this (bigger) task
-  addChildTask: function (name, estimate) {
+  addChildTask: function (name, options) {
     var self = this;
-    var childOptions = { name: name, parent: self };
-    if (estimate) {
-      childOptions.estimate = estimate;
-    }
-    var child = new Progress(childOptions);
+    var options = _.extend({ name: name, parent: self }, options);
+    var child = new Progress(options);
     self._activeChildTasks.push(child);
     self._reportChildState(child, child._state);
     return child;
@@ -49,7 +46,11 @@ _.extend(Progress.prototype, {
     if (prefix) {
       stream.write(prefix);
     }
-    stream.write("Task [" + self._name + "] " + self._state.current + "/" + self._state.end + (self._state.done ? " done" : "") + "\n");
+    var end = self._state.end;
+    if (!end) {
+      end = '?';
+    }
+    stream.write("Task [" + self._name + "] " + self._state.current + "/" + end + (self._state.done ? " done" : "") + "\n");
     if (self._activeChildTasks.length) {
       _.each(self._activeChildTasks, function (child) {
         child.dump(stream, (prefix || '') + '  ');
@@ -121,6 +122,7 @@ _.extend(Progress.prototype, {
     if (!allChildrenDone) {
       state.done = false;
     }
+
     return state;
   },
 
