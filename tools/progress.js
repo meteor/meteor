@@ -62,14 +62,14 @@ _.extend(Progress.prototype, {
 
   _notifyState: function () {
     var self = this;
-    
+
     if (self._parent) {
       self._parent._reportChildState(self, self._state);
     }
 
     if (self._watchers.length) {
       _.each(self._watchers, function (watcher) {
-        watcher(self, self._state);
+        watcher(self._state);
       });
     }
   },
