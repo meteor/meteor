@@ -136,7 +136,32 @@ _.extend(LayeredCatalog.prototype, {
     //PASCAL
   },
 
-  //_requireInitialized
+  // As getVersion, but returns info on the latest version of the
+  // package, or null if the package doesn't exist or has no versions.
+  // It does not include prereleases (with dashes in the version);
+  getLatestMainlineVersion: function (name) {
+    var self = this;
+    self._requireInitialized();
+    buildmessage.assertInCapture();
+
+    var versions = self.getSortedVersions(name);
+    versions.reverse();
+    var latest = _.find(versions, function (version) {
+      return !/-/.test(version);
+    });
+    if (!latest)
+      return null;
+    return self.getVersion(name, latest);
+  },
+
+    // Throw if the catalog's self.initialized value has not been set to true.
+  _requireInitialized: function () {
+    var self = this;
+    //PASCAL
+    // if (! self.initialized)
+    //   throw new Error("catalog not initialized yet?");
+  },
+
   resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};

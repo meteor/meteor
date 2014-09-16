@@ -226,24 +226,6 @@ _.extend(LocalCatalog.prototype, {
     return false;
   },
 
-  // As getVersion, but returns info on the latest version of the
-  // package, or null if the package doesn't exist or has no versions.
-  // It does not include prereleases (with dashes in the version);
-  getLatestMainlineVersion: function (name) {
-    var self = this;
-    self._requireInitialized();
-    buildmessage.assertInCapture();
-
-    var versions = self.getSortedVersions(name);
-    versions.reverse();
-    var latest = _.find(versions, function (version) {
-      return !/-/.test(version);
-    });
-    if (!latest)
-      return null;
-    return self.getVersion(name, latest);
-  },
-
   // If this package has any builds at this version, return an array of builds
   // which cover all of the required arches, or null if it is impossible to
   // cover them all (or if the version does not exist).
