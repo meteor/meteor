@@ -79,6 +79,10 @@ Migrations.migrateTo('3,rerun');
 
 ### Command line use
 
+*** DEPRECATED ***
+
+This info is for pre 0.9 users as post 0.9 the `migrate.sh` script is no longer included in the package folder.
+
 You can also run migrations from the command line using the included shell script. This will 
 
 1. Launch your Meteor app
