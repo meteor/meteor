@@ -1,3 +1,5 @@
+var fs = require('fs');
+var path = require('path');
 var _ = require('underscore');
 var util = require('util');
 var buildmessage = require('./buildmessage.js');
@@ -86,6 +88,20 @@ _.extend(LayeredCatalog.prototype, {
     return this._returnFirst("getPackage", arguments, [[], null]);
   },
 
+  // Find a release that uses the given version of a tool. See: publish-for-arch
+  // in command-packages for more explanation.  Returns information about a
+  // particular release version, or null if such release version does not exist.
+  getReleaseWithTool: function (toolSpec) {
+    var self = this;
+    buildmessage.assertInCapture();
+    self._requireInitialized();
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.releaseVersions, { tool: toolSpec });
+    });
+  },
+
+  // Returns general (non-version-specific) information about a
+  // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     return this.otherCatalog.getReleaseTrack(name);
   },
@@ -222,13 +238,15 @@ _.extend(LayeredCatalog.prototype, {
       messageAfterMs: 1000,
       message: "Figuring out the best package versions to use. This may take a moment."
     });
+
+    var ret;
     try {
       // Then, call the constraint solver, to get the valid transitive subset of
       // those versions to record for our solution. (We don't just return the
       // original version lock because we want to record the correct transitive
       // dependencies)
       try {
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        ret = self.resolver.resolve(deps, constr, resolverOpts);
       } catch (e) {
         // Maybe we only failed because we need to refresh. Try to refresh
         // (unless we already are) and retry.
@@ -239,10 +257,124 @@ _.extend(LayeredCatalog.prototype, {
         }
         exports.official.refresh();
         self.resolver || self._initializeResolver();
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        ret = self.resolver.resolve(deps, constr, resolverOpts);
       }
     } finally {
       patience.stop();
+    }
+    if (ret["usedRCs"]) {
+      var expPackages = [];
+      _.each(ret.answer, function(version, package) {
+        if (version.split('-').length > 1 &&
+            !_.findWhere(constr,
+                { packageName: package, version: version })) {
+          expPackages.push({
+              name: "  " + package + "@" + version,
+              description: self.getVersion(package, version).description
+            });
+        }
+      });
+      if (!_.isEmpty(expPackages)) {
+        // XXX: Couldn't figure out how to word this better for better tenses.
+        process.stderr.write(
+          "------------------------------------------------------------ \n");
+        process.stderr.write(
+          "In order to resolve constraints, we had to use the following\n"+
+            "experimental package versions:\n");
+        process.stderr.write(utils.formatList(expPackages));
+        process.stderr.write(
+          "------------------------------------------------------------ \n");
+
+        process.stderr.write("\n");
+      }
+    }
+    return ret.answer;
+  },
+
+  // Refresh the packages in the catalog.
+  //
+  // Reread server data from data.json on disk, then load local overrides on top
+  // of that information. Sets initialized to true.
+  // options:
+  // - forceRefresh: even if there is a future in progress, refresh the catalog
+  //   anyway. When we are using hot code push, we may be restarting the app
+  //   because of a local package change that impacts that catalog. Don't wait
+  //   on the official catalog to refresh data.json, in this case.
+  // - watchSet: if provided, any files read in reloading packages will be added
+  //   to this set.
+  refresh: function (options) {
+    var self = this;
+    options = options || {};
+    buildmessage.assertInCapture();
+
+    // We need to limit the rate of refresh, or, at least, prevent any sort of
+    // loops. ForceRefresh will override either one.
+    if (!options.forceRefresh && !options.initializing &&
+        (catalog.official._refreshFutures || self.refreshing)) {
+
+      return;
+    }
+
+    if (options.initializing && !self.forUniload) {
+      // If we are doing the top level initialization in main.js, everything
+      // sure had better be in a relaxed state, since we're about to hackily
+      // steal some data from catalog.official.
+      if (self.refreshing)
+        throw Error("initializing catalog.complete re-entrantly?");
+      if (catalog.official._refreshFutures)
+        throw Error("initializing catalog.complete during official refresh?");
+    }
+
+    if (self.refreshing) {
+      // We're being asked to refresh re-entrantly, maybe because we just
+      // updated the official catalog.  Let's not do this now, but make the
+      // outer call do it instead.
+      // XXX refactoring the catalogs so that the two catalogs share their
+      //     data and this one is just an overlay would reduce this wackiness
+      self.needRefresh = true;
+      return;
+    }
+
+    self.refreshing = true;
+
+    try {
+      self.reset();
+
+      if (!self.forUniload) {
+        if (options.initializing) {
+          // It's our first time! Everything ought to be at rest. Let's just
+          // steal data (without even a deep clone!) from catalog.official.
+          // XXX this is horrible. restructure to have a reference to
+          // catalog.official instead.
+          self.packages = _.clone(catalog.official.packages);
+          self.builds = _.clone(catalog.official.builds);
+          _.each(catalog.official.versions, function (versions, name) {
+            self.versions[name] = _.clone(versions);
+          });
+        } else {
+          // Not the first time. Slowly load data from disk.
+          // XXX restructure this class to just have a reference to
+          // catalog.official instead of a copy of its data.
+          var localData = packageClient.loadCachedServerData();
+          self._insertServerPackages(localData);
+        }
+      }
+
+      self._recomputeEffectiveLocalPackages();
+      var allOK = self._addLocalPackageOverrides(
+        { watchSet: options.watchSet });
+      self.initialized = true;
+      // Rebuild the resolver, since packages may have changed.
+      self.resolver = null;
+    } finally {
+      self.refreshing = false;
+    }
+
+    // If we got a re-entrant refresh request, do it now. (But not if we
+    // encountered build errors building the packages, since in that case
+    // we'd probably just get the same build errors again.)
+    if (self.needRefresh && allOK) {
+      self.refresh(options);
     }
   },
 

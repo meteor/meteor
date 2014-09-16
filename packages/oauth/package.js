@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.0.1"
+  version: "1.1.0"
 });
 
 Package.on_use(function (api) {
@@ -8,6 +8,7 @@ Package.on_use(function (api) {
   api.use('webapp', 'server');
   api.use('mongo', 'server');
   api.use('reload', 'client');
+  api.use('base64', 'client');
 
   api.use(['underscore', 'service-configuration', 'logging'], 'server');
 

@@ -78,10 +78,18 @@ OAuth._stateFromQuery = function (query) {
     Log.warn('Unable to parse state from OAuth query: ' + string);
     throw e;
   }
-}
+};
 
 OAuth._loginStyleFromQuery = function (query) {
-  var style = OAuth._stateFromQuery(query).loginStyle;
+  var style;
+  // For backwards-compatibility for older clients, catch any errors
+  // that result from parsing the state parameter. If we can't parse it,
+  // set login style to popup by default.
+  try {
+    style = OAuth._stateFromQuery(query).loginStyle;
+  } catch (err) {
+    style = "popup";
+  }
   if (style !== "popup" && style !== "redirect") {
     throw new Error("Unrecognized login style: " + style);
   }
@@ -89,11 +97,29 @@ OAuth._loginStyleFromQuery = function (query) {
 };
 
 OAuth._credentialTokenFromQuery = function (query) {
-  return OAuth._stateFromQuery(query).credentialToken;
+  var state;
+  // For backwards-compatibility for older clients, catch any errors
+  // that result from parsing the state parameter. If we can't parse it,
+  // assume that the state parameter's value is the credential token, as
+  // it used to be for older clients.
+  try {
+    state = OAuth._stateFromQuery(query);
+  } catch (err) {
+    return query.state;
+  }
+  return state.credentialToken;
 };
 
 OAuth._isCordovaFromQuery = function (query) {
-  return !! OAuth._stateFromQuery(query).isCordova;
+  try {
+    return !! OAuth._stateFromQuery(query).isCordova;
+  } catch (err) {
+    // For backwards-compatibility for older clients, catch any errors
+    // that result from parsing the state parameter. If we can't parse
+    // it, assume that we are not on Cordova, since older Meteor didn't
+    // do Cordova.
+    return false;
+  }
 };
 
 
@@ -344,7 +370,12 @@ OAuth._endOfLoginResponse = function (res, details) {
   if (details.loginStyle === 'redirect') {
     redirectUrl = OAuth._stateFromQuery(details.query).redirectUrl;
     var appHost = Meteor.absoluteUrl();
-    if (redirectUrl.substr(0, appHost.length) !== appHost) {
+    var appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
+      replaceLocalhost: true
+    });
+    if (redirectUrl.substr(0, appHost.length) !== appHost &&
+        redirectUrl.substr(0, appHostReplacedLocalhost.length) !==
+        appHostReplacedLocalhost) {
       details.error = "redirectUrl (" + redirectUrl +
         ") is not on the same host as the app (" + appHost + ")";
       redirectUrl = appHost;

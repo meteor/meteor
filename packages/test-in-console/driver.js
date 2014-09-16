@@ -37,12 +37,19 @@ var log = function (/*arguments*/) {
   }
 };
 
+var MAGIC_PREFIX = '##_meteor_magic##';
+// Write output so that other tools can read it
+// Output is sent to console.log, prefixed with the magic prefix and then the facility
+// By grepping for the prefix, other tools can get the 'special' output
+var logMagic = function (facility, s) {
+  log(MAGIC_PREFIX + facility + ': ' + s);
+};
+
 // Logs xUnit output, if xunit output is enabled
-// Output is sent to console.log, prefixed with a magic string 'XUNIT '
-// By grepping for that prefix, the xUnit output can be extracted
+// This uses logMagic with a facility of xunit
 var xunit = function (s) {
   if (xunitEnabled) {
-    log('XUNIT ' + s);
+    logMagic('xunit', s);
   }
 };
 
@@ -224,6 +231,7 @@ Meteor.startup(function () {
         xunit('</testcase>');
       });
       xunit('</testsuite>');
+      logMagic('state', 'done');
     },
     ["tinytest"]);
 });

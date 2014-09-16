@@ -1,5 +1,11 @@
 
 // Packages and apps add templates on to this object.
+
+/**
+ * @summary The class for defining templates
+ * @class
+ * @instanceName Template.myTemplate
+ */
 Template = Blaze.Template;
 
 // Check for duplicate template names and illegal names that won't work.
@@ -20,6 +26,11 @@ Template.__define__ = function (name, renderFunc) {
 // Define a template `Template.body` that renders its
 // `contentViews`.  `<body>` tags (of which there may be
 // multiple) will have their contents added to it.
+
+/**
+ * @summary The [template object](#templates_api) representing your `<body>` tag.
+ * @locus Client
+ */
 Template.body = new Template('body', function () {
   var parts = Template.body.contentViews;
   // enable lookup by setting `view.template`

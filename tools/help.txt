@@ -39,16 +39,18 @@ physical device. "ios-device" will open XCode and allow you to manually run
 the app on a device.
 
 Options:
-  --port, -p    Port to listen on (instead of the default 3000). Also
-                uses port N+1 and a port specified by --app-port.
-                Specify as --port=host:port to bind to a specific interface.
-  --production  Simulate production mode. Minify and bundle CSS and JS files.
-  --raw-logs    Run without parsing logs from stdout and stderr.
-  --settings    Set optional data for Meteor.settings on the server
-  --release     Specify the release of Meteor to use
-  --program     The program in the app to run (Advanced)
-  --no-server   Don't start the server, only launch the specified mobile builds.
-  --verbose     Print all output from builds logs.
+  --port, -p     Port to listen on (instead of the default 3000). Also
+                 uses port N+1 and a port specified by --app-port.
+                 Specify as --port=host:port to bind to a specific interface.
+  --mobile-port  Port (or interface, if specified as --mobile-port=host:port)
+                 where mobile builds connect to the Meteor server. Defaults
+                 to the host and port that the Meteor server binds to.
+  --production   Simulate production mode. Minify and bundle CSS and JS files.
+  --raw-logs     Run without parsing logs from stdout and stderr.
+  --settings     Set optional data for Meteor.settings on the server
+  --release      Specify the release of Meteor to use
+  --program      The program in the app to run (Advanced)
+  --verbose      Print all output from builds logs.
 
 
 >>> create
@@ -192,7 +194,7 @@ build artifacts:
   (see README in the tarball for details)
 - an unassigned apk bundle and a project source if Android is targeted as a
   mobile platform
-- a directory with an Xcode project source if iOS is targetted as a mobile
+- a directory with an Xcode project source if iOS is targeted as a mobile
   platform
 
 
@@ -557,9 +559,14 @@ By default, meteor search will not show packages that, due to migration issues,
 are known to not be compatible with Meteor 0.9.0 and later. If you
 want to see those packages anyway, use the --show-old option.
 
+By default, meteor search will not show packages that have no official versions
+(ie: non-pre-release versions) If you want to see those packages anyway, use
+the --show-rcs option.
+
 Options:
   --maintainer    filter by authorized maintainer
   --show-old      show packages incompatible with Meteor 0.9.0 and later.
+  --show-rcs      show packages with no non-prerelease versions
 
 
 >>> show
@@ -625,6 +632,23 @@ Change the homepage url of a package.
 Usage: meteor admin change-homepage <package name> <new url>
 
 Change the homepage containing package information.
+
+
+>>> admin set-unmigrated
+Set the package as unmigrated.
+Usage: meteor admin set-unmigrated <package name> [--success]
+       meteor admin set-unmigrated <package name>@<version> [--success]
+
+Set a version of a package, as unmigrated: make it invisible in search
+and show, without a special option. (You should use this to hide packages that have been
+renamed in the aftermath of the 0.9.0 migration.) This will not stop the users from
+adding the package to their app.
+
+If no version is passed in, all versions will be set. Use the --success option to
+mark the package version as successfully migrated, making it show up again.
+
+Options:
+  --success         mark the package as successfully migrated.
 
 
 >>> admin set-banners

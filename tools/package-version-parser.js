@@ -2,7 +2,6 @@
 // packages/package-version-parser/package-version-parser.js. It's part
 // of both the tool and the package!  We don't use uniload for it because
 // it needs to be used as part of initializing the uniload catalog.
-
 var inTool = typeof Package === 'undefined';
 
 var PV;
@@ -14,6 +13,91 @@ if (inTool) {
 
 var semver = inTool ? require ('semver') : Npm.require('semver');
 var __ = inTool ? require('underscore') : _;
+
+// Takes in a meteor version, for example 1.2.3-rc5~1+12345.
+//
+// Returns an object composed of the following:
+//   semver: (ex: 1.2.3)
+//   wrapNum: 0 or a valid wrap number.
+//
+// Throws if the wrapNumber is invalid, or if the version cannot be split
+// reasonably.
+var extractSemverPart = function (versionString) {
+  if (!versionString) return { semver: "", wrapNum: -1 };
+  var noBuild = versionString.split('+');
+  var splitVersion = noBuild[0].split('~');
+  var wrapNum = 0;
+  // If we find two +s, or two ~, that's super invalid.
+  if (noBuild.length > 2 || splitVersion.length > 2) {
+    throwVersionParserError(
+      "Version string must look like semver (eg '1.2.3'), not '"
+        + versionString + "'.");
+  } else if (splitVersion.length > 1) {
+    wrapNum = splitVersion[1];
+    if (!/^\d+$/.test(wrapNum)) {
+      throwVersionParserError(
+        "The wrap number (after ~) must contain only digits, so " +
+          versionString + " is invalid.");
+    } else if (wrapNum[0] === "0") {
+      throwVersionParserError(
+        "The wrap number (after ~) must not have a leading zero, so " +
+          versionString + " is invalid.");
+    }
+  }
+  return {
+    semver: (noBuild.length > 1) ?
+      splitVersion[0] + "+" + noBuild[1] :
+      splitVersion[0],
+    wrapNum: wrapNum
+  };
+};
+
+// Converts a meteor version into a very large number, unique to that version.
+PV.versionMagnitude = function (versionString) {
+ // var v = semver.parse(versionString);
+ // return v.major * 10000 + v.minor * 100 + v.patch;
+
+  var version = extractSemverPart(versionString);
+  var v = semver.parse(version.semver);
+  // XXX: This is kind of hacky and relies on not having more than 100 wrap
+  // numbers, for example. Probably OK.
+  return v.major * 1000000 + v.minor * 10000 +
+    v.patch * 100 + version.wrapNum;
+};
+
+// Takes in two meteor versions. Returns true if the first one is less than the second.
+PV.lessThan = function (versionOne, versionTwo) {
+  return PV.compare(versionOne, versionTwo) < 0;
+};
+
+// Given a string version, computes its default ECV (not counting any overrides).
+//
+// versionString: valid meteor version string.
+PV.defaultECV = function (versionString) {
+  var version = extractSemverPart(versionString).semver;
+  var parsed = semver.parse(version);
+  if (! parsed)
+     throwVersionParserError("not a valid version: " + version);
+  return parsed.major + ".0.0";
+}
+
+// Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
+// v2 is greater.
+PV.compare = function (versionOne, versionTwo) {
+  var meteorVOne = extractSemverPart(versionOne);
+  var meteorVTwo = extractSemverPart(versionTwo);
+
+  // Wrap numbers only matter if the semver is equal, so if they don't even have
+  // wrap numbers, or if their semver is not equal, then we should let the
+  // semver library resolve this one.
+  if (meteorVOne.semver !== meteorVTwo.semver) {
+    return semver.compare(meteorVOne.semver, meteorVTwo.semver);
+  }
+
+  // If their semver components are equal, then the one with the smaller wrap
+  // numbers is smaller.
+  return meteorVOne.wrapNum - meteorVTwo.wrapNum;
+};
 
 // Conceptually we have three types of constraints:
 // 1. "compatible-with" - A@x.y.z - constraints package A to version x.y.z or
@@ -46,7 +130,7 @@ PV.parseVersionConstraint = function (versionString, options) {
   }
 
   // This will throw if the version string is invalid.
-  PV.getValidSemverVersion(versionString);
+  PV.getValidServerVersion(versionString);
 
   versionDesc.version = versionString;
 
@@ -54,13 +138,17 @@ PV.parseVersionConstraint = function (versionString, options) {
 };
 
 
-// Check to see if the versionString that we pass in is valid semver, as far as
-// Meteor is concerned.
+// Check to see if the versionString that we pass in is a valid meteor version.
 //
-// Returns the output of semver.valid, which is a valid semver string (if
-// versionString is valid semver) WITHOUT THE BUILD ID. Otherwise, throws.
-PV.getValidSemverVersion = function (versionString) {
+// Returns a valid meteor version string that can be included in the
+// server. That means that it has everything EXCEPT the build id. Throws if the
+// entered string was invalid.
+PV.getValidServerVersion = function (meteorVersionString) {
 
+  // Strip out the wrapper num, if present and check that it is valid.
+  var version = extractSemverPart(meteorVersionString);
+
+  var versionString = version.semver;
   // NPM's semver spec supports things like 'v1.0.0' and considers them valid,
   // but we don't. Everything before the + or - should be of the x.x.x form.
   var mainVersion = versionString.split('+')[0].split('-')[0];
@@ -75,6 +163,10 @@ PV.getValidSemverVersion = function (versionString) {
     throwVersionParserError(
       "Version string must look like semver (eg '1.2.3'), not '"
         + versionString + "'.");
+  }
+
+  if (version.wrapNum) {
+    cleanVersion = cleanVersion + "~" + version.wrapNum;
   }
 
   return cleanVersion;

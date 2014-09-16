@@ -38,6 +38,6 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
     loginUrl: loginUrl,
     credentialRequestCompleteCallback: credentialRequestCompleteCallback,
     credentialToken: credentialToken,
-    popupOptons: {width: 900, height: 450}
+    popupOptions: {width: 900, height: 450}
   });
 };

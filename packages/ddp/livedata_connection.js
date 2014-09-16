@@ -460,6 +460,14 @@ _.extend(Connection.prototype, {
     return true;
   },
 
+  /**
+   * @memberOf Meteor
+   * @summary Subscribe to a record set.  Returns a handle that provides `stop()` and `ready()` methods.
+   * @locus Client
+   * @param {String} name Name of the subscription.  Matches the name of the server's `publish()` call.
+   * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function on server.
+   * @param {Function|Object} [callbacks] Optional. May include `onError` and `onReady` callbacks. If a function is passed instead of an object, it is interpreted as an `onReady` callback.
+   */
   subscribe: function (name /* .. [arguments] .. (callback|callbacks) */) {
     var self = this;
 
@@ -618,6 +626,14 @@ _.extend(Connection.prototype, {
     });
   },
 
+  /**
+   * @memberOf Meteor
+   * @summary Invokes a method passing any number of arguments.
+   * @locus Anywhere
+   * @param {String} name Name of method to invoke
+   * @param {EJSONable} [arg1,arg2...] Optional method arguments
+   * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the method is complete. If not provided, the method runs synchronously if possible (see below).
+   */
   call: function (name /* .. [arguments] .. callback */) {
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
@@ -647,6 +663,18 @@ _.extend(Connection.prototype, {
   //                              be confused with server return values; we
   //                              may improve this in future.
   // @param callback {Optional Function}
+  
+  /**
+   * @memberOf Meteor
+   * @summary Invoke a method passing an array of arguments.
+   * @locus Anywhere
+   * @param {String} name Name of method to invoke
+   * @param {EJSONable[]} args Method arguments
+   * @param {Object} [options]
+   * @param {Boolean} options.wait (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
+   * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+   * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
+   */
   apply: function (name, args, options, callback) {
     var self = this;
 

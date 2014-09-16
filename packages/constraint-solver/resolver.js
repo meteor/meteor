@@ -1,5 +1,3 @@
-var semver = Npm.require('semver');
-
 mori = Npm.require('mori');
 
 BREAK = {};  // used by our 'each' functions
@@ -53,7 +51,7 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
     self.unitsVersions[unitVersion.name] = [];
   } else {
     var latest = _.last(self.unitsVersions[unitVersion.name]).version;
-    if (!semver.lt(latest, unitVersion.version)) {
+    if (!PackageVersion.lessThan(latest, unitVersion.version)) {
       throw Error("adding uv out of order: " + latest + " vs "
                   + unitVersion.version);
     }
@@ -127,7 +125,6 @@ ConstraintSolver.Resolver.prototype.getEarliestCompatibleVersion = function (
 ConstraintSolver.Resolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
-
   constraints = constraints || [];
   var choices = mori.hash_map();  // uv.name -> uv
   options = _.extend({
@@ -152,8 +149,13 @@ ConstraintSolver.Resolver.prototype.resolve = function (
   var resolutionPriority = {};
 
   var startState = new ResolverState(self, resolveContext);
+
+  if (options.useRCs) {
+    resolveContext.useRCsOK = true;
+  }
+
   _.each(constraints, function (constraint) {
-    startState = startState.addConstraint(constraint);
+    startState = startState.addConstraint(constraint, mori.list());
 
     // Keep track of any top-level constraints that mention a pre-release.
     // These will be the only pre-release versions that count as "reasonable"
@@ -176,8 +178,9 @@ ConstraintSolver.Resolver.prototype.resolve = function (
         = true;
     }
   });
+
   _.each(dependencies, function (unitName) {
-    startState = startState.addDependency(unitName);
+    startState = startState.addDependency(unitName, mori.list());
     // Direct dependencies start on higher priority
     resolutionPriority[unitName] = 100;
   });
@@ -270,10 +273,12 @@ ConstraintSolver.Resolver.prototype._stateNeighbors = function (
   if (mori.is_empty(candidateVersions))
     throw Error("empty candidate set? should have detected earlier");
 
+  var pathway = state.somePathwayForUnitName(candidateName);
+
   var neighbors = [];
   var firstError = null;
   mori.each(candidateVersions, function (unitVersion) {
-    var neighborState = state.addChoice(unitVersion);
+    var neighborState = state.addChoice(unitVersion, pathway);
     if (!neighborState.error) {
       neighbors.push(neighborState);
     } else if (!firstError) {
@@ -336,9 +341,11 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     self.constraints = self.constraints.push(constraint);
   },
 
-  toString: function () {
+  toString: function (options) {
     var self = this;
-    return self.name + "@" + self.version;
+    options = options || {};
+    var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
+    return name + "@" + self.version;
   }
 });
 
@@ -360,7 +367,7 @@ ConstraintSolver.Constraint = function (name, versionString) {
   } else {
     // borrows the structure from the parseVersionConstraint format:
     // - type - String [compatible-with|exactly|any-reasonable]
-    // - version - String - semver string
+    // - version - String - meteor version string
     _.extend(self, PackageVersion.parseConstraint(name));
   }
   // See comment in UnitVersion constructor.
@@ -387,15 +394,17 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
   }
 
   if (self.type === "any-reasonable") {
-    // Non-prerelease versions are always reasonable.
-    if (!/-/.test(candidateUV.version))
+    // Non-prerelease versions are always reasonable, and if we are OK with
+    // using RCs all the time, then they are reasonable too.
+    if (!/-/.test(candidateUV.version) ||
+        resolveContext.useRCsOK)
       return true;
 
     // Is it a pre-release version that was explicitly mentioned at the top
     // level?
     if (_.has(resolveContext.topLevelPrereleases, self.name) &&
         _.has(resolveContext.topLevelPrereleases[self.name],
-              candidateUV.version)) {
+               candidateUV.version)) {
       return true;
     }
 
@@ -417,9 +426,10 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
     return self.version === candidateUV.version;
   }
 
-  // If you're not asking for a pre-release, you'll only get it if it was a top
-  // level explicit mention (eg, in the release).
-  if (/-/.test(candidateUV.version)) {
+  // If you're not asking for a pre-release (and you are not in pre-releases-OK
+  // mode), you'll only get it if it was a top level explicit mention (eg, in
+  // the release).
+  if (/-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
     if (self.version === candidateUV.version)
       return true;
     if (!_.has(resolveContext.topLevelPrereleases, self.name) ||
@@ -431,7 +441,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
 
   // If the candidate version is less than the version named in the constraint,
   // we are not satisfied.
-  if (semver.lt(candidateUV.version, self.version))
+  if (PackageVersion.lessThan(candidateUV.version, self.version))
     return false;
 
   var myECV = resolver.getEarliestCompatibleVersion(self.name, self.version);
@@ -455,4 +465,5 @@ var ResolveContext = function () {
   var self = this;
   // unitName -> version string -> true
   self.topLevelPrereleases = {};
+  self.useRCsOK = false;
 };

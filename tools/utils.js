@@ -11,6 +11,42 @@ var fs = require('fs');
 
 var utils = exports;
 
+
+// Returns a pretty list suitable for showing to the user. Input is an
+// array of objects with keys 'name' and 'description'.
+exports.formatList = function (unsortedItems) {
+  var alphaSort = function (item) {
+    return item.name;
+  };
+  var items = _.sortBy(unsortedItems, alphaSort);
+  var longest = '';
+  _.each(items, function (item) {
+    if (item.name.length > longest.length)
+      longest = item.name;
+  });
+
+  var pad = longest.replace(/./g, ' ');
+  // it'd be nice to read the actual terminal width, but I tried
+  // several methods and none of them work (COLUMNS isn't set in
+  // node's environment; `tput cols` returns a constant 80). maybe
+  // node is doing something weird with ptys.
+  var width = 80;
+
+  var out = '';
+  _.each(items, function (item) {
+    var name = item.name + pad.substr(item.name.length);
+    var description = item.description || 'No description';
+    var line = name + "  " + description;
+    if (line.length > width) {
+      line = line.substr(0, width - 3) + '...';
+    }
+    out += line + "\n";
+  });
+
+  return out;
+};
+
+
 // options:
 //   - echo (boolean): defaults to true
 //   - prompt (string)
@@ -360,6 +396,9 @@ exports.isUrlWithSha = function (x) {
 // If there is a version that isn't exact, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
+//
+// This is talking about NPM versions specifically, not Meteor versions.
+// It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
@@ -564,4 +603,3 @@ _.extend(exports.Patience.prototype, {
     self._whenMessage = null;
   }
 });
-

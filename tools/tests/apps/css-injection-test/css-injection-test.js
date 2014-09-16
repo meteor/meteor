@@ -3,10 +3,20 @@ if (Meteor.isClient) {
     return $(document.body).css('background-color');
   };
 
+  var linkHref = function () {
+    var links = document.getElementsByTagName('link');
+    if (links.length > 0) {
+      return links[0].href;
+    } else {
+      return null;
+    }
+  }
+
   Meteor.startup(function () {
     Meteor.call("clientLoad");
     var numCssChanges = 0;
     var oldBackgroundColor = backgroundColor();
+    var oldLinkHref = linkHref();
     Meteor.call("newStylesheet", numCssChanges, oldBackgroundColor);
     var waitingForCssReloadToComplete = false;
     Meteor.setInterval(function () {
@@ -19,10 +29,10 @@ if (Meteor.isClient) {
 
         // give the client some time to load the new css
         var handle = Meteor.setInterval(function () {
-          var numberLinks = document.getElementsByTagName('link').length;
-          if (numberLinks === 1) {
-            // numberLinks will be 1 once the old css link is removed.
+          var newLinkHref = linkHref();
+          if (newLinkHref !== oldLinkHref) {
             oldBackgroundColor = backgroundColor();
+            oldLinkHref = newLinkHref;
             Meteor.call("newStylesheet", ++numCssChanges, oldBackgroundColor);
             waitingForCssReloadToComplete = false;
             Meteor.clearInterval(handle);

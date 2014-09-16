@@ -20,6 +20,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var unipackage = require('./unipackage.js');
 var tropohouse = require('./tropohouse.js');
+var httpHelpers = require('./http-helpers.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -27,6 +28,7 @@ var tropo = tropohouse.default;
 var cordova = exports;
 
 var supportedPlatforms = ['ios', 'android', 'firefoxos'];
+var webArchName = "web.cordova";
 
 var localCordova = path.join(files.getCurrentToolsDir(),
   "tools", "cordova-scripts", "cordova.sh");
@@ -55,12 +57,14 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
   }
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
+  opts = opts || {};
+  opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      { "METEOR_WAREHOUSE_DIR": tropo.root },
+                      process.env,
+                      opts.env || {});
 
   var execFileAsync = require('./utils.js').execFileAsync;
-  if (_.contains([localCordova, localAdb, localAndroid], file) &&
-      _.contains(project.getCordovaPlatforms(), 'android'))
-    ensureAndroidBundle();
+  ensureAndroidBundle(file);
 
   var p = execFileAsync(file, args, opts);
   p.on('close', function (code) {
@@ -77,24 +81,61 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 
 var execFileSyncOrThrow = function (file, args, opts) {
   var execFileSync = require('./utils.js').execFileSync;
-  if (_.contains([localCordova, localAdb, localAndroid], file) &&
-      _.contains(project.getCordovaPlatforms(), 'android')) {
-    ensureAndroidBundle();
-  }
+  ensureAndroidBundle(file);
 
   verboseLog('Running synchronously: ', file, args);
 
   // XXX a hack to always tell the scripts where warehouse is
-  if (opts) opts.env = _.extend({ "WAREHOUSE_DIR": tropo.root, "USE_GLOBAL_ADK": process.env.USE_GLOBAL_ADK || "", HOME: process.env.HOME }, opts.env);
+  opts = opts || {};
+  opts.env = _.extend({ "USE_GLOBAL_ADK": "" },
+                      { "METEOR_WAREHOUSE_DIR": tropo.root },
+                      process.env,
+                      opts.env || {});
 
   var childProcess = execFileSync(file, args, opts);
-  if (! childProcess.success)
-    throw new Error('Failed to run ' + file + '\n' + childProcess.stderr + '\n\n' + childProcess.stdout);
+  if (! childProcess.success) {
+    // XXX: Include args
+    var message = 'Error running ' + file;
+    if (childProcess.stderr) {
+      message = message + "\n" + childProcess.stderr + "\n";
+    }
+    if (childProcess.stdout) {
+      message = message + "\n" + childProcess.stdout + "\n";
+    }
+
+    // XXX special case if Cordova complains about Xcode
+    var errorMatch =
+      message.match(/Cordova can only run in Xcode version/gm);
+
+    if (file === localCordova && errorMatch) {
+      process.stderr.write(
+        'Xcode 4.6 or greater is required to run iOS commands.\n');
+      process.exit(2);
+    }
+
+    // XXX special case if Cordova complains about Xcode license
+    errorMatch =
+      message.match(/Xcode\/iOS license/gm);
+
+    if (file === localCordova && errorMatch) {
+      process.stderr.write(
+        'Please open Xcode and activate it by agreeing to the license.\n');
+      process.exit(2);
+    }
+
+    throw new Error(message);
+  }
 
   return childProcess;
 };
 
-var ensureAndroidBundle = function () {
+var ensureAndroidBundle = function (command) {
+  if (! _.contains([localAdb, localAndroid], command)) {
+    if (command !== localCordova ||
+        ! _.contains(project.getCordovaPlatforms(), 'android'))
+      return;
+  }
+
   verboseLog('Ensuring android_bundle');
   var ensureScriptPath =
     path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
@@ -103,8 +144,9 @@ var ensureAndroidBundle = function () {
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
   } catch (err) {
-    verboseLog('Failed to install android_bundle: ', err.stack);
-    throw new Error('Failed to install android_bundle: ' + err.message);
+    verboseLog('Failed to install android_bundle ', err.stack);
+    process.stderr.write("Failed to install android_bundle\n");
+    throw new main.ExitWithCode(2);
   }
 };
 
@@ -134,9 +176,7 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     WebAppHashing.calculateClientHash(manifest, null, configDummy);
 
   // XXX partially copied from autoupdate package
-  var version = process.env.AUTOUPDATE_VERSION ||
-        process.env.SERVER_ID || // XXX COMPAT 0.6.6
-        calculatedHash;
+  var version = process.env.AUTOUPDATE_VERSION || calculatedHash;
 
   var runtimeConfig = {
     meteorRelease: meteorRelease,
@@ -145,13 +185,14 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     ROOT_URL_PATH_PREFIX: '',
     DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port,
     autoupdateVersionCordova: version,
-    cleanCache: options.clean
+    cleanCache: options.clean,
+    httpProxyPort: options.httpProxyPort
   };
 
   if (publicSettings)
     runtimeConfig.PUBLIC_SETTINGS = publicSettings;
 
-  var boilerplate = new Boilerplate('web.cordova', manifest, {
+  var boilerplate = new Boilerplate(webArchName, manifest, {
     urlMapper: function (url) { return url ? url.substr(1) : ''; },
     pathMapper: function (p) { return path.join(clientDir, p); },
     baseDataExtension: {
@@ -201,8 +242,10 @@ var fetchCordovaPluginFromShaUrl =
 };
 
 cordova.checkIsValidPlatform = function (name) {
+  if (name.match(/ios/i) && process.platform !== 'darwin')
+    throw new Error(name + ': not available on your system');
   if (! _.contains(supportedPlatforms, name))
-    throw new Error(name + ": no such platform");
+    throw new Error(name + ': no such platform');
 };
 
 cordova.checkIsValidPlugin = function (name) {
@@ -260,6 +303,9 @@ cordova.ensureCordovaProject = function (localPath, appName) {
       // XXX cache them there
       files.mkdir_p(localPluginsPath);
     } catch (err) {
+      if (err instanceof main.ExitWithCode) {
+        process.exit(err.code);
+      }
       process.stderr.write("Error creating Cordova project: " +
         err.message + "\n" + err.stack + "\n");
     }
@@ -397,9 +443,8 @@ var ensureCordovaPlugins = function (localPath, options) {
     // XXX slow - perhaps we should only do this lazily
     // XXX code copied from buildCordova
     var bundlePath = path.join(localPath, 'build-tar');
-    var webArchName = 'web.cordova';
-    plugins =
-      getBundle(bundlePath, [webArchName], options).starManifest.cordovaDependencies;
+    var bundle = getBundle(bundlePath, [webArchName], options);
+    plugins = getCordovaDependenciesFromStar(bundle.starManifest);
     files.rm_recursive(bundlePath);
   }
   // XXX the project-level cordova plugins deps override the package-level ones
@@ -501,16 +546,22 @@ var ensureCordovaPlugins = function (localPath, options) {
   }
 };
 
+// Returns the cordovaDependencies of the Cordova arch from a star json.
+var getCordovaDependenciesFromStar = function (star) {
+  var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
+  return cordovaProgram.cordovaDependencies;
+};
+
 // Build a Cordova project, creating a Cordova project if necessary.
 var buildCordova = function (localPath, buildCommand, options) {
   verboseLog('Building the cordova build project');
-  var webArchName = "web.cordova";
 
   var bundlePath = path.join(localPath, 'build-cordova-temp');
   var programPath = path.join(bundlePath, 'programs');
 
   var cordovaPath = path.join(localPath, 'cordova-build');
-  var wwwPath = path.join(cordovaPath, "www");
+  var wwwPath = path.join(cordovaPath, 'www');
+  var applicationPath = path.join(wwwPath, 'application');
   var cordovaProgramPath = path.join(programPath, webArchName);
   var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
@@ -520,7 +571,7 @@ var buildCordova = function (localPath, buildCommand, options) {
   cordova.ensureCordovaProject(localPath, options.appName);
   cordova.ensureCordovaPlatforms(localPath);
   ensureCordovaPlugins(localPath, _.extend({}, options, {
-    packagePlugins: bundle.starManifest.cordovaDependencies
+    packagePlugins: getCordovaDependenciesFromStar(bundle.starManifest)
   }));
 
   // XXX hack, copy files from app folder one level up
@@ -530,25 +581,42 @@ var buildCordova = function (localPath, buildCommand, options) {
     files.rm_recursive(cordovaProgramAppPath);
   }
 
-  verboseLog('Rewriting the www folder');
+  verboseLog('Removing the www folder');
   // rewrite the www folder
   files.rm_recursive(wwwPath);
-  files.cp_r(cordovaProgramPath, wwwPath);
+
+  files.mkdir_p(applicationPath);
+  verboseLog('Writing www/application folder');
+  files.cp_r(cordovaProgramPath, applicationPath);
 
   // clean up the temporary bundle directory
   files.rm_recursive(bundlePath);
 
-  verboseLog('Writing index.html, cordova_loader.js');
+  verboseLog('Writing index.html');
 
   // generate index.html
-  var indexHtml = generateCordovaBoilerplate(wwwPath, options);
-  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexHtml, 'utf8');
+  var indexHtml = generateCordovaBoilerplate(applicationPath, options);
+  fs.writeFileSync(path.join(applicationPath, 'index.html'), indexHtml, 'utf8');
 
+  verboseLog('Writing meteor_cordova_loader');
   var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
   var loaderCode = fs.readFileSync(loaderPath);
   fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
-  verboseLog('Running the build command');
+  verboseLog('Writing a default index.html for cordova app');
+  var indexPath = path.join(__dirname, 'client', 'cordova_index.html');
+  var indexContent = fs.readFileSync(indexPath);
+  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexContent);
+
+  var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
+
+  if (fs.existsSync(buildOverridePath) &&
+      fs.statSync(buildOverridePath).isDirectory()) {
+    verboseLog('Copying over the cordova-build-override');
+    files.cp_r(buildOverridePath, cordovaPath);
+  }
+
+  verboseLog('Running the build command:', buildCommand);
   // Give the buffer more space as the output of the build is really huge
   execFileSyncOrThrow(localCordova, [buildCommand],
                { cwd: cordovaPath, maxBuffer: 2000*1024 });
@@ -575,8 +643,9 @@ var checkRequestedPlatforms = function (platforms) {
   _.each(requestedPlatforms, function (platform) {
     if (! _.contains(cordovaPlatforms, platform))
       throw new Error(platform +
-        ": platform is not added to the project. Try 'meteor add-platform " +
-        platform + "' to add it or 'meteor help add-platform' for help.");
+": platform is not added to the project.\n" +
+"Try 'meteor add-platform " + platform + "' to add it or\n" +
+"'meteor help add-platform' for help.");
   });
 };
 
@@ -591,11 +660,42 @@ cordova.buildPlatforms = function (localPath, platforms, options) {
   buildCordova(localPath, 'build', options);
 };
 
-cordova.preparePlatforms = function (localPath, platforms, options) {
-  verboseLog('Running prepare for platforms:', platforms);
-  checkRequestedPlatforms(platforms);
-  buildCordova(localPath, 'prepare', options);
+
+cordova.buildPlatformRunners = function (localPath, platforms, options) {
+  var runners = [];
+  _.each(platforms, function (platformName) {
+    runners.push(new CordovaRunner(localPath, platformName, options));
+  });
+  return runners;
 };
+
+
+// This is a runner, that we pass to Runner (run-all.js)
+var CordovaRunner = function (localPath, platformName, options) {
+  var self = this;
+
+  self.localPath = localPath;
+  self.platformName = platformName;
+  self.options = options;
+
+  self.title = 'Cordova (' + self.platformName + ')';
+};
+
+_.extend(CordovaRunner.prototype, {
+  start: function () {
+    var self = this;
+
+    execCordovaOnPlatform(self.localPath,
+                          self.platformName,
+                          self.options);
+  },
+
+  stop: function () {
+    var self = this;
+
+    // XXX: A no-op for now (we leave it running because it's slow!)
+  }
+});
 
 
 // Start the simulator or physical device for a specific platform.
@@ -613,9 +713,12 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
   verboseLog('isDevice:', isDevice);
 
-  var args = [ 'run',
-               isDevice ? '--device' : '--emulator',
-               platform ];
+  var args = [ 'run' ];
+  if (options.verbose) {
+      args.push('--verbose');
+  }
+  args.push(isDevice ? '--device' : '--emulator');
+  args.push(platform);
 
   // XXX assert we have a valid Cordova project
   if (platform === 'ios' && isDevice) {
@@ -627,9 +730,16 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
              'platforms', 'ios', '*.xcodeproj')]);
   } else {
     verboseLog('Running emulator:', localCordova, args);
+    var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
+    emulatorOptions.env =  _.extend({}, process.env);
+    if (options.httpProxyPort) {
+      // XXX: Is this Android only?
+      // This is odd; the IP address is on the host, not inside the emulator
+      emulatorOptions.env['http_proxy'] = '127.0.0.1:' + options.httpProxyPort;
+    }
     execFileAsyncOrThrow(
       localCordova, args,
-      { verbose: options.verbose, cwd: cordovaPath });
+      emulatorOptions);
   }
 
   var Log = getLoadedPackages().logging.Log;
@@ -715,14 +825,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   return 0;
 };
 
-// Start the simulator or physical device for a list of platforms
-// options:
-//   - verbose: print all build logs
-cordova.runPlatforms = function (localPath, platforms, options) {
-  _.each(platforms, function (platformName) {
-    execCordovaOnPlatform(localPath, platformName, options);
-  });
-};
+
 
 // packages - list of strings
 cordova.filterPackages = function (packages) {
@@ -744,19 +847,92 @@ cordova.filterPackages = function (packages) {
   return ret;
 };
 
+var getTermsForPlatform = function (platform) {
+  var url = 'http://s3.amazonaws.com/android-bundle/license_cordova_' + platform + '.txt';
+  var result = httpHelpers.request({
+    url: url
+  });
+
+  var response = result.response;
+  // S3 returns 403 if not found
+  if (response.statusCode === 404 || response.statusCode === 403) {
+    verboseLog("License URL not found: " + url);
+    process.stderr.write("No licensing file found for platform: " + platform + ".\n");
+    return null;
+  }
+  if (response.statusCode !== 200) {
+    throw new Error("Unexpected response code: " + response.statusCode);
+  }
+  return response.body;
+};
+
+var checkAgreePlatformTerms = function (platform) {
+  try {
+    var terms = getTermsForPlatform(platform);
+  } catch (e) {
+    verboseLog("Error while downloading license terms: " + e);
+
+    // most likely we don't have a net connection
+    process.stderr.write("Unable to download license terms for platform: " + platform + ".\n" +
+    "Please make sure you are online.\n")
+    throw new main.ExitWithCode(2);
+  }
+
+  if (terms === null || terms.trim() === "") {
+    // No terms required
+    return true;
+  }
+
+  process.stdout.write("The following terms apply to the '" + platform + "' platform:\n\n");
+  process.stdout.write(terms + "\n\n");
+  process.stdout.write("You must agree to the terms to proceed.\n");
+  process.stdout.write("Do you agree (Y/n)? ");
+
+  var agreed = false;
+
+  var line = utils.readLine({ prompt: "Do you agree (Y/n)? "});
+  line = line.trim().toLowerCase();
+  if (line === "") {
+    // Default to yes
+    line = "y";
+  }
+  if (line === "y" || line === "yes") {
+    agreed = true;
+  }
+
+  return agreed;
+};
+
 // add one or more Cordova platforms
 main.registerCommand({
   name: "add-platform",
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true
 }, function (options) {
+  cordova.setVerboseness(options.verbose);
+
   var platforms = options.args;
 
   try {
     _.each(platforms, function (platform) {
       cordova.checkIsValidPlatform(platform);
     });
+  } catch (err) {
+    process.stderr.write(err.message + "\n");
+    return 1;
+  }
+
+  try {
+    var agreed = _.every(platforms, function (platform, options) {
+      return checkAgreePlatformTerms(platform, options);
+    });
+    if (!agreed) {
+      return 2;
+    }
   } catch (err) {
     process.stderr.write(err.message + "\n");
     return 1;
@@ -825,8 +1001,19 @@ main.registerCommand({
   name: "configure-android",
   options: {
     verbose: { type: Boolean, short: "v" }
-  }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
 }, function (options) {
-  return execFileSyncOrThrow(localAndroid, [], options);
+  cordova.setVerboseness(options.verbose);
+
+  var androidArgs = options.args || [];
+  try {
+    var execOptions = { pipeOutput: true, verbose: options.verbose };
+    execFileSyncOrThrow(localAndroid, androidArgs, execOptions);
+  } catch (err) {
+    // this tool can crash for whatever reason, ignore its failures
+  }
+  return 0;
 });
 

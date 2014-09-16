@@ -1,5 +1,54 @@
+/**
+ * @namespace
+ * @summary Namespace for EJSON functions
+ */
 EJSON = {};
 EJSONTest = {};
+
+
+
+// Custom type interface definition
+/**
+ * @class CustomType
+ * @instanceName customType
+ * @memberOf EJSON
+ * @summary The interface that a class must satisfy to be able to become an
+ * EJSON custom type via EJSON.addType.
+ */
+
+/**
+ * @function typeName
+ * @memberOf EJSON.CustomType
+ * @summary Return the tag used to identify this type.  This must match the tag used to register this type with [`EJSON.addType`](#ejson_add_type).
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function toJSONValue
+ * @memberOf EJSON.CustomType
+ * @summary Serialize this instance into a JSON-compatible value.
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function clone
+ * @memberOf EJSON.CustomType
+ * @summary Return a value `r` such that `this.equals(r)` is true, and modifications to `r` do not affect `this` and vice versa.
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function equals
+ * @memberOf EJSON.CustomType
+ * @summary Return `true` if `other` has a value equal to `this`; `false` otherwise.
+ * @locus Anywhere
+ * @param {Object} other Another object to compare this to.
+ * @instance
+ */
+
 
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
@@ -14,7 +63,6 @@ var customTypes = {};
 // used instead.
 // Similarly, EJSON.equals will use toJSONValue to make comparisons,
 // but you may provide a method equals() instead.
-
 /**
  * @summary Add a custom datatype to EJSON.
  * @locus Anywhere
@@ -75,10 +123,10 @@ var builtinConverters = [
         || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
     },
     toJSONValue: function (obj) {
-      return {$binary: base64Encode(obj)};
+      return {$binary: Base64.encode(obj)};
     },
     fromJSONValue: function (obj) {
-      return base64Decode(obj.$binary);
+      return Base64.decode(obj.$binary);
     }
   },
   { // Escaping one level
@@ -447,3 +495,15 @@ EJSON.clone = function (v) {
   });
   return ret;
 };
+
+/**
+ * @summary Allocate a new buffer of binary data that EJSON can serialize.
+ * @locus Anywhere
+ * @param {Number} size The number of bytes of binary data to allocate.
+ */
+// EJSON.newBinary is the public documented API for this functionality,
+// but the implementation is in the 'base64' package to avoid
+// introducing a circular dependency. (If the implementation were here,
+// then 'base64' would have to use EJSON.newBinary, and 'ejson' would
+// also have to use 'base64'.)
+EJSON.newBinary = Base64.newBinary;

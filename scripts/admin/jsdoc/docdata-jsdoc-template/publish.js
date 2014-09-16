@@ -12,7 +12,7 @@
   /**
    * Get a tag dictionary from the tags field on the object, for custom fields
    * like package
-   * @param  {JSDoc object} data The thing you get in the TaffyDB from JSDoc
+   * @param  {JSDocData} data The thing you get in the TaffyDB from JSDoc
    * @return {Object}      Keys are the parameter names, values are the values.
    */
   var getTagDict = function (data) {
@@ -44,6 +44,14 @@
       }
     }
 
+    root.comment = undefined;
+    root.meta = undefined;
+    root.___id = undefined;
+    root.___s = undefined;
+    root.name = undefined;
+    root.tags = undefined;
+    root.scope = undefined;
+
     _.extend(root, getTagDict(data));
     names.push(location);
   };
@@ -56,7 +64,6 @@
   exports.publish = function(taffyData) {
     var data = helper.prune(taffyData);
     var docTree = {};
-    var nameTree = {};
 
     var namespaces = helper.find(data, {kind: "namespace"});
 
@@ -92,6 +99,8 @@
       var filteredParams = [];
 
       _.each(func.params, function (param) {
+        param.name = param.name.replace(/,|\|/g, ", ");
+
         var splitName = param.name.split(".");
 
         if (splitName.length < 2 || splitName[0] !== "options") {

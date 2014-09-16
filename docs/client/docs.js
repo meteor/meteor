@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.1.1" : "(checkout)";
+  return Meteor.release ? "0.9.2.1" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -122,6 +122,7 @@ var toc = [
     "Core", [
       "Meteor.isClient",
       "Meteor.isServer",
+      "Meteor.isCordova",
       "Meteor.startup",
       "Meteor.wrapAsync",
       "Meteor.absoluteUrl",
@@ -256,7 +257,7 @@ var toc = [
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "template", name: "findAll", id: "template_findAll"},
-        {instance: "template", name: "$", id: "template_findAll"},
+        {instance: "template", name: "$", id: "template_$"},
         {instance: "template", name: "find", id: "template_find"},
         {instance: "template", name: "firstNode", id: "template_firstNode"},
         {instance: "template", name: "lastNode", id: "template_lastNode"},
@@ -349,10 +350,10 @@ var toc = [
       {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
-        {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
-        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"},
-        {instance: "instance", id: "ejson_type_clone", name: "clone"},
-        {instance: "instance", id: "ejson_type_equals", name: "equals"}
+        {instance: "customType", id: "ejson_type_typeName", name: "typeName"},
+        {instance: "customType", id: "ejson_type_toJSONValue", name: "toJSONValue"},
+        {instance: "customType", id: "ejson_type_clone", name: "clone"},
+        {instance: "customType", id: "ejson_type_equals", name: "equals"}
       ]
     ],
 
@@ -381,7 +382,10 @@ var toc = [
         {name: "api.export", id: "pack_export"},
         {name: "api.addFiles", id: "pack_addFiles"}
       ],
-      {name: "Package.onTest", id: "packagetests"}
+      {name: "Package.onTest", id: "packagetests"},
+      {name: "Npm.depends", id: "Npm-depends"},
+      {name: "Npm.require", id: "Npm-require"},
+      {name: "Cordova.depends", id: "Cordova-depends"}
     ]
   ],
 
@@ -395,6 +399,7 @@ var toc = [
     "browser-policy",
     "coffeescript",
     "d3",
+    "fastclick",
     "force-ssl",
     "jquery",
     "less",
@@ -497,12 +502,6 @@ UI.registerHelper('tstache', function() {
 UI.registerHelper('lt', function () {
   return '<';
 });
-
-Template.api_box.bare = function() {
-  return ((this.descr && this.descr.length) ||
-          (this.args && this.args.length) ||
-          (this.options && this.options.length)) ? "" : "bareapi";
-};
 
 check_links = function() {
   var body = document.body.innerHTML;

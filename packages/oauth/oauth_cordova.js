@@ -26,14 +26,31 @@ OAuth.showPopup = function (url, callback, dimensions) {
       OAuth._handleCredentialSecret(credentials.credentialToken,
                                     credentials.credentialSecret);
 
-      popup.close();
-      callback();
+      // On iOS, this seems to prevent "Warning: Attempt to dismiss from
+      // view controller <MainViewController: ...> while a presentation
+      // or dismiss is in progress". My guess is that the last
+      // navigation of the OAuth popup is still in progress while we try
+      // to close the popup. See
+      // https://issues.apache.org/jira/browse/CB-2285.
+      //
+      // XXX Can we make this timeout smaller?
+      setTimeout(function () {
+        popup.close();
+        callback();
+      }, 100);
     }
+  };
+
+  var onExit = function () {
+    popup.removeEventListener('loadstop', pageLoaded);
+    popup.removeEventListener('loaderror', fail);
+    popup.removeEventListener('exit', onExit);
   };
 
   var popup = window.open(url, '_blank', 'location=yes,hidden=yes');
   popup.addEventListener('loadstop', pageLoaded);
   popup.addEventListener('loaderror', fail);
+  popup.addEventListener('exit', onExit);
   popup.show();
 
 };

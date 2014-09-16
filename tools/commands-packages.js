@@ -42,36 +42,6 @@ var getReleaseOrPackageRecord = function(name) {
   return { record: rec, isRelease: rel };
 };
 
-// Returns a pretty list suitable for showing to the user. Input is an
-// array of objects with keys 'name' and 'description'.
-var formatList = function (items) {
-  var longest = '';
-  _.each(items, function (item) {
-    if (item.name.length > longest.length)
-      longest = item.name;
-  });
-
-  var pad = longest.replace(/./g, ' ');
-  // it'd be nice to read the actual terminal width, but I tried
-  // several methods and none of them work (COLUMNS isn't set in
-  // node's environment; `tput cols` returns a constant 80). maybe
-  // node is doing something weird with ptys.
-  var width = 80;
-
-  var out = '';
-  _.each(items, function (item) {
-    var name = item.name + pad.substr(item.name.length);
-    var description = item.description || 'No description';
-    var line = name + "  " + description;
-    if (line.length > width) {
-      line = line.substr(0, width - 3) + '...';
-    }
-    out += line + "\n";
-  });
-
-  return out;
-};
-
 // Seriously, this dies if it can't refresh. Only call it if you're sure you're
 // OK that the command doesn't work while offline.
 var doOrDie = exports.doOrDie = function (f) {
@@ -255,9 +225,19 @@ main.registerCommand({
 
     if (!options['top-level'] && !packageName.match(/:/)) {
       process.stderr.write(
-"To confirm that you wish to create a top-level package with no account\n" +
-"prefix, please run this command again with the --top-level option.\n" +
-"(Only administrators can create top-level packages without an account prefix)\n");
+"Only administrators can create top-level packages without an account prefix.\n" +
+"(To confirm that you wish to create a top-level package with no account\n" +
+"prefix, please run this command again with the --top-level option.)\n");
+
+      // You actually shouldn't be able to get here without being logged in, but
+      // it seems poor form to assume anything like that for the point of a
+      // brief error message.
+      if (auth.isLoggedIn()) {
+        var properName =  auth.loggedInUsername() + ":" + packageName;
+        process.stderr.write(
+          "\nDid you mean to create " + properName + " instead?\n"
+       );
+      }
       return 2;
     }
   };
@@ -395,6 +375,109 @@ main.registerCommand({
     if (buildmessage.jobHasMessages())
       return;
 
+    var versionLock = packageSource.dependencyVersions;
+    //If we don't have a valid version lock file, that's weird! Maybe we are a
+    //core package, which don't have version files. Anyway, we should not use
+    //publish-for-arch in this case.
+    if (!versionLock || !versionLock.toolVersion) {
+      process.stderr.write(
+"This package has no valid version lock file: are you trying to use publish-for-arch on\n" +
+"a core package? Publish-for-arch cannot guarantee safety. Please use\n" +
+"publish --existing-version instead.\n");
+      process.exit(1);
+    }
+
+    // Let's separate out the tool, if we can. If we can't, thats super bad, but
+    // hopefully will not happen.
+    var oldTool = versionLock.toolVersion.split('@');
+    if (oldTool.length !== 2) {
+      process.stderr.write(
+"The version lock file on this package specifies an invalid meteor tool. That's weird.\n" +
+"Publish-for-arch cannot guarantee safety with a corrupted version lock file! You can use\n" +
+"publish --existing-version to try to get around this?\n");
+      process.exit(1);
+    }
+
+    var toolPackage = oldTool[0];
+    var toolVersion = oldTool[1];
+    if (toolVersion === "CHECKOUT" &&
+        !files.inCheckout()) {
+      process.stderr.write(
+"This package was published from a checkout of meteor! The tool cannot replicate\n" +
+"that environment and will not even try. Please checkout meteor at the \n" +
+"corresponding git commit and try again.\n");
+      process.exit(1);
+    }
+
+    if (toolVersion !== "CHECKOUT") {
+      if (files.inCheckout()) {
+        // The code running here, is probably not what you think it is. You
+        // might think that you are running from checkout, but we are going to
+        // springboard into a built release that is not running the code that
+        // you just wrote. That's super confusing, so we are not going to do
+        // that. If you ever find yourself doing this... well, you are running
+        // from checkout, so you can figure it out.
+        process.stderr.write(
+          "This package was published from a built version of meteor," +
+            "but you are running from checkout!\nConsider running from a " +
+            "proper Meteor release, so we can springboard correctly.\n");
+        process.stderr.exit(1);
+      }
+      var currentToolPackage = release.current.getToolsPackage();
+      var currentToolVersion = release.current.getToolsVersion();
+      if (currentToolPackage !== toolPackage ||
+          currentToolVersion !== toolVersion) {
+        // XXX: OK. Here is the story.
+        //
+        // Meteor does not have a concept of not running from release. That is,
+        // it runs from a release, or from checkout, not from a stand-alone
+        // tool. We don't record the release that we publish with in
+        // publish-for-arch, because that doesn't make sense. However, we can't
+        // just springboard to a tool, because, for now, in 0.9.3, we really
+        // want this to work on packages published pre-0.9.3. Just putting in
+        // springboarding to tool code is not going to work, because older
+        // versions of Meteor will just try to spingboard anyway.
+        //
+        // This is kind of a transitional hack. Going forward, there are several
+        // ways to fix this -- we could introduct some sort of local records (so
+        // we could create a temporary release record and run meteor from
+        // there), or we can teach meteor to just run from a tool, instead of a
+        // release. I like the latter better from a conceptual standpoint (why
+        // should we run from a release only?) but it doesn't have a lot of use
+        // cases. Alternatively, we can learn to simulate a release for older
+        // versions, and not for newer versions, or something. This will be
+        // worth thinking about when we have more information on how the system
+        // is set up and used.
+        //
+        // Now, a proof of correctness -- this relies on several things:
+        //
+        // 1. We only use the tool in order to publish. Other release
+        // information is irrelevant. (If that's ever false, we should write the
+        // release instead of the tool and save us the trouble)
+        //
+        // 2. Springboarding to a specific release will run the tool from that
+        // release, and not end up springboarding us to a different
+        // release. Even if there are patches for this release (or whatever), we
+        // are going to run the tool version of the release that we select here.
+        //
+        // 3. The only way to run a tool currently is from a release --
+        // otherwise, we wouldn't need this explanation. (There is no way to
+        // remove a release from existence.) Ergo, there must be a release that
+        // contains a given tool, that we first used to publish this package.
+        //
+        // From 1 & 2, we get the idea that any release with the valid tool
+        // version will do. From 3, we know that such a release exists.
+        //
+        // XXX Once again, this is a hack. Various things could happen to change
+        // the above-mentioned points. When they do happen, in the not-so-near
+        // future, we will have more information on how to actually solve this
+        // problem.
+        var sufficientlyReasonableReleaseVersion =
+          catalog.official.getReleaseWithTool(versionLock.toolVersion);
+        throw new
+          main.SpringboardToSpecificRelease(sufficientlyReasonableReleaseVersion);
+      }
+    }
 
     // Now compile it! Once again, everything should compile, and if
     // it doesn't we should fail. Hopefully, of course, we have
@@ -866,9 +949,11 @@ main.registerCommand({
   var uploadInfo;
   try {
     if (!relConf.patchFrom) {
-      uploadInfo = conn.call('createReleaseVersion', record);
+      uploadInfo = packageClient.callPackageServer(
+        conn, 'createReleaseVersion', record);
     } else {
-      uploadInfo = conn.call('createPatchReleaseVersion', record, relConf.patchFrom);
+      uploadInfo = packageClient.callPackageServer(
+        conn, 'createPatchReleaseVersion', record, relConf.patchFrom);
     }
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
@@ -1070,9 +1155,16 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
-    "show-old": {type: Boolean, required: false }
+    "show-old": {type: Boolean, required: false },
+    "show-rcs": {type: Boolean, required: false}
   }
 }, function (options) {
+
+  // Show all means don't do any filtering at all. So, don't do any filtering
+  // for anything at all.
+  if (options["show-rcs"]) {
+    options["show-old"] = true;
+  }
 
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
@@ -1100,10 +1192,13 @@ main.registerCommand({
     // don't want to filter anyway, we do not care.
     if (!match || isRelease || options["show-old"])
       return match;
-
     var vr;
     doOrDie(function () {
-      vr = catalog.official.getLatestMainlineVersion(name);
+      if (!options["show-rcs"]) {
+        vr = catalog.official.getLatestMainlineVersion(name);
+      } else {
+        vr = catalog.official.getLatestVersion(name);
+      }
     });
     return vr && !vr.unmigrated;
   };
@@ -1140,7 +1235,10 @@ main.registerCommand({
   _.each(allPackages, function (pack) {
     if (selector(pack, false)) {
       var vr = doOrDie(function () {
-        return catalog.official.getLatestMainlineVersion(pack);
+        if (!options['show-rcs']) {
+          return catalog.official.getLatestMainlineVersion(pack);
+        }
+        return catalog.official.getLatestVersion(pack);
       });
       if (vr) {
         matchingPackages.push(
@@ -1167,13 +1265,13 @@ main.registerCommand({
   if (!_.isEqual(matchingPackages, [])) {
     output = true;
     process.stdout.write("Found the following packages:" + "\n");
-    process.stdout.write(formatList(matchingPackages) + "\n");
+    process.stdout.write(utils.formatList(matchingPackages) + "\n");
   }
 
   if (!_.isEqual(matchingReleases, [])) {
     output = true;
     process.stdout.write("Found the following releases:" + "\n");
-    process.stdout.write(formatList(matchingReleases) + "\n");
+    process.stdout.write(utils.formatList(matchingReleases) + "\n");
   }
 
   if (!output) {
@@ -1221,12 +1319,12 @@ main.registerCommand({
 
       var versionAddendum = "" ;
       var latest = catalog.complete.getLatestMainlineVersion(name, version);
-      var semver = require('semver');
+      var packageVersionParser = require('./package-version-parser.js');
       if (latest &&
           version !== latest.version &&
           // If we're currently running a prerelease, "latest" may be older than
           // what we're at, so don't tell us we're outdated!
-          semver.lt(version, latest.version) &&
+          packageVersionParser.lessThan(version, latest.version) &&
           !catalog.complete.isLocalPackage(name)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
@@ -1253,7 +1351,7 @@ main.registerCommand({
     items.push({ name: 'cordova:' + name, description: version });
   });
 
-  process.stdout.write(formatList(items));
+  process.stdout.write(utils.formatList(items));
 
   if (newVersionsAvailable) {
     process.stdout.write(
@@ -1689,8 +1787,16 @@ main.registerCommand({
                          messages.formatMessages());
     return 1;
   }
+
+  // Sometimes, we don't show changes -- for example, if you don't have a
+  // versions file. However, I think that if you don't have a versions file, and
+  // you are running update, it is OK to show you a bunch of output (and
+  // confusing not to).
   var showExitCode = project.showPackageChanges(
-    versions, newVersions, { onDiskPackages: setV.downloaded });
+    versions, newVersions,
+    { onDiskPackages: setV.downloaded,
+      alwaysShow: true });
+
   if (!setV.success) {
     process.stderr.write("Could not install all the requested packages.\n");
     return 1;
@@ -2090,16 +2196,20 @@ main.registerCommand({
       if (options.add) {
         process.stdout.write("Adding a maintainer to " + name + "...\n");
         if (fullRecord.release) {
-          conn.call('addReleaseMaintainer', name, options.add);
+          packageClient.callPackageServer(
+            conn, 'addReleaseMaintainer', name, options.add);
         } else {
-          conn.call('addMaintainer', name, options.add);
+          packageClient.callPackageServer(
+            conn, 'addMaintainer', name, options.add);
         }
       } else if (options.remove) {
         process.stdout.write("Removing a maintainer from " + name + "...\n");
         if (fullRecord.release) {
-          conn.call('removeReleaseMaintainer', name, options.remove);
+          packageClient.callPackageServer(
+            conn, 'removeReleaseMaintainer', name, options.remove);
         } else {
-          conn.call('removeMaintainer', name, options.remove);
+          packageClient.callPackageServer(
+            conn, 'removeMaintainer', name, options.remove);
         }
         process.stdout.write(" Done!\n");
       }
@@ -2343,8 +2453,9 @@ main.registerCommand({
   }
 
   try {
-    conn.call('setBannersOnReleases', bannersData.track,
-              bannersData.banners);
+    packageClient.callPackageServer(
+      conn, 'setBannersOnReleases',
+      bannersData.track, bannersData.banners);
   } catch (e) {
     packageClient.handlePackageServerConnectionError(e);
     return 1;
@@ -2394,12 +2505,12 @@ main.registerCommand({
   try {
     if (options.unrecommend) {
       process.stdout.write("Unrecommending " + name + "@" + version + "...\n");
-      conn.call('unrecommendVersion', name, version);
+      packageClient.callPackageServer(conn, 'unrecommendVersion', name, version);
       process.stdout.write("Done!\n " + name + "@" + version  +
                            " is no longer a recommended release\n");
     } else {
       process.stdout.write("Recommending " + options.args[0] + "...\n");
-      conn.call('recommendVersion', name, version);
+      packageClient.callPackageServer(conn, 'recommendVersion', name, version);
       process.stdout.write("Done!\n " +  name + "@" + version +
                            " is now  a recommended release\n");
     }
@@ -2453,7 +2564,8 @@ main.registerCommand({
           + options.args[0] + " to " + ecv + "...\n");
       var versionInfo = { name : name,
                           version : version };
-      conn.call('_setEarliestCompatibleVersion', versionInfo, ecv);
+      packageClient.callPackageServer(conn,
+          '_setEarliestCompatibleVersion', versionInfo, ecv);
       process.stdout.write("Done!\n");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
@@ -2464,7 +2576,6 @@ main.registerCommand({
 
   return 0;
 });
-
 
 main.registerCommand({
   name: 'admin change-homepage',
@@ -2497,8 +2608,66 @@ main.registerCommand({
       process.stdout.write(
         "Changing homepage on  "
           + name + " to " + url + "...\n");
-      conn.call('_changePackageHomepage', name, url);
+      packageClient.callPackageServer(conn,
+          '_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  conn.close();
+  refreshOfficialCatalogOrDie();
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: 'admin set-unmigrated',
+  minArgs: 1,
+  options: {
+    "success" : {type: Boolean, required: false}
+  },
+  hidden: true
+}, function (options) {
+
+  // We don't care about having the most recent information, but we do want the
+  // option to either unmigrate a specific version, or to unmigrate an entire
+  // package. So, for an entire package, let's get all of its versions.
+  var name = options.args[0];
+  var versions = [];
+  var nSplit = name.split('@');
+  if (nSplit.length > 2) {
+    throw new main.ShowUsage;
+  } else if (nSplit.length == 2) {
+    versions = [nSplit[1]];
+    name = nSplit[0];
+  } else {
+    versions = doOrDie(function () {
+      return catalog.official.getSortedVersions(name);
+    });
+  }
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+    var status = options.success ? "successfully" : "unsuccessfully";
+    _.each(versions, function (version) {
+      process.stdout.write(
+        "Setting "
+          + name + "@" + version + " as " +
+          status + " migrated ...");
+      packageClient.callPackageServer(
+        conn,
+        '_changeVersionMigrationStatus',
+        name, version, !options.success);
+      process.stdout.write(" done!\n");
+    });
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;

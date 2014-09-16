@@ -1,8 +1,8 @@
 # to be sourced by other scripts
 
 # WAREHOUSE_DIR variable check.
-if [ x == x"$WAREHOUSE_DIR" ]; then
-  echo "Set WAREHOUSE_DIR environment variable pointing at current warehouse."
+if [ x == x"$METEOR_WAREHOUSE_DIR" ]; then
+  echo "Set METEOR_WAREHOUSE_DIR environment variable pointing at current warehouse."
   echo $0
   exit 1
 fi
@@ -23,7 +23,7 @@ cd "$ORIG_DIR"
 if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
   BUNDLE_ROOT_DIR=$SCRIPT_DIR
 else
-  BUNDLE_ROOT_DIR=$WAREHOUSE_DIR
+  BUNDLE_ROOT_DIR=$METEOR_WAREHOUSE_DIR
 fi
 
 # XXX is android_bundle still stored this way? Fix this line once it is a
@@ -47,9 +47,8 @@ if [ -z "$USE_GLOBAL_ADK" ] ; then
   export HOME="${ANDROID_BUNDLE}"
   export ANDROID_SDK_HOME="${ANDROID_BUNDLE}"
 else
-  # to use a global ADK we don't set PATH, ANT_HOME
+  # to use a global ADK we don't set PATH, ANT_HOME, ANDROID_SDK_HOME
   # relying that they are installed and available globally
-  export ANDROID_SDK_HOME="${HOME}"
   true
 fi
 

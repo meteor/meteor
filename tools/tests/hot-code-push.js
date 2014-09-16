@@ -8,7 +8,7 @@ var files = require('../files.js');
 
 selftest.define("css hot code push", function (options) {
   var s = new Sandbox({
-    clients: options.clients,
+    clients: options.clients
   });
 
   s.createApp("myapp", "css-injection-test");
@@ -110,7 +110,7 @@ selftest.define("versioning hot code push", function (options) {
 
 selftest.define("javascript hot code push", function (options) {
   var s = new Sandbox({
-    clients: options.clients,
+    clients: options.clients
   });
 
   s.createApp("myapp", "hot-code-push-test");

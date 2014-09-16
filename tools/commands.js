@@ -150,11 +150,12 @@ main.registerCommand({
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: '3000' },
+    'mobile-port': { type: String },
     'app-port': { type: String },
+    'http-proxy-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
-    'no-server': { type: Boolean },
     program: { type: String },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -199,6 +200,22 @@ main.registerCommand({
     return 1;
   }
 
+  var mobilePort = options["mobile-port"] || options.port;
+  try {
+    var parsedMobileHostPort = parseHostPort(mobilePort);
+  } catch (err) {
+    if (options.verbose) {
+      process.stderr.write('Error while parsing --mobile-port option: '
+                           + err.stack + '\n');
+    } else {
+      process.stderr.write(err.message + '\n');
+    }
+    return 1;
+  }
+
+
+  options.httpProxyPort = options['http-proxy-port'];
+
   // If we are targeting the remote devices
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
@@ -213,13 +230,21 @@ main.registerCommand({
   // Always bundle for the browser by default.
   var webArchs = project.getWebArchs();
 
+  var runners = [];
+
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
-      // --clean encpasulates the behavior of once
+      // --clean encapsulates the behavior of once
       if (options.clean) {
         options.once = true;
+      }
+
+      // For this release; we won't force-enable the httpProxy
+      if (false) { //!options.httpProxyPort) {
+        console.log('Forcing http proxy on port 3002 for mobile');
+        options.httpProxyPort = '3002';
       }
 
       cordova.verboseLog('Will compile mobile builds');
@@ -228,8 +253,8 @@ main.registerCommand({
 
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
-                 options, parsedHostPort));
-      cordova.runPlatforms(localPath, options.args, options);
+                 options, parsedMobileHostPort));
+      runners = runners.concat(cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
       if (options.verbose) {
         process.stderr.write('Error while running for mobile platforms ' +
@@ -239,10 +264,6 @@ main.registerCommand({
       }
       return 1;
     }
-  }
-
-  if (options['no-server']) {
-    return 0;
   }
 
   var appHost, appPort;
@@ -278,6 +299,7 @@ main.registerCommand({
   return runAll.run(options.appDir, {
     proxyPort: parsedHostPort.port,
     proxyHost: parsedHostPort.host,
+    httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
     settingsFile: options.settings,
@@ -289,7 +311,8 @@ main.registerCommand({
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
-    once: options.once
+    once: options.once,
+    extraRunners: runners
   });
 });
 
@@ -481,7 +504,9 @@ main.registerCommand({
   });
 
   var messages = buildmessage.capture(function () {
-    project._ensureDepsUpToDate();
+    // Run the constraint solver. Override the assumption that using '--release'
+    // means we shouldn't update .meteor/versions.
+    project._ensureDepsUpToDate({alwaysRecord: true});
   });
 
 
@@ -534,13 +559,15 @@ var buildCommands = {
     architecture: { type: String },
     port: { type: String, short: "p", default: "localhost:3000" },
     settings: { type: String },
+    verbose: { type: Boolean, short: "v" },
     // Undocumented
-    'for-deploy': { type: Boolean },
+    'for-deploy': { type: Boolean }
   }
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     function (options) {
+  cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
@@ -603,7 +630,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   }
 
   var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages();
+    stats.recordPackages("sdk.bundle");
   });
   if (statsMessages.hasMessages()) {
     process.stdout.write("Error recording package list:\n" +
@@ -657,6 +684,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // Deprecated -- identical functionality to 'build'
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
+  cordova.setVerboseness(options.verbose);
   process.stdout.write("WARNING: 'bundle' has been deprecated. " +
                        "Use 'build' instead.\n");
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
@@ -1119,6 +1147,7 @@ main.registerCommand({
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: "localhost:3000" },
+    'http-proxy-port': { type: String },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1137,6 +1166,10 @@ main.registerCommand({
     // Undocumented, sets the path of where the temp app should be created
     'test-app-path': { type: String },
 
+    // Undocumented, runs tests under selenium
+    'selenium': { type: Boolean },
+    'selenium-browser': { type: String },
+
     // hard-coded options with all known Cordova platforms
     ios: { type: Boolean },
     'ios-device': { type: Boolean },
@@ -1151,12 +1184,16 @@ main.registerCommand({
     return 1;
   }
 
+  options.httpProxyPort = options['http-proxy-port'];
+
   // XXX not good to change the options this way
   _.extend(options, parsedHostPort);
 
   var testPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
+    if (typeof packages === "number")
+      return packages;
     testPackages = packages.testPackages;
     localPackages = packages.localPackages;
     options.localPackageNames = packages.localPackages;
@@ -1187,6 +1224,8 @@ main.registerCommand({
     [options['driver-package'] || 'test-in-browser'],
     'add');
 
+  var runners = [];
+
   var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
   var mobilePlatforms = [];
 
@@ -1196,6 +1235,12 @@ main.registerCommand({
   });
 
   if (! _.isEmpty(mobilePlatforms)) {
+    // For this release; we won't force-enable the httpProxy
+    if (false) { //!options.httpProxyPort) {
+      console.log('Forcing http proxy on port 3002 for mobile');
+      options.httpProxyPort = '3002'
+    }
+
     var localPath = path.join(testRunnerAppDir, '.meteor', 'local');
 
     var platforms =
@@ -1211,13 +1256,14 @@ main.registerCommand({
           appName: path.basename(testRunnerAppDir),
           debug: ! options.production
         }));
-      cordova.runPlatforms(localPath, mobilePlatforms, options);
+      runners = runners.concat(cordova.buildPlatformRunners(localPath, mobilePlatforms, options));
     } catch (err) {
       process.stderr.write(err.message + '\n');
       return 1;
     }
   }
 
+  options.extraRunners = runners;
   return runTestAppForPackages(testPackages, testRunnerAppDir, options);
 });
 
@@ -1369,8 +1415,11 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
     return 1;
   }
 
+  var webArchs = project.getWebArchs();
+
   var buildOptions = {
-    minify: options.production
+    minify: options.production,
+    webArchs: webArchs
   };
 
   var ret;
@@ -1391,6 +1440,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       // a switch to a different release
       appDirForVersionCheck: options.appDir,
       proxyPort: options.port,
+      httpProxyPort: options.httpProxyPort,
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",
@@ -1399,7 +1449,10 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       mongoUrl: process.env.MONGO_URL,
       oplogUrl: process.env.MONGO_OPLOG_URL,
       once: options.once,
-      recordPackageUsage: false
+      recordPackageUsage: false,
+      selenium: options.selenium,
+      seleniumBrowser: options['selenium-browser'],
+      extraRunners: options.extraRunners
     });
   }
 
@@ -1739,4 +1792,3 @@ main.registerCommand({
   if (options['delete'])
     process.stdout.write('delete\n');
 });
-

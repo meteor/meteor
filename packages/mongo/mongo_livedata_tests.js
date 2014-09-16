@@ -1430,7 +1430,7 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
   }
 ]);
 
-var bin = EJSONTest.base64Decode(
+var bin = Base64.decode(
   "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyBy" +
     "ZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJv" +
     "bSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhl" +
@@ -3044,4 +3044,3 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - observe limit bug", [
     test.equal(_.keys(state), [self.id1]);
   }
 ]);
-
