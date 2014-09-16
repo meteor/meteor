@@ -132,13 +132,9 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   rebuildLocalPackages: function (namedPackages) {
+    console.log("rebuilding local packages frmo layered catalog");
+    self.packageCache.refresh();
     return this.localCatalog.rebuildLocalPackages(namedPackages);
-  },
-
-  refresh: function () {
-    var self = this;
-    // console.log("refreshing the LayeredCatalog");
-    //PASCAL Deal with refresh properly
   },
 
   refreshInProgress: function () {
@@ -305,7 +301,11 @@ _.extend(LayeredCatalog.prototype, {
   //   to this set.
   refresh: function (options) {
     var self = this;
-    // options = options || {};
+    console.log("refresh layered catalo");
+    self.localCatalog.refresh(options);
+    self.otherCatalog.refresh(options);
+    self.packageCache.refresh();
+     // options = options || {};
     // buildmessage.assertInCapture();
 
     // // We need to limit the rate of refresh, or, at least, prevent any sort of
