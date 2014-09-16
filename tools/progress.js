@@ -20,9 +20,11 @@ var Progress = function (options) {
   self._parent = options.parent;
   self._watchers = options.watchers || [];
 
+  self._name = options.name;
+
   self._completedChildren = { current: 0, end: 0};
   self._activeChildTasks = [];
-  self._selfState = { current: 0, end: undefined, done: true };
+  self._selfState = { current: 0, end: undefined, done: false };
   if (options.estimate) {
     self._selfState.end = options.estimate;
   }
