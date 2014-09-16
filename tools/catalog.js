@@ -138,16 +138,11 @@ _.extend(OfficialCatalog.prototype, {
     self._refreshFiber = Fiber.current;
     self._currentRefreshIsLoud = !options.silent;
 
-    var patience = new utils.Patience({
-      messageAfterMs: 2000,
-      message: function () {
-        if (self._currentRefreshIsLoud) {
-          console.log("Refreshing package metadata. This may take a moment.");
-        }
-      }
-    });
-    try {
-      var thrownError = null;
+    var thrownError = null;
+
+    buildmessage.enterJob({
+      title: 'Refreshing package metadata.'
+    }, function () {
       try {
         self._refresh();
         // Force the complete catalog (which is layered on top of our data) to
@@ -156,9 +151,7 @@ _.extend(OfficialCatalog.prototype, {
       } catch (e) {
         thrownError = e;
       }
-    } finally {
-      patience.stop();
-    }
+    });
 
     while (self._refreshFutures.length) {
       var fut = self._refreshFutures.pop();
