@@ -634,6 +634,23 @@ Usage: meteor admin change-homepage <package name> <new url>
 Change the homepage containing package information.
 
 
+>>> admin set-unmigrated
+Set the package as unmigrated.
+Usage: meteor admin set-unmigrated <package name> [--success]
+       meteor admin set-unmigrated <package name>@<version> [--success]
+
+Set a version of a package, as unmigrated: make it invisible in search
+and show, without a special option. (You should use this to hide packages that have been
+renamed in the aftermath of the 0.9.0 migration.) This will not stop the users from
+adding the package to their app.
+
+If no version is passed in, all versions will be set. Use the --success option to
+mark the package version as successfully migrated, making it show up again.
+
+Options:
+  --success         mark the package as successfully migrated.
+
+
 >>> admin set-banners
 Set banners on published releases.
 Usage: meteor admin set-banners <path to banner configuration>

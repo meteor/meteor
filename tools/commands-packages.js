@@ -2579,7 +2579,6 @@ main.registerCommand({
   return 0;
 });
 
-
 main.registerCommand({
   name: 'admin change-homepage',
   minArgs: 2,
@@ -2614,6 +2613,63 @@ main.registerCommand({
       packageClient.callPackageServer(conn,
           '_changePackageHomepage', name, url);
       process.stdout.write("Done!\n");
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  conn.close();
+  refreshOfficialCatalogOrDie();
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: 'admin set-unmigrated',
+  minArgs: 1,
+  options: {
+    "success" : {type: Boolean, required: false}
+  },
+  hidden: true
+}, function (options) {
+
+  // We don't care about having the most recent information, but we do want the
+  // option to either unmigrate a specific version, or to unmigrate an entire
+  // package. So, for an entire package, let's get all of its versions.
+  var name = options.args[0];
+  var versions = [];
+  var nSplit = name.split('@');
+  if (nSplit.length > 2) {
+    throw new main.ShowUsage;
+  } else if (nSplit.length == 2) {
+    versions = [nSplit[1]];
+    name = nSplit[0];
+  } else {
+    versions = doOrDie(function () {
+      return catalog.official.getSortedVersions(name);
+    });
+  }
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+    var status = options.success ? "successfully" : "unsuccessfully";
+    _.each(versions, function (version) {
+      process.stdout.write(
+        "Setting "
+          + name + "@" + version + " as " +
+          status + " migrated ...");
+      packageClient.callPackageServer(
+        conn,
+        '_changeVersionMigrationStatus',
+        name, version, !options.success);
+      process.stdout.write(" done!\n");
+    });
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
