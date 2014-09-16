@@ -95,6 +95,13 @@ main.SpringboardToLatestRelease = function (track) {
   this.track = track;
 };
 
+// Exception to throw from a command to exit, restart, and reinvoke
+// the command with the given Meteor release.
+main.SpringboardToSpecificRelease = function (releaseRecord, msg) {
+  this.releaseRecord = releaseRecord;
+  this.msg = msg;
+};
+
 // Register a command-line command.
 //
 // options:
@@ -270,7 +277,7 @@ var longHelp = exports.longHelp = function (commandName) {
       // not appear in the top-level help. If we one day want to make
       // these kinds of commands visible to casual users, we'll need a
       // way to mark them as visible or hidden.
-      
+
       // Also, use helpDict to only include commands that have help text,
       // otherwise there is nothing to display
       if (n instanceof Command && ! n.hidden && helpDict[fullName])
@@ -316,7 +323,7 @@ var longHelp = exports.longHelp = function (commandName) {
 // Exit and restart the program, with the same arguments, but using a
 // different version of the tool and/or forcing a particular release.
 //
-// - toolsVersion: required. the version of the tool to run. must
+// - release: required. the version of the tool to run. must
 //   already be downloaded.
 // - releaseOverride: optional. if provided, a release name to force
 //   us to use when restarting (this functions exactly like --release
@@ -1226,6 +1233,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
   } catch (e) {
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
+        e === main.SpringboardToSpecificReleaseg ||
         e === main.WaitForExit) {
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
@@ -1246,6 +1254,20 @@ commandName + ": You're not in a Meteor project directory.\n" +
         process.exit(1);
       }
       springboard(latestRelease, latestRelease.name);
+      // (does not return)
+    } else if (e instanceof main.SpringboardToSpecificRelease) {
+      // Springboard to a specific release.
+      var nextRelease;
+      var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
+      var messages = buildmessage.capture(function () {
+        nextRelease = release.load(relName);
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write("=> " + e.msg + ":\n\n");
+        process.stderr.write(messages.formatMessages());
+        process.exit(1);
+      }
+      springboard(nextRelease, relName);
       // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;

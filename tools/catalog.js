@@ -217,6 +217,18 @@ _.extend(OfficialCatalog.prototype, {
     }
   },
 
+  // Find a release that uses the given version of a tool. See: publish-for-arch
+  // in command-packages for more explanation.  Returns information about a
+  // particular release version, or null if such release version does not exist.
+  getReleaseWithTool: function (toolSpec) {
+    var self = this;
+    buildmessage.assertInCapture();
+    self._requireInitialized();
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.releaseVersions, { tool: toolSpec });
+    });
+  },
+
   // Returns general (non-version-specific) information about a
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {

@@ -376,6 +376,116 @@ main.registerCommand({
     if (buildmessage.jobHasMessages())
       return;
 
+    var versionLock = packageSource.dependencyVersions;
+    //If we don't have a valid version lock file, that's weird! Maybe we are a
+    //core package, which don't have version files. Anyway, we should not use
+    //publish-for-arch in this case.
+    if (!versionLock || !versionLock.toolVersion) {
+      process.stderr.write(
+"This package has no valid version lock file: are you trying to use publish-for-arch on\n" +
+"a core package? Publish-for-arch cannot guarantee safety. Please use\n" +
+"publish --existing-version instead.\n");
+      process.exit(1);
+    }
+
+    // Let's separate out the tool, if we can. If we can't, thats super bad, but
+    // hopefully will not happen.
+    var oldTool = versionLock.toolVersion.split('@');
+    if (oldTool.length !== 2) {
+      process.stderr.write(
+"The version lock file on this package specifies an invalid meteor tool. That's weird.\n" +
+"Publish-for-arch cannot guarantee safety with a corrupted version lock file! You can use\n" +
+"publish --existing-version to try to get around this?\n");
+      process.exit(1);
+    }
+
+    var toolPackage = oldTool[0];
+    var toolVersion = oldTool[1];
+    if (toolVersion === "CHECKOUT" &&
+        !files.inCheckout()) {
+      process.stderr.write(
+"This package was published from a checkout of meteor! The tool cannot replicate\n" +
+"that environment and will not even try. Please checkout meteor at the \n" +
+"corresponding git commit and try again.\n");
+      process.exit(1);
+    }
+
+    if (toolVersion !== "CHECKOUT") {
+      if (files.inCheckout()) {
+        // The code running here, is probably not what you think it is. You
+        // might think that you are running from checkout, but we are going to
+        // springboard into a built release that is not running the code that
+        // you just wrote. That's super confusing, so we are not going to do
+        // that. If you ever find yourself doing this... well, you are running
+        // from checkout, so you can figure it out.
+        process.stderr.write(
+          "This package was published from a built version of meteor," +
+            "but you are running from checkout!\nConsider running from a " +
+            "proper Meteor release, so we can springboard correctly.\n");
+       // process.stderr.exit(1);
+        var sufficientlyReasonableReleaseVersion =
+          catalog.official.getReleaseWithTool(versionLock.toolVersion);
+        throw new
+          main.SpringboardToSpecificRelease(
+            sufficientlyReasonableReleaseVersion,
+            "Errors while trying to publish for arch");
+
+      }
+      var currentToolPackage = release.current.getToolsPackage();
+      var currentToolVersion = release.current.getToolsVersion();
+      if (currentToolPackage !== toolPackage ||
+          currentToolVersion !== toolVersion) {
+        // XXX: OK. Here is the story.
+        //
+        // Meteor does not have a concept of not running from release. That is,
+        // it runs from a release, or from checkout, not from a stand-alone
+        // tool. We don't record the release that we publish with in
+        // publish-for-arch, because that doesn't make sense. However, we can't
+        // just springboard to a tool, because, for now, in 0.9.3, we really
+        // want this to work on packages published pre-0.9.3. Just putting in
+        // springboarding to tool code is not going to work, because older
+        // versions of Meteor will just try to spingboard anyway.
+        //
+        // This is kind of a transitional hack. Going forward, there are several
+        // ways to fix this -- we could introduct some sort of local records (so
+        // we could create a temporary release record and run meteor from
+        // there), or we can teach meteor to just run from a tool, instead of a
+        // release. I like the latter better from a conceptual standpoint (why
+        // should we run from a release only?) but it doesn't have a lot of use
+        // cases. Alternatively, we can learn to simulate a release for older
+        // versions, and not for newer versions, or something. This will be
+        // worth thinking about when we have more information on how the system
+        // is set up and used.
+        //
+        // Now, a proof of correctness -- this relies on several things:
+        //
+        // 1. We only use the tool in order to publish. Other release
+        // information is irrelevant. (If that's ever false, we should write the
+        // release instead of the tool and save us the trouble)
+        //
+        // 2. Springboarding to a specific release will run the tool from that
+        // release, and not end up springboarding us to a different
+        // release. Even if there are patches for this release (or whatever), we
+        // are going to run the tool version of the release that we select here.
+        //
+        // 3. The only way to run a tool currently is from a release --
+        // otherwise, we wouldn't need this explanation. (There is no way to
+        // remove a release from existence.) Ergo, there must be a release that
+        // contains a given tool, that we first used to publish this package.
+        //
+        // From 1 & 2, we get the idea that any release with the valid tool
+        // version will do. From 3, we know that such a release exists.
+        //
+        // XXX Once again, this is a hack. Various things could happen to change
+        // the above-mentioned points. When they do happen, in the not-so-near
+        // future, we will have more information on how to actually solve this
+        // problem.
+        var sufficientlyReasonableReleaseVersion =
+          catalog.official.getReleaseWithTool(versionLock.toolVersion);
+        throw new
+          main.SpringboardToSpecificRelease(sufficientlyReasonableReleaseVersion);
+      }
+    }
 
     // Now compile it! Once again, everything should compile, and if
     // it doesn't we should fail. Hopefully, of course, we have
