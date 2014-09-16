@@ -168,7 +168,7 @@ list of the platforms that your application is currently using, see
 
 >>> list-platforms
 List the platforms added to your project.
-Usage: meteor list-packages
+Usage: meteor list-platforms
 
 Lists all of the platforms that have been explicitly added to your project.
 
