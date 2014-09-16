@@ -30,9 +30,6 @@ var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 var RemoteCatalog = function (options) {
   var self = this;
 
-  // We inherit from the BaseCatalog class.
-  //BaseCatalog.call(self);
-
   // Set this to true if we are not going to connect to the remote package
   // server, and will only use the cached data.json file for our package
   // information. This means that the catalog might be out of date on the latest
@@ -162,16 +159,21 @@ _.extend(RemoteCatalog.prototype, {
     return result;
   },
 
-  initialize: function () {
+  initialize: function (options) {
     //PASCAL deal with offline mode?
     var self = this;
+
+    // We should to figure out if we are intending to connect to the package server.
+    self.offline = options.offline ? options.offline : false;
+
     var dbFile = self.options.packageStorage || config.getPackageStorage();
     db = new sqlite3.Database(dbFile);
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
       fs.mkdirSync(path.dirname(dbFile));
     }
-
+    var future = new Future;
     db.serialize(function() {
+      db.run("BEGIN TRANSACTION");
       db.run("CREATE TABLE IF NOT EXISTS versions (name STRING, version STRING, id String, content STRING)");
       db.run("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(name)");
 
@@ -182,23 +184,41 @@ _.extend(RemoteCatalog.prototype, {
       db.run("CREATE TABLE IF NOT EXISTS releaseVersions (track STRING, version STRING, id STRING, content STRING)");
       db.run("CREATE TABLE IF NOT EXISTS packages (name STRING, id STRING, content STRING)");
       db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
+      db.run("END TRANSACTION", function(err, row) {
+        if (err)
+          console.log("TRANSACTION PB 1 " + err);
+        //PASCAL check errors
+        future.return();
+      });
     });
+    future.wait();
   },
 
   reset: function () {
     var self = this;
-    
+    var future = new Future;
     db.serialize(function() {
+      db.run("BEGIN TRANSACTION");
       db.run("DELETE FROM versions");
       db.run("DELETE FROM builds");
       db.run("DELETE FROM releaseTracks");
       db.run("DELETE FROM releaseVersions");
       db.run("DELETE FROM packages");
       db.run("DELETE FROM syncToken");
+      db.run("END TRANSACTION", function(err, row) {
+        if (err)
+          console.log("TRANSACTION PB 2 " + err);
+        //PASCAL check errors
+        future.return();
+      });
     });
+    future.wait();
   },
 
-  refresh: function () {
+  refresh: function (overrides) {
+    var self = this;
+    if (self.offline)
+      return;
     packageClient.updateServerPackageData(this);
   },
 
@@ -337,6 +357,8 @@ _.extend(RemoteCatalog.prototype, {
       self._insertReleaseVersions(serverData.collections.releaseVersions, db);
       self._insertTimestamps(serverData.syncToken, db);
       db.run("END TRANSACTION", function(err, row) {
+        if (err)
+          console.log("TRANSACTION PB 3 " + err);
         //PASCAL check errors
         future.return();
       });

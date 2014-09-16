@@ -3,6 +3,7 @@ var path = require('path');
 var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
+var watch = require('./watch.js');
 var archinfo = require('./archinfo.js');
 var unipackage = require('./unipackage.js');
 var compiler = require('./compiler.js');
@@ -325,7 +326,7 @@ _.extend(LocalCatalog.prototype, {
     }
 
     self.refreshing = true;
-    console.log("refreshing the local catalog");
+    // console.log("refreshing the local catalog");
     try {
       self.reset();
       self._recomputeEffectiveLocalPackages();
@@ -342,7 +343,7 @@ _.extend(LocalCatalog.prototype, {
   // and self.localPackages.
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
-    console.log("refrehsing for " + self.localPackageDirs);
+    // console.log("refrehsing for " + self.localPackageDirs);
 
     self.effectiveLocalPackages = _.clone(self.localPackages);
 
@@ -646,7 +647,7 @@ _.extend(LocalCatalog.prototype, {
     return count;
   },
 
-    // Register local package directories with a watchSet. We want to know if a
+  // Register local package directories with a watchSet. We want to know if a
   // package is created or deleted, which includes both its top-level source
   // directory and its main package metadata file.
   //

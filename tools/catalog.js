@@ -13,6 +13,7 @@ var checkoutBootstrap = require('./catalog-bootstrap-checkout.js');
 var project = require('./project.js');
 var utils = require('./utils.js');
 var config = require('./config.js');
+var packageClient = require('./package-client.js');
 
 var LayeredCatalog = function() {
 	var self = this;
@@ -136,19 +137,19 @@ _.extend(LayeredCatalog.prototype, {
 
   refresh: function () {
     var self = this;
-    console.log("refreshing the LayeredCatalog");
+    // console.log("refreshing the LayeredCatalog");
     //PASCAL Deal with refresh properly
   },
 
   refreshInProgress: function () {
     var self = this;
-    console.log("refresh in progress the LayeredCatalog");
+    // console.log("refresh in progress the LayeredCatalog");
     //PASCAL Deal with refresh properly
   },
 
   reset: function () {
     this.localCatalog.reset();
-    console.log("resetting the LayeredCatalog");
+    // console.log("resetting the LayeredCatalog");
     //PASCAL
   },
 
@@ -304,78 +305,78 @@ _.extend(LayeredCatalog.prototype, {
   //   to this set.
   refresh: function (options) {
     var self = this;
-    options = options || {};
-    buildmessage.assertInCapture();
+    // options = options || {};
+    // buildmessage.assertInCapture();
 
-    // We need to limit the rate of refresh, or, at least, prevent any sort of
-    // loops. ForceRefresh will override either one.
-    if (!options.forceRefresh && !options.initializing &&
-        (catalog.official._refreshFutures || self.refreshing)) {
+    // // We need to limit the rate of refresh, or, at least, prevent any sort of
+    // // loops. ForceRefresh will override either one.
+    // if (!options.forceRefresh && !options.initializing &&
+    //     (catalog.official._refreshFutures || self.refreshing)) {
 
-      return;
-    }
+    //   return;
+    // }
 
-    if (options.initializing && !self.forUniload) {
-      // If we are doing the top level initialization in main.js, everything
-      // sure had better be in a relaxed state, since we're about to hackily
-      // steal some data from catalog.official.
-      if (self.refreshing)
-        throw Error("initializing catalog.complete re-entrantly?");
-      if (catalog.official._refreshFutures)
-        throw Error("initializing catalog.complete during official refresh?");
-    }
+    // if (options.initializing && !self.forUniload) {
+    //   // If we are doing the top level initialization in main.js, everything
+    //   // sure had better be in a relaxed state, since we're about to hackily
+    //   // steal some data from catalog.official.
+    //   if (self.refreshing)
+    //     throw Error("initializing catalog.complete re-entrantly?");
+    //   if (catalog.official._refreshFutures)
+    //     throw Error("initializing catalog.complete during official refresh?");
+    // }
 
-    if (self.refreshing) {
-      // We're being asked to refresh re-entrantly, maybe because we just
-      // updated the official catalog.  Let's not do this now, but make the
-      // outer call do it instead.
-      // XXX refactoring the catalogs so that the two catalogs share their
-      //     data and this one is just an overlay would reduce this wackiness
-      self.needRefresh = true;
-      return;
-    }
+    // if (self.refreshing) {
+    //   // We're being asked to refresh re-entrantly, maybe because we just
+    //   // updated the official catalog.  Let's not do this now, but make the
+    //   // outer call do it instead.
+    //   // XXX refactoring the catalogs so that the two catalogs share their
+    //   //     data and this one is just an overlay would reduce this wackiness
+    //   self.needRefresh = true;
+    //   return;
+    // }
 
-    self.refreshing = true;
+    // self.refreshing = true;
 
-    try {
-      self.reset();
+    // try {
+    //   self.reset();
 
-      if (!self.forUniload) {
-        if (options.initializing) {
-          // It's our first time! Everything ought to be at rest. Let's just
-          // steal data (without even a deep clone!) from catalog.official.
-          // XXX this is horrible. restructure to have a reference to
-          // catalog.official instead.
-          self.packages = _.clone(catalog.official.packages);
-          self.builds = _.clone(catalog.official.builds);
-          _.each(catalog.official.versions, function (versions, name) {
-            self.versions[name] = _.clone(versions);
-          });
-        } else {
-          // Not the first time. Slowly load data from disk.
-          // XXX restructure this class to just have a reference to
-          // catalog.official instead of a copy of its data.
-          var localData = packageClient.loadCachedServerData();
-          self._insertServerPackages(localData);
-        }
-      }
+    //   if (!self.forUniload) {
+    //     if (options.initializing) {
+    //       // It's our first time! Everything ought to be at rest. Let's just
+    //       // steal data (without even a deep clone!) from catalog.official.
+    //       // XXX this is horrible. restructure to have a reference to
+    //       // catalog.official instead.
+    //       self.packages = _.clone(catalog.official.packages);
+    //       self.builds = _.clone(catalog.official.builds);
+    //       _.each(catalog.official.versions, function (versions, name) {
+    //         self.versions[name] = _.clone(versions);
+    //       });
+    //     } else {
+    //       // Not the first time. Slowly load data from disk.
+    //       // XXX restructure this class to just have a reference to
+    //       // catalog.official instead of a copy of its data.
+    //       var localData = packageClient.loadCachedServerData();
+    //       self._insertServerPackages(localData);
+    //     }
+    //   }
 
-      self._recomputeEffectiveLocalPackages();
-      var allOK = self._addLocalPackageOverrides(
-        { watchSet: options.watchSet });
-      self.initialized = true;
-      // Rebuild the resolver, since packages may have changed.
-      self.resolver = null;
-    } finally {
-      self.refreshing = false;
-    }
+    //   self._recomputeEffectiveLocalPackages();
+    //   var allOK = self._addLocalPackageOverrides(
+    //     { watchSet: options.watchSet });
+    //   self.initialized = true;
+    //   // Rebuild the resolver, since packages may have changed.
+    //   self.resolver = null;
+    // } finally {
+    //   self.refreshing = false;
+    // }f
 
-    // If we got a re-entrant refresh request, do it now. (But not if we
-    // encountered build errors building the packages, since in that case
-    // we'd probably just get the same build errors again.)
-    if (self.needRefresh && allOK) {
-      self.refresh(options);
-    }
+    // // If we got a re-entrant refresh request, do it now. (But not if we
+    // // encountered build errors building the packages, since in that case
+    // // we'd probably just get the same build errors again.)
+    // if (self.needRefresh && allOK) {
+    //   self.refresh(options);
+    // }
   },
 
   _initializeResolver: function () {
@@ -396,8 +397,7 @@ _.extend(LayeredCatalog.prototype, {
 
   watchLocalPackageDirs: function (watchSet) {
     var self = this;
-    console.log("watchllocalpackageDirs the LayeredCatalog");
-    //PASCAL
+    self.localCatalog.watchLocalPackageDirs(watchSet);
   },
 
  _refreshingIsProductive: function() {
