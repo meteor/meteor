@@ -25,6 +25,33 @@ _.extend(Console.prototype, {
     self._progressBar.terminate();
   },
 
+  info: function(/*arguments*/) {
+    var self = this;
+
+    self._print(arguments);
+  },
+
+  _print: function(logArguments) {
+    var self = this;
+
+    var message = self._format(logArguments);
+    var progressBar = self._progressBar;
+    if (progressBar) {
+      progressBar.terminate();
+    }
+    process.stderr.write(message + '\n');
+    if (progressBar) {
+      progressBar.render();
+    }
+  },
+
+  _format: function (logArguments) {
+    var message = '';
+    var format = logArguments[0];
+    message = format;
+    return message;
+  },
+
   showProgressBar: function () {
     var self = this;
 

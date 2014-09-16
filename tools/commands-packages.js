@@ -25,6 +25,7 @@ var stats = require('./stats.js');
 var unipackage = require('./unipackage.js');
 var cordova = require('./commands-cordova.js');
 var packageLoader = require('./package-loader.js');
+var Console = require('./console.js').Console;
 
 // Returns an object with keys:
 //  record : (a package or version record)
@@ -1824,13 +1825,13 @@ main.registerCommand({
     if (_.has(packages, constraint.name)) {
       if (packages[constraint.name] === constraint.constraintString) {
         if (constraint.constraintString) {
-          process.stderr.write(
+          Console.info(
             constraint.name + " with version constraint " +
-              constraint.constraintString + " has already been added.\n");
+              constraint.constraintString + " has already been added.");
         } else {
-          process.stderr.write(
+          Console.info(
             constraint.name +
-              " without a version constraint has already been added.\n");
+              " without a version constraint has already been added.");
         }
         failed = true;
       } else {
