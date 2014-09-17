@@ -1225,6 +1225,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
   if (showRequireProfile)
     require('./profile-require.js').printReport();
 
+  Console.enableStatusPoll();
   Console.showProgressBar();
 
   // Run the command!

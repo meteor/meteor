@@ -173,7 +173,7 @@ _.extend(exports, {
     if (progress) {
       httpHelpers._addProgressEvents(req);
       req.on('progress', function (state) {
-        progress.reportState(state);
+        progress.reportProgress(state);
       });
     }
 

@@ -195,6 +195,14 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, options) {
+  var results;
+  buildmessage.capture({ title: 'refresh packages' }, function () {
+    results = _updateServerPackageData(cachedServerData, options);
+  });
+  return results;
+};
+
+_updateServerPackageData = function (cachedServerData, options) {
   var self = this;
   options = options || {};
   cachedServerData = cachedServerData || emptyCachedServerDataJson();
@@ -202,12 +210,9 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   var done = false;
   var ret = {resetData: false};
 
-
-  var refreshTask = buildmessage.createProgressTracker('refresh packages');
-
   var start = undefined;
   var state = { current: 0, end: 0, done: false};
-  refreshTask.reportState(state);
+  buildmessage.reportProgress(state);
 
   try {
     var conn = openPackageServerConnection(options.packageServerUrl);
@@ -226,7 +231,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     }
     // XXX: Is packages the best progess indicator?
     state.current = syncToken.packages - start;
-    refreshTask.reportState(state);
+    buildmessage.reportProgress(state);
 
     var remoteData;
     try {
@@ -289,7 +294,7 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   }
 
   state.done = true;
-  refreshTask.reportState(state);
+  buildmessage.reportProgress(state);
 
   ret.data = cachedServerData;
   return ret;

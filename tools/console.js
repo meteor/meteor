@@ -3,6 +3,7 @@
 ///
 
 var _ = require('underscore');
+var Fiber = require('fibers');
 var Future = require('fibers/future');
 var ProgressBar = require('progress');
 var buildmessage = require('./buildmessage.js');
@@ -15,6 +16,16 @@ var Console = function (options) {
   self._progressBar = null;
 };
 
+// This function returns a future which resolves after a timeout. This
+// demonstrates manually resolving futures.
+function sleep(ms) {
+  var future = new Future;
+  setTimeout(function() {
+    future.return();
+  }, ms);
+  return future.wait();
+};
+
 _.extend(Console.prototype, {
   hideProgressBar: function () {
     var self = this;
@@ -23,6 +34,27 @@ _.extend(Console.prototype, {
       return;
     }
     self._progressBar.terminate();
+  },
+
+  enableStatusPoll: function () {
+    var self = this;
+    Fiber(function () {
+      while (true) {
+        var rootProgress = buildmessage.getRootProgress();
+        var title = (rootProgress ? rootProgress.getCurrent() : null) || '?';
+        //rootProgress.dump(process.stdout);
+        //console.log("Job: " + title);
+        if (self._progressBar) {
+          self._progressBar.fmt = self._buildProgressBarFormat(title);
+          self._progressBar.render();
+        }
+        sleep(500);
+      }
+    }).run();
+  },
+
+  _buildProgressBarFormat: function (status) {
+    return '[:bar] :percent :etas   ' + status;
   },
 
   info: function(/*arguments*/) {
@@ -38,8 +70,6 @@ _.extend(Console.prototype, {
     var message = self._format(arguments);
     self._print(message);
   },
-
-  warning: warn,
 
   error: function(/*arguments*/) {
     var self = this;
@@ -85,7 +115,7 @@ _.extend(Console.prototype, {
       return;
     }
 
-    var progressBar = new ProgressBar('  downloading [:bar] :percent :etas', {
+    var progressBar = new ProgressBar(self._buildProgressBarFormat(''), {
       complete: '=',
       incomplete: ' ',
       width: 20,
@@ -122,9 +152,10 @@ _.extend(Console.prototype, {
     });
 
     self._progressBar = progressBar;
-  },
-
+  }
 
 });
+
+Console.warning = Console.warn;
 
 exports.Console = new Console;

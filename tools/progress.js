@@ -20,24 +20,63 @@ var Progress = function (options) {
   self._parent = options.parent;
   self._watchers = options.watchers || [];
 
-  self._name = options.name;
+  self._title = options.title;
 
   self._completedChildren = { current: 0, end: 0};
   self._activeChildTasks = [];
+  self._allTasks = [];
+
   self._selfState = { current: 0, end: 0, done: false };
   if (options.estimate) {
     self._selfState.end = options.estimate;
   }
   self._state = _.clone(self._selfState);
+
+  self._selfActive = false;
 };
 
 _.extend(Progress.prototype, {
-  // Creates a subtask that must be completed as part of this (bigger) task
-  addChildTask: function (name, options) {
+  reportProgressDone: function () {
     var self = this;
-    var options = _.extend({ name: name, parent: self }, options);
+
+    var state = _.clone(self._selfState);
+    state.done = true;
+
+    self.reportProgress(state);
+  },
+
+  getCurrent: function () {
+    var self = this;
+
+    if (self._selfActive) {
+      return self._title;
+    }
+
+    if (self._activeChildTasks.length) {
+      var titles = _.map(self._activeChildTasks, function (task) {
+        return task.getCurrent();
+      });
+      titles = _.filter(titles, function (s) { return !!s; });
+      if (titles.length == 1) {
+        return titles[0];
+      }
+      //if (titles.length > 1) {
+      //  console.log("Multiple titles: " + titles);
+      //}
+      return self._title;
+    }
+
+    return null;
+  },
+
+  // Creates a subtask that must be completed as part of this (bigger) task
+  addChildTask: function (options) {
+    var self = this;
+    options = options || {};
+    var options = _.extend({ parent: self }, options);
     var child = new Progress(options);
     self._activeChildTasks.push(child);
+    self._allTasks.push(child);
     self._reportChildState(child, child._state);
     return child;
   },
@@ -52,21 +91,22 @@ _.extend(Progress.prototype, {
     if (!end) {
       end = '?';
     }
-    stream.write("Task [" + self._name + "] " + self._state.current + "/" + end + (self._state.done ? " done" : "") + "\n");
-    if (self._activeChildTasks.length) {
-      _.each(self._activeChildTasks, function (child) {
+    stream.write("Task [" + self._title + "] " + self._state.current + "/" + end + (self._state.done ? " done" : "") + "\n");
+    if (self._allTasks.length) {
+      _.each(self._allTasks, function (child) {
         child.dump(stream, (prefix || '') + '  ');
       });
     }
   },
 
   // Receives a state report indicating progress of self
-  reportState: function (state) {
+  reportProgress: function (state) {
     var self = this;
 
     self._selfState = state;
 
     self._state = self._computeTotalState();
+    self._selfActive = !state.done;
     self._notifyState();
   },
 

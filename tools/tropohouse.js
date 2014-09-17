@@ -154,15 +154,17 @@ _.extend(exports.Tropohouse.prototype, {
     var targetDirectory = files.mkdtemp();
 
     var url = buildRecord.build.url;
-    var downloadTask = buildmessage.createProgressTracker('http:get:' + url);
 
-    var packageTarball = httpHelpers.getUrl({
-      url: url,
-      encoding: null,
-      progress: downloadTask,
-      wait: false
+    buildmessage.capture({}, function () {
+      var packageTarball = httpHelpers.getUrl({
+        url: url,
+        encoding: null,
+        progress: buildmessage.getCurrentProgressTracker(),
+        wait: false
+      });
+      files.extractTarGz(packageTarball, targetDirectory);
     });
-    files.extractTarGz(packageTarball, targetDirectory);
+
     return targetDirectory;
   },
 
@@ -304,7 +306,8 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};
-    buildmessage.forkJoin(versionMap, function (version, name) {
+    buildmessage.forkJoin({ title: 'Downloading packages'},
+      versionMap, function (version, name) {
       try {
         self.maybeDownloadPackageForArchitectures({
           packageName: name,
