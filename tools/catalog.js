@@ -178,7 +178,7 @@ _.extend(LayeredCatalog.prototype, {
   resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
-    // self._requireInitialized();
+    self._requireInitialized();
     buildmessage.assertInCapture();
 
     // OK, since we are the complete catalog, the uniload catalog must be fully
@@ -305,6 +305,7 @@ _.extend(LayeredCatalog.prototype, {
     self.localCatalog.refresh(options);
     self.otherCatalog.refresh(options);
     self.packageCache.refresh();
+    self.resolver = null;
      // options = options || {};
     // buildmessage.assertInCapture();
 
