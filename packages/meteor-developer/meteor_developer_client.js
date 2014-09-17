@@ -20,7 +20,7 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
 
   var credentialToken = Random.secret();
 
-  var loginStyle = OAuth._loginStyle('facebook', config, options);
+  var loginStyle = OAuth._loginStyle('meteor-developer', config, options);
 
   var loginUrl =
         MeteorDeveloperAccounts._server +
