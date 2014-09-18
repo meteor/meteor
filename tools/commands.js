@@ -24,6 +24,7 @@ var unipackage = require('./unipackage.js');
 var cordova = require('./commands-cordova.js');
 var commandsPackages = require('./commands-packages.js');
 var execFileSync = require('./utils.js').execFileSync;
+var Console = require('./console.js').Console;
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -98,7 +99,7 @@ main.registerCommand({
   if (release.current === null) {
     if (! options.appDir)
       throw new Error("missing release, but not in an app?");
-    process.stderr.write(
+    Console.stderr.write(
 "This project was created with a checkout of Meteor, rather than an\n" +
 "official release, and doesn't have a release number associated with\n" +
 "it. You can set its release with 'meteor update'.\n");
@@ -106,7 +107,7 @@ main.registerCommand({
   }
 
   if (release.current.isCheckout()) {
-    process.stderr.write("Unreleased (running from a checkout)\n");
+    Console.stderr.write("Unreleased (running from a checkout)\n");
     return 1;
   }
 
@@ -119,15 +120,15 @@ main.registerCommand({
   requiresRelease: false
 }, function (options) {
   if (files.inCheckout()) {
-    process.stderr.write("checkout\n");
+    Console.stderr.write("checkout\n");
     return 1;
   } else if (release.current === null) {
     // .meteor/release says "none" but not in a checkout.
-    process.stderr.write("none\n");
+    Console.stderr.write("none\n");
     return 1;
   } else {
-    process.stdout.write(release.current.name + "\n");
-    process.stdout.write(files.getToolsVersion() + "\n");
+    Console.stdout.write(release.current.name + "\n");
+    Console.stdout.write(files.getToolsVersion() + "\n");
     return 0;
   }
 });
@@ -180,7 +181,7 @@ main.registerCommand({
     project.getVersions();  // #StructuredProjectInitialization
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
@@ -191,10 +192,10 @@ main.registerCommand({
     var parsedHostPort = parseHostPort(options.port);
   } catch (err) {
     if (options.verbose) {
-      process.stderr.write('Error while parsing --port option: '
+      Console.stderr.write('Error while parsing --port option: '
                            + err.stack + '\n');
     } else {
-      process.stderr.write(err.message + '\n');
+      Console.stderr.write(err.message + '\n');
     }
     return 1;
   }
@@ -204,7 +205,7 @@ main.registerCommand({
     cordova.verboseLog('A run on a device requested');
     // ... and if you didn't specify your ip address as host, print a warning
     if (parsedHostPort.host === 'localhost')
-      process.stderr.write(
+      Console.stderr.write(
         "WARN: You are testing your app on a remote device but your host option\n" +
         "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
         "WARN: network's IP address with the -p option?\n");
@@ -232,10 +233,10 @@ main.registerCommand({
       cordova.runPlatforms(localPath, options.args, options);
     } catch (err) {
       if (options.verbose) {
-        process.stderr.write('Error while running for mobile platforms ' +
+        Console.stderr.write('Error while running for mobile platforms ' +
                              err.stack + '\n');
       } else {
-        process.stderr.write(err.message + '\n');
+        Console.stderr.write(err.message + '\n');
       }
       return 1;
     }
@@ -249,7 +250,7 @@ main.registerCommand({
   if (options['app-port']) {
     var appPortMatch = options['app-port'].match(/^(?:(.+):)?([0-9]+)?$/);
     if (!appPortMatch) {
-      process.stderr.write(
+      Console.stderr.write(
 "run: --app-port must be a number or be of the form 'host:port' where\n" +
 "port is a number. Try 'meteor help run' for help.\n");
       return 1;
@@ -315,12 +316,12 @@ main.registerCommand({
 
     // No package examples exist yet.
     if (options.list && options.example) {
-      process.stderr.write("No package examples exist at this time.\n\n");
+      Console.stderr.write("No package examples exist at this time.\n\n");
       throw new main.ShowUsage;
     }
 
     if (!packageName) {
-      process.stderr.write("Please specify the name of the package. \n");
+      Console.stderr.write("Please specify the name of the package. \n");
       throw new main.ShowUsage;
     }
 
@@ -333,7 +334,7 @@ main.registerCommand({
     var inYourApp = options.appDir ? " in your app" : "";
 
     if (fs.existsSync(packageDir)) {
-      process.stderr.write(packageName + ": Already exists" + inYourApp + "\n");
+      Console.stderr.write(packageName + ": Already exists" + inYourApp + "\n");
       return 1;
     }
 
@@ -373,11 +374,11 @@ main.registerCommand({
       ignore: [/^local$/]
     });
    } catch (err) {
-     process.stderr.write("Could not create package: " + err.message + "\n");
+     Console.stderr.write("Could not create package: " + err.message + "\n");
      return 1;
    }
 
-    process.stdout.write(packageName + ": created" + inYourApp + "\n");
+    Console.stdout.write(packageName + ": created" + inYourApp + "\n");
     return 0;
   }
 
@@ -405,11 +406,11 @@ main.registerCommand({
   });
 
   if (options.list) {
-    process.stdout.write("Available examples:\n");
+    Console.stdout.write("Available examples:\n");
     _.each(examples, function (e) {
-      process.stdout.write("  " + e + "\n");
+      Console.stdout.write("  " + e + "\n");
     });
-    process.stdout.write("\n" +
+    Console.stdout.write("\n" +
 "Create a project from an example with 'meteor create --example <name>'.\n");
     return 0;
   };
@@ -423,12 +424,12 @@ main.registerCommand({
     throw new main.ShowUsage;
 
   if (fs.existsSync(appPath)) {
-    process.stderr.write(appPath + ": Already exists\n");
+    Console.stderr.write(appPath + ": Already exists\n");
     return 1;
   }
 
   if (files.findAppDir(appPath)) {
-    process.stderr.write(
+    Console.stderr.write(
       "You can't create a Meteor project inside another Meteor project.\n");
     return 1;
   }
@@ -439,8 +440,8 @@ main.registerCommand({
 
   if (options.example) {
     if (examples.indexOf(options.example) === -1) {
-      process.stderr.write(options.example + ": no such example\n\n");
-      process.stderr.write("List available applications with 'meteor create --list'.\n");
+      Console.stderr.write(options.example + ": no such example\n\n");
+      Console.stderr.write("List available applications with 'meteor create --list'.\n");
       return 1;
     } else {
       files.cp_r(path.join(exampleDir, options.example), appPath, {
@@ -480,7 +481,7 @@ main.registerCommand({
     project.appendFinishedUpgrader(upgrader);
   });
 
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Updating dependencies" }, function () {
     // Run the constraint solver. Override the assumption that using '--release'
     // means we shouldn't update .meteor/versions.
     project._ensureDepsUpToDate({alwaysRecord: true});
@@ -488,16 +489,19 @@ main.registerCommand({
 
 
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
-  process.stdout.write(appPath + ": created");
-  if (options.example && options.example !== appPath)
-    process.stderr.write(" (from '" + options.example + "' template)");
-  process.stdout.write(".\n\n");
+  {
+    var message = appPath + ": created";
+    if (options.example && options.example !== appPath)
+      message += (" (from '" + options.example + "' template)");
+    message += ".\n";
+    Console.info(message);
+  }
 
-  process.stdout.write(
+  Console.stdout.write(
     "To run your new app:\n" +
       "   cd " + appPath + "\n" +
       "   meteor\n");
@@ -557,8 +561,8 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
   if (options.architecture &&
       _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
-    process.stderr.write("Invalid architecture: " + options.architecture + "\n");
-    process.stderr.write(
+    Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
+    Console.stderr.write(
       "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
     return 1;
   }
@@ -573,7 +577,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 
   if (! _.isEmpty(mobilePlatforms)) {
     if (options.port === buildCommands.options.port.default) {
-      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
+      Console.stdout.write("WARNING: Building your app with host: localhost.\n" +
                            "Pass a -p argument to specify a host URL.\n");
     }
     var cordovaSettings = {};
@@ -581,7 +585,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     try {
       var parsedHostPort = parseHostPort(options.port);
     } catch (err) {
-      process.stderr.write(err.message);
+      Console.stderr.write(err.message);
       return 1;
     }
 
@@ -599,8 +603,8 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     loader = project.getPackageLoader();
   });
   if (messages.hasMessages()) {
-    process.stderr.write("Errors prevented bundling your app:\n");
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write("Errors prevented bundling your app:\n");
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
@@ -608,7 +612,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     stats.recordPackages();
   });
   if (statsMessages.hasMessages()) {
-    process.stdout.write("Error recording package list:\n" +
+    Console.stdout.write("Error recording package list:\n" +
                          statsMessages.formatMessages());
     // ... but continue;
   }
@@ -628,8 +632,8 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     }
   });
   if (bundleResult.errors) {
-    process.stderr.write("Errors prevented bundling:\n");
-    process.stderr.write(bundleResult.errors.formatMessages());
+    Console.stderr.write("Errors prevented bundling:\n");
+    Console.stderr.write(bundleResult.errors.formatMessages());
     return 1;
   }
 
@@ -640,7 +644,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
       files.createTarball(path.join(buildDir, 'bundle'), outputTar);
     } catch (err) {
       console.log(JSON.stringify(err));
-      process.stderr.write("Couldn't create tarball\n");
+      Console.stderr.write("Couldn't create tarball\n");
     }
   }
 
@@ -659,7 +663,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // Deprecated -- identical functionality to 'build'
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
-  process.stdout.write("WARNING: 'bundle' has been deprecated. " +
+  Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
                        "Use 'build' instead.\n");
   // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
   // the former for them
@@ -678,8 +682,8 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
   ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
   if (options.architecture &&
       _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
-    process.stderr.write("Invalid architecture: " + options.architecture + "\n");
-    process.stderr.write(
+    Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
+    Console.stderr.write(
       "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
     return 1;
   }
@@ -695,8 +699,8 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     loader = project.getPackageLoader();
   });
   if (messages.hasMessages()) {
-    process.stderr.write("Errors prevented bundling your app:\n");
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write("Errors prevented bundling your app:\n");
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
@@ -704,7 +708,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     stats.recordPackages("sdk.bundle");
   });
   if (statsMessages.hasMessages()) {
-    process.stdout.write("Error recording package list:\n" +
+    Console.stdout.write("Error recording package list:\n" +
                          statsMessages.formatMessages());
     // ... but continue;
   }
@@ -723,8 +727,8 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     }
   });
   if (bundleResult.errors) {
-    process.stderr.write("Errors prevented bundling:\n");
-    process.stderr.write(bundleResult.errors.formatMessages());
+    Console.stderr.write("Errors prevented bundling:\n");
+    Console.stderr.write(bundleResult.errors.formatMessages());
     return 1;
   }
 
@@ -733,7 +737,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
       files.createTarball(path.join(buildDir, 'bundle'), outputPath);
     } catch (err) {
       console.log(JSON.stringify(err));
-      process.stderr.write("Couldn't create tarball\n");
+      Console.stderr.write("Couldn't create tarball\n");
     }
   }
   files.rm_recursive(buildDir);
@@ -766,7 +770,7 @@ main.registerCommand({
     // specified?
 
     if (! mongoPort) {
-      process.stdout.write(
+      Console.stdout.write(
 "mongo: Meteor isn't running a local MongoDB server.\n" +
 "\n" +
 "This command only works while Meteor is running your application\n" +
@@ -822,7 +826,7 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
   if (options.args.length !== 0) {
-    process.stderr.write(
+    Console.stderr.write(
 "meteor reset only affects the locally stored database.\n" +
 "\n" +
 "To reset a deployed application use\n" +
@@ -839,7 +843,7 @@ main.registerCommand({
     require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
-    process.stderr.write(
+    Console.stderr.write(
 "reset: Meteor is running.\n" +
 "\n" +
 "This command does not work while Meteor is running your application.\n" +
@@ -850,7 +854,7 @@ main.registerCommand({
   var localDir = path.join(options.appDir, '.meteor', 'local');
   files.rm_recursive(localDir);
 
-  process.stdout.write("Project reset.\n");
+  Console.stdout.write("Project reset.\n");
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -909,15 +913,15 @@ main.registerCommand({
     project.getVersions();  // #StructuredProjectInitialization
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
   if (options.password) {
     if (useGalaxy) {
-      process.stderr.write("Galaxy does not support --password.\n");
+      Console.stderr.write("Galaxy does not support --password.\n");
     } else {
-      process.stderr.write(
+      Console.stderr.write(
 "Setting passwords on apps is no longer supported. Now there are\n" +
 "user accounts and your apps are associated with your account so that\n" +
 "only you (and people you designate) can access them. See the\n" +
@@ -929,14 +933,14 @@ main.registerCommand({
   var starball = options.star;
   if (starball && ! useGalaxy) {
     // XXX it would be nice to support this for non-Galaxy deploys too
-    process.stderr.write(
+    Console.stderr.write(
 "--star: only supported when deploying to Galaxy.\n");
     return 1;
   }
 
   var loggedIn = auth.isLoggedIn();
   if (! loggedIn) {
-    process.stderr.write(
+    Console.stderr.write(
 "To instantly deploy your app on a free testing server, just enter your\n" +
 "email address!\n" +
 "\n");
@@ -948,9 +952,9 @@ main.registerCommand({
   // Override architecture iff applicable.
   var buildArch = DEPLOY_ARCH;
   if (options['override-architecture-with-local']) {
-    process.stdout.write(
+    Console.stdout.write(
       "\n => WARNING: OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE\n");
-    process.stdout.write(
+    Console.stdout.write(
       " => If your app contains binary code, it may break terribly and you will be sad.\n\n");
     buildArch = archinfo.host();
   }
@@ -1041,13 +1045,13 @@ main.registerCommand({
 }, function (options) {
 
   if (options.add && options.remove) {
-    process.stderr.write(
+    Console.stderr.write(
       "Sorry, you can only add or remove one user at a time.\n");
     return 1;
   }
 
   if ((options.add || options.remove) && options.list) {
-    process.stderr.write(
+    Console.stderr.write(
 "Sorry, you can't change the users at the same time as you're listing them.\n");
     return 1;
   }
@@ -1057,7 +1061,7 @@ main.registerCommand({
   var site = qualifySitename(options.args[0]);
 
   if (hostedWithGalaxy(site)) {
-    process.stderr.write(
+    Console.stderr.write(
 "Sites hosted on Galaxy do not have an authorized user list.\n" +
 "Instead, go to your Galaxy dashboard to change the authorized users\n" +
 "of your Galaxy.\n");
@@ -1065,7 +1069,7 @@ main.registerCommand({
   }
 
   if (! auth.isLoggedIn()) {
-    process.stderr.write(
+    Console.stderr.write(
       "You must be logged in for that. Try 'meteor login'.\n");
     return 1;
   }
@@ -1092,7 +1096,7 @@ main.registerCommand({
   var site = qualifySitename(options.args[0]);
 
   if (! auth.isLoggedIn()) {
-    process.stderr.write(
+    Console.stderr.write(
 "You must be logged in to claim sites. Use 'meteor login' to log in.\n" +
 "If you don't have a Meteor developer account yet, create one by clicking\n" +
 "'Sign in' and then 'Create account' at www.meteor.com.\n\n");
@@ -1100,7 +1104,7 @@ main.registerCommand({
   }
 
   if (hostedWithGalaxy(site)) {
-    process.stderr.write(
+    Console.stderr.write(
       "Sorry, you can't claim sites that are hosted on Galaxy.\n");
     return 1;
   }
@@ -1153,7 +1157,7 @@ main.registerCommand({
   try {
     var parsedHostPort = parseHostPort(options.port);
   } catch (err) {
-    process.stderr.write(err.message);
+    Console.stderr.write(err.message);
     return 1;
   }
 
@@ -1169,7 +1173,7 @@ main.registerCommand({
     localPackages = packages.localPackages;
     options.localPackageNames = packages.localPackages;
   } catch (err) {
-    process.stderr.write('\n' + err.message);
+    Console.stderr.write('\n' + err.message);
     return 1;
   }
 
@@ -1221,7 +1225,7 @@ main.registerCommand({
         }));
       cordova.runPlatforms(localPath, mobilePlatforms, options);
     } catch (err) {
-      process.stderr.write(err.message + '\n');
+      Console.stderr.write(err.message + '\n');
       return 1;
     }
   }
@@ -1322,7 +1326,7 @@ var getPackagesForTest = function (packages) {
     });
 
     if (messages.hasMessages()) {
-      process.stderr.write("\n" + messages.formatMessages());
+      Console.stderr.write("\n" + messages.formatMessages());
       return 1;
     }
   }
@@ -1360,7 +1364,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
     });
   });
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
   project.forceEditPackages(tests, 'add');
@@ -1373,7 +1377,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
   });
 
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
@@ -1458,7 +1462,7 @@ main.registerCommand({
   if (count)
     console.log("Built " + count + " packages.");
   if (messages.hasMessages()) {
-    process.stderr.write("\n" + messages.formatMessages());
+    Console.stderr.write("\n" + messages.formatMessages());
     return 1;
   }
 });
@@ -1510,18 +1514,18 @@ main.registerCommand({
 var loggedInAccountsConnectionOrPrompt = function (action) {
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
-    process.stderr.write("You must be logged in to " + action + ".\n");
+    Console.stderr.write("You must be logged in to " + action + ".\n");
     auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
+    Console.stdout.write("\n");
   }
 
   token = auth.getSessionToken(config.getAccountsDomain());
   var conn = auth.loggedInAccountsConnection(token);
   if (conn === null) {
     // Server rejected our token.
-    process.stderr.write("You must be logged in to " + action + ".\n");
+    Console.stderr.write("You must be logged in to " + action + ".\n");
     auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
+    Console.stdout.write("\n");
     token = auth.getSessionToken(config.getAccountsDomain());
     conn = auth.loggedInAccountsConnection(token);
   }
@@ -1538,9 +1542,9 @@ main.registerCommand({
 
   var token = auth.getSessionToken(config.getAccountsDomain());
   if (! token) {
-    process.stderr.write("You must be logged in to list your organizations.\n");
+    Console.stderr.write("You must be logged in to list your organizations.\n");
     auth.doUsernamePasswordLogin({ retry: true });
-    process.stdout.write("\n");
+    Console.stdout.write("\n");
   }
 
   var url = config.getAccountsApiUrl() + "/organizations";
@@ -1553,13 +1557,13 @@ main.registerCommand({
     });
     var body = JSON.parse(result.body);
   } catch (err) {
-    process.stderr.write("Error listing organizations.\n");
+    Console.stderr.write("Error listing organizations.\n");
     return 1;
   }
 
   if (result.response.statusCode === 401 &&
       body && body.error === "invalid_credential") {
-    process.stderr.write("You must be logged in to list your organizations.\n");
+    Console.stderr.write("You must be logged in to list your organizations.\n");
     // XXX It would be nice to do a username/password prompt here like
     // we do for the other orgs commands.
     return 1;
@@ -1567,14 +1571,14 @@ main.registerCommand({
 
   if (result.response.statusCode !== 200 ||
       ! body || ! body.organizations) {
-    process.stderr.write("Error listing organizations.\n");
+    Console.stderr.write("Error listing organizations.\n");
     return 1;
   }
 
   if (body.organizations.length === 0) {
-    process.stdout.write("You are not a member of any organizations.\n");
+    Console.stdout.write("You are not a member of any organizations.\n");
   } else {
-    process.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
+    Console.stdout.write(_.pluck(body.organizations, "name").join("\n") + "\n");
   }
   return 0;
 });
@@ -1591,7 +1595,7 @@ main.registerCommand({
 }, function (options) {
 
   if (options.add && options.remove) {
-    process.stderr.write(
+    Console.stderr.write(
       "Sorry, you can only add or remove one member at a time.\n");
     throw new main.ShowUsage;
   }
@@ -1610,13 +1614,13 @@ main.registerCommand({
         options.add ? "addOrganizationMember": "removeOrganizationMember",
         options.args[0], username);
     } catch (err) {
-      process.stderr.write("Error " +
+      Console.stderr.write("Error " +
                            (options.add ? "adding" : "removing") +
                            " member: " + err.reason + "\n");
       return 1;
     }
 
-    process.stdout.write(username + " " +
+    Console.stdout.write(username + " " +
                          (options.add ? "added to" : "removed from") +
                          " organization " + options.args[0] + ".\n");
   } else {
@@ -1624,14 +1628,14 @@ main.registerCommand({
     try {
       var result = conn.call("showOrganization", options.args[0]);
     } catch (err) {
-      process.stderr.write("Error showing organization: " +
+      Console.stderr.write("Error showing organization: " +
                            err.reason + "\n");
       return 1;
     }
 
     var members = _.pluck(result, "username");
 
-    process.stdout.write(members.join("\n") + "\n");
+    Console.stdout.write(members.join("\n") + "\n");
   }
 
   return 0;
@@ -1678,7 +1682,7 @@ main.registerCommand({
     } catch (e) {
       if (!(e instanceof SyntaxError))
         throw e;
-      process.stderr.write("Bad regular expression: " + options.args[0] + "\n");
+      Console.stderr.write("Bad regular expression: " + options.args[0] + "\n");
       return 1;
     }
   }
@@ -1709,7 +1713,7 @@ main.registerCommand({
 }, function (options) {
   auth.pollForRegistrationCompletion();
   if (! auth.isLoggedIn()) {
-    process.stderr.write(
+    Console.stderr.write(
       "You must be logged in for that. Try 'meteor login'.\n");
     return 1;
   }
@@ -1742,11 +1746,11 @@ main.registerCommand({
     return 'none';
   };
 
-  process.stdout.write(p('email') + " " + p('port') + " " + p('changed') +
+  Console.stdout.write(p('email') + " " + p('port') + " " + p('changed') +
                        " " + p('args') + "\n");
   if (options.url)
-    process.stdout.write('url\n');
+    Console.stdout.write('url\n');
   if (options['delete'])
-    process.stdout.write('delete\n');
+    Console.stdout.write('delete\n');
 });
 
