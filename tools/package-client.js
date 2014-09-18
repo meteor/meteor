@@ -211,7 +211,7 @@ _updateServerPackageData = function (cachedServerData, options) {
   var ret = {resetData: false};
 
   var start = undefined;
-  var state = { current: 0, end: 0, done: false};
+  var state = { current: 0, end: 10, done: false};
   buildmessage.reportProgress(state);
 
   try {
@@ -221,6 +221,11 @@ _updateServerPackageData = function (cachedServerData, options) {
     ret.data = null;
     return ret;
   }
+
+  // Provide some progress indication
+  // XXX though it is just a hack
+  state.current = 1;
+  buildmessage.reportProgress(state);
 
   var getSomeData = function () {
     var syncToken = cachedServerData.syncToken;
