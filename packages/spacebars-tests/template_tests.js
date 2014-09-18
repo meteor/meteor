@@ -417,14 +417,14 @@ Tinytest.add("spacebars-tests - template_tests - block helper with dotted arg", 
 });
 
 Tinytest.add("spacebars-tests - template_tests - nested content", function (test) {
-  // Test that `{{> UI.contentBlock}}` in an `{{#if}}` works.
+  // Test that `{{> Template.contentBlock}}` in an `{{#if}}` works.
 
   // ```
   // <template name="spacebars_template_test_iftemplate">
   //   {{#if condition}}
-  //     {{> UI.contentBlock}}
+  //     {{> Template.contentBlock}}
   //   {{else}}
-  //     {{> UI.elseBlock}}
+  //     {{> Template.elseBlock}}
   //   {{/if}}
   // </template>
   // ```
@@ -451,7 +451,7 @@ Tinytest.add("spacebars-tests - template_tests - nested content", function (test
   Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'hello');
 
-  // Also test that `{{> UI.contentBlock}}` in a custom block helper works.
+  // Also test that `{{> Template.contentBlock}}` in a custom block helper works.
   tmpl = Template.spacebars_template_test_nested_content2;
   R = ReactiveVar(true);
   tmpl.x = function () {
@@ -1959,7 +1959,7 @@ Tinytest.add("spacebars-tests - template_tests - javascript scheme urls",
           } catch (err) {
             // IE throws an exception if you set an img src to a
             // javascript: URL. Blaze can't override this behavior;
-            // whether you've called UI._javascriptUrlsAllowed() or not,
+            // whether you've called Blaze._javascriptUrlsAllowed() or not,
             // you won't be able to set a javascript: URL in an img
             // src. So we only test img tags in other browsers.
             if (attrInfo[0] === "IMG") {
@@ -1984,13 +1984,13 @@ Tinytest.add("spacebars-tests - template_tests - javascript scheme urls",
       );
     };
 
-    test.equal(UI._javascriptUrlsAllowed(), false);
+    test.equal(Blaze._javascriptUrlsAllowed(), false);
     checkAttrs("http://www.meteor.com", false);
     checkAttrs("javascript:alert(1)", true);
     checkAttrs("jAvAsCrIpT:alert(1)", true);
     checkAttrs("    javascript:alert(1)", true);
-    UI._allowJavascriptUrls();
-    test.equal(UI._javascriptUrlsAllowed(), true);
+    Blaze._allowJavascriptUrls();
+    test.equal(Blaze._javascriptUrlsAllowed(), true);
     checkAttrs("http://www.meteor.com", false);
     checkAttrs("javascript:alert(1)", false);
     checkAttrs("jAvAsCrIpT:alert(1)", false);
@@ -2254,7 +2254,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.parentData from helpers",
+  "spacebars-tests - template_tests - Template.parentData from helpers",
   function (test) {
     var childTmpl = Template.spacebars_test_template_parent_data_helper_child;
     var parentTmpl = Template.spacebars_test_template_parent_data_helper;
@@ -2280,7 +2280,7 @@ Tinytest.add(
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "bar");
 
-    // Test UI.parentData() reactivity
+    // Test Template.parentData() reactivity
 
     bar.set("baz");
     Tracker.flush();
@@ -2349,7 +2349,7 @@ Tinytest.add(
   });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.render/UI.remove",
+  "spacebars-tests - template_tests - Blaze.render/Blaze.remove",
   function (test) {
     var div = document.createElement("DIV");
     document.body.appendChild(div);
@@ -2366,7 +2366,7 @@ Tinytest.add(
 
     test.equal([created, rendered, destroyed], [false, false, false]);
 
-    var renderedTmpl = UI.render(tmpl, div);
+    var renderedTmpl = Blaze.render(tmpl, div);
     test.equal([created, rendered, destroyed], [true, false, false]);
 
     // Flush now. We fire the rendered callback in an afterFlush block,
@@ -2376,10 +2376,10 @@ Tinytest.add(
 
     var otherDiv = document.createElement("DIV");
     // can run a second time without throwing
-    var x = UI.render(tmpl, otherDiv);
+    var x = Blaze.render(tmpl, otherDiv);
     // note: we'll have clean up `x` below
 
-    var renderedTmpl2 = UI.renderWithData(
+    var renderedTmpl2 = Blaze.renderWithData(
       tmpl, {greeting: 'Bye'}, div);
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello aaa</span><span>Bye aaa</span>");
@@ -2389,24 +2389,24 @@ Tinytest.add(
                "<span>Hello bbb</span><span>Bye bbb</span>");
     test.equal([created, rendered, destroyed], [true, true, false]);
     test.equal(R._numListeners(), 3);
-    UI.remove(renderedTmpl);
-    UI.remove(renderedTmpl); // test that double-remove doesn't throw
-    UI.remove(renderedTmpl2);
-    UI.remove(x);
+    Blaze.remove(renderedTmpl);
+    Blaze.remove(renderedTmpl); // test that double-remove doesn't throw
+    Blaze.remove(renderedTmpl2);
+    Blaze.remove(x);
     test.equal([created, rendered, destroyed], [true, true, true]);
     test.equal(R._numListeners(), 0);
     test.equal(canonicalizeHtml(div.innerHTML), "");
   });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - UI.render fails on jQuery objects",
+  "spacebars-tests - template_tests - Blaze.render fails on jQuery objects",
   function (test) {
     var tmpl = Template.spacebars_test_ui_render;
     test.throws(function () {
-      UI.render(tmpl, $('body'));
+      Blaze.render(tmpl, $('body'));
     }, /'parentElement' must be a DOM node/);
     test.throws(function () {
-      UI.render(tmpl, document.body, $('body'));
+      Blaze.render(tmpl, document.body, $('body'));
     }, /'nextNode' must be a DOM node/);
   });
 
@@ -2415,7 +2415,7 @@ Tinytest.add(
   function (test) {
     var div = document.createElement("DIV");
     var tmpl = Template.spacebars_test_ui_getElementData;
-    UI.renderWithData(tmpl, {foo: "bar"}, div);
+    Blaze.renderWithData(tmpl, {foo: "bar"}, div);
 
     var span = div.querySelector('SPAN');
     test.isTrue(span);
@@ -2759,7 +2759,7 @@ Tinytest.add(
   }
 );
 
-// Test that argument in {{> UI.contentBlock arg}} is evaluated in
+// Test that argument in {{> Template.contentBlock arg}} is evaluated in
 // the proper data context.
 Tinytest.add(
   "spacebars-tests - template_tests - contentBlock argument",

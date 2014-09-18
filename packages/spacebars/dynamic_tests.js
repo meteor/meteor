@@ -27,7 +27,7 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "testbar");
   });
 
-// Same test as above, but the {{> UI.dynamic}} inclusion has no
+// Same test as above, but the {{> Template.dynamic}} inclusion has no
 // `dataContext` argument.
 Tinytest.add(
   "spacebars - ui-dynamic-template - render template dynamically, no data context",
@@ -72,7 +72,7 @@ Tinytest.add(
 
     // Set the top-level template's data context; this should be
     // inherited by the dynamically-chosen template, since the {{>
-    // UI.dynamic}} inclusion didn't include a data argument.
+    // Template.dynamic}} inclusion didn't include a data argument.
     dataVar.set({ foo: "bar" });
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "testbar");
@@ -114,7 +114,7 @@ Tinytest.add(
     var errors = [
       "Must specify 'template' as an argument",
       "Must specify 'template' as an argument",
-      "Invalid argument to {{> UI.dynamic}}"
+      "Invalid argument to {{> Template.dynamic}}"
     ];
 
     for (var i = 0; i < 3; i++) {

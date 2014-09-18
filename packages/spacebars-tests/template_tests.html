@@ -17,18 +17,18 @@
 </template>
 
 <template name="spacebars_template_test_content">
-  {{> UI.contentBlock}}
+  {{> Template.contentBlock}}
 </template>
 
 <template name="spacebars_template_test_elsecontent">
-  {{> UI.elseBlock}}
+  {{> Template.elseBlock}}
 </template>
 
 <template name="spacebars_template_test_iftemplate">
   {{#if condition}}
-    {{> UI.contentBlock}}
+    {{> Template.contentBlock}}
   {{else}}
-    {{> UI.elseBlock}}
+    {{> Template.elseBlock}}
   {{/if}}
 </template>
 
@@ -122,9 +122,9 @@
 
 <template name="spacebars_template_test_iftemplate2">
   {{#spacebars_template_test_iftemplate condition=flag}}
-    {{> UI.contentBlock}}
+    {{> Template.contentBlock}}
   {{else}}
-    {{> UI.elseBlock}}
+    {{> Template.elseBlock}}
   {{/spacebars_template_test_iftemplate}}
 </template>
 
@@ -407,7 +407,7 @@ Hi there!
 </template>
 
 <template name="spacebars_template_test_just_content">
-  {{> UI.contentBlock}}
+  {{> Template.contentBlock}}
 </template>
 
 <template name="spacebars_template_test_simple_helpers_are_isolated">
@@ -957,7 +957,7 @@ Hi there!
 
 <template name="spacebars_test_contentBlock_arg_inner">
   {{#with foo="AAA" bar="BBB"}}
-    {{this.foo}} {{> UI.contentBlock this}}
+    {{this.foo}} {{> Template.contentBlock this}}
   {{/with}}
 </template>
 
