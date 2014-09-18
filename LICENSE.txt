@@ -1007,6 +1007,14 @@ browserstack-webdriver: https://github.com/browserstack/selenium-webdriver-nodej
 
 Copyright 2009-2014 Software Freedom Conservancy
 
+
+----------
+node-inspector: https://github.com/node-inspector/node-inspector
+----------
+
+Copyright (c) 2011, Danny Coates
+
+
 ----------
 phantomjs: https://github.com/Medium/phantomjs (npm installer)
 ----------

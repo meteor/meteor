@@ -160,6 +160,7 @@ npm install tar@1.0.1
 npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install browserstack-webdriver@2.41.1
+npm install node-inspector@0.7.4
 
 # Clean up a big zip file it leaves behind.
 npm install phantomjs@1.8.1-1
