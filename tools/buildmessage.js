@@ -179,6 +179,13 @@ var reportProgress = function (state) {
   }
 };
 
+var reportProgressDone = function () {
+  var progress = currentProgress.get();
+  if (progress) {
+    progress.reportProgressDone();
+  }
+};
+
 var getCurrentProgressTracker = function () {
   var progress = currentProgress.get();
   return progress;
@@ -471,6 +478,8 @@ var forkJoin = function (options, iterable, fn) {
       futures.push(fut);
     });
 
+    // XXX: We could check whether the sub-jobs set estimates, and if not
+    // assume they each take the same amount of time and auto-report their completion
     var errors = [];
     var firstError = null;
 
@@ -512,5 +521,6 @@ _.extend(exports, {
   forkJoin: forkJoin,
   getRootProgress: getRootProgress,
   reportProgress: reportProgress,
+  reportProgressDone: reportProgressDone,
   getCurrentProgressTracker: getCurrentProgressTracker
 });

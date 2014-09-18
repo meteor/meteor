@@ -879,9 +879,9 @@ _.extend(CompleteCatalog.prototype, {
     };
 
     // Load the package sources for packages and their tests into packageSources.
-    _.each(self.effectiveLocalPackages, function (x) {
+    buildmessage.forkJoin({ 'title': 'Initializing packages'}, self.effectiveLocalPackages, function (x) {
       initSourceFromDir(x);
-     });
+    });
 
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.

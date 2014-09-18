@@ -905,7 +905,7 @@ main.registerCommand({
   // issues are concurrency-related, or possibly some weird order-of-execution
   // of interaction that we are failing to understand. This seems to fix it in a
   // clear and understandable fashion.)
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Resolving versions" }, function () {
     project.getVersions();  // #StructuredProjectInitialization
   });
   if (messages.hasMessages()) {

@@ -449,38 +449,52 @@ _.extend(Target.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    // Populate the list of unibuilds to load
-    self._determineLoadOrder({
-      packages: options.packages || []
-    });
+    buildmessage.enterJob({ title: 'Building'}, function () {
+      var progress = { current: 0, end: 5, done: false };
+      buildmessage.reportProgress(progress);
 
-    // Link JavaScript and set up self.js, etc.
-    self._emitResources();
+      // Populate the list of unibuilds to load
+      self._determineLoadOrder({
+        packages: options.packages || []
+      });
+      progress.current++;
+      buildmessage.reportProgress(progress);
 
-    // Preprocess and concatenate CSS files for client targets.
-    if (self instanceof ClientTarget) {
-      self.mergeCss();
-    }
+      // Link JavaScript and set up self.js, etc.
+      self._emitResources();
+      progress.current++;
+      buildmessage.reportProgress(progress);
 
-    // Minify, if requested
-    if (options.minify) {
-      var minifiers = uniload.load({
-        packages: ['minifiers']
-      }).minifiers;
-      self.minifyJs(minifiers);
-
-      // CSS is minified only for client targets.
+      // Preprocess and concatenate CSS files for client targets.
       if (self instanceof ClientTarget) {
-        self.minifyCss(minifiers);
+        self.mergeCss();
       }
-    }
+      progress.current++;
+      buildmessage.reportProgress(progress);
 
-    if (options.addCacheBusters) {
-      // Make client-side CSS and JS assets cacheable forever, by
-      // adding a query string with a cache-busting hash.
-      self._addCacheBusters("js");
-      self._addCacheBusters("css");
-    }
+      // Minify, if requested
+      if (options.minify) {
+        var minifiers = uniload.load({
+          packages: ['minifiers']
+        }).minifiers;
+        self.minifyJs(minifiers);
+
+        // CSS is minified only for client targets.
+        if (self instanceof ClientTarget) {
+          self.minifyCss(minifiers);
+        }
+      }
+      progress.current++;
+      buildmessage.reportProgress(progress);
+
+      if (options.addCacheBusters) {
+        // Make client-side CSS and JS assets cacheable forever, by
+        // adding a query string with a cache-busting hash.
+        self._addCacheBusters("js");
+        self._addCacheBusters("css");
+      }
+      buildmessage.reportProgressDone();
+    });
   },
 
   // Determine the packages to load, create Unibuilds for
@@ -1772,7 +1786,6 @@ exports.bundle = function (options) {
         targetOptions.clientTargets = clientTargets;
 
       var server = new ServerTarget(targetOptions);
-
       server.make({
         packages: [app],
         minify: false

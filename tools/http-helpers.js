@@ -13,6 +13,52 @@ var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
 
+
+// Helper that tracks bytes written to a writable
+var WritableWithProgress = function (writable, listener) {
+  var self = this;
+  self._inner = writable;
+  self._listener = listener;
+};
+
+_.extend(WritableWithProgress.prototype, {
+  write: function (chunk, encoding, callback) {
+    var self = this;
+    self._listener(chunk.length, false);
+    return self._inner.write(chunk, encoding);
+  },
+
+  end: function (chunk, encoding, callback) {
+    var self = this;
+    self._listener(chunk ? chunk.length : 0, true);
+    return self._inner.end(chunk, encoding);
+  },
+
+  _progress: function (n, done) {
+    var self = this;
+
+    var state = self._state;
+    state.current += n;
+    if (done) {
+      state.current.done = true;
+    }
+    self.progress.reportProgress(state);
+  },
+
+  on: function (name, callback) {
+    return this._inner.on(name, callback);
+  },
+
+  once: function () {
+    return this._inner.once.apply(this._inner, arguments);
+  },
+
+  emit: function () {
+    return this._inner.emit.apply(this._inner, arguments);
+  }
+});
+
+
 // Compose a User-Agent header.
 var getUserAgent = function () {
   var version;
@@ -167,13 +213,36 @@ _.extend(exports, {
     var request = require('request');
     var req = request(options, callback);
 
-    if (bodyStream)
-      bodyStream.pipe(req);
+    var bodyStreamLength = 0;
+    if (bodyStream) {
+      // XXX
+      bodyStreamLength += 4000000;
+    }
+    // XXX
+    var responseLength = 128 * 1024;
+
+    var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
+
+    if (bodyStream) {
+      bodyStreamLength += 4000000;
+      var dest = req;
+      if (progress) {
+        dest = new WritableWithProgress(dest, function (n, done) {
+          totalProgress.current += n;
+          progress.reportProgress(totalProgress);
+        });
+      }
+      bodyStream.pipe(dest);
+    }
 
     if (progress) {
       httpHelpers._addProgressEvents(req);
       req.on('progress', function (state) {
-        progress.reportProgress(state);
+        totalProgress.current = bodyStreamLength + state.current;
+        totalProgress.end = bodyStreamLength + state.end;
+        totalProgress.done = state.done;
+
+        progress.reportProgress(totalProgress);
       });
     }
 

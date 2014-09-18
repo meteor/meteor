@@ -10,7 +10,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 
-
 var Progress = function (options) {
   var self = this;
 
@@ -36,6 +35,8 @@ var Progress = function (options) {
   }
   self._state = _.clone(self._selfState);
 
+  self._isDone = false;
+
   self._selfActive = false;
 };
 
@@ -54,31 +55,50 @@ _.extend(Progress.prototype, {
   // don't descend into fork-join jobs; we know these execute concurrently,
   // so we assume the top-level task has the title
   // i.e. "Downloading packages", not "downloading supercool-1.0"
-  getCurrent: function () {
+  getCurrentProgress: function () {
     var self = this;
 
-    if (self._selfActive) {
-      return self._title;
+    var isRoot = !self._parent;
+
+    if (self._isDone) {
+      return null;
+    }
+
+    if (self._selfActive && !isRoot) {
+      return self;
     }
 
     if (self._forkJoin) {
       // Don't descend into fork-join tasks
-      return self._title;
+      return self;
     }
 
-    if (self._activeChildTasks.length) {
-      var titles = _.map(self._activeChildTasks, function (task) {
-        return task.getCurrent();
+    if (self._allTasks.length) {
+      var active = _.map(self._allTasks, function (task) {
+        return task.getCurrentProgress();
       });
-      titles = _.filter(titles, function (s) { return !!s; });
-      if (titles.length == 1) {
-        return titles[0];
+      active = _.filter(active, function (s) {
+        return !!s;
+      });
+      if (active.length == 1) {
+        return active[0];
       }
-      //if (titles.length > 1) {
-      //  console.log("Multiple titles: " + titles);
-      //}
-      return self._title;
+      return self;
     }
+
+    //if (self._activeChildTasks.length) {
+    //  var titles = _.map(self._activeChildTasks, function (task) {
+    //    return task.getCurrent();
+    //  });
+    //  titles = _.filter(titles, function (s) { return !!s; });
+    //  if (titles.length == 1) {
+    //    return titles[0];
+    //  }
+    //  //if (titles.length > 1) {
+    //  //  console.log("Multiple titles: " + titles);
+    //  //}
+    //  return self._title;
+    //}
 
     return null;
   },
@@ -106,7 +126,7 @@ _.extend(Progress.prototype, {
     if (!end) {
       end = '?';
     }
-    stream.write("Task [" + self._title + "] " + self._state.current + "/" + end + (self._state.done ? " done" : "") + "\n");
+    stream.write("Task [" + self._title + "] " + self._state.current + "/" + end + (self._isDone ? " done" : "") + "\n");
     if (self._allTasks.length) {
       _.each(self._allTasks, function (child) {
         child.dump(stream, (prefix || '') + '  ');
@@ -153,31 +173,56 @@ _.extend(Progress.prototype, {
 
     var state = _.clone(self._selfState);
 
-    state.current += self._completedChildren.current;
-    if (state.end !== undefined) {
-      state.end += self._completedChildren.end;
-    }
+    //state.current += self._completedChildren.current;
+    //if (state.end !== undefined) {
+    //  state.end += self._completedChildren.end;
+    //}
+
+    //var allChildrenDone = true;
+    //_.each(self._activeChildTasks, function (child) {
+    //  var childState = child._state;
+    //  state.current += childState.current;
+    //  if (!state.done) {
+    //    allChildrenDone = false;
+    //  }
+    //
+    //  if (state.done) {
+    //    if (state.end !== undefined) {
+    //      state.end += childState.current;
+    //    }
+    //  } else if (state.end !== undefined) {
+    //    if (childState.end !== undefined) {
+    //      state.end += childState.end;
+    //    } else {
+    //      state.end = undefined;
+    //    }
+    //  }
+    //});
+    //if (!allChildrenDone) {
+    //  state.done = false;
+    //}
 
     var allChildrenDone = true;
-    _.each(self._activeChildTasks, function (child) {
+    var state = _.clone(self._selfState);
+    _.each(self._allTasks, function (child) {
       var childState = child._state;
-      state.current += childState.current;
-      if (!state.done) {
+
+      if (!child._isDone) {
         allChildrenDone = false;
       }
 
-      if (state.done) {
-        if (state.end !== undefined) {
+      state.current += childState.current;
+      if (state.end !== undefined) {
+        if (childState.done) {
           state.end += childState.current;
-        }
-      } else if (state.end !== undefined) {
-        if (childState.end !== undefined) {
+        } else if (childState.end !== undefined) {
           state.end += childState.end;
         } else {
           state.end = undefined;
         }
       }
     });
+    self._isDone = allChildrenDone && !self._selfActive;
     if (!allChildrenDone) {
       state.done = false;
     }

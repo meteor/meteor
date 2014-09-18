@@ -644,7 +644,7 @@ Fiber(function () {
     // One side effect of this: we really really expect them to all build, and
     // we're fine with dying if they don't (there's no worries about needing to
     // springboard).
-    var messages = buildmessage.capture(function () {
+    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
       catalog.uniload.initialize({
         localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
       });
@@ -669,7 +669,7 @@ Fiber(function () {
   // build anything (except maybe, if running from a checkout, packages
   // that we need to uniload, which really ought to build) so it's OK
   // to die on errors.
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Initializing server catalog" }, function () {
     catalog.official.initialize({
       offline: !!process.env.METEOR_OFFLINE_CATALOG
     });
@@ -812,7 +812,7 @@ Fiber(function () {
 
     try {
       var rel;
-      var messages = buildmessage.capture(function () {
+      var messages = buildmessage.capture({ title: "Loading release" }, function () {
         rel = release.load(releaseName);
       });
       if (messages.hasMessages()) {
@@ -916,7 +916,7 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
     catalog.complete.initialize({
       localPackageDirs: localPackageDirs
     });

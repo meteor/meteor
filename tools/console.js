@@ -16,8 +16,20 @@ var Console = function (options) {
   options = options || {};
 
   self._progressBar = null;
-  self._info = null;
+  self._progressBarText = null;
+  self._currentProgress = null;
+
+  // Legacy helpers
+  self.stdout = {};
+  self.stderr = {};
+  self.stdout.write = function (msg) {
+    self._legacyWrite(LEVEL_INFO, msg);
+  };
+  self.stderr.write = function (msg) {
+    self._legacyWrite(LEVEL_WARN, msg);
+  };
 };
+
 
 PROGRESS_BAR_WIDTH = 20;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
@@ -61,9 +73,9 @@ _.extend(Console.prototype, {
     var self = this;
     if (self._progressBar) {
       self._progressBar.render();
-      if (self._info) {
+      if (self._progressBarText) {
         self._progressBar.stream.cursorTo(STATUS_POSITION);
-        self._progressBar.stream.write(chalk.bold(' ' + self._info));
+        self._progressBar.stream.write(chalk.bold(' ' + self._progressBarText));
       }
     }
   },
@@ -72,15 +84,22 @@ _.extend(Console.prototype, {
     var self = this;
     Fiber(function () {
       while (true) {
+        sleep(500);
+
         var rootProgress = buildmessage.getRootProgress();
-        var title = (rootProgress ? rootProgress.getCurrent() : null) || FALLBACK_STATUS;
-        //rootProgress.dump(process.stdout);
-        //console.log("Job: " + title);
-        if (title != self._info) {
-          self._info = title;
+        var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
+        if (self._currentProgress === current) {
+          continue;
+        }
+
+        self._currentProgress = current;
+        var title = (current != null ? current._title : null) || FALLBACK_STATUS;
+        if (title != self._progressBarText) {
+          self._progressBarText = title;
           self._renderProgressBar();
         }
-        sleep(500);
+
+        self._watchProgress();
       }
     }).run();
   },
@@ -106,6 +125,14 @@ _.extend(Console.prototype, {
     self._print(LEVEL_ERROR, message);
   },
 
+  _legacyWrite: function (level, message) {
+    var self = this;
+    if(message.substr(-1) == '\n') {
+      message = message.substr(0, message.length - 1);
+    }
+    self._print(level, message);
+  },
+
   _print: function(level, message) {
     var self = this;
 
@@ -127,9 +154,9 @@ _.extend(Console.prototype, {
           dest = process.stderr;
           style = chalk.red;
           break;
-        case LEVEL_CODE_INFO:
-          style = chalk.blue;
-          break;
+        //case LEVEL_CODE_INFO:
+        //  style = chalk.blue;
+        //  break;
       }
     }
 
@@ -183,15 +210,29 @@ _.extend(Console.prototype, {
     var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
     progressBar.start = new Date;
 
-    var progress = buildmessage.getRootProgress();
-    progress.addWatcher(function (state) {
-      var fraction;
+    self._progressBar = progressBar;
+  },
 
-      //progress.dump(process.stderr);
-      //return;
+  _watchProgress: function () {
+    var self = this;
+
+    var progress = self._currentProgress;
+    if (!progress) return;
+
+    progress.addWatcher(function (state) {
+      if (progress != self._currentProgress) {
+        // No longer active
+        return;
+      }
+
+      var progressBar = self._progressBar;
+      if (!progressBar) {
+        // Progress bar disabled
+        return;
+      }
+
+      var fraction;
       if (state.done) {
-        //progressBar.terminate();
-        //progressBar.update(1.0);
         fraction = 1.0;
       } else {
         var current = state.current;
@@ -204,13 +245,9 @@ _.extend(Console.prototype, {
       }
 
       // XXX: isNan
-      //if (fraction > 0 && fraction <= 1.0) {
       progressBar.curr = Math.floor(fraction * progressBar.total);
       self._renderProgressBar();
-      //}
     });
-
-    self._progressBar = progressBar;
   }
 
 });
