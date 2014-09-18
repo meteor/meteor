@@ -196,7 +196,7 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, options) {
   var results;
-  buildmessage.capture({ title: 'refresh packages' }, function () {
+  buildmessage.capture({ title: 'Updating package catalog' }, function () {
     results = _updateServerPackageData(cachedServerData, options);
   });
   return results;
