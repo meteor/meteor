@@ -13,7 +13,7 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
 fi
 
 # import all the environment
-source $(dirname $0)/common_env.sh
+source "$(dirname "$0")/common_env.sh"
 
 command -v java >/dev/null 2>&1 || {
   if [ ${UNAME} == "Linux" ] ; then
