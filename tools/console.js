@@ -7,6 +7,8 @@ var Fiber = require('fibers');
 var Future = require('fibers/future');
 var ProgressBar = require('progress');
 var buildmessage = require('./buildmessage.js');
+// XXX: Are we happy with chalk (and its sub-dependencies)?
+var chalk = require('chalk');
 
 var Console = function (options) {
   var self = this;
@@ -25,6 +27,16 @@ function sleep(ms) {
   }, ms);
   return future.wait();
 };
+
+LEVEL_CODE_ERROR = 4;
+LEVEL_CODE_WARN = 3;
+LEVEL_CODE_INFO = 2;
+LEVEL_CODE_DEBUG = 1;
+
+LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
+LEVEL_WARN = { code: LEVEL_CODE_WARN };
+LEVEL_INFO = { code: LEVEL_CODE_INFO };
+LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 
 _.extend(Console.prototype, {
   hideProgressBar: function () {
@@ -61,31 +73,56 @@ _.extend(Console.prototype, {
     var self = this;
 
     var message = self._format(arguments);
-    self._print(message);
+    self._print(LEVEL_INFO, message);
   },
 
   warn: function(/*arguments*/) {
     var self = this;
 
     var message = self._format(arguments);
-    self._print(message);
+    self._print(LEVEL_WARN, message);
   },
 
   error: function(/*arguments*/) {
     var self = this;
 
     var message = self._format(arguments);
-    self._print(message);
+    self._print(LEVEL_ERROR, message);
   },
 
-  _print: function(message) {
+  _print: function(level, message) {
     var self = this;
 
     var progressBar = self._progressBar;
     if (progressBar) {
       progressBar.terminate();
     }
-    process.stderr.write(message + '\n');
+
+    var dest = process.stdout;
+    var style = null;
+
+    if (level) {
+      switch (level.code) {
+        case LEVEL_CODE_ERROR:
+          dest = process.stderr;
+          style = chalk.bold.red;
+          break;
+        case LEVEL_CODE_WARN:
+          dest = process.stderr;
+          style = chalk.red;
+          break;
+        case LEVEL_CODE_INFO:
+          style = chalk.blue;
+          break;
+      }
+    }
+
+    if (style) {
+      dest.write(style(message + '\n'));
+    } else {
+      dest.write(message + '\n');
+    }
+
     if (progressBar) {
       progressBar.render();
     }
@@ -104,7 +141,7 @@ _.extend(Console.prototype, {
     var self = this;
 
     if (messages.hasMessages()) {
-      self._print("\n" + messages.formatMessages());
+      self._print(null, "\n" + messages.formatMessages());
     }
   },
 
