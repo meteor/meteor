@@ -2756,4 +2756,3 @@ Tinytest.add(
     document.body.removeChild(div);
   }
 );
-

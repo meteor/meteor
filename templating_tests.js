@@ -183,19 +183,19 @@ Tinytest.add("spacebars-tests - templating_tests - safestring", function(test) {
 });
 
 Tinytest.add("spacebars-tests - templating_tests - helpers and dots", function(test) {
-  UI.registerHelper("platypus", function() {
+  Template.registerHelper("platypus", function() {
     return "eggs";
   });
-  UI.registerHelper("watermelon", function() {
+  Template.registerHelper("watermelon", function() {
     return "seeds";
   });
 
-  UI.registerHelper("daisygetter", function() {
+  Template.registerHelper("daisygetter", function() {
     return this.daisy;
   });
 
   // XXX for debugging
-  UI.registerHelper("debugger", function() {
+  Template.registerHelper("debugger", function() {
     debugger;
   });
 
@@ -221,7 +221,7 @@ Tinytest.add("spacebars-tests - templating_tests - helpers and dots", function(t
     };
   };
 
-  UI.registerHelper("fancyhelper", getFancyObject);
+  Template.registerHelper("fancyhelper", getFancyObject);
 
   Template.test_helpers_a.platypus = 'bill';
   Template.test_helpers_a.warthog = function() {
@@ -555,7 +555,7 @@ Tinytest.add("spacebars-tests - templating_tests - events", function (test) {
 
 Tinytest.add('spacebars-tests - templating_tests - helper typecast Issue #617', function (test) {
 
-  UI.registerHelper('testTypeCasting', function (/*arguments*/) {
+  Template.registerHelper('testTypeCasting', function (/*arguments*/) {
     // Return a string representing the arguments passed to this
     // function, including types. eg:
     // (1, true) -> "[number,1][boolean,true]"
