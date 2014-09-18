@@ -51,7 +51,7 @@ var Runner = function (appDir, options) {
   if (options.httpProxyPort) {
     self.httpProxy = new HttpProxy({
       listenPort: options.httpProxyPort
-    })
+    });
   }
 
   self.mongoRunner = null;
