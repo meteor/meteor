@@ -478,7 +478,11 @@ _.extend(Target.prototype, {
           packages: ['minifiers']
         }).minifiers;
         self.minifyJs(minifiers);
+      }
+      progress.current++;
+      buildmessage.reportProgress(progress);
 
+      if (options.minify) {
         // CSS is minified only for client targets.
         if (self instanceof ClientTarget) {
           self.minifyCss(minifiers);
