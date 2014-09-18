@@ -171,14 +171,16 @@ _.extend(Console.prototype, {
     var stream = process.stdout;
     if (!stream.isTTY) return;
 
-    var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, {
+    var options = {
       complete: '=',
       incomplete: ' ',
       width: PROGRESS_BAR_WIDTH,
       total: 100,
       clear: true,
       stream: stream
-    });
+    };
+
+    var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
     progressBar.start = new Date;
 
     var progress = buildmessage.getRootProgress();
