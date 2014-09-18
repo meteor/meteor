@@ -16,7 +16,12 @@ var Console = function (options) {
   options = options || {};
 
   self._progressBar = null;
+  self._info = null;
 };
+
+PROGRESS_BAR_WIDTH = 20;
+PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
+STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
 
 // This function returns a future which resolves after a timeout. This
 // demonstrates manually resolving futures.
@@ -48,6 +53,17 @@ _.extend(Console.prototype, {
     self._progressBar.terminate();
   },
 
+  _renderProgressBar: function () {
+    var self = this;
+    if (self._progressBar) {
+      self._progressBar.render();
+      if (self._info) {
+        self._progressBar.stream.cursorTo(STATUS_POSITION);
+        self._progressBar.stream.write(' ' + self._info);
+      }
+    }
+  },
+
   enableStatusPoll: function () {
     var self = this;
     Fiber(function () {
@@ -56,17 +72,13 @@ _.extend(Console.prototype, {
         var title = (rootProgress ? rootProgress.getCurrent() : null) || '?';
         //rootProgress.dump(process.stdout);
         //console.log("Job: " + title);
-        if (self._progressBar) {
-          self._progressBar.fmt = self._buildProgressBarFormat(title);
-          self._progressBar.render();
+        if (title != self._info) {
+          self._info = title;
+          self._renderProgressBar();
         }
         sleep(500);
       }
     }).run();
-  },
-
-  _buildProgressBarFormat: function (status) {
-    return '[:bar] :percent :etas   ' + status;
   },
 
   info: function(/*arguments*/) {
@@ -124,7 +136,7 @@ _.extend(Console.prototype, {
     }
 
     if (progressBar) {
-      progressBar.render();
+      self._renderProgressBar();
     }
   },
 
@@ -152,12 +164,16 @@ _.extend(Console.prototype, {
       return;
     }
 
-    var progressBar = new ProgressBar(self._buildProgressBarFormat(''), {
+    var stream = process.stdout;
+    if (!stream.isTTY) return;
+
+    var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, {
       complete: '=',
       incomplete: ' ',
-      width: 20,
+      width: PROGRESS_BAR_WIDTH,
       total: 100,
-      clear: true
+      clear: true,
+      stream: stream
     });
     progressBar.start = new Date;
 
@@ -184,7 +200,7 @@ _.extend(Console.prototype, {
       // XXX: isNan
       //if (fraction > 0 && fraction <= 1.0) {
       progressBar.curr = Math.floor(fraction * progressBar.total);
-      progressBar.render();
+      self._renderProgressBar();
       //}
     });
 
