@@ -194,10 +194,10 @@ Blaze._TemplateWith = function (arg, contentBlock) {
     };
   }
 
-  // This is a little messy.  When we compile `{{> UI.contentBlock}}`, we
+  // This is a little messy.  When we compile `{{> Template.contentBlock}}`, we
   // wrap it in Blaze._InOuterTemplateScope in order to skip the intermediate
   // parent Views in the current template.  However, when there's an argument
-  // (`{{> UI.contentBlock arg}}`), the argument needs to be evaluated
+  // (`{{> Template.contentBlock arg}}`), the argument needs to be evaluated
   // in the original scope.  There's no good order to nest
   // Blaze._InOuterTemplateScope and Spacebars.TemplateWith to achieve this,
   // so we wrap argFunc to run it in the "original parentView" of the
@@ -228,8 +228,8 @@ Blaze._InOuterTemplateScope = function (templateView, contentFunc) {
 
   // Hack so that if you call `{{> foo bar}}` and it expands into
   // `{{#with bar}}{{> foo}}{{/with}}`, and then `foo` is a template
-  // that inserts `{{> UI.contentBlock}}`, the data context for
-  // `UI.contentBlock` is not `bar` but the one enclosing that.
+  // that inserts `{{> Template.contentBlock}}`, the data context for
+  // `Template.contentBlock` is not `bar` but the one enclosing that.
   if (parentView.__isTemplateWith)
     parentView = parentView.parentView;
 

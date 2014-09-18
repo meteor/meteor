@@ -514,7 +514,7 @@ Blaze.insert = function (view, parentElement, nextNode) {
               "rendered content in the call to Blaze.render.");
 
   if (! (view && (view._domrange instanceof Blaze._DOMRange)))
-    throw new Error("Expected template rendered with UI.render");
+    throw new Error("Expected template rendered with Blaze.render");
 
   view._domrange.attach(parentElement, nextNode);
 };
