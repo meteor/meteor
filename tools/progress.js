@@ -46,7 +46,12 @@ _.extend(Progress.prototype, {
 
     var state = _.clone(self._selfState);
     state.done = true;
-
+    if (state.current === 0) {
+      state.current = 1;
+    }
+    if (!state.end || state.end > state.current) {
+      state.end = state.current;
+    }
     self.reportProgress(state);
   },
 
