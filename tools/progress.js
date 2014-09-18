@@ -22,6 +22,8 @@ var Progress = function (options) {
 
   self._title = options.title;
 
+  self._forkJoin = options.forkJoin;
+
   self._completedChildren = { current: 0, end: 0};
   self._activeChildTasks = [];
   self._allTasks = [];
@@ -45,10 +47,20 @@ _.extend(Progress.prototype, {
     self.reportProgress(state);
   },
 
+  // Tries to determine which is the 'current' job in the tree
+  // This is very heuristical... we use some hints, like:
+  // don't descend into fork-join jobs; we know these execute concurrently,
+  // so we assume the top-level task has the title
+  // i.e. "Downloading packages", not "downloading supercool-1.0"
   getCurrent: function () {
     var self = this;
 
     if (self._selfActive) {
+      return self._title;
+    }
+
+    if (self._forkJoin) {
+      // Don't descend into fork-join tasks
       return self._title;
     }
 

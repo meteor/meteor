@@ -229,7 +229,7 @@ _updateServerPackageData = function (cachedServerData, options) {
       start = syncToken.packages;
       state.end = Date.now() - start;
     }
-    // XXX: Is packages the best progess indicator?
+    // XXX: Is packages the best progress indicator?
     state.current = syncToken.packages - start;
     buildmessage.reportProgress(state);
 

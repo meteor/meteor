@@ -262,13 +262,17 @@ var enterJob = function (options, f) {
     if (!parentProgress) {
       parentProgress = rootProgress;
     }
-    var childOptions = {};
+    var progressOptions = {};
+    // XXX: Just pass all the options?
     if (typeof options === "object") {
       if (options.title) {
-        childOptions.title = options.title;
+        progressOptions.title = options.title;
+      }
+      if (options.forkJoin) {
+        progressOptions.forkJoin = options.forkJoin;
       }
     }
-    var progress = parentProgress.addChildTask(childOptions);
+    var progress = parentProgress.addChildTask(progressOptions);
   }
 
   currentProgress.withValue(progress, function () {
@@ -451,6 +455,8 @@ var forkJoin = function (options, iterable, fn) {
   }
 
   var results = [];
+
+  options.forkJoin = true;
 
   enterJob(options, function () {
     var job = currentJob.get();
