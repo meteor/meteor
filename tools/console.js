@@ -23,6 +23,10 @@ PROGRESS_BAR_WIDTH = 20;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
 
+// Message to show when we don't know what we're doing
+// XXX: ? FALLBACK_STATUS = 'Pondering';
+FALLBACK_STATUS = '';
+
 // This function returns a future which resolves after a timeout. This
 // demonstrates manually resolving futures.
 function sleep(ms) {
@@ -59,7 +63,7 @@ _.extend(Console.prototype, {
       self._progressBar.render();
       if (self._info) {
         self._progressBar.stream.cursorTo(STATUS_POSITION);
-        self._progressBar.stream.write(' ' + self._info);
+        self._progressBar.stream.write(chalk.bold(' ' + self._info));
       }
     }
   },
@@ -69,7 +73,7 @@ _.extend(Console.prototype, {
     Fiber(function () {
       while (true) {
         var rootProgress = buildmessage.getRootProgress();
-        var title = (rootProgress ? rootProgress.getCurrent() : null) || '?';
+        var title = (rootProgress ? rootProgress.getCurrent() : null) || FALLBACK_STATUS;
         //rootProgress.dump(process.stdout);
         //console.log("Job: " + title);
         if (title != self._info) {
