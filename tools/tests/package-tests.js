@@ -209,6 +209,7 @@ selftest.define("add packages to app", ["net"], function () {
   run.match("accounts-base: A user account system");
   run.expectExit(0);
 
+
   checkPackages(s,
                 ["meteor-platform", "accounts-base"]);
 
@@ -241,7 +242,7 @@ selftest.define("add packages to app", ["net"], function () {
                 ["accounts-base",  "depends-on-plugin",
                  "meteor-platform",
                  "contains-plugin"]);
-
+  
   run = s.run("remove", "depends-on-plugin");
   run.match("removed contains-plugin");
   run.match("removed depends-on-plugin");
@@ -251,17 +252,18 @@ selftest.define("add packages to app", ["net"], function () {
                 ["accounts-base",
                  "meteor-platform"]);
   run = s.run("list");
-  run.match("meteor-platform");
   run.match("accounts-base");
-
+  run.match("meteor-platform");
+  
+  
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   s.cp('programs/empty/package2.js', 'programs/empty/package.js');
 
   // Don't add the file to packages.
   run = s.run("list");
-  run.match("meteor-platform");
   run.match("accounts-base");
+  run.match("meteor-platform");
 
   // Do add the file to versions.
   checkVersions(s,
