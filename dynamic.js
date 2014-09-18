@@ -19,12 +19,12 @@ Template.__dynamic.dataContextPresent = function () {
 Template.__dynamic.checkContext = function () {
   if (! _.has(this, "template")) {
     throw new Error("Must specify name in the 'template' argument " +
-                    "to {{> UI.dynamic}}.");
+                    "to {{> Template.dynamic}}.");
   }
 
   _.each(this, function (v, k) {
     if (k !== "template" && k !== "data") {
-      throw new Error("Invalid argument to {{> UI.dynamic}}: " +
+      throw new Error("Invalid argument to {{> Template.dynamic}}: " +
                       k);
     }
   });
