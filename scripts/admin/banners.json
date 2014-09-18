@@ -7,9 +7,9 @@
        }
     },
     {
-      "versions": ["0.9.2"],
+      "versions": ["0.9.2", "0.9.2.1"],
       "banner": {
-        "text": "=> Meteor 0.9.2.1 fixes the version numbers of several packages, making\n   them compatible with other non-core packages.\n\n   Meteor 0.9.2.1 is being downloaded in the background. You can update\n   to it by running 'meteor update'."
+        "text": "=> Meteor 0.9.2.2 fixes an 0.9.2 regression that causes the Meteor\n   development server to listen on localhost by default instead of 0.0.0.0.\n\n   Meteor 0.9.2.2 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
       }
     }
   ]
