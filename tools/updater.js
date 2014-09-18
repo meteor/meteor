@@ -135,9 +135,6 @@ var maybeShowBanners = function () {
 var updateMeteorToolSymlink = function () {
   buildmessage.assertInCapture();
 
-  // XXX: TODO?
-  var progress = null;
-
   // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
@@ -173,8 +170,7 @@ var updateMeteorToolSymlink = function () {
             packageName: latestReleaseToolPackage,
             version: latestReleaseToolVersion,
             architectures: [archinfo.host()],
-            silent: true,
-            progress: progress
+            silent: true
           });
         });
         _.each(latestRelease.packages, function (pkgVersion, pkgName) {
@@ -185,8 +181,7 @@ var updateMeteorToolSymlink = function () {
               packageName: pkgName,
               version: pkgVersion,
               architectures: [archinfo.host()],
-              silent: true,
-              progress: progress
+              silent: true
             });
           });
         });

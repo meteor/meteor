@@ -1691,9 +1691,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  // XXX: Track progress?
-  var progress = null;
-
   // bundler.bundle is never called by uniload, so it always uses
   // the complete catalog.
   var whichCatalog = catalog.complete;
@@ -1726,7 +1723,7 @@ exports.bundle = function (options) {
 
     var packageLoader = project.project.getPackageLoader();
     var downloaded = tropohouse.default.downloadMissingPackages(
-      project.project.dependencies, { serverArch: serverArch, progress: progress });
+      project.project.dependencies, { serverArch: serverArch });
 
     if (_.keys(downloaded).length !==
         _.keys(project.project.dependencies).length) {

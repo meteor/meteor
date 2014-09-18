@@ -291,8 +291,6 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   var sources = [];
   var watchSet = inputSourceArch.watchSet.clone();
 
-  // XXX: Track progress?
-
   // Download whatever packages we may need for this compilation. (Since we're
   // compiling, we're always targeting the host; we can cross-link but we can't
   // cross-compile!)
@@ -773,8 +771,6 @@ compiler.compile = function (packageSource, options) {
 
   options = _.extend({ officialBuild: false }, options);
 
-  var progress = options.progress;
-
   // Determine versions of build-time dependencies
   var buildTimeDeps = determineBuildTimeDependencies(packageSource, {
     ignoreProjectDeps: options.ignoreProjectDeps
@@ -792,7 +788,7 @@ compiler.compile = function (packageSource, options) {
         versions: buildTimeDeps.pluginDependencies[info.name],
         catalog: packageSource.catalog
       });
-      loader.downloadMissingPackages({serverArch: archinfo.host(), progress: progress });
+      loader.downloadMissingPackages({serverArch: archinfo.host() });
 
       var buildResult = bundler.buildJsImage({
         name: info.name,

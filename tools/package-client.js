@@ -222,7 +222,7 @@ _updateServerPackageData = function (cachedServerData, options) {
     return ret;
   }
 
-  // Provide some progress indication
+  // Provide some progress indication for connection
   // XXX though it is just a hack
   state.current = 1;
   buildmessage.reportProgress(state);

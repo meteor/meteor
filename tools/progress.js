@@ -24,6 +24,8 @@ var Progress = function (options) {
 
   self._forkJoin = options.forkJoin;
 
+  // XXX: Rationalize this; we probably don't need _completedChildren
+  // XXX: or _activeChildTasks (?)
   self._completedChildren = { current: 0, end: 0};
   self._activeChildTasks = [];
   self._allTasks = [];
@@ -93,6 +95,7 @@ _.extend(Progress.prototype, {
     return child;
   },
 
+  // Dumps the tree, for debug
   dump: function (stream, prefix) {
     var self = this;
 
@@ -129,6 +132,7 @@ _.extend(Progress.prototype, {
     self._watchers.push(watcher);
   },
 
+  // Notifies watchers & parents
   _notifyState: function () {
     var self = this;
 
@@ -143,6 +147,7 @@ _.extend(Progress.prototype, {
     }
   },
 
+  // Recomputes state, incorporating children's states
   _computeTotalState: function () {
     var self = this;
 
@@ -180,6 +185,7 @@ _.extend(Progress.prototype, {
     return state;
   },
 
+  // Called by a child when its state changes
   _reportChildState: function (child, state) {
     var self = this;
 
