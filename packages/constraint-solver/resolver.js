@@ -359,27 +359,24 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 //    new PackageVersion.Constraint("pacakgeA@=2.1.0")
 ConstraintSolver.Constraint = function (name, versionString) {
   var self = this;
-
-  if (versionString !== undefined) {
-    _.extend(self,
-             PackageVersion.parseVersionConstraint(versionString));
-    self.name = name;
-  } else {
-    // borrows the structure from the parseVersionConstraint format:
-    // - type - String [compatible-with|exactly|any-reasonable]
-    // - version - String - meteor version string
-    _.extend(self, PackageVersion.parseConstraint(name));
+  if (versionString) {
+    name = name + "@" + versionString;
   }
-  // See comment in UnitVersion constructor.
-  if (self.version)
-    self.version = self.version.replace(/\+.*$/, '');
+
+  // See comment in UnitVersion constructor. We want to strip out build IDs
+  // because the code they represent is considered equivalent.
+  _.extend(self, PackageVersion.parseConstraint(name, {
+    removeBuildIDs: true,
+    archesOK: true
+  }));
+
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
   var self = this;
   options = options || {};
   var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
-  return name + "@" + PackageVersion.constraintToVersionString(self);
+  return name + "@" + self.constraintString;
 };
 
 
@@ -393,69 +390,73 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
                 candidateUV.name);
   }
 
-  if (self.type === "any-reasonable") {
-    // Non-prerelease versions are always reasonable, and if we are OK with
-    // using RCs all the time, then they are reasonable too.
-    if (!/-/.test(candidateUV.version) ||
-        resolveContext.useRCsOK)
-      return true;
+  return _.some(self.constraints, function (currConstraint) {
+     if (currConstraint.type === "any-reasonable") {
+      // Non-prerelease versions are always reasonable, and if we are OK with
+      // using RCs all the time, then they are reasonable too.
+      if (!/-/.test(candidateUV.version) ||
+          resolveContext.useRCsOK)
+        return true;
 
-    // Is it a pre-release version that was explicitly mentioned at the top
-    // level?
-    if (_.has(resolveContext.topLevelPrereleases, self.name) &&
-        _.has(resolveContext.topLevelPrereleases[self.name],
-               candidateUV.version)) {
-      return true;
-    }
+      // Is it a pre-release version that was explicitly mentioned at the top
+      // level?
+      if (_.has(resolveContext.topLevelPrereleases, self.name) &&
+          _.has(resolveContext.topLevelPrereleases[self.name],
+                candidateUV.version)) {
+        return true;
+      }
 
-    // Otherwise, not this pre-release!
-    return false;
-  }
-
-  if (self.type === "exactly") {
-    return self.version === candidateUV.version;
-  }
-
-  if (self.type !== "compatible-with") {
-    throw Error("Unknown constraint type: " + self.type);
-  }
-
-  // If you are asking for a pre-release, you need to get exactly that one.
-  // (@1.2.3-rc1 does not match 1.2.4.)
-  if (/-/.test(self.version)) {
-    return self.version === candidateUV.version;
-  }
-
-  // If you're not asking for a pre-release (and you are not in pre-releases-OK
-  // mode), you'll only get it if it was a top level explicit mention (eg, in
-  // the release).
-  if (/-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
-    if (self.version === candidateUV.version)
-      return true;
-    if (!_.has(resolveContext.topLevelPrereleases, self.name) ||
-        !_.has(resolveContext.topLevelPrereleases[self.name],
-               candidateUV.version)) {
+      // Otherwise, not this pre-release!
       return false;
     }
-  }
 
-  // If the candidate version is less than the version named in the constraint,
-  // we are not satisfied.
-  if (PackageVersion.lessThan(candidateUV.version, self.version))
-    return false;
+    if (currConstraint.type === "exactly") {
+      return currConstraint.version === candidateUV.version;
+    }
 
-  var myECV = resolver.getEarliestCompatibleVersion(self.name, self.version);
-  // If the constraint is "@1.2.3" and 1.2.3 doesn't exist, then nothing can
-  // match. This is because we don't know the ECV (compatibility class) of
-  // 1.2.3!
-  if (!myECV)
-    return false;
+    if (currConstraint.type !== "compatible-with") {
+      throw Error("Unknown constraint type: " + currConstraint.type);
+    }
 
-  // To be compatible, the two versions must have the same
-  // earliestCompatibleVersion. If the earliestCompatibleVersions haven't been
-  // overridden from their default, this means that the two versions have the
-  // same major version number.
-  return myECV === candidateUV.earliestCompatibleVersion;
+    // If you are asking for a pre-release, you need to get exactly that one.
+    // (@1.2.3-rc1 does not match 1.2.4.)
+    if (/-/.test(currConstraint.version)) {
+      return currConstraint.version === candidateUV.version;
+    }
+
+    // If you're not asking for a pre-release (and you are not in pre-releases-OK
+    // mode), you'll only get it if it was a top level explicit mention (eg, in
+    // the release).
+    if (/-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
+      if (currConstraint.version === candidateUV.version)
+        return true;
+      if (!_.has(resolveContext.topLevelPrereleases, self.name) ||
+          !_.has(resolveContext.topLevelPrereleases[self.name],
+                 candidateUV.version)) {
+        return false;
+      }
+    }
+
+    // If the candidate version is less than the version named in the constraint,
+    // we are not satisfied.
+    if (PackageVersion.lessThan(candidateUV.version, currConstraint.version))
+      return false;
+
+    var myECV = resolver.getEarliestCompatibleVersion(
+      self.name, currConstraint.version);
+    // If the constraint is "@1.2.3" and 1.2.3 doesn't exist, then nothing can
+    // match. This is because we don't know the ECV (compatibility class) of
+    // 1.2.3!
+    if (!myECV)
+      return false;
+
+    // To be compatible, the two versions must have the same
+    // earliestCompatibleVersion. If the earliestCompatibleVersions haven't been
+    // overridden from their default, this means that the two versions have the
+    // same major version number.
+    return myECV === candidateUV.earliestCompatibleVersion;
+  });
+
 };
 
 // An object that records the general context of a resolve call. It can be

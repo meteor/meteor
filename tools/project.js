@@ -270,10 +270,14 @@ _.extend(Project.prototype, {
     // self.constraints variable is always up to date.
     // Note that two parts of the "add" command run code that matches this.
     _.each(self.constraints, function (constraint, packageName) {
-      allDeps.push(_.extend({packageName: packageName},
-                            utils.parseVersionConstraint(constraint)));
+      var oldConstraint = "";
+      if (constraint) {
+        oldConstraint = "@" + constraint;
+      }
+      allDeps.push(
+        _.extend({packageName: packageName},
+                 utils.parseConstraint(packageName + oldConstraint)));
     });
-
 
     // Now we have to go through the programs directory, go through each of the
     // programs, get their dependencies and use them. (We could have memorized
@@ -294,20 +298,23 @@ _.extend(Project.prototype, {
         programSource.initFromPackageDir(programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {
           _.each(sourceUnibuild.uses, function (use) {
-            var constraint = use.constraint || null;
-            allDeps.push(_.extend({packageName: use.package},
-                                  utils.parseVersionConstraint(constraint)));
+            var oldConstraint = "";
+            if (use.constraint) {
+              oldConstraint = "@" + use.constraint;
+            }
+            allDeps.push(
+              _.extend({packageName: use.package},
+                       utils.parseConstraint(use.packageName + oldConstraint)));
+
           });
         });
       });
-
     });
-
     // Finally, each release package is a weak exact constraint. So, let's add
     // those.
     _.each(releasePackages, function(version, name) {
-      allDeps.push({packageName: name, version: version, weak: true,
-                    type: 'exactly'});
+      allDeps.push({packageName: name, weak: true, constraints: [
+          { version: version, type: 'exactly' } ]});
     });
 
     // This is an UGLY HACK that has to do with our requirement to have a
@@ -316,7 +323,8 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", version: null, type: 'any-reasonable'});
+      allDeps.push({packageName: "ctl", constraints: [
+        { version: null, type: 'any-reasonable' } ]});
     }
 
     return allDeps;

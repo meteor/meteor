@@ -465,7 +465,8 @@ _.extend(CompleteCatalog.prototype, {
         // Constraints for uniload should just be packages with no version
         // constraint and one local version (since they should all be in core).
         if (!_.has(constraint, 'packageName') ||
-            constraint.type !== 'any-reasonable') {
+            constraint.constraints.length > 1 ||
+            constraint.constraints[0].type !== 'any-reasonable') {
           throw Error("Surprising constraint: " + JSON.stringify(constraint));
         }
         if (!_.has(self.versions, constraint.packageName)) {
@@ -511,6 +512,10 @@ _.extend(CompleteCatalog.prototype, {
         deps.push(constraint.packageName);
       }
       delete constraint.weak;
+      delete constraint.constraintString;
+if (_.has(constraint, "version")) {
+  console.trace(constraint);
+}
       constr.push(constraint);
     });
 
@@ -525,15 +530,18 @@ _.extend(CompleteCatalog.prototype, {
       // for now: we can't use any packages that are of different versions from
       // what we've already decided from the project!
       _.each(project.project.getVersions(), function (version, name) {
-        constr.push({packageName: name, version: version, type: 'exactly'});
+        constr.push({packageName: name, constraints: [
+          { version: version, type: 'exactly'}] });
       });
     }
 
     // Local packages can only be loaded from the version we have the source
     // for: that's a weak exact constraint.
     _.each(self.packageSources, function (packageSource, name) {
-      constr.push({packageName: name, version: packageSource.version,
-                   type: 'exactly'});
+      constr.push({packageName: name,
+                   constraints: [
+                  { version: packageSource.version,
+                   type: 'exactly' }] });
     });
 
     var patience = new utils.Patience({

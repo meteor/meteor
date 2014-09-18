@@ -161,9 +161,10 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   check(constraints, [{
     packageName: String,
-    version: Match.OneOf(String, null),
-    type: String,
-    constraintString: Match.Optional(Match.OneOf(String, null))
+    name: Match.Optional(String),
+    constraints: [{
+      version: Match.OneOf(String, null),
+      type: String }]
   }]);
 
   check(options, {
@@ -302,7 +303,13 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   });
 
   _.each(inputConstraints, function (constraint) {
-    var constraintStr = PackageVersion.constraintToVersionString(constraint);
+    var constraintStr = constraint.constraintString;
+    if (!constraintStr) {
+      constraintStr =  constraint.version ?
+        constraint.version : "";
+      if (constraint.type === "exactly")
+        constraintStr = "=" + constraintStr;
+    }
     _.each(self._unibuildsForPackage(constraint.packageName), function (unibuildName) {
       constraints.push(self.resolver.getConstraint(unibuildName, constraintStr));
     });

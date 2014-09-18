@@ -1890,16 +1890,6 @@ main.registerCommand({
     return 1;
   }
 
-  // For every package name specified, add it to our list of package
-  // constraints. Don't run the constraint solver until you have added all of
-  // them -- add should be an atomic operation regardless of the package
-  // order. Even though the package file should specify versions of its inputs,
-  // we don't specify these constraints until we get them back from the
-  // constraint solver.
-  var constraints = _.map(args, function (packageReq) {
-    return utils.parseConstraint(packageReq);
-  });
-
   _.each(constraints, function (constraint) {
     // Check that the package exists.
     doOrDie(function () {
@@ -1911,17 +1901,19 @@ main.registerCommand({
     });
 
     // If the version was specified, check that the version exists.
-    if (constraint.version !== null) {
-      var versionInfo = doOrDie(function () {
-        return catalog.complete.getVersion(constraint.name, constraint.version);
-      });
-      if (! versionInfo) {
-        process.stderr.write(
-          constraint.name + "@" + constraint.version  + ": no such version\n");
-        failed = true;
-        return;
+    _.each(constraint.constraint, function (constr) {
+      if (constr.version !== null) {
+        var versionInfo = doOrDie(function () {
+          return catalog.complete.getVersion(constraint.name, constr.version);
+        });
+        if (! versionInfo) {
+          process.stderr.write(
+            constraint.name + "@" + constr.version  + ": no such version\n");
+          failed = true;
+          return;
+        }
       }
-    }
+    });
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function, but don't
     // fail. Rejecting the entire command because a part of it is a no-op is
@@ -1956,9 +1948,15 @@ main.registerCommand({
         // Now remove the old constraint from what we're going to calculate
         // with.
         // This matches code in calculateCombinedConstraints.
-        var oldConstraint = _.extend(
-          {packageName: constraint.name},
-          utils.parseVersionConstraint(packages[constraint.name]));
+        // XXX: This is the weirdest hack, all around.
+        var oldConstraint = "";
+        if (constraint.constraintString) {
+          oldConstraint = "@" + packages[constraint.name];
+        }
+        oldConstraint =
+          _.extend({packageName: constraint.name},
+                   utils.parseConstraint(constraint.name + oldConstraint));
+
         var removed = false;
         for (var i = 0; i < allPackages.length; ++i) {
           if (_.isEqual(oldConstraint, allPackages[i])) {
@@ -1980,10 +1978,13 @@ main.registerCommand({
 
     // Also, add it to all of our combined dependencies.
     // This matches code in project.calculateCombinedConstraints.
-    var constraintForResolver = _.extend(
-      { packageName: constraint.name },
-      utils.parseVersionConstraint(constraint.constraintString));
-    allPackages.push(constraintForResolver);
+    if (constraint.constraintString) {
+      oldConstraint = "@" + packages[constraint.name];
+    }
+    allPackages.push(
+      _.extend({packageName: constraint.name},
+               utils.parseConstraint(constraint.name + oldConstraint)));
+
   });
 
   // If the user asked for invalid packages, then the user probably expects a
@@ -2042,17 +2043,13 @@ main.registerCommand({
   if (ret !== 0) return ret;
 
   // Show the user the messageLog of the packages that they installed.
+  // (XXX: this will be rewritten pending geoff's feedback on packaging UX)
   process.stdout.write("\n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
     var versionRecord = doOrDie(function () {
       return catalog.complete.getVersion(constraint.name, version);
     });
-    if (constraint.constraintString !== null &&
-        version !== constraint.version) {
-      process.stdout.write("Added " + constraint.name + " at version " + version +
-                           " to avoid conflicting dependencies.\n");
-    }
     process.stdout.write(constraint.name +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :

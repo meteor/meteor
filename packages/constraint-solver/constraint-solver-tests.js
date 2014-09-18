@@ -202,6 +202,58 @@ Tinytest.add("constraint solver - no results", function (test) {
   });
 });
 
+
+Tinytest.add("constraint solver - any-of constraint", function (test) {
+  var resolver = makeResolver([
+    ["one-of", "1.0.0", {indirect: "1.0.0 || 2.0.0"}],
+    ["important", "1.0.0", {indirect: "2.0.0"}],
+    ["indirect", "1.0.0"],
+    ["indirect", "2.0.0"]
+  ]);
+
+  testWithResolver(test, resolver, function (t, FAIL) {
+    t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
+      "one-of": "1.0.0",
+      "important": "1.0.0",
+      "indirect": "2.0.0"
+    }, { _testing: true });
+  });
+
+  resolver = makeResolver([
+    ["one-of", "1.0.0", {indirect: "1.0.0 || 2.0.0"}],
+    ["one-of-equal", "1.0.0", {indirect: "1.0.0 || =2.0.1"}],
+    ["important", "1.0.0", {indirect: "1.0.0"}],
+    ["indirect", "1.0.0"],
+    ["indirect", "2.0.0"],
+    ["indirect", "2.0.1"]
+  ]);
+
+  testWithResolver(test, resolver, function (t, FAIL) {
+    t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
+      "one-of": "1.0.0",
+      "important": "1.0.0",
+      "indirect": "1.0.0"
+    }, { _testing: true });
+
+    t({ "one-of-equal": "1.0.0", "indirect": "2.0.0" }, {
+      "one-of-equal": "1.0.0",
+      "indirect": "2.0.1"
+    }, { _testing: true });
+
+    t({ "one-of-equal": "1.0.0", "one-of": "1.0.0" }, {
+      "one-of-equal": "1.0.0",
+      "one-of": "1.0.0",
+      "indirect": "1.0.0"
+    }, { _testing: true });
+
+    FAIL({"one-of-equal": "1.0.0",
+          "one-of": "1.0.0",
+          "indirect" : "=2.0.0"},
+         /constraints on indirect[^]+top level[^]+one-of-equal@1.0.0/
+    );
+  });
+});
+
 Tinytest.add("constraint solver - previousSolution", function (test) {
   testWithResolver(test, defaultResolver, function (t, FAIL) {
     // This is what you get if you lock sparky-forms to 1.0.0.
@@ -251,6 +303,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
     }});
   });
 });
+
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   var versions = defaultResolver.resolve(["sparkle"], [], { _testing: true }).answer;

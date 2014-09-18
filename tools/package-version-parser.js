@@ -113,10 +113,12 @@ PV.compare = function (versionOne, versionTwo) {
 //    version has been explicitly selected (which at this stage in the game
 //    means they are mentioned in a top-level constraint in the top-level
 //    call to the resolver).
+//
+// Options:
+//    removeBuildIDs:  Remove the build ID at the end of the version.
 PV.parseVersionConstraint = function (versionString, options) {
   options = options || {};
-  var versionDesc = { version: null, type: "any-reasonable",
-                      constraintString: versionString };
+  var versionDesc = { version: null, type: "any-reasonable" };
 
   if (!versionString) {
     return versionDesc;
@@ -131,6 +133,10 @@ PV.parseVersionConstraint = function (versionString, options) {
 
   // This will throw if the version string is invalid.
   PV.getValidServerVersion(versionString);
+
+  if (options.removeBuildIDs) {
+    versionString = versionString.replace(/\+.*$/, '');
+   }
 
   versionDesc.version = versionString;
 
@@ -180,8 +186,6 @@ PV.parseConstraint = function (constraintString, options) {
 
   var splitted = constraintString.split('@');
 
-  var constraint = { name: "", version: null,
-                     type: "any-reasonable", constraintString: null };
   var name = splitted[0];
   var versionString = splitted[1];
 
@@ -189,9 +193,17 @@ PV.parseConstraint = function (constraintString, options) {
     // throw error complaining about @
     PV.validatePackageName('a@');
   }
-  PV.validatePackageName(name);
 
-  constraint.name = name;
+  if (options.archesOK) {
+    var newNames = name.split('#');
+    if (newNames.length > 2) {
+      // It is invalid and should register as such. This will throw.
+      PV.validatePackageName(name);
+    }
+    PV.validatePackageName(newNames[0]);
+  } else {
+    PV.validatePackageName(name);
+  }
 
   if (splitted.length === 2 && !versionString) {
     throwVersionParserError(
@@ -200,10 +212,28 @@ PV.parseConstraint = function (constraintString, options) {
         "the version.");
   }
 
-  if (versionString) {
-    __.extend(constraint,
-              PV.parseVersionConstraint(versionString, options));
+  var constraint = {
+    name: name
+  };
+
+  // Before we parse through versionString, we save it for future output.
+  constraint.constraintString = versionString;
+
+  // If we did not specify a version string, then our only constraint is
+  // any-reasonable, so we are going to return that.
+  if (!versionString) {
+    constraint.constraints =
+      [ { version: null, type: "any-reasonable" } ];
+    return constraint;
   }
+
+  // Let's parse out the versionString.
+  var versionConstraints = versionString.split(' || ');
+  constraint.constraints = [];
+  __.each(versionConstraints, function (versionCon) {
+    constraint.constraints.push(
+      PV.parseVersionConstraint(versionCon, options));
+  });
 
   return constraint;
 };
@@ -238,19 +268,6 @@ var throwVersionParserError = function (message) {
   throw e;
 };
 
-// XXX if we were better about consistently only using functions in this file,
-// we could just do this using the constraintString field
-PV.constraintToVersionString = function (parsedConstraint) {
-  if (parsedConstraint.type === "any-reasonable")
-    return "";
-  if (parsedConstraint.type === "compatible-with")
-    return parsedConstraint.version;
-  if (parsedConstraint.type === "exactly")
-    return "=" + parsedConstraint.version;
-  throw Error("Unknown constraint type: " + parsedConstraint.type);
-};
-
 PV.constraintToFullString = function (parsedConstraint) {
-  return parsedConstraint.name + "@" + PV.constraintToVersionString(
-    parsedConstraint);
+  return parsedConstraint.name + "@" + parsedConstraint.constraintString;
 };

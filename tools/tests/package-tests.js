@@ -251,8 +251,8 @@ selftest.define("add packages to app", ["net"], function () {
                 ["accounts-base",
                  "meteor-platform"]);
   run = s.run("list");
-  run.match("meteor-platform");
   run.match("accounts-base");
+  run.match("meteor-platform");
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
@@ -260,8 +260,8 @@ selftest.define("add packages to app", ["net"], function () {
 
   // Don't add the file to packages.
   run = s.run("list");
-  run.match("meteor-platform");
   run.match("accounts-base");
+  run.match("meteor-platform");
 
   // Do add the file to versions.
   checkVersions(s,
@@ -614,8 +614,8 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.stop();
 
   run = s.run('list');
-  run.match("meteor");
   run.match("accounts-base");
+  run.match("meteor");
 
   // What about test-packages?
   s.cd('packages');
