@@ -137,6 +137,7 @@ _.extend(RemoteCatalog.prototype, {
   initialize: function (options) {
     var self = this;
 
+    options = options || {};
     // We should to figure out if we are intending to connect to the package server.
     self.offline = options.offline ? options.offline : false;
 
