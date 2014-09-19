@@ -275,7 +275,7 @@ _.extend(Project.prototype, {
         oldConstraint = "@" + constraint;
       }
       allDeps.push(
-        _.extend({packageName: packageName},
+        _.extend({name: packageName},
                  utils.parseConstraint(packageName + oldConstraint)));
     });
 
@@ -302,9 +302,7 @@ _.extend(Project.prototype, {
             if (use.constraint) {
               oldConstraint = "@" + use.constraint;
             }
-            allDeps.push(
-              _.extend({packageName: use.package},
-                       utils.parseConstraint(use.packageName + oldConstraint)));
+            allDeps.push(utils.parseConstraint(use.package + oldConstraint));
 
           });
         });
@@ -313,7 +311,9 @@ _.extend(Project.prototype, {
     // Finally, each release package is a weak exact constraint. So, let's add
     // those.
     _.each(releasePackages, function(version, name) {
-      allDeps.push({packageName: name, weak: true, constraints: [
+      allDeps.push({name: name, weak: true,
+        constraintStr: "=" + name,
+        constraints: [
           { version: version, type: 'exactly' } ]});
     });
 
@@ -323,8 +323,7 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", constraints: [
-        { version: null, type: 'any-reasonable' } ]});
+      allDeps.push(utils.parseConstraint("ctl"));
     }
 
     return allDeps;

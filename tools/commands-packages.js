@@ -1946,18 +1946,15 @@ main.registerCommand({
           process.stdout.write("The version constraint will be removed.\n");
         }
         // Now remove the old constraint from what we're going to calculate
-        // with.
-        // This matches code in calculateCombinedConstraints.
-        // XXX: This is the weirdest hack, all around.
-        var oldConstraint = "";
-        if (constraint.constraintString) {
-          oldConstraint = "@" + packages[constraint.name];
-        }
-        oldConstraint =
-          _.extend({packageName: constraint.name},
-                   utils.parseConstraint(constraint.name + oldConstraint));
-
+        // with. (XXX: This is hacky.)
         var removed = false;
+        var oldC = "";
+        if (packages[constraint.name]) {
+          oldC = "@" + packages[constraint.name];
+        }
+        var oldConstraint = utils.parseConstraint(
+          constraint.name + oldC);
+
         for (var i = 0; i < allPackages.length; ++i) {
           if (_.isEqual(oldConstraint, allPackages[i])) {
             removed = true;
@@ -1967,7 +1964,7 @@ main.registerCommand({
         }
         if (!removed) {
           throw Error("Couldn't find constraint to remove: " +
-                      JSON.stringify(oldConstraint));
+                      JSON.stringify(constraint.constraintString));
         }
       }
     }
@@ -1977,13 +1974,7 @@ main.registerCommand({
     packages[constraint.name] = constraint.constraintString;
 
     // Also, add it to all of our combined dependencies.
-    // This matches code in project.calculateCombinedConstraints.
-    if (constraint.constraintString) {
-      oldConstraint = "@" + packages[constraint.name];
-    }
-    allPackages.push(
-      _.extend({packageName: constraint.name},
-               utils.parseConstraint(constraint.name + oldConstraint)));
+    allPackages.push(constraint);
 
   });
 
@@ -2008,6 +1999,7 @@ main.registerCommand({
         allPackages,
         { previousSolution: versions },
         { ignoreProjectDeps: true });
+
       if ( ! newVersions) {
         // XXX: Better error handling.
         process.stderr.write("Cannot resolve package dependencies.\n");

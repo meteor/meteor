@@ -160,8 +160,8 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   check(dependencies, [String]);
 
   check(constraints, [{
-    packageName: String,
-    name: Match.Optional(String),
+    name: String,
+    constraintString: Match.Optional(Match.OneOf(String, undefined)),
     constraints: [{
       version: Match.OneOf(String, null),
       type: String }]
@@ -187,7 +187,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // were causing crashes, but maybe the real answer is that there shouldn't
   // have been undefineds?
   if (options.previousSolution) {
-    options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
+    options.previousSolution =
+      _.filter(_.flatten(
+        _.map(options.previousSolution, function (version, packageName) {
       return _.map(self._unibuildsForPackage(packageName), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
@@ -303,19 +305,34 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   });
 
   _.each(inputConstraints, function (constraint) {
-    var constraintStr = constraint.constraintString;
-    if (!constraintStr) {
-      constraintStr =  constraint.version ?
-        constraint.version : "";
-      if (constraint.type === "exactly")
-        constraintStr = "=" + constraintStr;
-    }
-    _.each(self._unibuildsForPackage(constraint.packageName), function (unibuildName) {
-      constraints.push(self.resolver.getConstraint(unibuildName, constraintStr));
+    _.each(self._unibuildsForPackage(constraint.name), function (unibuildName) {
+      //XXX: This is kind of dumb -- we make this up, so we can reparse it
+      //later. Todo: clean this up a bit.
+      if (!constraint.constraintString) {
+        var constraintArray = [];
+        _.each(constraint.constraints, function (c) {
+          if (c.type == "exact") {
+            constraintArray.push("+" + c.version);
+          } else if (c.version) {
+            constraintArray.push(c.version)
+          }
+         });
+        if (!_.isEmpty(constraintArray)) {
+         constraint.constraintString =
+           _.reduce(constraintArray,
+            function(x, y) {
+              return x + " || " + y;
+           });
+         } else {
+           constraint.constraintString = "";
+         }
+        }
+      constraints.push(
+        self.resolver.getConstraint(unibuildName, constraint.constraintString));
     });
   });
 
-  return { dependencies: dependencies, constraints: constraints };
+ return { dependencies: dependencies, constraints: constraints };
 };
 
 ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
