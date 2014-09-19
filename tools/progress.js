@@ -58,7 +58,7 @@ _.extend(Progress.prototype, {
     if (state.current === 0) {
       state.current = 1;
     }
-    if (!state.end || state.end > state.current) {
+    if (!state.end || state.end < state.current) {
       state.end = state.current;
     }
     self.reportProgress(state);
