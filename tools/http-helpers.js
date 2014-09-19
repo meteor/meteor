@@ -219,10 +219,10 @@ _.extend(exports, {
 
     var bodyStreamLength = 0;
     if (bodyStream) {
-      // XXX
-      bodyStreamLength += 4000000;
+      // XXX Horrible hack... we need the correct length estimate
+      bodyStreamLength += 8000000;
     }
-    // XXX
+    // XXX A default non-zero resposne size; if much bigger we should provide an estimate
     var responseLength = 128 * 1024;
 
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
