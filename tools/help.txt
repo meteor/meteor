@@ -42,6 +42,9 @@ Options:
   --port, -p       Port to listen on (instead of the default 3000). Also
                    uses port N+1 and a port specified by --app-port.
                    Specify as --port=host:port to bind to a specific interface.
+  --debug-port     Specify a port to enable server-side debugging. The
+                   server will be paused at startup, waiting for incoming
+                   connections from debugger clients on the specified port.
   --mobile-server  Location where mobile builds connect to the Meteor server.
                    Defaults to the host and port that the Meteor server
                    binds to. Can include a URL scheme (for example,
@@ -53,6 +56,27 @@ Options:
   --program        The program in the app to run (Advanced)
   --verbose        Print all output from builds logs.
 
+>>> debug
+Run the project, but suspend the server process for debugging.
+
+Usage: meteor debug [--debug-port <port>] [run options]
+       meteor run --debug-port <port> [run options]
+
+The server process will be suspended just before the first statement of
+server code that would normally execute. In order to continue execution of
+server code, use either the web-based Node Inspector or the command-line
+debugger (further instructions will be printed in the console).
+
+The easiest way to set breakpoints is to use the `debugger` keyword:
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger
+
+The options for 'meteor debug' are identical to those for 'meteor run',
+with one addition:
+
+Options:
+  --debug-port   Port on which the server process debugger should listen
+                 for incoming connections from debugging clients, such as
+                 node-inspector (default 5858).
 
 >>> create
 Create a new project.
@@ -363,6 +387,9 @@ to try the tests against many different browser versions.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --debug-port      Specify a port to enable server-side debugging. The
+                    server will be paused before any tests run, waiting
+                    for incoming connections from debugger clients.
   --mobile-server   If running tests in an emulator or on a mobile device,
                     the location where mobile builds connect to the Meteor
                     server. Defaults to the host and port that the Meteor
