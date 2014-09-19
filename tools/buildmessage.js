@@ -188,7 +188,14 @@ var reportProgressDone = function () {
 
 var getCurrentProgressTracker = function () {
   var progress = currentProgress.get();
-  return progress;
+  return progress ? progress : rootProgress;
+};
+
+
+var addChildTracker = function (title) {
+  var options = {};
+  options.title = title;
+  return getCurrentProgressTracker().addChildTask(options);
 };
 
 // Create a new MessageSet, run `f` with that as the current
@@ -271,6 +278,7 @@ var enterJob = function (options, f) {
     options = {};
   }
 
+  var progress;
   {
     var parentProgress = currentProgress.get();
     if (!parentProgress) {
@@ -286,12 +294,16 @@ var enterJob = function (options, f) {
         progressOptions.forkJoin = options.forkJoin;
       }
     }
-    var progress = parentProgress.addChildTask(progressOptions);
+    progress = parentProgress.addChildTask(progressOptions);
   }
 
   currentProgress.withValue(progress, function () {
     if (!currentMessageSet.get()) {
-      return f();
+      try {
+        return f();
+      } finally {
+        progress.reportProgressDone();
+      }
     }
 
     var job = new Job(options);
@@ -462,7 +474,12 @@ var forkJoin = function (options, iterable, fn) {
     options = {};
   }
 
+  var futures = [];
   var results = [];
+  // XXX: We could check whether the sub-jobs set estimates, and if not
+  // assume they each take the same amount of time and auto-report their completion
+  var errors = [];
+  var firstError = null;
 
   options.forkJoin = true;
 
@@ -471,7 +488,6 @@ var forkJoin = function (options, iterable, fn) {
     var messageSet = currentMessageSet.get();
     var progress = currentProgress.get();
 
-    var futures = [];
     _.each(iterable, function (/*arguments*/) {
       var fut = new Future();
       var fnArguments = arguments;
@@ -480,7 +496,9 @@ var forkJoin = function (options, iterable, fn) {
           currentMessageSet.withValue(messageSet, function () {
             currentJob.withValue(job, function () {
               try {
-                var result = fn.apply(null, fnArguments);
+                var result = enterJob({title: (options.title || '') + ' child' }, function () {
+                  return fn.apply(null, fnArguments);
+                });
                 fut['return'](result);
               } catch (e) {
                 fut['throw'](e);
@@ -491,11 +509,6 @@ var forkJoin = function (options, iterable, fn) {
       }).run();
       futures.push(fut);
     });
-
-    // XXX: We could check whether the sub-jobs set estimates, and if not
-    // assume they each take the same amount of time and auto-report their completion
-    var errors = [];
-    var firstError = null;
 
     _.each(futures, function (future) {
       try {
@@ -511,12 +524,11 @@ var forkJoin = function (options, iterable, fn) {
         }
       }
     });
-
-
-    if (firstError) {
-      throw firstError;
-    }
   });
+
+  if (firstError) {
+    throw firstError;
+  }
 
   return results;
 };
@@ -536,5 +548,6 @@ _.extend(exports, {
   getRootProgress: getRootProgress,
   reportProgress: reportProgress,
   reportProgressDone: reportProgressDone,
-  getCurrentProgressTracker: getCurrentProgressTracker
+  getCurrentProgressTracker: getCurrentProgressTracker,
+  addChildTracker: addChildTracker
 });

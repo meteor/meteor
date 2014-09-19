@@ -155,15 +155,20 @@ _.extend(exports.Tropohouse.prototype, {
 
     var url = buildRecord.build.url;
 
-    buildmessage.capture({}, function () {
-      var packageTarball = httpHelpers.getUrl({
-        url: url,
-        encoding: null,
-        progress: buildmessage.getCurrentProgressTracker(),
-        wait: false
+    var progress = buildmessage.addChildTracker("Download build");
+    try {
+      buildmessage.capture({}, function () {
+        var packageTarball = httpHelpers.getUrl({
+          url: url,
+          encoding: null,
+          progress: progress,
+          wait: false
+        });
+        files.extractTarGz(packageTarball, targetDirectory);
       });
-      files.extractTarGz(packageTarball, targetDirectory);
-    });
+    } finally {
+      progress.reportProgressDone();
+    }
 
     return targetDirectory;
   },

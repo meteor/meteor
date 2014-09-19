@@ -66,8 +66,8 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
+  var progress = buildmessage.addChildTracker("Deploy RPC");
   try {
-    var progress = buildmessage.getCurrentProgressTracker();
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation +
         (options.site ? ('/' + options.site) : ''),
@@ -82,6 +82,8 @@ var deployRpc = function (options) {
       statusCode: null,
       errorMessage: "Connection error (" + e.message + ")"
     };
+  } finally {
+    progress.reportProgressDone();
   }
 
   var response = result.response;

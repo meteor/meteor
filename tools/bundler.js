@@ -499,7 +499,6 @@ _.extend(Target.prototype, {
       buildmessage.reportProgress(progress);
 
       if (options.minify) {
-
         buildmessage.enterJob({title: "Minifying CSS" }, function () {
           // CSS is minified only for client targets.
           if (self instanceof ClientTarget) {
@@ -516,7 +515,6 @@ _.extend(Target.prototype, {
         self._addCacheBusters("js");
         self._addCacheBusters("css");
       }
-      buildmessage.reportProgressDone();
     });
   },
 

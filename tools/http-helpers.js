@@ -238,18 +238,27 @@ _.extend(exports, {
     if (progress) {
       httpHelpers._addProgressEvents(req);
       req.on('progress', function (state) {
-        totalProgress.current = bodyStreamLength + state.current;
-        totalProgress.end = bodyStreamLength + state.end;
-        totalProgress.done = state.done;
+        if (!callbackFired) {
+          totalProgress.current = bodyStreamLength + state.current;
+          totalProgress.end = bodyStreamLength + state.end;
+          totalProgress.done = state.done;
 
-        progress.reportProgress(totalProgress);
+          progress.reportProgress(totalProgress);
+        }
       });
     }
 
-    if (fut)
-      return fut.wait();
-    else
+    if (fut) {
+      try {
+        return fut.wait();
+      } finally {
+        if (progress) {
+          progress.reportProgressDone();
+        }
+      }
+    } else {
       return req;
+    }
   },
 
   // Adds progress callbacks to a request
