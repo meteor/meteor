@@ -272,13 +272,18 @@ PV.constraintToFullString = function (parsedConstraint) {
   return parsedConstraint.name + "@" + parsedConstraint.constraintString;
 };
 
-// Return true if the version was invalid prior to the 0.9.3.
+
+// Return true if the version constraint was invalid prior to 0.9.3
+// (adding ~ and || support)
+//
+// NOTE: this is not used on the client yet. This package is used by the
+// package server to determine what is valid.
 PV.invalidFirstFormatConstraint = function (validConstraint) {
   if (!validConstraint) return false;
   // We can check this easily right now, because we introduced some new
   // characters. Anything with those characters is invalid prior to
   // 0.9.3. XXX: If we ever have to go through these, we should write a more
   // complicated regex.
-  return (/.*~.*/.test(validConstraint) ||
-          /.*\|.*/.test(validConstraint));
-}
+  return (/~/.test(validConstraint) ||
+          /\|/.test(validConstraint));
+};
