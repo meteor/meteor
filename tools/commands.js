@@ -334,7 +334,8 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean }
-  }
+  },
+  pretty: true
 }, function (options) {
 
   // Creating a package is much easier than creating an app, so if that's what
