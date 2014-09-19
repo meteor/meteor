@@ -256,7 +256,10 @@ _.extend(Console.prototype, {
     var self = this;
 
     var progress = self._watching;
-    if (!progress) return;
+    if (!progress) {
+      self.hideProgressBar();
+      return;
+    }
 
     progress.addWatcher(function (state) {
       //console.log(state);
