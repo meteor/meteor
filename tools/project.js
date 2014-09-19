@@ -12,6 +12,7 @@ var buildmessage = require('./buildmessage.js');
 var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var packageVersionParser = require('./package-version-parser.js');
+var Console = require('./console.js').Console;
 
 var project = exports;
 
@@ -220,9 +221,9 @@ _.extend(Project.prototype, {
       } catch (err) {
         // XXX This error handling is bogus. Use buildmessage instead, or
         // something. See also compiler.determineBuildTimeDependencies
-        process.stdout.write(
+        Console.warn(
           "Could not resolve the specified constraints for this project:\n"
-           + (err.constraintSolverError ? err : err.stack) + "\n");
+           + (err.constraintSolverError ? err : err.stack));
         process.exit(1);
       }
 
@@ -236,8 +237,8 @@ _.extend(Project.prototype, {
       });
 
       if (!setV.success) {
-        process.stdout.write(
-          "Could not install all the requested packages.\n");
+        Console.warn(
+          "Could not install all the requested packages.");
         process.exit(1);
       }
 
@@ -356,9 +357,9 @@ _.extend(Project.prototype, {
            options.onDiskPackages[packageName] !== version)) {
         // XXX maybe we shouldn't be letting the constraint solver choose
         // things that don't have the right arches?
-        process.stderr.write("Package " + packageName +
+        Console.warn("Package " + packageName +
                              " has no compatible build for version " +
-                             version + "\n");
+                             version);
         failed = true;
         return;
       }
@@ -389,7 +390,7 @@ _.extend(Project.prototype, {
     if ((!self.muted && !_.isEmpty(versions))
         || options.alwaysShow) {
       _.each(messageLog, function (msg) {
-        process.stdout.write(msg + "\n");
+        Console.info(msg);
       });
 
       // Pay special attention to non-backwards-compatible changes.
@@ -441,11 +442,11 @@ _.extend(Project.prototype, {
       });
 
       if (!_.isEmpty(incompatibleUpdates)) {
-        process.stderr.write(
+        Console.warn(
           "\nThe following packages have been updated to new versions that are not " +
-            "backwards compatible:\n");
-        process.stderr.write(utils.formatList(incompatibleUpdates));
-        process.stderr.write("\n");
+            "backwards compatible:");
+        Console.warn(utils.formatList(incompatibleUpdates));
+        Console.warn("\n");
       };
     }
     return 0;
