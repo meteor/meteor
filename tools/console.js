@@ -32,12 +32,16 @@ var Console = function (options) {
   self.stderr.write = function (msg) {
     self._legacyWrite(LEVEL_WARN, msg);
   };
+
+  self._stream =process.stdout;
 };
 
 
 PROGRESS_BAR_WIDTH = 20;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
+STATUS_MAX_LENGTH = 40;
+
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
@@ -78,8 +82,16 @@ _.extend(Console.prototype, {
     if (self._progressBar) {
       self._progressBar.render();
       if (self._progressBarText) {
-        self._progressBar.stream.cursorTo(STATUS_POSITION);
-        self._progressBar.stream.write(chalk.bold(' ' + self._progressBarText));
+        var text = self._progressBarText;
+        if (text > STATUS_MAX_LENGTH) {
+          text = text.substring(0, STATUS_MAX_LENGTH - 3) + "...";
+        } else {
+          while (text.length < STATUS_MAX_LENGTH) {
+            text = text + ' ';
+          }
+        }
+        self._stream.cursorTo(STATUS_POSITION);
+        self._stream.write(chalk.bold(text));
       }
     }
   },
@@ -163,7 +175,9 @@ _.extend(Console.prototype, {
 
     var progressBar = self._progressBar;
     if (progressBar) {
-      progressBar.terminate();
+      //progressBar.terminate();
+      self._stream.clearLine();
+      self._stream.cursorTo(0);
     }
 
     var dest = process.stdout;
@@ -220,8 +234,7 @@ _.extend(Console.prototype, {
       return;
     }
 
-    var stream = process.stdout;
-    if (!stream.isTTY) return;
+    if (!self._stream.isTTY) return;
 
     var options = {
       complete: '=',
@@ -229,7 +242,7 @@ _.extend(Console.prototype, {
       width: PROGRESS_BAR_WIDTH,
       total: 100,
       clear: true,
-      stream: stream
+      stream: self._stream
     };
 
     var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
