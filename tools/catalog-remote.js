@@ -18,31 +18,30 @@ var packageClient = require('./package-client.js');
 var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 
 //PASCAL NOTES
-//offline mode?
 //What are the options that are passed to the initialize method in catalog?
-//Do we care about a case where the user completely busts the storage (e.g. deletes it?)
-//Do we want to close the DB explicitely? Do we have good opportunities to do this?
-//Detect the case where the db has not been closed properly?? - eg. process aborted
-//getData?
-//WDo we want to worry about the lifecycle of the connection or just open / close everytime?
-//Wehn we do transaction, then we should also need to see if there are errors reading
 
+// A RemoteCatalog is a local cache of the content of troposphere.
+// A default instance of this catalog is registered by the layered catalog and is available
+// under the variable "official" from the catalog.js
+
+// The remote catalog is backed by a db to make things easier on the memory and for faster queries
 var RemoteCatalog = function (options) {
   var self = this;
 
   // Set this to true if we are not going to connect to the remote package
-  // server, and will only use the cached data.json file for our package
-  // information. This means that the catalog might be out of date on the latest
-  // developments.
+  // server, and will only use the cached data for our package information
+  // This means that the catalog might be out of date on the latest developments.
   self.offline = null;
 
   self.options = options || {};
+
+  self.db = null;
 };
 
 _.extend(RemoteCatalog.prototype, {
   getVersion: function (name, version) {
-    var result = this._syncQuery("SELECT content FROM versions WHERE name=? AND version=?", [name, version]);
-    if(result.length === 0) {
+    var result = this._queryAsJSON("SELECT content FROM versions WHERE name=? AND version=?", [name, version]);
+    if(!result || result.length === 0) {
       return null;
     }
     return result[0];
@@ -50,13 +49,13 @@ _.extend(RemoteCatalog.prototype, {
 
   getSortedVersions: function (name) {
     var self = this;
-    var match = this._getPackage(name);
+    var match = this._getPackages(name);
     if (match === null)
       return [];
     return _.pluck(match, 'version').sort(semver.compare);
   },
 
-  //copied from base-catalog
+  // Copied from base-catalog
   getLatestMainlineVersion: function (name) {
     var self = this;
     var versions = self.getSortedVersions(name);
@@ -70,121 +69,98 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getPackage: function (name) {
-    var result = this._getPackage(name);
-    if (result.length === 0)
+    var result = this._getPackages(name);
+    if (!result || result.length === 0)
       return null;
     return result[0];
   },
   
-  _getPackage: function (name) {
-    return this._syncQuery("SELECT content FROM versions WHERE name=?", name);
+  _getPackages: function (name) {
+    return this._queryAsJSON("SELECT content FROM versions WHERE name=?", name);
   },
 
   getAllBuilds: function (name, version) {
-    var result = this._syncQuery("SELECT * FROM builds WHERE builds.versionId = (SELECT id FROM versions WHERE versions.name=? AND versions.version=?)", [name, version]);
-    if (result.length === 0)
+    var result = this._queryAsJSON("SELECT * FROM builds WHERE builds.versionId = (SELECT id FROM versions WHERE versions.name=? AND versions.version=?)", [name, version]);
+    if (!result || result.length === 0)
       return null;
-    return result[0];
+    return result;
   },
 
   getBuildsForArches: function (name, version, arches) {
     var solution = null;
     var allBuilds = getAllBuilds(name, version);
 
-    //TODO see if we can share this code with the code in base-catalog...
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
-        // This build subset works if for all the arches we need, at least one
-        // build in the subset satisfies it. It is guaranteed to be minimal,
-        // because we look at subsets in increasing order of size.
-        var satisfied = _.all(arches, function (neededArch) {
-          return _.any(buildSubset, function (build) {
-            var buildArches = build.buildArchitectures.split('+');
-            return !!archinfo.mostSpecificMatch(neededArch, buildArches);
-          });
+      // This build subset works if for all the arches we need, at least one
+      // build in the subset satisfies it. It is guaranteed to be minimal,
+      // because we look at subsets in increasing order of size.
+      var satisfied = _.all(arches, function (neededArch) {
+        return _.any(buildSubset, function (build) {
+          var buildArches = build.buildArchitectures.split('+');
+          return !!archinfo.mostSpecificMatch(neededArch, buildArches);
         });
-        if (satisfied) {
-          solution = buildSubset;
-          return true;  // stop the iteration
-        }
       });
-      return solution;  // might be null!
+      if (satisfied) {
+        solution = buildSubset;
+        return true;  // stop the iteration
+     }
+    });
+    return solution;  // might be null!
   },
 
   // Returns general (non-version-specific) information about a
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
-    var result = self._syncQuery("SELECT content FROM releaseTracks WHERE name=?", name);
-    if (result.length === 0)
+    var result = self._queryAsJSON("SELECT content FROM releaseTracks WHERE name=?", name);
+    if (!result || result.length === 0)
       return null;
     return result[0];
   },
 
   getReleaseVersion: function (track, version) {
     var self = this;
-    var result = self._syncQuery("SELECT content FROM releaseVersions WHERE track=? AND version=?", [track, version]);
-    if (result.length === 0)
+    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=? AND version=?", [track, version]);
+    if (!result || result.length === 0)
       return null;
     return result[0];
   },
 
-  //TODO see if we can use the _syncQuery function
   getAllReleaseTracks: function () {
-     var future = new Future;
-     var result = [];
-     db.all("SELECT name FROM releaseTracks", function(err, rows) {
-      if ( ! (err === null) ) {
-        future.return();
-        return;
-      }
-      result = _.pluck(rows, 'name');
-      future.return();
-    });
-    future.wait();
-    return result;
+    return _.pluck(this._justQuery("SELECT name FROM releaseTracks"), 'name');
   },
 
   getAllPackageNames: function () {
-     var future = new Future;
-     var result = [];
-     db.all("SELECT name FROM packages", function(err, rows) {
-      if ( ! (err === null) ) {
-        future.return();
-        return;
-      }
-      result = _.pluck(rows, 'name');
-      future.return();
-    });
-    future.wait();
-    return result;
+    return _.pluck(this._justQuery("SELECT name FROM packages"));
   },
 
   initialize: function (options) {
-    //PASCAL deal with offline mode?
     var self = this;
 
     // We should to figure out if we are intending to connect to the package server.
     self.offline = options.offline ? options.offline : false;
 
     var dbFile = self.options.packageStorage || config.getPackageStorage();
-    db = new sqlite3.Database(dbFile);
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
       fs.mkdirSync(path.dirname(dbFile));
     }
+    self.db = new sqlite3.Database(dbFile);
+
     var future = new Future;
-    db.serialize(function() {
-      db.run("BEGIN TRANSACTION");
-      db.run("CREATE TABLE IF NOT EXISTS versions (name STRING, version STRING, id String, content STRING)");
-      db.run("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(name)");
+    self.db.serialize(function() {
+      self.db.run("BEGIN TRANSACTION");
+      self.db.run("CREATE TABLE IF NOT EXISTS versions (name STRING, version STRING, id String, content STRING)");
+      self.db.run("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(name)");
 
-      db.run("CREATE TABLE IF NOT EXISTS builds (versionId STRING, id STRING, content STRING)");
-      db.run("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON builds(versionId)");
+      self.db.run("CREATE TABLE IF NOT EXISTS builds (versionId STRING, id STRING, content STRING)");
+      self.db.run("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON builds(versionId)");
 
-      db.run("CREATE TABLE IF NOT EXISTS releaseTracks (name STRING, id STRING, content STRING)");
-      db.run("CREATE TABLE IF NOT EXISTS releaseVersions (track STRING, version STRING, id STRING, content STRING)");
-      db.run("CREATE TABLE IF NOT EXISTS packages (name STRING, id STRING, content STRING)");
-      db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
-      db.run("END TRANSACTION", function(err, row) {
+      // These tables don't get an index because they are small and/or not often used
+      self.db.run("CREATE TABLE IF NOT EXISTS releaseTracks (name STRING, id STRING, content STRING)");
+      self.db.run("CREATE TABLE IF NOT EXISTS releaseVersions (track STRING, version STRING, id STRING, content STRING)");
+      self.db.run("CREATE TABLE IF NOT EXISTS packages (name STRING, id STRING, content STRING)");
+      self.db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
+      self.db.run("END TRANSACTION", function(err, row) {
         if (err)
           console.log("TRANSACTION PB 1 " + err);
         //PASCAL check errors
@@ -197,15 +173,15 @@ _.extend(RemoteCatalog.prototype, {
   reset: function () {
     var self = this;
     var future = new Future;
-    db.serialize(function() {
-      db.run("BEGIN TRANSACTION");
-      db.run("DELETE FROM versions");
-      db.run("DELETE FROM builds");
-      db.run("DELETE FROM releaseTracks");
-      db.run("DELETE FROM releaseVersions");
-      db.run("DELETE FROM packages");
-      db.run("DELETE FROM syncToken");
-      db.run("END TRANSACTION", function(err, row) {
+    self.db.serialize(function() {
+      self.db.run("BEGIN TRANSACTION");
+      self.db.run("DELETE FROM versions");
+      self.db.run("DELETE FROM builds");
+      self.db.run("DELETE FROM releaseTracks");
+      self.db.run("DELETE FROM releaseVersions");
+      self.db.run("DELETE FROM packages");
+      self.db.run("DELETE FROM syncToken");
+      self.db.run("END TRANSACTION", function(err, row) {
         if (err)
           console.log("TRANSACTION PB 2 " + err);
         //PASCAL check errors
@@ -233,7 +209,7 @@ _.extend(RemoteCatalog.prototype, {
   // exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
-    var result = self._syncQuery("SELECT content FROM releaseVersions WHERE track=?", track);
+    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
       if (!v.recommended)
@@ -260,12 +236,9 @@ _.extend(RemoteCatalog.prototype, {
     return {track: track, version: versions[0]};
   },
 
-  // Unlike the previous, this looks for a build which *precisely* matches the
-  // given buildArchitectures string. Also, it takes a versionRecord rather than
-  // name/version.
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._syncQuery("SELECT content FROM builds WHERE versionId=?", versionRecord._id);
+    var matchingBuilds = this._queryAsJSON("SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 
@@ -273,40 +246,43 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
-  _syncQuery: function (query, values) {
-     var future = new Future;
-     var result = [];
-     db.all(query, values, function(err, rows) {
-      if ( !(err === null) ) {
-        future.return();
-        return result;
+  // Runs a query synchronously.
+  // Query is the sql query to be executed and values are the parameters of the query
+  _justQuery: function (query, values) {
+    var future = new Future;
+    this.db.all(query, values, function(err, rows) {
+      if (err) {
+        future.return([]);
+        return;
       }
 
-      result = _.map(rows, function(entity) {
-        return JSON.parse(entity.content);
-      });
-      future.return();
+      future.return(rows);
     });
-    future.wait();
-    return result;
+    return future.wait();
   },
 
-  _generateQuestionMarks : function (nbr) {
-    var result = "(";
-    for (var i = nbr - 1; i >= 0; i--) {
-      result += "?" + (i !== 0 ? "," : "");
-    }
-    result += ")";
-    return result;
+  // Execute a query using the values as arguments of the query and return the result as JSON.
+  // This code assumes that the table being queried always have a column called "entity"
+  _queryAsJSON: function (query, values) {
+    var rows = this._justQuery(query, values);
+    return _.map(rows, function(entity) {
+        return JSON.parse(entity.content);
+    });
   },
 
-  _insertInTable : function(data, table, selFields, db) {
+  //Generate a string of the form (?, ?) where the n is the number of question mark
+  _generateQuestionMarks : function (n) {
+    return "(" + _.times(n, function () { return "?" }).join(",") + ")";
+  },
+
+  _insertInTable : function(data, table, selFields) {
+    var self = this;
     var queryParams = this._generateQuestionMarks(selFields.length + 1);
-    var insertVersion = db.prepare("INSERT INTO " + table + " VALUES " + queryParams);
-    var deleteVersion = db.prepare("DELETE FROM " + table + " WHERE id=?");
+    var insertVersion = self.db.prepare("INSERT INTO " + table + " VALUES " + queryParams);
+    var deleteVersion = self.db.prepare("DELETE FROM " + table + " WHERE id=?");
     _.each(data, function (entry) {
-      db.get("SELECT * FROM " + table + " WHERE id=?", entry._id, function(err, row) {
-        //TOO do we need to check for error?
+      self.db.get("SELECT * FROM " + table + " WHERE id=?", entry._id, function(err, row) {
+        // PASCAL TOO do we need to check for error?
         if ( ! (row === undefined) ) {
           deleteVersion.run(entry._id);
         }
@@ -320,43 +296,44 @@ _.extend(RemoteCatalog.prototype, {
     });
   },
 
-  _insertPackages : function(packagesData, db) {
-    this._insertInTable(packagesData, "packages", ['name', '_id'], db);
+  _insertPackages : function(packagesData) {
+    this._insertInTable(packagesData, "packages", ['name', '_id']);
   },
 
-  _insertVersions : function(versionsData, db) {
-    this._insertInTable(versionsData, "versions", ['packageName', 'version', '_id'], db);
+  _insertVersions : function(versionsData) {
+    this._insertInTable(versionsData, "versions", ['packageName', 'version', '_id']);
   },
 
-  _insertBuilds : function(buildsData, db) {
-    this._insertInTable(buildsData, "builds", ['versionId', '_id'], db);
+  _insertBuilds : function(buildsData) {
+    this._insertInTable(buildsData, "builds", ['versionId', '_id']);
   },
 
-  _insertReleaseTracks : function(releaseTrackData, db) {
-    this._insertInTable(releaseTrackData, "releaseTracks", ['name', '_id'], db);
+  _insertReleaseTracks : function(releaseTrackData) {
+    this._insertInTable(releaseTrackData, "releaseTracks", ['name', '_id']);
   },
 
-  _insertReleaseVersions : function(releaseVersionData, db) {
-    this._insertInTable(releaseVersionData, "releaseVersions", ['track', 'version', '_id'], db);
+  _insertReleaseVersions : function(releaseVersionData) {
+    this._insertInTable(releaseVersionData, "releaseVersions", ['track', 'version', '_id']);
   },
 
-  _insertTimestamps : function(syncToken, db) {
-    syncToken._id="1"; //Add fake _id so it fits the pattern
-    this._insertInTable([syncToken], "syncToken", ['_id'], db);
+  _insertTimestamps : function(syncToken) {
+    syncToken._id = "1"; //Add fake _id so it fits the pattern
+    this._insertInTable([syncToken], "syncToken", ['_id']);
   },
 
+  //Given data from troposphere, add it into the local store
   insertData : function(serverData) {
     var self = this;
     var future = new Future;
-    db.serialize(function() {
-      db.run("BEGIN TRANSACTION");
-      self._insertPackages(serverData.collections.packages, db);
-      self._insertBuilds(serverData.collections.builds, db);
-      self._insertVersions(serverData.collections.versions, db);
-      self._insertReleaseTracks(serverData.collections.releaseTracks, db);
-      self._insertReleaseVersions(serverData.collections.releaseVersions, db);
-      self._insertTimestamps(serverData.syncToken, db);
-      db.run("END TRANSACTION", function(err, row) {
+    self.db.serialize(function() {
+      self.db.run("BEGIN TRANSACTION");
+      self._insertPackages(serverData.collections.packages);
+      self._insertBuilds(serverData.collections.builds);
+      self._insertVersions(serverData.collections.versions);
+      self._insertReleaseTracks(serverData.collections.releaseTracks);
+      self._insertReleaseVersions(serverData.collections.releaseVersions);
+      self._insertTimestamps(serverData.syncToken);
+      self.db.run("END TRANSACTION", function(err, row) {
         if (err)
           console.log("TRANSACTION PB 3 " + err);
         //PASCAL check errors
@@ -376,8 +353,8 @@ _.extend(RemoteCatalog.prototype, {
 
   getSyncToken : function() {
     var self = this;
-    var result = self._syncQuery("SELECT content FROM syncToken", []);
-    if (result.length === 0)
+    var result = self._queryAsJSON("SELECT content FROM syncToken", []);
+    if (!result || result.length === 0)
       return {};
     delete result[0]._id;
     return result[0];
@@ -385,4 +362,5 @@ _.extend(RemoteCatalog.prototype, {
 
 });
 exports.RemoteCatalog = RemoteCatalog;
+//We put this constant here because we don't have any better place that would otherwise cause a cycle
 exports.DEFAULT_TRACK = 'METEOR';
