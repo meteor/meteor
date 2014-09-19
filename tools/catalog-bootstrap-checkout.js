@@ -4,12 +4,10 @@ var util = require('util');
 var LocalCatalog = require('./catalog-local.js').LocalCatalog;
 
 
-// This is a basic catalog class. It accesses basic catalog data by looking
-// through the catalog's collections.
-//
-// YOU MUST SET self.initialized = true BEFORE USING THIS CATALOG. In fact, the
-// protolog is not even intended to be used by itself -- there is a server
-// catalog and a constraint solving catalog, which inherit from it.
+// BootstrapCatalogCheckout represents a catalog of the packages at bootstrap
+// when we are running in checkout mode.
+// This catalog is typically never used directly by the user.
+// An instance of this catalog is created in catalog.js
 var BootstrapCatalogCheckout = function () {
   LocalCatalog.call(this);
 };
