@@ -160,9 +160,9 @@ _.extend(Progress.prototype, {
     var self = this;
 
     self._selfState = state;
-
-    self._state = self._computeTotalState();
     self._selfActive = !state.done;
+
+    self._updateTotalState();
 
     console.Console.statusPollMaybe();
 
@@ -192,7 +192,7 @@ _.extend(Progress.prototype, {
   },
 
   // Recomputes state, incorporating children's states
-  _computeTotalState: function () {
+  _updateTotalState: function () {
     var self = this;
 
     var state = _.clone(self._selfState);
@@ -251,7 +251,12 @@ _.extend(Progress.prototype, {
       state.done = false;
     }
 
-    return state;
+    if (!state.done && self._state.done) {
+      // This shouldn't happen
+      throw new Error("Progress transition from done => !done");
+    }
+
+    self._state = state;
   },
 
   // Called by a child when its state changes
@@ -265,7 +270,7 @@ _.extend(Progress.prototype, {
       self._completedChildren.end += weight;
     }
 
-    self._state = self._computeTotalState();
+    self._updateTotalState();
     self._notifyState();
   }
 });
