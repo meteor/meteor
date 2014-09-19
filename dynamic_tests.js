@@ -145,3 +145,32 @@ Tinytest.add(
     test.equal(subtmplContext, {});
   }
 );
+
+Tinytest.add(
+  "spacebars - ui-dynamic-template - back-compat", function (test, expect) {
+    var tmpl = Template.ui_dynamic_backcompat;
+
+    var nameVar = new ReactiveVar;
+    var dataVar = new ReactiveVar;
+    tmpl.templateName = function () {
+      return nameVar.get();
+    };
+    tmpl.templateData = function () {
+      return dataVar.get();
+    };
+
+    // No template chosen
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "");
+
+    // Choose the "ui-dynamic-test-sub" template, with no data context
+    // passed in.
+    nameVar.set("ui_dynamic_test_sub");
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "test");
+
+    // Set a data context.
+    dataVar.set({ foo: "bar" });
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "testbar");
+  });
