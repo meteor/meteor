@@ -903,6 +903,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'deploy',
+  pretty: true,
   minArgs: 1,
   maxArgs: 1,
   options: {
