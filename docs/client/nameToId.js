@@ -163,7 +163,7 @@ nameToId = {
   "EJSON.CustomType#clone": "ejson_type_clone",
   "EJSON.CustomType#equals": "ejson_type_equals",
   "Match.test": "match_test",
-  "UI.dynamic": "ui_dynamic",
+  "Template.dynamic": "template_dynamic",
   "currentUser": "template_currentuser",
   "loggingIn": "template_loggingin"
 };

@@ -7,7 +7,7 @@ TOPDIR=$(pwd)
 
 INFINITY=10000
 
-cd $TOPDIR
+cd $ORIGDIR
 
 # Call git grep to find all js files with the appropriate comment tags,
 # and only then pass it to JSDoc which will parse the JS files.
