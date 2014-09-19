@@ -130,8 +130,13 @@ _.extend(Progress.prototype, {
   },
 
   // Dumps the tree, for debug
-  dump: function (stream, prefix) {
+  dump: function (stream, options, prefix) {
     var self = this;
+
+    options = options || {};
+    if (options.skipDone && self._isDone) {
+      return;
+    }
 
     if (prefix) {
       stream.write(prefix);
@@ -140,10 +145,12 @@ _.extend(Progress.prototype, {
     if (!end) {
       end = '?';
     }
-    stream.write("Task [" + self._title + "] " + self._state.current + "/" + end + (self._isDone ? " done" : "") + "\n");
+    stream.write("Task [" + self._title + "] " + self._state.current + "/" + end
+      + (self._isDone ? " done" : "")
+      + (self._selfActive ? " active" : "") +"\n");
     if (self._allTasks.length) {
       _.each(self._allTasks, function (child) {
-        child.dump(stream, (prefix || '') + '  ');
+        child.dump(stream, options, (prefix || '') + '  ');
       });
     }
   },
