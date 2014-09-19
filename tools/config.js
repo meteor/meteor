@@ -213,7 +213,7 @@ _.extend(exports, {
   getPackageStorage: function (tropo) {
     var self = this;
     tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v1",
+    return path.join(tropo.root, "package-metadata", "v2",
                      self.getLocalPackageCacheFilename());
   },
 
@@ -223,7 +223,7 @@ _.extend(exports, {
 
   getBannersShownFilename: function() {
     return path.join(tropohouse.default.root,
-                     "package-metadata", "v1", "banners-shown.json");
+                     "package-metadata", "v2", "banners-shown.json");
   },
 
   // Return the domain name of the current Meteor Accounts server in
