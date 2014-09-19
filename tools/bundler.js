@@ -782,7 +782,7 @@ _.extend(Target.prototype, {
       minifyOptions.compress.unused = false;
       minifyOptions.compress.dead_code = false;
 
-      allJs = buildmessage.forkJoin({title: "Minifying"}, self.js, function (file) {
+      allJs = buildmessage.forkJoin({title: "Minifying" }, self.js, function (file) {
         var source = file.contents('utf8');
         return UglifyJSMinify(file.info, source, minifyOptions).code;
       }).join("\n\n");
@@ -827,7 +827,7 @@ _.extend(Target.prototype, {
 // This code should mirror the minify function in UglifyJs2,
 var UglifyJS = require('uglify-js');
 
-UglifyJSMinify = function(files, options) {
+UglifyJSMinify = function(key, files, options) {
   options = UglifyJS.defaults(options, {
     spidermonkey : false,
     outSourceMap : null,
@@ -845,7 +845,13 @@ UglifyJSMinify = function(files, options) {
   _.forEach(files, function (file) {
     totalFileSize += file.length;
   });
-  var progress = {current: 0, end: totalFileSize * 5, done: false};
+
+  var phases = 2;
+  if (options.compress) phases++;
+  if (options.mangle) phases++;
+  if (options.output) phases++;
+
+  var progress = {current: 0, end: totalFileSize * phases, done: false};
   var progressTracker = buildmessage.getCurrentProgressTracker();
 
   // 1. parse
@@ -857,7 +863,7 @@ UglifyJSMinify = function(files, options) {
   } else {
     if (typeof files == "string")
       files = [ files ];
-    buildmessage.forkJoin({title: 'Minifying files'}, files, function (file) {
+    buildmessage.forkJoin({title: 'Minifying: parsing ' + key}, files, function (file) {
       var code = options.fromString
         ? file
         : fs.readFileSync(file, "utf8");
@@ -867,32 +873,35 @@ UglifyJSMinify = function(files, options) {
         toplevel: toplevel
       });
 
-      progress.curent += code.length;
+      progress.current += code.length;
       progressTracker.reportProgress(progress);
     });
   }
 
   // 2. compress
-  if (options.compress) {
-    var compress = { warnings: options.warnings };
+  var compress;
+  if (options.compress) buildmessage.enterJob({title: "Minify: compress 1 " + key}, function () {
+    compress = { warnings: options.warnings };
     UglifyJS.merge(compress, options.compress);
     toplevel.figure_out_scope();
+  });
+  if (options.compress) buildmessage.enterJob({title: "Minify: compress 2 " + key}, function () {
     var sq = UglifyJS.Compressor(compress);
     toplevel = toplevel.transform(sq);
 
-    progress.curent += totalFileSize;
+    progress.current += totalFileSize;
     progressTracker.reportProgress(progress);
-  }
+  });
 
   // 3. mangle
-  if (options.mangle) {
+  if (options.mangle) buildmessage.enterJob({title: "Minify: mangling " + key}, function () {
     toplevel.figure_out_scope();
     toplevel.compute_char_frequency();
     toplevel.mangle_names(options.mangle);
 
-    progress.curent += totalFileSize;
+    progress.current += totalFileSize;
     progressTracker.reportProgress(progress);
-  }
+  });
 
   // 4. output
   var inMap = options.inSourceMap;
@@ -914,18 +923,22 @@ UglifyJSMinify = function(files, options) {
       }
     }
   }
-  if (options.output) {
+  if (options.output) buildmessage.enterJob({title: "Minify: merging " + key}, function () {
     UglifyJS.merge(output, options.output);
 
-    progress.curent += totalFileSize;
+    progress.current += totalFileSize;
     progressTracker.reportProgress(progress);
-  }
+  });
 
-  var stream = UglifyJS.OutputStream(output);
-  toplevel.print(stream);
 
-  progress.curent += totalFileSize;
-  progressTracker.reportProgress(progress);
+  var stream;
+  buildmessage.enterJob({title: "Minify: printing " + key}, function () {
+    stream = UglifyJS.OutputStream(output);
+    toplevel.print(stream);
+
+    progress.current += totalFileSize;
+    progressTracker.reportProgress(progress);
+  });
 
   return {
     code : stream + "",
