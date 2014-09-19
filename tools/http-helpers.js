@@ -135,6 +135,10 @@ _.extend(exports, {
     if (_.has(options, 'progress')) {
       progress = options.progress;
       delete options.progress;
+
+      if (callback) {
+        throw new Error("Not safe to use progress with callback");
+      }
     }
 
     options.headers = _.extend({
@@ -227,8 +231,10 @@ _.extend(exports, {
       var dest = req;
       if (progress) {
         dest = new WritableWithProgress(dest, function (n, done) {
-          totalProgress.current += n;
-          progress.reportProgress(totalProgress);
+          if (!totalProgress.done) {
+            totalProgress.current += n;
+            progress.reportProgress(totalProgress);
+          }
         });
       }
       bodyStream.pipe(dest);
@@ -237,7 +243,7 @@ _.extend(exports, {
     if (progress) {
       httpHelpers._addProgressEvents(req);
       req.on('progress', function (state) {
-        if (!callbackFired) {
+        if (!totalProgress.done) {
           totalProgress.current = bodyStreamLength + state.current;
           totalProgress.end = bodyStreamLength + state.end;
           totalProgress.done = state.done;

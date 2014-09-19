@@ -88,7 +88,7 @@ _.extend(Console.prototype, {
     self._lastStatusPoll = Date.now();
 
     var rootProgress = buildmessage.getRootProgress();
-    //rootProgress.dump(process.stdout);
+    //rootProgress.dump(process.stdout, {skipDone: true});
     var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
     if (self._watching === current) {
       return;
