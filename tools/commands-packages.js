@@ -1812,7 +1812,8 @@ main.registerCommand({
   name: 'add',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  pretty: true
 }, function (options) {
 
   // Special case on reserved package namespaces, such as 'cordova'

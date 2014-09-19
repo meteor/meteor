@@ -35,7 +35,8 @@ var Command = function (options) {
     options: {},
     requiresApp: false,
     requiresRelease: true,
-    hidden: false
+    hidden: false,
+    pretty: false
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -1227,6 +1228,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
   // startup time profiling mode, print the profile.
   if (showRequireProfile)
     require('./profile-require.js').printReport();
+
+  Console.setPretty(command.pretty);
 
   Console.enableStatusPoll();
   Console.showProgressBar();

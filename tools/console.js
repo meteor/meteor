@@ -11,7 +11,10 @@ var buildmessage = require('./buildmessage.js');
 var chalk = require('chalk');
 
 PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
-USE_PRETTY = (process.env.METEOR_PRETTY_OUTPUT != '0');
+FORCE_PRETTY=undefined;
+if (process.env.METEOR_PRETTY_OUTPUT) {
+  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
+}
 
 var Console = function (options) {
   var self = this;
@@ -34,7 +37,9 @@ var Console = function (options) {
     self._legacyWrite(LEVEL_WARN, msg);
   };
 
-  self._stream =process.stdout;
+  self._stream = process.stdout;
+
+  self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
 };
 
 
@@ -76,6 +81,13 @@ _.extend(Console.prototype, {
       return;
     }
     self._progressBar.terminate();
+  },
+
+  setPretty: function (pretty) {
+    var self = this;
+    if (FORCE_PRETTY === undefined) {
+      self._pretty = pretty;
+    }
   },
 
   _renderProgressBar: function () {
@@ -184,7 +196,7 @@ _.extend(Console.prototype, {
     var dest = process.stdout;
     var style = null;
 
-    if (level && USE_PRETTY) {
+    if (level && self._pretty) {
       switch (level.code) {
         case LEVEL_CODE_ERROR:
           dest = process.stderr;
@@ -235,7 +247,7 @@ _.extend(Console.prototype, {
       return;
     }
 
-    if (!self._stream.isTTY || !USE_PRETTY) return;
+    if (!self._stream.isTTY || !self._pretty) return;
 
     var options = {
       complete: '=',
