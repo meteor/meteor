@@ -772,8 +772,6 @@ _.extend(Target.prototype, {
       compress: {drop_debugger: false }
     };
 
-    var start = Date.now();
-
     if (self._minifyTogether) {
       var sources = _.map(self.js, function (file) {
         return file.contents('utf8');
@@ -791,10 +789,6 @@ _.extend(Target.prototype, {
         return UglifyJSMinify(file.info, source, minifyOptions).code;
       }).join("\n\n");
     }
-
-    var end = Date.now();
-
-    console.log("Minification took " + (end - start) + "ms");
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
