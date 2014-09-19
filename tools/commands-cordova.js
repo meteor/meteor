@@ -20,6 +20,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var unipackage = require('./unipackage.js');
 var tropohouse = require('./tropohouse.js');
+var Console = require('./console.js').Console;
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -43,7 +44,7 @@ var setVerboseness = cordova.setVerboseness = function (v) {
 };
 var verboseLog = cordova.verboseLog = function (/* args */) {
   if (verboseness)
-    process.stderr.write('%% ' + util.format.apply(null, arguments) + '\n');
+    Console.stderr.write('%% ' + util.format.apply(null, arguments) + '\n');
 };
 
 
@@ -260,7 +261,7 @@ cordova.ensureCordovaProject = function (localPath, appName) {
       // XXX cache them there
       files.mkdir_p(localPluginsPath);
     } catch (err) {
-      process.stderr.write("Error creating Cordova project: " +
+      Console.stderr.write("Error creating Cordova project: " +
         err.message + "\n" + err.stack + "\n");
     }
   }
@@ -336,7 +337,7 @@ var installPlugin = function (cordovaPath, name, version, settings) {
     additionalArgs.push(variable + '=' + JSON.stringify(value));
   });
 
-  process.stdout.write('  installing ' + pluginInstallCommand + '\n');
+  Console.stdout.write('  installing ' + pluginInstallCommand + '\n');
   var execRes = execFileSyncOrThrow(localCordova,
      ['plugin', 'add', pluginInstallCommand].concat(additionalArgs),
      { cwd: cordovaPath });
@@ -483,7 +484,7 @@ var ensureCordovaPlugins = function (localPath, options) {
       files.rm_recursive(path.join(cordovaPath, 'platforms'));
       cordova.ensureCordovaPlatforms(localPath);
     };
-    process.stdout.write("Initializing Cordova plugins...\n");
+    Console.stdout.write("Initializing Cordova plugins...\n");
     uninstallAllPlugins();
 
     // Now install all of the plugins.
@@ -758,7 +759,7 @@ main.registerCommand({
       cordova.checkIsValidPlatform(platform);
     });
   } catch (err) {
-    process.stderr.write(err.message + "\n");
+    Console.stderr.write(err.message + "\n");
     return 1;
   }
 
@@ -774,7 +775,7 @@ main.registerCommand({
   }
 
   _.each(platforms, function (platform) {
-    process.stdout.write("added platform " + platform + "\n");
+    Console.stdout.write("added platform " + platform + "\n");
   });
 });
 
@@ -790,9 +791,9 @@ main.registerCommand({
 
   _.each(platforms, function (platform) {
     if (_.contains(currentPlatforms, platform)) {
-      process.stdout.write("removed platform " + platform + "\n");
+      Console.stdout.write("removed platform " + platform + "\n");
     } else {
-      process.stdout.write(platform + " is not in this project\n");
+      Console.stdout.write(platform + " is not in this project\n");
     }
   });
   project.removeCordovaPlatforms(platforms);
@@ -813,11 +814,11 @@ main.registerCommand({
   requiresApp: true
 }, function () {
   var platforms = project.getCordovaPlatforms();
-  process.stdout.write(platforms.join("\n"));
+  Console.stdout.write(platforms.join("\n"));
 
   // print nothing at all if no platforms
   if (platforms.length) {
-    process.stdout.write("\n");
+    Console.stdout.write("\n");
   }
 });
 

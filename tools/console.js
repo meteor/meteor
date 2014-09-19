@@ -17,7 +17,7 @@ var Console = function (options) {
 
   self._progressBar = null;
   self._progressBarText = null;
-  self._currentProgress = null;
+  self._watching = null;
 
   // Legacy helpers
   self.stdout = {};
@@ -84,15 +84,16 @@ _.extend(Console.prototype, {
     var self = this;
     Fiber(function () {
       while (true) {
-        sleep(500);
+        sleep(10);
 
         var rootProgress = buildmessage.getRootProgress();
+        //rootProgress.dump(process.stdout);
         var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
-        if (self._currentProgress === current) {
+        if (self._watching === current) {
           continue;
         }
 
-        self._currentProgress = current;
+        self._watching = current;
         var title = (current != null ? current._title : null) || FALLBACK_STATUS;
         if (title != self._progressBarText) {
           self._progressBarText = title;
@@ -216,17 +217,20 @@ _.extend(Console.prototype, {
   _watchProgress: function () {
     var self = this;
 
-    var progress = self._currentProgress;
+    var progress = self._watching;
     if (!progress) return;
 
     progress.addWatcher(function (state) {
-      if (progress != self._currentProgress) {
+      //console.log(state);
+      if (progress != self._watching) {
         // No longer active
+        //console.log("NOT WATCHING");
         return;
       }
 
       var progressBar = self._progressBar;
       if (!progressBar) {
+        //console.log("NOT PROGRESS BAR");
         // Progress bar disabled
         return;
       }
