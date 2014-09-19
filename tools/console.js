@@ -19,6 +19,8 @@ var Console = function (options) {
   self._progressBarText = null;
   self._watching = null;
 
+  self._lastStatusPoll = 0;
+
   // Legacy helpers
   self.stdout = {};
   self.stderr = {};
@@ -80,27 +82,45 @@ _.extend(Console.prototype, {
     }
   },
 
+  _statusPoll: function () {
+    var self = this;
+
+    self._lastStatusPoll = Date.now();
+
+    var rootProgress = buildmessage.getRootProgress();
+    //rootProgress.dump(process.stdout);
+    var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
+    if (self._watching === current) {
+      return;
+    }
+
+    self._watching = current;
+    var title = (current != null ? current._title : null) || FALLBACK_STATUS;
+    if (title != self._progressBarText) {
+      self._progressBarText = title;
+      self._renderProgressBar();
+    }
+
+    self._watchProgress();
+  },
+
+  statusPollMaybe: function () {
+    var self = this;
+    var now = Date.now();
+
+    if ((now - self._lastStatusPoll) < 50) {
+      return;
+    }
+    self._statusPoll();
+  },
+
   enableStatusPoll: function () {
     var self = this;
     Fiber(function () {
       while (true) {
         sleep(10);
 
-        var rootProgress = buildmessage.getRootProgress();
-        //rootProgress.dump(process.stdout);
-        var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
-        if (self._watching === current) {
-          continue;
-        }
-
-        self._watching = current;
-        var title = (current != null ? current._title : null) || FALLBACK_STATUS;
-        if (title != self._progressBarText) {
-          self._progressBarText = title;
-          self._renderProgressBar();
-        }
-
-        self._watchProgress();
+        self._statusPoll();
       }
     }).run();
   },

@@ -9,6 +9,7 @@
 
 var _ = require('underscore');
 var Future = require('fibers/future');
+var console = require('./console.js');
 
 var Progress = function (options) {
   var self = this;
@@ -150,6 +151,9 @@ _.extend(Progress.prototype, {
 
     self._state = self._computeTotalState();
     self._selfActive = !state.done;
+
+    console.Console.statusPollMaybe();
+
     self._notifyState();
   },
 
