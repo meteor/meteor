@@ -436,6 +436,12 @@ var Target = function (options) {
   self.asset = [];
 
   self.cordovaDependencies = {};
+
+  // For the todos sample app:
+  // false: 99.6 KB / 316 KB
+  // vs
+  // true: 99 KB / 315 KB
+  self._minifyTogether = false;
 };
 
 _.extend(Target.prototype, {
@@ -757,23 +763,38 @@ _.extend(Target.prototype, {
   minifyJs: function (minifiers) {
     var self = this;
 
-    var sources = _.map(self.js, function (file) {
-      return file.contents('utf8');
-    });
-
     var start = Date.now();
 
     var allJs;
-    buildmessage.enterJob({title: "Minify"}, function () {
-      allJs = UglifyJSMinify(sources, {
-        fromString: true,
-        compress: {drop_debugger: false}
-      }).code;
-    });
+
+    var minifyOptions = {
+      fromString: true,
+      compress: {drop_debugger: false }
+    };
+
+    var start = Date.now();
+
+    if (self._minifyTogether) {
+      var sources = _.map(self.js, function (file) {
+        return file.contents('utf8');
+      });
+
+      buildmessage.enterJob({title: "Minifying"}, function () {
+        allJs = UglifyJSMinify('', sources, minifyOptions).code;
+      });
+    } else {
+      minifyOptions.compress.unused = false;
+      minifyOptions.compress.dead_code = false;
+
+      allJs = buildmessage.forkJoin({title: "Minifying"}, self.js, function (file) {
+        var source = file.contents('utf8');
+        return UglifyJSMinify(file.info, source, minifyOptions).code;
+      }).join("\n\n");
+    }
 
     var end = Date.now();
 
-    console.log("Minification took " + (end - start) + "ms to minify");
+    console.log("Minification took " + (end - start) + "ms");
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
