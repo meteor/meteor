@@ -25,43 +25,43 @@ _.extend(BootstrapCatalogCheckout.prototype, {
     self._requireInitialized();
     buildmessage.assertInCapture();
 
-      // uniload should always ignore the project: it's essentially loading part
-      // of the tool, which shouldn't be affected by your app's dependencies.
-      if (!opts.ignoreProjectDeps)
-        throw Error("whoa, if for uniload, why not ignoring project?");
+    // uniload should always ignore the project: it's essentially loading part
+    // of the tool, which shouldn't be affected by your app's dependencies.
+    if (!opts.ignoreProjectDeps)
+      throw Error("whoa, if for uniload, why not ignoring project?");
 
-      // OK, we're building something while uniload
-      var ret = {};
-      _.each(constraints, function (constraint) {
-        if (_.has(constraint, 'version')) {
+    // OK, we're building something while uniload
+    var ret = {};
+    _.each(constraints, function (constraint) {
+    if (_.has(constraint, 'version')) {
           if (constraint.version !== null) {
             throw Error("Uniload specifying version? " + JSON.stringify(constraint));
           }
           delete constraint.version;
         }
 
-        // Constraints for uniload should just be packages with no version
-        // constraint and one local version (since they should all be in core).
-        if (!_.has(constraint, 'packageName') ||
-            constraint.type !== 'any-reasonable') {
-          throw Error("Surprising constraint: " + JSON.stringify(constraint));
-        }
-        if (!_.has(self.versions, constraint.packageName)) {
-          throw Error("Trying to resolve unknown package: " +
-                      constraint.packageName);
-        }
-        if (_.isEmpty(self.versions[constraint.packageName])) {
-          throw Error("Trying to resolve versionless package: " +
-                      constraint.packageName);
-        }
-        if (_.size(self.versions[constraint.packageName]) > 1) {
-          throw Error("Too many versions for package: " +
-                      constraint.packageName);
-        }
-        ret[constraint.packageName] =
-          _.keys(self.versions[constraint.packageName])[0];
-      });
-      return ret;
+      // Constraints for uniload should just be packages with no version
+      // constraint and one local version (since they should all be in core).
+      if (!_.has(constraint, 'packageName') ||
+        constraint.type !== 'any-reasonable') {
+        throw Error("Surprising constraint: " + JSON.stringify(constraint));
+      }
+      if (!_.has(self.versions, constraint.packageName)) {
+        throw Error("Trying to resolve unknown package: " +
+                     constraint.packageName);
+      }
+      if (_.isEmpty(self.versions[constraint.packageName])) {
+        throw Error("Trying to resolve versionless package: " +
+                    constraint.packageName);
+      }
+      if (_.size(self.versions[constraint.packageName]) > 1) {
+        throw Error("Too many versions for package: " +
+                    constraint.packageName);
+      }
+      ret[constraint.packageName] =
+        _.keys(self.versions[constraint.packageName])[0];
+    });
+    return ret;
   },
   
   
