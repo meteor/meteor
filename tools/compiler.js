@@ -184,7 +184,8 @@ var determineBuildTimeDependencies = function (packageSource,
       constraintString = "@" + info.constraint;
     }
     var version = utils.parseConstraint(packageName + constraintString);
-    constraints_array.push(_.extend({ packageName: packageName }, version));
+    constraints_array.push(
+      utils.parseConstraint(packageName + constraintString));
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
@@ -236,9 +237,8 @@ var determineBuildTimeDependencies = function (packageSource,
       if (info.constraint) {
         constraintString = "@" + info.constraint;
       }
-      var version = utils.parseConstraint(parsedSpec.package + constraintString);
-      constraints_array.push(_.extend({packageName: parsedSpec.package},
-                                      version));
+      constraints_array.push(
+        utils.parseConstraint(parsedSpec.package + constraintString));
     });
 
     var pluginVersion = pluginVersions[info.name] || {};

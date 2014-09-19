@@ -464,25 +464,25 @@ _.extend(CompleteCatalog.prototype, {
 
         // Constraints for uniload should just be packages with no version
         // constraint and one local version (since they should all be in core).
-        if (!_.has(constraint, 'packageName') ||
+        if (!_.has(constraint, 'name') ||
             constraint.constraints.length > 1 ||
             constraint.constraints[0].type !== 'any-reasonable') {
           throw Error("Surprising constraint: " + JSON.stringify(constraint));
         }
-        if (!_.has(self.versions, constraint.packageName)) {
+        if (!_.has(self.versions, constraint.name)) {
           throw Error("Trying to resolve unknown package: " +
-                      constraint.packageName);
+                      constraint.name);
         }
-        if (_.isEmpty(self.versions[constraint.packageName])) {
+        if (_.isEmpty(self.versions[constraint.name])) {
           throw Error("Trying to resolve versionless package: " +
-                      constraint.packageName);
+                      constraint.name);
         }
-        if (_.size(self.versions[constraint.packageName]) > 1) {
+        if (_.size(self.versions[constraint.name]) > 1) {
           throw Error("Too many versions for package: " +
-                      constraint.packageName);
+                      constraint.name);
         }
-        ret[constraint.packageName] =
-          _.keys(self.versions[constraint.packageName])[0];
+        ret[constraint.name] =
+          _.keys(self.versions[constraint.name])[0];
       });
       return ret;
     }
@@ -499,8 +499,7 @@ _.extend(CompleteCatalog.prototype, {
     // arguments to the constraint solver.
     //
     // -deps: list of package names that we depend on
-    // -constr: constraints of form {packageName: String, version: String} with
-    //  {type: exact} for exact constraints.
+    // -constr: constraints of the proper form from parseConstraint in utils.js
     //
     // Weak dependencies are constraints (they constrain the result), but not
     // dependencies.
@@ -509,13 +508,9 @@ _.extend(CompleteCatalog.prototype, {
     _.each(constraints, function (constraint) {
       constraint = _.clone(constraint);
       if (!constraint.weak) {
-        deps.push(constraint.packageName);
+        deps.push(constraint.name);
       }
       delete constraint.weak;
-      delete constraint.constraintString;
-if (_.has(constraint, "version")) {
-  console.trace(constraint);
-}
       constr.push(constraint);
     });
 
@@ -530,18 +525,14 @@ if (_.has(constraint, "version")) {
       // for now: we can't use any packages that are of different versions from
       // what we've already decided from the project!
       _.each(project.project.getVersions(), function (version, name) {
-        constr.push({packageName: name, constraints: [
-          { version: version, type: 'exactly'}] });
-      });
+        constr.push(utils.parseConstraint(name + "@=" + version));
+     });
     }
 
     // Local packages can only be loaded from the version we have the source
     // for: that's a weak exact constraint.
     _.each(self.packageSources, function (packageSource, name) {
-      constr.push({packageName: name,
-                   constraints: [
-                  { version: packageSource.version,
-                   type: 'exactly' }] });
+      constr.push(utils.parseConstraint(name + "@=" + packageSource.version));
     });
 
     var patience = new utils.Patience({

@@ -5,6 +5,7 @@ var testUtils = require('../test-utils.js');
 var selftest = require('../selftest.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
+var files = require('../files.js');
 
 selftest.define("publish-and-search", ["slow", "net", "test-package-server"], function () {
   var s = new Sandbox;
@@ -240,7 +241,7 @@ selftest.define("list-with-a-new-version",
   });
 
   s.cd('mapp', function () {
-    // // 
+    // //
     // run = s.run("search", "asdf");
     // run.waitSecs(100);
     // run.expectExit(0);
@@ -264,4 +265,92 @@ selftest.define("list-with-a-new-version",
     run.forbidAll("New versions");
     run.expectExit(0);
   });
+});
+
+selftest.define("package-depends-on-either-version",
+    ["slow", "net", "test-package-server"], function () {
+  var s = new Sandbox;
+
+  var username = "test";
+  var password = "testtest";
+  testUtils.login(s, username, password);
+  var packageNameDependent = utils.randomToken();
+
+  // First, we publish fullPackageNameDep at 1.0 and publish it..
+  var fullPackageNameDep = username + ":" + packageNameDependent;
+  s.createPackage(fullPackageNameDep, "package-of-two-versions");
+   s.cd(fullPackageNameDep, function() {
+    run = s.run("publish", "--create");
+    run.waitSecs(20);
+    run.match("Done");
+  });
+
+  // Then, we publish fullPackageNameDep at 2.0.
+  s.cd(fullPackageNameDep, function() {
+    s.cp("package3.js", "package.js");
+    run = s.run("publish");
+    run.waitSecs(20);
+    run.match("Done");
+  });
+
+  // Then, we make another one that depends on either version and publish.
+  var another = utils.randomToken();
+  var fullPackageAnother = username + ":" + another;
+  s.createPackage(fullPackageAnother, "package-of-two-versions");
+  s.cd(fullPackageAnother, function() {
+    var packOpen = s.read("package.js");
+   packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
+      "api.use(\"" + fullPackageNameDep +
+      "@1.0.0 || 2.0.0\");\n" +
+      " });";
+    s.write("package.js", packOpen);
+    run = s.run("publish", "--create");
+    run.waitSecs(20);
+    run.match("Done");
+  });
+
+  // Now we add them to an app.
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+  run = s.run("add", fullPackageNameDep + "@=1.0.0");
+  run.match(fullPackageNameDep);
+  run.expectExit(0);
+
+  var readVersions = function () {
+    var lines = s.read(".meteor/versions").split("\n");
+    var depend = {};
+    _.each(lines, function(line) {
+      if (!line) return;
+      // Packages are stored of the form foo@1.0.0, so this should give us an
+      // array [foo, 1.0.0].
+      var split = line.split('@');
+      var pack = split[0];
+      depend[pack] = split[1];
+    });
+    return depend;
+  };
+
+  var depend = readVersions();
+  selftest.expectEqual(depend[fullPackageNameDep], "1.0.0");
+
+  run = s.run("add", fullPackageAnother + "@=1.0.0");
+  run.match(fullPackageAnother);
+  run.expectExit(0);
+
+  var depend = readVersions();
+  selftest.expectEqual(depend[fullPackageNameDep], "1.0.0");
+  selftest.expectEqual(depend[fullPackageAnother], "1.0.0");
+
+  run = s.run("add", fullPackageNameDep + "@=2.0.0");
+  run.match(fullPackageNameDep);
+  run.expectExit(0);
+
+  depend = readVersions();
+  selftest.expectEqual(depend[fullPackageNameDep], "2.0.0");
+  selftest.expectEqual(depend[fullPackageAnother], "1.0.0");
+
 });

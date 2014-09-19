@@ -1264,11 +1264,23 @@ _.extend(PackageSource.prototype, {
       }
     }
 
+    // By the way, you can't depend on yourself.
+    var doNotDepOnSelf = function (dep) {
+      if (dep.package === self.name) {
+        buildmessage.error("Circular dependency found: "
+                           + self.name +
+                           " depends on itself.\n");
+      }
+    };
+    _.each(self.allArchs, function (label) {
+      _.each(uses[label], doNotDepOnSelf);
+      _.each(implies[label], doNotDepOnSelf);
+    });
+
     // If we have specified some release, then we should go through the
     // dependencies and fill in the unspecified constraints with the versions in
     // the releases (if possible).
     if (!_.isEmpty(releaseRecords)) {
-console.log(releaseRecords);
 
       // Given a dependency object with keys package (the name of the package)
       // and constraint (the version constraint), if the constraint is null,
