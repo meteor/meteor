@@ -964,3 +964,31 @@ Hi there!
 <template name="spacebars_template_test_input_field_to_same_value">
   <input type="text" value={{foo}}>
 </template>
+
+<template name="spacebars_template_test_content_backcompat">
+  {{#spacebars_template_test_iftemplate_backcompat condition=flag}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate_backcompat}}
+</template>
+
+<template name="spacebars_template_test_iftemplate_backcompat">
+  {{#if condition}}
+    {{> UI.contentBlock}}
+  {{else}}
+    {{> UI.elseBlock}}
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_content_context_backcompat">
+  {{#with foo}}
+    {{#with bar}}
+      {{#spacebars_template_test_iftemplate_backcompat condition=cond}}
+        {{firstLetter}}{{../secondLetter}}
+      {{else}}
+        {{../firstLetter}}{{secondLetter}}
+      {{/spacebars_template_test_iftemplate_backcompat}}
+    {{/with}}
+  {{/with}}
+</template>
