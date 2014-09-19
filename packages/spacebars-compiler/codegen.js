@@ -138,6 +138,7 @@ _.extend(CodeGen.prototype, {
           // XXX BACK COMPAT - UI is the old name, Template is the new
           if ((path[0] === 'UI' || path[0] === 'Template') &&
               (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
+            // Call contentBlock and elseBlock in the appropriate scope
             includeCode = 'Blaze._InOuterTemplateScope(view, function () { return '
               + includeCode + '; })';
           }

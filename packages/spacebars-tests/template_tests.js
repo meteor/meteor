@@ -2860,3 +2860,46 @@ Tinytest.add(
     document.body.removeChild(div);
   }
 );
+
+Tinytest.add("spacebars-tests - template_tests - contentBlock back-compat", function (test) {
+  // adapted from another test, but this time make sure `UI.contentBlock`
+  // and `UI.elseBlock` correctly behave as `Template.contentBlock`
+  // and `Template.elseBlock`.
+
+  var tmpl = Template.spacebars_template_test_content_backcompat;
+  var R = ReactiveVar(true);
+  tmpl.flag = function () {
+    return R.get();
+  };
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+  R.set(false);
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), 'world');
+  R.set(true);
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+});
+
+// For completeness (of coverage), make sure the code that calls
+// `Template.contentBlock` in the correct scope also causes
+// the old `UI.contentBlock` to be called in the correct scope.
+Tinytest.add("spacebars-tests - template_tests - content context back-compat", function (test) {
+  var tmpl = Template.spacebars_template_test_content_context_backcompat;
+  var R = ReactiveVar(true);
+  tmpl.foo = {
+    firstLetter: 'F',
+    secondLetter: 'O',
+    bar: {
+      cond: function () { return R.get(); },
+      firstLetter: 'B',
+      secondLetter: 'A'
+    }
+  };
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'BO');
+  R.set(false);
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), 'FA');
+});

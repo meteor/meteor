@@ -43,3 +43,7 @@
 <template name="ui_dynamic_test_falsey_context_sub">
   {{foo}}
 </template>
+
+<template name="ui_dynamic_backcompat">
+  {{> UI.dynamic template=templateName data=templateData}}
+</template>
