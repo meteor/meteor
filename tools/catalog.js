@@ -144,8 +144,6 @@ _.extend(LayeredCatalog.prototype, {
 
   reset: function () {
     this.localCatalog.reset();
-    // console.log("resetting the LayeredCatalog");
-    //PASCAL
   },
 
   // As getVersion, but returns info on the latest version of the
