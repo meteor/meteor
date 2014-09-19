@@ -747,7 +747,7 @@ _.extend(Target.prototype, {
       return file.contents('utf8');
     }).join('\n;\n');
 
-    allJs = minifiers.UglifyJSMinify(allJs, {
+    allJs = UglifyJSMinify(allJs, {
       fromString: true,
       compress: {drop_debugger: false}
     }).code;
@@ -787,6 +787,92 @@ _.extend(Target.prototype, {
     return archinfo.leastSpecificDescription(_.pluck(self.unibuilds, 'arch'));
   }
 });
+
+// This code should mirror the minify function in UglifyJs2,
+var UglifyJS = require('uglify-js');
+
+UglifyJSMinify = function(files, options) {
+  options = UglifyJS.defaults(options, {
+    spidermonkey : false,
+    outSourceMap : null,
+    sourceRoot   : null,
+    inSourceMap  : null,
+    fromString   : false,
+    warnings     : false,
+    mangle       : {},
+    output       : null,
+    compress     : {}
+  });
+  UglifyJS.base54.reset();
+
+  // 1. parse
+  var toplevel = null,
+    sourcesContent = {};
+
+  if (options.spidermonkey) {
+    toplevel = UglifyJS.AST_Node.from_mozilla_ast(files);
+  } else {
+    if (typeof files == "string")
+      files = [ files ];
+    files.forEach(function(file){
+      var code = options.fromString
+        ? file
+        : fs.readFileSync(file, "utf8");
+      sourcesContent[file] = code;
+      toplevel = UglifyJS.parse(code, {
+        filename: options.fromString ? "?" : file,
+        toplevel: toplevel
+      });
+    });
+  }
+
+  // 2. compress
+  if (options.compress) {
+    var compress = { warnings: options.warnings };
+    UglifyJS.merge(compress, options.compress);
+    toplevel.figure_out_scope();
+    var sq = UglifyJS.Compressor(compress);
+    toplevel = toplevel.transform(sq);
+  }
+
+  // 3. mangle
+  if (options.mangle) {
+    toplevel.figure_out_scope();
+    toplevel.compute_char_frequency();
+    toplevel.mangle_names(options.mangle);
+  }
+
+  // 4. output
+  var inMap = options.inSourceMap;
+  var output = {};
+  if (typeof options.inSourceMap == "string") {
+    inMap = fs.readFileSync(options.inSourceMap, "utf8");
+  }
+  if (options.outSourceMap) {
+    output.source_map = UglifyJS.SourceMap({
+      file: options.outSourceMap,
+      orig: inMap,
+      root: options.sourceRoot
+    });
+    if (options.sourceMapIncludeSources) {
+      for (var file in sourcesContent) {
+        if (sourcesContent.hasOwnProperty(file)) {
+          options.source_map.get().setSourceContent(file, sourcesContent[file]);
+        }
+      }
+    }
+  }
+  if (options.output) {
+    UglifyJS.merge(output, options.output);
+  }
+  var stream = UglifyJS.OutputStream(output);
+  toplevel.print(stream);
+  return {
+    code : stream + "",
+    map  : output.source_map + ""
+  };
+};
+
 
 
 //////////////////// ClientTarget ////////////////////
