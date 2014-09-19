@@ -236,6 +236,8 @@ var File = function (options) {
   // disk).
   self.sourcePath = options.sourcePath;
 
+  self.info = options.info || '?';
+
   // If this file was generated, a sourceMap (as a string) with debugging
   // information, as well as the "root" that paths in it should be resolved
   // against. Set with setSourceMap.
@@ -270,6 +272,11 @@ var File = function (options) {
 };
 
 _.extend(File.prototype, {
+  toString: function() {
+    var self = this;
+    return "File: [info=" + self.info + "]";
+  },
+
   hash: function () {
     var self = this;
     if (! self._hash)
@@ -473,20 +480,26 @@ _.extend(Target.prototype, {
       buildmessage.reportProgress(progress);
 
       // Minify, if requested
+      var minifiers;
       if (options.minify) {
-        var minifiers = uniload.load({
-          packages: ['minifiers']
-        }).minifiers;
-        self.minifyJs(minifiers);
+        buildmessage.enterJob({title: "Minifying JS" }, function () {
+          minifiers = uniload.load({
+            packages: ['minifiers']
+          }).minifiers;
+          self.minifyJs(minifiers);
+        });
       }
       progress.current++;
       buildmessage.reportProgress(progress);
 
       if (options.minify) {
-        // CSS is minified only for client targets.
-        if (self instanceof ClientTarget) {
-          self.minifyCss(minifiers);
-        }
+
+        buildmessage.enterJob({title: "Minifying CSS" }, function () {
+          // CSS is minified only for client targets.
+          if (self instanceof ClientTarget) {
+            self.minifyCss(minifiers);
+          }
+        });
       }
       progress.current++;
       buildmessage.reportProgress(progress);
@@ -642,6 +655,7 @@ _.extend(Target.prototype, {
           return;
 
         var f = new File({
+          info: 'unbuild ' + resource,
           data: resource.data,
           cacheable: false,
           hash: resource.hash
@@ -676,7 +690,7 @@ _.extend(Target.prototype, {
             // meteor.js?
             return;
 
-          var f = new File({data: resource.data, cacheable: false});
+          var f = new File({ info: 'resource ' + resource.servePath, data: resource.data, cacheable: false});
 
           var relPath = stripLeadingSlash(resource.servePath);
           f.setTargetPathFromRelPath(relPath);
@@ -743,16 +757,25 @@ _.extend(Target.prototype, {
   minifyJs: function (minifiers) {
     var self = this;
 
-    var allJs = _.map(self.js, function (file) {
+    var sources = _.map(self.js, function (file) {
       return file.contents('utf8');
-    }).join('\n;\n');
+    });
 
-    allJs = UglifyJSMinify(allJs, {
-      fromString: true,
-      compress: {drop_debugger: false}
-    }).code;
+    var start = Date.now();
 
-    self.js = [new File({ data: new Buffer(allJs, 'utf8') })];
+    var allJs;
+    buildmessage.enterJob({title: "Minify"}, function () {
+      allJs = UglifyJSMinify(sources, {
+        fromString: true,
+        compress: {drop_debugger: false}
+      }).code;
+    });
+
+    var end = Date.now();
+
+    console.log("Minification took " + (end - start) + "ms to minify");
+
+    self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
   },
 
@@ -805,6 +828,13 @@ UglifyJSMinify = function(files, options) {
   });
   UglifyJS.base54.reset();
 
+  var totalFileSize = 0;
+  _.forEach(files, function (file) {
+    totalFileSize += file.length;
+  });
+  var progress = {current: 0, end: totalFileSize * 5, done: false};
+  var progressTracker = buildmessage.getCurrentProgressTracker();
+
   // 1. parse
   var toplevel = null,
     sourcesContent = {};
@@ -814,7 +844,7 @@ UglifyJSMinify = function(files, options) {
   } else {
     if (typeof files == "string")
       files = [ files ];
-    files.forEach(function(file){
+    buildmessage.forkJoin({title: 'Minifying files'}, files, function (file) {
       var code = options.fromString
         ? file
         : fs.readFileSync(file, "utf8");
@@ -823,6 +853,9 @@ UglifyJSMinify = function(files, options) {
         filename: options.fromString ? "?" : file,
         toplevel: toplevel
       });
+
+      progress.curent += code.length;
+      progressTracker.reportProgress(progress);
     });
   }
 
@@ -833,6 +866,9 @@ UglifyJSMinify = function(files, options) {
     toplevel.figure_out_scope();
     var sq = UglifyJS.Compressor(compress);
     toplevel = toplevel.transform(sq);
+
+    progress.curent += totalFileSize;
+    progressTracker.reportProgress(progress);
   }
 
   // 3. mangle
@@ -840,6 +876,9 @@ UglifyJSMinify = function(files, options) {
     toplevel.figure_out_scope();
     toplevel.compute_char_frequency();
     toplevel.mangle_names(options.mangle);
+
+    progress.curent += totalFileSize;
+    progressTracker.reportProgress(progress);
   }
 
   // 4. output
@@ -864,9 +903,17 @@ UglifyJSMinify = function(files, options) {
   }
   if (options.output) {
     UglifyJS.merge(output, options.output);
+
+    progress.curent += totalFileSize;
+    progressTracker.reportProgress(progress);
   }
+
   var stream = UglifyJS.OutputStream(output);
   toplevel.print(stream);
+
+  progress.curent += totalFileSize;
+  progressTracker.reportProgress(progress);
+
   return {
     code : stream + "",
     map  : output.source_map + ""
@@ -945,7 +992,7 @@ _.extend(ClientTarget.prototype, {
     if (! stringifiedCss.code)
       return;
 
-    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
+    self.css = [new File({ info: 'combined css', data: new Buffer(stringifiedCss.code, 'utf8') })];
 
     // Add the contents of the input files to the source map of the new file
     stringifiedCss.map.sourcesContent =
@@ -993,7 +1040,7 @@ _.extend(ClientTarget.prototype, {
       minifiedCss = minifiers.CssTools.minifyCss(allCss);
     }
     if (!! minifiedCss) {
-      self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
+      self.css = [new File({ info: 'minified css', data: new Buffer(minifiedCss, 'utf8') })];
       self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
     }
   },
@@ -1844,11 +1891,15 @@ exports.bundle = function (options) {
         arch: webArch
       });
 
-      client.make({
-        packages: [app],
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
+      client.build = function () {
+        buildmessage.enterJob({title: "Build client: " + webArch}, function () {
+          client.make({
+            packages: [app],
+            minify: buildOptions.minify,
+            addCacheBusters: true
+          });
+        });
+      };
 
       return client;
     };
@@ -1858,10 +1909,12 @@ exports.bundle = function (options) {
         packageLoader: packageLoader,
         arch: "web.browser"
       });
-      client.make({
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
+      client.build = function () {
+        client.make({
+          minify: buildOptions.minify,
+          addCacheBusters: true
+        });
+      };
 
       return client;
     };
@@ -1876,10 +1929,12 @@ exports.bundle = function (options) {
         targetOptions.clientTargets = clientTargets;
 
       var server = new ServerTarget(targetOptions);
-      server.make({
-        packages: [app],
-        minify: false
-      });
+      server.build = function () {
+        server.make({
+          packages: [app],
+          minify: false
+        });
+      };
 
       return server;
     };
@@ -2081,29 +2136,35 @@ exports.bundle = function (options) {
                            pathForTarget(options.forTarget));
     };
 
-    // Write to disk
-    var writeOptions = {
-      includeNodeModulesSymlink: includeNodeModulesSymlink,
-      builtBy: builtBy,
-      controlProgram: controlProgram,
-      releaseName: releaseName,
-      getRelativeTargetPath: getRelativeTargetPath
-    };
+    buildmessage.forkJoin({ title: "Building" }, targets, function (target) {
+      if (target.build) target.build();
+    });
 
-    if (options.hasCachedBundle) {
-      // If we already have a cached bundle, just recreate the new targets.
-      // XXX This might make the contents of "star.json" out of date.
-      _.each(targets, function (target, name) {
-        writeTargetToPath(name, target, outputPath, writeOptions);
-        clientWatchSet.merge(target.getWatchSet());
-      });
-    } else {
-      starResult = writeSiteArchive(targets, outputPath, writeOptions);
-      serverWatchSet.merge(starResult.serverWatchSet);
-      clientWatchSet.merge(starResult.clientWatchSet);
-    }
+    buildmessage.enterJob({ title: "Writing bundle" }, function () {
+      // Write to disk
+      var writeOptions = {
+        includeNodeModulesSymlink: includeNodeModulesSymlink,
+        builtBy: builtBy,
+        controlProgram: controlProgram,
+        releaseName: releaseName,
+        getRelativeTargetPath: getRelativeTargetPath
+      };
 
-    success = true;
+      if (options.hasCachedBundle) {
+        // If we already have a cached bundle, just recreate the new targets.
+        // XXX This might make the contents of "star.json" out of date.
+        _.each(targets, function (target, name) {
+          writeTargetToPath(name, target, outputPath, writeOptions);
+          clientWatchSet.merge(target.getWatchSet());
+        });
+      } else {
+        starResult = writeSiteArchive(targets, outputPath, writeOptions);
+        serverWatchSet.merge(starResult.serverWatchSet);
+        clientWatchSet.merge(starResult.clientWatchSet);
+      }
+
+      success = true;
+    });
   });
 
   if (success && messages.hasMessages())

@@ -21,6 +21,9 @@ var Progress = function (options) {
 
   self._title = options.title;
 
+  if (!self._title && self._parent) {
+    throw new Error("WHATSMYNAME");
+  }
   self._forkJoin = options.forkJoin;
 
   // XXX: Rationalize this; we probably don't need _completedChildren

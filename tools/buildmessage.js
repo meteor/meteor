@@ -231,13 +231,20 @@ var capture = function (options, f) {
       currentJob.withValue(job, function () {
         var nestingLevel = currentNestingLevel.get();
         currentNestingLevel.withValue(nestingLevel + 1, function () {
-          debugBuild && console.log("START CAPTURE", nestingLevel, options.title);
+          var start;
+          if (debugBuild) {
+            start = Date.now();
+            console.log("START CAPTURE", nestingLevel, options.title, "took " + (end - start));
+          }
           try {
             f();
           } finally {
             progress.reportProgressDone();
 
-            debugBuild && console.log("END CAPTURE", nestingLevel, options.title);
+            if (debugBuild) {
+              var end = Date.now();
+              console.log("END CAPTURE", nestingLevel, options.title, "took " + (end - start));
+            }
           }
         });
       });
@@ -295,12 +302,19 @@ var enterJob = function (options, f) {
     return currentJob.withValue(job, function () {
       var nestingLevel = currentNestingLevel.get();
       return currentNestingLevel.withValue(nestingLevel + 1, function () {
-        debugBuild && console.log("START", nestingLevel, options.title);
+        var start;
+        if (debugBuild) {
+          start = Date.now();
+          console.log("START", nestingLevel, options.title);
+        }
         try {
           return f();
         } finally {
           progress.reportProgressDone();
-          debugBuild && console.log("DONE", nestingLevel, options.title);
+          if (debugBuild) {
+            var end = Date.now();
+            console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+          }
         }
       });
     });
