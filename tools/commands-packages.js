@@ -1151,6 +1151,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'search',
+  pretty: true,
   minArgs: 1,
   maxArgs: 1,
   options: {
