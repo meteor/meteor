@@ -45,6 +45,11 @@ var Progress = function (options) {
 };
 
 _.extend(Progress.prototype, {
+  toString: function() {
+    var self = this;
+    return "Progress [state=" + JSON.stringify(self._state) + "]";
+  },
+
   reportProgressDone: function () {
     var self = this;
 
