@@ -997,6 +997,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'show',
+  pretty: true,
   minArgs: 1,
   maxArgs: 1,
   options: {
