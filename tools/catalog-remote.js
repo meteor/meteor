@@ -170,7 +170,7 @@ _.extend(RemoteCatalog.prototype, {
     future.wait();
   },
 
-  reset: function () {
+  purgeDB: function () {
     var self = this;
     var future = new Future;
     self.db.serialize(function() {
@@ -195,7 +195,13 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     if (self.offline)
       return;
-    packageClient.updateServerPackageData(this);
+
+    var updateResult = packageClient.updateServerPackageData(this);
+    if (updateResult.resetData) {
+      tropohouse.default.wipeAllPackages();
+      self.purgeDB();
+    }
+
   },
 
   refreshInProgress: function () {
