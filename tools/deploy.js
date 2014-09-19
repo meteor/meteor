@@ -15,6 +15,7 @@ var utils = require('./utils.js');
 var _ = require('underscore');
 var Future = require('fibers/future');
 var stats = require('./stats.js');
+var Console = require('./console.js').Console;
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
@@ -65,6 +66,7 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
+  var progress = buildmessage.addChildTracker("Uploading");
   try {
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation +
@@ -72,13 +74,16 @@ var deployRpc = function (options) {
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
       useAuthHeader: true,
-      encoding: 'utf8' // Hack, but good enough for the deploy server..
+      encoding: 'utf8', // Hack, but good enough for the deploy server..
+      progress: progress
     }));
   } catch (e) {
     return {
       statusCode: null,
       errorMessage: "Connection error (" + e.message + ")"
     };
+  } finally {
+    progress.reportProgressDone();
   }
 
   var response = result.response;
@@ -254,7 +259,7 @@ var authedRpc = function (options) {
 // password-protected app, instruct them to claim it with 'meteor
 // claim'.
 var printLegacyPasswordMessage = function (site) {
-    process.stderr.write(
+  Console.stderr.write(
 "\nThis site was deployed with an old version of Meteor that used\n" +
 "site passwords instead of user accounts. Now we have a much better\n" +
 "system, Meteor developer accounts.\n\n" +
@@ -267,7 +272,7 @@ var printLegacyPasswordMessage = function (site) {
 // --add' or switch accounts.
 var printUnauthorizedMessage = function () {
   var username = auth.loggedInUsername();
-  process.stderr.write(
+  Console.stderr.write(
 "Sorry, that site belongs to a different user.\n" +
 (username ? "You are currently logged in as " + username  + ".\n" : "") +
 "\nEither have the site owner use 'meteor authorized --add' to add you\n" +
@@ -288,7 +293,7 @@ var canonicalizeSite = function (site) {
   // characters (url.parse will do something very strange if a component is
   // larger than 63, which is the maximum legal length).
   if (site.length > 63) {
-    process.stdout.write(
+    Console.stdout.write(
 "The maximum hostname length currently supported is 63 characters.\n" +
 site + " is too long.\n" +
 "Please try again with a shorter URL for your site.\n");
@@ -302,14 +307,14 @@ site + " is too long.\n" +
   var parsed = require('url').parse(url);
 
   if (! parsed.hostname) {
-    process.stdout.write(
+    Console.stdout.write(
 "Please specify a domain to connect to, such as www.example.com or\n" +
 "http://www.example.com/\n");
     return false;
   }
 
   if (parsed.pathname != '/' || parsed.hash || parsed.query) {
-    process.stdout.write(
+    Console.stdout.write(
 "Sorry, Meteor does not yet support specific path URLs, such as\n" +
 "http://www.example.com/blog .  Please specify the root of a domain.\n");
     return false;
@@ -362,14 +367,14 @@ var bundleAndDeploy = function (options) {
   });
 
   if (preflight.errorMessage) {
-    process.stderr.write("\nError deploying application: " +
+    Console.stderr.write("\nError deploying application: " +
                          preflight.errorMessage + "\n");
     return 1;
   }
 
   if (preflight.protection === "password") {
     printLegacyPasswordMessage(site);
-    process.stderr.write("If it's not your site, please try a different name!\n");
+    Console.stderr.write("If it's not your site, please try a different name!\n");
     return 1;
 
   } else if (preflight.protection === "account" &&
@@ -381,7 +386,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  process.stdout.write('Deploying to ' + site + '. Bundling...\n');
+  Console.stdout.write('Deploying to ' + site + '. Bundling...\n');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -396,11 +401,11 @@ var bundleAndDeploy = function (options) {
     var bundler = require('./bundler.js');
 
     if (options.recordPackageUsage) {
-      var statsMessages = buildmessage.capture(function () {
+      var statsMessages = buildmessage.capture({ title: 'Reporting statistics' }, function () {
         stats.recordPackages("sdk.deploy", site);
       });
       if (statsMessages.hasMessages()) {
-        process.stdout.write("Error recording package list:\n" +
+        Console.stdout.write("Error recording package list:\n" +
                              statsMessages.formatMessages());
         // ... but continue;
       }
@@ -416,25 +421,29 @@ var bundleAndDeploy = function (options) {
   }
 
   if (messages.hasMessages()) {
-    process.stdout.write("\nErrors prevented deploying:\n");
-    process.stdout.write(messages.formatMessages());
+    Console.stdout.write("\nErrors prevented deploying:\n");
+    Console.stdout.write(messages.formatMessages());
     return 1;
   }
 
-  process.stdout.write('Uploading...\n');
+  Console.stdout.write('Uploading...\n');
 
-  var result = authedRpc({
-    method: 'POST',
-    operation: 'deploy',
-    site: site,
-    qs: settings !== null ? { settings: settings } : {},
-    bodyStream: files.createTarGzStream(path.join(buildDir, 'bundle')),
-    expectPayload: ['url'],
-    preflightPassword: preflight.preflightPassword
+  var result;
+  buildmessage.enterJob({ title: "Uploading" }, function () {
+    result = authedRpc({
+      method: 'POST',
+      operation: 'deploy',
+      site: site,
+      qs: settings !== null ? {settings: settings} : {},
+      bodyStream: files.createTarGzStream(path.join(buildDir, 'bundle')),
+      expectPayload: ['url'],
+      preflightPassword: preflight.preflightPassword
+    });
   });
 
+
   if (result.errorMessage) {
-    process.stderr.write("\nError deploying application: " +
+    Console.stderr.write("\nError deploying application: " +
                          result.errorMessage + "\n");
     return 1;
   }
@@ -442,7 +451,7 @@ var bundleAndDeploy = function (options) {
   var deployedAt = require('url').parse(result.payload.url);
   var hostname = deployedAt.hostname;
 
-  process.stdout.write('Now serving at ' + hostname + '\n');
+  Console.stdout.write('Now serving at ' + hostname + '\n');
   files.rm_recursive(buildDir);
 
   if (! hostname.match(/meteor\.com$/)) {
@@ -451,11 +460,11 @@ var bundleAndDeploy = function (options) {
       if (err || cnames[0] !== 'origin.meteor.com') {
         dns.resolve(hostname, 'A', function (err, addresses) {
           if (err || addresses[0] !== '107.22.210.133') {
-            process.stdout.write('-------------\n');
-            process.stdout.write("You've deployed to a custom domain.\n");
-            process.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
-            process.stdout.write("or set an A record to 107.22.210.133.\n");
-            process.stdout.write('-------------\n');
+            Console.stdout.write('-------------\n');
+            Console.stdout.write("You've deployed to a custom domain.\n");
+            Console.stdout.write("Please be sure to CNAME your hostname to origin.meteor.com,\n");
+            Console.stdout.write("or set an A record to 107.22.210.133.\n");
+            Console.stdout.write('-------------\n');
           }
         });
         }
@@ -478,12 +487,12 @@ var deleteApp = function (site) {
   });
 
   if (result.errorMessage) {
-    process.stderr.write("Couldn't delete application: " +
+    Console.stderr.write("Couldn't delete application: " +
                          result.errorMessage + "\n");
     return 1;
   }
 
-  process.stdout.write("Deleted.\n");
+  Console.stdout.write("Deleted.\n");
   return 0;
 };
 
@@ -504,7 +513,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
   });
 
   if (preflight.errorMessage) {
-    process.stderr.write("Couldn't " + what + ": " +
+    Console.stderr.write("Couldn't " + what + ": " +
                          preflight.errorMessage + "\n");
     return null;
   }
@@ -529,7 +538,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
       } else {
         // Shouldn't ever get here because we set the retry flag on the
         // login, but just in case.
-        process.stderr.write(
+        Console.stderr.write(
 "\nYou must be logged in to " + what + " for this app. Use 'meteor login'\n" +
 "to log in.\n\n" +
 "If you don't have a Meteor developer account yet, you can quickly\n" +
@@ -537,7 +546,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
         return null;
       }
     } else { // User is logged in but not authorized for this app
-      process.stderr.write("\n");
+      Console.stderr.write("\n");
       printUnauthorizedMessage();
       return null;
     }
@@ -553,7 +562,7 @@ var checkAuthThenSendRpc = function (site, operation, what) {
   });
 
   if (result.errorMessage) {
-    process.stderr.write("Couldn't " + what + ": " +
+    Console.stderr.write("Couldn't " + what + ": " +
                          result.errorMessage + "\n");
     return null;
   }
@@ -589,7 +598,7 @@ var logs = function (site) {
   if (result === null) {
     return 1;
   } else {
-    process.stdout.write(result.message);
+    Console.stdout.write(result.message);
     auth.maybePrintRegistrationLink({ leadingNewline: true });
     return 0;
   }
@@ -606,33 +615,33 @@ var listAuthorized = function (site) {
     expectPayload: []
   });
   if (result.errorMessage) {
-    process.stderr.write("Couldn't get authorized users list: " +
+    Console.stderr.write("Couldn't get authorized users list: " +
                          result.errorMessage + "\n");
     return 1;
   }
   var info = result.payload;
 
   if (! _.has(info, 'protection')) {
-    process.stdout.write("<anyone>\n");
+    Console.stdout.write("<anyone>\n");
     return 0;
   }
 
   if (info.protection === "password") {
-    process.stdout.write("<password>\n");
+    Console.stdout.write("<password>\n");
     return 0;
   }
 
   if (info.protection === "account") {
     if (! _.has(info, 'authorized')) {
-      process.stderr.write("Couldn't get authorized users list: " +
+      Console.stderr.write("Couldn't get authorized users list: " +
                            "You are not authorized\n");
       return 1;
     }
 
-    process.stdout.write((auth.loggedInUsername() || "<you>") + "\n");
+    Console.stdout.write((auth.loggedInUsername() || "<you>") + "\n");
     _.each(info.authorized, function (username) {
       if (username)
-        process.stdout.write(username + "\n");
+        Console.stdout.write(username + "\n");
     });
     return 0;
   }
@@ -654,12 +663,12 @@ var changeAuthorized = function (site, action, username) {
   });
 
   if (result.errorMessage) {
-    process.stderr.write("Couldn't change authorized users: " +
+    Console.stderr.write("Couldn't change authorized users: " +
                          result.errorMessage + "\n");
     return 1;
   }
 
-  process.stdout.write(site + ": " +
+  Console.stdout.write(site + ": " +
                        (action === "add" ? "added " : "removed ")
                        + username + "\n");
   return 0;
@@ -680,7 +689,7 @@ var claim = function (site) {
   });
 
   if (infoResult.statusCode === 404) {
-    process.stderr.write(
+    Console.stderr.write(
 "There isn't a site deployed at that address. Use 'meteor deploy' if\n" +
 "you'd like to deploy your app here.\n");
     return 1;
@@ -688,15 +697,15 @@ var claim = function (site) {
 
   if (infoResult.payload && infoResult.payload.protection === "account") {
     if (infoResult.payload.authorized)
-      process.stderr.write("That site already belongs to you.\n");
+      Console.stderr.write("That site already belongs to you.\n");
     else
-      process.stderr.write("Sorry, that site belongs to someone else.\n");
+      Console.stderr.write("Sorry, that site belongs to someone else.\n");
     return 1;
   }
 
   if (infoResult.payload &&
       infoResult.payload.protection === "password") {
-    process.stdout.write(
+    Console.stdout.write(
 "To claim this site and transfer it to your account, enter the\n" +
 "site password one last time.\n\n");
   }
@@ -712,18 +721,18 @@ var claim = function (site) {
     auth.pollForRegistrationCompletion();
     if (! auth.loggedInUsername() &&
         auth.registrationUrl()) {
-      process.stderr.write(
+      Console.stderr.write(
 "You need to set a password on your Meteor developer account before\n" +
 "you can claim sites. You can do that here in under a minute:\n\n" +
 auth.registrationUrl() + "\n\n");
     } else {
-      process.stderr.write("Couldn't claim site: " +
+      Console.stderr.write("Couldn't claim site: " +
                            result.errorMessage + "\n");
     }
     return 1;
   }
 
-  process.stdout.write(
+  Console.stdout.write(
 site + ": " + "successfully transferred to your account.\n" +
 "\n" +
 "Show authorized users with:\n" +
@@ -747,7 +756,7 @@ var listSites = function () {
   });
 
   if (result.errorMessage) {
-    process.stderr.write("Couldn't list sites: " +
+    Console.stderr.write("Couldn't list sites: " +
                          result.errorMessage + "\n");
     return 1;
   }
@@ -755,11 +764,11 @@ var listSites = function () {
   if (! result.payload ||
       ! result.payload.sites ||
       ! result.payload.sites.length) {
-    process.stdout.write("You don't have any sites yet.\n");
+    Console.stdout.write("You don't have any sites yet.\n");
   } else {
     result.payload.sites.sort();
     _.each(result.payload.sites, function (site) {
-      process.stdout.write(site + "\n");
+      Console.stdout.write(site + "\n");
     });
   }
   return 0;

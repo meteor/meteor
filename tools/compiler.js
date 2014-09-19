@@ -797,7 +797,7 @@ compiler.compile = function (packageSource, options) {
         versions: buildTimeDeps.pluginDependencies[info.name],
         catalog: packageSource.catalog
       });
-      loader.downloadMissingPackages({serverArch: archinfo.host()});
+      loader.downloadMissingPackages({serverArch: archinfo.host() });
 
       var buildResult = bundler.buildJsImage({
         name: info.name,
