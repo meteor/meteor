@@ -32,8 +32,13 @@ var builtInTemplateMacros = {
 
 // A "reserved name" can't be used as a <template> name.  This
 // function is used by the template file scanner.
+//
+// Note that the runtime imposes additional restrictions, for example
+// banning the name "body" and names of built-in object properties
+// like "toString".
 SpacebarsCompiler.isReservedName = function (name) {
-  return builtInBlockHelpers.hasOwnProperty(name);
+  return builtInBlockHelpers.hasOwnProperty(name) ||
+    builtInTemplateMacros.hasOwnProperty(name);
 };
 
 var makeObjectLiteral = function (obj) {
