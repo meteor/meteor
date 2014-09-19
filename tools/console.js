@@ -10,6 +10,8 @@ var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
 
+PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
+
 var Console = function (options) {
   var self = this;
 
@@ -88,7 +90,9 @@ _.extend(Console.prototype, {
     self._lastStatusPoll = Date.now();
 
     var rootProgress = buildmessage.getRootProgress();
-    //rootProgress.dump(process.stdout, {skipDone: true});
+    if (PROGRESS_DEBUG) {
+      rootProgress.dump(process.stdout, {skipDone: true});
+    }
     var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
     if (self._watching === current) {
       return;
