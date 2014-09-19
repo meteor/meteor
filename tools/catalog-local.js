@@ -15,12 +15,8 @@ var catalog = require('./catalog.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 
-// This is a basic catalog class. It accesses basic catalog data by looking
-// through the catalog's collections.
-//
-// YOU MUST SET self.initialized = true BEFORE USING THIS CATALOG. In fact, the
-// protolog is not even intended to be used by itself -- there is a server
-// catalog and a constraint solving catalog, which inherit from it.
+// LocalCatalog represents the packages located into an application folder
+// A default instance of this catalog is created in catalog.js
 var LocalCatalog = function (options) {
   var self = this;
 
