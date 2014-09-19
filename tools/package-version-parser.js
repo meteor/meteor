@@ -271,3 +271,14 @@ var throwVersionParserError = function (message) {
 PV.constraintToFullString = function (parsedConstraint) {
   return parsedConstraint.name + "@" + parsedConstraint.constraintString;
 };
+
+// Return true if the version was invalid prior to the 0.9.3.
+PV.invalidFirstFormatConstraint = function (validConstraint) {
+  if (!validConstraint) return false;
+  // We can check this easily right now, because we introduced some new
+  // characters. Anything with those characters is invalid prior to
+  // 0.9.3. XXX: If we ever have to go through these, we should write a more
+  // complicated regex.
+  return (/.*~.*/.test(validConstraint) ||
+          /.*\|.*/.test(validConstraint));
+}

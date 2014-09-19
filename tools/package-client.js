@@ -38,7 +38,7 @@ var openPackageServerConnection = function (packageServerUrl) {
 
 var emptyCachedServerDataJson = function () {
   return {
-    syncToken: {},
+    syncToken: { format: "1.1" },
     collections: null
   };
 };
@@ -696,6 +696,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     // XXX check that we're actually providing something new?
   } else {
     process.stdout.write('Creating package version...\n');
+
     var uploadRec = {
       packageName: packageSource.name,
       version: version,

@@ -156,3 +156,23 @@ Tinytest.add("Meteor Version string parsing - compare", function (test) {
   test.isTrue(PackageVersion.compare("1.2.0", "1.0.0") > 0);
   test.isTrue(PackageVersion.compare("1.0.1", "1.0.0~5") > 0);
 });
+
+Tinytest.add("Invalid in 0.9.2", function (test) {
+  // Note that invalidFirstFormatConstraint assumes that the initial version
+  // passed in has been previously checked to be valid in 0.9.3.
+
+  // These are invalid in 0.9.2, but valid in 0.9.3 and above.
+  var invalidVersions =
+    ["1.0.0~1", "1.0.0 || 2.0.0", "1.0.0-rc1~1",
+     "3.4.0-rc1 || =1.0.0"];
+  _.each(invalidVersions, function (v) {
+    test.isTrue(PackageVersion.invalidFirstFormatConstraint(v));
+  });
+
+  // These are all valid in 0.9.2.
+  var validVersions =
+    ["1.0.0", "2.0.0-rc1", "=2.5.0"];
+  _.each(validVersions, function (v) {
+    test.isFalse(PackageVersion.invalidFirstFormatConstraint(v));
+  });
+});
