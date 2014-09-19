@@ -138,16 +138,11 @@ _.extend(OfficialCatalog.prototype, {
     self._refreshFiber = Fiber.current;
     self._currentRefreshIsLoud = !options.silent;
 
-    var patience = new utils.Patience({
-      messageAfterMs: 2000,
-      message: function () {
-        if (self._currentRefreshIsLoud) {
-          console.log("Refreshing package metadata. This may take a moment.");
-        }
-      }
-    });
-    try {
-      var thrownError = null;
+    var thrownError = null;
+
+    buildmessage.enterJob({
+      title: 'Refreshing package metadata.'
+    }, function () {
       try {
         self._refresh();
         // Force the complete catalog (which is layered on top of our data) to
@@ -156,9 +151,7 @@ _.extend(OfficialCatalog.prototype, {
       } catch (e) {
         thrownError = e;
       }
-    } finally {
-      patience.stop();
-    }
+    });
 
     while (self._refreshFutures.length) {
       var fut = self._refreshFutures.pop();
@@ -897,9 +890,9 @@ _.extend(CompleteCatalog.prototype, {
     };
 
     // Load the package sources for packages and their tests into packageSources.
-    _.each(self.effectiveLocalPackages, function (x) {
+    buildmessage.forkJoin({ 'title': 'Initializing packages'}, self.effectiveLocalPackages, function (x) {
       initSourceFromDir(x);
-     });
+    });
 
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.

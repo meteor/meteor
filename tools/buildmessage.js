@@ -1,7 +1,10 @@
+var Fiber = require('fibers');
+var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('./files.js');
 var parseStack = require('./parse-stack.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var Progress = require('./progress.js').Progress;
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 
@@ -154,9 +157,46 @@ _.extend(MessageSet.prototype, {
   }
 });
 
+// XXX: This is now a little bit silly... ideas:
+// Can we just have one hierarchical state?
+// Can we combined job & messageSet
+// Can we infer nesting level?
 var currentMessageSet = new fiberHelpers.EnvironmentVariable;
 var currentJob = new fiberHelpers.EnvironmentVariable;
 var currentNestingLevel = new fiberHelpers.EnvironmentVariable(0);
+var currentProgress = new fiberHelpers.EnvironmentVariable;
+
+var rootProgress = new Progress();
+
+var getRootProgress = function () {
+  return rootProgress;
+};
+
+var reportProgress = function (state) {
+  var progress = currentProgress.get();
+  if (progress) {
+    progress.reportProgress(state);
+  }
+};
+
+var reportProgressDone = function () {
+  var progress = currentProgress.get();
+  if (progress) {
+    progress.reportProgressDone();
+  }
+};
+
+var getCurrentProgressTracker = function () {
+  var progress = currentProgress.get();
+  return progress ? progress : rootProgress;
+};
+
+
+var addChildTracker = function (title) {
+  var options = {};
+  options.title = title;
+  return getCurrentProgressTracker().addChildTask(options);
+};
 
 // Create a new MessageSet, run `f` with that as the current
 // MessageSet for the purpose of accumulating and recovering from
@@ -169,24 +209,51 @@ var currentNestingLevel = new fiberHelpers.EnvironmentVariable(0);
 // `options`.
 var capture = function (options, f) {
   var messageSet = new MessageSet;
-  currentMessageSet.withValue(messageSet, function () {
-    var job = null;
-    if (typeof options === "object") {
-      job = new Job(options);
-      messageSet.jobs.push(job);
-    } else {
-      f = options; // options not actually provided
-    }
+  var parentMessageSet = currentMessageSet.get();
 
-    currentJob.withValue(job, function () {
-      var nestingLevel = currentNestingLevel.get();
-      currentNestingLevel.withValue(nestingLevel + 1, function () {
-        debugBuild && console.log("START CAPTURE", nestingLevel, options.title);
-        try {
-          f();
-        } finally {
-          debugBuild && console.log("END CAPTURE", nestingLevel, options.title);
-        }
+  {
+    var parentProgress = currentProgress.get();
+    if (!parentProgress) {
+      parentProgress = rootProgress;
+    }
+    var childOptions = {};
+    if (typeof options === "object") {
+      if (options.title) {
+        childOptions.title = options.title;
+      }
+    }
+    var progress = parentProgress.addChildTask(childOptions);
+  }
+
+  currentProgress.withValue(progress, function () {
+    currentMessageSet.withValue(messageSet, function () {
+      var job = null;
+      if (typeof options === "object") {
+        job = new Job(options);
+        messageSet.jobs.push(job);
+      } else {
+        f = options; // options not actually provided
+      }
+
+      currentJob.withValue(job, function () {
+        var nestingLevel = currentNestingLevel.get();
+        currentNestingLevel.withValue(nestingLevel + 1, function () {
+          var start;
+          if (debugBuild) {
+            start = Date.now();
+            console.log("START CAPTURE", nestingLevel, options.title, "took " + (end - start));
+          }
+          try {
+            f();
+          } finally {
+            progress.reportProgressDone();
+
+            if (debugBuild) {
+              var end = Date.now();
+              console.log("END CAPTURE", nestingLevel, options.title, "took " + (end - start));
+            }
+          }
+        });
       });
     });
   });
@@ -211,24 +278,57 @@ var enterJob = function (options, f) {
     options = {};
   }
 
-  if (! currentMessageSet.get()) {
-    return f();
+  var progress;
+  {
+    var parentProgress = currentProgress.get();
+    if (!parentProgress) {
+      parentProgress = rootProgress;
+    }
+    var progressOptions = {};
+    // XXX: Just pass all the options?
+    if (typeof options === "object") {
+      if (options.title) {
+        progressOptions.title = options.title;
+      }
+      if (options.forkJoin) {
+        progressOptions.forkJoin = options.forkJoin;
+      }
+    }
+    progress = parentProgress.addChildTask(progressOptions);
   }
 
-  var job = new Job(options);
-  var originalJob = currentJob.get();
-  originalJob && originalJob.children.push(job);
-  currentMessageSet.get().jobs.push(job);
-
-  return currentJob.withValue(job, function () {
-    var nestingLevel = currentNestingLevel.get();
-    return currentNestingLevel.withValue(nestingLevel + 1, function () {
-      debugBuild && console.log("START", nestingLevel, options.title);
+  currentProgress.withValue(progress, function () {
+    if (!currentMessageSet.get()) {
       try {
         return f();
       } finally {
-        debugBuild && console.log("DONE", nestingLevel, options.title);
+        progress.reportProgressDone();
       }
+    }
+
+    var job = new Job(options);
+    var originalJob = currentJob.get();
+    originalJob && originalJob.children.push(job);
+    currentMessageSet.get().jobs.push(job);
+
+    return currentJob.withValue(job, function () {
+      var nestingLevel = currentNestingLevel.get();
+      return currentNestingLevel.withValue(nestingLevel + 1, function () {
+        var start;
+        if (debugBuild) {
+          start = Date.now();
+          console.log("START", nestingLevel, options.title);
+        }
+        try {
+          return f();
+        } finally {
+          progress.reportProgressDone();
+          if (debugBuild) {
+            var end = Date.now();
+            console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+          }
+        }
+      });
     });
   });
 };
@@ -366,6 +466,74 @@ var assertInCapture = function () {
     throw new Error("Expected to be in a buildmessage capture");
 };
 
+// Like _.each, but runs each operation in a separate job
+var forkJoin = function (options, iterable, fn) {
+  if (!_.isFunction(fn)) {
+    fn = iterable;
+    iterable = options;
+    options = {};
+  }
+
+  var futures = [];
+  var results = [];
+  // XXX: We could check whether the sub-jobs set estimates, and if not
+  // assume they each take the same amount of time and auto-report their completion
+  var errors = [];
+  var firstError = null;
+
+  options.forkJoin = true;
+
+  enterJob(options, function () {
+    var job = currentJob.get();
+    var messageSet = currentMessageSet.get();
+    var progress = currentProgress.get();
+
+    _.each(iterable, function (/*arguments*/) {
+      var fut = new Future();
+      var fnArguments = arguments;
+      Fiber(function () {
+        currentProgress.withValue(progress, function () {
+          currentMessageSet.withValue(messageSet, function () {
+            currentJob.withValue(job, function () {
+              try {
+                var result = enterJob({title: (options.title || '') + ' child' }, function () {
+                  return fn.apply(null, fnArguments);
+                });
+                fut['return'](result);
+              } catch (e) {
+                fut['throw'](e);
+              }
+            });
+          });
+        });
+      }).run();
+      futures.push(fut);
+    });
+
+    _.each(futures, function (future) {
+      try {
+        var result = future.wait();
+        results.push(result);
+        errors.push(null);
+      } catch (e) {
+        results.push(null);
+        errors.push(e);
+
+        if (firstError === null) {
+          firstError = e;
+        }
+      }
+    });
+  });
+
+  if (firstError) {
+    throw firstError;
+  }
+
+  return results;
+};
+
+
 var buildmessage = exports;
 _.extend(exports, {
   capture: capture,
@@ -375,5 +543,11 @@ _.extend(exports, {
   exception: exception,
   jobHasMessages: jobHasMessages,
   assertInJob: assertInJob,
-  assertInCapture: assertInCapture
+  assertInCapture: assertInCapture,
+  forkJoin: forkJoin,
+  getRootProgress: getRootProgress,
+  reportProgress: reportProgress,
+  reportProgressDone: reportProgressDone,
+  getCurrentProgressTracker: getCurrentProgressTracker,
+  addChildTracker: addChildTracker
 });

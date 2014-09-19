@@ -152,11 +152,24 @@ _.extend(exports.Tropohouse.prototype, {
   downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
     var targetDirectory = files.mkdtemp();
-    var packageTarball = httpHelpers.getUrl({
-      url: buildRecord.build.url,
-      encoding: null
-    });
-    files.extractTarGz(packageTarball, targetDirectory);
+
+    var url = buildRecord.build.url;
+
+    var progress = buildmessage.addChildTracker("Download build");
+    try {
+      buildmessage.capture({}, function () {
+        var packageTarball = httpHelpers.getUrl({
+          url: url,
+          encoding: null,
+          progress: progress,
+          wait: false
+        });
+        files.extractTarGz(packageTarball, targetDirectory);
+      });
+    } finally {
+      progress.reportProgressDone();
+    }
+
     return targetDirectory;
   },
 
@@ -239,21 +252,9 @@ _.extend(exports.Tropohouse.prototype, {
       throw e;
     }
 
-    // XXX replace with a real progress bar in downloadMissingPackages
-    var header = "  downloading " + packageName + " at version " + version + " ...";
-    if (!options.silent) {
-        var animationFrame = 0;
-        var spinner = ['..-', '..\\', '..|', '../'];
-
-        var printUpdate = function () {
-          process.stderr.write(header + spinner[animationFrame] + "\r");
-          animationFrame = (animationFrame + 1) % spinner.length;
-        };
-        printUpdate();
-        var dlTimer = setInterval(printUpdate, 200);
-    }
-
-    try {
+    buildmessage.enterJob({
+      title: "  downloading " + packageName + " at version " + version + " ...",
+    }, function() {
       var buildTempDirs = [];
       // If there's already a package in the tropohouse, start with it.
       if (packageLinkTarget) {
@@ -263,8 +264,7 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX how does concurrency work here?  we could just get errors if we try
       // to rename over the other thing?  but that's the same as in warehouse?
       _.each(buildsToDownload, function (build) {
-        buildTempDirs.push(self.downloadBuildToTempDir(
-          {packageName: packageName, version: version}, build));
+        buildTempDirs.push(self.downloadBuildToTempDir({packageName: packageName, version: version}, build));
       });
 
       // We need to turn our builds into a single unipackage.
@@ -290,12 +290,7 @@ _.extend(exports.Tropohouse.prototype, {
       if (packageLinkTarget) {
         files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
       }
-    } finally {
-      if (!options.silent) {
-        clearInterval(dlTimer);
-        process.stderr.write(header + " done\n");
-      }
-    }
+    });
 
     return;
   },
@@ -316,7 +311,8 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};
-    _.each(versionMap, function (version, name) {
+    buildmessage.forkJoin({ title: 'Downloading packages'},
+      versionMap, function (version, name) {
       try {
         self.maybeDownloadPackageForArchitectures({
           packageName: name,

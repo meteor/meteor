@@ -195,12 +195,24 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, options) {
+  var results;
+  buildmessage.capture({ title: 'Updating package catalog' }, function () {
+    results = _updateServerPackageData(cachedServerData, options);
+  });
+  return results;
+};
+
+_updateServerPackageData = function (cachedServerData, options) {
   var self = this;
   options = options || {};
   cachedServerData = cachedServerData || emptyCachedServerDataJson();
 
   var done = false;
   var ret = {resetData: false};
+
+  var start = undefined;
+  var state = { current: 0, end: 10, done: false};
+  buildmessage.reportProgress(state);
 
   try {
     var conn = openPackageServerConnection(options.packageServerUrl);
@@ -210,8 +222,22 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     return ret;
   }
 
+  // Provide some progress indication for connection
+  // XXX though it is just a hack
+  state.current = 1;
+  buildmessage.reportProgress(state);
+
   var getSomeData = function () {
     var syncToken = cachedServerData.syncToken;
+
+    if (!start) {
+      start = syncToken.packages;
+      state.end = Date.now() - start;
+    }
+    // XXX: Is packages the best progress indicator?
+    state.current = syncToken.packages - start;
+    buildmessage.reportProgress(state);
+
     var remoteData;
     try {
       remoteData = loadRemotePackageData(conn, syncToken, {
@@ -271,6 +297,9 @@ exports.updateServerPackageData = function (cachedServerData, options) {
   } finally {
     conn.close();
   }
+
+  state.done = true;
+  buildmessage.reportProgress(state);
 
   ret.data = cachedServerData;
   return ret;

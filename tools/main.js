@@ -4,6 +4,7 @@ if (showRequireProfile)
 
 var _ = require('underscore');
 var Fiber = require('fibers');
+var Console = require('./console.js').Console;
 var files = require('./files.js');
 var path = require('path');
 var warehouse = require('./warehouse.js');
@@ -646,7 +647,7 @@ Fiber(function () {
     // One side effect of this: we really really expect them to all build, and
     // we're fine with dying if they don't (there's no worries about needing to
     // springboard).
-    var messages = buildmessage.capture(function () {
+    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
       catalog.uniload.initialize({
         localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
       });
@@ -671,7 +672,7 @@ Fiber(function () {
   // build anything (except maybe, if running from a checkout, packages
   // that we need to uniload, which really ought to build) so it's OK
   // to die on errors.
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Initializing server catalog" }, function () {
     catalog.official.initialize({
       offline: !!process.env.METEOR_OFFLINE_CATALOG
     });
@@ -814,7 +815,7 @@ Fiber(function () {
 
     try {
       var rel;
-      var messages = buildmessage.capture(function () {
+      var messages = buildmessage.capture({ title: "Loading release" }, function () {
         rel = release.load(releaseName);
       });
       if (messages.hasMessages()) {
@@ -918,7 +919,7 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
     catalog.complete.initialize({
       localPackageDirs: localPackageDirs
     });
@@ -1227,10 +1228,15 @@ commandName + ": You're not in a Meteor project directory.\n" +
   if (showRequireProfile)
     require('./profile-require.js').printReport();
 
+  Console.enableStatusPoll();
+  Console.showProgressBar();
+
   // Run the command!
   try {
     var ret = command.func(options);
   } catch (e) {
+    Console.hideProgressBar();
+
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
         e === main.SpringboardToSpecificReleaseg ||
@@ -1277,6 +1283,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
       throw e;
     }
   }
+
+  Console.hideProgressBar();
 
   // Exit. (We will not get here if the command threw an exception
   // such as main.WaitForExit).
