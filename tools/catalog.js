@@ -16,10 +16,10 @@ var config = require('./config.js');
 var packageClient = require('./package-client.js');
 
 var LayeredCatalog = function() {
-	var self = this;
+  var self = this;
 
-	self.localCatalog = null;
-	self.otherCatalog = null;
+  self.localCatalog = null;
+  self.otherCatalog = null;
 
   // Constraint solver using this catalog.
   self.resolver = null;
@@ -132,8 +132,7 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   rebuildLocalPackages: function (namedPackages) {
-    console.log("rebuilding local packages frmo layered catalog");
-    self.packageCache.refresh();
+    this.packageCache.refresh();
     return this.localCatalog.rebuildLocalPackages(namedPackages);
   },
 
