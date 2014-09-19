@@ -224,7 +224,6 @@ _.extend(exports, {
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
 
     if (bodyStream) {
-      bodyStreamLength += 4000000;
       var dest = req;
       if (progress) {
         dest = new WritableWithProgress(dest, function (n, done) {
