@@ -1,6 +1,6 @@
 /**
  * @isTemplate true
- * @memberOf UI
+ * @memberOf Template
  * @function dynamic
  * @summary Choose a template to include dynamically, by name.
  * @locus Templates
