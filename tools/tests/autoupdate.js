@@ -7,7 +7,7 @@ var Sandbox = selftest.Sandbox;
 
 var editPackageMetadata = function (sandbox, f) {
   var dataFile = path.join(sandbox.warehouse,
-                           'package-metadata', 'v1',
+                           'package-metadata', 'v1.1',
                            config.getLocalPackageCacheFilename());
   var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
   f(data);
