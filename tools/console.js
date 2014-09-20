@@ -319,6 +319,6 @@ _.extend(Console.prototype, {
 
 });
 
-Console.warning = Console.warn;
+Console.prototype.warning = Console.prototype.warn;
 
 exports.Console = new Console;
