@@ -580,6 +580,10 @@ _.extend(CompleteCatalog.prototype, {
       });
       if (!_.isEmpty(expPackages)) {
         // XXX: Couldn't figure out how to word this better for better tenses.
+        //
+        // XXX: this shouldn't be here. This is library code... it
+        // shouldn't be printing.
+        // https://github.com/meteor/meteor/wiki/Meteor-Style-Guide#only-user-interface-code-should-engage-with-the-user
         Console.info(
           "\nIn order to resolve constraints, we had to use the following\n"+
             "experimental package versions:");
