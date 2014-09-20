@@ -2230,7 +2230,7 @@ main.registerCommand({
     return 1;
   }
 
-  Console.info("\n The maintainers for " + name + " are:");
+  Console.info("\nThe maintainers for " + name + " are:");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
       Console.info("<unknown>");
