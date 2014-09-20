@@ -745,7 +745,7 @@ main.registerCommand({
                   name: item });
 
                 if (buildmessage.jobHasMessages()) {
-                  Console.warning("\n ...Error reading package:" + item);
+                  Console.warn("\n ...Error reading package:" + item);
                   canBuild = false;
                   return;
                 };
@@ -771,7 +771,7 @@ main.registerCommand({
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  Console.warning("\n ... Error compiling unipackage: " + item );
+                  Console.warn("\n ... Error compiling unipackage: " + item );
                   canBuild = false;
                   return;
                 };
@@ -802,7 +802,7 @@ main.registerCommand({
                                        "at the end (ex: 1.0.0-dev). If this is an " +
                                        "official release, please set official to true " +
                                        "in the release configuration file.");
-                    Console.warning("NOT OK unofficial");
+                    Console.warn("NOT OK unofficial");
                     return;
                   }
                   toPublish[item] = {source: packageSource,
