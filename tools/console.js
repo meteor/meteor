@@ -40,6 +40,10 @@ var Console = function (options) {
   self._stream = process.stdout;
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+
+  process.on('exit', function(code) {
+    self.hideProgressBar();
+  });
 };
 
 
