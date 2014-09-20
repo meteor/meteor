@@ -647,7 +647,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     _.each(badConstraints, function(bad) {
       Console.stderr.write(" " + bad);
     });
-    Console.stderr.write(". \n" );
     process.exit(1);
   }
 
