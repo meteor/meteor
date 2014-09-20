@@ -6,6 +6,11 @@ var net = require('net');
 var _ = require('underscore');
 var files = require('../files.js');
 
+// XXX: Remove me.  This shouldn't be neeeded, but sometimes
+// if we run too quickly on fast (or Linux?) machines, we get
+// 'stuck'
+HACK_DELAY = 3;
+
 selftest.define("css hot code push", function (options) {
   var s = new Sandbox({
     clients: options.clients
@@ -74,6 +79,7 @@ selftest.define("css hot code push", function (options) {
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);
 
+    run.waitSecs(HACK_DELAY);
     s.write(".meteor/packages", "standard-app-packages");
     run.match("removed my-package");
     run.match("numCssChanges: 0");
@@ -203,6 +209,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("packageVar: bar");
 
     // Add appcache and ensure that the browser still reloads.
+    run.waitSecs(HACK_DELAY);
     s.write(".meteor/packages", "standard-app-packages \n appcache");
     run.match("added appcache");
     run.match("server restarted");
@@ -214,6 +221,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("jsVar: bar");
 
     // Remove appcache and ensure that the browser still reloads.
+    run.waitSecs(HACK_DELAY);
     s.write(".meteor/packages", "standard-app-packages");
     run.match("removed appcache");
     run.match("server restarted");
