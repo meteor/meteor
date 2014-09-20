@@ -194,16 +194,24 @@ _.extend(Console.prototype, {
     }
 
     var dest = process.stdout;
-    var style = null;
-
-    if (level && self._pretty) {
+    if (level) {
       switch (level.code) {
         case LEVEL_CODE_ERROR:
           dest = process.stderr;
-          style = chalk.bold.red;
           break;
         case LEVEL_CODE_WARN:
           dest = process.stderr;
+          break;
+      }
+    }
+
+    var style = null;
+    if (level && self._pretty) {
+      switch (level.code) {
+        case LEVEL_CODE_ERROR:
+          style = chalk.bold.red;
+          break;
+        case LEVEL_CODE_WARN:
           style = chalk.red;
           break;
         //case LEVEL_CODE_INFO:
