@@ -1359,7 +1359,9 @@ main.registerCommand({
   if (newVersionsAvailable) {
     Console.info(
 "\n * New versions of these packages are available! Run 'meteor update' to try\n" +
-" to update those packages to their latest versions.");
+" to update those packages to their latest versions. If your packages cannot be\n" +
+" updated further, try typing meteor add <package>@<newVersion> to see more\n" +
+" information.");
   }
   return 0;
 });
@@ -1774,7 +1776,7 @@ main.registerCommand({
 
   // Just for the sake of good messages, check to see if anything changed.
   if (_.isEqual(newVersions, versions)) {
-    Console.info("All your package dependencies are already up to date.");
+    Console.info("Your packages are at their latest compatible versions.");
     return 0;
   }
 
