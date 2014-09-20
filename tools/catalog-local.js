@@ -85,8 +85,6 @@ _.extend(LocalCatalog.prototype, {
     self.localPackageDirs =
       _.filter(options.localPackageDirs || [], utils.isDirectory);
 
-    // Lastly, let's read through the data.json file and then put through the
-    // local overrides.
     self.refresh({initializing: true});
   },
 
@@ -113,38 +111,6 @@ _.extend(LocalCatalog.prototype, {
       throw new Error("catalog not initialized yet?");
   },
 
-  // Accessor methods below. The primary function of both catalogs is to provide
-  // data about the existence of various packages, versions, etc, which it does
-  // through these methods.
-
-  // We have a pattern, where we try to retrieve something and if we fail, call
-  // refresh to check if there is new data. That makes sense to me, so let's do
-  // that all the time. (In the future, we should continue some rate-limiting
-  // on refresh, but for now, most of the time, refreshing on an unknown <stuff>
-  // will just cause us to crash if it doesn't exist, so we are just delaying
-  // the inevitable rather than slowing down normal operations)
-  _recordOrRefresh: function (recordFinder) {
-    var self = this;
-    buildmessage.assertInCapture();
-    var record = recordFinder();
-    // If we cannot find it maybe refresh.
-    if (!record && self._refreshingIsProductive()) {
-      if (! catalog.official.refreshInProgress()) {
-        catalog.official.refresh();
-      }
-      record = recordFinder();
-    }
-    // If we still cannot find it, give the user a null.
-    if (!record) {
-      return null;
-    }
-    return record;
-  },
-
-  _refreshingIsProductive: function () {
-    return true;
-  },
-
   // Return an array with the names of all of the packages that we
   // know about, in no particular order.
   getAllPackageNames: function () {
@@ -162,11 +128,7 @@ _.extend(LocalCatalog.prototype, {
     self._requireInitialized();
     options = options || {};
 
-    var get = function () {
-      return _.findWhere(self.packages, { name: name });
-    };
-
-    return options.noRefresh ? get() : self._recordOrRefresh(get);
+    return _.findWhere(self.packages, { name: name });
   },
 
   // Given a package, returns an array of the versions available for
@@ -213,7 +175,7 @@ _.extend(LocalCatalog.prototype, {
       return lookupVersion() || null;
     }
 
-    return self._recordOrRefresh(lookupVersion);
+    return lookupVersion();
   },
 
   // Overridden by CompleteCatalog.
@@ -243,24 +205,23 @@ _.extend(LocalCatalog.prototype, {
     // one, in case our local cache says "version exists but only for the wrong
     // arch" and the right arch has been recently published.
     // XXX should ensure at most one refresh
-    return self._recordOrRefresh(function () {
-      var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
-      var solution = null;
-      utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
-        // This build subset works if for all the arches we need, at least one
-        // build in the subset satisfies it. It is guaranteed to be minimal,
-        // because we look at subsets in increasing order of size.
-        var satisfied = _.all(arches, function (neededArch) {
-          return _.any(buildSubset, function (build) {
-            var buildArches = build.buildArchitectures.split('+');
-            return !!archinfo.mostSpecificMatch(neededArch, buildArches);
-          });
+    // PASCAL - check with Ekate
+    var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
+    var solution = null;
+    utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
+      // This build subset works if for all the arches we need, at least one
+      // build in the subset satisfies it. It is guaranteed to be minimal,
+      // because we look at subsets in increasing order of size.
+      var satisfied = _.all(arches, function (neededArch) {
+        return _.any(buildSubset, function (build) {
+          var buildArches = build.buildArchitectures.split('+');
+          return !!archinfo.mostSpecificMatch(neededArch, buildArches);
         });
-        if (satisfied) {
-          solution = buildSubset;
-          return true;  // stop the iteration
-        }
       });
+      if (satisfied) {
+        solution = buildSubset;
+        return true;  // stop the iteration
+      }
       return solution;  // might be null!
     });
   },
@@ -273,11 +234,9 @@ _.extend(LocalCatalog.prototype, {
     buildmessage.assertInCapture();
     self._requireInitialized();
 
-    return self._recordOrRefresh(function () {
-      return _.findWhere(self.builds,
-                         { versionId: versionRecord._id,
-                           buildArchitectures: buildArchitectures });
-    });
+    return _.findWhere(self.builds,
+                       { versionId: versionRecord._id,
+                         buildArchitectures: buildArchitectures });
   },
 
   getAllBuilds: function (name, version) {
@@ -306,33 +265,13 @@ _.extend(LocalCatalog.prototype, {
     options = options || {};
     buildmessage.assertInCapture();
 
-    //PASCAL Review the this option checking logic
-    // We need to limit the rate of refresh, or, at least, prevent any sort of
-    // loops. ForceRefresh will override either one.
-    if (!options.forceRefresh && !options.initializing && self.refreshing) {
-      return;
-    }
+    self.reset();
+    self._recomputeEffectiveLocalPackages();
+    var allOK = self._loadLocalPackages({ watchSet: options.watchSet });
+    self.initialized = true;
+    // Rebuild the resolver, since packages may have changed.
+    self.resolver = null;
 
-    if (options.initializing) {
-      // If we are doing the top level initialization in main.js, everything
-      // sure had better be in a relaxed state, since we're about to hackily
-      // steal some data from catalog.official.
-      if (self.refreshing)
-        throw Error("initializing local catalog re-entrantly?");
-    }
-
-    self.refreshing = true;
-    // console.log("refreshing the local catalog");
-    try {
-      self.reset();
-      self._recomputeEffectiveLocalPackages();
-      var allOK = self._loadLocalPackages({ watchSet: options.watchSet });
-      self.initialized = true;
-      // Rebuild the resolver, since packages may have changed.
-      self.resolver = null;
-    } finally {
-      self.refreshing = false;
-    }
   },
 
   // Compute self.effectiveLocalPackages from self.localPackageDirs

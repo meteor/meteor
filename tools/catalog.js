@@ -15,6 +15,11 @@ var utils = require('./utils.js');
 var config = require('./config.js');
 var packageClient = require('./package-client.js');
 
+
+// The LayeredCatalog provides a way to query multiple catalogs in a uniform way
+// A LayeredCatalog typically contains:
+//  - a local catalog referencing the packages of the project
+//  - a reference to the official catalog
 var LayeredCatalog = function() {
   var self = this;
 
@@ -77,7 +82,7 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
-    var self = this; //PASCAL check with Ekate
+    var self = this;
     return self.localCatalog.getLoadPathForPackage(name, version, constraintSolverOpts);
   },
 
@@ -95,7 +100,6 @@ _.extend(LayeredCatalog.prototype, {
   getReleaseWithTool: function (toolSpec) {
     var self = this;
     buildmessage.assertInCapture();
-    self._requireInitialized();
     return self._recordOrRefresh(function () {
       return _.findWhere(self.releaseVersions, { tool: toolSpec });
     });
@@ -136,12 +140,6 @@ _.extend(LayeredCatalog.prototype, {
     return this.localCatalog.rebuildLocalPackages(namedPackages);
   },
 
-  refreshInProgress: function () {
-    var self = this;
-    // console.log("refresh in progress the LayeredCatalog");
-    //PASCAL Deal with refresh properly
-  },
-
   reset: function () {
     this.localCatalog.reset();
   },
@@ -151,7 +149,6 @@ _.extend(LayeredCatalog.prototype, {
   // It does not include prereleases (with dashes in the version);
   getLatestMainlineVersion: function (name) {
     var self = this;
-    self._requireInitialized();
     buildmessage.assertInCapture();
 
     var versions = self.getSortedVersions(name);
@@ -164,18 +161,9 @@ _.extend(LayeredCatalog.prototype, {
     return self.getVersion(name, latest);
   },
 
-    // Throw if the catalog's self.initialized value has not been set to true.
-  _requireInitialized: function () {
-    var self = this;
-    //PASCAL
-    // if (! self.initialized)
-    //   throw new Error("catalog not initialized yet?");
-  },
-
   resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
-    self._requireInitialized();
     buildmessage.assertInCapture();
 
     // OK, since we are the complete catalog, the uniload catalog must be fully
@@ -244,7 +232,6 @@ _.extend(LayeredCatalog.prototype, {
       } catch (e) {
         // Maybe we only failed because we need to refresh. Try to refresh
         // (unless we already are) and retry.
-        //PASCAL review
         if (!self._refreshingIsProductive() ||
             exports.official.refreshInProgress()) {
           throw e;
@@ -285,10 +272,7 @@ _.extend(LayeredCatalog.prototype, {
     return ret.answer;
   },
 
-  // Refresh the packages in the catalog.
-  //
-  // Reread server data from data.json on disk, then load local overrides on top
-  // of that information. Sets initialized to true.
+  // Refresh the catalogs referenced by this catalog.
   // options:
   // - forceRefresh: even if there is a future in progress, refresh the catalog
   //   anyway. When we are using hot code push, we may be restarting the app
@@ -298,83 +282,10 @@ _.extend(LayeredCatalog.prototype, {
   //   to this set.
   refresh: function (options) {
     var self = this;
-    console.log("refresh layered catalo");
     self.localCatalog.refresh(options);
     self.otherCatalog.refresh(options);
     self.packageCache.refresh();
     self.resolver = null;
-     // options = options || {};
-    // buildmessage.assertInCapture();
-
-    // // We need to limit the rate of refresh, or, at least, prevent any sort of
-    // // loops. ForceRefresh will override either one.
-    // if (!options.forceRefresh && !options.initializing &&
-    //     (catalog.official._refreshFutures || self.refreshing)) {
-
-    //   return;
-    // }
-
-    // if (options.initializing && !self.forUniload) {
-    //   // If we are doing the top level initialization in main.js, everything
-    //   // sure had better be in a relaxed state, since we're about to hackily
-    //   // steal some data from catalog.official.
-    //   if (self.refreshing)
-    //     throw Error("initializing catalog.complete re-entrantly?");
-    //   if (catalog.official._refreshFutures)
-    //     throw Error("initializing catalog.complete during official refresh?");
-    // }
-
-    // if (self.refreshing) {
-    //   // We're being asked to refresh re-entrantly, maybe because we just
-    //   // updated the official catalog.  Let's not do this now, but make the
-    //   // outer call do it instead.
-    //   // XXX refactoring the catalogs so that the two catalogs share their
-    //   //     data and this one is just an overlay would reduce this wackiness
-    //   self.needRefresh = true;
-    //   return;
-    // }
-
-    // self.refreshing = true;
-
-    // try {
-    //   self.reset();
-
-    //   if (!self.forUniload) {
-    //     if (options.initializing) {
-    //       // It's our first time! Everything ought to be at rest. Let's just
-    //       // steal data (without even a deep clone!) from catalog.official.
-    //       // XXX this is horrible. restructure to have a reference to
-    //       // catalog.official instead.
-    //       self.packages = _.clone(catalog.official.packages);
-    //       self.builds = _.clone(catalog.official.builds);
-    //       _.each(catalog.official.versions, function (versions, name) {
-    //         self.versions[name] = _.clone(versions);
-    //       });
-    //     } else {
-    //       // Not the first time. Slowly load data from disk.
-    //       // XXX restructure this class to just have a reference to
-    //       // catalog.official instead of a copy of its data.
-    //       var localData = packageClient.loadCachedServerData();
-    //       self._insertServerPackages(localData);
-    //     }
-    //   }
-
-    //   self._recomputeEffectiveLocalPackages();
-    //   var allOK = self._addLocalPackageOverrides(
-    //     { watchSet: options.watchSet });
-    //   self.initialized = true;
-    //   // Rebuild the resolver, since packages may have changed.
-    //   self.resolver = null;
-    // } finally {
-    //   self.refreshing = false;
-    // }f
-
-    // // If we got a re-entrant refresh request, do it now. (But not if we
-    // // encountered build errors building the packages, since in that case
-    // // we'd probably just get the same build errors again.)
-    // if (self.needRefresh && allOK) {
-    //   self.refresh(options);
-    // }
   },
 
   _initializeResolver: function () {
@@ -396,13 +307,7 @@ _.extend(LayeredCatalog.prototype, {
   watchLocalPackageDirs: function (watchSet) {
     var self = this;
     self.localCatalog.watchLocalPackageDirs(watchSet);
-  },
-
- _refreshingIsProductive: function() {
-    //PASCAL REVIEW
-    return true;
- }
-
+  }
 });
 
 exports.DEFAULT_TRACK = remoteCatalog.DEFAULT_TRACK;

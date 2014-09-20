@@ -17,13 +17,10 @@ var semver = require('semver');
 var packageClient = require('./package-client.js');
 var sqlite3 = require('../dev_bundle/bin/node_modules/sqlite3');
 
-//PASCAL NOTES
-//What are the options that are passed to the initialize method in catalog?
-
 // A RemoteCatalog is a local cache of the content of troposphere.
 // A default instance of this catalog is registered by the layered catalog and is available
 // under the variable "official" from the catalog.js
-
+//
 // The remote catalog is backed by a db to make things easier on the memory and for faster queries
 var RemoteCatalog = function (options) {
   var self = this;
@@ -127,11 +124,11 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getAllReleaseTracks: function () {
-    return _.pluck(this._justQuery("SELECT name FROM releaseTracks"), 'name');
+    return _.pluck(this._queryWithRetry("SELECT name FROM releaseTracks"), 'name');
   },
 
   getAllPackageNames: function () {
-    return _.pluck(this._justQuery("SELECT name FROM packages"));
+    return _.pluck(this._queryWithRetry("SELECT name FROM packages"));
   },
 
   initialize: function (options) {
@@ -192,23 +189,34 @@ _.extend(RemoteCatalog.prototype, {
     future.wait();
   },
 
-  refresh: function (overrides) {
+  refresh: function () {
     var self = this;
     if (self.offline)
       return;
 
-    var updateResult = packageClient.updateServerPackageData(this);
+    var patience = new utils.Patience({
+      messageAfterMs: 2000,
+      message: function () {
+        if (self._currentRefreshIsLoud) {
+          console.log("Refreshing package metadata. This may take a moment.");
+        }
+      }
+    });
+
+    var updateResult = {};
+    try {
+      packageClient.updateServerPackageData(this);
+    } finally {
+      patience.stop();
+    }
+    if (!updateResult.data) {
+      process.stderr.write("Warning: could not connect to package server\n");
+    }
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
       self.purgeDB();
     }
 
-  },
-
-  refreshInProgress: function () {
-    return false;
-    // var self = this;
-    // return self._refreshFiber === Fiber.current;
   },
 
   // Given a release track, return all recommended versions for this track, sorted
@@ -253,6 +261,15 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
+  _queryWithRetry: function (query, values) {
+    var self = this;
+    var result = self._justQuery(query, values);
+    if (result.length !== 0)
+      return result;
+    self.refresh();
+    return self._justQuery(query, values);
+  },
+
   // Runs a query synchronously.
   // Query is the sql query to be executed and values are the parameters of the query
   _justQuery: function (query, values) {
@@ -265,13 +282,17 @@ _.extend(RemoteCatalog.prototype, {
 
       future.return(rows);
     });
-    return future.wait();
+    var results = future.wait();
+    if (results !== [])
+      return results;
+    self.refresh();
+
   },
 
   // Execute a query using the values as arguments of the query and return the result as JSON.
   // This code assumes that the table being queried always have a column called "entity"
   _queryAsJSON: function (query, values) {
-    var rows = this._justQuery(query, values);
+    var rows = this._queryWithRetry(query, values);
     return _.map(rows, function(entity) {
         return JSON.parse(entity.content);
     });
