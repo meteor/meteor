@@ -142,6 +142,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'publish',
+  pretty: true,
   minArgs: 0,
   maxArgs: 0,
   options: {
