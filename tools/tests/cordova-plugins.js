@@ -150,7 +150,9 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.matchErr("meteor add-platform ");
 
   run = s.run("add-platform", "android");
-  run.waitSecs(5);
+  run.match("Do you agree");
+  run.write("Y\n");
+  run.extraTime = 90; // Huge download
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
