@@ -1323,7 +1323,8 @@ var getPackagesForTest = function (packages) {
     testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
-      testPackages = _.map(packages, function (p) {
+      testPackages = [];
+      _.each(packages, function (p) {
         return buildmessage.enterJob({
           title: "trying to test package `" + p + "`"
         }, function () {
@@ -1333,14 +1334,15 @@ var getPackagesForTest = function (packages) {
             if (p.indexOf('@') !== -1) {
               buildmessage.error(
                 "You may not specify versions for local packages: " + p );
-              // Recover by returning p anyway.
+              // Recover by returning anyway.
+              return;
             }
             // Check to see if this is a real package, and if it is a real
             // package, if it has tests.
             if (!catalog.complete.isLocalPackage(p)) {
               buildmessage.error(
                 "Not a known local package, cannot test: " + p );
-              return p;
+              return;
             }
             var versionNames = catalog.complete.getSortedVersions(p);
             if (versionNames.length !== 1)
@@ -1349,8 +1351,10 @@ var getPackagesForTest = function (packages) {
             if (versionRec && !versionRec.testName) {
               buildmessage.error(
                 "There are no tests for package: " + p );
+              return;
             }
-            return p;
+            testPackages.push(p);
+            return;
           }
           // Otherwise it's a directory; load it into a Package now. Use
           // path.resolve to strip trailing slashes, so that packageName doesn't
@@ -1375,8 +1379,8 @@ var getPackagesForTest = function (packages) {
           var PackageSource = require('./package-source.js');
           var packageSource = new PackageSource(catalog.complete);
           packageSource.initFromPackageDir(packageDir);
-
-          return packageSource.name;
+          testPackages.push(packageSource.name);
+          return;
         });
 
       });
