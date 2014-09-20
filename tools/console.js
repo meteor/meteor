@@ -9,6 +9,7 @@ var ProgressBar = require('progress');
 var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
+var cleanup = require('./cleanup.js');
 
 PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 FORCE_PRETTY=undefined;
@@ -41,7 +42,7 @@ var Console = function (options) {
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
 
-  process.on('exit', function(code) {
+  cleanup.onExit(function (sig) {
     self.hideProgressBar();
   });
 };
