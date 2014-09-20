@@ -297,7 +297,7 @@ var enterJob = function (options, f) {
     progress = parentProgress.addChildTask(progressOptions);
   }
 
-  currentProgress.withValue(progress, function () {
+  return currentProgress.withValue(progress, function () {
     if (!currentMessageSet.get()) {
       try {
         return f();
