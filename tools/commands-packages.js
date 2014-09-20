@@ -142,6 +142,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'publish',
+  pretty: true,
   minArgs: 0,
   maxArgs: 0,
   options: {
@@ -278,7 +279,7 @@ main.registerCommand({
   if (_.any(allArchs, function (arch) {
     return arch.match(/^os\./);
   })) {
-    Console.warning(
+    Console.warn(
       "\nWARNING: Your package contains binary code and is only compatible with " +
         archinfo.host() + " architecture.\n" +
         "Please use publish-for-arch to publish new builds of the package.\n");
@@ -744,7 +745,7 @@ main.registerCommand({
                   name: item });
 
                 if (buildmessage.jobHasMessages()) {
-                  Console.warning("\n ...Error reading package:" + item);
+                  Console.warn("\n ...Error reading package:" + item);
                   canBuild = false;
                   return;
                 };
@@ -770,7 +771,7 @@ main.registerCommand({
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  Console.warning("\n ... Error compiling unipackage: " + item );
+                  Console.warn("\n ... Error compiling unipackage: " + item );
                   canBuild = false;
                   return;
                 };
@@ -801,7 +802,7 @@ main.registerCommand({
                                        "at the end (ex: 1.0.0-dev). If this is an " +
                                        "official release, please set official to true " +
                                        "in the release configuration file.");
-                    Console.warning("NOT OK unofficial");
+                    Console.warn("NOT OK unofficial");
                     return;
                   }
                   toPublish[item] = {source: packageSource,
@@ -1357,9 +1358,10 @@ main.registerCommand({
 
   if (newVersionsAvailable) {
     Console.info(
-      "\n * New versions of these packages are available! " +
-        "Run 'meteor update' to try to update\n" +
-        "   those packages to their latest versions.");
+"\n * New versions of these packages are available! Run 'meteor update' to try\n" +
+" to update those packages to their latest versions. If your packages cannot be\n" +
+" updated further, try typing meteor add <package>@<newVersion> to see more\n" +
+" information.");
   }
   return 0;
 });
@@ -1750,7 +1752,7 @@ main.registerCommand({
   // specified, then only upgrade those.
   var upgradePackages;
   if (options.args.length === 0) {
-    upgradePackages = _.pluck(allPackages, 'packageName');
+    upgradePackages = _.pluck(allPackages, 'name');
   } else {
     upgradePackages = options.args;
   }
@@ -1774,7 +1776,7 @@ main.registerCommand({
 
   // Just for the sake of good messages, check to see if anything changed.
   if (_.isEqual(newVersions, versions)) {
-    Console.info("All your package dependencies are already up to date.");
+    Console.info("Your packages are at their latest compatible versions.");
     return 0;
   }
 
@@ -2222,7 +2224,13 @@ main.registerCommand({
     record = fullRecord.record;
   }
 
-  Console.info("\n The maintainers for " + name + " are:");
+  if (!record) {
+    Console.info(
+"Could not get list of maintainers: package " + name + " does not exist.");
+    return 1;
+  }
+
+  Console.info("\nThe maintainers for " + name + " are:");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
       Console.info("<unknown>");

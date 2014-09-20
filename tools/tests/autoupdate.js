@@ -7,7 +7,7 @@ var Sandbox = selftest.Sandbox;
 
 var editPackageMetadata = function (sandbox, f) {
   var dataFile = path.join(sandbox.warehouse,
-                           'package-metadata', 'v1',
+                           'package-metadata', 'v1.1',
                            config.getLocalPackageCacheFilename());
   var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
   f(data);
@@ -143,7 +143,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     run = s.run("update");
     run.read("myapp: updated to Meteor v3.");
-    run.match("All your package dependencies are already up to date.\n");
+    run.match("Your packages are at their latest compatible versions.\n");
     run.expectEnd();
     run.expectExit(0);
 

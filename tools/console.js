@@ -9,6 +9,7 @@ var ProgressBar = require('progress');
 var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
+var cleanup = require('./cleanup.js');
 
 PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 FORCE_PRETTY=undefined;
@@ -40,6 +41,10 @@ var Console = function (options) {
   self._stream = process.stdout;
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+
+  cleanup.onExit(function (sig) {
+    self.hideProgressBar();
+  });
 };
 
 
@@ -194,16 +199,24 @@ _.extend(Console.prototype, {
     }
 
     var dest = process.stdout;
-    var style = null;
-
-    if (level && self._pretty) {
+    if (level) {
       switch (level.code) {
         case LEVEL_CODE_ERROR:
           dest = process.stderr;
-          style = chalk.bold.red;
           break;
         case LEVEL_CODE_WARN:
           dest = process.stderr;
+          break;
+      }
+    }
+
+    var style = null;
+    if (level && self._pretty) {
+      switch (level.code) {
+        case LEVEL_CODE_ERROR:
+          style = chalk.bold.red;
+          break;
+        case LEVEL_CODE_WARN:
           style = chalk.red;
           break;
         //case LEVEL_CODE_INFO:
@@ -311,6 +324,6 @@ _.extend(Console.prototype, {
 
 });
 
-Console.warning = Console.warn;
+Console.prototype.warning = Console.prototype.warn;
 
 exports.Console = new Console;

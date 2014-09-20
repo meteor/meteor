@@ -1297,6 +1297,7 @@ _.extend(PackageSource.prototype, {
             newConstraint.push(dep.package);
           }
         });
+        if (_.isEmpty(newConstraint)) return dep;
         dep.constraint = _.reduce(newConstraint,
           function(x, y) {
             return x + " || " + y;

@@ -18,7 +18,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var project = require('./project.js');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
-
+var Console = require('./console.js').Console;
 var catalog = exports;
 
 catalog.DEFAULT_TRACK = 'METEOR';
@@ -558,27 +558,36 @@ _.extend(CompleteCatalog.prototype, {
     if (ret["usedRCs"]) {
       var expPackages = [];
       _.each(ret.answer, function(version, package) {
-        if (version.split('-').length > 1 &&
-            !_.findWhere(constr,
-                { packageName: package, version: version })) {
-          expPackages.push({
+        if (version.split('-').length > 1) {
+         if (!(resolverOpts.previousSolution &&
+               resolverOpts.previousSolution[package] === version)) {
+          var oldConstraints = _.where(constr, { name: package } );
+          var printMe = true;
+          _.each(oldConstraints, function (oC) {
+            _.each(oC.constraints, function (specOC) {
+              if (specOC.version === version) {
+                printMe = false;
+              }
+            });
+          });
+          if (printMe) {
+            expPackages.push({
               name: "  " + package + "@" + version,
               description: self.getVersion(package, version).description
             });
-        }
+          };
+        }}
       });
       if (!_.isEmpty(expPackages)) {
         // XXX: Couldn't figure out how to word this better for better tenses.
-        process.stderr.write(
-          "------------------------------------------------------------ \n");
-        process.stderr.write(
-          "In order to resolve constraints, we had to use the following\n"+
-            "experimental package versions:\n");
-        process.stderr.write(utils.formatList(expPackages));
-        process.stderr.write(
-          "------------------------------------------------------------ \n");
-
-        process.stderr.write("\n");
+        //
+        // XXX: this shouldn't be here. This is library code... it
+        // shouldn't be printing.
+        // https://github.com/meteor/meteor/wiki/Meteor-Style-Guide#only-user-interface-code-should-engage-with-the-user
+        Console.info(
+          "\nIn order to resolve constraints, we had to use the following\n"+
+            "experimental package versions:");
+        Console.info(utils.formatList(expPackages));
       }
     }
     return ret.answer;
