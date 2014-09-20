@@ -2224,6 +2224,12 @@ main.registerCommand({
     record = fullRecord.record;
   }
 
+  if (!record) {
+    Console.info(
+"Could not get list of maintainers: package " + name + " does not exist.");
+    return 1;
+  }
+
   Console.info("\n The maintainers for " + name + " are:");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
