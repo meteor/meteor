@@ -313,7 +313,7 @@ _.extend(Project.prototype, {
     // those.
     _.each(releasePackages, function(version, name) {
       allDeps.push({name: name, weak: true,
-        constraintStr: "=" + name,
+        constraintString: "=" + name,
         constraints: [
           { version: version, type: 'exactly' } ]});
     });
