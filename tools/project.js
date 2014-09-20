@@ -312,7 +312,7 @@ _.extend(Project.prototype, {
     // Finally, each release package is a weak exact constraint. So, let's add
     // those.
     _.each(releasePackages, function(version, name) {
-      _.extend(allDeps.push(utils.parseConstraint(name + "@=" + version),
+     allDeps.push(_.extend(utils.parseConstraint(name + "@=" + version),
                            { weak: true }));
     });
 
