@@ -279,7 +279,7 @@ main.registerCommand({
   if (_.any(allArchs, function (arch) {
     return arch.match(/^os\./);
   })) {
-    Console.warning(
+    Console.warn(
       "\nWARNING: Your package contains binary code and is only compatible with " +
         archinfo.host() + " architecture.\n" +
         "Please use publish-for-arch to publish new builds of the package.\n");
@@ -1751,7 +1751,7 @@ main.registerCommand({
   // specified, then only upgrade those.
   var upgradePackages;
   if (options.args.length === 0) {
-    upgradePackages = _.pluck(allPackages, 'packageName');
+    upgradePackages = _.pluck(allPackages, 'name');
   } else {
     upgradePackages = options.args;
   }
