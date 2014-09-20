@@ -1358,9 +1358,8 @@ main.registerCommand({
 
   if (newVersionsAvailable) {
     Console.info(
-      "\n * New versions of these packages are available! " +
-        "Run 'meteor update' to try to update\n" +
-        "   those packages to their latest versions.");
+"\n * New versions of these packages are available! Run 'meteor update' to try\n" +
+" to update those packages to their latest versions.");
   }
   return 0;
 });
