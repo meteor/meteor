@@ -1294,7 +1294,7 @@ _.extend(PackageSource.prototype, {
         _.each(releaseRecords, function (releaseRecord) {
           var packages = releaseRecord.packages;
           if(_.has(packages, dep.package)) {
-            newConstraint.push(dep.package);
+            newConstraint.push(packages[dep.package]);
           }
         });
         if (_.isEmpty(newConstraint)) return dep;
