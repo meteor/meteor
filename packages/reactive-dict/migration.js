@@ -15,7 +15,7 @@ ReactiveDict._registerDictForMigrate = function (dictName, dict) {
   ReactiveDict._dictsToMigrate[dictName] = dict;
 };
 
-if (Package.reload) {
+if (Meteor.isClient && Package.reload) {
   // Put old migrated data into ReactiveDict._migratedDictData,
   // where it can be accessed by ReactiveDict._loadMigratedDict.
   var migrationData = Package.reload.Reload._migrationData('reactive-dict');
