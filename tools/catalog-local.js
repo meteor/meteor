@@ -49,10 +49,6 @@ var LocalCatalog = function (options) {
 
   self.packageSources = null;
   self.built = null;
-
-  //???? PASCAL Do we need those
-  self.refreshing = false;
-  self.needRefresh = false;
 };
 
 _.extend(LocalCatalog.prototype, {
@@ -205,7 +201,7 @@ _.extend(LocalCatalog.prototype, {
     // one, in case our local cache says "version exists but only for the wrong
     // arch" and the right arch has been recently published.
     // XXX should ensure at most one refresh
-    // PASCAL - check with Ekate
+    // PASCAL - check with Ekate that it is ok to not explicitely refresh again
     var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
     var solution = null;
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
@@ -278,18 +274,9 @@ _.extend(LocalCatalog.prototype, {
   // and self.localPackages.
   _recomputeEffectiveLocalPackages: function () {
     var self = this;
-    // console.log("refrehsing for " + self.localPackageDirs);
 
     self.effectiveLocalPackages = _.clone(self.localPackages);
 
-    //PASCAL Does this still applies?
-    // XXX If this is the forUniload catalog, we should only consider
-    // uniload.ROOT_PACKAGES and their dependencies. Unfortunately, that takes a
-    // fair amount of refactoring (since we don't know dependencies until we
-    // start reading them).  So for now, the uniload catalog (in checkout mode)
-    // does include information about all the packages in the meteor repo, not
-    // just the ones that can be uniloaded. (But it doesn't contain information
-    // about app packages!)
     _.each(self.localPackageDirs, function (localPackageDir) {
       if (! utils.isDirectory(localPackageDir))
         return;

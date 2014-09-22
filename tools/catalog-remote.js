@@ -168,7 +168,8 @@ _.extend(RemoteCatalog.prototype, {
     future.wait();
   },
 
-  purgeDB: function () {
+  // This function empties the DB. This is called from the package-client.
+  reset: function () {
     var self = this;
     var future = new Future;
     self.db.serialize(function() {
@@ -214,7 +215,7 @@ _.extend(RemoteCatalog.prototype, {
     }
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
-      self.purgeDB();
+      self.reset();
     }
 
   },
@@ -261,10 +262,10 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
-  _queryWithRetry: function (query, values) {
+  _queryWithRetry: function (query, values, options) {
     var self = this;
     var result = self._justQuery(query, values);
-    if (result.length !== 0)
+    if ( result.length !== 0 || ( options && options.noRetry ) )
       return result;
     self.refresh();
     return self._justQuery(query, values);
@@ -291,8 +292,8 @@ _.extend(RemoteCatalog.prototype, {
 
   // Execute a query using the values as arguments of the query and return the result as JSON.
   // This code assumes that the table being queried always have a column called "entity"
-  _queryAsJSON: function (query, values) {
-    var rows = this._queryWithRetry(query, values);
+  _queryAsJSON: function (query, values, options) {
+    var rows = this._queryWithRetry(query, values, options);
     return _.map(rows, function(entity) {
         return JSON.parse(entity.content);
     });
@@ -381,7 +382,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getSyncToken : function() {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM syncToken", []);
+    var result = self._queryAsJSON("SELECT content FROM syncToken", [], { noRetry: true });
     if (!result || result.length === 0)
       return {};
     delete result[0]._id;
