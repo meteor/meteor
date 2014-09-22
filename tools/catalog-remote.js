@@ -208,7 +208,7 @@ _.extend(RemoteCatalog.prototype, {
 
     var updateResult = {};
     try {
-      packageClient.updateServerPackageData(this);
+      updateResult = packageClient.updateServerPackageData(this);
     } finally {
       patience.stop();
     }
