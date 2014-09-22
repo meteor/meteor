@@ -146,7 +146,7 @@ _.extend(RemoteCatalog.prototype, {
 
     var future = new Future;
     self.db.serialize(function() {
-      self.db.run("BEGIN TRANSACTION");
+      self.db.run("BEGIN IMMEDIATE TRANSACTION");
       self.db.run("CREATE TABLE IF NOT EXISTS versions (name STRING, version STRING, id String, content STRING)");
       self.db.run("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(name)");
 
@@ -173,7 +173,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     var future = new Future;
     self.db.serialize(function() {
-      self.db.run("BEGIN TRANSACTION");
+      self.db.run("BEGIN IMMEDIATE TRANSACTION");
       self.db.run("DELETE FROM versions");
       self.db.run("DELETE FROM builds");
       self.db.run("DELETE FROM releaseTracks");
@@ -355,7 +355,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     var future = new Future;
     self.db.serialize(function() {
-      self.db.run("BEGIN TRANSACTION");
+      self.db.run("BEGIN IMMEDIATE TRANSACTION");
       self._insertPackages(serverData.collections.packages);
       self._insertBuilds(serverData.collections.builds);
       self._insertVersions(serverData.collections.versions);
