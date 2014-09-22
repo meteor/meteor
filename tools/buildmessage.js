@@ -1,6 +1,10 @@
+var Fiber = require('fibers');
+var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('./files.js');
 var parseStack = require('./parse-stack.js');
+var fiberHelpers = require('./fiber-helpers.js');
+var Progress = require('./progress.js').Progress;
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 
@@ -153,8 +157,46 @@ _.extend(MessageSet.prototype, {
   }
 });
 
-var currentMessageSet = null;
-var currentJob = null;
+// XXX: This is now a little bit silly... ideas:
+// Can we just have one hierarchical state?
+// Can we combined job & messageSet
+// Can we infer nesting level?
+var currentMessageSet = new fiberHelpers.EnvironmentVariable;
+var currentJob = new fiberHelpers.EnvironmentVariable;
+var currentNestingLevel = new fiberHelpers.EnvironmentVariable(0);
+var currentProgress = new fiberHelpers.EnvironmentVariable;
+
+var rootProgress = new Progress();
+
+var getRootProgress = function () {
+  return rootProgress;
+};
+
+var reportProgress = function (state) {
+  var progress = currentProgress.get();
+  if (progress) {
+    progress.reportProgress(state);
+  }
+};
+
+var reportProgressDone = function () {
+  var progress = currentProgress.get();
+  if (progress) {
+    progress.reportProgressDone();
+  }
+};
+
+var getCurrentProgressTracker = function () {
+  var progress = currentProgress.get();
+  return progress ? progress : rootProgress;
+};
+
+
+var addChildTracker = function (title) {
+  var options = {};
+  options.title = title;
+  return getCurrentProgressTracker().addChildTask(options);
+};
 
 // Create a new MessageSet, run `f` with that as the current
 // MessageSet for the purpose of accumulating and recovering from
@@ -165,37 +207,56 @@ var currentJob = null;
 // begin capturing errors. Alternately you may pass `options`
 // (otherwise optional) and a job will be created for you based on
 // `options`.
-//
-// ** Not compatible with multifiber environments **
-// Using a single fiber to block on i/o is fine however.
 var capture = function (options, f) {
-  var originalMessageSet = currentMessageSet;
   var messageSet = new MessageSet;
-  currentMessageSet = messageSet;
+  var parentMessageSet = currentMessageSet.get();
 
-  var originalJob = currentJob;
-  var job = null;
-  if (typeof options === "object") {
-    job = new Job(options);
-    currentMessageSet.jobs.push(job);
-  } else {
-    f = options; // options not actually provided
+  {
+    var parentProgress = currentProgress.get();
+    if (!parentProgress) {
+      parentProgress = rootProgress;
+    }
+    var childOptions = {};
+    if (typeof options === "object") {
+      if (options.title) {
+        childOptions.title = options.title;
+      }
+    }
+    var progress = parentProgress.addChildTask(childOptions);
   }
 
-  currentJob = job;
+  currentProgress.withValue(progress, function () {
+    currentMessageSet.withValue(messageSet, function () {
+      var job = null;
+      if (typeof options === "object") {
+        job = new Job(options);
+        messageSet.jobs.push(job);
+      } else {
+        f = options; // options not actually provided
+      }
 
-  if (debugBuild)
-    console.log("START CAPTURE: " + options.title);
+      currentJob.withValue(job, function () {
+        var nestingLevel = currentNestingLevel.get();
+        currentNestingLevel.withValue(nestingLevel + 1, function () {
+          var start;
+          if (debugBuild) {
+            start = Date.now();
+            console.log("START CAPTURE", nestingLevel, options.title, "took " + (end - start));
+          }
+          try {
+            f();
+          } finally {
+            progress.reportProgressDone();
 
-  try {
-    f();
-  } finally {
-    currentMessageSet = originalMessageSet;
-    currentJob = originalJob;
-    if (debugBuild)
-      console.log("DONE CAPTURE: " + options.title);
-  }
-
+            if (debugBuild) {
+              var end = Date.now();
+              console.log("END CAPTURE", nestingLevel, options.title, "took " + (end - start));
+            }
+          }
+        });
+      });
+    });
+  });
   return messageSet;
 };
 
@@ -217,29 +278,59 @@ var enterJob = function (options, f) {
     options = {};
   }
 
-  if (! currentMessageSet) {
-    return f();
+  var progress;
+  {
+    var parentProgress = currentProgress.get();
+    if (!parentProgress) {
+      parentProgress = rootProgress;
+    }
+    var progressOptions = {};
+    // XXX: Just pass all the options?
+    if (typeof options === "object") {
+      if (options.title) {
+        progressOptions.title = options.title;
+      }
+      if (options.forkJoin) {
+        progressOptions.forkJoin = options.forkJoin;
+      }
+    }
+    progress = parentProgress.addChildTask(progressOptions);
   }
 
-  var job = new Job(options);
-  var originalJob = currentJob;
-  if (originalJob)
-    originalJob.children.push(job);
-  currentMessageSet.jobs.push(job);
-  currentJob = job;
+  return currentProgress.withValue(progress, function () {
+    if (!currentMessageSet.get()) {
+      try {
+        return f();
+      } finally {
+        progress.reportProgressDone();
+      }
+    }
 
-  if (debugBuild)
-    console.log("START: " + options.title);
+    var job = new Job(options);
+    var originalJob = currentJob.get();
+    originalJob && originalJob.children.push(job);
+    currentMessageSet.get().jobs.push(job);
 
-  try {
-    var ret = f();
-  } finally {
-    if (debugBuild)
-      console.log("DONE: " + options.title);
-    currentJob = originalJob;
-  }
-
-  return ret;
+    return currentJob.withValue(job, function () {
+      var nestingLevel = currentNestingLevel.get();
+      return currentNestingLevel.withValue(nestingLevel + 1, function () {
+        var start;
+        if (debugBuild) {
+          start = Date.now();
+          console.log("START", nestingLevel, options.title);
+        }
+        try {
+          return f();
+        } finally {
+          progress.reportProgressDone();
+          if (debugBuild) {
+            var end = Date.now();
+            console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+          }
+        }
+      });
+    });
+  });
 };
 
 // If not inside a job, return false. Otherwise, return true if any
@@ -252,7 +343,7 @@ var jobHasMessages = function () {
     return !! _.find(job.children, search);
   };
 
-  return currentJob ? search(currentJob) : false;
+  return currentJob.get() ? search(currentJob.get()) : false;
 };
 
 // Given a function f, return a "marked" version of f. The mark
@@ -294,7 +385,7 @@ var error = function (message, options) {
   if (options.downcase)
     message = message.slice(0,1).toLowerCase() + message.slice(1);
 
-  if (! currentJob)
+  if (! currentJob.get())
     throw new Error("Error: " + message);
 
   if (options.secondary && jobHasMessages())
@@ -318,7 +409,7 @@ var error = function (message, options) {
     delete info.useMyCaller;
   }
 
-  currentJob.addMessage(info);
+  currentJob.get().addMessage(info);
 };
 
 // Record an exception. The message as well as any file and line
@@ -330,12 +421,12 @@ var error = function (message, options) {
 // actually occurred, rather than the place where the exception was
 // thrown.
 var exception = function (error) {
-  if (! currentJob) {
+  if (! currentJob.get()) {
     // XXX this may be the wrong place to do this, but it makes syntax errors in
     // files loaded via unipackage.load have context.
     if (error instanceof files.FancySyntaxError) {
-      error.message = "Syntax error: " + error.message + " at " +
-        error.file + ":" + error.line + ":" + error.column;
+      error = new Error("Syntax error: " + error.message + " at " +
+        error.file + ":" + error.line + ":" + error.column);
     }
     throw error;
   }
@@ -345,7 +436,7 @@ var exception = function (error) {
   if (error instanceof files.FancySyntaxError) {
     // No stack, because FancySyntaxError isn't a real Error and has no stack
     // property!
-    currentJob.addMessage({
+    currentJob.get().addMessage({
       message: message,
       file: error.file,
       line: error.line,
@@ -354,7 +445,7 @@ var exception = function (error) {
   } else {
     var stack = parseStack.parse(error);
     var locus = stack[0];
-    currentJob.addMessage({
+    currentJob.get().addMessage({
       message: message,
       stack: stack,
       func: locus.func,
@@ -365,6 +456,84 @@ var exception = function (error) {
   }
 };
 
+var assertInJob = function () {
+  if (! currentJob.get())
+    throw new Error("Expected to be in a buildmessage job");
+};
+
+var assertInCapture = function () {
+  if (! currentMessageSet.get())
+    throw new Error("Expected to be in a buildmessage capture");
+};
+
+// Like _.each, but runs each operation in a separate job
+var forkJoin = function (options, iterable, fn) {
+  if (!_.isFunction(fn)) {
+    fn = iterable;
+    iterable = options;
+    options = {};
+  }
+
+  var futures = [];
+  var results = [];
+  // XXX: We could check whether the sub-jobs set estimates, and if not
+  // assume they each take the same amount of time and auto-report their completion
+  var errors = [];
+  var firstError = null;
+
+  options.forkJoin = true;
+
+  enterJob(options, function () {
+    var job = currentJob.get();
+    var messageSet = currentMessageSet.get();
+    var progress = currentProgress.get();
+
+    _.each(iterable, function (/*arguments*/) {
+      var fut = new Future();
+      var fnArguments = arguments;
+      Fiber(function () {
+        currentProgress.withValue(progress, function () {
+          currentMessageSet.withValue(messageSet, function () {
+            currentJob.withValue(job, function () {
+              try {
+                var result = enterJob({title: (options.title || '') + ' child' }, function () {
+                  return fn.apply(null, fnArguments);
+                });
+                fut['return'](result);
+              } catch (e) {
+                fut['throw'](e);
+              }
+            });
+          });
+        });
+      }).run();
+      futures.push(fut);
+    });
+
+    _.each(futures, function (future) {
+      try {
+        var result = future.wait();
+        results.push(result);
+        errors.push(null);
+      } catch (e) {
+        results.push(null);
+        errors.push(e);
+
+        if (firstError === null) {
+          firstError = e;
+        }
+      }
+    });
+  });
+
+  if (firstError) {
+    throw firstError;
+  }
+
+  return results;
+};
+
+
 var buildmessage = exports;
 _.extend(exports, {
   capture: capture,
@@ -372,5 +541,13 @@ _.extend(exports, {
   markBoundary: markBoundary,
   error: error,
   exception: exception,
-  jobHasMessages: jobHasMessages
+  jobHasMessages: jobHasMessages,
+  assertInJob: assertInJob,
+  assertInCapture: assertInCapture,
+  forkJoin: forkJoin,
+  getRootProgress: getRootProgress,
+  reportProgress: reportProgress,
+  reportProgressDone: reportProgressDone,
+  getCurrentProgressTracker: getCurrentProgressTracker,
+  addChildTracker: addChildTracker
 });

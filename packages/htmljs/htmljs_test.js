@@ -79,24 +79,6 @@ Tinytest.add("htmljs - utils", function (test) {
 
 });
 
-Tinytest.add("htmljs - attributes", function (test) {
-  var SPAN = HTML.SPAN;
-  var amp = HTML.CharRef({html: '&amp;', str: '&'});
-
-  test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
-             '<span title="M&amp;Ms">M&amp;M candies</span>');
-
-  // test that evaluateAttributes calls functions in both normal and dynamic attributes
-  test.equal(HTML.evaluateAttributes({x: function () { return 'abc'; }}),
-             { x: 'abc' });
-  test.equal(HTML.evaluateAttributes({x: function () { return 'abc'; },
-                                             $dynamic: []}),
-             { x: 'abc' });
-  test.equal(HTML.evaluateAttributes({x: function () { return 'abc'; },
-                                             $dynamic: [{ x: function () { return 'def'; }}]}),
-             { x: 'def' });
-});
-
 Tinytest.add("htmljs - details", function (test) {
   test.equal(HTML.toHTML(false), "false");
 });

@@ -1,7 +1,7 @@
 // Set up a collection to contain player information. On the server,
 // it is backed by a MongoDB collection named "players".
 
-Players = new Meteor.Collection("players");
+Players = new Mongo.Collection("players");
 
 if (Meteor.isClient) {
   Template.leaderboard.players = function () {
@@ -18,7 +18,7 @@ if (Meteor.isClient) {
   };
 
   Template.leaderboard.events({
-    'click input.inc': function () {
+    'click button.inc': function () {
       Players.update(Session.get("selected_player"), {$inc: {score: 5}});
     }
   });

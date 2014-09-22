@@ -1,12 +1,15 @@
-if (Package.ui) {
-  var UI = Package.ui.UI;
-  var HTML = Package.htmljs.HTML; // implied by `ui`
-  Package.ui.UI.registerHelper('markdown', UI.block(function () {
-    var self = this;
-    return function () {
-      var text = UI.toRawText(self.__content, self /*parentComponent*/);
-      var converter = new Showdown.converter();
-      return HTML.Raw(converter.makeHtml(text));
-    };
+if (Package.templating) {
+  var Template = Package.templating.Template;
+  var Blaze = Package.blaze.Blaze; // implied by `templating`
+  var HTML = Package.htmljs.HTML; // implied by `blaze`
+
+  Blaze.Template.registerHelper("markdown", new Template('markdown', function () {
+    var view = this;
+    var content = '';
+    if (view.templateContentBlock) {
+      content = Blaze._toText(view.templateContentBlock, HTML.TEXTMODE.STRING);
+    }
+    var converter = new Showdown.converter();
+    return HTML.Raw(converter.makeHtml(content));
   }));
 }

@@ -27,7 +27,7 @@ selftest.define("npm", ["net"], function () {
       run.waitSecs(2);
       // use match instead of read because on a built release we can
       // also get an update message here.
-      run.read(
+      run.match(
         "npm-test: updating npm dependencies -- meteor-test-executable...\n");
     }
     run.waitSecs(15);

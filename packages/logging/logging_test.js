@@ -4,7 +4,8 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
   // in Chrome and Firefox, other browsers don't give us an ability to get
   // stacktrace.
   if ((new Error).stack) {
-    test.equal(details.file, 'tinytest.js');
+    test.equal(details.file, Meteor.isServer ?
+                             'tinytest.js' : 'local-test_logging.js');
 
     // evaled statements shouldn't crash
     var code = "Log._getCallerDetails().file";
@@ -181,4 +182,3 @@ Tinytest.add("logging - format", function (test) {
       level.charAt(0).toUpperCase() + '20120908-07:06:05.004' + utcOffsetStr + ' (app.js:42) message');
   });
 });
-

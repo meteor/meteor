@@ -27,7 +27,7 @@ var getAccessToken = function (query) {
         client_id: config.clientId,
         client_secret: OAuth.openSecret(config.secret),
         grant_type: 'authorization_code',
-        redirect_uri: Meteor.absoluteUrl("_oauth/meetup?close"),
+        redirect_uri: OAuth._redirectUri('meetup', config),
         state: query.state
       }});
   } catch (err) {
@@ -45,7 +45,7 @@ var getAccessToken = function (query) {
 var getIdentity = function (accessToken) {
   try {
     var response = HTTP.get(
-      "https://secure.meetup.com/2/members",
+      "https://api.meetup.com/2/members",
       {params: {member_id: 'self', access_token: accessToken}});
     return response.data.results && response.data.results[0];
   } catch (err) {

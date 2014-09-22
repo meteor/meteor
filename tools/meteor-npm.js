@@ -2,8 +2,6 @@
 /// in which we call `npm install` to install npm dependencies,
 /// and a variety of related commands. Notably, we use `npm shrinkwrap`
 /// to ensure we get consistent versions of npm sub-dependencies.
-
-var semver = require('semver');
 var Future = require('fibers/future');
 
 var path = require('path');
@@ -31,28 +29,6 @@ cleanup.onExit(function () {
 // Exception used internally to gracefully bail out of a npm run if
 // something goes wrong
 var NpmFailure = function () {};
-
-var isUrlWithSha = function (x) {
-  // For now, just support http/https, which is at least less restrictive than
-  // the old "github only" rule.
-  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
-};
-
-// If there is a version that isn't exact, throws an Error with a
-// human-readable message that is suitable for showing to the user.
-// npmDependencies may be falsey or empty.
-meteorNpm.ensureOnlyExactVersions = function (npmDependencies) {
-  _.each(npmDependencies, function (version, name) {
-    // We want a given version of a smart package (package.js +
-    // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
-    // don't want anything too vague. For now, we support semvers and urls that
-    // name a specific commit by SHA.
-    if (!semver.valid(version) && ! isUrlWithSha(version))
-      throw new Error(
-        "Must declare exact version of npm package dependency: " +
-          name + '@' + version);
-  });
-};
 
 // Creates a temporary directory in which the new contents of the
 // package's .npm directory will be assembled. If all is successful,
@@ -209,7 +185,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
       oldNodeVersion = 'v0.8.24';
     }
 
-    if (oldNodeVersion !== process.version)
+    if (oldNodeVersion !== currentNodeCompatibilityVersion())
       files.rm_recursive(nodeModulesDir);
   }
 
@@ -346,7 +322,20 @@ var createReadme = function (newPackageNpmDir) {
 var createNodeVersion = function (newPackageNpmDir) {
   fs.writeFileSync(
     path.join(newPackageNpmDir, 'node_modules', '.node_version'),
-    process.version);
+    currentNodeCompatibilityVersion());
+};
+
+// This value should change whenever we think that the Node C ABI has changed
+// (ie, when we need to be sure to reinstall npm packages because they might
+// have native components that need to be rebuilt). It does not need to change
+// for every patch release of Node! Notably, it needed to change between 0.8.*
+// and 0.10.*.  If Node does make a patch release of 0.10 that breaks
+// compatibility, you can just change this from "0.10.*" to "0.10.35" or
+// whatever.
+var currentNodeCompatibilityVersion = function () {
+  var version = process.version;
+  version = version.replace(/\.(\d+)$/, '.*');
+  return version + '\n';
 };
 
 // Returns object with keys 'stdout', 'stderr', and 'success' (true
@@ -359,7 +348,7 @@ var createNodeVersion = function (newPackageNpmDir) {
 meteorNpm._execFileSync = function (file, args, opts) {
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
     process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' +
-                         args.join(' ') + ' ... ');
+                         args.join(' ') + ' ...\n');
 
   var future = new Future;
 
@@ -381,8 +370,10 @@ meteorNpm._execFileSync = function (file, args, opts) {
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
   var packageJsonContents = JSON.stringify({
-    // name and version are unimportant but required for `npm install`
-    name: 'packages-for-meteor-smartpackage-' + packageName,
+    // name and version are unimportant but required for `npm install`.
+    // we used to put packageName in here, but it doesn't work when that
+    // has colons.
+    name: 'packages-for-meteor-smartpackage-' + utils.randomToken(),
     version: '0.0.0',
     dependencies: npmDependencies
   });
@@ -435,7 +426,7 @@ var getShrinkwrappedDependenciesTree = function (dir) {
 //
 // If more logic is added here, it should probably go in minimizeModule too.
 var canonicalVersion = function (depObj) {
-  if (isUrlWithSha(depObj.from))
+  if (utils.isUrlWithSha(depObj.from))
     return depObj.from;
   else
     return depObj.version;
@@ -464,7 +455,7 @@ var getShrinkwrappedDependencies = function (dir) {
 var installNpmModule = function (name, version, dir) {
   ensureConnected();
 
-  var installArg = isUrlWithSha(version)
+  var installArg = utils.isUrlWithSha(version)
     ? version : (name + "@" + version);
 
   // We don't use npm.commands.install since we couldn't figure out
@@ -593,7 +584,7 @@ var minimizeDependencyTree = function (tree) {
     if (module.resolved &&
         !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
       version = module.resolved;
-    } else if (isUrlWithSha(module.from)) {
+    } else if (utils.isUrlWithSha(module.from)) {
       version = module.from;
     } else {
       version = module.version;

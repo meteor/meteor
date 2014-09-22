@@ -1,6 +1,7 @@
 var path = require('path');
 var files = require(path.join(__dirname, 'files.js'));
 var watch = require('./watch.js');
+var files = require('./files.js');
 var fs = require('fs');
 var _ = require('underscore');
 
@@ -96,11 +97,12 @@ _.extend(Builder.prototype, {
     for (var i = 0; i < parts.length; i++) {
       var part = parts[i];
       var shouldBeFile = (i === parts.length - 1) && ! isDirectory;
+      var mustBeUnique = (i === parts.length - 1);
 
       // Basic sanitization
       if (part.match(/^\.+$/))
         throw new Error("Path contains forbidden segment '" + part + "'");
-      part = part.replace(/[^a-zA-Z0-9._-]/g, '');
+      part = part.replace(/[^a-zA-Z0-9._\:-]/g, '');
 
       // If at last component, pull extension (if any) off of part
       var ext = '';
@@ -115,14 +117,19 @@ _.extend(Builder.prototype, {
       var suffix = '';
       while (true) {
         var candidate = path.join(partsOut.join(path.sep), part + suffix + ext);
-        if (candidate.length &&
-            (! (candidate in self.usedAsFile) ||
-             (!shouldBeFile && !self.usedAsFile[candidate])))
-          // No conflict -- either not used, or it's two paths that
-          // share a common ancestor directory (as opposed to one path
-          // thinking that a/b should be a file, and another thinking
-          // that it should be a directory)
-          break;
+        if (candidate.length) {
+          // If we've never heard of this, then it's unique enough.
+          if (!_.has(self.usedAsFile, candidate))
+            break;
+          // If we want this bit to be a directory, and we don't need it to be
+          // unique (ie, it isn't the very last bit), and it's currently a
+          // directory, then that's OK.
+          if (!(mustBeUnique || self.usedAsFile[candidate]))
+            break;
+          // OK, either we want it to be unique and it already exists; or it is
+          // currently a file (and we want it to be either a different file or a
+          // directory).  Try a new suffix.
+        }
 
         suffix++; // first increment will do '' -> 1
       }
@@ -146,9 +153,8 @@ _.extend(Builder.prototype, {
   //   if any path segments consist entirely of dots (eg, '..'), and
   //   if there is a file in the bundle with the same relPath, then
   //   the path is changed by adding a numeric suffix.
-  // - append: if true, append to the file if it exists rather than
-  //   throwing an exception.
   // - executable: if true, mark the file as executable.
+  // - symlink: if set to a string, create a symlink to its value
   //
   // Returns the final canonicalize relPath that was written to.
   //
@@ -179,14 +185,16 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(path.dirname(relPath));
     var absPath = path.join(self.buildPath, relPath);
-    if (options.append)
-      fs.appendFileSync(absPath, data);
-    else
-      fs.writeFileSync(absPath, data);
+    if (options.symlink) {
+      fs.symlinkSync(options.symlink, absPath);
+    } else {
+      // Builder is used to create build products, which should be read-only;
+      // users shouldn't be manually editing automatically generated files and
+      // expecting the results to "stick".
+      fs.writeFileSync(absPath, data,
+                       { mode: options.executable ? 0555 : 0444 });
+    }
     self.usedAsFile[relPath] = true;
-
-    if (options.executable)
-      fs.chmodSync(absPath, 0755); // rwxr-xr-x
 
     return relPath;
   },
@@ -203,7 +211,8 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(path.dirname(relPath));
     fs.writeFileSync(path.join(self.buildPath, relPath),
-                     new Buffer(JSON.stringify(data, null, 2), 'utf8'));
+                     new Buffer(JSON.stringify(data, null, 2), 'utf8'),
+                     {mode: 0444});
 
     self.usedAsFile[relPath] = true;
   },
@@ -214,6 +223,10 @@ _.extend(Builder.prototype, {
   // written that would conflict with paths that we are expecting to
   // be directories). Calling this twice on the same relPath will
   // given an exception.
+  //
+  // Returns the *current* (temporary!) path to where the file or directory
+  // lives. This is so you could use non-builder code to write into a reserved
+  // directory.
   //
   // options:
   // - directory: set to true to reserve this relPath to be a
@@ -245,6 +258,9 @@ _.extend(Builder.prototype, {
         self.usedAsFile[soFar] = true;
       }
     }
+
+    // Return the path we reserved.
+    return path.join(self.buildPath, relPath);
   },
 
   // Generate and reserve a unique name for a file based on `relPath`,
@@ -288,6 +304,8 @@ _.extend(Builder.prototype, {
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
   //
+  // Unlike with files.cp_r, if a symlink is found, it is copied as a symlink.
+  //
   // This does NOT add anything to the WatchSet.
   //
   // Options:
@@ -298,6 +316,7 @@ _.extend(Builder.prototype, {
   //   ignore (they may still be visible in the output bundle if
   //   symlinks are being used).  Like with WatchSets, they match against
   //   entries that end with a slash if it's a directory.
+  // - specificFiles: just copy these paths (specified as relative to 'to').
   copyDirectory: function (options) {
     var self = this;
     options = options || {};
@@ -308,6 +327,10 @@ _.extend(Builder.prototype, {
 
     var absPathTo = path.join(self.buildPath, normOptionsTo);
     if (self.shouldSymlink) {
+      if (options.specificFiles) {
+        throw new Error("can't copy only specific paths with a single symlink");
+      }
+
       var canSymlink = true;
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
@@ -337,6 +360,16 @@ _.extend(Builder.prototype, {
     }
 
     var ignore = options.ignore || [];
+    var specificPaths = null;
+    if (options.specificFiles) {
+      specificPaths = {};
+      _.each(options.specificFiles, function (f) {
+        while (f !== '.') {
+          specificPaths[path.join(normOptionsTo, f)] = true;
+          f = path.dirname(f);
+        }
+      });
+    }
 
     var walk = function (absFrom, relTo) {
       self._ensureDirectory(relTo);
@@ -345,27 +378,32 @@ _.extend(Builder.prototype, {
         var thisAbsFrom = path.resolve(absFrom, item);
         var thisRelTo = path.join(relTo, item);
 
-        var fileStatus = fs.statSync(thisAbsFrom);
-        var isDir = fileStatus.isDirectory();
-        var itemForMatch = item;
-        if (isDir)
-          itemForMatch += '/';
+        if (specificPaths && !_.has(specificPaths, thisRelTo)) {
+          return;
+        }
 
+        var fileStatus = fs.lstatSync(thisAbsFrom);
+
+        var itemForMatch = item;
+        if (fileStatus.isDirectory())
+          itemForMatch += '/';
         if (_.any(ignore, function (pattern) {
           return itemForMatch.match(pattern);
         })) return; // skip excluded files
 
-        if (isDir) {
+        if (fileStatus.isDirectory()) {
           walk(thisAbsFrom, thisRelTo);
-          return;
+        } else if (fileStatus.isSymbolicLink()) {
+          fs.symlinkSync(fs.readlinkSync(thisAbsFrom),
+                         path.resolve(self.buildPath, thisRelTo));
+          // A symlink counts as a file, as far as "can you put something under
+          // it" goes.
+          self.usedAsFile[thisRelTo] = true;
+        } else {
+          files.copyFile(thisAbsFrom, path.resolve(self.buildPath, thisRelTo),
+                         fileStatus.mode);
+          self.usedAsFile[thisRelTo] = true;
         }
-
-        // XXX avoid reading whole file into memory
-        var data = fs.readFileSync(thisAbsFrom);
-
-        fs.writeFileSync(path.resolve(self.buildPath, thisRelTo), data,
-                         { mode: fileStatus.mode });
-        self.usedAsFile[thisRelTo] = true;
       });
     };
 

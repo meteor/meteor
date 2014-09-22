@@ -1,5 +1,3 @@
-MeteorDeveloperAccounts = {};
-
 OAuth.registerService("meteor-developer", 2, null, function (query) {
   var response = getTokens(query);
   var accessToken = response.accessToken;
@@ -40,13 +38,13 @@ var getTokens = function (query) {
   var response;
   try {
     response = HTTP.post(
-      METEOR_DEVELOPER_URL + "/oauth2/token", {
+      MeteorDeveloperAccounts._server + "/oauth2/token", {
         params: {
           grant_type: "authorization_code",
           code: query.code,
           client_id: config.clientId,
           client_secret: OAuth.openSecret(config.secret),
-          redirect_uri: Meteor.absoluteUrl("_oauth/meteor-developer?close")
+          redirect_uri: OAuth._redirectUri('meteor-developer', config)
         }
       }
     );
@@ -79,7 +77,7 @@ var getTokens = function (query) {
 var getIdentity = function (accessToken) {
   try {
     return HTTP.get(
-      METEOR_DEVELOPER_URL + "/api/v1/identity",
+      MeteorDeveloperAccounts._server + "/api/v1/identity",
       {
         headers: { Authorization: "Bearer " + accessToken }
       }

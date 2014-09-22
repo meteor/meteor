@@ -34,10 +34,10 @@ var expectInvalidToken = function (token) {
 // elapses.
 var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
                              bodyRegExp, timeoutSecs) {
+  var timedOut = false;
   if (timeoutSecs) {
     var timeout = setTimeout(function () {
-      throw new Error('Waiting for email to ' + inbox +
-                      ' timed out.');
+      timedOut = true;
     }, timeoutSecs * 1000);
   }
 
@@ -87,8 +87,12 @@ var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
       }
     });
 
-    if (! match)
+    if (! match) {
       utils.sleepMs(3000);
+      if (timedOut) {
+        selftest.fail('Waiting for email to ' + inbox + ' timed out.');
+      }
+    }
   }
 
   clearTimeout(timeout);
@@ -174,8 +178,7 @@ selftest.define('deferred registration revocation', ['net'], function () {
   var sessionState = s.readSessionFile();
   run = s.run('logout');
   run.waitSecs(15);
-  run.readErr("Logged out.\n");
-  run.expectEnd();
+  run.matchErr("Logged out.\n");
   run.expectExit(0);
   s.writeSessionFile(sessionState);
 
@@ -183,7 +186,6 @@ selftest.define('deferred registration revocation', ['net'], function () {
   run = s.run('whoami');
   run.waitSecs(15);
   run.readErr("Not logged in. 'meteor login' to log in.\n");
-  run.expectEnd();
   run.expectExit(1);
 });
 

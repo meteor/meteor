@@ -24,28 +24,19 @@ caching simply add the `appcache` package to your project.
 (Note however that the `appcache` package by itself doesn't make
 *data* available offline: in an application loaded offline, a Meteor
 Collection will appear to be empty in the client until the Internet
-becomes available and the browser is able to establish a livedata
+becomes available and the browser is able to establish a DDP
 connection).
 
-The application cache works transparently in all supported browsers
-except for Firefox, which pops up a message saying "This website is
-asking to store data on your computer for offline use" and asks the
-user whether to allow or deny the request.  The application cache is
-disabled on Firefox by default; to turn it on use:
-
-    Meteor.AppCache.config({firefox: true});
-
-You can also disable the application cache for specific browsers:
+To turn AppCache off for specific browsers use:
 
     Meteor.AppCache.config({
       chrome: false,
-      firefox: true,
-      ie: false
+      firefox: false
     });
 
-The supported browsers that can be enabled or disabled are `android`,
-`chrome`, `chromium`, `chromeMobileIOS`, `firefox`, `ie`,
-`mobileSafari` and `safari`.
+The supported browsers that can be enabled or disabled include, but are
+not limited to, `android`, `chrome`, `chromium`, `chromeMobileIOS`,
+`firefox`, `ie`, `mobileSafari` and `safari`.
 
 Browsers limit the amount of data they will put in the application
 cache, which can vary due to factors such as how much disk space is

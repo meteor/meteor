@@ -3,6 +3,7 @@ var Sandbox = selftest.Sandbox;
 var testUtils = require('../test-utils.js');
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
+var loginTimeoutSecs = 2;
 
 selftest.define("login", ['net'], function () {
   var s = new Sandbox;
@@ -19,7 +20,7 @@ selftest.define("login", ['net'], function () {
   // even if you are already logged in.
   for (var i = 0; i < 2; i++) {
     run = s.run("login");
-    run.waitSecs(commandTimeoutSecs);
+    run.waitSecs(loginTimeoutSecs);
     run.matchErr("Username:");
     run.write("test\n");
     run.matchErr("Password:");
@@ -32,7 +33,7 @@ selftest.define("login", ['net'], function () {
   // Leaving username blank, or getting the password wrong, doesn't
   // reprompt. It also doesn't log you out.
   run = s.run("login");
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(loginTimeoutSecs);
   run.matchErr("Username:");
   run.write("\n");
   run.matchErr("Password:");
@@ -42,7 +43,7 @@ selftest.define("login", ['net'], function () {
   run.expectExit(1);
 
   run = s.run("login");
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(loginTimeoutSecs);
   run.matchErr("Username:");
   run.write("test\n");
   run.matchErr("Password:");
@@ -52,7 +53,7 @@ selftest.define("login", ['net'], function () {
   run.expectExit(1);
 
   run = s.run('login');
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(loginTimeoutSecs);
   run.matchErr("Username:");
   run.write("test\n");
   run.matchErr("Password:");
@@ -65,7 +66,6 @@ selftest.define("login", ['net'], function () {
 
   run = s.run("whoami");
   run.read("test\n");
-  run.expectEnd();
   run.expectExit(0);
 
   run = s.run("logout");
@@ -84,7 +84,7 @@ selftest.define("login", ['net'], function () {
 
   // Test login failure
   run = s.run("login");
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(loginTimeoutSecs);
   run.matchErr("Username:");
   run.write("test\n");
   run.matchErr("Password:");
@@ -96,7 +96,7 @@ selftest.define("login", ['net'], function () {
   // Logging in with a capitalized username should work (usernames are
   // case-insensitive).
   run = s.run("login");
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(loginTimeoutSecs);
   run.matchErr("Username:");
   run.write("TeSt\n");
   run.matchErr("Password:");
@@ -113,7 +113,7 @@ selftest.define("login", ['net'], function () {
   // Logging in with a capitalized password should NOT work (can't be
   // too safe...)
   run = s.run("login");
-  run.waitSecs(commandTimeoutSecs);
+  run.waitSecs(loginTimeoutSecs);
   run.matchErr("Username:");
   run.write("test\n");
   run.matchErr("Password:");

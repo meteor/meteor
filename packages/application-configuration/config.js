@@ -25,14 +25,15 @@ var Services;
 var collectionFuture = new Future();
 
 Meteor.startup(function () {
+  var Mongo = Package.mongo.Mongo;
   if (ultra) {
-    Apps = new Meteor.Collection("apps", {
+    Apps = new Mongo.Collection("apps", {
       connection: ultra
     });
-    Jobs = new Meteor.Collection("jobs", {
+    Jobs = new Mongo.Collection("jobs", {
       connection: ultra
     });
-    Services = new Meteor.Collection('services', {
+    Services = new Mongo.Collection('services', {
       connection: ultra
     });
     // allow us to block on the collections being ready

@@ -10,7 +10,7 @@ Template.loginButtons.events({
   }
 });
 
-UI.registerHelper('loginButtons', function () {
+Template.registerHelper('loginButtons', function () {
   throw new Error("Use {{> loginButtons}} instead of {{loginButtons}}");
 });
 
@@ -160,4 +160,3 @@ Template._loginButtonsMessages.infoMessage = function () {
 //
 
 Template._loginButtonsLoggingInPadding.dropdown = dropdown;
-

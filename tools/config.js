@@ -1,7 +1,9 @@
 var fs = require('fs');
 var path = require('path');
+var url = require('url');
 var files = require('./files.js');
 var _ = require('underscore');
+var tropohouse = require('./tropohouse.js');
 
 // A few functions in the `meteor` tool talk to MDG servers: primarily
 // checking for updates, logging into your Meteor account, and
@@ -118,13 +120,115 @@ _.extend(exports, {
   // base universe port number (that is, the Meteor Accounts port
   // number) plus 20.
   getPackageServerUrl: function () {
-    var host;
-    if (isLocalUniverse())
-      host = localhostOffset(20);
-    else
-      host = getUniverse().replace(/^www\./, 'packages.');
+    if (process.env.METEOR_PACKAGE_SERVER_URL)
+      return process.env.METEOR_PACKAGE_SERVER_URL;
+    var host = config.getPackageServerDomain();
 
     return addScheme(host);
+  },
+
+  getPackageServerDomain: function () {
+    if (isLocalUniverse()) {
+      return localhostOffset(20);
+    } else {
+      if (process.env.METEOR_PACKAGE_SERVER_URL) {
+        var parsed = url.parse(process.env.METEOR_PACKAGE_SERVER_URL);
+        return parsed.host;
+      } else {
+        return getUniverse().replace(/^www\./, 'packages.');
+      }
+    }
+  },
+
+  getTestPackageServerUrl: function () {
+    if (isLocalUniverse()) {
+      return localhostOffset(20);
+    } else {
+      return addScheme(getUniverse().replace(/^www\./, 'test-packages.'));
+    }
+  },
+
+  getPackageStatsServerUrl: function () {
+    if (process.env.METEOR_PACKAGE_STATS_SERVER_URL) {
+      return process.env.METEOR_PACKAGE_STATS_SERVER_URL;
+    }
+
+    var host = config.getPackageStatsServerDomain();
+    return addScheme(host);
+  },
+
+  getPackageStatsServerDomain: function () {
+    if (process.env.METEOR_PACKAGE_STATS_SERVER_URL) {
+      return url.parse(process.env.METEOR_PACKAGE_STATS_SERVER_URL).hostname;
+    }
+
+    if (isLocalUniverse()) {
+      return localhostOffset(30);
+    } else {
+      return getUniverse().replace(/^www\./, 'activity.');
+    }
+  },
+
+  // Note: this is NOT guaranteed to return a distinct prefix for every
+  // conceivable URL.  But it sure ought to return a distinct prefix for every
+  // server we actually use.
+  getPackageServerFilePrefix: function (serverUrl) {
+    var self = this;
+    if (!serverUrl) serverUrl = self.getPackageServerUrl();
+
+    // Chop off http:// and https:// and trailing slashes.
+    serverUrl = serverUrl.replace(/^\https:\/\//, '');
+    serverUrl = serverUrl.replace(/^\http:\/\//, '');
+    serverUrl = serverUrl.replace(/\/+$/, '');
+
+    // Chop off meteor.com.
+    serverUrl = serverUrl.replace(/\.meteor\.com$/, '');
+
+    // Replace other weird stuff with X.
+    serverUrl = serverUrl.replace(/[^a-zA-Z0-9.:-]/g, 'X');
+
+    return serverUrl;
+  },
+
+  getPackagesDirectoryName: function (serverUrl) {
+    var self = this;
+
+    var prefix = config.getPackageServerFilePrefix();
+    if (prefix !== 'packages') {
+      prefix = path.join('packages-from-server', prefix);
+    }
+
+    return prefix;
+  },
+
+  getLocalPackageCacheFilename: function (serverUrl) {
+    var self = this;
+    var prefix = self.getPackageServerFilePrefix();
+
+    // Should look like 'packages.data.json' in the default case
+    // (test-packages.data.json before 0.9.0).
+    return prefix + ".data.json";
+  },
+
+  getPackageStorage: function (tropo) {
+    var self = this;
+    tropo = tropo || tropohouse.default;
+    return path.join(tropo.root, "package-metadata", "v1.1",
+                     self.getLocalPackageCacheFilename());
+  },
+
+  // XXX this does not appear to be called.
+  getPackageStorageVersion: function() {
+    return "1.0";
+  },
+
+  // NOTE: Uses the v1 directory, not v1.1 like package-metadata. This
+  // is so that we don't double-print banners and the like. Someday we
+  // should unifiy these so that the tool doesn't have to write to
+  // multiple different versions of these directories.
+  getBannersShownFilename: function() {
+    return path.join(tropohouse.default.root,
+                     "package-metadata", "v1.1", "banners-shown.json");
   },
 
   // Return the domain name of the current Meteor Accounts server in
@@ -132,6 +236,10 @@ _.extend(exports, {
   // login token.
   getAccountsDomain: function () {
     return getUniverse();
+  },
+
+  getDeployHostname: function () {
+    return process.env.DEPLOY_HOSTNAME || "meteor.com";
   },
 
   // Deploy URL for MDG free hosting, eg 'https://deploy.meteor.com'.

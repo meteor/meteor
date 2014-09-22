@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  internal: true
+  version: "1.1.0"
 });
 
 Package.on_use(function (api) {
@@ -9,6 +9,7 @@ Package.on_use(function (api) {
   api.use('oauth', ['client', 'server']);
   api.use('underscore', 'server');
   api.use('http', 'server');
+  api.use('mongo');
 
   api.export('OAuth1Binding', 'server');
   api.export('OAuth1Test', 'server', {testOnly: true});

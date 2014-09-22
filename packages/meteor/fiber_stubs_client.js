@@ -14,6 +14,7 @@ Meteor._SynchronousQueue = function () {
   var self = this;
   self._tasks = [];
   self._running = false;
+  self._runTimeout = null;
 };
 
 _.extend(Meteor._SynchronousQueue.prototype, {
@@ -25,6 +26,15 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     var tasks = self._tasks;
     self._tasks = [];
     self._running = true;
+
+    if (self._runTimeout) {
+      // Since we're going to drain the queue, we can forget about the timeout
+      // which tries to run it.  (But if one of our tasks queues something else,
+      // the timeout will be correctly re-created.)
+      clearTimeout(self._runTimeout);
+      self._runTimeout = null;
+    }
+
     try {
       while (!_.isEmpty(tasks)) {
         var t = tasks.shift();
@@ -47,12 +57,12 @@ _.extend(Meteor._SynchronousQueue.prototype, {
 
   queueTask: function (task) {
     var self = this;
-    var wasEmpty = _.isEmpty(self._tasks);
     self._tasks.push(task);
     // Intentionally not using Meteor.setTimeout, because it doesn't like runing
     // in stubs for now.
-    if (wasEmpty)
-      setTimeout(_.bind(self.flush, self), 0);
+    if (!self._runTimeout) {
+      self._runTimeout = setTimeout(_.bind(self.flush, self), 0);
+    }
   },
 
   flush: function () {

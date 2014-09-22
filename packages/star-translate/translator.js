@@ -11,7 +11,7 @@ StarTranslator = {};
 StarTranslator.maybeTranslate = function (bundlePath, translatedPath) {
   var self = this;
   if (path.resolve(bundlePath) !== path.resolve(translatedPath)) {
-    var _ncp = Meteor._wrapAsync(ncp);
+    var _ncp = Meteor.wrapAsync(ncp);
     _ncp(bundlePath, translatedPath);
   }
 
@@ -39,8 +39,8 @@ StarTranslator._translate = function (bundlePath) {
     "builtBy": "Star translator",
     "programs": [
       {
-        "name": "client",
-        "arch": "browser",
+        "name": "web.browser",
+        "arch": "web.browser",
         "path": "client.json"
       },
       {
@@ -99,7 +99,7 @@ StarTranslator._writeClientProg = function (bundlePath, clientProgPath) {
                                                                 "app.json"),
                                                       'utf8'));
   var clientManifest = {
-    "format": "browser-program-pre1",
+    "format": "web-program-pre1",
     "manifest": origClientManifest.manifest,
     // XXX Haven't updated this for the app.html -> head/body change, but
     //     surely we don't need to because code in pre-star apps doesn't

@@ -216,12 +216,23 @@ selftest.define("argument parsing", function () {
 
   run = s.run("bundle");
   run.matchErr("not enough arguments");
-  run.matchErr("Usage: meteor bundle");
+  run.matchErr("Deprecated command");
   run.expectExit(1);
 
   run = s.run("bundle", "a", "b");
   run.matchErr("too many arguments");
-  run.matchErr("Usage: meteor bundle");
+  run.matchErr("Deprecated command");
+  run.expectExit(1);
+
+
+  run = s.run("build");
+  run.matchErr("not enough arguments");
+  run.matchErr("Usage: meteor build");
+  run.expectExit(1);
+
+  run = s.run("build", "a", "b");
+  run.matchErr("too many arguments");
+  run.matchErr("Usage: meteor build");
   run.expectExit(1);
 
   // '--' to end parsing
@@ -283,14 +294,14 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // requiring an app dir
-  run = s.run("list", "--using");
+  run = s.run("list");
   run.matchErr("not in a Meteor project");
   run.matchErr("meteor create"); // new user help
   run.expectExit(1);
 
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
-    run = s.run("list", "--using");
+    run = s.run("list");
     run.expectExit(0);
   });
 });
@@ -305,7 +316,7 @@ selftest.define("command-like options", function () {
     run.matchErr("Unreleased");
     run.expectExit(1);
   } else {
-    run.read("Release " + release.current.name + "\n");
+    run.read(release.current.getDisplayName() + "\n");
     run.expectEnd();
     run.expectExit(0);
   }

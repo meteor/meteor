@@ -135,14 +135,26 @@ _.extend(WatchSet.prototype, {
       self.alwaysFire = true;
       return;
     }
-    _.each(other.files, function (hash, name) {
-      self.addFile(name, hash);
-    });
+   _.each(other.files, function (hash, name) {
+     self.addFile(name, hash);
+   });
     _.each(other.directories, function (dir) {
       // XXX this doesn't deep-clone the directory, but I think these objects
-      // are never mutated
+      // are never mutated #WatchSetShallowClone
       self.directories.push(dir);
     });
+  },
+
+  clone: function () {
+    var self = this;
+    var ret = new WatchSet;
+
+    // XXX doesn't bother to deep-clone the directory info
+    // #WatchSetShallowClone
+    ret.alwaysFire = self.alwaysFire;
+    ret.files = _.clone(self.files);
+    ret.directories = _.clone(self.directories);
+    return ret;
   },
 
   toJSON: function () {
@@ -434,7 +446,7 @@ _.extend(Watcher.prototype, {
     });
 
     if (!self.stopped && !self.justCheckOnce) {
-      setTimeout(fiberHelpers.inFiber(function () {
+      setTimeout(fiberHelpers.inBareFiber(function () {
         self._checkDirectories(true);
       }), 500);
     }

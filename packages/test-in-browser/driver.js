@@ -5,7 +5,7 @@
 
 // dependency for the count of tests running/passed/failed, etc. drives
 // the navbar and the like.
-var countDep = new Deps.Dependency;
+var countDep = new Tracker.Dependency;
 // things that change on countDep
 var running = true;
 var totalCount = 0;
@@ -15,7 +15,7 @@ var failedTests = [];
 
 // Dependency for when a new top level group is added. Each group and
 // each test have their own dependency objects.
-var topLevelGroupsDep = new Deps.Dependency;
+var topLevelGroupsDep = new Tracker.Dependency;
 
 // An array of top-level groups.
 //
@@ -23,7 +23,7 @@ var topLevelGroupsDep = new Deps.Dependency;
 // - name: string
 // - path: array of strings (names of parent groups)
 // - parent: parent group object (back reference)
-// - dep: Deps.Dependency object for this group. fires when new tests added.
+// - dep: Tracker.Dependency object for this group. fires when new tests added.
 // - groups: list of sub-groups
 // - tests: list of tests in this group
 //
@@ -32,7 +32,7 @@ var topLevelGroupsDep = new Deps.Dependency;
 // - parent: parent group object (back reference)
 // - server: boolean
 // - fullName: string
-// - dep: Deps.Dependency object for this test. fires when the test completes.
+// - dep: Tracker.Dependency object for this test. fires when the test completes.
 var resultTree = [];
 
 
@@ -40,12 +40,12 @@ Session.setDefault("groupPath", ["tinytest"]);
 Session.set("rerunScheduled", false);
 
 Meteor.startup(function () {
-  Deps.flush();
+  Tracker.flush();
   Tinytest._runTestsEverywhere(reportResults, function () {
     running = false;
     Meteor.onTestsComplete && Meteor.onTestsComplete();
     countDep.changed();
-    Deps.flush();
+    Tracker.flush();
 
     Meteor.connection._unsubscribeAll();
   }, Session.get("groupPath"));
@@ -63,6 +63,17 @@ Meteor.startup(function () {
 var reportResults = function(results) {
   var test = _findTestForResults(results);
 
+  // Tolerate repeated reports: first undo the effect of any previous report
+  var status = _testStatus(test);
+  if (status === "failed") {
+    failedCount--;
+    countDep.changed();
+  } else if (status === "succeeded") {
+    passedCount--;
+    countDep.changed();
+  }
+
+  // Now process the current report
   if (_.isArray(results.events)) {
     // append events, if present
     Array.prototype.push.apply((test.events || (test.events = [])),
@@ -78,7 +89,7 @@ var reportResults = function(results) {
     });
     test.events = out;
   }
-  var status = _testStatus(test);
+  status = _testStatus(test);
   if (status === "failed") {
     failedCount++;
     // Expand a failed test (but only set this if the user hasn't clicked on the
@@ -137,7 +148,7 @@ var _findTestForResults = function (results) {
         name: gname,
         parent: (group || null),
         path: groupPath.slice(0, i+1),
-        dep: new Deps.Dependency
+        dep: new Tracker.Dependency
       }; // create group
       array.push(newGroup);
 
@@ -165,7 +176,7 @@ var _findTestForResults = function (results) {
       parent: group,
       server: server,
       fullName: fullName,
-      dep: new Deps.Dependency
+      dep: new Tracker.Dependency
     };
     group.tests.push(test);
     group.dep.changed();
@@ -327,6 +338,19 @@ Template.groupNav.events({
     Reload._reload();
   }
 });
+
+Template.groupNav.rendered = function () {
+  Tinytest._onCurrentClientTest = function (name) {
+    name = (name ? 'C: '+name : '');
+    // Set the DOM directly so that it's immediate and we
+    // don't wait for Tracker to flush.
+    var span = document.getElementById('current-client-test');
+    if (span) {
+      span.innerHTML = '';
+      span.appendChild(document.createTextNode(name));
+    }
+  };
+};
 
 
 //// Template - failedTests
@@ -502,7 +526,7 @@ Template.event.helpers({
               var text = piece[1];
               if (which === 0 ||
                   which === (key === 'actual' ? -1 : 1)) {
-                var htmlBit = UI._escape(text).replace(
+                var htmlBit = Blaze._escape(text).replace(
                     /\n/g, '<br>');
                 if (which !== 0)
                   htmlBit = '<ins>' + htmlBit + '</ins>';

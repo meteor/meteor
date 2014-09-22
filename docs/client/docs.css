@@ -314,12 +314,20 @@ dl.callbacks {
     border-width: 0;
 }
 
-.api h3 {
+.api h3, h3.api-title {
     margin: 0px 0px 1.33em 0px;
     border-width: 2px 0px 2px 0px;
     border-style: solid;
     border-color: black;
     padding-bottom: 1px;
+}
+
+h3.api-title {
+    margin-top: 3em;
+}
+
+.api h3.api-title {
+    margin-top: 0;
 }
 
 .api h4 {
@@ -366,7 +374,7 @@ dl.callbacks {
     margin: 1em 0 1em 20px;
 }
 
-.api .locus {
+.api-title .locus {
     float: right;
     font-weight: normal;
     padding-right: 5px;

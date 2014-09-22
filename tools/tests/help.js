@@ -20,7 +20,7 @@ selftest.define("help", function () {
   // Command help
   var checkCommandHelp = function (run) {
     run.read("Usage: meteor create");
-    run.match("create a new Meteor project");
+    run.match("create a new Meteor app");
     run.match("Options:");
     run.match(/--list\s*Show list/);
     run.expectExit(0);
@@ -34,7 +34,7 @@ selftest.define("help", function () {
   var checkSubcommandList = function (run) {
     run.read("Usage: meteor admin <command>");
     run.match("Commands:");
-    run.match(/grant\s*Grant a permission/);
+    run.match(/recommend-release\s*Recommend a previously published/);
     run.expectExit(0);
   };
   checkSubcommandList(s.run("help", "admin"));
@@ -44,12 +44,14 @@ selftest.define("help", function () {
 
   // Subcommand help
   var checkSubcommandHelp = function (run) {
-    run.read("Usage: meteor admin grant");
+    run.match("Usage: meteor admin make-bootstrap-tarballs");
+    run.match("For internal use only.");
     run.expectExit(0);
   };
 
-  checkSubcommandHelp(s.run("help", "admin", "grant"));
-  checkSubcommandHelp(s.run("admin", "help", "grant"));
-  checkSubcommandHelp(s.run("admin", "grant", "--help"));
-  checkSubcommandHelp(s.run("--help", "admin", "grant"));
+  var comm = "make-bootstrap-tarballs";
+  checkSubcommandHelp(s.run("help", "admin", comm));
+  checkSubcommandHelp(s.run("admin", "help", comm));
+  checkSubcommandHelp(s.run("admin", comm, "--help"));
+  checkSubcommandHelp(s.run("--help", "admin", comm));
 });

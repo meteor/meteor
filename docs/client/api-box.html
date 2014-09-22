@@ -1,0 +1,70 @@
+<template name="apiBoxTitle">
+  <h3 id="{{id}}" class="api-title">
+    <a class="name selflink" href="#{{id}}">{{{name}}}</a>
+    {{#if locus}}
+      <span class="locus">{{locus}}</span>
+    {{/if}}
+  </h3>
+</template>
+
+<template name="autoApiBox">
+{{#with apiData this}}
+<div class="api {{bare}} new-api-box">
+  {{> apiBoxTitle name=signature locus=locus id=link}}
+
+  <div class="desc">
+    {{#markdown}}{{summary}}{{/markdown}}
+  </div>
+
+  {{#if paramsNoOptions}}
+    <h4>Arguments</h4>
+    <dl class="args">
+      {{#each paramsNoOptions}}
+        <dt>
+          <span class="name">{{name}}</span>
+          <span class="type">{{{typeNames type.names}}}</span>
+        </dt>
+        <dd>
+          {{{description}}}
+        </dd>
+      {{/each}}
+    </dl>
+  {{/if}}
+
+  {{#if options}}
+    <h4>Options</h4>
+    <dl class="args">
+      {{#each options}}
+        <dt>
+          <span class="name">{{name}}</span>
+          <span class="type">{{{typeNames type.names}}}</span>
+        </dt>
+        <dd>
+          {{{description}}}
+        </dd>
+      {{/each}}
+    </dl>
+  {{/if}}
+
+  {{#if UI.contentBlock}}
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
+  {{/if}}
+</div>
+{{/with}}
+</template>
+
+<template name="api_box_args">
+<dl class="args">
+{{#each this}}
+<dt><span class="name">{{{name}}}</span>
+  <span class="type">
+    {{#if type_link}}
+      <a href="#{{type_link}}">{{{type}}}</a>
+    {{else}}
+      {{{type}}}
+    {{/if}}
+  </span></dt>
+<dd>{{#markdown}}{{{descr}}}{{/markdown}}</dd>
+{{/each}}
+</dl>
+</template>

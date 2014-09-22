@@ -1,3 +1,19 @@
+// This file is used to access the "warehouse" of pre-0.9.0 releases. This code
+// is now legacy, but we keep it around so that you can still use the same
+// `meteor` entry point to run pre-0.9.0 and post-0.9.0 releases, for now. All
+// it knows how to do is download old releases and explain to main.js how to
+// exec them.
+//
+// Because of this, we do have to be careful that the files used by this code
+// and the files used by tropohouse.js (the modern version of the warehouse)
+// don't overlap. tropohouse does not use tools or releases directorys, and
+// while they both have packages directories with similar structures, the
+// version names should not overlap: warehouse versions are SHAs and tropohouse
+// versions are semvers.  Additionally, while they do both use the 'meteor'
+// symlink at the top level, there's no actual code in this file to write that
+// symlink (it was just created by the bootstrap tarball release process).
+
+
 /// We store a "warehouse" of tools, releases and packages on
 /// disk. This warehouse is populated from our servers, as needed.
 ///
@@ -34,14 +50,6 @@ var fiberHelpers = require('./fiber-helpers.js');
 
 var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 
-// Like fs.symlinkSync, but creates a temporay link and renames it over the
-// file; this means it works even if the file already exists.
-var symlinkOverSync = function (linkText, file) {
-  var tmpSymlink = file + ".tmp" + utils.randomToken();
-  fs.symlinkSync(linkText, tmpSymlink);
-  fs.renameSync(tmpSymlink, file);
-};
-
 var warehouse = exports;
 _.extend(warehouse, {
   // An exception meaning that you asked for a release that doesn't
@@ -74,6 +82,14 @@ _.extend(warehouse, {
     return path.join(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
   },
 
+  _latestReleaseSymlinkPath: function () {
+    return path.join(warehouse.getWarehouseDir(), 'releases', 'latest');
+  },
+
+  _latestToolsSymlinkPath: function () {
+    return path.join(warehouse.getWarehouseDir(), 'tools', 'latest');
+  },
+
   // Ensure the passed release version is stored in the local
   // warehouse and return its parsed manifest.
   //
@@ -88,72 +104,7 @@ _.extend(warehouse, {
     if (!files.usesWarehouse())
       throw new Error("Not in a warehouse but requesting a manifest!");
 
-    var manifestPath = path.join(
-      warehouse.getWarehouseDir(), 'releases', release + '.release.json');
-
     return warehouse._populateWarehouseForRelease(release, !quiet);
-  },
-
-  _latestReleaseSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'releases', 'latest');
-  },
-
-  // look in the warehouse for the latest release version. if no
-  // releases are found, return null.
-  latestRelease: function () {
-    var latestReleaseSymlink = warehouse._latestReleaseSymlinkPath();
-    // This throws if the symlink doesn't exist, but it really should, since
-    // it exists in bootstrap tarballs and is never deleted.
-    var linkText = fs.readlinkSync(latestReleaseSymlink);
-    return linkText.replace(/\.release\.json$/, '');
-  },
-
-  _latestToolsSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'tools', 'latest');
-  },
-
-  // Look in the warehouse for the latest tools version. (This is the one that
-  // the meteor shell script runs initially). If the symlink doesn't exist
-  // (which shouldn't happen, since it is provided in the bootstrap tarball)
-  // returns null.
-  latestTools: function () {
-    var latestToolsSymlink = warehouse._latestToolsSymlinkPath();
-    try {
-      return fs.readlinkSync(latestToolsSymlink);
-    } catch (e) {
-      return null;
-    }
-  },
-
-  // returns true if we updated the latest symlink
-  // XXX make errors prettier
-  fetchLatestRelease: function (options) {
-    options = options || {};
-    var manifest = updater.getManifest();
-
-    // XXX in the future support release channels other than stable
-    var releaseName = manifest && manifest.releases &&
-          manifest.releases.stable && manifest.releases.stable.version;
-    if (! releaseName)
-      throw new Error("no stable release found?");
-
-    var latestReleaseManifest = warehouse._populateWarehouseForRelease(
-      releaseName, !!options.showInstalling);
-
-    // First, make sure the latest tools symlink reflects the latest installed
-    // release.
-    if (latestReleaseManifest.tools !== warehouse.latestTools()) {
-      symlinkOverSync(latestReleaseManifest.tools,
-                      warehouse._latestToolsSymlinkPath());
-    }
-
-    var storedLatestRelease = warehouse.latestRelease();
-    if (storedLatestRelease === releaseName)
-      return false;
-
-    symlinkOverSync(releaseName + '.release.json',
-                    warehouse._latestReleaseSymlinkPath());
-    return true;
   },
 
   packageExistsInWarehouse: function (name, version) {
@@ -171,6 +122,20 @@ _.extend(warehouse, {
 
   toolsExistsInWarehouse: function (version) {
     return fs.existsSync(warehouse.getToolsDir(version));
+  },
+
+  // Returns true if we already have the release file on disk, and it's not a
+  // fake "red pill" release --- we should never springboard to those!
+  realReleaseExistsInWarehouse: function (version) {
+    var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
+    var releaseManifestPath = path.join(releasesDir,
+                                        version + '.release.json');
+    try {
+      var manifest = JSON.parse(fs.readFileSync(releaseManifestPath, 'utf8'));
+      return !manifest.redPill;
+    } catch (e) {
+      return false;
+    }
   },
 
   _calculateNewPiecesForRelease: function (releaseManifest) {
@@ -297,6 +262,14 @@ _.extend(warehouse, {
             console.error("Failed to load tools for release " + releaseVersion);
           throw e;
         }
+
+        // If the 'tools/latest' symlink doesn't exist, this must be the first
+        // legacy tools we've downloaded into this warehouse. Add the symlink,
+        // so that the tools doesn't get confused when it tries to readlink it.
+        if (!fs.existsSync(warehouse._latestToolsSymlinkPath())) {
+          fs.symlinkSync(newPieces.tools.version,
+                         warehouse._latestToolsSymlinkPath());
+        }
       }
 
       var packagesToDownload = {};
@@ -335,6 +308,15 @@ _.extend(warehouse, {
       // Now that we have written all packages, it's safe to write the
       // release manifest.
       fs.writeFileSync(releaseManifestPath, releaseManifestText);
+
+      // If the 'releases/latest' symlink doesn't exist, this must be the first
+      // legacy release manifest we've downloaded into this warehouse. Add the
+      // symlink, so that the tools doesn't get confused when it tries to
+      // readlink it.
+      if (!fs.existsSync(warehouse._latestReleaseSymlinkPath())) {
+        fs.symlinkSync(releaseVersion + '.release.json',
+                       warehouse._latestReleaseSymlinkPath());
+      }
     }
 
     // Finally, clear the "fresh" files for all the things we just printed
@@ -387,66 +369,6 @@ _.extend(warehouse, {
       fs.writeFileSync(warehouse.getToolsFreshFile(toolsVersion), '');
   },
 
-  printNotices: function (fromRelease, toRelease, packages) {
-    var noticesPath = path.join(
-      warehouse.getWarehouseDir(), 'releases', toRelease + '.notices.json');
-
-    try {
-      var notices = JSON.parse(fs.readFileSync(noticesPath));
-    } catch (e) {
-      // It's valid for this file to not exist (if it's an unblessed version)
-      // and eh, if the JSON is bad then the user doesn't really care.
-      return;
-    }
-
-    var noticesToPrint = [];
-    // If we are updating from an app with no .meteor/release, print all
-    // entries up to toRelease.
-    var foundFromRelease = !fromRelease;
-    for (var i = 0; i < notices.length; ++i) {
-      var record = notices[i];
-      // We want to print the notices for releases newer than fromRelease, and
-      // we always want to print toRelease even if we're updating from something
-      // that's not in the notices file at all.
-      if (foundFromRelease || record.release === toRelease) {
-        var noticesForRelease = record.notices || [];
-        _.each(record.packageNotices, function (lines, pkgName) {
-          if (_.contains(packages, pkgName)) {
-            if (!_.isEmpty(noticesForRelease))
-              noticesForRelease.push('');
-            noticesForRelease.push.apply(noticesForRelease, lines);
-          }
-        });
-
-        if (!_.isEmpty(noticesForRelease)) {
-          noticesToPrint.push({release: record.release,
-                               notices: noticesForRelease});
-        }
-      }
-      // Nothing newer than toRelease.
-      if (record.release === toRelease)
-        break;
-      if (!foundFromRelease && record.release === fromRelease)
-        foundFromRelease = true;
-    }
-
-    if (_.isEmpty(noticesToPrint))
-      return;
-
-    console.log();
-    console.log("-- Notice --");
-    console.log();
-    _.each(noticesToPrint, function (record) {
-      var header = record.release + ': ';
-      _.each(record.notices, function (line, i) {
-        console.log(header + line);
-        if (i === 0)
-          header = header.replace(/./g, ' ');
-      });
-      console.log();
-    });
-  },
-
   // this function is also used by bless-release.js
   downloadPackagesToWarehouse: function (packagesToDownload,
                                          platform,
@@ -465,26 +387,6 @@ _.extend(warehouse, {
         if (!dontWriteFreshFile)
           fs.writeFileSync(warehouse.getPackageFreshFile(name, version), '');
       });
-  },
-
-  _lastPrintedBannerReleaseFile: function () {
-    return path.join(warehouse.getWarehouseDir(),
-                     'releases', '.last-printed-banner');
-  },
-
-  lastPrintedBannerRelease: function () {
-    // Calculate filename outside of try block, because getWarehouseDir can
-    // throw.
-    var filename = warehouse._lastPrintedBannerReleaseFile();
-    try {
-      return fs.readFileSync(filename, 'utf8');
-    } catch (e) {
-      return null;
-    }
-  },
-
-  writeLastPrintedBannerRelease: function (release) {
-    fs.writeFileSync(warehouse._lastPrintedBannerReleaseFile(), release);
   },
 
   _platform: function () {

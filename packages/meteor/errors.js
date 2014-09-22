@@ -41,7 +41,15 @@ Meteor.makeErrorType = function (name, constructor) {
 // The DDP client manually puts these into Meteor.Error objects. (We don't use
 // EJSON.addType here because the type is determined by location in the
 // protocol, not text on the wire.)
-//
+
+/**
+ * @summary This class represents a symbolic error thrown by a method.
+ * @locus Anywhere
+ * @class
+ * @param {Number} error A numeric error code, likely similar to an HTTP code (eg, 404, 500).
+ * @param {String} [reason] Optional.  A short human-readable summary of the error, like 'Not Found'.
+ * @param {String} [details] Optional.  Additional information about the error, like a textual stack trace.
+ */
 Meteor.Error = Meteor.makeErrorType(
   "Meteor.Error",
   function (error, reason, details) {

@@ -2,48 +2,25 @@ var crypto = Npm.require('crypto');
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 
-var knownBrowsers = [
-  'android',
-  'chrome',
-  'chromium',
-  'chromeMobileIOS',
-  'firefox',
-  'ie',
-  'mobileSafari',
-  'safari'
-];
-
-var browsersEnabledByDefault = [
-  'android',
-  'chrome',
-  'chromium',
-  'chromeMobileIOS',
-  'ie',
-  'mobileSafari',
-  'safari'
-];
-
-var enabledBrowsers = {};
-_.each(browsersEnabledByDefault, function (browser) {
-  enabledBrowsers[browser] = true;
-});
-
 Meteor.AppCache = {
   config: function(options) {
     _.each(options, function (value, option) {
       if (option === 'browsers') {
-        enabledBrowsers = {};
+        disabledBrowsers = {};
         _.each(value, function (browser) {
-          enabledBrowsers[browser] = true;
+          disabledBrowsers[browser] = false;
         });
-      }
-      else if (_.contains(knownBrowsers, option)) {
-        enabledBrowsers[option] = value;
       }
       else if (option === 'onlineOnly') {
         _.each(value, function (urlPrefix) {
           RoutePolicy.declare(urlPrefix, 'static-online');
         });
+      }
+      else if (value === false) {
+        disabledBrowsers[option] = true;
+      }
+      else if (value === true) {
+        disabledBrowsers[option] = false;
       } else {
         throw new Error('Invalid AppCache config option: ' + option);
       }
@@ -51,15 +28,16 @@ Meteor.AppCache = {
   }
 };
 
-var browserEnabled = function(request) {
-  return enabledBrowsers[request.browser.name];
+var disabledBrowsers = {};
+var browserDisabled = function(request) {
+  return disabledBrowsers[request.browser.name];
 };
 
 WebApp.addHtmlAttributeHook(function (request) {
-  if (browserEnabled(request))
-    return { manifest: "/app.manifest" };
-  else
+  if (browserDisabled(request))
     return null;
+  else
+    return { manifest: "/app.manifest" };
 });
 
 WebApp.connectHandlers.use(function(req, res, next) {
@@ -77,7 +55,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // use").  Returning a 404 gets the browser to really turn off the
   // app cache.
 
-  if (!browserEnabled(WebApp.categorizeRequest(req))) {
+  if (browserDisabled(WebApp.categorizeRequest(req))) {
     res.writeHead(404);
     res.end();
     return;
@@ -111,7 +89,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
   manifest += "CACHE:" + "\n";
   manifest += "/" + "\n";
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
       manifest += resource.url;
@@ -140,7 +118,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // request to the server and have the asset served from cache by
   // specifying the full URL with hash in their code (manually, with
   // some sort of URL rewriting helper)
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url) &&
         !resource.cacheable) {
@@ -176,7 +154,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
 
 var sizeCheck = function() {
   var totalSize = 0;
-  _.each(WebApp.clientProgram.manifest, function (resource) {
+  _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
         ! RoutePolicy.classify(resource.url)) {
       totalSize += resource.size;

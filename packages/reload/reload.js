@@ -43,14 +43,40 @@ var TIMEOUT = 30000;
 var old_data = {};
 // read in old data at startup.
 var old_json;
-// On Firefox with dom.storage.enabled set to false, sessionStorage is null,
-// so we have to both check to see if it is defined and not null.
-if (typeof sessionStorage !== "undefined" && sessionStorage) {
-  old_json = sessionStorage.getItem(KEY_NAME);
-  sessionStorage.removeItem(KEY_NAME);
+
+// This logic for sessionStorage detection is based on browserstate/history.js
+var safeSessionStorage = null;
+try {
+  // This throws a SecurityError on Chrome if cookies & localStorage are
+  // explicitly disabled
+  //
+  // On Firefox with dom.storage.enabled set to false, sessionStorage is null
+  //
+  // We can't even do (typeof sessionStorage) on Chrome, it throws.  So we rely
+  // on the throw if sessionStorage == null; the alternative is browser
+  // detection, but this seems better.
+  safeSessionStorage = window.sessionStorage;
+
+  // Check we can actually use it
+  if (safeSessionStorage) {
+    safeSessionStorage.setItem('__dummy__', '1');
+    safeSessionStorage.removeItem('__dummy__');
+  } else {
+    // Be consistently null, for safety
+    safeSessionStorage = null;
+  }
+} catch(e) {
+  // Expected on chrome with strict security, or if sessionStorage not supported
+  safeSessionStorage = null;
+}
+
+if (safeSessionStorage) {
+  old_json = safeSessionStorage.getItem(KEY_NAME);
+  safeSessionStorage.removeItem(KEY_NAME);
 } else {
-  // Unsupported browser (IE 6,7). No session resumption.
-  // Meteor._debug("XXX UNSUPPORTED BROWSER");
+  // Unsupported browser (IE 6,7) or locked down security settings.
+  // No session resumption.
+  // Meteor._debug("XXX UNSUPPORTED BROWSER/SETTINGS");
 }
 
 if (!old_json) old_json = '{}';
@@ -108,6 +134,59 @@ Reload._migrationData = function (name) {
   return old_data[name];
 };
 
+
+var pollProviders = function (tryReload, options) {
+  tryReload = tryReload || function () {};
+  var migrationData = {};
+  var remaining = _.clone(providers);
+  var allReady = true;
+  while (remaining.length) {
+    var p = remaining.shift();
+    var status = p.callback(tryReload, options);
+    if (!status[0])
+      allReady = false;
+    if (status.length > 1 && p.name)
+      migrationData[p.name] = status[1];
+  };
+  if (allReady || options.immediateMigration)
+    return migrationData;
+  else
+    return null;
+};
+
+
+Reload._migrate = function (tryReload, options) {
+  // Make sure each package is ready to go, and collect their
+  // migration data
+  var migrationData = pollProviders(tryReload, options);
+  if (migrationData === null)
+    return false; // not ready yet..
+
+  try {
+    // Persist the migration data
+    var json = JSON.stringify({
+      time: (new Date()).getTime(), data: migrationData, reload: true
+    });
+  } catch (err) {
+    Meteor._debug("Couldn't serialize data for migration", migrationData);
+    throw err;
+  }
+
+  if (typeof sessionStorage !== "undefined" && sessionStorage) {
+    try {
+      sessionStorage.setItem(KEY_NAME, json);
+    } catch (err) {
+      // happens in safari with private browsing
+      Meteor._debug("Couldn't save data for migration to sessionStorage", err);
+    }
+  } else {
+    Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
+  }
+
+  return true;
+};
+
+
 // Migrating reload: reload this page (presumably to pick up a new
 // version of the code or assets), but save the program state and
 // migrate it over. This function returns immediately. The reload
@@ -115,7 +194,9 @@ Reload._migrationData = function (name) {
 // are ready to migrate.
 //
 var reloading = false;
-Reload._reload = function () {
+Reload._reload = function (options) {
+  options = options || {};
+
   if (reloading)
     return;
   reloading = true;
@@ -144,19 +225,20 @@ Reload._reload = function () {
       throw err;
     }
 
-    if (typeof sessionStorage !== "undefined" && sessionStorage) {
+    if (safeSessionStorage) {
       try {
-        sessionStorage.setItem(KEY_NAME, json);
+        safeSessionStorage.setItem(KEY_NAME, json);
       } catch (err) {
-        // happens in safari with private browsing
+        // We should have already checked this, but just log - don't throw
         Meteor._debug("Couldn't save data for migration to sessionStorage", err);
       }
     } else {
       Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
     }
 
-    // Tell the browser to shut down this VM and make a new one
-    window.location.reload();
+    if (Reload._migrate(tryReload, options)) {
+      window.location.reload();
+    }
   }); };
 
   tryReload();

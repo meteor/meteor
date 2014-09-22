@@ -83,6 +83,13 @@ Fiber(function () {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
     var Npm = {
+      /**
+       * @summary Require a package that was specified using
+       * `Npm.depends()`.
+       * @param  {String} name The name of the package to require.
+       * @locus Server
+       * @memberOf Npm
+       */
       require: function (name) {
         if (! fileInfo.node_modules) {
           return require(name);
@@ -178,7 +185,7 @@ Fiber(function () {
     mains.push(main);
     globalMain = main;
   }
-  _.each(Package, function (p, n) {
+  typeof Package !== 'undefined' && _.each(Package, function (p, n) {
     if ('main' in p && p.main !== globalMain) {
       mains.push(p.main);
     }
