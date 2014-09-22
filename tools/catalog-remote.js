@@ -33,6 +33,7 @@ var RemoteCatalog = function (options) {
   self.options = options || {};
 
   self.db = null;
+  self._currentRefreshIsLoud = false;
 };
 
 _.extend(RemoteCatalog.prototype, {
@@ -191,10 +192,15 @@ _.extend(RemoteCatalog.prototype, {
     future.wait();
   },
 
-  refresh: function () {
+  refresh: function (options) {
     var self = this;
+    options = options || {};
     if (self.offline)
       return;
+
+    if (!options.silent) {
+      self._currentRefreshIsLoud = true;
+    }
 
     var patience = new utils.Patience({
       messageAfterMs: 2000,
