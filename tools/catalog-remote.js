@@ -161,9 +161,9 @@ _.extend(RemoteCatalog.prototype, {
       self.db.run("CREATE TABLE IF NOT EXISTS packages (name STRING, id STRING, content STRING)");
       self.db.run("CREATE TABLE IF NOT EXISTS syncToken (id STRING, content STRING)");
       self.db.run("END TRANSACTION", function(err, row) {
-        if (err)
-          console.log("TRANSACTION PB 1 " + err);
-        //PASCAL check errors
+        if (err) {
+          throw new Error("An error occurred while initializing package store" + err);
+        }
         future.return();
       });
     });
@@ -184,8 +184,7 @@ _.extend(RemoteCatalog.prototype, {
       self.db.run("DELETE FROM syncToken");
       self.db.run("END TRANSACTION", function(err, row) {
         if (err)
-          console.log("TRANSACTION PB 2 " + err);
-        //PASCAL check errors
+          throw new Error("An error occurred while resetting package store." + err);
         future.return();
       });
     });
@@ -313,7 +312,9 @@ _.extend(RemoteCatalog.prototype, {
     var deleteVersion = self.db.prepare("DELETE FROM " + table + " WHERE id=?");
     _.each(data, function (entry) {
       self.db.get("SELECT * FROM " + table + " WHERE id=?", entry._id, function(err, row) {
-        // PASCAL TOO do we need to check for error?
+        if ( err )
+            return; //There is nothing smart we could do here.
+
         if ( ! (row === undefined) ) {
           deleteVersion.run(entry._id);
         }
@@ -365,9 +366,12 @@ _.extend(RemoteCatalog.prototype, {
       self._insertReleaseVersions(serverData.collections.releaseVersions);
       self._insertTimestamps(serverData.syncToken);
       self.db.run("END TRANSACTION", function(err, row) {
-        if (err)
-          console.log("TRANSACTION PB 3 " + err);
-        //PASCAL check errors
+        if (err) {
+          // An error could happen if two processes are simultaneously saving in the DB.
+          // However the data will eventually get all written out so we should not bother the user and carry on.
+          future.return();
+        }
+
         future.return();
       });
     });
