@@ -196,6 +196,7 @@ exports.updateServerPackageData = function (dataStore, options) {
     // disk (unless we were just told to reset everything).
     if (!remoteData.resetData && _.isEqual(remoteData.collections, {})) {
       done = true;
+      ret.data = {};
       return;
     }
 
