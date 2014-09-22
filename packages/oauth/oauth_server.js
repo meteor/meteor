@@ -122,6 +122,21 @@ OAuth._isCordovaFromQuery = function (query) {
   }
 };
 
+// Checks if the `redirectUrl` matches the app host.
+// We export this function so that developers can override this
+// behavior to allow apps from external domains to login using the
+// redirect OAuth flow.
+OAuth._checkRedirectUrlOrigin = function (redirectUrl) {
+  var appHost = Meteor.absoluteUrl();
+  var appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
+    replaceLocalhost: true
+  });
+  return (
+    redirectUrl.substr(0, appHost.length) !== appHost &&
+    redirectUrl.substr(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
+  );
+};
+
 
 // Listen to incoming OAuth http requests
 WebApp.connectHandlers.use(function(req, res, next) {
@@ -274,7 +289,7 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 OAuth._endOfPopupResponseTemplate = Assets.getText(
   "end_of_popup_response.html");
 
-var endOfRedirectResponseTemplate = Assets.getText(
+OAuth._endOfRedirectResponseTemplate = Assets.getText(
   "end_of_redirect_response.html");
 
 // Renders the end of login response template into some HTML and JavaScript
@@ -322,7 +337,7 @@ var renderEndOfLoginResponse = function (options) {
   if (options.loginStyle === 'popup') {
     template = OAuth._endOfPopupResponseTemplate;
   } else if (options.loginStyle === 'redirect') {
-    template = endOfRedirectResponseTemplate;
+    template = OAuth._endOfRedirectResponseTemplate;
   } else {
     throw new Error('invalid loginStyle: ' + options.loginStyle);
   }
@@ -370,12 +385,7 @@ OAuth._endOfLoginResponse = function (res, details) {
   if (details.loginStyle === 'redirect') {
     redirectUrl = OAuth._stateFromQuery(details.query).redirectUrl;
     var appHost = Meteor.absoluteUrl();
-    var appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
-      replaceLocalhost: true
-    });
-    if (redirectUrl.substr(0, appHost.length) !== appHost &&
-        redirectUrl.substr(0, appHostReplacedLocalhost.length) !==
-        appHostReplacedLocalhost) {
+    if (OAuth._checkRedirectUrlOrigin(redirectUrl)) {
       details.error = "redirectUrl (" + redirectUrl +
         ") is not on the same host as the app (" + appHost + ")";
       redirectUrl = appHost;
