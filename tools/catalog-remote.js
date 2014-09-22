@@ -140,7 +140,9 @@ _.extend(RemoteCatalog.prototype, {
 
     var dbFile = self.options.packageStorage || config.getPackageStorage();
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
-      fs.mkdirSync(path.dirname(dbFile));
+      var folder = path.dirname(dbFile)
+      if ( !files.mkdir_p(folder) )
+        throw new Error("Could not create folder at " + folder);
     }
     self.db = new sqlite3.Database(dbFile);
 
