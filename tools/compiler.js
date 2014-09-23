@@ -591,7 +591,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
       /**
        * @summary The filename and relative path of the input file.
        * Please don't use this filename to read the file from disk, instead
-       * use [compileStep.read](CompileStep#read).
+       * use [compileStep.read](CompileStep-read).
        * @type {String}
        * @instance
        * @memberOf CompileStep
