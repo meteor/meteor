@@ -623,8 +623,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
       /**
-       * @summary The name of the package in which this build plugin
-       * is defined.
+       * @summary The name of the package in which the file being built exists.
        * @type {String}
        * @memberOf CompileStep
        * @instance
