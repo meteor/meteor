@@ -288,21 +288,22 @@ var MODIFIERS = {
     }
   },
   $addToSet: function (target, field, arg) {
+    var isEach = false;
+    if (typeof arg === "object") {
+      //check if first key is '$each'
+      for (var k in arg) {
+        if (k === "$each")
+          isEach = true;
+        break;
+      }
+    }
+    var values = isEach ? arg["$each"] : [arg];
     var x = target[field];
     if (x === undefined)
-      target[field] = [arg];
+      target[field] = values;
     else if (!(x instanceof Array))
       throw MinimongoError("Cannot apply $addToSet modifier to non-array");
     else {
-      var isEach = false;
-      if (typeof arg === "object") {
-        for (var k in arg) {
-          if (k === "$each")
-            isEach = true;
-          break;
-        }
-      }
-      var values = isEach ? arg["$each"] : [arg];
       _.each(values, function (value) {
         for (var i = 0; i < x.length; i++)
           if (LocalCollection._f._equal(value, x[i]))
