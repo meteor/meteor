@@ -3474,7 +3474,8 @@ by spammers.)
 {{#markdown}}
 `Assets` allows server code in a Meteor application to access static server
 assets, which are located in the `private` subdirectory of an application's
-tree.
+tree. Assets are not processed as source files and are copied directly
+into your application's bundle.
 
 {{> autoApiBox "Assets.getText"}}
 {{> autoApiBox "Assets.getBinary"}}
