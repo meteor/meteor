@@ -416,6 +416,8 @@ _.extend(Unipackage.prototype, {
        * Examples: `"coffee"`, `"coffee.md"`.
        * @param  {Function} handler  A function that takes one argument,
        * a CompileStep object.
+       *
+       * Documentation for CompileStep is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/CompileStep-API-for-Build-Plugin-Source-Handlers).
        * @memberOf Plugin
        * @locus Build Plugin
        */
