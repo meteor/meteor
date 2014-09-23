@@ -638,6 +638,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @instance
        */
       fileOptions: fileOptions,
+
       /**
        * @summary XXX document this
        * @type {Object}
@@ -645,6 +646,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @instance
        */
       declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
+
       /**
        * @summary Read from the input file. If `n` is specified, returns the
        * next `n` bytes of the file as a Buffer. XXX not sure if this actually
@@ -660,6 +662,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
         readOffset += n;
         return ret;
       },
+
       /**
        * // XXX should probably be appendHTML or appendToDocument
        * @summary Works in web targets only. Add markup to the `head` or `body`
@@ -684,6 +687,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           data: new Buffer(options.data, 'utf8')
         });
       },
+
       /**
        * @summary Web targets only. Add a stylesheet to the document.
        * @param {Object} options
@@ -710,6 +714,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           sourceMap: options.sourceMap
         });
       },
+
       /**
        * @summary Add JavaScript code. The code added will only see the
        * namespaces imported by this package as runtime dependencies using
@@ -740,6 +745,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           sourceMap: options.sourceMap
         });
       },
+
       /**
        * @summary Add a file to serve as-is to the browser or to include on
        * the browser, depending on the target. On the web, it will be served
@@ -763,6 +769,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
         
         addAsset(options.data, options.path);
       },
+
       /**
        * @summary Display a build error.
        * @param  {Object} options
