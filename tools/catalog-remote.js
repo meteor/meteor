@@ -53,7 +53,6 @@ _.extend(RemoteCatalog.prototype, {
     return _.pluck(match, 'version').sort(semver.compare);
   },
 
-  // Copied from base-catalog
   getLatestMainlineVersion: function (name) {
     var self = this;
     var versions = self.getSortedVersions(name);
