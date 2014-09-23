@@ -191,6 +191,9 @@ var getCurrentProgressTracker = function () {
   return progress ? progress : rootProgress;
 };
 
+var nudge = function () {
+  getCurrentProgressTracker().nudge();
+};
 
 var addChildTracker = function (title) {
   var options = {};
@@ -549,5 +552,6 @@ _.extend(exports, {
   reportProgress: reportProgress,
   reportProgressDone: reportProgressDone,
   getCurrentProgressTracker: getCurrentProgressTracker,
-  addChildTracker: addChildTracker
+  addChildTracker: addChildTracker,
+  nudge: nudge
 });
