@@ -587,7 +587,26 @@ _.extend(PackageSource.prototype, {
       // - sources: sources for the plugin (array of string)
       // - npmDependencies: map from npm package name to required
       //   version (string)
-      _transitional_registerBuildPlugin: function (options) {
+      
+      /**
+       * @summary Define a build plugin. A build plugin extends the build
+       * process for apps and packages that use this package. For example,
+       * the a package could compile CoffeeScript files into JavaScript.
+       * @param  {Object} [options]
+       * @param {String} options.name A cosmetic name, must be unique in the
+       * package.
+       * @param {String|String[]} options.use Meteor packages that this
+       * plugin uses, independent of the packages specified in
+       * [api.onUse](#PackageAPI-onUse).
+       * @param {String[]} options.sources The source files that make up the
+       * build plugin, independent from [api.addFiles](#PackageAPI-addFiles).
+       * @param {Object} options.npmDependencies An object where the keys
+       * are NPM package names, and the keys are the version numbers of
+       * required NPM packages, just like in [Npm.depends](#Npm-depends).
+       * @memberOf Package
+       * @locus package.js
+       */
+      registerBuildPlugin: function (options) {
         // Tests don't have plugins; plugins initialized in the control file
         // belong to the package and not to the test. (This will be less
         // confusing in the new control file format).
@@ -620,6 +639,10 @@ _.extend(PackageSource.prototype, {
         self.pluginInfo[options.name] = options;
       },
 
+      /**
+       * @deprecated in 0.9.4
+       */
+      _transitional_registerBuildPlugin: this.registerBuildPlugin,
       includeTool: function () {
         if (!files.inCheckout()) {
           buildmessage.error("Package.includeTool() can only be used with a " +
@@ -686,7 +709,7 @@ _.extend(PackageSource.prototype, {
 
         npmDependencies = _npmDependencies;
       },
-      
+
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);

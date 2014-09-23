@@ -569,25 +569,89 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
     // way to return errors (that could go in an overall list of
     // errors experienced across all files)
     var readOffset = 0;
+
+    /**
+     * @class CompileStep
+     * @summary The object passed into Plugin.registerSourceHandler
+     * @global
+     */
     var compileStep = {
+
+      /**
+       * @summary The total number of bytes in the input file.
+       * @memberOf CompileStep
+       * @instance
+       * @type {Integer}
+       */
       inputSize: contents.length,
+
+      /**
+       * @summary The filename and relative path of the input file.
+       * Please don't use this filename to read the file from disk, instead
+       * use [compileStep.read](CompileStep#read).
+       * @type {String}
+       * @instance
+       * @memberOf CompileStep
+       */
       inputPath: relPath,
       _fullInputPath: absPath, // avoid, see above..
       // XXX duplicates _pathForSourceMap() in linker
+      
+      /**
+       * @summary If you are generating a sourcemap for the compiled file, use
+       * this path for the original file in the sourcemap.
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
       pathForSourceMap: (
         inputSourceArch.pkg.name
           ? inputSourceArch.pkg.name + "/" + relPath
           : path.basename(relPath)),
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
+      
+      /**
+       * @summary XXX document this
+       * @type {String}
+       */
       packageName: inputSourceArch.pkg.name,
+
+      /**
+       * @summary On web targets, this will be the root URL prepended
+       * to the paths you pick for your output files. For example,
+       * it could be "/packages/my-package".
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
       rootOutputPath: inputSourceArch.pkg.serveRoot,
       arch: inputSourceArch.arch, // XXX: what is the story with arch?
       archMatches: function (pattern) {
         return archinfo.matches(inputSourceArch.arch, pattern);
       },
+      /**
+       * @summary Any options passed to "api.addFiles".
+       * @type {Object}
+       * @memberOf CompileStep
+       * @instance
+       */
       fileOptions: fileOptions,
+      /**
+       * @summary XXX document this
+       * @type {Object}
+       * @memberOf CompileStep
+       * @instance
+       */
       declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
+      /**
+       * @summary Read from the input file. If `n` is specified, returns the
+       * next `n` bytes of the file as a Buffer. XXX not sure if this actually
+       * returns a String sometimes...
+       * @param  {Integer} [n] The number of bytes to return.
+       * @instance
+       * @memberOf CompileStep
+       */
       read: function (n) {
         if (n === undefined || readOffset + n > contents.length)
           n = contents.length - readOffset;
@@ -595,6 +659,17 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
         readOffset += n;
         return ret;
       },
+      /**
+       * // XXX should probably be appendHTML or appendToDocument
+       * @summary Works in web targets only. Add markup to the `head` or `body`
+       * section of the document. 
+       * @param  {Object} options
+       * @param {String} options.section Which section of the document should
+       * be appended to. Can only be "head" or "body".
+       * @param {String} options.data The content to append.
+       * @memberOf CompileStep
+       * @instance
+       */
       appendDocument: function (options) {
         if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Document sections can only be emitted to " +
@@ -608,6 +683,18 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           data: new Buffer(options.data, 'utf8')
         });
       },
+      /**
+       * @summary Web targets only. Add a stylesheet to the document.
+       * @param {Object} options
+       * @param {String} path The requested path for the added CSS, may not be
+       * satisfied if there are path conflicts.
+       * @param {String} data The content of the stylesheet that should be
+       * added.
+       * @param {String} sourceMap A stringified JSON sourcemap, in case the
+       * stylesheet was generated from a different file.
+       * @memberOf CompileStep
+       * @instance
+       */
       addStylesheet: function (options) {
         if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Stylesheets can only be emitted to " +
@@ -622,6 +709,21 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           sourceMap: options.sourceMap
         });
       },
+      /**
+       * @summary Add JavaScript code. The code added will only see the
+       * namespaces imported by this package as runtime dependencies using
+       * ['api.use'](#PackageAPI-use).
+       * @param {Object} options
+       * @param {String} options.path The path at which the JavaScript file
+       * should be inserted, may not be honored in case of path conflicts.
+       * @param {String} options.data The code to be added.
+       * @param {String} options.sourcePath The path that will be used in
+       * any error messages generated by this file, e.g. `foo.js:4:1: error`.
+       * @param {String} options.bare Do not wrap this file in a closure,
+       * exposing its variables to other files in the package.
+       * @memberOf CompileStep
+       * @instance
+       */
       addJavaScript: function (options) {
         if (typeof options.data !== "string")
           throw new Error("'data' option to addJavaScript must be a string");
@@ -637,11 +739,33 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           sourceMap: options.sourceMap
         });
       },
+      /**
+       * @summary Add a file to serve as-is to the browser or to include on
+       * the browser, depending on the target. On the web, it will be served
+       * at the exact path requested. For server targets, it can be retrieved
+       * using `Assets.getText` or `Assets.getBinary`.
+       * @param {Object} options
+       * @param {String} path The path at which to serve the asset.
+       * @param {Buffer} data A Buffer of the data that should be placed in
+       * the file.
+       * @memberOf CompileStep
+       * @instance
+       */
       addAsset: function (options) {
         if (! (options.data instanceof Buffer))
           throw new Error("'data' option to addAsset must be a Buffer");
         addAsset(options.data, options.path);
       },
+      /**
+       * @summary Display a build error.
+       * @param  {Object} options
+       * @param {String} message The error message to display.
+       * @param {String} [sourcePath] The path to display in the error message.
+       * @param {Integer} line The line number to display in the error message.
+       * @param {String} func The function name to display in the error message.
+       * @memberOf CompileStep
+       * @instance
+       */
       error: function (options) {
         buildmessage.error(options.message || ("error building " + relPath), {
           file: options.sourcePath,
