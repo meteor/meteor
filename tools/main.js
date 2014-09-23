@@ -1231,8 +1231,10 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   Console.setPretty(command.pretty);
 
-  Console.enableStatusPoll();
-  Console.showProgressBar();
+  if (command.pretty) {
+    Console.enableStatusPoll();
+    Console.showProgressBar();
+  }
 
   // Run the command!
   try {

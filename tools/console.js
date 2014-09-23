@@ -152,7 +152,7 @@ _.extend(Console.prototype, {
     var self = this;
     Fiber(function () {
       while (true) {
-        sleep(10);
+        sleep(50);
 
         self._statusPoll();
       }
