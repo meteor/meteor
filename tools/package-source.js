@@ -642,7 +642,10 @@ _.extend(PackageSource.prototype, {
       /**
        * @deprecated in 0.9.4
        */
-      _transitional_registerBuildPlugin: this.registerBuildPlugin,
+      _transitional_registerBuildPlugin: function (options) {
+        this.registerBuildPlugin(options);
+      },
+
       includeTool: function () {
         if (!files.inCheckout()) {
           buildmessage.error("Package.includeTool() can only be used with a " +
