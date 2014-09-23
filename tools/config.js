@@ -205,8 +205,8 @@ _.extend(exports, {
     var self = this;
     var prefix = self.getPackageServerFilePrefix();
 
-    // Should look like 'packages.data.json' in the default case
-    // (test-packages.data.json before 0.9.0).
+    // Should look like 'packages.data.db' in the default case
+    // (packages.data.json before 0.9.4).
     return prefix + ".data.db";
   },
 
