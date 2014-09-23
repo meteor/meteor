@@ -7,10 +7,16 @@
 This package lets you use Markdown in your templates. It's easy: just
 put your markdown inside
 <code>{&#123;#markdown}}</code> ... <code>{&#123;/markdown}}</code>
-tags. You can still use all of the usual Meteor template features
-inside a Markdown block, such `#each`, and you still get reactivity.
+tags. All [Meteor live template](#livehtmltemplates) rules and features
+also apply inside a Markdown block.
 
-<!-- XXX include an example -->
+Example:
+
+    {{#markdown}}I am using __markdown__.{{/markdown}}
+
+outputs
+
+    <p>I am using <strong>markdown</strong>.</p>
 
 {{/markdown}}
 </template>
