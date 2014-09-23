@@ -11,7 +11,13 @@ tags. You can still use all of the usual Meteor template features
 inside a Markdown block, such as `{{dstache}}#each}}`, and you still get
 reactivity.
 
-<!-- XXX include an example -->
+Example:
+
+<code>{&#123;#markdown}}</code>`I am using __markdown__.`<code>{&#123;/markdown}}</code>
+
+outputs
+
+    <p>I am using <strong>markdown</strong>.</p>
 
 {{/markdown}}
 </template>
