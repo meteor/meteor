@@ -226,12 +226,6 @@ _.extend(LayeredCatalog.prototype, {
         try {
             ret = self.resolver.resolve(deps, constr, resolverOpts);
         } catch (e) {
-          // Maybe we only failed because we need to refresh. Try to refresh
-          // (unless we already are) and retry.
-          if (!self._refreshingIsProductive() ||
-            catalog.official.refreshInProgress()) {
-            throw e;
-          }
           catalog.official.refresh();
           self.resolver || self._initializeResolver();
            ret = self.resolver.resolve(deps, constr, resolverOpts);
