@@ -570,9 +570,6 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
     // errors experienced across all files)
     var readOffset = 0;
 
-    var sourceMapPath = (inputSourceArch.pkg.name ?
-      inputSourceArch.pkg.name + "/" + relPath : path.basename(relPath));
-
     /**
      * @class CompileStep
      * @summary The object passed into Plugin.registerSourceHandler
@@ -620,15 +617,9 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @memberOf CompileStep
        * @instance
        */
-      sourceMapPath: sourceMapPath,
+      sourceMapPath: (inputSourceArch.pkg.name ?
+        inputSourceArch.pkg.name + "/" + relPath : path.basename(relPath)),
 
-      /**
-       * @deprecated in 0.9.4
-       */
-      pathForSourceMap: sourceMapPath,
-      // null if this is an app. intended to be used for the sources
-      // dictionary for source maps.
-      
       /**
        * @summary The name of the package in which this build plugin
        * is defined.
@@ -636,6 +627,10 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @memberOf CompileStep
        * @instance
        */
+      pathForSourceMap: sourceMapPath,
+      // null if this is an app. intended to be used for the sources
+      // dictionary for source maps.
+      
       packageName: inputSourceArch.pkg.name,
 
       /**
