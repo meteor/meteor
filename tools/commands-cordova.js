@@ -782,11 +782,21 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     // remove a part of file url we don't like
     line = line.replace(/^file:\/\/\/android_asset\/www\//, '');
     line = line.replace(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+\//, '');
+
+    // ignore annoying lines that we see all the time but don't bring any value
+    if (line.match(/^--------- beginning of /) ||
+        line.match(/^Changing log level to/) ||
+        line.match(/^Found start page location: /)) {
+      return null;
+    }
+
     // filename.js?hashsha1: Line 123 : message goes here
-    var parsedLine = line.match(/^([^?]+)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
+    var parsedLine =
+      line.match(/^([^?]*)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
 
     if (! parsedLine)
-      return Log.format(Log.objFromText(line), { color: true });
+      return Log.format(
+        Log.objFromText(line), { metaColor: 'green', color: true });
 
     var output = {
       time: new Date,
