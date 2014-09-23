@@ -245,7 +245,6 @@ _updateServerPackageData = function (dataStore, options) {
   state.done = true;
   buildmessage.reportProgress(state);
 
-  ret.data = cachedServerData;
   return ret;
 };
 

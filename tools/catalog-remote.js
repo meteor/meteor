@@ -203,18 +203,9 @@ _.extend(RemoteCatalog.prototype, {
       self._currentRefreshIsLoud = true;
     }
 
-    var patience = new utils.Patience({
-      messageAfterMs: 2000,
-      message: function () {
-        if (self._currentRefreshIsLoud) {
-          console.log("Refreshing package metadata. This may take a moment.");
-        }
-      }
-    });
-
     var updateResult = {};
     buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
-      updateResult = packageClient.updateServerPackageData(this);
+      updateResult = packageClient.updateServerPackageData(self);
     });
     if (!updateResult.data) {
       process.stderr.write("Warning: could not connect to package server\n");
