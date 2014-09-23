@@ -57,7 +57,7 @@
   "CompileStep#fullInputPath",
   "CompileStep#inputPath",
   "CompileStep#inputSize",
-  "CompileStep#packageName",
+  "CompileStep#pathForSourceMap",
   "CompileStep#read",
   "CompileStep#rootOutputPath",
   "CompileStep#sourceMapPath",
