@@ -603,6 +603,8 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * Please don't use this filename to read the file from disk, instead
        * use [compileStep.read](CompileStep-read).
        * @type {String}
+       * @instance
+       * @memberOf CompileStep
        */
       fullInputPath: absPath,
 
@@ -696,7 +698,6 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
       },
 
       /**
-       * // XXX should probably be appendHTML or appendToDocument
        * @summary Works in web targets only. Add markup to the `head` or `body`
        * section of the document. 
        * @param  {Object} options
@@ -706,7 +707,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @memberOf CompileStep
        * @instance
        */
-      appendDocument: function (options) {
+      addHtml: function (options) {
         if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Document sections can only be emitted to " +
                           "web targets");
@@ -718,6 +719,13 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           type: options.section,
           data: new Buffer(options.data, 'utf8')
         });
+      },
+
+      /**
+       * @deprecated in 0.9.4
+       */
+      appendDocument: function (options) {
+        this.addHtml(options);
       },
 
       /**
