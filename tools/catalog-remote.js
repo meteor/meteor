@@ -139,7 +139,7 @@ _.extend(RemoteCatalog.prototype, {
     // We should to figure out if we are intending to connect to the package server.
     self.offline = options.offline ? options.offline : false;
 
-    var dbFile = self.options.packageStorage || config.getPackageStorage();
+    var dbFile = options.packageStorage || config.getPackageStorage();
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
       var folder = path.dirname(dbFile)
       if ( !files.mkdir_p(folder) )
