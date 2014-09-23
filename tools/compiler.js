@@ -597,9 +597,20 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @memberOf CompileStep
        */
       inputPath: relPath,
+
+      /**
+       * @summary The filename and absolute path of the input file.
+       * Please don't use this filename to read the file from disk, instead
+       * use [compileStep.read](CompileStep-read).
+       * @type {String}
+       */
+      fullInputPath: absPath,
+
+      // The below is used in the less and stylus packages... so it should be
+      // public API.
       _fullInputPath: absPath, // avoid, see above..
+
       // XXX duplicates _pathForSourceMap() in linker
-      
       /**
        * @summary If you are generating a sourcemap for the compiled file, use
        * this path for the original file in the sourcemap.
