@@ -226,7 +226,7 @@ _.extend(LayeredCatalog.prototype, {
         try {
             ret = self.resolver.resolve(deps, constr, resolverOpts);
         } catch (e) {
-          catalogRemote.official.refresh();
+          remoteCatalog.official.refresh();
           self.resolver || self._initializeResolver();
            ret = self.resolver.resolve(deps, constr, resolverOpts);
         }
