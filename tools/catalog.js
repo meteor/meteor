@@ -590,6 +590,7 @@ _.extend(CompleteCatalog.prototype, {
         Console.info(utils.formatList(expPackages));
       }
     }
+Console.info("DONE CS");
     return ret.answer;
   },
 

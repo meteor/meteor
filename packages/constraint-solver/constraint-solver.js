@@ -242,6 +242,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
         throw e;
     }
   }
+console.log("res", res);
 
   // Either we didn't have a previous solution, or it doesn't work. Try again
   // without locking in the previous solution as strict equality.
@@ -254,6 +255,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
         throw e;
     }
   }
+console.log("res", res);
 
   // As a last-ditch effort, let's take a look at all the prerelease
   // versions. Is it possible that a pre-release version will satisfy our
@@ -266,6 +268,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   var ret = { answer:  resolverResultToPackageMap(res) };
   if (resolverOptions.useRCs)
     ret.usedRCs = true;
+console.log("return", ret);
   return ret;
 };
 

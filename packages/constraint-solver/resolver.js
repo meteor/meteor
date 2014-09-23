@@ -424,6 +424,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
       return currConstraint.version === candidateUV.version;
     }
 
+
     // If you're not asking for a pre-release (and you are not in pre-releases-OK
     // mode), you'll only get it if it was a top level explicit mention (eg, in
     // the release).

@@ -197,12 +197,16 @@ main.registerCommand({
         requireVersion: true });
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
-
+Console.info("about to dbt");
       var deps =
             compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+Console.info("Finished dbtd");
       tropohouse.default.downloadMissingPackages(deps);
+Console.info("finished dmp");
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
+Console.info("finished compiling");
+
     });
 
   if (messages.hasMessages()) {
