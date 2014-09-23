@@ -591,7 +591,8 @@ _.extend(PackageSource.prototype, {
       /**
        * @summary Define a build plugin. A build plugin extends the build
        * process for apps and packages that use this package. For example,
-       * the a package could compile CoffeeScript files into JavaScript.
+       * the `coffeescript` package could compile CoffeeScript source files
+       * into JavaScript.
        * @param  {Object} [options]
        * @param {String} options.name A cosmetic name, must be unique in the
        * package.
