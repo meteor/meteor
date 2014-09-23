@@ -77,7 +77,7 @@ Meteor.user = function () {
 Accounts.callLoginMethod = function (options) {
   options = _.extend({
     methodName: 'login',
-    methodArguments: [],
+    methodArguments: [{}],
     _suppressLoggingIn: false
   }, options);
   // Set defaults for callback arguments to no-op functions; make sure we
