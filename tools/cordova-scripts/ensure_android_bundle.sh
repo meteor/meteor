@@ -95,7 +95,7 @@ install_android_bundle () {
   rm -rf "$BUNDLE_TMPDIR"
   mkdir "$BUNDLE_TMPDIR"
 
-  ANDROID_BUNDLE_URL_ROOT="http://s3.amazonaws.com/android-bundle/"
+  ANDROID_BUNDLE_URL_ROOT="https://warehouse.meteor.com/cordova/"
 
   if [ -f "$DEST_DIR/$TARBALL" ] ; then
       echo "Skipping download and installing kit from $DEST_DIR/$TARBALL" >&2

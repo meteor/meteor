@@ -891,7 +891,7 @@ cordova.filterPackages = function (packages) {
 };
 
 var getTermsForPlatform = function (platform) {
-  var url = 'http://s3.amazonaws.com/android-bundle/license_cordova_' + platform + '.txt';
+  var url = 'https://warehouse.meteor.com/cordova/license_cordova_' + platform + '.txt';
   var result = httpHelpers.request({
     url: url
   });
