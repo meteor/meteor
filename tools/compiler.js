@@ -612,7 +612,8 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
       // dictionary for source maps.
       
       /**
-       * @summary XXX document this
+       * @summary The name of the package in which this build plugin
+       * is defined.
        * @type {String}
        */
       packageName: inputSourceArch.pkg.name,
