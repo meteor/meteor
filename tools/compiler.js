@@ -617,9 +617,11 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @memberOf CompileStep
        * @instance
        */
-      sourceMapPath: (inputSourceArch.pkg.name ?
+      pathForSourceMap: (inputSourceArch.pkg.name ?
         inputSourceArch.pkg.name + "/" + relPath : path.basename(relPath)),
 
+      // null if this is an app. intended to be used for the sources
+      // dictionary for source maps.
       /**
        * @summary The name of the package in which this build plugin
        * is defined.
@@ -627,10 +629,6 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @memberOf CompileStep
        * @instance
        */
-      pathForSourceMap: sourceMapPath,
-      // null if this is an app. intended to be used for the sources
-      // dictionary for source maps.
-      
       packageName: inputSourceArch.pkg.name,
 
       /**
