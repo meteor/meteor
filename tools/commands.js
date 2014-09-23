@@ -1062,8 +1062,9 @@ main.registerCommand({
       app: site,
       streaming: options.stream
     });
-    if (options.stream && ret === null)
+    if (options.stream && ret === null) {
       throw new main.WaitForExit;
+    }
     return ret;
   } else {
     return deploy.logs(site);
