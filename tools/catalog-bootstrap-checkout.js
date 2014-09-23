@@ -19,7 +19,7 @@ _.extend(BootstrapCatalogCheckout.prototype, {
     return false;
   },
 
-  resolveConstraints : function (constraints, resolverOpts, opts) {
+  resolveConstraints: function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
     self._requireInitialized();

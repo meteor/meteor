@@ -645,7 +645,7 @@ _.extend(LocalCatalog.prototype, {
   // catalog. If we build in catalog, we need to send the package over to
   // package cache. It could go either way, but since a lot of the information
   // that we use is in the catalog already, we build it here.
-  _build : function (name, onStack,  constraintSolverOpts) {
+  _build: function (name, onStack,  constraintSolverOpts) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -768,7 +768,7 @@ _.extend(LocalCatalog.prototype, {
 
   // Returns the latest unipackage build if the package has already been
   // compiled and built in the directory, and null otherwise.
-  _maybeGetUpToDateBuild : function (name, constraintSolverOpts) {
+  _maybeGetUpToDateBuild: function (name, constraintSolverOpts) {
     var self = this;
     buildmessage.assertInCapture();
 

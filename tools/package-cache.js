@@ -49,7 +49,7 @@ _.extend(PackageCache.prototype, {
   // - name: package name
   // - loadPath: path of the source to the package
   // - unipackage (prebuilt package)
-  cachePackageAtPath : function (name, loadPath, unip) {
+  cachePackageAtPath: function (name, loadPath, unip) {
     var self = this;
     var key = name + "@" + loadPath;
     var buildDir = path.join(loadPath, '.build.'+  name);

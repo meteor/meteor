@@ -264,7 +264,7 @@ _.extend(RemoteCatalog.prototype, {
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 
-  isLocalPackage : function() {
+  isLocalPackage: function() {
     return false;
   },
 
@@ -306,11 +306,11 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   //Generate a string of the form (?, ?) where the n is the number of question mark
-  _generateQuestionMarks : function (n) {
+  _generateQuestionMarks: function (n) {
     return "(" + _.times(n, function () { return "?" }).join(",") + ")";
   },
 
-  _insertInTable : function(data, table, selFields) {
+  _insertInTable: function(data, table, selFields) {
     var self = this;
     var queryParams = this._generateQuestionMarks(selFields.length + 1);
     var insertVersion = self.db.prepare("INSERT INTO " + table + " VALUES " + queryParams);
@@ -333,33 +333,33 @@ _.extend(RemoteCatalog.prototype, {
     });
   },
 
-  _insertPackages : function(packagesData) {
+  _insertPackages: function(packagesData) {
     this._insertInTable(packagesData, "packages", ['name', '_id']);
   },
 
-  _insertVersions : function(versionsData) {
+  _insertVersions: function(versionsData) {
     this._insertInTable(versionsData, "versions", ['packageName', 'version', '_id']);
   },
 
-  _insertBuilds : function(buildsData) {
+  _insertBuilds: function(buildsData) {
     this._insertInTable(buildsData, "builds", ['versionId', '_id']);
   },
 
-  _insertReleaseTracks : function(releaseTrackData) {
+  _insertReleaseTracks: function(releaseTrackData) {
     this._insertInTable(releaseTrackData, "releaseTracks", ['name', '_id']);
   },
 
-  _insertReleaseVersions : function(releaseVersionData) {
+  _insertReleaseVersions: function(releaseVersionData) {
     this._insertInTable(releaseVersionData, "releaseVersions", ['track', 'version', '_id']);
   },
 
-  _insertTimestamps : function(syncToken) {
+  _insertTimestamps: function(syncToken) {
     syncToken._id = "1"; //Add fake _id so it fits the pattern
     this._insertInTable([syncToken], "syncToken", ['_id']);
   },
 
   //Given data from troposphere, add it into the local store
-  insertData : function(serverData) {
+  insertData: function(serverData) {
     var self = this;
     var future = new Future;
     self.db.serialize(function() {
@@ -383,7 +383,7 @@ _.extend(RemoteCatalog.prototype, {
     future.wait();
   },
 
-  getLoadPathForPackage : function (name, version, constraintSolverOpts) {
+  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var packageDir = tropohouse.default.packagePath(name, version);
     if (fs.existsSync(packageDir)) {
       return packageDir;
@@ -391,7 +391,7 @@ _.extend(RemoteCatalog.prototype, {
     return null;
   },
 
-  getSyncToken : function() {
+  getSyncToken: function() {
     var self = this;
     var result = self._queryAsJSON("SELECT content FROM syncToken", [], { noRetry: true });
     if (!result || result.length === 0)

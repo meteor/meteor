@@ -161,7 +161,7 @@ _.extend(LayeredCatalog.prototype, {
     return self.getVersion(name, latest);
   },
 
-  resolveConstraints : function (constraints, resolverOpts, opts) {
+  resolveConstraints: function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
       // OK, since we are the complete catalog, the uniload catalog must be fully
