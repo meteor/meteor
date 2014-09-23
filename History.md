@@ -72,6 +72,10 @@ integration with Apache's Cordova/PhoneGap project.
   example, assets from the `abc:bootstrap` package are now served at
   `/packages/abc_bootstrap` instead of `/packages/abc:bootstrap`.
 
+* Also change the paths within a bundled Meteor app to allow for
+  different client architectures (eg mobile). For example,
+  `bundle/programs/client` is now `bundle/programs/web.browser`.
+
 
 Patches by Github users awwx, mizzao, and mquandalle.
 
