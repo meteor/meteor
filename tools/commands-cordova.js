@@ -454,21 +454,21 @@ var ensureCordovaPlugins = function (localPath, options) {
   var cordovaPath = path.join(localPath, 'cordova-build');
   var settingsFile = path.join(cordovaPath, 'cordova-settings.json');
 
-  var newSettings;
-  if (options.settings) {
-    newSettings =
-      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
-    fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
-      'utf8');
-  }
-
   var oldSettings;
   try {
-    oldSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    oldSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8')) || {};
   } catch(err) {
     if (err.code !== 'ENOENT')
       throw err;
     oldSettings = {};
+  }
+
+  var newSettings;
+  if (options.settings) {
+    newSettings =
+      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova || {};
+    fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
+      'utf8');
   }
 
   // XXX compare the latest used sha's with the currently required sha's for
