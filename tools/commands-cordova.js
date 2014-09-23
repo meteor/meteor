@@ -781,6 +781,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     line = line.replace(/^.\/CordovaLog\(\s*\d+\s*\):\s+/, '');
     // remove a part of file url we don't like
     line = line.replace(/^file:\/\/\/android_asset\/www\//, '');
+    line = line.replace(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+\//, '');
     // filename.js?hashsha1: Line 123 : message goes here
     var parsedLine = line.match(/^([^?]+)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
 
