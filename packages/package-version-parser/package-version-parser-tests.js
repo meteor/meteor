@@ -130,32 +130,63 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
   FAIL("foo@1.0.0-rc|1.0.0");
 });
 
-Tinytest.add("Meteor Version string parsing - less than", function (test) {
-  test.isTrue(PackageVersion.lessThan("1.0.0", "1.2.0"));
-  test.isTrue(PackageVersion.lessThan("1.0.0_500", "1.2.0"));
-  test.isTrue(PackageVersion.lessThan("1.0.0_1", "1.0.0_2"));
-  test.isTrue(PackageVersion.lessThan("1.0.0", "1.0.0_2"));
-  test.isTrue(PackageVersion.lessThan("1.123.0_123", "3.0.0_2"));
+Tinytest.add(
+  "Meteor Version string parsing - less than, compare, version magnitude",
+  function (test) {
+    var compare = function (v1, v2, expected) {
+      if (expected === '<') {
+        test.isTrue(PackageVersion.lessThan(v1, v2));
+        test.isTrue(PackageVersion.versionMagnitude(v1) < PackageVersion.versionMagnitude(v2));
+        test.isTrue(PackageVersion.compare(v1, v2) < 0);
+      } else if (expected === '=') {
+        test.isFalse(PackageVersion.lessThan(v1, v2));
+        test.isFalse(PackageVersion.lessThan(v2, v1));
+        test.isTrue(PackageVersion.versionMagnitude(v1) === PackageVersion.versionMagnitude(v2));
+        test.isTrue(PackageVersion.compare(v1, v2) === 0);
+      } else if (expected === '>') {
+        test.isTrue(PackageVersion.lessThan(v2, v1));
+        test.isTrue(PackageVersion.versionMagnitude(v1) > PackageVersion.versionMagnitude(v2));
+        test.isTrue(PackageVersion.compare(v1, v2) > 0);
+      } else {
+        throw new Error("expected should be '<', '=' or '>'");
+      }
+    };
 
-  test.isFalse(PackageVersion.lessThan("1.0.0_5", "1.0.0_2"));
-  test.isFalse(PackageVersion.lessThan("1.0.0", "1.0.0"));
-  test.isFalse(PackageVersion.lessThan("1.0.0_5", "1.0.0_5"));
-  test.isFalse(PackageVersion.lessThan("1.0.1", "1.0.0_5"));
-});
+    compare("1.0.0", "1.2.0", "<");
+    compare("1.0.0_200", "1.2.0", "<");
+    compare("1.0.0_1", "1.0.0_2", "<");
+    compare("1.0.0_2", "1.0.0_10", "<"); // verify that we compare ~N as numbers, not strings
+    compare("1.0.0", "1.0.0_2", "<");
+    compare("1.123.0_123", "3.0.0_2", "<");
+    compare("1.0.0_5", "1.0.0_2", ">");
+    compare("1.0.0_200", "1.2.0", "<");
+    compare("1.0.0_1", "1.0.0_2", "<");
+    compare("1.0.0", "1.0.0_2", "<");
+    compare("1.123.0_123", "3.0.0_2", "<");
 
-Tinytest.add("Meteor Version string parsing - compare", function (test) {
-  test.isTrue(PackageVersion.compare("1.0.0", "1.2.0") < 0);
-  test.isTrue(PackageVersion.compare("1.0.0_500", "1.2.0") < 0);
-  test.isTrue(PackageVersion.compare("1.0.0_1", "1.0.0_2") < 0);
-  test.isTrue(PackageVersion.compare("1.0.0", "1.0.0_2") < 0);
-  test.isTrue(PackageVersion.compare("1.123.0_123", "3.0.0_2") < 0);
+    compare("1.0.0_5", "1.0.0_2", ">");
+    compare("1.0.0", "1.0.0", "=");
+    compare("1.0.0_5", "1.0.0_5", "=");
+    compare("1.2.0", "1.0.0", ">");
+    compare("1.0.1", "1.0.0_5", ">");
 
-  test.isTrue(PackageVersion.compare("1.0.0_5", "1.0.0_2") > 0);
-  test.equal(PackageVersion.compare("1.0.0", "1.0.0"), 0);
-  test.equal(PackageVersion.compare("1.0.0_1", "1.0.0_1"), 0);
-  test.isTrue(PackageVersion.compare("1.2.0", "1.0.0") > 0);
-  test.isTrue(PackageVersion.compare("1.0.1", "1.0.0_5") > 0);
-});
+    // Rule 11 from http://semver.org
+    compare("0.99.99", "1.0.0-alpha.1", "<");
+    compare("1.0.0-alpha", "1.0.0-alpha.1", "<");
+    compare("1.0.0-alpha.1", "1.0.0-alpha.beta", "<");
+    compare("1.0.0-alpha.beta", "1.0.0-beta", "<");
+    compare("1.0.0-beta", "1.0.0-beta.2", "<");
+    compare("1.0.0-beta.2", "1.0.0-beta.11", "<");
+    compare("1.0.0-beta.11", "1.0.0-rc.1", "<");
+    compare("1.0.0-rc.1", "1.0.0", "<");
+    compare("1.0.0-r.1", "1.0.0", "<"); // test single character prerelease parts
+
+    // Our broken implementation of Rule 11 (see [*] above the
+    // declaration of PackageVersion.versionMagnitude). Maybe one day
+    // we'll fix it, in which case replace "===" with ">"
+    test.isTrue(PackageVersion.versionMagnitude("1.0.0-beta.0") ===
+                PackageVersion.versionMagnitude("1.0.0-bear.0"));
+  });
 
 Tinytest.add("Invalid in 0.9.2", function (test) {
   // Note that invalidFirstFormatConstraint assumes that the initial version
