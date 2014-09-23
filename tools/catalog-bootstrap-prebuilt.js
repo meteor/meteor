@@ -43,7 +43,6 @@ _.extend(BootstrapCatalogPrebuilt.prototype, {
   // precompiled packages.
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;
-    self._requireInitialized();
     if (_.has(self._knownPackages, name)) {
       return path.join(self.uniloadDir, name);
     }
