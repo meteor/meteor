@@ -226,7 +226,7 @@ _.extend(LayeredCatalog.prototype, {
         try {
             ret = self.resolver.resolve(deps, constr, resolverOpts);
         } catch (e) {
-          catalog.official.refresh();
+          catalogRemote.official.refresh();
           self.resolver || self._initializeResolver();
            ret = self.resolver.resolve(deps, constr, resolverOpts);
         }
@@ -310,6 +310,7 @@ _.extend(LayeredCatalog.prototype, {
 });
 
 exports.DEFAULT_TRACK = remoteCatalog.DEFAULT_TRACK;
+exports.official = remoteCatalog.official;
 
 //Instantiate the various catalogs
 if (files.inCheckout()) {
@@ -318,12 +319,9 @@ if (files.inCheckout()) {
   exports.uniload = new prebuiltBootstrap.BootstrapCatalogPrebuilt();
 }
 
-//The catalog as provided by troposhere (aka atomospherejs.com)
-exports.official = new remoteCatalog.RemoteCatalog();
-
 // This is the catalog that's used to actually drive the constraint solver: it
 // contains local packages, and since local packages always beat server
 // packages, it doesn't contain any information about the server version of
 // local packages.
 exports.complete = new LayeredCatalog();
-exports.complete.setCatalogs(new localCatalog.LocalCatalog({containingCatalog : exports.complete}), exports.official);
+exports.complete.setCatalogs(new localCatalog.LocalCatalog({containingCatalog : exports.complete}), remoteCatalog.official);
