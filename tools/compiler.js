@@ -773,7 +773,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           source: options.data,
           sourcePath: options.sourcePath,
           servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
-          bare: !! options.bare,
+          bare: !! fileOptions.bare,
           sourceMap: options.sourceMap
         });
       },
