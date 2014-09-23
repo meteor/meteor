@@ -224,14 +224,14 @@ _.extend(LayeredCatalog.prototype, {
         // original version lock because we want to record the correct transitive
         // dependencies)
         try {
-            ret = self.resolver.resolve(deps, constr, resolverOpts);
+          ret = self.resolver.resolve(deps, constr, resolverOpts);
         } catch (e) {
           remoteCatalog.official.refresh();
           self.resolver || self._initializeResolver();
-           ret = self.resolver.resolve(deps, constr, resolverOpts);
+          ret = self.resolver.resolve(deps, constr, resolverOpts);
         }
       } finally {
-          patience.stop();
+        patience.stop();
       }
       if (ret["usedRCs"]) {
         var expPackages = [];
