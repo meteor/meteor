@@ -470,8 +470,16 @@ var ensureCordovaPlugins = function (localPath, options) {
 
   var newSettings;
   if (options.settings) {
-    newSettings =
-      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova || {};
+    var settingsText = fs.readFileSync(options.settings, "utf8");
+    var parsedSettings = {};
+    try {
+      parsedSettings = JSON.parse(settingsText);
+    } catch (err) {
+      throw new Error(
+        'Passed --settings are not a valid JSON: ' + settingsText);
+    }
+
+    newSettings = parsedSettings.cordova || {};
     fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
       'utf8');
   }
