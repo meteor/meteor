@@ -619,8 +619,26 @@ var buildCordova = function (localPath, buildCommand, options) {
 
   verboseLog('Running the build command:', buildCommand);
   // Give the buffer more space as the output of the build is really huge
-  execFileSyncOrThrow(localCordova, [buildCommand],
-               { cwd: cordovaPath, maxBuffer: 2000*1024 });
+  try {
+    execFileSyncOrThrow(localCordova, [buildCommand],
+                        { cwd: cordovaPath, maxBuffer: 2000*1024 });
+  } catch (err) {
+    // "ld: 100000 duplicate symbols for architecture i386" is a common error
+    // message that occurs when you run an iOS project compilation from /tmp or
+    // whenever there is a symbolic link cycle reachable for ld to multiple
+    // object files.
+    if (err.message.match(/ld: \d+ duplicate symbols/g)) {
+      // XXX a better message
+      var message = "Can't build an iOS project from the /tmp directory.";
+
+      if (verboseness)
+        message = err.message + '\n' + message;
+
+      throw new Error(message);
+    } else {
+      throw err;
+    }
+  }
 
   verboseLog('Done building the cordova build project');
 };
