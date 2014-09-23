@@ -173,11 +173,13 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     previousSolution: Match.Optional(Object)
   });
 
+console.log(dependencies, constraints, options);
+
   _.each(dependencies, function (packageName) {
     self._ensurePackageInfoLoaded(packageName);
   });
   _.each(constraints, function (constraint) {
-    self._ensurePackageInfoLoaded(constraint.packageName);
+    self._ensurePackageInfoLoaded(constraint.name);
   });
   _.each(options.previousSolution, function (version, packageName) {
     self._ensurePackageInfoLoaded(packageName);
