@@ -42,19 +42,19 @@ Tinytest.add("Smart Package version string parsing - compatible version, compati
   FAIL("foo@x.y.z");
   FAIL("foo@<1.2");
   FAIL("foo<1.2");
-  FAIL("foo@1.2.3~abc");
-  FAIL("foo@1.2.3+1234~1");
-  FAIL("foo@1.2.3~1-rc1");
-  FAIL("foo-1233@1.2.3~0");
-  FAIL("foo-1233@1.2.3~");
-  FAIL("foo-1233@1.2.3~0123");
+  FAIL("foo@1.2.3_abc");
+  FAIL("foo@1.2.3+1234_1");
+  FAIL("foo@1.2.3_1-rc1");
+  FAIL("foo-1233@1.2.3_0");
+  FAIL("foo-1233@1.2.3_");
+  FAIL("foo-1233@1.2.3_0123");
 
-  t("foo@1.2.3~1", { name: "foo", constraints: [{
-       version: "1.2.3~1", type: "compatible-with" } ]});
-  t("foo-bar@3.2.1-rc0~123", { name: "foo-bar", constraints: [{
-       version: "3.2.1-rc0~123", type: "compatible-with" } ]});
-  t("foo-1233@1.2.3~5+1234", { name: "foo-1233", constraints: [{
-       version: "1.2.3~5+1234", type: "compatible-with" } ]});
+  t("foo@1.2.3_1", { name: "foo", constraints: [{
+       version: "1.2.3_1", type: "compatible-with" } ]});
+  t("foo-bar@3.2.1-rc0_123", { name: "foo-bar", constraints: [{
+       version: "3.2.1-rc0_123", type: "compatible-with" } ]});
+  t("foo-1233@1.2.3_5+1234", { name: "foo-1233", constraints: [{
+       version: "1.2.3_5+1234", type: "compatible-with" } ]});
   t("foo", { name: "foo", constraints: [{
        version: null, type: "any-reasonable" } ]});
 });
@@ -66,10 +66,10 @@ Tinytest.add("Smart Package version string parsing - compatible version, exactly
          { version: "1.2.3", type: "exactly" } ]});
   t("foo-bar@=3.2.1", { name: "foo-bar", constraints: [{
       version: "3.2.1", type: "exactly" } ]});
-  t("foo@=1.2.3~1", { name: "foo", constraints: [{
-       version: "1.2.3~1", type: "exactly" } ]});
-  t("foo-bar@=3.2.1~34", { name: "foo-bar", constraints: [{
-       version: "3.2.1~34", type: "exactly" } ]});
+  t("foo@=1.2.3_1", { name: "foo", constraints: [{
+       version: "1.2.3_1", type: "exactly" } ]});
+  t("foo-bar@=3.2.1_34", { name: "foo-bar", constraints: [{
+       version: "3.2.1_34", type: "exactly" } ]});
 
   FAIL("42@=0.2.0");
   FAIL("foo@=1.2.3.4");
@@ -81,7 +81,7 @@ Tinytest.add("Smart Package version string parsing - compatible version, exactly
   FAIL("foo@=<1.2");
   FAIL("foo@<=1.2");
   FAIL("foo<=1.2");
-  FAIL("foo@=1.2.3~rc0");
+  FAIL("foo@=1.2.3_rc0");
 
   // We no longer support @>=.
   FAIL("foo@>=1.2.3");
@@ -112,14 +112,14 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
       [{ version: "3.2.1", type: "exactly"},
        { version: "1.0.0", type: "compatible-with"}]
    });
-  t("foo@=1.2.3~1 || 1.2.4",
+  t("foo@=1.2.3_1 || 1.2.4",
     { name: "foo", constraints:
-      [{ version: "1.2.3~1", type: "exactly"},
+      [{ version: "1.2.3_1", type: "exactly"},
        { version: "1.2.4", type: "compatible-with"}]
    });
-  t("foo-bar@=3.2.1~34 || =3.2.1-rc1",
+  t("foo-bar@=3.2.1_34 || =3.2.1-rc1",
     { name: "foo-bar", constraints:
-      [{ version: "3.2.1~34", type: "exactly"},
+      [{ version: "3.2.1_34", type: "exactly"},
        { version: "3.2.1-rc1", type: "exactly"}]
     });
 
@@ -132,29 +132,29 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
 
 Tinytest.add("Meteor Version string parsing - less than", function (test) {
   test.isTrue(PackageVersion.lessThan("1.0.0", "1.2.0"));
-  test.isTrue(PackageVersion.lessThan("1.0.0~500", "1.2.0"));
-  test.isTrue(PackageVersion.lessThan("1.0.0~1", "1.0.0~2"));
-  test.isTrue(PackageVersion.lessThan("1.0.0", "1.0.0~2"));
-  test.isTrue(PackageVersion.lessThan("1.123.0~123", "3.0.0~2"));
+  test.isTrue(PackageVersion.lessThan("1.0.0_500", "1.2.0"));
+  test.isTrue(PackageVersion.lessThan("1.0.0_1", "1.0.0_2"));
+  test.isTrue(PackageVersion.lessThan("1.0.0", "1.0.0_2"));
+  test.isTrue(PackageVersion.lessThan("1.123.0_123", "3.0.0_2"));
 
-  test.isFalse(PackageVersion.lessThan("1.0.0~5", "1.0.0~2"));
+  test.isFalse(PackageVersion.lessThan("1.0.0_5", "1.0.0_2"));
   test.isFalse(PackageVersion.lessThan("1.0.0", "1.0.0"));
-  test.isFalse(PackageVersion.lessThan("1.0.0~5", "1.0.0~5"));
-  test.isFalse(PackageVersion.lessThan("1.0.1", "1.0.0~5"));
+  test.isFalse(PackageVersion.lessThan("1.0.0_5", "1.0.0_5"));
+  test.isFalse(PackageVersion.lessThan("1.0.1", "1.0.0_5"));
 });
 
 Tinytest.add("Meteor Version string parsing - compare", function (test) {
   test.isTrue(PackageVersion.compare("1.0.0", "1.2.0") < 0);
-  test.isTrue(PackageVersion.compare("1.0.0~500", "1.2.0") < 0);
-  test.isTrue(PackageVersion.compare("1.0.0~1", "1.0.0~2") < 0);
-  test.isTrue(PackageVersion.compare("1.0.0", "1.0.0~2") < 0);
-  test.isTrue(PackageVersion.compare("1.123.0~123", "3.0.0~2") < 0);
+  test.isTrue(PackageVersion.compare("1.0.0_500", "1.2.0") < 0);
+  test.isTrue(PackageVersion.compare("1.0.0_1", "1.0.0_2") < 0);
+  test.isTrue(PackageVersion.compare("1.0.0", "1.0.0_2") < 0);
+  test.isTrue(PackageVersion.compare("1.123.0_123", "3.0.0_2") < 0);
 
-  test.isTrue(PackageVersion.compare("1.0.0~5", "1.0.0~2") > 0);
+  test.isTrue(PackageVersion.compare("1.0.0_5", "1.0.0_2") > 0);
   test.equal(PackageVersion.compare("1.0.0", "1.0.0"), 0);
-  test.equal(PackageVersion.compare("1.0.0~1", "1.0.0~1"), 0);
+  test.equal(PackageVersion.compare("1.0.0_1", "1.0.0_1"), 0);
   test.isTrue(PackageVersion.compare("1.2.0", "1.0.0") > 0);
-  test.isTrue(PackageVersion.compare("1.0.1", "1.0.0~5") > 0);
+  test.isTrue(PackageVersion.compare("1.0.1", "1.0.0_5") > 0);
 });
 
 Tinytest.add("Invalid in 0.9.2", function (test) {
@@ -163,7 +163,7 @@ Tinytest.add("Invalid in 0.9.2", function (test) {
 
   // These are invalid in 0.9.2, but valid in 0.9.3 and above.
   var invalidVersions =
-    ["1.0.0~1", "1.0.0 || 2.0.0", "1.0.0-rc1~1",
+    ["1.0.0_1", "1.0.0 || 2.0.0", "1.0.0-rc1_1",
      "3.4.0-rc1 || =1.0.0"];
   _.each(invalidVersions, function (v) {
     test.isTrue(PackageVersion.invalidFirstFormatConstraint(v));

@@ -14,7 +14,7 @@ if (inTool) {
 var semver = inTool ? require ('semver') : Npm.require('semver');
 var __ = inTool ? require('underscore') : _;
 
-// Takes in a meteor version, for example 1.2.3-rc5~1+12345.
+// Takes in a meteor version, for example 1.2.3-rc5_1+12345.
 //
 // Returns an object composed of the following:
 //   semver: (ex: 1.2.3)
@@ -25,9 +25,9 @@ var __ = inTool ? require('underscore') : _;
 var extractSemverPart = function (versionString) {
   if (!versionString) return { semver: "", wrapNum: -1 };
   var noBuild = versionString.split('+');
-  var splitVersion = noBuild[0].split('~');
+  var splitVersion = noBuild[0].split('_');
   var wrapNum = 0;
-  // If we find two +s, or two ~, that's super invalid.
+  // If we find two +s, or two _, that's super invalid.
   if (noBuild.length > 2 || splitVersion.length > 2) {
     throwVersionParserError(
       "Version string must look like semver (eg '1.2.3'), not '"
@@ -36,11 +36,11 @@ var extractSemverPart = function (versionString) {
     wrapNum = splitVersion[1];
     if (!/^\d+$/.test(wrapNum)) {
       throwVersionParserError(
-        "The wrap number (after ~) must contain only digits, so " +
+        "The wrap number (after _) must contain only digits, so " +
           versionString + " is invalid.");
     } else if (wrapNum[0] === "0") {
       throwVersionParserError(
-        "The wrap number (after ~) must not have a leading zero, so " +
+        "The wrap number (after _) must not have a leading zero, so " +
           versionString + " is invalid.");
     }
   }
@@ -172,7 +172,7 @@ PV.getValidServerVersion = function (meteorVersionString) {
   }
 
   if (version.wrapNum) {
-    cleanVersion = cleanVersion + "~" + version.wrapNum;
+    cleanVersion = cleanVersion + "_" + version.wrapNum;
   }
 
   return cleanVersion;
@@ -274,7 +274,7 @@ PV.constraintToFullString = function (parsedConstraint) {
 
 
 // Return true if the version constraint was invalid prior to 0.9.3
-// (adding ~ and || support)
+// (adding _ and || support)
 //
 // NOTE: this is not used on the client yet. This package is used by the
 // package server to determine what is valid.
@@ -284,6 +284,6 @@ PV.invalidFirstFormatConstraint = function (validConstraint) {
   // characters. Anything with those characters is invalid prior to
   // 0.9.3. XXX: If we ever have to go through these, we should write a more
   // complicated regex.
-  return (/~/.test(validConstraint) ||
+  return (/_/.test(validConstraint) ||
           /\|/.test(validConstraint));
 };
