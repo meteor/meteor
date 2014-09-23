@@ -752,8 +752,14 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @instance
        */
       addAsset: function (options) {
-        if (! (options.data instanceof Buffer))
-          throw new Error("'data' option to addAsset must be a Buffer");
+        if (! (options.data instanceof Buffer)) {
+          if (_.isString(options.data)) {
+            options.data = new Buffer(options.data);
+          } else {
+            throw new Error("'data' option to addAsset must be a Buffer or String.");
+          }
+        }
+        
         addAsset(options.data, options.path);
       },
       /**
