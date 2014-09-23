@@ -319,8 +319,13 @@ cordova.ensureCordovaPlatforms = function (localPath) {
   verboseLog('Ensuring that platforms in cordova build project are in sync');
   var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
-  var platformsList = execFileSyncOrThrow(localCordova, ['platform', 'list'],
-                                   { cwd: cordovaPath });
+  var platformsList = execFileSyncOrThrow(
+    localCordova, ['platform', 'list'], { cwd: cordovaPath });
+
+  // skip iOS platform if not on darwin
+  if (process.platform !== 'darwin') {
+   platforms = _.difference(platforms, ['ios']);
+  }
 
   verboseLog('The output of `cordova platforms list`:', platformsList.stdout);
 
