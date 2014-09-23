@@ -631,6 +631,8 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @summary The name of the package in which this build plugin
        * is defined.
        * @type {String}
+       * @memberOf CompileStep
+       * @instance
        */
       packageName: inputSourceArch.pkg.name,
 
@@ -643,10 +645,24 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * @instance
        */
       rootOutputPath: inputSourceArch.pkg.serveRoot,
-      arch: inputSourceArch.arch, // XXX: what is the story with arch?
+
+      /**
+       * XXX What are the possible values for this?
+       * @summary The architecture for which we are building.
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
+      arch: inputSourceArch.arch,
+
+      /**
+       * @deprecated in 0.9.4
+       * This is a duplicate API of the above, we don't need it.
+       */
       archMatches: function (pattern) {
         return archinfo.matches(inputSourceArch.arch, pattern);
       },
+
       /**
        * @summary Any options passed to "api.addFiles".
        * @type {Object}
