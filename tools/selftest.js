@@ -16,7 +16,7 @@ var util = require('util');
 var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
-
+var catalogRemote = require('./catalog-remote.js');
 var Package = uniload.load({ packages: ["ejson"] });
 
 var toolPackageName = "meteor-tool";
@@ -638,6 +638,7 @@ _.extend(Sandbox.prototype, {
     files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2'), 0755);
 
     var stubCatalog = {
       syncToken: {},
@@ -703,6 +704,7 @@ _.extend(Sandbox.prototype, {
       // Release info
       stubCatalog.collections.releaseVersions.push({
         track: catalog.DEFAULT_TRACK,
+        _id: Math.random().toString(),
         version: releaseName,
         orderKey: releaseName,
         description: "test release " + releaseName,
@@ -782,9 +784,9 @@ _.extend(Sandbox.prototype, {
     catalog.official.offline = oldOffline;
 
     var dataFile = config.getLocalPackageCacheFilename(serverUrl);
-    fs.writeFileSync(
-      path.join(self.warehouse, 'package-metadata', 'v1.1', dataFile),
-      JSON.stringify(stubCatalog, null, 2));
+    var tmpCatalog = new catalogRemote.RemoteCatalog();
+    tmpCatalog.initialize({packageStorage: path.join(self.warehouse, 'package-metadata', 'v2', dataFile)});
+    tmpCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     fs.symlinkSync(path.join(packagesDirectoryName,
