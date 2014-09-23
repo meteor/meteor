@@ -747,7 +747,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
        * using `Assets.getText` or `Assets.getBinary`.
        * @param {Object} options
        * @param {String} path The path at which to serve the asset.
-       * @param {Buffer} data A Buffer of the data that should be placed in
+       * @param {Buffer|String} data The data that should be placed in
        * the file.
        * @memberOf CompileStep
        * @instance
