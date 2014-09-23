@@ -62,7 +62,7 @@ var sha1 = function (contents) {
 };
 
 var readUtf8FileSync = function (filename) {
-  return Future.wrap(fs.readFile)(filename, 'utf8').wait();
+  return Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
 };
 
 // #BrowserIdentification
