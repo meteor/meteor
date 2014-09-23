@@ -456,9 +456,9 @@ _.extend(LocalCatalog.prototype, {
     };
 
     // Load the package sources for packages and their tests into packageSources.
-    _.each(self.effectiveLocalPackages, function (x) {
+    buildmessage.forkJoin({ 'title': 'Initializing packages'}, self.effectiveLocalPackages, function (x) {
       initSourceFromDir(x);
-     });
+    });
 
     // Go through the packageSources and create a catalog record for each.
     _.each(self.packageSources, initCatalogRecordsFromSource);

@@ -795,7 +795,15 @@ Copyright 2012 Irakli Gozalishvili. All rights reserved.
 
 
 ----------
-strip-json-comments: https://github.com/sindresorhus/strip-json-comments
+ansi-regex:             https://github.com/sindresorhus/ansi-regex
+ansi-styles:            https://github.com/sindresorhus/ansi-styles
+escape-string-regexp:   https://github.com/sindresorhus/escape-string-regexp
+chalk:                  https://github.com/sindresorhus/chalk
+get-stdin:              https://github.com/sindresorhus/get-stdin
+has-ansi:               https://github.com/sindresorhus/has-ansi
+strip-ansi:             https://github.com/sindresorhus/strip-ansi
+strip-json-comments:    https://github.com/sindresorhus/strip-json-comments
+supports-color:         https://github.com/sindresorhus/supports-color
 ----------
 
 Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
@@ -1006,6 +1014,14 @@ browserstack-webdriver: https://github.com/browserstack/selenium-webdriver-nodej
 ----------
 
 Copyright 2009-2014 Software Freedom Conservancy
+
+
+----------
+node-inspector: https://github.com/node-inspector/node-inspector
+----------
+
+Copyright (c) 2011, Danny Coates
+
 
 ----------
 phantomjs: https://github.com/Medium/phantomjs (npm installer)

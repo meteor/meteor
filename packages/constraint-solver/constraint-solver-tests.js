@@ -86,8 +86,9 @@ var splitArgs = function (deps) {
     } else {
       dependencies.push(dep);
     }
-    if (constr)
-      constraints.push({ packageName: dep, type: (constr.indexOf("=") !== -1 ? "exactly" : "compatible-with"), version: constr.replace("=", "")});
+    if (constr) {
+      constraints.push(PackageVersion.parseConstraint(dep + "@" + constr));
+    }
   });
   return {dependencies: dependencies, constraints: constraints};
 };
@@ -202,6 +203,58 @@ Tinytest.add("constraint solver - no results", function (test) {
   });
 });
 
+
+Tinytest.add("constraint solver - any-of constraint", function (test) {
+  var resolver = makeResolver([
+    ["one-of", "1.0.0", {indirect: "1.0.0 || 2.0.0"}],
+    ["important", "1.0.0", {indirect: "2.0.0"}],
+    ["indirect", "1.0.0"],
+    ["indirect", "2.0.0"]
+  ]);
+
+  testWithResolver(test, resolver, function (t, FAIL) {
+    t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
+      "one-of": "1.0.0",
+      "important": "1.0.0",
+      "indirect": "2.0.0"
+    }, { _testing: true });
+  });
+
+  resolver = makeResolver([
+    ["one-of", "1.0.0", {indirect: "1.0.0 || 2.0.0"}],
+    ["one-of-equal", "1.0.0", {indirect: "1.0.0 || =2.0.1"}],
+    ["important", "1.0.0", {indirect: "1.0.0"}],
+    ["indirect", "1.0.0"],
+    ["indirect", "2.0.0"],
+    ["indirect", "2.0.1"]
+  ]);
+
+  testWithResolver(test, resolver, function (t, FAIL) {
+    t({ "one-of": "=1.0.0", "important": "1.0.0" }, {
+      "one-of": "1.0.0",
+      "important": "1.0.0",
+      "indirect": "1.0.0"
+    }, { _testing: true });
+
+    t({ "one-of-equal": "1.0.0", "indirect": "2.0.0" }, {
+      "one-of-equal": "1.0.0",
+      "indirect": "2.0.1"
+    }, { _testing: true });
+
+    t({ "one-of-equal": "1.0.0", "one-of": "1.0.0" }, {
+      "one-of-equal": "1.0.0",
+      "one-of": "1.0.0",
+      "indirect": "1.0.0"
+    }, { _testing: true });
+
+    FAIL({"one-of-equal": "1.0.0",
+          "one-of": "1.0.0",
+          "indirect" : "=2.0.0"},
+         /constraints on indirect[^]+top level[^]+one-of-equal@1.0.0/
+    );
+  });
+});
+
 Tinytest.add("constraint solver - previousSolution", function (test) {
   testWithResolver(test, defaultResolver, function (t, FAIL) {
     // This is what you get if you lock sparky-forms to 1.0.0.
@@ -252,6 +305,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
   });
 });
 
+
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
   var versions = defaultResolver.resolve(["sparkle"], [], { _testing: true }).answer;
   test.isTrue(_.isString(versions.sparkle));
@@ -261,7 +315,7 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],
-    [{ packageName: "sparky-forms", version: "1.1.2", type: "compatible-with" }],
+    [PackageVersion.parseConstraint("sparky-forms@1.1.2")],
     { _testing: true }).answer;
   test.equal(versions.sparkle, "2.1.1");
 });

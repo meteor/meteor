@@ -179,8 +179,13 @@ var determineBuildTimeDependencies = function (packageSource,
   var constraints_array = [];
   _.each(dependencyMetadata, function (info, packageName) {
     constraints[packageName] = info.constraint;
-    var version = utils.parseVersionConstraint(info.constraint || '') ;
-    constraints_array.push(_.extend({ packageName: packageName }, version));
+    var constraintString = '';
+    if (info.constraint) {
+      constraintString = "@" + info.constraint;
+    }
+    var version = utils.parseConstraint(packageName + constraintString);
+    constraints_array.push(
+      utils.parseConstraint(packageName + constraintString));
   });
 
   var versions = packageSource.dependencyVersions.dependencies || {};
@@ -227,9 +232,13 @@ var determineBuildTimeDependencies = function (packageSource,
     _.each(info.use, function (spec) {
       var parsedSpec = utils.splitConstraint(spec);
       constraints[parsedSpec.package] = parsedSpec.constraint || null;
-      var version = utils.parseVersionConstraint(info.constraint || '');
-      constraints_array.push(_.extend({packageName: parsedSpec.package},
-                                      version));
+
+      var constraintString = '';
+      if (info.constraint) {
+        constraintString = "@" + info.constraint;
+      }
+      constraints_array.push(
+        utils.parseConstraint(parsedSpec.package + constraintString));
     });
 
     var pluginVersion = pluginVersions[info.name] || {};
@@ -788,7 +797,7 @@ compiler.compile = function (packageSource, options) {
         versions: buildTimeDeps.pluginDependencies[info.name],
         catalog: packageSource.catalog
       });
-      loader.downloadMissingPackages({serverArch: archinfo.host()});
+      loader.downloadMissingPackages({serverArch: archinfo.host() });
 
       var buildResult = bundler.buildJsImage({
         name: info.name,

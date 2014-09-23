@@ -519,7 +519,7 @@ exports.Patience = function (options) {
         typeof(options.message) !== 'function') {
       throw Error("message must be string or function");
     }
-    self._message = options.message;
+    self._message = "\n" + options.message;
     self._whenMessage = now + options.messageAfterMs;
     self._messageTimeout = setTimeout(function () {
       self._messageTimeout = null;

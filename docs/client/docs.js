@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.2.1" : "(checkout)";
+  return Meteor.release ? "0.9.2.2" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -270,7 +270,7 @@ var toc = [
       "Template.currentData",
       "Template.parentData",
       "Template.body",
-      {name: "{{> UI.dynamic}}", id: "ui_dynamic"},
+      {name: "{{> Template.dynamic}}", id: "template_dynamic"},
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
     ],

@@ -193,6 +193,7 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   refresh: function (options) {
+    buildmessage.assertInCapture();
     var self = this;
     options = options || {};
     if (self.offline)
@@ -212,11 +213,9 @@ _.extend(RemoteCatalog.prototype, {
     });
 
     var updateResult = {};
-    try {
+    buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
       updateResult = packageClient.updateServerPackageData(this);
-    } finally {
-      patience.stop();
-    }
+    });
     if (!updateResult.data) {
       process.stderr.write("Warning: could not connect to package server\n");
     }

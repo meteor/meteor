@@ -164,112 +164,117 @@ _.extend(LayeredCatalog.prototype, {
   resolveConstraints : function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
-    buildmessage.assertInCapture();
+      // OK, since we are the complete catalog, the uniload catalog must be fully
+      // initialized, so it's safe to load a resolver if we didn't
+      // already. (Putting this off until the first call to resolveConstraints
+      // also helps with performance: no need to build this package and load the
+      // large mori module unless we actually need it.)
+      self.resolver || self._initializeResolver();
 
-    // OK, since we are the complete catalog, the uniload catalog must be fully
-    // initialized, so it's safe to load a resolver if we didn't
-    // already. (Putting this off until the first call to resolveConstraints
-    // also helps with performance: no need to build this package and load the
-    // large mori module unless we actually need it.)
-    self.resolver || self._initializeResolver();
-
-    // Looks like we are not going to be able to avoid calling the constraint
-    // solver, so let's process the input (constraints) into the correct
-    // arguments to the constraint solver.
-    //
-    // -deps: list of package names that we depend on
-    // -constr: constraints of form {packageName: String, version: String} with
-    //  {type: exact} for exact constraints.
-    //
-    // Weak dependencies are constraints (they constrain the result), but not
-    // dependencies.
-    var deps = [];
-    var constr = [];
-    _.each(constraints, function (constraint) {
-      constraint = _.clone(constraint);
-      if (!constraint.weak) {
-        deps.push(constraint.packageName);
-      }
-      delete constraint.weak;
-      constr.push(constraint);
-    });
-
-    // If we are called with 'ignore projectDeps', then we don't even look to
-    // see what the project thinks and recalculate everything. Similarly, if the
-    // project root path has not been initialized, we are probably running
-    // outside of a project, and have nothing to look at for guidance.
-    if (!opts.ignoreProjectDeps && project.project &&
-         project.project.viableDepSource) {
-      // Anything in the project's dependencies was calculated based on a
-      // previous constraint solver run, and needs to be taken as absolute truth
-      // for now: we can't use any packages that are of different versions from
-      // what we've already decided from the project!
-      _.each(project.project.getVersions(), function (version, name) {
-        constr.push({packageName: name, version: version, type: 'exactly'});
+      // Looks like we are not going to be able to avoid calling the constraint
+      // solver, so let's process the input (constraints) into the correct
+      // arguments to the constraint solver.
+      //
+      // -deps: list of package names that we depend on
+      // -constr: constraints of the proper form from parseConstraint in utils.js
+      //
+      // Weak dependencies are constraints (they constrain the result), but not
+      // dependencies.
+      var deps = [];
+      var constr = [];
+      _.each(constraints, function (constraint) {
+        constraint = _.clone(constraint);
+        if (!constraint.weak) {
+          deps.push(constraint.name);
+        }
+        delete constraint.weak;
+        constr.push(constraint);
       });
-    }
 
-    // Local packages can only be loaded from the version we have the source
-    // for: that's a weak exact constraint.
-    _.each(self.packageSources, function (packageSource, name) {
-      constr.push({packageName: name, version: packageSource.version,
-                   type: 'exactly'});
-    });
+      // If we are called with 'ignore projectDeps', then we don't even look to
+      // see what the project thinks and recalculate everything. Similarly, if the
+      // project root path has not been initialized, we are probably running
+      // outside of a project, and have nothing to look at for guidance.
+      if (!opts.ignoreProjectDeps && project.project &&
+        project.project.viableDepSource) {
+        // Anything in the project's dependencies was calculated based on a
+        // previous constraint solver run, and needs to be taken as absolute truth
+        // for now: we can't use any packages that are of different versions from
+        // what we've already decided from the project!
+        _.each(project.project.getVersions(), function (version, name) {
+            constr.push(utils.parseConstraint(name + "@=" + version));
+        });
+      }
 
-    var patience = new utils.Patience({
-      messageAfterMs: 1000,
-      message: "Figuring out the best package versions to use. This may take a moment."
-    });
+      // Local packages can only be loaded from the version we have the source
+      // for: that's a weak exact constraint.
+      _.each(self.packageSources, function (packageSource, name) {
+        constr.push(utils.parseConstraint(name + "@=" + packageSource.version));
+      });
 
-    var ret;
-    try {
-      // Then, call the constraint solver, to get the valid transitive subset of
-      // those versions to record for our solution. (We don't just return the
-      // original version lock because we want to record the correct transitive
-      // dependencies)
+      var patience = new utils.Patience({
+        messageAfterMs: 1000,
+        message: "Figuring out the best package versions to use. This may take a moment."
+      });
+
+      var ret;
       try {
-        ret = self.resolver.resolve(deps, constr, resolverOpts);
-      } catch (e) {
-        // Maybe we only failed because we need to refresh. Try to refresh
-        // (unless we already are) and retry.
-        if (!self._refreshingIsProductive() ||
-            exports.official.refreshInProgress()) {
-          throw e;
+        // Then, call the constraint solver, to get the valid transitive subset of
+        // those versions to record for our solution. (We don't just return the
+        // original version lock because we want to record the correct transitive
+        // dependencies)
+        try {
+            ret = self.resolver.resolve(deps, constr, resolverOpts);
+        } catch (e) {
+          // Maybe we only failed because we need to refresh. Try to refresh
+          // (unless we already are) and retry.
+          if (!self._refreshingIsProductive() ||
+            catalog.official.refreshInProgress()) {
+            throw e;
+          }
+          catalog.official.refresh();
+          self.resolver || self._initializeResolver();
+           ret = self.resolver.resolve(deps, constr, resolverOpts);
         }
-        exports.official.refresh();
-        self.resolver || self._initializeResolver();
-        ret = self.resolver.resolve(deps, constr, resolverOpts);
+      } finally {
+          patience.stop();
       }
-    } finally {
-      patience.stop();
-    }
-    if (ret["usedRCs"]) {
-      var expPackages = [];
-      _.each(ret.answer, function(version, package) {
-        if (version.split('-').length > 1 &&
-            !_.findWhere(constr,
-                { packageName: package, version: version })) {
-          expPackages.push({
-              name: "  " + package + "@" + version,
-              description: self.getVersion(package, version).description
-            });
+      if (ret["usedRCs"]) {
+        var expPackages = [];
+        _.each(ret.answer, function(version, package) {
+          if (version.split('-').length > 1) {
+            if (!(resolverOpts.previousSolution &&
+              resolverOpts.previousSolution[package] === version)) {
+                var oldConstraints = _.where(constr, { name: package } );
+                var printMe = true;
+                _.each(oldConstraints, function (oC) {
+                  _.each(oC.constraints, function (specOC) {
+                    if (specOC.version === version) {
+                      printMe = false;
+                    }
+                   });
+                });
+                if (printMe) {
+                  expPackages.push({
+                    name: "  " + package + "@" + version,
+                    description: self.getVersion(package, version).description
+                  });
+                };
+          }}
+        });
+        if (!_.isEmpty(expPackages)) {
+          // XXX: Couldn't figure out how to word this better for better tenses.
+          //
+          // XXX: this shouldn't be here. This is library code... it
+          // shouldn't be printing.
+          // https://github.com/meteor/meteor/wiki/Meteor-Style-Guide#only-user-interface-code-should-engage-with-the-user
+          Console.info(
+            "\nIn order to resolve constraints, we had to use the following\n"+
+            "experimental package versions:");
+          Console.info(utils.formatList(expPackages));
         }
-      });
-      if (!_.isEmpty(expPackages)) {
-        // XXX: Couldn't figure out how to word this better for better tenses.
-        process.stderr.write(
-          "------------------------------------------------------------ \n");
-        process.stderr.write(
-          "In order to resolve constraints, we had to use the following\n"+
-            "experimental package versions:\n");
-        process.stderr.write(utils.formatList(expPackages));
-        process.stderr.write(
-          "------------------------------------------------------------ \n");
-
-        process.stderr.write("\n");
       }
-    }
-    return ret.answer;
+      return ret.answer;
   },
 
   // Refresh the catalogs referenced by this catalog.
@@ -328,6 +333,3 @@ exports.official = new remoteCatalog.RemoteCatalog();
 // local packages.
 exports.complete = new LayeredCatalog();
 exports.complete.setCatalogs(new localCatalog.LocalCatalog({containingCatalog : exports.complete}), exports.official);
-
-
-

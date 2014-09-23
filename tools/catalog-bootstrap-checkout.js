@@ -33,33 +33,30 @@ _.extend(BootstrapCatalogCheckout.prototype, {
     // OK, we're building something while uniload
     var ret = {};
     _.each(constraints, function (constraint) {
-    if (_.has(constraint, 'version')) {
-          if (constraint.version !== null) {
-            throw Error("Uniload specifying version? " + JSON.stringify(constraint));
-          }
-          delete constraint.version;
+      if (_.has(constraint, 'version')) {
+        if (constraint.version !== null) {
+          throw Error("Uniload specifying version? " + JSON.stringify(constraint));
         }
+        delete constraint.version;
+      }
 
       // Constraints for uniload should just be packages with no version
       // constraint and one local version (since they should all be in core).
-      if (!_.has(constraint, 'packageName') ||
-        constraint.type !== 'any-reasonable') {
+      if (!_.has(constraint, 'name') ||
+        constraint.constraints.length > 1 ||
+        constraint.constraints[0].type !== 'any-reasonable') {
         throw Error("Surprising constraint: " + JSON.stringify(constraint));
       }
-      if (!_.has(self.versions, constraint.packageName)) {
-        throw Error("Trying to resolve unknown package: " +
-                     constraint.packageName);
+      if (!_.has(self.versions, constraint.name)) {
+        throw Error("Trying to resolve unknown package: " + constraint.name);
       }
-      if (_.isEmpty(self.versions[constraint.packageName])) {
-        throw Error("Trying to resolve versionless package: " +
-                    constraint.packageName);
+      if (_.isEmpty(self.versions[constraint.name])) {
+        throw Error("Trying to resolve versionless package: " + constraint.name);
       }
-      if (_.size(self.versions[constraint.packageName]) > 1) {
-        throw Error("Too many versions for package: " +
-                    constraint.packageName);
+      if (_.size(self.versions[constraint.name]) > 1) {
+        throw Error("Too many versions for package: " + constraint.name);
       }
-      ret[constraint.packageName] =
-        _.keys(self.versions[constraint.packageName])[0];
+      ret[constraint.name] = _.keys(self.versions[constraint.name])[0];
     });
     return ret;
   },

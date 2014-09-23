@@ -12,6 +12,7 @@ var buildmessage = require('./buildmessage.js');
 var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var packageVersionParser = require('./package-version-parser.js');
+var Console = require('./console.js').Console;
 
 var project = exports;
 
@@ -220,9 +221,9 @@ _.extend(Project.prototype, {
       } catch (err) {
         // XXX This error handling is bogus. Use buildmessage instead, or
         // something. See also compiler.determineBuildTimeDependencies
-        process.stdout.write(
+        Console.warn(
           "Could not resolve the specified constraints for this project:\n"
-           + (err.constraintSolverError ? err : err.stack) + "\n");
+           + (err.constraintSolverError ? err : err.stack));
         process.exit(1);
       }
 
@@ -236,8 +237,8 @@ _.extend(Project.prototype, {
       });
 
       if (!setV.success) {
-        process.stdout.write(
-          "Could not install all the requested packages.\n");
+        Console.warn(
+          "Could not install all the requested packages.");
         process.exit(1);
       }
 
@@ -270,10 +271,14 @@ _.extend(Project.prototype, {
     // self.constraints variable is always up to date.
     // Note that two parts of the "add" command run code that matches this.
     _.each(self.constraints, function (constraint, packageName) {
-      allDeps.push(_.extend({packageName: packageName},
-                            utils.parseVersionConstraint(constraint)));
+      var oldConstraint = "";
+      if (constraint) {
+        oldConstraint = "@" + constraint;
+      }
+      allDeps.push(
+        _.extend({name: packageName},
+                 utils.parseConstraint(packageName + oldConstraint)));
     });
-
 
     // Now we have to go through the programs directory, go through each of the
     // programs, get their dependencies and use them. (We could have memorized
@@ -294,20 +299,23 @@ _.extend(Project.prototype, {
         programSource.initFromPackageDir(programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {
           _.each(sourceUnibuild.uses, function (use) {
-            var constraint = use.constraint || null;
-            allDeps.push(_.extend({packageName: use.package},
-                                  utils.parseVersionConstraint(constraint)));
+            var oldConstraint = "";
+            if (use.constraint) {
+              oldConstraint = "@" + use.constraint;
+            }
+            allDeps.push(utils.parseConstraint(use.package + oldConstraint));
+
           });
         });
       });
-
     });
-
     // Finally, each release package is a weak exact constraint. So, let's add
     // those.
     _.each(releasePackages, function(version, name) {
-      allDeps.push({packageName: name, version: version, weak: true,
-                    type: 'exactly'});
+      allDeps.push({name: name, weak: true,
+        constraintStr: "=" + name,
+        constraints: [
+          { version: version, type: 'exactly' } ]});
     });
 
     // This is an UGLY HACK that has to do with our requirement to have a
@@ -316,7 +324,7 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", version: null, type: 'any-reasonable'});
+      allDeps.push(utils.parseConstraint("ctl"));
     }
 
     return allDeps;
@@ -356,9 +364,9 @@ _.extend(Project.prototype, {
            options.onDiskPackages[packageName] !== version)) {
         // XXX maybe we shouldn't be letting the constraint solver choose
         // things that don't have the right arches?
-        process.stderr.write("Package " + packageName +
+        Console.warn("Package " + packageName +
                              " has no compatible build for version " +
-                             version + "\n");
+                             version);
         failed = true;
         return;
       }
@@ -389,7 +397,7 @@ _.extend(Project.prototype, {
     if ((!self.muted && !_.isEmpty(versions))
         || options.alwaysShow) {
       _.each(messageLog, function (msg) {
-        process.stdout.write(msg + "\n");
+        Console.info(msg);
       });
 
       // Pay special attention to non-backwards-compatible changes.
@@ -441,11 +449,11 @@ _.extend(Project.prototype, {
       });
 
       if (!_.isEmpty(incompatibleUpdates)) {
-        process.stderr.write(
+        Console.warn(
           "\nThe following packages have been updated to new versions that are not " +
-            "backwards compatible:\n");
-        process.stderr.write(utils.formatList(incompatibleUpdates));
-        process.stderr.write("\n");
+            "backwards compatible:");
+        Console.warn(utils.formatList(incompatibleUpdates));
+        Console.warn("\n");
       };
     }
     return 0;

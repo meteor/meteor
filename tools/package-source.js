@@ -444,7 +444,7 @@ _.extend(PackageSource.prototype, {
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
 
-    var releaseRecord = null;
+    var releaseRecords = [];
     var hasTests = false;
 
     // Any package that depends on us needs to be rebuilt if our package.js file
@@ -454,7 +454,7 @@ _.extend(PackageSource.prototype, {
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
     // == 'Package' object visible in package.js ==
-    
+
     /**
      * @global
      * @name  Package
@@ -470,7 +470,7 @@ _.extend(PackageSource.prototype, {
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
-      
+
       /**
        * @summary Provide basic package information.
        * @locus package.js
@@ -633,7 +633,7 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Npm' object visible in package.js ==
-    
+
     /**
      * @namespace Npm
      * @global
@@ -687,13 +687,6 @@ _.extend(PackageSource.prototype, {
         npmDependencies = _npmDependencies;
       },
 
-      /**
-       * @summary Require a package that was specified using
-       * `Npm.depends()`.
-       * @param  {String} name The name of the package to require.
-       * @locus Server
-       * @memberOf Npm
-       */
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);
@@ -715,7 +708,7 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Cordova' object visible in package.js ==
-    
+
     /**
      * @namespace Cordova
      * @global
@@ -725,7 +718,7 @@ _.extend(PackageSource.prototype, {
       /**
        * @summary Specify which [Cordova / PhoneGap](http://cordova.apache.org/)
        * plugins your Meteor package depends on.
-       * 
+       *
        * Plugins are installed from
        * [plugins.cordova.io](http://plugins.cordova.io/), so the plugins and
        * versions specified must exist there. Alternatively, the version
@@ -751,7 +744,7 @@ _.extend(PackageSource.prototype, {
        *     "https://github.com/apache/cordova-plugin-camera/tarball/d84b875c"
        * });
        * ```
-       * 
+       *
        * @locus package.js
        * @memberOf  Cordova
        */
@@ -1005,7 +998,7 @@ _.extend(PackageSource.prototype, {
         //   its plugins. (Has the same limitation as "unordered" that this
         //   flag is not tracked per-environment or per-role; this may
         //   change.)
-        
+
         /**
          * @memberOf PackageAPI
          * @instance
@@ -1013,7 +1006,7 @@ _.extend(PackageSource.prototype, {
          * @locus package.js
          * @param {String|String[]} packageNames Packages being depended on.
          * Package names may be suffixed with an @version tag.
-         * 
+         *
          * In general, you must specify a package's version (e.g.,
          * `'accounts@1.0.0'` to use version 1.0.0 or a higher
          * compatible version (ex: 1.0.1, 1.5.0, etc.)  of the
@@ -1090,7 +1083,7 @@ _.extend(PackageSource.prototype, {
         // Called when this package wants packages using it to also use
         // another package.  eg, for umbrella packages which want packages
         // using them to also get symbols or plugins from their components.
-        
+
         /**
          * @memberOf PackageAPI
          * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
@@ -1129,7 +1122,7 @@ _.extend(PackageSource.prototype, {
         // Top-level call to add a source file to a package. It will
         // be processed according to its extension (eg, *.coffee
         // files will be compiled to JavaScript).
-        
+
         /**
          * @memberOf PackageAPI
          * @instance
@@ -1155,7 +1148,7 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
-        
+
         /**
          * @memberOf PackageAPI
          * @instance
@@ -1163,14 +1156,7 @@ _.extend(PackageSource.prototype, {
          * @locus package.js
          * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
          */
-        versionsFrom: function (release) {
-          if (releaseRecord) {
-            buildmessage.error("api.versionsFrom may only be specified once.",
-                               { useMyCaller: true });
-            // recover by ignoring
-            return;
-          }
-
+        versionsFrom: function (releases) {
           // Uniloaded packages really ought to be in the core release, by
           // definition, so saying that they should use versions from another
           // release doesn't make sense. Moreover, if we're running from a
@@ -1183,22 +1169,31 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
-          // If you don't specify a track, use our default.
-          if (release.indexOf('@') === -1) {
-            release = catalog.DEFAULT_TRACK + "@" + release;
-          }
+          releases = toArray(releases);
 
-          var relInf = release.split('@');
-          if (relInf.length !== 2) {
-            buildmessage.error("Release names in versionsFrom may not contain '@'.",
-                               { useMyCaller: true });
-            return;
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < releases.length; ++i) {
+            var release = releases[i];
+
+            // If you don't specify a track, use our default.
+            if (release.indexOf('@') === -1) {
+              release = catalog.DEFAULT_TRACK + "@" + release;
+            }
+
+            var relInf = release.split('@');
+            if (relInf.length !== 2) {
+              buildmessage.error("Release names in versionsFrom may not contain '@'.",
+                                 { useMyCaller: true });
+              return;
+            }
+            var releaseRecord = catalog.official.getReleaseVersion(
+              relInf[0], relInf[1]);
+            if (!releaseRecord) {
+              buildmessage.error("Unknown release "+ release);
+            } else {
+              releaseRecords.push(releaseRecord);
+            }
           }
-          releaseRecord = catalog.official.getReleaseVersion(
-            relInf[0], relInf[1]);
-          if (!releaseRecord) {
-            buildmessage.error("Unknown release "+ release);
-           }
         },
 
         // Export symbols from this package.
@@ -1208,7 +1203,7 @@ _.extend(PackageSource.prototype, {
         // or an array of those.
         // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
-        
+
         /**
          * @memberOf PackageAPI
          * @instance
@@ -1269,20 +1264,44 @@ _.extend(PackageSource.prototype, {
       }
     }
 
-    // If we have specified a release, then we should go through the
+    // By the way, you can't depend on yourself.
+    var doNotDepOnSelf = function (dep) {
+      if (dep.package === self.name) {
+        buildmessage.error("Circular dependency found: "
+                           + self.name +
+                           " depends on itself.\n");
+      }
+    };
+    _.each(self.allArchs, function (label) {
+      _.each(uses[label], doNotDepOnSelf);
+      _.each(implies[label], doNotDepOnSelf);
+    });
+
+    // If we have specified some release, then we should go through the
     // dependencies and fill in the unspecified constraints with the versions in
-    // the release (if possible).
-    if (releaseRecord) {
-      var packages = releaseRecord.packages;
+    // the releases (if possible).
+    if (!_.isEmpty(releaseRecords)) {
 
       // Given a dependency object with keys package (the name of the package)
       // and constraint (the version constraint), if the constraint is null,
       // look in the packages field in the release record and fill in from
       // there.
       var setFromRel = function (dep) {
-        if (! dep.constraint && _.has(packages, dep.package)) {
-          dep.constraint = packages[dep.package];
-        };
+        if (dep.constraint) {
+          return dep;
+        }
+        var newConstraint = [];
+        _.each(releaseRecords, function (releaseRecord) {
+          var packages = releaseRecord.packages;
+          if(_.has(packages, dep.package)) {
+            newConstraint.push(packages[dep.package]);
+          }
+        });
+        if (_.isEmpty(newConstraint)) return dep;
+        dep.constraint = _.reduce(newConstraint,
+          function(x, y) {
+            return x + " || " + y;
+          });
         return dep;
       };
 

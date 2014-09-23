@@ -219,7 +219,7 @@ _.extend(exports, {
 
   getBannersShownFilename: function() {
     return path.join(tropohouse.default.root,
-                     "package-metadata", "v1", "banners-shown.json");
+                     "package-metadata", "v1.1", "banners-shown.json");
   },
 
   // Return the domain name of the current Meteor Accounts server in

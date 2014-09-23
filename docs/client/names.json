@@ -163,6 +163,7 @@
   "Template#rendered",
   "Template.body",
   "Template.currentData",
+  "Template.dynamic",
   "Template.instance",
   "Template.parentData",
   "Template.registerHelper",
@@ -184,7 +185,6 @@
   "Tracker.flush",
   "Tracker.nonreactive",
   "Tracker.onInvalidate",
-  "UI.dynamic",
   "check",
   "currentUser",
   "loggingIn"
