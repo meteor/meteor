@@ -148,7 +148,7 @@ _.extend(OplogHandle.prototype, {
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
   },
-  _startTailing: function () {
+  _startTailing: function (pollFirst) {
     var self = this;
     // We make two separate connections to Mongo. The Node Mongo driver
     // implements a naive round-robin connection pool: each "connection" is a
@@ -191,6 +191,10 @@ _.extend(OplogHandle.prototype, {
       self._lastProcessedTS = lastOplogEntry.ts;
     }
 
+    if (pollFirst) {
+      self._crossbar.fire({ pollQuery: true });
+    }
+
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
@@ -205,6 +209,17 @@ _.extend(OplogHandle.prototype, {
         var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
                        dropCollection: false,
                        op: doc};
+
+        if (self._oplogTailConnection.find(
+            OPLOG_COLLECTION,
+            _.extend(cursorDescription.selector,
+              { ts: { $gt: doc.ts } })).count() > 2000) {
+          self._tailHandle.stop();
+          Meteor.setTimeout(function () {
+            self._startTailing(true);
+          }, 200);
+          return;
+        }
 
         // Is it a special command and the collection name is hidden somewhere
         // in operator?
