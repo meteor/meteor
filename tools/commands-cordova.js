@@ -439,13 +439,17 @@ var getTarballPluginsLock = function (cordovaPath) {
   return tarballPluginsLock;
 };
 
-var writeTarballPluginsLock = function (cordovaPath, lock) {
+var writeTarballPluginsLock = function (cordovaPath, tarballPluginsLock) {
   verboseLog('Will write cordova-tarball-plugins.json');
 
   var tarballPluginsLockPath =
     path.join(cordovaPath, 'cordova-tarball-plugins.json');
 
-  fs.writeFileSync(tarballPluginsLock, JSON.stringify(lock), 'utf8');
+  fs.writeFileSync(
+    tarballPluginsLockPath,
+    JSON.stringify(tarballPluginsLock),
+    'utf8'
+  );
 };
 
 // Returns the list of installed plugins as a hash from plugin name to version.
