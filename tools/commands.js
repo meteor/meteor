@@ -2,6 +2,7 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
+var ip = require('ip');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -223,15 +224,20 @@ main.registerCommand({
 
   options.httpProxyPort = options['http-proxy-port'];
 
-  // If we are targeting the remote devices
+  // If we are targeting the remote devices, warn about ports and same network
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
-    // ... and if you didn't specify your ip address as host, print a warning
-    if (parsedMobileHostPort.host === DEFAULT_BUILD_HOST)
-      Console.stderr.write(
-        "WARN: You are testing your app on a remote device but your host option\n" +
-        "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
-        "WARN: network's IP address with the -p or --mobile-port option?\n");
+    Console.stderr.write([
+"WARNING: You are testing your app on a remote device.",
+"         For the mobile app to be able to connect to the local server, make",
+"         sure your device is on the same network, and that the network",
+"         configuration allows clients to talk to each other",
+"         (no client isolation).",
+"",
+"         You can pass the host and the port in -p or --mobile-port argument.",
+"         For example: --mobile-port " +
+  ip.address() + ":" + parsedMobileHostPort.port + "\n\n"
+].join("\n"));
   }
 
   // Always bundle for the browser by default.
