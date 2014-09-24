@@ -383,7 +383,6 @@ var installPlugin = function (cordovaPath, name, version, settings) {
     additionalArgs.push(variable + '=' + JSON.stringify(value));
   });
 
-  Console.stdout.write('  installing ' + pluginInstallCommand + '\n');
   var execRes = execFileSyncOrThrow(localCordova,
      ['plugin', 'add', pluginInstallCommand].concat(additionalArgs),
      { cwd: cordovaPath });
@@ -534,8 +533,11 @@ var ensureCordovaPlugins = function (localPath, options) {
 
     // Now install all of the plugins.
     try {
+      // XXX: forkJoin with parallel false?
       _.each(plugins, function (version, name) {
-        installPlugin(cordovaPath, name, version, settings[name]);
+        buildmessage.enterJob({ title: 'Installing Cordova plugin ' + name}, function () {
+          installPlugin(cordovaPath, name, version, settings[name]);
+        });
       });
     } catch (err) {
       // If a plugin fails to install, then remove all plugins and throw the
