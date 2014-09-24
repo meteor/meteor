@@ -7,6 +7,7 @@
  */
 
 (function () {
+  var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
   var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
@@ -54,9 +55,9 @@
     var retry = function () {
       loadTries++;
       if (loadTries > 10) {
-        console.log('Giving up on starting the server.');
+        console.log(DEBUG_TAG + 'Giving up on starting the server.');
       } else {
-        console.log('Retrying to to start the server.');
+        console.log(DEBUG_TAG + 'Retrying to to start the server.');
         loadFromLocation(location);
       }
     };
@@ -66,7 +67,7 @@
         // if server is already running, stop it and retry
         httpd.stopServer(retry, retry);
       } else {
-        console.log('Starting the server on port ' + port);
+        console.log(DEBUG_TAG + 'Starting the server on port ' + port);
         httpd.startServer({
           'www_root' : location,
           'port' : port,
@@ -91,10 +92,10 @@
   // no error is passed, then we simply do not have any new versions.
   var fallback = function (err) {
     if (err) {
-      console.log('Couldn\'t load from the manifest, ' +
+      console.log(DEBUG_TAG + 'Couldn\'t load from the manifest, ' +
                   'falling back to the bundled assets.');
     } else {
-      console.log('No new versions saved to disk.');
+      console.log(DEBUG_TAG + 'No new versions saved to disk.');
     }
 
     loadFromLocation('application');
@@ -162,10 +163,10 @@
             // around on disk
             removeDirectory(localPathPrefix + name + '/', function (err) {
               if (err) {
-                console.log('Failed to remove an old cache folder '
+                console.log(DEBUG_TAG + 'Failed to remove an old cache folder '
                             + name + ':' + err.message);
               } else {
-                console.log('Successfully removed an old cache folder ' + name);
+                console.log(DEBUG_TAG + 'Successfully removed an old cache folder ' + name);
               }
             });
           });

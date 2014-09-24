@@ -838,6 +838,10 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       return null;
     }
 
+    // Skip the debug output produced by Meteor Core components.
+    if (/^METEOR CORDOVA DEBUG /.test(line) && ! verboseness)
+      return null;
+
     // filename.js?hashsha1: Line 123 : message goes here
     var parsedLine =
       line.match(/^([^?]*)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
@@ -876,6 +880,17 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       appLogsStarted = true;
 
     if (! appLogsStarted)
+      return null;
+
+    // Skip the success messages from File Transfer. There are a lot of them on
+    // Hot-Code Push, but we are interested only in failures.
+    if (/File Transfer Finished with response code 200/.test(line)
+        && ! verboseness) {
+          return null;
+        }
+
+    // Skip the debug output produced by Meteor Core components.
+    if (/^METEOR CORDOVA DEBUG /.test(line) && ! verboseness)
       return null;
 
     return Log.format(Log.objFromText(line, { program: 'ios' }), {

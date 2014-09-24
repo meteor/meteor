@@ -1,3 +1,4 @@
+var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
@@ -35,8 +36,8 @@ var writeFile = function (directoryPath, fileName, content, cb) {
 };
 
 var restartServer = function (location) {
-  console.log('restartserver with location ' + location);
-  var fail = function (err) { console.log('something failed: ' + err.message) };
+  console.log(DEBUG_TAG + 'restartserver with location ' + location);
+  var fail = function (err) { console.log(DEBUG_TAG + 'something failed: ' + err.message) };
   var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
 
   if (! httpd) {
@@ -86,7 +87,7 @@ var onNewVersion = function () {
 
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
-      console.log('failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
+      console.log(DEBUG_TAG + 'failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
     }
 
@@ -110,7 +111,7 @@ var onNewVersion = function () {
           function (err) {
 
         if (err) {
-          console.log("Failed to write manifest.json");
+          console.log(DEBUG_TAG + "Failed to write manifest.json");
           // XXX do something smarter?
           return;
         }
@@ -120,7 +121,7 @@ var onNewVersion = function () {
         writeFile(localPathPrefix, 'version', version,
             function (err) {
           if (err) {
-            console.log("Failed to write version");
+            console.log(DEBUG_TAG + "Failed to write version");
             return;
           }
 
@@ -155,8 +156,8 @@ var onNewVersion = function () {
           if (tries++ < 5) {
             tryDownload();
           } else {
-            console.log('fail source: ', error.source);
-            console.log('fail target: ', error.target);
+            console.log(DEBUG_TAG + 'fail source: ', error.source);
+            console.log(DEBUG_TAG + 'fail target: ', error.target);
           }
         });
       };
