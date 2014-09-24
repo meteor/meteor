@@ -55,7 +55,7 @@ will not be able to use versions of packages that use the new features.
   enable data peristance during hot code push.
 
 
-XXX patches contributed by
+Patches by Github users meonkeys, mitar, mizzao, mquandalle, prapicault, waitingkuo, wulfmeister
 
 
 
