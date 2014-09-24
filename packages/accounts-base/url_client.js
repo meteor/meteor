@@ -42,3 +42,31 @@ if (match) {
   Accounts._enrollAccountToken = match[1];
   window.location.hash = '';
 }
+
+// callbacks
+// Desired API below:
+/*
+Accounts.onResetPassword(function (resetPasswordToken, done) {
+  ... do some user flow
+
+  call Accounts.resetPassword
+
+  call done if Accounts.resetPassword succeeded
+});
+*/
+
+/*
+Accounts.onVerifyEmail(function () {
+  ... let the user know their email was verified
+});
+*/
+
+/*
+Accounts.onEnrollAccount(function (enrollAccountToken, done) {
+  ... do some user flow
+
+  call Accounts.resetPassword
+
+  call done if Accounts.resetPassword succeeded
+});
+*/
