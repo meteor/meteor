@@ -860,11 +860,24 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     });
   };
 
+  // In case of verboseness don't skip any logs. Otherwise skip all the scary
+  // stuff that gets printed before the app load.
+  var appLogsStarted = false || verboseness;
   var iosMapper = function (line) {
     if (line.match(/^[0-9]+-[0-9]+-[0-9].*/)) {
       // if the line starts with the date, we remove the prefix
       line = line.replace(/^\S+\s\S+\s\S+\s/, '');
     }
+
+    var finishedRegexp =
+      /Finished load of: http:\/\/[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+/g;
+
+    if (finishedRegexp.test(line))
+      appLogsStarted = true;
+
+    if (! appLogsStarted)
+      return null;
+
     return Log.format(Log.objFromText(line, { program: 'ios' }), {
       metaColor: 'cyan',
       color: true
