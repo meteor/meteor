@@ -95,6 +95,8 @@ css-parse: https://github.com/reworkcss/css-parse
 css-stringify: https://github.com/reworkcss/css-stringify
 callsite: https://github.com/visionmedia/callsite
 indexof: https://registry.npmjs.org/indexof/-/indexof-0.0.1.tgz
+escape-html: https://github.com/component/escape-html
+express: https://github.com/strongloop/express
 ----------
 
 Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
@@ -102,6 +104,7 @@ Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
 Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
 Copyright (c) 2013 TJ Holowaychuk <tj@vision-media.ca>
 Copyright (c) 2011, 2013 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2009-2014 TJ Holowaychuk <tj@vision-media.ca>
 
 
 ----------
@@ -328,6 +331,7 @@ tty-browserify: https://github.com/substack/tty-browserify
 typedarray: https://github.com/substack/typedarray
 vm-browserify: https://github.com/substack/vm-browserify
 wordwrap: https://github.com/substack/node-wordwrap
+yargs: https://github.com/chevex/yargs
 ----------
 
 Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
@@ -874,6 +878,74 @@ Modifications made by the following entities are licensed as above:
 - https://github.com/hborders
 - http://pivotallabs.com/users/scoward/blog
 - Eloy Duran, Fingertips <eloy@fngtps.com>
+
+
+----------
+accepts: https://github.com/jshttp/accepts
+merge-descriptors: https://github.com/component/merge-descriptors
+type-is: https://github.com/jshttp/type-is
+----------
+
+Copyright (c) 2013 Jonathan Ong me@jongleberry.com
+Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
+
+
+----------
+parseurl: https://github.com/expressjs/parseurl
+----------
+
+Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
+Copyright (c) 2014 Douglas Christopher Wilson <doug@somethingdoug.com>
+
+
+----------
+serve-static: https://github.com/expressjs/serve-static
+----------
+
+Copyright (c) 2010 Sencha Inc.
+Copyright (c) 2011 LearnBoost
+Copyright (c) 2011 TJ Holowaychuk
+Copyright (c) 2014 Douglas Christopher Wilson
+
+
+----------
+negotiator: https://github.com/jshttp/negotiator
+----------
+
+Original "Negotiator" program Copyright Federico Romero
+Port to JavaScript Copyright Isaac Z. Schlueter
+
+
+----------
+options: https://github.com/einaros/options.js
+tinycolor: https://github.com/einaros/tinycolor
+ws: https://github.com/einaros/ws
+----------
+
+Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
+Copyright (c) 2012 Einar Otto Stangvik <einaros@gmail.com>
+
+
+----------
+path-to-regexp: https://github.com/component/path-to-regexp
+----------
+
+Copyright (c) 2014 Blake Embrey (hello@blakeembrey.com)
+
+
+----------
+truncate: https://github.com/FGRibreau/node-truncate
+----------
+
+Copyright (c) 2013 Francois-Guillaume Ribreau
+
+
+----------
+utils-merge: https://github.com/jaredhanson/utils-merge
+----------
+
+Copyright (c) 2013 Jared Hanson
+
 
 
 
@@ -1996,6 +2068,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 Except where noted, this license applies to any and all software
 programs and associated documentation files created by the
 Original Author, when distributed with the Software.
+
+----------
+strong-data-uri: https://github.com/strongloop/strong-data-uri
+----------
+
+Redistributed under the terms of the Artistic License, version 2.0.
+
+http://opensource.org/licenses/Artistic-2.0
 
 
 ----------
