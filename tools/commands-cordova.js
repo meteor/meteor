@@ -824,6 +824,11 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
   var Log = getLoadedPackages().logging.Log;
 
+  var isDebugOutput = function (line) {
+    // Skip the debug output produced by Meteor Core components.
+    return /^METEOR CORDOVA DEBUG /.test(line) || /^HTTPD DEBUG /.test(line);
+  };
+
   var androidMapper = function (line) {
     // remove the annoying prefix
     line = line.replace(/^.\/CordovaLog\(\s*\d+\s*\):\s+/, '');
@@ -838,8 +843,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       return null;
     }
 
-    // Skip the debug output produced by Meteor Core components.
-    if (/^METEOR CORDOVA DEBUG /.test(line) && ! verboseness)
+    if (isDebugOutput(line) && ! verboseness)
       return null;
 
     // filename.js?hashsha1: Line 123 : message goes here
@@ -889,8 +893,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
           return null;
         }
 
-    // Skip the debug output produced by Meteor Core components.
-    if (/^METEOR CORDOVA DEBUG /.test(line) && ! verboseness)
+    if (isDebugOutput(line) && ! verboseness)
       return null;
 
     return Log.format(Log.objFromText(line, { program: 'ios' }), {
