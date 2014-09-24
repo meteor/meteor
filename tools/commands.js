@@ -577,7 +577,19 @@ var buildCommands = {
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
+  function (options) {
+    return buildCommand(options);
+});
+
+// Deprecated -- identical functionality to 'build'
+main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
+      Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
+                           "Use 'build' instead.\n");
+      return buildCommand(options);
+});
+
+var buildCommand = function (options) {
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -619,8 +631,11 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     // warn about it.
     var cordovaBuildHost = parsedHostPort.host || DEFAULT_BUILD_HOST;
     if (cordovaBuildHost === DEFAULT_BUILD_HOST) {
-      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
-                           "Pass a -p argument to specify a host URL.\n");
+      // XXX better error message?
+      process.stdout.write(
+        "Supply the server hostname and port argument in the -p option\n" +
+        "for the mobile apps builds.\n");
+      return 1;
     }
     var cordovaSettings = {};
 
@@ -697,91 +712,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   });
 
   files.rm_recursive(buildDir);
-});
-
-// Deprecated -- identical functionality to 'build'
-main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
-    function (options) {
-  cordova.setVerboseness(options.verbose);
-  Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
-                       "Use 'build' instead.\n");
-  // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
-  // the former for them
-
-  // XXX output, to stderr, the name of the file written to (for human
-  // comfort, especially since we might change the name)
-
-  // XXX name the root directory in the bundle based on the basename
-  // of the file, not a constant 'bundle' (a bit obnoxious for
-  // machines, but worth it for humans)
-
-  // Error handling for options.architecture. We must pass in only one of three
-  // architectures. See archinfo.js for more information on what the
-  // architectures are, what they mean, et cetera.
-  var VALID_ARCHITECTURES =
-  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
-  if (options.architecture &&
-      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
-    Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
-    Console.stderr.write(
-      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
-    return 1;
-  }
-  var bundleArch =  options.architecture || archinfo.host();
-
-  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var outputPath = path.resolve(options.args[0]); // get absolute path
-  var bundlePath = options['directory'] ?
-      outputPath : path.join(buildDir, 'bundle');
-
-  var loader;
-  var messages = buildmessage.capture(function () {
-    loader = project.getPackageLoader();
-  });
-  if (messages.hasMessages()) {
-    Console.stderr.write("Errors prevented bundling your app:\n");
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
-  var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages("sdk.bundle");
-  });
-  if (statsMessages.hasMessages()) {
-    Console.stdout.write("Error recording package list:\n" +
-                         statsMessages.formatMessages());
-    // ... but continue;
-  }
-
-  var bundler = require(path.join(__dirname, 'bundler.js'));
-  var bundleResult = bundler.bundle({
-    outputPath: bundlePath,
-    buildOptions: {
-      minify: ! options.debug,
-      // XXX is this a good idea, or should linux be the default since
-      //     that's where most people are deploying
-      //     default?  i guess the problem with using DEPLOY_ARCH as default
-      //     is then 'meteor bundle' with no args fails if you have any local
-      //     packages with binary npm dependencies
-      serverArch: bundleArch
-    }
-  });
-  if (bundleResult.errors) {
-    Console.stderr.write("Errors prevented bundling:\n");
-    Console.stderr.write(bundleResult.errors.formatMessages());
-    return 1;
-  }
-
-  if (!options['directory']) {
-    try {
-      files.createTarball(path.join(buildDir, 'bundle'), outputPath);
-    } catch (err) {
-      console.log(JSON.stringify(err));
-      Console.stderr.write("Couldn't create tarball\n");
-    }
-  }
-  files.rm_recursive(buildDir);
-});
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // mongo
