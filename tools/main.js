@@ -335,7 +335,7 @@ var springboard = function (rel, releaseOverride) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
   var archinfo = require('./archinfo.js');
-  var unipackage = require('./unipackage.js');
+  var unipackage = require('./isopack.js');
 
   var toolsPkg = rel.getToolsPackage();
   var toolsVersion = rel.getToolsVersion();

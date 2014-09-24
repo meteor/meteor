@@ -6,7 +6,7 @@ var compiler = require("./compiler.js");
 var buildmessage = require("./buildmessage.js");
 var PackageSource = require("./package-source.js");
 var _ = require('underscore');
-var unipackage = require("./unipackage.js");
+var unipackage = require("./isopack.js");
 
 var PackageCache = function (whichCatalog) {
   var self = this;

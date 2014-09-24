@@ -11,7 +11,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
-var Unipackage = require('./unipackage.js').Unipackage;
+var Unipackage = require('./isopack.js').Unipackage;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 

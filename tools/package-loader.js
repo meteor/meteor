@@ -4,7 +4,7 @@ var _ = require('underscore');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var unipackage = require('./unipackage.js');
+var unipackage = require('./isopack.js');
 var tropohouse = require('./tropohouse.js');
 
 // options:
