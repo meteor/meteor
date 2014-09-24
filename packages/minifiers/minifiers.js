@@ -1,5 +1,3 @@
-UglifyJSMinify = Npm.require('uglify-js').minify;
-
 var cssParse = Npm.require('css-parse');
 var cssStringify = Npm.require('css-stringify');
 var path = Npm.require('path');
