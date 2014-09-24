@@ -872,7 +872,7 @@ _.extend(CompleteCatalog.prototype, {
       // run, but any code that actually relies on accurate versions
       // (for example, code that checks if a build is up to date)
       // needs to be careful to get the versions not from the catalog
-      // but from the actual built Unipackage objects, which will have
+      // but from the actual built Isopack objects, which will have
       // accurate versions (with precise buildids) even for local
       // packages.
       var version = packageSource.version;
@@ -950,11 +950,11 @@ _.extend(CompleteCatalog.prototype, {
     var sourcePath = self.packageSources[name].sourceRoot;
     var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
-      var unip = new unipackage.Unipackage;
+      var unip = new unipackage.Isopack;
       try {
         unip.initFromPath(name, buildDir, { buildOfPath: sourcePath });
       } catch (e) {
-        if (!(e instanceof unipackage.OldUnipackageFormatError))
+        if (!(e instanceof unipackage.OldIsopackFormatError))
           throw e;
         // Ignore unipackage-pre1 builds
         return null;

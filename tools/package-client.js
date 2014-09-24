@@ -670,8 +670,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
         if (buildmessage.jobHasMessages())
           return; // already have errors, so skip the build
 
-        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
-        testFiles = testUnipackage.sources;
+        var testIsopack = compiler.compile(testSource, { officialBuild: true });
+        testFiles = testIsopack.sources;
       }
     });
 

@@ -440,7 +440,7 @@ _.extend(Target.prototype, {
   // target-type-dependent function such as write() or toJsImage().
   //
   // options
-  // - packages: packages to include (Unipackage or 'foo'), per
+  // - packages: packages to include (Isopack or 'foo'), per
   //   _determineLoadOrder
   // - minify: true to minify
   // - addCacheBusters: if true, make all files cacheable by adding
@@ -488,11 +488,11 @@ _.extend(Target.prototype, {
   // them, put them in load order, save in unibuilds.
   //
   // (Note: this is also called directly by
-  // bundler.iterateOverAllUsedUnipackages, kinda hackily.)
+  // bundler.iterateOverAllUsedIsopacks, kinda hackily.)
   //
   // options include:
   // - packages: an array of packages (or, properly speaking, unibuilds)
-  //   to include. Each element should either be a Unipackage object or a
+  //   to include. Each element should either be a Isopack object or a
   //   package name as a string
   _determineLoadOrder: function (options) {
     var self = this;
@@ -1788,7 +1788,7 @@ exports.bundle = function (options) {
       serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
-      // Create a Unipackage object that represents the app
+      // Create a Isopack object that represents the app
       var packageSource = new PackageSource(whichCatalog);
       packageSource.initFromAppDir(appDir, exports.ignoreFiles);
       var app = compiler.compile(packageSource).unipackage;
@@ -2102,9 +2102,9 @@ exports.readJsImage = function (controlFilePath) {
 };
 
 // Given an array of unipackage names, invokes the callback with each
-// corresponding Unipackage object, plus all of their transitive dependencies,
+// corresponding Isopack object, plus all of their transitive dependencies,
 // with a topological sort.
-exports.iterateOverAllUsedUnipackages = function (loader, arch,
+exports.iterateOverAllUsedIsopacks = function (loader, arch,
                                                   packageNames, callback) {
   buildmessage.assertInCapture();
   var target = new Target({packageLoader: loader,

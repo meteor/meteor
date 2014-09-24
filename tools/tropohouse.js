@@ -11,7 +11,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
-var Unipackage = require('./isopack.js').Unipackage;
+var Isopack = require('./isopack.js').Isopack;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 
@@ -268,12 +268,12 @@ _.extend(exports.Tropohouse.prototype, {
       });
 
       // We need to turn our builds into a single unipackage.
-      var unipackage = new Unipackage;
+      var unipackage = new Isopack;
       _.each(buildTempDirs, function (buildTempDir, i) {
         unipackage._loadUnibuildsFromPath(
           packageName,
           buildTempDir,
-          {firstUnipackage: i === 0});
+          {firstIsopack: i === 0});
       });
       // Note: wipeAllPackages depends on this filename structure, as does the
       // part above which readlinks.

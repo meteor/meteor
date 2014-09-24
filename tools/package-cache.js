@@ -12,7 +12,7 @@ var PackageCache = function (whichCatalog) {
   var self = this;
 
   // both map from package load path to:
-  // - pkg: cached Unipackage object
+  // - pkg: cached Isopack object
   // - sourceDir: directory that contained its source code, or null
   // - buildDir: directory from which the built package was loaded
   self.softReloadCache = {};
@@ -61,7 +61,7 @@ _.extend(PackageCache.prototype, {
       };
   },
 
-  // Given a path to a package on disk, retrieve a Unipackage
+  // Given a path to a package on disk, retrieve a Isopack
   // object.
   //
   // loadPackageAtPath() caches the packages it returns, meaning if
@@ -112,7 +112,7 @@ _.extend(PackageCache.prototype, {
           packageSource.initFromPackageDir(loadPath, {
             name: name
           });
-          unip = new unipackage.Unipackage;
+          unip = new unipackage.Isopack;
           unip.initFromPath(name, entry.buildDir);
           isUpToDate = compiler.checkUpToDate(
             packageSource, entry.pkg, {
@@ -132,7 +132,7 @@ _.extend(PackageCache.prototype, {
     // Does loadPath point directly at a unipackage (rather than a
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      unip = new unipackage.Unipackage;
+      unip = new unipackage.Isopack;
 
       unip.initFromPath(name, loadPath);
       self.loadedPackages[key] = {
@@ -156,12 +156,12 @@ _.extend(PackageCache.prototype, {
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {
-      unip = new unipackage.Unipackage;
+      unip = new unipackage.Isopack;
       var maybeUpToDate = true;
       try {
         unip.initFromPath(name, buildDir);
       } catch (e) {
-        if (!(e instanceof unipackage.OldUnipackageFormatError))
+        if (!(e instanceof unipackage.OldIsopackFormatError))
           throw e;
         maybeUpToDate = false;
       }

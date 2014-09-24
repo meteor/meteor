@@ -31,7 +31,7 @@ exports.PackageLoader = function (options) {
 };
 
 _.extend(exports.PackageLoader.prototype, {
-  // Given the name of a package, return a Unipackage object, or throw an
+  // Given the name of a package, return a Isopack object, or throw an
   // error if the package wasn't included in the 'versions' passed on
   // initalization or isn't available (for example, hasn't been
   // downloaded yet).
@@ -58,7 +58,7 @@ _.extend(exports.PackageLoader.prototype, {
         return null;
       buildmessage.error("package not available: " + name);
       // recover by returning a dummy (empty) package
-      var pkg = new unipackage.Unipackage;
+      var pkg = new unipackage.Isopack;
       pkg.initEmpty(name);
       return pkg;
     }

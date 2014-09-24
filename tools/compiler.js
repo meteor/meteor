@@ -746,7 +746,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   return sources;
 };
 
-// Build a PackageSource into a Unipackage by running its source files through
+// Build a PackageSource into a Isopack by running its source files through
 // the appropriate compiler plugins. Once build has completed, any errors
 // detected in the package will have been emitted to buildmessage.
 //
@@ -768,7 +768,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
 //    glasser only half understands, ignore the current project deps
 //
 // Returns an object with keys:
-// - unipackage: the built Unipackage
+// - unipackage: the built Isopack
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the compilation (the source files you'd have to
 //   ship to a different machine to replicate the build there)
@@ -860,7 +860,7 @@ compiler.compile = function (packageSource, options) {
     }
   }
 
-  var unipkg = new unipackage.Unipackage;
+  var unipkg = new unipackage.Isopack;
   unipkg.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,

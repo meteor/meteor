@@ -1358,7 +1358,7 @@ var getPackagesForTest = function (packages) {
           // have a trailing slash.
           //
           // Why use addLocalPackage instead of just loading the packages
-          // and passing Unipackage objects to the bundler? Because we
+          // and passing Isopack objects to the bundler? Because we
           // actually need the Catalog to know about the package, so that
           // we are able to resolve the test package's dependency on the
           // main package. This is not ideal (I hate how this mutates global

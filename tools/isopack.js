@@ -176,7 +176,7 @@ _.extend(Unibuild.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// Unipackage
+// Isopack
 ///////////////////////////////////////////////////////////////////////////////
 
 // Helper function. Takes an object mapping package name to version, and
@@ -205,7 +205,7 @@ var getLoadedPackageVersions = function (versions, catalog, filter) {
 };
 
 // XXX document
-var Unipackage = function () {
+var Isopack = function () {
   var self = this;
 
   // These have the same meaning as in PackageSource.
@@ -273,7 +273,7 @@ var Unipackage = function () {
   self.toolsOnDisk = [];
 };
 
-_.extend(Unipackage.prototype, {
+_.extend(Isopack.prototype, {
   // Make a dummy (empty) package that contains nothing of interest.
   // XXX used?
   initEmpty: function (name) {
@@ -298,8 +298,8 @@ _.extend(Unipackage.prototype, {
     self.includeTool = options.includeTool;
   },
 
-  // Programmatically add a unibuild to this Unipackage. Should only be
-  // called as part of building up a new Unipackage using
+  // Programmatically add a unibuild to this Isopack. Should only be
+  // called as part of building up a new Isopack using
   // initFromOptions. 'options' are the options to the Unibuild
   // constructor.
   addUnibuild: function (options) {
@@ -451,7 +451,7 @@ _.extend(Unipackage.prototype, {
     self._pluginsInitialized = true;
   },
 
-  // Load a Unipackage on disk.
+  // Load a Isopack on disk.
   //
   // options:
   // - buildOfPath: If present, the source directory (as an absolute
@@ -463,7 +463,7 @@ _.extend(Unipackage.prototype, {
   initFromPath: function (name, dir, options) {
     var self = this;
     options = _.clone(options || {});
-    options.firstUnipackage = true;
+    options.firstIsopack = true;
 
     return self._loadUnibuildsFromPath(name, dir, options);
   },
@@ -484,7 +484,7 @@ _.extend(Unipackage.prototype, {
     // We don't support pre-0.9.0 unipackages, but we do know enough to delete
     // them if we find them in .build.* somehow (rather than crash).
     if (mainJson.format === "unipackage-pre1")
-      throw new exports.OldUnipackageFormatError;
+      throw new exports.OldIsopackFormatError;
 
     if (mainJson.format !== "unipackage-pre2")
       throw new Error("Unsupported unipackage format: " +
@@ -500,7 +500,7 @@ _.extend(Unipackage.prototype, {
     var buildInfoJson = fs.existsSync(buildInfoPath) &&
       JSON.parse(fs.readFileSync(buildInfoPath));
     if (buildInfoJson) {
-      if (!options.firstUnipackage) {
+      if (!options.firstIsopack) {
         throw Error("can't merge unipackages with buildinfo");
       }
     } else {
@@ -545,7 +545,7 @@ _.extend(Unipackage.prototype, {
 
     // If we are loading multiple unipackages, only take this stuff from the
     // first one.
-    if (options.firstUnipackage) {
+    if (options.firstIsopack) {
       self.name = name;
       self.metadata = {
         summary: mainJson.summary
@@ -985,7 +985,7 @@ _.extend(Unipackage.prototype, {
       catalog: catalog.uniload,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
-    bundler.iterateOverAllUsedUnipackages(
+    bundler.iterateOverAllUsedIsopacks(
       localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
       function (unipkg) {
         // XXX assert that each name shows up once
@@ -1117,9 +1117,9 @@ _.extend(Unipackage.prototype, {
   }
 });
 
-exports.Unipackage = Unipackage;
+exports.Isopack = Isopack;
 
-exports.OldUnipackageFormatError = function () {
+exports.OldIsopackFormatError = function () {
   // This should always be caught anywhere where it can appear (ie, anywhere
   // that isn't definitely loading something from the tropohouse).
   this.toString = function () { return "old unipackage format!" };

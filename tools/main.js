@@ -369,9 +369,9 @@ var springboard = function (rel, releaseOverride) {
   }
 
   var packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
-  var toolUnipackage = new unipackage.Unipackage;
-  toolUnipackage.initFromPath(toolsPkg, packagePath);
-  var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+  var toolIsopack = new unipackage.Isopack;
+  toolIsopack.initFromPath(toolsPkg, packagePath);
+  var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
                                {arch: archinfo.host()});
   if (!toolRecord)
     throw Error("missing tool for " + archinfo.host() + " in " +

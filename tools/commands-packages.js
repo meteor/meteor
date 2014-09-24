@@ -2401,11 +2401,11 @@ main.registerCommand({
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
-    var toolUnipackagePath =
+    var toolIsopackPath =
           tmpTropo.packagePath(toolPkg.package, toolPkg.constraint);
-    var toolUnipackage = new unipackage.Unipackage;
-    toolUnipackage.initFromPath(toolPkg.package, toolUnipackagePath);
-    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk, {arch: osArch});
+    var toolIsopack = new unipackage.Isopack;
+    toolIsopack.initFromPath(toolPkg.package, toolIsopackPath);
+    var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
     fs.symlinkSync(

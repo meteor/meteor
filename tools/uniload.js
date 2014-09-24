@@ -32,7 +32,7 @@ var ROOT_PACKAGES = [
 // this function you load another, distinct copy of all of the
 // packages (except see note about caching below). The return value is
 // an object that maps package name to package exports (that is, it is
-// the Unipackage object from inside the sandbox created for the newly
+// the Isopack object from inside the sandbox created for the newly
 // loaded packages).
 //
 // Caching: There is a simple cache. If you call this function with
