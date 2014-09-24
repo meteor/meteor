@@ -394,6 +394,12 @@ var installPlugin = function (cordovaPath, name, version, settings) {
      { cwd: cordovaPath });
   if (! execRes.success)
     throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
+
+  if (utils.isUrlWithSha(version)) {
+    var lock = getTarballPluginsLock(cordovaPath);
+    lock[name] = version;
+    writeTarballPluginsLock(cordovaPath, lock);
+  }
 };
 
 var uninstallPlugin = function (cordovaPath, name) {
@@ -407,6 +413,39 @@ var uninstallPlugin = function (cordovaPath, name) {
     // plugin B. In this case, we will loop and remove plugin A first.
     verboseLog('Plugin removal threw an error:', err.message);
   }
+};
+
+var getTarballPluginsLock = function (cordovaPath) {
+  verboseLog('Will check for cordova-tarball-plugins.json' +
+             ' for tarball-url-based plugins previously installed.');
+
+  var tarballPluginsLockPath =
+    path.join(cordovaPath, 'cordova-tarball-plugins.json');
+
+  var tarballPluginsLock;
+  try {
+    var text = fs.readFileSync(tarballPluginsLockPath, 'utf8');
+    tarballPluginsLock = JSON.parse(text);
+
+    verboseLog('The tarball plugins lock:', tarballPluginsLock);
+  } catch (err) {
+    if (err.code !== 'ENOENT')
+      throw err;
+
+    verboseLog('The tarball plugins file was not found.');
+    tarballPluginsLock = {};
+  }
+
+  return tarballPluginsLock;
+};
+
+var writeTarballPluginsLock = function (cordovaPath, lock) {
+  verboseLog('Will write cordova-tarball-plugins.json');
+
+  var tarballPluginsLockPath =
+    path.join(cordovaPath, 'cordova-tarball-plugins.json');
+
+  fs.writeFileSync(tarballPluginsLock, JSON.stringify(lock), 'utf8');
 };
 
 // Returns the list of installed plugins as a hash from plugin name to version.
@@ -430,6 +469,11 @@ var getInstalledPlugins = function (cordovaPath) {
       installedPlugins[plugin] = version;
     });
   }
+
+  // override the values of the plugins installed from tarballs
+  _.each(getTarballPluginsLock(cordovaPath), function (url, name) {
+    installedPlugins[name] = url;
+  });
 
   return installedPlugins;
 };
