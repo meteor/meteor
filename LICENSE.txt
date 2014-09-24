@@ -1058,6 +1058,13 @@ This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 
 
+----------
+ip: https://github.com/indutny/node-ip
+----------
+
+Copyright Fedor Indutny, 2012
+
+
 
 ======================
 Eclipse Public License
