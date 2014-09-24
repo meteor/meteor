@@ -19,16 +19,35 @@ var clickIt = function (elem) {
   clickElement(elem);
 };
 
+// maybe use created callback on the template instead of this?
+var extendTemplateWithInit = function (template, initFunc) {
+  var tmpl = new Template(template.viewName+'-extended', template.renderFunction);
+  tmpl.constructView = function (/*args*/) {
+    var view = Template.prototype.constructView.apply(this, arguments);
+    initFunc(view);
+    return view;
+  };
+  return tmpl;
+};
+
+// Make a "clone" of origTemplate (but not its helpers)
+var copyTemplate = function (origTemplate) {
+  return new Template(origTemplate.viewName, origTemplate.renderFunction);
+};
+
 Tinytest.add("spacebars-tests - template_tests - simple helper", function (test) {
-  var tmpl = Template.spacebars_template_test_simple_helper;
+  var baseTmpl = Template.spacebars_template_test_simple_helper;
+  var tmpl1 = copyTemplate(baseTmpl);
   var R = ReactiveVar(1);
-  tmpl.foo = function (x) {
-    return x + R.get();
-  };
-  tmpl.bar = function () {
-    return 123;
-  };
-  var div = renderToDiv(tmpl);
+  tmpl1.helpers({
+    foo: function (x) {
+      return x + R.get();
+    },
+    bar: function () {
+      return 123;
+    }
+  });
+  var div = renderToDiv(tmpl1);
 
   test.equal(canonicalizeHtml(div.innerHTML), "124");
   R.set(2);
@@ -36,26 +55,33 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
   test.equal(canonicalizeHtml(div.innerHTML), "125");
 
   // Test that `{{foo bar}}` throws if `foo` is missing or not a function.
-  tmpl.foo = 3;
+  var tmpl2 = copyTemplate(baseTmpl);
+  tmpl2.helpers({foo: 3});
   test.throws(function () {
-    renderToDiv(tmpl);
+    renderToDiv(tmpl2);
   }, /Can't call non-function/);
 
-  delete tmpl.foo;
+  var tmpl3 = copyTemplate(baseTmpl);
   test.throws(function () {
-    renderToDiv(tmpl);
+    renderToDiv(tmpl3);
   }, /No such function/);
 
-  tmpl.foo = function () {};
+  var tmpl4 = copyTemplate(baseTmpl);
+  tmpl4.helpers({foo: function () {}});
   // doesn't throw
-  div = renderToDiv(tmpl);
+  div = renderToDiv(tmpl4);
   test.equal(canonicalizeHtml(div.innerHTML), '');
 
-  // now "foo" is a function in the data context
-  delete tmpl.foo;
+  // now make "foo" is a function in the data context
+  var tmpl5 = copyTemplate(baseTmpl);
+  tmpl5.helpers({
+    bar: function () {
+      return 123;
+    }
+  });
 
   R = ReactiveVar(1);
-  div = renderToDiv(tmpl, { foo: function (x) {
+  div = renderToDiv(tmpl5, { foo: function (x) {
     return x + R.get();
   } });
   test.equal(canonicalizeHtml(div.innerHTML), "124");
@@ -64,15 +90,15 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
   test.equal(canonicalizeHtml(div.innerHTML), "125");
 
   test.throws(function () {
-    renderToDiv(tmpl, {foo: 3});
+    renderToDiv(tmpl5, {foo: 3});
   }, /Can't call non-function/);
 
   test.throws(function () {
-    renderToDiv(tmpl, {foo: null});
+    renderToDiv(tmpl5, {foo: null});
   }, /No such function/);
 
   test.throws(function () {
-    renderToDiv(tmpl, {});
+    renderToDiv(tmpl5, {});
   }, /No such function/);
 });
 
@@ -226,17 +252,6 @@ Tinytest.add("spacebars-tests - template_tests - inclusion args 2", function (te
   var span2 = div.querySelector('span');
   test.isTrue(span1 === span2);
 });
-
-// maybe use created callback on the template instead of this?
-var extendTemplateWithInit = function (template, initFunc) {
-  var tmpl = new Template(template.viewName+'-extended', template.renderFunction);
-  tmpl.constructView = function (/*args*/) {
-    var view = Template.prototype.constructView.apply(this, arguments);
-    initFunc(view);
-    return view;
-  };
-  return tmpl;
-};
 
 Tinytest.add("spacebars-tests - template_tests - inclusion dotted args", function (test) {
   // `{{> foo bar.baz}}`
@@ -1173,7 +1188,7 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   var dep = new Tracker.Dependency;
   var subtmpl = Template.spacebars_template_test_inclusion_helpers_are_isolated_subtemplate;
   // make a copy so we can set "rendered" without mutating the original
-  var subtmplCopy = new Template(subtmpl.viewName, subtmpl.renderFunction);
+  var subtmplCopy = copyTemplate(subtmpl);
 
   var R = new ReactiveVar(subtmplCopy);
   tmpl.foo = function () {
@@ -1596,31 +1611,36 @@ var runOneTwoTest = function (test, subTemplateName, optionsData) {
           Template.spacebars_test_helpers_stop_onetwo_attribute],
          function (tmpl) {
 
-           tmpl.one = Template[subTemplateName + '1'];
-           tmpl.two = Template[subTemplateName + '2'];
+           var sub1 = Template[subTemplateName + '1'];
+           var sub2 = Template[subTemplateName + '2'];
+
+           tmpl.helpers({
+             one: sub1,
+             two: sub2
+           });
 
            var buf = '';
 
            var showOne = ReactiveVar(true);
            var dummy = ReactiveVar(0);
 
-           tmpl.showOne = function () { return showOne.get(); };
-           tmpl.one.options = function () {
+           tmpl.helpers({showOne: function () { return showOne.get(); }});
+           sub1.helpers({options: function () {
              var x = dummy.get();
              buf += '1';
              if (optionsData)
                return optionsData[x];
              else
                return ['something'];
-           };
-           tmpl.two.options = function () {
+           }});
+           sub2.helpers({options: function () {
              var x = dummy.get();
              buf += '2';
              if (optionsData)
                return optionsData[x];
              else
                return ['something'];
-           };
+           }});
 
            var div = renderToDiv(tmpl);
            Tracker.flush();
