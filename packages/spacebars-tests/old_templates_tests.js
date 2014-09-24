@@ -1610,28 +1610,28 @@ var runOneTwoTest = function (test, subTemplateName, optionsData) {
 };
 
 Tinytest.add('spacebars-tests - old - template_tests - with stops without re-running helper', function (test) {
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_with');
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_with');
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - each stops without re-running helper', function (test) {
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_each');
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_each');
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - each inside with stops without re-running helper', function (test) {
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_with_each');
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_with_each');
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - if stops without re-running helper', function (test) {
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_if', ['a', 'b', 'a']);
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_if', ['a', 'b', 'a']);
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - unless stops without re-running helper', function (test) {
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_unless', ['a', 'b', 'a']);
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_unless', ['a', 'b', 'a']);
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - inclusion stops without re-running function', function (test) {
   var t = Template.old_spacebars_test_helpers_stop_inclusion3;
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_inclusion', [t, t, t]);
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_inclusion', [t, t, t]);
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - template with callbacks inside with stops without recalculating data', function (test) {
@@ -1639,7 +1639,7 @@ Tinytest.add('spacebars-tests - old - template_tests - template with callbacks i
   tmpl.created = function () {};
   tmpl.rendered = function () {};
   tmpl.destroyed = function () {};
-  runOneTwoTest(test, 'spacebars_test_helpers_stop_with_callbacks');
+  runOneTwoTest(test, 'old_spacebars_test_helpers_stop_with_callbacks');
 });
 
 Tinytest.add('spacebars-tests - old - template_tests - no data context is seen as an empty object', function (test) {
