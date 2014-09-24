@@ -130,6 +130,8 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
+var ensureAndroidBundleCache = {};
+
 var ensureAndroidBundle = function (command) {
   if (! _.contains([localAdb, localAndroid], command)) {
     if (command !== localCordova ||
@@ -137,13 +139,19 @@ var ensureAndroidBundle = function (command) {
       return;
   }
 
-  verboseLog('Ensuring android_bundle');
   var ensureScriptPath =
     path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
               'ensure_android_bundle.sh');
 
+  if (ensureAndroidBundleCache[ensureScriptPath]) {
+    verboseLog('android_bundle already checked');
+    return;
+  }
+
+  verboseLog('Ensuring android_bundle');
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
+    ensureAndroidBundleCache[ensureScriptPath] = true;
   } catch (err) {
     verboseLog('Failed to install android_bundle ', err.stack);
     process.stderr.write("Failed to install android_bundle\n");
