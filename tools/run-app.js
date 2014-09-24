@@ -65,7 +65,6 @@ var AppProcess = function (options) {
   self.settings = options.settings;
 
   self.proc = null;
-  self.keepaliveTimer = null;
   self.madeExitCallback = false;
 };
 
@@ -123,17 +122,6 @@ _.extend(AppProcess.prototype, {
     // exception and the whole app dies.
     // http://stackoverflow.com/questions/2893458/uncatchable-errors-in-node-js
     self.proc.stdin.on('error', function () {});
-
-    // Keepalive so child process can detect when we die
-    self.keepaliveTimer = setInterval(function () {
-      try {
-        if (self.proc && self.proc.pid &&
-            self.proc.stdin && self.proc.stdin.write)
-          self.proc.stdin.write('k');
-      } catch (e) {
-        // do nothing. this fails when the process dies.
-      }
-    }, 2000);
   },
 
   _maybeCallOnExit: function (code, signal) {
@@ -155,10 +143,6 @@ _.extend(AppProcess.prototype, {
       self.proc.kill();
     }
     self.proc = null;
-
-    if (self.keepaliveTimer)
-      clearInterval(self.keepaliveTimer);
-    self.keepaliveTimer = null;
 
     self.onListen = null;
     self.onExit = null;
@@ -207,7 +191,8 @@ _.extend(AppProcess.prototype, {
       // Old-style bundle
       var opts = _.clone(self.nodeOptions);
       opts.push(path.join(self.bundlePath, 'main.js'));
-      opts.push('--keepalive');
+      opts.push('--parent-pid');
+      opts.push(process.pid);
 
       return child_process.spawn(process.execPath, opts, {
         env: self._computeEnvironment()
