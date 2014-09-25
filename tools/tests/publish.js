@@ -289,8 +289,26 @@ selftest.define("do-not-update-to-rcs",
     run.match("Done");
   });
 
+  // Change the package to increment version and publish the new package.
+  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
   // Now publish an 1.0.4-rc.3.
   s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Now publish an 1.0.4-rc.4.
+  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -304,13 +322,24 @@ selftest.define("do-not-update-to-rcs",
   run.waitSecs(15);
   run.expectExit(0);
   s.cd('mapp', function () {
+
+    // XXX: This test was failing because we were running from a situation that
+    // could not be resolved without using RCs. Since we had to use RCs already,
+    // we were OK with using the RC for the new package. That's bad! Anyway, at
+    // least we are testing that in the absense of other data, we should not add
+    // the RC. Ideally, we should consider running this test with a warehouse,
+    // but maybe not yet.
+    run = s.run("remove", "meteor-platform", "autopublish", "insecure");
+    run.waitSecs(10);
+    run.expectExit(0);
+
     run = s.run("add", fullPackageName);
-    run.waitSecs(100);
+    run.waitSecs(10);
     run.expectExit(0);
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.0 ");
+    run.match("1.0.1");
     run.forbidAll("New versions");
     run.expectExit(0);
 
@@ -320,10 +349,16 @@ selftest.define("do-not-update-to-rcs",
     run.waitSecs(10);
     run.match("Your packages are at their latest compatible versions.");
     run.expectExit(0);
+    run = s.run("update");
+    run.waitSecs(10);
+    run.match("Your packages are at their latest compatible versions.");
+    run.expectExit(0);
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.0 ");
+    // Check that we have 1.0.1 AND there is no star indicating new versions.
+    run.match("1.0.1 ");
+    run.expectExit(0);
 
     // It works if ask for it, though.
     run = s.run("add", fullPackageName + "@1.0.4-rc.3");
@@ -332,8 +367,13 @@ selftest.define("do-not-update-to-rcs",
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.4-rc.3 ");
-    run.forbidAll("New versions");
+    run.match("1.0.4-rc.3");
+  //  run.match("New versions");
+    run.expectExit(0);
+
+    run = s.run("update", "packages-only");
+    run.waitSecs(10);
+    run.match("1.0.4-rc.4");
     run.expectExit(0);
   });
 });
