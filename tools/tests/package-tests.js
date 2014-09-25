@@ -7,6 +7,7 @@ var _= require('underscore');
 var fs = require("fs");
 var path = require("path");
 var packageClient = require("../package-client.js");
+var config = require("../config.js");
 
 var username = "test";
 var password = "testtest";
@@ -757,4 +758,83 @@ selftest.define("packages with organizations", ["net", "test-package-server"], f
 
   testUtils.login(s, "testtest", "testtest");
   changeVersionAndPublish(s, true /* expect authorization failure */);
+});
+
+selftest.define("malformed package names", [], function () {
+  var s = new Sandbox({warehouse: {v1: {recommended: true}}});
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+  var dataFile = config.getPackageStorage({root: s.warehouse});
+  var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+  data.collections = data.collections || {};
+  data.collections.packages = data.collections.packages || [];
+  data.collections.packages.push({
+    "name": "bar",
+    "_id": utils.randomToken()
+  });
+  data.collections.packages.push({
+    "name": "foo",
+    "_id": utils.randomToken()
+  });
+
+  data.collections.versions = data.collections.versions || [];
+  data.collections.versions.push({
+    "packageName": "bar",
+    "version": "1.2.3",
+    "earliestCompatibleVersion": "1.2.3",
+    "containsPlugins": false,
+    "description": "...",
+    "dependencies": {}
+  });
+  data.collections.versions.push({
+    "packageName": "bar",
+    "version": "1.2.4",
+    "earliestCompatibleVersion": "1.2.4",
+    "containsPlugins": false,
+    "description": "...",
+    "dependencies": {
+      "foo": {
+        "constraint": "1.2.3!bang:colon#hash%invalid",
+        "references": [{"arch": "os"}]
+      }
+    }
+  });
+  data.collections.versions.push({
+    "packageName": "foo",
+    "version": "1.2.3!bang:colon#hash%invalid",
+    "earliestCompatibleVersion": "1.2.3",
+    "containsPlugins": false,
+    "description": "...",
+    "dependencies": {}
+  });
+
+  fs.writeFileSync(dataFile, JSON.stringify(data));
+
+  run = s.run("search", "foo");
+  run.matchErr(/Neither packages nor releases .* could be found/);
+  run.expectExit(0);
+
+  run = s.run("show", "bar");
+  run.match("1.2.3");
+  run.forbidAll("1.2.4");
+  run.expectExit(0);
+
+  run = s.run("create", "myapp");
+  run.expectExit(0);
+
+  s.cd("myapp");
+  run = s.run("add", "foo");
+  run.matchErr("unknown package: foo");
+  run.expectExit(1);
+
+  run = s.run("add", "bar");
+  // If we get the following error, that means we successfully decided
+  // to try to add bar@1.2.3, but couldn't because (as expected) there
+  // is no build for this release in the catalog.
+  run.matchErr("Package bar has no compatible build for version 1.2.3");
+  run.expectExit(1);
+
+  run = s.run("add", "bar@1.2.4");
+  run.matchErr("constraints on bar cannot be satisfied");
+  run.expectExit(1);
 });

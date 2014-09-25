@@ -311,7 +311,6 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
   test.isTrue(_.isString(versions.sparkle));
 });
 
-
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],

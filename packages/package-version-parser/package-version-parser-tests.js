@@ -14,6 +14,17 @@ var FAIL = function (versionString) {
   });
 };
 
+Tinytest.add("Smart Package version string parsing - isValidVersion", function (test) {
+  var validVersions = ["0.1.1", "1.0.0_2", "2.0.0-pre.2", "2.0.1-pre.2_50"];
+  var invalidVersions = ["0.1.1!", "1.0.0~2", "3.2.0.0", "=2.0.1"];
+  _.each(validVersions, function (v) {
+    test.isTrue(PackageVersion.isValidVersion(v));
+  });
+  _.each(invalidVersions, function (v) {
+    test.isFalse(PackageVersion.isValidVersion(v));
+  });
+});
+
 Tinytest.add("Smart Package version string parsing - old format", function (test) {
   currentTest = test;
 
