@@ -2932,3 +2932,25 @@ Tinytest.add("spacebars-tests - template_tests - falsy helper", function (test) 
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), 'foo:0 GLOBAL_ZERO:0');
 });
+
+Tinytest.add("spacebars-tests - template_tests - old-style helpers", function (test) {
+  var tmpl = Template.spacebars_template_test_oldstyle_helpers;
+
+  // Test old-style helper
+  tmpl.foo = 'hello';
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'hello');
+
+  // Test that replacing a helper still works (we don't cache).
+  // We can change this behavior if we need to, but it is more breaking
+  // to do so.
+  tmpl.foo = 'world';
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'world');
+
+  // Test deleting a helper.  As with the previous case, we can
+  // break this, but we should do it intentionally.
+  delete tmpl.foo;
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), '');
+});
