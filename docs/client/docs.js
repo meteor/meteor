@@ -385,7 +385,10 @@ var toc = [
       {name: "Package.onTest", id: "packagetests"},
       {name: "Npm.depends", id: "Npm-depends"},
       {name: "Npm.require", id: "Npm-require"},
-      {name: "Cordova.depends", id: "Cordova-depends"}
+      {name: "Cordova.depends", id: "Cordova-depends"},
+      {name: "Package.registerBuildPlugin", id: "Package-registerBuildPlugin"}, [
+        {name: "Plugin.registerSourceHandler", id: "Plugin-registerSourceHandler"}
+      ]
     ]
   ],
 
