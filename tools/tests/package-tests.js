@@ -7,7 +7,6 @@ var _= require('underscore');
 var fs = require("fs");
 var path = require("path");
 var packageClient = require("../package-client.js");
-var config = require("../config.js");
 
 var username = "test";
 var password = "testtest";
@@ -758,66 +757,4 @@ selftest.define("packages with organizations", ["net", "test-package-server"], f
 
   testUtils.login(s, "testtest", "testtest");
   changeVersionAndPublish(s, true /* expect authorization failure */);
-});
-
-selftest.define("malformed package names", [], function () {
-  var s = new Sandbox({warehouse: {v1: {recommended: true}}});
-  s.set("METEOR_OFFLINE_CATALOG", "t");
-
-  var dataFile = config.getPackageStorage({root: s.warehouse});
-  var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-  data.collections = data.collections || {};
-  data.collections.packages = data.collections.packages || [];
-  data.collections.packages.push({
-    "name": "bar",
-    "_id": utils.randomToken()
-  });
-  data.collections.packages.push({
-    "name": "foo",
-    "_id": utils.randomToken()
-  });
-
-  data.collections.versions = data.collections.versions || [];
-  data.collections.versions.push({
-    "packageName": "bar",
-    "version": "1.2.4",
-    "earliestCompatibleVersion": "1.2.4",
-    "containsPlugins": false,
-    "description": "...",
-    "dependencies": {
-      "foo": {
-        "constraint": "1.2.3!bang@at#hash%invalid",
-        "references": [{"arch": "os"}]
-      }
-    }
-  });
-  data.collections.versions.push({
-    "packageName": "foo",
-    "version": "1.2.3!bang@at#hash%invalid",
-    "earliestCompatibleVersion": "1.2.3",
-    "containsPlugins": false,
-    "description": "...",
-    "dependencies": {}
-  });
-
-  fs.writeFileSync(dataFile, JSON.stringify(data));
-/*
-  run = s.run("search", "foo");
-  run.match(/Neither packages nor releases .* could be found/);
-  run.expectExit(0);
-
-  var run = s.run("search", "bar");
-  run.match(/Neither packages nor releases .* could be found/);
-  run.expectExit(0);
-*/
-  var run = s.run("create", "myapp");
-  run.expectExit(0);
-
-  s.cd("myapp");
-  run = s.run("add", "foo");
-  run.matchErr("foo: no such package");
-  run.expectExit(1);
-  run = s.run("add", "bar");
-  run.matchErr("bar: no such package");
-  run.expectExit(1);
 });
