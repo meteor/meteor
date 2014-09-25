@@ -1,7 +1,5 @@
 // Source: https://github.com/coreyti/showdown
 
-// XXX rename to 'markdown' and credit showdown some other way?
-
 Package.describe({
   summary: "Markdown-to-HTML processor",
   version: "1.0.1"
