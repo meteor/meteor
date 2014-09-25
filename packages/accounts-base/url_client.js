@@ -1,72 +1,72 @@
 autoLoginEnabled = true;
 
-// reads a reset password token from the url's hash fragment, if it's
-// there. if so prevent automatically logging in since it could be
-// confusing to be logged in as user A while resetting password for
-// user B
-//
-// reset password urls use hash fragments instead of url paths/query
-// strings so that the reset password token is not sent over the wire
-// on the http request
-var match;
-match = window.location.hash.match(/^\#\/reset-password\/(.*)$/);
-if (match) {
-  autoLoginEnabled = false;
-  Accounts._resetPasswordToken = match[1];
-  window.location.hash = '';
-}
+// All of the special hash URLs we support for accounts interactions
+var accountsPaths = ["reset-password", "verify-email", "enroll-account"];
 
-// reads a verify email token from the url's hash fragment, if
-// it's there.  also don't automatically log the user is, as for
-// reset password links.
-//
-// XXX we don't need to use hash fragments in this case, and having
-// the token appear in the url's path would allow us to use a custom
-// middleware instead of verifying the email on pageload, which
-// would be faster but less DDP-ish (and more specifically, any
-// non-web DDP app, such as an iOS client, would do something more
-// in line with the hash fragment approach)
-match = window.location.hash.match(/^\#\/verify-email\/(.*)$/);
-if (match) {
-  autoLoginEnabled = false;
-  Accounts._verifyEmailToken = match[1];
-  window.location.hash = '';
-}
+// We only support one callback per URL
+var accountsCallbacks = {};
 
-// reads an account enrollment token from the url's hash fragment, if
-// it's there.  also don't automatically log the user is, as for
-// reset password links.
-match = window.location.hash.match(/^\#\/enroll-account\/(.*)$/);
-if (match) {
-  autoLoginEnabled = false;
-  Accounts._enrollAccountToken = match[1];
-  window.location.hash = '';
-}
+// The UI flow should call this when done to log in the existing person
+var doneCallback = function () {
+  Accounts._enableAutoLogin();
+};
 
-// callbacks
-// Desired API below:
-/*
-Accounts.onResetPassword(function (resetPasswordToken, done) {
-  ... do some user flow
+_.each(accountsPaths, function (urlPart) {
+  var tokenRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)$");
+  var match = window.location.hash.match(tokenRegex);
 
-  call Accounts.resetPassword
+  if (match) {
+    // put login in a suspended state to wait for the interaction to finish
+    autoLoginEnabled = false;
 
-  call done if Accounts.resetPassword succeeded
+    // get the token from the URL
+    var token = match[1];
+
+    // reset the URL
+    window.location.hash = "";
+
+    // if a callback has been registered for this kind of token, call it
+    if (accountsCallbacks[urlPart]) {
+      accountsCallbacks[urlPart](token, doneCallback);
+    }
+
+    // XXX COMPAT WITH 0.9.3
+    if (urlPart === "reset-password") {
+      Accounts._resetPasswordToken = token;
+    } else if (urlPart === "verify-email") {
+      Accounts._verifyEmailToken = token;
+    } else if (urlPart === "enroll-account") {
+      Accounts._enrollAccountToken = token;
+    }
+  }
 });
-*/
 
-/*
-Accounts.onVerifyEmail(function () {
-  ... let the user know their email was verified
-});
-*/
+// XXX these should be moved to accounts-password eventually. Right now
+// this is prevented by the need to set autoLoginEnabled=false, but in
+// some bright future we won't need to do that anymore.
+Accounts.onResetPasswordLink = function (callback) {
+  if (accountsCallbacks["reset-password"]) {
+    Meteor._debug("Accounts.onResetPasswordLink was called more than once." +
+      "Only the last callback added will be executed.");
+  }
 
-/*
-Accounts.onEnrollAccount(function (enrollAccountToken, done) {
-  ... do some user flow
+  accountsCallbacks["reset-password"] = callback;
+};
 
-  call Accounts.resetPassword
+Accounts.onVerifyEmailLink = function (callback) {
+  if (accountsCallbacks["verify-email"]) {
+    Meteor._debug("Accounts.onVerifyEmailLink was called more than once." +
+      "Only the last callback added will be executed.");
+  }
 
-  call done if Accounts.resetPassword succeeded
-});
-*/
+  accountsCallbacks["verify-email"] = callback;
+};
+
+Accounts.onEnrollAccountLink = function (callback) {
+  if (accountsCallbacks["enroll-account"]) {
+    Meteor._debug("Accounts.onEnrollAccountLink was called more than once." +
+      "Only the last callback added will be executed.");
+  }
+
+  accountsCallbacks["enroll-account"] = callback;
+};
