@@ -82,14 +82,6 @@ PV.versionMagnitude = function (versionString) {
     prereleaseIdentifierToFraction(v.prerelease) / 100 / 100;
 };
 
-PV.isValidVersion = function (versionString) {
-  try {
-    return semver.valid(extractSemverPart(versionString).semver);
-  } catch (e) {
-    return false;
-  }
-};
-
 // Accepts an array, eg ["rc", 2, 3]. Returns a number in the range
 // (-1, 0].  An empty array returns 0. A non-empty string returns a
 // number that is "as large" as the its precedence.
