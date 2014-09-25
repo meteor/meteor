@@ -391,6 +391,11 @@ _.extend(Unipackage.prototype, {
     if (self._pluginsInitialized)
       return;
 
+    /**
+     * @global
+     * @namespace Plugin
+     * @summary The namespace that is exposed inside build plugin files.
+     */
     var Plugin = {
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
@@ -401,6 +406,21 @@ _.extend(Unipackage.prototype, {
       //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
+      
+      /**
+       * @summary Inside a build plugin source file specified in
+       * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
+       * add a handler to compile files with a certain file extension.
+       * @param  {String} fileExtension The file extension that this plugin
+       * should handle, without the first dot.
+       * Examples: `"coffee"`, `"coffee.md"`.
+       * @param  {Function} handler  A function that takes one argument,
+       * a CompileStep object.
+       *
+       * Documentation for CompileStep is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/CompileStep-API-for-Build-Plugin-Source-Handlers).
+       * @memberOf Plugin
+       * @locus Build Plugin
+       */
       registerSourceHandler: function (extension, options, handler) {
         if (!handler) {
           handler = options;
