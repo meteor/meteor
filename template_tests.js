@@ -669,7 +669,6 @@ Tinytest.add("spacebars-tests - template_tests - select tags", function (test) {
   options.update({}, {$set: {selected: false}}, {multi: true});
   Tracker.flush();
   options.update({}, {$set: {selected: true}}, {multi: true});
-  window.avital = true;
   Tracker.flush();
   test.equal($(selectEl).find('option')[0].selected, true);
   test.equal($(selectEl).find('option')[1].selected, true);
