@@ -191,8 +191,7 @@ _.extend(AppProcess.prototype, {
       // Old-style bundle
       var opts = _.clone(self.nodeOptions);
       opts.push(path.join(self.bundlePath, 'main.js'));
-      opts.push('--parent-pid');
-      opts.push(process.pid);
+      opts.push('--parent-pid', process.pid);
 
       return child_process.spawn(process.execPath, opts, {
         env: self._computeEnvironment()

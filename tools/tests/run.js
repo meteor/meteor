@@ -360,9 +360,10 @@ selftest.define("run and SIGKILL parent process", function () {
   childPid = match[1];
 
   process.kill(run.proc.pid, "SIGKILL");
-  // This sleep should match the interval at which the child checks if
-  // the parent is still alive, in packages/webapp/webapp_server.js.
-  utils.sleepMs(3000);
+  // This sleep should be a little more time than the interval at which
+  // the child checks if the parent is still alive, in
+  // packages/webapp/webapp_server.js.
+  utils.sleepMs(3500);
 
   // Send the child process a signal of 0. If there is no error, it
   // means that the process is still running, which is not what we
