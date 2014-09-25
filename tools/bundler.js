@@ -442,7 +442,10 @@ var Target = function (options) {
   // false: 99.6 KB / 316 KB
   // vs
   // true: 99 KB / 315 KB
-  self._minifyTogether = false;
+
+  // METEOR_MINIFY_LEGACY is an undocumented safety-valve environment variable,
+  //  in case people hit trouble
+  self._minifyTogether = !!process.env.METEOR_MINIFY_LEGACY;
 };
 
 _.extend(Target.prototype, {
@@ -802,7 +805,7 @@ _.extend(Target.prototype, {
 });
 
 // This code should mirror the minify function in UglifyJs2,
-var UglifyJS = require('uglify-js');
+var UglifyJS = Npm.require('uglify-js');
 
 UglifyJSMinify = function(key, files, options) {
   options = UglifyJS.defaults(options, {
