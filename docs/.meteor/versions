@@ -28,6 +28,7 @@ json@1.0.0
 less@1.0.8
 livedata@1.0.9
 logging@1.0.3
+markdown@1.0.1
 meteor-platform@1.1.0
 meteor@1.1.0
 minifiers@1.1.0
