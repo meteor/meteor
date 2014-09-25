@@ -60,6 +60,13 @@ var initKeepalive = function () {
 
 // As a replacement to the old keepalives mechanism, check for a running
 // parent every few seconds. Exit if the parent is not running.
+//
+// Two caveats to this strategy:
+// * Doesn't catch the case where the parent is CPU-hogging (but maybe we
+//   don't want to catch that case anyway, since the bundler not yielding
+//   is what caused #2536).
+// * Could be fooled by pid re-use, i.e. if another process comes up and
+//   takes the parent process's place before the child process dies.
 var startCheckForLiveParent = function (parentPid) {
   if (parentPid) {
     setInterval(function () {
