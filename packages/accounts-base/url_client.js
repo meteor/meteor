@@ -25,10 +25,13 @@ _.each(accountsPaths, function (urlPart) {
     // reset the URL
     window.location.hash = "";
 
-    // if a callback has been registered for this kind of token, call it
-    if (accountsCallbacks[urlPart]) {
-      accountsCallbacks[urlPart](token, doneCallback);
-    }
+    // wait for other packages to register callbacks
+    Meteor.startup(function () {
+      // if a callback has been registered for this kind of token, call it
+      if (accountsCallbacks[urlPart]) {
+        accountsCallbacks[urlPart](token, doneCallback);
+      }
+    });
 
     // XXX COMPAT WITH 0.9.3
     if (urlPart === "reset-password") {
