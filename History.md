@@ -2,20 +2,20 @@
 
 ## v0.9.3
 
-### More Package Version Number Flexability
+### More Package Version Number Flexibility
 
-* Packages now support for relying on multiple major versions of their
-  dependancies (eg `blaze@1.0.0 || 2.0.0`). Additionally, you can now
+* Packages now support relying on multiple major versions of their
+  dependencies (eg `blaze@1.0.0 || 2.0.0`). Additionally, you can now
   call `api.versionsFrom(<release>)` multiple times, or with an array
   (eg `api.versionsFrom([<release1>, <release2>])`. Meteor will
   interpret this to mean that the package will work with packages from
   all the listed releases.
 
-* Support for "wrapped package" version numbers. There is now `_` field
-  in version number. The `_` field must be integer, and versions with
+* Support for "wrapped package" version numbers. There is now a `_` field
+  in version numbers. The `_` field must be an integer, and versions with
   the `_` are sorted after versions without. This allows using the
   upstream version number as the Meteor package version number and being
-  able to publish multiple version of the Meteor package (eg
+  able to publish multiple version of the Meteor package (e.g.
   `jquery@1.11.1_2`).
 
 Note: packages using the `||` operator or the `_` symbol in their
@@ -24,19 +24,19 @@ versions 0.9.2 and before do not understand the new version formats and
 will not be able to use versions of packages that use the new features.
 
 
-### Other Command-line tool improvments
+### Other Command-line Tool Improvements
 
 * More detailed constraint solver output. Meteor now tells you which
   constraints prevent upgrading or adding new packages. This will make
   it much easier to update your app to new versions.
 
-* Better handling of pre-release versions (eg versions with
+* Better handling of pre-release versions (e.g. versions with
   `-`). Pre-release packages will now be included in an app if and only
   if there is no way to meet the app's constraints without using a
   pre-release package.
 
 * Add `meteor admin set-unmigrated` to allow maintainers to hide
-  pre-0.9.0 packages in `meteor search` & `meteor show`. This will not
+  pre-0.9.0 packages in `meteor search` and `meteor show`. This will not
   stop users from continuing to use the package, but it helps prevent
   new users from finding old non-functional packages.
 
@@ -52,10 +52,11 @@ will not be able to use versions of packages that use the new features.
   https://docs.meteor.com/#meteor_wrapasync.
 
 * The `reactive-dict` package now allows an optional name argument to
-  enable data peristance during hot code push.
+  enable data persistence during hot code push.
 
 
-Patches by Github users evliu, meonkeys, mitar, mizzao, mquandalle, prapicault, waitingkuo, wulfmeister
+Patches by Github users evliu, meonkeys, mitar, mizzao, mquandalle,
+prapicault, waitingkuo, wulfmeister.
 
 
 
