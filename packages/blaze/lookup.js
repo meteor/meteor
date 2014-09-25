@@ -49,9 +49,11 @@ var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
     // Only warn once per helper
     if (! isKnownOldStyleHelper) {
       template.__helpers.set(name, Blaze._OLDSTYLE_HELPER);
-      Blaze._warn('Assigning helper with ' + template.viewName + '.' +
-                  name + ' = ... is deprecated.  Use ' + template.viewName +
-                  '.helpers(...) instead.');
+      if (! template._NOWARN_OLDSTYLE_HELPERS) {
+        Blaze._warn('Assigning helper with `' + template.viewName + '.' +
+                    name + ' = ...` is deprecated.  Use `' + template.viewName +
+                    '.helpers(...)` instead.');
+      }
     }
     return template[name];
   }
