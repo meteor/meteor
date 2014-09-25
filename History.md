@@ -9,6 +9,11 @@
 
 * Rename the `showdown` package to `markdown`.
 
+* Deprecate the `Template.someTemplate.myHelper = ...` syntax in favor
+  of `Template.someTemplate.helpers(...)`.  Using the older syntax still
+  works, but it prints a deprecation warning to the console.
+
+
 ## v0.9.2.2
 
 * Fix regression in 0.9.2 that prevented some users from accessing the

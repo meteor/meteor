@@ -8,24 +8,27 @@
  * @param {Object} [data] Optional. The data context in which to include the template.
  */
 
-Template.__dynamicWithDataContext.chooseTemplate = function (name) {
-  return Template[name] || null;
-};
-
-Template.__dynamic.dataContextPresent = function () {
-  return _.has(this, "data");
-};
-
-Template.__dynamic.checkContext = function () {
-  if (! _.has(this, "template")) {
-    throw new Error("Must specify name in the 'template' argument " +
-                    "to {{> Template.dynamic}}.");
+Template.__dynamicWithDataContext.helpers({
+  chooseTemplate: function (name) {
+    return Template[name] || null;
   }
+});
 
-  _.each(this, function (v, k) {
-    if (k !== "template" && k !== "data") {
-      throw new Error("Invalid argument to {{> Template.dynamic}}: " +
-                      k);
+Template.__dynamic.helpers({
+  dataContextPresent: function () {
+    return _.has(this, "data");
+  },
+  checkContext: function () {
+    if (! _.has(this, "template")) {
+      throw new Error("Must specify name in the 'template' argument " +
+                      "to {{> Template.dynamic}}.");
     }
-  });
-};
+
+    _.each(this, function (v, k) {
+      if (k !== "template" && k !== "data") {
+        throw new Error("Invalid argument to {{> Template.dynamic}}: " +
+                        k);
+      }
+    });
+  }
+});

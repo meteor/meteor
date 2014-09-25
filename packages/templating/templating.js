@@ -21,6 +21,12 @@ Template.__checkName = function (name) {
 Template.__define__ = function (name, renderFunc) {
   Template.__checkName(name);
   Template[name] = new Template("Template." + name, renderFunc);
+  // Exempt packages built pre-0.9.0 from warnings about using old
+  // helper syntax, because we can.  It's not very useful to get a
+  // warning about someone else's code (like a package on Atmosphere),
+  // and this should at least put a bit of a dent in number of warnings
+  // that come from packages that haven't been updated lately.
+  Template[name]._NOWARN_OLDSTYLE_HELPERS = true;
 };
 
 // Define a template `Template.body` that renders its

@@ -54,19 +54,20 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
   }
 });
 
-Template._loginButtonsLoggedOutSingleLoginButton.configured = function () {
-  return !!ServiceConfiguration.configurations.findOne({service: this.name});
-};
-
-Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {
-  if (this.name === 'github')
-    // XXX we should allow service packages to set their capitalized name
-    return 'GitHub';
-  else if (this.name === 'meteor-developer')
-    return 'Meteor';
-  else
-    return capitalize(this.name);
-};
+Template._loginButtonsLoggedOutSingleLoginButton.helpers({
+  configured: function () {
+    return !!ServiceConfiguration.configurations.findOne({service: this.name});
+  },
+  capitalizedName: function () {
+    if (this.name === 'github')
+      // XXX we should allow service packages to set their capitalized name
+      return 'GitHub';
+    else if (this.name === 'meteor-developer')
+      return 'Meteor';
+    else
+      return capitalize(this.name);
+  }
+});
 
 // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
 var capitalize = function(str){
