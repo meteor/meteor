@@ -644,7 +644,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
 
       /**
        * @summary The architecture for which we are building. Can be "os",
-       * "web.browser", and "web.cordova".
+       * "web.browser", or "web.cordova".
        * @type {String}
        * @memberOf CompileStep
        * @instance
@@ -668,7 +668,8 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
       fileOptions: fileOptions,
 
       /**
-       * @summary XXX document this
+       * @summary The list of exports that the current package has defined.
+       * Can be used to treat those symbols differently during compilation.
        * @type {Object}
        * @memberOf CompileStep
        * @instance
