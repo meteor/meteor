@@ -340,3 +340,41 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.expectEnd();
   run.expectExit(254);
 });
+
+// Test that when the parent runner process is SIGKILLed, the child
+// process exits also.
+selftest.define("run and SIGKILL parent process", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "app-prints-pid");
+  s.cd("myapp");
+
+  run = s.run();
+  run.waitSecs(10);
+  var match = run.match(/My pid is (\d+)/);
+  var childPid;
+  if (! match || ! match[1]) {
+    selftest.fail("No pid printed");
+  }
+  childPid = match[1];
+
+  process.kill(run.proc.pid, "SIGKILL");
+  // This sleep should match the interval at which the child checks if
+  // the parent is still alive, in packages/webapp/webapp_server.js.
+  utils.sleepMs(3000);
+
+  // Send the child process a signal of 0. If there is no error, it
+  // means that the process is still running, which is not what we
+  // expect.
+  var caughtError;
+  try {
+    process.kill(childPid, 0);
+  } catch (err) {
+    caughtError = err;
+  }
+
+  if (! caughtError) {
+    selftest.fail("Child process " + childPid + " is still running");
+  }
+});
