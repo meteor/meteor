@@ -1053,7 +1053,7 @@ main.registerCommand({
       return _.extend({ buildArchitectures: myStringBuilds },
                       versionRecord);
     };
-    // XXX should this skip pre-releases?
+    // XXX should this skip pre-releases? No, it should.
     var versions = catalog.official.getSortedVersions(name);
     if (full.length > 1) {
       versions = [full[1]];
