@@ -311,27 +311,6 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
   test.isTrue(_.isString(versions.sparkle));
 });
 
-Tinytest.add("constraint solver - ignore malformed version strings", function (test) {
-  var resolver = makeResolver([
-    ["foo", "1.2.3", "1.2.3"],
-    ["foo", "1.2.3!bang@at#hash%invalid", "1.2.3!bang@at#hash%invalid"],
-    ["bar", "1.2.3", "1.2.3", {"foo": "1.2.3"}],
-    ["bar", "1.2.4", "1.2.4", {"foo": "1.2.3!bang@at#hash%invalid"}]
-  ]);
-
-  testWithResolver(test, resolver, function (t, FAIL) {
-    FAIL({ "bar": "1.2.4" }, /not satisfied/);
-
-    // Since we can't parse versions or dependencies of
-    // foo@1.2.3!band@at#hash%invalid or bar@1.2.4, ignore them when
-    // finding the right versions to use.
-    t({ "bar": "1.2.3"}, {
-      "bar": "1.2.3",
-      "foo": "1.2.3"
-    }, { _testing: true });
-  });
-});
-
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],

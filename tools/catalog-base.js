@@ -152,9 +152,27 @@ _.extend(baseCatalog.BaseCatalog.prototype, {
     if (!_.has(self.versions, name)) {
       return [];
     }
-    var ret = _.keys(self.versions[name]);
-    ret.sort(packageVersionParser.compare);
-    return ret;
+
+    var validVersions = [];
+
+    // filter out any package with a malformed version, or with any
+    // dependencies that have malformed versions.
+    _.each(self.versions[name], function (entry, version) {
+      if (! packageVersionParser.isValidVersion(version))
+        return;
+
+      if (! _.all(entry.dependencies, function (dependency, packageName) {
+        return !dependency.constraint ||
+          packageVersionParser.isValidVersion(dependency.constraint);
+      })) {
+        return;
+      }
+
+      validVersions.push(version);
+    });
+
+
+    return validVersions.sort(packageVersionParser.compare);
   },
 
   // Return information about a particular version of a package, or
