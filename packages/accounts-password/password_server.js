@@ -386,7 +386,7 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
-  var resetPasswordUrl = Accounts.urls.resetPassword(token);
+  var resetPasswordUrl = Accounts.urls.resetPassword(token, email);
 
   var options = {
     to: email,
@@ -444,7 +444,7 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
-  var enrollAccountUrl = Accounts.urls.enrollAccount(token);
+  var enrollAccountUrl = Accounts.urls.enrollAccount(token, email);
 
   var options = {
     to: email,
@@ -580,7 +580,7 @@ Accounts.sendVerificationEmail = function (userId, address) {
   }
   user.services.email.verificationTokens.push(tokenRecord);
 
-  var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token);
+  var verifyEmailUrl = Accounts.urls.verifyEmail(tokenRecord.token, email);
 
   var options = {
     to: address,

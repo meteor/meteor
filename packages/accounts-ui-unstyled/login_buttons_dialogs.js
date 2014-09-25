@@ -5,17 +5,18 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 // handlers, we just make it a variable for the whole file
 var doneCallback;
 
-Accounts.onResetPasswordLink(function (token, done) {
+// XXX make the UI display the email address that we now get
+Accounts.onResetPasswordLink(function (token, email, done) {
   loginButtonsSession.set("resetPasswordToken", token);
   doneCallback = done;
 });
 
-Accounts.onEnrollAccountLink(function (token, done) {
+Accounts.onEnrollAccountLink(function (token, email, done) {
   loginButtonsSession.set("enrollAccountToken", token);
   doneCallback = done;
 });
 
-Accounts.onVerifyEmailLink(function (token, done) {
+Accounts.onVerifyEmailLink(function (token, email, done) {
   Accounts.verifyEmail(token, function (error) {
     if (! error) {
       loginButtonsSession.set('justVerifiedEmail', true);

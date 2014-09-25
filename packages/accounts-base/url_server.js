@@ -2,14 +2,14 @@
 
 Accounts.urls = {};
 
-Accounts.urls.resetPassword = function (token) {
-  return Meteor.absoluteUrl('#/reset-password/' + token);
+Accounts.urls.resetPassword = function (token, email) {
+  return Meteor.absoluteUrl('#/reset-password/' + token + '/' + email);
 };
 
-Accounts.urls.verifyEmail = function (token) {
-  return Meteor.absoluteUrl('#/verify-email/' + token);
+Accounts.urls.verifyEmail = function (token, email) {
+  return Meteor.absoluteUrl('#/verify-email/' + token + '/' + email);
 };
 
-Accounts.urls.enrollAccount = function (token) {
-  return Meteor.absoluteUrl('#/enroll-account/' + token);
+Accounts.urls.enrollAccount = function (token, email) {
+  return Meteor.absoluteUrl('#/enroll-account/' + token + '/' + email);
 };
