@@ -756,7 +756,7 @@ _.extend(Target.prototype, {
       });
 
       buildmessage.enterJob({title: "Minifying"}, function () {
-        allJs = UglifyJSMinify('', sources, minifyOptions).code;
+        allJs = _minify(minifiers.UglifyJS, '', sources, minifyOptions).code;
       });
     } else {
       minifyOptions.compress.unused = false;
@@ -764,7 +764,7 @@ _.extend(Target.prototype, {
 
       allJs = buildmessage.forkJoin({title: "Minifying" }, self.js, function (file) {
         var source = file.contents('utf8');
-        return UglifyJSMinify(file.info, source, minifyOptions).code;
+        return _minify(minifiers.UglifyJS, file.info, source, minifyOptions).code;
       }).join("\n\n");
     }
 
@@ -805,9 +805,7 @@ _.extend(Target.prototype, {
 });
 
 // This code should mirror the minify function in UglifyJs2,
-var UglifyJS = Npm.require('uglify-js');
-
-UglifyJSMinify = function(key, files, options) {
+_minify = function(UglifyJS, key, files, options) {
   options = UglifyJS.defaults(options, {
     spidermonkey : false,
     outSourceMap : null,
