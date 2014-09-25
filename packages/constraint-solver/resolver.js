@@ -418,10 +418,11 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
       throw Error("Unknown constraint type: " + currConstraint.type);
     }
 
-    // If you are asking for a pre-release, you need to get exactly that one.
-    // (@1.2.3-rc1 does not match 1.2.4.)
+    // If you are asking for a pre-release, you need to get a
+    // pre-release on the same release that has higher precendence.
     if (/-/.test(currConstraint.version)) {
-      return currConstraint.version === candidateUV.version;
+      return PackageVersion.prereleaseLessThan(
+        currConstraint.version, candidateUV.version);
     }
 
     // If you're not asking for a pre-release (and you are not in pre-releases-OK

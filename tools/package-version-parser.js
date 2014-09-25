@@ -337,3 +337,15 @@ PV.invalidFirstFormatConstraint = function (validConstraint) {
   return (/_/.test(validConstraint) ||
           /\|/.test(validConstraint));
 };
+
+// Returns true if both v1 and v2 represent pre-releases off of the
+// same base release, and v2 >= v1
+PV.prereleaseLessThan = function (v1, v2) {
+  if (!/-/.test(v1) || !/-/.test(v2))
+    return false;
+
+  if (v1.split('-')[0] !== v2.split('-')[0])
+    return false;
+
+  return PV.lessThan(v1, v2);
+};
