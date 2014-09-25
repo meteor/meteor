@@ -35,7 +35,11 @@ var bundledJsCssPrefix;
 // pidfiles.
 // XXX This should really be part of the boot script, not the webapp package.
 //     Or we should just get rid of it, and rely on containerization.
-
+//
+// XXX COMPAT WITH 0.9.2.2
+// Keepalives have been replaced with a check that the parent pid is
+// still running. We keep the --keep-alive option for backwards
+// compatibility.
 var initKeepalive = function () {
   var keepaliveCount = 0;
 
@@ -52,6 +56,21 @@ var initKeepalive = function () {
       process.exit(1);
     }
   }, 3000);
+};
+
+// As a replacement to the old keepalives mechanism, check for a running
+// parent every few seconds. Exit if the parent is not running.
+var startCheckForLiveParent = function (parentPid) {
+  if (parentPid) {
+    setInterval(function () {
+      try {
+        process.kill(parentPid, 0);
+      } catch (err) {
+        console.log("Parent process is dead! Exiting.");
+        process.exit(1);
+      }
+    });
+  }
 };
 
 
@@ -747,7 +766,18 @@ var runWebAppServer = function () {
     // We used to use the optimist npm package to parse argv here, but it's
     // overkill (and no longer in the dev bundle). Just assume any instance of
     // '--keepalive' is a use of the option.
+    // XXX COMPAT WITH 0.9.2.2
+    // We used to expect keepalives to be written to stdin every few
+    // seconds; now we just check if the parent process is still alive
+    // every few seconds.
     var expectKeepalives = _.contains(argv, '--keepalive');
+    // XXX Saddest argument parsing ever, should we add optimist back to
+    // the dev bundle?
+    var parentPid = null;
+    var parentPidIndex = _.indexOf(argv, "--parent-pid");
+    if (parentPidIndex !== -1) {
+      parentPid = argv[parentPidIndex + 1];
+    }
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
@@ -755,7 +785,7 @@ var runWebAppServer = function () {
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
-      if (expectKeepalives)
+      if (expectKeepalives || parentPid)
         console.log("LISTENING"); // must match run-app.js
       var proxyBinding;
 
@@ -810,8 +840,12 @@ var runWebAppServer = function () {
       console.error(e && e.stack);
     }));
 
-    if (expectKeepalives)
+    if (expectKeepalives) {
       initKeepalive();
+    }
+    if (parentPid) {
+      startCheckForLiveParent(parentPid);
+    }
     return 'DAEMON';
   };
 };
