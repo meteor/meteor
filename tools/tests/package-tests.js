@@ -801,7 +801,7 @@ selftest.define("malformed package names", [], function () {
   });
 
   fs.writeFileSync(dataFile, JSON.stringify(data));
-/*
+
   run = s.run("search", "foo");
   run.match(/Neither packages nor releases .* could be found/);
   run.expectExit(0);
@@ -809,7 +809,7 @@ selftest.define("malformed package names", [], function () {
   var run = s.run("search", "bar");
   run.match(/Neither packages nor releases .* could be found/);
   run.expectExit(0);
-*/
+
   var run = s.run("create", "myapp");
   run.expectExit(0);
 
