@@ -59,7 +59,7 @@ var extractSemverPart = function (versionString) {
 //
 // [* XXX!] We don't quite satisfy the uniqueness and comparison properties in
 // these cases:
-// 1. If any of the version parts are greater than 250 (pretty unlikely?)
+// 1. If any of the version parts are greater than 100 (pretty unlikely?)
 // 2. If we're dealing with a prerelease version, we only look at the
 //    first two characters of each prerelease part. So, "1.0.0-beta" and
 //    "1.0.0-bear" will have the same magnitude.
@@ -75,11 +75,11 @@ PV.versionMagnitude = function (versionString) {
   var version = extractSemverPart(versionString);
   var v = semver.parse(version.semver);
 
-  return v.major * 250 * 250 * 250 +
-    v.minor * 250 * 250 +
-    v.patch * 250 +
-    version.wrapNum +
-    prereleaseIdentifierToFraction(v.prerelease);
+  return v.major * 100 * 100 +
+    v.minor * 100 +
+    v.patch +
+    version.wrapNum / 100 +
+    prereleaseIdentifierToFraction(v.prerelease) / 100 / 100;
 };
 
 // Accepts an array, eg ["rc", 2, 3]. Returns a number in the range
