@@ -5,7 +5,8 @@
 // This is reactive.
 
 /**
- * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user id, or `null` if no user is logged in. A
+ * reactive data source.
  * @locus Anywhere but publish functions
  */
 Meteor.userId = function () {
@@ -25,7 +26,9 @@ Accounts._setLoggingIn = function (x) {
 };
 
 /**
- * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.
+ * @summary True if a login method (such as `Meteor.loginWithPassword`,
+ * `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in
+ * progress. A reactive data source.
  * @locus Client
  */
 Meteor.loggingIn = function () {
@@ -36,7 +39,8 @@ Meteor.loggingIn = function () {
 // This calls userId, which is reactive.
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, or `null` if no user is logged in. A
+ * reactive data source.
  * @locus Anywhere but publish functions
  */
 Meteor.user = function () {
@@ -221,7 +225,8 @@ makeClientLoggedIn = function(userId, token, tokenExpires) {
 /**
  * @summary Log the user out.
  * @locus Client
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with no arguments on
+ * success, or with a single `Error` argument on failure.
  */
 Meteor.logout = function (callback) {
   Accounts.connection.apply('logout', [], {wait: true}, function(error, result) {
@@ -235,9 +240,11 @@ Meteor.logout = function (callback) {
 };
 
 /**
- * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
+ * @summary Log out other clients logged in as the current user, but does not
+ * log out the client that calls this function.
  * @locus Client
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with no arguments on
+ * success, or with a single `Error` argument on failure.
  */
 Meteor.logoutOtherClients = function (callback) {
   // We need to make two method calls: one to replace our current token,
@@ -339,11 +346,12 @@ Accounts._pageLoadLogin = function (attemptInfo) {
 // If our app has a Blaze, register the {{currentUser}} and {{loggingIn}}
 // global helpers.
 if (Package.blaze) {
-  /**
+  /**ß
    * @global
    * @name  currentUser
    * @isHelper true
-   * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in.
+   * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}`
+   * to check whether the user is logged in.
    */
   Package.blaze.Blaze.Template.registerHelper('currentUser', function () {
     return Meteor.user();
