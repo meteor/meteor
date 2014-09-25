@@ -1,34 +1,29 @@
 // for convenience
 var loginButtonsSession = Accounts._loginButtonsSession;
 
+// since we don't want to pass around the callback that we get from our event
+// handlers, we just make it a variable for the whole file
+var doneCallback;
 
-//
-// populate the session so that the appropriate dialogs are
-// displayed by reading variables set by accounts-base, which parses
-// special URLs. since accounts-ui depends on accounts-base, we are
-// guaranteed to have these set at this point.
-//
+Accounts.onResetPasswordLink(function (token, done) {
+  loginButtonsSession.set("resetPasswordToken", token);
+  doneCallback = done;
+});
 
-if (Accounts._resetPasswordToken) {
-  loginButtonsSession.set('resetPasswordToken', Accounts._resetPasswordToken);
-}
+Accounts.onEnrollAccountLink(function (token, done) {
+  loginButtonsSession.set("enrollAccountToken", token);
+  doneCallback = done;
+});
 
-if (Accounts._enrollAccountToken) {
-  loginButtonsSession.set('enrollAccountToken', Accounts._enrollAccountToken);
-}
+Accounts.onVerifyEmailLink(function (token, done) {
+  Accounts.verifyEmail(token, function (error) {
+    if (! error) {
+      loginButtonsSession.set('justVerifiedEmail', true);
+    }
 
-// Needs to be in Meteor.startup because of a package loading order
-// issue. We can't be sure that accounts-password is loaded earlier
-// than accounts-ui so Accounts.verifyEmail might not be defined.
-Meteor.startup(function () {
-  if (Accounts._verifyEmailToken) {
-    Accounts.verifyEmail(Accounts._verifyEmailToken, function(error) {
-      Accounts._enableAutoLogin();
-      if (!error)
-        loginButtonsSession.set('justVerifiedEmail', true);
-      // XXX show something if there was an error.
-    });
-  }
+    done();
+    // XXX show something if there was an error.
+  });
 });
 
 
@@ -46,7 +41,7 @@ Template._resetPasswordDialog.events({
   },
   'click #login-buttons-cancel-reset-password': function () {
     loginButtonsSession.set('resetPasswordToken', null);
-    Accounts._enableAutoLogin();
+    doneCallback();
   }
 });
 
@@ -64,7 +59,7 @@ var resetPassword = function () {
       } else {
         loginButtonsSession.set('resetPasswordToken', null);
         loginButtonsSession.set('justResetPassword', true);
-        Accounts._enableAutoLogin();
+        doneCallback();
       }
     });
 };
@@ -105,7 +100,7 @@ Template._enrollAccountDialog.events({
   },
   'click #login-buttons-cancel-enroll-account': function () {
     loginButtonsSession.set('enrollAccountToken', null);
-    Accounts._enableAutoLogin();
+    doneCallback();
   }
 });
 
@@ -122,7 +117,7 @@ var enrollAccount = function () {
         loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
         loginButtonsSession.set('enrollAccountToken', null);
-        Accounts._enableAutoLogin();
+        doneCallback();
       }
     });
 };
