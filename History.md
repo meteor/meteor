@@ -3,6 +3,12 @@
 * Rename `{{> UI.dynamic}}` to `{{> Template.dynamic}}`, and likewise
   with `UI.contentBlock` and `UI.elseBlock`.
 
+* Deprecate the `amplify`, `backbone`, `bootstrap`, and `d3` integration
+  packages in favor of community alternatives.  These packages will no
+  longer be maintained by MDG.
+
+* Rename the `showdown` package to `markdown`.
+
 ## v0.9.2.2
 
 * Fix regression in 0.9.2 that prevented some users from accessing the
