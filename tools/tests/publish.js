@@ -284,7 +284,7 @@ selftest.define("do-not-update-to-rcs",
   // Publish the first version.
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(15);
+    run.waitSecs(30);
     run.expectExit(0);
     run.match("Done");
   });
@@ -300,15 +300,6 @@ selftest.define("do-not-update-to-rcs",
 
   // Now publish an 1.0.4-rc.3.
   s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
-  s.cd(fullPackageName, function () {
-    run = s.run("publish");
-    run.waitSecs(15);
-    run.expectExit(0);
-    run.match("Done");
-  });
-
-  // Now publish an 1.0.4-rc.4.
-  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -367,11 +358,29 @@ selftest.define("do-not-update-to-rcs",
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
+    run.match("1.0.4-rc.3"); // We got the rc version.
+  });
+
+  // Now publish an 1.0.4-rc.4.
+  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  s.cd('mapp', function () {
+    // If we run list, we see that we might want to upgrade.
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
     run.match("1.0.4-rc.3");
-  //  run.match("New versions");
+    run.match("New versions");
     run.expectExit(0);
 
-    run = s.run("update", "packages-only");
+    // And if we run update, we will get the new rc.
+    run = s.run("update", "--packages-only");
     run.waitSecs(10);
     run.match("1.0.4-rc.4");
     run.expectExit(0);
