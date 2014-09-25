@@ -4,12 +4,14 @@ Tinytest.add(
 
     var nameVar = new ReactiveVar;
     var dataVar = new ReactiveVar;
-    tmpl.templateName = function () {
-      return nameVar.get();
-    };
-    tmpl.templateData = function () {
-      return dataVar.get();
-    };
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      },
+      templateData: function () {
+        return dataVar.get();
+      }
+    });
 
     // No template chosen
     var div = renderToDiv(tmpl);
@@ -35,9 +37,11 @@ Tinytest.add(
     var tmpl = Template.ui_dynamic_test_no_data;
 
     var nameVar = new ReactiveVar;
-    tmpl.templateName = function () {
-      return nameVar.get();
-    };
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      }
+    });
 
     var div = renderToDiv(tmpl);
     test.equal(canonicalizeHtml(div.innerHTML), "");
@@ -56,12 +60,14 @@ Tinytest.add(
 
     var nameVar = new ReactiveVar();
     var dataVar = new ReactiveVar();
-    tmpl.templateName = function () {
-      return nameVar.get();
-    };
-    tmpl.context = function () {
-      return dataVar.get();
-    };
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      },
+      context: function () {
+        return dataVar.get();
+      }
+    });
 
     var div = renderToDiv(tmpl);
     test.equal(canonicalizeHtml(div.innerHTML), "");
@@ -88,12 +94,14 @@ Tinytest.add(
 
     var nameVar = new ReactiveVar();
     var dataVar = new ReactiveVar();
-    tmpl.templateName = function () {
-      return nameVar.get();
-    };
-    tmpl.context = function () {
-      return dataVar.get();
-    };
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      },
+      context: function () {
+        return dataVar.get();
+      }
+    });
 
     var div = renderToDiv(tmpl);
     test.equal(canonicalizeHtml(div.innerHTML), "");
@@ -135,9 +143,9 @@ Tinytest.add(
     var subtmpl = Template.ui_dynamic_test_falsey_context_sub;
 
     var subtmplContext;
-    subtmpl.foo = function () {
+    subtmpl.helpers({foo: function () {
       subtmplContext = this;
-    };
+    }});
     var div = renderToDiv(tmpl);
 
     // Because `this` can only be an object, Blaze normalizes falsey
@@ -152,12 +160,14 @@ Tinytest.add(
 
     var nameVar = new ReactiveVar;
     var dataVar = new ReactiveVar;
-    tmpl.templateName = function () {
-      return nameVar.get();
-    };
-    tmpl.templateData = function () {
-      return dataVar.get();
-    };
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      },
+      templateData: function () {
+        return dataVar.get();
+      }
+    });
 
     // No template chosen
     var div = renderToDiv(tmpl);
