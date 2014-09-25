@@ -1,6 +1,8 @@
-Template.headline.release = function () {
-  return Meteor.release ? "0.9.2.2" : "(checkout)";
-};
+Template.headline.helpers({
+  release: function () {
+    return Meteor.release ? "0.9.2.2" : "(checkout)";
+  }
+});
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -439,44 +441,46 @@ var name_to_id = function (name) {
   return x;
 };
 
-Template.nav.sections = function () {
-  var ret = [];
-  var walk = function (items, depth) {
-    _.each(items, function (item) {
-      // Work around (eg) accidental trailing commas leading to spurious holes
-      // in IE8.
-      if (!item)
-        return;
-      if (item instanceof Array)
-        walk(item, depth + 1);
-      else {
-        if (typeof(item) === "string")
-          item = {name: item};
-        ret.push(_.extend({
-          type: "section",
-          id: item.name && name_to_id(item.name) || undefined,
-          depth: depth,
-          style: ''
-        }, item));
-      }
-    });
-  };
+Template.nav.helpers({
+  sections: function () {
+    var ret = [];
+    var walk = function (items, depth) {
+      _.each(items, function (item) {
+        // Work around (eg) accidental trailing commas leading to spurious holes
+        // in IE8.
+        if (!item)
+          return;
+        if (item instanceof Array)
+          walk(item, depth + 1);
+        else {
+          if (typeof(item) === "string")
+            item = {name: item};
+          ret.push(_.extend({
+            type: "section",
+            id: item.name && name_to_id(item.name) || undefined,
+            depth: depth,
+            style: ''
+          }, item));
+        }
+      });
+    };
 
-  walk(toc, 1);
-  return ret;
-};
+    walk(toc, 1);
+    return ret;
+  },
 
-Template.nav.type = function (what) {
-  return this.type === what;
-};
+  type: function (what) {
+    return this.type === what;
+  },
 
-Template.nav.maybe_current = function () {
-  return Session.equals("section", this.id) ? "current" : "";
-};
+  maybe_current: function () {
+    return Session.equals("section", this.id) ? "current" : "";
+  },
 
-Template.nav_section.depthIs = function (n) {
-  return this.depth === n;
-};
+  depthIs: function (n) {
+    return this.depth === n;
+  }
+});
 
 // Show hidden TOC when menu icon is tapped
 Template.nav.events({

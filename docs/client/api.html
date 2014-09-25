@@ -1633,14 +1633,18 @@ Example:
     {{lt}}/template>
 
     ///// in JS file
-    Template.postsView.posts = function() {
-      return Posts.find();
-    };
+    Template.postsView.helpers({
+      posts: function() {
+        return Posts.find();
+      }
+    });
 
-    Template.postItem.postClass = function() {
-      return Session.equals("selectedPost", this._id) ?
-        "selected" : "";
-    };
+    Template.postItem.helpers({
+      postClass: function() {
+        return Session.equals("selectedPost", this._id) ?
+          "selected" : "";
+      }
+    });
 
     Template.postItem.events({
       'click': function() {
@@ -2219,12 +2223,6 @@ Example:
 
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
-
-The following syntax is a shorthand for when you only have one helper to define:
-
-    Template.myTemplate.foo = function () {
-      return Session.get("foo");
-    };
 
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).

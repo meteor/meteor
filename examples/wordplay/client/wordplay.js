@@ -43,33 +43,35 @@ var clear_selected_positions = function () {
 ////// offers a button to start a fresh game.
 //////
 
-Template.lobby.show = function () {
-  // only show lobby if we're not in a game
-  return !game();
-};
+Template.lobby.helpers({
+  show: function () {
+    // only show lobby if we're not in a game
+    return !game();
+  },
 
-Template.lobby.waiting = function () {
-  var players = Players.find({_id: {$ne: Session.get('player_id')},
-                              name: {$ne: ''},
-                              game_id: {$exists: false}});
+  waiting: function () {
+    var players = Players.find({_id: {$ne: Session.get('player_id')},
+                                name: {$ne: ''},
+                                game_id: {$exists: false}});
 
-  return players;
-};
+    return players;
+  },
 
-Template.lobby.count = function () {
-  var players = Players.find({_id: {$ne: Session.get('player_id')},
-                              name: {$ne: ''},
-                              game_id: {$exists: false}});
+  count: function () {
+    var players = Players.find({_id: {$ne: Session.get('player_id')},
+                                name: {$ne: ''},
+                                game_id: {$exists: false}});
 
-  return players.count();
-};
+    return players.count();
+  },
 
-Template.lobby.disabled = function () {
-  var me = player();
-  if (me && me.name)
-    return '';
-  return 'disabled';
-};
+  disabled: function () {
+    var me = player();
+    if (me && me.name)
+      return '';
+    return 'disabled';
+  }
+});
 
 var trim = function (string) { return string.replace(/^\s+|\s+$/g, ''); };
 
@@ -92,26 +94,28 @@ var SPLASH = ['','','','',
               'P', 'L', 'A', 'Y',
               '','','',''];
 
-Template.board.square = function (i) {
-  var g = game();
-  return g && g.board && g.board[i] || SPLASH[i];
-};
+Template.board.helpers({
+  square: function (i) {
+    var g = game();
+    return g && g.board && g.board[i] || SPLASH[i];
+  },
 
-Template.board.selected = function (i) {
-  return Session.get('selected_' + i);
-};
+  selected: function (i) {
+    return Session.get('selected_' + i);
+  },
 
-Template.board.clock = function () {
-  var clock = game() && game().clock;
+  clock: function () {
+    var clock = game() && game().clock;
 
-  if (!clock || clock === 0)
-    return;
+    if (!clock || clock === 0)
+      return;
 
-  // format into M:SS
-  var min = Math.floor(clock / 60);
-  var sec = clock % 60;
-  return min + ':' + (sec < 10 ? ('0' + sec) : sec);
-};
+    // format into M:SS
+    var min = Math.floor(clock / 60);
+    var sec = clock % 60;
+    return min + ':' + (sec < 10 ? ('0' + sec) : sec);
+  }
+});
 
 Template.board.events({
   'click .square': function (evt) {
@@ -127,9 +131,11 @@ Template.board.events({
 ////// scratchpad is where we enter new words.
 //////
 
-Template.scratchpad.show = function () {
-  return game() && game().clock > 0;
-};
+Template.scratchpad.helpers({
+  show: function () {
+    return game() && game().clock > 0;
+  }
+});
 
 Template.scratchpad.events({
   'click button, keyup input': function (evt) {
@@ -151,9 +157,11 @@ Template.scratchpad.events({
   }
 });
 
-Template.postgame.show = function () {
-  return game() && game().clock === 0;
-};
+Template.postgame.helpers({
+  show: function () {
+    return game() && game().clock === 0;
+  }
+});
 
 Template.postgame.events({
   'click button': function (evt) {
@@ -165,37 +173,43 @@ Template.postgame.events({
 ////// scores shows everyone's score and word list.
 //////
 
-Template.scores.show = function () {
-  return !!game();
-};
+Template.scores.helpers({
+  show: function () {
+    return !!game();
+  },
 
-Template.scores.players = function () {
-  return game() && game().players;
-};
+  players: function () {
+    return game() && game().players;
+  }
+});
 
-Template.player.winner = function () {
-  var g = game();
-  if (g.winners && _.include(g.winners, this._id))
-    return 'winner';
-  return '';
-};
+Template.player.helpers({
+  winner: function () {
+    var g = game();
+    if (g.winners && _.include(g.winners, this._id))
+      return 'winner';
+    return '';
+  },
 
-Template.player.total_score = function () {
-  var words = Words.find({game_id: game() && game()._id,
-                          player_id: this._id});
+  total_score: function () {
+    var words = Words.find({game_id: game() && game()._id,
+                            player_id: this._id});
 
-  var score = 0;
-  words.forEach(function (word) {
-    if (word.score)
-      score += word.score;
-  });
-  return score;
-};
+    var score = 0;
+    words.forEach(function (word) {
+      if (word.score)
+        score += word.score;
+    });
+    return score;
+  }
+});
 
-Template.words.words = function () {
-  return Words.find({game_id: game() && game()._id,
-                    player_id: this._id});
-};
+Template.words.helpers({
+  words: function () {
+    return Words.find({game_id: game() && game()._id,
+                       player_id: this._id});
+  }
+});
 
 
 //////

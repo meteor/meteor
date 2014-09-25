@@ -74,7 +74,7 @@ see the variable without having the client also reload.
 
 Add to leaderboard.js:
 
-    Template.leaderboard.available = Autoupdate.newClientAvailable;
+    Template.leaderboard.helpers({available: Autoupdate.newClientAvailable});
 
 And add `{{available}}` to the leaderboard template in
 leaderboard.html.
