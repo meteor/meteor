@@ -64,7 +64,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
   } else if (lookupTemplate && (name in Blaze.Template) &&
              (Blaze.Template[name] instanceof Blaze.Template)) {
     return Blaze.Template[name];
-  } else if (Blaze._globalHelpers[name]) {
+  } else if (Blaze._globalHelpers[name] != null) {
     return wrapHelper(bindDataContext(Blaze._globalHelpers[name]));
   } else {
     return function () {

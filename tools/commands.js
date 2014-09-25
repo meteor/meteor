@@ -152,6 +152,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'run',
+  pretty: true,
   requiresApp: true,
   maxArgs: Infinity,
   options: {
