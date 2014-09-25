@@ -138,7 +138,6 @@ selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], func
 
 });
 
-
 selftest.define("list-with-a-new-version",
                 ["slow", "net", "test-package-server"], function () {
   var s = new Sandbox;
@@ -255,17 +254,90 @@ selftest.define("list-with-a-new-version",
     run.expectExit(0);
 
     // It works if ask for it, though.
-    run = s.run("add", fullPackageName + "@1.0.4-rc3");
+    run = s.run("add", fullPackageName + "@1.0.4-rc.3");
     run.waitSecs(100);
     run.expectExit(0);
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.4-rc3 ");
+    run.match("1.0.4-rc.3 ");
     run.forbidAll("New versions");
     run.expectExit(0);
   });
 });
+
+
+selftest.define("do-not-update-to-rcs",
+                ["slow", "net", "test-package-server"], function () {
+  var s = new Sandbox;
+
+  var username = "test";
+  var password = "testtest";
+
+  testUtils.login(s, username, password);
+  var packageName = utils.randomToken();
+  var fullPackageName = username + ":" + packageName;
+  var run;
+
+  // Now, create a package.
+  s.createPackage(fullPackageName, "package-of-two-versions");
+  // Publish the first version.
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Now publish an 1.0.4-rc.3.
+  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Create an app. Add the package to it. Check that list shows the package, at
+  // the non-rc version.
+  run = s.run('create', 'mapp');
+  run.waitSecs(15);
+  run.expectExit(0);
+  s.cd('mapp', function () {
+    run = s.run("add", fullPackageName);
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.0 ");
+    run.forbidAll("New versions");
+    run.expectExit(0);
+
+    // Now, let's try to update. It should not work, since update will not bring
+    // you to an rc version automatically (unless it has to).
+    run = s.run("update", "packages-only");
+    run.waitSecs(10);
+    run.match("Your packages are at their latest compatible versions.");
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.0 ");
+
+    // It works if ask for it, though.
+    run = s.run("add", fullPackageName + "@1.0.4-rc.3");
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.4-rc.3 ");
+    run.forbidAll("New versions");
+    run.expectExit(0);
+  });
+});
+
 
 selftest.define("package-depends-on-either-version",
     ["slow", "net", "test-package-server"], function () {
@@ -352,5 +424,4 @@ selftest.define("package-depends-on-either-version",
   depend = readVersions();
   selftest.expectEqual(depend[fullPackageNameDep], "2.0.0");
   selftest.expectEqual(depend[fullPackageAnother], "1.0.0");
-
 });
