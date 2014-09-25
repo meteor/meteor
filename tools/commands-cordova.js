@@ -402,11 +402,18 @@ var installPlugin = function (cordovaPath, name, version, settings) {
   }
 };
 
-var uninstallPlugin = function (cordovaPath, name) {
+var uninstallPlugin = function (cordovaPath, name, isFromTarballUrl) {
   verboseLog('Uninstalling a plugin', name);
   try {
     execFileSyncOrThrow(localCordova, ['plugin', 'rm', name],
       { cwd: cordovaPath });
+
+    if (isFromTarballUrl) {
+      // also remove from tarball-url-based plugins lock
+      var lock = getTarballPluginsLock(cordovaPath);
+      delete lock[name];
+      writeTarballPluginsLock(cordovaPath, lock);
+    }
   } catch (err) {
     // Catch when an uninstall fails, because it might just be a dependency
     // issue. For example, plugin A depends on plugin B and we try to remove
@@ -532,9 +539,6 @@ var ensureCordovaPlugins = function (localPath, options) {
       'utf8');
   }
 
-  // XXX compare the latest used sha's with the currently required sha's for
-  // plugins fetched from a github/tarball url.
-
   var installedPlugins = getInstalledPlugins(cordovaPath);
 
   // Due to the dependency structure of Cordova plugins, it is impossible to
@@ -556,8 +560,7 @@ var ensureCordovaPlugins = function (localPath, options) {
     // XXX there is a hack here that never updates a package if you are
     // trying to install it from a URL, because we can't determine if
     // it's the right version or not
-    if (! _.has(installedPlugins, name) ||
-      (installedPlugins[name] !== version && ! utils.isUrlWithSha(version))) {
+    if (! _.has(installedPlugins, name) || installedPlugins[name] !== version) {
       // The version of the plugin has changed, or we do not contain a plugin.
       shouldReinstallPlugins = true;
     }
@@ -578,8 +581,8 @@ var ensureCordovaPlugins = function (localPath, options) {
     var uninstallAllPlugins = function () {
       installedPlugins = getInstalledPlugins(cordovaPath);
       while (_.size(installedPlugins)) {
-        _.each(_.keys(installedPlugins), function (name) {
-          uninstallPlugin(cordovaPath, name);
+        _.each(installedPlugins, function (version, name) {
+          uninstallPlugin(cordovaPath, name, utils.isUrlWithSha(version));
         });
         installedPlugins = getInstalledPlugins(cordovaPath);
       }
