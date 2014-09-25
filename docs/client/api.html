@@ -2256,12 +2256,8 @@ This callback fires once and is the first callback to fire.  Every
 `created` callback with a certain template instance object in `this`,
 you will eventually get a `destroyed` callback for the same object.
 
-{{#note}}
-  The `created` callback is not currently very useful. In a later release, the
-  template instance object (or something like it) will be visible from helper
-  functions, and `created` will be a useful way to set up values that are read
-  from helpers. For now, you probably just want to use `rendered`.
-{{/note}}
+`created` is a useful way to set up values on template instance that are
+read from template helpers using `Template.instance()`.
 
 {{> autoApiBox "Template#destroyed"}}
 
