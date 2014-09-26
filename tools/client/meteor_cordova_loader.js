@@ -42,15 +42,10 @@
     return p.slice(1);
   };
 
-  var randomInt = function (min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
-
   var loadTries = 0;
   var loadFromLocation = function (location) {
     var cordovaRoot = decodeURI(window.location.href).replace(/\/index.html$/, '/').replace(/^file:\/\/?/, '');
-    var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
-    var port = randomInt(10000, 50000);
+    var httpd = cordova && cordova.plugins && cordova.plugins.CordovaUpdate;
 
     var retry = function () {
       loadTries++;
@@ -62,27 +57,14 @@
       }
     };
 
-    httpd.getURL(function(url){
-      if (url.length > 0) {
-        // if server is already running, stop it and retry
-        httpd.stopServer(retry, retry);
-      } else {
-        console.log(DEBUG_TAG + 'Starting the server on port ' + port);
-        httpd.startServer({
-          'www_root' : location,
-          'port' : port,
-          'cordovajs_root': cordovaRoot
-        }, function (url) {
-          // go to the new proxy url
-          window.location = url;
-        }, function (error) {
-          // failed to start a server, is port already in use?
-          retry();
-        });
-      }
-
-    }, function () {
-      // failed to call to server: retry
+    httpd.startServing({
+      'www_root' : location,
+      'cordovajs_root': cordovaRoot
+    }, function (url) {
+      // go to the new proxy url
+      window.location = url;
+    }, function (error) {
+      // failed to start a server, is port already in use?
       retry();
     });
   };

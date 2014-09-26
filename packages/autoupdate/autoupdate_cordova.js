@@ -38,23 +38,16 @@ var writeFile = function (directoryPath, fileName, content, cb) {
 var restartServer = function (location) {
   console.log(DEBUG_TAG + 'restartserver with location ' + location);
   var fail = function (err) { console.log(DEBUG_TAG + 'something failed: ' + err.message) };
-  var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
+  var httpd = cordova && cordova.plugins && cordova.plugins.CordovaUpdate;
 
   if (! httpd) {
     fail(new Error('no httpd'));
     return;
   }
 
-  var startServer = function (cordovajsRoot, prevUrl) {
-    var port;
-    if (prevUrl) {
-      var parts = prevUrl.split(':');
-      if (parts.length)
-        port = parseInt(parts[parts.length - 1], 10);
-    }
+  var startServer = function (cordovajsRoot) {
     httpd.startServer({
       'www_root' : location,
-      'port' : port,
       'cordovajs_root': cordovajsRoot
     }, function (url) {
       Package.reload.Reload._reload();
@@ -62,17 +55,7 @@ var restartServer = function (location) {
   };
 
   httpd.getCordovajsRoot(function (cordovajsRoot) {
-    httpd.getURL(function (url) {
-      if (url.length > 0) {
-        // already have a server running, stop it
-        httpd.stopServer(function () {
-          startServer(cordovajsRoot, url);
-        }, fail);
-      } else {
-        // just start a server
-        startServer(cordovajsRoot);
-      }
-    }, fail);
+    startServer(cordovajsRoot);
   }, fail);
 };
 
