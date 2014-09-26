@@ -1,4 +1,8 @@
 var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
+var log = function (msg) {
+  console.log(DEBUG_TAG + msg);
+};
+
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
@@ -36,8 +40,8 @@ var writeFile = function (directoryPath, fileName, content, cb) {
 };
 
 var restartServer = function (location) {
-  console.log(DEBUG_TAG + 'restartserver with location ' + location);
-  var fail = function (err) { console.log(DEBUG_TAG + 'something failed: ' + err.message) };
+  log('restartServer with location ' + location);
+  var fail = function (err) { log("Unexpected error in restartServer: " + err.message) };
   var httpd = cordova && cordova.plugins && cordova.plugins.CordovaUpdate;
 
   if (! httpd) {
@@ -70,7 +74,7 @@ var onNewVersion = function () {
 
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
-      console.log(DEBUG_TAG + 'failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
+      log('Failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
     }
 
@@ -94,7 +98,7 @@ var onNewVersion = function () {
           function (err) {
 
         if (err) {
-          console.log(DEBUG_TAG + "Failed to write manifest.json");
+          log("Failed to write manifest.json: " + err);
           // XXX do something smarter?
           return;
         }
@@ -104,7 +108,7 @@ var onNewVersion = function () {
         writeFile(localPathPrefix, 'version', version,
             function (err) {
           if (err) {
-            console.log(DEBUG_TAG + "Failed to write version");
+            log("Failed to write version: " + err);
             return;
           }
 
@@ -137,10 +141,10 @@ var onNewVersion = function () {
         }, function (err) {
           // It failed, try again if we have tried less than 5 times.
           if (tries++ < 5) {
+            log("Download error, will retry (#" + tries + "): " + uri);
             tryDownload();
           } else {
-            console.log(DEBUG_TAG + 'fail source: ', error.source);
-            console.log(DEBUG_TAG + 'fail target: ', error.target);
+            log('Download failed: ' + err + ", source=" + err.source + ", target=" + err.target);
           }
         });
       };
@@ -158,8 +162,8 @@ var failures = 0;
 
 Autoupdate._retrySubscription = function () {
  Meteor.subscribe("meteor_autoupdate_clientVersions", {
-    onError: function (error) {
-      Meteor._debug("autoupdate subscription failed:", error);
+    onError: function (err) {
+      Meteor._debug("autoupdate subscription failed:", err);
       failures++;
       retry.retryLater(failures, function () {
         // Just retry making the subscription, don't reload the whole
