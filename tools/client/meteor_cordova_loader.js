@@ -7,7 +7,7 @@
  */
 
 (function () {
-  var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
+  var DEBUG_TAG = 'METEOR CORDOVA DEBUG (meteor_cordova_loader.js) ';
   var log = function (msg) {
     console.log(DEBUG_TAG + msg);
   };

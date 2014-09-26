@@ -1,4 +1,4 @@
-var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
+var DEBUG_TAG = 'METEOR CORDOVA DEBUG (autoupdate_cordova.js) ';
 var log = function (msg) {
   console.log(DEBUG_TAG + msg);
 };
