@@ -1,6 +1,8 @@
-Template.headline.release = function () {
-  return Meteor.release ? "0.9.3" : "(checkout)";
-};
+Template.headline.helpers({
+  release: function () {
+    return Meteor.release ? "0.9.3" : "(checkout)";
+  }
+});
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
