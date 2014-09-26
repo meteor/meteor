@@ -57,7 +57,7 @@
       }
     };
 
-    httpd.startServing({
+    httpd.startServer({
       'www_root' : location,
       'cordovajs_root': cordovaRoot
     }, function (url) {
