@@ -16,22 +16,19 @@ Tinytest.add("accounts - parse urls for accounts-password",
         test.equal(email, null);
         test.equal(action, hashPart);
 
-        actionsParsed.push(action);
-      });
-
-      // test new URLs with token and email
-      var fakeEmail = "sashko@meteor.com";
-      var hashTokenAndEmail = "#/" + hashPart + "/" + fakeToken + "/" + fakeEmail;
-      AccountsTest.attemptToMatchHash(hashTokenAndEmail,
-          function (token, email, action) {
-        test.equal(token, fakeToken);
-        test.equal(email, fakeEmail);
-        test.equal(action, hashPart);
+        // XXX COMPAT WITH 0.9.3
+        if (urlPart === "reset-password") {
+          test.equal(Accounts._resetPasswordToken, fakeToken);
+        } else if (urlPart === "verify-email") {
+          test.equal(Accounts._verifyEmailToken, fakeToken);
+        } else if (urlPart === "enroll-account") {
+          test.equal(Accounts._enrollAccountToken, fakeToken);
+        }
 
         actionsParsed.push(action);
       });
     });
 
-    // make sure each action is called twice, in order
-    test.equal(actionsParsed, _.flatten(_.zip(actions, actions)));
+    // make sure each action is called once, in order
+    test.equal(actionsParsed, actions);
   });

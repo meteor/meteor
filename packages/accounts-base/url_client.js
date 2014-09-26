@@ -10,30 +10,18 @@ var attemptToMatchHash = function (hash, success) {
     var token;
     var email;
 
-    var tokenWithEmailRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)/(.*)$");
-    var match = hash.match(tokenWithEmailRegex);
+    tokenRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)$");
+    match = hash.match(oldTokenRegex);
 
     if (match) {
-      // get the token and email from the URL
       token = match[1];
-      email = match[2];
+      email = null; // no email in the URL
     } else {
-      // XXX COMPAT WITH 0.9.3
-      // This is to support urls generated with the old system that doesn't
-      // include the email address in the link.
-      var oldTokenRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)$");
-      match = hash.match(oldTokenRegex);
-
-      if (match) {
-        token = match[1];
-        email = null; // no email in the URL
-      } else {
-        return;
-      }
+      return;
     }
 
     // Do some stuff with the token and email we matched
-    success(token, email, urlPart);
+    success(token, urlPart);
   });
 };
 
@@ -47,7 +35,7 @@ var enableAutoLogin = function () {
 
 // Actually call the function, has to happen in the top level so that we can
 // mess with autoLoginEnabled.
-attemptToMatchHash(window.location.hash, function (token, email, urlPart) {
+attemptToMatchHash(window.location.hash, function (token, urlPart) {
   // put login in a suspended state to wait for the interaction to finish
   autoLoginEnabled = false;
 
@@ -58,7 +46,7 @@ attemptToMatchHash(window.location.hash, function (token, email, urlPart) {
   Meteor.startup(function () {
     // if a callback has been registered for this kind of token, call it
     if (accountsCallbacks[urlPart]) {
-      accountsCallbacks[urlPart](token, email, enableAutoLogin);
+      accountsCallbacks[urlPart](token, enableAutoLogin);
     }
   });
 
@@ -89,7 +77,6 @@ AccountsTest = {
  *
  * 1. A password reset token that can be passed to
  * [`Accounts.resetPassword`](#accounts_resetpassword)
- * 2. The email address to which the email was sent
  * 3. A function to call when the password reset UI flow is complete. The normal
  * login process is suspended until this function is called, so that the
  * password for user A can be reset even if user B was logged in.
@@ -111,7 +98,6 @@ Accounts.onResetPasswordLink = function (callback) {
  *
  * 1. An email verification token that can be passed to
  * [`Accounts.verifyEmail`](#accounts_verifyemail)
- * 2. The email address to which the email was sent
  * 3. A function to call when the email verification UI flow is complete.
  * The normal login process is suspended until this function is called, so
  * that the user can be notified that they are verifying their email before
@@ -135,7 +121,6 @@ Accounts.onVerifyEmailLink = function (callback) {
  * 1. A password reset token that can be passed to
  * [`Accounts.resetPassword`](#accounts_resetpassword) to give the newly
  * enrolled account a password.
- * 2. The email address to which the email was sent
  * 3. A function to call when the enrollment UI flow is complete.
  * The normal login process is suspended until this function is called, so that
  * user A can be enrolled even if user B was logged in.
