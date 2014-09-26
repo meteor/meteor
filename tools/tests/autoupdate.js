@@ -6,9 +6,7 @@ var config = require("../config.js");
 var Sandbox = selftest.Sandbox;
 
 var editPackageMetadata = function (sandbox, f) {
-  var dataFile = path.join(sandbox.warehouse,
-                           'package-metadata', 'v1.1',
-                           config.getLocalPackageCacheFilename());
+  var dataFile = config.getPackageStorage({root: sandbox.warehouse});
   var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
   f(data);
   fs.writeFileSync(dataFile, JSON.stringify(data));

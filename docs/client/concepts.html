@@ -790,6 +790,12 @@ things). However, we will still write the new versions.json file.
 
 {{/note}}
 
+Meteor uses extended semver versioning for its packages: that means that the version
+number has three parts separated by dots: major version, minor version and patch version
+(for example: 1.2.3) with an optional pre-release version. You can read more about it here
+(www.semver.org). Additionally, because some meteor packages wrap external libraries,
+Meteor supports the convention of using _ to denote a wrap number.
+
 You can read more about [`package.js`](#packagejs) files in the API
 section.
 

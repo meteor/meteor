@@ -38,12 +38,9 @@ var packageList = function (_currentProjectForTest) {
   buildmessage.assertInCapture();
   var directDeps = (_currentProjectForTest || project.project).getConstraints();
 
-  var versions;
-  if (_currentProjectForTest) {
-    versions = _currentProjectForTest.dependencies;
-  } else {
-    versions = project.project.getVersions({ dontRunConstraintSolver: true });
-  }
+  var versions = (_currentProjectForTest || project.project).getVersions({
+    dontRunConstraintSolver: true
+  });
 
   return _.map(
     versions,
