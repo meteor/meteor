@@ -134,7 +134,7 @@ selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], func
   run.waitSecs(15);
   run.expectExit(0);
   run.match("Done");
-  run.match("WARNING");
+  run.matchErr("WARNING");
 
 });
 
