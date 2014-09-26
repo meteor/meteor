@@ -39,18 +39,19 @@ physical device. "ios-device" will open XCode and allow you to manually run
 the app on a device.
 
 Options:
-  --port, -p     Port to listen on (instead of the default 3000). Also
-                 uses port N+1 and a port specified by --app-port.
-                 Specify as --port=host:port to bind to a specific interface.
-  --mobile-port  Port (or interface, if specified as --mobile-port=host:port)
-                 where mobile builds connect to the Meteor server. Defaults
-                 to the host and port that the Meteor server binds to.
-  --production   Simulate production mode. Minify and bundle CSS and JS files.
-  --raw-logs     Run without parsing logs from stdout and stderr.
-  --settings     Set optional data for Meteor.settings on the server
-  --release      Specify the release of Meteor to use
-  --program      The program in the app to run (Advanced)
-  --verbose      Print all output from builds logs.
+  --port, -p       Port to listen on (instead of the default 3000). Also
+                   uses port N+1 and a port specified by --app-port.
+                   Specify as --port=host:port to bind to a specific interface.
+  --mobile-server  Location where mobile builds connect to the Meteor server.
+                   Defaults to the host and port that the Meteor server
+                   binds to. Can include a URL scheme (for example,
+                   --mobile-server=https://example.com:443).
+  --production     Simulate production mode. Minify and bundle CSS and JS files.
+  --raw-logs       Run without parsing logs from stdout and stderr.
+  --settings       Set optional data for Meteor.settings on the server
+  --release        Specify the release of Meteor to use
+  --program        The program in the app to run (Advanced)
+  --verbose        Print all output from builds logs.
 
 
 >>> create
@@ -199,12 +200,15 @@ build artifacts:
 
 
 Options:
-  --debug        build in debug mode (don't minify, etc)
-  --directory    output a directory (rather than a tarball) for the
-                 application server bundle. If the output location exists,
-                 it will be recursively deleted first.
-  --settings     set optional data for Meteor.settings for the build-time
-                 settings (such as settings required by Cordova plugins).
+  --debug          build in debug mode (don't minify, etc)
+  --directory      output a directory (rather than a tarball) for the
+                   application server bundle. If the output location exists,
+                   it will be recursively deleted first.
+  --settings       set optional data for Meteor.settings for the build-time
+                   settings (such as settings required by Cordova plugins).
+  --mobile-server  Location where mobile builds connect to the Meteor server.
+                   Defaults to localhost:3000. Can include a URL scheme
+                   (for example, --mobile-server=https://example.com:443).
 
 
 >>> mongo
@@ -358,6 +362,11 @@ to try the tests against many different browser versions.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --mobile-server   If running tests in an emulator or on a mobile device,
+                    the location where mobile builds connect to the Meteor
+                    server. Defaults to the host and port that the Meteor
+                    server binds to. Can include a URL scheme (for example,
+                    --mobile-server=https://example.com:443).
   --deploy          Optionally, specify a domain to deploy to, rather than
                     running locally.
   --production      Simulate production mode. Minify and bundle CSS and JS files.

@@ -11,6 +11,9 @@ var fs = require('fs');
 
 var utils = exports;
 
+exports.hasScheme = function (str) {
+  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+};
 
 // Returns a pretty list suitable for showing to the user. Input is an
 // array of objects with keys 'name' and 'description'.
