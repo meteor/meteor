@@ -475,8 +475,10 @@ Template.nav.helpers({
 
   maybe_current: function () {
     return Session.equals("section", this.id) ? "current" : "";
-  },
+  }
+});
 
+Template.nav_section.helpers({
   depthIs: function (n) {
     return this.depth === n;
   }
