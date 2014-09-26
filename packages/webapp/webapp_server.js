@@ -58,9 +58,10 @@ var initKeepalive = function () {
   }, 3000);
 };
 
-// Check that we have a pid that looks like a decimal integer.
+// Check that we have a pid that looks like an integer (non-decimal
+// integer is okay).
 var validPid = function (pid) {
-  return "" + parseInt(pid, 10) === "" + pid;
+  return ! isNaN(+pid);
 };
 
 // As a replacement to the old keepalives mechanism, check for a running
