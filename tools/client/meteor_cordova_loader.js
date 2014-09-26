@@ -8,6 +8,9 @@
 
 (function () {
   var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
+  var log = function (msg) {
+    console.log(DEBUG_TAG + msg);
+  };
   var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
@@ -21,12 +24,12 @@
           reader.readAsText(file);
         };
         var fail = function (evt) {
-          cb(new Error("Failed to load entry"), null);
+          cb(new Error("Failed to load entry: " + url), null);
         };
         fileEntry.file(success, fail);
       },
       // error callback
-      function (err) { cb(new Error("Failed to load entry"), null); }
+      function (err) { cb(new Error("Failed to resolve entry: " + url), null); }
     );
   };
 
@@ -50,9 +53,11 @@
     var retry = function () {
       loadTries++;
       if (loadTries > 10) {
-        console.log(DEBUG_TAG + 'Giving up on starting the server.');
+        // XXX: If this means the app fails, we should probably do exponential backoff
+        // or at least show a message
+        log('Failed to start the server (too many retries)');
       } else {
-        console.log(DEBUG_TAG + 'Retrying to to start the server.');
+        log('Starting the server (retry #' + loadTries + ')');
         loadFromLocation(location);
       }
     };
@@ -65,6 +70,7 @@
       window.location = url;
     }, function (error) {
       // failed to start a server, is port already in use?
+      log("Failed to start the server: " + error);
       retry();
     });
   };
@@ -74,10 +80,9 @@
   // no error is passed, then we simply do not have any new versions.
   var fallback = function (err) {
     if (err) {
-      console.log(DEBUG_TAG + 'Couldn\'t load from the manifest, ' +
-                  'falling back to the bundled assets.');
+      log("Couldn't load from the manifest, falling back to the bundled assets.");
     } else {
-      console.log(DEBUG_TAG + 'No new versions saved to disk.');
+      log('No new versions saved to disk.');
     }
 
     loadFromLocation('application');
@@ -124,6 +129,7 @@
     readFile(localPathPrefix + 'version',
       function (err, version) {
         if (err) {
+          log("Error reading version file " + err);
           fallback();
           return;
         }
@@ -145,10 +151,10 @@
             // around on disk
             removeDirectory(localPathPrefix + name + '/', function (err) {
               if (err) {
-                console.log(DEBUG_TAG + 'Failed to remove an old cache folder '
-                            + name + ':' + err.message);
+                log('Failed to remove an old cache folder '
+                    + name + ':' + err.message);
               } else {
-                console.log(DEBUG_TAG + 'Successfully removed an old cache folder ' + name);
+                log('Successfully removed an old cache folder ' + name);
               }
             });
           });
