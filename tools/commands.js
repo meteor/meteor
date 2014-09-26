@@ -322,7 +322,10 @@ main.registerCommand({
     });
     var DDP = unipackages.ddp.DDP;
 
-    var ddpConnection = DDP.connect("http://localhost:3000");
+    var hostPort = parseHostPort(options.port);
+    var serverUrl = "http://" + (hostPort.host || "localhost") +
+      ":" + hostPort.port;
+    var ddpConnection = DDP.connect(serverUrl);
 
     var interval = setInterval(function(){
       if (ddpConnection.status().status === "connected"){
@@ -339,9 +342,9 @@ main.registerCommand({
                   var testDesc = msg.fields.framework + " : " +
                     msg.fields.ancestors.join(":") + " => " + msg.fields.name;
                   if(msg.fields.result == "passed"){
-                    console.log("PASSED ", testDesc);
+                    console.log("PASSED", testDesc);
                   } else if (msg.fields.result == "failed"){
-                    console.error("FAILED ", testDesc);
+                    console.error("FAILED", testDesc);
                     console.log(msg.fields.failureStackTrace)
                   }
                 }
@@ -380,12 +383,12 @@ main.registerCommand({
                      report.result === "completed"){
                     setTimeout(function(){
                       if (aggregateResult === "passed"){
-                        console.log("TESTS RAN SUCCESSFULLY :-)")
+                        console.log("TESTS RAN SUCCESSFULLY")
                         //better way to exit here?
                         process.exit(0);
                       }
                       if (aggregateResult === "failed"){
-                        console.log("FAILURE :-(");
+                        console.log("FAILURE");
                         process.exit(1);
                       }
                     }, 2000);
