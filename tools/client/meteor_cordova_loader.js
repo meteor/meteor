@@ -67,6 +67,7 @@
       'cordovajs_root': cordovaRoot
     }, function (url) {
       // go to the new proxy url
+      log("Loading from url: " + url);
       window.location = url;
     }, function (error) {
       // failed to start a server, is port already in use?
