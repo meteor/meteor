@@ -10,12 +10,12 @@ Accounts.onResetPasswordLink(function (token, done) {
   doneCallback = done;
 });
 
-Accounts.onEnrollAccountLink(function (token, done) {
+Accounts.onEnrollmentLink(function (token, done) {
   loginButtonsSession.set("enrollAccountToken", token);
   doneCallback = done;
 });
 
-Accounts.onVerifyEmailLink(function (token, done) {
+Accounts.onEmailVerificationLink(function (token, done) {
   Accounts.verifyEmail(token, function (error) {
     if (! error) {
       loginButtonsSession.set('justVerifiedEmail', true);

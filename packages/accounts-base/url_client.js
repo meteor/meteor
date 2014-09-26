@@ -73,18 +73,20 @@ AccountsTest = {
  * @summary Register a function to call when a reset password link is clicked
  * in an email sent by
  * [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).
+ * This function should be called in top-level code, not inside
+ * `Meteor.startup()`.
  * @param  {Function} callback The function to call. It is given two arguments:
  *
- * 1. A password reset token that can be passed to
- * [`Accounts.resetPassword`](#accounts_resetpassword)
- * 3. A function to call when the password reset UI flow is complete. The normal
+ * 1. `token`: A password reset token that can be passed to
+ * [`Accounts.resetPassword`](#accounts_resetpassword).
+ * 2. `done`: A function to call when the password reset UI flow is complete. The normal
  * login process is suspended until this function is called, so that the
  * password for user A can be reset even if user B was logged in.
  */
 Accounts.onResetPasswordLink = function (callback) {
   if (accountsCallbacks["reset-password"]) {
-    Meteor._debug("Accounts.onResetPasswordLink was called more than once." +
-      "Only the last callback added will be executed.");
+    Meteor._debug("Accounts.onResetPasswordLink was called more than once. " +
+      "Only one callback added will be executed.");
   }
 
   accountsCallbacks["reset-password"] = callback;
@@ -94,19 +96,21 @@ Accounts.onResetPasswordLink = function (callback) {
  * @summary Register a function to call when an email verification link is
  * clicked in an email sent by
  * [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail).
+ * This function should be called in top-level code, not inside
+ * `Meteor.startup()`.
  * @param  {Function} callback The function to call. It is given two arguments:
  *
- * 1. An email verification token that can be passed to
- * [`Accounts.verifyEmail`](#accounts_verifyemail)
- * 3. A function to call when the email verification UI flow is complete.
+ * 1. `token`: An email verification token that can be passed to
+ * [`Accounts.verifyEmail`](#accounts_verifyemail).
+ * 2. `done`: A function to call when the email verification UI flow is complete.
  * The normal login process is suspended until this function is called, so
  * that the user can be notified that they are verifying their email before
  * being logged in.
  */
-Accounts.onVerifyEmailLink = function (callback) {
+Accounts.onEmailVerificationLink = function (callback) {
   if (accountsCallbacks["verify-email"]) {
-    Meteor._debug("Accounts.onVerifyEmailLink was called more than once." +
-      "Only the last callback added will be executed.");
+    Meteor._debug("Accounts.onEmailVerificationLink was called more than once. " +
+      "Only one callback added will be executed.");
   }
 
   accountsCallbacks["verify-email"] = callback;
@@ -116,19 +120,21 @@ Accounts.onVerifyEmailLink = function (callback) {
  * @summary Register a function to call when an account enrollment link is
  * clicked in an email sent by
  * [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
+ * This function should be called in top-level code, not inside
+ * `Meteor.startup()`.
  * @param  {Function} callback The function to call. It is given two arguments:
  *
- * 1. A password reset token that can be passed to
+ * 1. `token`: A password reset token that can be passed to
  * [`Accounts.resetPassword`](#accounts_resetpassword) to give the newly
  * enrolled account a password.
- * 3. A function to call when the enrollment UI flow is complete.
+ * 2. `done`: A function to call when the enrollment UI flow is complete.
  * The normal login process is suspended until this function is called, so that
  * user A can be enrolled even if user B was logged in.
  */
-Accounts.onEnrollAccountLink = function (callback) {
+Accounts.onEnrollmentLink = function (callback) {
   if (accountsCallbacks["enroll-account"]) {
-    Meteor._debug("Accounts.onEnrollAccountLink was called more than once." +
-      "Only the last callback added will be executed.");
+    Meteor._debug("Accounts.onEnrollmentLink was called more than once. " +
+      "Only one callback added will be executed.");
   }
 
   accountsCallbacks["enroll-account"] = callback;
