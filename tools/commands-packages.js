@@ -1513,6 +1513,11 @@ var maybeUpdateRelease = function (options) {
     var record = doOrDie(function () {
       return catalog.official.getReleaseVersion(r[0], r[1]);
     });
+    if (!record) {
+      Console.error(
+        "Cannot update to a patch release from an old release.");
+      return 1;
+    }
     var updateTo = record.patchReleaseVersion;
     if (!updateTo) {
       Console.error(
