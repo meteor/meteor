@@ -69,11 +69,17 @@ var initKeepalive = function () {
 //   takes the parent process's place before the child process dies.
 var startCheckForLiveParent = function (parentPid) {
   if (parentPid) {
+    // Check that we have a pid that looks like an integer.
+    if (+parseInt(parentPid) !== parentPid) {
+      console.error("--parent-pid must be a valid process ID.");
+      process.exit(1);
+    }
+
     setInterval(function () {
       try {
         process.kill(parentPid, 0);
       } catch (err) {
-        console.log("Parent process is dead! Exiting.");
+        console.error("Parent process is dead! Exiting.");
         process.exit(1);
       }
     });

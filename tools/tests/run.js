@@ -351,7 +351,7 @@ selftest.define("run and SIGKILL parent process", function () {
   s.cd("myapp");
 
   run = s.run();
-  run.waitSecs(10);
+  run.waitSecs(30);
   var match = run.match(/My pid is (\d+)/);
   var childPid;
   if (! match || ! match[1]) {
@@ -378,4 +378,15 @@ selftest.define("run and SIGKILL parent process", function () {
   if (! caughtError) {
     selftest.fail("Child process " + childPid + " is still running");
   }
+
+  run.stop();
+
+  // Test that passing a bad pid in --parent-pid logs an error and exits
+  // immediately.
+  s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
+  run = s.run();
+  run.waitSecs(30);
+  run.match("must be a valid process ID");
+  run.match("Your application is crashing");
+  run.stop();
 });

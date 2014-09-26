@@ -191,7 +191,11 @@ _.extend(AppProcess.prototype, {
       // Old-style bundle
       var opts = _.clone(self.nodeOptions);
       opts.push(path.join(self.bundlePath, 'main.js'));
-      opts.push('--parent-pid', process.pid);
+
+      opts.push(
+        '--parent-pid',
+        process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
+      );
 
       return child_process.spawn(process.execPath, opts, {
         env: self._computeEnvironment()
