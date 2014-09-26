@@ -130,7 +130,7 @@
       function (err, version) {
         if (err) {
           log("Error reading version file " + err);
-          fallback();
+          fallback(err);
           return;
         }
 
