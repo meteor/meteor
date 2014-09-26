@@ -79,15 +79,6 @@ prapicault, waitingkuo, wulfmeister.
   Meteor development server in their browser. Specifically, 0.9.2
   unintentionally changed the development mode server's default bind
   host to localhost instead of 0.0.0.0. #2596
->>>>>>> master
-
-
-## v0.9.2.2
-
-* Fix regression in 0.9.2 that prevented some users from accessing the
-  Meteor development server in their browser. Specifically, 0.9.2
-  unintentionally changed the development mode server's default bind
-  host to localhost instead of 0.0.0.0. #2596
 
 
 ## v0.9.2.1
