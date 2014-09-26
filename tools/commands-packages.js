@@ -1740,7 +1740,11 @@ main.registerCommand({
     var appRecord = doOrDie(function () {
       return catalog.official.getReleaseVersion(r[0], r[1]);
     });
-    releasePackages = appRecord.packages;
+    if (appRecord) {
+      releasePackages = appRecord.packages;
+    } else {
+      releasePackages = {};
+    }
   }
 
   // Let's figure out what packages we are currently using. Don't run the
