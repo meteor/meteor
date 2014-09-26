@@ -637,6 +637,7 @@ _.extend(Sandbox.prototype, {
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
     files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
 
     var stubCatalog = {
       syncToken: {},
@@ -782,7 +783,7 @@ _.extend(Sandbox.prototype, {
 
     var dataFile = config.getLocalPackageCacheFilename(serverUrl);
     fs.writeFileSync(
-      path.join(self.warehouse, 'package-metadata', 'v1', dataFile),
+      path.join(self.warehouse, 'package-metadata', 'v1.1', dataFile),
       JSON.stringify(stubCatalog, null, 2));
 
     // And a cherry on top

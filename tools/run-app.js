@@ -389,30 +389,42 @@ _.extend(AppRunner.prototype, {
 
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
-  _runOnce: function (onListen, beforeRun) {
+  _runOnce: function (options) {
     var self = this;
+    options = options || {};
 
-    // We need to reset our workspace for hotcodepush. Specifically, we need to
-    // tell the catalog to reload local package sources (since their
-    // dependencies may have changed), and then we should recompute the project
-    // constraints.
-    // XXX the catalog refresh seems overly conservative, but who knows
-    var refreshWatchSet = new watch.WatchSet;
-    var refreshMessages = buildmessage.capture(function () {
-      catalog.complete.refresh({ forceRefresh: true,
-                                 watchSet: refreshWatchSet});
-    });
-    if (refreshMessages.hasMessages()) {
-      return {
-        outcome: 'bundle-fail',
-        bundleResult: {
-          errors: refreshMessages,
-          serverWatchSet: refreshWatchSet
-        }
-      };
+    if (!options.firstRun) {
+      // We need to reset our workspace for subsequent builds. Specifically, we
+      // need to tell the catalog to reload local package sources (since their
+      // dependencies may have changed), and then we should recompute the
+      // project constraints.
+      //
+      // XXX This is almost certainly both overly conservative and not
+      // conservative enough. On the one hand, catalog.complete.refresh is a
+      // slow operation (especially now when it involves reading the whole
+      // packages.data.json into memory) and it's likely that the existing
+      // buildinfo/watcher code with some extensions can detect relevant changes
+      // more precisely. On the other hand, we DON'T use this blunt hammer when
+      // only the client code has changed, which might not be good enough.  We
+      // need to take a thorough pass over all the package build/metadata
+      // caching mechanisms and come up with a unified system that flushes
+      // caches only when actually necessary.
+      var refreshWatchSet = new watch.WatchSet;
+      var refreshMessages = buildmessage.capture(function () {
+        catalog.complete.refresh({ forceRefresh: true,
+                                   watchSet: refreshWatchSet});
+      });
+      if (refreshMessages.hasMessages()) {
+        return {
+          outcome: 'bundle-fail',
+          bundleResult: {
+            errors: refreshMessages,
+            serverWatchSet: refreshWatchSet
+          }
+        };
+      }
+      project.reload();
     }
-
-    project.reload();
 
     runLog.clearLog();
     self.proxy.setMode("hold");
@@ -530,7 +542,7 @@ _.extend(AppRunner.prototype, {
     var runFuture = self.runFuture = new Future;
 
     // Run the program
-    beforeRun && beforeRun();
+    options.beforeRun && options.beforeRun();
     var appProcess = new AppProcess({
       bundlePath: bundlePath,
       port: self.port,
@@ -549,7 +561,7 @@ _.extend(AppRunner.prototype, {
       program: self.program,
       onListen: function () {
         self.proxy.setMode("proxy");
-        onListen && onListen();
+        options.onListen && options.onListen();
         if (self.startFuture)
           self.startFuture['return']();
       },
@@ -615,7 +627,7 @@ _.extend(AppRunner.prototype, {
         var oldFuture = self.runFuture = new Future;
 
         // Notify the server that new client assets have been added to the build.
-        process.kill(appProcess.proc.pid, 'SIGUSR2');
+        appProcess.proc.kill('SIGUSR2');
 
         // Establish a watcher on the new files.
         setupClientWatcher();
@@ -670,11 +682,14 @@ _.extend(AppRunner.prototype, {
         }, 3000);
       };
 
-      var runResult = self._runOnce(function () {
-        /* onListen */
-        if (! self.noRestartBanner && ! firstRun)
-          runLog.logRestart();
-      }, resetCrashCount /* beforeRun */);
+      var runResult = self._runOnce({
+        onListen: function () {
+          if (! self.noRestartBanner && ! firstRun)
+            runLog.logRestart();
+        },
+        beforeRun: resetCrashCount,
+        firstRun: firstRun
+      });
       firstRun = false;
 
       clearTimeout(crashTimer);

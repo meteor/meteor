@@ -58,6 +58,9 @@ selftest.define("add cordova platforms", function () {
   run.expectExit(1);
 
   run = s.run("add-platform", "android");
+  run.match("Do you agree");
+  run.write("Y\n");
+  run.extraTime = 90; // Huge download
   run.match("added");
 
   run = s.run("remove-platform", "foo");

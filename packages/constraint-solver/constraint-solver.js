@@ -1,5 +1,3 @@
-var semver = Npm.require('semver');
-
 // Copied from archinfo.matches() in tools/
 var archMatches = function (arch, baseArch) {
   return arch.substr(0, baseArch.length) === baseArch &&
@@ -153,7 +151,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 ConstraintSolver.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
-
   // clone because we mutate options
   options = _.extend({
     _testing: false,
@@ -163,10 +160,11 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   check(dependencies, [String]);
 
   check(constraints, [{
-    packageName: String,
-    version: Match.OneOf(String, null),
-    type: String,
-    constraintString: Match.Optional(Match.OneOf(String, null))
+    name: String,
+    constraintString: Match.Optional(Match.OneOf(String, undefined)),
+    constraints: [{
+      version: Match.OneOf(String, null),
+      type: String }]
   }]);
 
   check(options, {
@@ -179,7 +177,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     self._ensurePackageInfoLoaded(packageName);
   });
   _.each(constraints, function (constraint) {
-    self._ensurePackageInfoLoaded(constraint.packageName);
+    self._ensurePackageInfoLoaded(constraint.name);
   });
   _.each(options.previousSolution, function (version, packageName) {
     self._ensurePackageInfoLoaded(packageName);
@@ -189,7 +187,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // were causing crashes, but maybe the real answer is that there shouldn't
   // have been undefineds?
   if (options.previousSolution) {
-    options.previousSolution = _.filter(_.flatten(_.map(options.previousSolution, function (version, packageName) {
+    options.previousSolution =
+      _.filter(_.flatten(
+        _.map(options.previousSolution, function (version, packageName) {
       return _.map(self._unibuildsForPackage(packageName), function (unitName) {
         return self.resolver._unitsVersionsMap[unitName + "@" + version];
       });
@@ -211,7 +211,6 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   options.rootDependencies = dc.dependencies;
   var resolverOptions = self._getResolverOptions(options);
-
   var res = null;
   // If a previous solution existed, try resolving with additional (weak)
   // equality constraints on all the versions from the previous solution (except
@@ -244,15 +243,30 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     }
   }
 
+  // Either we didn't have a previous solution, or it doesn't work. Try again
+  // without locking in the previous solution as strict equality.
   if (!res) {
-    // Either we didn't have a previous solution, or it doesn't work. Try again
-    // without locking in the previous solution as strict equality.
+    try {
+      res = self.resolver.resolve(
+        dc.dependencies, dc.constraints, resolverOptions);
+    } catch (e) {
+      if (!(e.constraintSolverError))
+        throw e;
+    }
+  }
 
+  // As a last-ditch effort, let's take a look at all the prerelease
+  // versions. Is it possible that a pre-release version will satisfy our
+  // constraints?
+  if (!res) {
+    resolverOptions["useRCs"] = true;
     res = self.resolver.resolve(
       dc.dependencies, dc.constraints, resolverOptions);
   }
-
-  return resolverResultToPackageMap(res);
+  var ret = { answer:  resolverResultToPackageMap(res) };
+  if (resolverOptions.useRCs)
+    ret.usedRCs = true;
+  return ret;
 };
 
 var removeUnibuild = function (unitName) {
@@ -291,13 +305,34 @@ ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
   });
 
   _.each(inputConstraints, function (constraint) {
-    var constraintStr = PackageVersion.constraintToVersionString(constraint);
-    _.each(self._unibuildsForPackage(constraint.packageName), function (unibuildName) {
-      constraints.push(self.resolver.getConstraint(unibuildName, constraintStr));
+    _.each(self._unibuildsForPackage(constraint.name), function (unibuildName) {
+      //XXX: This is kind of dumb -- we make this up, so we can reparse it
+      //later. Todo: clean this up a bit.
+      if (!constraint.constraintString) {
+        var constraintArray = [];
+        _.each(constraint.constraints, function (c) {
+          if (c.type == "exact") {
+            constraintArray.push("+" + c.version);
+          } else if (c.version) {
+            constraintArray.push(c.version)
+          }
+         });
+        if (!_.isEmpty(constraintArray)) {
+         constraint.constraintString =
+           _.reduce(constraintArray,
+            function(x, y) {
+              return x + " || " + y;
+           });
+         } else {
+           constraint.constraintString = "";
+         }
+        }
+      constraints.push(
+        self.resolver.getConstraint(unibuildName, constraint.constraintString));
     });
   });
 
-  return { dependencies: dependencies, constraints: constraints };
+ return { dependencies: dependencies, constraints: constraints };
 };
 
 ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
@@ -318,17 +353,12 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   function (options) {
   var self = this;
 
-  var semverToNum = function (version) {
-    var v = semver.parse(version);
-    return v.major * 10000 + v.minor * 100 + v.patch;
-  };
-
   var resolverOptions = {};
 
   if (options._testing) {
     resolverOptions.costFunction = function (state) {
       return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-        return semverToNum(mori.last(nameAndUv).version);
+        return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
       }, state.choices));
     };
   } else {
@@ -361,8 +391,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           // The package was present in the previous solution
           var prev = prevSolMapping[uv.name];
           var versionsDistance =
-            semverToNum(uv.version) -
-            semverToNum(prev.version);
+            PackageVersion.versionMagnitude(uv.version) -
+            PackageVersion.versionMagnitude(prev.version);
 
           var isCompatible =
                 prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
@@ -390,8 +420,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            semverToNum(_.last(self.resolver.unitsVersions[uv.name]).version) -
-            semverToNum(uv.version);
+            PackageVersion.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
+            PackageVersion.versionMagnitude(uv.version);
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -404,7 +434,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             // How far is our choice from the most conservative version that
             // also matches our constraints?
             var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
-            cost[MINOR] += semverToNum(uv.version) - semverToNum(minimal);
+            cost[MINOR] += PackageVersion.versionMagnitude(uv.version) - PackageVersion.versionMagnitude(minimal);
             options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }
@@ -445,8 +475,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
 
           var versionsDistance =
-            semverToNum(earliestMatching.version) -
-            semverToNum(prev.version);
+            PackageVersion.versionMagnitude(earliestMatching.version) -
+            PackageVersion.versionMagnitude(prev.version);
           if (versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
@@ -458,8 +488,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
-            semverToNum(_.last(self.resolver.unitsVersions[dep]).version) -
-            semverToNum(latestMatching.version);
+            PackageVersion.versionMagnitude(
+              _.last(self.resolver.unitsVersions[dep]).version) -
+            PackageVersion.versionMagnitude(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;
         }

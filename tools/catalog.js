@@ -1,6 +1,5 @@
 var fs = require('fs');
 var path = require('path');
-var semver = require('semver');
 var _ = require('underscore');
 var util = require('util');
 var packageClient = require('./package-client.js');
@@ -19,7 +18,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var project = require('./project.js');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
-
+var Console = require('./console.js').Console;
 var catalog = exports;
 
 catalog.DEFAULT_TRACK = 'METEOR';
@@ -139,16 +138,11 @@ _.extend(OfficialCatalog.prototype, {
     self._refreshFiber = Fiber.current;
     self._currentRefreshIsLoud = !options.silent;
 
-    var patience = new utils.Patience({
-      messageAfterMs: 2000,
-      message: function () {
-        if (self._currentRefreshIsLoud) {
-          console.log("Refreshing package metadata. This may take a moment.");
-        }
-      }
-    });
-    try {
-      var thrownError = null;
+    var thrownError = null;
+
+    buildmessage.enterJob({
+      title: 'Refreshing package metadata.'
+    }, function () {
       try {
         self._refresh();
         // Force the complete catalog (which is layered on top of our data) to
@@ -157,9 +151,7 @@ _.extend(OfficialCatalog.prototype, {
       } catch (e) {
         thrownError = e;
       }
-    } finally {
-      patience.stop();
-    }
+    });
 
     while (self._refreshFutures.length) {
       var fut = self._refreshFutures.pop();
@@ -216,6 +208,18 @@ _.extend(OfficialCatalog.prototype, {
     if (allPackageData && allPackageData.collections) {
       self._insertServerPackages(allPackageData);
     }
+  },
+
+  // Find a release that uses the given version of a tool. See: publish-for-arch
+  // in command-packages for more explanation.  Returns information about a
+  // particular release version, or null if such release version does not exist.
+  getReleaseWithTool: function (toolSpec) {
+    var self = this;
+    buildmessage.assertInCapture();
+    self._requireInitialized();
+    return self._recordOrRefresh(function () {
+      return _.findWhere(self.releaseVersions, { tool: toolSpec });
+    });
   },
 
   // Returns general (non-version-specific) information about a
@@ -453,24 +457,25 @@ _.extend(CompleteCatalog.prototype, {
 
         // Constraints for uniload should just be packages with no version
         // constraint and one local version (since they should all be in core).
-        if (!_.has(constraint, 'packageName') ||
-            constraint.type !== 'any-reasonable') {
+        if (!_.has(constraint, 'name') ||
+            constraint.constraints.length > 1 ||
+            constraint.constraints[0].type !== 'any-reasonable') {
           throw Error("Surprising constraint: " + JSON.stringify(constraint));
         }
-        if (!_.has(self.versions, constraint.packageName)) {
+        if (!_.has(self.versions, constraint.name)) {
           throw Error("Trying to resolve unknown package: " +
-                      constraint.packageName);
+                      constraint.name);
         }
-        if (_.isEmpty(self.versions[constraint.packageName])) {
+        if (_.isEmpty(self.versions[constraint.name])) {
           throw Error("Trying to resolve versionless package: " +
-                      constraint.packageName);
+                      constraint.name);
         }
-        if (_.size(self.versions[constraint.packageName]) > 1) {
+        if (_.size(self.versions[constraint.name]) > 1) {
           throw Error("Too many versions for package: " +
-                      constraint.packageName);
+                      constraint.name);
         }
-        ret[constraint.packageName] =
-          _.keys(self.versions[constraint.packageName])[0];
+        ret[constraint.name] =
+          _.keys(self.versions[constraint.name])[0];
       });
       return ret;
     }
@@ -487,8 +492,7 @@ _.extend(CompleteCatalog.prototype, {
     // arguments to the constraint solver.
     //
     // -deps: list of package names that we depend on
-    // -constr: constraints of form {packageName: String, version: String} with
-    //  {type: exact} for exact constraints.
+    // -constr: constraints of the proper form from parseConstraint in utils.js
     //
     // Weak dependencies are constraints (they constrain the result), but not
     // dependencies.
@@ -497,7 +501,7 @@ _.extend(CompleteCatalog.prototype, {
     _.each(constraints, function (constraint) {
       constraint = _.clone(constraint);
       if (!constraint.weak) {
-        deps.push(constraint.packageName);
+        deps.push(constraint.name);
       }
       delete constraint.weak;
       constr.push(constraint);
@@ -514,28 +518,29 @@ _.extend(CompleteCatalog.prototype, {
       // for now: we can't use any packages that are of different versions from
       // what we've already decided from the project!
       _.each(project.project.getVersions(), function (version, name) {
-        constr.push({packageName: name, version: version, type: 'exactly'});
-      });
+        constr.push(utils.parseConstraint(name + "@=" + version));
+     });
     }
 
     // Local packages can only be loaded from the version we have the source
     // for: that's a weak exact constraint.
     _.each(self.packageSources, function (packageSource, name) {
-      constr.push({packageName: name, version: packageSource.version,
-                   type: 'exactly'});
+      constr.push(utils.parseConstraint(name + "@=" + packageSource.version));
     });
 
     var patience = new utils.Patience({
       messageAfterMs: 1000,
       message: "Figuring out the best package versions to use. This may take a moment."
     });
+
+    var ret;
     try {
       // Then, call the constraint solver, to get the valid transitive subset of
       // those versions to record for our solution. (We don't just return the
       // original version lock because we want to record the correct transitive
       // dependencies)
       try {
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        ret = self.resolver.resolve(deps, constr, resolverOpts);
       } catch (e) {
         // Maybe we only failed because we need to refresh. Try to refresh
         // (unless we already are) and retry.
@@ -545,12 +550,49 @@ _.extend(CompleteCatalog.prototype, {
         }
         catalog.official.refresh();
         self.resolver || self._initializeResolver();
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        ret = self.resolver.resolve(deps, constr, resolverOpts);
       }
     } finally {
       patience.stop();
     }
+    if (ret["usedRCs"]) {
+      var expPackages = [];
+      _.each(ret.answer, function(version, package) {
+        if (version.split('-').length > 1) {
+         if (!(resolverOpts.previousSolution &&
+               resolverOpts.previousSolution[package] === version)) {
+          var oldConstraints = _.where(constr, { name: package } );
+          var printMe = true;
+          _.each(oldConstraints, function (oC) {
+            _.each(oC.constraints, function (specOC) {
+              if (specOC.version === version) {
+                printMe = false;
+              }
+            });
+          });
+          if (printMe) {
+            expPackages.push({
+              name: "  " + package + "@" + version,
+              description: self.getVersion(package, version).description
+            });
+          };
+        }}
+      });
+      if (!_.isEmpty(expPackages)) {
+        // XXX: Couldn't figure out how to word this better for better tenses.
+        //
+        // XXX: this shouldn't be here. This is library code... it
+        // shouldn't be printing.
+        // https://github.com/meteor/meteor/wiki/Meteor-Style-Guide#only-user-interface-code-should-engage-with-the-user
+        Console.info(
+          "\nIn order to resolve constraints, we had to use the following\n"+
+            "experimental package versions:");
+        Console.info(utils.formatList(expPackages));
+      }
+    }
+    return ret.answer;
   },
+
   // Refresh the packages in the catalog.
   //
   // Reread server data from data.json on disk, then load local overrides on top
@@ -857,9 +899,9 @@ _.extend(CompleteCatalog.prototype, {
     };
 
     // Load the package sources for packages and their tests into packageSources.
-    _.each(self.effectiveLocalPackages, function (x) {
+    buildmessage.forkJoin({ 'title': 'Initializing packages'}, self.effectiveLocalPackages, function (x) {
       initSourceFromDir(x);
-     });
+    });
 
     // Remove all packages from the catalog that have the same name as
     // a local package, along with all of their versions and builds.

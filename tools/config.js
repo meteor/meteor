@@ -213,14 +213,19 @@ _.extend(exports, {
   getPackageStorage: function (tropo) {
     var self = this;
     tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v1",
+    return path.join(tropo.root, "package-metadata", "v1.1",
                      self.getLocalPackageCacheFilename());
   },
 
+  // XXX this does not appear to be called.
   getPackageStorageVersion: function() {
     return "1.0";
   },
 
+  // NOTE: Uses the v1 directory, not v1.1 like package-metadata. This
+  // is so that we don't double-print banners and the like. Someday we
+  // should unifiy these so that the tool doesn't have to write to
+  // multiple different versions of these directories.
   getBannersShownFilename: function() {
     return path.join(tropohouse.default.root,
                      "package-metadata", "v1", "banners-shown.json");

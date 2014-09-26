@@ -1,5 +1,5 @@
 Template.headline.release = function () {
-  return Meteor.release ? "0.9.2.2" : "(checkout)";
+  return Meteor.release ? "0.9.3" : "(checkout)";
 };
 
 Meteor.startup(function () {
@@ -122,7 +122,9 @@ var toc = [
     "Core", [
       "Meteor.isClient",
       "Meteor.isServer",
+      "Meteor.isCordova",
       "Meteor.startup",
+      "Meteor.wrapAsync",
       "Meteor.absoluteUrl",
       "Meteor.settings",
       "Meteor.release"
@@ -154,6 +156,12 @@ var toc = [
       "Meteor.Error",
       "Meteor.call",
       "Meteor.apply"
+    ],
+
+    {name: "Check", id: "check_package"}, [
+      "check",
+      "Match.test",
+      {name: "Match patterns", style: "noncode"}
     ],
 
     {name: "Server connections", id: "connections"}, [
@@ -249,7 +257,7 @@ var toc = [
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "template", name: "findAll", id: "template_findAll"},
-        {instance: "template", name: "$", id: "template_findAll"},
+        {instance: "template", name: "$", id: "template_$"},
         {instance: "template", name: "find", id: "template_find"},
         {instance: "template", name: "firstNode", id: "template_firstNode"},
         {instance: "template", name: "lastNode", id: "template_lastNode"},
@@ -286,12 +294,6 @@ var toc = [
       {type: "spacer"},
       {name: "Renderable content", id: "renderable_content", style: "noncode"}
      ],
-
-    "Match", [
-      "check",
-      "Match.test",
-      {name: "Match patterns", style: "noncode"}
-    ],
 
     "Timers", [
       "Meteor.setTimeout",
@@ -348,10 +350,10 @@ var toc = [
       {name: "EJSON.isBinary", id: "ejson_is_binary"},
       {name: "EJSON.addType", id: "ejson_add_type"},
       [
-        {instance: "instance", id: "ejson_type_typeName", name: "typeName"},
-        {instance: "instance", id: "ejson_type_toJSONValue", name: "toJSONValue"},
-        {instance: "instance", id: "ejson_type_clone", name: "clone"},
-        {instance: "instance", id: "ejson_type_equals", name: "equals"}
+        {instance: "customType", id: "ejson_type_typeName", name: "typeName"},
+        {instance: "customType", id: "ejson_type_toJSONValue", name: "toJSONValue"},
+        {instance: "customType", id: "ejson_type_clone", name: "clone"},
+        {instance: "customType", id: "ejson_type_equals", name: "equals"}
       ]
     ],
 
@@ -406,7 +408,8 @@ var toc = [
     "spiderable",
     "stylus",
     "showdown",
-    "underscore"
+    "underscore",
+    "webapp"
   ] ],
 
   "Command line", [ [
@@ -421,7 +424,7 @@ var toc = [
     "meteor list",
     "meteor mongo",
     "meteor reset",
-    "meteor bundle",
+    "meteor build",
     "meteor search",
     "meteor show",
     "meteor publish",
@@ -499,12 +502,6 @@ UI.registerHelper('tstache', function() {
 UI.registerHelper('lt', function () {
   return '<';
 });
-
-Template.api_box.bare = function() {
-  return ((this.descr && this.descr.length) ||
-          (this.args && this.args.length) ||
-          (this.options && this.options.length)) ? "" : "bareapi";
-};
 
 check_links = function() {
   var body = document.body.innerHTML;

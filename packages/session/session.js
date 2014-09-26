@@ -1,10 +1,4 @@
-var migratedKeys = {};
-if (Package.reload) {
-  var migrationData = Package.reload.Reload._migrationData('session');
-  if (migrationData && migrationData.keys) {
-    migratedKeys = migrationData.keys;
-  }
-}
+Session = new ReactiveDict('session');
 
 // Documentation here is really awkward because the methods are defined
 // elsewhere
@@ -43,11 +37,3 @@ if (Package.reload) {
  * @param {String} key The name of the session variable to test
  * @param {String | Number | Boolean | null | undefined} value The value to test against
  */
-
-Session = new ReactiveDict(migratedKeys);
-
-if (Package.reload) {
-  Package.reload.Reload._onMigrate('session', function () {
-    return [true, {keys: Session.keys}];
-  });
-}

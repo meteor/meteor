@@ -1,7 +1,6 @@
 var fs = require('fs');
 var path = require('path');
 var _ = require('underscore');
-var semver = require('semver');
 var sourcemap = require('source-map');
 
 var files = require('./files.js');
@@ -13,7 +12,7 @@ var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
-var semver = require('semver');
+var packageVersionParser = require('./package-version-parser.js');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -25,20 +24,6 @@ var isTestName = function (name) {
 };
 var genTestName = function (name) {
   return AUTO_TEST_PREFIX + name;
-};
-
-// Given a semver version string, return the earliest semver for which
-// we are a replacement. This is used to compute the default
-// earliestCompatibleVersion.
-// XXX: move to utils?
-var earliestCompatible = function (version) {
-  // This is not the place to check to see if version parses as
-  // semver. That should have been done when we first received it from
-  // the user.
-  var parsed = semver.parse(version);
-  if (! parsed)
-    throw new Error("not a valid version: " + version);
-  return parsed.major + ".0.0";
 };
 
 // Returns a sort comparator to order files into load order.
@@ -231,7 +216,7 @@ var PackageSource = function (catalog) {
   // optional.
   self.metadata = {};
 
-  // Package version as a semver string. Optional; not all packages
+  // Package version as a meteor-version string. Optional; not all packages
   // (for example, the app) have versions.
   // XXX when we have names, maybe we want to say that all packages
   // with names have versions? certainly the reverse is true
@@ -459,7 +444,7 @@ _.extend(PackageSource.prototype, {
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = Builder.sha1(code);
 
-    var releaseRecord = null;
+    var releaseRecords = [];
     var hasTests = false;
 
     // Any package that depends on us needs to be rebuilt if our package.js file
@@ -469,14 +454,45 @@ _.extend(PackageSource.prototype, {
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
     // == 'Package' object visible in package.js ==
+
+    /**
+     * @global
+     * @name  Package
+     * @summary The Package object in package.js
+     * @namespace
+     * @locus package.js
+     */
     var Package = {
       // Set package metadata. Options:
       // - summary: for 'meteor list' & package server
-      // - version: package version string (semver)
+      // - version: package version string
       // - earliestCompatibleVersion: version string
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
+
+      /**
+       * @summary Provide basic package information.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Object} options
+       * @param {String} options.summary A concise 1-2 sentence description of
+       * the package, required for publication.
+       * @param {String} options.version The (extended)
+       * [semver](http://www.semver.org) version for your package. Additionally,
+       * Meteor allows a wrap number, to follow the version number. If you are
+       * porting another package that uses semver versioning, you may want to
+       * use the original version, postfixed with the _<number>. For example,
+       * '1.2.3_1', '2.4.5-rc1_4'. Wrap numbers sort after the original numbers:
+       * '1.2.3' < '1.2.3_1' < '1.2.3_2' < '1.2.4-rc.0'. By default, wrap
+       * numbers don't affect compatibility, so 1.2.3_1 is compatible with
+       * 1.2.3, 1.2.3_3, etc. If no version is specified, this field defaults to
+       * `0.0.0`. You need to specify a version to publish to the package
+       * server.
+       * @param {String} options.name Optional name override. By default, the
+       * package name comes from the name of its directory.
+       * @param {String} options.git Optional Git URL to the source repository.
+       */
       describe: function (options) {
         _.each(options, function (value, key) {
           if (key === "summary" ||
@@ -505,6 +521,12 @@ _.extend(PackageSource.prototype, {
         });
       },
 
+      /**
+       * @summary Define package dependencies and expose package methods.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       */
       onUse: function (f) {
         if (!self.isTest) {
           if (fileAndDepLoader) {
@@ -517,11 +539,19 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      // Backwards compatibility for old interfaces.
+      /**
+       * @deprecated in 0.9.0
+       */
       on_use: function (f) {
         this.onUse(f);
       },
 
+      /**
+       * @summary Define dependencies and expose package methods for unit tests.
+       * @locus package.js
+       * @memberOf Package
+       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       */
       onTest: function (f) {
         // If we are not initializing the test package, then we are initializing
         // the normal package and have now noticed that it has tests. So, let's
@@ -544,7 +574,9 @@ _.extend(PackageSource.prototype, {
         }
       },
 
-      // Backwards compatibility for old interfaces.
+      /**
+       * @deprecated in 0.9.0
+       */
       on_test: function (f) {
         this.onTest(f);
       },
@@ -613,7 +645,7 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Npm' object visible in package.js ==
-    
+
     /**
      * @namespace Npm
      * @global
@@ -667,13 +699,6 @@ _.extend(PackageSource.prototype, {
         npmDependencies = _npmDependencies;
       },
 
-      /**
-       * @summary Require a package that was specified using
-       * `Npm.depends()`.
-       * @param  {String} name The name of the package to require.
-       * @locus Server
-       * @memberOf Npm
-       */
       require: function (name) {
         var nodeModuleDir = path.join(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);
@@ -695,7 +720,7 @@ _.extend(PackageSource.prototype, {
     };
 
     // == 'Cordova' object visible in package.js ==
-    
+
     /**
      * @namespace Cordova
      * @global
@@ -705,7 +730,7 @@ _.extend(PackageSource.prototype, {
       /**
        * @summary Specify which [Cordova / PhoneGap](http://cordova.apache.org/)
        * plugins your Meteor package depends on.
-       * 
+       *
        * Plugins are installed from
        * [plugins.cordova.io](http://plugins.cordova.io/), so the plugins and
        * versions specified must exist there. Alternatively, the version
@@ -731,7 +756,7 @@ _.extend(PackageSource.prototype, {
        *     "https://github.com/apache/cordova-plugin-camera/tarball/d84b875c"
        * });
        * ```
-       * 
+       *
        * @locus package.js
        * @memberOf  Cordova
        */
@@ -830,7 +855,7 @@ _.extend(PackageSource.prototype, {
       // version is not set) but short of failing the build we have no
       // alternative. Using a dummy version like "1.0.0" would cause
       // endless confusion and a fake version like "unknown" wouldn't
-      // parse as semver. Anyway, apps don't have versions, so it's
+      // parse correctly. Anyway, apps don't have versions, so it's
       // not like we didn't already have to think about this case.
     }
 
@@ -844,16 +869,24 @@ _.extend(PackageSource.prototype, {
     }
 
     if (self.version !== null) {
-      var parsedVersion = semver.parse(self.version);
-      if (!parsedVersion) {
+      var parsedVersion;
+      try {
+        parsedVersion =
+          packageVersionParser.getValidServerVersion(self.version);
+      } catch (e) {
+        if (!e.versionParserError)
+          throw e;
         if (!buildmessage.jobHasMessages()) {
           buildmessage.error(
-            "The package version (specified with Package.describe) must be "
-              + "valid semver (see http://semver.org/).");
+            "The package version " + self.version + " (specified with Package.describe) "
+            + "is not a valid Meteor package version.\n"
+            + "Valid package versions are semver (see http://semvar.org/), "
+            + "optionally followed by '~' and an integer.");
         }
         // Recover by pretending there was no version (see above).
         self.version = null;
-      } else if (parsedVersion.build.length) {
+      }
+      if (parsedVersion && parsedVersion !== self.version) {
         if (!buildmessage.jobHasMessages()) {
           buildmessage.error(
             "The package version (specified with Package.describe) may not "
@@ -866,7 +899,7 @@ _.extend(PackageSource.prototype, {
 
     if (self.version !== null && ! self.earliestCompatibleVersion) {
       self.earliestCompatibleVersion =
-        earliestCompatible(self.version);
+        packageVersionParser.defaultECV(self.version);
     }
 
     // source files used
@@ -940,6 +973,12 @@ _.extend(PackageSource.prototype, {
         return arch;
       };
 
+      /**
+       * @class PackageAPI
+       * @instanceName api
+       * @global
+       * @summary The API object passed into the Packages.onUse function.
+       */
       var api = {
         // Called when this package wants to make another package be
         // used. Can also take literal package objects, if you have
@@ -971,6 +1010,43 @@ _.extend(PackageSource.prototype, {
         //   its plugins. (Has the same limitation as "unordered" that this
         //   flag is not tracked per-environment or per-role; this may
         //   change.)
+
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Depend on package `packagename`.
+         * @locus package.js
+         * @param {String|String[]} packageNames Packages being depended on.
+         * Package names may be suffixed with an @version tag.
+         *
+         * In general, you must specify a package's version (e.g.,
+         * `'accounts@1.0.0'` to use version 1.0.0 or a higher
+         * compatible version (ex: 1.0.1, 1.5.0, etc.)  of the
+         * `accounts` package). If you are sourcing core
+         * packages from a Meteor release with `versionsFrom`, you may leave
+         * off version names for core packages. You may also specify constraints,
+         * such as 'my:forms@=1.0.0 (this package demands my:forms at 1.0.0 exactly),
+         * or 'my:forms@1.0.0 || =2.0.1' (my:forms at 1.x.y, or exactly 2.0.1).
+         * @param {String} [architecture] If you only use the package on the
+         * server (or the client), you can pass in the second argument (e.g.,
+         * `'server'` or `'client'`) to specify what architecture the package is
+         * used with.
+         * @param {Object} [options]
+         * @param {Boolean} options.weak Establish a weak dependency on a
+         * package. If package A has a weak dependency on package B, it means
+         * that including A in an app does not force B to be included too — but,
+         * if B is included or by another package, then B will load before A.
+         * You can use this to make packages that optionally integrate with or
+         * enhance other packages if those packages are present.
+         * When you weakly depend on a package you don't see its exports.
+         * You can detect if the possibly-present weakly-depended-on package
+         * is there by seeing if `Package.foo` exists, and get its exports
+         * from the same place.
+         * @param {Boolean} options.unordered It's okay to load this dependency
+         * after your package. (In general, dependencies specified by `api.use`
+         * are loaded before your package.) You can use this option to break
+         * circular dependencies.
+         */
         use: function (names, arch, options) {
           // Support `api.use(package, {weak: true})` without arch.
           if (_.isObject(arch) && !_.isArray(arch) && !options) {
@@ -1021,6 +1097,14 @@ _.extend(PackageSource.prototype, {
         // Called when this package wants packages using it to also use
         // another package.  eg, for umbrella packages which want packages
         // using them to also get symbols or plugins from their components.
+
+        /**
+         * @memberOf PackageAPI
+         * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
+         * @locus package.js
+         * @instance
+         * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
+         */
         imply: function (names, arch) {
           names = toArray(names);
           arch = toArchArray(arch);
@@ -1052,6 +1136,15 @@ _.extend(PackageSource.prototype, {
         // Top-level call to add a source file to a package. It will
         // be processed according to its extension (eg, *.coffee
         // files will be compiled to JavaScript).
+
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Specify the source code for your package.
+         * @locus package.js
+         * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
+         * @param {String} [architecture] If you only want to export the file on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the file is used with.
+         */
         addFiles: function (paths, arch, fileOptions) {
           paths = toArray(paths);
           arch = toArchArray(arch);
@@ -1069,14 +1162,15 @@ _.extend(PackageSource.prototype, {
         // Use this release to resolve unclear dependencies for this package. If
         // you don't fill in dependencies for some of your implies/uses, we will
         // look at the packages listed in the release to figure that out.
-        versionsFrom: function (release) {
-          if (releaseRecord) {
-            buildmessage.error("api.versionsFrom may only be specified once.",
-                               { useMyCaller: true });
-            // recover by ignoring
-            return;
-          }
 
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published. You may specify more than one release, in which case the constraints will be parsed with an or: 'jquery@1.0.0 || 2.0.0'.
+         * @locus package.js
+         * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
+         */
+        versionsFrom: function (releases) {
           // Uniloaded packages really ought to be in the core release, by
           // definition, so saying that they should use versions from another
           // release doesn't make sense. Moreover, if we're running from a
@@ -1089,22 +1183,31 @@ _.extend(PackageSource.prototype, {
             return;
           }
 
-          // If you don't specify a track, use our default.
-          if (release.indexOf('@') === -1) {
-            release = catalog.DEFAULT_TRACK + "@" + release;
-          }
+          releases = toArray(releases);
 
-          var relInf = release.split('@');
-          if (relInf.length !== 2) {
-            buildmessage.error("Release names in versionsFrom may not contain '@'.",
-                               { useMyCaller: true });
-            return;
+          // using for loop rather than underscore to help with useMyCaller
+          for (var i = 0; i < releases.length; ++i) {
+            var release = releases[i];
+
+            // If you don't specify a track, use our default.
+            if (release.indexOf('@') === -1) {
+              release = catalog.DEFAULT_TRACK + "@" + release;
+            }
+
+            var relInf = release.split('@');
+            if (relInf.length !== 2) {
+              buildmessage.error("Release names in versionsFrom may not contain '@'.",
+                                 { useMyCaller: true });
+              return;
+            }
+            var releaseRecord = catalog.official.getReleaseVersion(
+              relInf[0], relInf[1]);
+            if (!releaseRecord) {
+              buildmessage.error("Unknown release "+ release);
+            } else {
+              releaseRecords.push(releaseRecord);
+            }
           }
-          releaseRecord = catalog.official.getReleaseVersion(
-            relInf[0], relInf[1]);
-          if (!releaseRecord) {
-            buildmessage.error("Unknown release "+ release);
-           }
         },
 
         // Export symbols from this package.
@@ -1114,6 +1217,15 @@ _.extend(PackageSource.prototype, {
         // or an array of those.
         // The default is ['web', 'server'].
         // @param options 'testOnly', boolean.
+
+        /**
+         * @memberOf PackageAPI
+         * @instance
+         * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
+         * @locus package.js
+         * @param {String} exportedObject Name of the object.
+         * @param {String} [architecture] If you only want to export the object on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the export is used with.
+         */
         export: function (symbols, arch, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
           // arch.
@@ -1166,20 +1278,44 @@ _.extend(PackageSource.prototype, {
       }
     }
 
-    // If we have specified a release, then we should go through the
+    // By the way, you can't depend on yourself.
+    var doNotDepOnSelf = function (dep) {
+      if (dep.package === self.name) {
+        buildmessage.error("Circular dependency found: "
+                           + self.name +
+                           " depends on itself.\n");
+      }
+    };
+    _.each(self.allArchs, function (label) {
+      _.each(uses[label], doNotDepOnSelf);
+      _.each(implies[label], doNotDepOnSelf);
+    });
+
+    // If we have specified some release, then we should go through the
     // dependencies and fill in the unspecified constraints with the versions in
-    // the release (if possible).
-    if (releaseRecord) {
-      var packages = releaseRecord.packages;
+    // the releases (if possible).
+    if (!_.isEmpty(releaseRecords)) {
 
       // Given a dependency object with keys package (the name of the package)
       // and constraint (the version constraint), if the constraint is null,
       // look in the packages field in the release record and fill in from
       // there.
       var setFromRel = function (dep) {
-        if (! dep.constraint && _.has(packages, dep.package)) {
-          dep.constraint = packages[dep.package];
-        };
+        if (dep.constraint) {
+          return dep;
+        }
+        var newConstraint = [];
+        _.each(releaseRecords, function (releaseRecord) {
+          var packages = releaseRecord.packages;
+          if(_.has(packages, dep.package)) {
+            newConstraint.push(packages[dep.package]);
+          }
+        });
+        if (_.isEmpty(newConstraint)) return dep;
+        dep.constraint = _.reduce(newConstraint,
+          function(x, y) {
+            return x + " || " + y;
+          });
         return dep;
       };
 

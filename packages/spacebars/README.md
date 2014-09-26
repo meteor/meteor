@@ -268,7 +268,7 @@ Things are more complicated if the argument to the `#each` reactively changes be
 2. For objects with no `_id` field, use the array index as the identification key. In this case, appends are fast but prepends are slower.
 3. For numbers or strings, use their value as the identification key.
 
-Regardless of the strategy used, keys are deduplicated so that arrays with repeating items work fine.
+In case of duplicate identification keys, all duplicates after the first are replaced with random ones. Using objects with unique `_id` fields is the way to get full control over the identity of rendered elements.
 
 ## Custom Block Helpers
 

@@ -628,11 +628,11 @@ Mongo.Collection.prototype._dropCollection = function () {
     throw new Error("Can only call _dropCollection on server collections");
   self._collection.dropCollection();
 };
-Mongo.Collection.prototype._createCappedCollection = function (byteSize) {
+Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocuments) {
   var self = this;
   if (!self._collection._createCappedCollection)
     throw new Error("Can only call _createCappedCollection on server collections");
-  self._collection._createCappedCollection(byteSize);
+  self._collection._createCappedCollection(byteSize, maxDocuments);
 };
 
 /**
@@ -741,9 +741,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
    * @summary Allow users to write directly to this collection from client code, subject to limitations you define.
    * @locus Server
    * @param {Object} options
-   * @param {Function} options.insert
-   * @param {Function} options.update
-   * @param {Function} options.remove Functions that look at a proposed modification to the database and return true if it should be allowed.
+   * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be allowed.
    * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
    */
@@ -755,9 +753,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
    * @summary Override `allow` rules.
    * @locus Server
    * @param {Object} options
-   * @param {Function} options.insert
-   * @param {Function} options.update
-   * @param {Function} options.remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an `allow` rule says otherwise.
+   * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
    * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
    */

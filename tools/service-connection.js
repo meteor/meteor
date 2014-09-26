@@ -36,6 +36,7 @@ var ServiceConnection = function (Package, endpointUrl, options) {
     connectTimeoutMs: 15000,
     retry: false,
     onConnected: function () {
+      self.connected = true;
       if (!self.currentFuture)
         throw Error("nobody waiting for connection?");
       if (self.currentFuture !== connectFuture)
@@ -51,6 +52,7 @@ var ServiceConnection = function (Package, endpointUrl, options) {
   // 10-second timeout built into our DDP client).
   var connectFuture = self.currentFuture = new Future;
   self.connection._stream.on('disconnect', function (error) {
+    self.connected = false;
     if (error && error.errorType === "DDP.ForcedReconnectError") {
       // OK, we requested this, probably due to version negotation failure.
       //

@@ -151,7 +151,6 @@
 
 var path = require('path');
 var util = require('util');
-var semver = require('semver');
 var files = require(path.join(__dirname, 'files.js'));
 var Builder = require(path.join(__dirname, 'builder.js'));
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
@@ -170,6 +169,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
+var packageVersionParser = require('./package-version-parser.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -606,7 +606,8 @@ _.extend(Target.prototype, {
         // use the newer version
         if (_.has(self.cordovaDependencies, name)) {
           var existingVersion = self.cordovaDependencies[name];
-          version = semver.lt(existingVersion, version) ? version : existingVersion;
+          version = packageVersionParser.
+            lessThan(existingVersion, version) ? version : existingVersion;
         }
         self.cordovaDependencies[name] = version;
       });
@@ -838,6 +839,9 @@ _.extend(ClientTarget.prototype, {
     // Overwrite the CSS files list with the new concatenated file
     var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
                                                { sourcemap: true });
+    if (! stringifiedCss.code)
+      return;
+
     self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
 
     // Add the contents of the input files to the source map of the new file
@@ -885,9 +889,10 @@ _.extend(ClientTarget.prototype, {
 
       minifiedCss = minifiers.CssTools.minifyCss(allCss);
     }
-
-    self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
+    if (!! minifiedCss) {
+      self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
+      self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
+    }
   },
 
   // Output the finished target to disk
@@ -1096,10 +1101,32 @@ _.extend(JsImage.prototype, {
             }
           }
         },
+
+        /**
+         * @summary The namespace for Assets functions, lives in the bundler.
+         * @namespace
+         * @name Assets
+         */
         Assets: {
+
+          /**
+           * @summary Retrieve the contents of the static server asset as a UTF8-encoded string.
+           * @locus Server
+           * @memberOf Assets
+           * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
+           * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+           */
           getText: function (assetPath, callback) {
             return getAsset(item.assets, assetPath, "utf8", callback);
           },
+
+          /**
+           * @summary Retrieve the contents of the static server asset as an [EJSON Binary](#ejson_new_binary).
+           * @locus Server
+           * @memberOf Assets
+           * @param {String} assetPath The path of the asset, relative to the application's `private` subdirectory.
+           * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the function is complete. If not provided, the function runs synchronously.
+           */
           getBinary: function (assetPath, callback) {
             return getAsset(item.assets, assetPath, undefined, callback);
           }

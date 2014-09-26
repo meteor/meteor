@@ -238,7 +238,10 @@ var runApp = function (s, sandboxProject, expectStats) {
   // Pick up new app identifier and/or packages added/removed. Usually the
   // changes to .meteor/packages and .meteor/.id would be handled by the
   // code that handles the hotcodepush, so the project does not cache them.
-  sandboxProject.reload();
+  //
+  // Calling `sandboxProject.reload` here doesn't work because `reload`
+  // does not update `sandboxProject.dependencies`.
+  sandboxProject.setRootDir(s.cwd);
 };
 
 // Contact the package stats server and look for a given app

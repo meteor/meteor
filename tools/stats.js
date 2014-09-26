@@ -38,12 +38,9 @@ var packageList = function (_currentProjectForTest) {
   buildmessage.assertInCapture();
   var directDeps = (_currentProjectForTest || project.project).getConstraints();
 
-  var versions;
-  if (_currentProjectForTest) {
-    versions = _currentProjectForTest.dependencies;
-  } else {
-    versions = project.project.getVersions();
-  }
+  var versions = (_currentProjectForTest || project.project).getVersions({
+    dontRunConstraintSolver: true
+  });
 
   return _.map(
     versions,
@@ -165,7 +162,7 @@ var getPackagesForAppIdInTest = function (currentProject) {
 
 var connectToPackagesStatsServer = function () {
   var Package = uniload.load({
-    packages: ["ddp"]
+    packages: ["meteor", "ddp"]
   });
   var conn = new ServiceConnection(
     Package,

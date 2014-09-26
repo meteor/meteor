@@ -2,8 +2,6 @@
 /// in which we call `npm install` to install npm dependencies,
 /// and a variety of related commands. Notably, we use `npm shrinkwrap`
 /// to ensure we get consistent versions of npm sub-dependencies.
-
-var semver = require('semver');
 var Future = require('fibers/future');
 
 var path = require('path');

@@ -12,8 +12,8 @@ var apiData = function (longname) {
   return root;
 };
 
-var typeLink = function (displayName, id) {
-  return "<a href='#" + id + "'>" + displayName + "</a>";
+var typeLink = function (displayName, url) {
+  return "<a href='" + url + "'>" + displayName + "</a>";
 };
 
 var toOrSentence = function (array) {
@@ -26,31 +26,52 @@ var toOrSentence = function (array) {
   return _.initial(array).join(", ") + ", or " + _.last(array);
 };
 
+var typeNameTranslation = {
+  "function": "Function",
+  EJSON: typeLink("EJSON-able Object", "#ejson"),
+  EJSONable: typeLink("EJSON-able Object", "#ejson"),
+  "Tracker.Computation": typeLink("Tracker.Computation", "#tracker_computation"),
+  MongoSelector: [
+    typeLink("Mongo Selector", "#selectors"),
+    typeLink("Object ID", "#mongo_object_id"),
+    "String"
+  ],
+  MongoModifier: typeLink("Mongo Modifier", "#modifiers"),
+  MongoSortSpecifier: typeLink("Mongo Sort Specifier", "#sortspecifiers"),
+  MongoFieldSpecifier: typeLink("Mongo Field Specifier", "#fieldspecifiers"),
+  JSONCompatible: "JSON-compatible Object",
+  EventMap: typeLink("Event Map", "#eventmaps"),
+  DOMNode: typeLink("DOM Node", "https://developer.mozilla.org/en-US/docs/Web/API/Node"),
+  "Blaze.View": typeLink("Blaze.View", "#blaze_view"),
+  Template: typeLink("Blaze.Template", "#blaze_template"),
+  DOMElement: typeLink("DOM Element", "https://developer.mozilla.org/en-US/docs/Web/API/element"),
+  MatchPattern: typeLink("Match Pattern", "#matchpatterns")
+};
+
 Template.autoApiBox.helpers({
   apiData: apiData,
   typeNames: function (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
-      if (name === "function") {
-        return "Function";
-      } else if (name === "EJSONable" || name === "EJSON") {
-        return typeLink("EJSON-able Object", "ejson");
-      } else if (name === "Tracker.Computation") {
-        return typeLink("Tracker.Computation", "tracker_computation");
-      } else if (name === "MongoSelector") {
-        return [
-          typeLink("Mongo Selector", "selectors"),
-          typeLink("Object ID", "mongo_object_id"),
-          "String"
-        ];
-      } else if (name === "MongoModifier") {
-        return typeLink("Mongo Modifier", "modifiers");
-      } else if (name === "MongoSortSpecifier") {
-        return typeLink("Mongo Sort Specifier", "sortspecifiers");
-      } else if (name === "MongoFieldSpecifier") {
-        return typeLink("Mongo Field Specifier", "fieldspecifiers");
-      } else if (name === "JSONCompatible") {
-        return "JSON-compatible Object";
+      // decode the "Array.<Type>" syntax
+      if (name.slice(0, 7) === "Array.<") {
+        // get the part inside angle brackets like in Array<String>
+        name = name.match(/<([^>]+)>/)[1];
+
+        if (name && typeNameTranslation.hasOwnProperty(name)) {
+          return "Array of " + typeNameTranslation[name] + "s";
+        }
+
+        if (name) {
+          return "Array of " + name + "s";
+        }
+
+        console.log("no array type defined");
+        return "Array";
+      }
+
+      if (typeNameTranslation.hasOwnProperty(name)) {
+        return typeNameTranslation[name];
       }
 
       return name;
@@ -62,31 +83,60 @@ Template.autoApiBox.helpers({
   },
   signature: function () {
     var signature;
+    var escapedLongname = _.escape(this.longname);
 
-    var beforeParens;
-    if (this.scope === "instance") {
-      beforeParens = "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
-    } else if (this.kind === "class") {
-      beforeParens = "new " + this.longname;
-    } else {
-      beforeParens = this.longname;
-    }
+    if (this.istemplate || this.ishelper) {
+      if (this.istemplate) {
+        signature = "{{> ";
+      } else {
+        signature = "{{ ";
+      }
 
-    signature = beforeParens;
+      signature += escapedLongname;
 
-    // if it is a function, and therefore has arguments
-    if (_.contains(["function", "class"], this.kind)) {
       var params = this.params;
 
       var paramNames = _.map(params, function (param) {
+        var name = param.name;
+
+        name = name + "=" + name;
+
         if (param.optional) {
-          return "[" + param.name + "]";
+          return "[" + name + "]";
         }
 
-        return param.name;
+        return name;
       });
 
-      signature += "(" + paramNames.join(", ") + ")";
+      signature += " " + paramNames.join(" ");
+
+      signature += " }}";
+    } else {
+      var beforeParens;
+      if (this.scope === "instance") {
+        beforeParens = "<em>" + apiData(this.memberof).instancename + "</em>." + this.name;
+      } else if (this.kind === "class") {
+        beforeParens = "new " + escapedLongname;
+      } else {
+        beforeParens = escapedLongname;
+      }
+
+      signature = beforeParens;
+
+      // if it is a function, and therefore has arguments
+      if (_.contains(["function", "class"], this.kind)) {
+        var params = this.params;
+
+        var paramNames = _.map(params, function (param) {
+          if (param.optional) {
+            return "[" + param.name + "]";
+          }
+
+          return param.name;
+        });
+
+        signature += "(" + paramNames.join(", ") + ")";
+      }
     }
 
     return signature;

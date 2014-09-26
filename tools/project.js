@@ -11,6 +11,8 @@ var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
+var packageVersionParser = require('./package-version-parser.js');
+var Console = require('./console.js').Console;
 
 var project = exports;
 
@@ -160,6 +162,8 @@ _.extend(Project.prototype, {
   },
 
   // Rereads all the on-disk files by reinitalizing the project with the same directory.
+  // Caches the old versions, in case we were running with --release (and they don't
+  // match the ones on disk).
   //
   // We don't automatically reinitialize this singleton when an app is
   // restarted, but an app restart is very likely caused by changes to our
@@ -167,7 +171,9 @@ _.extend(Project.prototype, {
   // dependencies here.
   reload : function () {
     var self = this;
+    var oldDependencies = self.dependencies;
     self.setRootDir(self.rootDir);
+    self.dependencies = oldDependencies;
   },
 
   // Several fields in project are derived from constraints. Whenever we change
@@ -177,8 +183,9 @@ _.extend(Project.prototype, {
   // If the project's dependencies are up to date, this does nothing. Otherwise,
   // it recomputes the combined constraints, the versions to use and initializes
   // the package loader for this project. This WILL REWRITE THE VERSIONS FILE.
-  _ensureDepsUpToDate : function () {
+  _ensureDepsUpToDate : function (options) {
     var self = this;
+    options = options || {};
     buildmessage.assertInCapture();
 
     // To calculate project dependencies, we need to know what release we are
@@ -214,23 +221,24 @@ _.extend(Project.prototype, {
       } catch (err) {
         // XXX This error handling is bogus. Use buildmessage instead, or
         // something. See also compiler.determineBuildTimeDependencies
-        process.stdout.write(
+        Console.warn(
           "Could not resolve the specified constraints for this project:\n"
-           + (err.constraintSolverError ? err : err.stack) + "\n");
+           + (err.constraintSolverError ? err : err.stack));
         process.exit(1);
       }
 
       // Download packages to disk, and rewrite .meteor/versions if it has
       // changed.
       var oldVersions = self.dependencies;
-      var setV = self.setVersions(newVersions);
+      var setV = self.setVersions(newVersions,
+                                  {alwaysRecord: options.alwaysRecord});
       self.showPackageChanges(oldVersions, newVersions, {
         onDiskPackages: setV.downloaded
       });
 
       if (!setV.success) {
-        process.stdout.write(
-          "Could not install all the requested packages.\n");
+        Console.warn(
+          "Could not install all the requested packages.");
         process.exit(1);
       }
 
@@ -263,10 +271,14 @@ _.extend(Project.prototype, {
     // self.constraints variable is always up to date.
     // Note that two parts of the "add" command run code that matches this.
     _.each(self.constraints, function (constraint, packageName) {
-      allDeps.push(_.extend({packageName: packageName},
-                            utils.parseVersionConstraint(constraint)));
+      var oldConstraint = "";
+      if (constraint) {
+        oldConstraint = "@" + constraint;
+      }
+      allDeps.push(
+        _.extend({name: packageName},
+                 utils.parseConstraint(packageName + oldConstraint)));
     });
-
 
     // Now we have to go through the programs directory, go through each of the
     // programs, get their dependencies and use them. (We could have memorized
@@ -287,20 +299,21 @@ _.extend(Project.prototype, {
         programSource.initFromPackageDir(programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {
           _.each(sourceUnibuild.uses, function (use) {
-            var constraint = use.constraint || null;
-            allDeps.push(_.extend({packageName: use.package},
-                                  utils.parseVersionConstraint(constraint)));
+            var oldConstraint = "";
+            if (use.constraint) {
+              oldConstraint = "@" + use.constraint;
+            }
+            allDeps.push(utils.parseConstraint(use.package + oldConstraint));
+
           });
         });
       });
-
     });
-
     // Finally, each release package is a weak exact constraint. So, let's add
     // those.
     _.each(releasePackages, function(version, name) {
-      allDeps.push({packageName: name, version: version, weak: true,
-                    type: 'exactly'});
+     allDeps.push(_.extend(utils.parseConstraint(name + "@=" + version),
+                           { weak: true }));
     });
 
     // This is an UGLY HACK that has to do with our requirement to have a
@@ -309,7 +322,7 @@ _.extend(Project.prototype, {
     // someday, this will make sense.  (The conditional here allows us to work
     // in tests with releases that have no packages.)
     if (catalog.complete.getPackage("ctl")) {
-      allDeps.push({packageName: "ctl", version: null, type: 'any-reasonable'});
+      allDeps.push(utils.parseConstraint("ctl"));
     }
 
     return allDeps;
@@ -349,9 +362,9 @@ _.extend(Project.prototype, {
            options.onDiskPackages[packageName] !== version)) {
         // XXX maybe we shouldn't be letting the constraint solver choose
         // things that don't have the right arches?
-        process.stderr.write("Package " + packageName +
+        Console.warn("Package " + packageName +
                              " has no compatible build for version " +
-                             version + "\n");
+                             version);
         failed = true;
         return;
       }
@@ -359,9 +372,16 @@ _.extend(Project.prototype, {
       // If the previous versions file had this, then we are upgrading, if it did
       // not, then we must be adding this package anew.
       if (_.has(versions, packageName)) {
-        messageLog.push("  upgraded " + packageName + " from version " +
-                        versions[packageName] +
-                        " to version " + newVersions[packageName]);
+        if (packageVersionParser.lessThan(
+          newVersions[packageName], versions[packageName])) {
+          messageLog.push("  downgraded " + packageName + " from version " +
+                          versions[packageName] +
+                          " to version " + newVersions[packageName]);
+        } else {
+          messageLog.push("  upgraded " + packageName + " from version " +
+                          versions[packageName] +
+                          " to version " + newVersions[packageName]);
+        }
       } else {
         messageLog.push("  added " + packageName +
                         " at version " + newVersions[packageName]);
@@ -372,10 +392,67 @@ _.extend(Project.prototype, {
       return 1;
 
     // Show the user the messageLog of packages we added.
-    if (!self.muted && !_.isEmpty(versions)) {
+    if ((!self.muted && !_.isEmpty(versions))
+        || options.alwaysShow) {
       _.each(messageLog, function (msg) {
-        process.stdout.write(msg + "\n");
+        Console.info(msg);
       });
+
+      // Pay special attention to non-backwards-compatible changes.
+      var incompatibleUpdates = [];
+      _.each(self.constraints, function (constraint, package) {
+        var oldV = versions[package];
+        var newV = newVersions[package];
+        // Did we not actually have a version before? We don't care.
+        if (!oldV) {
+          return;
+        }
+        // If this is a local package, then we are aware that this happened and it
+        // is not news.
+        if (catalog.complete.isLocalPackage(package)) {
+          return;
+        }
+        // If we can't find the old version, then maybe that was a local package and
+        // now is not, and that is also not news.
+        var oldVersion;
+        var newRec;
+        var messages = buildmessage.capture(function () {
+          // XXX: Lack of rate limiting, means that this could refresh a lot and
+          // be slow. Hopefully, that will not be happening often, and be fixed
+          // with sql stuff using a better pattern.
+          oldVersion = catalog.complete.getVersion(package, oldV);
+          newRec =
+            catalog.complete.getVersion(package, newV);
+        });
+        if (messages.hasMessages()) {
+          // It would be very weird for us to end up here! But it is
+          // theoretically possible. If it happens, we should probably not crash
+          // (since we have already done all the operations) and logging a
+          // confusing message will just be confusing, so ... recover by
+          // skipping, I guess.
+          return;
+        };
+
+        // The new version has to exist, or we wouldn't have chosen it.
+        if (!oldVersion) {
+          return;
+        }
+        var oldECV = oldVersion.earliestCompatibleVersion;
+        if (oldECV !== newRec.earliestCompatibleVersion) {
+          incompatibleUpdates.push({
+            name: package,
+            description: "(" + oldV + "->" + newV + ") " + newRec.description
+          });
+        }
+      });
+
+      if (!_.isEmpty(incompatibleUpdates)) {
+        Console.warn(
+          "\nThe following packages have been updated to new versions that are not " +
+            "backwards compatible:");
+        Console.warn(utils.formatList(incompatibleUpdates));
+        Console.warn("\n");
+      };
     }
     return 0;
   },
@@ -683,7 +760,8 @@ _.extend(Project.prototype, {
     options = options || {};
 
     // If the user forced us to an explicit release, then maybe we shouldn't
-    // record versions, unless we are updating, in which case, we should.
+    // record versions, unless we are updating or creating, in which case, we
+    // should.
     if (release.explicit && !options.alwaysRecord) {
       return;
     }

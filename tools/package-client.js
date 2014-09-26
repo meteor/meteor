@@ -12,6 +12,7 @@ var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
+var Console = require('./console.js').Console;
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -38,9 +39,22 @@ var openPackageServerConnection = function (packageServerUrl) {
 
 var emptyCachedServerDataJson = function () {
   return {
-    syncToken: {},
+    syncToken: { format: "1.1" },
     collections: null
   };
+};
+
+// Given a connection, makes a call to the package server.  (Checks to see if
+// the connection is connected, and reconnectes if needed -- a workaround for
+// the fact that connections in the tool do not reconnect)
+exports.callPackageServer = function (conn) {
+  if (!conn.connected) {
+    conn.close();
+    conn = exports.loggedInPackagesConnection();
+  }
+  var args = _.values(arguments)
+    .slice(1, arguments.length);
+  return conn.call.apply(conn, args);
 };
 
 // Load the package data that was saved in the local data.json
@@ -69,7 +83,7 @@ exports.loadCachedServerData = function (packageStorageFile) {
     }
     // XXX we should probably return an error to the caller here to
     // figure out how to handle it
-    process.stderr.write("ERROR " + e.message + "\n");
+    Console.stderr.write("ERROR " + e.message + "\n");
     process.exit(1);
   }
   var ret = noDataToken;
@@ -77,7 +91,7 @@ exports.loadCachedServerData = function (packageStorageFile) {
     ret = JSON.parse(data);
   } catch (err) {
     // XXX error handling
-    process.stderr.write(
+    Console.stderr.write(
       "ERROR: Could not parse JSON for local package-metadata cache. \n");
     // This should only happen if you decided to manually edit this or
     // whatever. Regardless, go on and treat this as an empty file.
@@ -109,11 +123,11 @@ var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   }
   var collectionData;
   if (syncOpts) {
-    collectionData = conn.call(
-      'syncNewPackageData', syncToken, syncOpts);
+    collectionData = exports.callPackageServer(conn,
+        'syncNewPackageData', syncToken, syncOpts);
   } else {
-    collectionData = conn.call(
-      'syncNewPackageData', syncToken);
+    collectionData = exports.callPackageServer(conn,
+        'syncNewPackageData', syncToken);
   }
   return collectionData;
 };
@@ -182,12 +196,24 @@ var writePackageDataToDisk = function (syncToken, data, options) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (cachedServerData, options) {
+  var results;
+  buildmessage.capture({ title: 'Updating package catalog' }, function () {
+    results = _updateServerPackageData(cachedServerData, options);
+  });
+  return results;
+};
+
+_updateServerPackageData = function (cachedServerData, options) {
   var self = this;
   options = options || {};
   cachedServerData = cachedServerData || emptyCachedServerDataJson();
 
   var done = false;
   var ret = {resetData: false};
+
+  var start = undefined;
+  var state = { current: 0, end: 10, done: false};
+  buildmessage.reportProgress(state);
 
   try {
     var conn = openPackageServerConnection(options.packageServerUrl);
@@ -197,8 +223,22 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     return ret;
   }
 
+  // Provide some progress indication for connection
+  // XXX though it is just a hack
+  state.current = 1;
+  buildmessage.reportProgress(state);
+
   var getSomeData = function () {
     var syncToken = cachedServerData.syncToken;
+
+    if (!start) {
+      start = syncToken.packages;
+      state.end = Date.now() - start;
+    }
+    // XXX: Is packages the best progress indicator?
+    state.current = syncToken.packages - start;
+    buildmessage.reportProgress(state);
+
     var remoteData;
     try {
       remoteData = loadRemotePackageData(conn, syncToken, {
@@ -259,6 +299,9 @@ exports.updateServerPackageData = function (cachedServerData, options) {
     conn.close();
   }
 
+  state.done = true;
+  buildmessage.reportProgress(state);
+
   ret.data = cachedServerData;
   return ret;
 };
@@ -281,7 +324,7 @@ exports.loggedInPackagesConnection = function () {
 
   if (! auth.isLoggedIn()) {
     // XXX we should have a better account signup page.
-    process.stderr.write(
+    Console.stderr.write(
 "Please log in with your Meteor developer account. If you don't have one,\n" +
 "you can quickly create one at www.meteor.com.\n");
     auth.doUsernamePasswordLogin({ retry: true });
@@ -303,7 +346,7 @@ exports.loggedInPackagesConnection = function () {
     if (err.message === "access-denied") {
       // Maybe we thought we were logged in, but our token had been
       // revoked.
-      process.stderr.write(
+      Console.stderr.write(
 "It looks like you have been logged out! Please log in with your Meteor\n" +
 "developer account. If you don't have one, you can quickly create one\n" +
 "at www.meteor.com.\n");
@@ -343,7 +386,7 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
     name
   );
   if (! files.mkdir_p(sourcePackageDir)) {
-    process.stderr.write('Failed to create temporary source directory: ' +
+    Console.stderr.write('Failed to create temporary source directory: ' +
                          sourcePackageDir);
     return null;
   }
@@ -454,32 +497,34 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
 
   // Note: we really want to do this before createPackageBuild, because the URL
   // we get from createPackageBuild will expire!
-  process.stdout.write('Bundling build...\n');
+  Console.stdout.write('Bundling build...\n');
   var bundleResult = bundleBuild(unipackage);
   if (buildmessage.jobHasMessages())
     return;
 
-  process.stdout.write('Creating package build...\n');
-  var uploadInfo = conn.call('createPackageBuild', {
-    packageName: unipackage.name,
-    version: unipackage.version,
-    buildArchitectures: unipackage.buildArchitectures()
+  Console.stdout.write('Creating package build...\n');
+  var uploadInfo = exports.callPackageServer(conn,
+    'createPackageBuild', {
+      packageName: unipackage.name,
+      version: unipackage.version,
+      buildArchitectures: unipackage.buildArchitectures()
   });
 
-  process.stdout.write('Uploading build...\n');
+  Console.stdout.write('Uploading build...\n');
   uploadTarball(uploadInfo.uploadUrl,
                 bundleResult.buildTarball);
 
-  process.stdout.write('Publishing package build...\n');
-  conn.call('publishPackageBuild',
+  Console.stdout.write('Publishing package build...\n');
+  exports.callPackageServer(conn,
+            'publishPackageBuild',
             uploadInfo.uploadToken,
             bundleResult.tarballHash,
             bundleResult.treeHash);
 
-  process.stdout.write('Published ' + unipackage.name +
+  Console.stdout.write('Published ' + unipackage.name +
                        ', version ' + unipackage.version);
 
-  process.stdout.write('\nDone!\n');
+  Console.stdout.write('\nDone!\n');
 };
 
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
@@ -488,13 +533,13 @@ exports.handlePackageServerConnectionError = function (error) {
   if (error instanceof AlreadyPrintedMessageError) {
     // do nothing
   } else if (error.errorType === 'Meteor.Error') {
-    process.stderr.write("Error from package server");
+    Console.stderr.write("Error from package server");
     if (error.message) {
-      process.stderr.write(": " + error.message);
+      Console.stderr.write(": " + error.message);
     }
-    process.stderr.write("\n");
+    Console.stderr.write("\n");
   } else if (error.errorType === "DDP.ConnectionError") {
-    process.stderr.write("Error connecting to package server: "
+    Console.stderr.write("Error connecting to package server: "
                          + error.message + "\n");
   } else {
     throw error;
@@ -533,13 +578,13 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   } catch (e) {
     if (!e.versionParserError)
       throw e;
-    process.stderr.write(e.error + "\n");
+    Console.stderr.write(e.error + "\n");
     return 1;
   }
 
   // Check that we have a version.
   if (! version) {
-    process.stderr.write(
+    Console.stderr.write(
      "That package cannot be published because it doesn't have a version.\n");
     return 1;
   }
@@ -548,15 +593,15 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // all string limits on the server, but this is the one that is mostly likely
   // to be wrong)
   if (!packageSource.metadata.summary) {
-    process.stderr.write("Please describe what your package does. \n");
-    process.stderr.write("Set a summary in Package.describe in package.js. \n");
+    Console.stderr.write("Please describe what your package does. \n");
+    Console.stderr.write("Set a summary in Package.describe in package.js. \n");
     return 1;
   }
 
   if (packageSource.metadata.summary &&
       packageSource.metadata.summary.length > 100) {
-    process.stderr.write("Description must be under 100 chars. \n");
-    process.stderr.write("Publish failed. \n");
+    Console.stderr.write("Description must be under 100 chars. \n");
+    Console.stderr.write("Publish failed. \n");
     return 1;
   }
 
@@ -566,15 +611,15 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   if (!options['new']) {
     var packRecord = catalog.official.getPackage(name);
     if (!packRecord) {
-      process.stderr.write('There is no package named ' + name +
+      Console.stderr.write('There is no package named ' + name +
                            '. If you are creating a new package, use the --create flag. \n');
-      process.stderr.write("Publish failed. \n");
+      Console.stderr.write("Publish failed. \n");
       return 1;
     }
 
     if (!exports.amIAuthorized(name, conn, false)) {
-      process.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
-      process.stderr.write('Only authorized maintainers may publish new versions. \n');
+      Console.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
+      Console.stderr.write('Only authorized maintainers may publish new versions. \n');
       return 1;
     }
   }
@@ -597,12 +642,11 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // then we should force the user to specify them. This is because we are not
   // sure about pre-0.90 package versions yet.
   if (!packageSource.isCore && !_.isEqual(badConstraints, [])) {
-    process.stderr.write(
+    Console.stderr.write(
 "You must specify a version constraint for the following packages:");
     _.each(badConstraints, function(bad) {
-      process.stderr.write(" " + bad);
+      Console.stderr.write(" " + bad);
     });
-    process.stderr.write(". \n" );
     process.exit(1);
   }
 
@@ -632,11 +676,11 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     });
 
   if (messages.hasMessages()) {
-    process.stderr.write(messages.formatMessages());
+    Console.stderr.write(messages.formatMessages());
     return 1;
   }
 
-  process.stdout.write('Bundling source...\n');
+  Console.stdout.write('Bundling source...\n');
 
   var sources = _.union(compileResult.sources, testFiles);
 
@@ -653,13 +697,14 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 
   // Create the package. Check that the metadata exists.
   if (options.new) {
-    process.stdout.write('Creating package...\n');
+    Console.stdout.write('Creating package...\n');
     try {
-      var packageId = conn.call('createPackage', {
-        name: packageSource.name
-      });
+      var packageId = exports.callPackageServer(conn,
+        'createPackage', {
+            name: packageSource.name
+        });
     } catch (err) {
-      process.stderr.write(err.message + "\n");
+      Console.stderr.write(err.message + "\n");
       return 3;
     }
 
@@ -668,18 +713,19 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   if (options.existingVersion) {
     var existingRecord = catalog.official.getVersion(name, version);
     if (!existingRecord) {
-      process.stderr.write("Version does not exist.\n");
+      Console.stderr.write("Version does not exist.\n");
       return 1;
     }
     if (existingRecord.source.treeHash !== sourceBundleResult.treeHash) {
-      process.stderr.write(
+      Console.stderr.write(
         "Package source differs from the existing version.\n");
       return 1;
     }
 
     // XXX check that we're actually providing something new?
   } else {
-    process.stdout.write('Creating package version...\n');
+    Console.stdout.write('Creating package version...\n');
+
     var uploadRec = {
       packageName: packageSource.name,
       version: version,
@@ -691,9 +737,10 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       dependencies: packageDeps
     };
     try {
-      var uploadInfo = conn.call('createPackageVersion', uploadRec);
+      var uploadInfo = exports.callPackageServer(conn,
+        'createPackageVersion', uploadRec);
     } catch (err) {
-      process.stderr.write("ERROR " + err.message + "\n");
+      Console.stderr.write("ERROR " + err.message + "\n");
       return 3;
     }
 
@@ -701,17 +748,18 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
 
-    process.stdout.write('Uploading source...\n');
+    Console.stdout.write('Uploading source...\n');
     uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
 
-    process.stdout.write('Publishing package version...\n');
+    Console.stdout.write('Publishing package version...\n');
     try {
-      conn.call('publishPackageVersion',
-                uploadInfo.uploadToken,
-                { tarballHash: sourceBundleResult.tarballHash,
-                  treeHash: sourceBundleResult.treeHash });
+      exports.callPackageServer(conn,
+                        'publishPackageVersion',
+                        uploadInfo.uploadToken,
+                        { tarballHash: sourceBundleResult.tarballHash,
+                          treeHash: sourceBundleResult.treeHash });
     } catch (err) {
-      process.stderr.write("ERROR " + err.message + "\n");
+      Console.stderr.write("ERROR " + err.message + "\n");
       return 3;
     }
 
@@ -734,7 +782,7 @@ exports.amIAuthorized = function (name, conn, isRelease) {
     (isRelease ? "Release" : "Package");
 
   try {
-     conn.call(methodName, name);
+    exports.callPackageServer(conn, methodName, name);
   } catch (err) {
     if (err.error === 401) {
       return false;

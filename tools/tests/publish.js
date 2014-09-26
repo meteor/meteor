@@ -5,6 +5,7 @@ var testUtils = require('../test-utils.js');
 var selftest = require('../selftest.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
+var files = require('../files.js');
 
 selftest.define("publish-and-search", ["slow", "net", "test-package-server"], function () {
   var s = new Sandbox;
@@ -133,10 +134,9 @@ selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], func
   run.waitSecs(15);
   run.expectExit(0);
   run.match("Done");
-  run.match("WARNING");
+  run.matchErr("WARNING");
 
 });
-
 
 selftest.define("list-with-a-new-version",
                 ["slow", "net", "test-package-server"], function () {
@@ -240,7 +240,7 @@ selftest.define("list-with-a-new-version",
   });
 
   s.cd('mapp', function () {
-    // // 
+    // //
     // run = s.run("search", "asdf");
     // run.waitSecs(100);
     // run.expectExit(0);
@@ -254,14 +254,223 @@ selftest.define("list-with-a-new-version",
     run.expectExit(0);
 
     // It works if ask for it, though.
-    run = s.run("add", fullPackageName + "@1.0.4-rc3");
+    run = s.run("add", fullPackageName + "@1.0.4-rc.3");
     run.waitSecs(100);
     run.expectExit(0);
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.4-rc3 ");
+    run.match("1.0.4-rc.3 ");
     run.forbidAll("New versions");
     run.expectExit(0);
   });
+});
+
+
+selftest.define("do-not-update-to-rcs",
+                ["slow", "net", "test-package-server"], function () {
+  var s = new Sandbox;
+
+  var username = "test";
+  var password = "testtest";
+
+  testUtils.login(s, username, password);
+  var packageName = utils.randomToken();
+  var fullPackageName = username + ":" + packageName;
+  var run;
+
+  // Now, create a package.
+  s.createPackage(fullPackageName, "package-of-two-versions");
+  // Publish the first version.
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(30);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Change the package to increment version and publish the new package.
+  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Now publish an 1.0.4-rc.3.
+  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  // Create an app. Add the package to it. Check that list shows the package, at
+  // the non-rc version.
+  run = s.run('create', 'mapp');
+  run.waitSecs(15);
+  run.expectExit(0);
+  s.cd('mapp', function () {
+
+    // XXX: This test was failing because we were running from a situation that
+    // could not be resolved without using RCs. Since we had to use RCs already,
+    // we were OK with using the RC for the new package. That's bad! Anyway, at
+    // least we are testing that in the absense of other data, we should not add
+    // the RC. Ideally, we should consider running this test with a warehouse,
+    // but maybe not yet.
+    run = s.run("remove", "meteor-platform", "autopublish", "insecure");
+    run.waitSecs(10);
+    run.expectExit(0);
+
+    run = s.run("add", fullPackageName);
+    run.waitSecs(10);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.1");
+    run.forbidAll("New versions");
+    run.expectExit(0);
+
+    // Now, let's try to update. It should not work, since update will not bring
+    // you to an rc version automatically (unless it has to).
+    run = s.run("update", "packages-only");
+    run.waitSecs(10);
+    run.match("Your packages are at their latest compatible versions.");
+    run.expectExit(0);
+    run = s.run("update");
+    run.waitSecs(10);
+    run.match("Your packages are at their latest compatible versions.");
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    // Check that we have 1.0.1 AND there is no star indicating new versions.
+    run.match("1.0.1 ");
+    run.expectExit(0);
+
+    // It works if ask for it, though.
+    run = s.run("add", fullPackageName + "@1.0.4-rc.3");
+    run.waitSecs(100);
+    run.expectExit(0);
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.4-rc.3"); // We got the rc version.
+  });
+
+  // Now publish an 1.0.4-rc.4.
+  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/package.js');
+  s.cd(fullPackageName, function () {
+    run = s.run("publish");
+    run.waitSecs(15);
+    run.expectExit(0);
+    run.match("Done");
+  });
+
+  s.cd('mapp', function () {
+    // If we run list, we see that we might want to upgrade.
+    run = s.run("list");
+    run.waitSecs(10);
+    run.match(fullPackageName);
+    run.match("1.0.4-rc.3");
+    run.match("New versions");
+    run.expectExit(0);
+
+    // And if we run update, we will get the new rc.
+    run = s.run("update", "--packages-only");
+    run.waitSecs(10);
+    run.match("1.0.4-rc.4");
+    run.expectExit(0);
+  });
+});
+
+
+selftest.define("package-depends-on-either-version",
+    ["slow", "net", "test-package-server"], function () {
+  var s = new Sandbox;
+
+  var username = "test";
+  var password = "testtest";
+  testUtils.login(s, username, password);
+  var packageNameDependent = utils.randomToken();
+
+  // First, we publish fullPackageNameDep at 1.0 and publish it..
+  var fullPackageNameDep = username + ":" + packageNameDependent;
+  s.createPackage(fullPackageNameDep, "package-of-two-versions");
+   s.cd(fullPackageNameDep, function() {
+    run = s.run("publish", "--create");
+    run.waitSecs(20);
+    run.match("Done");
+  });
+
+  // Then, we publish fullPackageNameDep at 2.0.
+  s.cd(fullPackageNameDep, function() {
+    s.cp("package3.js", "package.js");
+    run = s.run("publish");
+    run.waitSecs(20);
+    run.match("Done");
+  });
+
+  // Then, we make another one that depends on either version and publish.
+  var another = utils.randomToken();
+  var fullPackageAnother = username + ":" + another;
+  s.createPackage(fullPackageAnother, "package-of-two-versions");
+  s.cd(fullPackageAnother, function() {
+    var packOpen = s.read("package.js");
+   packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
+      "api.use(\"" + fullPackageNameDep +
+      "@1.0.0 || 2.0.0\");\n" +
+      " });";
+    s.write("package.js", packOpen);
+    run = s.run("publish", "--create");
+    run.waitSecs(20);
+    run.match("Done");
+  });
+
+  // Now we add them to an app.
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+  run = s.run("add", fullPackageNameDep + "@=1.0.0");
+  run.match(fullPackageNameDep);
+  run.expectExit(0);
+
+  var readVersions = function () {
+    var lines = s.read(".meteor/versions").split("\n");
+    var depend = {};
+    _.each(lines, function(line) {
+      if (!line) return;
+      // Packages are stored of the form foo@1.0.0, so this should give us an
+      // array [foo, 1.0.0].
+      var split = line.split('@');
+      var pack = split[0];
+      depend[pack] = split[1];
+    });
+    return depend;
+  };
+
+  var depend = readVersions();
+  selftest.expectEqual(depend[fullPackageNameDep], "1.0.0");
+
+  run = s.run("add", fullPackageAnother + "@=1.0.0");
+  run.match(fullPackageAnother);
+  run.expectExit(0);
+
+  var depend = readVersions();
+  selftest.expectEqual(depend[fullPackageNameDep], "1.0.0");
+  selftest.expectEqual(depend[fullPackageAnother], "1.0.0");
+
+  run = s.run("add", fullPackageNameDep + "@=2.0.0");
+  run.match(fullPackageNameDep);
+  run.expectExit(0);
+
+  depend = readVersions();
+  selftest.expectEqual(depend[fullPackageNameDep], "2.0.0");
+  selftest.expectEqual(depend[fullPackageAnother], "1.0.0");
 });
