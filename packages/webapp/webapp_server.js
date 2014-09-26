@@ -58,6 +58,11 @@ var initKeepalive = function () {
   }, 3000);
 };
 
+// Check that we have a pid that looks like a decimal integer.
+var validPid = function (pid) {
+  return "" + parseInt(pid, 10) === "" + pid;
+};
+
 // As a replacement to the old keepalives mechanism, check for a running
 // parent every few seconds. Exit if the parent is not running.
 //
@@ -69,8 +74,7 @@ var initKeepalive = function () {
 //   takes the parent process's place before the child process dies.
 var startCheckForLiveParent = function (parentPid) {
   if (parentPid) {
-    // Check that we have a pid that looks like a decimal integer.
-    if ("" + parseInt(parentPid, 10) !== parentPid) {
+    if (! validPid(parentPid)) {
       console.error("--parent-pid must be a valid process ID.");
       process.exit(1);
     }
@@ -1178,3 +1182,4 @@ WebAppInternals.addStaticJs = function (contents) {
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
+WebAppInternals.validPid = validPid;
