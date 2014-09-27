@@ -35,7 +35,7 @@ Deploy it to the world, for free:
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
-    git clone git://github.com/meteor/meteor.git
+    git clone git://github.com/4commerce-technologies-AG/meteor.git
     cd meteor
 
 If you're the sort of person who likes to build everything from scratch,
