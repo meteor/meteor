@@ -9,8 +9,7 @@ Tinytest.add("accounts - parse urls for accounts-password",
       var fakeToken = "asdf";
       
       var hashTokenOnly = "#/" + hashPart + "/" + fakeToken;
-      AccountsTest.attemptToMatchHash(hashTokenOnly,
-          function (token, action) {
+      AccountsTest.attemptToMatchHash(hashTokenOnly, function (token, action) {
         test.equal(token, fakeToken);
         test.equal(action, hashPart);
 
