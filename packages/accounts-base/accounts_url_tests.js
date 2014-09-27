@@ -19,8 +19,13 @@ Tinytest.add("accounts - parse urls for accounts-password",
         } else if (hashPart === "verify-email") {
           test.equal(Accounts._verifyEmailToken, fakeToken);
         } else if (hashPart === "enroll-account") {
-          test.equal(Accounts._resetPasswordToken, fakeToken);
+          test.equal(Accounts._enrollAccountToken, fakeToken);
         }
+
+        // Reset variables for the next test
+        Accounts._resetPasswordToken = null;
+        Accounts._verifyEmailToken = null;
+        Accounts._enrollAccountToken = null;
 
         actionsParsed.push(action);
       });
