@@ -418,16 +418,11 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
       throw Error("Unknown constraint type: " + currConstraint.type);
     }
 
-    // If you are asking for a pre-release, you need to get exactly that one.
-    // (@1.2.3-rc1 does not match 1.2.4.)
-    if (/-/.test(currConstraint.version)) {
-      return currConstraint.version === candidateUV.version;
-    }
-
     // If you're not asking for a pre-release (and you are not in pre-releases-OK
     // mode), you'll only get it if it was a top level explicit mention (eg, in
     // the release).
-    if (/-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
+    if (!/-/.test(currConstraint.version) &&
+        /-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
       if (currConstraint.version === candidateUV.version)
         return true;
       if (!_.has(resolveContext.topLevelPrereleases, self.name) ||

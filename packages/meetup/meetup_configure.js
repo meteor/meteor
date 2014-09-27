@@ -1,6 +1,8 @@
-Template.configureLoginServiceDialogForMeetup.siteUrl = function () {
-  return Meteor.absoluteUrl();
-};
+Template.configureLoginServiceDialogForMeetup.helpers({
+  siteUrl: function () {
+    return Meteor.absoluteUrl();
+  }
+});
 
 Template.configureLoginServiceDialogForMeetup.fields = function () {
   return [

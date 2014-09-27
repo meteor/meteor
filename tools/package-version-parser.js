@@ -14,7 +14,7 @@ if (inTool) {
 var semver = inTool ? require ('semver') : Npm.require('semver');
 var __ = inTool ? require('underscore') : _;
 
-// Takes in a meteor version, for example 1.2.3-rc5~1+12345.
+// Takes in a meteor version, for example 1.2.3-rc5_1+12345.
 //
 // Returns an object composed of the following:
 //   semver: (ex: 1.2.3)
@@ -25,9 +25,9 @@ var __ = inTool ? require('underscore') : _;
 var extractSemverPart = function (versionString) {
   if (!versionString) return { semver: "", wrapNum: -1 };
   var noBuild = versionString.split('+');
-  var splitVersion = noBuild[0].split('~');
+  var splitVersion = noBuild[0].split('_');
   var wrapNum = 0;
-  // If we find two +s, or two ~, that's super invalid.
+  // If we find two +s, or two _, that's super invalid.
   if (noBuild.length > 2 || splitVersion.length > 2) {
     throwVersionParserError(
       "Version string must look like semver (eg '1.2.3'), not '"
@@ -36,11 +36,11 @@ var extractSemverPart = function (versionString) {
     wrapNum = splitVersion[1];
     if (!/^\d+$/.test(wrapNum)) {
       throwVersionParserError(
-        "The wrap number (after ~) must contain only digits, so " +
+        "The wrap number (after _) must contain only digits, so " +
           versionString + " is invalid.");
     } else if (wrapNum[0] === "0") {
       throwVersionParserError(
-        "The wrap number (after ~) must not have a leading zero, so " +
+        "The wrap number (after _) must not have a leading zero, so " +
           versionString + " is invalid.");
     }
   }
@@ -48,21 +48,71 @@ var extractSemverPart = function (versionString) {
     semver: (noBuild.length > 1) ?
       splitVersion[0] + "+" + noBuild[1] :
       splitVersion[0],
-    wrapNum: wrapNum
+    wrapNum: parseInt(wrapNum, 10)
   };
 };
 
-// Converts a meteor version into a very large number, unique to that version.
+// Converts a meteor version into a large floating point number, which
+// is (more or less [*]) unique to that version. Satisfies the
+// following guarantee: If PV.lessThan(v1, v2) then
+// PV.versionMagnitude(v1) < PV.versionMagnitude(v2) [*]
+//
+// [* XXX!] We don't quite satisfy the uniqueness and comparison properties in
+// these cases:
+// 1. If any of the version parts are greater than 100 (pretty unlikely?)
+// 2. If we're dealing with a prerelease version, we only look at the
+//    first two characters of each prerelease part. So, "1.0.0-beta" and
+//    "1.0.0-bear" will have the same magnitude.
+// 3. If we're dealing with a prerelease version with more than two parts, eg
+//    "1.0.0-rc.0.1". In this comparison may fail since we'd get to the limit
+//    of JavaScript floating point precision.
+//
+// If we wanted to fix this, we'd make this function return a BigFloat
+// instead of a vanilla JavaScript number. That will make the
+// constraint solver slower (by how much?), and would require some
+// careful thought.
 PV.versionMagnitude = function (versionString) {
- // var v = semver.parse(versionString);
- // return v.major * 10000 + v.minor * 100 + v.patch;
-
   var version = extractSemverPart(versionString);
   var v = semver.parse(version.semver);
-  // XXX: This is kind of hacky and relies on not having more than 100 wrap
-  // numbers, for example. Probably OK.
-  return v.major * 1000000 + v.minor * 10000 +
-    v.patch * 100 + version.wrapNum;
+
+  return v.major * 100 * 100 +
+    v.minor * 100 +
+    v.patch +
+    version.wrapNum / 100 +
+    prereleaseIdentifierToFraction(v.prerelease) / 100 / 100;
+};
+
+// Accepts an array, eg ["rc", 2, 3]. Returns a number in the range
+// (-1, 0].  An empty array returns 0. A non-empty string returns a
+// number that is "as large" as the its precedence.
+var prereleaseIdentifierToFraction = function (prerelease) {
+  if (prerelease.length === 0)
+    return 0;
+
+  return _.reduce(prerelease, function (memo, part, index) {
+    var digit;
+    if (typeof part === 'number') {
+      digit = part+1;
+    } else if (typeof part === 'string') {
+      var VALID_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+      var validCharToNumber = function (ch) {
+        var result = VALID_CHARACTERS.indexOf(ch);
+        if (result === -1)
+          throw new Error("Unexpected character in prerelease identifier: " + ch);
+        else
+          return result;
+      };
+
+      digit = 251 + // Numeric parts always have lower precedence than non-numeric parts.
+        validCharToNumber(part[0]) * VALID_CHARACTERS.length +
+        (part[1] ? validCharToNumber(part[1]) : 0);
+    } else {
+      throw new Error("Unexpected prerelease identifier part: " + part + " of type " + typeof part);
+    }
+
+    return memo + digit / Math.pow(3000, index+1);
+  }, -1);
 };
 
 // Takes in two meteor versions. Returns true if the first one is less than the second.
@@ -172,7 +222,7 @@ PV.getValidServerVersion = function (meteorVersionString) {
   }
 
   if (version.wrapNum) {
-    cleanVersion = cleanVersion + "~" + version.wrapNum;
+    cleanVersion = cleanVersion + "_" + version.wrapNum;
   }
 
   return cleanVersion;
@@ -274,7 +324,7 @@ PV.constraintToFullString = function (parsedConstraint) {
 
 
 // Return true if the version constraint was invalid prior to 0.9.3
-// (adding ~ and || support)
+// (adding _ and || support)
 //
 // NOTE: this is not used on the client yet. This package is used by the
 // package server to determine what is valid.
@@ -284,6 +334,6 @@ PV.invalidFirstFormatConstraint = function (validConstraint) {
   // characters. Anything with those characters is invalid prior to
   // 0.9.3. XXX: If we ever have to go through these, we should write a more
   // complicated regex.
-  return (/~/.test(validConstraint) ||
+  return (/_/.test(validConstraint) ||
           /\|/.test(validConstraint));
 };

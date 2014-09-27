@@ -400,6 +400,14 @@ var bundleAndDeploy = function (options) {
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
 
+    var bundleResult = bundler.bundle({
+      outputPath: bundlePath,
+      buildOptions: options.buildOptions
+    });
+
+    if (bundleResult.errors)
+      messages.merge(bundleResult.errors);
+
     if (options.recordPackageUsage) {
       var statsMessages = buildmessage.capture({ title: 'Reporting statistics' }, function () {
         stats.recordPackages("sdk.deploy", site);
@@ -411,13 +419,6 @@ var bundleAndDeploy = function (options) {
       }
     }
 
-    var bundleResult = bundler.bundle({
-      outputPath: bundlePath,
-      buildOptions: options.buildOptions
-    });
-
-    if (bundleResult.errors)
-      messages.merge(bundleResult.errors);
   }
 
   if (messages.hasMessages()) {

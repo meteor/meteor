@@ -191,6 +191,9 @@ var getCurrentProgressTracker = function () {
   return progress ? progress : rootProgress;
 };
 
+var nudge = function () {
+  getCurrentProgressTracker().nudge();
+};
 
 var addChildTracker = function (title) {
   var options = {};
@@ -299,10 +302,20 @@ var enterJob = function (options, f) {
 
   return currentProgress.withValue(progress, function () {
     if (!currentMessageSet.get()) {
+      var nestingLevel = currentNestingLevel.get();
+      var start;
+      if (debugBuild) {
+        start = Date.now();
+        console.log("START", nestingLevel, options.title);
+      }
       try {
         return f();
       } finally {
         progress.reportProgressDone();
+        if (debugBuild) {
+          var end = Date.now();
+          console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+        }
       }
     }
 
@@ -549,5 +562,6 @@ _.extend(exports, {
   reportProgress: reportProgress,
   reportProgressDone: reportProgressDone,
   getCurrentProgressTracker: getCurrentProgressTracker,
-  addChildTracker: addChildTracker
+  addChildTracker: addChildTracker,
+  nudge: nudge
 });

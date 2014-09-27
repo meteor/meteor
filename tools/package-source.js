@@ -476,9 +476,21 @@ _.extend(PackageSource.prototype, {
        * @locus package.js
        * @memberOf Package
        * @param {Object} options
-       * @param {String} options.summary A concise 1-2 sentence description of the package, required for publication.
-       * @param {String} options.version The [semver](http://www.semver.org) version for your package. If no version is specified, defaults to `0.0.0`. You need to specify a version to publish to the package server.
-       * @param {String} options.name Optional name override. By default, the package name comes from the name of its directory.
+       * @param {String} options.summary A concise 1-2 sentence description of
+       * the package, required for publication.
+       * @param {String} options.version The (extended)
+       * [semver](http://www.semver.org) version for your package. Additionally,
+       * Meteor allows a wrap number, to follow the version number. If you are
+       * porting another package that uses semver versioning, you may want to
+       * use the original version, postfixed with the _<number>. For example,
+       * '1.2.3_1', '2.4.5-rc1_4'. Wrap numbers sort after the original numbers:
+       * '1.2.3' < '1.2.3_1' < '1.2.3_2' < '1.2.4-rc.0'. By default, wrap
+       * numbers don't affect compatibility, so 1.2.3_1 is compatible with
+       * 1.2.3, 1.2.3_3, etc. If no version is specified, this field defaults to
+       * `0.0.0`. You need to specify a version to publish to the package
+       * server.
+       * @param {String} options.name Optional name override. By default, the
+       * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
        */
       describe: function (options) {
@@ -587,7 +599,27 @@ _.extend(PackageSource.prototype, {
       // - sources: sources for the plugin (array of string)
       // - npmDependencies: map from npm package name to required
       //   version (string)
-      _transitional_registerBuildPlugin: function (options) {
+      
+      /**
+       * @summary Define a build plugin. A build plugin extends the build
+       * process for apps and packages that use this package. For example,
+       * the `coffeescript` package uses a build plugin to compile CoffeeScript
+       * source files into JavaScript.
+       * @param  {Object} [options]
+       * @param {String} options.name A cosmetic name, must be unique in the
+       * package.
+       * @param {String|String[]} options.use Meteor packages that this
+       * plugin uses, independent of the packages specified in
+       * [api.onUse](#PackageAPI-onUse).
+       * @param {String[]} options.sources The source files that make up the
+       * build plugin, independent from [api.addFiles](#PackageAPI-addFiles).
+       * @param {Object} options.npmDependencies An object where the keys
+       * are NPM package names, and the keys are the version numbers of
+       * required NPM packages, just like in [Npm.depends](#Npm-depends).
+       * @memberOf Package
+       * @locus package.js
+       */
+      registerBuildPlugin: function (options) {
         // Tests don't have plugins; plugins initialized in the control file
         // belong to the package and not to the test. (This will be less
         // confusing in the new control file format).
@@ -618,6 +650,13 @@ _.extend(PackageSource.prototype, {
 
         // XXX probably want further type checking
         self.pluginInfo[options.name] = options;
+      },
+
+      /**
+       * @deprecated in 0.9.4
+       */
+      _transitional_registerBuildPlugin: function (options) {
+        this.registerBuildPlugin(options);
       },
 
       includeTool: function () {
@@ -1012,7 +1051,9 @@ _.extend(PackageSource.prototype, {
          * compatible version (ex: 1.0.1, 1.5.0, etc.)  of the
          * `accounts` package). If you are sourcing core
          * packages from a Meteor release with `versionsFrom`, you may leave
-         * off version names for core packages.
+         * off version names for core packages. You may also specify constraints,
+         * such as 'my:forms@=1.0.0 (this package demands my:forms at 1.0.0 exactly),
+         * or 'my:forms@1.0.0 || =2.0.1' (my:forms at 1.x.y, or exactly 2.0.1).
          * @param {String} [architecture] If you only use the package on the
          * server (or the client), you can pass in the second argument (e.g.,
          * `'server'` or `'client'`) to specify what architecture the package is
@@ -1152,7 +1193,7 @@ _.extend(PackageSource.prototype, {
         /**
          * @memberOf PackageAPI
          * @instance
-         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published.
+         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published. You may specify more than one release, in which case the constraints will be parsed with an or: 'jquery@1.0.0 || 2.0.0'.
          * @locus package.js
          * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
          */
