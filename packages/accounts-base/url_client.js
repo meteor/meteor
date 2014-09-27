@@ -8,19 +8,26 @@ var accountsPaths = ["reset-password", "verify-email", "enroll-account"];
 var attemptToMatchHash = function (hash, success) {
   _.each(accountsPaths, function (urlPart) {
     var token;
-    var email;
 
     tokenRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)$");
-    match = hash.match(oldTokenRegex);
+    match = hash.match(tokenRegex);
 
     if (match) {
       token = match[1];
-      email = null; // no email in the URL
+
+      // XXX COMPAT WITH 0.9.3
+      if (urlPart === "reset-password") {
+        Accounts._resetPasswordToken = token;
+      } else if (urlPart === "verify-email") {
+        Accounts._verifyEmailToken = token;
+      } else if (urlPart === "enroll-account") {
+        Accounts._enrollAccountToken = token;
+      }
     } else {
       return;
     }
 
-    // Do some stuff with the token and email we matched
+    // Do some stuff with the token we matched
     success(token, urlPart);
   });
 };
@@ -49,15 +56,6 @@ attemptToMatchHash(window.location.hash, function (token, urlPart) {
       accountsCallbacks[urlPart](token, enableAutoLogin);
     }
   });
-
-  // XXX COMPAT WITH 0.9.3
-  if (urlPart === "reset-password") {
-    Accounts._resetPasswordToken = token;
-  } else if (urlPart === "verify-email") {
-    Accounts._verifyEmailToken = token;
-  } else if (urlPart === "enroll-account") {
-    Accounts._enrollAccountToken = token;
-  }
 });
 
 // Export for testing

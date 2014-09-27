@@ -8,21 +8,19 @@ Tinytest.add("accounts - parse urls for accounts-password",
     _.each(actions, function (hashPart) {
       var fakeToken = "asdf";
       
-      // test backcompat with URLs that only contain the token and no email
       var hashTokenOnly = "#/" + hashPart + "/" + fakeToken;
       AccountsTest.attemptToMatchHash(hashTokenOnly,
-          function (token, email, action) {
+          function (token, action) {
         test.equal(token, fakeToken);
-        test.equal(email, null);
         test.equal(action, hashPart);
 
         // XXX COMPAT WITH 0.9.3
-        if (urlPart === "reset-password") {
+        if (hashPart === "reset-password") {
           test.equal(Accounts._resetPasswordToken, fakeToken);
-        } else if (urlPart === "verify-email") {
+        } else if (hashPart === "verify-email") {
           test.equal(Accounts._verifyEmailToken, fakeToken);
-        } else if (urlPart === "enroll-account") {
-          test.equal(Accounts._enrollAccountToken, fakeToken);
+        } else if (hashPart === "enroll-account") {
+          test.equal(Accounts._resetPasswordToken, fakeToken);
         }
 
         actionsParsed.push(action);
