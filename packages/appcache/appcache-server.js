@@ -71,7 +71,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   // So to ensure that the client updates if client resources change,
   // include a hash of client resources in the manifest.
 
-  manifest += "# " + WebApp.clientHash + "\n";
+  manifest += "# " + WebApp.clientHash() + "\n";
 
   // When using the autoupdate package, also include
   // AUTOUPDATE_VERSION.  Otherwise the client will get into an
