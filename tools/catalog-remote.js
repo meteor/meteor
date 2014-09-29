@@ -553,6 +553,7 @@ _.extend(RemoteCatalog.prototype, {
     if (results.length !== 0 || options.noRetry)
       return results;
 
+    // XXX: This causes unnecessary refreshes
     Console.warn("Forcing refresh because of unexpected missing data");
     Console.debug("No data was returned from query: ", query, values);
     self.refresh();
