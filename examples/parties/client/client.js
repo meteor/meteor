@@ -20,32 +20,30 @@ Meteor.startup(function () {
 ///////////////////////////////////////////////////////////////////////////////
 // Party details sidebar
 
-Template.details.party = function () {
-  return Parties.findOne(Session.get("selected"));
-};
+Template.details.helpers({
+  party: function () {
+    return Parties.findOne(Session.get("selected"));
+  },
+  anyParties: function () {
+    return Parties.find().count() > 0;
+  },
+  creatorName: function () {
+    var owner = Meteor.users.findOne(this.owner);
+    if (owner._id === Meteor.userId())
+      return "me";
+    return displayName(owner);
+  },
+  canRemove: function () {
+    return this.owner === Meteor.userId() && attending(this) === 0;
+  },
+  maybeChosen: function (what) {
+    var myRsvp = _.find(this.rsvps, function (r) {
+      return r.user === Meteor.userId();
+    }) || {};
 
-Template.details.anyParties = function () {
-  return Parties.find().count() > 0;
-};
-
-Template.details.creatorName = function () {
-  var owner = Meteor.users.findOne(this.owner);
-  if (owner._id === Meteor.userId())
-    return "me";
-  return displayName(owner);
-};
-
-Template.details.canRemove = function () {
-  return this.owner === Meteor.userId() && attending(this) === 0;
-};
-
-Template.details.maybeChosen = function (what) {
-  var myRsvp = _.find(this.rsvps, function (r) {
-    return r.user === Meteor.userId();
-  }) || {};
-
-  return what == myRsvp.rsvp ? "chosen btn-inverse" : "";
-};
+    return what == myRsvp.rsvp ? "chosen btn-inverse" : "";
+  }
+});
 
 Template.details.events({
   'click .rsvp_yes': function () {
@@ -73,34 +71,36 @@ Template.details.events({
 ///////////////////////////////////////////////////////////////////////////////
 // Party attendance widget
 
-Template.attendance.rsvpName = function () {
-  var user = Meteor.users.findOne(this.user);
-  return displayName(user);
-};
+Template.attendance.helpers({
+  rsvpName: function () {
+    var user = Meteor.users.findOne(this.user);
+    return displayName(user);
+  },
 
-Template.attendance.outstandingInvitations = function () {
-  var party = Parties.findOne(this._id);
-  return Meteor.users.find({$and: [
-    {_id: {$in: party.invited}}, // they're invited
-    {_id: {$nin: _.pluck(party.rsvps, 'user')}} // but haven't RSVP'd
-  ]});
-};
+  outstandingInvitations: function () {
+    var party = Parties.findOne(this._id);
+    return Meteor.users.find({$and: [
+      {_id: {$in: party.invited}}, // they're invited
+      {_id: {$nin: _.pluck(party.rsvps, 'user')}} // but haven't RSVP'd
+    ]});
+  },
 
-Template.attendance.invitationName = function () {
-  return displayName(this);
-};
+  invitationName: function () {
+    return displayName(this);
+  },
 
-Template.attendance.rsvpIs = function (what) {
-  return this.rsvp === what;
-};
+  rsvpIs: function (what) {
+    return this.rsvp === what;
+  },
 
-Template.attendance.nobody = function () {
-  return ! this.public && (this.rsvps.length + this.invited.length === 0);
-};
+  nobody: function () {
+    return ! this.public && (this.rsvps.length + this.invited.length === 0);
+  },
 
-Template.attendance.canInvite = function () {
-  return ! this.public && this.owner === Meteor.userId();
-};
+  canInvite: function () {
+    return ! this.public && this.owner === Meteor.userId();
+  }
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Map display
@@ -204,9 +204,11 @@ var openCreateDialog = function (x, y) {
   Session.set("showCreateDialog", true);
 };
 
-Template.page.showCreateDialog = function () {
-  return Session.get("showCreateDialog");
-};
+Template.page.helpers({
+  showCreateDialog: function () {
+    return Session.get("showCreateDialog");
+  }
+});
 
 Template.createDialog.events({
   'click .save': function (event, template) {
@@ -239,9 +241,11 @@ Template.createDialog.events({
   }
 });
 
-Template.createDialog.error = function () {
-  return Session.get("createError");
-};
+Template.createDialog.helpers({
+  error: function () {
+    return Session.get("createError");
+  }
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Invite dialog
@@ -250,9 +254,11 @@ var openInviteDialog = function () {
   Session.set("showInviteDialog", true);
 };
 
-Template.page.showInviteDialog = function () {
-  return Session.get("showInviteDialog");
-};
+Template.page.helpers({
+  showInviteDialog: function () {
+    return Session.get("showInviteDialog");
+  }
+});
 
 Template.inviteDialog.events({
   'click .invite': function (event, template) {
@@ -264,14 +270,16 @@ Template.inviteDialog.events({
   }
 });
 
-Template.inviteDialog.uninvited = function () {
-  var party = Parties.findOne(Session.get("selected"));
-  if (! party)
-    return []; // party hasn't loaded yet
-  return Meteor.users.find({$nor: [{_id: {$in: party.invited}},
-                                   {_id: party.owner}]});
-};
+Template.inviteDialog.helpers({
+  uninvited: function () {
+    var party = Parties.findOne(Session.get("selected"));
+    if (! party)
+      return []; // party hasn't loaded yet
+    return Meteor.users.find({$nor: [{_id: {$in: party.invited}},
+                                     {_id: party.owner}]});
+  },
 
-Template.inviteDialog.displayName = function () {
-  return displayName(this);
-};
+  displayName: function () {
+    return displayName(this);
+  }
+});

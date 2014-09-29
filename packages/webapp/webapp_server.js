@@ -35,7 +35,11 @@ var bundledJsCssPrefix;
 // pidfiles.
 // XXX This should really be part of the boot script, not the webapp package.
 //     Or we should just get rid of it, and rely on containerization.
-
+//
+// XXX COMPAT WITH 0.9.2.2
+// Keepalives have been replaced with a check that the parent pid is
+// still running. We keep the --keep-alive option for backwards
+// compatibility.
 var initKeepalive = function () {
   var keepaliveCount = 0;
 
@@ -54,6 +58,39 @@ var initKeepalive = function () {
   }, 3000);
 };
 
+// Check that we have a pid that looks like an integer (non-decimal
+// integer is okay).
+var validPid = function (pid) {
+  return ! isNaN(+pid);
+};
+
+// As a replacement to the old keepalives mechanism, check for a running
+// parent every few seconds. Exit if the parent is not running.
+//
+// Two caveats to this strategy:
+// * Doesn't catch the case where the parent is CPU-hogging (but maybe we
+//   don't want to catch that case anyway, since the bundler not yielding
+//   is what caused #2536).
+// * Could be fooled by pid re-use, i.e. if another process comes up and
+//   takes the parent process's place before the child process dies.
+var startCheckForLiveParent = function (parentPid) {
+  if (parentPid) {
+    if (! validPid(parentPid)) {
+      console.error("--parent-pid must be a valid process ID.");
+      process.exit(1);
+    }
+
+    setInterval(function () {
+      try {
+        process.kill(parentPid, 0);
+      } catch (err) {
+        console.error("Parent process is dead! Exiting.");
+        process.exit(1);
+      }
+    });
+  }
+};
+
 
 var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
@@ -62,7 +99,7 @@ var sha1 = function (contents) {
 };
 
 var readUtf8FileSync = function (filename) {
-  return Future.wrap(fs.readFile)(filename, 'utf8').wait();
+  return Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
 };
 
 // #BrowserIdentification
@@ -747,7 +784,18 @@ var runWebAppServer = function () {
     // We used to use the optimist npm package to parse argv here, but it's
     // overkill (and no longer in the dev bundle). Just assume any instance of
     // '--keepalive' is a use of the option.
+    // XXX COMPAT WITH 0.9.2.2
+    // We used to expect keepalives to be written to stdin every few
+    // seconds; now we just check if the parent process is still alive
+    // every few seconds.
     var expectKeepalives = _.contains(argv, '--keepalive');
+    // XXX Saddest argument parsing ever, should we add optimist back to
+    // the dev bundle?
+    var parentPid = null;
+    var parentPidIndex = _.indexOf(argv, "--parent-pid");
+    if (parentPidIndex !== -1) {
+      parentPid = argv[parentPidIndex + 1];
+    }
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
@@ -755,7 +803,7 @@ var runWebAppServer = function () {
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
-      if (expectKeepalives)
+      if (expectKeepalives || parentPid)
         console.log("LISTENING"); // must match run-app.js
       var proxyBinding;
 
@@ -810,8 +858,12 @@ var runWebAppServer = function () {
       console.error(e && e.stack);
     }));
 
-    if (expectKeepalives)
+    if (expectKeepalives) {
       initKeepalive();
+    }
+    if (parentPid) {
+      startCheckForLiveParent(parentPid);
+    }
     return 'DAEMON';
   };
 };
@@ -1131,3 +1183,4 @@ WebAppInternals.addStaticJs = function (contents) {
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
+WebAppInternals.validPid = validPid;

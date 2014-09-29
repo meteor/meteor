@@ -1231,14 +1231,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   Console.setPretty(command.pretty);
 
-  Console.enableStatusPoll();
-  Console.showProgressBar();
+  Console.enableProgressBar(true);
 
   // Run the command!
   try {
     var ret = command.func(options);
   } catch (e) {
-    Console.hideProgressBar();
+    Console.enableProgressBar(false);
 
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
@@ -1287,7 +1286,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
     }
   }
 
-  Console.hideProgressBar();
+  Console.enableProgressBar(false);
 
   // Exit. (We will not get here if the command threw an exception
   // such as main.WaitForExit).

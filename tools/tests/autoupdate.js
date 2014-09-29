@@ -14,7 +14,7 @@ var getCatalog = function (sandbox) {
  var catalog = new catalogRemote.RemoteCatalog();
  catalog.initialize( {packageStorage: dataFile});
  return catalog;
-}
+};
 
 var setBanner = function (sandbox, version, banner) {
   var messages = buildmessage.capture(function () {

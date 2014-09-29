@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var uniload = require('./uniload.js');
 var release = require('./release.js');
+var Console = require('./console.js').Console;
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
 // writes to standard output (and standard error, if rawLogs is set), and allows
@@ -64,12 +65,12 @@ _.extend(RunLog.prototype, {
 
     if (self.consecutiveRestartMessages) {
       self.consecutiveRestartMessages = null;
-      process.stdout.write("\n");
+      Console.stdout.write("\n");
     }
 
     if (self.consecutiveClientRestartMessages) {
       self.consecutiveClientRestartMessages = null;
-      process.stdout.write("\n");
+      Console.stdout.write("\n");
     }
 
     if (self.temporaryMessageLength) {
@@ -95,9 +96,9 @@ _.extend(RunLog.prototype, {
 
     self._clearSpecial();
     if (self.rawLogs)
-      process[isStderr ? "stderr" : "stdout"].write(line + "\n");
+      Console[isStderr ? "stderr" : "stdout"].write(line + "\n");
     else
-      process.stdout.write(Log.format(obj, { color: true }) + "\n");
+      Console.stdout.write(Log.format(obj, { color: true }) + "\n");
 
     // XXX deal with test server logging differently?!
   },
@@ -115,7 +116,7 @@ _.extend(RunLog.prototype, {
     self._record(obj);
 
     self._clearSpecial();
-    process.stdout.write(msg + "\n");
+    Console.stdout.write(msg + "\n");
   },
 
   // Write a message to the terminal that will get overwritten by the

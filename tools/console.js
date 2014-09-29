@@ -1,6 +1,18 @@
 ///
 /// utility functions for formatting output to the screen
 ///
+/// Console offers several pieces of functionality:
+///   debug / info / warn messages:
+///     Outputs to the screen, optionally with colors (when pretty == true)
+///   'legacy' functions: Console.stdout.write & Console.stderr.write
+///     Make porting code a lot easier (just a regex from process -> Console)
+///   Progress bar support
+///     Displays a progress bar on the screen, but hides it around log messages
+///     (The need to hide it is why we have this class)
+///
+/// In future, we might do things like support verbose mode in here,
+/// and also integrate the buildmessage functionality into here
+///
 
 var _ = require('underscore');
 var Fiber = require('fibers');
@@ -22,10 +34,14 @@ var Console = function (options) {
 
   options = options || {};
 
-  self._progressBar = null;
+  // The progress bar we are showing on-screen, if enabled
+  self._progressBar = false;
+  // The current status text for the progress bar
   self._progressBarText = null;
+  // The current progress we are watching
   self._watching = null;
 
+  self._statusPoller = null;
   self._lastStatusPoll = 0;
 
   // Legacy helpers
@@ -43,7 +59,7 @@ var Console = function (options) {
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
 
   cleanup.onExit(function (sig) {
-    self.hideProgressBar();
+    self.enableProgressBar(false);
   });
 };
 
@@ -79,15 +95,6 @@ LEVEL_INFO = { code: LEVEL_CODE_INFO };
 LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 
 _.extend(Console.prototype, {
-  hideProgressBar: function () {
-    var self = this;
-
-    if (!self._progressBar) {
-      return;
-    }
-    self._progressBar.terminate();
-  },
-
   setPretty: function (pretty) {
     var self = this;
     if (FORCE_PRETTY === undefined) {
@@ -98,7 +105,11 @@ _.extend(Console.prototype, {
   _renderProgressBar: function () {
     var self = this;
     if (self._progressBar) {
+      // Force repaint
+      self._progressBar.lastDraw = '';
+
       self._progressBar.render();
+
       if (self._progressBarText) {
         var text = self._progressBarText;
         if (text > STATUS_MAX_LENGTH) {
@@ -138,6 +149,9 @@ _.extend(Console.prototype, {
     self._watchProgress();
   },
 
+  // Like Patience.nudge(); this can be called during long lived operations
+  // where the timer may be starved off the CPU.  It will execute the poll if
+  // it has been 'too long'
   statusPollMaybe: function () {
     var self = this;
     var now = Date.now();
@@ -152,7 +166,7 @@ _.extend(Console.prototype, {
     var self = this;
     Fiber(function () {
       while (true) {
-        sleep(10);
+        sleep(50);
 
         self._statusPoll();
       }
@@ -191,13 +205,15 @@ _.extend(Console.prototype, {
   _print: function(level, message) {
     var self = this;
 
+    // We need to hide the progress bar before printing the message
     var progressBar = self._progressBar;
     if (progressBar) {
-      //progressBar.terminate();
       self._stream.clearLine();
       self._stream.cursorTo(0);
     }
 
+    // stdout/stderr is determined by the log level
+    // XXX: We should probably just implement Loggers with observers
     var dest = process.stdout;
     if (level) {
       switch (level.code) {
@@ -210,6 +226,7 @@ _.extend(Console.prototype, {
       }
     }
 
+    // Pick the color/weight if in pretty mode
     var style = null;
     if (level && self._pretty) {
       switch (level.code) {
@@ -219,9 +236,6 @@ _.extend(Console.prototype, {
         case LEVEL_CODE_WARN:
           style = chalk.red;
           break;
-        //case LEVEL_CODE_INFO:
-        //  style = chalk.blue;
-        //  break;
       }
     }
 
@@ -231,6 +245,7 @@ _.extend(Console.prototype, {
       dest.write(message + '\n');
     }
 
+    // Repaint the progress bar if we hid it
     if (progressBar) {
       self._renderProgressBar();
     }
@@ -253,51 +268,79 @@ _.extend(Console.prototype, {
     }
   },
 
-  showProgressBar: function () {
+  // Enables the progress bar, or disables it when called with (false)
+  enableProgressBar: function (enabled) {
     var self = this;
 
-    if (self._progressBar) {
-      return;
+    // No arg => enable
+    if (enabled === undefined) {
+      enabled = true;
     }
 
+    // Ignore if not in pretty / on TTY
     if (!self._stream.isTTY || !self._pretty) return;
 
-    var options = {
-      complete: '=',
-      incomplete: ' ',
-      width: PROGRESS_BAR_WIDTH,
-      total: 100,
-      clear: true,
-      stream: self._stream
-    };
+    if (enabled && !self._progressBar) {
+      var options = {
+        complete: '=',
+        incomplete: ' ',
+        width: PROGRESS_BAR_WIDTH,
+        total: 100,
+        clear: true,
+        stream: self._stream
+      };
 
-    var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
-    progressBar.start = new Date;
+      var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
+      progressBar.start = new Date;
 
-    self._progressBar = progressBar;
+      self._progressBar = progressBar;
+    } else if (!enabled && self._progressBar) {
+      self._progressBar.terminate();
+      self._progressBar = null;
+    }
+
+    // Start the status poller, which watches the task tree, and periodically
+    // repoints the progress bar to the 'active' task.
+    if (enabled && !self._statusPoller) {
+      self._statusPoller = Fiber(function () {
+        while (true) {
+          sleep(100);
+
+          if (!self._progressBar) {
+            // Stop when we are turned off
+            // XXX: In theory, this is a race (?)
+            self._statusPoller = null;
+            return;
+          }
+
+          self._statusPoll();
+        }
+      });
+      self._statusPoller.run();
+    } else {
+      // The status-poller self-exits when _progressBar is null
+    }
   },
 
   _watchProgress: function () {
     var self = this;
 
-    var progress = self._watching;
-    if (!progress) {
-      self.hideProgressBar();
+    var watching = self._watching;
+    if (!watching) {
+      // No active task
       return;
     }
 
-    progress.addWatcher(function (state) {
-      //console.log(state);
-      if (progress != self._watching) {
+    watching.addWatcher(function (state) {
+      if (watching != self._watching) {
         // No longer active
-        //console.log("NOT WATCHING");
+        // XXX: De-register with watching?
         return;
       }
 
       var progressBar = self._progressBar;
       if (!progressBar) {
-        //console.log("NOT PROGRESS BAR");
-        // Progress bar disabled
+        // Progress bar disabled; don't bother with the computation
         return;
       }
 

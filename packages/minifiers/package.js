@@ -11,7 +11,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.use('underscore', 'server');
-  api.export(['CssTools', 'UglifyJSMinify']);
+  api.export(['CssTools', 'UglifyJSMinify', 'UglifyJS']);
   api.add_files(['minification.js', 'minifiers.js'], 'server');
 });
 

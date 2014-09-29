@@ -212,27 +212,19 @@ _.extend(LayeredCatalog.prototype, {
         constr.push(utils.parseConstraint(name + "@=" + packageSource.version));
       });
 
-      var patience = new utils.Patience({
-        messageAfterMs: 1000,
-        message: "Figuring out the best package versions to use. This may take a moment."
-      });
-
-      var ret;
-      try {
+      var ret = buildmessage.enterJob({ title: "Figuring out the best package versions to use." }, function () {
         // Then, call the constraint solver, to get the valid transitive subset of
         // those versions to record for our solution. (We don't just return the
         // original version lock because we want to record the correct transitive
         // dependencies)
         try {
-          ret = self.resolver.resolve(deps, constr, resolverOpts);
+          return self.resolver.resolve(deps, constr, resolverOpts);
         } catch (e) {
           remoteCatalog.official.refresh();
           self.resolver || self._initializeResolver();
-          ret = self.resolver.resolve(deps, constr, resolverOpts);
+          return self.resolver.resolve(deps, constr, resolverOpts);
         }
-      } finally {
-        patience.stop();
-      }
+      });
       if (ret["usedRCs"]) {
         var expPackages = [];
         _.each(ret.answer, function(version, package) {
@@ -299,6 +291,7 @@ _.extend(LayeredCatalog.prototype, {
           // This may be a singleton, but the resolver is in a package so it
           // doesn't have access to it.
           utils.Patience.nudge();
+          buildmessage.nudge();
         }
       });
   },

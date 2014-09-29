@@ -133,3 +133,14 @@ Tinytest.add("webapp - additional static javascript", function (test) {
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
 });
+
+Tinytest.add("webapp - valid pid check", function (test) {
+  test.isTrue(WebAppInternals.validPid(123));
+  test.isTrue(WebAppInternals.validPid("123"));
+  test.isTrue(WebAppInternals.validPid(0x123));
+  test.isTrue(WebAppInternals.validPid("0x123"));
+
+  test.isFalse(WebAppInternals.validPid("foo123"));
+  test.isFalse(WebAppInternals.validPid("foobar"));
+  test.isFalse(WebAppInternals.validPid("123foo"));
+});

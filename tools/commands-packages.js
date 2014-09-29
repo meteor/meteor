@@ -1052,7 +1052,7 @@ main.registerCommand({
       return _.extend({ buildArchitectures: myStringBuilds },
                       versionRecord);
     };
-    // XXX should this skip pre-releases?
+    // XXX should this skip pre-releases? No, it should.
     var versions = catalog.official.getSortedVersions(name);
     if (full.length > 1) {
       versions = [full[1]];
@@ -1320,7 +1320,16 @@ main.registerCommand({
       }
 
       var versionAddendum = "" ;
-      var latest = catalog.complete.getLatestMainlineVersion(name, version);
+      // If we are not using an rc for this package, then we are not going to
+      // update to an rc. But if we are using a pre-release version, then we
+      // care about other pre-release versions, and might want to update to a
+      // newer one.
+      var latest;
+      if (!/-/.test(version)) {
+          latest = catalog.complete.getLatestMainlineVersion(name, version);
+      } else {
+          latest = catalog.complete.getLatestVersion(name, version);
+      }
       var packageVersionParser = require('./package-version-parser.js');
       if (latest &&
           version !== latest.version &&
@@ -1730,7 +1739,11 @@ main.registerCommand({
     var appRecord = doOrDie(function () {
       return catalog.official.getReleaseVersion(r[0], r[1]);
     });
-    releasePackages = appRecord.packages;
+    if (appRecord) {
+      releasePackages = appRecord.packages;
+    } else {
+      releasePackages = {};
+    }
   }
 
   // Let's figure out what packages we are currently using. Don't run the

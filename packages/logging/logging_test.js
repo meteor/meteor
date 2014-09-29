@@ -9,7 +9,7 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
 
     // evaled statements shouldn't crash
     var code = "Log._getCallerDetails().file";
-    test.matches(eval(code), /^eval|tinytest.js$/);
+    test.matches(eval(code), /^eval|local-test_logging.js$/);
   }
 });
 

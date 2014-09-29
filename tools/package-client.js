@@ -45,7 +45,7 @@ var emptyCachedServerDataJson = function () {
 };
 
 // Given a connection, makes a call to the package server.  (Checks to see if
-// the connection is connected, and reconnectes if needed -- a workaround for
+// the connection is connected, and reconnects if needed -- a workaround for
 // the fact that connections in the tool do not reconnect)
 exports.callPackageServer = function (conn) {
   if (!conn.connected) {
