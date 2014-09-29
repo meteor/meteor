@@ -327,8 +327,13 @@ cordova.ensureCordovaPlatforms = function (localPath) {
   verboseLog('Ensuring that platforms in cordova build project are in sync');
   var cordovaPath = path.join(localPath, 'cordova-build');
   var platforms = project.getCordovaPlatforms();
-  var platformsList = execFileSyncOrThrow(localCordova, ['platform', 'list'],
-                                   { cwd: cordovaPath });
+  var platformsList = execFileSyncOrThrow(
+    localCordova, ['platform', 'list'], { cwd: cordovaPath });
+
+  // skip iOS platform if not on darwin
+  if (process.platform !== 'darwin') {
+   platforms = _.difference(platforms, ['ios']);
+  }
 
   verboseLog('The output of `cordova platforms list`:', platformsList.stdout);
 
@@ -396,19 +401,69 @@ var installPlugin = function (cordovaPath, name, version, settings) {
      { cwd: cordovaPath });
   if (! execRes.success)
     throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
+
+  if (utils.isUrlWithSha(version)) {
+    var lock = getTarballPluginsLock(cordovaPath);
+    lock[name] = version;
+    writeTarballPluginsLock(cordovaPath, lock);
+  }
 };
 
-var uninstallPlugin = function (cordovaPath, name) {
+var uninstallPlugin = function (cordovaPath, name, isFromTarballUrl) {
   verboseLog('Uninstalling a plugin', name);
   try {
     execFileSyncOrThrow(localCordova, ['plugin', 'rm', name],
       { cwd: cordovaPath });
+
+    if (isFromTarballUrl) {
+      // also remove from tarball-url-based plugins lock
+      var lock = getTarballPluginsLock(cordovaPath);
+      delete lock[name];
+      writeTarballPluginsLock(cordovaPath, lock);
+    }
   } catch (err) {
     // Catch when an uninstall fails, because it might just be a dependency
     // issue. For example, plugin A depends on plugin B and we try to remove
     // plugin B. In this case, we will loop and remove plugin A first.
     verboseLog('Plugin removal threw an error:', err.message);
   }
+};
+
+var getTarballPluginsLock = function (cordovaPath) {
+  verboseLog('Will check for cordova-tarball-plugins.json' +
+             ' for tarball-url-based plugins previously installed.');
+
+  var tarballPluginsLockPath =
+    path.join(cordovaPath, 'cordova-tarball-plugins.json');
+
+  var tarballPluginsLock;
+  try {
+    var text = fs.readFileSync(tarballPluginsLockPath, 'utf8');
+    tarballPluginsLock = JSON.parse(text);
+
+    verboseLog('The tarball plugins lock:', tarballPluginsLock);
+  } catch (err) {
+    if (err.code !== 'ENOENT')
+      throw err;
+
+    verboseLog('The tarball plugins file was not found.');
+    tarballPluginsLock = {};
+  }
+
+  return tarballPluginsLock;
+};
+
+var writeTarballPluginsLock = function (cordovaPath, tarballPluginsLock) {
+  verboseLog('Will write cordova-tarball-plugins.json');
+
+  var tarballPluginsLockPath =
+    path.join(cordovaPath, 'cordova-tarball-plugins.json');
+
+  fs.writeFileSync(
+    tarballPluginsLockPath,
+    JSON.stringify(tarballPluginsLock),
+    'utf8'
+  );
 };
 
 // Returns the list of installed plugins as a hash from plugin name to version.
@@ -432,6 +487,11 @@ var getInstalledPlugins = function (cordovaPath) {
       installedPlugins[plugin] = version;
     });
   }
+
+  // override the values of the plugins installed from tarballs
+  _.each(getTarballPluginsLock(cordovaPath), function (url, name) {
+    installedPlugins[name] = url;
+  });
 
   return installedPlugins;
 };
@@ -461,25 +521,30 @@ var ensureCordovaPlugins = function (localPath, options) {
   var cordovaPath = path.join(localPath, 'cordova-build');
   var settingsFile = path.join(cordovaPath, 'cordova-settings.json');
 
-  var newSettings;
-  if (options.settings) {
-    newSettings =
-      JSON.parse(fs.readFileSync(options.settings, "utf8")).cordova;
-    fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
-      'utf8');
-  }
-
   var oldSettings;
   try {
-    oldSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    oldSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8')) || {};
   } catch(err) {
     if (err.code !== 'ENOENT')
       throw err;
     oldSettings = {};
   }
 
-  // XXX compare the latest used sha's with the currently required sha's for
-  // plugins fetched from a github/tarball url.
+  var newSettings;
+  if (options.settings) {
+    var settingsText = fs.readFileSync(options.settings, "utf8");
+    var parsedSettings = {};
+    try {
+      parsedSettings = JSON.parse(settingsText);
+    } catch (err) {
+      throw new Error(
+        'Passed --settings are not a valid JSON: ' + settingsText);
+    }
+
+    newSettings = parsedSettings.cordova || {};
+    fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
+      'utf8');
+  }
 
   var installedPlugins = getInstalledPlugins(cordovaPath);
 
@@ -502,8 +567,7 @@ var ensureCordovaPlugins = function (localPath, options) {
     // XXX there is a hack here that never updates a package if you are
     // trying to install it from a URL, because we can't determine if
     // it's the right version or not
-    if (! _.has(installedPlugins, name) ||
-      (installedPlugins[name] !== version && ! utils.isUrlWithSha(version))) {
+    if (! _.has(installedPlugins, name) || installedPlugins[name] !== version) {
       // The version of the plugin has changed, or we do not contain a plugin.
       shouldReinstallPlugins = true;
     }
@@ -524,8 +588,8 @@ var ensureCordovaPlugins = function (localPath, options) {
     var uninstallAllPlugins = function () {
       installedPlugins = getInstalledPlugins(cordovaPath);
       while (_.size(installedPlugins)) {
-        _.each(_.keys(installedPlugins), function (name) {
-          uninstallPlugin(cordovaPath, name);
+        _.each(installedPlugins, function (version, name) {
+          uninstallPlugin(cordovaPath, name, utils.isUrlWithSha(version));
         });
         installedPlugins = getInstalledPlugins(cordovaPath);
       }
@@ -629,8 +693,26 @@ var buildCordova = function (localPath, buildCommand, options) {
 
   verboseLog('Running the build command:', buildCommand);
   // Give the buffer more space as the output of the build is really huge
-  execFileSyncOrThrow(localCordova, [buildCommand],
-               { cwd: cordovaPath, maxBuffer: 2000*1024 });
+  try {
+    execFileSyncOrThrow(localCordova, [buildCommand],
+                        { cwd: cordovaPath, maxBuffer: 2000*1024 });
+  } catch (err) {
+    // "ld: 100000 duplicate symbols for architecture i386" is a common error
+    // message that occurs when you run an iOS project compilation from /tmp or
+    // whenever there is a symbolic link cycle reachable for ld to multiple
+    // object files.
+    if (err.message.match(/ld: \d+ duplicate symbols/g)) {
+      // XXX a better message
+      var message = "Can't build an iOS project from the /tmp directory.";
+
+      if (verboseness)
+        message = err.message + '\n' + message;
+
+      throw new Error(message);
+    } else {
+      throw err;
+    }
+  }
 
   verboseLog('Done building the cordova build project');
 };
@@ -755,16 +837,35 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
   var Log = getLoadedPackages().logging.Log;
 
+  var isDebugOutput = function (line) {
+    // Skip the debug output produced by Meteor Core components.
+    return /^METEOR CORDOVA DEBUG /.test(line) || /^HTTPD DEBUG /.test(line);
+  };
+
   var androidMapper = function (line) {
     // remove the annoying prefix
     line = line.replace(/^.\/CordovaLog\(\s*\d+\s*\):\s+/, '');
     // remove a part of file url we don't like
     line = line.replace(/^file:\/\/\/android_asset\/www\//, '');
+    line = line.replace(/^http:\/\/\d+\.\d+\.\d+\.\d+:\d+\//, '');
+
+    // ignore annoying lines that we see all the time but don't bring any value
+    if (line.match(/^--------- beginning of /) ||
+        line.match(/^Changing log level to/) ||
+        line.match(/^Found start page location: /)) {
+      return null;
+    }
+
+    if (isDebugOutput(line) && ! verboseness)
+      return null;
+
     // filename.js?hashsha1: Line 123 : message goes here
-    var parsedLine = line.match(/^([^?]+)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
+    var parsedLine =
+      line.match(/^([^?]*)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
 
     if (! parsedLine)
-      return Log.format(Log.objFromText(line), { color: true });
+      return Log.format(
+        Log.objFromText(line), { metaColor: 'green', color: true });
 
     var output = {
       time: new Date,
@@ -780,11 +881,34 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     });
   };
 
+  // In case of verboseness don't skip any logs. Otherwise skip all the scary
+  // stuff that gets printed before the app load.
+  var appLogsStarted = false || verboseness;
   var iosMapper = function (line) {
     if (line.match(/^[0-9]+-[0-9]+-[0-9].*/)) {
       // if the line starts with the date, we remove the prefix
       line = line.replace(/^\S+\s\S+\s\S+\s/, '');
     }
+
+    var finishedRegexp =
+      /Finished load of: http:\/\/[0-9]+.[0-9]+.[0-9]+.[0-9]+:[0-9]+/g;
+
+    if (finishedRegexp.test(line))
+      appLogsStarted = true;
+
+    if (! appLogsStarted)
+      return null;
+
+    // Skip the success messages from File Transfer. There are a lot of them on
+    // Hot-Code Push, but we are interested only in failures.
+    if (/File Transfer Finished with response code 200/.test(line)
+        && ! verboseness) {
+          return null;
+        }
+
+    if (isDebugOutput(line) && ! verboseness)
+      return null;
+
     return Log.format(Log.objFromText(line, { program: 'ios' }), {
       metaColor: 'cyan',
       color: true
@@ -859,7 +983,7 @@ cordova.filterPackages = function (packages) {
 };
 
 var getTermsForPlatform = function (platform) {
-  var url = 'http://s3.amazonaws.com/android-bundle/license_cordova_' + platform + '.txt';
+  var url = 'https://warehouse.meteor.com/cordova/license_cordova_' + platform + '.txt';
   var result = httpHelpers.request({
     url: url
   });

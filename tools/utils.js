@@ -461,7 +461,8 @@ exports.execFileAsync = function (file, args, opts) {
   var logOutput = fiberHelpers.bindEnvironment(function (line) {
     if (opts.verbose) {
       line = mapper(line);
-      console.log(line);
+      if (line)
+        console.log(line);
     }
   });
 
