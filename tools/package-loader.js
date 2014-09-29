@@ -4,7 +4,7 @@ var _ = require('underscore');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var unipackage = require('./isopack.js');
+var isopack = require('./isopack.js');
 var tropohouse = require('./tropohouse.js');
 
 // options:
@@ -58,7 +58,7 @@ _.extend(exports.PackageLoader.prototype, {
         return null;
       buildmessage.error("package not available: " + name);
       // recover by returning a dummy (empty) package
-      var pkg = new unipackage.Isopack;
+      var pkg = new isopack.Isopack;
       pkg.initEmpty(name);
       return pkg;
     }

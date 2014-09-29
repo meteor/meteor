@@ -4,7 +4,7 @@ var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
-var unipackage = require('./isopack.js');
+var isopack = require('./isopack.js');
 var packageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
@@ -15,16 +15,16 @@ var release = require('./release.js');
 
 var compiler = exports;
 
-// Whenever you change anything about the code that generates unipackages, bump
-// this version number. The idea is that the "format" field of the unipackage
+// Whenever you change anything about the code that generates isopacks, bump
+// this version number. The idea is that the "format" field of the isopack
 // JSON file only changes when the actual specified structure of the
-// unipackage/unibuild changes, but this version (which is build-tool-specific)
+// isopack/unibuild changes, but this version (which is build-tool-specific)
 // can change when the the contents (not structure) of the built output
 // changes. So eg, if we improve the linker's static analysis, this should be
 // bumped.
 //
 // You should also update this whenever you update any of the packages used
-// directly by the unipackage creation process (eg js-analyze) since they do not
+// directly by the isopack creation process (eg js-analyze) since they do not
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
@@ -753,7 +753,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
 // Options:
 //  - officialBuild: defaults to false. If false, then we will compute a
 //    build identifier (a hash of the package's dependency versions and
-//    source files) and include it as part of the unipackage's version
+//    source files) and include it as part of the isopack's version
 //    string. If true, then we will use the version that is contained in
 //    the package's source. You should set it to true when you are
 //    building a package to publish as an official build with the
@@ -768,7 +768,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
 //    glasser only half understands, ignore the current project deps
 //
 // Returns an object with keys:
-// - unipackage: the built Isopack
+// - isopack: the built Isopack
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the compilation (the source files you'd have to
 //   ship to a different machine to replicate the build there)
@@ -860,7 +860,7 @@ compiler.compile = function (packageSource, options) {
     }
   }
 
-  var unipkg = new unipackage.Isopack;
+  var unipkg = new isopack.Isopack;
   unipkg.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
@@ -916,7 +916,7 @@ compiler.compile = function (packageSource, options) {
 
   return {
     sources: _.uniq(sources),
-    unipackage: unipkg
+    isopack: unipkg
   };
 };
 
@@ -1008,7 +1008,7 @@ compiler.checkUpToDate = function (
     return false;
   }
 
-  // Compute the unipackage's direct and plugin dependencies to
+  // Compute the isopack's direct and plugin dependencies to
   // `buildTimeDeps`, by comparing versions (including build
   // identifiers). For direct dependencies, we only care if the set of
   // direct dependencies that provide plugins has changed.
@@ -1018,11 +1018,11 @@ compiler.checkUpToDate = function (
   var sourcePluginProviders = getPluginProviders(
     buildTimeDeps.directDependencies, packageSource.catalog);
 
-  var unipackagePluginProviders = getPluginProviders(
+  var isopackPluginProviders = getPluginProviders(
     unipkg.buildTimeDirectDependencies, packageSource.catalog);
 
   if (_.keys(sourcePluginProviders).length !==
-      _.keys(unipackagePluginProviders).length) {
+      _.keys(isopackPluginProviders).length) {
     return false;
   }
 
@@ -1037,7 +1037,7 @@ compiler.checkUpToDate = function (
       // XXX Check that `versionWithBuildId` is the same as `version`
       // except for the build id?
       return (loadedPackage &&
-              unipackagePluginProviders[packageName] ===
+              isopackPluginProviders[packageName] ===
               loadedPackage.version);
     }
   );
@@ -1059,20 +1059,20 @@ compiler.checkUpToDate = function (
         return false;
 
       // For each plugin, check that the resolved build-time deps for
-      // that plugin match the unipackage's build time deps for it.
+      // that plugin match the isopack's build time deps for it.
       var packageLoaderForPlugin = new packageLoader.PackageLoader({
         catalog: packageSource.catalog,
         versions: buildTimeDeps.pluginDependencies[pluginName]
       });
-      var unipackagePluginDeps = unipkg.buildTimePluginDependencies[pluginName];
-      if (! unipackagePluginDeps ||
-          _.keys(pluginDeps).length !== _.keys(unipackagePluginDeps).length) {
+      var isopackPluginDeps = unipkg.buildTimePluginDependencies[pluginName];
+      if (! isopackPluginDeps ||
+          _.keys(pluginDeps).length !== _.keys(isopackPluginDeps).length) {
         return false;
       }
       return _.all(pluginDeps, function (version, packageName) {
         var loadedPackage = packageLoaderForPlugin.getPackage(packageName);
         return loadedPackage &&
-          unipackagePluginDeps[packageName] === loadedPackage.version;
+          isopackPluginDeps[packageName] === loadedPackage.version;
       });
     }
   );

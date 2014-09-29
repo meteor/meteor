@@ -6,7 +6,7 @@ var packageClient = require('./package-client.js');
 var archinfo = require('./archinfo.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
-var unipackage = require('./isopack.js');
+var isopack = require('./isopack.js');
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
@@ -721,7 +721,7 @@ _.extend(CompleteCatalog.prototype, {
           return;
 
         // Consider a directory to be a package source tree if it
-        // contains 'package.js'. (We used to support unipackages in
+        // contains 'package.js'. (We used to support isopacks in
         // localPackageDirs, but no longer.)
         if (fs.existsSync(path.join(packageDir, 'package.js'))) {
           // Let earlier package directories override later package
@@ -835,7 +835,7 @@ _.extend(CompleteCatalog.prototype, {
 
       // This doesn't have great birthday-paradox properties, but we
       // don't have Random.id() here (since it comes from a
-      // unipackage), and making an index so we can see if a value is
+      // isopack), and making an index so we can see if a value is
       // already in use would complicated the code. Let's take the bet
       // that by the time we have enough local packages that this is a
       // problem, we either will have made tools into a star, or we'll
@@ -941,7 +941,7 @@ _.extend(CompleteCatalog.prototype, {
     return version;
   },
 
-  // Returns the latest unipackage build if the package has already been
+  // Returns the latest isopack build if the package has already been
   // compiled and built in the directory, and null otherwise.
   _maybeGetUpToDateBuild : function (name, constraintSolverOpts) {
     var self = this;
@@ -950,13 +950,13 @@ _.extend(CompleteCatalog.prototype, {
     var sourcePath = self.packageSources[name].sourceRoot;
     var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
-      var unip = new unipackage.Isopack;
+      var unip = new isopack.Isopack;
       try {
         unip.initFromPath(name, buildDir, { buildOfPath: sourcePath });
       } catch (e) {
-        if (!(e instanceof unipackage.OldIsopackFormatError))
+        if (!(e instanceof isopack.OldIsopackFormatError))
           throw e;
-        // Ignore unipackage-pre1 builds
+        // Ignore isopack-pre1 builds
         return null;
       }
       if (compiler.checkUpToDate(
@@ -1058,7 +1058,7 @@ _.extend(CompleteCatalog.prototype, {
       }, function () {
         unip = compiler.compile(self.packageSources[name], {
           ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
-        }).unipackage;
+        }).isopack;
         if (! buildmessage.jobHasMessages()) {
           // Save the build, for a fast load next time
           try {
@@ -1227,7 +1227,7 @@ _.extend(CompleteCatalog.prototype, {
   // HACK: Version can be null if you are certain that the package is to be
   // loaded from local packages. In the future, version should always be
   // required and we should confirm that the version on disk is the version that
-  // we asked for. This is to support unipackage loader not having a version
+  // we asked for. This is to support isopack loader not having a version
   // manifest.
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;

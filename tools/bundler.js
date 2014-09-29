@@ -1023,7 +1023,7 @@ var JsImage = function () {
 _.extend(JsImage.prototype, {
   // Load the image into the current process. It gets its own unique
   // Package object containing its own private copy of every
-  // unipackage that it uses. This Package object is returned.
+  // isopack that it uses. This Package object is returned.
   //
   // If `bindings` is provided, it is a object containing a set of
   // variables to set in the global environment of the executed
@@ -1314,7 +1314,7 @@ JsImage.readFromDisk = function (controlFilePath) {
     };
 
     if (item.sourceMap) {
-      // XXX this is the same code as unipackage.initFromPath
+      // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
       loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
@@ -1791,7 +1791,7 @@ exports.bundle = function (options) {
       // Create a Isopack object that represents the app
       var packageSource = new PackageSource(whichCatalog);
       packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource).unipackage;
+      var app = compiler.compile(packageSource).isopack;
 
       var clientTargets = [];
       // Client
@@ -2072,20 +2072,20 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var unipackage = compiler.compile(packageSource, {
+  var isopack = compiler.compile(packageSource, {
     ignoreProjectDeps: options.ignoreProjectDeps
-  }).unipackage;
+  }).isopack;
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only
-    // used to build plugins (during package build) and for unipackage.load
+    // used to build plugins (during package build) and for isopack.load
     // (which always wants to build for the current host).
     arch: archinfo.host()
   });
-  target.make({ packages: [unipackage] });
+  target.make({ packages: [isopack] });
 
   return {
     image: target.toJsImage(),
@@ -2101,7 +2101,7 @@ exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
 };
 
-// Given an array of unipackage names, invokes the callback with each
+// Given an array of isopack names, invokes the callback with each
 // corresponding Isopack object, plus all of their transitive dependencies,
 // with a topological sort.
 exports.iterateOverAllUsedIsopacks = function (loader, arch,

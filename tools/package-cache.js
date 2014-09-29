@@ -6,7 +6,7 @@ var compiler = require("./compiler.js");
 var buildmessage = require("./buildmessage.js");
 var PackageSource = require("./package-source.js");
 var _ = require('underscore');
-var unipackage = require("./isopack.js");
+var isopack = require("./isopack.js");
 
 var PackageCache = function (whichCatalog) {
   var self = this;
@@ -48,7 +48,7 @@ _.extend(PackageCache.prototype, {
   //
   // - name: package name
   // - loadPath: path of the source to the package
-  // - unipackage (prebuilt package)
+  // - isopack (prebuilt package)
   cachePackageAtPath : function (name, loadPath, unip) {
     var self = this;
     var key = name + "@" + loadPath;
@@ -112,7 +112,7 @@ _.extend(PackageCache.prototype, {
           packageSource.initFromPackageDir(loadPath, {
             name: name
           });
-          unip = new unipackage.Isopack;
+          unip = new isopack.Isopack;
           unip.initFromPath(name, entry.buildDir);
           isUpToDate = compiler.checkUpToDate(
             packageSource, entry.pkg, {
@@ -129,10 +129,10 @@ _.extend(PackageCache.prototype, {
 
     // Load package from disk
 
-    // Does loadPath point directly at a unipackage (rather than a
+    // Does loadPath point directly at a isopack (rather than a
     // source tree?)
     if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      unip = new unipackage.Isopack;
+      unip = new isopack.Isopack;
 
       unip.initFromPath(name, loadPath);
       self.loadedPackages[key] = {
@@ -156,12 +156,12 @@ _.extend(PackageCache.prototype, {
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {
-      unip = new unipackage.Isopack;
+      unip = new isopack.Isopack;
       var maybeUpToDate = true;
       try {
         unip.initFromPath(name, buildDir);
       } catch (e) {
-        if (!(e instanceof unipackage.OldIsopackFormatError))
+        if (!(e instanceof isopack.OldIsopackFormatError))
           throw e;
         maybeUpToDate = false;
       }
@@ -194,7 +194,7 @@ _.extend(PackageCache.prototype, {
       // informed by a topological sort
       var unip = compiler.compile(packageSource, {
         ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
-      }).unipackage;
+      }).isopack;
       self.loadedPackages[key] = {
         pkg: unip,
         sourceDir: null,
