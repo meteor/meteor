@@ -65,6 +65,7 @@ var AppProcess = function (options) {
   self.program = options.program || null;
   self.nodeOptions = options.nodeOptions || [];
   self.debugPort = options.debugPort;
+  self.shell = options.shell;
   self.settings = options.settings;
 
   self.proc = null;
@@ -89,6 +90,10 @@ _.extend(AppProcess.prototype, {
       return;
     }
 
+    if (self.shell) {
+      require('./server/shell.js').wrapChildProcess(self.proc);
+    }
+
     // Send stdout and stderr to the runLog
     var eachline = require('eachline');
     eachline(self.proc.stdout, 'utf8', fiberHelpers.inBareFiber(function (line) {
@@ -96,6 +101,11 @@ _.extend(AppProcess.prototype, {
         // This is the child process telling us that it's ready to
         // receive connections.
         self.onListen && self.onListen();
+
+        if (self.proc.startShell) {
+          self.proc.startShell();
+        }
+
       } else {
         runLog.logAppOutput(line);
       }
@@ -207,11 +217,16 @@ _.extend(AppProcess.prototype, {
     if (! self.program) {
       // Old-style bundle
       var opts = _.clone(self.nodeOptions);
+
       if (self.debugPort) {
         require("./inspector.js").start(self.debugPort);
         opts.push("--debug-brk=" + self.debugPort);
       }
-      opts.push(path.join(self.bundlePath, 'main.js'));
+
+      opts.push(path.join(
+        self.bundlePath,
+        self.shell ? 'shell.js' : 'main.js'
+      ));
 
       opts.push(
         '--parent-pid',
@@ -340,6 +355,7 @@ var AppRunner = function (appDir, options) {
   self.settingsFile = options.settingsFile;
   self.program = options.program;
   self.debugPort = options.debugPort;
+  self.shell = options.shell;
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
@@ -572,6 +588,7 @@ _.extend(AppRunner.prototype, {
       },
       program: self.program,
       debugPort: self.debugPort,
+      shell: self.shell,
       onListen: function () {
         self.proxy.setMode("proxy");
         options.onListen && options.onListen();

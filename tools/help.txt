@@ -79,6 +79,7 @@ Options:
                  for incoming connections from debugging clients, such as
                  node-inspector (default 5858).
 
+
 >>> create
 Create a new project.
 Usage: meteor create [--release <release>] <name>
@@ -256,6 +257,26 @@ Options:
   --server         Location where mobile builds connect to the Meteor server.
                    Defaults to localhost:3000. Can include a URL scheme
                    (for example, --server=https://example.com:443).
+
+>>> shell
+Launch a Node REPL for interactively evaluating server-side code.
+
+Usage: meteor shell [run options]
+       meteor run --shell [run options]
+
+The shell runs in addition to the application server, and commands are
+evaluated in the context of the running server process, just like any
+other code running on the server.
+
+If the server restarts because a change was made in server code, or an
+exception was encountered, the shell will restart along with the
+server. This behavior can be simulated by typing `.reload` in the shell.
+
+The shell supports tab completion for global variables like `Meteor`,
+`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+
+The shell maintains a persistent history across sessions. Previously-run
+commands can be accessed by pressing the up arrow.
 
 
 >>> mongo

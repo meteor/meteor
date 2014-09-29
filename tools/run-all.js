@@ -23,6 +23,7 @@ var Updater = require('./run-updater.js').Updater;
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
+  self.shell = !!options.shell;
 
   if (! _.has(options, 'proxyPort'))
     throw new Error("no proxyPort?");
@@ -93,6 +94,7 @@ var Runner = function (appDir, options) {
     settingsFile: options.settingsFile,
     program: options.program,
     debugPort: options.debugPort,
+    shell: options.shell,
     proxy: self.proxy,
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
