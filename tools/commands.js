@@ -206,7 +206,7 @@ main.registerCommand({
       {
         host: DEFAULT_BUILD_HOST,
         port: DEFAULT_PORT,
-        protocol: "http:"
+        protocol: "http://"
       }
     );
   } catch (err) {
