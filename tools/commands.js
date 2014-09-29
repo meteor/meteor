@@ -33,7 +33,7 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default host to use when building apps. (Specifically, for mobile
 // builds, we need a host to use for DDP_DEFAULT_CONNECTION_URL if the
-// user doesn't specify one with -p or --mobile-port).
+// user doesn't specify one with -p or --mobile-server).
 var DEFAULT_BUILD_HOST = "localhost";
 
 // The default port that the development server listens on.
@@ -144,6 +144,8 @@ main.registerCommand({
   options: {
     port: { type: String, short: "p", default: '' + DEFAULT_PORT },
     'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    'mobile-port': { type: String },
     'app-port': { type: String },
     'http-proxy-port': { type: String },
     production: { type: Boolean },
@@ -195,7 +197,9 @@ main.registerCommand({
     return 1;
   }
 
-  var mobileServer = options["mobile-server"] || options.port;
+ // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
+  var mobileServer = options["mobile-server"] ||
+        options["mobile-port"] || options.port;
   try {
     var parsedMobileServer = utils.parseUrl(
       mobileServer,
@@ -568,8 +572,9 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
-    "mobile-server": { type: String, default: "http://" +
-                       DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT },
+    "mobile-server": { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    "mobile-port": { type: String },
     settings: { type: String },
     verbose: { type: Boolean, short: "v" },
     // Undocumented
@@ -621,9 +626,16 @@ var buildCommand = function (options) {
   var appName = path.basename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms)) {
+
+    // XXX COMPAT WITH 0.9.2.2 -- the mobile-port is deprecated
+    var mobileServer = options["mobile-server"] ||
+          options["mobile-port"] ||
+          "http://" + DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT;
+
     try {
       var parsedMobileServer = utils.parseUrl(
-        options["mobile-server"], {
+        mobileServer,
+        {
           host: DEFAULT_BUILD_HOST,
           port: DEFAULT_PORT,
           protocol: "http://"
@@ -1108,6 +1120,8 @@ main.registerCommand({
             DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT },
     'http-proxy-port': { type: String },
     'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    'mobile-port': { type: String },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1147,7 +1161,8 @@ main.registerCommand({
 
   try {
     var parsedMobileServer = utils.parseUrl(
-      options["mobile-server"] || options.port,
+      // XXX COMPAT WITH 0.9.2.2
+      options["mobile-server"] || options["mobile-port"] || options.port,
       {
         host: DEFAULT_BUILD_HOST,
         port: DEFAULT_PORT,
