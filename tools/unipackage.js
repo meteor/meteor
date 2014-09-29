@@ -406,7 +406,7 @@ _.extend(Unipackage.prototype, {
       //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
-      
+
       /**
        * @summary Inside a build plugin source file specified in
        * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
@@ -457,7 +457,7 @@ _.extend(Unipackage.prototype, {
 
       var plugin = pluginsByArch[arch];
       buildmessage.enterJob({
-        title: "loading plugin `" + name +
+        title: "Loading plugin `" + name +
           "` from package `" + self.name + "`"
         // don't necessarily have rootPath anymore
         // (XXX we do, if the unipackage was locally built, which is

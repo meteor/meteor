@@ -343,7 +343,7 @@ var springboard = function (rel, releaseOverride) {
   // XXX split better
   try {
     var messages = buildmessage.capture({
-      title: "downloading tools package " + toolsPkg + "@" + toolsVersion
+      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
     }, function () {
       tropohouse.default.maybeDownloadPackageForArchitectures({
         packageName: toolsPkg,

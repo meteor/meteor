@@ -103,7 +103,7 @@ _.extend(PackageCache.prototype, {
       } else {
 
         buildmessage.enterJob({
-          title: "initializing package `" + name + "`",
+          title: "Initializing package `" + name + "`",
           rootPath: loadPath
         }, function () {
           var packageSource = new PackageSource(self.catalog);
@@ -146,7 +146,7 @@ _.extend(PackageCache.prototype, {
     // It's a source tree. Load it.
     var packageSource = new PackageSource(self.catalog);
     buildmessage.enterJob({
-      title: "initializing package `" + name + "`",
+      title: "Initializing package `" + name + "`",
       rootPath: loadPath
     }, function () {
       packageSource.initFromPackageDir(loadPath, {
@@ -180,7 +180,7 @@ _.extend(PackageCache.prototype, {
     // Either we didn't have a build, or it was out of date, or the
     // caller wanted us to rebuild no matter what. Build the package.
     return buildmessage.enterJob({
-      title: "building package `" + name + "`",
+      title: "Building package `" + name + "`",
       rootPath: loadPath
     }, function () {
       // We used to take great care to first put a

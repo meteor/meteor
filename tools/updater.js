@@ -164,7 +164,7 @@ var updateMeteorToolSymlink = function () {
     try {
       var messages = buildmessage.capture(function () {
         buildmessage.enterJob({
-          title: "downloading tool package " + latestRelease.tool
+          title: "Downloading tool package " + latestRelease.tool
         }, function () {
           tropohouse.default.maybeDownloadPackageForArchitectures({
             packageName: latestReleaseToolPackage,
@@ -175,7 +175,7 @@ var updateMeteorToolSymlink = function () {
         });
         _.each(latestRelease.packages, function (pkgVersion, pkgName) {
           buildmessage.enterJob({
-            title: "downloading package " + pkgName + "@" + pkgVersion
+            title: "Downloading package " + pkgName + "@" + pkgVersion
           }, function () {
             tropohouse.default.maybeDownloadPackageForArchitectures({
               packageName: pkgName,

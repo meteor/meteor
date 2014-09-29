@@ -653,7 +653,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // We need to build the test package to get all of its sources.
   var testFiles = [];
   var messages = buildmessage.capture(
-    { title: "getting test sources" },
+    { title: "Getting test sources" },
     function () {
       var testName = packageSource.testName;
       if (testName) {

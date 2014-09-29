@@ -499,7 +499,7 @@ _.extend(AppRunner.prototype, {
     var settings = null;
     var settingsWatchSet = new watch.WatchSet;
     var settingsMessages = buildmessage.capture({
-      title: "preparing to run",
+      title: "Preparing to run",
       rootPath: process.cwd()
     }, function () {
       if (self.settingsFile)

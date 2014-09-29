@@ -703,7 +703,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
 
       /**
        * @summary Works in web targets only. Add markup to the `head` or `body`
-       * section of the document. 
+       * section of the document.
        * @param  {Object} options
        * @param {String} options.section Which section of the document should
        * be appended to. Can only be "head" or "body".
@@ -810,7 +810,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
             throw new Error("'data' option to addAsset must be a Buffer or String.");
           }
         }
-        
+
         addAsset(options.data, options.path);
       },
 
@@ -961,7 +961,7 @@ compiler.compile = function (packageSource, options) {
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
     buildmessage.enterJob({
-      title: "building plugin `" + info.name +
+      title: "Building plugin `" + info.name +
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
@@ -1069,7 +1069,7 @@ compiler.compile = function (packageSource, options) {
     // XXX I have no idea if this should be using buildmessage.enterJob
     // or not. test what happens on error
     buildmessage.enterJob({
-      title: "compute build identifier for package `" +
+      title: "Compute build identifier for package `" +
         packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {

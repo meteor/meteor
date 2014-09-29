@@ -101,7 +101,7 @@ main.registerCommand({
   };
 
   var messages = buildmessage.capture({
-    title: 'getting packages ready'
+    title: 'Getting packages ready'
   }, function () {
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
@@ -187,7 +187,7 @@ main.registerCommand({
 
   var packageSource, compileResult;
   var messages = buildmessage.capture(
-    { title: "building the package" },
+    { title: "Building the package" },
     function () {
 
       packageSource = new PackageSource(catalog.complete);
@@ -248,7 +248,7 @@ main.registerCommand({
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
-      title: "publishing the package"
+      title: "Publishing the package"
     }, function () {
       ec = packageClient.publishPackage(
         packageSource, compileResult, conn, {
@@ -359,7 +359,7 @@ main.registerCommand({
 
   var unipkg;
   var messages = buildmessage.capture({
-    title: "building package " + name
+    title: "Building package " + name
   }, function () {
     var packageSource = new PackageSource(catalog.complete);
 
@@ -514,7 +514,7 @@ main.registerCommand({
 
   try {
     messages = buildmessage.capture({
-      title: "publishing package " + name
+      title: "Publishing package " + name
     }, function () {
       packageClient.createAndPublishBuiltPackage(conn, unipkg);
     });
@@ -713,7 +713,7 @@ main.registerCommand({
     var toPublish = {};
     var canBuild = true;
     var messages = buildmessage.capture(
-      {title: "rebuilding local packages"},
+      {title: "Rebuilding local packages"},
       function () {
         Console.info("Rebuilding local packages...");
         _.each(contents, function (item) {
@@ -731,7 +731,7 @@ main.registerCommand({
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
             var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
-              { title: "building package " + item },
+              { title: "Building package " + item },
               function () {
                 Console.info("  checking consistency of " + item + " ");
 
@@ -884,7 +884,7 @@ main.registerCommand({
       var pubEC;
       try {
         messages = buildmessage.capture({
-          title: "publishing package " + name
+          title: "Publishing package " + name
         }, function () {
           var opts = {
             new: !catalog.official.getPackage(name)
@@ -2328,7 +2328,7 @@ main.registerCommand({
     _.each(osArches, function (osArch) {
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
+          title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
           if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
@@ -2383,7 +2383,7 @@ main.registerCommand({
       path.join(tmpdir, '.meteor'), catalog.official);
     var messages = buildmessage.capture(function () {
       buildmessage.enterJob({
-        title: "downloading tool package " + toolPkg.package + "@" +
+        title: "Downloading tool package " + toolPkg.package + "@" +
           toolPkg.constraint
       }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures({
@@ -2394,7 +2394,7 @@ main.registerCommand({
       });
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "downloading package " + pkgName + "@" + pkgVersion
+          title: "Downloading package " + pkgName + "@" + pkgVersion
         }, function () {
           tmpTropo.maybeDownloadPackageForArchitectures({
             packageName: pkgName,

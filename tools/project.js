@@ -290,7 +290,7 @@ _.extend(Project.prototype, {
 
       var programSubdir = path.join(self.getProgramsDirectory(), item);
       buildmessage.enterJob({
-        title: "initializing program `" + programName + "`",
+        title: "Initializing program `" + programName + "`",
         rootPath: self.rootDir
       }, function () {
         var packageSource;

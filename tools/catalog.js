@@ -141,7 +141,7 @@ _.extend(OfficialCatalog.prototype, {
     var thrownError = null;
 
     buildmessage.enterJob({
-      title: 'Refreshing package metadata.'
+      title: 'Refreshing package metadata'
     }, function () {
       try {
         self._refresh();
@@ -760,7 +760,7 @@ _.extend(CompleteCatalog.prototype, {
       var packageSource = new PackageSource(self);
       var broken = false;
       buildmessage.enterJob({
-        title: "reading package from `" + packageDir + "`",
+        title: "Reading package from `" + packageDir + "`",
         rootPath: packageDir
       }, function () {
         // All packages in the catalog must have versions. Though, for local
@@ -1047,7 +1047,7 @@ _.extend(CompleteCatalog.prototype, {
     if (! unip) {
       // Didn't have a build or it wasn't up to date. Build it.
       buildmessage.enterJob({
-        title: "building package `" + name + "`",
+        title: "Building package `" + name + "`",
         rootPath: sourcePath
       }, function () {
         unip = compiler.compile(self.packageSources[name], {
@@ -1168,7 +1168,7 @@ _.extend(CompleteCatalog.prototype, {
       _.each(namedPackages, function (namedPackage) {
         if (!_.has(self.packageSources, namedPackage)) {
           buildmessage.enterJob(
-            { title: "rebuilding " + namedPackage }, function () {
+            { title: "Rebuilding " + namedPackage }, function () {
               buildmessage.error("unknown package");
             });
           bad = true;

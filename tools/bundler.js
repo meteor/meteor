@@ -1868,7 +1868,7 @@ exports.bundle = function (options) {
   var targets = {};
 
   var messages = buildmessage.capture({
-    title: "building the application"
+    title: "Building the application"
   }, function () {
     if (! release.usingRightReleaseForApp(appDir))
       throw new Error("running wrong release for app?");

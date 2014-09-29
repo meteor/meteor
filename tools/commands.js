@@ -1264,7 +1264,7 @@ var getPackagesForTest = function (packages) {
     var messages = buildmessage.capture(function () {
       testPackages = _.map(packages, function (p) {
         return buildmessage.enterJob({
-          title: "trying to test package `" + p + "`"
+          title: "Trying to test package `" + p + "`"
         }, function () {
 
           // If it's a package name, just pass it through.
@@ -1367,7 +1367,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
 
   // We don't strictly need to do this before we bundle, but can't hurt.
   messages = buildmessage.capture({
-    title: 'getting packages ready'
+    title: 'Getting packages ready'
   },function () {
     project._ensureDepsUpToDate();
   });
