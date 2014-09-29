@@ -585,7 +585,7 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   //Given data from troposphere, add it into the local store
-  insertData: function(serverData) {
+  insertData: function(serverData, syncComplete) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
       self.tablePackages.upsert(txn, serverData.collections.packages);
@@ -599,8 +599,10 @@ _.extend(RemoteCatalog.prototype, {
       syncToken._id = "1"; //Add fake _id so it fits the pattern
       self.tableSyncToken.upsert(txn, [syncToken]);
 
-      var lastSync = { timestamp: Date.now() };
-      self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
+      if (syncComplete) {
+        var lastSync = {timestamp: Date.now()};
+        self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
+      }
     });
   },
 
