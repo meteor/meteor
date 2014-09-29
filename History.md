@@ -13,6 +13,10 @@
   of `Template.someTemplate.helpers(...)`.  Using the older syntax still
   works, but it prints a deprecation warning to the console.
 
+* Fix behavior of ROOT_URL with path ending in `/`.
+
+* Fix source maps when using a ROOT_URL with a path. #2627
+
 ## v0.9.3
 
 ### More Package Version Number Flexibility
