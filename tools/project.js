@@ -570,6 +570,32 @@ _.extend(Project.prototype, {
     return archs;
   },
 
+  // Returns a map of all commands registered by the plugins of this project
+  getCommands: function () {
+    var self = this;
+    var pluginCommands = {};
+    buildmessage.capture(function() {
+      var allPackages = self.getConstraints();
+      var packageLoader = self.getPackageLoader();
+      _.each(allPackages, function(version, pkgName) {
+        _.each(packageLoader.getPackage(pkgName).getCommands(),
+               function(command, commandName) {
+
+          if (_.has(pluginCommands, commandName)) {
+            buildmessage.error("conflict: two packages are both trying to " +
+              "register the " + commandName + " command");
+            // Recover by just going with the first command we saw
+            return;
+          }
+
+          pluginCommands[commandName] = command;
+        });
+      });
+    });
+
+    return pluginCommands;
+  },
+
   // Returns the file path to the .meteor/cordova-plugins file, containing the
   // Cordova plugins dependencies for this specific project.
   _getCordovaPluginsFile: function () {

@@ -965,6 +965,11 @@ Fiber(function () {
     });
   }
 
+  // Register commands exported by plugins
+  _.each(project.project.getCommands(), function(options) {
+    main.registerCommand(options, options.func);
+  });
+
   // OK, if not one of those, the first (non-'--') argument(s) should
   // name the command.
   if (! command) {

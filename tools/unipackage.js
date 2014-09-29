@@ -263,6 +263,10 @@ var Unipackage = function () {
   // CompileStep. Valid only when _pluginsInitialized is true.
   self.sourceHandlers = null;
 
+  // Command-line tool commands registered by plugins. A list of
+  // (options, actionFunc) pairs.
+  self.commands = {};
+
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
   // unipackage.
@@ -383,6 +387,16 @@ _.extend(Unipackage.prototype, {
     return self.sourceHandlers;
   },
 
+  // Load this package's plugins into memory, if they haven't already
+  // been loaded, and return the list of commands registered by the
+  // plugins: a map from the command name to a map of options including
+  // the action as `func`.
+  getCommands: function () {
+    var self = this;
+    self._ensurePluginsInitialized();
+    return self.commands;
+  },
+
   // If this package has plugins, initialize them (run the startup
   // code in them so that they register their extensions). Idempotent.
   _ensurePluginsInitialized: function () {
@@ -394,7 +408,8 @@ _.extend(Unipackage.prototype, {
     /**
      * @global
      * @namespace Plugin
-     * @summary The namespace that is exposed inside build plugin files.
+     * @summary The namespace that is exposed inside build plugin files
+     * specified in [Package.registerBuildPlugin](#Package-registerBuildPlugin).
      */
     var Plugin = {
       // 'extension' is a file extension without the separation dot
@@ -406,11 +421,9 @@ _.extend(Unipackage.prototype, {
       //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
-      
+
       /**
-       * @summary Inside a build plugin source file specified in
-       * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
-       * add a handler to compile files with a certain file extension.
+       * @summary Add a handler to compile files with a certain file extension.
        * @param  {String} fileExtension The file extension that this plugin
        * should handle, without the first dot.
        * Examples: `"coffee"`, `"coffee.md"`.
@@ -440,6 +453,67 @@ _.extend(Unipackage.prototype, {
           isTemplate: !!options.isTemplate,
           archMatching: options.archMatching
         };
+      },
+
+      /**
+       * @summary Register a new entry for the meteor command-line tool.
+       * @param  {String} name  The command name, possibly mutliple words
+       * separated by spaces to indicate sub-commands.
+       * Examples: `"velocity"`, `"velocity add-adapter"`.
+       * @param {Object} [options]
+       * @param {Object} options.minArgs  Minimum non-option arguments that can
+       * be present (default 0)
+       * @param {Object} options.maxArgs  Maximum non-option arguments that can
+       * be present (defaults to whatever value you passed for minArgs; use
+       * Infinity for unlimited)
+       * @param {Object} options.options  Map from long option name to:
+       * - type: String, Number, or Boolean. default is String. a future
+       *   version could support [String] and [Number] to allow the option to
+       *   be passed more than once, but we don't do that yet.
+       * - short: single character short alias (eg, 'p' for 'port', to do -p 3000)
+       * - default: value to use if none supplied
+       * - required: true if required (incompatible with 'default')
+       * @param  {Function} action  The function to call when the command is
+       * chosen. Receives one argument, an options dictionary that contains:
+       * - the values of any 'options' that were provided
+       * - args: an array of the other command-line arguments
+       * - appDir: if run from inside an app tree, the absolute path to the
+       *   app's top-level directory
+       * @memberOf Plugin
+       * @locus Build Plugin
+       */
+      registerCommand: function (name, options, action) {
+        if (!action) {
+          action = options;
+          options = {};
+        }
+
+        if (typeof name !== "string" || _.isEmpty(name)) {
+          buildmessage.error("Plugin try to register a command with an " +
+                             "invalid name", { useMyCaller: true });
+          return;
+        }
+
+
+        if (_.has(self.commands, name)) {
+          buildmessage.error(name + " command has several definitions",
+                             { useMyCaller: true });
+          // recover by ignoring all but the first
+          return;
+        }
+
+        _.each(["name", "func"], function(attr) {
+          if (_.has(options, "name")) {
+            buildmessage.error("The options of the registered command must " +
+                               "not include a " + attr, { useMyCaller: true });
+            return;
+          }
+        });
+
+        options.name = name;
+        options.func = action;
+
+        self.commands[name] = options;
       }
     };
 

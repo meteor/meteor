@@ -157,6 +157,7 @@
   "PackageAPI#versionsFrom",
   "Plugin",
   "Plugin.registerSourceHandler",
+  "Plugin.registerCommand",
   "ReactiveVar",
   "ReactiveVar#get",
   "ReactiveVar#set",
