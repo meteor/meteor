@@ -168,11 +168,12 @@ _.extend(Db.prototype, {
 
     //Console.debug("Executing SQL ", sql);
 
-    var callback = function (err, rows) {
+    var callback = function (err) {
       if (err) {
         future['throw'](err);
       } else {
-        future['return'](rows);
+        // Yes, lastID & changes are on this(!)
+        future['return']({ lastID: this.lastID, changes: this.changes });
       }
     };
 
@@ -264,7 +265,10 @@ _.extend(Table.prototype, {
       var id = o._id;
       var rows = txn.query(self._selectQuery, [ id ]);
       if (rows.length !== 0) {
-        txn.execute(self._deleteQuery, [ id ]);
+        var deleteResults = txn.execute(self._deleteQuery, [ id ]);
+        if (deleteResults.changes !== 1) {
+          throw new Error("Unable to delete row: " + id);
+        }
       }
       var row = [];
       _.each(self.jsonFields, function (jsonField) {
@@ -576,10 +580,10 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   // XXX: Remove this; it is only here for the tests, and that is a hack
-  _insertReleaseVersions: function(releaseVersionData) {
+  _insertReleaseVersions: function(releaseVersions) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
-      self.tableReleaseVersions.upsert(txn, [releaseVersionData]);
+      self.tableReleaseVersions.upsert(txn, releaseVersions);
     });
   },
 
