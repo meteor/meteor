@@ -50,6 +50,10 @@ var doOrThrow = function (f) {
 };
 
 var runTest = function () {
+   // As preparation, let's initialize the official catalog. It servers as our
+   // data store, so we will probably need it.
+   catalog.official.initialize();
+
   var readManifest = function (tmpOutputDir) {
     return JSON.parse(fs.readFileSync(
       path.join(tmpOutputDir, "programs", "web.browser", "program.json"),
