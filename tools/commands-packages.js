@@ -1145,9 +1145,9 @@ main.registerCommand({
   var metamessage = "Maintained by " + myMaintainerString + ".";
         ;
   if (lastVersion && lastVersion.git) {
-    metamessage += "\nYou can find the git repository at " +
+    // No full stop, as it makes copying and pasting painful
+    metamessage += "\nYou can find the git repository at: " +
         lastVersion.git;
-    metamessage += ".";
   }
 
   if (record && record.homepage) {
