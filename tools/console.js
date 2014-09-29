@@ -105,23 +105,34 @@ _.extend(Console.prototype, {
 
   _renderProgressBar: function () {
     var self = this;
+
+    var text = self._progressBarText;
+    if (text) {
+      // pad or truncate `text` to STATUS_MAX_LENGTH
+      if (text.length > STATUS_MAX_LENGTH) {
+        text = text.substring(0, STATUS_MAX_LENGTH - 3) + "...";
+      } else {
+        while (text.length < STATUS_MAX_LENGTH) {
+          text = text + ' ';
+        }
+      }
+    }
+
     if (self._progressBar) {
       // Force repaint
       self._progressBar.lastDraw = '';
 
       self._progressBar.render();
 
-      if (self._progressBarText) {
-        var text = self._progressBarText;
-        if (text > STATUS_MAX_LENGTH) {
-          text = text.substring(0, STATUS_MAX_LENGTH - 3) + "...";
-        } else {
-          while (text.length < STATUS_MAX_LENGTH) {
-            text = text + ' ';
-          }
-        }
+      if (text) {
         self._stream.cursorTo(STATUS_POSITION);
         self._stream.write(chalk.bold(text));
+      }
+    } else {
+      // No fancy terminal support available.  Print messages
+      // what will be overwritten because they end in `\r`.
+      if (text) {
+        self._stream.write('  |  ' + text + '  ... |  \r');
       }
     }
   },
