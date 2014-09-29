@@ -219,6 +219,10 @@ _updateServerPackageData = function (dataStore, options) {
       ret.resetData = true;
     }
 
+    // We always write to the data store; the fact there is no data is itself data!
+    // e.g. the last-refresh timestamp
+    dataStore.insertData(remoteData);
+
     // If there is no new data from the server, don't bother writing things to
     // disk (unless we were just told to reset everything).
     if (!remoteData.resetData && _.isEqual(remoteData.collections, {})) {
@@ -226,9 +230,6 @@ _updateServerPackageData = function (dataStore, options) {
       ret.data = {};
       return;
     }
-
-    //Actually add the data to the data store
-    dataStore.insertData(remoteData);
 
     if (remoteData.upToDate)
       done = true;

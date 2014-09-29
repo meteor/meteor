@@ -171,7 +171,7 @@ _.extend(LocalCatalog.prototype, {
       return lookupVersion() || null;
     }
 
-    return lookupVersion();
+    return lookupVersion() || null;
   },
 
   // Overridden by CompleteCatalog.

@@ -26,6 +26,9 @@ var cordova = require('./commands-cordova.js');
 var packageLoader = require('./package-loader.js');
 var Console = require('./console.js').Console;
 
+// On some informational actions, we only refresh the package catalog if it is > 15 minutes old
+DEFAULT_MAX_AGE = 15 * 60 * 1000;
+
 // Returns an object with keys:
 //  record : (a package or version record)
 //  release : true if it is a release instead of a package.
@@ -45,9 +48,14 @@ var getReleaseOrPackageRecord = function(name) {
 
 // Seriously, this dies if it can't refresh. Only call it if you're sure you're
 // OK that the command doesn't work while offline.
-var doOrDie = exports.doOrDie = function (f) {
+var doOrDie = exports.doOrDie = function (options, f) {
+  if (_.isFunction(options)) {
+    f = options;
+    options = {};
+  }
+  options = options || {};
   var ret;
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture(options, function () {
     ret = f();
   });
   if (messages.hasMessages()) {
@@ -57,9 +65,9 @@ var doOrDie = exports.doOrDie = function (f) {
   return ret;
 
 };
-var refreshOfficialCatalogOrDie = function () {
-  doOrDie(function () {
-    catalog.official.refresh();
+var refreshOfficialCatalogOrDie = function (options) {
+  doOrDie({title: 'Refreshing package catalog'}, function () {
+    catalog.official.refresh(options);
   });
 };
 
@@ -1006,7 +1014,7 @@ main.registerCommand({
 }, function (options) {
 
   // We should refresh the catalog in case there are new versions.
-  refreshOfficialCatalogOrDie();
+  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
@@ -1017,7 +1025,7 @@ main.registerCommand({
   var name = full[0];
   var allRecord;
   doOrDie(function () {
-    allRecord = getReleaseOrPackageRecord(name);
+    allRecord = getReleaseOrPackageRecord({ title: 'Get release record' }, name);
   });
 
   var record = allRecord.record;
@@ -1031,10 +1039,10 @@ main.registerCommand({
   if (!allRecord.isRelease) {
     label = "package";
     var getRelevantRecord = function (version) {
-      var versionRecord = doOrDie(function () {
+      var versionRecord = doOrDie({ title: 'Get relevant record' }, function () {
         return catalog.official.getVersion(name, version);
       });
-      var myBuilds = _.pluck(doOrDie(function () {
+      var myBuilds = _.pluck(doOrDie({ title: 'Get all builds' }, function () {
         return catalog.official.getAllBuilds(name, version);
       }), 'buildArchitectures');
       // Does this package only have a cross-platform build?
@@ -1151,6 +1159,13 @@ main.registerCommand({
 });
 
 main.registerCommand({
+  name: 'refresh',
+  pretty: true
+}, function (options) {
+  refreshOfficialCatalogOrDie();
+});
+
+main.registerCommand({
   name: 'search',
   pretty: true,
   minArgs: 1,
@@ -1171,7 +1186,7 @@ main.registerCommand({
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
   // refreshing" from "can't connect to catalog"
-  refreshOfficialCatalogOrDie();
+  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   var allPackages = catalog.official.getAllPackageNames();
   var allReleases = catalog.official.getAllReleaseTracks();
@@ -1236,7 +1251,7 @@ main.registerCommand({
 
   _.each(allPackages, function (pack) {
     if (selector(pack, false)) {
-      var vr = doOrDie(function () {
+      var vr = doOrDie({ title: 'Get latest version'}, function () {
         if (!options['show-rcs']) {
           return catalog.official.getLatestMainlineVersion(pack);
         }
@@ -1897,7 +1912,7 @@ main.registerCommand({
   var packages = project.getConstraints();
 
   var allPackages;
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: 'Combining constraints' }, function () {
     // Combine into one object mapping package name to list of constraints, to
     // pass in to the constraint solver.
     allPackages = project.getCurrentCombinedConstraints();
@@ -1909,7 +1924,7 @@ main.registerCommand({
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    doOrDie(function () {
+    doOrDie({title: 'Checking package: ' + constraint.name }, function () {
       if (! catalog.complete.getPackage(constraint.name)) {
         Console.error(constraint.name + ": no such package");
         failed = true;
@@ -1920,7 +1935,7 @@ main.registerCommand({
     // If the version was specified, check that the version exists.
     _.each(constraint.constraint, function (constr) {
       if (constr.version !== null) {
-        var versionInfo = doOrDie(function () {
+        var versionInfo = doOrDie({ title: 'Fetching packages' }, function () {
           return catalog.complete.getVersion(constraint.name, constr.version);
         });
         if (! versionInfo) {

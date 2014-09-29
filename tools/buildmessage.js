@@ -157,6 +157,10 @@ _.extend(MessageSet.prototype, {
   }
 });
 
+var spaces = function (n) {
+  return _.times(n, function() { return ' ' }).join('');
+};
+
 // XXX: This is now a little bit silly... ideas:
 // Can we just have one hierarchical state?
 // Can we combined job & messageSet
@@ -244,7 +248,7 @@ var capture = function (options, f) {
           var start;
           if (debugBuild) {
             start = Date.now();
-            console.log("START CAPTURE", nestingLevel, options.title, "took " + (end - start));
+            console.log(spaces(nestingLevel * 2), "START CAPTURE", nestingLevel, options.title, "took " + (end - start));
           }
           try {
             f();
@@ -253,7 +257,7 @@ var capture = function (options, f) {
 
             if (debugBuild) {
               var end = Date.now();
-              console.log("END CAPTURE", nestingLevel, options.title, "took " + (end - start));
+              console.log(spaces(nestingLevel * 2), "END CAPTURE", nestingLevel, options.title, "took " + (end - start));
             }
           }
         });
@@ -306,7 +310,7 @@ var enterJob = function (options, f) {
       var start;
       if (debugBuild) {
         start = Date.now();
-        console.log("START", nestingLevel, options.title);
+        console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
       }
       try {
         return f();
@@ -314,7 +318,7 @@ var enterJob = function (options, f) {
         progress.reportProgressDone();
         if (debugBuild) {
           var end = Date.now();
-          console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+          console.log(spaces(nestingLevel * 2), "DONE", nestingLevel, options.title, "took " + (end - start));
         }
       }
     }

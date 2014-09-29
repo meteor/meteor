@@ -12,6 +12,7 @@ var archinfo = require('./archinfo.js');
 var unipackage = require('./unipackage.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
+var Console = require('./console.js').Console;
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -50,6 +51,7 @@ var checkForUpdate = function (showBanner) {
     // XXX But maybe if it's just a "we're offline" message we should keep
     //     going? In case we want to present the "hey there's a locally
     //     available recommended release?
+    Console.debug("Errors while updating in background");
     return;
   }
 };

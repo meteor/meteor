@@ -14,7 +14,20 @@ var project = require('./project.js');
 var utils = require('./utils.js');
 var config = require('./config.js');
 var packageClient = require('./package-client.js');
+var Console = require('./console.js').Console;
 
+// As a work-around for [] !== [], we use a function to check whether values are acceptable
+var ACCEPT_NON_EMPTY = function (result) {
+  // null, undefined
+  if (result === null || result === undefined) {
+    return false;
+  }
+  // []
+  if (result.length === 0) {
+    return false;
+  }
+  return true;
+};
 
 // The LayeredCatalog provides a way to query multiple catalogs in a uniform way
 // A LayeredCatalog typically contains:
@@ -51,7 +64,7 @@ _.extend(LayeredCatalog.prototype, {
 
   getAllBuilds: function (name, version) {
     var self = this;
-    return self._returnFirst("getAllBuilds", arguments, [[], null]);
+    return self._returnFirst("getAllBuilds", arguments, ACCEPT_NON_EMPTY);
   },
 
   getAllPackageNames: function () {
@@ -59,22 +72,22 @@ _.extend(LayeredCatalog.prototype, {
     return _.union(self.localCatalog.getAllPackageNames(), self.otherCatalog.getAllPackageNames());
   },
 
-  _returnFirst: function(f, args, unacceptableValues) {
+  _returnFirst: function(f, args, validityOracle) {
     var self = this;
     var splittedArgs = Array.prototype.slice.call(args,0);
     var result = self.localCatalog[f].apply(self.localCatalog, splittedArgs);
-    if ( ! (_.contains(unacceptableValues, result) )) {
+    if (validityOracle(result)) {
       return result;
     }
     return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
   },
 
   getBuildsForArches: function (name, version, arches) {
-    return this._returnFirst("getBuildsForArches", arguments, [[], null]);
+    return this._returnFirst("getBuildsForArches", arguments, ACCEPT_NON_EMPTY);
   },
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
-    return this._returnFirst("getBuildWithPreciseBuildArchitectures", arguments, [[], null]);
+    return this._returnFirst("getBuildWithPreciseBuildArchitectures", arguments, ACCEPT_NON_EMPTY);
   },
 
   getForgottenECVs: function (packageName) {
@@ -91,7 +104,7 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getPackage: function (name) {
-    return this._returnFirst("getPackage", arguments, [[], null]);
+    return this._returnFirst("getPackage", arguments, ACCEPT_NON_EMPTY);
   },
 
   // Find a release that uses the given version of a tool. See: publish-for-arch
@@ -120,11 +133,11 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getSortedVersions: function (name) {
-    return this._returnFirst("getSortedVersions", arguments, [[], null]);
+    return this._returnFirst("getSortedVersions", arguments, ACCEPT_NON_EMPTY);
   },
 
   getVersion: function (name, version) {
-    return this._returnFirst("getVersion", arguments, [[], null]);
+    return this._returnFirst("getVersion", arguments, ACCEPT_NON_EMPTY);
   },
 
   initialize: function (options) {
@@ -220,6 +233,7 @@ _.extend(LayeredCatalog.prototype, {
         try {
           return self.resolver.resolve(deps, constr, resolverOpts);
         } catch (e) {
+          console.log("Got error during resolve; trying refresh", e);
           remoteCatalog.official.refresh();
           self.resolver || self._initializeResolver();
           return self.resolver.resolve(deps, constr, resolverOpts);
