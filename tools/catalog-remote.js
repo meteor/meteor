@@ -479,7 +479,7 @@ _.extend(RemoteCatalog.prototype, {
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          Console.info("Catalog is sufficiently up-to-date");
+          Console.info("Catalog is sufficiently up-to-date; not refreshing\n");
           return;
         }
       }
@@ -567,7 +567,7 @@ _.extend(RemoteCatalog.prototype, {
   // This code assumes that the table being queried always have a column called "content"
   _queryAsJSON: function (query, values, options) {
     var self = this;
-    Console.debug("Executing query with _queryAsJSON: ", query);
+    Console.debug("Executing query with _queryAsJSON: ", query, values);
     var rows = self._queryWithRetry(query, values, options);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);

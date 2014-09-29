@@ -1024,8 +1024,8 @@ main.registerCommand({
   var full = options.args[0].split('@');
   var name = full[0];
   var allRecord;
-  doOrDie(function () {
-    allRecord = getReleaseOrPackageRecord({ title: 'Get release record' }, name);
+  doOrDie({ title: 'Get release record' }, function () {
+    allRecord = getReleaseOrPackageRecord(name);
   });
 
   var record = allRecord.record;
