@@ -8,11 +8,52 @@ var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
+var url = require('url');
 
 var utils = exports;
 
 exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+};
+
+// Parses <protocol>://<host>:<port> into an object { protocol: *, host:
+// *, port: * }. The input can also be of the form <host>:<port> or just
+// <port>. We're not simply using 'url.parse' because we want '3000' to
+// parse as {host: undefined, protocol: undefined, port: 3000}, whereas
+// 'url.parse' would give us {protocol:3000, host: undefined, port:
+// undefined} or something like that.
+//
+// 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
+exports.parseUrl = function (str, defaults) {
+  // XXX factor this out into a {type: host/port}?
+
+  defaults = defaults || {};
+  var defaultHost = defaults.host || undefined;
+  var defaultPort = defaults.port || undefined;
+  var defaultProtocol = defaults.protocol || undefined;
+
+  if (str.match(/^[0-9]+$/)) { // just a port
+    return {
+      port: str,
+      host: defaultHost,
+      protocol: defaultProtocol };
+  }
+
+  var hasScheme = exports.hasScheme(str);
+  if (! hasScheme) {
+    str = "http://" + str;
+  }
+
+  var parsed = url.parse(str);
+  if (! parsed.protocol.match(/\/\/$/)) {
+    // For easy concatenation, add double slashes to protocols.
+    parsed.protocol = parsed.protocol + "//";
+  }
+  return {
+    protocol: hasScheme ? parsed.protocol : defaultProtocol,
+    host: parsed.hostname || defaultHost,
+    port: parsed.port || defaultPort
+  };
 };
 
 // Returns a pretty list suitable for showing to the user. Input is an

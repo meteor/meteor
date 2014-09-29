@@ -3,7 +3,6 @@ var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
 var ip = require('ip');
-var url = require('url');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -64,33 +63,6 @@ var qualifySitename = function (site) {
 var hostedWithGalaxy = function (site) {
   var site = qualifySitename(site);
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
-};
-
-// Parses <protocol>://<host>:<port> into an object { protocol: *, host:
-// *, port: * }. The input can also be of the form <host>:<port> or just
-// <port>.
-var parseHostPort = function (str, useDefaults) {
-  // XXX factor this out into a {type: host/port}?
-
-  var defaultHost = useDefaults ? DEFAULT_BUILD_HOST : undefined;
-  var defaultPort = useDefaults ? DEFAULT_PORT : undefined;
-  var defaultProtocol = useDefaults ? "http://" : undefined;
-
-  if (str.match(/$[0-9]+^/)) { // just a port
-    return { port: str, host: defaultHost, protocol: defaultProtocol };
-  }
-
-  var hasScheme = utils.hasScheme(str);
-  if (! hasScheme) {
-    str = "http://" + str;
-  }
-
-  var parsed = url.parse(str);
-  return {
-    protocol: hasScheme ? parsed.protocol : defaultProtocol,
-    host: parsed.host || defaultHost,
-    port: parsed.port || defaultPort
-  };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -210,7 +182,9 @@ main.registerCommand({
 
   cordova.verboseLog('Parsing the --port option');
   try {
-    var parsedHostPort = parseHostPort(options.port);
+    var parsedUrl = utils.parseUrl(options.port, {
+      port: DEFAULT_PORT
+    });
   } catch (err) {
     if (options.verbose) {
       Console.stderr.write('Error while parsing --port option: '
@@ -221,12 +195,16 @@ main.registerCommand({
     return 1;
   }
 
-  parsedHostPort.port = parsedHostPort.port || DEFAULT_PORT;
-
   var mobileServer = options["mobile-server"] || options.port;
   try {
-    var parsedMobileServer = parseHostPort(mobileServer,
-                                           true /* use defaults */);
+    var parsedMobileServer = utils.parseUrl(
+      mobileServer,
+      {
+        host: DEFAULT_BUILD_HOST,
+        port: DEFAULT_PORT,
+        protocol: "http:"
+      }
+    );
   } catch (err) {
     if (options.verbose) {
       process.stderr.write('Error while parsing --mobile-port option: '
@@ -251,7 +229,7 @@ main.registerCommand({
 "",
 "         You can pass the host and the port in the --mobile-server argument.",
 "         For example: --mobile-server " +
-  ip.address() + ":" + parsedHostPort.port + "\n\n"
+  ip.address() + ":" + parsedUrl.port + "\n\n"
 ].join("\n"));
   }
 
@@ -326,8 +304,8 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    proxyPort: parsedHostPort.port,
-    proxyHost: parsedHostPort.host,
+    proxyPort: parsedUrl.port,
+    proxyHost: parsedUrl.host,
     httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
@@ -644,8 +622,13 @@ var buildCommand = function (options) {
 
   if (! _.isEmpty(mobilePlatforms)) {
     try {
-      var parsedMobileServer = parseHostPort(options["mobile-server"],
-                                             true /* fill in defaults */);
+      var parsedMobileServer = utils.parseUrl(
+        options["mobile-server"], {
+          host: DEFAULT_BUILD_HOST,
+          port: DEFAULT_PORT,
+          protocol: "http://"
+        }
+      );
     } catch (err) {
       Console.stderr.write(err.message);
       return 1;
@@ -1155,18 +1138,22 @@ main.registerCommand({
   }
 }, function (options) {
   try {
-    var parsedHostPort = parseHostPort(options.port);
+    var parsedUrl = utils.parseUrl(
+      options.port, { port: DEFAULT_PORT });
   } catch (err) {
     Console.stderr.write(err.message);
     return 1;
   }
 
-  parsedHostPort.port = parsedHostPort.port || DEFAULT_PORT;
-
   try {
-    var parsedMobileServer = parseHostPort(
+    var parsedMobileServer = utils.parseUrl(
       options["mobile-server"] || options.port,
-      true /* use defaults */);
+      {
+        host: DEFAULT_BUILD_HOST,
+        port: DEFAULT_PORT,
+        protocol: "http://"
+      }
+    );
   } catch (err) {
     Console.stderr.write(err.message);
     return 1;
@@ -1175,9 +1162,10 @@ main.registerCommand({
   options.httpProxyPort = options['http-proxy-port'];
 
   // XXX not good to change the options this way
-  _.extend(options, parsedHostPort);
+  _.extend(options, parsedUrl);
 
   var testPackages = null;
+
   var localPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
