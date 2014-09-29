@@ -278,8 +278,13 @@ _.extend(Console.prototype, {
       enabled = true;
     }
 
-    // Ignore if not in pretty / on TTY
-    if (!self._stream.isTTY || !self._pretty) return;
+    // Ignore if not in pretty / on TTY.
+    // Emacs's pseudo-TTY (with 0 rows and columns) doesn't count because
+    // it doesn't support clearLine() and cursorTo(...).
+    if (!(self._stream.isTTY && self._stream.columns) ||
+        !self._pretty) {
+      return;
+    }
 
     if (enabled && !self._progressBar) {
       var options = {
