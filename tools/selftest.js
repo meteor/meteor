@@ -159,8 +159,10 @@ _.extend(Matcher.prototype, {
   matchEmpty: function () {
     var self = this;
 
-    if (self.buf.length > 0)
+    if (self.buf.length > 0) {
+      console.log("Extra junk is ", self.buf);
       throw new TestFailure('junk-at-end', { run: self.run });
+    }
   },
 
   _tryMatch: function () {
