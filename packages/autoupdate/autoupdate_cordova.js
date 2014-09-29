@@ -4,7 +4,7 @@ var DEBUG_TAG = 'METEOR CORDOVA DEBUG ';
 // We limit the number of concurrent downloads because iOS gets angry on the
 // application when a certain limit is exceeded and starts timing-out the
 // connections in 1-2 minutes which makes the whole HCP really slow.
-var MAX_NUM_CONCURRENT_DOWNLOADS = 15;
+var MAX_NUM_CONCURRENT_DOWNLOADS = 30;
 var MAX_RETRY_COUNT = 5;
 
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
@@ -161,7 +161,10 @@ var onNewVersion = function () {
     };
 
     _.times(Math.min(MAX_NUM_CONCURRENT_DOWNLOADS, queue.length), function () {
-      dowloadUrl(queue.shift());
+      var nextUrl = queue.shift();
+      // XXX defer the next download so iOS doesn't rate limit us on concurrent
+      // downloads
+      Meteor.setTimeout(dowloadUrl.bind(null, nextUrl), 50);
     });
   });
 };
