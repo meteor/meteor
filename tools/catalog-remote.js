@@ -494,7 +494,7 @@ _.extend(RemoteCatalog.prototype, {
       updateResult = packageClient.updateServerPackageData(self);
     });
     if (!updateResult.data) {
-      process.stderr.write("Warning: could not connect to package server\n");
+      Console.warn("Warning: could not connect to package server\n");
     }
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
@@ -547,40 +547,27 @@ _.extend(RemoteCatalog.prototype, {
 
   _queryWithRetry: function (query, values, options) {
     var self = this;
-    var result = self._justQuery(query, values);
-    if ( result.length !== 0 || ( options && options.noRetry ) )
-      return result;
-    Console.warn("Forcing refresh because of _queryWithRetry", query, values);
-    self.refresh();
-    return self._justQuery(query, values);
-  },
+    options = options || {};
 
-  // Runs a query synchronously.
-  // Query is the sql query to be executed and values are the parameters of the query
-  _justQuery: function (query, values) {
-    var self = this;
-    var results;
-    try {
-      results = self.db.query(query, values);
-    } catch (err) {
-      // XXX: Throw?
-      console.log("Error running query ", query, err);
-      results = [];
-    }
-    if (results !== [])
+    var results = self.db.query(query, values);
+    if (results.length !== 0 || options.noRetry)
       return results;
-    // XXX: Scary
-    console.log("Forcing refresh in _justQuery");
+
+    Console.warn("Forcing refresh because of unexpected missing data");
+    Console.debug("No data was returned from query: ", query, values);
     self.refresh();
-    // XXX: What should we return here??
-    return results;
+
+    options = _.clone(options);
+    options.noRetry = true;
+
+    return self._queryWithRetry(query, values, options);
   },
 
   // Execute a query using the values as arguments of the query and return the result as JSON.
-  // This code assumes that the table being queried always have a column called "entity"
+  // This code assumes that the table being queried always have a column called "content"
   _queryAsJSON: function (query, values, options) {
     var self = this;
-    console.log("Executing query with _queryAsJSON: ", query);
+    Console.debug("Executing query with _queryAsJSON: ", query);
     var rows = self._queryWithRetry(query, values, options);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
