@@ -11,7 +11,7 @@ With Meteor you write apps:
 
 Documentation is available at http://docs.meteor.com/
 
-## Quick Start
+## Quick Start (only if your architecture is supported)
 
 Install Meteor:
 
@@ -30,12 +30,12 @@ Deploy it to the world, for free:
 
     meteor deploy try-meteor.meteor.com
 
-## Slow Start (for developers)
+## Slow Start (for developers or if looking for universal bundle)
 
 If you want to run on the bleeding edge, or help develop Meteor, you
 can run Meteor directly from a git checkout.
 
-    git clone git://github.com/meteor/meteor.git
+    git clone git://github.com/4commerce-technologies-AG/meteor.git
     cd meteor
 
 If you're the sort of person who likes to build everything from scratch,
@@ -44,7 +44,12 @@ with the provided script. This requires git, a C and C++ compiler,
 autotools, and scons. If you do not run this script, Meteor will
 automatically download pre-compiled binaries when you first run it.
 
-    # OPTIONAL
+You also need to generate the dev bundle if your architecture is not yet
+supported. So if you have pre-installed your platform packages for
+nodejs and mongodb, the script will create an universal bundle. This
+also runs on ARM architectures like UDOO or Raspi.
+
+    # OPTIONAL or for UNIVERSAL bundle
     ./scripts/generate-dev-bundle.sh
 
 Now you can run meteor directly from the checkout (if you did not

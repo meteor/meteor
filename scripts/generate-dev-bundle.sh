@@ -8,9 +8,16 @@ ARCH=$(uname -m)
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
-        echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports i686 and x86_64 for now."
-        exit 1
+        # test for platform installed binaries
+        if [ "$(which node)" != "" -a "$(which npm)" != "" -a "$(which mongo)" != "" -a "$(which mongod)" != "" ] ; then
+            # we are using installation for platform installed binaries
+            ARCH="universal"
+        else
+            echo "Unsupported architecture: $ARCH"
+            echo "Meteor only supports i686 and x86_64 or universal for now."
+            echo "To use universal architecture make sure that node and mongo packages are pre-installed."
+            exit 1
+        fi
     fi
 
     OS="linux"
@@ -96,22 +103,25 @@ fi
 
 cd "$DIR/build"
 
-# For now, use our fork with https://github.com/npm/npm/pull/5821/files
-git clone https://github.com/meteor/node.git
-cd node
-# When upgrading node versions, also update the values of MIN_NODE_VERSION at
-# the top of tools/main.js and tools/server/boot.js, and the text in
-# docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.29-with-npm-5821
+# Check if have to build on universal architecture
+if [ "$ARCH" != "universal" ] ; then
+    # For now, use our fork with https://github.com/npm/npm/pull/5821/files
+    git clone https://github.com/meteor/node.git
+    cd node
+    # When upgrading node versions, also update the values of MIN_NODE_VERSION at
+    # the top of tools/main.js and tools/server/boot.js, and the text in
+    # docs/client/concepts.html and the README in tools/bundler.js.
+    git checkout v0.10.29-with-npm-5821
 
-./configure --prefix="$DIR"
-make -j4
-make install PORTABLE=1
-# PORTABLE=1 is a node hack to make npm look relative to itself instead
-# of hard coding the PREFIX.
+    ./configure --prefix="$DIR"
+    make -j4
+    make install PORTABLE=1
+    # PORTABLE=1 is a node hack to make npm look relative to itself instead
+    # of hard coding the PREFIX.
 
-# export path so we use our new node for later builds
-export PATH="$DIR/bin:$PATH"
+    # export path so we use our new node for later builds
+    export PATH="$DIR/bin:$PATH"
+fi
 
 which node
 
@@ -134,6 +144,7 @@ npm install
 npm shrinkwrap
 
 # This ignores the stuff in node_modules/.bin, but that's OK.
+mkdir -p "${DIR}/lib/node_modules/"
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 mkdir "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
@@ -191,79 +202,101 @@ npm install jsdoc@3.3.0-alpha9
 #npm install cordova@3.5.0-0.2.6
 npm install "https://github.com/meteor/cordova-cli/tarball/898040e71f6d6900cac4d477986b0451fb196ff1"
 
-# Checkout and build mongodb.
-# We want to build a binary that includes SSL support but does not depend on a
-# particular version of openssl on the host system.
+# Check if have to build on universal architecture
+if [ "$ARCH" != "universal" ] ; then
+    # Checkout and build mongodb.
+    # We want to build a binary that includes SSL support but does not depend on a
+    # particular version of openssl on the host system.
 
-cd "$DIR/build"
-OPENSSL="openssl-1.0.1g"
-OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
-wget $OPENSSL_URL || curl -O $OPENSSL_URL
-tar xzf $OPENSSL.tar.gz
+    cd "$DIR/build"
+    OPENSSL="openssl-1.0.1g"
+    OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
+    wget $OPENSSL_URL || curl -O $OPENSSL_URL
+    tar xzf $OPENSSL.tar.gz
 
-cd $OPENSSL
-if [ "$UNAME" == "Linux" ]; then
-    ./config --prefix="$DIR/build/openssl-out" no-shared
-else
-    # This configuration line is taken from Homebrew formula:
-    # https://github.com/mxcl/homebrew/blob/master/Library/Formula/openssl.rb
-    ./Configure no-shared zlib-dynamic --prefix="$DIR/build/openssl-out" darwin64-x86_64-cc enable-ec_nistp_64_gcc_128
-fi
-make install
-
-# To see the mongo changelog, go to http://www.mongodb.org/downloads,
-# click 'changelog' under the current version, then 'release notes' in
-# the upper right.
-cd "$DIR/build"
-MONGO_VERSION="2.4.9"
-
-# We use Meteor fork since we added some changes to the building script.
-# Our patches allow us to link most of the libraries statically.
-git clone git://github.com/meteor/mongo.git
-cd mongo
-git checkout ssl-r$MONGO_VERSION
-
-# Compile
-
-MONGO_FLAGS="--ssl --release -j4 "
-MONGO_FLAGS+="--cpppath=$DIR/build/openssl-out/include --libpath=$DIR/build/openssl-out/lib "
-
-if [ "$OS" == "osx" ]; then
-    # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
-    MONGO_FLAGS+="--openssl=$DIR/build/openssl-out/lib "
-    /usr/local/bin/scons $MONGO_FLAGS mongo mongod
-elif [ "$OS" == "linux" ]; then
-    MONGO_FLAGS+="--no-glibc-check --prefix=./ "
-    if [ "$ARCH" == "x86_64" ]; then
-      MONGO_FLAGS+="--64"
+    cd $OPENSSL
+    if [ "$UNAME" == "Linux" ]; then
+        ./config --prefix="$DIR/build/openssl-out" no-shared
+    else
+        # This configuration line is taken from Homebrew formula:
+        # https://github.com/mxcl/homebrew/blob/master/Library/Formula/openssl.rb
+        ./Configure no-shared zlib-dynamic --prefix="$DIR/build/openssl-out" darwin64-x86_64-cc enable-ec_nistp_64_gcc_128
     fi
-    scons $MONGO_FLAGS mongo mongod
-else
-    echo "We don't know how to compile mongo for this platform"
-    exit 1
+    make install
+
+    # To see the mongo changelog, go to http://www.mongodb.org/downloads,
+    # click 'changelog' under the current version, then 'release notes' in
+    # the upper right.
+    cd "$DIR/build"
+    MONGO_VERSION="2.4.9"
+
+    # We use Meteor fork since we added some changes to the building script.
+    # Our patches allow us to link most of the libraries statically.
+    git clone git://github.com/meteor/mongo.git
+    cd mongo
+    git checkout ssl-r$MONGO_VERSION
+
+    # Compile
+
+    MONGO_FLAGS="--ssl --release -j4 "
+    MONGO_FLAGS+="--cpppath=$DIR/build/openssl-out/include --libpath=$DIR/build/openssl-out/lib "
+
+    if [ "$OS" == "osx" ]; then
+        # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
+        MONGO_FLAGS+="--openssl=$DIR/build/openssl-out/lib "
+        /usr/local/bin/scons $MONGO_FLAGS mongo mongod
+    elif [ "$OS" == "linux" ]; then
+        MONGO_FLAGS+="--no-glibc-check --prefix=./ "
+        if [ "$ARCH" == "x86_64" ]; then
+          MONGO_FLAGS+="--64"
+        fi
+        scons $MONGO_FLAGS mongo mongod
+    else
+        echo "We don't know how to compile mongo for this platform"
+        exit 1
+    fi
 fi
 
 # Copy binaries
 mkdir -p "$DIR/mongodb/bin"
-cp mongo "$DIR/mongodb/bin/"
-cp mongod "$DIR/mongodb/bin/"
+# Check if have to build on universal architecture
+if [ "$ARCH" != "universal" ] ; then
+    cp mongo "$DIR/mongodb/bin/"
+    cp mongod "$DIR/mongodb/bin/"
+fi
 
-# Copy mongodb distribution information
-find ./distsrc -maxdepth 1 -type f -exec cp '{}' ../mongodb \;
+# Check if have to build on universal architecture
+if [ "$ARCH" != "universal" ] ; then
+    # Copy mongodb distribution information
+    find ./distsrc -maxdepth 1 -type f -exec cp '{}' ../mongodb \;
+fi
 
 cd "$DIR"
-stripBinary bin/node
-stripBinary mongodb/bin/mongo
-stripBinary mongodb/bin/mongod
+# Check if have to build on universal architecture
+if [ "$ARCH" != "universal" ] ; then
+    stripBinary bin/node
+    stripBinary mongodb/bin/mongo
+    stripBinary mongodb/bin/mongod
+else
+    # link to pre-installed binaries
+    mkdir -p "$DIR/bin"
+    ln -s "$(which node)" "$DIR/bin"
+    ln -s "$(which npm)" "$DIR/bin"
+    ln -s "$(which mongo)" "$DIR/mongodb/bin"
+    ln -s "$(which mongod)" "$DIR/mongodb/bin/mongod"
+fi
 
-# Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
+# Check if have to build on universal architecture
+if [ "$ARCH" != "universal" ] ; then
+    # Download BrowserStackLocal binary.
+    BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
 
-cd "$DIR/build"
-curl -O $BROWSER_STACK_LOCAL_URL
-gunzip BrowserStackLocal*
-mv BrowserStackLocal* BrowserStackLocal
-mv BrowserStackLocal "$DIR/bin/"
+    cd "$DIR/build"
+    curl -O $BROWSER_STACK_LOCAL_URL
+    gunzip BrowserStackLocal*
+    mv BrowserStackLocal* BrowserStackLocal
+    mv BrowserStackLocal "$DIR/bin/"
+fi
 
 echo BUNDLING
 
