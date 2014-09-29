@@ -130,6 +130,8 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
+var ensureAndroidBundleCache = {};
+
 var ensureAndroidBundle = function (command) {
   if (! _.contains([localAdb, localAndroid], command)) {
     if (command !== localCordova ||
@@ -137,13 +139,19 @@ var ensureAndroidBundle = function (command) {
       return;
   }
 
-  verboseLog('Ensuring android_bundle');
   var ensureScriptPath =
     path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
               'ensure_android_bundle.sh');
 
+  if (ensureAndroidBundleCache[ensureScriptPath]) {
+    verboseLog('android_bundle already checked');
+    return;
+  }
+
+  verboseLog('Ensuring android_bundle');
   try {
     execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
+    ensureAndroidBundleCache[ensureScriptPath] = true;
   } catch (err) {
     verboseLog('Failed to install android_bundle ', err.stack);
     process.stderr.write("Failed to install android_bundle\n");
@@ -383,7 +391,6 @@ var installPlugin = function (cordovaPath, name, version, settings) {
     additionalArgs.push(variable + '=' + JSON.stringify(value));
   });
 
-  Console.stdout.write('  installing ' + pluginInstallCommand + '\n');
   var execRes = execFileSyncOrThrow(localCordova,
      ['plugin', 'add', pluginInstallCommand].concat(additionalArgs),
      { cwd: cordovaPath });
@@ -534,8 +541,11 @@ var ensureCordovaPlugins = function (localPath, options) {
 
     // Now install all of the plugins.
     try {
+      // XXX: forkJoin with parallel false?
       _.each(plugins, function (version, name) {
-        installPlugin(cordovaPath, name, version, settings[name]);
+        buildmessage.enterJob({ title: 'Installing Cordova plugin ' + name}, function () {
+          installPlugin(cordovaPath, name, version, settings[name]);
+        });
       });
     } catch (err) {
       // If a plugin fails to install, then remove all plugins and throw the

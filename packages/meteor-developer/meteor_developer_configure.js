@@ -1,6 +1,8 @@
-Template.configureLoginServiceDialogForMeteorDeveloper.siteUrl = function () {
-  return Meteor.absoluteUrl();
-};
+Template.configureLoginServiceDialogForMeteorDeveloper.helpers({
+  siteUrl: function () {
+    return Meteor.absoluteUrl();
+  }
+});
 
 Template.configureLoginServiceDialogForMeteorDeveloper.fields = function () {
   return [

@@ -78,10 +78,10 @@ _.extend(Meteor, {
   // fs.open(pathname, flags, [mode], [callback])
   // For maximum effectiveness and least confusion, wrapAsync should be used on
   // functions where the callback is the only argument of type Function.
-  
+
   /**
    * @memberOf Meteor
-   * @summary Wrap a function that takes a callback function as its final parameter so that the wrapper function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). If a callback is provided, the environment captured when the original function was called will be restored in the callback.
+   * @summary Wrap a function that takes a callback function as its final parameter. On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback.
    * @locus Anywhere
    * @param {Function} func A function that takes a callback as its final parameter
    * @param {Object} [context] Optional `this` object against which the original function will be invoked
