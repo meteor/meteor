@@ -24,6 +24,48 @@ DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
 
 METADATA_LAST_SYNC = "lastsync";
 
+BUSY_RETRY_ATTEMPTS = 5;
+BUSY_RETRY_INTERVAL = 1000;
+
+var Mutex = function () {
+  var self = this;
+
+  self._locked = false;
+
+  self._waiters = [];
+};
+
+_.extend(Mutex.prototype, {
+  lock: function () {
+    var self = this;
+
+    while (true) {
+      if (!self._locked) {
+        self._locked = true;
+        return;
+      }
+
+      var fut = new Future();
+      self._waiters.push(fut);
+      fut.wait();
+    }
+  },
+
+  unlock: function () {
+    var self = this;
+
+    if (!self._locked) {
+      throw new Error("unlock called on unlocked mutex");
+    }
+
+    self._locked = false;
+    var waiter = self._waiters.shift();
+    if (waiter) {
+      waiter['return']();
+    }
+  }
+});
+
 var Db = function (dbFile, options) {
   var self = this;
 
@@ -33,14 +75,29 @@ var Db = function (dbFile, options) {
   self._prepared = {};
 
   self._db = self.open(dbFile);
+
+  self._transactionMutex = new Mutex();
 };
 
 _.extend(Db.prototype, {
+
+  _serialize: function (f) {
+    var self = this;
+
+    try {
+      self._transactionMutex.lock();
+      f();
+    } finally {
+      self._transactionMutex.unlock();
+    }
+  },
+
+
   runInTransaction: function (action) {
     var self = this;
     var future = new Future();
-    // XXX: serialize doesn't work with fibers
-    self._db.serialize(function () {
+
+    var runOnce = function () {
       var t1 = Date.now();
 
       var rollback = true;
@@ -90,8 +147,29 @@ _.extend(Db.prototype, {
       } else {
         future['return'](result);
       }
-    });
-    return future.wait();
+      return future.wait();
+    };
+
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return self._serialize(runOnce);
+      } catch (err) {
+        var retry = false;
+        // Grr... doesn't expose error code; must string-match
+        if (err.message && err.message == "SQLITE_BUSY: database is locked") {
+          if (attempt < BUSY_RETRY_ATTEMPTS) {
+            retry = true;
+          }
+        }
+        if (!retry) {
+          throw err;
+        }
+      }
+
+      // Wait on average BUSY_RETRY_INTERVAL, but randomize to avoid thundering herd
+      var t = (Math.random() + 0.5) * BUSY_RETRY_INTERVAL;
+      utils.sleepMs(t);
+    }
   },
 
   open: function (dbFile) {
