@@ -584,6 +584,14 @@ _.extend(RemoteCatalog.prototype, {
     });
   },
 
+  // XXX: Remove this; it is only here for the tests, and that is a hack
+  _insertReleaseVersions: function(releaseVersionData) {
+    var self = this;
+    return self.db.runInTransaction(function (txn) {
+      self.tableReleaseVersions.upsert(txn, [releaseVersionData]);
+    });
+  },
+
   //Given data from troposphere, add it into the local store
   insertData: function(serverData, syncComplete) {
     var self = this;
