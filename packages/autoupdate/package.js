@@ -17,6 +17,7 @@ Package.on_use(function (api) {
   api.use('http', 'web.cordova');
 
   api.export('Autoupdate');
+  api.export('ClientVersions', 'web');
   api.add_files('autoupdate_server.js', 'server');
   api.add_files('autoupdate_client.js', 'web.browser');
   api.add_files('autoupdate_cordova.js', 'web.cordova');
