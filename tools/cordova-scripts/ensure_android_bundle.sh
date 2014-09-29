@@ -13,7 +13,7 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
 fi
 
 # import all the environment
-source $(dirname $0)/common_env.sh
+source "$(dirname "$0")/common_env.sh"
 
 command -v java >/dev/null 2>&1 || {
   if [ ${UNAME} == "Linux" ] ; then
@@ -131,12 +131,12 @@ set_config () {
   KEY=$1
   VALUE=$2
 
-  CONFIG_FILE=${ANDROID_BUNDLE}/meteor_avd/config.ini
+  CONFIG_FILE="${ANDROID_BUNDLE}/meteor_avd/config.ini"
 
   TEMP_FILE=`mktemp -t tmp.XXXXXXXXXX`
-  grep -v "^${KEY}=" ${CONFIG_FILE} > ${TEMP_FILE}
-  echo "${KEY}=${VALUE}" >> ${TEMP_FILE}
-  mv -f ${TEMP_FILE} ${CONFIG_FILE}
+  grep -v "^${KEY}=" "${CONFIG_FILE}" > "${TEMP_FILE}"
+  echo "${KEY}=${VALUE}" >> "${TEMP_FILE}"
+  mv -f "${TEMP_FILE}" "${CONFIG_FILE}"
 }
 
 install_x86 () {
@@ -158,7 +158,7 @@ if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]]
   # save the output to a log file and tell user where to find it in case of
   # failure.
   echo "
-" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path ${ANDROID_BUNDLE}/meteor_avd/ > /dev/null 2>&1
+" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path "${ANDROID_BUNDLE}/meteor_avd/" > /dev/null 2>&1
 
   # Nice keyboard support
   set_config "hw.keyboard" "yes"
