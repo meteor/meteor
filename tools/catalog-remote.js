@@ -17,6 +17,7 @@ var semver = require('semver');
 var packageClient = require('./package-client.js');
 var sqlite3 = require('sqlite3');
 var archinfo = require('./archinfo.js');
+var Console = require('./console.js').Console;
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
@@ -59,7 +60,7 @@ _.extend(Db.prototype, {
           self.execute("END TRANSACTION");
         } catch (err) {
           rollback = true;
-          console.log("Transaction commit failed ", err);
+          Console.warn("Transaction commit failed ", err);
           if (!resultError) {
             resultError = err;
           }
@@ -71,7 +72,7 @@ _.extend(Db.prototype, {
           self.execute("ROLLBACK TRANSACTION");
         } catch (err) {
           // Now we are out of options...
-          console.log("Transaction rollback failed ", err);
+          Console.warn("Transaction rollback failed ", err);
           if (!resultError) {
             resultError = err;
           }
@@ -80,7 +81,8 @@ _.extend(Db.prototype, {
 
       if (DEBUG_SQL) {
         var t2 = Date.now();
-        console.log("Transaction took: ", (t2 - t1));
+        // XXX: Hack around not having loggers
+        Console.info("Transaction took: ", (t2 - t1));
       }
 
       if (resultError) {
@@ -101,7 +103,7 @@ _.extend(Db.prototype, {
         throw new Error("Could not create folder at " + folder);
     }
 
-    console.log("Opening db file", dbFile);
+    Console.debug("Opening db file", dbFile);
     return new sqlite3.Database(dbFile);
   },
 
@@ -120,7 +122,7 @@ _.extend(Db.prototype, {
 
     var future = new Future();
 
-    //console.log("Executing SQL ", sql);
+    //Console.debug("Executing SQL ", sql);
 
     var callback = function (err, rows) {
       if (err) {
@@ -141,7 +143,8 @@ _.extend(Db.prototype, {
     if (DEBUG_SQL) {
       var t2 = Date.now();
       if ((t2 - t1) > 10) {
-        console.log("SQL statement ", sql, " took ", (t2 - t1));
+        // XXX: Hack around not having log levels
+        Console.info("SQL statement ", sql, " took ", (t2 - t1));
       }
     }
 
@@ -163,7 +166,7 @@ _.extend(Db.prototype, {
 
     var future = new Future();
 
-    //console.log("Executing SQL ", sql);
+    //Console.debug("Executing SQL ", sql);
 
     var callback = function (err, rows) {
       if (err) {
@@ -184,7 +187,7 @@ _.extend(Db.prototype, {
     if (DEBUG_SQL) {
       var t2 = Date.now();
       if ((t2 - t1) > 10) {
-        console.log("SQL statement ", sql, " took ", (t2 - t1));
+        Console.info("SQL statement ", sql, " took ", (t2 - t1));
       }
     }
 
@@ -197,7 +200,7 @@ _.extend(Db.prototype, {
 
     var prepared = self._prepared[sql];
     if (!prepared) {
-      //console.log("Preparing statement: ", sql);
+      //Console.debug("Preparing statement: ", sql);
       var future = new Future();
       prepared = self._db.prepare(sql, function (err) {
         if (err) {
@@ -465,7 +468,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     options = options || {};
 
-    console.log("In remote catalog refresh");
+    Console.debug("In remote catalog refresh");
 
     buildmessage.assertInCapture();
     if (self.offline)
@@ -473,10 +476,10 @@ _.extend(RemoteCatalog.prototype, {
 
     if (options.maxAge) {
       var lastSync = self.getMetadata(METADATA_LAST_SYNC);
-      console.log("lastSync = ", lastSync);
+      Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          console.log("Catalog is sufficiently up-to-date");
+          Console.info("Catalog is sufficiently up-to-date");
           return;
         }
       }
@@ -547,7 +550,7 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._justQuery(query, values);
     if ( result.length !== 0 || ( options && options.noRetry ) )
       return result;
-    console.log("Forcing refresh because of _queryWithRetry", query, values);
+    Console.warn("Forcing refresh because of _queryWithRetry", query, values);
     self.refresh();
     return self._justQuery(query, values);
   },
@@ -603,7 +606,7 @@ _.extend(RemoteCatalog.prototype, {
       self.tableReleaseVersions.upsert(txn, serverData.collections.releaseVersions);
 
       var syncToken = serverData.syncToken;
-      console.log("Adding syncToken: ", JSON.stringify(syncToken));
+      Console.debug("Adding syncToken: ", JSON.stringify(syncToken));
       syncToken._id = "1"; //Add fake _id so it fits the pattern
       self.tableSyncToken.upsert(txn, [syncToken]);
 
@@ -626,15 +629,14 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     var result = self._queryAsJSON("SELECT content FROM syncToken", [], { noRetry: true });
     if (!result || result.length === 0) {
-      console.log("No sync token found");
+      Console.debug("No sync token found");
       return {};
     }
     if (result.length !== 1) {
       throw new Error("Unexpected number of sync tokens found");
     }
     delete result[0]._id;
-    //console.log(utils.getStackTrace());
-    console.log("Returning sync token: " + JSON.stringify(result[0]));
+    Console.debug("Returning sync token: " + JSON.stringify(result[0]));
     return result[0];
   },
 
