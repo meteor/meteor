@@ -648,9 +648,9 @@ var buildCommand = function (options) {
     } else {
       // For Cordova builds, require '--mobile-server'.
       // XXX better error message?
-      process.stdout.write(
-"Supply the server hostname and port argument in the --mobile-server option\n" +
-"for the mobile app builds.\n");
+      process.stderr.write(
+"Supply the server hostname and port in the --mobile-server option\n" +
+"for mobile app builds.\n");
       return 1;
     }
     var cordovaSettings = {};
