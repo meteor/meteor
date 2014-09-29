@@ -280,8 +280,11 @@ _.extend(Console.prototype, {
     var self = this;
 
     var message = '';
-    var format = logArguments[0];
-    message = format;
+    for (var i = 0; i < logArguments.length; i++) {
+      if (i != 0) message += ' ';
+      message += logArguments[i];
+    }
+
     return message;
   },
 
