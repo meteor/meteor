@@ -57,6 +57,11 @@ var Console = function (options) {
   self._stream = process.stdout;
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+  // Status message mode is where we see status messages but not the
+  // fancy progress bar.  It's used when we detect a "pseudo-TTY"
+  // of the type used by Emacs, and possibly SSH.
+  self._inStatusMessageMode = false;
+  self._wroteStatusMessage = false;
 
   cleanup.onExit(function (sig) {
     self.enableProgressBar(false);
@@ -68,6 +73,7 @@ PROGRESS_BAR_WIDTH = 20;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
 STATUS_MAX_LENGTH = 40;
+TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
 STATUS_INTERVAL_MS = 500;
 
@@ -128,11 +134,15 @@ _.extend(Console.prototype, {
         self._stream.cursorTo(STATUS_POSITION);
         self._stream.write(chalk.bold(text));
       }
-    } else {
-      // No fancy terminal support available.  Print messages
-      // what will be overwritten because they end in `\r`.
+    } else if (self._inStatusMessageMode) {
+      // No fancy terminal support available, but we have a TTY.
+      // Print messages that will be overwritten because they
+      // end in `\r`.
       if (text) {
-        self._stream.write('  |  ' + text + '  ... |  \r');
+        // the number of characters besides `text` here must
+        // be accounted for in TEMP_STATUS_LENGTH.
+        self._stream.write('  (  ' + text + '  ... )\r');
+        self._wroteStatusMessage = true;
       }
     }
   },
@@ -251,6 +261,14 @@ _.extend(Console.prototype, {
       }
     }
 
+    // For the non-progress-bar status mode, we may need to
+    // clear some characters that we printed with a trailing `\r`.
+    if (self._wroteStatusMessage) {
+      var spaces = new Array(TEMP_STATUS_LENGTH + 1).join(' ');
+      self._stream.write(spaces + '\r');
+      self._wroteStatusMessage = false;
+    }
+
     if (style) {
       dest.write(style(message + '\n'));
     } else {
@@ -290,10 +308,17 @@ _.extend(Console.prototype, {
     }
 
     // Ignore if not in pretty / on TTY.
-    // Emacs's pseudo-TTY (with 0 rows and columns) doesn't count because
-    // it doesn't support clearLine() and cursorTo(...).
-    if (!(self._stream.isTTY && self._stream.columns) ||
-        !self._pretty) {
+    if ((! self._stream.isTTY) || (! self._pretty)) {
+      self._inStatusMessageMode = false;
+      return;
+    }
+    if (self._stream.isTTY && ! self._stream.columns) {
+      // We might be in a pseudo-TTY that doesn't support
+      // clearLine() and cursorTo(...).
+      // It's important that we only enter status message mode
+      // if self._pretty, so that we don't start displaying
+      // status messages too soon.
+      self._inStatusMessageMode = true;
       return;
     }
 
