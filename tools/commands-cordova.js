@@ -914,11 +914,8 @@ var checkAgreePlatformTerms = function (platform) {
   return agreed;
 };
 
-// these platforms are always present and can be neither added or removed
-var defaultPlatforms = ["server", "browser"];
-
 // android is available on all supported architectures
-var availablePlatforms = defaultPlatforms.concat(["android"]);
+var availablePlatforms = project.getDefaultPlatforms().concat(["android"]);
 
 // ios is only available on OSX
 if (process.platform === 'darwin') {
@@ -938,7 +935,7 @@ main.registerCommand({
   cordova.setVerboseness(options.verbose);
 
   var platforms = options.args;
-  var currentPlatforms = defaultPlatforms.concat(project.getCordovaPlatforms());
+  var currentPlatforms = project.getPlatforms();
 
   try {
     _.each(platforms, function (platform) {
@@ -988,17 +985,16 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
   var platforms = options.args;
-  var currentPlatforms = project.getCordovaPlatforms();
 
   _.each(platforms, function (platform) {
     // explain why we can't remove server or browser platforms
-    if (_.contains(defaultPlatforms, platform)) {
+    if (_.contains(project.getDefaultPlatforms(), platform)) {
       Console.stdout.write("cannot remove platform " + platform +
         " in this version of Meteor\n");
       return;
     }
 
-    if (_.contains(currentPlatforms, platform)) {
+    if (_.contains(project.getPlatforms(), platform)) {
       Console.stdout.write("removed platform " + platform + "\n");
       return;
     }
@@ -1022,7 +1018,7 @@ main.registerCommand({
   name: "list-platforms",
   requiresApp: true
 }, function () {
-  var platforms = defaultPlatforms.concat(project.getCordovaPlatforms());
+  var platforms = project.getPlatforms();
 
   Console.stdout.write(platforms.join("\n"));
 });

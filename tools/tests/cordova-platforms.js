@@ -36,7 +36,7 @@ var checkCordovaPlatforms = function(sand, platforms) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // platforms: an array of platforms in order.
 var checkUserPlatforms = function(sand, platforms) {
-  var lines = sand.read(".meteor/cordova-platforms").split("\n");
+  var lines = sand.read(".meteor/platforms").split("\n");
   // XXX do it
   selftest.expectEqual(platforms.length, i);
 };
