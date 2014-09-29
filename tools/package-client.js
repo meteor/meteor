@@ -188,11 +188,13 @@ _updateServerPackageData = function (dataStore, options) {
     var syncToken = dataStore.getSyncToken() || {};
 
     if (!start) {
-      start = syncToken.packages;
-      state.end = Date.now() - start;
+      start = {};
+      start.builds = syncToken.builds;
+      start.versions = syncToken.versions;
+      state.end = (Date.now() - start.builds) + (Date.now() - start.versions);
     }
-    // XXX: Is packages the best progress indicator?
-    state.current = syncToken.packages - start;
+    // XXX: This is a hack... syncToken should have a % done
+    state.current = (syncToken.builds - start.builds) + (syncToken.versions - start.versions);
     buildmessage.reportProgress(state);
 
     var remoteData;
