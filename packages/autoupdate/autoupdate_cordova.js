@@ -3,6 +3,13 @@ var log = function (msg) {
   console.log(DEBUG_TAG + msg);
 };
 
+// This constant was picked by testing on iOS 7.1
+// We limit the number of concurrent downloads because iOS gets angry on the
+// application when a certain limit is exceeded and starts timing-out the
+// connections in 1-2 minutes which makes the whole HCP really slow.
+var MAX_NUM_CONCURRENT_DOWNLOADS = 30;
+var MAX_RETRY_COUNT = 5;
+
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
@@ -85,14 +92,19 @@ var onNewVersion = function () {
 
     manifest.push({ url: '/index.html?' + Random.id() });
 
-    var downloads = 0;
-    _.each(manifest, function (item) {
-      if (item.url) downloads++;
-    });
-
     var versionPrefix = localPathPrefix + version;
 
-    var afterAllFilesDownloaded = _.after(downloads, function () {
+    var queue = [];
+    _.each(manifest, function (item) {
+      if (! item.url) return;
+
+      var url = item.url;
+      url = url.replace(/\?.+$/, '');
+
+      queue.push(url);
+    });
+
+    var afterAllFilesDownloaded = _.after(queue.length, function () {
       writeFile(versionPrefix, 'manifest.json',
           JSON.stringify(program, undefined, 2),
           function (err) {
@@ -122,12 +134,8 @@ var onNewVersion = function () {
       });
     });
 
-    _.each(manifest, function (item) {
-      if (! item.url) return;
-
-      var url = item.url;
-      url = url.replace(/\?.+$/, '');
-
+    var dowloadUrl = function (url) {
+      console.log(DEBUG_TAG + "start dowloading " + url);
       // Add a cache buster to ensure that we don't cache an old asset.
       var uri = encodeURI(urlPrefix + url + '?' + Random.id());
 
@@ -136,11 +144,15 @@ var onNewVersion = function () {
       var tryDownload = function () {
         ft.download(uri, versionPrefix + url, function (entry) {
           if (entry) {
+            console.log(DEBUG_TAG + "done dowloading " + url);
+            // start downloading next queued url
+            if (queue.length)
+              dowloadUrl(queue.shift());
             afterAllFilesDownloaded();
           }
         }, function (err) {
           // It failed, try again if we have tried less than 5 times.
-          if (tries++ < 5) {
+          if (tries++ < MAX_RETRY_COUNT) {
             log("Download error, will retry (#" + tries + "): " + uri);
             tryDownload();
           } else {
@@ -150,6 +162,13 @@ var onNewVersion = function () {
       };
 
       tryDownload();
+    };
+
+    _.times(Math.min(MAX_NUM_CONCURRENT_DOWNLOADS, queue.length), function () {
+      var nextUrl = queue.shift();
+      // XXX defer the next download so iOS doesn't rate limit us on concurrent
+      // downloads
+      Meteor.setTimeout(dowloadUrl.bind(null, nextUrl), 50);
     });
   });
 };
