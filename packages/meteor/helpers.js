@@ -147,7 +147,7 @@ _.extend(Meteor, {
 var warnedAboutWrapAsync = false;
 
 /**
- * @deprecated in 1.0.0
+ * @deprecated in 0.9.3
  */
 Meteor._wrapAsync = function(fn, context) {
   if (! warnedAboutWrapAsync) {

@@ -669,7 +669,6 @@ Tinytest.add("spacebars-tests - template_tests - select tags", function (test) {
   options.update({}, {$set: {selected: false}}, {multi: true});
   Tracker.flush();
   options.update({}, {$set: {selected: true}}, {multi: true});
-  window.avital = true;
   Tracker.flush();
   test.equal($(selectEl).find('option')[0].selected, true);
   test.equal($(selectEl).find('option')[1].selected, true);
@@ -2902,4 +2901,13 @@ Tinytest.add("spacebars-tests - template_tests - content context back-compat", f
   R.set(false);
   Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), 'FA');
+});
+
+Tinytest.add("spacebars-tests - template_tests - falsy helper", function (test) {
+  var tmpl = Template.spacebars_template_test_falsy_helper;
+  tmpl.foo = 0;
+  Template.registerHelper('GLOBAL_ZERO', 0);
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), 'foo:0 GLOBAL_ZERO:0');
 });
