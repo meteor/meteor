@@ -7,7 +7,7 @@ var path = require('path');
 // It is meant to work when we are running meteor in the "real" format
 // This catalog is typically never used directly by the user.
 // An instance of this catalog is created in catalog.js
-var BootstrapCatalogPrebuilt = function (uniloadDir) {
+var BootstrapCatalogPrebuilt = function () {
   var self = this;
 
   // The uniload catalog needs its own package cache.

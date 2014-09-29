@@ -504,20 +504,26 @@ selftest.define("release track defaults to METEOR",
 // SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
 // TO THE TEST SERVER. (XXX: fix this post-0.9.0)
 selftest.define("update server package data unit test",
-                ["net", "test-package-server", "checkout"], function () {
-  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
-  var packageStorageFile = path.join(packageStorageFileDir, "data.json");
-
+                ["net", "test-package-server", "checkout", "slow"],
+                function () {
   var s = new Sandbox();
   var run;
+
+  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
+
+  var rC = require('../catalog-remote.js');
+  var config = require('../config.js');
+  var packageStorage = new rC.RemoteCatalog();
+  packageStorage.initialize({
+    packageStorage : config.getPackageStorage({root: packageStorageFileDir})
+  });
 
   testUtils.login(s, username, password);
 
   // Get the current data from the server. Once we publish new packages,
   // we'll check that all this data still appears on disk and hasn't
   // been overwritten.
-  var data = packageClient.updateServerPackageData({ syncToken: {} }, {
-    packageStorageFile: packageStorageFile,
+  var data = packageClient.updateServerPackageData(packageStorage, {
     packageServerUrl: selftest.testPackageServerUrl
   }).data;
 
@@ -528,16 +534,16 @@ selftest.define("update server package data unit test",
   // records at a time instead of 100, so this is more than a page.
   _.times(5, function (i) {
     var packageName = username + ":" + utils.randomToken();
-    createAndPublishPackage(s, packageName);
+    createAndPublishPackage(i, packageName);
     packageNames.push(packageName);
   });
 
   var newData = packageClient.updateServerPackageData(data, {
-    packageStorageFile: packageStorageFile,
+    packageStorageFile: packageStorage,
     packageServerUrl: selftest.testPackageServerUrl,
     useShortPages: true
   }).data;
-  var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
+  var newOnDiskData = packageClient.loadCachedServerData(packageStorage);
 
   // Check that we didn't lose any data.
   _.each(data.collections, function (collectionData, name) {

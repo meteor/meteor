@@ -194,7 +194,9 @@ _updateServerPackageData = function (dataStore, options) {
       state.end = (Date.now() - start.builds) + (Date.now() - start.versions);
     }
     // XXX: This is a hack... syncToken should have a % done
-    state.current = (syncToken.builds - start.builds) + (syncToken.versions - start.versions);
+    state.current =
+      (syncToken.builds - start.builds) +
+      (syncToken.versions - start.versions);
     buildmessage.reportProgress(state);
 
     var remoteData;
@@ -221,9 +223,10 @@ _updateServerPackageData = function (dataStore, options) {
       ret.resetData = true;
     }
 
-    // We always write to the data store; the fact there is no data is itself data!
-    // e.g. the last-refresh timestamp
-    var syncComplete = _.isEqual(remoteData.collections, {}) || remoteData.upToDate;
+    // We always write to the data store; the fact there is no data is itself
+    // data!  e.g. the last-refresh timestamp
+    var syncComplete =
+          _.isEqual(remoteData.collections, {}) || remoteData.upToDate;
     dataStore.insertData(remoteData, syncComplete);
 
     // If there is no new data from the server, don't bother writing things to
