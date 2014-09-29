@@ -424,8 +424,11 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   //
   // You may also need to enable source maps in Chrome: open dev tools, click
   // the gear in the bottom right corner, and select "enable source maps".
-  if (info.sourceMapUrl)
-    res.setHeader('X-SourceMap', info.sourceMapUrl);
+  if (info.sourceMapUrl) {
+    res.setHeader('X-SourceMap',
+                  __meteor_runtime_config__.ROOT_URL_PATH_PREFIX +
+                  info.sourceMapUrl);
+  }
 
   if (info.type === "js") {
     res.setHeader("Content-Type", "application/javascript; charset=UTF-8");
