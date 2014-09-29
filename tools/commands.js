@@ -629,30 +629,28 @@ var buildCommand = function (options) {
 
     // XXX COMPAT WITH 0.9.2.2 -- the mobile-port is deprecated
     var mobileServer = options["mobile-server"] ||
-          options["mobile-port"] ||
-          "http://" + DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT;
+          options["mobile-port"];
 
-    try {
-      var parsedMobileServer = utils.parseUrl(
-        mobileServer,
-        {
-          host: DEFAULT_BUILD_HOST,
-          port: DEFAULT_PORT,
-          protocol: "http://"
-        }
-      );
-    } catch (err) {
-      Console.stderr.write(err.message);
-      return 1;
-    }
-
-    // For Cordova builds, if a host isn't specified, use localhost, but
-    // warn about it.
-    if (parsedMobileServer.host === DEFAULT_BUILD_HOST) {
+    if (mobileServer) {
+      try {
+        var parsedMobileServer = utils.parseUrl(
+          mobileServer,
+          {
+            host: DEFAULT_BUILD_HOST,
+            port: DEFAULT_PORT,
+            protocol: "http://"
+          }
+        );
+      } catch (err) {
+        Console.stderr.write(err.message);
+        return 1;
+      }
+    } else {
+      // For Cordova builds, require '--mobile-server'.
       // XXX better error message?
       process.stdout.write(
 "Supply the server hostname and port argument in the --mobile-server option\n" +
-"for the mobile apps builds.\n");
+"for the mobile app builds.\n");
       return 1;
     }
     var cordovaSettings = {};
