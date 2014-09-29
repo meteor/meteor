@@ -69,6 +69,7 @@ PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
 STATUS_MAX_LENGTH = 40;
 
+STATUS_INTERVAL_MS = 500;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
@@ -156,7 +157,7 @@ _.extend(Console.prototype, {
     var self = this;
     var now = Date.now();
 
-    if ((now - self._lastStatusPoll) < 50) {
+    if ((now - self._lastStatusPoll) < STATUS_INTERVAL_MS) {
       return;
     }
     self._statusPoll();
@@ -166,7 +167,7 @@ _.extend(Console.prototype, {
     var self = this;
     Fiber(function () {
       while (true) {
-        sleep(50);
+        sleep(STATUS_INTERVAL_MS);
 
         self._statusPoll();
       }
