@@ -914,6 +914,17 @@ var checkAgreePlatformTerms = function (platform) {
   return agreed;
 };
 
+// these platforms are always present and can be neither added or removed
+var defaultPlatforms = ["server", "browser"];
+
+// android is available on all supported architectures
+var availablePlatforms = defaultPlatforms.concat(["android"]);
+
+// ios is only available on OSX
+if (process.platform === 'darwin') {
+  availablePlatforms.push("ios");
+}
+
 // add one or more Cordova platforms
 main.registerCommand({
   name: "add-platform",
@@ -927,9 +938,13 @@ main.registerCommand({
   cordova.setVerboseness(options.verbose);
 
   var platforms = options.args;
+  var currentPlatforms = defaultPlatforms.concat(project.getCordovaPlatforms());
 
   try {
     _.each(platforms, function (platform) {
+      if (_.contains(currentPlatforms, platform)) {
+        throw new Error("platform " + platform + " already added");
+      }
       cordova.checkIsValidPlatform(platform);
     });
   } catch (err) {
@@ -976,11 +991,19 @@ main.registerCommand({
   var currentPlatforms = project.getCordovaPlatforms();
 
   _.each(platforms, function (platform) {
+    // explain why we can't remove server or browser platforms
+    if (_.contains(defaultPlatforms, platform)) {
+      Console.stdout.write("cannot remove platform " + platform +
+        " in this version of Meteor\n");
+      return;
+    }
+
     if (_.contains(currentPlatforms, platform)) {
       Console.stdout.write("removed platform " + platform + "\n");
-    } else {
-      Console.stdout.write(platform + " is not in this project\n");
+      return;
     }
+
+    Console.stdout.write(platform + " is not in this project\n");
   });
   project.removeCordovaPlatforms(platforms);
 
@@ -999,13 +1022,9 @@ main.registerCommand({
   name: "list-platforms",
   requiresApp: true
 }, function () {
-  var platforms = project.getCordovaPlatforms();
-  Console.stdout.write(platforms.join("\n"));
+  var platforms = defaultPlatforms.concat(project.getCordovaPlatforms());
 
-  // print nothing at all if no platforms
-  if (platforms.length) {
-    Console.stdout.write("\n");
-  }
+  Console.stdout.write(platforms.join("\n"));
 });
 
 main.registerCommand({
