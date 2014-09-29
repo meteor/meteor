@@ -110,6 +110,8 @@ OplogObserveDriver = function (options) {
             // on waiting for oplog entries to catch up) because that will block
             // onOplogEntry!
             self._needToPollQuery();
+          } else if (notification.pollQuery) {
+            self._pollQuery();
           } else {
             // All other operators should be handled depending on phase
             if (self._phase === PHASE.QUERYING)
