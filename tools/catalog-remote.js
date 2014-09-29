@@ -558,7 +558,9 @@ _.extend(RemoteCatalog.prototype, {
       return results;
 
     // XXX: This causes unnecessary refreshes
-    Console.info("Forcing refresh because of unexpected missing data");
+
+    // XXX: It would be nice to Console.warn this, but that breaks some of our self-tests
+    Console.debug("Forcing refresh because of unexpected missing data");
     Console.debug("No data was returned from query: ", query, values);
     self.refresh();
 
