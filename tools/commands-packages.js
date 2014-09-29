@@ -1129,7 +1129,9 @@ main.registerCommand({
   // "bob", "bob and alice" or "bob, alex and alice".
   var myMaintainerString = "";
   var myMaintainers = _.pluck(record.maintainers, 'username');
-  if (myMaintainers.length === 1) {
+  if (myMaintainers.length === 0) {
+    Console.debug("No maintainer records found: ", JSON.stringify(record));
+  } else if (myMaintainers.length === 1) {
     myMaintainerString = myMaintainers[0];
   } else {
     var myTotal = myMaintainers.length;
@@ -1142,8 +1144,12 @@ main.registerCommand({
     myMaintainerString +=  " and " +  myMaintainers[myTotal - 1];
   }
 
-  var metamessage = "Maintained by " + myMaintainerString + ".";
-        ;
+  var metamessage = "";
+
+  if (myMaintainerString) {
+    metamessage += "Maintained by " + myMaintainerString + ".";
+  }
+
   if (lastVersion && lastVersion.git) {
     // No full stop, as it makes copying and pasting painful
     metamessage += "\nYou can find the git repository at: " +
@@ -1151,9 +1157,9 @@ main.registerCommand({
   }
 
   if (record && record.homepage) {
+    // No full stop, as it makes copying and pasting painful
     metamessage = metamessage + "\nYou can find more information at "
       + record.homepage;
-    metamessage += ".";
   }
   Console.info(metamessage);
 });
