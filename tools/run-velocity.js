@@ -14,7 +14,7 @@ var _ = require('underscore');
 // 1. Establish a DDP connection to Meteor
 // 2. Subscribe to the Velocity subscriptions that tell us
 //    which tests pass/fail and when all tests have completed.
-// 3. Poke an app server with PhantomJS to run client side tests.
+// 3. Open the app server with PhantomJS to run client side tests.
 // 4. Print the results and exit with the appropriate exit code.
 var runVelocity = function (url) {
   var unipackages = uniload.load({
@@ -26,25 +26,25 @@ var runVelocity = function (url) {
 
   var ddpConnection = DDP.connect(url);
 
-  var interval = setInterval(function(){
-    if (ddpConnection.status().status === "connected"){
+  var interval = setInterval(function () {
+    if (ddpConnection.status().status === "connected") {
       clearInterval(interval);
 
       ddpConnection.subscribe("VelocityTestReports", {
-        onError: function(){
+        onError: function () {
           Console.stderr.write("failed to subscribe to VelocityTestReports "
                                + "subscription");
           // XXX tell user to add velocity:core
           // XXX these also fire if the user turns on autopublish
-        }, onReady: function(){
+        }, onReady: function () {
           this.connection.registerStore("velocityTestReports", {
-            update: function(msg){
-              if (msg.msg == "added"){
+            update: function (msg) {
+              if (msg.msg === "added") {
                 var testDesc = msg.fields.framework + " : " +
                       msg.fields.ancestors.join(":") + " => " + msg.fields.name;
-                if(msg.fields.result == "passed"){
+                if (msg.fields.result === "passed") {
                   console.log("PASSED", testDesc);
-                } else if (msg.fields.result == "failed"){
+                } else if (msg.fields.result === "failed") {
                   console.error("FAILED", testDesc);
                   console.log(msg.fields.failureStackTrace);
                 }
@@ -55,9 +55,9 @@ var runVelocity = function (url) {
       });
 
       var reports = {};
-      function updateReport(msg){
+      function updateReport(msg) {
         var report = reports[msg.id];
-        if (! report){
+        if (! report) {
           reports[msg.id] = msg.fields;
         } else {
           _.extend(report, msg.fields);
@@ -66,24 +66,24 @@ var runVelocity = function (url) {
       var aggregateResult = null;
       var isFinished = false;
       ddpConnection.subscribe("VelocityAggregateReports", {
-        onError: function(){
+        onError: function () {
           Console.stderr.write("failed to subscribe to " +
                                "VelocityAggregateReports subscription");
-        }, onReady: function(){
+        }, onReady: function () {
           this.connection.registerStore("velocityAggregateReports", {
-            update: function(msg){
-              if (msg.msg === "added" || msg.msg == "changed"){
+            update: function (msg) {
+              if (msg.msg === "added" || msg.msg === "changed") {
                 updateReport(msg);
                 var report = reports[msg.id];
 
-                if (report.name === "aggregateResult"){
+                if (report.name === "aggregateResult") {
                   aggregateResult = report.result;
                 }
 
-                if(report.name === "aggregateComplete" &&
-                   report.result === "completed"){
-                  setTimeout(function(){
-                    if (aggregateResult === "passed"){
+                if (report.name === "aggregateComplete" &&
+                    report.result === "completed") {
+                  setTimeout(function () {
+                    if (aggregateResult === "passed") {
                       console.log("TESTS RAN SUCCESSFULLY");
                       // XXX XXX this is not great. We shouldn't be
                       // exiting from deep within code like this. Better
@@ -92,7 +92,7 @@ var runVelocity = function (url) {
                       // test completion.
                       process.exit(0);
                     }
-                    if (aggregateResult === "failed"){
+                    if (aggregateResult === "failed") {
                       console.log("FAILURE");
                       process.exit(1);
                     }
@@ -104,7 +104,7 @@ var runVelocity = function (url) {
         }
       });
 
-      function visitWithPhantom(url){
+      function visitWithPhantom (url) {
         var phantomScript = "require('webpage').create().open('" + url + "');";
         child_process.execFile(
           '/bin/bash',
@@ -114,13 +114,13 @@ var runVelocity = function (url) {
       }
 
       ddpConnection.subscribe("VelocityMirrors", {
-        onError: function(err){
+        onError: function (err) {
           Console.stderr.write("failed to subscribe to VelocityMirrors " +
                                "subscription", err);
-        }, onReady: function(){
+        }, onReady: function () {
           this.connection.registerStore("velocityMirrors", {
-            update: function(msg){
-              if (msg.msg === "added"){
+            update: function (msg) {
+              if (msg.msg === "added") {
                 visitWithPhantom(msg.fields.rootUrl);
               }
             }
