@@ -164,6 +164,7 @@ main.registerCommand({
     'raw-logs': { type: Boolean },
     settings: { type: String },
     program: { type: String },
+    test: {type: Boolean, default: false},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -302,6 +303,18 @@ main.registerCommand({
 
   if (options['raw-logs'])
     runLog.setRawLogs(true);
+
+  // Velocity testing. Sets up a DDP connection to the app process and
+  // runs phantomjs.
+  //
+  // NOTE: this calls process.exit() when testing is done.
+  if (options['test']){
+    var serverUrl = "http://" + (parsedHostPort.host || "localhost") +
+          ":" + parsedHostPort.port;
+    var velocity = require('./run-velocity.js');
+    velocity.runVelocity(serverUrl);
+  }
+
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
