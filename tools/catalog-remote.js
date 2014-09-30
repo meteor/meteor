@@ -71,7 +71,8 @@ var Db = function (dbFile, options) {
 
   self._dbFile = dbFile;
 
-  self._autoPrepare = true;
+  // XXX: Re-enable
+  self._autoPrepare = false;
   self._prepared = {};
 
   self._db = self.open(dbFile);
