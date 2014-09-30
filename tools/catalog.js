@@ -1139,6 +1139,8 @@ _.extend(CompleteCatalog.prototype, {
         include: [/\/$/]
       });
       _.each(packages, function (pack) {
+        // old filename was "unipackage.json"
+        // XXX COMPAT WITH 0.9.3
         _.each(["package.js", "unipackage.json", "isopack.json"],
             function (fileToWatch) {
           watch.readAndWatchFile(watchSet,

@@ -204,6 +204,24 @@ var getLoadedPackageVersions = function (versions, catalog, filter) {
   return result;
 };
 
+var convertIsopackFormat = function (data, versionFrom, versionTo) {
+  var convertedData = _.clone(data);
+  if (versionFrom === versionTo) {
+    return convertedData;
+  }
+
+  // XXX COMPAT WITH 0.9.3
+  if (versionFrom === "unipackage-pre2" && versionTo === "isopack-1") {
+    convertedData.unibuilds = convertedData.builds;
+    delete convertedData.builds;
+    return convertedData;
+  } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
+    convertedData.builds = convertedData.unibuilds;
+    delete convertedData.unibuilds;
+    return convertedData;
+  }
+};
+
 // XXX document
 var Isopack = function () {
   var self = this;
@@ -498,6 +516,8 @@ _.extend(Isopack.prototype, {
     // realpath'ing dir.
     dir = fs.realpathSync(dir);
 
+    var mainJson;
+
     // deal with different versions of "isopack.json", backwards compatible
     var currentFormat = "isopack-1";
     var isopackJsonPath = path.join(dir, "isopack.json");
@@ -513,6 +533,7 @@ _.extend(Isopack.prototype, {
       }
     } else {
       // super old version with different file name
+      // XXX COMPAT WITH 0.9.3
       var unipackageJsonPath = path.join(dir, "unipackage.json");
       if (fs.existsSync(unipackageJsonPath)) {
         mainJson = JSON.parse(fs.readFileSync(unipackageJsonPath));
@@ -520,6 +541,9 @@ _.extend(Isopack.prototype, {
         // in the old format, builds were called unibuilds
         // use string to make sure this doesn't get caught in a find/replace
         mainJson.builds = mainJson["unibuilds"];
+
+        mainJson = convertIsopackFormat(mainJson,
+          "unipackage-pre2", currentFormat);
       }
 
       if (mainJson.format !== "unipackage-pre2") {
@@ -772,7 +796,9 @@ _.extend(Isopack.prototype, {
         };
       }
 
+      // XXX COMPAT WITH 0.9.3
       builder.reserve("unipackage.json");
+
       builder.reserve("isopack.json");
       // Reserve this even if elideBuildInfo is set, to ensure nothing else
       // writes it somehow.
@@ -978,29 +1004,20 @@ _.extend(Isopack.prototype, {
         mainJson.tools.push(toolMeta);
       });
 
+      // old unipackage.json format/filename
+      // XXX COMPAT WITH 0.9.3
+      builder.writeJson("unipackage.json",
+        convertIsopackFormat(mainJson, currentFormat, "unipackage-pre2"));
+
       // write several versions of the file
-      var formats = ["unipackage-pre2", "isopack-1"];
+      // add your new format here, and define some stuff
+      // in convertIsopackFormat
+      var formats = ["isopack-1"];
       var isopackJson = {};
       _.each(formats, function (format) {
-        // make a clone so that we can modify it without destroying the data
-        // we just compiled
-        var clone = _.clone(mainJson);
-
-        // super old format, written to a different file name
-        if (format === "unipackage-pre2") {
-          clone.format = format;
-
-          // in the old format, builds were called unibuilds
-          // use string to make sure this doesn't get caught in a find/replace
-          clone["unibuilds"] = clone.builds;
-          delete clone.builds;
-
-          builder.writeJson("unipackage.json", clone);
-          return;
-        }
-
         // new, extensible format - forwards-compatible
-        isopackJson[format] = clone;
+        isopackJson[format] = convertIsopackFormat(mainJson,
+          currentFormat, format);
       });
 
       // writes one file with all of the new formats, so that it is possible
@@ -1210,6 +1227,8 @@ exports.OldIsopackFormatError = function () {
 };
 
 exports.isopackExistsAtPath = function (thePath) {
+  // XXX COMPAT WITH 0.9.3
+  // Remove unipackage.json when no longer supported
   return fs.existsSync(path.join(thePath, 'isopack.json')) ||
     fs.existsSync(path.join(thePath, 'unipackage.json'));
 };
