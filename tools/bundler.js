@@ -2268,8 +2268,8 @@ exports.readJsImage = function (controlFilePath) {
 // Given an array of isopack names, invokes the callback with each
 // corresponding Isopack object, plus all of their transitive dependencies,
 // with a topological sort.
-exports.iterateOverAllUsedIsopacks = function (loader, arch,
-                                                  packageNames, callback) {
+exports.iterateOverAllUsedIsopacks =
+  function (loader, arch, packageNames, callback) {
   buildmessage.assertInCapture();
   var target = new Target({packageLoader: loader,
                            arch: arch});
@@ -2278,3 +2278,4 @@ exports.iterateOverAllUsedIsopacks = function (loader, arch,
     callback(unibuild.pkg);
   });
 };
+
