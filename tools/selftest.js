@@ -16,7 +16,7 @@ var util = require('util');
 var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
-
+var catalogRemote = require('./catalog-remote.js');
 var Package = uniload.load({ packages: ["ejson"] });
 
 var toolPackageName = "meteor-tool";
@@ -159,8 +159,10 @@ _.extend(Matcher.prototype, {
   matchEmpty: function () {
     var self = this;
 
-    if (self.buf.length > 0)
+    if (self.buf.length > 0) {
+      console.log("Extra junk is ", self.buf);
       throw new TestFailure('junk-at-end', { run: self.run });
+    }
   },
 
   _tryMatch: function () {
@@ -638,6 +640,7 @@ _.extend(Sandbox.prototype, {
     files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2'), 0755);
 
     var stubCatalog = {
       syncToken: {},
@@ -703,6 +706,7 @@ _.extend(Sandbox.prototype, {
       // Release info
       stubCatalog.collections.releaseVersions.push({
         track: catalog.DEFAULT_TRACK,
+        _id: Math.random().toString(),
         version: releaseName,
         orderKey: releaseName,
         description: "test release " + releaseName,
@@ -782,9 +786,9 @@ _.extend(Sandbox.prototype, {
     catalog.official.offline = oldOffline;
 
     var dataFile = config.getLocalPackageCacheFilename(serverUrl);
-    fs.writeFileSync(
-      path.join(self.warehouse, 'package-metadata', 'v1.1', dataFile),
-      JSON.stringify(stubCatalog, null, 2));
+    var tmpCatalog = new catalogRemote.RemoteCatalog();
+    tmpCatalog.initialize({packageStorage: path.join(self.warehouse, 'package-metadata', 'v2', dataFile)});
+    tmpCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     fs.symlinkSync(path.join(packagesDirectoryName,
@@ -812,6 +816,68 @@ var Client = function (options) {
   }
 };
 
+var SimpleProcess = function (command, args, options) {
+  var self = this;
+
+  var defaultOptions = {};
+  // Make stdin,stdout & stderr pipes (not shared)
+  defaultOptions.stdio = ['pipe', 'pipe', 'pipe'];
+  defaultOptions.env = process.env;
+
+  options = _.extend(defaultOptions, options);
+
+  self.command = command;
+  self.args = args;
+  self.options = options;
+
+  self.exitFuture = new Future();
+  self.exitCode = undefined;
+
+  self.stdout = '';
+  self.stderr = '';
+};
+
+_.extend(SimpleProcess.prototype, {
+  start: function () {
+    var self = this;
+    if (self.process) {
+      throw new Error("Process already started");
+    }
+    self.process = child_process.spawn( self.command,
+                                        self.args,
+                                        self.options);
+    self.process.on('close', function (exitCode) {
+      self.exitCode = exitCode;
+
+      // XXX: Disable through an option
+      if (exitCode != 0) {
+        console.log("Unexpected exit code", exitCode, "from", self.command, self.args, "\nstdout:\n", self.stdout, "\nstderr:\n", self.stderr);
+      }
+    });
+
+    self.process.stdout.on('data', function (data) {
+      self.stdout = self.stdout + data;
+    });
+
+    self.process.stderr.on('data', function (data) {
+      self.stderr = self.stderr + data;
+    });
+
+    self.stdin = self.process.stdin;
+  },
+
+  waitForExit: function () {
+    var self = this;
+    self.exitFuture.wait();
+    return self.exitCode;
+  },
+
+  kill: function () {
+    var self = this;
+    self.process.kill();
+  }
+});
+
 // PhantomClient
 var PhantomClient = function (options) {
   var self = this;
@@ -835,6 +901,7 @@ _.extend(PhantomClient.prototype, {
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
         phantomScript + "\nEND\n")]);
   },
+
   stop: function() {
     var self = this;
     self.process && self.process.kill();

@@ -456,7 +456,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
 // name>), and the sandbox should be logged in as that username.
 var createAndPublishPackage = function (s, packageName) {
   var run = s.run("create", "--package", packageName);
-  run.waitSecs(10);
+  run.waitSecs(20);
   run.expectExit(0);
   s.cd(packageName, function (){
     run = s.run("publish", "--create");
@@ -467,6 +467,7 @@ var createAndPublishPackage = function (s, packageName) {
 
 selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {
+
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
@@ -503,78 +504,81 @@ selftest.define("release track defaults to METEOR",
 // THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
 // SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
 // TO THE TEST SERVER. (XXX: fix this post-0.9.0)
+//
+// XXX: This test is going to take progressively more time as we run more
+// tests, and perhaps checks too much information. We should consider
+// rethinking it in the future.
 selftest.define("update server package data unit test",
-                ["net", "test-package-server", "checkout"], function () {
-  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
-  var packageStorageFile = path.join(packageStorageFileDir, "data.json");
-
+                ["net", "test-package-server", "checkout", "slow"],
+                function () {
   var s = new Sandbox();
   var run;
+  var buildmessage = require("../buildmessage.js");
 
+  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
+
+  var rC = require('../catalog-remote.js');
+  var config = require('../config.js');
+  var packageStorage = new rC.RemoteCatalog();
+  var packageStorageFile =
+    config.getPackageStorage({root: packageStorageFileDir});
+  packageStorage.initialize({
+    packageStorage : packageStorageFile
+  });
   testUtils.login(s, username, password);
 
   // Get the current data from the server. Once we publish new packages,
   // we'll check that all this data still appears on disk and hasn't
   // been overwritten.
-  var data = packageClient.updateServerPackageData({ syncToken: {} }, {
-    packageStorageFile: packageStorageFile,
+  packageClient.updateServerPackageData(packageStorage, {
     packageServerUrl: selftest.testPackageServerUrl
-  }).data;
+  });
 
-  var packageNames = [];
+  var oldStorage = _.clone(packageStorage);
 
+  var newPackageNames = [];
   // Publish more than a (small) page worth of packages. When we pass the
   // `useShortPages` option to updateServerPackageData, the server will send 3
   // records at a time instead of 100, so this is more than a page.
   _.times(5, function (i) {
     var packageName = username + ":" + utils.randomToken();
     createAndPublishPackage(s, packageName);
-    packageNames.push(packageName);
+    newPackageNames.push(packageName);
   });
 
-  var newData = packageClient.updateServerPackageData(data, {
-    packageStorageFile: packageStorageFile,
+  packageClient.updateServerPackageData(packageStorage, {
     packageServerUrl: selftest.testPackageServerUrl,
     useShortPages: true
-  }).data;
-  var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
+  });
 
-  // Check that we didn't lose any data.
-  _.each(data.collections, function (collectionData, name) {
-    _.each(collectionData, function (record, i) {
-      selftest.expectEqual(newData.collections[name][i], record);
-
-      var onDisk = newOnDiskData.collections[name][i];
-
-      // XXX Probably because we're using JSON.parse/stringify instead
-      // of EJSON to serialize/deserialize to disk, we can't compare
-      // records with date fields using `selftest.expectEqual`.
-      _.each(
-        ["lastUpdated", "published", "buildPublished"],
-        function (dateFieldName) {
-          if (record[dateFieldName]) {
-            selftest.expectEqual(new Date(onDisk[dateFieldName]),
-                                 new Date(record[dateFieldName]));
-          } else {
-            selftest.expectEqual(onDisk[dateFieldName], record[dateFieldName]);
-          }
-
-          delete onDisk[dateFieldName];
-          delete record[dateFieldName];
-        }
-      );
-
-      selftest.expectEqual(onDisk, record);
-    });
+  buildmessage.capture(
+      { title: "comparing the test catalogs" },
+      function () {
+        var packages = oldStorage.getAllPackageNames();
+        _.each(packages, function (p) {
+          // We could be more pedantic about comparing all the records, but it
+          // is a significant effort, time-wise to do that.
+         selftest.expectEqual(
+           packageStorage.getPackage(p), oldStorage.getPackage(p));
+         selftest.expectEqual(
+           packageStorage.getSortedVersions(p),
+           oldStorage.getSortedVersions(p));
+        });
+        var releaseTracks = oldStorage.getAllReleaseTracks;
+        _.each(releaseTracks, function (t) {
+          _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
+            function (v) {
+              selftest.expectEqual(
+                packageStorage.getReleaseVersion(t, v),
+                oldStorage.getReleaseVersion(t, v));
+            });
+        });
   });
 
   // Check that our newly published packages appear in newData and on disk.
-  _.each(packageNames, function (name) {
-    var found = _.findWhere(newData.collections.packages, { name: name });
+  _.each(newPackageNames, function (name) {
+    var found = packageStorage.getPackage(name);
     selftest.expectEqual(!! found, true);
-    var foundOnDisk = _.findWhere(newOnDiskData.collections.packages,
-                                  { name: name });
-    selftest.expectEqual(!! foundOnDisk, true);
   });
 });
 

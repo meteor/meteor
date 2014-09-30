@@ -63,6 +63,15 @@ var Console = function (options) {
   self._inStatusMessageMode = false;
   self._wroteStatusMessage = false;
 
+  self._logThreshold = LEVEL_CODE_INFO;
+  var logspec = process.env.METEOR_LOG;
+  if (logspec) {
+    logspec = logspec.trim().toLowerCase();
+    if (logspec == 'debug') {
+      self._logThreshold = LEVEL_CODE_DEBUG;
+    }
+  }
+
   cleanup.onExit(function (sig) {
     self.enableProgressBar(false);
   });
@@ -195,8 +204,21 @@ _.extend(Console.prototype, {
     }).run();
   },
 
+  debug: function(/*arguments*/) {
+    var self = this;
+    if (self._logThreshold > LEVEL_CODE_DEBUG) {
+      return;
+    }
+
+    var message = self._format(arguments);
+    self._print(LEVEL_DEBUG, message);
+  },
+
   info: function(/*arguments*/) {
     var self = this;
+    if (self._logThreshold > LEVEL_CODE_INFO) {
+      return;
+    }
 
     var message = self._format(arguments);
     self._print(LEVEL_INFO, message);
@@ -204,6 +226,9 @@ _.extend(Console.prototype, {
 
   warn: function(/*arguments*/) {
     var self = this;
+    if (self._logThreshold > LEVEL_CODE_WARN) {
+      return;
+    }
 
     var message = self._format(arguments);
     self._print(LEVEL_WARN, message);
@@ -290,8 +315,11 @@ _.extend(Console.prototype, {
     var self = this;
 
     var message = '';
-    var format = logArguments[0];
-    message = format;
+    for (var i = 0; i < logArguments.length; i++) {
+      if (i != 0) message += ' ';
+      message += logArguments[i];
+    }
+
     return message;
   },
 
