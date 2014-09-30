@@ -187,7 +187,7 @@ Deprecated command. Use 'build' instead.
 >>> build
 Outputs builds for all targeted platforms.
 Usage: meteor build <output path> [--debug] [--directory]
-         [--settings settings.json] [--mobile-server example.com:3000]
+         [--settings settings.json] [--mobile-server http://example.com:3000]
 
 Package this project up for deployment. The output is a directory with several
 build artifacts:
