@@ -217,6 +217,7 @@ var convertIsopackFormat = function (data, versionFrom, versionTo) {
     return convertedData;
   } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
     convertedData.unibuilds = convertedData.builds;
+    convertedData.format = "unipackage-pre2";
     delete convertedData.builds;
     return convertedData;
   }
@@ -1024,7 +1025,7 @@ _.extend(Isopack.prototype, {
       // writes one file with all of the new formats, so that it is possible
       // to invent a new format and have old versions of meteor still read the
       // old format
-      // 
+      //
       // This looks something like:
       // {
       //   isopack-1: {... data ...},
