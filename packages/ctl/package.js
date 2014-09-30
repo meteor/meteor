@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Default control program for an application",
-  version: "1.0.1"
+  version: "1.0.2-pre.0"
 });
 
 Package.on_use(function (api) {
