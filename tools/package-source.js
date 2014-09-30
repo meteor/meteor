@@ -1477,6 +1477,9 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
 
+    // special files those are excluded from app's top-level sources
+    var controlFiles = ['mobile-config.js'];
+
     _.each(self.allArchs, function (arch) {
       // Determine used packages
       var project = require('./project.js').project;
@@ -1530,6 +1533,9 @@ _.extend(PackageSource.prototype, {
           include: sourceInclude,
           exclude: sourceExclude
         });
+
+        // don't include watched but not included control files
+        sources = _.difference(sources, controlFiles);
 
         var otherUnibuildRegExp =
               (arch === "os" ? /^client\/$/ : /^server\/$/);
