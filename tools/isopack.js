@@ -481,7 +481,7 @@ _.extend(Isopack.prototype, {
     // deal with different versions of "isopack.json", backwards compatible
     var currentFormat = "isopack-1";
     var isopackJsonPath = path.join(dir, "isopack.json");
-    if (fs.existsFileSync(isopackJsonPath)) {
+    if (fs.existsSync(isopackJsonPath)) {
       isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
 
       if (isopackJson[currentFormat]) {
@@ -494,8 +494,12 @@ _.extend(Isopack.prototype, {
     } else {
       // super old version with different file name
       var unipackageJsonPath = path.join(dir, "unipackage.json");
-      if (fs.existsFileSync(unipackageJsonPath)) {
+      if (fs.existsSync(unipackageJsonPath)) {
         mainJson = JSON.parse(fs.readFileSync(unipackageJsonPath));
+
+        // in the old format, builds were called unibuilds
+        // use string to make sure this doesn't get caught in a find/replace
+        mainJson.builds = mainJson["unibuilds"];
       }
 
       if (mainJson.format !== "unipackage-pre2") {
@@ -711,7 +715,7 @@ _.extend(Isopack.prototype, {
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
-        unibuilds: [],
+        builds: [],
         plugins: []
       };
 
@@ -757,7 +761,7 @@ _.extend(Isopack.prototype, {
       builder.reserve("body");
 
       // Map from absolute path to npm directory in the unibuild, to the
-      // generated filename in the isopack we're writing.  Multiple unibuilds
+      // generated filename in the isopack we're writing.  Multiple builds
       // can use the same npm modules (though maybe not any more, since tests
       // have been separated?), but also there can be different sets of
       // directories as well (eg, for a isopack merged with from multiple
@@ -788,7 +792,7 @@ _.extend(Isopack.prototype, {
           builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
-        mainJson.unibuilds.push({
+        mainJson.builds.push({
           arch: unibuild.arch,
           path: unibuildJsonFile
         });
@@ -958,17 +962,25 @@ _.extend(Isopack.prototype, {
       var formats = ["unipackage-pre2", "isopack-1"];
       var isopackJson = {};
       _.each(formats, function (format) {
+        // make a clone so that we can modify it without destroying the data
+        // we just compiled
         var clone = _.clone(mainJson);
 
         // super old format, written to a different file name
         if (format === "unipackage-pre2") {
           clone.format = format;
-          builder.writeJson("unipackage.json", mainJson);
+
+          // in the old format, builds were called unibuilds
+          // use string to make sure this doesn't get caught in a find/replace
+          clone["unibuilds"] = clone.builds;
+          delete clone.builds;
+
+          builder.writeJson("unipackage.json", clone);
           return;
         }
 
         // new, extensible format - forwards-compatible
-        isopackJson[format] = mainJson;
+        isopackJson[format] = clone;
       });
 
       // writes one file with all of the new formats, so that it is possible
