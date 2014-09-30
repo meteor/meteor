@@ -673,7 +673,7 @@ _.extend(RemoteCatalog.prototype, {
     options = options || {};
 
     var results = self.db.query(query, values);
-    if (results.length !== 0 || options.noRetry)
+    if (results.length !== 0 || options.noRefresh)
       return results;
 
     // XXX: This causes unnecessary refreshes
@@ -684,9 +684,18 @@ _.extend(RemoteCatalog.prototype, {
     self.refresh();
 
     options = _.clone(options);
-    options.noRetry = true;
+    options.noRefresh = true;
 
     return self._queryWithRetry(query, values, options);
+  },
+
+
+  _simpleQuery: function (query, params) {
+    var self = this;
+    var rows = self.db.query(query, params);
+    return _.map(rows, function(entity) {
+      return JSON.parse(entity.content);
+    });
   },
 
   // Execute a query using the values as arguments of the query and return the result as JSON.
