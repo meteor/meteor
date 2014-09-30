@@ -599,7 +599,7 @@ _.extend(PackageSource.prototype, {
       // - sources: sources for the plugin (array of string)
       // - npmDependencies: map from npm package name to required
       //   version (string)
-      
+
       /**
        * @summary Define a build plugin. A build plugin extends the build
        * process for apps and packages that use this package. For example,
