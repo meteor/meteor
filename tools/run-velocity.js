@@ -5,10 +5,12 @@ var phantomjs = require('phantomjs');
 var child_process = require('child_process');
 var _ = require('underscore');
 
+// XXX this could really use a self-test!
 
-// XXX comment
-//
-// More specifically:
+// XXX would be nice be nice if this didn't have to be in core. Perhaps
+// at some point we'll have an API for packages to register commands in
+// the tool.
+
 // 1. Establish a DDP connection to Meteor
 // 2. Subscribe to the Velocity subscriptions that tell us
 //    which tests pass/fail and when all tests have completed.
@@ -20,6 +22,8 @@ var runVelocity = function (url) {
   });
   var DDP = unipackages.ddp.DDP;
 
+  // XXX maybe a startup message so users know the tests are running.
+
   var ddpConnection = DDP.connect(url);
 
   var interval = setInterval(function(){
@@ -30,6 +34,8 @@ var runVelocity = function (url) {
         onError: function(){
           Console.stderr.write("failed to subscribe to VelocityTestReports "
                                + "subscription");
+          // XXX tell user to add velocity:core
+          // XXX these also fire if the user turns on autopublish
         }, onReady: function(){
           this.connection.registerStore("velocityTestReports", {
             update: function(msg){
@@ -40,7 +46,7 @@ var runVelocity = function (url) {
                   console.log("PASSED", testDesc);
                 } else if (msg.fields.result == "failed"){
                   console.error("FAILED", testDesc);
-                  console.log(msg.fields.failureStackTrace)
+                  console.log(msg.fields.failureStackTrace);
                 }
               }
             }
@@ -79,7 +85,11 @@ var runVelocity = function (url) {
                   setTimeout(function(){
                     if (aggregateResult === "passed"){
                       console.log("TESTS RAN SUCCESSFULLY");
-                      //better way to exit here?
+                      // XXX XXX this is not great. We shouldn't be
+                      // exiting from deep within code like this. Better
+                      // would be to integrate with run --once, and
+                      // signal the inner process to exit cleanly on
+                      // test completion.
                       process.exit(0);
                     }
                     if (aggregateResult === "failed"){

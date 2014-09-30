@@ -304,7 +304,10 @@ main.registerCommand({
   if (options['raw-logs'])
     runLog.setRawLogs(true);
 
-  // Use `--test` to activate velocity testing.
+  // Velocity testing. Sets up a DDP connection to the app process and
+  // runs phantomjs.
+  //
+  // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
     var serverUrl = "http://" + (parsedHostPort.host || "localhost") +
           ":" + parsedHostPort.port;
