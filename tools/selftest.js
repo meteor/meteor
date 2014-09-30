@@ -19,6 +19,7 @@ var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
 var Package = uniload.load({ packages: ["ejson"] });
 var Console = require('./console.js').Console;
+var processes = require('./processes.js');
 
 var toolPackageName = "meteor-tool";
 
@@ -818,6 +819,64 @@ var Client = function (options) {
   }
 };
 
+var MeteorTempDir = function () {
+  var self = this;
+  self._tmp = self._getSystemTemp();
+  self.path = path.join(self._tmp, "meteor");
+  files.mkdir_p(self.path);
+};
+
+_.extend(MeteorTempDir.prototype, {
+  _getSystemTemp: function () {
+    var tmpDir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
+        return process.env[t];
+      }).filter(_.identity)) || path.sep + 'tmp';
+    tmpDir = fs.realpathSync(tmpDir);
+    return tmpDir;
+  }
+});
+
+MeteorTempDir = new MeteorTempDir();
+
+var TempFile = function () {
+  var self = this;
+  self.path = self.create();
+};
+
+_.extend(TempFile.prototype, {
+  create: function (prefix) {
+    var self = this;
+
+    prefix = prefix || 'tmp';
+    // So we can safely clean-up old files in future
+    prefix = prefix + '.' + process.pid + '.';
+
+    // create the file; retry in case of collisions
+    var tries = 3;
+    while (tries > 0) {
+      var filePath = path.join(MeteorTempDir.path, prefix + (Math.random() * 0x100000000 + 1).toString(36));
+      try {
+        var fd = fs.openSync(filePath, 'w+');
+        fs.closeSync(fd);
+        self.path = filePath;
+        return self.path;
+      } catch (err) {
+        Console.debug("Error creating temp file", filePath, err);
+        tries--;
+      }
+    }
+    throw new Error("failed to make temporary file in " + MeteorTempDir.path);
+  },
+
+  unlink: function () {
+    var self = this;
+    if (self.path) {
+      fs.unlinkSync(self.path);
+      self.path = null;
+    }
+  }
+});
+
 // PhantomClient
 var PhantomClient = function (options) {
   var self = this;
@@ -827,6 +886,7 @@ var PhantomClient = function (options) {
   self.process = null;
 
   self._logError = true;
+  self.scriptFile = null;
 };
 
 util.inherits(PhantomClient, Client);
@@ -836,17 +896,19 @@ _.extend(PhantomClient.prototype, {
     var self = this;
 
     var phantomScript = "require('webpage').create().open('" + self.url + "');";
-    var phantomPath = phantomjs.path;
-    self.process = child_process.execFile(
-      '/bin/bash',
-      ['-c',
-       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "\nEND\n")],
-      {}, function (error, stdout, stderr) {
-        if (self._logError && error) {
-          console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
-        }
-      });
+    self.scriptFile = new TempFile();
+
+    fs.writeFileSync(self.scriptFile.path, phantomScript);
+
+    options = {};
+    options.onStdout = function (data) {
+      if (self._logError) {
+        Console.info("PhantomJS output: ", data);
+      }
+    };
+    options.onStderr = options.onStdout;
+    self.process = new processes.RunCommand(phantomjs.path, ['--load-images=no', self.scriptFile.path], options);
+    self.process.start();
   },
 
   stop: function() {
@@ -855,6 +917,8 @@ _.extend(PhantomClient.prototype, {
     self._logError = false;
     self.process && self.process.kill();
     self.process = null;
+    self.scriptFile && self.scriptFile.unlink();
+    self.scriptFile = null;
   }
 });
 
