@@ -156,7 +156,7 @@ Tinytest.add(
     compare("1.0.0_50", "1.0.1", "<");
     compare("1.0.0_50", "1.2.0", "<");
     compare("1.0.0_1", "1.0.0_2", "<");
-    compare("1.0.0_2", "1.0.0_10", "<"); // verify that we compare ~N as numbers, not strings
+    compare("1.0.0_2", "1.0.0_10", "<"); // verify that we compare _N "wrap numbers" as numbers, not strings
     compare("1.0.0", "1.0.0_2", "<");
     compare("1.99.0_99", "3.0.0_2", "<");
     compare("1.99.0", "2.0.0", "<");
@@ -182,13 +182,21 @@ Tinytest.add(
     compare("1.0.0-beta.2", "1.0.0-beta.11", "<");
     compare("1.0.0-beta.11", "1.0.0-rc.1", "<");
     compare("1.0.0-rc.1", "1.0.0", "<");
-    compare("1.0.0-r.1", "1.0.0", "<"); // test single character prerelease parts
+
+    // dashes are allowed in prerelease parts
+    compare("1.0.0--alpha", "1.0.0-alpha", "<");
+    compare("1.0.0-a-lpha", "1.0.0-alpha", "<");
+    // test single character prerelease parts
+    compare("1.0.0-r.1", "1.0.0", "<");
+    // test the edges of `versionMagnitude`
+    compare("1.0.0-zzzzzzzzzzzz", "1.0.0", "<");
 
     // Our broken implementation of Rule 11 (see [*] above the
     // declaration of PackageVersion.versionMagnitude). Maybe one day
     // we'll fix it, in which case replace "===" with ">"
     test.isTrue(PackageVersion.versionMagnitude("1.0.0-beta.0") ===
                 PackageVersion.versionMagnitude("1.0.0-bear.0"));
+
   });
 
 Tinytest.add("Invalid in 0.9.2", function (test) {
