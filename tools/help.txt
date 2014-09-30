@@ -50,6 +50,7 @@ Options:
   --settings     Set optional data for Meteor.settings on the server
   --release      Specify the release of Meteor to use
   --program      The program in the app to run (Advanced)
+  --test         Run velocity tests (using phantomjs if necessary) and exit
   --verbose      Print all output from builds logs.
 
 
