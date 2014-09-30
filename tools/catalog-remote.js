@@ -576,7 +576,7 @@ _.extend(RemoteCatalog.prototype, {
     buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
       updateResult = packageClient.updateServerPackageData(self);
     });
-    if (!updateResult.data) {
+    if (updateResult.connectionFailed) {
       Console.warn("Warning: could not connect to package server\n");
     }
     if (updateResult.resetData) {

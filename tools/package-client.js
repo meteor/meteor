@@ -57,48 +57,6 @@ exports.callPackageServer = function (conn) {
   return conn.call.apply(conn, args);
 };
 
-// Load the package data that was saved in the local data.json
-// collection from the last time we did a sync to the server. Takes an
-// optional `packageStorageFile` argument (defaults to
-// `config.getPackageStorage()`). This return object consists of
-//
-//  - collections: an object keyed by the name of server collections, with the
-//    records as an array of javascript objects.
-//  - syncToken: a syncToken object representing the last time that we talked to
-//    the server, to pass into the getRemotePackageData to get the latest
-//    updates.
-// If there is no data.json file, or the file cannot be parsed, return null for
-// the collections and a default syncToken to ask the server for all the data
-// from the beginning of time.
-exports.loadCachedServerData = function (packageStorageFile) {
-  var noDataToken = emptyCachedServerDataJson();
-
-  packageStorageFile = packageStorageFile || config.getPackageStorage();
-
-  try {
-    var data = fs.readFileSync(packageStorageFile, 'utf8');
-  } catch (e) {
-    if (e.code == 'ENOENT') {
-      return noDataToken;
-    }
-    // XXX we should probably return an error to the caller here to
-    // figure out how to handle it
-    Console.stderr.write("ERROR " + e.message + "\n");
-    process.exit(1);
-  }
-  var ret = noDataToken;
-  try {
-    ret = JSON.parse(data);
-  } catch (err) {
-    // XXX error handling
-    Console.stderr.write(
-      "ERROR: Could not parse JSON for local package-metadata cache. \n");
-    // This should only happen if you decided to manually edit this or
-    // whatever. Regardless, go on and treat this as an empty file.
-  }
-  return ret;
-};
-
 // Requests and returns one page of new package data that we haven't cached on
 // disk. We assume that data is cached chronologically, so essentially, we are
 // asking for a diff from the last time that we did this.
@@ -135,13 +93,14 @@ var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
 // Contacts the package server to get the latest diff and writes changes to
 // disk.
 //
-// Takes in cachedServerData, which is the processed contents of data.json. Uses
-// those to talk to the server and get the latest updates. Applies the diff from
-// the server to the in-memory version of the on-disk data, then writes the new
-// file to disk as the new data.json.
+// Takes in the dataStore, which is an example of the remote catalog. Contacts
+// the package server and updates the sql database with the most recent
+// information.
 //
-// Returns null if contacting the server times out. Otherwise, returns
-// all the data.
+// Returns null if contacting the server times out, or an object with the
+// following keys:
+//     resetData : true if we should reset the database, otherwise false.
+//     connectionFailed: true if we failed to connect to the server.
 //
 // options can include:
 //  - packageStorageFile: String. The file to write the data to (overrides
@@ -157,6 +116,7 @@ exports.updateServerPackageData = function (dataStore, options) {
   });
   return results;
 };
+
 
 _updateServerPackageData = function (dataStore, options) {
   var self = this;
@@ -175,7 +135,7 @@ _updateServerPackageData = function (dataStore, options) {
     var conn = openPackageServerConnection(options.packageServerUrl);
   } catch (err) {
     self.handlePackageServerConnectionError(err);
-    ret.data = null;
+    ret.connectionFailed = true;
     return ret;
   }
 
@@ -233,12 +193,12 @@ _updateServerPackageData = function (dataStore, options) {
     // disk (unless we were just told to reset everything).
     if (!remoteData.resetData && _.isEqual(remoteData.collections, {})) {
       done = true;
-      ret.data = {};
       return;
     }
 
-    if (remoteData.upToDate)
+    if (remoteData.upToDate) {
       done = true;
+    }
   };
 
   try {
