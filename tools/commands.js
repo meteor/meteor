@@ -21,7 +21,7 @@ var tropohouse = require('./tropohouse.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var commandsPackages = require('./commands-packages.js');
 var execFileSync = require('./utils.js').execFileSync;
@@ -1349,7 +1349,7 @@ var getPackagesForTest = function (packages) {
           // have a trailing slash.
           //
           // Why use addLocalPackage instead of just loading the packages
-          // and passing Unipackage objects to the bundler? Because we
+          // and passing Isopack objects to the bundler? Because we
           // actually need the Catalog to know about the package, so that
           // we are able to resolve the test package's dependency on the
           // main package. This is not ideal (I hate how this mutates global

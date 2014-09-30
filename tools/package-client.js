@@ -375,11 +375,11 @@ exports.loggedInPackagesConnection = function () {
 // In retrospect a better approach here might be to actually make "save source
 // somewhere else" or perhaps "add source to tarball" be part of the package
 // build itself...
-var bundleSource = function (unipackage, includeSources, packageDir) {
-  var name = unipackage.name;
+var bundleSource = function (isopack, includeSources, packageDir) {
+  var name = isopack.name;
 
   var tempDir = files.mkdtemp('build-source-package-');
-  var packageTarName = name + '-' + unipackage.version + '-source';
+  var packageTarName = name + '-' + isopack.version + '-source';
   var dirToTar = path.join(tempDir, 'source', packageTarName);
   var sourcePackageDir = path.join(
     dirToTar,
@@ -395,7 +395,7 @@ var bundleSource = function (unipackage, includeSources, packageDir) {
   if (fs.existsSync(path.join(packageDir, '.npm/package/npm-shrinkwrap.json'))) {
     includeSources.push('.npm/package/npm-shrinkwrap.json');
   }
-  _.each(unipackage.plugins, function (plugin, pluginName) {
+  _.each(isopack.plugins, function (plugin, pluginName) {
     var pluginShrinkwrap = path.join('.npm/plugin/', pluginName,
                                      'npm-shrinkwrap.json');
     if (fs.existsSync(path.join(packageDir, pluginShrinkwrap))) {
@@ -452,14 +452,14 @@ var uploadTarball = function (putUrl, tarball) {
 
 exports.uploadTarball = uploadTarball;
 
-var bundleBuild = function (unipackage) {
+var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
 
   var tempDir = files.mkdtemp('build-package-');
-  var packageTarName = unipackage.tarballName();
+  var packageTarName = isopack.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
 
-  unipackage.saveToPath(tarInputDir, {
+  isopack.saveToPath(tarInputDir, {
     // Don't upload buildinfo.json. It's only of interest locally (for example,
     // it contains a watchset with local paths).  (This also means we don't
     // need to specify a catalog, yay.)
@@ -492,22 +492,22 @@ var bundleBuild = function (unipackage) {
 
 exports.bundleBuild = bundleBuild;
 
-var createAndPublishBuiltPackage = function (conn, unipackage) {
+var createAndPublishBuiltPackage = function (conn, isopack) {
   buildmessage.assertInJob();
 
   // Note: we really want to do this before createPackageBuild, because the URL
   // we get from createPackageBuild will expire!
   Console.stdout.write('Bundling build...\n');
-  var bundleResult = bundleBuild(unipackage);
+  var bundleResult = bundleBuild(isopack);
   if (buildmessage.jobHasMessages())
     return;
 
   Console.stdout.write('Creating package build...\n');
   var uploadInfo = exports.callPackageServer(conn,
     'createPackageBuild', {
-      packageName: unipackage.name,
-      version: unipackage.version,
-      buildArchitectures: unipackage.buildArchitectures()
+      packageName: isopack.name,
+      version: isopack.version,
+      buildArchitectures: isopack.buildArchitectures()
   });
 
   Console.stdout.write('Uploading build...\n');
@@ -521,8 +521,8 @@ var createAndPublishBuiltPackage = function (conn, unipackage) {
             bundleResult.tarballHash,
             bundleResult.treeHash);
 
-  Console.stdout.write('Published ' + unipackage.name +
-                       ', version ' + unipackage.version);
+  Console.stdout.write('Published ' + isopack.name +
+                       ', version ' + isopack.version);
 
   Console.stdout.write('\nDone!\n');
 };
@@ -548,10 +548,10 @@ exports.handlePackageServerConnectionError = function (error) {
 
 // Publish the package information into the server catalog. Create new records
 // for the package (if needed), the version and the build; upload source and
-// unipackage.
+// isopack.
 //
 // packageSource: the packageSource for this package.
-// compileResult: the compiled unipackage and various source files.
+// compileResult: the compiled isopack and various source files.
 // conn: the open, logged-in connection over which we should talk to the package
 //       server. DO NOT CLOSE this connection here.
 // options:
@@ -670,8 +670,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
         if (buildmessage.jobHasMessages())
           return; // already have errors, so skip the build
 
-        var testUnipackage = compiler.compile(testSource, { officialBuild: true });
-        testFiles = testUnipackage.sources;
+        var testIsopack = compiler.compile(testSource, { officialBuild: true });
+        testFiles = testIsopack.sources;
       }
     });
 
@@ -693,7 +693,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     sources.push("versions.json");
   }
   var sourceBundleResult = bundleSource(
-    compileResult.unipackage, sources, packageSource.sourceRoot);
+    compileResult.isopack, sources, packageSource.sourceRoot);
 
   // Create the package. Check that the metadata exists.
   if (options.new) {
@@ -765,7 +765,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 
   }
 
-  createAndPublishBuiltPackage(conn, compileResult.unipackage);
+  createAndPublishBuiltPackage(conn, compileResult.isopack);
 
   return 0;
 };
