@@ -357,7 +357,7 @@ main.registerCommand({
     return 1;
   }
 
-  var unipkg;
+  var isopk;
   var messages = buildmessage.capture({
     title: "building package " + name
   }, function () {
@@ -492,7 +492,7 @@ main.registerCommand({
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
 
-    unipkg = compiler.compile(packageSource, {
+    isopk = compiler.compile(packageSource, {
       officialBuild: true
     }).isopack;
     if (buildmessage.jobHasMessages())
@@ -516,7 +516,7 @@ main.registerCommand({
     messages = buildmessage.capture({
       title: "publishing package " + name
     }, function () {
-      packageClient.createAndPublishBuiltPackage(conn, unipkg);
+      packageClient.createAndPublishBuiltPackage(conn, isopk);
     });
   } catch (e) {
     packageClient.handlePackageServerConnectionError(e);

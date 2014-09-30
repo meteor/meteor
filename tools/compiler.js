@@ -292,7 +292,7 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
+var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
                                 nodeModulesPath, isPortable) {
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
@@ -317,7 +317,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   // (there's also some weirdness here with handling implies, because
   // the implies field is on the target unibuild, but we really only care
   // about packages.)
-  var activePluginPackages = [unipkg];
+  var activePluginPackages = [isopk];
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
@@ -339,7 +339,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
     compiler.eachUsedUnibuild(
       inputSourceArch.uses, archinfo.host(),
       packageLoader, {skipUnordered: true}, function (unibuild) {
-        if (unibuild.pkg.name === unipkg.name)
+        if (unibuild.pkg.name === isopk.name)
           return;
         if (_.isEmpty(unibuild.pkg.plugins))
           return;
@@ -904,7 +904,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   }
 
   // *** Output unibuild object
-  unipkg.addUnibuild({
+  isopk.addUnibuild({
     name: inputSourceArch.archName,
     arch: arch,
     uses: inputSourceArch.uses,
@@ -1033,8 +1033,8 @@ compiler.compile = function (packageSource, options) {
     }
   }
 
-  var unipkg = new isopack.Isopack;
-  unipkg.initFromOptions({
+  var isopk = new isopack.Isopack;
+  isopk.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
     version: packageSource.version,
@@ -1058,7 +1058,7 @@ compiler.compile = function (packageSource, options) {
   });
 
   _.each(packageSource.architectures, function (unibuild) {
-    var unibuildSources = compileUnibuild(unipkg, unibuild, loader,
+    var unibuildSources = compileUnibuild(isopk, unibuild, loader,
                                           nodeModulesPath, isPortable);
     sources.push.apply(sources, unibuildSources);
   });
@@ -1079,7 +1079,7 @@ compiler.compile = function (packageSource, options) {
                            packageSource.version + "because it already " +
                            "has a build identifier");
       } else {
-        unipkg.addBuildIdentifierToVersion({
+        isopk.addBuildIdentifierToVersion({
           relativeTo: packageSource.sourceRoot,
           catalog: packageSource.catalog
         });
@@ -1089,7 +1089,7 @@ compiler.compile = function (packageSource, options) {
 
   return {
     sources: _.uniq(sources),
-    isopack: unipkg
+    isopack: isopk
   };
 };
 
@@ -1168,16 +1168,16 @@ compiler.getBuildOrderConstraints = function (
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
 compiler.checkUpToDate = function (
-    packageSource, unipkg, constraintSolverOpts) {
+    packageSource, isopk, constraintSolverOpts) {
   buildmessage.assertInCapture();
 
-  if (unipkg.forceNotUpToDate) {
+  if (isopk.forceNotUpToDate) {
     return false;
   }
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
-  if (unipkg.builtBy !== compiler.BUILT_BY) {
+  if (isopk.builtBy !== compiler.BUILT_BY) {
     return false;
   }
 
@@ -1192,7 +1192,7 @@ compiler.checkUpToDate = function (
     buildTimeDeps.directDependencies, packageSource.catalog);
 
   var isopackPluginProviders = getPluginProviders(
-    unipkg.buildTimeDirectDependencies, packageSource.catalog);
+    isopk.buildTimeDirectDependencies, packageSource.catalog);
 
   if (_.keys(sourcePluginProviders).length !==
       _.keys(isopackPluginProviders).length) {
@@ -1219,7 +1219,7 @@ compiler.checkUpToDate = function (
   }
 
   if (_.keys(buildTimeDeps.pluginDependencies).length !==
-      _.keys(unipkg.buildTimePluginDependencies).length) {
+      _.keys(isopk.buildTimePluginDependencies).length) {
     return false;
   }
 
@@ -1237,7 +1237,7 @@ compiler.checkUpToDate = function (
         catalog: packageSource.catalog,
         versions: buildTimeDeps.pluginDependencies[pluginName]
       });
-      var isopackPluginDeps = unipkg.buildTimePluginDependencies[pluginName];
+      var isopackPluginDeps = isopk.buildTimePluginDependencies[pluginName];
       if (! isopackPluginDeps ||
           _.keys(pluginDeps).length !== _.keys(isopackPluginDeps).length) {
         return false;
@@ -1255,8 +1255,8 @@ compiler.checkUpToDate = function (
   }
 
   var watchSet = new watch.WatchSet();
-  watchSet.merge(unipkg.pluginWatchSet);
-  _.each(unipkg.unibuilds, function (unibuild) {
+  watchSet.merge(isopk.pluginWatchSet);
+  _.each(isopk.unibuilds, function (unibuild) {
     watchSet.merge(unibuild.watchSet);
   });
 

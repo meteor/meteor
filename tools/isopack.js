@@ -1071,9 +1071,9 @@ _.extend(Isopack.prototype, {
     });
     bundler.iterateOverAllUsedIsopacks(
       localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
-      function (unipkg) {
+      function (isopk) {
         // XXX assert that each name shows up once
-        unipkg.saveToPath(path.join(unipath, unipkg.name), {
+        isopk.saveToPath(path.join(unipath, isopk.name), {
           // There's no mechanism to rebuild these packages.
           elideBuildInfo: true
         });
