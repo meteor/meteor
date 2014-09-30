@@ -837,7 +837,12 @@ _.extend(PhantomClient.prototype, {
       '/bin/bash',
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "\nEND\n")]);
+        phantomScript + "\nEND\n")],
+      {}, function (exitCode, stdout, stderr) {
+        if (exitCode != 0) {
+          console.log("PhantomJS exited with exitCode ", exitCode, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
+        }
+      });
   },
 
   stop: function() {
