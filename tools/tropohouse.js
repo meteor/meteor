@@ -311,7 +311,7 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};
-    buildmessage.forkJoin({ title: 'Downloading packages'},
+    buildmessage.forkJoin({ title: 'Downloading packages', parallel: true },
       versionMap, function (version, name) {
       try {
         self.maybeDownloadPackageForArchitectures({

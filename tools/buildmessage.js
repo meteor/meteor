@@ -505,42 +505,62 @@ var forkJoin = function (options, iterable, fn) {
     var messageSet = currentMessageSet.get();
     var progress = currentProgress.get();
 
-    _.each(iterable, function (/*arguments*/) {
-      var fut = new Future();
-      var fnArguments = arguments;
-      Fiber(function () {
-        currentProgress.withValue(progress, function () {
-          currentMessageSet.withValue(messageSet, function () {
-            currentJob.withValue(job, function () {
-              try {
-                var result = enterJob({title: (options.title || '') + ' child' }, function () {
-                  return fn.apply(null, fnArguments);
-                });
-                fut['return'](result);
-              } catch (e) {
-                fut['throw'](e);
-              }
+    var parallel = (options.parallel !== undefined) ? options.parallel : true;
+    if (parallel) {
+      _.each(iterable, function (/*arguments*/) {
+        var fut = new Future();
+        var fnArguments = arguments;
+        Fiber(function () {
+          currentProgress.withValue(progress, function () {
+            currentMessageSet.withValue(messageSet, function () {
+              currentJob.withValue(job, function () {
+                try {
+                  var result = enterJob({title: (options.title || '') + ' child' }, function () {
+                    return fn.apply(null, fnArguments);
+                  });
+                  fut['return'](result);
+                } catch (e) {
+                  fut['throw'](e);
+                }
+              });
             });
           });
-        });
-      }).run();
-      futures.push(fut);
-    });
+        }).run();
+        futures.push(fut);
+      });
 
-    _.each(futures, function (future) {
-      try {
-        var result = future.wait();
-        results.push(result);
-        errors.push(null);
-      } catch (e) {
-        results.push(null);
-        errors.push(e);
+      _.each(futures, function (future) {
+        try {
+          var result = future.wait();
+          results.push(result);
+          errors.push(null);
+        } catch (e) {
+          results.push(null);
+          errors.push(e);
 
-        if (firstError === null) {
-          firstError = e;
+          if (firstError === null) {
+            firstError = e;
+          }
         }
-      }
-    });
+      });
+    } else {
+      // not parallel
+      _.each(iterable, function (/*arguments*/) {
+        var fnArguments = arguments;
+        try {
+          var result = fn.apply(null, fnArguments);
+          results.push(result);
+          errors.push(null);
+        } catch (e) {
+          results.push(null);
+          errors.push(e);
+
+          if (firstError === null) {
+            firstError = e;
+          }
+        }
+      });
+    }
   });
 
   if (firstError) {

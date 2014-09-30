@@ -456,7 +456,8 @@ _.extend(LocalCatalog.prototype, {
     };
 
     // Load the package sources for packages and their tests into packageSources.
-    buildmessage.forkJoin({ 'title': 'Initializing packages'}, self.effectiveLocalPackages, function (x) {
+    // XXX: We should make this work with parallel: true; right now it seems to hit node problems
+    buildmessage.forkJoin({ 'title': 'Initializing packages', parallel: false }, self.effectiveLocalPackages, function (x) {
       initSourceFromDir(x);
     });
 
