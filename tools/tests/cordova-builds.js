@@ -36,22 +36,22 @@ selftest.define("cordova builds with server options", ["slow"], function () {
   run = s.run("build", ".");
   run.waitSecs(90);
   run.matchErr(
-    "Supply the server hostname and port in the --mobile-server option");
+    "Supply the server hostname and port in the --server option");
   run.expectExit(1);
 
-  run = s.run("build", ".", "--mobile-server", "5000");
+  run = s.run("build", ".", "--server", "5000");
   run.waitSecs(90);
   run.expectExit(0);
   checkMobileServer(s, "http://localhost:5000");
   cleanUpBuild(s);
 
-  run = s.run("build", ".", "--mobile-server", "https://example.com:5000");
+  run = s.run("build", ".", "--server", "https://example.com:5000");
   run.waitSecs(90);
   run.expectExit(0);
   checkMobileServer(s, "https://example.com:5000");
   cleanUpBuild(s);
 
-  run = s.run("build", ".", "--mobile-server", "example.com:5000");
+  run = s.run("build", ".", "--server", "example.com:5000");
   run.waitSecs(90);
   run.expectExit(0);
   checkMobileServer(s, "http://example.com:5000");

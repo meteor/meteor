@@ -187,7 +187,7 @@ Deprecated command. Use 'build' instead.
 >>> build
 Outputs builds for all targeted platforms.
 Usage: meteor build <output path> [--debug] [--directory]
-         [--settings settings.json] [--mobile-server http://example.com:3000]
+         [--settings settings.json] [--server http://example.com:3000]
 
 Package this project up for deployment. The output is a directory with several
 build artifacts:
@@ -207,9 +207,9 @@ Options:
                    it will be recursively deleted first.
   --settings       set optional data for Meteor.settings for the build-time
                    settings (such as settings required by Cordova plugins).
-  --mobile-server  Location where mobile builds connect to the Meteor server.
+  --server         Location where mobile builds connect to the Meteor server.
                    Defaults to localhost:3000. Can include a URL scheme
-                   (for example, --mobile-server=https://example.com:443).
+                   (for example, --server=https://example.com:443).
 
 
 >>> mongo

@@ -572,7 +572,7 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
-    "mobile-server": { type: String },
+    server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
     settings: { type: String },
@@ -628,7 +628,7 @@ var buildCommand = function (options) {
   if (! _.isEmpty(mobilePlatforms)) {
 
     // XXX COMPAT WITH 0.9.2.2 -- the mobile-port is deprecated
-    var mobileServer = options["mobile-server"] ||
+    var mobileServer = options.server ||
           options["mobile-port"];
 
     if (mobileServer) {
@@ -646,10 +646,10 @@ var buildCommand = function (options) {
         return 1;
       }
     } else {
-      // For Cordova builds, require '--mobile-server'.
+      // For Cordova builds, require '--server'.
       // XXX better error message?
       process.stderr.write(
-"Supply the server hostname and port in the --mobile-server option\n" +
+"Supply the server hostname and port in the --server option\n" +
 "for mobile app builds.\n");
       return 1;
     }
