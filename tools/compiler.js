@@ -28,7 +28,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/13';
+compiler.BUILT_BY = 'meteor/14';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -284,7 +284,7 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 
 // inputSourceArch is a SourceArch to compile. Process all source files through
 // the appropriate handlers and run the prelink phase on any resulting
-// JavaScript. Create a new Unibuild and add it to 'unipackage'.
+// JavaScript. Create a new Unibuild and add it to 'isopack'.
 //
 // packageLoader is a PackageLoader that can load our build-time
 // direct dependencies at the correct versions. It is only used to

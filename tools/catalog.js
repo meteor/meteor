@@ -1144,11 +1144,12 @@ _.extend(CompleteCatalog.prototype, {
         absPath: packageDir,
         include: [/\/$/]
       });
-      _.each(packages, function (p) {
-        watch.readAndWatchFile(watchSet,
-                               path.join(packageDir, p, 'package.js'));
-        watch.readAndWatchFile(watchSet,
-                               path.join(packageDir, p, 'unipackage.json'));
+      _.each(packages, function (pack) {
+        _.each(["package.js", "unipackage.json", "isopack.json"],
+            function (fileToWatch) {
+          watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, pack, fileToWatch));
+        });
       });
     });
   },
@@ -1278,8 +1279,7 @@ _.extend(BuiltUniloadCatalog.prototype, {
 
     self._knownPackages = {};
     _.each(fs.readdirSync(options.uniloadDir), function (package) {
-      if (fs.existsSync(path.join(options.uniloadDir, package,
-                                  'unipackage.json'))) {
+      if (isopack.isopackExistsAtPath(path.join(options.uniloadDir, package))) {
         self._knownPackages[package] = true;
 
         // XXX do we have to also put stuff in self.packages/versions/builds?

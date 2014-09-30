@@ -135,7 +135,7 @@ var load = function (options) {
     // time like any other app and this case will disappear.
     process.stderr.write("Errors prevented isopack load:\n");
     process.stderr.write(messages.formatMessages());
-    throw new Error("unipackage load failed?");
+    throw new Error("isopack load failed?");
   }
 
   // Save to cache

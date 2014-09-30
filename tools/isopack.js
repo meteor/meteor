@@ -478,21 +478,44 @@ _.extend(Isopack.prototype, {
     // realpath'ing dir.
     dir = fs.realpathSync(dir);
 
-    var mainJson =
-      JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
+    // deal with different versions of "isopack.json", backwards compatible
+    var currentFormat = "isopack-1";
+    var isopackJsonPath = path.join(dir, "isopack.json");
+    if (fs.existsFileSync(isopackJsonPath)) {
+      isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
 
-    // We don't support pre-0.9.0 isopacks, but we do know enough to delete
-    // them if we find them in .build.* somehow (rather than crash).
-    if (mainJson.format === "unipackage-pre1")
-      throw new exports.OldIsopackFormatError;
+      if (isopackJson[currentFormat]) {
+        mainJson = isopackJson[currentFormat];
+      } else {
+        // This file is from the future and no longer supports this version
+        throw new Error("Could not find isopack data with format " + currentFormat + ".\n" +
+          "This isopack was likely built with a much newer version of Meteor.");
+      }
+    } else {
+      // super old version with different file name
+      var unipackageJsonPath = path.join(dir, "unipackage.json");
+      if (fs.existsFileSync(unipackageJsonPath)) {
+        mainJson = JSON.parse(fs.readFileSync(unipackageJsonPath));
+      }
 
-    if (mainJson.format !== "unipackage-pre2")
-      throw new Error("Unsupported isopack format: " +
-                      JSON.stringify(mainJson.format));
+      if (mainJson.format !== "unipackage-pre2") {
+        // We don't support pre-0.9.0 isopacks, but we do know enough to delete
+        // them if we find them in .build.* somehow (rather than crash).
+        if (mainJson.format === "unipackage-pre1") {
+          throw new exports.OldIsopackFormatError();
+        }
+
+        throw new Error("Unsupported isopack format: " +
+                        JSON.stringify(mainJson.format));
+      }
+    }
+
+    // done dealing with different versions, below here
+    // mainJson is the data we want
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
-      throw new Error("unipackage " + name + " thinks its name is " +
+      throw new Error("isopack " + name + " thinks its name is " +
                       mainJson.name);
     }
 
@@ -683,7 +706,6 @@ _.extend(Isopack.prototype, {
     var builder = new Builder({ outputPath: outputPath });
     try {
       var mainJson = {
-        format: "unipackage-pre2",
         name: self.name,
         summary: self.metadata.summary,
         version: self.version,
@@ -692,6 +714,7 @@ _.extend(Isopack.prototype, {
         unibuilds: [],
         plugins: []
       };
+
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
@@ -726,6 +749,7 @@ _.extend(Isopack.prototype, {
       }
 
       builder.reserve("unipackage.json");
+      builder.reserve("isopack.json");
       // Reserve this even if elideBuildInfo is set, to ensure nothing else
       // writes it somehow.
       builder.reserve("buildinfo.json");
@@ -929,7 +953,35 @@ _.extend(Isopack.prototype, {
         }
         mainJson.tools.push(toolMeta);
       });
-      builder.writeJson("unipackage.json", mainJson);
+
+      // write several versions of the file
+      var formats = ["unipackage-pre2", "isopack-1"];
+      var isopackJson = {};
+      _.each(formats, function (format) {
+        var clone = _.clone(mainJson);
+
+        // super old format, written to a different file name
+        if (format === "unipackage-pre2") {
+          clone.format = format;
+          builder.writeJson("unipackage.json", mainJson);
+          return;
+        }
+
+        // new, extensible format - forwards-compatible
+        isopackJson[format] = mainJson;
+      });
+
+      // writes one file with all of the new formats, so that it is possible
+      // to invent a new format and have old versions of meteor still read the
+      // old format
+      // 
+      // This looks something like:
+      // {
+      //   isopack-1: {... data ...},
+      //   isopack-2: {... data ...}
+      // }
+      builder.writeJson("isopack.json", isopackJson);
+
       if (buildInfoJson) {
         builder.writeJson("buildinfo.json", buildInfoJson);
       }
@@ -965,7 +1017,7 @@ _.extend(Isopack.prototype, {
 
     var toolPath = 'meteor-tool-' + archinfo.host();
     builder = builder.enter(toolPath);
-    var unipath = builder.reserve('unipackages', {directory: true});
+    var unipath = builder.reserve('isopacks', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
@@ -1123,4 +1175,9 @@ exports.OldIsopackFormatError = function () {
   // This should always be caught anywhere where it can appear (ie, anywhere
   // that isn't definitely loading something from the tropohouse).
   this.toString = function () { return "old isopack format!" };
+};
+
+exports.isopackExistsAtPath = function (thePath) {
+  return fs.existsSync(path.join(thePath, 'isopack.json')) ||
+    fs.existsSync(path.join(thePath, 'unipackage.json'));
 };

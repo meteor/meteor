@@ -147,7 +147,7 @@ files.getToolsVersion = function () {
     var isopackJson = fs.readFileSync(
       path.join(files.getCurrentToolsDir(),
                 '..',  // get out of tool, back to package
-                'unipackage.json'));
+                'isopack.json'));
     var parsed = JSON.parse(isopackJson);
     return parsed.name + '@' + parsed.version;
   } else {
@@ -171,7 +171,7 @@ files.getCurrentToolsDir = function () {
 files.getUniloadDir = function () {
   if (files.inCheckout())
     return null;
-  return path.join(files.getCurrentToolsDir(), 'unipackages');
+  return path.join(files.getCurrentToolsDir(), 'isopacks');
 };
 
 // Read a settings file and sanity-check it. Returns a string on

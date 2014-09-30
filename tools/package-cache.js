@@ -49,13 +49,13 @@ _.extend(PackageCache.prototype, {
   // - name: package name
   // - loadPath: path of the source to the package
   // - isopack (prebuilt package)
-  cachePackageAtPath : function (name, loadPath, unip) {
+  cachePackageAtPath : function (name, loadPath, isop) {
     var self = this;
     var key = name + "@" + loadPath;
     var buildDir = path.join(loadPath, '.build.'+  name);
 
     self.loadedPackages[key] = {
-        pkg: unip,
+        pkg: isop,
         sourceDir: loadPath,
         buildDir: buildDir
       };
@@ -83,6 +83,8 @@ _.extend(PackageCache.prototype, {
        return self.loadedPackages[key].pkg;
     }
 
+    var isop;
+
     // See if we can reuse a package that we have cached from before
     // the last soft refresh.
     // XXX XXX this is not very efficient. refactor
@@ -95,8 +97,7 @@ _.extend(PackageCache.prototype, {
       delete self.softReloadCache[key];
 
       var isUpToDate;
-      var unip;
-      if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
+      if (isopack.isopackExistsAtPath(loadPath)) {
         // We don't even have the source to this package, so it must
         // be up to date.
         isUpToDate = true;
@@ -112,8 +113,8 @@ _.extend(PackageCache.prototype, {
           packageSource.initFromPackageDir(loadPath, {
             name: name
           });
-          unip = new isopack.Isopack;
-          unip.initFromPath(name, entry.buildDir);
+          isop = new isopack.Isopack();
+          isop.initFromPath(name, entry.buildDir);
           isUpToDate = compiler.checkUpToDate(
             packageSource, entry.pkg, {
               ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
@@ -131,17 +132,17 @@ _.extend(PackageCache.prototype, {
 
     // Does loadPath point directly at a isopack (rather than a
     // source tree?)
-    if (fs.existsSync(path.join(loadPath, 'unipackage.json'))) {
-      unip = new isopack.Isopack;
+    if (isopack.isopackExistsAtPath(loadPath)) {
+      isop = new isopack.Isopack();
 
-      unip.initFromPath(name, loadPath);
+      isop.initFromPath(name, loadPath);
       self.loadedPackages[key] = {
-        pkg: unip,
+        pkg: isop,
         sourceDir: null,
         buildDir: loadPath
       };
-      return unip;
-    };
+      return isop;
+    }
 
     // It's a source tree. Load it.
     var packageSource = new PackageSource(self.catalog);
@@ -156,10 +157,10 @@ _.extend(PackageCache.prototype, {
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
     if (fs.existsSync(buildDir)) {
-      unip = new isopack.Isopack;
+      isop = new isopack.Isopack();
       var maybeUpToDate = true;
       try {
-        unip.initFromPath(name, buildDir);
+        isop.initFromPath(name, buildDir);
       } catch (e) {
         if (!(e instanceof isopack.OldIsopackFormatError))
           throw e;
@@ -167,13 +168,13 @@ _.extend(PackageCache.prototype, {
       }
       if (maybeUpToDate &&
           compiler.checkUpToDate(
-            packageSource, unip,
+            packageSource, isop,
             { ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps })) {
-        self.loadedPackages[key] = { pkg: unip,
+        self.loadedPackages[key] = { pkg: isop,
                                      sourceDir: loadPath,
                                      buildDir: buildDir
                                    };
-        return unip;
+        return isop;
       }
     }
 
@@ -192,11 +193,11 @@ _.extend(PackageCache.prototype, {
       // We don't do that anymore and at the moment, we rely on catalog to
       // initalize ahead of us and swoop in and build all of the local packages
       // informed by a topological sort
-      var unip = compiler.compile(packageSource, {
+      var isop = compiler.compile(packageSource, {
         ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
       }).isopack;
       self.loadedPackages[key] = {
-        pkg: unip,
+        pkg: isop,
         sourceDir: null,
         buildDir: buildDir
       };
@@ -205,7 +206,7 @@ _.extend(PackageCache.prototype, {
         // Save it, for a fast load next time
         try {
           files.addToGitignore(loadPath, '.build*');
-          unip.saveToPath(buildDir, {
+          isop.saveToPath(buildDir, {
             buildOfPath: loadPath,
             catalog: self.catalog
           });
@@ -216,7 +217,7 @@ _.extend(PackageCache.prototype, {
             throw e;
         }
       }
-      return unip;
+      return isop;
     });
   }
 });
