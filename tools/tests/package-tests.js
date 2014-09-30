@@ -581,7 +581,8 @@ selftest.define("update server package data unit test",
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("package with --name", ['test-package-server'], function () {
+selftest.define("package with --name",
+    ['test-package-server', "checkout"], function () {
   var s = new Sandbox();
   var run;
 
@@ -626,7 +627,8 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.stop();
 });
 
-selftest.define("talk to package server with expired or no accounts token", ['net', 'test-package-server'], function () {
+selftest.define("talk to package server with expired or no accounts token",
+  ['net', 'test-package-server'], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
@@ -698,7 +700,8 @@ var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   }
 };
 
-selftest.define("packages with organizations", ["net", "test-package-server"], function () {
+selftest.define("packages with organizations",
+    ["net", "test-package-server"], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
