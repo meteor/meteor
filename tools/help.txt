@@ -55,7 +55,7 @@ Options:
   --release        Specify the release of Meteor to use.
   --program        The program in the app to run (Advanced).
   --verbose        Print all output from builds logs.
-  --test         [Experimental] Run Velocity tests using phantomjs and exit.
+  --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
 >>> debug
 Run the project, but suspend the server process for debugging.
