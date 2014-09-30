@@ -33,8 +33,11 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default host to use when building apps. (Specifically, for mobile
 // builds, we need a host to use for DDP_DEFAULT_CONNECTION_URL if the
-// user doesn't specify one with -p or --mobile-port).
+// user doesn't specify one with -p or --mobile-server).
 var DEFAULT_BUILD_HOST = "localhost";
+
+// The default port that the development server listens on.
+var DEFAULT_PORT = 3000;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -60,24 +63,6 @@ var qualifySitename = function (site) {
 var hostedWithGalaxy = function (site) {
   var site = qualifySitename(site);
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
-};
-
-var parseHostPort = function (str) {
-  // XXX factor this out into a {type: host/port}?
-  var portMatch = str.match(/^(?:(.+):)?([0-9]+)$/);
-  if (!portMatch) {
-    throw new Error(
-"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
-"port is a number. Try 'meteor help run' for help.\n");
-  }
-
-  var host = portMatch[1];
-  var port = parseInt(portMatch[2]);
-
-  return {
-    host: host,
-    port: port
-  };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -157,7 +142,9 @@ main.registerCommand({
   requiresApp: true,
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: '3000' },
+    port: { type: String, short: "p", default: '' + DEFAULT_PORT },
+    'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'app-port': { type: String },
     'http-proxy-port': { type: String },
@@ -197,7 +184,9 @@ main.registerCommand({
 
   cordova.verboseLog('Parsing the --port option');
   try {
-    var parsedHostPort = parseHostPort(options.port);
+    var parsedUrl = utils.parseUrl(options.port, {
+      port: DEFAULT_PORT
+    });
   } catch (err) {
     if (options.verbose) {
       Console.stderr.write('Error while parsing --port option: '
@@ -208,9 +197,18 @@ main.registerCommand({
     return 1;
   }
 
-  var mobilePort = options["mobile-port"] || options.port;
+ // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
+  var mobileServer = options["mobile-server"] ||
+        options["mobile-port"] || options.port;
   try {
-    var parsedMobileHostPort = parseHostPort(mobilePort);
+    var parsedMobileServer = utils.parseUrl(
+      mobileServer,
+      {
+        host: DEFAULT_BUILD_HOST,
+        port: DEFAULT_PORT,
+        protocol: "http://"
+      }
+    );
   } catch (err) {
     if (options.verbose) {
       process.stderr.write('Error while parsing --mobile-port option: '
@@ -220,8 +218,6 @@ main.registerCommand({
     }
     return 1;
   }
-
-  parsedMobileHostPort.host = parsedMobileHostPort.host || DEFAULT_BUILD_HOST;
 
   options.httpProxyPort = options['http-proxy-port'];
 
@@ -235,9 +231,9 @@ main.registerCommand({
 "         configuration allows clients to talk to each other",
 "         (no client isolation).",
 "",
-"         You can pass the host and the port in -p or --mobile-port argument.",
-"         For example: --mobile-port " +
-  ip.address() + ":" + parsedMobileHostPort.port + "\n\n"
+"         You can pass the host and the port in the --mobile-server argument.",
+"         For example: --mobile-server " +
+  ip.address() + ":" + parsedUrl.port + "\n\n"
 ].join("\n"));
   }
 
@@ -267,8 +263,9 @@ main.registerCommand({
 
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
-                 options, parsedMobileHostPort));
-      runners = runners.concat(cordova.buildPlatformRunners(localPath, options.args, options));
+                 options, parsedMobileServer));
+      runners = runners.concat(
+        cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
       if (options.verbose) {
         Console.stderr.write('Error while running for mobile platforms ' +
@@ -311,8 +308,8 @@ main.registerCommand({
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    proxyPort: parsedHostPort.port,
-    proxyHost: parsedHostPort.host,
+    proxyPort: parsedUrl.port,
+    proxyHost: parsedUrl.host,
     httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
@@ -575,7 +572,9 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
-    port: { type: String, short: "p", default: DEFAULT_BUILD_HOST + ":3000" },
+    "mobile-server": { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    "mobile-port": { type: String },
     settings: { type: String },
     verbose: { type: Boolean, short: "v" },
     // Undocumented
@@ -627,29 +626,40 @@ var buildCommand = function (options) {
   var appName = path.basename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms)) {
-    try {
-      var parsedHostPort = parseHostPort(options.port);
-    } catch (err) {
-      Console.stderr.write(err.message);
-      return 1;
-    }
 
-    // For Cordova builds, if a host isn't specified, use localhost, but
-    // warn about it.
-    var cordovaBuildHost = parsedHostPort.host || DEFAULT_BUILD_HOST;
-    if (cordovaBuildHost === DEFAULT_BUILD_HOST) {
+    // XXX COMPAT WITH 0.9.2.2 -- the mobile-port is deprecated
+    var mobileServer = options["mobile-server"] ||
+          options["mobile-port"];
+
+    if (mobileServer) {
+      try {
+        var parsedMobileServer = utils.parseUrl(
+          mobileServer,
+          {
+            host: DEFAULT_BUILD_HOST,
+            port: DEFAULT_PORT,
+            protocol: "http://"
+          }
+        );
+      } catch (err) {
+        Console.stderr.write(err.message);
+        return 1;
+      }
+    } else {
+      // For Cordova builds, require '--mobile-server'.
       // XXX better error message?
-      process.stdout.write(
-        "Supply the server hostname and port argument in the -p option\n" +
-        "for the mobile apps builds.\n");
+      process.stderr.write(
+"Supply the server hostname and port in the --mobile-server option\n" +
+"for mobile app builds.\n");
       return 1;
     }
     var cordovaSettings = {};
 
     cordova.buildPlatforms(localPath, mobilePlatforms,
       _.extend({}, options, {
-        host: cordovaBuildHost,
-        port: parsedHostPort.port,
+        host: parsedMobileServer.host,
+        port: parsedMobileServer.port,
+        protocol: parsedMobileServer.protocol,
         appName: appName
       }));
   }
@@ -1104,8 +1114,12 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: "localhost:3000" },
+    port: { type: String, short: "p", default:
+            DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT },
     'http-proxy-port': { type: String },
+    'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    'mobile-port': { type: String },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1136,7 +1150,23 @@ main.registerCommand({
   }
 }, function (options) {
   try {
-    var parsedHostPort = parseHostPort(options.port);
+    var parsedUrl = utils.parseUrl(
+      options.port, { port: DEFAULT_PORT });
+  } catch (err) {
+    Console.stderr.write(err.message);
+    return 1;
+  }
+
+  try {
+    var parsedMobileServer = utils.parseUrl(
+      // XXX COMPAT WITH 0.9.2.2
+      options["mobile-server"] || options["mobile-port"] || options.port,
+      {
+        host: DEFAULT_BUILD_HOST,
+        port: DEFAULT_PORT,
+        protocol: "http://"
+      }
+    );
   } catch (err) {
     Console.stderr.write(err.message);
     return 1;
@@ -1145,9 +1175,10 @@ main.registerCommand({
   options.httpProxyPort = options['http-proxy-port'];
 
   // XXX not good to change the options this way
-  _.extend(options, parsedHostPort);
+  _.extend(options, parsedUrl);
 
   var testPackages = null;
+
   var localPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
@@ -1215,7 +1246,9 @@ main.registerCommand({
           appName: path.basename(testRunnerAppDir),
           debug: ! options.production,
           // Default to localhost for mobile builds.
-          host: parsedHostPort.host || DEFAULT_BUILD_HOST
+          host: parsedMobileServer.host,
+          protocol: parsedMobileServer.protocol,
+          port: parsedMobileServer.port
         }));
       runners = runners.concat(cordova.buildPlatformRunners(
         localPath, mobilePlatforms, options));
@@ -1733,7 +1766,7 @@ main.registerCommand({
   name: 'dummy',
   options: {
     email: { type: String, short: "e", required: true },
-    port: { type: Number, short: "p", default: 3000 },
+    port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
     changed: { type: Boolean }

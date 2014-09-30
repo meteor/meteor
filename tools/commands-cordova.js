@@ -189,10 +189,11 @@ var generateCordovaBoilerplate = function (clientDir, options) {
 
   var runtimeConfig = {
     meteorRelease: meteorRelease,
-    ROOT_URL: 'http://' + options.host + ':' + options.port + '/',
+    ROOT_URL: options.protocol + options.host + ':' + options.port + '/',
     // XXX propagate it from options?
     ROOT_URL_PATH_PREFIX: '',
-    DDP_DEFAULT_CONNECTION_URL: 'http://' + options.host + ':' + options.port,
+    DDP_DEFAULT_CONNECTION_URL: options.protocol +
+      options.host + ':' + options.port,
     autoupdateVersionCordova: version,
     cleanCache: options.clean,
     httpProxyPort: options.httpProxyPort
@@ -1151,4 +1152,3 @@ main.registerCommand({
   }
   return 0;
 });
-
