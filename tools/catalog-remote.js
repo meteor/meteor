@@ -22,9 +22,11 @@ var Console = require('./console.js').Console;
 // XXX: Rationalize these flags.  Maybe use the logger?
 DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
 
+SYNCTOKEN_ID = "1";
+
 METADATA_LAST_SYNC = "lastsync";
 
-BUSY_RETRY_ATTEMPTS = 5;
+BUSY_RETRY_ATTEMPTS = 10;
 BUSY_RETRY_INTERVAL = 1000;
 
 var Mutex = function () {
@@ -71,13 +73,15 @@ var Db = function (dbFile, options) {
 
   self._dbFile = dbFile;
 
-  // XXX: Re-enable
-  self._autoPrepare = false;
+  self._autoPrepare = true;
   self._prepared = {};
 
   self._db = self.open(dbFile);
 
   self._transactionMutex = new Mutex();
+
+  // WAL mode copes much better with (multi-process) concurrency
+  self.execute('PRAGMA journal_mode=WAL');
 };
 
 _.extend(Db.prototype, {
@@ -96,16 +100,20 @@ _.extend(Db.prototype, {
 
   runInTransaction: function (action) {
     var self = this;
-    var future = new Future();
 
     var runOnce = function () {
+      var future = new Future();
+
       var t1 = Date.now();
 
       var rollback = true;
       var result = null;
       var resultError = null;
 
-      self.execute("BEGIN IMMEDIATE TRANSACTION");
+      // XXX: Use DEFERRED mode?
+      var mode = "IMMEDIATE";
+
+      self.execute("BEGIN " + mode + " TRANSACTION");
       try {
         result = action(self);
         rollback = false;
@@ -137,6 +145,8 @@ _.extend(Db.prototype, {
         }
       }
 
+      self._closePreparedStatements();
+
       if (DEBUG_SQL) {
         var t2 = Date.now();
         // XXX: Hack around not having loggers
@@ -157,7 +167,9 @@ _.extend(Db.prototype, {
       } catch (err) {
         var retry = false;
         // Grr... doesn't expose error code; must string-match
-        if (err.message && err.message == "SQLITE_BUSY: database is locked") {
+        if (err.message
+            && (   err.message == "SQLITE_BUSY: database is locked"
+                || err.message == "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
           if (attempt < BUSY_RETRY_ATTEMPTS) {
             retry = true;
           }
@@ -191,7 +203,14 @@ _.extend(Db.prototype, {
     var self = this;
 
     var prepared = null;
-    if (false && self._autoPrepare) {
+    var prepare = self._autoPrepare;
+    if (prepare && (!params || !params.length)) {
+      // This seems to be a straight bug; we can't execute with empty parameters,
+      // even if we special-case it and pass run(sql, callback)
+      Console.debug("No params, won't prepare: ", sql);
+      prepare = false;
+    }
+    if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
 
@@ -201,7 +220,7 @@ _.extend(Db.prototype, {
 
     var future = new Future();
 
-    //Console.debug("Executing SQL ", sql);
+    //Console.debug("Executing SQL ", sql, params);
 
     var callback = function (err, rows) {
       if (err) {
@@ -245,7 +264,7 @@ _.extend(Db.prototype, {
 
     var future = new Future();
 
-    //Console.debug("Executing SQL ", sql);
+    //Console.debug("Executing SQL ", sql, params);
 
     var callback = function (err) {
       if (err) {
@@ -293,6 +312,27 @@ _.extend(Db.prototype, {
       self._prepared[sql] = prepared;
     }
     return prepared;
+  },
+
+
+  // Close any cached prepared statements
+  _closePreparedStatements: function () {
+    var self = this;
+
+    var prepared = self._prepared;
+    self._prepared = {};
+
+    _.each(prepared, function (statement) {
+      var future = new Future();
+      statement.finalize(function (err) {
+        // We return, not throw it, because we don't want to throw
+        future['return'](err);
+      });
+      var err = future.wait();
+      if (err) {
+        Console.warn("Error finalizing statement ", err);
+      }
+    });
   }
 
 });
@@ -680,7 +720,7 @@ _.extend(RemoteCatalog.prototype, {
 
       var syncToken = serverData.syncToken;
       Console.debug("Adding syncToken: ", JSON.stringify(syncToken));
-      syncToken._id = "1"; //Add fake _id so it fits the pattern
+      syncToken._id = SYNCTOKEN_ID; //Add fake _id so it fits the pattern
       self.tableSyncToken.upsert(txn, [syncToken]);
 
       if (syncComplete) {
@@ -700,7 +740,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getSyncToken: function() {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM syncToken", [], { noRetry: true });
+    var result = self._simpleQuery("SELECT content FROM syncToken WHERE _id=?", [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
       return {};
