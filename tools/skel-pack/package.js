@@ -1,7 +1,7 @@
 Package.describe({
-  summary: " \* Fill me in! *\ ",
+  summary: " /* Fill me in! */ ",
   version: "1.0.0",
-  git: " \* Fill me in! *\ "
+  git: " /* Fill me in! */ "
 });
 
 Package.onUse(function(api) {
