@@ -4,88 +4,92 @@ var _ = require('underscore');
 var buildmessage = require('../buildmessage.js');
 var catalog = require('../catalog.js');
 
+// Easy to change back to enable console.log
+var check = function (v) { /*console.log(v)*/ };
+
 selftest.define("dumpPreBuilt", [], function () {
-	console.log(catalog.uniload.getAllPackageNames());
-	console.log(catalog.complete.getAllPackageNames());
+
+  check(catalog.uniload.getAllPackageNames());
+  check(catalog.complete.getAllPackageNames());
 });
 
 selftest.define("unitTestCatalog", [], function () {
   //Test getVersion
   var messages = buildmessage.capture(function () {
-    console.log(catalog.official.getVersion("accounts-facebook", "1.0.0"));
-    console.log(catalog.complete.getVersion("accounts-facebook", "1.0.0"));
+    check(catalog.official.getVersion("accounts-facebook", "1.0.0"));
+    check(catalog.complete.getVersion("accounts-facebook", "1.0.0"));
 
-    console.log(catalog.official.getVersion("missingPackage", "1.0.0"));
-    console.log(catalog.complete.getVersion("missingPackage", "1.0.0"));
+    check(catalog.official.getVersion("missingPackage", "1.0.0"));
+    check(catalog.complete.getVersion("missingPackage", "1.0.0"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getSortedVersions("accounts-facebook"));
-    console.log(catalog.complete.getSortedVersions("accounts-facebook"));
+    check(catalog.official.getSortedVersions("accounts-facebook"));
+    check(catalog.complete.getSortedVersions("accounts-facebook"));
 
-    console.log(catalog.official.getSortedVersions("missingPackage"));
-    console.log(catalog.complete.getSortedVersions("missingPackage"));
+    check(catalog.official.getSortedVersions("missingPackage"));
+    check(catalog.complete.getSortedVersions("missingPackage"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getAllBuilds("accounts-base", "1.0.0"));
-    console.log(catalog.complete.getAllBuilds("accounts-base", "1.0.0"));
+    check(catalog.official.getAllBuilds("accounts-base", "1.0.0"));
+    check(catalog.complete.getAllBuilds("accounts-base", "1.0.0"));
 
-    console.log(catalog.official.getAllBuilds("missingPackage", "1.0.0"));
-    console.log(catalog.complete.getAllBuilds("missingPackage", "1.0.0"));
+    check(catalog.official.getAllBuilds("missingPackage", "1.0.0"));
+    check(catalog.complete.getAllBuilds("missingPackage", "1.0.0"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getAllReleaseTracks());
+    check(catalog.official.getAllReleaseTracks());
   });
   
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getDefaultReleaseVersion());
+    check(catalog.official.getDefaultReleaseVersion());
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getLatestMainlineVersion("accounts-base"));
-    console.log(catalog.official.getLatestMainlineVersion("missing"));
+    check(catalog.official.getLatestMainlineVersion("accounts-base"));
+    check(catalog.official.getLatestMainlineVersion("missing"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getPackage("iron:core"));
-    console.log(catalog.complete.getPackage("iron:core"));
+    check(catalog.official.getPackage("iron:core"));
+    check(catalog.complete.getPackage("iron:core"));
 
-    console.log(catalog.official.getPackage("missing"));
-    console.log(catalog.complete.getPackage("missing"));
+    check(catalog.official.getPackage("missing"));
+    check(catalog.complete.getPackage("missing"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getReleaseTrack("METEOR"));
-    // console.log(catalog.complete.getReleaseTrack("METEOR"));
+    check(catalog.official.getReleaseTrack("METEOR"));
+    // check(catalog.complete.getReleaseTrack("METEOR"));
 
-    console.log(catalog.official.getReleaseTrack("missing"));
-    // console.log(catalog.complete.getReleaseTrack("missing"));
+    check(catalog.official.getReleaseTrack("missing"));
+    // check(catalog.complete.getReleaseTrack("missing"));
   });
  
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getReleaseVersion("METEOR", "0.9.1"));
-    // console.log(catalog.complete.getReleaseTrack("METEOR"));
+    check(catalog.official.getReleaseVersion("METEOR", "0.9.1"));
+    // check(catalog.complete.getReleaseTrack("METEOR"));
 
-    console.log(catalog.official.getReleaseVersion("missing", "0.9.1"));
-    // console.log(catalog.complete.getReleaseTrack("missing"));
+    check(catalog.official.getReleaseVersion("missing", "0.9.1"));
+    // check(catalog.complete.getReleaseTrack("missing"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.official.getSortedRecommendedReleaseVersions("METEOR", "0.8.0"));
-    // console.log(catalog.complete.getReleaseTrack("METEOR"));
+    check(catalog.official.getSortedRecommendedReleaseVersions("METEOR", "0.8.0"));
+    // check(catalog.complete.getReleaseTrack("METEOR"));
 
-    console.log(catalog.official.getSortedRecommendedReleaseVersions("missing", "0.8.0"));
-    // console.log(catalog.complete.getReleaseTrack("missing"));
+    check(catalog.official.getSortedRecommendedReleaseVersions("missing", "0.8.0"));
+    // check(catalog.complete.getReleaseTrack("missing"));
   });
 
   messages = buildmessage.capture(function () {
-    console.log(catalog.complete.getLocalPackageNames());
+    check(catalog.complete.getLocalPackageNames());
   });
 
   // messages = buildmessage.capture(function () {
-  //   console.log(catalog.complete.getBuildsForArches("accounts-base", "1.0.0", "mac"));
+  //   check(catalog.complete.getBuildsForArches("accounts-base", "1.0.0", "mac"));
   // });
 
 	//getAllPackageNames
