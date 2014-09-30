@@ -816,6 +816,68 @@ var Client = function (options) {
   }
 };
 
+var SimpleProcess = function (command, args, options) {
+  var self = this;
+
+  var defaultOptions = {};
+  // Make stdin,stdout & stderr pipes (not shared)
+  defaultOptions.stdio = ['pipe', 'pipe', 'pipe'];
+  defaultOptions.env = process.env;
+
+  options = _.extend(defaultOptions, options);
+
+  self.command = command;
+  self.args = args;
+  self.options = options;
+
+  self.exitFuture = new Future();
+  self.exitCode = undefined;
+
+  self.stdout = '';
+  self.stderr = '';
+};
+
+_.extend(SimpleProcess.prototype, {
+  start: function () {
+    var self = this;
+    if (self.process) {
+      throw new Error("Process already started");
+    }
+    self.process = child_process.spawn( self.command,
+                                        self.args,
+                                        self.options);
+    self.process.on('close', function (exitCode) {
+      self.exitCode = exitCode;
+
+      // XXX: Disable through an option
+      if (exitCode != 0) {
+        console.log("Unexpected exit code", exitCode, "from", self.command, self.args, "\nstdout:\n", self.stdout, "\nstderr:\n", self.stderr);
+      }
+    });
+
+    self.process.stdout.on('data', function (data) {
+      self.stdout = self.stdout + data;
+    });
+
+    self.process.stderr.on('data', function (data) {
+      self.stderr = self.stderr + data;
+    });
+
+    self.stdin = self.process.stdin;
+  },
+
+  waitForExit: function () {
+    var self = this;
+    self.exitFuture.wait();
+    return self.exitCode;
+  },
+
+  kill: function () {
+    var self = this;
+    self.process.kill();
+  }
+});
+
 // PhantomClient
 var PhantomClient = function (options) {
   var self = this;
@@ -833,12 +895,13 @@ _.extend(PhantomClient.prototype, {
 
     var phantomScript = "require('webpage').create().open('" + self.url + "');";
     var phantomPath = phantomjs.path;
-    self.process = child_process.execFile(
-      '/bin/bash',
-      ['-c',
-       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "END\n")]);
+
+    self.process = new SimpleProcess(phantomjs.path, ['--load-images=no', '/dev/stdin']);
+    self.process.start();
+    self.process.stdin.write(phantomScript + "\n");
+    self.process.stdin.end();
   },
+
   stop: function() {
     var self = this;
     self.process && self.process.kill();
