@@ -246,6 +246,13 @@ var toc = [
       "Accounts.sendResetPasswordEmail",
       "Accounts.sendEnrollmentEmail",
       "Accounts.sendVerificationEmail",
+      {type: "spacer"},
+
+      {name: "Accounts.onResetPasswordLink", id: "Accounts-onResetPasswordLink"},
+      {name: "Accounts.onEnrollmentLink", id: "Accounts-onEnrollmentLink"},
+      {name: "Accounts.onEmailVerificationLink", id: "Accounts-onEmailVerificationLink"},
+      {type: "spacer"},
+
       "Accounts.emailTemplates"
     ],
 

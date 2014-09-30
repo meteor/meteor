@@ -2254,6 +2254,8 @@ Tinytest.add("minimongo - modify", function (test) {
          {a: [1, 2, 3, 4]}); // tested
   modify({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}},
          {a: [1, 2, {b: 12, $each: [3, 1, 4]}]}); // tested
+  modify({}, {$addToSet: {a: {$each: []}}}, {a: []});
+  modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
   modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
   modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
 

@@ -152,7 +152,7 @@ var SourceArch = function (pkg, options) {
 
   // A function that returns the source files for this architecture. Array of
   // objects with keys "relPath" and "fileOptions". Null if loaded from
-  // unipackage.
+  // isopack.
   //
   // fileOptions is optional and represents arbitrary options passed
   // to "api.add_files"; they are made available on to the plugin as
@@ -271,7 +271,7 @@ var PackageSource = function (catalog) {
 
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
-  // built unipackages for all the packages in uniload.ROOT_PACKAGES as well as
+  // built isopacks for all the packages in uniload.ROOT_PACKAGES as well as
   // their transitive (strong) dependencies.
   self.includeTool = false;
 
@@ -599,7 +599,7 @@ _.extend(PackageSource.prototype, {
       // - sources: sources for the plugin (array of string)
       // - npmDependencies: map from npm package name to required
       //   version (string)
-      
+
       /**
        * @summary Define a build plugin. A build plugin extends the build
        * process for apps and packages that use this package. For example,

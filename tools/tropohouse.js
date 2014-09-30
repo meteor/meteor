@@ -11,7 +11,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
-var Unipackage = require('./unipackage.js').Unipackage;
+var Isopack = require('./isopack.js').Isopack;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 
@@ -221,7 +221,7 @@ _.extend(exports.Tropohouse.prototype, {
     if (packageLinkTarget) {
       // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
       // so this strips off the part before the '++'.
-      // XXX maybe we should just read the unipackage.json instead of
+      // XXX maybe we should just read the isopack.json instead of
       //     depending on the symlink?
       var archPart = packageLinkTarget.split('++')[1];
       if (!archPart)
@@ -267,20 +267,20 @@ _.extend(exports.Tropohouse.prototype, {
         buildTempDirs.push(self.downloadBuildToTempDir({packageName: packageName, version: version}, build));
       });
 
-      // We need to turn our builds into a single unipackage.
-      var unipackage = new Unipackage;
+      // We need to turn our builds into a single isopack.
+      var isopack = new Isopack;
       _.each(buildTempDirs, function (buildTempDir, i) {
-        unipackage._loadUnibuildsFromPath(
+        isopack._loadUnibuildsFromPath(
           packageName,
           buildTempDir,
-          {firstUnipackage: i === 0});
+          {firstIsopack: i === 0});
       });
       // Note: wipeAllPackages depends on this filename structure, as does the
       // part above which readlinks.
       var newPackageLinkTarget = '.' + version + '.'
-            + utils.randomToken() + '++' + unipackage.buildArchitectures();
+            + utils.randomToken() + '++' + isopack.buildArchitectures();
       var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
-      unipackage.saveToPath(combinedDirectory, {
+      isopack.saveToPath(combinedDirectory, {
         // We got this from the server, so we can't rebuild it.
         elideBuildInfo: true
       });

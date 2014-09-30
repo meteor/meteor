@@ -22,7 +22,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var packageLoader = require('./package-loader.js');
 var Console = require('./console.js').Console;
@@ -93,7 +93,7 @@ main.registerCommand({
     buildmessage.assertInCapture();
     loader.downloadMissingPackages();
     _.each(packagesToLoad, function (name) {
-      // Calling getPackage on the loader will return a unipackage object, which
+      // Calling getPackage on the loader will return a isopack object, which
       // means that the package will be compiled/downloaded. That we throw the
       // package variable away afterwards is immaterial.
       loader.getPackage(name);
@@ -101,7 +101,7 @@ main.registerCommand({
   };
 
   var messages = buildmessage.capture({
-    title: 'getting packages ready'
+    title: 'Getting packages ready'
   }, function () {
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
@@ -187,7 +187,7 @@ main.registerCommand({
 
   var packageSource, compileResult;
   var messages = buildmessage.capture(
-    { title: "building the package" },
+    { title: "Building the package" },
     function () {
 
       packageSource = new PackageSource(catalog.complete);
@@ -248,7 +248,7 @@ main.registerCommand({
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
-      title: "publishing the package"
+      title: "Publishing the package"
     }, function () {
       ec = packageClient.publishPackage(
         packageSource, compileResult, conn, {
@@ -275,7 +275,7 @@ main.registerCommand({
     return ec;
 
   // Warn the user if their package is not good for all architectures.
-  var allArchs = compileResult.unipackage.buildArchitectures().split('+');
+  var allArchs = compileResult.isopack.buildArchitectures().split('+');
   if (_.any(allArchs, function (arch) {
     return arch.match(/^os\./);
   })) {
@@ -357,9 +357,9 @@ main.registerCommand({
     return 1;
   }
 
-  var unipkg;
+  var isopk;
   var messages = buildmessage.capture({
-    title: "building package " + name
+    title: "Building package " + name
   }, function () {
     var packageSource = new PackageSource(catalog.complete);
 
@@ -492,9 +492,9 @@ main.registerCommand({
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
 
-    unipkg = compiler.compile(packageSource, {
+    isopk = compiler.compile(packageSource, {
       officialBuild: true
-    }).unipackage;
+    }).isopack;
     if (buildmessage.jobHasMessages())
       return;
   });
@@ -514,9 +514,9 @@ main.registerCommand({
 
   try {
     messages = buildmessage.capture({
-      title: "publishing package " + name
+      title: "Publishing package " + name
     }, function () {
-      packageClient.createAndPublishBuiltPackage(conn, unipkg);
+      packageClient.createAndPublishBuiltPackage(conn, isopk);
     });
   } catch (e) {
     packageClient.handlePackageServerConnectionError(e);
@@ -713,7 +713,7 @@ main.registerCommand({
     var toPublish = {};
     var canBuild = true;
     var messages = buildmessage.capture(
-      {title: "rebuilding local packages"},
+      {title: "Rebuilding local packages"},
       function () {
         Console.info("Rebuilding local packages...");
         _.each(contents, function (item) {
@@ -726,12 +726,12 @@ main.registerCommand({
           // in a release.
           var packageDir = path.resolve(path.join(localPackageDir, item));
           // Consider a directory to be a package source tree if it
-          // contains 'package.js'. (We used to support unipackages in
+          // contains 'package.js'. (We used to support isopacks in
           // localPackageDirs, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
             var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
-              { title: "building package " + item },
+              { title: "Building package " + item },
               function () {
                 Console.info("  checking consistency of " + item + " ");
 
@@ -771,7 +771,7 @@ main.registerCommand({
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  Console.warn("\n ... Error compiling unipackage: " + item );
+                  Console.warn("\n ... Error compiling isopack: " + item );
                   canBuild = false;
                   return;
                 };
@@ -822,7 +822,7 @@ main.registerCommand({
                   var existingBuild =
                         catalog.official.getBuildWithPreciseBuildArchitectures(
                           oldVersion,
-                          compileResult.unipackage.buildArchitectures());
+                          compileResult.isopack.buildArchitectures());
 
                   // If the version number mentioned in package.js exists, but
                   // there's no build of this architecture, then either the old
@@ -833,11 +833,11 @@ main.registerCommand({
                   var somethingChanged = !existingBuild;
 
                   if (!somethingChanged) {
-                    // Save the unipackage, just to get its hash.
+                    // Save the isopack, just to get its hash.
                     // XXX this is redundant with the bundle build step that
                     // publishPackage will do later
                     var bundleBuildResult = packageClient.bundleBuild(
-                      compileResult.unipackage);
+                      compileResult.isopack);
                     if (bundleBuildResult.treeHash !==
                         existingBuild.build.treeHash) {
                       somethingChanged = true;
@@ -884,7 +884,7 @@ main.registerCommand({
       var pubEC;
       try {
         messages = buildmessage.capture({
-          title: "publishing package " + name
+          title: "Publishing package " + name
         }, function () {
           var opts = {
             new: !catalog.official.getPackage(name)
@@ -2328,7 +2328,7 @@ main.registerCommand({
     _.each(osArches, function (osArch) {
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
+          title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
           if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
@@ -2383,7 +2383,7 @@ main.registerCommand({
       path.join(tmpdir, '.meteor'), catalog.official);
     var messages = buildmessage.capture(function () {
       buildmessage.enterJob({
-        title: "downloading tool package " + toolPkg.package + "@" +
+        title: "Downloading tool package " + toolPkg.package + "@" +
           toolPkg.constraint
       }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures({
@@ -2394,7 +2394,7 @@ main.registerCommand({
       });
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "downloading package " + pkgName + "@" + pkgVersion
+          title: "Downloading package " + pkgName + "@" + pkgVersion
         }, function () {
           tmpTropo.maybeDownloadPackageForArchitectures({
             packageName: pkgName,
@@ -2414,11 +2414,11 @@ main.registerCommand({
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
-    var toolUnipackagePath =
+    var toolIsopackPath =
           tmpTropo.packagePath(toolPkg.package, toolPkg.constraint);
-    var toolUnipackage = new unipackage.Unipackage;
-    toolUnipackage.initFromPath(toolPkg.package, toolUnipackagePath);
-    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk, {arch: osArch});
+    var toolIsopack = new isopack.Isopack;
+    toolIsopack.initFromPath(toolPkg.package, toolIsopackPath);
+    var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
     fs.symlinkSync(

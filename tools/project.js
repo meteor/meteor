@@ -290,11 +290,11 @@ _.extend(Project.prototype, {
 
       var programSubdir = path.join(self.getProgramsDirectory(), item);
       buildmessage.enterJob({
-        title: "initializing program `" + programName + "`",
+        title: "Initializing program `" + programName + "`",
         rootPath: self.rootDir
       }, function () {
         var packageSource;
-        // For now, if it turns into a unipackage, it should have a version.
+        // For now, if it turns into a isopack, it should have a version.
         var programSource = new PackageSource(catalog.complete);
         programSource.initFromPackageDir(programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {

@@ -436,7 +436,7 @@ var error = function (message, options) {
 var exception = function (error) {
   if (! currentJob.get()) {
     // XXX this may be the wrong place to do this, but it makes syntax errors in
-    // files loaded via unipackage.load have context.
+    // files loaded via isopack.load have context.
     if (error instanceof files.FancySyntaxError) {
       error = new Error("Syntax error: " + error.message + " at " +
         error.file + ":" + error.line + ":" + error.column);

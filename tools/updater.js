@@ -9,7 +9,7 @@ var release = require('./release.js');
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 
@@ -164,7 +164,7 @@ var updateMeteorToolSymlink = function () {
     try {
       var messages = buildmessage.capture(function () {
         buildmessage.enterJob({
-          title: "downloading tool package " + latestRelease.tool
+          title: "Downloading tool package " + latestRelease.tool
         }, function () {
           tropohouse.default.maybeDownloadPackageForArchitectures({
             packageName: latestReleaseToolPackage,
@@ -175,7 +175,7 @@ var updateMeteorToolSymlink = function () {
         });
         _.each(latestRelease.packages, function (pkgVersion, pkgName) {
           buildmessage.enterJob({
-            title: "downloading package " + pkgName + "@" + pkgVersion
+            title: "Downloading package " + pkgName + "@" + pkgVersion
           }, function () {
             tropohouse.default.maybeDownloadPackageForArchitectures({
               packageName: pkgName,
@@ -193,12 +193,12 @@ var updateMeteorToolSymlink = function () {
       return;  // since we are running in the background
     }
 
-    var toolUnipackage = new unipackage.Unipackage;
-    toolUnipackage.initFromPath(
+    var toolIsopack = new isopack.Isopack;
+    toolIsopack.initFromPath(
       latestReleaseToolPackage,
       tropohouse.default.packagePath(latestReleaseToolPackage,
                                      latestReleaseToolVersion));
-    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+    var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
                                  {arch: archinfo.host()});
 
     // XXX maybe we shouldn't throw from this background thing

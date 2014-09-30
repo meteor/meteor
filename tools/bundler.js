@@ -193,7 +193,17 @@ var stripLeadingSlash = function (p) {
 
 // Contents of main.js in bundles. Exported for use by the bundler
 // tests.
-exports._mainJsContents = "process.argv.splice(2, 0, 'program.json');\nprocess.chdir(require('path').join(__dirname, 'programs', 'server'));\nrequire('./programs/server/boot.js');\n";
+exports._mainJsContents = [
+  "",
+  "// The debugger pauses here when you run `meteor debug`, because this is ",
+  "// the very first code to be executed by the server process. If you have ",
+  "// not already added any `debugger` statements to your code, feel free to ",
+  "// do so now, wait for the server to restart, then reload this page and ",
+  "// click the |\u25b6 button to continue.",
+  "process.argv.splice(2, 0, 'program.json');",
+  "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
+  "require('./programs/server/boot.js');",
+].join("\n");
 
 ///////////////////////////////////////////////////////////////////////////////
 // NodeModulesDirectory
@@ -456,7 +466,7 @@ _.extend(Target.prototype, {
   // target-type-dependent function such as write() or toJsImage().
   //
   // options
-  // - packages: packages to include (Unipackage or 'foo'), per
+  // - packages: packages to include (Isopack or 'foo'), per
   //   _determineLoadOrder
   // - minify: true to minify
   // - addCacheBusters: if true, make all files cacheable by adding
@@ -504,11 +514,11 @@ _.extend(Target.prototype, {
   // them, put them in load order, save in unibuilds.
   //
   // (Note: this is also called directly by
-  // bundler.iterateOverAllUsedUnipackages, kinda hackily.)
+  // bundler.iterateOverAllUsedIsopacks, kinda hackily.)
   //
   // options include:
   // - packages: an array of packages (or, properly speaking, unibuilds)
-  //   to include. Each element should either be a Unipackage object or a
+  //   to include. Each element should either be a Isopack object or a
   //   package name as a string
   _determineLoadOrder: function (options) {
     var self = this;
@@ -1177,7 +1187,7 @@ var JsImage = function () {
 _.extend(JsImage.prototype, {
   // Load the image into the current process. It gets its own unique
   // Package object containing its own private copy of every
-  // unipackage that it uses. This Package object is returned.
+  // isopack that it uses. This Package object is returned.
   //
   // If `bindings` is provided, it is a object containing a set of
   // variables to set in the global environment of the executed
@@ -1468,7 +1478,7 @@ JsImage.readFromDisk = function (controlFilePath) {
     };
 
     if (item.sourceMap) {
-      // XXX this is the same code as unipackage.initFromPath
+      // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
       loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
@@ -1868,7 +1878,7 @@ exports.bundle = function (options) {
   var targets = {};
 
   var messages = buildmessage.capture({
-    title: "building the application"
+    title: "Building the application"
   }, function () {
     if (! release.usingRightReleaseForApp(appDir))
       throw new Error("running wrong release for app?");
@@ -1942,10 +1952,10 @@ exports.bundle = function (options) {
       serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
-      // Create a Unipackage object that represents the app
+      // Create a Isopack object that represents the app
       var packageSource = new PackageSource(whichCatalog);
       packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource).unipackage;
+      var app = compiler.compile(packageSource).isopack;
 
       var clientTargets = [];
       // Client
@@ -2226,20 +2236,20 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var unipackage = compiler.compile(packageSource, {
+  var isopack = compiler.compile(packageSource, {
     ignoreProjectDeps: options.ignoreProjectDeps
-  }).unipackage;
+  }).isopack;
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only
-    // used to build plugins (during package build) and for unipackage.load
+    // used to build plugins (during package build) and for isopack.load
     // (which always wants to build for the current host).
     arch: archinfo.host()
   });
-  target.make({ packages: [unipackage] });
+  target.make({ packages: [isopack] });
 
   return {
     image: target.toJsImage(),
@@ -2255,11 +2265,11 @@ exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
 };
 
-// Given an array of unipackage names, invokes the callback with each
-// corresponding Unipackage object, plus all of their transitive dependencies,
+// Given an array of isopack names, invokes the callback with each
+// corresponding Isopack object, plus all of their transitive dependencies,
 // with a topological sort.
-exports.iterateOverAllUsedUnipackages = function (loader, arch,
-                                                  packageNames, callback) {
+exports.iterateOverAllUsedIsopacks =
+  function (loader, arch, packageNames, callback) {
   buildmessage.assertInCapture();
   var target = new Target({packageLoader: loader,
                            arch: arch});
@@ -2268,3 +2278,4 @@ exports.iterateOverAllUsedUnipackages = function (loader, arch,
     callback(unibuild.pkg);
   });
 };
+
