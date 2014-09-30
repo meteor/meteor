@@ -818,7 +818,9 @@ _.extend(RemoteCatalog.prototype, {
 
   getMetadata: function(key) {
     var self = this;
-    var row = self.tableMetadata.find(self.db, key);
+    var row = self.db.runInTransaction(function (txn) {
+      return self.tableMetadata.find(txn, key);
+    });
     if (row) {
       return JSON.parse(row['content']);
     }
