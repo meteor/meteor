@@ -68,6 +68,69 @@ _.extend(Mutex.prototype, {
   }
 });
 
+var Txn = function (db) {
+  var self = this;
+  self.db = db;
+  self.closed = false;
+  self.committed = false;
+  self.started = false;
+};
+
+_.extend(Txn.prototype, {
+  // Runs a SQL query and returns the rows
+  query: function (sql, params) {
+    var self = this;
+    return self.db._query(sql, params);
+  },
+
+  // Runs a SQL statement, returning no rows
+  execute: function (sql, params) {
+    var self = this;
+    return self.db._execute(sql, params);
+  },
+
+  // Start a transaction
+  begin: function (mode) {
+    var self = this;
+
+    // XXX: Use DEFERRED mode?
+    mode = mode || "IMMEDIATE";
+
+    if (self.started) {
+      throw new Error("Transaction already started");
+    }
+
+    self.db._execute("BEGIN " + mode + " TRANSACTION");
+    self.started = true;
+  },
+
+  // Releases resources from the transaction; Rollback if commit not already called.
+  close: function () {
+    var self = this;
+
+    if (self.closed) {
+      return;
+    }
+
+    if (!self.started) {
+      return;
+    }
+
+    self.db._execute("ROLLBACK TRANSACTION");
+    self.committed = false;
+    self.closed = true;
+  },
+
+  // Commits the transaction.  close() will then be a no-op
+  commit: function () {
+    var self = this;
+
+    self.db._execute("END TRANSACTION");
+    self.committed = true;
+    self.closed = true;
+  }
+});
+
 var Db = function (dbFile, options) {
   var self = this;
 
@@ -81,28 +144,31 @@ var Db = function (dbFile, options) {
   self._transactionMutex = new Mutex();
 
   // WAL mode copes much better with (multi-process) concurrency
-  self.execute('PRAGMA journal_mode=WAL');
+  self._execute('PRAGMA journal_mode=WAL');
 };
 
 _.extend(Db.prototype, {
 
+  // Runs functions serially, in a mutex
   _serialize: function (f) {
     var self = this;
 
     try {
       self._transactionMutex.lock();
-      f();
+      return f();
     } finally {
       self._transactionMutex.unlock();
     }
   },
 
-
+  // Runs the function inside a transaction block
   runInTransaction: function (action) {
     var self = this;
 
     var runOnce = function () {
       var future = new Future();
+
+      var txn = new Txn(self);
 
       var t1 = Date.now();
 
@@ -110,42 +176,22 @@ _.extend(Db.prototype, {
       var result = null;
       var resultError = null;
 
-      // XXX: Use DEFERRED mode?
-      var mode = "IMMEDIATE";
-
-      self.execute("BEGIN " + mode + " TRANSACTION");
+      txn.begin();
       try {
-        result = action(self);
-        rollback = false;
+        result = action(txn);
+        txn.commit();
       } catch (err) {
         resultError = err;
-      }
-
-      if (!rollback) {
+      } finally {
         try {
-          self.execute("END TRANSACTION");
-        } catch (err) {
-          rollback = true;
-          Console.warn("Transaction commit failed ", err);
-          if (!resultError) {
-            resultError = err;
-          }
+          txn.close();
+        } catch (e) {
+          // We don't have a lot of options here...
+          Console.warn("Error closing transaction", e);
         }
       }
 
-      if (rollback) {
-        try {
-          self.execute("ROLLBACK TRANSACTION");
-        } catch (err) {
-          // Now we are out of options...
-          Console.warn("Transaction rollback failed ", err);
-          if (!resultError) {
-            resultError = err;
-          }
-        }
-      }
-
-      self._closePreparedStatements();
+      //self._closePreparedStatements();
 
       if (DEBUG_SQL) {
         var t2 = Date.now();
@@ -199,17 +245,12 @@ _.extend(Db.prototype, {
   },
 
   // Runs a query synchronously, returning all rows
-  query: function (sql, params) {
+  // Hidden to enforce transaction usage
+  _query: function (sql, params) {
     var self = this;
 
     var prepared = null;
     var prepare = self._autoPrepare;
-    if (prepare && (!params || !params.length)) {
-      // This seems to be a straight bug; we can't execute with empty parameters,
-      // even if we special-case it and pass run(sql, callback)
-      Console.debug("No params, won't prepare: ", sql);
-      prepare = false;
-    }
     if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
@@ -231,7 +272,7 @@ _.extend(Db.prototype, {
     };
 
     if (prepared) {
-      prepared.all(sql, params, callback);
+      prepared.all(params, callback);
     } else {
       self._db.all(sql, params, callback);
     }
@@ -250,11 +291,18 @@ _.extend(Db.prototype, {
   },
 
   // Runs a query synchronously, returning no rows
-  execute: function (sql, params) {
+  // Hidden to enforce transaction usage
+  _execute: function (sql, params) {
     var self = this;
 
     var prepared = null;
-    if (self._autoPrepare) {
+    var prepare = self._autoPrepare;
+    if (prepare &&
+        (sql.indexOf("PRAGMA ") === 0 || sql.indexOf("BEGIN ") === 0 || sql.indexOf("END ") === 0 || sql.indexOf("ROLLBACK ") === 0)) {
+      Console.debug("Not preparing PRAGMA/BEGIN/END/ROLLBACK command", sql);
+      prepare = false;
+    }
+    if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
 
@@ -668,42 +716,48 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
-  _queryWithRetry: function (query, values, options) {
+  _queryWithRetry: function (query, params, options) {
     var self = this;
     options = options || {};
 
-    var results = self.db.query(query, values);
-    if (results.length !== 0 || options.noRefresh)
-      return results;
+    var rows = self.db.runInTransaction(function (txn) {
+      return txn.query(query, params);
+    });
+    if (rows.length !== 0 || options.noRefresh)
+      return rows;
 
     // XXX: This causes unnecessary refreshes
 
     // XXX: It would be nice to Console.warn this, but that breaks some of our self-tests
     Console.debug("Forcing refresh because of unexpected missing data");
-    Console.debug("No data was returned from query: ", query, values);
+    Console.debug("No data was returned from query: ", query, params);
     self.refresh();
 
     options = _.clone(options);
     options.noRefresh = true;
 
-    return self._queryWithRetry(query, values, options);
+    return self._queryWithRetry(query, params, options);
   },
 
 
-  _simpleQuery: function (query, params) {
+  // Execute a query using the values as arguments of the query and return the result as JSON.
+  // This code assumes that the table being queried always have a column called "content"
+  _queryAsJSON: function (query, params, options) {
     var self = this;
-    var rows = self.db.query(query, params);
+    Console.debug("Executing query with _queryAsJSON: ", query, params);
+    var rows = self._queryWithRetry(query, params, options);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
   },
 
-  // Execute a query using the values as arguments of the query and return the result as JSON.
-  // This code assumes that the table being queried always have a column called "content"
-  _queryAsJSON: function (query, values, options) {
+  // Executes a query, parsing the content column as JSON
+  // No refreshes
+  _simpleQuery: function (query, params) {
     var self = this;
-    Console.debug("Executing query with _queryAsJSON: ", query, values);
-    var rows = self._queryWithRetry(query, values, options);
+    var rows = self.db.runInTransaction(function (txn) {
+      return txn.query(query, params);
+    });
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
