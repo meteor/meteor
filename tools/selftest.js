@@ -833,7 +833,7 @@ _.extend(PhantomClient.prototype, {
       '/bin/bash',
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "END\n")]);
+        phantomScript + "\nEND\n")]);
   },
   stop: function() {
     var self = this;
