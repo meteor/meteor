@@ -26,7 +26,7 @@ insecure@1.0.0
 iron:core@0.3.4
 iron:dynamic-template@0.4.1
 iron:layout@0.4.1
-iron:router@0.9.3
+iron:router@0.9.4
 jquery@1.0.0
 json@1.0.0
 less@1.0.8
