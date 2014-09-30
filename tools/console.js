@@ -261,13 +261,7 @@ _.extend(Console.prototype, {
       }
     }
 
-    // For the non-progress-bar status mode, we may need to
-    // clear some characters that we printed with a trailing `\r`.
-    if (self._wroteStatusMessage) {
-      var spaces = new Array(TEMP_STATUS_LENGTH + 1).join(' ');
-      self._stream.write(spaces + '\r');
-      self._wroteStatusMessage = false;
-    }
+    self._clearStatusMessage();
 
     if (style) {
       dest.write(style(message + '\n'));
@@ -278,6 +272,17 @@ _.extend(Console.prototype, {
     // Repaint the progress bar if we hid it
     if (progressBar) {
       self._renderProgressBar();
+    }
+  },
+
+  _clearStatusMessage: function () {
+    var self = this;
+    // For the non-progress-bar status mode, we may need to
+    // clear some characters that we printed with a trailing `\r`.
+    if (self._wroteStatusMessage) {
+      var spaces = new Array(TEMP_STATUS_LENGTH + 1).join(' ');
+      self._stream.write(spaces + '\r');
+      self._wroteStatusMessage = false;
     }
   },
 
@@ -318,7 +323,12 @@ _.extend(Console.prototype, {
       // It's important that we only enter status message mode
       // if self._pretty, so that we don't start displaying
       // status messages too soon.
-      self._inStatusMessageMode = true;
+      if (enabled) {
+        self._inStatusMessageMode = true;
+      } else if (self._inStatusMessageMode) {
+        self._clearStatusMessage();
+        self._inStatusMessageMode = false;
+      }
       return;
     }
 
