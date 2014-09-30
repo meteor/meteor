@@ -34,13 +34,6 @@
 Reload = {};
 
 var KEY_NAME = 'Meteor_Reload';
-// after how long should we consider this no longer an automatic
-// reload, but a fresh restart. This only happens if a reload is
-// interrupted and a user manually restarts things. The only time
-// this is really weird is if a user navigates away mid-refresh,
-// then manually navigates back to the page.
-var TIMEOUT = 30000;
-
 
 var old_data = {};
 // read in old data at startup.
@@ -98,8 +91,7 @@ try {
   Meteor._debug("Got invalid JSON on reload. Ignoring.");
 }
 
-if (old_parsed.reload && typeof old_parsed.data === "object" &&
-    old_parsed.time + TIMEOUT > (new Date()).getTime()) {
+if (old_parsed.reload && typeof old_parsed.data === "object") {
   // Meteor._debug("Restoring reload data.");
   old_data = old_parsed.data;
 }
@@ -178,7 +170,7 @@ Reload._migrate = function (tryReload, options) {
   try {
     // Persist the migration data
     var json = JSON.stringify({
-      time: (new Date()).getTime(), data: migrationData, reload: true
+      data: migrationData, reload: true
     });
   } catch (err) {
     Meteor._debug("Couldn't serialize data for migration", migrationData);
