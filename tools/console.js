@@ -162,6 +162,17 @@ _.extend(Console.prototype, {
     self._statusPoll();
   },
 
+  enableStatusPoll: function () {
+    var self = this;
+    Fiber(function () {
+      while (true) {
+        sleep(50);
+
+        self._statusPoll();
+      }
+    }).run();
+  },
+
   info: function(/*arguments*/) {
     var self = this;
 

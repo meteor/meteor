@@ -3,6 +3,80 @@
 * Rename `{{> UI.dynamic}}` to `{{> Template.dynamic}}`, and likewise
   with `UI.contentBlock` and `UI.elseBlock`.
 
+* Deprecate the `amplify`, `backbone`, `bootstrap`, and `d3` integration
+  packages in favor of community alternatives.  These packages will no
+  longer be maintained by MDG.
+
+* Rename the `showdown` package to `markdown`.
+
+* Deprecate the `Template.someTemplate.myHelper = ...` syntax in favor
+  of `Template.someTemplate.helpers(...)`.  Using the older syntax still
+  works, but it prints a deprecation warning to the console.
+
+* Fix behavior of ROOT_URL with path ending in `/`.
+
+* Fix source maps when using a ROOT_URL with a path. #2627
+
+## v0.9.3
+
+### More Package Version Number Flexibility
+
+* Packages now support relying on multiple major versions of their
+  dependencies (eg `blaze@1.0.0 || 2.0.0`). Additionally, you can now
+  call `api.versionsFrom(<release>)` multiple times, or with an array
+  (eg `api.versionsFrom([<release1>, <release2>])`. Meteor will
+  interpret this to mean that the package will work with packages from
+  all the listed releases.
+
+* Support for "wrapped package" version numbers. There is now a `_` field
+  in version numbers. The `_` field must be an integer, and versions with
+  the `_` are sorted after versions without. This allows using the
+  upstream version number as the Meteor package version number and being
+  able to publish multiple version of the Meteor package (e.g.
+  `jquery@1.11.1_2`).
+
+Note: packages using the `||` operator or the `_` symbol in their
+versions or dependencies will be invisible to pre-0.9.3 users. Meteor
+versions 0.9.2 and before do not understand the new version formats and
+will not be able to use versions of packages that use the new features.
+
+
+### Other Command-line Tool Improvements
+
+* More detailed constraint solver output. Meteor now tells you which
+  constraints prevent upgrading or adding new packages. This will make
+  it much easier to update your app to new versions.
+
+* Better handling of pre-release versions (e.g. versions with
+  `-`). Pre-release packages will now be included in an app if and only
+  if there is no way to meet the app's constraints without using a
+  pre-release package.
+
+* Add `meteor admin set-unmigrated` to allow maintainers to hide
+  pre-0.9.0 packages in `meteor search` and `meteor show`. This will not
+  stop users from continuing to use the package, but it helps prevent
+  new users from finding old non-functional packages.
+
+* Progress bars for time-intensive operations, like downloading large
+  packages.
+
+
+### Other Changes
+
+* Offically support `Meteor.wrapAsync` (renamed from
+  `Meteor._wrapAsync`). Additionally, `Meteor.wrapAsync` now lets you
+  pass an object to bind as `this` in the wrapped call. See
+  https://docs.meteor.com/#meteor_wrapasync.
+
+* The `reactive-dict` package now allows an optional name argument to
+  enable data persistence during hot code push.
+
+
+Patches by Github users evliu, meonkeys, mitar, mizzao, mquandalle,
+prapicault, waitingkuo, wulfmeister.
+
+
+
 ## v0.9.2.2
 
 * Fix regression in 0.9.2 that prevented some users from accessing the

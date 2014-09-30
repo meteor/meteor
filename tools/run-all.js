@@ -1,9 +1,14 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
+
 var files = require('./files.js');
 var release = require('./release.js');
-
+var buildmessage = require('./buildmessage.js');
+var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');
+
+var Console = require('./console.js').Console;
+
 var Proxy = require('./run-proxy.js').Proxy;
 var Selenium = require('./run-selenium.js').Selenium;
 var HttpProxy = require('./run-httpproxy.js').HttpProxy;
@@ -106,6 +111,7 @@ _.extend(Runner.prototype, {
   // XXX leave a pidfile and check if we are already running
   start: function () {
     var self = this;
+
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
@@ -145,16 +151,19 @@ _.extend(Runner.prototype, {
       // but all of the ones I tried look terrible in the terminal.
       if (! self.quiet) {
         var animationFrame = 0;
-        var printUpdate = function () {
-          runLog.logTemporary("=> Starting MongoDB... " +
-                              spinner[animationFrame]);
+        var printUpdate = fiberHelpers.bindEnvironment(function () {
+          //runLog.logTemporary("=> Starting MongoDB... " +
+          //                    spinner[animationFrame]);
+          buildmessage.nudge();
           animationFrame = (animationFrame + 1) % spinner.length;
-        };
+        });
         printUpdate();
         var mongoProgressTimer = setInterval(printUpdate, 200);
       }
 
-      self.mongoRunner.start();
+      buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
+        self.mongoRunner.start();
+      });
 
       if (! self.quiet) {
         clearInterval(mongoProgressTimer);
@@ -324,6 +333,7 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
+  Console.enableProgressBar(false);
   var result = fut.wait();
   runner.stop();
 

@@ -1633,14 +1633,18 @@ Example:
     {{lt}}/template>
 
     ///// in JS file
-    Template.postsView.posts = function() {
-      return Posts.find();
-    };
+    Template.postsView.helpers({
+      posts: function() {
+        return Posts.find();
+      }
+    });
 
-    Template.postItem.postClass = function() {
-      return Session.equals("selectedPost", this._id) ?
-        "selected" : "";
-    };
+    Template.postItem.helpers({
+      postClass: function() {
+        return Session.equals("selectedPost", this._id) ?
+          "selected" : "";
+      }
+    });
 
     Template.postItem.events({
       'click': function() {
@@ -2092,9 +2096,9 @@ service login flows do not use this function.
 
 This triggers a call
 to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
-on the server. Pass the token the user receives in this email
-to [`Accounts.resetPassword`](#accounts_resetpassword) to
-complete the password reset process.
+on the server. When the user visits the link in this email, the callback
+registered with [`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink)
+will be called.
 
 If you are using the [`accounts-ui` package](#accountsui), this is handled
 automatically. Otherwise, it is your responsiblity to prompt the user for the
@@ -2102,42 +2106,51 @@ new password and call `resetPassword`.
 
 {{> autoApiBox "Accounts.resetPassword"}}
 
-This function accepts tokens generated
-by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
-and
-[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
+This function accepts tokens passed into the callbacks registered with
+[`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink) and
+[`Accounts.onEnrollmentLink`](#Accounts-onEnrollmentLink).
 
 {{> autoApiBox "Accounts.setPassword"}}
 
 {{> autoApiBox "Accounts.verifyEmail"}}
 
-This function accepts tokens generated
-by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
-sets the `emails.verified` field in the user record.
+This function accepts tokens passed into the callback registered with
+[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink).
 
 {{> autoApiBox "Accounts.sendResetPasswordEmail"}}
 
-The token in this email should be passed
-to [`Accounts.resetPassword`](#accounts_resetpassword).
+When the user visits the link in this email, the callback registered with
+[`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink) will be called.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
 {{> autoApiBox "Accounts.sendEnrollmentEmail"}}
 
-The token in this email should be passed
-to [`Accounts.resetPassword`](#accounts_resetpassword).
+When the user visits the link in this email, the callback registered with
+[`Accounts.onEnrollmentLink`](#Accounts-onEnrollmentLink) will be called.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
 {{> autoApiBox "Accounts.sendVerificationEmail"}}
 
-The token in this email should be passed
-to [`Accounts.verifyEmail`](#accounts_verifyemail).
+When the user visits the link in this email, the callback registered with
+[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink) will
+be called.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+
+{{> autoApiBox "Accounts.onResetPasswordLink"}}
+
+{{> autoApiBox "Accounts.onEnrollmentLink"}}
+
+{{> autoApiBox "Accounts.onEmailVerificationLink"}}
+
+
+
 
 {{> autoApiBox "Accounts.emailTemplates"}}
 
@@ -2219,12 +2232,6 @@ Example:
 
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
-
-The following syntax is a shorthand for when you only have one helper to define:
-
-    Template.myTemplate.foo = function () {
-      return Session.get("foo");
-    };
 
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
@@ -3577,6 +3584,9 @@ package is exported to.
 {{> autoApiBox "PackageAPI#imply" }}
 {{> autoApiBox "PackageAPI#export" }}
 {{> autoApiBox "PackageAPI#addFiles" }}
+
+{{> autoApiBox "Package.registerBuildPlugin"}}
+{{> autoApiBox "Plugin.registerSourceHandler"}}
 
 <h3 id="packagetests"><span>Unit Tests</span></h3>
 

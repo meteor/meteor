@@ -2,6 +2,7 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
+var ip = require('ip');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -152,6 +153,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'run',
+  pretty: true,
   requiresApp: true,
   maxArgs: Infinity,
   options: {
@@ -223,15 +225,20 @@ main.registerCommand({
 
   options.httpProxyPort = options['http-proxy-port'];
 
-  // If we are targeting the remote devices
+  // If we are targeting the remote devices, warn about ports and same network
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
-    // ... and if you didn't specify your ip address as host, print a warning
-    if (parsedMobileHostPort.host === DEFAULT_BUILD_HOST)
-      Console.stderr.write(
-        "WARN: You are testing your app on a remote device but your host option\n" +
-        "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
-        "WARN: network's IP address with the -p or --mobile-port option?\n");
+    Console.stderr.write([
+"WARNING: You are testing your app on a remote device.",
+"         For the mobile app to be able to connect to the local server, make",
+"         sure your device is on the same network, and that the network",
+"         configuration allows clients to talk to each other",
+"         (no client isolation).",
+"",
+"         You can pass the host and the port in -p or --mobile-port argument.",
+"         For example: --mobile-port " +
+  ip.address() + ":" + parsedMobileHostPort.port + "\n\n"
+].join("\n"));
   }
 
   // Always bundle for the browser by default.
@@ -577,7 +584,19 @@ var buildCommands = {
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
+  function (options) {
+    return buildCommand(options);
+});
+
+// Deprecated -- identical functionality to 'build'
+main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
+      Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
+                           "Use 'build' instead.\n");
+      return buildCommand(options);
+});
+
+var buildCommand = function (options) {
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -619,8 +638,11 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     // warn about it.
     var cordovaBuildHost = parsedHostPort.host || DEFAULT_BUILD_HOST;
     if (cordovaBuildHost === DEFAULT_BUILD_HOST) {
-      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
-                           "Pass a -p argument to specify a host URL.\n");
+      // XXX better error message?
+      process.stdout.write(
+        "Supply the server hostname and port argument in the -p option\n" +
+        "for the mobile apps builds.\n");
+      return 1;
     }
     var cordovaSettings = {};
 
@@ -697,91 +719,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   });
 
   files.rm_recursive(buildDir);
-});
-
-// Deprecated -- identical functionality to 'build'
-main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
-    function (options) {
-  cordova.setVerboseness(options.verbose);
-  Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
-                       "Use 'build' instead.\n");
-  // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
-  // the former for them
-
-  // XXX output, to stderr, the name of the file written to (for human
-  // comfort, especially since we might change the name)
-
-  // XXX name the root directory in the bundle based on the basename
-  // of the file, not a constant 'bundle' (a bit obnoxious for
-  // machines, but worth it for humans)
-
-  // Error handling for options.architecture. We must pass in only one of three
-  // architectures. See archinfo.js for more information on what the
-  // architectures are, what they mean, et cetera.
-  var VALID_ARCHITECTURES =
-  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
-  if (options.architecture &&
-      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
-    Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
-    Console.stderr.write(
-      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
-    return 1;
-  }
-  var bundleArch =  options.architecture || archinfo.host();
-
-  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var outputPath = path.resolve(options.args[0]); // get absolute path
-  var bundlePath = options['directory'] ?
-      outputPath : path.join(buildDir, 'bundle');
-
-  var loader;
-  var messages = buildmessage.capture(function () {
-    loader = project.getPackageLoader();
-  });
-  if (messages.hasMessages()) {
-    Console.stderr.write("Errors prevented bundling your app:\n");
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
-  var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages("sdk.bundle");
-  });
-  if (statsMessages.hasMessages()) {
-    Console.stdout.write("Error recording package list:\n" +
-                         statsMessages.formatMessages());
-    // ... but continue;
-  }
-
-  var bundler = require(path.join(__dirname, 'bundler.js'));
-  var bundleResult = bundler.bundle({
-    outputPath: bundlePath,
-    buildOptions: {
-      minify: ! options.debug,
-      // XXX is this a good idea, or should linux be the default since
-      //     that's where most people are deploying
-      //     default?  i guess the problem with using DEPLOY_ARCH as default
-      //     is then 'meteor bundle' with no args fails if you have any local
-      //     packages with binary npm dependencies
-      serverArch: bundleArch
-    }
-  });
-  if (bundleResult.errors) {
-    Console.stderr.write("Errors prevented bundling:\n");
-    Console.stderr.write(bundleResult.errors.formatMessages());
-    return 1;
-  }
-
-  if (!options['directory']) {
-    try {
-      files.createTarball(path.join(buildDir, 'bundle'), outputPath);
-    } catch (err) {
-      console.log(JSON.stringify(err));
-      Console.stderr.write("Couldn't create tarball\n");
-    }
-  }
-  files.rm_recursive(buildDir);
-});
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // mongo

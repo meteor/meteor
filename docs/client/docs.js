@@ -1,6 +1,8 @@
-Template.headline.release = function () {
-  return Meteor.release ? "0.9.2.2" : "(checkout)";
-};
+Template.headline.helpers({
+  release: function () {
+    return Meteor.release ? "0.9.3" : "(checkout)";
+  }
+});
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -244,6 +246,13 @@ var toc = [
       "Accounts.sendResetPasswordEmail",
       "Accounts.sendEnrollmentEmail",
       "Accounts.sendVerificationEmail",
+      {type: "spacer"},
+
+      {name: "Accounts.onResetPasswordLink", id: "Accounts-onResetPasswordLink"},
+      {name: "Accounts.onEnrollmentLink", id: "Accounts-onEnrollmentLink"},
+      {name: "Accounts.onEmailVerificationLink", id: "Accounts-onEmailVerificationLink"},
+      {type: "spacer"},
+
       "Accounts.emailTemplates"
     ],
 
@@ -385,20 +394,19 @@ var toc = [
       {name: "Package.onTest", id: "packagetests"},
       {name: "Npm.depends", id: "Npm-depends"},
       {name: "Npm.require", id: "Npm-require"},
-      {name: "Cordova.depends", id: "Cordova-depends"}
+      {name: "Cordova.depends", id: "Cordova-depends"},
+      {name: "Package.registerBuildPlugin", id: "Package-registerBuildPlugin"}, [
+        {name: "Plugin.registerSourceHandler", id: "Plugin-registerSourceHandler"}
+      ]
     ]
   ],
 
   "Packages", [ [
     "accounts-ui",
-    "amplify",
     "appcache",
     "audit-argument-checks",
-    "backbone",
-    "bootstrap",
     "browser-policy",
     "coffeescript",
-    "d3",
     "fastclick",
     "force-ssl",
     "jquery",
@@ -440,44 +448,48 @@ var name_to_id = function (name) {
   return x;
 };
 
-Template.nav.sections = function () {
-  var ret = [];
-  var walk = function (items, depth) {
-    _.each(items, function (item) {
-      // Work around (eg) accidental trailing commas leading to spurious holes
-      // in IE8.
-      if (!item)
-        return;
-      if (item instanceof Array)
-        walk(item, depth + 1);
-      else {
-        if (typeof(item) === "string")
-          item = {name: item};
-        ret.push(_.extend({
-          type: "section",
-          id: item.name && name_to_id(item.name) || undefined,
-          depth: depth,
-          style: ''
-        }, item));
-      }
-    });
-  };
+Template.nav.helpers({
+  sections: function () {
+    var ret = [];
+    var walk = function (items, depth) {
+      _.each(items, function (item) {
+        // Work around (eg) accidental trailing commas leading to spurious holes
+        // in IE8.
+        if (!item)
+          return;
+        if (item instanceof Array)
+          walk(item, depth + 1);
+        else {
+          if (typeof(item) === "string")
+            item = {name: item};
+          ret.push(_.extend({
+            type: "section",
+            id: item.name && name_to_id(item.name) || undefined,
+            depth: depth,
+            style: ''
+          }, item));
+        }
+      });
+    };
 
-  walk(toc, 1);
-  return ret;
-};
+    walk(toc, 1);
+    return ret;
+  },
 
-Template.nav.type = function (what) {
-  return this.type === what;
-};
+  type: function (what) {
+    return this.type === what;
+  },
 
-Template.nav.maybe_current = function () {
-  return Session.equals("section", this.id) ? "current" : "";
-};
+  maybe_current: function () {
+    return Session.equals("section", this.id) ? "current" : "";
+  }
+});
 
-Template.nav_section.depthIs = function (n) {
-  return this.depth === n;
-};
+Template.nav_section.helpers({
+  depthIs: function (n) {
+    return this.depth === n;
+  }
+});
 
 // Show hidden TOC when menu icon is tapped
 Template.nav.events({

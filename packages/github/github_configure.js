@@ -1,6 +1,8 @@
-Template.configureLoginServiceDialogForGithub.siteUrl = function () {
-  return Meteor.absoluteUrl();
-};
+Template.configureLoginServiceDialogForGithub.helpers({
+  siteUrl: function () {
+    return Meteor.absoluteUrl();
+  }
+});
 
 Template.configureLoginServiceDialogForGithub.fields = function () {
   return [
