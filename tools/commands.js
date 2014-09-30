@@ -318,8 +318,8 @@ function doRunCommand (options) {
   //
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
-    var serverUrl = "http://" + (parsedHostPort.host || "localhost") +
-          ":" + parsedHostPort.port;
+    var serverUrl = "http://" + (parsedUrl.host || "localhost") +
+          ":" + parsedUrl.port;
     var velocity = require('./run-velocity.js');
     velocity.runVelocity(serverUrl);
   }
