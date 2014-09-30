@@ -7,7 +7,8 @@ var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 
-selftest.define("publish-and-search", ["slow", "net", "test-package-server"], function () {
+selftest.define("publish-and-search",
+    ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -101,7 +102,8 @@ selftest.define("publish-and-search", ["slow", "net", "test-package-server"], fu
   run.match("package: " + packageName);
 });
 
-selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], function () {
+selftest.define("publish-one-arch",
+    ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -139,7 +141,8 @@ selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], func
 });
 
 selftest.define("list-with-a-new-version",
-                ["slow", "net", "test-package-server"], function () {
+    ["slow", "net", "test-package-server", "checkout"],
+    function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -268,7 +271,8 @@ selftest.define("list-with-a-new-version",
 
 
 selftest.define("do-not-update-to-rcs",
-                ["slow", "net", "test-package-server"], function () {
+    ["slow", "net", "test-package-server", "checkout"],
+    function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -389,7 +393,7 @@ selftest.define("do-not-update-to-rcs",
 
 
 selftest.define("package-depends-on-either-version",
-    ["slow", "net", "test-package-server"], function () {
+    ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
   var username = "test";
