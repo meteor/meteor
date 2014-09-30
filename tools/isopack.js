@@ -222,6 +222,8 @@ var convertIsopackFormat = function (data, versionFrom, versionTo) {
   }
 };
 
+var currentFormat = "isopack-1";
+
 // XXX document
 var Isopack = function () {
   var self = this;
@@ -519,7 +521,6 @@ _.extend(Isopack.prototype, {
     var mainJson;
 
     // deal with different versions of "isopack.json", backwards compatible
-    var currentFormat = "isopack-1";
     var isopackJsonPath = path.join(dir, "isopack.json");
     if (fs.existsSync(isopackJsonPath)) {
       isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
