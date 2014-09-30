@@ -497,6 +497,16 @@ _.extend(RemoteCatalog.prototype, {
     return result[0];
   },
 
+  // As getVersion, but returns info on the latest version of the
+  // package, or null if the package doesn't exist or has no versions.
+  getLatestVersion: function (name) {
+    var self = this;
+
+    var versions = self.getSortedVersions(name);
+    versions.reverse();
+    return self.getVersion(name, versions[0]);
+  },
+
   getSortedVersions: function (name) {
     var self = this;
     var match = this._getPackageVersions(name);
