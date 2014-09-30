@@ -13,6 +13,10 @@
   of `Template.someTemplate.helpers(...)`.  Using the older syntax still
   works, but it prints a deprecation warning to the console.
 
+* Upgraded dependencies:
+  - jquery: 1.11.1 (from 1.11.0)
+
+
 ## v0.9.3
 
 ### More Package Version Number Flexibility
