@@ -522,7 +522,7 @@ _.extend(TestRun.prototype, {
         }, stop_at_offset);
         // Wait for the test to complete or time out.
         future.wait();
-        onComplete & onComplete();
+        onComplete && onComplete();
       });
     } else {
       // client

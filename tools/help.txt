@@ -51,10 +51,11 @@ Options:
                    --mobile-server=https://example.com:443).
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
-  --settings       Set optional data for Meteor.settings on the server
-  --release        Specify the release of Meteor to use
-  --program        The program in the app to run (Advanced)
+  --settings       Set optional data for Meteor.settings on the server.
+  --release        Specify the release of Meteor to use.
+  --program        The program in the app to run (Advanced).
   --verbose        Print all output from builds logs.
+  --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
 >>> debug
 Run the project, but suspend the server process for debugging.
