@@ -1381,6 +1381,12 @@ _.extend(JsImage.prototype, {
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
 
+        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        // Remove any existing sourceMappingURL line. (eg, if roundtripping
+        // through JsImage.readFromDisk, don't end up with two!)
+        item.source = item.source.replace(
+            /\n\/\/# sourceMappingURL=.+\n?$/, '');
+        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
