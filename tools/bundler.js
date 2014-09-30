@@ -1385,7 +1385,7 @@ _.extend(JsImage.prototype, {
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
         item.source = item.source.replace(
-            /\n\/\/# sourceMappingURL=.+\n?$/, '');
+            /\n\/\/# sourceMappingURL=.+\n?$/g, '');
         item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
