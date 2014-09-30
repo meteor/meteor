@@ -31,6 +31,8 @@ var cordova = exports;
 var supportedPlatforms = ['ios', 'android', 'firefoxos'];
 var webArchName = "web.cordova";
 
+// --- helpers ---
+
 var localCordova = path.join(files.getCurrentToolsDir(),
   "tools", "cordova-scripts", "cordova.sh");
 
@@ -130,6 +132,17 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
+var getLoadedPackages = _.once(function () {
+  var uniload = require('./uniload.js');
+  return uniload.load({
+    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing' ]
+  });
+});
+
+
+
+// --- Cordova routines ---
+
 var ensureAndroidBundleCache = {};
 
 var ensureAndroidBundle = function (command) {
@@ -158,13 +171,6 @@ var ensureAndroidBundle = function (command) {
     throw new main.ExitWithCode(2);
   }
 };
-
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
-  return uniload.load({
-    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing' ]
-  });
-});
 
 var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
@@ -212,61 +218,6 @@ var generateCordovaBoilerplate = function (clientDir, options) {
   return boilerplate.toHTML();
 };
 
-var fetchCordovaPluginFromShaUrl =
-    function (urlWithSha, localPluginsDir, pluginName) {
-  verboseLog('Fetching a tarball from url:', urlWithSha);
-  var pluginPath = path.join(localPluginsDir, pluginName);
-  var pluginTarballPath = pluginPath + '.tgz';
-
-  var execFileSync = require('./utils.js').execFileSync;
-  var whichCurl = execFileSync('which', ['curl']);
-
-  var downloadProcess = null;
-
-  if (whichCurl.success) {
-    verboseLog('Downloading with curl');
-    downloadProcess =
-      execFileSyncOrThrow('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
-  } else {
-    verboseLog('Downloading with wget');
-    downloadProcess =
-      execFileSyncOrThrow('wget', ['-O', pluginTarballPath, urlWithSha]);
-  }
-
-  if (! downloadProcess.success)
-    throw new Error("Failed to fetch the tarball from " + urlWithSha + ": " +
-                    downloadProcess.stderr);
-
-  verboseLog('Create a folder for the plugin', pluginPath);
-  files.mkdir_p(pluginPath);
-
-  verboseLog('Untarring the tarball with plugin');
-  var tarProcess = execFileSyncOrThrow('tar',
-    ['xf', pluginTarballPath, '-C', pluginPath, '--strip-components=1']);
-  if (! tarProcess.success)
-    throw new Error("Failed to untar the tarball from " + urlWithSha + ": " +
-                    tarProcess.stderr);
-  verboseLog('Untarring succeeded, removing the tarball');
-  files.rm_recursive(pluginTarballPath);
-  return pluginPath;
-};
-
-cordova.checkIsValidPlatform = function (name) {
-  if (name.match(/ios/i) && process.platform !== 'darwin')
-    throw new Error(name + ': not available on your system');
-  if (! _.contains(supportedPlatforms, name))
-    throw new Error(name + ': no such platform');
-};
-
-cordova.checkIsValidPlugin = function (name) {
-  var pluginHash = {};
-  pluginHash[name.split('@')[0]] = name.split('@')[1];
-
-  // check that every plugin is specifying either an exact constraint or a
-  // tarball url with sha
-  utils.ensureOnlyExactVersions(pluginHash);
-};
-
 // options
 //  - debug
 var getBundle = function (bundlePath, webArchs, options) {
@@ -288,14 +239,6 @@ var getBundle = function (bundlePath, webArchs, options) {
 
   return bundleResult;
 };
-
-var localPluginsPathFromCordovaPath = function (cordovaPath) {
-  return path.join(cordovaPath, 'local-plugins');
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// ensureCordova
-////////////////////////////////////////////////////////////////////////////////
 
 // Creates a Cordova project if necessary.
 cordova.ensureCordovaProject = function (localPath, appName) {
@@ -321,6 +264,8 @@ cordova.ensureCordovaProject = function (localPath, appName) {
     }
   }
 };
+
+// --- Cordova platforms ---
 
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
@@ -371,6 +316,60 @@ cordova.ensureCordovaPlatforms = function (localPath) {
   return true;
 };
 
+// checks that every requested platform such as 'android' or 'ios' is already
+// added to the project
+var checkRequestedPlatforms = function (platforms) {
+  platforms = _.uniq(platforms);
+
+  var requestedPlatforms = [];
+  // Find the required platforms.
+  // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
+  _.each(platforms, function (platformName) {
+    var platform = platformName.split('-')[0];
+    if (! _.contains(requestedPlatforms, platform)) {
+      requestedPlatforms.push(platform);
+    }
+  });
+
+  var cordovaPlatforms = project.getCordovaPlatforms();
+  _.each(requestedPlatforms, function (platform) {
+    if (! _.contains(cordovaPlatforms, platform))
+      throw new Error(platform +
+": platform is not added to the project.\n" +
+"Try 'meteor add-platform " + platform + "' to add it or\n" +
+"'meteor help add-platform' for help.");
+  });
+};
+
+// Builds a Cordova project that targets the list of 'platforms'
+// options:
+//   - appName: the target path of the build
+//   - host
+//   - port
+cordova.buildPlatforms = function (localPath, platforms, options) {
+  verboseLog('Running build for platforms:', platforms);
+  checkRequestedPlatforms(platforms);
+  buildCordova(localPath, 'build', options);
+};
+
+
+cordova.buildPlatformRunners = function (localPath, platforms, options) {
+  var runners = [];
+  _.each(platforms, function (platformName) {
+    runners.push(new CordovaRunner(localPath, platformName, options));
+  });
+  return runners;
+};
+
+cordova.checkIsValidPlatform = function (name) {
+  if (name.match(/ios/i) && process.platform !== 'darwin')
+    throw new Error(name + ': not available on your system');
+  if (! _.contains(supportedPlatforms, name))
+    throw new Error(name + ': no such platform');
+};
+
+
+// --- Cordova plugins ---
 
 var installPlugin = function (cordovaPath, name, version, settings) {
   verboseLog('Installing a plugin', name, version);
@@ -622,6 +621,63 @@ var ensureCordovaPlugins = function (localPath, options) {
   }
 };
 
+var fetchCordovaPluginFromShaUrl =
+    function (urlWithSha, localPluginsDir, pluginName) {
+  verboseLog('Fetching a tarball from url:', urlWithSha);
+  var pluginPath = path.join(localPluginsDir, pluginName);
+  var pluginTarballPath = pluginPath + '.tgz';
+
+  var execFileSync = require('./utils.js').execFileSync;
+  var whichCurl = execFileSync('which', ['curl']);
+
+  var downloadProcess = null;
+
+  if (whichCurl.success) {
+    verboseLog('Downloading with curl');
+    downloadProcess =
+      execFileSyncOrThrow('curl', ['-L', urlWithSha, '-o', pluginTarballPath]);
+  } else {
+    verboseLog('Downloading with wget');
+    downloadProcess =
+      execFileSyncOrThrow('wget', ['-O', pluginTarballPath, urlWithSha]);
+  }
+
+  if (! downloadProcess.success)
+    throw new Error("Failed to fetch the tarball from " + urlWithSha + ": " +
+                    downloadProcess.stderr);
+
+  verboseLog('Create a folder for the plugin', pluginPath);
+  files.mkdir_p(pluginPath);
+
+  verboseLog('Untarring the tarball with plugin');
+  var tarProcess = execFileSyncOrThrow('tar',
+    ['xf', pluginTarballPath, '-C', pluginPath, '--strip-components=1']);
+  if (! tarProcess.success)
+    throw new Error("Failed to untar the tarball from " + urlWithSha + ": " +
+                    tarProcess.stderr);
+  verboseLog('Untarring succeeded, removing the tarball');
+  files.rm_recursive(pluginTarballPath);
+  return pluginPath;
+};
+
+var localPluginsPathFromCordovaPath = function (cordovaPath) {
+  return path.join(cordovaPath, 'local-plugins');
+};
+
+cordova.checkIsValidPlugin = function (name) {
+  var pluginHash = {};
+  pluginHash[name.split('@')[0]] = name.split('@')[1];
+
+  // check that every plugin is specifying either an exact constraint or a
+  // tarball url with sha
+  utils.ensureOnlyExactVersions(pluginHash);
+};
+
+
+
+
+// --- Cordova from project ---
+
 // Returns the cordovaDependencies of the Cordova arch from a star json.
 var getCordovaDependenciesFromStar = function (star) {
   var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
@@ -716,51 +772,6 @@ var buildCordova = function (localPath, buildCommand, options) {
   }
 
   verboseLog('Done building the cordova build project');
-};
-
-// checks that every requested platform such as 'android' or 'ios' is already
-// added to the project
-var checkRequestedPlatforms = function (platforms) {
-  platforms = _.uniq(platforms);
-
-  var requestedPlatforms = [];
-  // Find the required platforms.
-  // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
-  _.each(platforms, function (platformName) {
-    var platform = platformName.split('-')[0];
-    if (! _.contains(requestedPlatforms, platform)) {
-      requestedPlatforms.push(platform);
-    }
-  });
-
-  var cordovaPlatforms = project.getCordovaPlatforms();
-  _.each(requestedPlatforms, function (platform) {
-    if (! _.contains(cordovaPlatforms, platform))
-      throw new Error(platform +
-": platform is not added to the project.\n" +
-"Try 'meteor add-platform " + platform + "' to add it or\n" +
-"'meteor help add-platform' for help.");
-  });
-};
-
-// Builds a Cordova project that targets the list of 'platforms'
-// options:
-//   - appName: the target path of the build
-//   - host
-//   - port
-cordova.buildPlatforms = function (localPath, platforms, options) {
-  verboseLog('Running build for platforms:', platforms);
-  checkRequestedPlatforms(platforms);
-  buildCordova(localPath, 'build', options);
-};
-
-
-cordova.buildPlatformRunners = function (localPath, platforms, options) {
-  var runners = [];
-  _.each(platforms, function (platformName) {
-    runners.push(new CordovaRunner(localPath, platformName, options));
-  });
-  return runners;
 };
 
 
@@ -1039,6 +1050,9 @@ var checkAgreePlatformTerms = function (platform) {
   return agreed;
 };
 
+
+// --- Cordova commands ---
+
 // add one or more Cordova platforms
 main.registerCommand({
   name: "add-platform",
@@ -1152,3 +1166,4 @@ main.registerCommand({
   }
   return 0;
 });
+
