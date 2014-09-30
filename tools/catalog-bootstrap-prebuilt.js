@@ -24,7 +24,7 @@ _.extend(BootstrapCatalogPrebuilt.prototype, {
     self._knownPackages = {};
     _.each(fs.readdirSync(options.uniloadDir), function (package) {
       if (fs.existsSync(path.join(options.uniloadDir, package,
-                                  'unipackage.json'))) {
+                                  'isopack.json'))) {
         self._knownPackages[package] = true;
 
         // XXX do we have to also put stuff in self.packages/versions/builds?

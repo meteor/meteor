@@ -60,8 +60,8 @@ _.extend(BootstrapCatalogCheckout.prototype, {
     });
     return ret;
   },
-  
-  
+
+
   // Given a name and a version of a package, return a path on disk
   // from which we can load it. If we don't have it on disk (we
   // haven't downloaded it, or it just plain doesn't exist in the
@@ -73,7 +73,7 @@ _.extend(BootstrapCatalogCheckout.prototype, {
   // HACK: Version can be null if you are certain that the package is to be
   // loaded from local packages. In the future, version should always be
   // required and we should confirm that the version on disk is the version that
-  // we asked for. This is to support unipackage loader not having a version
+  // we asked for. This is to support isopack loader not having a version
   // manifest.
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;

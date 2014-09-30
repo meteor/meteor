@@ -5,7 +5,7 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var watch = require('./watch.js');
 var archinfo = require('./archinfo.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
@@ -287,7 +287,7 @@ _.extend(LocalCatalog.prototype, {
           return;
 
         // Consider a directory to be a package source tree if it
-        // contains 'package.js'. (We used to support unipackages in
+        // contains 'package.js'. (We used to support isopacks in
         // localPackageDirs, but no longer.)
         if (fs.existsSync(path.join(packageDir, 'package.js'))) {
           // Let earlier package directories override later package
@@ -392,7 +392,7 @@ _.extend(LocalCatalog.prototype, {
 
       // This doesn't have great birthday-paradox properties, but we
       // don't have Random.id() here (since it comes from a
-      // unipackage), and making an index so we can see if a value is
+      // isopack), and making an index so we can see if a value is
       // already in use would complicated the code. Let's take the bet
       // that by the time we have enough local packages that this is a
       // problem, we either will have made tools into a star, or we'll
@@ -429,7 +429,7 @@ _.extend(LocalCatalog.prototype, {
       // run, but any code that actually relies on accurate versions
       // (for example, code that checks if a build is up to date)
       // needs to be careful to get the versions not from the catalog
-      // but from the actual built Unipackage objects, which will have
+      // but from the actual built Isopack objects, which will have
       // accurate versions (with precise buildids) even for local
       // packages.
       var version = packageSource.version;
@@ -478,7 +478,7 @@ _.extend(LocalCatalog.prototype, {
   // HACK: Version can be null if you are certain that the package is to be
   // loaded from local packages. In the future, version should always be
   // required and we should confirm that the version on disk is the version that
-  // we asked for. This is to support unipackage loader not having a version
+  // we asked for. This is to support isopack loader not having a version
   // manifest.
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;
@@ -591,6 +591,8 @@ _.extend(LocalCatalog.prototype, {
                                path.join(packageDir, p, 'package.js'));
         watch.readAndWatchFile(watchSet,
                                path.join(packageDir, p, 'unipackage.json'));
+        watch.readAndWatchFile(watchSet,
+                               path.join(packageDir, p, 'isopack.json'));
       });
     });
   },
@@ -720,7 +722,7 @@ _.extend(LocalCatalog.prototype, {
       }, function () {
         unip = compiler.compile(self.packageSources[name], {
           ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
-        }).unipackage;
+        }).isopack;
         if (! buildmessage.jobHasMessages()) {
           // Save the build, for a fast load next time
           try {
@@ -757,7 +759,7 @@ _.extend(LocalCatalog.prototype, {
     });
   },
 
- 
+
   // Given a version string that may or may not have a build ID, convert it into
   // the catalog's internal format for local versions -- [version
   // number]+local. (for example, 1.0.0+local).
@@ -767,7 +769,7 @@ _.extend(LocalCatalog.prototype, {
     return version;
   },
 
-  // Returns the latest unipackage build if the package has already been
+  // Returns the latest isopack build if the package has already been
   // compiled and built in the directory, and null otherwise.
   _maybeGetUpToDateBuild: function (name, constraintSolverOpts) {
     var self = this;
@@ -776,13 +778,13 @@ _.extend(LocalCatalog.prototype, {
     var sourcePath = self.packageSources[name].sourceRoot;
     var buildDir = path.join(sourcePath, '.build.' + name);
     if (fs.existsSync(buildDir)) {
-      var unip = new unipackage.Unipackage;
+      var unip = new isopack.Isopack;
       try {
         unip.initFromPath(name, buildDir, { buildOfPath: sourcePath });
       } catch (e) {
-        if (!(e instanceof unipackage.OldUnipackageFormatError))
+        if (!(e instanceof isopack.OldIsopackFormatError))
           throw e;
-        // Ignore unipackage-pre1 builds
+        // Ignore isopack-pre1 builds
         return null;
       }
       if (compiler.checkUpToDate(
@@ -795,4 +797,3 @@ _.extend(LocalCatalog.prototype, {
 });
 
 exports.LocalCatalog = LocalCatalog;
-
