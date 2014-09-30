@@ -499,7 +499,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getSortedVersions: function (name) {
     var self = this;
-    var match = this._getPackages(name);
+    var match = this._getPackageVersions(name);
     if (match === null)
       return [];
     return _.pluck(match, 'version').sort(semver.compare);
@@ -517,14 +517,17 @@ _.extend(RemoteCatalog.prototype, {
     return self.getVersion(name, latest);
   },
 
-  getPackage: function (name) {
-    var result = this._getPackages(name);
+  getPackage: function (name, options) {
+    var result = this._queryAsJSON("SELECT * FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
+    if (result.length !== 1) {
+      throw new Error("Found multiple packages matching name: " + name);
+    }
     return result[0];
   },
 
-  _getPackages: function (name) {
+  _getPackageVersions: function (name) {
     if (!name) {
       throw new Error("No name provided");
     }
