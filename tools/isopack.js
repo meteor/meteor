@@ -615,7 +615,7 @@ _.extend(Isopack.prototype, {
       }
     });
     self.pluginsBuilt = true;
-    _.each(mainJson.unibuilds, function (unibuildMeta) {
+    _.each(mainJson.builds, function (unibuildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
       rejectBadPath(unibuildMeta.path);
