@@ -218,7 +218,7 @@ _updateServerPackageData = function (cachedServerData, options) {
   try {
     var conn = openPackageServerConnection(options.packageServerUrl);
   } catch (err) {
-    self.handlePackageServerConnectionError(err);
+    exports.handlePackageServerConnectionError(err);
     ret.data = null;
     return ret;
   }
