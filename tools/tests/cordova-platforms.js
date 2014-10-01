@@ -1,10 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
-var _ = require('underscore');
-var utils = require('../utils.js');
-var fs = require('fs');
-var path = require('path');
 
 // Add plugins to an app. Change the contents of the plugins and their
 // dependencies, make sure that the app still refreshes.

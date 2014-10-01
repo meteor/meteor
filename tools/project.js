@@ -78,8 +78,8 @@ var Project = function () {
   // XXX Ignores the transitive dependencies.
   self.cordovaPlugins = null;
 
-  // Platfroms & versions used by the Cordova project.
-  self.cordovaPlatforms = null;
+  // Platforms for this project.
+  self.platforms = null;
 
   // The package loader for this project, with the project's dependencies as its
   // version file. (See package-loader.js for more information about package
@@ -148,8 +148,7 @@ _.extend(Project.prototype, {
     self.cordovaPlugins = processPerConstraintLines(
       files.getLinesOrEmpty(self._getCordovaPluginsFile()));
 
-    self.cordovaPlatforms =
-      files.getLinesOrEmpty(self._getCordovaPlatformsFile());
+    self.ensurePlatforms();
 
     // Lastly, invalidate everything that we have computed -- obviously the
     // dependencies that we counted with the previous rootPath are wrong and we
@@ -555,9 +554,21 @@ _.extend(Project.prototype, {
     return _.clone(self.cordovaPlugins);
   },
 
+  getPlatforms: function () {
+    var self = this;
+    return _.clone(self.platforms);
+  },
+
+  getDefaultPlatforms: function () {
+    // these platforms are always present and can be neither added or removed
+    var defaultPlatforms = ["server", "browser"];
+
+    return defaultPlatforms;
+  },
+  
   getCordovaPlatforms: function () {
     var self = this;
-    return _.clone(self.cordovaPlatforms);
+    return _.difference(self.getPlatforms(), self.getDefaultPlatforms());
   },
 
   // Returns the set of web archs that are targeted by the project
@@ -577,11 +588,29 @@ _.extend(Project.prototype, {
     return path.join(self.rootDir, '.meteor', 'cordova-plugins');
   },
 
-  // Returns the file path to the .meteor/cordova-platforms file, containing the
-  // targetted Cordova platforms for this specific project.
-  _getCordovaPlatformsFile: function () {
+  // Returns the file path to the .meteor/platforms file, containing the
+  // platforms for this specific project.
+  _getPlatformsFile: function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'cordova-platforms');
+    return path.join(self.rootDir, '.meteor', 'platforms');
+  },
+
+  ensurePlatforms: function () {
+    var self = this;
+
+    var lines = files.getLinesOrEmpty(self._getPlatformsFile());
+    self.platforms = _.compact(_.map(lines, files.trimLine));
+
+    if (! self.platforms) {
+      self.platforms = self.getDefaultPlatforms();
+      self.writePlatformsFile();
+    }
+  },
+
+  writePlatformsFile: function () {
+    var self = this;
+    fs.writeFileSync(self._getPlatformsFile(),
+      self.platforms.join("\n") + "\n", 'utf8');
   },
 
   // Give the package loader attached to this project to the caller.
@@ -976,17 +1005,15 @@ _.extend(Project.prototype, {
   // platforms - a list of strings
   addCordovaPlatforms: function (platforms) {
     var self = this;
-    self.cordovaPlatforms = _.uniq(platforms.concat(self.cordovaPlatforms));
-    fs.writeFileSync(self._getCordovaPlatformsFile(),
-                     self.cordovaPlatforms.join('\n'), 'utf8');
+    self.platforms = _.union(self.platforms, platforms);
+    self.writePlatformsFile();
   },
 
   // platforms - a list of strings
   removeCordovaPlatforms: function (platforms) {
     var self = this;
-    self.cordovaPlatforms = _.difference(self.cordovaPlatforms, platforms);
-    fs.writeFileSync(self._getCordovaPlatformsFile(),
-                     self.cordovaPlatforms.join('\n'), 'utf8');
+    self.platforms = _.difference(self.platforms, platforms);
+    self.writePlatformsFile();
   }
 });
 

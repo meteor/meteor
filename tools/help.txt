@@ -172,7 +172,7 @@ list of the packages that your application is currently using, see
 List the packages explicitly used by your project.
 Usage: meteor list
 
-List the packages that you have explicitly added to your project.
+Lists the packages that you have explicitly added to your project.
 This will not list transitive dependencies.
 
 >>> add-platform
@@ -180,9 +180,21 @@ Add a platform to this project.
 Usage: meteor add-platform <platform> [platform..]
 
 Adds platforms to your Meteor project. You can add multiple
-platforms with one command. Once a platform has been added, you
-can use 'meteor run <platform>' to run on the platform, and 'meteor build'
-to build the Meteor project for every added platform.
+platforms with one command. 
+
+Available platforms:
+  server
+  browser
+  android
+  ios (on OS X only)
+
+Currently, the server and browser platforms are present in every
+Meteor project and cannot be removed.
+
+`meteor run` by default runs the server and browser platforms.
+After adding a mobile platform, you can use 'meteor run <mobile-platform>'
+to run on a mobile device or emulator. 'meteor build' will always build
+the project for every added platform.
 
 >>> remove-platform
 Remove a platform from this project.
@@ -196,7 +208,7 @@ list of the platforms that your application is currently using, see
 List the platforms added to your project.
 Usage: meteor list-platforms
 
-Lists all of the platforms that have been explicitly added to your project.
+Lists all of the platforms added to your project.
 
 >>> configure-android
 Run the Android configuration tool from Meteor's ADK environment.

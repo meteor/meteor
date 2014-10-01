@@ -6,27 +6,36 @@ var util = require('util');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
-var auth = require('./auth.js');
-var config = require('./config.js');
-var release = require('./release.js');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js');
 var utils = require('./utils.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
-var packageLoader = require('./package-loader.js');
-var PackageSource = require('./package-source.js');
-var compiler = require('./compiler.js');
-var isopack = require('./isopack.js');
 var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
-var supportedPlatforms = ['ios', 'android', 'firefoxos'];
 var webArchName = "web.cordova";
+
+// android is available on all supported architectures
+var availablePlatforms =
+  project.getDefaultPlatforms().concat(["android", "firefoxos"]);
+
+// ios is only available on OSX
+if (process.platform === 'darwin') {
+  availablePlatforms.push("ios");
+}
+
+var isValidPlatform = function (name) {
+  if (name.match(/ios/i) && process.platform !== 'darwin') {
+    throw new Error(name + ': not available on your system');
+  }
+
+  if (! _.contains(availablePlatforms, name)) {
+    throw new Error(name + ': no such platform');
+  }
+};
 
 var cordova = exports;
 
@@ -338,7 +347,7 @@ var ensureCordovaPlatforms = function (localPath) {
 
   _.each(platforms, function (platform) {
     if (! _.contains(installedPlatforms, platform) &&
-        _.contains(supportedPlatforms, platform)) {
+        _.contains(availablePlatforms, platform)) {
       verboseLog('Adding a platform', platform);
       execFileSyncOrThrow(localCordova, ['platform', 'add', platform],
                           { cwd: cordovaPath });
@@ -347,7 +356,7 @@ var ensureCordovaPlatforms = function (localPath) {
 
   _.each(installedPlatforms, function (platform) {
     if (! _.contains(platforms, platform) &&
-        _.contains(supportedPlatforms, platform)) {
+        _.contains(availablePlatforms, platform)) {
       verboseLog('Removing a platform', platform);
       execFileSyncOrThrow(localCordova, ['platform', 'rm', platform],
                           { cwd: cordovaPath });
@@ -380,13 +389,6 @@ var checkRequestedPlatforms = function (platforms) {
 "Try 'meteor add-platform " + platform + "' to add it or\n" +
 "'meteor help add-platform' for help.");
   });
-};
-
-var isValidPlatform = function (name) {
-  if (name.match(/ios/i) && process.platform !== 'darwin')
-    throw new Error(name + ': not available on your system');
-  if (! _.contains(supportedPlatforms, name))
-    throw new Error(name + ': no such platform');
 };
 
 
@@ -1309,9 +1311,14 @@ main.registerCommand({
   cordova.setVerboseness(options.verbose);
 
   var platforms = options.args;
+  var currentPlatforms = project.getPlatforms();
 
   try {
     _.each(platforms, function (platform) {
+      if (_.contains(currentPlatforms, platform)) {
+        throw new Error("platform " + platform + " already added");
+      }
+
       isValidPlatform(platform);
     });
   } catch (err) {
@@ -1355,14 +1362,21 @@ main.registerCommand({
   requiresApp: true
 }, function (options) {
   var platforms = options.args;
-  var currentPlatforms = project.getCordovaPlatforms();
 
   _.each(platforms, function (platform) {
-    if (_.contains(currentPlatforms, platform)) {
-      Console.stdout.write("removed platform " + platform + "\n");
-    } else {
-      Console.stdout.write(platform + " is not in this project\n");
+    // explain why we can't remove server or browser platforms
+    if (_.contains(project.getDefaultPlatforms(), platform)) {
+      Console.stdout.write("cannot remove platform " + platform +
+        " in this version of Meteor\n");
+      return;
     }
+
+    if (_.contains(project.getPlatforms(), platform)) {
+      Console.stdout.write("removed platform " + platform + "\n");
+      return;
+    }
+
+    Console.stdout.write(platform + " is not in this project\n");
   });
   project.removeCordovaPlatforms(platforms);
 
@@ -1381,13 +1395,9 @@ main.registerCommand({
   name: "list-platforms",
   requiresApp: true
 }, function () {
-  var platforms = project.getCordovaPlatforms();
-  Console.stdout.write(platforms.join("\n"));
+  var platforms = project.getPlatforms();
 
-  // print nothing at all if no platforms
-  if (platforms.length) {
-    Console.stdout.write("\n");
-  }
+  Console.stdout.write(platforms.join("\n"));
 });
 
 main.registerCommand({
