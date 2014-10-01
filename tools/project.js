@@ -565,7 +565,7 @@ _.extend(Project.prototype, {
 
     return defaultPlatforms;
   },
-  
+
   getCordovaPlatforms: function () {
     var self = this;
     return _.difference(self.getPlatforms(), self.getDefaultPlatforms());
