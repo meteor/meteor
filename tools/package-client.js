@@ -13,6 +13,7 @@ var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
 var Console = require('./console.js').Console;
+var packageVersionParser = require('./package-version-parser.js');
 
 // Use uniload to load the packages that we need to open a connection to the
 // current package server and use minimongo in memory. We need the following
@@ -537,22 +538,39 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   var packageDeps =  packageSource.getDependencyMetadata();
   var badConstraints = [];
   _.each(packageDeps, function(refs, label) {
-    // HACK: we automatically include the meteor package and there is no way for
-    // anyone to set its dependency data correctly, so I guess we shouldn't
-    // penalize the user for not doing that. It will be resolved at runtime
-    // anyway.
-    if (label !== "meteor" &&
-        refs.constraint == null) {
-      badConstraints.push(label);
+    if (refs.constraint == null) {
+      if (packageSource.isCore && files.inCheckout() &&
+          catalog.complete.isLocalPackage(label)) {
+        // Core package is using or implying another core package,
+        // without a version number.  We fill in the version number.
+        var versionString = catalog.complete.getLatestVersion(label).version;
+        // strip suffix like "+local"
+        versionString = packageVersionParser.removeBuildID(versionString);
+        // modify the constraint on this dep that will be sent to troposphere
+        refs.constraint = versionString;
+      } else if (label === "meteor") {
+        // HACK: We are willing to publish a package with a "null"
+        // constraint on the "meteor" package to troposphere.  This
+        // happens for non-core packages when not running from a
+        // checkout, because all packages implicitly depend on the
+        // "meteor" package, but do not necessarily specify an
+        // explicit version for it, and we don't have a great way to
+        // choose one here.
+        // XXX come back to this, especially if we are incrementing the
+        // major version of "meteor".  hopefully we will have more data
+        // about the package system by then.
+      } else {
+        badConstraints.push(label);
+      }
     }
   });
 
   // If we are not a core package and some of our constraints are unspecified,
   // then we should force the user to specify them. This is because we are not
   // sure about pre-0.90 package versions yet.
-  if (!packageSource.isCore && !_.isEqual(badConstraints, [])) {
+  if (!_.isEqual(badConstraints, [])) {
     Console.stderr.write(
-"You must specify a version constraint for the following packages:");
+      "You must specify a version constraint for the following packages:");
     _.each(badConstraints, function(bad) {
       Console.stderr.write(" " + bad);
     });

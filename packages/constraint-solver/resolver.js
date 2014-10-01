@@ -311,7 +311,7 @@ ConstraintSolver.UnitVersion = function (name, unitVersion, ecv) {
   self.name = name;
   // Things with different build IDs should represent the same code, so ignore
   // them. (Notably: depending on @=1.3.1 should allow 1.3.1+local!)
-  self.version = unitVersion.replace(/\+.*$/, '');
+  self.version = PackageVersion.removeBuildID(unitVersion);
   self.dependencies = [];
   self.constraints = new ConstraintSolver.ConstraintsList();
   // a string in a form of "1.2.0"
