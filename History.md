@@ -10,6 +10,7 @@
 * Fix `meteor update` on an app built from a checkout version
   of Meteor.
 
+
 ## v0.9.3
 
 ### More Package Version Number Flexibility
