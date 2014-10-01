@@ -553,7 +553,33 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
-  return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
+
+  // Use `dirPath` as the argument to `fstream.Reader` here instead of
+  // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
+  // collection of odd behaviors in fstream (which might be bugs or
+  // might just be weirdnesses). First, if we pass an object with `type:
+  // 'Directory'` as an argument, then the resulting tarball has no
+  // entry for the top-level directory, because the reader emits an
+  // entry (with just the path, no permissions or other properties)
+  // before the pipe to gzip is even set up, so that entry gets
+  // lost. Even if we pause the streams until all the pipes are set up,
+  // we'll get the entry in the tarball for the top-level directory
+  // without permissions or other properties, which is problematic. Just
+  // passing `dirPath` appears to cause `fstream` to stat the directory
+  // before emitting an entry for it, so the pipes are set up by the
+  // time the entry is emitted, and the entry has all the right
+  // permissions, etc. from statting it.
+  //
+  // The second weird behavior is that we need an entry for the
+  // top-level directory in the tarball to untar it with npm `tar`. (GNU
+  // tar, in contrast, appears to have no problems untarring tarballs
+  // without entries for the top-level directory inside them.) The
+  // problem is that, without an entry for the top-level directory,
+  // `fstream` will create the directory with the same permissions as
+  // the first file inside it. This manifests as an EACCESS when
+  // untarring if the first file inside the top-level directory is not
+  // writeable.
+  return fstream.Reader(dirPath).pipe(
     tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
 };
 
