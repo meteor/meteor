@@ -857,9 +857,6 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       return null;
     }
 
-    if (isDebugOutput(line) && ! verboseness)
-      return null;
-
     // filename.js?hashsha1: Line 123 : message goes here
     var parsedLine =
       line.match(/^([^?]*)(\?[a-zA-Z0-9]+)?: Line (\d+) : (.*)$/);
@@ -867,6 +864,9 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     if (! parsedLine)
       return Log.format(
         Log.objFromText(line), { metaColor: 'green', color: true });
+
+    if (isDebugOutput(parsedLine[4]) && ! verboseness)
+      return null;
 
     var output = {
       time: new Date,
