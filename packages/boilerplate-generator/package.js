@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.1-pre.0'
+  version: '1.0.1-pre.1'
 });
 
 Package.on_use(function (api) {
