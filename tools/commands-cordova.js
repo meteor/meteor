@@ -1052,6 +1052,7 @@ var checkAgreePlatformTerms = function (platform) {
   return agreed;
 };
 
+
 // --- Mobile Control File parsing ---
 
 
