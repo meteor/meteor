@@ -77,10 +77,10 @@ var updateVersions = function (shouldReloadClientProgram) {
       process.env.AUTOUPDATE_VERSION ||
       WebApp.calculateClientHashRefreshable();
 
-    Autoupdate.autoupdateVersionCordova =
-      __meteor_runtime_config__.autoupdateVersionCordova =
-        process.env.AUTOUPDATE_VERSION ||
-        WebApp.calculateClientHashCordova();
+  Autoupdate.autoupdateVersionCordova =
+    __meteor_runtime_config__.autoupdateVersionCordova =
+      process.env.AUTOUPDATE_VERSION ||
+      WebApp.calculateClientHashCordova();
 
   // Step 2: form the new client boilerplate which contains the updated
   // assets and __meteor_runtime_config__.
