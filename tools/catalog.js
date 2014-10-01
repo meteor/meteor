@@ -51,6 +51,11 @@ var LayeredCatalog = function() {
 };
 
 _.extend(LayeredCatalog.prototype, {
+  toString: function () {
+    var self = this;
+    return "LayeredCatalog []";
+  },
+
   setCatalogs: function(local, remote) {
     var self = this;
     self.localCatalog = local;

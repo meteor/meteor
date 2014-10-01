@@ -489,6 +489,11 @@ var RemoteCatalog = function (options) {
 };
 
 _.extend(RemoteCatalog.prototype, {
+  toString: function () {
+    var self = this;
+    return "RemoteCatalog [options=" + JSON.stringify(self.options) + "]";
+  },
+
   getVersion: function (name, version) {
     var result = this._queryAsJSON("SELECT content FROM versions WHERE packageName=? AND version=?", [name, version]);
     if(!result || result.length === 0) {

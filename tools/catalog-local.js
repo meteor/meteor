@@ -52,6 +52,11 @@ var LocalCatalog = function (options) {
 };
 
 _.extend(LocalCatalog.prototype, {
+  toString: function () {
+    var self = this;
+    return "LocalCatalog [localPackageDirs=" + self.localPackageDirs + "]";
+  },
+
   // Initialize the Catalog. This must be called before any other
   // Catalog function.
 
