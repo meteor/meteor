@@ -28,7 +28,7 @@ var Runner = function (appDir, options) {
     throw new Error("no proxyPort?");
 
   var listenPort = options.proxyPort;
-  var mongoPort = listenPort + 1;
+  var mongoPort = parseInt(listenPort) + 1;
   self.specifiedAppPort = options.appPort;
   self.regenerateAppPort();
 
