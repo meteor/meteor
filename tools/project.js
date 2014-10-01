@@ -575,7 +575,7 @@ _.extend(Project.prototype, {
   getWebArchs: function () {
     var self = this;
     var archs = [ "web.browser" ];
-    if (! _.isEmpty(self.getPlatforms())) {
+    if (! _.isEmpty(self.getCordovaPlatforms())) {
       archs.push("web.cordova");
     }
     return archs;
@@ -602,7 +602,7 @@ _.extend(Project.prototype, {
     self.platforms = _.compact(_.map(lines, files.trimLine));
 
     if (! self.platforms) {
-      self.platforms = ["server", "browser"];
+      self.platforms = self.getDefaultPlatforms();
       self.writePlatformsFile();
     }
   },

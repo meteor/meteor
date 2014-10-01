@@ -2,6 +2,7 @@ var _ = require('underscore');
 var fs = require('fs');
 var path = require('path');
 var project = require('./project.js');
+var files = require('./files.js');
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -21,10 +22,6 @@ var maybePrintNoticeHeader = function () {
   console.log("-- Notice --");
   console.log();
   printedNoticeHeaderThisProcess = true;
-};
-
-var trim = function (s) {
-  return s.replace(/\s+/, "");
 };
 
 var upgradersByName = {
@@ -86,14 +83,14 @@ var upgradersByName = {
     if (fs.existsSync(oldPlatformsPath)) {
       // App already has a platforms file, add "server" and "browser" to the top
       oldPlatforms = fs.readFileSync(oldPlatformsPath, {encoding: "utf-8"});
-      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"), trim));
+      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"), files.trimLine));
 
       fs.unlinkSync(oldPlatformsPath);
     }
 
     platforms = _.union(platforms, oldPlatforms);
 
-    fs.writeFileSync(newPlatformsPath, platforms.join("\n") + "\n");
+    fs.writeFileSync(newPlatformsPath, platforms.join("\n") + "\n", "utf-8");
   }
 };
 
