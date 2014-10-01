@@ -10,7 +10,6 @@ var Future = require('fibers/future');
 var utils = require('./utils.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
 
@@ -26,6 +25,19 @@ var availablePlatforms =
 if (process.platform === 'darwin') {
   availablePlatforms.push("ios");
 }
+
+// Borrowed from tropohouse
+// The version in warehouse fails when run from a checkout.
+// XXX: Rationalize
+var cordovaWarehouseDir = function () {
+  if (process.env.METEOR_WAREHOUSE_DIR)
+    return process.env.METEOR_WAREHOUSE_DIR;
+
+  var warehouseBase = files.inCheckout()
+    ? files.getCurrentToolsDir() : process.env.HOME;
+  return path.join(warehouseBase, ".meteor", "cordova");
+};
+
 
 var isValidPlatform = function (name) {
   if (name.match(/ios/i) && process.platform !== 'darwin') {
@@ -809,7 +821,6 @@ _.extend(CordovaRunner.prototype, {
   }
 });
 
-
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
 // options:
@@ -979,7 +990,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   return 0;
 };
 
-var getTermsForPlatform = function (platform) {
+var getTermsForPlatform = function (platform, name) {
   var url = 'https://warehouse.meteor.com/cordova/license_cordova_' + platform + '.txt';
   var result = httpHelpers.request({
     url: url
@@ -989,7 +1000,7 @@ var getTermsForPlatform = function (platform) {
   // S3 returns 403 if not found
   if (response.statusCode === 404 || response.statusCode === 403) {
     verboseLog("License URL not found: " + url);
-    process.stderr.write("No licensing file found for platform: " + platform + ".\n");
+    Console.info("No licensing file found for " + name + ".\n");
     return null;
   }
   if (response.statusCode !== 200) {
@@ -998,14 +1009,14 @@ var getTermsForPlatform = function (platform) {
   return response.body;
 };
 
-var checkAgreePlatformTerms = function (platform) {
+var checkAgreePlatformTerms = function (platform, name) {
   try {
     var terms = getTermsForPlatform(platform);
   } catch (e) {
     verboseLog("Error while downloading license terms: " + e);
 
     // most likely we don't have a net connection
-    process.stderr.write("Unable to download license terms for platform: " + platform + ".\n" +
+    Console.warn("Unable to download license terms for " + name + ".\n" +
     "Please make sure you are online.\n")
     throw new main.ExitWithCode(2);
   }
@@ -1015,7 +1026,7 @@ var checkAgreePlatformTerms = function (platform) {
     return true;
   }
 
-  process.stdout.write("The following terms apply to the '" + platform + "' platform:\n\n");
+  process.stdout.write("The following terms apply to " + name + ":\n\n");
   process.stdout.write(terms + "\n\n");
   process.stdout.write("You must agree to the terms to proceed.\n");
   process.stdout.write("Do you agree (Y/n)? ");
@@ -1353,6 +1364,80 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
 };
 
 
+var Android = function () {
+
+};
+
+_.extend(Android.prototype, {
+  hasAcceleration: function () {
+    var host = archinfo.host();
+
+    if (host.indexOf("os.osx.") == 0) {
+      var kexts = files.run('kextstat');
+      var found = _.any(kexts.split('\n'), function (line) {
+        if (line.indexOf('com.intel.kext.intelhaxm') != -1) {
+          Console.debug("Found com.intel.kext.intelhaxm: ", found);
+          Console.info(Console.success("HAXM is installed"));
+          return true;
+        }
+      });
+      return found;
+    }
+
+    Console.info("Can't determine acceleration for unknown host: ", host);
+
+    return undefined;
+  },
+
+  installAcceleration: function () {
+    var host = archinfo.host();
+
+    if (host.indexOf("os.osx.") == 0) {
+      if (!checkAgreePlatformTerms("haxm", "Intel HAXM")) {
+        Console.warn("Intel HAXM not installed (must agree to license)");
+        return false;
+      }
+      // The mpkg is small, so it's OK to buffer it in memory
+      var name = 'IntelHAXM_1.0.8.mpkg';
+      var mpkg = httpHelpers.getUrl({
+        url: 'http://android-bundle.s3.amazonaws.com/haxm/' + name,
+      // XXX: https://warehouse.meteor.com/haxm/' + name,
+        encoding: null
+      });
+
+      var dir = path.join(cordovaWarehouseDir(), 'haxm');
+      var filepath = path.join(dir, name);
+      files.mkdir_p(dir);
+      fs.writeFileSync(filepath, mpkg);
+
+      Console.info("Launching HAXM installer; we recommend allocating 1024MB of RAM (or more)");
+      files.run('open', filepath);
+
+      return true;
+    }
+
+    return false;
+  },
+
+  startEmulator: function () {
+    var self = this;
+
+//    runEmulator();
+//    # Put Android build tool-chain into path
+//    export PATH="${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH}"
+//
+//# add ant
+//    export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
+//    export PATH="${ANT_HOME}/bin:${PATH}"
+//
+//    export ANDROID_HOME="${ANDROID_BUNDLE}"
+//    export ANDROID_SDK_HOME="${ANDROID_BUNDLE}"
+
+  }
+});
+
+
+
 // --- Cordova commands ---
 
 // add one or more Cordova platforms
@@ -1400,8 +1485,8 @@ main.registerCommand({
   }
 
   try {
-    var agreed = _.every(platforms, function (platform, options) {
-      return checkAgreePlatformTerms(platform, options);
+    var agreed = _.every(platforms, function (platform) {
+      return checkAgreePlatformTerms(platform, "the " + platform + " platform");
     });
     if (!agreed) {
       return 2;
@@ -1491,6 +1576,29 @@ main.registerCommand({
     execFileSyncOrThrow(localAndroid, androidArgs, execOptions);
   } catch (err) {
     // this tool can crash for whatever reason, ignore its failures
+  }
+  return 0;
+});
+
+
+main.registerCommand({
+  name: "android",
+  pretty: true,
+  options: {
+    verbose: { type: Boolean, short: "v" },
+    getready: { type: Boolean }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
+}, function (options) {
+  var android = new Android();
+
+  if (options.getready) {
+    if (!android.hasAcceleration()) {
+      Console.info("Acceleration is not installed; the Android emulator will be very slow without it");
+
+      android.installAcceleration();
+    }
   }
   return 0;
 });

@@ -487,7 +487,7 @@ files.mkdtemp = function (prefix) {
         tries--;
       }
     }
-    throw new Error("failed to make tempory directory in " + tmpDir);
+    throw new Error("failed to make temporary directory in " + tmpDir);
   };
   var dir = make();
   tempDirs.push(dir);
