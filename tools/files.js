@@ -144,11 +144,11 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    var unipackageJson = fs.readFileSync(
+    var isopackJson = fs.readFileSync(
       path.join(files.getCurrentToolsDir(),
                 '..',  // get out of tool, back to package
-                'unipackage.json'));
-    var parsed = JSON.parse(unipackageJson);
+                'isopack.json'));
+    var parsed = JSON.parse(isopackJson);
     return parsed.name + '@' + parsed.version;
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
@@ -166,12 +166,12 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Returns a directory with pre-built unipackages for use by the tool, or 'null'
+// Returns a directory with pre-built isopacks for use by the tool, or 'null'
 // if in a checkout.
 files.getUniloadDir = function () {
   if (files.inCheckout())
     return null;
-  return path.join(files.getCurrentToolsDir(), 'unipackages');
+  return path.join(files.getCurrentToolsDir(), 'isopacks');
 };
 
 // Read a settings file and sanity-check it. Returns a string on

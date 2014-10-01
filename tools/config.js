@@ -205,27 +205,18 @@ _.extend(exports, {
     var self = this;
     var prefix = self.getPackageServerFilePrefix();
 
-    // Should look like 'packages.data.json' in the default case
-    // (test-packages.data.json before 0.9.0).
-    return prefix + ".data.json";
+    // Should look like 'packages.data.db' in the default case
+    // (packages.data.json before 0.9.4).
+    return prefix + ".data.db";
   },
 
   getPackageStorage: function (tropo) {
     var self = this;
     tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v1.1",
+    return path.join(tropo.root, "package-metadata", "v2",
                      self.getLocalPackageCacheFilename());
   },
 
-  // XXX this does not appear to be called.
-  getPackageStorageVersion: function() {
-    return "1.0";
-  },
-
-  // NOTE: Uses the v1 directory, not v1.1 like package-metadata. This
-  // is so that we don't double-print banners and the like. Someday we
-  // should unifiy these so that the tool doesn't have to write to
-  // multiple different versions of these directories.
   getBannersShownFilename: function() {
     return path.join(tropohouse.default.root,
                      "package-metadata", "v1.1", "banners-shown.json");

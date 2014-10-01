@@ -7,6 +7,7 @@
     "chalk": "0.5.1",
     "underscore": "1.5.2",
     "source-map-support": "0.2.5",
-    "semver": "2.2.1"
+    "semver": "2.2.1",
+    "ip": "0.3.2"
   }
 }

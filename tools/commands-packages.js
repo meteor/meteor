@@ -5,7 +5,6 @@ var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var uniload = require('./uniload.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
@@ -22,10 +21,13 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var packageLoader = require('./package-loader.js');
 var Console = require('./console.js').Console;
+
+// On some informational actions, we only refresh the package catalog if it is > 15 minutes old
+DEFAULT_MAX_AGE = 15 * 60 * 1000;
 
 // Returns an object with keys:
 //  record : (a package or version record)
@@ -46,9 +48,14 @@ var getReleaseOrPackageRecord = function(name) {
 
 // Seriously, this dies if it can't refresh. Only call it if you're sure you're
 // OK that the command doesn't work while offline.
-var doOrDie = exports.doOrDie = function (f) {
+var doOrDie = exports.doOrDie = function (options, f) {
+  if (_.isFunction(options)) {
+    f = options;
+    options = {};
+  }
+  options = options || {};
   var ret;
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture(options, function () {
     ret = f();
   });
   if (messages.hasMessages()) {
@@ -58,9 +65,9 @@ var doOrDie = exports.doOrDie = function (f) {
   return ret;
 
 };
-var refreshOfficialCatalogOrDie = function () {
-  doOrDie(function () {
-    catalog.official.refresh();
+var refreshOfficialCatalogOrDie = function (options) {
+  doOrDie({title: 'Refreshing package catalog'}, function () {
+    catalog.official.refresh(options);
   });
 };
 
@@ -93,7 +100,7 @@ main.registerCommand({
     buildmessage.assertInCapture();
     loader.downloadMissingPackages();
     _.each(packagesToLoad, function (name) {
-      // Calling getPackage on the loader will return a unipackage object, which
+      // Calling getPackage on the loader will return a isopack object, which
       // means that the package will be compiled/downloaded. That we throw the
       // package variable away afterwards is immaterial.
       loader.getPackage(name);
@@ -101,7 +108,7 @@ main.registerCommand({
   };
 
   var messages = buildmessage.capture({
-    title: 'getting packages ready'
+    title: 'Getting packages ready'
   }, function () {
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
@@ -187,7 +194,7 @@ main.registerCommand({
 
   var packageSource, compileResult;
   var messages = buildmessage.capture(
-    { title: "building the package" },
+    { title: "Building the package" },
     function () {
 
       packageSource = new PackageSource(catalog.complete);
@@ -248,7 +255,7 @@ main.registerCommand({
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
-      title: "publishing the package"
+      title: "Publishing the package"
     }, function () {
       ec = packageClient.publishPackage(
         packageSource, compileResult, conn, {
@@ -275,7 +282,7 @@ main.registerCommand({
     return ec;
 
   // Warn the user if their package is not good for all architectures.
-  var allArchs = compileResult.unipackage.buildArchitectures().split('+');
+  var allArchs = compileResult.isopack.buildArchitectures().split('+');
   if (_.any(allArchs, function (arch) {
     return arch.match(/^os\./);
   })) {
@@ -357,9 +364,9 @@ main.registerCommand({
     return 1;
   }
 
-  var unipkg;
+  var isopk;
   var messages = buildmessage.capture({
-    title: "building package " + name
+    title: "Building package " + name
   }, function () {
     var packageSource = new PackageSource(catalog.complete);
 
@@ -492,9 +499,9 @@ main.registerCommand({
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
 
-    unipkg = compiler.compile(packageSource, {
+    isopk = compiler.compile(packageSource, {
       officialBuild: true
-    }).unipackage;
+    }).isopack;
     if (buildmessage.jobHasMessages())
       return;
   });
@@ -514,9 +521,9 @@ main.registerCommand({
 
   try {
     messages = buildmessage.capture({
-      title: "publishing package " + name
+      title: "Publishing package " + name
     }, function () {
-      packageClient.createAndPublishBuiltPackage(conn, unipkg);
+      packageClient.createAndPublishBuiltPackage(conn, isopk);
     });
   } catch (e) {
     packageClient.handlePackageServerConnectionError(e);
@@ -713,7 +720,7 @@ main.registerCommand({
     var toPublish = {};
     var canBuild = true;
     var messages = buildmessage.capture(
-      {title: "rebuilding local packages"},
+      {title: "Rebuilding local packages"},
       function () {
         Console.info("Rebuilding local packages...");
         _.each(contents, function (item) {
@@ -726,12 +733,12 @@ main.registerCommand({
           // in a release.
           var packageDir = path.resolve(path.join(localPackageDir, item));
           // Consider a directory to be a package source tree if it
-          // contains 'package.js'. (We used to support unipackages in
+          // contains 'package.js'. (We used to support isopacks in
           // localPackageDirs, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
             var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
-              { title: "building package " + item },
+              { title: "Building package " + item },
               function () {
                 Console.info("  checking consistency of " + item + " ");
 
@@ -771,7 +778,7 @@ main.registerCommand({
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {
-                  Console.warn("\n ... Error compiling unipackage: " + item );
+                  Console.warn("\n ... Error compiling isopack: " + item );
                   canBuild = false;
                   return;
                 };
@@ -822,7 +829,7 @@ main.registerCommand({
                   var existingBuild =
                         catalog.official.getBuildWithPreciseBuildArchitectures(
                           oldVersion,
-                          compileResult.unipackage.buildArchitectures());
+                          compileResult.isopack.buildArchitectures());
 
                   // If the version number mentioned in package.js exists, but
                   // there's no build of this architecture, then either the old
@@ -833,11 +840,11 @@ main.registerCommand({
                   var somethingChanged = !existingBuild;
 
                   if (!somethingChanged) {
-                    // Save the unipackage, just to get its hash.
+                    // Save the isopack, just to get its hash.
                     // XXX this is redundant with the bundle build step that
                     // publishPackage will do later
                     var bundleBuildResult = packageClient.bundleBuild(
-                      compileResult.unipackage);
+                      compileResult.isopack);
                     if (bundleBuildResult.treeHash !==
                         existingBuild.build.treeHash) {
                       somethingChanged = true;
@@ -884,7 +891,7 @@ main.registerCommand({
       var pubEC;
       try {
         messages = buildmessage.capture({
-          title: "publishing package " + name
+          title: "Publishing package " + name
         }, function () {
           var opts = {
             new: !catalog.official.getPackage(name)
@@ -1007,7 +1014,7 @@ main.registerCommand({
 }, function (options) {
 
   // We should refresh the catalog in case there are new versions.
-  refreshOfficialCatalogOrDie();
+  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
@@ -1017,7 +1024,7 @@ main.registerCommand({
   var full = options.args[0].split('@');
   var name = full[0];
   var allRecord;
-  doOrDie(function () {
+  doOrDie({ title: 'Get release record' }, function () {
     allRecord = getReleaseOrPackageRecord(name);
   });
 
@@ -1032,10 +1039,10 @@ main.registerCommand({
   if (!allRecord.isRelease) {
     label = "package";
     var getRelevantRecord = function (version) {
-      var versionRecord = doOrDie(function () {
+      var versionRecord = doOrDie({ title: 'Get relevant record' }, function () {
         return catalog.official.getVersion(name, version);
       });
-      var myBuilds = _.pluck(doOrDie(function () {
+      var myBuilds = _.pluck(doOrDie({ title: 'Get all builds' }, function () {
         return catalog.official.getAllBuilds(name, version);
       }), 'buildArchitectures');
       // Does this package only have a cross-platform build?
@@ -1122,7 +1129,9 @@ main.registerCommand({
   // "bob", "bob and alice" or "bob, alex and alice".
   var myMaintainerString = "";
   var myMaintainers = _.pluck(record.maintainers, 'username');
-  if (myMaintainers.length === 1) {
+  if (myMaintainers.length === 0) {
+    Console.debug("No maintainer records found: ", JSON.stringify(record));
+  } else if (myMaintainers.length === 1) {
     myMaintainerString = myMaintainers[0];
   } else {
     var myTotal = myMaintainers.length;
@@ -1135,20 +1144,31 @@ main.registerCommand({
     myMaintainerString +=  " and " +  myMaintainers[myTotal - 1];
   }
 
-  var metamessage = "Maintained by " + myMaintainerString + ".";
-        ;
+  var metamessage = "";
+
+  if (myMaintainerString) {
+    metamessage += "Maintained by " + myMaintainerString + ".";
+  }
+
   if (lastVersion && lastVersion.git) {
-    metamessage += "\nYou can find the git repository at " +
+    // No full stop, as it makes copying and pasting painful
+    metamessage += "\nYou can find the git repository at: " +
         lastVersion.git;
-    metamessage += ".";
   }
 
   if (record && record.homepage) {
+    // No full stop, as it makes copying and pasting painful
     metamessage = metamessage + "\nYou can find more information at "
       + record.homepage;
-    metamessage += ".";
   }
   Console.info(metamessage);
+});
+
+main.registerCommand({
+  name: 'refresh',
+  pretty: true
+}, function (options) {
+  refreshOfficialCatalogOrDie();
 });
 
 main.registerCommand({
@@ -1172,7 +1192,7 @@ main.registerCommand({
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
   // refreshing" from "can't connect to catalog"
-  refreshOfficialCatalogOrDie();
+  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   var allPackages = catalog.official.getAllPackageNames();
   var allReleases = catalog.official.getAllReleaseTracks();
@@ -1237,7 +1257,7 @@ main.registerCommand({
 
   _.each(allPackages, function (pack) {
     if (selector(pack, false)) {
-      var vr = doOrDie(function () {
+      var vr = doOrDie({ title: 'Get latest version'}, function () {
         if (!options['show-rcs']) {
           return catalog.official.getLatestMainlineVersion(pack);
         }
@@ -1392,7 +1412,7 @@ var maybeUpdateRelease = function (options) {
   }
 
   // We are running from checkout, so we are not updating the release.
-  if (release.current.isCheckout()) {
+  if (release.current && release.current.isCheckout()) {
     Console.error(
 "You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
 "Checking to see if we can update your packages.");
@@ -1513,6 +1533,11 @@ var maybeUpdateRelease = function (options) {
     var record = doOrDie(function () {
       return catalog.official.getReleaseVersion(r[0], r[1]);
     });
+    if (!record) {
+      Console.error(
+        "Cannot update to a patch release from an old release.");
+      return 1;
+    }
     var updateTo = record.patchReleaseVersion;
     if (!updateTo) {
       Console.error(
@@ -1898,7 +1923,7 @@ main.registerCommand({
   var packages = project.getConstraints();
 
   var allPackages;
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: 'Combining constraints' }, function () {
     // Combine into one object mapping package name to list of constraints, to
     // pass in to the constraint solver.
     allPackages = project.getCurrentCombinedConstraints();
@@ -1910,7 +1935,7 @@ main.registerCommand({
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    doOrDie(function () {
+    doOrDie({title: 'Checking package: ' + constraint.name }, function () {
       if (! catalog.complete.getPackage(constraint.name)) {
         Console.error(constraint.name + ": no such package");
         failed = true;
@@ -1921,7 +1946,7 @@ main.registerCommand({
     // If the version was specified, check that the version exists.
     _.each(constraint.constraint, function (constr) {
       if (constr.version !== null) {
-        var versionInfo = doOrDie(function () {
+        var versionInfo = doOrDie({ title: 'Fetching packages' }, function () {
           return catalog.complete.getVersion(constraint.name, constr.version);
         });
         if (! versionInfo) {
@@ -2328,7 +2353,7 @@ main.registerCommand({
     _.each(osArches, function (osArch) {
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
+          title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
           if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
@@ -2348,11 +2373,10 @@ main.registerCommand({
 
   // Get a copy of the data.json.
   var dataTmpdir = files.mkdtemp();
-  var tmpDataJson = path.join(dataTmpdir, 'data.json');
+  var tmpDataJson = path.join(dataTmpdir, 'data.db');
 
-  var savedData = packageClient.updateServerPackageData(null, {
-    packageStorageFile: tmpDataJson
-  }).data;
+  var tmpCatalog = new catalog.Remote({packageStorage : tmpDataJson});
+  var savedData = packageClient.updateServerPackageData(tmpCatalog, null);
   if (!savedData) {
     // will have already printed an error
     return 2;
@@ -2383,7 +2407,7 @@ main.registerCommand({
       path.join(tmpdir, '.meteor'), catalog.official);
     var messages = buildmessage.capture(function () {
       buildmessage.enterJob({
-        title: "downloading tool package " + toolPkg.package + "@" +
+        title: "Downloading tool package " + toolPkg.package + "@" +
           toolPkg.constraint
       }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures({
@@ -2394,7 +2418,7 @@ main.registerCommand({
       });
       _.each(release.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "downloading package " + pkgName + "@" + pkgVersion
+          title: "Downloading package " + pkgName + "@" + pkgVersion
         }, function () {
           tmpTropo.maybeDownloadPackageForArchitectures({
             packageName: pkgName,
@@ -2414,11 +2438,11 @@ main.registerCommand({
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
-    var toolUnipackagePath =
+    var toolIsopackPath =
           tmpTropo.packagePath(toolPkg.package, toolPkg.constraint);
-    var toolUnipackage = new unipackage.Unipackage;
-    toolUnipackage.initFromPath(toolPkg.package, toolUnipackagePath);
-    var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk, {arch: osArch});
+    var toolIsopack = new isopack.Isopack;
+    toolIsopack.initFromPath(toolPkg.package, toolIsopackPath);
+    var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
     fs.symlinkSync(

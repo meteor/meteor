@@ -57,6 +57,20 @@ var Console = function (options) {
   self._stream = process.stdout;
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+  // Status message mode is where we see status messages but not the
+  // fancy progress bar.  It's used when we detect a "pseudo-TTY"
+  // of the type used by Emacs, and possibly SSH.
+  self._inStatusMessageMode = false;
+  self._wroteStatusMessage = false;
+
+  self._logThreshold = LEVEL_CODE_INFO;
+  var logspec = process.env.METEOR_LOG;
+  if (logspec) {
+    logspec = logspec.trim().toLowerCase();
+    if (logspec == 'debug') {
+      self._logThreshold = LEVEL_CODE_DEBUG;
+    }
+  }
 
   cleanup.onExit(function (sig) {
     self.enableProgressBar(false);
@@ -68,7 +82,9 @@ PROGRESS_BAR_WIDTH = 20;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
 STATUS_MAX_LENGTH = 40;
+TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
+STATUS_INTERVAL_MS = 500;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
@@ -104,23 +120,38 @@ _.extend(Console.prototype, {
 
   _renderProgressBar: function () {
     var self = this;
+
+    var text = self._progressBarText;
+    if (text) {
+      // pad or truncate `text` to STATUS_MAX_LENGTH
+      if (text.length > STATUS_MAX_LENGTH) {
+        text = text.substring(0, STATUS_MAX_LENGTH - 3) + "...";
+      } else {
+        while (text.length < STATUS_MAX_LENGTH) {
+          text = text + ' ';
+        }
+      }
+    }
+
     if (self._progressBar) {
       // Force repaint
       self._progressBar.lastDraw = '';
 
       self._progressBar.render();
 
-      if (self._progressBarText) {
-        var text = self._progressBarText;
-        if (text > STATUS_MAX_LENGTH) {
-          text = text.substring(0, STATUS_MAX_LENGTH - 3) + "...";
-        } else {
-          while (text.length < STATUS_MAX_LENGTH) {
-            text = text + ' ';
-          }
-        }
+      if (text) {
         self._stream.cursorTo(STATUS_POSITION);
         self._stream.write(chalk.bold(text));
+      }
+    } else if (self._inStatusMessageMode) {
+      // No fancy terminal support available, but we have a TTY.
+      // Print messages that will be overwritten because they
+      // end in `\r`.
+      if (text) {
+        // the number of characters besides `text` here must
+        // be accounted for in TEMP_STATUS_LENGTH.
+        self._stream.write('  (  ' + text + '  ... )\r');
+        self._wroteStatusMessage = true;
       }
     }
   },
@@ -156,7 +187,7 @@ _.extend(Console.prototype, {
     var self = this;
     var now = Date.now();
 
-    if ((now - self._lastStatusPoll) < 50) {
+    if ((now - self._lastStatusPoll) < STATUS_INTERVAL_MS) {
       return;
     }
     self._statusPoll();
@@ -166,15 +197,28 @@ _.extend(Console.prototype, {
     var self = this;
     Fiber(function () {
       while (true) {
-        sleep(50);
+        sleep(STATUS_INTERVAL_MS);
 
         self._statusPoll();
       }
     }).run();
   },
 
+  debug: function(/*arguments*/) {
+    var self = this;
+    if (self._logThreshold > LEVEL_CODE_DEBUG) {
+      return;
+    }
+
+    var message = self._format(arguments);
+    self._print(LEVEL_DEBUG, message);
+  },
+
   info: function(/*arguments*/) {
     var self = this;
+    if (self._logThreshold > LEVEL_CODE_INFO) {
+      return;
+    }
 
     var message = self._format(arguments);
     self._print(LEVEL_INFO, message);
@@ -182,6 +226,9 @@ _.extend(Console.prototype, {
 
   warn: function(/*arguments*/) {
     var self = this;
+    if (self._logThreshold > LEVEL_CODE_WARN) {
+      return;
+    }
 
     var message = self._format(arguments);
     self._print(LEVEL_WARN, message);
@@ -239,6 +286,8 @@ _.extend(Console.prototype, {
       }
     }
 
+    self._clearStatusMessage();
+
     if (style) {
       dest.write(style(message + '\n'));
     } else {
@@ -251,12 +300,26 @@ _.extend(Console.prototype, {
     }
   },
 
+  _clearStatusMessage: function () {
+    var self = this;
+    // For the non-progress-bar status mode, we may need to
+    // clear some characters that we printed with a trailing `\r`.
+    if (self._wroteStatusMessage) {
+      var spaces = new Array(TEMP_STATUS_LENGTH + 1).join(' ');
+      self._stream.write(spaces + '\r');
+      self._wroteStatusMessage = false;
+    }
+  },
+
   _format: function (logArguments) {
     var self = this;
 
     var message = '';
-    var format = logArguments[0];
-    message = format;
+    for (var i = 0; i < logArguments.length; i++) {
+      if (i != 0) message += ' ';
+      message += logArguments[i];
+    }
+
     return message;
   },
 
@@ -277,8 +340,25 @@ _.extend(Console.prototype, {
       enabled = true;
     }
 
-    // Ignore if not in pretty / on TTY
-    if (!self._stream.isTTY || !self._pretty) return;
+    // Ignore if not in pretty / on TTY.
+    if ((! self._stream.isTTY) || (! self._pretty)) {
+      self._inStatusMessageMode = false;
+      return;
+    }
+    if (self._stream.isTTY && ! self._stream.columns) {
+      // We might be in a pseudo-TTY that doesn't support
+      // clearLine() and cursorTo(...).
+      // It's important that we only enter status message mode
+      // if self._pretty, so that we don't start displaying
+      // status messages too soon.
+      if (enabled) {
+        self._inStatusMessageMode = true;
+      } else if (self._inStatusMessageMode) {
+        self._clearStatusMessage();
+        self._inStatusMessageMode = false;
+      }
+      return;
+    }
 
     if (enabled && !self._progressBar) {
       var options = {

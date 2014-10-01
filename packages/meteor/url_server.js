@@ -8,7 +8,11 @@ if (process.env.ROOT_URL &&
       throw Error("$ROOT_URL, if specified, must be an URL");
     }
     var pathPrefix = parsedUrl.pathname;
-    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = pathPrefix === "/" ? "" : pathPrefix;
+    if (pathPrefix.slice(-1) === '/') {
+      // remove trailing slash (or turn "/" into "")
+      pathPrefix = pathPrefix.slice(0, -1);
+    }
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = pathPrefix;
   } else {
     __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = "";
   }

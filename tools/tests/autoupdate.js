@@ -3,28 +3,34 @@ var path = require('path');
 var fs = require('fs');
 var _ = require('underscore');
 var config = require("../config.js");
+var catalogRemote = require("../catalog-remote.js");
+var buildmessage = require("../buildmessage.js");
 var Sandbox = selftest.Sandbox;
 
-var editPackageMetadata = function (sandbox, f) {
-  var dataFile = config.getPackageStorage({root: sandbox.warehouse});
-  var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-  f(data);
-  fs.writeFileSync(dataFile, JSON.stringify(data));
+var getCatalog = function (sandbox) {
+ var dataFile = path.join(sandbox.warehouse,
+                          'package-metadata', 'v2',
+                          config.getLocalPackageCacheFilename());
+ var catalog = new catalogRemote.RemoteCatalog();
+ catalog.initialize( {packageStorage: dataFile});
+ return catalog;
 };
 
 var setBanner = function (sandbox, version, banner) {
-  editPackageMetadata(sandbox, function (data) {
-    var release = _.findWhere(data.collections.releaseVersions,
-                              { version: version });
+  var messages = buildmessage.capture(function () {
+    var catalog = getCatalog(sandbox);
+    var release = catalog.getReleaseVersion("METEOR", version);
     release.banner = { text: banner, lastUpdated: new Date };
+    catalog._insertReleaseVersions([release]); //This is a hack
   });
 };
 
 var recommend = function (sandbox, version) {
-  editPackageMetadata(sandbox, function (data) {
-    var release = _.findWhere(data.collections.releaseVersions,
-                              { version: version });
+  var messages = buildmessage.capture(function () {
+    var catalog = getCatalog(sandbox);
+    var release = catalog.getReleaseVersion('METEOR', version);
     release.recommended = true;
+    catalog._insertReleaseVersions([release]);
   });
 };
 

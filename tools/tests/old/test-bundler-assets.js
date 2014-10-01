@@ -54,6 +54,10 @@ var doOrThrow = function (f) {
 // are client and server programs inside programs/.
 
 var runTest = function () {
+   // As preparation, we need to initialize the official catalog, which serves
+   // as our sql data store.
+   catalog.official.initialize();
+
   console.log("Bundle app with public/ directory");
   assert.doesNotThrow(function () {
     setAppDir(appWithPublic);

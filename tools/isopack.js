@@ -35,10 +35,10 @@ var rejectBadPath = function (p) {
 // - resources
 
 var nextBuildId = 1;
-var Unibuild = function (unipackage, options) {
+var Unibuild = function (isopack, options) {
   var self = this;
   options = options || {};
-  self.pkg = unipackage;
+  self.pkg = isopack;
 
   self.arch = options.arch;
 
@@ -57,7 +57,7 @@ var Unibuild = function (unipackage, options) {
   // to keep track of Unibuilds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
-  self.id = unipackage.name + "." + self.pkg.name + "@" + self.arch + "#" +
+  self.id = isopack.name + "." + self.pkg.name + "@" + self.arch + "#" +
     (nextBuildId ++);
 
   // Prelink output.
@@ -176,7 +176,7 @@ _.extend(Unibuild.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// Unipackage
+// Isopack
 ///////////////////////////////////////////////////////////////////////////////
 
 // Helper function. Takes an object mapping package name to version, and
@@ -197,15 +197,36 @@ var getLoadedPackageVersions = function (versions, catalog, filter) {
   });
   _.each(versions, function (version, packageName) {
     if (! filter || filter(packageName, version)) {
-      var unipackage = loader.getPackage(packageName);
-      result[packageName] = unipackage.version;
+      var isopack = loader.getPackage(packageName);
+      result[packageName] = isopack.version;
     }
   });
   return result;
 };
 
+var convertIsopackFormat = function (data, versionFrom, versionTo) {
+  var convertedData = _.clone(data);
+  if (versionFrom === versionTo) {
+    return convertedData;
+  }
+
+  // XXX COMPAT WITH 0.9.3
+  if (versionFrom === "unipackage-pre2" && versionTo === "isopack-1") {
+    convertedData.builds = convertedData.unibuilds;
+    delete convertedData.unibuilds;
+    return convertedData;
+  } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
+    convertedData.unibuilds = convertedData.builds;
+    convertedData.format = "unipackage-pre2";
+    delete convertedData.builds;
+    return convertedData;
+  }
+};
+
+var currentFormat = "isopack-1";
+
 // XXX document
-var Unipackage = function () {
+var Isopack = function () {
   var self = this;
 
   // These have the same meaning as in PackageSource.
@@ -225,11 +246,11 @@ var Unipackage = function () {
 
   // -- Information for up-to-date checks --
 
-  // Version number of the tool that built this unipackage
+  // Version number of the tool that built this isopack
   // (compiler.BUILT_BY) or null if unknown
   self.builtBy = null;
 
-  // If true, force the checkUpToDate to return false for this unipackage.
+  // If true, force the checkUpToDate to return false for this isopack.
   self.forceNotUpToDate = false;
 
   // The versions that we used at build time for each of our direct
@@ -265,15 +286,15 @@ var Unipackage = function () {
 
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
-  // unipackage.
+  // isopack.
   self.includeTool = false;
 
   // This is tools to copy from trees on disk. This is used by the
-  // unipackage-merge code in tropohouse.
+  // isopack-merge code in tropohouse.
   self.toolsOnDisk = [];
 };
 
-_.extend(Unipackage.prototype, {
+_.extend(Isopack.prototype, {
   // Make a dummy (empty) package that contains nothing of interest.
   // XXX used?
   initEmpty: function (name) {
@@ -298,8 +319,8 @@ _.extend(Unipackage.prototype, {
     self.includeTool = options.includeTool;
   },
 
-  // Programmatically add a unibuild to this Unipackage. Should only be
-  // called as part of building up a new Unipackage using
+  // Programmatically add a unibuild to this Isopack. Should only be
+  // called as part of building up a new Isopack using
   // initFromOptions. 'options' are the options to the Unibuild
   // constructor.
   addUnibuild: function (options) {
@@ -406,7 +427,7 @@ _.extend(Unipackage.prototype, {
       //
       // 'handler' is a function that takes a single argument, a
       // CompileStep (#CompileStep)
-      
+
       /**
        * @summary Inside a build plugin source file specified in
        * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
@@ -457,10 +478,10 @@ _.extend(Unipackage.prototype, {
 
       var plugin = pluginsByArch[arch];
       buildmessage.enterJob({
-        title: "loading plugin `" + name +
+        title: "Loading plugin `" + name +
           "` from package `" + self.name + "`"
         // don't necessarily have rootPath anymore
-        // (XXX we do, if the unipackage was locally built, which is
+        // (XXX we do, if the isopack was locally built, which is
         // the important case for debugging. it'd be nice to get this
         // case right.)
       }, function () {
@@ -471,11 +492,11 @@ _.extend(Unipackage.prototype, {
     self._pluginsInitialized = true;
   },
 
-  // Load a Unipackage on disk.
+  // Load a Isopack on disk.
   //
   // options:
   // - buildOfPath: If present, the source directory (as an absolute
-  //   path on local disk) of which we think this unipackage is a
+  //   path on local disk) of which we think this isopack is a
   //   build. If it's not (it was copied from somewhere else), we
   //   consider it not up to date (in the sense of checkUpToDate) so
   //   that we can rebuild it and correct the absolute paths in the
@@ -483,7 +504,7 @@ _.extend(Unipackage.prototype, {
   initFromPath: function (name, dir, options) {
     var self = this;
     options = _.clone(options || {});
-    options.firstUnipackage = true;
+    options.firstIsopack = true;
 
     return self._loadUnibuildsFromPath(name, dir, options);
   },
@@ -492,27 +513,59 @@ _.extend(Unipackage.prototype, {
     var self = this;
     options = options || {};
 
-    // In the tropohouse, unipackage paths are symlinks (which can be updated if
+    // In the tropohouse, isopack paths are symlinks (which can be updated if
     // more unibuilds are merged in). For any given call to
-    // _loadUnibuildsFromPath, let's ensure we see a consistent unipackage by
+    // _loadUnibuildsFromPath, let's ensure we see a consistent isopack by
     // realpath'ing dir.
     dir = fs.realpathSync(dir);
 
-    var mainJson =
-      JSON.parse(fs.readFileSync(path.join(dir, 'unipackage.json')));
+    var mainJson;
 
-    // We don't support pre-0.9.0 unipackages, but we do know enough to delete
-    // them if we find them in .build.* somehow (rather than crash).
-    if (mainJson.format === "unipackage-pre1")
-      throw new exports.OldUnipackageFormatError;
+    // deal with different versions of "isopack.json", backwards compatible
+    var isopackJsonPath = path.join(dir, "isopack.json");
+    if (fs.existsSync(isopackJsonPath)) {
+      isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
 
-    if (mainJson.format !== "unipackage-pre2")
-      throw new Error("Unsupported unipackage format: " +
-                      JSON.stringify(mainJson.format));
+      if (isopackJson[currentFormat]) {
+        mainJson = isopackJson[currentFormat];
+      } else {
+        // This file is from the future and no longer supports this version
+        throw new Error("Could not find isopack data with format " + currentFormat + ".\n" +
+          "This isopack was likely built with a much newer version of Meteor.");
+      }
+    } else {
+      // super old version with different file name
+      // XXX COMPAT WITH 0.9.3
+      var unipackageJsonPath = path.join(dir, "unipackage.json");
+      if (fs.existsSync(unipackageJsonPath)) {
+        mainJson = JSON.parse(fs.readFileSync(unipackageJsonPath));
 
-    // unipackages didn't used to know their name, but they should.
+        // in the old format, builds were called unibuilds
+        // use string to make sure this doesn't get caught in a find/replace
+        mainJson.builds = mainJson["unibuilds"];
+
+        mainJson = convertIsopackFormat(mainJson,
+          "unipackage-pre2", currentFormat);
+      }
+
+      if (mainJson.format !== "unipackage-pre2") {
+        // We don't support pre-0.9.0 isopacks, but we do know enough to delete
+        // them if we find them in .build.* somehow (rather than crash).
+        if (mainJson.format === "unipackage-pre1") {
+          throw new exports.OldIsopackFormatError();
+        }
+
+        throw new Error("Unsupported isopack format: " +
+                        JSON.stringify(mainJson.format));
+      }
+    }
+
+    // done dealing with different versions, below here
+    // mainJson is the data we want
+
+    // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
-      throw new Error("unipackage " + name + " thinks its name is " +
+      throw new Error("isopack " + name + " thinks its name is " +
                       mainJson.name);
     }
 
@@ -520,8 +573,8 @@ _.extend(Unipackage.prototype, {
     var buildInfoJson = fs.existsSync(buildInfoPath) &&
       JSON.parse(fs.readFileSync(buildInfoPath));
     if (buildInfoJson) {
-      if (!options.firstUnipackage) {
-        throw Error("can't merge unipackages with buildinfo");
+      if (!options.firstIsopack) {
+        throw Error("can't merge isopacks with buildinfo");
       }
     } else {
       buildInfoJson = {};
@@ -556,16 +609,16 @@ _.extend(Unipackage.prototype, {
     });
 
     // Read pluginWatchSet and pluginProviderPackageDirs. (In the
-    // multi-sub-unipackage case, these are guaranteed to be trivial
+    // multi-sub-isopack case, these are guaranteed to be trivial
     // (since we check that there's no buildinfo.json), so no need to
     // merge.)
     self.pluginWatchSet = watch.WatchSet.fromJSON(
       buildInfoJson.pluginDependencies);
     self.pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
 
-    // If we are loading multiple unipackages, only take this stuff from the
+    // If we are loading multiple isopacks, only take this stuff from the
     // first one.
-    if (options.firstUnipackage) {
+    if (options.firstIsopack) {
       self.name = name;
       self.metadata = {
         summary: mainJson.summary
@@ -588,7 +641,7 @@ _.extend(Unipackage.prototype, {
       }
     });
     self.pluginsBuilt = true;
-    _.each(mainJson.unibuilds, function (unibuildMeta) {
+    _.each(mainJson.builds, function (unibuildMeta) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
       rejectBadPath(unibuildMeta.path);
@@ -605,7 +658,7 @@ _.extend(Unipackage.prototype, {
       var unibuildBasePath = path.dirname(path.join(dir, unibuildMeta.path));
 
       if (unibuildJson.format !== "unipackage-unibuild-pre1")
-        throw new Error("Unsupported unipackage unibuild format: " +
+        throw new Error("Unsupported isopack unibuild format: " +
                         JSON.stringify(unibuildJson.format));
 
       var nodeModulesPath = null;
@@ -656,7 +709,7 @@ _.extend(Unipackage.prototype, {
             path: resource.path || undefined
           });
         } else
-          throw new Error("bad resource type in unipackage: " +
+          throw new Error("bad resource type in isopack: " +
                           JSON.stringify(resource.type));
       });
 
@@ -703,15 +756,15 @@ _.extend(Unipackage.prototype, {
     var builder = new Builder({ outputPath: outputPath });
     try {
       var mainJson = {
-        format: "unipackage-pre2",
         name: self.name,
         summary: self.metadata.summary,
         version: self.version,
         earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
-        unibuilds: [],
+        builds: [],
         plugins: []
       };
+
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
@@ -722,7 +775,7 @@ _.extend(Unipackage.prototype, {
         // Meteor checkout naively deleted) gets its SHA taken to determine the
         // built package's warehouse version. So it should not contain
         // platform-dependent data and should contain all sources of change to
-        // the unipackage's output.  See
+        // the isopack's output.  See
         // scripts/admin/build-package-tarballs.sh.
         // XXX this script is no longer relevant; we use "build IDs" now instead
         var buildTimeDirectDeps = getLoadedPackageVersions(
@@ -745,7 +798,10 @@ _.extend(Unipackage.prototype, {
         };
       }
 
+      // XXX COMPAT WITH 0.9.3
       builder.reserve("unipackage.json");
+
+      builder.reserve("isopack.json");
       // Reserve this even if elideBuildInfo is set, to ensure nothing else
       // writes it somehow.
       builder.reserve("buildinfo.json");
@@ -753,11 +809,11 @@ _.extend(Unipackage.prototype, {
       builder.reserve("body");
 
       // Map from absolute path to npm directory in the unibuild, to the
-      // generated filename in the unipackage we're writing.  Multiple unibuilds
+      // generated filename in the isopack we're writing.  Multiple builds
       // can use the same npm modules (though maybe not any more, since tests
       // have been separated?), but also there can be different sets of
-      // directories as well (eg, for a unipackage merged with from multiple
-      // unipackages with _loadUnibuildsFromPath).
+      // directories as well (eg, for a isopack merged with from multiple
+      // isopacks with _loadUnibuildsFromPath).
       var npmDirectories = {};
 
       // Pre-linker versions of Meteor expect all packages in the warehouse to
@@ -784,7 +840,7 @@ _.extend(Unipackage.prototype, {
           builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
-        mainJson.unibuilds.push({
+        mainJson.builds.push({
           arch: unibuild.arch,
           path: unibuildJsonFile
         });
@@ -805,7 +861,7 @@ _.extend(Unipackage.prototype, {
             nodeModulesPath = npmDirectories[unibuild.nodeModulesPath];
           } else {
             // It's important not to put node_modules at the top level of the
-            // unipackage, so that it is not visible from within plugins.
+            // isopack, so that it is not visible from within plugins.
             nodeModulesPath = npmDirectories[unibuild.nodeModulesPath] =
               builder.generateFilename("npm/node_modules", {directory: true});
             needToCopyNodeModules = true;
@@ -934,7 +990,7 @@ _.extend(Unipackage.prototype, {
         var toolsJson = self._writeTool(builder);
         mainJson.tools = toolsJson;
       }
-      // Next, what about other tools we may be merging from other unipackages?
+      // Next, what about other tools we may be merging from other isopacks?
       // XXX check for overlap
       _.each(self.toolsOnDisk, function (toolMeta) {
         toolMeta = _.clone(toolMeta);
@@ -949,7 +1005,34 @@ _.extend(Unipackage.prototype, {
         }
         mainJson.tools.push(toolMeta);
       });
-      builder.writeJson("unipackage.json", mainJson);
+
+      // old unipackage.json format/filename
+      // XXX COMPAT WITH 0.9.3
+      builder.writeJson("unipackage.json",
+        convertIsopackFormat(mainJson, currentFormat, "unipackage-pre2"));
+
+      // write several versions of the file
+      // add your new format here, and define some stuff
+      // in convertIsopackFormat
+      var formats = ["isopack-1"];
+      var isopackJson = {};
+      _.each(formats, function (format) {
+        // new, extensible format - forwards-compatible
+        isopackJson[format] = convertIsopackFormat(mainJson,
+          currentFormat, format);
+      });
+
+      // writes one file with all of the new formats, so that it is possible
+      // to invent a new format and have old versions of meteor still read the
+      // old format
+      //
+      // This looks something like:
+      // {
+      //   isopack-1: {... data ...},
+      //   isopack-2: {... data ...}
+      // }
+      builder.writeJson("isopack.json", isopackJson);
+
       if (buildInfoJson) {
         builder.writeJson("buildinfo.json", buildInfoJson);
       }
@@ -985,7 +1068,7 @@ _.extend(Unipackage.prototype, {
 
     var toolPath = 'meteor-tool-' + archinfo.host();
     builder = builder.enter(toolPath);
-    var unipath = builder.reserve('unipackages', {directory: true});
+    var unipath = builder.reserve('isopacks', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
@@ -1005,11 +1088,11 @@ _.extend(Unipackage.prototype, {
       catalog: catalog.uniload,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
-    bundler.iterateOverAllUsedUnipackages(
+    bundler.iterateOverAllUsedIsopacks(
       localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
-      function (unipkg) {
+      function (isopk) {
         // XXX assert that each name shows up once
-        unipkg.saveToPath(path.join(unipath, unipkg.name), {
+        isopk.saveToPath(path.join(unipath, isopk.name), {
           // There's no mechanism to rebuild these packages.
           elideBuildInfo: true
         });
@@ -1048,7 +1131,7 @@ _.extend(Unipackage.prototype, {
         if (packageName !== self.name) {
           var catalogVersion = options.catalog.getVersion(packageName, version);
           // XXX This could throw if we call it on a freshly-built
-          // unipackage (as opposed to one read from disk that has real
+          // isopack (as opposed to one read from disk that has real
           // build ids for build-time deps instead of +local) before
           // catalog initialization has finished. See XXX at the top of
           // `getPluginProviders` in compiler.js.
@@ -1125,7 +1208,7 @@ _.extend(Unipackage.prototype, {
     return hasher.digest('hex');
   },
 
-  // Adds the build identifier to the unipackage's `version` field. The
+  // Adds the build identifier to the isopack's `version` field. The
   // caller is responsible for checking whether the existing version has
   // a build identifier already. Options are the same as
   // `getBuildIdentifier`.
@@ -1137,10 +1220,17 @@ _.extend(Unipackage.prototype, {
   }
 });
 
-exports.Unipackage = Unipackage;
+exports.Isopack = Isopack;
 
-exports.OldUnipackageFormatError = function () {
+exports.OldIsopackFormatError = function () {
   // This should always be caught anywhere where it can appear (ie, anywhere
   // that isn't definitely loading something from the tropohouse).
-  this.toString = function () { return "old unipackage format!" };
+  this.toString = function () { return "old isopack format!" };
+};
+
+exports.isopackExistsAtPath = function (thePath) {
+  // XXX COMPAT WITH 0.9.3
+  // Remove unipackage.json when no longer supported
+  return fs.existsSync(path.join(thePath, 'isopack.json')) ||
+    fs.existsSync(path.join(thePath, 'unipackage.json'));
 };

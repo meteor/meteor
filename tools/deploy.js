@@ -390,7 +390,7 @@ var bundleAndDeploy = function (options) {
 
   var settings = null;
   var messages = buildmessage.capture({
-    title: "preparing to deploy",
+    title: "Preparing to deploy",
     rootPath: process.cwd()
   }, function () {
     if (options.settingsFile)

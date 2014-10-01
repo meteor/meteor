@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.meteor.mdg-todos" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>mdg-todos</name>
+    <description>
+        A simple todo list app built in Meteor.
+    </description>
+    <author email="us@percolatestudio.com" href="http://percolatestudio.com">
+        Percolate Studio Team
+    </author>
+    <content src="index.html" />
+    <access origin="*" />
+
+    <!-- Prevents our full page scrollable div from rubber banding when content
+         doesn't overflow the page -->
+    <preference name="DisallowOverscroll" value="true"/>
+</widget>

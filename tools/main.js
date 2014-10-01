@@ -335,7 +335,7 @@ var springboard = function (rel, releaseOverride) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
   var archinfo = require('./archinfo.js');
-  var unipackage = require('./unipackage.js');
+  var isopack = require('./isopack.js');
 
   var toolsPkg = rel.getToolsPackage();
   var toolsVersion = rel.getToolsVersion();
@@ -343,7 +343,7 @@ var springboard = function (rel, releaseOverride) {
   // XXX split better
   try {
     var messages = buildmessage.capture({
-      title: "downloading tools package " + toolsPkg + "@" + toolsVersion
+      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
     }, function () {
       tropohouse.default.maybeDownloadPackageForArchitectures({
         packageName: toolsPkg,
@@ -369,9 +369,9 @@ var springboard = function (rel, releaseOverride) {
   }
 
   var packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
-  var toolUnipackage = new unipackage.Unipackage;
-  toolUnipackage.initFromPath(toolsPkg, packagePath);
-  var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+  var toolIsopack = new isopack.Isopack;
+  toolIsopack.initFromPath(toolsPkg, packagePath);
+  var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
                                {arch: archinfo.host()});
   if (!toolRecord)
     throw Error("missing tool for " + archinfo.host() + " in " +
@@ -440,7 +440,7 @@ Fiber(function () {
   }
 
   // This is a bit of a hack, but: if we don't check this in the tool, then the
-  // first time we do a unipackage.load, it will fail due to the check in the
+  // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
     var parsedUrl = require('url').parse(process.env.ROOT_URL);
@@ -661,7 +661,7 @@ Fiber(function () {
   } else {
     // This doesn't need to be in a buildmessage, because the
     // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
-    // bunch of precompiled unipackages!
+    // bunch of precompiled isopacks!
     catalog.uniload.initialize({
       uniloadDir: files.getUniloadDir()
     });

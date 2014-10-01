@@ -7,6 +7,10 @@
  */
 
 (function () {
+  var DEBUG_TAG = 'METEOR CORDOVA DEBUG (meteor_cordova_loader.js) ';
+  var log = function (msg) {
+    console.log(DEBUG_TAG + msg);
+  };
   var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url,
       function (fileEntry) {
@@ -20,12 +24,12 @@
           reader.readAsText(file);
         };
         var fail = function (evt) {
-          cb(new Error("Failed to load entry"), null);
+          cb(new Error("Failed to load entry: " + url), null);
         };
         fileEntry.file(success, fail);
       },
       // error callback
-      function (err) { cb(new Error("Failed to load entry"), null); }
+      function (err) { cb(new Error("Failed to resolve entry: " + url), null); }
     );
   };
 
@@ -41,47 +45,33 @@
     return p.slice(1);
   };
 
-  var randomInt = function (min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
-
   var loadTries = 0;
   var loadFromLocation = function (location) {
     var cordovaRoot = decodeURI(window.location.href).replace(/\/index.html$/, '/').replace(/^file:\/\/?/, '');
-    var httpd = cordova && cordova.plugins && cordova.plugins.CorHttpd;
-    var port = randomInt(10000, 50000);
+    var httpd = cordova && cordova.plugins && cordova.plugins.CordovaUpdate;
 
     var retry = function () {
       loadTries++;
       if (loadTries > 10) {
-        console.log('Giving up on starting the server.');
+        // XXX: If this means the app fails, we should probably do exponential backoff
+        // or at least show a message
+        log('Failed to start the server (too many retries)');
       } else {
-        console.log('Retrying to to start the server.');
+        log('Starting the server (retry #' + loadTries + ')');
         loadFromLocation(location);
       }
     };
 
-    httpd.getURL(function(url){
-      if (url.length > 0) {
-        // if server is already running, stop it and retry
-        httpd.stopServer(retry, retry);
-      } else {
-        console.log('Starting the server on port ' + port);
-        httpd.startServer({
-          'www_root' : location,
-          'port' : port,
-          'cordovajs_root': cordovaRoot
-        }, function (url) {
-          // go to the new proxy url
-          window.location = url;
-        }, function (error) {
-          // failed to start a server, is port already in use?
-          retry();
-        });
-      }
-
-    }, function () {
-      // failed to call to server: retry
+    httpd.startServer({
+      'www_root' : location,
+      'cordovajs_root': cordovaRoot
+    }, function (url) {
+      // go to the new proxy url
+      log("Loading from url: " + url);
+      window.location = url;
+    }, function (error) {
+      // failed to start a server, is port already in use?
+      log("Failed to start the server: " + error);
       retry();
     });
   };
@@ -91,10 +81,9 @@
   // no error is passed, then we simply do not have any new versions.
   var fallback = function (err) {
     if (err) {
-      console.log('Couldn\'t load from the manifest, ' +
-                  'falling back to the bundled assets.');
+      log("Couldn't load from the manifest, falling back to the bundled assets.");
     } else {
-      console.log('No new versions saved to disk.');
+      log('No new versions saved to disk.');
     }
 
     loadFromLocation('application');
@@ -141,7 +130,8 @@
     readFile(localPathPrefix + 'version',
       function (err, version) {
         if (err) {
-          fallback();
+          log("Error reading version file " + err);
+          fallback(err);
           return;
         }
 
@@ -162,10 +152,10 @@
             // around on disk
             removeDirectory(localPathPrefix + name + '/', function (err) {
               if (err) {
-                console.log('Failed to remove an old cache folder '
-                            + name + ':' + err.message);
+                log('Failed to remove an old cache folder '
+                    + name + ':' + err.message);
               } else {
-                console.log('Successfully removed an old cache folder ' + name);
+                log('Successfully removed an old cache folder ' + name);
               }
             });
           });

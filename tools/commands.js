@@ -2,6 +2,7 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
+var ip = require('ip');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -20,7 +21,7 @@ var tropohouse = require('./tropohouse.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var commandsPackages = require('./commands-packages.js');
 var execFileSync = require('./utils.js').execFileSync;
@@ -32,8 +33,11 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default host to use when building apps. (Specifically, for mobile
 // builds, we need a host to use for DDP_DEFAULT_CONNECTION_URL if the
-// user doesn't specify one with -p or --mobile-port).
+// user doesn't specify one with -p or --mobile-server).
 var DEFAULT_BUILD_HOST = "localhost";
+
+// The default port that the development server listens on.
+var DEFAULT_PORT = 3000;
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -59,24 +63,6 @@ var qualifySitename = function (site) {
 var hostedWithGalaxy = function (site) {
   var site = qualifySitename(site);
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
-};
-
-var parseHostPort = function (str) {
-  // XXX factor this out into a {type: host/port}?
-  var portMatch = str.match(/^(?:(.+):)?([0-9]+)$/);
-  if (!portMatch) {
-    throw new Error(
-"run: --port (-p) must be a number or be of the form 'host:port' where\n" +
-"port is a number. Try 'meteor help run' for help.\n");
-  }
-
-  var host = portMatch[1];
-  var port = parseInt(portMatch[2]);
-
-  return {
-    host: host,
-    port: port
-  };
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -150,20 +136,23 @@ main.registerCommand({
 // run
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand({
-  name: 'run',
+var runCommandOptions = {
   pretty: true,
   requiresApp: true,
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: '3000' },
+    port: { type: String, short: "p", default: '' + DEFAULT_PORT },
+    'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'app-port': { type: String },
     'http-proxy-port': { type: String },
+    'debug-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
     program: { type: String },
+    test: {type: Boolean, default: false},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -175,8 +164,14 @@ main.registerCommand({
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean}
   }
-}, function (options) {
+};
 
+main.registerCommand(_.extend(
+  { name: 'run' },
+  runCommandOptions
+), doRunCommand);
+
+function doRunCommand (options) {
   // Calculate project versions. (XXX: Theoretically, we should not be doing it
   // here. We should do it lazily, if the command calls for it. However, we do
   // end up recalculating them for stats, for example, and, more importantly, we
@@ -196,7 +191,9 @@ main.registerCommand({
 
   cordova.verboseLog('Parsing the --port option');
   try {
-    var parsedHostPort = parseHostPort(options.port);
+    var parsedUrl = utils.parseUrl(options.port, {
+      port: DEFAULT_PORT
+    });
   } catch (err) {
     if (options.verbose) {
       Console.stderr.write('Error while parsing --port option: '
@@ -207,9 +204,18 @@ main.registerCommand({
     return 1;
   }
 
-  var mobilePort = options["mobile-port"] || options.port;
+ // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
+  var mobileServer = options["mobile-server"] ||
+        options["mobile-port"] || options.port;
   try {
-    var parsedMobileHostPort = parseHostPort(mobilePort);
+    var parsedMobileServer = utils.parseUrl(
+      mobileServer,
+      {
+        host: DEFAULT_BUILD_HOST,
+        port: DEFAULT_PORT,
+        protocol: "http://"
+      }
+    );
   } catch (err) {
     if (options.verbose) {
       process.stderr.write('Error while parsing --mobile-port option: '
@@ -220,19 +226,22 @@ main.registerCommand({
     return 1;
   }
 
-  parsedMobileHostPort.host = parsedMobileHostPort.host || DEFAULT_BUILD_HOST;
-
   options.httpProxyPort = options['http-proxy-port'];
 
-  // If we are targeting the remote devices
+  // If we are targeting the remote devices, warn about ports and same network
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
-    // ... and if you didn't specify your ip address as host, print a warning
-    if (parsedMobileHostPort.host === DEFAULT_BUILD_HOST)
-      Console.stderr.write(
-        "WARN: You are testing your app on a remote device but your host option\n" +
-        "WARN: is set to 'localhost'. Perhaps you want to change it to your local\n" +
-        "WARN: network's IP address with the -p or --mobile-port option?\n");
+    Console.stderr.write([
+"WARNING: You are testing your app on a remote device.",
+"         For the mobile app to be able to connect to the local server, make",
+"         sure your device is on the same network, and that the network",
+"         configuration allows clients to talk to each other",
+"         (no client isolation).",
+"",
+"         You can pass the host and the port in the --mobile-server argument.",
+"         For example: --mobile-server " +
+  ip.address() + ":" + parsedUrl.port + "\n\n"
+].join("\n"));
   }
 
   // Always bundle for the browser by default.
@@ -261,8 +270,9 @@ main.registerCommand({
 
       cordova.buildPlatforms(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
-                 options, parsedMobileHostPort));
-      runners = runners.concat(cordova.buildPlatformRunners(localPath, options.args, options));
+                 options, parsedMobileServer));
+      runners = runners.concat(
+        cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
       if (options.verbose) {
         Console.stderr.write('Error while running for mobile platforms ' +
@@ -303,13 +313,26 @@ main.registerCommand({
   if (options['raw-logs'])
     runLog.setRawLogs(true);
 
+  // Velocity testing. Sets up a DDP connection to the app process and
+  // runs phantomjs.
+  //
+  // NOTE: this calls process.exit() when testing is done.
+  if (options['test']){
+    var serverUrl = "http://" + (parsedUrl.host || "localhost") +
+          ":" + parsedUrl.port;
+    var velocity = require('./run-velocity.js');
+    velocity.runVelocity(serverUrl);
+  }
+
+
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
-    proxyPort: parsedHostPort.port,
-    proxyHost: parsedHostPort.host,
+    proxyPort: parsedUrl.port,
+    proxyHost: parsedUrl.host,
     httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
+    debugPort: options['debug-port'],
     settingsFile: options.settings,
     program: options.program || undefined,
     buildOptions: {
@@ -322,6 +345,18 @@ main.registerCommand({
     once: options.once,
     extraRunners: runners
   });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// debug
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand(_.extend(
+  { name: 'debug' },
+  runCommandOptions
+), function (options) {
+  options['debug-port'] = options['debug-port'] || '5858';
+  return doRunCommand(options);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -569,7 +604,9 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
-    port: { type: String, short: "p", default: DEFAULT_BUILD_HOST + ":3000" },
+    server: { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    "mobile-port": { type: String },
     settings: { type: String },
     verbose: { type: Boolean, short: "v" },
     // Undocumented
@@ -578,7 +615,19 @@ var buildCommands = {
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
+  function (options) {
+    return buildCommand(options);
+});
+
+// Deprecated -- identical functionality to 'build'
+main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
+      Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
+                           "Use 'build' instead.\n");
+      return buildCommand(options);
+});
+
+var buildCommand = function (options) {
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -609,26 +658,40 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   var appName = path.basename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms)) {
-    try {
-      var parsedHostPort = parseHostPort(options.port);
-    } catch (err) {
-      Console.stderr.write(err.message);
-      return 1;
-    }
 
-    // For Cordova builds, if a host isn't specified, use localhost, but
-    // warn about it.
-    var cordovaBuildHost = parsedHostPort.host || DEFAULT_BUILD_HOST;
-    if (cordovaBuildHost === DEFAULT_BUILD_HOST) {
-      process.stdout.write("WARNING: Building your app with host: localhost.\n" +
-                           "Pass a -p argument to specify a host URL.\n");
+    // XXX COMPAT WITH 0.9.2.2 -- the mobile-port is deprecated
+    var mobileServer = options.server ||
+          options["mobile-port"];
+
+    if (mobileServer) {
+      try {
+        var parsedMobileServer = utils.parseUrl(
+          mobileServer,
+          {
+            host: DEFAULT_BUILD_HOST,
+            port: DEFAULT_PORT,
+            protocol: "http://"
+          }
+        );
+      } catch (err) {
+        Console.stderr.write(err.message);
+        return 1;
+      }
+    } else {
+      // For Cordova builds, require '--server'.
+      // XXX better error message?
+      process.stderr.write(
+"Supply the server hostname and port in the --server option\n" +
+"for mobile app builds.\n");
+      return 1;
     }
     var cordovaSettings = {};
 
     cordova.buildPlatforms(localPath, mobilePlatforms,
       _.extend({}, options, {
-        host: cordovaBuildHost,
-        port: parsedHostPort.port,
+        host: parsedMobileServer.host,
+        port: parsedMobileServer.port,
+        protocol: parsedMobileServer.protocol,
         appName: appName
       }));
   }
@@ -698,91 +761,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
   });
 
   files.rm_recursive(buildDir);
-});
-
-// Deprecated -- identical functionality to 'build'
-main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
-    function (options) {
-  cordova.setVerboseness(options.verbose);
-  Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
-                       "Use 'build' instead.\n");
-  // XXX if they pass a file that doesn't end in .tar.gz or .tgz, add
-  // the former for them
-
-  // XXX output, to stderr, the name of the file written to (for human
-  // comfort, especially since we might change the name)
-
-  // XXX name the root directory in the bundle based on the basename
-  // of the file, not a constant 'bundle' (a bit obnoxious for
-  // machines, but worth it for humans)
-
-  // Error handling for options.architecture. We must pass in only one of three
-  // architectures. See archinfo.js for more information on what the
-  // architectures are, what they mean, et cetera.
-  var VALID_ARCHITECTURES =
-  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
-  if (options.architecture &&
-      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
-    Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
-    Console.stderr.write(
-      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
-    return 1;
-  }
-  var bundleArch =  options.architecture || archinfo.host();
-
-  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
-  var outputPath = path.resolve(options.args[0]); // get absolute path
-  var bundlePath = options['directory'] ?
-      outputPath : path.join(buildDir, 'bundle');
-
-  var loader;
-  var messages = buildmessage.capture(function () {
-    loader = project.getPackageLoader();
-  });
-  if (messages.hasMessages()) {
-    Console.stderr.write("Errors prevented bundling your app:\n");
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
-  var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages("sdk.bundle");
-  });
-  if (statsMessages.hasMessages()) {
-    Console.stdout.write("Error recording package list:\n" +
-                         statsMessages.formatMessages());
-    // ... but continue;
-  }
-
-  var bundler = require(path.join(__dirname, 'bundler.js'));
-  var bundleResult = bundler.bundle({
-    outputPath: bundlePath,
-    buildOptions: {
-      minify: ! options.debug,
-      // XXX is this a good idea, or should linux be the default since
-      //     that's where most people are deploying
-      //     default?  i guess the problem with using DEPLOY_ARCH as default
-      //     is then 'meteor bundle' with no args fails if you have any local
-      //     packages with binary npm dependencies
-      serverArch: bundleArch
-    }
-  });
-  if (bundleResult.errors) {
-    Console.stderr.write("Errors prevented bundling:\n");
-    Console.stderr.write(bundleResult.errors.formatMessages());
-    return 1;
-  }
-
-  if (!options['directory']) {
-    try {
-      files.createTarball(path.join(buildDir, 'bundle'), outputPath);
-    } catch (err) {
-      console.log(JSON.stringify(err));
-      Console.stderr.write("Couldn't create tarball\n");
-    }
-  }
-  files.rm_recursive(buildDir);
-});
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // mongo
@@ -1167,8 +1146,13 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: "localhost:3000" },
+    port: { type: String, short: "p", default:
+            DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT },
     'http-proxy-port': { type: String },
+    'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    'mobile-port': { type: String },
+    'debug-port': { type: String },
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
@@ -1199,7 +1183,23 @@ main.registerCommand({
   }
 }, function (options) {
   try {
-    var parsedHostPort = parseHostPort(options.port);
+    var parsedUrl = utils.parseUrl(
+      options.port, { port: DEFAULT_PORT });
+  } catch (err) {
+    Console.stderr.write(err.message);
+    return 1;
+  }
+
+  try {
+    var parsedMobileServer = utils.parseUrl(
+      // XXX COMPAT WITH 0.9.2.2
+      options["mobile-server"] || options["mobile-port"] || options.port,
+      {
+        host: DEFAULT_BUILD_HOST,
+        port: DEFAULT_PORT,
+        protocol: "http://"
+      }
+    );
   } catch (err) {
     Console.stderr.write(err.message);
     return 1;
@@ -1208,9 +1208,10 @@ main.registerCommand({
   options.httpProxyPort = options['http-proxy-port'];
 
   // XXX not good to change the options this way
-  _.extend(options, parsedHostPort);
+  _.extend(options, parsedUrl);
 
   var testPackages = null;
+
   var localPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
@@ -1278,7 +1279,9 @@ main.registerCommand({
           appName: path.basename(testRunnerAppDir),
           debug: ! options.production,
           // Default to localhost for mobile builds.
-          host: parsedHostPort.host || DEFAULT_BUILD_HOST
+          host: parsedMobileServer.host,
+          protocol: parsedMobileServer.protocol,
+          port: parsedMobileServer.port
         }));
       runners = runners.concat(cordova.buildPlatformRunners(
         localPath, mobilePlatforms, options));
@@ -1327,7 +1330,7 @@ var getPackagesForTest = function (packages) {
     var messages = buildmessage.capture(function () {
       testPackages = _.map(packages, function (p) {
         return buildmessage.enterJob({
-          title: "trying to test package `" + p + "`"
+          title: "Trying to test package `" + p + "`"
         }, function () {
 
           // If it's a package name, just pass it through.
@@ -1359,7 +1362,7 @@ var getPackagesForTest = function (packages) {
           // have a trailing slash.
           //
           // Why use addLocalPackage instead of just loading the packages
-          // and passing Unipackage objects to the bundler? Because we
+          // and passing Isopack objects to the bundler? Because we
           // actually need the Catalog to know about the package, so that
           // we are able to resolve the test package's dependency on the
           // main package. This is not ideal (I hate how this mutates global
@@ -1430,7 +1433,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
 
   // We don't strictly need to do this before we bundle, but can't hurt.
   messages = buildmessage.capture({
-    title: 'getting packages ready'
+    title: 'Getting packages ready'
   },function () {
     project._ensureDepsUpToDate();
   });
@@ -1466,6 +1469,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       appDirForVersionCheck: options.appDir,
       proxyPort: options.port,
       httpProxyPort: options.httpProxyPort,
+      debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
       banner: "Tests",
@@ -1796,7 +1800,7 @@ main.registerCommand({
   name: 'dummy',
   options: {
     email: { type: String, short: "e", required: true },
-    port: { type: Number, short: "p", default: 3000 },
+    port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
     changed: { type: Boolean }
