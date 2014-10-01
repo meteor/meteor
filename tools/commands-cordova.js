@@ -1269,18 +1269,20 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   files.mkdir_p(resourcesPath);
 
   verboseLog('Copying resources for mobile apps');
-  // XXX makes a big assumption that every file is a png
   var setImages = function (sizes, xmlEle, tag) {
     _.each(sizes, function (size, name) {
       var width = size.split('x')[0];
       var height = size.split('x')[1];
 
-      if (! _.has(imagePaths[tag], name))
+      var suppliedPath = imagePaths[tag][name];
+      if (! suppliedPath)
         return;
 
-      var fileName = name + '.' + tag + '.png';
+      var extension = _.last(_.last(suppliedPath.split(path.sep)).split('.'));
+      var fileName = name + '.' + tag + '.' + extension;
+
       // copy the file to the build folder with a standardized name
-      files.copyFile(path.join(project.rootDir, imagePaths[tag][name]),
+      files.copyFile(path.join(project.rootDir, suppliedPath),
                      path.join(resourcesPath, fileName));
 
       // set it to the xml tree
