@@ -238,7 +238,7 @@ a `pong` message. If the received `ping` message includes an `id` field, the
 Errors appear in `result` and `nosub` messages in an optional error field. An
 error is an Object with the following fields:
 
- * `error`: number
+ * `error`: string
  * `reason`: optional string
  * `details`: optional string
 
