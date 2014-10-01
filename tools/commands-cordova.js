@@ -741,6 +741,7 @@ var buildCordova = function (localPath, buildCommand, options) {
   var indexHtml = generateCordovaBoilerplate(applicationPath, options);
   fs.writeFileSync(path.join(applicationPath, 'index.html'), indexHtml, 'utf8');
 
+  // write the cordova loader
   verboseLog('Writing meteor_cordova_loader');
   var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
   var loaderCode = fs.readFileSync(loaderPath);
@@ -751,6 +752,17 @@ var buildCordova = function (localPath, buildCommand, options) {
   var indexContent = fs.readFileSync(indexPath);
   fs.writeFileSync(path.join(wwwPath, 'index.html'), indexContent);
 
+
+  // Check and consume the control file
+  var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
+  files.rm_recursive(path.join(cordovaPath, 'resources'));
+  if (fs.existsSync(controlFilePath)) {
+    verboseLog('Reading the mobile control file');
+    consumeControlFile(controlFilePath, cordovaPath);
+  }
+
+
+  // Cordova Build Override feature (c)
   var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
 
   if (fs.existsSync(buildOverridePath) &&
@@ -759,6 +771,7 @@ var buildCordova = function (localPath, buildCommand, options) {
     files.cp_r(buildOverridePath, cordovaPath);
   }
 
+  // Run the actual build
   verboseLog('Running the build command:', buildCommand);
   // Give the buffer more space as the output of the build is really huge
   try {
@@ -1198,6 +1211,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   };
 
   try {
+    verboseLog('Running the mobile control file');
     files.runJavaScript(code, {
       filename: 'mobile-config.js',
       symbols: { App: App }
@@ -1210,7 +1224,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   var config = XmlBuilder.create('widget', {
     id: metadata.id,
     version: metadata.version,
-    xmlns: 'http://www.w3.org/ns/widgets'
+    xmlns: 'http://www.w3.org/ns/widgets',
     'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
   });
 
@@ -1243,9 +1257,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   files.rm_recursive(resourcesPath);
   files.mkdir_p(resourcesPath);
 
+  verboseLog('Copying resources for mobile apps');
   // XXX makes a big assumption that every file is a png
   var setImages = function (sizes, xmlEle, tag) {
-    _.each(sizes function (size, name) {
+    _.each(sizes, function (size, name) {
       var width = size.split('x')[0];
       var height = size.split('x')[1];
 
@@ -1268,12 +1283,13 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   // add icons and launch screens to config and copy the files on fs
   setImages(iconIosSizes, iosPlatform, 'icon');
   setImages(iconAndroidSizes, androidPlatform, 'icon');
-  setImages(launchIosSizes, iosPlatform, 'splash'); // XXX not 'gap:splash'?
+  setImages(launchIosSizes, iosPlatform, 'splash');
   setImages(launchAndroidSizes, androidPlatform, 'splash');
 
   var formattedXmlConfig = config.end({ pretty: true });
   var configPath = path.join(cordovaPath, 'config.xml');
 
+  verboseLog('Writing new config.xml');
   fs.writeFileSync(configPath, formattedXmlConfig, 'utf8');
 };
 
