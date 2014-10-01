@@ -72,6 +72,11 @@ _.extend(LayeredCatalog.prototype, {
     return self._returnFirst("getAllBuilds", arguments, ACCEPT_NON_EMPTY);
   },
 
+  getLatestVersion: function (name) {
+    var self = this;
+    return self._returnFirst("getLatestVersion", arguments, ACCEPT_NON_EMPTY);
+  },
+
   getAllPackageNames: function () {
     var self = this;
     return _.union(self.localCatalog.getAllPackageNames(), self.otherCatalog.getAllPackageNames());
