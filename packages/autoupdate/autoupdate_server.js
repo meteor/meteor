@@ -49,6 +49,7 @@ ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions",
 Autoupdate.autoupdateVersion = null;
 Autoupdate.autoupdateVersionRefreshable = null;
 Autoupdate.autoupdateVersionCordova = null;
+Autoupdate.appId = __meteor_runtime_config__.appId = process.env.APP_ID;
 
 var syncQueue = new Meteor._SynchronousQueue();
 
@@ -135,7 +136,12 @@ var updateVersions = function (shouldReloadClientProgram) {
 
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
-  function () {
+  function (appId) {
+    // Don't notify clients using wrong appId such as mobile apps built with a
+    // different server but pointing at the same local url
+    if (Autoupdate.appId && appId && Autoupdate.appId !== appId)
+      return [];
+
     return ClientVersions.find();
   },
   {is_auto: true}

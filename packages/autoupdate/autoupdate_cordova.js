@@ -182,7 +182,8 @@ var retry = new Retry({
 var failures = 0;
 
 Autoupdate._retrySubscription = function () {
- Meteor.subscribe("meteor_autoupdate_clientVersions", {
+  var appId = __meteor_runtime_config__.appId;
+  Meteor.subscribe("meteor_autoupdate_clientVersions", appId, {
     onError: function (err) {
       Meteor._debug("autoupdate subscription failed:", err);
       failures++;
@@ -216,3 +217,4 @@ Autoupdate._retrySubscription = function () {
 };
 
 Meteor.startup(Autoupdate._retrySubscription);
+
