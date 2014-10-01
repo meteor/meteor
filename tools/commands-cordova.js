@@ -1644,6 +1644,7 @@ main.registerCommand({
       Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
     } else {
       Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+      // XXX: Create avd (pull code out of ensure_android_bundle.sh)
     }
   }
   return 0;
