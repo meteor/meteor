@@ -3,6 +3,10 @@ Package.describe({
   version: '2.4.4'
 });
 
+Npm.depends({
+  'xmlbuilder': '2.4.4'
+});
+
 Package.onUse(function (api) {
   api.addFiles(['xmlbuilder.js'], 'server');
 

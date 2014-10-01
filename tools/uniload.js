@@ -22,7 +22,8 @@ var ROOT_PACKAGES = [
   'mongo',
   'package-version-parser',
   'boilerplate-generator',
-  'webapp-hashing'
+  'webapp-hashing',
+  'xmlbuilder'
 ];
 
 // Load isopacks into the currently running node.js process. Use
