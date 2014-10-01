@@ -3603,11 +3603,67 @@ in the `_test.js` file that was created.
 <h3><span>External Packages and Plugins</span></h3>
 
 {{#markdown}}
-Meteor packages can include NPM packages and Cordova plugins by using `Npm.depends` and `Cordova.depends` in the `package.js` file.
+Meteor packages can include NPM packages and Cordova plugins by using
+`Npm.depends` and `Cordova.depends` in the `package.js` file.
 {{/markdown}}
 
 {{> autoApiBox "Npm.depends"}}
 {{> autoApiBox "Npm.require"}}
 {{> autoApiBox "Cordova.depends"}}
 
+<h2 id="mobileconfigjs"><span>Mobile Config File</span></h2>
+
+{{#markdown}}
+If your Meteor application is targeting mobile platforms (such as iOS or
+Android), you might want to configure the metadata and the process of
+Phonegap/Cordova build which is used internally for mobile builds.
+
+This configuration should be placed in a special top-level file
+`mobile-config.js` which is *not* included in your application and used only for
+the configuration.
+
+The code listing below is an example of such configuration. The rest of this
+section will explain the specific API commands in greater details.
+
+
+    // This section sets up some basic app metadata,
+    // the entire section is optional.
+    App.info({
+      id: 'com.matt.uber',
+      name: 'über',
+      description: 'Get über power in one button click',
+      author: 'Matt Development Group',
+      email: 'contact@matt.com',
+      website: 'http://matt.nu.edu'
+    });
+
+    // Set up resources such as icons and launch screens.
+    App.icons({
+      'iphone': 'icons/icon-60.png',
+      'iphone-2x': 'icons/icon-60@2x.png',
+      ...
+    });
+
+    App.launchScreens({
+      'iphone': 'splash/Default~iphone.png',
+      'iphone_2x': 'splash/Default@2x~iphone.png',
+      ...
+    });
+
+    // Configure Cordova's preferences
+    App.set('BackgroundColor', '0xff0000ff');
+    App.set('HideKeyboardFormAccessoryBar', true);
+
+    // Set up a particular Cordova plugin's build process
+    App.configurePlugin('com.phonegap.plugins.facebookconnect', {
+      APP_ID: '1234567890',
+      API_KEY: 'yoursupersecretsauce'
+    });
+{{/markdown}}
+
+{{> autoApiBox "App.info"}}
+{{> autoApiBox "App.set"}}
+{{> autoApiBox "App.configurePlugin"}}
+{{> autoApiBox "App.icons"}}
+{{> autoApiBox "App.launchScreens"}}
 </template>
