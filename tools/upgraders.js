@@ -65,6 +65,23 @@ var upgradersByName = {
 "are backwards compatible, except that templates can no longer be named \"body\"\n" +
 "or \"instance\".\n");
     console.log();
+  },
+
+  // In 0.9.4, the platforms file contains "server" and "browser" as platforms,
+  // and before it only had "ios" and/or "android"
+  "upgrade-platform-file": function () {
+    var platformsPath =
+      path.join(project.project.rootDir, ".meteor", "platforms");
+    var newPlatforms = "server\nbrowser\n";
+
+    if (fs.existsSync(platformsPath)) {
+      // App already has a platforms file, add "server" and "browser" to the top
+      var platforms = fs.readFileSync(platformsPath, {encoding: "utf-8"});
+      fs.writeFileSync(platformsPath, newPlatforms + platforms);
+    } else {
+      // App doesn't have a platforms file, write a new one
+      fs.writeFileSync(platformsPath, newPlatforms);
+    }
   }
 };
 
