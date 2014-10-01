@@ -3625,40 +3625,42 @@ the configuration.
 The code listing below is an example of such configuration. The rest of this
 section will explain the specific API commands in greater details.
 
+```javascript
+// This section sets up some basic app metadata,
+// the entire section is optional.
+App.info({
+  id: 'com.matt.uber',
+  name: 'über',
+  description: 'Get über power in one button click',
+  author: 'Matt Development Group',
+  email: 'contact@matt.com',
+  website: 'http://matt.nu.edu'
+});
 
-    // This section sets up some basic app metadata,
-    // the entire section is optional.
-    App.info({
-      id: 'com.matt.uber',
-      name: 'über',
-      description: 'Get über power in one button click',
-      author: 'Matt Development Group',
-      email: 'contact@matt.com',
-      website: 'http://matt.nu.edu'
-    });
+// Set up resources such as icons and launch screens.
+App.icons({
+  'iphone': 'icons/icon-60.png',
+  'iphone-2x': 'icons/icon-60@2x.png',
+  ...
+});
 
-    // Set up resources such as icons and launch screens.
-    App.icons({
-      'iphone': 'icons/icon-60.png',
-      'iphone-2x': 'icons/icon-60@2x.png',
-      ...
-    });
+App.launchScreens({
+  'iphone': 'splash/Default~iphone.png',
+  'iphone_2x': 'splash/Default@2x~iphone.png',
+  ...
+});
 
-    App.launchScreens({
-      'iphone': 'splash/Default~iphone.png',
-      'iphone_2x': 'splash/Default@2x~iphone.png',
-      ...
-    });
+// Configure Cordova's preferences
+App.set('BackgroundColor', '0xff0000ff');
+App.set('HideKeyboardFormAccessoryBar', true);
 
-    // Configure Cordova's preferences
-    App.set('BackgroundColor', '0xff0000ff');
-    App.set('HideKeyboardFormAccessoryBar', true);
+// Set up a particular Cordova plugin's build process
+App.configurePlugin('com.phonegap.plugins.facebookconnect', {
+  APP_ID: '1234567890',
+  API_KEY: 'yoursupersecretsauce'
+});
+```
 
-    // Set up a particular Cordova plugin's build process
-    App.configurePlugin('com.phonegap.plugins.facebookconnect', {
-      APP_ID: '1234567890',
-      API_KEY: 'yoursupersecretsauce'
-    });
 {{/markdown}}
 
 {{> autoApiBox "App.info"}}
