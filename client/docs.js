@@ -1,8 +1,18 @@
+<<<<<<< HEAD
 Template.headline.helpers({
   release: function () {
     return Meteor.release ? "0.9.4-pre.1" : "(checkout)";
   }
 });
+||||||| merged common ancestors
+Template.headline.release = function () {
+  return Meteor.release ? "0.9.3" : "(checkout)";
+};
+=======
+Template.headline.release = function () {
+  return Meteor.release ? "0.9.3.1" : "(checkout)";
+};
+>>>>>>> master
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
