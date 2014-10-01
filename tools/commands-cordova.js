@@ -193,7 +193,23 @@ var getLoadedPackages = _.once(function () {
 
 // --- Cordova routines ---
 
-var ensureAndroidBundleCache = {};
+var cordovaScriptExecutionCache = {};
+
+var runCordovaScript = function (name, cache) {
+  var scriptPath =
+    path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts', name);
+
+  if (cache && cordovaScriptExecutionCache[scriptPath]) {
+    verboseLog('Script already checked: ' + name);
+    return;
+  }
+
+  verboseLog('Running script ' + name);
+  execFileSyncOrThrow('bash', [scriptPath], { pipeOutput: true });
+  if (cache) {
+    cordovaScriptExecutionCache[scriptPath] = true;
+  }
+};
 
 var ensureAndroidBundle = function (command) {
   if (! _.contains([localAdb, localAndroid], command)) {
@@ -202,24 +218,24 @@ var ensureAndroidBundle = function (command) {
       return;
   }
 
-  var ensureScriptPath =
-    path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
-              'ensure_android_bundle.sh');
-
-  if (ensureAndroidBundleCache[ensureScriptPath]) {
-    verboseLog('android_bundle already checked');
-    return;
-  }
-
-  verboseLog('Ensuring android_bundle');
   try {
-    execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
-    ensureAndroidBundleCache[ensureScriptPath] = true;
+    runCordovaScript('ensure_android_bundle.sh', true);
   } catch (err) {
     verboseLog('Failed to install android_bundle ', err.stack);
-    process.stderr.write("Failed to install android_bundle\n");
+    Console.warn("Failed to install android_bundle");
     throw new main.ExitWithCode(2);
   }
+};
+
+var ensureAndroidPrereqs = function () {
+  try {
+    runCordovaScript('ensure_android_prereqs.sh', true);
+  } catch (err) {
+    verboseLog('Android prequisites not met', err.stack);
+    Console.warn("Android prequisites not met");
+    throw new main.ExitWithCode(2);
+  }
+  return true;
 };
 
 var generateCordovaBoilerplate = function (clientDir, options) {
@@ -1019,6 +1035,12 @@ var checkAgreePlatformTerms = function (platform) {
   return agreed;
 };
 
+var checkPlatformPrequisites = function (platform) {
+  if (platform == 'android') {
+    return ensureAndroidPrereqs();
+  }
+  return true;
+};
 
 // --- Mobile Control File parsing ---
 
@@ -1357,7 +1379,23 @@ main.registerCommand({
       isValidPlatform(platform);
     });
   } catch (err) {
-    Console.stderr.write(err.message + "\n");
+    if (err.message) {
+      Console.warn(err.message);
+    }
+    return 1;
+  }
+
+  try {
+    var ok = _.every(platforms, function (platform, options) {
+      return checkPlatformPrequisites(platform);
+    });
+    if (!ok) {
+      return 2;
+    }
+  } catch (err) {
+    if (err.message) {
+      Console.warn(err.message);
+    }
     return 1;
   }
 
@@ -1369,7 +1407,9 @@ main.registerCommand({
       return 2;
     }
   } catch (err) {
-    process.stderr.write(err.message + "\n");
+    if (err.message) {
+      Console.warn(err.message);
+    }
     return 1;
   }
 
