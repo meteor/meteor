@@ -176,7 +176,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
 var getLoadedPackages = _.once(function () {
   var uniload = require('./uniload.js');
   return uniload.load({
-    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing' ]
+    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing', 'xmlbuilder' ]
   });
 });
 
@@ -1037,6 +1037,244 @@ var checkAgreePlatformTerms = function (platform) {
   }
 
   return agreed;
+};
+
+
+// --- Mobile Control File parsing ---
+
+
+// Hard-coded constants
+var iconIosSizes = {
+  'iphone': '60x60',
+  'iphone-2x': '120x120x',
+  'iphone-3x': '180x180',
+  'ipad': '76x76',
+  'ipad-2x': '152x152'
+};
+
+var iconAndroidSizes = {
+  'android_ldpi': '36x36',
+  'android_mdpi': '42x42',
+  'android_hdpi': '72x72',
+  'android_xhdpi': '96x96'
+};
+
+var launchIosSizes = {
+  'iphone': '320x480',
+  'iphone_2x': '640x960',
+  'iphone5': '640x1136',
+  'iphone6': '750x1334',
+  'iphone6p_portrait': '1242x2208',
+  'iphone6p_landscape': '2208x1242',
+  'ipad_portrait': '768x1004',
+  'ipad_portrait_2x': '1536x2008',
+  'ipad_landscape': '1024x748',
+  'ipad_landscape_2x': '2048x1496'
+};
+
+var launchAndroidSizes = {
+  'android_ldpi_portrait': '320x426',
+  'android_ldpi_landscape': '426x320',
+  'android_mdpi_portrait': '320x470',
+  'android_mdpi_landscape': '470x320',
+  'android_hdpi_portrait': '480x640',
+  'android_hdpi_landscape': '640x480',
+  'android_xhdpi_portrait': '720x960',
+  'android_xhdpi_landscape': '960x720'
+};
+
+// Given the mobile control file converts it to the Phongep/Cordova project's
+// config.xml file and copies the necessary files (icons and launch screens) to
+// the correct build location. Replaces all the old resources.
+var consumeControlFile = function (controlFilePath, cordovaPath) {
+  var code = fs.readFileSync(controlFilePath, 'utf8');
+  var metadata = {};
+  // set some defaults different from the Phonegap/Cordova defaults
+  var additionalConfiguration = {
+    'webviewbounce': false,
+    'DisallowOverscroll': true
+  };
+  var pluginsConfiguration = {};
+  var imagePaths = {};
+
+  /**
+   * @namespace App
+   * @global
+   * @summary The App configuration object in mobile-config.js
+   */
+  var App = {
+    /**
+     * @summary Set mobile app's metadata
+     * @param {Object} [options] An object with keys corresponding to different
+     * metadata fields such as: "id", "version", "name", "description",
+     * "author", "email", "website".
+     * @memberOf App
+     */
+    info: function (options) {
+      var defaults = {
+        id: project.getAppIdentifier(),
+        version: '0.0.1',
+        name: path.dirname(project.rootDir),
+        description: 'New Meteor Mobile App',
+        author: 'A Meteor Developer',
+        email: 'n/a',
+        website: 'n/a'
+      };
+
+      // check that every key is meaningful
+      _.each(options, function (value, key) {
+        if (_.has(defaults, key))
+          throw new Error(key + ": unknown key in App.info configuration.");
+      });
+
+      options = _.extend(defaults, options);
+
+      _.extend(metadata, options);
+    },
+    /**
+     * @summary Set a custom configuration supported by Phonegap/Cordova's
+     * config.xml
+     * @param {String} key a key supported by Phonegap/Cordova's config.xml
+     * @param {String} value the string value that should be used in the
+     * configuration
+     * @memberOf App
+     */
+    set: function (key, value) {
+      additionalConfiguration[key] = value;
+    },
+    /**
+     * @summary Set the build-time configuration for a Phonegap/Cordova plugin.
+     * @param {Object} config a dictionary whose key-value pairs will be used
+     * as the environment in the build-time of the Phonegap/Cordova project.
+     * @memberOf App
+     */
+    configurePlugin: function (pluginName, config) {
+      pluginsConfiguration[pluginName] = config;
+    },
+    /**
+     * @summary Set the paths to icons to be used in mobile app.
+     * @param {Object} icons a dictionary with keys corresponding to different
+     * devices (one of "iphone", "iphone-2x", "iphone-3x", "ipad", "ipad-2x",
+     * "android_ldpi", "android_mdpi", "android_hdpi", "android_xhdpi") and
+     * values set to the location of an image relative to the project root
+     * directory.
+     * @memberOf App
+     */
+    icons: function (icons) {
+      var validDevices =
+        _.keys(iconIosSizes).concat(_.keys(iconAndroidSizes));
+      _.each(icons, function (value, key) {
+        if (! _.has(validDevices, key))
+          throw new Error(key + ": unknown key in App.icons configuration.");
+      });
+      _.extend(imagePaths, icons);
+    },
+    /**
+     * @summary Set the paths to the launch screen images.
+     * @param {Object} launchScreens a dictionary with keys corresponding to different
+     * devices (one of "iphone", "iphone_2x", "iphone5", "iphone6",
+     * "iphone6p_portrait", "iphone6p_landscape", "ipad_portrait",
+     * "ipad_portrait_2x", "ipad_landscape", "ipad_landscape_2x",
+     * "android_ldpi_portrait", "android_ldpi_landscape",
+     * "android_mdpi_portrait", "android_mdpi_landscape",
+     * "android_hdpi_portrait", "android_hdpi_landscape",
+     * "android_xhdpi_portrait", "android_xhdpi_landscape") and values set
+     * to the location of an image relative to the project root directory.
+     * For the Android launch screens images should be a specially guided
+     * "Nine-patch" image files to show how to stretch them. See:
+     * https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch.
+     * @memberOf App
+     */
+    launchScreens: function (launchScreens) {
+      var validDevices =
+        _.keys(launchIosSizes).concat(_.keys(launchAndroidSizes));
+
+      _.each(launchScreens, function (value, key) {
+        if (! _.has(validDevices, key))
+          throw new Error(key + ": unknown key in App.launchScreens configuration.");
+      });
+      _.extend(imagePaths, launchScreens);
+    }
+  };
+
+  try {
+    files.runJavaScript(code, {
+      filename: 'mobile-config.js',
+      symbols: { App: App }
+    });
+  } catch (err) {
+    throw new Error('Error reading mobile-config.js:' + err.stack);
+  }
+
+  var XmlBuilder = getLoadedPackages().xmlbuilder.XmlBuilder;
+  var config = XmlBuilder.create('widget', {
+    id: metadata.id,
+    version: metadata.version,
+    xmlns: 'http://www.w3.org/ns/widgets'
+    'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
+  });
+
+  // set all the metadata
+  config.ele('name').txt(metadata.name);
+  config.ele('description').txt(metadata.description);
+  config.ele('author', {
+    href: metadata.website,
+    email: metadata.email
+  }).txt(metadata.author);
+
+  // set the additional configuration preferences
+  _.each(additionalConfiguration, function (value, key) {
+    config.ele('preference', {
+      name: key,
+      value: value.toString()
+    });
+  });
+
+  // load from index.html by default
+  config.ele('content', { src: 'index.html' });
+  // allow cors for the initial file
+  config.ele('access', { origin: '*' });
+
+  var iosPlatform = config.ele('platform', { name: 'ios' });
+  var androidPlatform = config.ele('platform', { name: 'android' });
+
+  // Prepare the resources folder
+  var resourcesPath = path.join(cordovaPath, 'resources');
+  files.rm_recursive(resourcesPath);
+  files.mkdir_p(resourcesPath);
+
+  // XXX makes a big assumption that every file is a png
+  var setImages = function (sizes, xmlEle, tag) {
+    _.each(sizes function (size, name) {
+      var width = size.split('x')[0];
+      var height = size.split('x')[1];
+
+      if (! _.has(iconsPaths, name))
+        return;
+
+      // copy the file to the build folder with a standardized name
+      files.cp_r(path.join(project.rootDir, imagePaths[name]),
+                 path.join(resourcesPath, name + '.png'));
+
+      // set it to the xml tree
+      xmlEle.ele(tag, {
+        src: path.join('resources', name + '.png'),
+        width: width,
+        height: height
+      });
+    });
+  };
+
+  // add icons and launch screens to config and copy the files on fs
+  setImages(iconIosSizes, iosPlatform, 'icon');
+  setImages(iconAndroidSizes, androidPlatform, 'icon');
+  setImages(launchIosSizes, iosPlatform, 'splash'); // XXX not 'gap:splash'?
+  setImages(launchAndroidSizes, androidPlatform, 'splash');
+
+  var formattedXmlConfig = config.end({ pretty: true });
+  var configPath = path.join(cordovaPath, 'config.xml');
+
+  fs.writeFileSync(configPath, formattedXmlConfig, 'utf8');
 };
 
 
