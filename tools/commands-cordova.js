@@ -279,7 +279,8 @@ var generateCordovaBoilerplate = function (clientDir, options) {
       options.host + ':' + options.port,
     autoupdateVersionCordova: version,
     cleanCache: options.clean,
-    httpProxyPort: options.httpProxyPort
+    httpProxyPort: options.httpProxyPort,
+    appId: project.appId
   };
 
   if (publicSettings)
