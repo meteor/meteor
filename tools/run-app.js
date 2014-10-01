@@ -178,6 +178,7 @@ _.extend(AppProcess.prototype, {
     } else {
       delete env.BIND_IP;
     }
+    env.APP_ID = project.appId;
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
