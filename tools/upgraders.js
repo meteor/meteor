@@ -23,6 +23,10 @@ var maybePrintNoticeHeader = function () {
   printedNoticeHeaderThisProcess = true;
 };
 
+var trim = function (s) {
+  return s.replace(/\s+/, "");
+};
+
 var upgradersByName = {
    "notices-for-0.9.0": function () {
      maybePrintNoticeHeader();
@@ -69,19 +73,27 @@ var upgradersByName = {
 
   // In 0.9.4, the platforms file contains "server" and "browser" as platforms,
   // and before it only had "ios" and/or "android"
-  "upgrade-platform-file": function () {
-    var platformsPath =
-      path.join(project.project.rootDir, ".meteor", "platforms");
-    var newPlatforms = "server\nbrowser\n";
+  "0.9.4-platform-file": function () {
+    var oldPlatformsPath =
+      path.join(project.project.rootDir, ".meteor", "cordova-platforms");
 
-    if (fs.existsSync(platformsPath)) {
+    var newPlatformsPath =
+      path.join(project.project.rootDir, ".meteor", "platforms");
+
+    var platforms = ["server", "browser"];
+    var oldPlatforms = [];
+
+    if (fs.existsSync(oldPlatformsPath)) {
       // App already has a platforms file, add "server" and "browser" to the top
-      var platforms = fs.readFileSync(platformsPath, {encoding: "utf-8"});
-      fs.writeFileSync(platformsPath, newPlatforms + platforms);
-    } else {
-      // App doesn't have a platforms file, write a new one
-      fs.writeFileSync(platformsPath, newPlatforms);
+      oldPlatforms = fs.readFileSync(oldPlatformsPath, {encoding: "utf-8"});
+      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"), trim));
+
+      fs.unlinkSync(oldPlatformsPath);
     }
+
+    platforms = _.union(platforms, oldPlatforms);
+
+    fs.writeFileSync(newPlatformsPath, platforms.join("\n") + "\n");
   }
 };
 
