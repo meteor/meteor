@@ -28,22 +28,24 @@ var writeFile = function (directoryPath, fileName, content, cb) {
   var fail = function (err) {
     cb(new Error("Failed to write file: ", err), null);
   };
-  window.resolveLocalFileSystemURL(directoryPath,
-    function (dirEntry) {
-      var success = function (fileEntry) {
-        fileEntry.createWriter(function (writer) {
-          writer.onwrite = function (evt) {
-            var result = evt.target.result;
-            cb(null, result);
-          };
-          writer.onerror = fail;
-          writer.write(content);
-        }, fail);
-      };
 
-      dirEntry.getFile(fileName, { create: true, exclusive: false },
-        success, fail);
-    }, fail);
+  window.resolveLocalFileSystemURL(directoryPath, function (dirEntry) {
+    var success = function (fileEntry) {
+      fileEntry.createWriter(function (writer) {
+        writer.onwrite = function (evt) {
+          var result = evt.target.result;
+          cb(null, result);
+        };
+        writer.onerror = fail;
+        writer.write(content);
+      }, fail);
+    };
+
+    dirEntry.getFile(fileName, {
+      create: true,
+      exclusive: false
+    }, success, fail);
+  }, fail);
 };
 
 var restartServer = function (location) {
@@ -105,10 +107,7 @@ var onNewVersion = function () {
     });
 
     var afterAllFilesDownloaded = _.after(queue.length, function () {
-      writeFile(versionPrefix, 'manifest.json',
-          JSON.stringify(program, undefined, 2),
-          function (err) {
-
+      var wroteManifest = function (err) {
         if (err) {
           log("Failed to write manifest.json: " + err);
           // XXX do something smarter?
@@ -131,7 +130,10 @@ var onNewVersion = function () {
             restartServer(location);
           }
         });
-      });
+      };
+
+      writeFile(versionPrefix, 'manifest.json',
+                JSON.stringify(program, undefined, 2), wroteManifest);
     });
 
     var dowloadUrl = function (url) {
