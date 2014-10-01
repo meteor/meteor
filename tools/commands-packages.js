@@ -1392,7 +1392,7 @@ var maybeUpdateRelease = function (options) {
   }
 
   // We are running from checkout, so we are not updating the release.
-  if (release.current.isCheckout()) {
+  if (release.current && release.current.isCheckout()) {
     Console.error(
 "You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
 "Checking to see if we can update your packages.");
