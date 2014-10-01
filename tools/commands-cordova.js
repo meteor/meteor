@@ -38,7 +38,6 @@ var cordovaWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor", "cordova");
 };
 
-
 var isValidPlatform = function (name) {
   if (name.match(/ios/i) && process.platform !== 'darwin') {
     throw new Error(name + ': not available on your system');
@@ -1377,7 +1376,6 @@ _.extend(Android.prototype, {
       var found = _.any(kexts.split('\n'), function (line) {
         if (line.indexOf('com.intel.kext.intelhaxm') != -1) {
           Console.debug("Found com.intel.kext.intelhaxm: ", found);
-          Console.info(Console.success("HAXM is installed"));
           return true;
         }
       });
@@ -1417,6 +1415,44 @@ _.extend(Android.prototype, {
     }
 
     return false;
+  },
+
+  getAndroidBundlePath: function () {
+    return path.join(files.getCurrentToolsDir(), 'android_bundle');
+  },
+
+  runAndroidTool: function (args) {
+    var self = this;
+
+    var androidBundlePath = self.getAndroidBundlePath();
+
+    var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', 'android');
+
+    var options = {};
+    options.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
+    var cmd = new utils.RunCommand(androidToolPath, args, options);
+    var execution = cmd.run();
+    if (execution.exitCode !== 0) {
+      Console.warn("Unexpected exit code from android process: " + execution.exitCode);
+      Console.warn("stdout: " + execution.stdout);
+      Console.warn("stderr: " + execution.stderr);
+
+      throw new Error("Error running android tool: exit code " + execution.exitCode);
+    }
+
+    return execution.stdout;
+  },
+
+  listAvds: function () {
+    var self = this;
+
+    var out = self.runAndroidTool(['list', 'avd', '--compact']);
+    var avds = [];
+    _.each(out.split('\n'), function (line) {
+      line = line.trim();
+      avds.push(line);
+    });
+    return avds;
   },
 
   startEmulator: function () {
@@ -1594,10 +1630,22 @@ main.registerCommand({
   var android = new Android();
 
   if (options.getready) {
-    if (!android.hasAcceleration()) {
-      Console.info("Acceleration is not installed; the Android emulator will be very slow without it");
+    // (hasAcceleration can also be undefined)
+    var hasAcceleration = android.hasAcceleration();
+    if (hasAcceleration === false) {
+      Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
 
       android.installAcceleration();
+    } else if (hasAcceleration === true) {
+      Console.info(Console.success("HAXM is installed"));
+    }
+
+    var avds = android.listAvds();
+    var avdName = 'meteor';
+    if (_.contains(avds, avdName)) {
+      Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
+    } else {
+      Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
     }
   }
   return 0;
