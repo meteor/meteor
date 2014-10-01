@@ -1110,7 +1110,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     'DisallowOverscroll': true
   };
   var pluginsConfiguration = {};
-  var imagePaths = {};
+  var imagePaths = {
+    icon: {},
+    splash: {}
+  };
 
   /**
    * @namespace App
@@ -1138,7 +1141,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
 
       // check that every key is meaningful
       _.each(options, function (value, key) {
-        if (_.has(defaults, key))
+        if (! _.has(defaults, key))
           throw new Error(key + ": unknown key in App.info configuration.");
       });
 
@@ -1179,10 +1182,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       var validDevices =
         _.keys(iconIosSizes).concat(_.keys(iconAndroidSizes));
       _.each(icons, function (value, key) {
-        if (! _.has(validDevices, key))
+        if (! _.include(validDevices, key))
           throw new Error(key + ": unknown key in App.icons configuration.");
       });
-      _.extend(imagePaths, icons);
+      _.extend(imagePaths.icon, icons);
     },
     /**
      * @summary Set the paths to the launch screen images.
@@ -1205,10 +1208,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
         _.keys(launchIosSizes).concat(_.keys(launchAndroidSizes));
 
       _.each(launchScreens, function (value, key) {
-        if (! _.has(validDevices, key))
+        if (! _.include(validDevices, key))
           throw new Error(key + ": unknown key in App.launchScreens configuration.");
       });
-      _.extend(imagePaths, launchScreens);
+      _.extend(imagePaths.splash, launchScreens);
     }
   };
 
@@ -1223,11 +1226,15 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   }
 
   var XmlBuilder = getLoadedPackages().xmlbuilder.XmlBuilder;
-  var config = XmlBuilder.create('widget', {
+  var config = XmlBuilder.create('widget');
+
+  _.each({
     id: metadata.id,
     version: metadata.version,
     xmlns: 'http://www.w3.org/ns/widgets',
     'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
+  }, function (val, key) {
+    config.att(key, val);
   });
 
   // set all the metadata
@@ -1266,16 +1273,17 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       var width = size.split('x')[0];
       var height = size.split('x')[1];
 
-      if (! _.has(iconsPaths, name))
+      if (! _.has(imagePaths[tag], name))
         return;
 
+      var fileName = name + '.' + tag + '.png';
       // copy the file to the build folder with a standardized name
-      files.cp_r(path.join(project.rootDir, imagePaths[name]),
-                 path.join(resourcesPath, name + '.png'));
+      files.copyFile(path.join(project.rootDir, imagePaths[tag][name]),
+                     path.join(resourcesPath, fileName));
 
       // set it to the xml tree
       xmlEle.ele(tag, {
-        src: path.join('resources', name + '.png'),
+        src: path.join('resources', fileName),
         width: width,
         height: height
       });
