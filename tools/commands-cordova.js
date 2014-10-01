@@ -653,6 +653,12 @@ var localPluginsPathFromCordovaPath = function (cordovaPath) {
 
 // --- Cordova from project ---
 
+
+// XXX a hack: make this variable global to reduce the interface of
+// consumeControlFile and make more side-effects for simplicity.
+// This is populated only in consumeControlFile.
+var pluginsConfiguration = {};
+
 // Returns the cordovaDependencies of the Cordova arch from a star json.
 var getCordovaDependenciesFromStar = function (star) {
   var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
@@ -680,11 +686,7 @@ var buildCordova = function (localPath, buildCommand, options) {
 
   // Check and consume the control file
   var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
-  files.rm_recursive(path.join(cordovaPath, 'resources'));
-  if (fs.existsSync(controlFilePath)) {
-    verboseLog('Reading the mobile control file');
-    consumeControlFile(controlFilePath, cordovaPath);
-  }
+  consumeControlFile(controlFilePath, cordovaPath);
 
   ensureCordovaPlatforms(localPath);
   ensureCordovaPlugins(localPath, _.extend({}, options, {
@@ -1061,15 +1063,21 @@ var launchAndroidSizes = {
   'android_xhdpi_landscape': '960x720'
 };
 
-// XXX a hack: make this variable global to reduce the interface of
-// consumeControlFile and make more side-effects for simplicity.
-var pluginsConfiguration = {};
-
 // Given the mobile control file converts it to the Phongep/Cordova project's
 // config.xml file and copies the necessary files (icons and launch screens) to
 // the correct build location. Replaces all the old resources.
 var consumeControlFile = function (controlFilePath, cordovaPath) {
-  var code = fs.readFileSync(controlFilePath, 'utf8');
+  verboseLog('Reading the mobile control file');
+  // clean up the previous settings and resources
+  files.rm_recursive(path.join(cordovaPath, 'resources'));
+
+  var code = '';
+
+  if (fs.existsSync(controlFilePath)) {
+    // read the file if it exists
+    code = fs.readFileSync(controlFilePath, 'utf8');
+  }
+
   var metadata = {};
   // set some defaults different from the Phonegap/Cordova defaults
   var additionalConfiguration = {
