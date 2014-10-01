@@ -7,9 +7,6 @@
 
 * Allow more than one dash in package versions. #2715
 
-* Fix `meteor update` on an app built from a checkout version
-  of Meteor.
-
 
 ## v0.9.3
 
