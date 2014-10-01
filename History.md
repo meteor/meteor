@@ -1,5 +1,15 @@
 ## v.NEXT
 
+
+## v0.9.3.1
+
+* Don't crash when failing to contact the package server. #2713
+
+* Allow more than one dash in package versions. #2715
+
+* Fix `meteor update` on an app built from a checkout version
+  of Meteor.
+
 ## v0.9.3
 
 ### More Package Version Number Flexibility
