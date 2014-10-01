@@ -94,7 +94,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
     if (typeof part === 'number') {
       digit = part+1;
     } else if (typeof part === 'string') {
-      var VALID_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+      var VALID_CHARACTERS = "-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
       var validCharToNumber = function (ch) {
         var result = VALID_CHARACTERS.indexOf(ch);
@@ -104,13 +104,16 @@ var prereleaseIdentifierToFraction = function (prerelease) {
           return result;
       };
 
-      digit = 251 + // Numeric parts always have lower precedence than non-numeric parts.
+      digit = 101 + // Numeric parts always have lower precedence than non-numeric parts.
         validCharToNumber(part[0]) * VALID_CHARACTERS.length +
         (part[1] ? validCharToNumber(part[1]) : 0);
     } else {
       throw new Error("Unexpected prerelease identifier part: " + part + " of type " + typeof part);
     }
 
+    // 3000 > 101 + VALID_CHARACTERS.length *
+    // VALID_CHARACTERS.length. And there's a test to verify this
+    // ("test the edges of `versionMagnitude`")
     return memo + digit / Math.pow(3000, index+1);
   }, -1);
 };

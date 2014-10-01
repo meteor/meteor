@@ -1392,7 +1392,7 @@ var maybeUpdateRelease = function (options) {
   }
 
   // We are running from checkout, so we are not updating the release.
-  if (release.current.isCheckout()) {
+  if (release.current && release.current.isCheckout()) {
     Console.error(
 "You are running Meteor from a checkout, so we cannot update the Meteor release.\n" +
 "Checking to see if we can update your packages.");
@@ -1740,7 +1740,11 @@ main.registerCommand({
     var appRecord = doOrDie(function () {
       return catalog.official.getReleaseVersion(r[0], r[1]);
     });
-    releasePackages = appRecord.packages;
+    if (appRecord) {
+      releasePackages = appRecord.packages;
+    } else {
+      releasePackages = {};
+    }
   }
 
   // Let's figure out what packages we are currently using. Don't run the

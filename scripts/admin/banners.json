@@ -5,6 +5,14 @@
       "banner": {
         "text": "=> Meteor 0.9.3 is out with improvements for working with packages,\n   including: speedups, more information about conflicting packages on\n   update, and additional features for package authors.\n\n   Meteor 0.9.3 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
        }
+    },
+    {
+      "versions": ["0.9.3"],
+      "banner": {
+        "text":
+
+"=> Meteor 0.9.3.1 is out, fixing a few bugs in 0.9.3. You can update to \n   it by running 'meteor update'."
+       }
     }
   ]
 }
