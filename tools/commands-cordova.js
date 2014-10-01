@@ -1111,9 +1111,9 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   }
 
   var metadata = {
-    id: project.getAppIdentifier(),
+    id: 'com.id' + project.getAppIdentifier(),
     version: '0.0.1',
-    name: path.dirname(project.rootDir),
+    name: path.basename(project.rootDir),
     description: 'New Meteor Mobile App',
     author: 'A Meteor Developer',
     email: 'n/a',
