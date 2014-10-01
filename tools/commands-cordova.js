@@ -1078,7 +1078,16 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     code = fs.readFileSync(controlFilePath, 'utf8');
   }
 
-  var metadata = {};
+  var metadata = {
+    id: project.getAppIdentifier(),
+    version: '0.0.1',
+    name: path.dirname(project.rootDir),
+    description: 'New Meteor Mobile App',
+    author: 'A Meteor Developer',
+    email: 'n/a',
+    website: 'n/a'
+  };
+
   // set some defaults different from the Phonegap/Cordova defaults
   var additionalConfiguration = {
     'webviewbounce': false,
@@ -1104,23 +1113,11 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
      * @memberOf App
      */
     info: function (options) {
-      var defaults = {
-        id: project.getAppIdentifier(),
-        version: '0.0.1',
-        name: path.dirname(project.rootDir),
-        description: 'New Meteor Mobile App',
-        author: 'A Meteor Developer',
-        email: 'n/a',
-        website: 'n/a'
-      };
-
       // check that every key is meaningful
       _.each(options, function (value, key) {
-        if (! _.has(defaults, key))
+        if (! _.has(metadata, key))
           throw new Error(key + ": unknown key in App.info configuration.");
       });
-
-      options = _.extend(defaults, options);
 
       _.extend(metadata, options);
     },
