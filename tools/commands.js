@@ -607,7 +607,6 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
-    settings: { type: String },
     verbose: { type: Boolean, short: "v" },
     // Undocumented
     'for-deploy': { type: Boolean }

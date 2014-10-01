@@ -394,7 +394,7 @@ var checkRequestedPlatforms = function (platforms) {
 
 // --- Cordova plugins ---
 
-var installPlugin = function (cordovaPath, name, version, settings) {
+var installPlugin = function (cordovaPath, name, version, conf) {
   verboseLog('Installing a plugin', name, version);
 
   // XXX do something different for plugins fetched from a url.
@@ -407,14 +407,8 @@ var installPlugin = function (cordovaPath, name, version, settings) {
   }
 
   var additionalArgs = [];
-  // XXX how do we get settings to work now? Do we require settings to be
-  // passed every time we add a plugin?
 
-  if (settings && ! _.isObject(settings))
-    throw new Error('Meteor.settings.cordova.' + name +
-                    ' is expected to be an object');
-
-  _.each(settings, function (value, variable) {
+  _.each(conf || {}, function (value, variable) {
     additionalArgs.push('--variable');
     additionalArgs.push(variable + '=' + JSON.stringify(value));
   });
@@ -542,32 +536,6 @@ var ensureCordovaPlugins = function (localPath, options) {
   _.extend(plugins, project.getCordovaPlugins());
 
   var cordovaPath = path.join(localPath, 'cordova-build');
-  var settingsFile = path.join(cordovaPath, 'cordova-settings.json');
-
-  var oldSettings;
-  try {
-    oldSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf8')) || {};
-  } catch(err) {
-    if (err.code !== 'ENOENT')
-      throw err;
-    oldSettings = {};
-  }
-
-  var newSettings;
-  if (options.settings) {
-    var settingsText = fs.readFileSync(options.settings, "utf8");
-    var parsedSettings = {};
-    try {
-      parsedSettings = JSON.parse(settingsText);
-    } catch (err) {
-      throw new Error(
-        'Passed --settings are not a valid JSON: ' + settingsText);
-    }
-
-    newSettings = parsedSettings.cordova || {};
-    fs.writeFileSync(settingsFile, JSON.stringify(newSettings, null, 2),
-      'utf8');
-  }
 
   var installedPlugins = getInstalledPlugins(cordovaPath);
 
@@ -576,13 +544,7 @@ var ensureCordovaPlugins = function (localPath, options) {
   // new Cordova plugin is added or removed, or its version is changed,
   // we just reinstall all of the plugins.
 
-  // If there are Cordova settings and they have changed, then reinstall
-  // all of the plugins.
-  var shouldReinstallPlugins = newSettings &&
-                               ! _.isEqual(newSettings, oldSettings);
-
-  // If we have newSettings then use them, otherwise use the old settings.
-  var settings = (newSettings ? newSettings : oldSettings) || {};
+  var shouldReinstallPlugins = false;
 
   // Iterate through all of the plugin and find if any of them have a new
   // version.
@@ -631,7 +593,7 @@ var ensureCordovaPlugins = function (localPath, options) {
       // XXX: forkJoin with parallel false?
       _.each(plugins, function (version, name) {
         buildmessage.enterJob({ title: 'Installing Cordova plugin ' + name}, function () {
-          installPlugin(cordovaPath, name, version, settings[name]);
+          installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
         });
       });
     } catch (err) {
@@ -713,7 +675,17 @@ var buildCordova = function (localPath, buildCommand, options) {
   verboseLog('Bundling the web.cordova program of the app');
   var bundle = getBundle(bundlePath, [webArchName], options);
 
+  // Make there is a project as all other operations depend on that
   ensureCordovaProject(localPath, options.appName);
+
+  // Check and consume the control file
+  var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
+  files.rm_recursive(path.join(cordovaPath, 'resources'));
+  if (fs.existsSync(controlFilePath)) {
+    verboseLog('Reading the mobile control file');
+    consumeControlFile(controlFilePath, cordovaPath);
+  }
+
   ensureCordovaPlatforms(localPath);
   ensureCordovaPlugins(localPath, _.extend({}, options, {
     packagePlugins: getCordovaDependenciesFromStar(bundle.starManifest)
@@ -753,15 +725,6 @@ var buildCordova = function (localPath, buildCommand, options) {
   var indexPath = path.join(__dirname, 'client', 'cordova_index.html');
   var indexContent = fs.readFileSync(indexPath);
   fs.writeFileSync(path.join(wwwPath, 'index.html'), indexContent);
-
-
-  // Check and consume the control file
-  var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
-  files.rm_recursive(path.join(cordovaPath, 'resources'));
-  if (fs.existsSync(controlFilePath)) {
-    verboseLog('Reading the mobile control file');
-    consumeControlFile(controlFilePath, cordovaPath);
-  }
 
 
   // Cordova Build Override feature (c)
@@ -1098,6 +1061,10 @@ var launchAndroidSizes = {
   'android_xhdpi_landscape': '960x720'
 };
 
+// XXX a hack: make this variable global to reduce the interface of
+// consumeControlFile and make more side-effects for simplicity.
+var pluginsConfiguration = {};
+
 // Given the mobile control file converts it to the Phongep/Cordova project's
 // config.xml file and copies the necessary files (icons and launch screens) to
 // the correct build location. Replaces all the old resources.
@@ -1109,7 +1076,6 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     'webviewbounce': false,
     'DisallowOverscroll': true
   };
-  var pluginsConfiguration = {};
   var imagePaths = {
     icon: {},
     splash: {}
