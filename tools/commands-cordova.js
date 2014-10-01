@@ -12,6 +12,7 @@ var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
+var process = require('./process.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -1366,10 +1367,14 @@ var Android = function () {
 };
 
 _.extend(Android.prototype, {
-  hasAcceleration: function () {
-    var host = archinfo.host();
+  isMac: function () {
+    return archinfo.host().indexOf("os.osx.") == 0;
+  },
 
-    if (host.indexOf("os.osx.") == 0) {
+  hasAcceleration: function () {
+    var self = this;
+
+    if (self.isMac()) {
       var kexts = files.run('kextstat');
       var found = _.any(kexts.split('\n'), function (line) {
         if (line.indexOf('com.intel.kext.intelhaxm') != -1) {
@@ -1380,15 +1385,13 @@ _.extend(Android.prototype, {
       return found;
     }
 
-    Console.info("Can't determine acceleration for unknown host: ", host);
+    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
 
     return undefined;
   },
 
   installAcceleration: function () {
-    var host = archinfo.host();
-
-    if (host.indexOf("os.osx.") == 0) {
+    if (self.isMac()) {
       if (!checkAgreePlatformTerms("haxm", "Intel HAXM")) {
         Console.warn("Intel HAXM not installed (must agree to license)");
         return false;
@@ -1412,23 +1415,23 @@ _.extend(Android.prototype, {
       return true;
     }
 
-    return false;
+    throw new Error("Can't install acceleration for unknown host: " + archinfo.host());
   },
 
   getAndroidBundlePath: function () {
     return path.join(files.getCurrentToolsDir(), 'android_bundle');
   },
 
-  runAndroidTool: function (args) {
+  runAndroidTool: function (args, options) {
     var self = this;
 
     var androidBundlePath = self.getAndroidBundlePath();
 
     var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', 'android');
 
-    var options = {};
+    options = options || {};
     options.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
-    var cmd = new utils.RunCommand(androidToolPath, args, options);
+    var cmd = new process.RunCommand(androidToolPath, args, options);
     var execution = cmd.run();
     if (execution.exitCode !== 0) {
       Console.warn("Unexpected exit code from android process: " + execution.exitCode);
@@ -1453,20 +1456,75 @@ _.extend(Android.prototype, {
     return avds;
   },
 
-  startEmulator: function () {
+  hasAvd: function (avd) {
+    var self = this;
+    return _.contains(self.listAvds(), avd);
+  },
+
+  startEmulator: function (avd, options) {
     var self = this;
 
-//    runEmulator();
-//    # Put Android build tool-chain into path
-//    export PATH="${ANDROID_BUNDLE}/android-sdk/tools:${ANDROID_BUNDLE}/android-sdk/platform-tools:${PATH}"
-//
-//# add ant
-//    export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
-//    export PATH="${ANT_HOME}/bin:${PATH}"
-//
-//    export ANDROID_HOME="${ANDROID_BUNDLE}"
-//    export ANDROID_SDK_HOME="${ANDROID_BUNDLE}"
+    var androidBundlePath = self.getAndroidBundlePath();
 
+    // XXX: Use emulator64-x86?  What difference does it make?
+    var name = 'emulator';
+    var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', name);
+
+    var args = ['-avd', avd];
+
+    var runOptions = {};
+    runOptions.detached = true;
+    runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
+    var cmd = new process.RunCommand(androidToolPath, args, runOptions);
+    cmd.start();
+  },
+
+  createAvd: function (avd, options) {
+    var self = this;
+
+    var abi = "default/x86";
+
+    // XXX: TODO
+    //(android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
+
+  //# XXX if this command fails, it would be really hard to debug or understand
+  //# for the end user. But the output is also very misleading. Later we should
+  //# save the output to a log file and tell user where to find it in case of
+  //# failure.
+  //    echo "
+  //  " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path "${ANDROID_BUNDLE}/meteor_avd/" > /dev/null 2>&1
+    var androidBundlePath = self.getAndroidBundlePath();
+    var avdPath = path.join(androidBundlePath, 'meteor_avd');
+    var args = ['create', 'avd',
+                '--target', '1',
+                '--name', avd,
+                '--abi', abi,
+                '--path', avdPath];
+
+    // We need to send a new line to bypass the 'custom hardware prompt'
+    self.runAndroidTool(args, { stdin: '\n' });
+
+    var config = new files.KeyValueFile(path.join(avdPath, 'config.ini'));
+
+    // Nice keyboard support
+    config.set("hw.keyboard", "yes");
+    config.set("hw.mainKeys", "no");
+
+    // More RAM than the default
+    config.set("hw.ramSize", "1024");
+    config.set("vm.heapSize", "64");
+
+    //# These are the settings for a Nexus 4, but it's a bit big for some screens
+    //#  (and likely a bit slow without GPU & KVM/HAXM acceleration)
+    //  #set_config "skin.dynamic" "yes"
+    //#set_config "hw.lcd.density" "320"
+    //#set_config "hw.device.name" "Nexus 4"
+    //#set_config "hw.device.manufacturer" "Google"
+
+    // XXX: Enable on Linux?
+    if (self.isMac()) {
+      config.set("hw.gpu.enabled", "yes");
+    }
   }
 });
 
@@ -1614,6 +1672,34 @@ main.registerCommand({
   return 0;
 });
 
+main.registerCommand({
+  name: "android-launch",
+  pretty: true,
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
+  minArgs: 0,
+  maxArgs: 1
+}, function (options) {
+  var android = new Android();
+
+  var args = options.args;
+  var avd = 'meteor';
+  if (args.length) {
+    avd = args[0];
+  }
+
+  if (!android.hasAvd(avd)) {
+    Console.error("'" + avd + "' android virtual device (AVD) does not exist");
+    Console.info("The default AVD is called meteor, and will be created automatically for you");
+    return 1;
+  }
+
+  android.startEmulator(avd);
+
+  return 0;
+});
+
 
 main.registerCommand({
   name: "android",
@@ -1633,20 +1719,27 @@ main.registerCommand({
     if (hasAcceleration === false) {
       Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
 
-      android.installAcceleration();
+      buildmessage.enterJob({title: 'Installing acceleration'}, function () {
+        android.installAcceleration();
+      });
     } else if (hasAcceleration === true) {
       Console.info(Console.success("HAXM is installed"));
     }
 
-    var avds = android.listAvds();
     var avdName = 'meteor';
-    if (_.contains(avds, avdName)) {
+    if (android.hasAvd(avdName)) {
       Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
     } else {
       Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
-      // XXX: Create avd (pull code out of ensure_android_bundle.sh)
+
+      buildmessage.enterJob({title: 'Creating AVD'}, function () {
+        var avdOptions = {};
+        android.createAvd(avdName, avdOptions);
+        Console.info(Console.success("Created android virtual device (AVD): " + avdName));
+      });
     }
   }
+
   return 0;
 });
 

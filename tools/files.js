@@ -906,3 +906,42 @@ exports.trimLine = function (line) {
   line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
   return line;
 };
+
+
+files.KeyValueFile = function (path) {
+  var self = this;
+  self.path = path;
+}
+
+_.extend(files.KeyValueFile.prototype, {
+  set: function (k, v) {
+    var self = this;
+
+    var data = self._readAll() || '';
+    var lines = data.split(/\n/);
+
+    var found = false;
+    for (var i = 0; i < lines.length; i++) {
+      var trimmed = lines[i].trim();
+      if (trimmed.indexOf(k + '=') == 0) {
+        lines[i] = k + '=' + v;
+        found = true;
+      }
+    }
+    if (!found) {
+      lines.push(k + "=" + v);
+    }
+    var newdata = lines.join('\n') + '\n';
+    fs.writeFileSync(self.path, newdata, 'utf8');
+  },
+
+  _readAll: function () {
+    var self = this;
+
+    if (fs.existsSync(self.path)) {
+      return fs.readFileSync(self.path, 'utf8');
+    } else {
+      return null;
+    }
+  }
+});
