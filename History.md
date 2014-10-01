@@ -17,6 +17,14 @@
 
 * Fix source maps when using a ROOT_URL with a path. #2627
 
+
+## v0.9.3.1
+
+* Don't crash when failing to contact the package server. #2713
+
+* Allow more than one dash in package versions. #2715
+
+
 ## v0.9.3
 
 ### More Package Version Number Flexibility
