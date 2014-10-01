@@ -1061,7 +1061,7 @@ var checkAgreePlatformTerms = function (platform) {
 // Hard-coded constants
 var iconIosSizes = {
   'iphone': '60x60',
-  'iphone-2x': '120x120x',
+  'iphone-2x': '120x120',
   'iphone-3x': '180x180',
   'ipad': '76x76',
   'ipad-2x': '152x152'
@@ -1286,6 +1286,29 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
         src: path.join('resources', fileName),
         width: width,
         height: height
+      });
+
+      // XXX reuse one size for other dimensions
+      var dups = {
+        '60x60': ['29x29', '40x40', '50x50', '57x57', '58x58'],
+        '76x76': ['72x72'],
+        '152x152': ['144x144'],
+        '120x120': ['80x80', '100x100', '114x114'],
+        '768x1004': ['768x1024'],
+        '1536x2008': ['1536x2048'],
+        '1024x748': ['1024x768'],
+        '2048x1496': ['2048x1536']
+      }[size];
+
+      // just use the same image
+      _.each(dups, function (size) {
+        width = size.split('x')[0];
+        height = size.split('x')[1];
+        xmlEle.ele(tag, {
+          src: path.join('resources', fileName),
+          width: width,
+          height: height
+        });
       });
     });
   };
