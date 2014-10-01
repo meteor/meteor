@@ -1123,9 +1123,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   var App = {
     /**
      * @summary Set mobile app's metadata
-     * @param {Object} [options] An object with keys corresponding to different
-     * metadata fields such as: "id", "version", "name", "description",
-     * "author", "email", "website".
+     * @param {Object} options
+     * @param {String} [options.id,version,name,description,author,email,website]
+     * A common app's metadata field. Some of this will be displayed to the
+     * user, others will be only used internally.
      * @memberOf App
      */
     info: function (options) {
@@ -1150,9 +1151,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       _.extend(metadata, options);
     },
     /**
-     * @summary Set a custom configuration supported by Phonegap/Cordova's
+     * @summary Set up a preference for the build supported by
+     * Phonegap/Cordova's config.xml.
+     * @param {String} key a preference supported by Phonegap/Cordova's
      * config.xml
-     * @param {String} key a key supported by Phonegap/Cordova's config.xml
      * @param {String} value the string value that should be used in the
      * configuration
      * @memberOf App
@@ -1162,8 +1164,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     },
     /**
      * @summary Set the build-time configuration for a Phonegap/Cordova plugin.
-     * @param {Object} config a dictionary whose key-value pairs will be used
-     * as the environment in the build-time of the Phonegap/Cordova project.
+     * @param {String} pluginName the identifier of the plugin the configuration
+     * corresponds to.
+     * @param {Object} config a set of key-value pairs, those will be used as
+     * the environment in the build-time of the Phonegap/Cordova project.
      * @memberOf App
      */
     configurePlugin: function (pluginName, config) {
@@ -1172,10 +1176,19 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     /**
      * @summary Set the paths to icons to be used in mobile app.
      * @param {Object} icons a dictionary with keys corresponding to different
-     * devices (one of "iphone", "iphone-2x", "iphone-3x", "ipad", "ipad-2x",
-     * "android_ldpi", "android_mdpi", "android_hdpi", "android_xhdpi") and
-     * values set to the location of an image relative to the project root
-     * directory.
+     * devices and values set to the location of an image relative to the
+     * project root directory.
+     *
+     * Valid key values:
+     * - `iphone`
+     * - `iphone-2x`
+     * - `iphone-3x`
+     * - `ipad`
+     * - `ipad-2x`
+     * - `android_ldpi`
+     * - `android_mdpi`
+     * - `android_hdpi`
+     * - `android_xhdpi`
      * @memberOf App
      */
     icons: function (icons) {
@@ -1189,18 +1202,33 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     },
     /**
      * @summary Set the paths to the launch screen images.
-     * @param {Object} launchScreens a dictionary with keys corresponding to different
-     * devices (one of "iphone", "iphone_2x", "iphone5", "iphone6",
-     * "iphone6p_portrait", "iphone6p_landscape", "ipad_portrait",
-     * "ipad_portrait_2x", "ipad_landscape", "ipad_landscape_2x",
-     * "android_ldpi_portrait", "android_ldpi_landscape",
-     * "android_mdpi_portrait", "android_mdpi_landscape",
-     * "android_hdpi_portrait", "android_hdpi_landscape",
-     * "android_xhdpi_portrait", "android_xhdpi_landscape") and values set
-     * to the location of an image relative to the project root directory.
-     * For the Android launch screens images should be a specially guided
-     * "Nine-patch" image files to show how to stretch them. See:
-     * https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch.
+     * @param {Object} launchScreens A dictionary with keys corresponding to
+     * different devices and values set to the location of an image relative to
+     * the project root directory.  For the Android launch screens images should
+     * be a specially guided "Nine-patch" image files to show how to stretch
+     * them. See:
+     * [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
+     *
+     * Valid key values:
+     * - `iphone`
+     * - `iphone_2x`
+     * - `iphone5`
+     * - `iphone6`
+     * - `iphone6p_portrait`
+     * - `iphone6p_landscape`
+     * - `ipad_portrait`
+     * - `ipad_portrait_2x`
+     * - `ipad_landscape`
+     * - `ipad_landscape_2x`
+     * - `android_ldpi_portrait`
+     * - `android_ldpi_landscape`
+     * - `android_mdpi_portrait`
+     * - `android_mdpi_landscape`
+     * - `android_hdpi_portrait`
+     * - `android_hdpi_landscape`
+     * - `android_xhdpi_portrait`
+     * - `android_xhdpi_landscape`
+     *
      * @memberOf App
      */
     launchScreens: function (launchScreens) {

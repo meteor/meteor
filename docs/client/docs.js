@@ -398,6 +398,14 @@ var toc = [
       {name: "Package.registerBuildPlugin", id: "Package-registerBuildPlugin"}, [
         {name: "Plugin.registerSourceHandler", id: "Plugin-registerSourceHandler"}
       ]
+    ],
+
+    {name: "Mobile Config file", id: "mobileconfigjs"}, [
+      {name: "App.info", id: "App-info"},
+      {name: "App.set", id: "App-set"},
+      {name: "App.configurePlugin", id: "App-configurePlugin"},
+      {name: "App.icons", id: "App-icons"},
+      {name: "App.launchScreens", id: "App-launchScreens"}
     ]
   ],
 
