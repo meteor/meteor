@@ -732,7 +732,7 @@ _.extend(LocalCatalog.prototype, {
     if (! unip) {
       // Didn't have a build or it wasn't up to date. Build it.
       buildmessage.enterJob({
-        title: "building package `" + name + "`",
+        title: "Building package `" + name + "`",
         rootPath: sourcePath
       }, function () {
         unip = compiler.compile(self.packageSources[name], {
