@@ -1110,7 +1110,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
      * @param {Object} options
      * @param {String} [options.id,version,name,description,author,email,website]
      * Each of the options correspond to a key in the app's core configuration
-     * as described the [PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements).
+     * as described in the [PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements).
      * @memberOf App
      */
     info: function (options) {
