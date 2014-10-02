@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A package for translating old bundles into stars",
-  version: "1.0.4-pre.0"
+  version: "1.0.4-pre.2"
 });
 
 Package.on_use(function (api) {

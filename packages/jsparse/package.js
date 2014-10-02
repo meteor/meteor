@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Full-featured JavaScript parser",
-  version: "1.0.1-pre.0"
+  version: "1.0.1-pre.2"
 });
 
 Package.on_use(function (api) {

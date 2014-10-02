@@ -1,7 +1,7 @@
 <<<<<<< HEAD
 Template.headline.helpers({
   release: function () {
-    return Meteor.release ? "0.9.4-pre.1" : "(checkout)";
+    return Meteor.release ? "0.9.4-pre.6" : "(checkout)";
   }
 });
 ||||||| merged common ancestors

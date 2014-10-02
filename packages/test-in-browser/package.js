@@ -1,13 +1,13 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.5-pre.0'
+  version: '1.0.5-pre.2'
 });
 
 Package.on_use(function (api) {
   // XXX this should go away, and there should be a clean interface
   // that tinytest and the driver both implement?
   api.use('tinytest');
-  api.use('bootstrap');
+  api.use('bootstrap@1.0.1');
   api.use('underscore');
 
   api.use('session');
