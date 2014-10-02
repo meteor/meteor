@@ -12,25 +12,24 @@
     console.log(DEBUG_TAG + msg);
   };
   var readFile = function (url, cb) {
-    window.resolveLocalFileSystemURL(url,
-      function (fileEntry) {
-        var success = function (file) {
-          var reader = new FileReader();
-          reader.onloadend = function (evt) {
-            var result = evt.target.result;
-            cb(null, result);
-          };
-          reader.onerror = fail;
-          reader.readAsText(file);
+    window.resolveLocalFileSystemURL(url, function (fileEntry) {
+      var success = function (file) {
+        var reader = new FileReader();
+        reader.onloadend = function (evt) {
+          var result = evt.target.result;
+          cb(null, result);
         };
-        var fail = function (evt) {
-          cb(new Error("Failed to load entry: " + url), null);
-        };
-        fileEntry.file(success, fail);
-      },
-      // error callback
-      function (err) { cb(new Error("Failed to resolve entry: " + url), null); }
-    );
+        reader.onerror = fail;
+        reader.readAsText(file);
+      };
+      var fail = function (evt) {
+        cb(new Error("Failed to load entry: " + url), null);
+      };
+      fileEntry.file(success, fail);
+    },
+    // error callback
+    function (err) { cb(new Error("Failed to resolve entry: " + url), null);
+    });
   };
 
   var each = function (array, f) {
@@ -85,8 +84,10 @@
     } else {
       log('No new versions saved to disk.');
     }
+    var location = cordova.file.applicationDirectory + 'www/application/';
+    location = decodeURI(location).replace(/^file:\/\//g, '');
 
-    loadFromLocation('application');
+    loadFromLocation(location);
   };
 
   var listDirectory = function (url, options, cb) {
@@ -112,54 +113,49 @@
       cb(err);
     };
     window.resolveLocalFileSystemURL(url, function (entry) {
-      entry.removeRecursively(function () {
-        cb();
-      }, fail);
+      entry.removeRecursively(function () { cb(); }, fail);
     }, fail);
   };
 
   var loadVersion = function (version, localPathPrefix) {
     var versionPrefix = localPathPrefix + version + '/';
-    // We have a version string, now read the new version
-    // Relative to "bundle.app/www"
-    var location = '../../Documents/meteor/' + version;
+    var location = decodeURI(versionPrefix).replace(/^file:\/\//g, '')
     loadFromLocation(location);
   };
 
   var loadApp = function (localPathPrefix) {
-    readFile(localPathPrefix + 'version',
-      function (err, version) {
-        if (err) {
-          log("Error reading version file " + err);
-          fallback(err);
-          return;
-        }
+    readFile(localPathPrefix + 'version', function (err, version) {
+      if (err) {
+        log("Error reading version file " + err);
+        fallback(err);
+        return;
+      }
 
-        // Try to clean up our cache directory, make sure to scan the directory
-        // *before* loading the actual app. This ordering will prevent race
-        // conditions when the app code tries to download a new version before
-        // the old-cache removal has scanned the cache folder.
-        listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
-          loadVersion(version, localPathPrefix);
+      // Try to clean up our cache directory, make sure to scan the directory
+      // *before* loading the actual app. This ordering will prevent race
+      // conditions when the app code tries to download a new version before
+      // the old-cache removal has scanned the cache folder.
+      listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
+        loadVersion(version, localPathPrefix);
 
-          if (err) return;
-          each(names, function (name) {
-            // Skip the folder with the latest version
-            if (name === version)
-              return;
+        if (err) return;
+        each(names, function (name) {
+          // Skip the folder with the latest version
+          if (name === version)
+            return;
 
-            // remove everything else, as we don't want to keep too much cache
-            // around on disk
-            removeDirectory(localPathPrefix + name + '/', function (err) {
-              if (err) {
-                log('Failed to remove an old cache folder '
-                    + name + ':' + err.message);
-              } else {
-                log('Successfully removed an old cache folder ' + name);
-              }
-            });
+          // remove everything else, as we don't want to keep too much cache
+          // around on disk
+          removeDirectory(localPathPrefix + name + '/', function (err) {
+            if (err) {
+              log('Failed to remove an old cache folder '
+                  + name + ':' + err.message);
+            } else {
+              log('Successfully removed an old cache folder ' + name);
+            }
           });
         });
+      });
     });
   };
 
@@ -167,8 +163,7 @@
     if (window.cordova.logger)
       window.cordova.logger.__onDeviceReady();
 
-    var localPathPrefix = cordova.file.applicationStorageDirectory +
-                          'Documents/meteor/';
+    var localPathPrefix = cordova.file.dataDirectory + 'meteor/';
     loadApp(localPathPrefix);
   }, false);
 })();
