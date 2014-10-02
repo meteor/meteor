@@ -142,7 +142,7 @@ var onNewVersion = function () {
       // Try to dowload the file a few times.
       var tries = 0;
       var tryDownload = function () {
-        ft.download(uri, versionPrefix + url, function (entry) {
+        ft.download(uri, versionPrefix + encodeURI(url), function (entry) {
           if (entry) {
             console.log(DEBUG_TAG + "done dowloading " + url);
             // start downloading next queued url
