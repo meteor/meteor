@@ -228,22 +228,6 @@ function doRunCommand (options) {
 
   options.httpProxyPort = options['http-proxy-port'];
 
-  // If we are targeting the remote devices, warn about ports and same network
-  if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
-    cordova.verboseLog('A run on a device requested');
-    Console.stderr.write([
-"WARNING: You are testing your app on a remote device.",
-"         For the mobile app to be able to connect to the local server, make",
-"         sure your device is on the same network, and that the network",
-"         configuration allows clients to talk to each other",
-"         (no client isolation).",
-"",
-"         You can pass the host and the port in the --mobile-server argument.",
-"         For example: --mobile-server " +
-  ip.address() + ":" + parsedUrl.port + "\n\n"
-].join("\n"));
-  }
-
   // Always bundle for the browser by default.
   var webArchs = project.getWebArchs();
 
@@ -283,6 +267,23 @@ function doRunCommand (options) {
       return 1;
     }
   }
+
+  // If we are targeting the remote devices, warn about ports and same network
+  if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
+    cordova.verboseLog('A run on a device requested');
+    Console.stderr.write([
+"WARNING: You are testing your app on a remote device.",
+"         For the mobile app to be able to connect to the local server, make",
+"         sure your device is on the same network, and that the network",
+"         configuration allows clients to talk to each other",
+"         (no client isolation).",
+"",
+"         You can pass the host and the port in the --mobile-server argument.",
+"         For example: --mobile-server " +
+  ip.address() + ":" + parsedUrl.port + "\n\n"
+].join("\n"));
+  }
+
 
   var appHost, appPort;
   if (options['app-port']) {
