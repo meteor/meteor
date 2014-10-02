@@ -382,7 +382,7 @@ var toc = [
       {name: "Assets.getBinary", id: "assets_getBinary"}
     ],
 
-    {name: "Package.js", id: "packagejs"}, [
+    {name: "package.js", id: "packagejs"}, [
       {name: "Package.describe", id: "packagedescription"},
       {name: "Package.onUse", id: "packagedefinition"}, [
         {name: "api.versionsFrom", id: "pack_versions"},
@@ -400,7 +400,7 @@ var toc = [
       ]
     ],
 
-    {name: "Mobile Config file", id: "mobileconfigjs"}, [
+    {name: "mobile-config.js", id: "mobileconfigjs"}, [
       {name: "App.info", id: "App-info"},
       {name: "App.set", id: "App-set"},
       {name: "App.configurePlugin", id: "App-configurePlugin"},
