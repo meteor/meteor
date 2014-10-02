@@ -3,7 +3,7 @@ var _ = require('underscore');
 var child_process = require('child_process');
 var Console = require('./console.js').Console;
 
-var process = exports;
+var processes = exports;
 
 var RunCommand = function (command, args, options) {
   var self = this;

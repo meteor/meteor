@@ -12,7 +12,7 @@ var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
-var process = require('./process.js');
+var processes = require('./processes.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -1431,7 +1431,7 @@ _.extend(Android.prototype, {
 
     options = options || {};
     options.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
-    var cmd = new process.RunCommand(androidToolPath, args, options);
+    var cmd = new processes.RunCommand(androidToolPath, args, options);
     var execution = cmd.run();
     if (execution.exitCode !== 0) {
       Console.warn("Unexpected exit code from android process: " + execution.exitCode);
@@ -1475,7 +1475,7 @@ _.extend(Android.prototype, {
     var runOptions = {};
     runOptions.detached = true;
     runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
-    var cmd = new process.RunCommand(androidToolPath, args, runOptions);
+    var cmd = new processes.RunCommand(androidToolPath, args, runOptions);
     cmd.start();
   },
 
