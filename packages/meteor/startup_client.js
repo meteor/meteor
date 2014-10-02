@@ -2,15 +2,25 @@ var queue = [];
 var loaded = !Meteor.isCordova &&
   (document.readyState === "loaded" || document.readyState == "complete");
 
+var awaitingEventsCount = 1;
 var ready = function() {
+  awaitingEventsCount--;
+  if (awaitingEventsCount > 0)
+    return;
+
   loaded = true;
   while (queue.length)
     (queue.shift())();
 };
 
 if (document.addEventListener) {
-  var event = Meteor.isCordova ? 'deviceready' : 'DOMContentLoaded';
-  document.addEventListener(event, ready, false);
+  document.addEventListener('DOMContentLoaded', ready, false);
+
+  if (Meteor.isCordova) {
+    awaitingEventsCount++;
+    document.addEventListener('deviceready', ready, false);
+  }
+
   window.addEventListener('load', ready, false);
 } else {
   document.attachEvent('onreadystatechange', function () {

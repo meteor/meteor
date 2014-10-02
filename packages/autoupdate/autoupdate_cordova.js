@@ -77,10 +77,7 @@ var onNewVersion = function () {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + '__cordova';
 
-  var localPathPrefix = cordova.file.applicationStorageDirectory +
-                        'Documents/meteor/';
-
-
+  var localPathPrefix = cordova.file.dataDirectory + 'meteor/';
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
       log('Failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
@@ -126,7 +123,8 @@ var onNewVersion = function () {
           // don't call reload twice!
           if (! hasCalledReload) {
             // relative to 'bundle.app/www'
-            var location = '../../Documents/meteor/' + version;
+            var location =
+              decodeURI(localPathPrefix + version).replace(/^file:\/\//, '');
             restartServer(location);
           }
         });
