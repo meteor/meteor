@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.1.2-pre.1'
+  version: '1.1.2-pre.2'
 });
 
 Package.on_use(function(api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Ordered traversable dictionary with a mutable ordering",
-  version: '1.0.1-pre.1'
+  version: '1.0.1-pre.2'
 });
 
 Package.on_use(function (api) {
