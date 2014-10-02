@@ -1106,50 +1106,51 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
    */
   var App = {
     /**
-     * @summary Set mobile app's metadata
+     * @summary Set your mobile app's core configuration information.
      * @param {Object} options
      * @param {String} [options.id,version,name,description,author,email,website]
-     * A common app's metadata field. Some of this will be displayed to the
-     * user, others will be only used internally.
+     * Each of the options correspond to a key in the app's core configuration
+     * as described the [PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements).
      * @memberOf App
      */
     info: function (options) {
       // check that every key is meaningful
       _.each(options, function (value, key) {
         if (! _.has(metadata, key))
-          throw new Error(key + ": unknown key in App.info configuration.");
+          throw new Error("Unknown key in App.info configuration: " + key);
       });
 
       _.extend(metadata, options);
     },
     /**
-     * @summary Set up a preference for the build supported by
-     * Phonegap/Cordova's config.xml.
-     * @param {String} key a preference supported by Phonegap/Cordova's
-     * config.xml
-     * @param {String} value the string value that should be used in the
-     * configuration
+     * @summary Add a preference for your build as described in the
+     * [PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_global_preferences).
+     * @param {String} name A preference name supported by Phonegap's
+     * `config.xml`.
+     * @param {String} value The value for that preference.
      * @memberOf App
      */
     set: function (key, value) {
       additionalConfiguration[key] = value;
     },
+
     /**
-     * @summary Set the build-time configuration for a Phonegap/Cordova plugin.
-     * @param {String} pluginName the identifier of the plugin the configuration
-     * corresponds to.
-     * @param {Object} config a set of key-value pairs, those will be used as
-     * the environment in the build-time of the Phonegap/Cordova project.
+     * @summary Set the build-time configuration for a Phonegap plugin.
+     * @param {String} pluginName The identifier of the plugin you want to
+     * configure.
+     * @param {Object} config A set of key-value pairs which will be passed
+     * at build-time to configure the specified plugin.
      * @memberOf App
      */
     configurePlugin: function (pluginName, config) {
       pluginsConfiguration[pluginName] = config;
     },
+
     /**
-     * @summary Set the paths to icons to be used in mobile app.
-     * @param {Object} icons a dictionary with keys corresponding to different
-     * devices and values set to the location of an image relative to the
-     * project root directory.
+     * @summary Set the icons for your mobile app.
+     * @param {Object} icons An Object where the keys are different
+     * devices and screen sizes, and values are image paths
+     * relative to the project root directory.
      *
      * Valid key values:
      * - `iphone`
@@ -1172,14 +1173,16 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       });
       _.extend(imagePaths.icon, icons);
     },
+
     /**
-     * @summary Set the paths to the launch screen images.
-     * @param {Object} launchScreens A dictionary with keys corresponding to
-     * different devices and values set to the location of an image relative to
-     * the project root directory.  For the Android launch screens images should
-     * be a specially guided "Nine-patch" image files to show how to stretch
-     * them. See:
-     * [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
+     * @summary Set the launch screen images for your mobile app.
+     * @param {Object} launchScreens A dictionary where keys are different
+     * devices, screen sizes, and orientations, and the values are image paths
+     * relative to the project root directory.
+     * 
+     * For Android, launch screen images should
+     * be special "Nine-patch" image files that specify how they should be
+     * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
      *
      * Valid key values:
      * - `iphone`
