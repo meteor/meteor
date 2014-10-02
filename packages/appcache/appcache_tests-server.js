@@ -8,3 +8,13 @@
 WebApp.addHtmlAttributeHook(function (request) {
   return { manifest: "" };
 });
+
+
+// Let's add some file in the 'ONLINE' section
+Meteor.AppCache.config({
+  onlineOnly: [
+    '/online/',
+    '/bigimage.jpg',
+    '/largedata.json'
+  ]
+});
