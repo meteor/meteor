@@ -144,12 +144,29 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    var isopackJson = fs.readFileSync(
-      path.join(files.getCurrentToolsDir(),
-                '..',  // get out of tool, back to package
-                'isopack.json'));
-    var parsed = JSON.parse(isopackJson);
+    var isopackJsonPath = path.join(files.getCurrentToolsDir(),
+      '..',  // get out of tool, back to package
+      'isopack.json');
+
+    var parsed;
+
+    if (fs.existsSync(isopackJsonPath)) {
+      var isopackJson = fs.readFileSync(isopackJsonPath);
+      parsed = JSON.parse(isopackJson);
+
+      // XXX "isopack-1" is duplicate of isopack.currentFormat
+      parsed = parsed["isopack-1"]; // get the right format from the JSON
+      return parsed.name + '@' + parsed.version;
+    }
+
+    // XXX COMPAT WITH 0.9.3
+    var unipackageJsonPath = path.join(files.getCurrentToolsDir(),
+      '..',  // get out of tool, back to package
+      'unipackage.json');
+    var unipackageJson = fs.readFileSync(unipackageJsonPath);
+    parsed = JSON.parse(unipackageJson);
     return parsed.name + '@' + parsed.version;
+
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
