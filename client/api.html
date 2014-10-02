@@ -3614,16 +3614,14 @@ Meteor packages can include NPM packages and Cordova plugins by using
 <h2 id="mobileconfigjs"><span>Mobile Config File</span></h2>
 
 {{#markdown}}
-If your Meteor application is targeting mobile platforms (such as iOS or
-Android), you might want to configure the metadata and the process of
-Phonegap/Cordova build which is used internally for mobile builds.
+If your Meteor application targets mobile platforms such as iOS or
+Android, you can configure your app's metadata and build process
+in a special top-level file called
+`mobile-config.js` which is *not* included in your application and is used only
+for this configuration.
 
-This configuration should be placed in a special top-level file
-`mobile-config.js` which is *not* included in your application and used only for
-the configuration.
-
-The code listing below is an example of such configuration. The rest of this
-section will explain the specific API commands in greater details.
+The code snippet below is an example `mobile-config.js` file. The rest of this
+section will explain the specific API commands in greater detail.
 
 ```javascript
 // This section sets up some basic app metadata,
@@ -3641,23 +3639,23 @@ App.info({
 App.icons({
   'iphone': 'icons/icon-60.png',
   'iphone-2x': 'icons/icon-60@2x.png',
-  ...
+  // ... more screen sizes and platforms ...
 });
 
 App.launchScreens({
   'iphone': 'splash/Default~iphone.png',
   'iphone_2x': 'splash/Default@2x~iphone.png',
-  ...
+  // ... more screen sizes and platforms ...
 });
 
-// Configure Cordova's preferences
+// Set PhoneGap/Cordova preferences
 App.set('BackgroundColor', '0xff0000ff');
 App.set('HideKeyboardFormAccessoryBar', true);
 
-// Set up a particular Cordova plugin's build process
+// Pass preferences for a particular PhoneGap/Cordova plugin
 App.configurePlugin('com.phonegap.plugins.facebookconnect', {
   APP_ID: '1234567890',
-  API_KEY: 'yoursupersecretsauce'
+  API_KEY: 'supersecretapikey'
 });
 ```
 
