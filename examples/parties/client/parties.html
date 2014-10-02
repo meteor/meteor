@@ -80,11 +80,11 @@
         <div class="rsvp-buttons">
           {{#if currentUser}}
             <input type="button" value="I'm going!"
-                   class="btn btn-small rsvp_yes {{maybeChosen "yes"}}">
+                   class="btn btn-small rsvp_yes {{maybeChosen 'yes'}}">
             <input type="button" value="Maybe"
-                   class="btn btn-small rsvp_maybe {{maybeChosen "maybe"}}">
+                   class="btn btn-small rsvp_maybe {{maybeChosen 'maybe'}}">
             <input type="button" value="No"
-                   class="btn btn-small rsvp_no {{maybeChosen "no"}}">
+                   class="btn btn-small rsvp_no {{maybeChosen 'no'}}">
           {{else}}
             <i>Sign in to RSVP for this party.</i>
           {{/if}}
