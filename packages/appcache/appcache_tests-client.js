@@ -10,11 +10,13 @@ var appcacheTest = function(cb) {
 };
 
 Tinytest.addAsync('appcache - presence', appcacheTest(function(test, manifest) {
+  console.log(manifest)
   test.equal(manifest.statusCode, 200, 'manifest not served');
 }));
 
 Tinytest.addAsync('appcache - validity', appcacheTest(function(test, manifest) {
   var lines = manifest.content.split("\n");
+  console.log(test)
   var i = 0;
 
   var nextLinesMatch = function(expectedList) {
