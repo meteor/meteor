@@ -1460,10 +1460,6 @@ _.extend(Android.prototype, {
     var self = this;
 
     if (Host.isMac()) {
-      if (!checkAgreePlatformTerms("haxm", "Intel HAXM")) {
-        Console.warn("Intel HAXM not installed (must agree to license)");
-        return false;
-      }
       // The mpkg is small, so it's OK to buffer it in memory
       var name = 'IntelHAXM_1.0.8.mpkg';
       var mpkg = httpHelpers.getUrl({
