@@ -1,9 +1,11 @@
 var fs = require("fs");
 var _ = require("../../packages/underscore/underscore.js")._;
 
-var filenames = _.rest(process.argv, 2);
+var packageNames = _.rest(process.argv, 2);
 
-_.each(filenames, function (name) {
+_.each(packageNames, function (name) {
+  name = "packages/" + name + "/package.js";
+
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 
   match = content.match(/\d+\.\d+\.\d+-pre\.\d+/);
