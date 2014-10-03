@@ -1430,7 +1430,7 @@ _.extend(IOS.prototype, {
   },
 
   getDirectoryForSdk: function (version) {
-    return path.join('/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/', version);
+    return '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS' + version + '.sdk';
   },
 
   isSdkInstalled: function (version) {
@@ -1973,11 +1973,14 @@ main.registerCommand({
         }
       }
 
-      // XXX: Other versions
-      _.each(['iPhoneOS5.0.sdk', 'iPhoneOS6.0.sdk', 'iPhoneOS6.1.sdk'], function (version) {
+      _.each(['5.0', '5.0.1', '5.1', '6.0', '6.1'], function (version) {
         if (ios.isSdkInstalled(version)) {
-          Console.warn("An old version of the iPhone SDK is installed (" + version + "); you should probably delete it");
-          Console.info("You can delete it by deleting the directory: " + ios.getDirectoryForSdk(version));
+          Console.warn("An old version of the iPhone SDK is installed (" + version + "); you should");
+          Console.warn("probably delete it. With SDK versions prior to 7.0 installed, your apps");
+          Console.warn("can't be published to the App Store. Moreover, some Cordova plugins are");
+          Console.warn("incompatible with this SDK.");
+          Console.info("You can remove it by deleting this directory: ");
+          Console.info("    " + ios.getDirectoryForSdk(version));
         }
       });
     }
