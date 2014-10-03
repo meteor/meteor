@@ -1410,7 +1410,7 @@ _.extend(IOS.prototype, {
   agreedXcodeLicense: function () {
     var self = this;
 
-    var cmd = processes.RunCommand('/usr/bin/xcrun', 'cc', '--version');
+    var cmd = processes.RunCommand('/usr/bin/xcrun', [ 'cc', '--version' ]);
     var execution = cmd.run();
     if (execution.stderr.indexOf('Xcode/iOS license') != -1) {
       return false;
@@ -1421,7 +1421,7 @@ _.extend(IOS.prototype, {
   launchXcode: function () {
     var self = this;
 
-    var cmd = processes.RunCommand('/usr/bin/open', '/Applications/Xcode.app/');
+    var cmd = processes.RunCommand('/usr/bin/open', [ '/Applications/Xcode.app/' ]);
     var execution = cmd.run();
   }
 });
@@ -1606,11 +1606,13 @@ _.extend(Android.prototype, {
 
     if (Host.isMac()) {
       // XXX: Find the magic incantation that invokes the JRE 6 installer
-      var cmd = new processes.RunCommand('open', 'http://support.apple.com/kb/DL1572');
+      var cmd = new processes.RunCommand('open', [ 'http://support.apple.com/kb/DL1572' ]);
       // This works, but requires some manual steps
       // This installs, but doesn't provide java (?)
-      //var cmd = new processes.RunCommand('open', 'https://www.java.com/en/download/mac_download.jsp');
+      //var cmd = new processes.RunCommand('open', [ 'https://www.java.com/en/download/mac_download.jsp' ]);
       cmd.run();
+
+      return;
     }
 
     // XXX: TODO

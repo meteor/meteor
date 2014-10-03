@@ -93,7 +93,7 @@ var load = function (options) {
 
   var ret;
   var messages = buildmessage.capture({
-    title: "loading isopack"
+    title: "Loading isopack"
   }, function () {
     // Load the code. The uniloader does not call the constraint solver, unless
     // it is running from checkout, in which case it will use the constraint
