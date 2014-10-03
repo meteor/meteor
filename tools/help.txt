@@ -415,6 +415,8 @@ Options:
   --android,        the tests for client and server will run in addition to
   --ios-device,     mobile-specific tests.
   --android-device
+  --test-app-path   Set the location where to create and run a temporary app
+                    used for tests. Defaults to systems temporary directory /tmp.
   --verbose         Print all output from builds logs.
 
 

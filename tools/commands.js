@@ -1168,7 +1168,7 @@ main.registerCommand({
     // Undocumented flag to use a different test driver.
     'driver-package': { type: String },
 
-    // Undocumented, sets the path of where the temp app should be created
+    // Sets the path of where the temp app should be created
     'test-app-path': { type: String },
 
     // Undocumented, runs tests under selenium
