@@ -62,6 +62,11 @@ var cordova = exports;
 cordova.buildPlatforms = function (localPath, platforms, options) {
   verboseLog('Running build for platforms:', platforms);
   checkRequestedPlatforms(platforms);
+
+  _.each(platforms, function (platform) {
+    requirePlatformReady(platform);
+  });
+
   buildCordova(localPath, 'build', options);
 };
 
@@ -1056,6 +1061,8 @@ var requirePlatformReady = function (platform) {
   } catch (err) {
     if (err.message) {
       Console.warn(err.message);
+    } else if (err instanceof main.ExitWithCode) {
+      throw err;
     } else {
       Console.warn("Unexpected error while checking platform requirements: ", err);
     }

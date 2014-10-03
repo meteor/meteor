@@ -44,6 +44,8 @@ var Console = function (options) {
   self._statusPoller = null;
   self._lastStatusPoll = 0;
 
+  self.verbose = false;
+
   // Legacy helpers
   self.stdout = {};
   self.stderr = {};
@@ -116,6 +118,11 @@ _.extend(Console.prototype, {
     if (FORCE_PRETTY === undefined) {
       self._pretty = pretty;
     }
+  },
+
+  setVerbose: function (verbose) {
+    var self = this;
+    self.verbose = verbose;
   },
 
   _renderProgressBar: function () {
@@ -339,6 +346,27 @@ _.extend(Console.prototype, {
     }
 
     return message;
+  },
+
+  printError: function (err, info) {
+    var self = this;
+
+    var message = err.message;
+    if (!message) {
+      message = "Unexpected error";
+      if (self.verbose) {
+        message += " (" + err.toString() + ")";
+      }
+    }
+
+    if (info) {
+      message = info + ": " + message
+    }
+
+    self.error(message);
+    if (self.verbose && err.stack) {
+      self.info(err.stack);
+    }
   },
 
   printMessages: function (messages) {

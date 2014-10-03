@@ -188,6 +188,7 @@ function doRunCommand (options) {
   }
 
   cordova.setVerboseness(options.verbose);
+  Console.setVerbose(options.verbose);
 
   cordova.verboseLog('Parsing the --port option');
   try {
@@ -258,13 +259,12 @@ function doRunCommand (options) {
       runners = runners.concat(
         cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
-      if (options.verbose) {
-        Console.stderr.write('Error while running for mobile platforms ' +
-                             err.stack + '\n');
+      if (err instanceof main.ExitWithCode) {
+        throw err;
       } else {
-        Console.stderr.write(err.message + '\n');
+        Console.printError(err, 'Error while running for mobile platforms');
+        return 1;
       }
-      return 1;
     }
   }
 

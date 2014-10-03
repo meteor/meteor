@@ -86,6 +86,13 @@ main.ExitWithCode = function (code) {
   this.code = code;
 };
 
+_.extend(main.ExitWithCode.prototype, {
+  toString: function () {
+    var self = this;
+    return "ExitWithCode:" + self.code;
+  }
+});
+
 // Exception to throw to skip the process.exit call.
 main.WaitForExit = function () {};
 
