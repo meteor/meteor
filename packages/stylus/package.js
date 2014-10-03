@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "1.0.5-pre.2"
+  version: "1.0.5-pre.3"
 });
 
 Package._transitional_registerBuildPlugin({
