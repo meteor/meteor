@@ -1,0 +1,1 @@
+NpmModuleNetroute = Npm.require("netroute");

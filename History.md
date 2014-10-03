@@ -17,6 +17,11 @@
 
 * Fix source maps when using a ROOT_URL with a path. #2627
 
+* --port now requires a port (e.g. `meteor run --port example.com` is
+    not valid). XXX --mobile-port deprecated in favor of --mobile-server
+    option for 'meteor run' and '--server' for 'meteor build'. --server
+    is required for meteor build. describe defaults for --mobile-server.
+
 
 ## v0.9.3.1
 
