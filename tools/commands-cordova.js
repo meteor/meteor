@@ -1651,6 +1651,7 @@ _.extend(Android.prototype, {
   },
 
   getAndroidBundlePath: function () {
+    // XXX: Support USE_GLOBAL_ADK
     return path.join(files.getCurrentToolsDir(), 'android_bundle');
   },
 
