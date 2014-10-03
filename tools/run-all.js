@@ -18,7 +18,7 @@ var Updater = require('./run-updater.js').Updater;
 
 // options: proxyPort, proxyHost, appPort, appHost, buildOptions,
 // settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
-// quiet, rootUrl, mongoUrl, oplogUrl, disableOplog,
+// quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl, disableOplog,
 // appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
@@ -87,6 +87,7 @@ var Runner = function (appDir, options) {
     listenHost: options.appHost,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
+    mobileServerUrl: options.mobileServerUrl,
     buildOptions: options.buildOptions,
     rootUrl: self.rootUrl,
     settingsFile: options.settingsFile,

@@ -318,8 +318,8 @@ var getBoilerplate = function (request, arch) {
 
 var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
   additionalOptions = additionalOptions || {};
-  var runtimeConfig = _.defaults(__meteor_runtime_config__,
-    additionalOptions.runtimeConfigDefaults || {}
+  var runtimeConfig = _.extend(__meteor_runtime_config__,
+    additionalOptions.runtimeConfigOverrides || {}
   );
 
   return new Boilerplate(arch, manifest,
@@ -562,8 +562,11 @@ var runWebAppServer = function () {
     // Meteor server accepting DDP connections and not the device's file server.
     var defaultOptionsForArch = {
       'web.cordova': {
-        runtimeConfigDefaults: {
-          DDP_DEFAULT_CONNECTION_URL: __meteor_runtime_config__.ROOT_URL
+        runtimeConfigOverrides: {
+          DDP_DEFAULT_CONNECTION_URL: process.env.MOBILE_DDP_URL ||
+            __meteor_runtime_config__.ROOT_URL,
+          ROOT_URL: process.env.MOBILE_ROOT_URL ||
+            __meteor_runtime_config__.ROOT_URL
         }
       }
     };

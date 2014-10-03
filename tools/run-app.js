@@ -58,6 +58,7 @@ var AppProcess = function (options) {
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
+  self.mobileServerUrl = options.mobileServerUrl;
 
   self.onExit = options.onExit;
   self.onListen = options.onListen;
@@ -165,6 +166,11 @@ _.extend(AppProcess.prototype, {
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
     env.MONGO_URL = self.mongoUrl;
+    if (self.mobileServerUrl) {
+      env.MOBILE_DDP_URL = self.mobileServerUrl;
+      env.MOBILE_ROOT_URL = self.mobileServerUrl;
+    }
+
     if (self.oplogUrl) {
       env.MONGO_OPLOG_URL = self.oplogUrl;
     }
@@ -330,6 +336,7 @@ var AppRunner = function (appDir, options) {
   self.oplogUrl = options.oplogUrl;
   self.buildOptions = options.buildOptions;
   self.rootUrl = options.rootUrl;
+  self.mobileServerUrl = options.mobileServerUrl;
   self.settingsFile = options.settingsFile;
   self.program = options.program;
   self.debugPort = options.debugPort;
@@ -554,6 +561,7 @@ _.extend(AppRunner.prototype, {
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,
+      mobileServerUrl: self.mobileServerUrl,
       onExit: function (code, signal) {
         self._runFutureReturn({
           outcome: 'terminated',

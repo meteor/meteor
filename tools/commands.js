@@ -316,6 +316,10 @@ function doRunCommand (options) {
     velocity.runVelocity(serverUrl);
   }
 
+  var mobileServer = parsedMobileServer.protocol + parsedMobileServer.host;
+  if (parsedMobileServer.port) {
+    mobileServer = mobileServer + ":" + parsedMobileServer.port;
+  }
 
   var runAll = require('./run-all.js');
   return runAll.run(options.appDir, {
@@ -334,6 +338,7 @@ function doRunCommand (options) {
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
+    mobileServerUrl: mobileServer,
     once: options.once,
     extraRunners: runners
   });
