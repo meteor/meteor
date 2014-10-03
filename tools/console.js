@@ -214,7 +214,7 @@ _.extend(Console.prototype, {
 
   debug: function(/*arguments*/) {
     var self = this;
-    if (self._logThreshold > LEVEL_CODE_DEBUG) {
+    if (!self.verbose && self._logThreshold > LEVEL_CODE_DEBUG) {
       return;
     }
 
@@ -251,7 +251,7 @@ _.extend(Console.prototype, {
 
   _legacyWrite: function (level, message) {
     var self = this;
-    if(message.substr(-1) == '\n') {
+    if(message.substr && message.substr(-1) == '\n') {
       message = message.substr(0, message.length - 1);
     }
     self._print(level, message);

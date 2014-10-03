@@ -92,8 +92,11 @@ _.extend(RunCommand.prototype, {
     var self = this;
 
     self.start();
+    if (self.options.detached) {
+      Console.debug("run called on detached process; won't wait");
+      return undefined;
+    }
     self.waitForExit();
-
     return { stdout: self.stdout, stderr: self.stderr, exitCode: self.exitCode };
   }
 });

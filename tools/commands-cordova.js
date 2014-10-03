@@ -49,8 +49,21 @@ var isValidPlatform = function (name) {
   }
 };
 
-var cordova = exports;
+var splitN = function (s, split, n) {
+  if (n <= 1) {
+    return s;
+  }
+  var tokens = s.split(split);
+  if (tokens.length <= n) {
+    return tokens;
+  }
+  var firstN = tokens.slice(0, n - 1);
+  var tail = tokens.slice(n).join(split);
+  firstN.push(tail);
+  return firstN;
+};
 
+var cordova = exports;
 
 // --- the public interface ---
 
@@ -808,9 +821,26 @@ _.extend(CordovaRunner.prototype, {
   start: function () {
     var self = this;
 
+    // android, not android-device
+    if (self.platformName == 'android') {
+      Android.waitForEmulator();
+    }
+
     execCordovaOnPlatform(self.localPath,
                           self.platformName,
                           self.options);
+  },
+
+  prestart: function () {
+    var self = this;
+
+    // android, not android-device
+    if (self.platformName == 'android') {
+      if (!Android.isEmulatorRunning()) {
+        Console.info("Starting android emulator");
+        Android.startEmulator();
+      }
+    }
   },
 
   stop: function () {
@@ -1668,7 +1698,7 @@ _.extend(Android.prototype, {
 
   getAvdName: function () {
     var self = this;
-    return "meteor";
+    return process.env.METEOR_AVD || "meteor";
   },
 
   hasTarget: function (findApi, findArch) {
@@ -1726,6 +1756,18 @@ _.extend(Android.prototype, {
     runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
     var cmd = new processes.RunCommand(androidToolPath, args, runOptions);
     cmd.start();
+  },
+
+  runAdb: function (args, options) {
+    var self = this;
+
+    var androidBundlePath = self.getAndroidBundlePath();
+    var adbPath = path.join(androidBundlePath, 'android-sdk', 'platform-tools', "adb");
+
+    var runOptions = options || {};
+    runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
+    var cmd = new processes.RunCommand(adbPath, args, runOptions);
+    return cmd.run();
   },
 
   createAvd: function (avd, options) {
@@ -1854,6 +1896,66 @@ _.extend(Android.prototype, {
 
     // XXX: Replace script
     ensureAndroidBundle();
+  },
+
+  waitForEmulator: function () {
+    var self = this;
+
+    var timeLimit = 120 * 1000;
+    var interval = 1000;
+    for (var i = 0; i < timeLimit / interval; i++) {
+      Console.debug("Waiting for emulator");
+      if (self.isEmulatorRunning()) {
+        Console.debug("Found emulator");
+        return;
+      }
+      utils.sleepMs(interval);
+    }
+    throw new Error("Emulator did not start in expected time");
+  },
+
+  isEmulatorRunning: function () {
+    var self = this;
+
+    var devices = self.listAdbDevices();
+    return _.any(devices, function (device) {
+      if (device.id && device.id.indexOf('emulator-') == 0) {
+        if (device.state && device.state == 'device') {
+          return true;
+        }
+      }
+      return false;
+    });
+  },
+
+  listAdbDevices: function () {
+    var self = this;
+    var execution = self.runAdb(['devices', '-l'], {});
+    var devices = [];
+    _.each(execution.stdout.split('\n'), function (line) {
+      line = line.trim();
+      line = line.replace('\t', ' ');
+      while (line.indexOf('  ') != -1) {
+        line = line.replace('  ', ' ');
+      }
+      if (line.length == 0) {
+        return;
+      }
+      if (line.indexOf("List of devices") === 0) {
+        return;
+      }
+      var tokens = line.split(' ');
+      var device = {};
+      device.id = tokens[0];
+      device.state = tokens[1];
+      for (var i = 2; i < tokens.length; i++) {
+        var kv = splitN(tokens[i], ':', 2);
+        device[kv[0]] = kv[1];
+      }
+      devices.push(device);
+      Console.debug("Found device", JSON.stringify(device));
+    });
+    return devices;
   },
 
   checkRequirements: function (options) {
@@ -2057,6 +2159,7 @@ main.registerCommand({
     Android.runAndroidTool(args, runOptions);
   } catch (err) {
     // this tool can crash for whatever reason, ignore its failures
+    Console.debug("Ignoring error from android tool", err);
   }
   return 0;
 });
@@ -2100,10 +2203,20 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: Infinity
 }, function (options) {
+  Console.setVerbose(options.verbose);
+  
   if (options.getready) {
     var okay = Android.checkRequirements({ log: true, fix: true});
     if (!okay) {
       Console.warn("Android requirements not yet met");
+    }
+  }
+
+  var args = options.args || [];
+  if (args.length) {
+    var arg = args[0];
+    if (arg == "adb") {
+      Android.runAdb(args.slice(1), { pipeOutput: true, detached: true });
     }
   }
 

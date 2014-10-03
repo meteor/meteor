@@ -113,6 +113,14 @@ _.extend(Runner.prototype, {
   start: function () {
     var self = this;
 
+    // XXX: Include all runners, and merge parallel-launch patch
+    var allRunners = [ ] ;
+    allRunners = allRunners.concat(self.extraRunners);
+    _.each(allRunners, function (runner) {
+      if (!runner) return;
+      runner.prestart && runner.prestart();
+    });
+
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
