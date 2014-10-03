@@ -1213,7 +1213,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
      * @param {String} value The value for that preference.
      * @memberOf App
      */
-    set: function (key, value) {
+    setPreference: function (key, value) {
       additionalConfiguration[key] = value;
     },
 
