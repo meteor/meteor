@@ -218,6 +218,18 @@ files.prettyPath = function (path) {
   return path;
 };
 
+// Like statSync, but null if file not found
+files.statOrNull = function (path) {
+  try {
+    return Future.wrap(fs.stat)(path).wait();
+  } catch (e) {
+    if (e.code == "ENOENT")
+      return null;
+    throw e;
+  }
+};
+
+
 // Like rm -r.
 files.rm_recursive = function (p) {
   try {

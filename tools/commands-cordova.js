@@ -173,7 +173,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
       message.match(/Cordova can only run in Xcode version/gm);
 
     if (file === localCordova && errorMatch) {
-      process.stderr.write(
+      Console.error(
         'Xcode 4.6 or greater is required to run iOS commands.\n');
       process.exit(2);
     }
@@ -183,7 +183,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
       message.match(/Xcode\/iOS license/gm);
 
     if (file === localCordova && errorMatch) {
-      process.stderr.write(
+      Console.error(
         'Please open Xcode and activate it by agreeing to the license.\n');
       process.exit(2);
     }
@@ -1361,20 +1361,79 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   fs.writeFileSync(configPath, formattedXmlConfig, 'utf8');
 };
 
+var Host = function () {
+
+};
+
+
+_.extend(Host.prototype, {
+  isMac: function () {
+    return archinfo.host().indexOf("os.osx.") == 0;
+  },
+
+  getName : function () {
+    return archinfo.host();
+  }
+});
+
+// (Sneakily) mask Host to make it a singelton
+var Host = new Host();
+
+var IOS = function () {
+
+};
+
+_.extend(IOS.prototype, {
+
+  hasXcode: function () {
+    var self = this;
+
+    if (!Host.isMac()) {
+      return false;
+    }
+
+    var stat = files.statOrNull('/Applications/Xcode.app');
+    return (stat && stat.isDirectory());
+  },
+
+  installXcode: function () {
+    if (!Host.isMac()) {
+      throw new Error("Can only install Xcode on OSX");
+    }
+    Console.info("Launching Xcode installer; we recommend you choose 'Get Xcode' to install Xcode");
+    files.run('/usr/bin/xcodebuild', '--install');
+  },
+
+  agreedXcodeLicense: function () {
+    var self = this;
+
+    var cmd = processes.RunCommand('/usr/bin/xcrun', 'cc', '--version');
+    var execution = cmd.run();
+    if (execution.stderr.indexOf('Xcode/iOS license') != -1) {
+      return false;
+    }
+    return true;
+  },
+
+  launchXcode: function () {
+    var self = this;
+
+    var cmd = processes.RunCommand('/usr/bin/open', '/Applications/Xcode.app/');
+    var execution = cmd.run();
+  }
+});
+
+
 
 var Android = function () {
 
 };
 
 _.extend(Android.prototype, {
-  isMac: function () {
-    return archinfo.host().indexOf("os.osx.") == 0;
-  },
-
   hasAcceleration: function () {
     var self = this;
 
-    if (self.isMac()) {
+    if (Host.isMac()) {
       var kexts = files.run('kextstat');
       var found = _.any(kexts.split('\n'), function (line) {
         if (line.indexOf('com.intel.kext.intelhaxm') != -1) {
@@ -1391,7 +1450,9 @@ _.extend(Android.prototype, {
   },
 
   installAcceleration: function () {
-    if (self.isMac()) {
+    var self = this;
+
+    if (Host.isMac()) {
       if (!checkAgreePlatformTerms("haxm", "Intel HAXM")) {
         Console.warn("Intel HAXM not installed (must agree to license)");
         return false;
@@ -1400,7 +1461,7 @@ _.extend(Android.prototype, {
       var name = 'IntelHAXM_1.0.8.mpkg';
       var mpkg = httpHelpers.getUrl({
         url: 'http://android-bundle.s3.amazonaws.com/haxm/' + name,
-      // XXX: https://warehouse.meteor.com/haxm/' + name,
+        // XXX: https://warehouse.meteor.com/haxm/' + name,
         encoding: null
       });
 
@@ -1487,19 +1548,19 @@ _.extend(Android.prototype, {
     // XXX: TODO
     //(android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
 
-  //# XXX if this command fails, it would be really hard to debug or understand
-  //# for the end user. But the output is also very misleading. Later we should
-  //# save the output to a log file and tell user where to find it in case of
-  //# failure.
-  //    echo "
-  //  " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path "${ANDROID_BUNDLE}/meteor_avd/" > /dev/null 2>&1
+    //# XXX if this command fails, it would be really hard to debug or understand
+    //# for the end user. But the output is also very misleading. Later we should
+    //# save the output to a log file and tell user where to find it in case of
+    //# failure.
+    //    echo "
+    //  " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path "${ANDROID_BUNDLE}/meteor_avd/" > /dev/null 2>&1
     var androidBundlePath = self.getAndroidBundlePath();
     var avdPath = path.join(androidBundlePath, 'meteor_avd');
     var args = ['create', 'avd',
-                '--target', '1',
-                '--name', avd,
-                '--abi', abi,
-                '--path', avdPath];
+      '--target', '1',
+      '--name', avd,
+      '--abi', abi,
+      '--path', avdPath];
 
     // We need to send a new line to bypass the 'custom hardware prompt'
     self.runAndroidTool(args, { stdin: '\n' });
@@ -1522,10 +1583,40 @@ _.extend(Android.prototype, {
     //#set_config "hw.device.manufacturer" "Google"
 
     // XXX: Enable on Linux?
-    if (self.isMac()) {
+    if (Host.isMac()) {
       config.set("hw.gpu.enabled", "yes");
     }
-  }
+  },
+
+  hasJava: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      return files.statOrNull('/System/Library/Frameworks/JavaVM.framework/Versions/1.6/') != null;
+    } else {
+      return files.statOrNull('/usr/bin/java') != null;
+    }
+  },
+
+  installJava: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      // XXX: Find the magic incantation that invokes the JRE 6 installer
+      var cmd = new processes.RunCommand('open', 'http://support.apple.com/kb/DL1572');
+      // This works, but requires some manual steps
+      // This installs, but doesn't provide java (?)
+      //var cmd = new processes.RunCommand('open', 'https://www.java.com/en/download/mac_download.jsp');
+      cmd.run();
+    }
+
+    // XXX: TODO
+    //if (Host.isLinux()) {
+    //}
+
+    throw new Error("Cannot automatically install Java on host: " + Host.getName());
+  },
+
 });
 
 
@@ -1714,6 +1805,15 @@ main.registerCommand({
   var android = new Android();
 
   if (options.getready) {
+
+    if (android.hasJava()) {
+      Console.info(Console.success("Java is installed"));
+    } else {
+      Console.info(Console.fail("Java is not installed"));
+
+      android.installJava();
+    }
+
     // (hasAcceleration can also be undefined)
     var hasAcceleration = android.hasAcceleration();
     if (hasAcceleration === false) {
@@ -1737,6 +1837,56 @@ main.registerCommand({
         android.createAvd(avdName, avdOptions);
         Console.info(Console.success("Created android virtual device (AVD): " + avdName));
       });
+    }
+  }
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: "ios",
+  pretty: true,
+  options: {
+    verbose: { type: Boolean, short: "v" },
+    getready: { type: Boolean }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
+}, function (options) {
+  var ios = new IOS();
+
+  if (options.getready) {
+    if (!Host.isMac()) {
+      Console.info("You are not running on OSX; we won't be able to install Xcode for local iOS development");
+    } else {
+      if (ios.hasXcode()) {
+        Console.info(Console.success("Xcode is installed"));
+      } else {
+        Console.info(Console.fail("Xcode is not installed"));
+
+        buildmessage.enterJob({title: 'Installing Xcode'}, function () {
+          ios.installXcode();
+        });
+      }
+
+      //Check if the full Xcode package is already installed:
+      //
+      //  $ xcode-select -p
+      //If you see:
+      //
+      //  /Applications/Xcode.app/Contents/Developer
+      //the full Xcode package is already installed.
+
+      if (ios.hasXcode()) {
+        if (ios.agreedXcodeLicense()) {
+          Console.info(Console.success("Xcode license agreed"));
+        } else {
+          Console.info(Console.fail("You must accept the Xcode license"));
+
+          ios.launchXcode();
+        }
+      }
     }
   }
 
