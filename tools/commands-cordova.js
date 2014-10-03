@@ -1365,18 +1365,67 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
 };
 
 var Host = function () {
+  var self = this;
 
+  self._unameCache = {};
 };
-
 
 _.extend(Host.prototype, {
   isMac: function () {
-    return archinfo.host().indexOf("os.osx.") == 0;
+    var self = this;
+    return self.getUname([ '-s' ]) == 'Darwin';
+  },
+
+  isLinux: function () {
+    var self = this;
+    return self.getUname([ '-s' ]) == 'Linux';
   },
 
   getName : function () {
     return archinfo.host();
-  }
+  },
+
+  getProcessor: function () {
+    var self = this;
+    return self.getUname([ '--processor' ]);
+  },
+
+  getUname: function (args) {
+    var self = this;
+
+    args = args || [];
+
+    var cacheKey = args.join('::');
+    var uname = self._unameCache[cacheKey];
+    if (uname === undefined) {
+      var cmd = new processes.RunCommand('uname', args);
+      var execution = cmd.run();
+      uname = execution.stdout.trim();
+
+      self._unameCache[cacheKey] = uname;
+    }
+    return uname;
+  },
+
+  which: function (findCmd) {
+    var cmd = new processes.RunCommand('which', [ findCmd ], { checkExitCode: false });
+    var execution = cmd.run();
+    var location = execution.stdout.trim();
+    if (location == "") {
+      return null;
+    }
+    return location;
+  },
+
+  hasYum: function () {
+    var self = this;
+    return !!self.which('yum');
+  },
+
+  hasAptGet: function () {
+    var self = this;
+    return !!self.which('apt-get');
+  },
 });
 
 // (Sneakily) mask Host to make it a singelton
@@ -1654,9 +1703,33 @@ _.extend(Android.prototype, {
       return;
     }
 
-    // XXX: TODO
-    //if (Host.isLinux()) {
-    //}
+    if (Host.isLinux()) {
+      var processor = Host.getProcessor();
+
+      if (Host.hasAptGet()) {
+        Console.info("You can install the JDK using:");
+        Console.info("  sudo apt-get install --yes openjdk-7-jdk");
+
+        // XXX: Technically, these are for Android, not installing Java
+        if (processor == "x86_64") {
+          Console.info("You will also need some 32-bit libraries:");
+          Console.info("  sudo apt-get install --yes lib32z1 lib32stdc++6");
+        }
+      }
+
+      if (Host.hasYum()) {
+        Console.info("You can install the JDK using:");
+        Console.info("  sudo yum install -y java-1.7.0-openjdk-devel");
+
+        // XXX: Technically, these are for Android, not installing Java
+        if (processor == "x86_64") {
+          Console.info("You will also need some 32-bit libraries:");
+          Console.info("  sudo yum install -y glibc.i686 zlib.i686 libstdc++.i686 ncurses-libs.i686");
+        }
+      }
+
+      return;
+    }
 
     throw new Error("Cannot automatically install Java on host: " + Host.getName());
   },
