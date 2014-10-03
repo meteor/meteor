@@ -1,5 +1,4 @@
 var Future = require('fibers/future');
-var readline = require('readline');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
@@ -129,57 +128,6 @@ exports.formatList = function (unsortedItems) {
   });
 
   return out;
-};
-
-
-// options:
-//   - echo (boolean): defaults to true
-//   - prompt (string)
-//   - stream: defaults to process.stdout (you might want process.stderr)
-exports.readLine = function (options) {
-  var fut = new Future();
-
-  options = _.extend({
-    echo: true,
-    stream: process.stdout
-  }, options);
-
-  var silentStream = {
-    write: function () {
-    },
-    on: function () {
-    },
-    end: function () {
-    },
-    isTTY: options.stream.isTTY,
-    removeListener: function () {
-    }
-  };
-
-  // Read a line, throwing away the echoed characters into our dummy stream.
-  var rl = readline.createInterface({
-    input: process.stdin,
-    output: options.echo ? options.stream : silentStream,
-    // `terminal: options.stream.isTTY` is the default, but emacs shell users
-    // don't want fancy ANSI.
-    terminal: options.stream.isTTY && process.env.EMACS !== 't'
-  });
-
-  if (! options.echo) {
-    options.stream.write(options.prompt);
-  } else {
-    rl.setPrompt(options.prompt);
-    rl.prompt();
-  }
-
-  rl.on('line', function (line) {
-    rl.close();
-    if (! options.echo)
-      options.stream.write("\n");
-    fut['return'](line);
-  });
-
-  return fut.wait();
 };
 
 // Determine a human-readable hostname for this computer. Prefer names

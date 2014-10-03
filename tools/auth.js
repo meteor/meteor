@@ -12,6 +12,7 @@ var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
 var uniload = require('./uniload.js');
+var Console = require('./console.js').Console;
 
 var auth = exports;
 
@@ -616,7 +617,7 @@ var doInteractivePasswordLogin = function (options) {
   };
 
   while (true) {
-    loginData.password = utils.readLine({
+    loginData.password = Console.readLine({
       echo: false,
       prompt: "Password: ",
       stream: process.stderr
@@ -667,7 +668,7 @@ exports.doUsernamePasswordLogin = function (options) {
   var username;
 
   do {
-    username = utils.readLine({
+    username = Console.readLine({
       prompt: "Username: ",
       stream: process.stderr
     }).trim();
@@ -693,12 +694,12 @@ exports.loginCommand = withAccountsConnection(function (options,
     var loginOptions = {};
 
     if (options.email) {
-      loginOptions.email = utils.readLine({
+      loginOptions.email = Console.readLine({
         prompt: "Email: ",
         stream: process.stderr
       });
     } else {
-      loginOptions.username = utils.readLine({
+      loginOptions.username = Console.readLine({
         prompt: "Username: ",
         stream: process.stderr
       });
@@ -879,7 +880,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
   var result;
   // Get their email
   while (true) {
-    var email = utils.readLine({
+    var email = Console.readLine({
       prompt: "Email: ",
       stream: process.stderr
     });

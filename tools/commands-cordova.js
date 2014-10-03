@@ -1025,14 +1025,14 @@ var checkAgreePlatformTerms = function (platform, name) {
     return true;
   }
 
-  process.stdout.write("The following terms apply to " + name + ":\n\n");
-  process.stdout.write(terms + "\n\n");
-  process.stdout.write("You must agree to the terms to proceed.\n");
-  process.stdout.write("Do you agree (Y/n)? ");
+  Console.stdout.write("The following terms apply to " + name + ":\n\n");
+  Console.stdout.write(terms + "\n\n");
+  Console.stdout.write("You must agree to the terms to proceed.\n");
+  Console.stdout.write("Do you agree (Y/n)? ");
 
   var agreed = false;
 
-  var line = utils.readLine({ prompt: "Do you agree (Y/n)? "});
+  var line = Console.readLine({ prompt: "Do you agree (Y/n)? "});
   line = line.trim().toLowerCase();
   if (line === "") {
     // Default to yes

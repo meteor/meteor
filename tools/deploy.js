@@ -156,7 +156,7 @@ var authedRpc = function (options) {
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
-    var username = utils.readLine({
+    var username = Console.readLine({
       prompt: "Username: ",
       stream: process.stderr
     });
@@ -197,7 +197,7 @@ var authedRpc = function (options) {
     // Password protected. Read a password, hash it, and include the
     // hashed password as a query parameter when doing the RPC.
     var password;
-    password = utils.readLine({
+    password = Console.readLine({
       echo: false,
       prompt: "Password: ",
       stream: process.stderr

@@ -17,6 +17,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
+var readline = require('readline');
 var ProgressBar = require('progress');
 var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
@@ -35,7 +36,7 @@ var Console = function (options) {
   options = options || {};
 
   // The progress bar we are showing on-screen, if enabled
-  self._progressBar = false;
+  self._progressBar = null;
   // The current status text for the progress bar
   self._progressBarText = null;
   // The current progress we are watching
@@ -377,6 +378,14 @@ _.extend(Console.prototype, {
     }
   },
 
+  isProgressBarEnabled: function () {
+    // "status message mode" counts as having a progress bar
+    // as far as the caller of enableProgressBar is considered,
+    // because you get it by calling enableProgressBar(true)
+    // and not having a real TTY.
+    return this._progressBar || this._inStatusMessageMode;
+  },
+
   // Enables the progress bar, or disables it when called with (false)
   enableProgressBar: function (enabled) {
     var self = this;
@@ -494,5 +503,63 @@ _.extend(Console.prototype, {
 });
 
 Console.prototype.warning = Console.prototype.warn;
+
+// options:
+//   - echo (boolean): defaults to true
+//   - prompt (string)
+//   - stream: defaults to process.stdout (you might want process.stderr)
+Console.prototype.readLine = function (options) {
+  var self = this;
+
+  var fut = new Future();
+
+  options = _.extend({
+    echo: true,
+    stream: self._stream
+  }, options);
+
+  var silentStream = {
+    write: function () {
+    },
+    on: function () {
+    },
+    end: function () {
+    },
+    isTTY: options.stream.isTTY,
+    removeListener: function () {
+    }
+  };
+
+  var wasProgressBar = self.isProgressBarEnabled();
+  self.enableProgressBar(false);
+
+  // Read a line, throwing away the echoed characters into our dummy stream.
+  var rl = readline.createInterface({
+    input: process.stdin,
+    output: options.echo ? options.stream : silentStream,
+    // `terminal: options.stream.isTTY` is the default, but emacs shell users
+    // don't want fancy ANSI.
+    terminal: options.stream.isTTY && process.env.EMACS !== 't'
+  });
+
+  if (! options.echo) {
+    options.stream.write(options.prompt);
+  } else {
+    rl.setPrompt(options.prompt);
+    rl.prompt();
+  }
+
+  rl.on('line', function (line) {
+    rl.close();
+    if (! options.echo)
+      options.stream.write("\n");
+    if (wasProgressBar)
+      self.enableProgressBar(true);
+    fut['return'](line);
+  });
+
+  return fut.wait();
+};
+
 
 exports.Console = new Console;
