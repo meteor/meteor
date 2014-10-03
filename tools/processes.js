@@ -12,6 +12,7 @@ var RunCommand = function (command, args, options) {
   // Make stdin,stdout & stderr pipes (not shared)
   defaultOptions.stdio = ['pipe', 'pipe', 'pipe'];
   defaultOptions.env = process.env;
+  defaultOptions.checkExitCode = true;
 
   options = _.extend(defaultOptions, options);
 
@@ -39,8 +40,7 @@ _.extend(RunCommand.prototype, {
     self.process.on('close', function (exitCode) {
       self.exitCode = exitCode;
 
-      // XXX: Disable through an option
-      if (exitCode != 0) {
+      if (options.checkExitCode && exitCode != 0) {
         console.log("Unexpected exit code", exitCode, "from", self.command, self.args, "\nstdout:\n", self.stdout, "\nstderr:\n", self.stderr);
       }
 

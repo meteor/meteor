@@ -1414,7 +1414,7 @@ _.extend(IOS.prototype, {
   hasAgreedXcodeLicense: function () {
     var self = this;
 
-    var cmd = new processes.RunCommand('/usr/bin/xcrun', [ 'cc', '--version' ]);
+    var cmd = new processes.RunCommand('/usr/bin/xcrun', [ 'cc', '--version' ], { checkExitCode: false });
     var execution = cmd.run();
     if (execution.stderr.indexOf('Xcode/iOS license') != -1) {
       return false;
