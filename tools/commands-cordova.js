@@ -1048,6 +1048,23 @@ var checkPlatformRequirements = function (platform) {
   return true;
 };
 
+var requirePlatformReady = function (platform) {
+  try {
+    var ok = checkPlatformRequirements(platform);
+    if (!ok) {
+      Console.warn("Platform is not installed; please run: 'meteor " + platform + " --getready'");
+      throw new main.ExitWithCode(2);
+    }
+  } catch (err) {
+    if (err.message) {
+      Console.warn(err.message);
+    } else {
+      Console.warn("Unexpected error while checking platform requirements: ", err);
+    }
+    throw new main.ExitWithCode(2);
+  }
+}
+
 // --- Mobile Control File parsing ---
 
 
@@ -1912,19 +1929,9 @@ main.registerCommand({
     return 1;
   }
 
-  try {
-    var ok = _.every(platforms, function (platform, options) {
-      return checkPlatformRequirements(platform);
-    });
-    if (!ok) {
-      return 2;
-    }
-  } catch (err) {
-    if (err.message) {
-      Console.warn(err.message);
-    }
-    return 1;
-  }
+  _.each(platforms, function (platform) {
+    requirePlatformReady(platform);
+  });
 
   try {
     var agreed = _.every(platforms, function (platform) {
