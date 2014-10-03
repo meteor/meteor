@@ -1038,8 +1038,7 @@ var checkAgreePlatformTerms = function (platform, name) {
 
 var checkPlatformRequirements = function (platform) {
   if (platform == 'android') {
-    var android = new Android();
-    return android.checkRequirements({ fix: false, log: false });
+    return Android.checkRequirements({ fix: false, log: false });
   }
   if (platform == 'ios') {
     var ios = new IOS();
@@ -1895,7 +1894,7 @@ _.extend(Android.prototype, {
   }
 });
 
-
+var Android = new Android();
 
 // --- Cordova commands ---
 
@@ -2038,21 +2037,19 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: 1
 }, function (options) {
-  var android = new Android();
-
   var args = options.args;
   var avd = 'meteor';
   if (args.length) {
     avd = args[0];
   }
 
-  if (!android.hasAvd(avd)) {
+  if (!Android.hasAvd(avd)) {
     Console.error("'" + avd + "' android virtual device (AVD) does not exist");
     Console.info("The default AVD is called meteor, and will be created automatically for you");
     return 1;
   }
 
-  android.startEmulator(avd);
+  Android.startEmulator(avd);
 
   return 0;
 });
@@ -2068,10 +2065,8 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: Infinity
 }, function (options) {
-  var android = new Android();
-
   if (options.getready) {
-    var okay = android.checkRequirements({ log: true, fix: true});
+    var okay = Android.checkRequirements({ log: true, fix: true});
     if (!okay) {
       Console.warn("Android requirements not yet met");
     }
