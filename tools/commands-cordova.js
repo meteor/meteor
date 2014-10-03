@@ -1403,8 +1403,12 @@ _.extend(IOS.prototype, {
     if (!Host.isMac()) {
       throw new Error("Can only install Xcode on OSX");
     }
-    Console.info("Launching Xcode installer; we recommend you choose 'Get Xcode' to install Xcode");
-    files.run('/usr/bin/xcodebuild', '--install');
+
+    //Console.info("Launching Xcode installer; please choose 'Get Xcode' to install Xcode");
+    //files.run('/usr/bin/xcodebuild', '--install');
+
+    // XXX: Any way to open direct in AppStore (rather than in browser)?
+    files.run('open', 'https://itunes.apple.com/us/app/xcode/id497799835?mt=12');
   },
 
   agreedXcodeLicense: function () {
