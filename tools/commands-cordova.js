@@ -224,7 +224,7 @@ var runCordovaScript = function (name, cache) {
 };
 
 var ensureAndroidBundle = function (command) {
-  if (! _.contains([localAdb, localAndroid], command)) {
+  if (command && ! _.contains([localAdb, localAndroid], command)) {
     if (command !== localCordova ||
         ! _.contains(project.getCordovaPlatforms(), 'android'))
       return;
@@ -1529,6 +1529,35 @@ _.extend(Android.prototype, {
     return _.contains(self.listAvds(), avd);
   },
 
+  hasTarget: function (findApi, findArch) {
+    var self = this;
+
+    var out = self.runAndroidTool(['list', 'target']);
+    var currentApi = null;
+    return _.any(out.split('\n'), function (line) {
+      line = line.trim();
+      if (line.indexOf("API level:") == 0) {
+        currentApi = line.substring(line.indexOf(":") + 1).trim();
+      } else if (line.indexOf("Tag/ABIs") == 0) {
+        var abis = line.substring(line.indexOf(":") + 1).trim();
+        return _.any(abis.split(','), function (abi) {
+          abi = abi.trim();
+          if (currentApi == findApi && abi == findArch) {
+            return true;
+          }
+        });
+      }
+    });
+    return false;
+  },
+
+  installTarget: function (target) {
+    var self = this;
+
+    var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u']);
+    return false;
+  },
+
   startEmulator: function (avd, options) {
     var self = this;
 
@@ -1624,6 +1653,29 @@ _.extend(Android.prototype, {
     //}
 
     throw new Error("Cannot automatically install Java on host: " + Host.getName());
+  },
+
+  hasAndroidBundle: function () {
+    var self = this;
+
+    var androidBundlePath = self.getAndroidBundlePath();
+    var versionPath = path.join(androidBundlePath, '.bundle_version.txt');
+
+    if (files.statOrNull(versionPath)) {
+      var version = fs.readFileSync(versionPath, { encoding: 'utf-8' });
+      // XXX: Dry violation with script
+      if (version.trim() == '0.1') {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  installAndroidBundle: function () {
+    var self = this;
+
+    // XXX: Replace script
+    ensureAndroidBundle();
   },
 
 });
@@ -1833,6 +1885,22 @@ main.registerCommand({
       });
     } else if (hasAcceleration === true) {
       Console.info(Console.success("HAXM is installed"));
+    }
+
+    if (android.hasAndroidBundle()) {
+      Console.info(Console.success("Found Android bundle"));
+    } else {
+      Console.info(Console.fail("Android bundle not found"));
+
+      android.installAndroidBundle();
+    }
+
+    if (android.hasTarget('19', 'default/x86')) {
+      Console.info(Console.success("Found suitable Android API libraries"));
+    } else {
+      Console.info(Console.fail("Suitable Android API libraries not found"));
+
+      android.installTarget('sys-img-x86-android-19');
     }
 
     var avdName = 'meteor';

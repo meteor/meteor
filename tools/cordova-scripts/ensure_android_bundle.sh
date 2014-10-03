@@ -60,12 +60,3 @@ elif [ ! -f "$ANDROID_BUNDLE/.bundle_version.txt" ] ||
   grep -qvx "$BUNDLE_VERSION" "$ANDROID_BUNDLE/.bundle_version.txt" ; then
   install_android_bundle
 fi
-
-install_x86 () {
-    echo "Android x86 System image not found.  Found targets:"
-    android list target
-    echo "Downloading x86 system image..."
-    echo y | android update sdk -t sys-img-x86-android-19 --all -u > /dev/null 2>&1
-}
-
-(android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
