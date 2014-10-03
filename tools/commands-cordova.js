@@ -2017,6 +2017,8 @@ main.registerCommand({
 }, function (options) {
   cordova.setVerboseness(options.verbose);
 
+  requirePlatformReady('android');
+
   var androidArgs = options.args || [];
   try {
     var execOptions = { pipeOutput: true, verbose: options.verbose };
@@ -2036,6 +2038,8 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: 1
 }, function (options) {
+  requirePlatformReady('android');
+
   var args = options.args;
   var avd = 'meteor';
   if (args.length) {
