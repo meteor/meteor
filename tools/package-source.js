@@ -908,7 +908,7 @@ _.extend(PackageSource.prototype, {
             "The package version " + self.version + " (specified with Package.describe) "
             + "is not a valid Meteor package version.\n"
             + "Valid package versions are semver (see http://semver.org/), "
-            + "optionally followed by '_' and an integer.");
+            + "optionally followed by '_' and an integer greater or equal to 1.");
         }
         // Recover by pretending there was no version (see above).
         self.version = null;
