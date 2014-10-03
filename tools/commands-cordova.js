@@ -2216,7 +2216,7 @@ main.registerCommand({
   if (args.length) {
     var arg = args[0];
     if (arg == "adb") {
-      Android.runAdb(args.slice(1), { pipeOutput: true, detached: true });
+      Android.runAdb(args.slice(1), { pipeOutput: true, detached: true, stdio: ['inherit', 'inherit', 'inherit']});
     }
   }
 
