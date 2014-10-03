@@ -34,9 +34,10 @@ _.extend(RunCommand.prototype, {
       throw new Error("Process already started");
     }
     Console.debug("Running command", self.command, self.args.join(' '));
+
     self.process = child_process.spawn( self.command,
-      self.args,
-      self.options);
+                                        self.args,
+                                        self.options);
     self.process.on('close', function (exitCode) {
       self.exitCode = exitCode;
 
@@ -54,10 +55,16 @@ _.extend(RunCommand.prototype, {
 
     self.process.stdout.on('data', function (data) {
       self.stdout = self.stdout + data;
+      if (self.options.pipeOutput) {
+        Console.stdout.write(data);
+      }
     });
 
     self.process.stderr.on('data', function (data) {
       self.stderr = self.stderr + data;
+      if (self.options.pipeOutput) {
+        Console.stderr.write(data);
+      }
     });
 
     self.stdin = self.process.stdin;

@@ -1632,8 +1632,11 @@ _.extend(Android.prototype, {
     var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', 'android');
 
     options = options || {};
-    options.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
+    options.env = _.extend({}, process.env, options.env || {}, { 'ANDROID_SDK_HOME': androidBundlePath });
     var cmd = new processes.RunCommand(androidToolPath, args, options);
+    if (options.detached) {
+      return cmd.start();
+    }
     var execution = cmd.run();
     if (execution.exitCode !== 0) {
       Console.warn("Unexpected exit code from android process: " + execution.exitCode);
@@ -1661,6 +1664,11 @@ _.extend(Android.prototype, {
   hasAvd: function (avd) {
     var self = this;
     return _.contains(self.listAvds(), avd);
+  },
+
+  getAvdName: function () {
+    var self = this;
+    return "meteor";
   },
 
   hasTarget: function (findApi, findArch) {
@@ -1695,6 +1703,15 @@ _.extend(Android.prototype, {
 
   startEmulator: function (avd, options) {
     var self = this;
+
+    if (!avd) {
+      avd = self.getAvdName();
+    }
+
+    if (!self.hasAvd(avd)) {
+      Console.error("'" + avd + "' android virtual device (AVD) does not exist");
+      throw new Error("AVD not found: " + avd);
+    }
 
     var androidBundlePath = self.getAndroidBundlePath();
 
@@ -1887,7 +1904,7 @@ _.extend(Android.prototype, {
       okay = fix;
     }
 
-    var avdName = 'meteor';
+    var avdName = self.getAvdName();
     if (self.hasAvd(avdName)) {
       log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
     } else {
@@ -2027,13 +2044,17 @@ main.registerCommand({
   maxArgs: Infinity
 }, function (options) {
   cordova.setVerboseness(options.verbose);
+  Console.setVerbose(options.verbose);
 
   requirePlatformReady('android');
 
-  var androidArgs = options.args || [];
+  var runOptions = {};
+  runOptions.detached = true;
+  runOptions.pipeOutput = true;
+
+  var args = options.args || [];
   try {
-    var execOptions = { pipeOutput: true, verbose: options.verbose };
-    execFileSyncOrThrow(localAndroid, androidArgs, execOptions);
+    Android.runAndroidTool(args, runOptions);
   } catch (err) {
     // this tool can crash for whatever reason, ignore its failures
   }
@@ -2052,7 +2073,7 @@ main.registerCommand({
   requirePlatformReady('android');
 
   var args = options.args;
-  var avd = 'meteor';
+  var avd = Android.getAvdName();
   if (args.length) {
     avd = args[0];
   }
