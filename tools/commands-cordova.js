@@ -1041,8 +1041,7 @@ var checkPlatformRequirements = function (platform) {
     return Android.checkRequirements({ fix: false, log: false });
   }
   if (platform == 'ios') {
-    var ios = new IOS();
-    return ios.checkRequirements({ fix: false, log: false });
+    return IOS.checkRequirements({ fix: false, log: false });
   }
   return true;
 };
@@ -1558,7 +1557,7 @@ _.extend(IOS.prototype, {
   }
 });
 
-
+var IOS = new IOS();
 
 var Android = function () {
 
@@ -2086,10 +2085,8 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: Infinity
 }, function (options) {
-  var ios = new IOS();
-
   if (options.getready) {
-    var okay = ios.checkRequirements({ log: true, fix: true});
+    var okay = IOS.checkRequirements({ log: true, fix: true});
     if (!okay) {
       Console.warn("iOS requirements not yet met");
     }
