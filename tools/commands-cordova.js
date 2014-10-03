@@ -10,9 +10,9 @@ var Future = require('fibers/future');
 var utils = require('./utils.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
+var processes = require('./processes.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -26,6 +26,18 @@ var availablePlatforms =
 if (process.platform === 'darwin') {
   availablePlatforms.push("ios");
 }
+
+// Borrowed from tropohouse
+// The version in warehouse fails when run from a checkout.
+// XXX: Rationalize
+var cordovaWarehouseDir = function () {
+  if (process.env.METEOR_WAREHOUSE_DIR)
+    return process.env.METEOR_WAREHOUSE_DIR;
+
+  var warehouseBase = files.inCheckout()
+    ? files.getCurrentToolsDir() : process.env.HOME;
+  return path.join(warehouseBase, ".meteor", "cordova");
+};
 
 var isValidPlatform = function (name) {
   if (name.match(/ios/i) && process.platform !== 'darwin') {
@@ -161,7 +173,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
       message.match(/Cordova can only run in Xcode version/gm);
 
     if (file === localCordova && errorMatch) {
-      process.stderr.write(
+      Console.error(
         'Xcode 4.6 or greater is required to run iOS commands.\n');
       process.exit(2);
     }
@@ -171,7 +183,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
       message.match(/Xcode\/iOS license/gm);
 
     if (file === localCordova && errorMatch) {
-      process.stderr.write(
+      Console.error(
         'Please open Xcode and activate it by agreeing to the license.\n');
       process.exit(2);
     }
@@ -193,7 +205,23 @@ var getLoadedPackages = _.once(function () {
 
 // --- Cordova routines ---
 
-var ensureAndroidBundleCache = {};
+var cordovaScriptExecutionCache = {};
+
+var runCordovaScript = function (name, cache) {
+  var scriptPath =
+    path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts', name);
+
+  if (cache && cordovaScriptExecutionCache[scriptPath]) {
+    verboseLog('Script already checked: ' + name);
+    return;
+  }
+
+  verboseLog('Running script ' + name);
+  execFileSyncOrThrow('bash', [scriptPath], { pipeOutput: true });
+  if (cache) {
+    cordovaScriptExecutionCache[scriptPath] = true;
+  }
+};
 
 var ensureAndroidBundle = function (command) {
   if (! _.contains([localAdb, localAndroid], command)) {
@@ -202,24 +230,24 @@ var ensureAndroidBundle = function (command) {
       return;
   }
 
-  var ensureScriptPath =
-    path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts',
-              'ensure_android_bundle.sh');
-
-  if (ensureAndroidBundleCache[ensureScriptPath]) {
-    verboseLog('android_bundle already checked');
-    return;
-  }
-
-  verboseLog('Ensuring android_bundle');
   try {
-    execFileSyncOrThrow('bash', [ensureScriptPath], { pipeOutput: true });
-    ensureAndroidBundleCache[ensureScriptPath] = true;
+    runCordovaScript('ensure_android_bundle.sh', true);
   } catch (err) {
     verboseLog('Failed to install android_bundle ', err.stack);
-    process.stderr.write("Failed to install android_bundle\n");
+    Console.warn("Failed to install android_bundle");
     throw new main.ExitWithCode(2);
   }
+};
+
+var ensureAndroidPrereqs = function () {
+  try {
+    runCordovaScript('ensure_android_prereqs.sh', true);
+  } catch (err) {
+    verboseLog('Android prequisites not met', err.stack);
+    Console.warn("Android prequisites not met");
+    throw new main.ExitWithCode(2);
+  }
+  return true;
 };
 
 var generateCordovaBoilerplate = function (clientDir, options) {
@@ -794,7 +822,6 @@ _.extend(CordovaRunner.prototype, {
   }
 });
 
-
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
 // options:
@@ -964,7 +991,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   return 0;
 };
 
-var getTermsForPlatform = function (platform) {
+var getTermsForPlatform = function (platform, name) {
   var url = 'https://warehouse.meteor.com/cordova/license_cordova_' + platform + '.txt';
   var result = httpHelpers.request({
     url: url
@@ -974,7 +1001,7 @@ var getTermsForPlatform = function (platform) {
   // S3 returns 403 if not found
   if (response.statusCode === 404 || response.statusCode === 403) {
     verboseLog("License URL not found: " + url);
-    process.stderr.write("No licensing file found for platform: " + platform + ".\n");
+    Console.info("No licensing file found for " + name + ".\n");
     return null;
   }
   if (response.statusCode !== 200) {
@@ -983,14 +1010,14 @@ var getTermsForPlatform = function (platform) {
   return response.body;
 };
 
-var checkAgreePlatformTerms = function (platform) {
+var checkAgreePlatformTerms = function (platform, name) {
   try {
     var terms = getTermsForPlatform(platform);
   } catch (e) {
     verboseLog("Error while downloading license terms: " + e);
 
     // most likely we don't have a net connection
-    process.stderr.write("Unable to download license terms for platform: " + platform + ".\n" +
+    Console.warn("Unable to download license terms for " + name + ".\n" +
     "Please make sure you are online.\n")
     throw new main.ExitWithCode(2);
   }
@@ -1000,7 +1027,7 @@ var checkAgreePlatformTerms = function (platform) {
     return true;
   }
 
-  process.stdout.write("The following terms apply to the '" + platform + "' platform:\n\n");
+  process.stdout.write("The following terms apply to " + name + ":\n\n");
   process.stdout.write(terms + "\n\n");
   process.stdout.write("You must agree to the terms to proceed.\n");
   process.stdout.write("Do you agree (Y/n)? ");
@@ -1020,6 +1047,12 @@ var checkAgreePlatformTerms = function (platform) {
   return agreed;
 };
 
+var checkPlatformPrequisites = function (platform) {
+  if (platform == 'android') {
+    return ensureAndroidPrereqs();
+  }
+  return true;
+};
 
 // --- Mobile Control File parsing ---
 
@@ -1331,6 +1364,265 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   fs.writeFileSync(configPath, formattedXmlConfig, 'utf8');
 };
 
+var Host = function () {
+
+};
+
+
+_.extend(Host.prototype, {
+  isMac: function () {
+    return archinfo.host().indexOf("os.osx.") == 0;
+  },
+
+  getName : function () {
+    return archinfo.host();
+  }
+});
+
+// (Sneakily) mask Host to make it a singelton
+var Host = new Host();
+
+var IOS = function () {
+
+};
+
+_.extend(IOS.prototype, {
+
+  hasXcode: function () {
+    var self = this;
+
+    if (!Host.isMac()) {
+      return false;
+    }
+
+    var stat = files.statOrNull('/Applications/Xcode.app');
+    return (stat && stat.isDirectory());
+  },
+
+  installXcode: function () {
+    if (!Host.isMac()) {
+      throw new Error("Can only install Xcode on OSX");
+    }
+    Console.info("Launching Xcode installer; we recommend you choose 'Get Xcode' to install Xcode");
+    files.run('/usr/bin/xcodebuild', '--install');
+  },
+
+  agreedXcodeLicense: function () {
+    var self = this;
+
+    var cmd = processes.RunCommand('/usr/bin/xcrun', 'cc', '--version');
+    var execution = cmd.run();
+    if (execution.stderr.indexOf('Xcode/iOS license') != -1) {
+      return false;
+    }
+    return true;
+  },
+
+  launchXcode: function () {
+    var self = this;
+
+    var cmd = processes.RunCommand('/usr/bin/open', '/Applications/Xcode.app/');
+    var execution = cmd.run();
+  }
+});
+
+
+
+var Android = function () {
+
+};
+
+_.extend(Android.prototype, {
+  hasAcceleration: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      var kexts = files.run('kextstat');
+      var found = _.any(kexts.split('\n'), function (line) {
+        if (line.indexOf('com.intel.kext.intelhaxm') != -1) {
+          Console.debug("Found com.intel.kext.intelhaxm: ", found);
+          return true;
+        }
+      });
+      return found;
+    }
+
+    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
+
+    return undefined;
+  },
+
+  installAcceleration: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      if (!checkAgreePlatformTerms("haxm", "Intel HAXM")) {
+        Console.warn("Intel HAXM not installed (must agree to license)");
+        return false;
+      }
+      // The mpkg is small, so it's OK to buffer it in memory
+      var name = 'IntelHAXM_1.0.8.mpkg';
+      var mpkg = httpHelpers.getUrl({
+        url: 'http://android-bundle.s3.amazonaws.com/haxm/' + name,
+        // XXX: https://warehouse.meteor.com/haxm/' + name,
+        encoding: null
+      });
+
+      var dir = path.join(cordovaWarehouseDir(), 'haxm');
+      var filepath = path.join(dir, name);
+      files.mkdir_p(dir);
+      fs.writeFileSync(filepath, mpkg);
+
+      Console.info("Launching HAXM installer; we recommend allocating 1024MB of RAM (or more)");
+      files.run('open', filepath);
+
+      return true;
+    }
+
+    throw new Error("Can't install acceleration for unknown host: " + archinfo.host());
+  },
+
+  getAndroidBundlePath: function () {
+    return path.join(files.getCurrentToolsDir(), 'android_bundle');
+  },
+
+  runAndroidTool: function (args, options) {
+    var self = this;
+
+    var androidBundlePath = self.getAndroidBundlePath();
+
+    var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', 'android');
+
+    options = options || {};
+    options.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
+    var cmd = new processes.RunCommand(androidToolPath, args, options);
+    var execution = cmd.run();
+    if (execution.exitCode !== 0) {
+      Console.warn("Unexpected exit code from android process: " + execution.exitCode);
+      Console.warn("stdout: " + execution.stdout);
+      Console.warn("stderr: " + execution.stderr);
+
+      throw new Error("Error running android tool: exit code " + execution.exitCode);
+    }
+
+    return execution.stdout;
+  },
+
+  listAvds: function () {
+    var self = this;
+
+    var out = self.runAndroidTool(['list', 'avd', '--compact']);
+    var avds = [];
+    _.each(out.split('\n'), function (line) {
+      line = line.trim();
+      avds.push(line);
+    });
+    return avds;
+  },
+
+  hasAvd: function (avd) {
+    var self = this;
+    return _.contains(self.listAvds(), avd);
+  },
+
+  startEmulator: function (avd, options) {
+    var self = this;
+
+    var androidBundlePath = self.getAndroidBundlePath();
+
+    // XXX: Use emulator64-x86?  What difference does it make?
+    var name = 'emulator';
+    var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', name);
+
+    var args = ['-avd', avd];
+
+    var runOptions = {};
+    runOptions.detached = true;
+    runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidBundlePath });
+    var cmd = new processes.RunCommand(androidToolPath, args, runOptions);
+    cmd.start();
+  },
+
+  createAvd: function (avd, options) {
+    var self = this;
+
+    var abi = "default/x86";
+
+    // XXX: TODO
+    //(android list target | grep ABIs | grep default/x86 > /dev/null) || install_x86
+
+    //# XXX if this command fails, it would be really hard to debug or understand
+    //# for the end user. But the output is also very misleading. Later we should
+    //# save the output to a log file and tell user where to find it in case of
+    //# failure.
+    //    echo "
+    //  " | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi ${ABI} --path "${ANDROID_BUNDLE}/meteor_avd/" > /dev/null 2>&1
+    var androidBundlePath = self.getAndroidBundlePath();
+    var avdPath = path.join(androidBundlePath, 'meteor_avd');
+    var args = ['create', 'avd',
+      '--target', '1',
+      '--name', avd,
+      '--abi', abi,
+      '--path', avdPath];
+
+    // We need to send a new line to bypass the 'custom hardware prompt'
+    self.runAndroidTool(args, { stdin: '\n' });
+
+    var config = new files.KeyValueFile(path.join(avdPath, 'config.ini'));
+
+    // Nice keyboard support
+    config.set("hw.keyboard", "yes");
+    config.set("hw.mainKeys", "no");
+
+    // More RAM than the default
+    config.set("hw.ramSize", "1024");
+    config.set("vm.heapSize", "64");
+
+    //# These are the settings for a Nexus 4, but it's a bit big for some screens
+    //#  (and likely a bit slow without GPU & KVM/HAXM acceleration)
+    //  #set_config "skin.dynamic" "yes"
+    //#set_config "hw.lcd.density" "320"
+    //#set_config "hw.device.name" "Nexus 4"
+    //#set_config "hw.device.manufacturer" "Google"
+
+    // XXX: Enable on Linux?
+    if (Host.isMac()) {
+      config.set("hw.gpu.enabled", "yes");
+    }
+  },
+
+  hasJava: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      return files.statOrNull('/System/Library/Frameworks/JavaVM.framework/Versions/1.6/') != null;
+    } else {
+      return files.statOrNull('/usr/bin/java') != null;
+    }
+  },
+
+  installJava: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      // XXX: Find the magic incantation that invokes the JRE 6 installer
+      var cmd = new processes.RunCommand('open', 'http://support.apple.com/kb/DL1572');
+      // This works, but requires some manual steps
+      // This installs, but doesn't provide java (?)
+      //var cmd = new processes.RunCommand('open', 'https://www.java.com/en/download/mac_download.jsp');
+      cmd.run();
+    }
+
+    // XXX: TODO
+    //if (Host.isLinux()) {
+    //}
+
+    throw new Error("Cannot automatically install Java on host: " + Host.getName());
+  },
+
+});
+
+
 
 // --- Cordova commands ---
 
@@ -1358,19 +1650,37 @@ main.registerCommand({
       isValidPlatform(platform);
     });
   } catch (err) {
-    Console.stderr.write(err.message + "\n");
+    if (err.message) {
+      Console.warn(err.message);
+    }
     return 1;
   }
 
   try {
-    var agreed = _.every(platforms, function (platform, options) {
-      return checkAgreePlatformTerms(platform, options);
+    var ok = _.every(platforms, function (platform, options) {
+      return checkPlatformPrequisites(platform);
+    });
+    if (!ok) {
+      return 2;
+    }
+  } catch (err) {
+    if (err.message) {
+      Console.warn(err.message);
+    }
+    return 1;
+  }
+
+  try {
+    var agreed = _.every(platforms, function (platform) {
+      return checkAgreePlatformTerms(platform, "the " + platform + " platform");
     });
     if (!agreed) {
       return 2;
     }
   } catch (err) {
-    process.stderr.write(err.message + "\n");
+    if (err.message) {
+      Console.warn(err.message);
+    }
     return 1;
   }
 
@@ -1453,6 +1763,136 @@ main.registerCommand({
   } catch (err) {
     // this tool can crash for whatever reason, ignore its failures
   }
+  return 0;
+});
+
+main.registerCommand({
+  name: "android-launch",
+  pretty: true,
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
+  minArgs: 0,
+  maxArgs: 1
+}, function (options) {
+  var android = new Android();
+
+  var args = options.args;
+  var avd = 'meteor';
+  if (args.length) {
+    avd = args[0];
+  }
+
+  if (!android.hasAvd(avd)) {
+    Console.error("'" + avd + "' android virtual device (AVD) does not exist");
+    Console.info("The default AVD is called meteor, and will be created automatically for you");
+    return 1;
+  }
+
+  android.startEmulator(avd);
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: "android",
+  pretty: true,
+  options: {
+    verbose: { type: Boolean, short: "v" },
+    getready: { type: Boolean }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
+}, function (options) {
+  var android = new Android();
+
+  if (options.getready) {
+
+    if (android.hasJava()) {
+      Console.info(Console.success("Java is installed"));
+    } else {
+      Console.info(Console.fail("Java is not installed"));
+
+      android.installJava();
+    }
+
+    // (hasAcceleration can also be undefined)
+    var hasAcceleration = android.hasAcceleration();
+    if (hasAcceleration === false) {
+      Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
+
+      buildmessage.enterJob({title: 'Installing acceleration'}, function () {
+        android.installAcceleration();
+      });
+    } else if (hasAcceleration === true) {
+      Console.info(Console.success("HAXM is installed"));
+    }
+
+    var avdName = 'meteor';
+    if (android.hasAvd(avdName)) {
+      Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
+    } else {
+      Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+
+      buildmessage.enterJob({title: 'Creating AVD'}, function () {
+        var avdOptions = {};
+        android.createAvd(avdName, avdOptions);
+        Console.info(Console.success("Created android virtual device (AVD): " + avdName));
+      });
+    }
+  }
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: "ios",
+  pretty: true,
+  options: {
+    verbose: { type: Boolean, short: "v" },
+    getready: { type: Boolean }
+  },
+  minArgs: 0,
+  maxArgs: Infinity
+}, function (options) {
+  var ios = new IOS();
+
+  if (options.getready) {
+    if (!Host.isMac()) {
+      Console.info("You are not running on OSX; we won't be able to install Xcode for local iOS development");
+    } else {
+      if (ios.hasXcode()) {
+        Console.info(Console.success("Xcode is installed"));
+      } else {
+        Console.info(Console.fail("Xcode is not installed"));
+
+        buildmessage.enterJob({title: 'Installing Xcode'}, function () {
+          ios.installXcode();
+        });
+      }
+
+      //Check if the full Xcode package is already installed:
+      //
+      //  $ xcode-select -p
+      //If you see:
+      //
+      //  /Applications/Xcode.app/Contents/Developer
+      //the full Xcode package is already installed.
+
+      if (ios.hasXcode()) {
+        if (ios.agreedXcodeLicense()) {
+          Console.info(Console.success("Xcode license agreed"));
+        } else {
+          Console.info(Console.fail("You must accept the Xcode license"));
+
+          ios.launchXcode();
+        }
+      }
+    }
+  }
+
   return 0;
 });
 

@@ -235,6 +235,18 @@ files.prettyPath = function (path) {
   return path;
 };
 
+// Like statSync, but null if file not found
+files.statOrNull = function (path) {
+  try {
+    return Future.wrap(fs.stat)(path).wait();
+  } catch (e) {
+    if (e.code == "ENOENT")
+      return null;
+    throw e;
+  }
+};
+
+
 // Like rm -r.
 files.rm_recursive = function (p) {
   try {
@@ -504,7 +516,7 @@ files.mkdtemp = function (prefix) {
         tries--;
       }
     }
-    throw new Error("failed to make tempory directory in " + tmpDir);
+    throw new Error("failed to make temporary directory in " + tmpDir);
   };
   var dir = make();
   tempDirs.push(dir);
@@ -923,3 +935,42 @@ exports.trimLine = function (line) {
   line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
   return line;
 };
+
+
+files.KeyValueFile = function (path) {
+  var self = this;
+  self.path = path;
+}
+
+_.extend(files.KeyValueFile.prototype, {
+  set: function (k, v) {
+    var self = this;
+
+    var data = self._readAll() || '';
+    var lines = data.split(/\n/);
+
+    var found = false;
+    for (var i = 0; i < lines.length; i++) {
+      var trimmed = lines[i].trim();
+      if (trimmed.indexOf(k + '=') == 0) {
+        lines[i] = k + '=' + v;
+        found = true;
+      }
+    }
+    if (!found) {
+      lines.push(k + "=" + v);
+    }
+    var newdata = lines.join('\n') + '\n';
+    fs.writeFileSync(self.path, newdata, 'utf8');
+  },
+
+  _readAll: function () {
+    var self = this;
+
+    if (fs.existsSync(self.path)) {
+      return fs.readFileSync(self.path, 'utf8');
+    } else {
+      return null;
+    }
+  }
+});

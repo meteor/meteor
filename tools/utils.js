@@ -9,6 +9,7 @@ var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
 var url = require('url');
+var child_process = require('child_process');
 
 var utils = exports;
 
@@ -648,3 +649,6 @@ _.extend(exports.Patience.prototype, {
     self._whenMessage = null;
   }
 });
+
+
+

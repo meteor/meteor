@@ -299,7 +299,7 @@ _.extend(Db.prototype, {
     var prepare = self._autoPrepare;
     if (prepare &&
         (sql.indexOf("PRAGMA ") === 0 || sql.indexOf("BEGIN ") === 0 || sql.indexOf("END ") === 0 || sql.indexOf("ROLLBACK ") === 0)) {
-      Console.debug("Not preparing PRAGMA/BEGIN/END/ROLLBACK command", sql);
+      //Console.debug("Not preparing PRAGMA/BEGIN/END/ROLLBACK command", sql);
       prepare = false;
     }
     if (prepare) {

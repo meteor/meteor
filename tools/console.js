@@ -300,6 +300,24 @@ _.extend(Console.prototype, {
     }
   },
 
+  success: function (message) {
+    var self = this;
+
+    if (!self._pretty) {
+      return message;
+    }
+    return chalk.green('\u2713 ' + message);
+  },
+
+  fail: function (message) {
+    var self = this;
+
+    if (!self._pretty) {
+      return message;
+    }
+    return chalk.red('\u2717 ' + message);
+  },
+
   _clearStatusMessage: function () {
     var self = this;
     // For the non-progress-bar status mode, we may need to
