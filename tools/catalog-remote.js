@@ -726,7 +726,8 @@ _.extend(RemoteCatalog.prototype, {
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._queryAsJSON("SELECT content FROM builds WHERE versionId=?", versionRecord._id);
+    var matchingBuilds = this._queryAsJSON(
+      "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 

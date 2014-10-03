@@ -42,10 +42,6 @@ var LayeredCatalog = function() {
   // Constraint solver using this catalog.
   self.resolver = null;
 
-  // See the documentation of the _extraECVs field in ConstraintSolver.Resolver.
-  // Maps packageName -> version -> its ECV
-  self.forgottenECVs = {};
-
   // Each complete catalog needs its own package cache.
   self.packageCache = new packageCache.PackageCache(self);
 };
@@ -101,7 +97,14 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getForgottenECVs: function (packageName) {
-    return this.forgottenECVs[packageName];
+    var self = this;
+    var versions = self.otherCatalog.getSortedVersions(packageName);
+    var forgottenECVs = {};
+    _.each(versions, function (v) {
+      var vr = self.otherCatalog.getVersion(packageName, v);
+      forgottenECVs[v] = vr.earliestCompatibleVersion;
+    });
+    return forgottenECVs;
   },
 
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
@@ -147,7 +150,15 @@ _.extend(LayeredCatalog.prototype, {
   },
 
   getVersion: function (name, version) {
-    return this._returnFirst("getVersion", arguments, ACCEPT_NON_EMPTY);
+    var self = this;
+    var result = self.localCatalog.getVersion(name, version);
+    if (!result) {
+      if (/\+/.test(version)) {
+        return null;
+      }
+      result = self.otherCatalog.getVersion(name, version);
+    }
+    return result;
   },
 
   initialize: function (options) {
