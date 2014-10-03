@@ -40,7 +40,7 @@ _.extend(RunCommand.prototype, {
     self.process.on('close', function (exitCode) {
       self.exitCode = exitCode;
 
-      if (options.checkExitCode && exitCode != 0) {
+      if (self.options.checkExitCode && exitCode != 0) {
         console.log("Unexpected exit code", exitCode, "from", self.command, self.args, "\nstdout:\n", self.stdout, "\nstderr:\n", self.stderr);
       }
 
