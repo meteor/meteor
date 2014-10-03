@@ -1411,10 +1411,10 @@ _.extend(IOS.prototype, {
     files.run('open', 'https://itunes.apple.com/us/app/xcode/id497799835?mt=12');
   },
 
-  agreedXcodeLicense: function () {
+  hasAgreedXcodeLicense: function () {
     var self = this;
 
-    var cmd = processes.RunCommand('/usr/bin/xcrun', [ 'cc', '--version' ]);
+    var cmd = new processes.RunCommand('/usr/bin/xcrun', [ 'cc', '--version' ]);
     var execution = cmd.run();
     if (execution.stderr.indexOf('Xcode/iOS license') != -1) {
       return false;
@@ -1425,7 +1425,7 @@ _.extend(IOS.prototype, {
   launchXcode: function () {
     var self = this;
 
-    var cmd = processes.RunCommand('/usr/bin/open', [ '/Applications/Xcode.app/' ]);
+    var cmd = new processes.RunCommand('/usr/bin/open', [ '/Applications/Xcode.app/' ]);
     var execution = cmd.run();
   }
 });
@@ -1954,7 +1954,7 @@ main.registerCommand({
       //the full Xcode package is already installed.
 
       if (ios.hasXcode()) {
-        if (ios.agreedXcodeLicense()) {
+        if (ios.hasAgreedXcodeLicense()) {
           Console.info(Console.success("Xcode license agreed"));
         } else {
           Console.info(Console.fail("You must accept the Xcode license"));
