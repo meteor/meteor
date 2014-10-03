@@ -2,7 +2,7 @@
 // needs to be uniloaded from tool.
 Package.describe({
   summary: "Wrapper for npm netroute module",
-  version: "0.2.5"
+  version: "0.2.5-pre.0"
 });
 
 Npm.depends({

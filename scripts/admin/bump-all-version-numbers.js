@@ -1,3 +1,5 @@
+// run as node scripts/admin/bump-all-version-numbers.js <packageNames>
+
 var fs = require("fs");
 var _ = require("../../packages/underscore/underscore.js")._;
 
