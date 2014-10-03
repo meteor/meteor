@@ -1427,6 +1427,16 @@ _.extend(IOS.prototype, {
 
     var cmd = new processes.RunCommand('/usr/bin/open', [ '/Applications/Xcode.app/' ]);
     var execution = cmd.run();
+  },
+
+  getDirectoryForSdk: function (version) {
+    return path.join('/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/', version);
+  },
+
+  isSdkInstalled: function (version) {
+    var self = this;
+    var stat = files.statOrNull(self.getDirectoryForSdk(version));
+    return stat != null;
   }
 });
 
@@ -1962,6 +1972,14 @@ main.registerCommand({
           ios.launchXcode();
         }
       }
+
+      // XXX: Other versions
+      _.each(['iPhoneOS5.0.sdk', 'iPhoneOS6.0.sdk', 'iPhoneOS6.1.sdk'], function (version) {
+        if (ios.isSdkInstalled(version)) {
+          Console.warn("An old version of the iPhone SDK is installed (" + version + "); you should probably delete it");
+          Console.info("You can delete it by deleting the directory: " + ios.getDirectoryForSdk(version));
+        }
+      });
     }
   }
 
