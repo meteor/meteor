@@ -20,6 +20,7 @@ var ROOT_PACKAGES = [
   'minifiers',
   'minimongo',
   'mongo',
+  'netroute',
   'package-version-parser',
   'boilerplate-generator',
   'webapp-hashing',

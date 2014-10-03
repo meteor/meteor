@@ -390,3 +390,21 @@ selftest.define("run and SIGKILL parent process", function () {
   run.match("Your application is crashing");
   run.stop();
 });
+
+selftest.define("'meteor run --port' requires a port", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "app-prints-pid");
+  s.cd("myapp");
+
+  run = s.run("run", "--port", "example.com");
+  run.waitSecs(30);
+  run.matchErr("--port must include a port");
+  run.expectExit(1);
+
+  run = s.run("run", "--port", "http://example.com");
+  run.waitSecs(30);
+  run.matchErr("--port must include a port");
+  run.expectExit(1);
+});

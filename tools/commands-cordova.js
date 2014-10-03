@@ -265,13 +265,17 @@ var generateCordovaBoilerplate = function (clientDir, options) {
   // XXX partially copied from autoupdate package
   var version = process.env.AUTOUPDATE_VERSION || calculatedHash;
 
+  var mobileServer = options.protocol + options.host;
+  if (options.port) {
+    mobileServer = mobileServer + ":" + options.port;
+  }
+
   var runtimeConfig = {
     meteorRelease: meteorRelease,
-    ROOT_URL: options.protocol + options.host + ':' + options.port + '/',
+    ROOT_URL: mobileServer + "/",
     // XXX propagate it from options?
     ROOT_URL_PATH_PREFIX: '',
-    DDP_DEFAULT_CONNECTION_URL: options.protocol +
-      options.host + ':' + options.port,
+    DDP_DEFAULT_CONNECTION_URL: mobileServer,
     autoupdateVersionCordova: version,
     cleanCache: options.clean,
     httpProxyPort: options.httpProxyPort,
@@ -1228,7 +1232,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
      * @param {Object} launchScreens A dictionary where keys are different
      * devices, screen sizes, and orientations, and the values are image paths
      * relative to the project root directory.
-     * 
+     *
      * For Android, launch screen images should
      * be special "Nine-patch" image files that specify how they should be
      * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
@@ -2105,4 +2109,3 @@ main.registerCommand({
 
   return 0;
 });
-

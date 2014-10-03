@@ -2,7 +2,6 @@ var main = require('./main.js');
 var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
-var ip = require('ip');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -30,11 +29,6 @@ var Console = require('./console.js').Console;
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
-
-// The default host to use when building apps. (Specifically, for mobile
-// builds, we need a host to use for DDP_DEFAULT_CONNECTION_URL if the
-// user doesn't specify one with -p or --mobile-server).
-var DEFAULT_BUILD_HOST = "localhost";
 
 // The default port that the development server listens on.
 var DEFAULT_PORT = 3000;
@@ -192,9 +186,7 @@ function doRunCommand (options) {
 
   cordova.verboseLog('Parsing the --port option');
   try {
-    var parsedUrl = utils.parseUrl(options.port, {
-      port: DEFAULT_PORT
-    });
+    var parsedUrl = utils.parseUrl(options.port);
   } catch (err) {
     if (options.verbose) {
       Console.stderr.write('Error while parsing --port option: '
@@ -205,24 +197,19 @@ function doRunCommand (options) {
     return 1;
   }
 
- // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  var mobileServer = options["mobile-server"] ||
-        options["mobile-port"] || options.port;
+  if (! parsedUrl.port) {
+    Console.stderr.write("--port must include a port.\n");
+    return 1;
+  }
+
   try {
-    var parsedMobileServer = utils.parseUrl(
-      mobileServer,
-      {
-        host: DEFAULT_BUILD_HOST,
-        port: DEFAULT_PORT,
-        protocol: "http://"
-      }
-    );
+    var parsedMobileServer = utils.mobileServerForRun(options);
   } catch (err) {
     if (options.verbose) {
-      process.stderr.write('Error while parsing --mobile-port option: '
+      Console.stderr.write('Error while parsing --mobile-server option: '
                            + err.stack + '\n');
     } else {
-      process.stderr.write(err.message + '\n');
+      Console.stderr.write(err.message + '\n');
     }
     return 1;
   }
@@ -271,17 +258,21 @@ function doRunCommand (options) {
   // If we are targeting the remote devices, warn about ports and same network
   if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
     cordova.verboseLog('A run on a device requested');
-    Console.stderr.write([
+    var warning = [
 "WARNING: You are testing your app on a remote device.",
 "         For the mobile app to be able to connect to the local server, make",
 "         sure your device is on the same network, and that the network",
 "         configuration allows clients to talk to each other",
-"         (no client isolation).",
-"",
+"         (no client isolation)."];
+
+    if (! options["mobile-server"]) {
+      warning = warning.concat(["",
 "         You can pass the host and the port in the --mobile-server argument.",
 "         For example: --mobile-server " +
-  ip.address() + ":" + parsedUrl.port + "\n\n"
-].join("\n"));
+  utils.ipAddress() + ":" + parsedUrl.port + "\n\n"]);
+    }
+
+    Console.stderr.write(warning.join("\n"));
   }
 
 
@@ -659,28 +650,26 @@ var buildCommand = function (options) {
 
   if (! _.isEmpty(mobilePlatforms)) {
 
-    // XXX COMPAT WITH 0.9.2.2 -- the mobile-port is deprecated
-    var mobileServer = options.server ||
-          options["mobile-port"];
+    // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
+    var mobileServer = options.server || options["mobile-port"];
 
     if (mobileServer) {
       try {
         var parsedMobileServer = utils.parseUrl(
-          mobileServer,
-          {
-            host: DEFAULT_BUILD_HOST,
-            port: DEFAULT_PORT,
-            protocol: "http://"
-          }
-        );
+          mobileServer, { protocol: "http://" });
       } catch (err) {
         Console.stderr.write(err.message);
+        return 1;
+      }
+
+      if (! parsedMobileServer.host) {
+        Console.stderr.write("--server must include a hostname.\n");
         return 1;
       }
     } else {
       // For Cordova builds, require '--server'.
       // XXX better error message?
-      process.stderr.write(
+      Console.stderr.write(
 "Supply the server hostname and port in the --server option\n" +
 "for mobile app builds.\n");
       return 1;
@@ -1146,8 +1135,7 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default:
-            DEFAULT_BUILD_HOST + ":" + DEFAULT_PORT },
+    port: { type: String, short: "p", default: DEFAULT_PORT },
     'http-proxy-port': { type: String },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
@@ -1183,23 +1171,19 @@ main.registerCommand({
   }
 }, function (options) {
   try {
-    var parsedUrl = utils.parseUrl(
-      options.port, { port: DEFAULT_PORT });
+    var parsedUrl = utils.parseUrl(options.port);
   } catch (err) {
     Console.stderr.write(err.message);
     return 1;
   }
 
+  if (! parsedUrl.port) {
+    Console.stderr.write("--port must include a port.\n");
+    return 1;
+  }
+
   try {
-    var parsedMobileServer = utils.parseUrl(
-      // XXX COMPAT WITH 0.9.2.2
-      options["mobile-server"] || options["mobile-port"] || options.port,
-      {
-        host: DEFAULT_BUILD_HOST,
-        port: DEFAULT_PORT,
-        protocol: "http://"
-      }
-    );
+    var parsedMobileServer = utils.mobileServerForRun(options);
   } catch (err) {
     Console.stderr.write(err.message);
     return 1;

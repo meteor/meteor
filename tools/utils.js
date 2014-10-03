@@ -13,10 +13,6 @@ var child_process = require('child_process');
 
 var utils = exports;
 
-exports.hasScheme = function (str) {
-  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
-};
-
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
 // <port>. We're not simply using 'url.parse' because we want '3000' to
@@ -25,7 +21,7 @@ exports.hasScheme = function (str) {
 // undefined} or something like that.
 //
 // 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
-exports.parseUrl = function (str, defaults) {
+var parseUrl = function (str, defaults) {
   // XXX factor this out into a {type: host/port}?
 
   defaults = defaults || {};
@@ -55,6 +51,50 @@ exports.parseUrl = function (str, defaults) {
     host: parsed.hostname || defaultHost,
     port: parsed.port || defaultPort
   };
+};
+
+var ipAddress = function () {
+  var uniload = require("./uniload.js");
+  var netroute = uniload.load({ packages: ["netroute"] }).
+        netroute.NpmModuleNetroute;
+  var info = netroute.getInfo();
+  var defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
+  if (! defaultRoute) {
+    return null;
+  }
+
+  var iface = defaultRoute["interface"];
+
+  var getAddress = function (iface) {
+    var interfaces = os.networkInterfaces();
+    return _.findWhere(interfaces[iface], { family: "IPv4" });
+  };
+
+  var address = getAddress(iface);
+  if (! address) {
+    // Retry after a couple seconds in case the user is connecting or
+    // disconnecting from the Internet.
+    utils.sleepMs(2000);
+    address = getAddress(iface);
+    if (! address) {
+      throw new Error(
+"Interface '" + iface + "' not found in interface list, or\n" +
+"does not have an IPv4 address.");
+    }
+  }
+  return address.address;
+};
+
+exports.hasScheme = function (str) {
+  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+};
+
+exports.parseUrl = parseUrl;
+
+exports.ipAddress = ipAddress;
+
+exports.hasScheme = function (str) {
+  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
 // Returns a pretty list suitable for showing to the user. Input is an
@@ -650,5 +690,45 @@ _.extend(exports.Patience.prototype, {
   }
 });
 
+// Given the options for a 'meteor run' command, returns a parsed URL ({
+// host: *, protocol: *, port: * }. The rules for --mobile-server are:
+//   * If you don't specify anything for --mobile-server, then it
+//     defaults to <detected ip address>:<port from --port>.
+//   * If you specify something for --mobile-server, we use that,
+//     defaulting to http:// as the protocol and 80 or 443 as the port.
+exports.mobileServerForRun = function (options) {
+  var parsedUrl = parseUrl(options.port);
+  if (! parsedUrl.port) {
+    throw new Error("--port must include a port.");
+  }
 
+  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
+  var mobileServer = options["mobile-server"] || options["mobile-port"];
+  var parsedMobileServer;
 
+  if (! mobileServer) {
+    var myIp = ipAddress();
+    if (! myIp) {
+      throw new Error(
+"Error detecting IP address for mobile app to connect to.\n" +
+"Please specify the address that the mobile app should connect\n" +
+"to with --mobile-server.");
+    }
+
+    parsedMobileServer = {
+      host: myIp,
+      port: parsedUrl.port,
+      protocol: "http://"
+    };
+  } else {
+    parsedMobileServer = parseUrl(mobileServer, {
+      protocol: "http://"
+    });
+
+    if (! parsedMobileServer.host) {
+      throw new Error("--mobile-server must specify a hostname.");
+    }
+  }
+
+  return parsedMobileServer;
+};
