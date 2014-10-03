@@ -20,6 +20,7 @@ source "$(dirname "$0")/common_env.sh"
 cd "$ORIG_DIR"
 
 install_android_bundle () {
+  echo ""
   echo "Installing Android development bundle."
   echo "This might take a while, please hold on."
 

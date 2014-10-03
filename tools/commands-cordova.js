@@ -1554,7 +1554,7 @@ _.extend(Android.prototype, {
   installTarget: function (target) {
     var self = this;
 
-    var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u']);
+    var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], { stdin: 'y\n' });
     return false;
   },
 
@@ -1900,7 +1900,9 @@ main.registerCommand({
     } else {
       Console.info(Console.fail("Suitable Android API libraries not found"));
 
-      android.installTarget('sys-img-x86-android-19');
+      buildmessage.enterJob({ title: 'Installing Android API library'}, function () {
+        android.installTarget('sys-img-x86-android-19');
+      });
     }
 
     var avdName = 'meteor';
