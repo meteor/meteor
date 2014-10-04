@@ -125,7 +125,7 @@ OAuth1Binding.prototype._getSignature = function(method, url, rawHeaders, access
   return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
 };
 
-OAuth1Binding.prototype._call = function(method, url, headers, params, callback) {
+OAuth1Binding.prototype._call = function(method, url, headers, options, callback) {
   var self = this;
 
   // all URLs to be functions to support parameters/customization
@@ -134,12 +134,18 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
   }
 
   headers = headers || {};
-  params = params || {};
+  options = options || {};
+
+  // Make sure we don't cut off content or data, it is used by HTTP methods POST, PUT and DELETE.
+  // Support params (by itself) being passed for options.
+  if (_.intersection(_.keys(options), ['content', 'data', 'params']).length == 0) {
+    options.params = options;
+  }
 
   // Extract all query string parameters from the provided URL
   var parsedUrl = urlModule.parse(url, true);
   // Merge them in a way that params given to the method call have precedence
-  params = _.extend({}, parsedUrl.query, params);
+  options.params = _.extend({}, parsedUrl.query, options.params);
 
   // Reconstruct the URL back without any query string parameters
   // (they are now in params)
@@ -149,19 +155,19 @@ OAuth1Binding.prototype._call = function(method, url, headers, params, callback)
 
   // Get the signature
   headers.oauth_signature =
-    self._getSignature(method, url, headers, self.accessTokenSecret, params);
+    self._getSignature(method, url, headers, self.accessTokenSecret, options.params);
 
   // Make a authorization string according to oauth1 spec
   var authString = self._getAuthHeaderString(headers);
 
+  // Set the auth string for the headers.
+  options.headers = {
+    Authorization: authString
+  };
+
   // Make signed request
   try {
-    var response = HTTP.call(method, url, {
-      params: params,
-      headers: {
-        Authorization: authString
-      }
-    }, callback && function (error, response) {
+    var response = HTTP.call(method, url, options, callback && function (error, response) {
       if (! error) {
         response.nonce = headers.oauth_nonce;
       }
