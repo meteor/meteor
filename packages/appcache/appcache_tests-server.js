@@ -10,7 +10,7 @@ WebApp.addHtmlAttributeHook(function (request) {
 });
 
 
-// Let's add some file in the 'ONLINE' section
+// Let's add some ressources in the 'NETWORK' section
 Meteor.AppCache.config({
   onlineOnly: [
     '/online/',
