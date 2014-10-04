@@ -1623,8 +1623,17 @@ _.extend(Android.prototype, {
       return found;
     }
 
-    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
+    if (Host.isLinux()) {
+      var stat = files.statOrNull("/dev/kvm");
+      if (stat != null) {
+        Console.debug("Found /dev/kvm");
+      } else {
+        Console.debug("/dev/kvm not found");
+      }
+      return stat != null;
+    }
 
+    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
     return undefined;
   },
 
@@ -1648,7 +1657,14 @@ _.extend(Android.prototype, {
       Console.info("Launching HAXM installer; we recommend allocating 1024MB of RAM (or more)");
       files.run('open', filepath);
 
-      return true;
+      return;
+    }
+
+    if (Host.isLinux()) {
+      // KVM should be enabled by default, if supported, on most modern distros?
+      Console.info("Please enable KVM, for faster Android emulation");
+
+      return;
     }
 
     throw new Error("Can't install acceleration for unknown host: " + archinfo.host());
@@ -1858,9 +1874,7 @@ _.extend(Android.prototype, {
           Console.info("You will also need some 32-bit libraries:");
           Console.info("  sudo apt-get install --yes lib32z1 lib32stdc++6");
         }
-      }
-
-      if (Host.hasYum()) {
+      } else if (Host.hasYum()) {
         Console.info("You can install the JDK using:");
         Console.info("  sudo yum install -y java-1.7.0-openjdk-devel");
 
@@ -1869,6 +1883,9 @@ _.extend(Android.prototype, {
           Console.info("You will also need some 32-bit libraries:");
           Console.info("  sudo yum install -y glibc.i686 zlib.i686 libstdc++.i686 ncurses-libs.i686");
         }
+      } else {
+        Console.warn("You should install the JDK; we don't have instructions for your distibution (sorry!)");
+        Console.info("Please do submit the instructions so we can include them.")
       }
 
       return;
