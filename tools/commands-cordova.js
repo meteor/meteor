@@ -1656,7 +1656,12 @@ _.extend(Android.prototype, {
 
   getAndroidBundlePath: function () {
     // XXX: Support USE_GLOBAL_ADK
-    return path.join(files.getCurrentToolsDir(), 'android_bundle');
+
+    // XXX XXX is this right?
+    if (files.usesWarehouse())
+      return path.join(tropo.root, 'android_bundle');
+    else
+      return path.join(files.getCurrentToolsDir(), 'android_bundle');
   },
 
   runAndroidTool: function (args, options) {
