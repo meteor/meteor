@@ -16,11 +16,9 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('tinytest');
   api.use('appcache');
-
+  api.use('http', 'client');
+  api.use('underscore', 'client');
   api.use('webapp', 'server');
   api.addFiles('appcache_tests-server.js', 'server');
-
-  api.use('underscore', 'client');
-  api.use('http', 'client');
   api.addFiles('appcache_tests-client.js', 'client');
 });
