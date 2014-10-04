@@ -1562,6 +1562,8 @@ _.extend(IOS.prototype, {
       okay = fix;
     }
 
+    if (!okay) return okay;
+
     //Check if the full Xcode package is already installed:
     //
     //  $ xcode-select -p
@@ -1580,6 +1582,8 @@ _.extend(IOS.prototype, {
         okay = fix;
       }
     }
+
+    if (!okay) return okay;
 
     _.each(['5.0', '5.0.1', '5.1', '6.0', '6.1'], function (version) {
       if (self.isSdkInstalled(version)) {
@@ -1975,6 +1979,8 @@ _.extend(Android.prototype, {
       okay = fix;
     }
 
+    if (!okay) return okay;
+
     // (hasAcceleration can also be undefined)
     var hasAcceleration = self.hasAcceleration();
     if (hasAcceleration === false) {
@@ -1986,6 +1992,8 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("HAXM is installed"));
     }
 
+    if (!okay) return okay;
+
     if (self.hasAndroidBundle()) {
       log && Console.info(Console.success("Found Android bundle"));
     } else {
@@ -1995,6 +2003,8 @@ _.extend(Android.prototype, {
       okay = fix;
     }
 
+    if (!okay) return okay;
+
     if (self.hasTarget('19', 'default/x86')) {
       log && Console.info(Console.success("Found suitable Android API libraries"));
     } else {
@@ -2003,6 +2013,8 @@ _.extend(Android.prototype, {
       fix && self.installTarget('sys-img-x86-android-19');
       okay = fix;
     }
+
+    if (!okay) return okay;
 
     var avdName = self.getAvdName();
     if (self.hasAvd(avdName)) {
