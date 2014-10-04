@@ -18,7 +18,7 @@ Template.appBody.rendered = function() {
   }
   
   this.find('#content-container')._uihooks = {
-    insertElement: function(node, next) {
+    insertElement: function(node, next) {;
       $(node)
         .hide()
         .insertBefore(next)
@@ -48,6 +48,9 @@ Template.appBody.helpers({
   },
   menuOpen: function() {
     return Session.get(MENU_KEY) && 'menu-open';
+  },
+  cordova: function() {
+    return Meteor.isCordova && 'cordova';
   },
   email: function() {
     return Meteor.user().emails[0].address;

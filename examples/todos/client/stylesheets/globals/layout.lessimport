@@ -3,6 +3,7 @@
 
 body {
   .position(absolute, 0, 0, 0, 0);
+  background-color: #315481;
   .background-image( linear-gradient(top, #315481, #918e82 100%) );
   background-repeat: no-repeat;
   background-attachment: fixed;

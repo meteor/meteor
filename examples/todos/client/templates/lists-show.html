@@ -5,7 +5,7 @@
         <form class="js-edit-form list-edit-form">
           <input type="text" name="name" value="{{name}}">
           <div class="nav-group right">
-            <a href="#" class="js-cancel nav-item"><span class="icon-close" title="Cancel"></span></a>
+            <a href="#" class="js-cancel nav-item"><span class="icon-close js-cancel" title="Cancel"></span></a>
           </div>
         </form>
       {{else}}
@@ -52,14 +52,20 @@
 
 
     <div class="content-scrollable list-items">
-      {{#each todos}}
-        {{> todosItem}}
+      {{#if todosReady}}
+        {{#each todos}}
+          {{> todosItem}}
+        {{else}}
+          <div class="wrapper-message">
+            <div class="title-message">No tasks here</div>
+            <div class="subtitle-message">Add new tasks using the field above</div>
+          </div>
+        {{/each}}
       {{else}}
-        <div class="wrapper-message">
-          <div class="title-message">No tasks here</div>
-          <div class="subtitle-message">Add new tasks using the field above</div>
-        </div>
-      {{/each}}
+          <div class="wrapper-message">
+            <div class="title-message">Loading tasks...</div>
+          </div>
+      {{/if}}
     </div>
   </div>
 </template>

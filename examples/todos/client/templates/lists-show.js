@@ -22,6 +22,10 @@ Template.listsShow.helpers({
     return Session.get(EDITING_KEY);
   },
 
+  todosReady: function() {
+    return Router.current().todosHandle.ready();
+  },
+
   todos: function() {
     return Todos.find({listId: this._id}, {sort: {createdAt : -1}});
   }
@@ -35,6 +39,11 @@ var editList = function(list, template) {
     template.$('.js-edit-form input[type=text]').focus();
   });
 };
+
+var saveList = function(list, template) {
+  Session.set(EDITING_KEY, false);
+  Lists.update(list._id, {$set: {name: template.$('[name=name]').val()}});
+}
 
 var deleteList = function(list) {
   // ensure the last public list cannot be deleted.
@@ -87,14 +96,21 @@ Template.listsShow.events({
     }
   },
   
-  'blur input[type=text]': function() {
-    Session.set(EDITING_KEY, false);
+  'blur input[type=text]': function(event, template) {
+    // if we are still editing (we haven't just clicked the cancel button)
+    if (Session.get(EDITING_KEY))
+      saveList(this, template);
   },
 
   'submit .js-edit-form': function(event, template) {
     event.preventDefault();
-
-    Lists.update(this._id, {$set: {name: template.$('[name=name]').val()}});
+    saveList(this, template);
+  },
+  
+  // handle mousedown otherwise the blur handler above will swallow the click
+  // on iOS, we still require the click event so handle both
+  'mousedown .js-cancel, click .js-cancel': function(event) {
+    event.preventDefault();
     Session.set(EDITING_KEY, false);
   },
 
@@ -132,6 +148,9 @@ Template.listsShow.events({
     event.preventDefault();
 
     var $input = $(event.target).find('[type=text]');
+    if (! $input.val())
+      return;
+    
     Todos.insert({
       listId: this._id,
       text: $input.val(),
