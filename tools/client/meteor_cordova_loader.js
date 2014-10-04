@@ -11,6 +11,9 @@
   var log = function (msg) {
     console.log(DEBUG_TAG + msg);
   };
+  var uriToPath = function (uri) {
+    return decodeURI(uri).replace(/^file:\/\//g, '');
+  };
   var readFile = function (url, cb) {
     window.resolveLocalFileSystemURL(url, function (fileEntry) {
       var success = function (file) {
@@ -32,21 +35,11 @@
     });
   };
 
-  var each = function (array, f) {
-    for (var i = 0; i < array.length; i++)
-      f(array[i], i, array);
-  };
-
-
-  var stripLeadingSlash = function (p) {
-    if (p.charAt(0) !== '/')
-      throw new Error("bad path: " + p);
-    return p.slice(1);
-  };
-
   var loadTries = 0;
   var loadFromLocation = function (location) {
-    var cordovaRoot = decodeURI(window.location.href).replace(/\/index.html$/, '/').replace(/^file:\/\/?/, '');
+    var cordovaRoot =
+      uriToPath(window.location.href).replace(/\/index.html$/, '/');
+
     var httpd = cordova && cordova.plugins && cordova.plugins.CordovaUpdate;
 
     var retry = function () {
@@ -85,41 +78,14 @@
       log('No new versions saved to disk.');
     }
     var location = cordova.file.applicationDirectory + 'www/application/';
-    location = decodeURI(location).replace(/^file:\/\//g, '');
+    location = uriToPath(location);
 
     loadFromLocation(location);
   };
 
-  var listDirectory = function (url, options, cb) {
-    if (typeof options === 'function')
-      cb = options, options = {};
-
-    var fail = function (err) { cb(err); };
-    window.resolveLocalFileSystemURL(url, function (entry) {
-      var reader = entry.createReader();
-      reader.readEntries(function (entries) {
-        var names = [];
-        each(entries, function (entry) {
-          if (! options.dirsOnly || entry.isDirectory)
-            names.push(entry.name);
-        });
-        cb(null, names);
-      }, fail);
-    }, fail);
-  };
-
-  var removeDirectory = function (url, cb) {
-    var fail = function (err) {
-      cb(err);
-    };
-    window.resolveLocalFileSystemURL(url, function (entry) {
-      entry.removeRecursively(function () { cb(); }, fail);
-    }, fail);
-  };
-
   var loadVersion = function (version, localPathPrefix) {
     var versionPrefix = localPathPrefix + version + '/';
-    var location = decodeURI(versionPrefix).replace(/^file:\/\//g, '')
+    var location = uriToPath(versionPrefix);
     loadFromLocation(location);
   };
 
@@ -131,31 +97,7 @@
         return;
       }
 
-      // Try to clean up our cache directory, make sure to scan the directory
-      // *before* loading the actual app. This ordering will prevent race
-      // conditions when the app code tries to download a new version before
-      // the old-cache removal has scanned the cache folder.
-      listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
-        loadVersion(version, localPathPrefix);
-
-        if (err) return;
-        each(names, function (name) {
-          // Skip the folder with the latest version
-          if (name === version)
-            return;
-
-          // remove everything else, as we don't want to keep too much cache
-          // around on disk
-          removeDirectory(localPathPrefix + name + '/', function (err) {
-            if (err) {
-              log('Failed to remove an old cache folder '
-                  + name + ':' + err.message);
-            } else {
-              log('Successfully removed an old cache folder ' + name);
-            }
-          });
-        });
-      });
+      loadVersion(version, localPathPrefix);
     });
   };
 

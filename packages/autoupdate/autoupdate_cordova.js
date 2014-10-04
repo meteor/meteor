@@ -73,16 +73,20 @@ var restartServer = function (location) {
 };
 
 var hasCalledReload = false;
+var updating = false;
+var localPathPrefix = null;
+
 var onNewVersion = function () {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + '__cordova';
-
-  var localPathPrefix = cordova.file.dataDirectory + 'meteor/';
   HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
       log('Failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
     }
+
+    updating = true;
+    ensureLocalPathPrefix();
 
     var program = res.data;
     var manifest = _.clone(program.manifest);
@@ -113,8 +117,7 @@ var onNewVersion = function () {
 
         // success! downloaded all sources and saved the manifest
         // save the version string for atomicity
-        writeFile(localPathPrefix, 'version', version,
-            function (err) {
+        writeFile(localPathPrefix, 'version', version, function (err) {
           if (err) {
             log("Failed to write version: " + err);
             return;
@@ -122,9 +125,7 @@ var onNewVersion = function () {
 
           // don't call reload twice!
           if (! hasCalledReload) {
-            // relative to 'bundle.app/www'
-            var location =
-              decodeURI(localPathPrefix + version).replace(/^file:\/\//, '');
+            var location = uriToPath(localPathPrefix + version);
             restartServer(location);
           }
         });
@@ -214,5 +215,78 @@ Autoupdate._retrySubscription = function () {
   }
 };
 
+Meteor.startup(function () {
+  clearAutoupdateCache(autoupdateVersionCordova);
+});
 Meteor.startup(Autoupdate._retrySubscription);
+
+
+// A helper that removes old directories left from previous autoupdates
+var clearAutoupdateCache = function (currentVersion) {
+  ensureLocalPathPrefix();
+  // Try to clean up our cache directory, make sure to scan the directory
+  // *before* loading the actual app. This ordering will prevent race
+  // conditions when the app code tries to download a new version before
+  // the old-cache removal has scanned the cache folder.
+  listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
+    // Couldn't get the list of dirs or risking to get into a race with an
+    // on-going update to disk.
+    if (err || updating) {
+      return;
+    }
+
+    _.each(names, function (name) {
+      // Skip the folder with the latest version
+      if (name === currentVersion)
+        return;
+
+      // remove everything else, as we don't want to keep too much cache
+      // around on disk
+      removeDirectory(localPathPrefix + name + '/', function (err) {
+        if (err) {
+          log('Failed to remove an old cache folder '
+              + name + ':' + err.message);
+        } else {
+          log('Successfully removed an old cache folder ' + name);
+        }
+      });
+    });
+  });
+};
+
+// Cordova File plugin helpers
+var listDirectory = function (url, options, cb) {
+  if (typeof options === 'function')
+    cb = options, options = {};
+
+  var fail = function (err) { cb(err); };
+  window.resolveLocalFileSystemURL(url, function (entry) {
+    var reader = entry.createReader();
+    reader.readEntries(function (entries) {
+      var names = [];
+      _.each(entries, function (entry) {
+        if (! options.dirsOnly || entry.isDirectory)
+          names.push(entry.name);
+      });
+      cb(null, names);
+    }, fail);
+  }, fail);
+};
+
+var removeDirectory = function (url, cb) {
+  var fail = function (err) {
+    cb(err);
+  };
+  window.resolveLocalFileSystemURL(url, function (entry) {
+    entry.removeRecursively(function () { cb(); }, fail);
+  }, fail);
+};
+
+var uriToPath = function (uri) {
+  return decodeURI(uri).replace(/^file:\/\//g, '');
+};
+
+var ensureLocalPathPrefix = function () {
+  localPathPrefix = localPathPrefix || cordova.file.dataDirectory + 'meteor/';
+};
 
