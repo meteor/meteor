@@ -127,14 +127,34 @@ selftest.define("parse url", function () {
 });
 
 selftest.define('get mobile server argument for meteor run', function () {
-  // meteor run -p 3000 => mobile server should be <detected ip>:3000
+  // on emulator
+
+  // meteor run -p 3000
+  // => mobile server should be localhost:3000
   selftest.expectEqual(utils.mobileServerForRun({
     port: "3000"
-  }), { host: utils.ipAddress(), port: "3000", protocol: "http://" });
+  }), { host: "localhost", port: "3000", protocol: "http://" });
 
-  // meteor run -p example.com:3000 => mobile server should be <detected ip>:3000
+  // meteor run -p example.com:3000
+  // => mobile server should be localhost:3000
   selftest.expectEqual(utils.mobileServerForRun({
     port: "example.com:3000"
+  }), { host: "localhost", port: "3000", protocol: "http://" });
+
+  // on device
+
+  // meteor run -p 3000 on device
+  // => mobile server should be <detected ip>:3000
+  selftest.expectEqual(utils.mobileServerForRun({
+    port: "3000",
+    args: ["ios-device"]
+  }), { host: utils.ipAddress(), port: "3000", protocol: "http://" });
+
+  // meteor run -p example.com:3000 on device
+  // => mobile server should be <detected ip>:3000
+  selftest.expectEqual(utils.mobileServerForRun({
+    port: "example.com:3000",
+    args: ["android-device"]
   }), { host: utils.ipAddress(), port: "3000", protocol: "http://" });
 
   // meteor run -p example.com:3000 --mobile-server 4000 => error, mobile

@@ -49,6 +49,7 @@ _.extend(RunCommand.prototype, {
     });
 
     self.process.on('error', function (err) {
+      Console.debug("Error while running command", err);
       self.exitError = err;
       self.exitFuture.isResolved() || self.exitFuture['throw'](err);
     });
