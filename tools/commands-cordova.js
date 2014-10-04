@@ -1987,9 +1987,12 @@ _.extend(Android.prototype, {
       log && Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
 
       fix && self.installAcceleration();
-      okay = fix;
+
+      // Not all systems can install the accelerator, so don't block
+      // XXX: Maybe we should block the emulator (only); it is unusable without it
+      //okay = fix;
     } else if (hasAcceleration === true) {
-      log && Console.info(Console.success("HAXM is installed"));
+      log && Console.info(Console.success("Android emulator acceleration is installed"));
     }
 
     if (!okay) return okay;
