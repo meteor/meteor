@@ -256,7 +256,7 @@ function doRunCommand (options) {
   }
 
   // If we are targeting the remote devices, warn about ports and same network
-  if (_.intersection(options.args, ['ios-device', 'android-device']).length) {
+  if (utils.runOnDevice(options)) {
     cordova.verboseLog('A run on a device requested');
     var warning = [
 "WARNING: You are testing your app on a remote device.",

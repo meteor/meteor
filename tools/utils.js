@@ -638,6 +638,12 @@ _.extend(exports.Patience.prototype, {
   }
 });
 
+// Are we running on device?
+exports.runOnDevice = function (options) {
+  return !! _.intersection(options.args,
+    ['ios-device', 'android-device']).length;
+};
+
 // Given the options for a 'meteor run' command, returns a parsed URL ({
 // host: *, protocol: *, port: * }. The rules for --mobile-server are:
 //   * If you don't specify anything for --mobile-server, then it
@@ -645,6 +651,12 @@ _.extend(exports.Patience.prototype, {
 //   * If you specify something for --mobile-server, we use that,
 //     defaulting to http:// as the protocol and 80 or 443 as the port.
 exports.mobileServerForRun = function (options) {
+  // we want to do different IP generation depending on whether we
+  // are running for a device or simulator
+  options = _.extend({}, options, {
+    runOnDevice: exports.runOnDevice(options)
+  });
+
   var parsedUrl = parseUrl(options.port);
   if (! parsedUrl.port) {
     throw new Error("--port must include a port.");
@@ -652,9 +664,26 @@ exports.mobileServerForRun = function (options) {
 
   // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
   var mobileServer = options["mobile-server"] || options["mobile-port"];
-  var parsedMobileServer;
 
-  if (! mobileServer) {
+
+  // if we specified a mobile server, use that
+
+  if (mobileServer) {
+    var parsedMobileServer = parseUrl(mobileServer, {
+      protocol: "http://"
+    });
+
+    if (! parsedMobileServer.host) {
+      throw new Error("--mobile-server must specify a hostname.");
+    }
+
+    return parsedMobileServer;
+  }
+
+
+  // if we are running on a device, use the auto-detected IP
+  
+  if (options.runOnDevice) {
     var myIp = ipAddress();
     if (! myIp) {
       throw new Error(
@@ -663,20 +692,19 @@ exports.mobileServerForRun = function (options) {
 "to with --mobile-server.");
     }
 
-    parsedMobileServer = {
+    return {
       host: myIp,
       port: parsedUrl.port,
       protocol: "http://"
     };
-  } else {
-    parsedMobileServer = parseUrl(mobileServer, {
-      protocol: "http://"
-    });
-
-    if (! parsedMobileServer.host) {
-      throw new Error("--mobile-server must specify a hostname.");
-    }
   }
 
-  return parsedMobileServer;
+
+  // we are running a simulator, use localhost:3000
+  
+  return {
+    host: "localhost",
+    port: parsedUrl.port,
+    protocol: "http://"
+  };
 };
