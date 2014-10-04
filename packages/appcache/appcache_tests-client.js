@@ -1,10 +1,7 @@
 var manifestUrl = '/app.manifest';
 
-var pathRegex = '[a-z0-9_@\\-^:\\?!#$%&+={}/\\[\\]\\.]+';
-var versionRegex = '[a-z0-9]+';
-
-var appcacheTest = function(cb) {
-  return function(test, next) {
+var appcacheTest = function(name, cb) {
+  Tinytest.addAsync('appcache - ' + name, function(test, next) {
     HTTP.get(manifestUrl, function (err, res) {
       if (err) {
         test.fail(err);
@@ -13,30 +10,50 @@ var appcacheTest = function(cb) {
       }
       next();
     });
-  };
+  });
 };
 
-Tinytest.addAsync('appcache - presence', appcacheTest(function(test, manifest) {
+
+// Verify that the code status of the HTTP response is "OK"
+appcacheTest('presence', function(test, manifest) {
   test.equal(manifest.statusCode, 200, 'manifest not served');
-}));
+});
 
-Tinytest.addAsync('appcache - content type',
-  appcacheTest(function(test, manifest) {
-    test.equal(manifest.headers['content-type'], 'text/cache-manifest');
-}));
 
-Tinytest.addAsync('appcache - validity', appcacheTest(function(test, manifest) {
+// Verify the content-type HTTP header
+appcacheTest('content type', function(test, manifest) {
+  test.equal(manifest.headers['content-type'], 'text/cache-manifest');
+});
+
+
+// Verify that each section header is only set once.
+appcacheTest('sections unicity', function(test, manifest) {
+  var content = manifest.content;
+  var sectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:', 'SETTINGS'];
+  _.each(sectionHeaders, function(sectionHeader) {
+    var globalSearch = new RegExp(sectionHeader, "g");
+    var matches = content.match(globalSearch) || [];
+    test.isTrue(matches.length <= 1, sectionHeader + ' is set twice');
+  });
+});
+
+
+// Verify the content of the header and of each section of the manifest using
+// regular expressions. Regular expressions matches malformed URIs but that's
+// not what we're trying to catch here (the user is free to add its own content
+// in the manifest -- even malformed).
+appcacheTest('sections validity', function(test, manifest) {
   var lines = manifest.content.split('\n');
   var i = 0;
   var currentRegex = null, line = null;
 
   var nextLine = function() {
     return lines[i++];
-  }
+  };
 
   var eof = function() {
     return i >= lines.length;
-  }
+  };
 
   var nextLineMatches = function(expected, n) {
     n = n || 1;
@@ -46,15 +63,10 @@ Tinytest.addAsync('appcache - validity', appcacheTest(function(test, manifest) {
     });
   };
 
-  var regExpConstructor = function(/* arguments */) {
-    var parts = ['^'].concat(_.toArray(arguments)).concat(['$']);
-    return new RegExp(parts.join(''), 'i');
-  };
-
   // Verify header validity
   nextLineMatches('CACHE MANIFEST');
   nextLineMatches('');
-  nextLineMatches(regExpConstructor('# ', versionRegex), 2);
+  nextLineMatches(/^# [a-z0-9]+$/i, 2);
 
 
   // Verify body validity
@@ -65,12 +77,13 @@ Tinytest.addAsync('appcache - validity', appcacheTest(function(test, manifest) {
     // A section start with its name suffixed by a colon. When we read a new
     // section header, we update the currentRegex expression for the next lines
     // of the section.
-    // XXX There is also a 'SETTINGS' section, not used by this package.
+    // XXX There is also a 'SETTINGS' section, not used by this package. If this
+    // section is used, the test will fail.
     if (line === 'CACHE:' || line === 'NETWORK:')
-      currentRegex = regExpConstructor(pathRegex);
+      currentRegex = /^\S+$/;
 
     else if (line === 'FALLBACK:')
-      currentRegex = regExpConstructor(pathRegex, ' ', pathRegex);
+      currentRegex = /^\S+ \S+$/;
 
     // Blank lines and lines starting with a `#` (comments) are valid
     else if (line == '' || line.match(/^#.+/))
@@ -89,4 +102,37 @@ Tinytest.addAsync('appcache - validity', appcacheTest(function(test, manifest) {
     else
       test.matches(line, currentRegex, 'line ' + i);
   }
-}));
+});
+
+
+// Verify that resources declared on the server with the `onlineOnly` parameter
+// are present in the network section of the manifest. The `appcache` package
+// also automatically add the manifest (`app.manifest`) add the star symbol to
+// this list and therefore we also check the presence of these two elements.
+appcacheTest('network section content', function(test, manifest) {
+  var shouldBePresentInNetworkSection = [
+    "/app.manifest",
+    "/online/",
+    "/bigimage.jpg",
+    "/largedata.json",
+    "*"
+  ];
+  var lines = manifest.content.split('\n');
+  var startNetworkSection = lines.indexOf('NETWORK:');
+
+  // We search the end of the 'NETWORK:' section by looking at the beginning
+  // of any potential other section. By default we set this value to
+  // `lines.length - 1` which is the index of the last line.
+  var otherSections = ['CACHE:', 'FALLBACK:', 'SETTINGS'];
+  var endNetworkSection = _.reduce(otherSections, function(min, sectionName) {
+    var position = lines.indexOf(sectionName);
+    return position > startNetworkSection && position < min ? position : min;
+  }, lines.length - 1);
+
+  // We remove the first line because it's the 'NETWORK:' header line.
+  var networkLines = lines.slice(startNetworkSection + 1, endNetworkSection);
+
+  _.each(shouldBePresentInNetworkSection, function(item) {
+    test.include(networkLines, item);
+  });
+});
