@@ -423,11 +423,11 @@ var checkRequestedPlatforms = function (platforms) {
 
   var cordovaPlatforms = project.getCordovaPlatforms();
   _.each(requestedPlatforms, function (platform) {
-    if (! _.contains(cordovaPlatforms, platform))
-      throw new Error(platform +
-": platform is not added to the project.\n" +
-"Try 'meteor add-platform " + platform + "' to add it or\n" +
-"'meteor help add-platform' for help.");
+    if (! _.contains(cordovaPlatforms, platform)) {
+      Console.warn("Platform is not added to the project: " + platform);
+      Console.info("Try 'meteor add-platform " + platform + "'");
+      throw new main.ExitWithCode(1);
+    }
   });
 };
 
@@ -1058,7 +1058,6 @@ var checkAgreePlatformTerms = function (platform, name) {
   Console.stdout.write("The following terms apply to " + name + ":\n\n");
   Console.stdout.write(terms + "\n\n");
   Console.stdout.write("You must agree to the terms to proceed.\n");
-  Console.stdout.write("Do you agree (Y/n)? ");
 
   var agreed = false;
 
@@ -1075,12 +1074,13 @@ var checkAgreePlatformTerms = function (platform, name) {
   return agreed;
 };
 
-var checkPlatformRequirements = function (platform) {
+var checkPlatformRequirements = function (platform, options) {
+  options = _.extend({ fix: false, log: false }, options);
   if (platform == 'android') {
-    return Android.checkRequirements({ fix: false, log: false });
+    return Android.checkRequirements(options);
   }
   if (platform == 'ios') {
-    return IOS.checkRequirements({ fix: false, log: false });
+    return IOS.checkRequirements(options);
   }
   return true;
 };
@@ -1089,7 +1089,7 @@ var requirePlatformReady = function (platform) {
   try {
     var ok = checkPlatformRequirements(platform);
     if (!ok) {
-      Console.warn("Platform is not installed; please run: 'meteor " + platform + " --getready'");
+      Console.warn("Platform is not installed; please run: 'meteor install-sdk " + platform + "'");
       throw new main.ExitWithCode(2);
     }
   } catch (err) {
@@ -1623,8 +1623,17 @@ _.extend(Android.prototype, {
       return found;
     }
 
-    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
+    if (Host.isLinux()) {
+      var stat = files.statOrNull("/dev/kvm");
+      if (stat != null) {
+        Console.debug("Found /dev/kvm");
+      } else {
+        Console.debug("/dev/kvm not found");
+      }
+      return stat != null;
+    }
 
+    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
     return undefined;
   },
 
@@ -1648,7 +1657,14 @@ _.extend(Android.prototype, {
       Console.info("Launching HAXM installer; we recommend allocating 1024MB of RAM (or more)");
       files.run('open', filepath);
 
-      return true;
+      return;
+    }
+
+    if (Host.isLinux()) {
+      // KVM should be enabled by default, if supported, on most modern distros?
+      Console.info("Please enable KVM, for faster Android emulation");
+
+      return;
     }
 
     throw new Error("Can't install acceleration for unknown host: " + archinfo.host());
@@ -1863,9 +1879,7 @@ _.extend(Android.prototype, {
           Console.info("You will also need some 32-bit libraries:");
           Console.info("  sudo apt-get install --yes lib32z1 lib32stdc++6");
         }
-      }
-
-      if (Host.hasYum()) {
+      } else if (Host.hasYum()) {
         Console.info("You can install the JDK using:");
         Console.info("  sudo yum install -y java-1.7.0-openjdk-devel");
 
@@ -1874,6 +1888,9 @@ _.extend(Android.prototype, {
           Console.info("You will also need some 32-bit libraries:");
           Console.info("  sudo yum install -y glibc.i686 zlib.i686 libstdc++.i686 ncurses-libs.i686");
         }
+      } else {
+        Console.warn("You should install the JDK; we don't have instructions for your distibution (sorry!)");
+        Console.info("Please do submit the instructions so we can include them.")
       }
 
       return;
@@ -1992,9 +2009,12 @@ _.extend(Android.prototype, {
       log && Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
 
       fix && self.installAcceleration();
-      okay = fix;
+
+      // Not all systems can install the accelerator, so don't block
+      // XXX: Maybe we should block the emulator (only); it is unusable without it
+      //okay = fix;
     } else if (hasAcceleration === true) {
-      log && Console.info(Console.success("HAXM is installed"));
+      log && Console.info(Console.success("Android emulator acceleration is installed"));
     }
 
     if (!okay) return okay;
@@ -2050,9 +2070,11 @@ main.registerCommand({
   },
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  pretty: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
+  Console.setVerbose(options.verbose);
 
   var platforms = options.args;
   var currentPlatforms = project.getPlatforms();
@@ -2081,6 +2103,7 @@ main.registerCommand({
       return checkAgreePlatformTerms(platform, "the " + platform + " platform");
     });
     if (!agreed) {
+      Console.warn("Could not add platform: you must agree to the terms");
       return 2;
     }
   } catch (err) {
@@ -2090,19 +2113,21 @@ main.registerCommand({
     return 1;
   }
 
-  project.addCordovaPlatforms(platforms);
+  buildmessage.enterJob({ title: 'Adding platforms' }, function () {
+    project.addCordovaPlatforms(platforms);
 
-  if (platforms.length) {
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
+    if (platforms.length) {
+      var localPath = path.join(options.appDir, '.meteor', 'local');
+      files.mkdir_p(localPath);
 
-    var appName = path.basename(options.appDir);
-    ensureCordovaProject(localPath, appName);
-    ensureCordovaPlatforms(localPath);
-  }
+      var appName = path.basename(options.appDir);
+      ensureCordovaProject(localPath, appName);
+      ensureCordovaPlatforms(localPath);
+    }
+  });
 
   _.each(platforms, function (platform) {
-    Console.stdout.write("added platform " + platform + "\n");
+    Console.info("added platform " + platform);
   });
 });
 
@@ -2207,54 +2232,41 @@ main.registerCommand({
   return 0;
 });
 
-
 main.registerCommand({
-  name: "android",
+  name: "install-sdk",
   pretty: true,
   options: {
-    verbose: { type: Boolean, short: "v" },
-    getready: { type: Boolean }
+    verbose: { type: Boolean, short: "v" }
   },
-  minArgs: 0,
-  maxArgs: Infinity
+  minArgs: 1,
+  maxArgs: 1
 }, function (options) {
   Console.setVerbose(options.verbose);
-  
-  if (options.getready) {
-    var okay = Android.checkRequirements({ log: true, fix: true});
-    if (!okay) {
-      Console.warn("Android requirements not yet met");
-    }
+
+  var platform = options.args[0];
+  platform = platform.trim().toLowerCase();
+
+  if (platform != "android" && platform != "ios") {
+    Console.warn("Unknown platform: " + platform);
+    Console.info("Valid platforms are: android, ios");
+    return 1;
   }
 
-  var args = options.args || [];
-  if (args.length) {
-    var arg = args[0];
-    if (arg == "adb") {
-      Android.runAdb(args.slice(1), { pipeOutput: true, detached: true, stdio: 'inherit' });
-    }
+  var okay = checkPlatformRequirements(platform, { log:true, fix: true} );
+  if (!okay) {
+    Console.warn("Platform requirements not yet met");
+    return 1;
   }
+
+  //var args = options.args || [];
+  //if (args.length) {
+  //  var arg = args[0];
+  //  if (arg == "adb") {
+  //    Android.runAdb(args.slice(1), { pipeOutput: true, detached: true, stdio: 'inherit' });
+  //  }
+  //}
 
   return 0;
 });
 
 
-main.registerCommand({
-  name: "ios",
-  pretty: true,
-  options: {
-    verbose: { type: Boolean, short: "v" },
-    getready: { type: Boolean }
-  },
-  minArgs: 0,
-  maxArgs: Infinity
-}, function (options) {
-  if (options.getready) {
-    var okay = IOS.checkRequirements({ log: true, fix: true});
-    if (!okay) {
-      Console.warn("iOS requirements not yet met");
-    }
-  }
-
-  return 0;
-});
