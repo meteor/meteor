@@ -633,24 +633,27 @@ var ensureCordovaPlugins = function (localPath, options) {
       files.rm_recursive(path.join(cordovaPath, 'platforms'));
       ensureCordovaPlatforms(localPath);
     };
-    Console.stdout.write("Initializing Cordova plugins...\n");
-    uninstallAllPlugins();
+    Console.info("Initializing Cordova plugins...");
 
-    // Now install all of the plugins.
-    try {
-      // XXX: forkJoin with parallel false?
-      _.each(plugins, function (version, name) {
-        buildmessage.enterJob({ title: 'Installing Cordova plugin ' + name}, function () {
-          installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
-        });
-      });
-    } catch (err) {
-      // If a plugin fails to install, then remove all plugins and throw the
-      // error. Cordova doesn't remove the plugin by default for some reason.
-      // XXX don't throw and improve this error message.
+    buildmessage.enterJob({ title: "Initializing Cordova plugins..."}, function () {
       uninstallAllPlugins();
-      throw err;
-    }
+
+      // Now install all of the plugins.
+      try {
+        // XXX: forkJoin with parallel false?
+        _.each(plugins, function (version, name) {
+          buildmessage.enterJob({ title: 'Installing Cordova plugin ' + name}, function () {
+            installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
+          });
+        });
+      } catch (err) {
+        // If a plugin fails to install, then remove all plugins and throw the
+        // error. Cordova doesn't remove the plugin by default for some reason.
+        // XXX don't throw and improve this error message.
+        uninstallAllPlugins();
+        throw err;
+      }
+    });
   }
 };
 
