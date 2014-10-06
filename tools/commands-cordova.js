@@ -423,11 +423,11 @@ var checkRequestedPlatforms = function (platforms) {
 
   var cordovaPlatforms = project.getCordovaPlatforms();
   _.each(requestedPlatforms, function (platform) {
-    if (! _.contains(cordovaPlatforms, platform))
-      throw new Error(platform +
-": platform is not added to the project.\n" +
-"Try 'meteor add-platform " + platform + "' to add it or\n" +
-"'meteor help add-platform' for help.");
+    if (! _.contains(cordovaPlatforms, platform)) {
+      Console.warn("Platform is not added to the project: " + platform);
+      Console.info("Try 'meteor add-platform " + platform + "'");
+      throw new main.ExitWithCode(1);
+    }
   });
 };
 
