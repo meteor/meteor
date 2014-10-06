@@ -265,13 +265,6 @@ function doRunCommand (options) {
 "         configuration allows clients to talk to each other",
 "         (no client isolation)."];
 
-    if (! options["mobile-server"]) {
-      warning = warning.concat(["",
-"         You can pass the host and the port in the --mobile-server argument.",
-"         For example: --mobile-server " +
-  utils.ipAddress() + ":" + parsedUrl.port + "\n\n"]);
-    }
-
     Console.stderr.write(warning.join("\n"));
   }
 
