@@ -1435,7 +1435,10 @@ var runTests = function (options) {
     testState = { version: 1, lastPassedHashes: {} };
   var currentHashes = {};
 
-  // _.keys(skipCounts) is the set of tags to skip
+  // _.keys(skipCounts) is the set of tags to skip.
+  // skipCounts also holds counts of tests skipped for other reasons
+  // (like not matching the test regex) and is used for printing
+  // messages about how many tests were skipped.
   var skipCounts = {};
   if (! files.inCheckout())
     skipCounts['checkout'] = 0;
@@ -1461,7 +1464,7 @@ var runTests = function (options) {
     tests = _.filter(tests, function (test) {
       return test.fileHash !== testState.lastPassedHashes[test.file];
     });
-    skipCounts.unchanged = lengthBeforeOnlyChanged - tests.length;
+    skipCounts['unchanged'] = lengthBeforeOnlyChanged - tests.length;
   }
 
   var failuresInFile = {};
@@ -1569,10 +1572,10 @@ var runTests = function (options) {
   if (totalRun > 0)
     process.stderr.write("\n");
 
-  var totalSkipCount = 0;
+  var skippedSome = false;
   _.each(skipCounts, function (count, tag) {
-    totalSkipCount += count;
     if (count) {
+      skippedSome = true;
       process.stderr.write("Skipped " + count + " " + tag + " test" +
                            (count > 1 ? "s" : "") + " (" +
                            tagDescriptions[tag] + ")\n");
@@ -1584,7 +1587,7 @@ var runTests = function (options) {
     return 0;
   } else if (failureCount === 0) {
     var disclaimers = '';
-    if (totalSkipCount > 0)
+    if (skippedSome)
       disclaimers += " other";
     process.stderr.write("All" + disclaimers + " tests passed.\n");
     return 0;
