@@ -1058,7 +1058,6 @@ var checkAgreePlatformTerms = function (platform, name) {
   Console.stdout.write("The following terms apply to " + name + ":\n\n");
   Console.stdout.write(terms + "\n\n");
   Console.stdout.write("You must agree to the terms to proceed.\n");
-  Console.stdout.write("Do you agree (Y/n)? ");
 
   var agreed = false;
 
@@ -2066,9 +2065,11 @@ main.registerCommand({
   },
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  pretty: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
+  Console.setVerbose(options.verbose);
 
   var platforms = options.args;
   var currentPlatforms = project.getPlatforms();
@@ -2097,6 +2098,7 @@ main.registerCommand({
       return checkAgreePlatformTerms(platform, "the " + platform + " platform");
     });
     if (!agreed) {
+      Console.warn("Could not add platform: you must agree to the terms");
       return 2;
     }
   } catch (err) {
@@ -2106,19 +2108,21 @@ main.registerCommand({
     return 1;
   }
 
-  project.addCordovaPlatforms(platforms);
+  buildmessage.enterJob({ title: 'Adding platforms' }, function () {
+    project.addCordovaPlatforms(platforms);
 
-  if (platforms.length) {
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
+    if (platforms.length) {
+      var localPath = path.join(options.appDir, '.meteor', 'local');
+      files.mkdir_p(localPath);
 
-    var appName = path.basename(options.appDir);
-    ensureCordovaProject(localPath, appName);
-    ensureCordovaPlatforms(localPath);
-  }
+      var appName = path.basename(options.appDir);
+      ensureCordovaProject(localPath, appName);
+      ensureCordovaPlatforms(localPath);
+    }
+  });
 
   _.each(platforms, function (platform) {
-    Console.stdout.write("added platform " + platform + "\n");
+    Console.info("added platform " + platform);
   });
 });
 
