@@ -1075,12 +1075,13 @@ var checkAgreePlatformTerms = function (platform, name) {
   return agreed;
 };
 
-var checkPlatformRequirements = function (platform) {
+var checkPlatformRequirements = function (platform, options) {
+  options = _.extend({ fix: false, log: false }, options);
   if (platform == 'android') {
-    return Android.checkRequirements({ fix: false, log: false });
+    return Android.checkRequirements(options);
   }
   if (platform == 'ios') {
-    return IOS.checkRequirements({ fix: false, log: false });
+    return IOS.checkRequirements(options);
   }
   return true;
 };
@@ -1089,7 +1090,7 @@ var requirePlatformReady = function (platform) {
   try {
     var ok = checkPlatformRequirements(platform);
     if (!ok) {
-      Console.warn("Platform is not installed; please run: 'meteor " + platform + " --getready'");
+      Console.warn("Platform is not installed; please run: 'meteor install-sdk " + platform + "'");
       throw new main.ExitWithCode(2);
     }
   } catch (err) {
@@ -2222,54 +2223,41 @@ main.registerCommand({
   return 0;
 });
 
-
 main.registerCommand({
-  name: "android",
+  name: "install-sdk",
   pretty: true,
   options: {
-    verbose: { type: Boolean, short: "v" },
-    getready: { type: Boolean }
+    verbose: { type: Boolean, short: "v" }
   },
-  minArgs: 0,
-  maxArgs: Infinity
+  minArgs: 1,
+  maxArgs: 1
 }, function (options) {
   Console.setVerbose(options.verbose);
-  
-  if (options.getready) {
-    var okay = Android.checkRequirements({ log: true, fix: true});
-    if (!okay) {
-      Console.warn("Android requirements not yet met");
-    }
+
+  var platform = options.args[0];
+  platform = platform.trim().toLowerCase();
+
+  if (platform != "android" && platform != "ios") {
+    Console.warn("Unknown platform: " + platform);
+    Console.info("Valid platforms are: android, ios");
+    return 1;
   }
 
-  var args = options.args || [];
-  if (args.length) {
-    var arg = args[0];
-    if (arg == "adb") {
-      Android.runAdb(args.slice(1), { pipeOutput: true, detached: true, stdio: 'inherit' });
-    }
+  var okay = checkPlatformRequirements(platform, { log:true, fix: true} );
+  if (!okay) {
+    Console.warn("Platform requirements not yet met");
+    return 1;
   }
+
+  //var args = options.args || [];
+  //if (args.length) {
+  //  var arg = args[0];
+  //  if (arg == "adb") {
+  //    Android.runAdb(args.slice(1), { pipeOutput: true, detached: true, stdio: 'inherit' });
+  //  }
+  //}
 
   return 0;
 });
 
 
-main.registerCommand({
-  name: "ios",
-  pretty: true,
-  options: {
-    verbose: { type: Boolean, short: "v" },
-    getready: { type: Boolean }
-  },
-  minArgs: 0,
-  maxArgs: Infinity
-}, function (options) {
-  if (options.getready) {
-    var okay = IOS.checkRequirements({ log: true, fix: true});
-    if (!okay) {
-      Console.warn("iOS requirements not yet met");
-    }
-  }
-
-  return 0;
-});
