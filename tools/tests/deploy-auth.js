@@ -111,7 +111,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // deploy to the legacy app.
   var run = sandbox.run('deploy', noPasswordLegacyApp);
   run.waitSecs(90);
-  run.match('Now serving at ' + noPasswordLegacyApp);
+  run.match('Now serving at http://' + noPasswordLegacyApp);
   run.expectExit(0);
   // And we should have claimed the app by deploying to it.
   run = sandbox.run('claim', noPasswordLegacyApp);
@@ -141,7 +141,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   run.expectExit(0);
   run = sandbox.run('deploy', passwordLegacyApp);
   run.waitSecs(90);
-  run.match('Now serving at ' + passwordLegacyApp);
+  run.match('Now serving at http://' + passwordLegacyApp);
   run.expectExit(0);
   // Clean up
   testUtils.cleanUpApp(sandbox, passwordLegacyApp);
@@ -193,7 +193,7 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.matchErr('Password:');
   run.write('testtest\n');
   run.waitSecs(90);
-  run.match('Now serving at ' + appName);
+  run.match('Now serving at http://' + appName);
   run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
 
