@@ -425,7 +425,15 @@ var checkRequestedPlatforms = function (platforms) {
   _.each(requestedPlatforms, function (platform) {
     if (! _.contains(cordovaPlatforms, platform)) {
       Console.warn("Platform is not added to the project: " + platform);
-      Console.info("Try 'meteor add-platform " + platform + "'");
+
+      var sdkInstalled = checkPlatformRequirements(platform);
+      if (!sdkInstalled) {
+        Console.info("First install the SDK by running: 'meteor install-sdk " + platform + "'");
+        Console.info("Then run: 'meteor add-platform " + platform + "'");
+      } else {
+        Console.info("Run: 'meteor add-platform " + platform + "'");
+      }
+
       throw new main.ExitWithCode(1);
     }
   });
