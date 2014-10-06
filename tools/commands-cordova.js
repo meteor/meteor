@@ -428,10 +428,10 @@ var checkRequestedPlatforms = function (platforms) {
 
       var sdkInstalled = checkPlatformRequirements(platform);
       if (!sdkInstalled) {
-        Console.info("First install the SDK by running: 'meteor install-sdk " + platform + "'");
-        Console.info("Then run: 'meteor add-platform " + platform + "'");
+        Console.info("First install the SDK by running: " + Console.bold("meteor install-sdk " + platform));
+        Console.info("Then run: " + Console.bold("meteor add-platform " + platform));
       } else {
-        Console.info("Run: 'meteor add-platform " + platform + "'");
+        Console.info("Run: " + Console.bold("meteor add-platform " + platform));
       }
 
       throw new main.ExitWithCode(1);
@@ -1100,7 +1100,7 @@ var requirePlatformReady = function (platform) {
   try {
     var ok = checkPlatformRequirements(platform);
     if (!ok) {
-      Console.warn("Platform is not installed; please run: 'meteor install-sdk " + platform + "'");
+      Console.warn("Platform is not installed; please run: " + Console.bold("meteor install-sdk " + platform));
       throw new main.ExitWithCode(2);
     }
   } catch (err) {

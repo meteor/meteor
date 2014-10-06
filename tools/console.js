@@ -326,6 +326,15 @@ _.extend(Console.prototype, {
     return chalk.red('\u2717 ' + message);
   },
 
+  bold: function (message) {
+    var self = this;
+
+    if (!self._pretty) {
+      return message;
+    }
+    return chalk.bold(message);
+  },
+
   _clearStatusMessage: function () {
     var self = this;
     // For the non-progress-bar status mode, we may need to
