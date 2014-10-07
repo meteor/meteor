@@ -4,21 +4,39 @@ Session.setDefault(MENU_KEY, false);
 var USER_MENU_KEY = 'userMenuOpen';
 Session.setDefault(USER_MENU_KEY, false);
 
-Template.appBody.rendered = function() {
+var SHOW_CONNECTION_ISSUE_KEY = 'showConnectionIssue';
+Session.setDefault(SHOW_CONNECTION_ISSUE_KEY, false);
+
+var CONNECTION_ISSUE_TIMEOUT = 1000;
+
+Meteor.startup(function () {
   if (Meteor.isCordova) {
     // set up a swipe left / right handler
-    this.hammer = new Hammer(this.find('#container'));
-    this.hammer.on('swipeleft swiperight', function(event) {
-      if (event.gesture.direction === 'right') {
-        Session.set(MENU_KEY, true);
-      } else if (event.gesture.direction === 'left') {
-        Session.set(MENU_KEY, false);
-      }
+    var hammer = new Hammer.Manager(document.body);
+
+    hammer.add(new Hammer.Swipe({
+      velocity: 0.1
+    }));
+
+    hammer.on('swipeleft', function () {
+      Session.set(MENU_KEY, false);
+    });
+
+    hammer.on('swiperight', function () {
+      Session.set(MENU_KEY, true);
     });
   }
-  
+
+  // Don't show the connection error box unless we haven't connected within
+  // 1 second of app starting
+  setTimeout(function () {
+    Session.set(SHOW_CONNECTION_ISSUE_KEY, true);
+  }, CONNECTION_ISSUE_TIMEOUT);
+});
+
+Template.appBody.rendered = function() {
   this.find('#content-container')._uihooks = {
-    insertElement: function(node, next) {;
+    insertElement: function(node, next) {
       $(node)
         .hide()
         .insertBefore(next)
@@ -68,7 +86,11 @@ Template.appBody.helpers({
     }
   },
   connected: function() {
-    return Meteor.status().connected;
+    if (Session.get(SHOW_CONNECTION_ISSUE_KEY)) {
+      return Meteor.status().connected;
+    } else {
+      return true;
+    }
   }
 });
 

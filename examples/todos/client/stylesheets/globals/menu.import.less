@@ -85,6 +85,11 @@
         color: @color-empty;
         .count-list { background: @color-primary; }
       }
+
+      .cordova &:hover {
+        // Prevent hover states from being noticeable on Cordova apps
+        color: rgba(255,255,255,.4);
+      }
     }
   }
 }
