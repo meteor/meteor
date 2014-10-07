@@ -1409,7 +1409,8 @@ var tagDescriptions = {
   // these last two are pseudo-tags, assigned to tests when you specify
   // --changed or a regex pattern
   unchanged: 'unchanged since last pass',
-  'non-matching': "don't match specified pattern"
+  'non-matching': "don't match specified pattern",
+  'in other files': ""
 };
 
 var getFilteredTests = function (options) {
@@ -1424,7 +1425,9 @@ var getFilteredTests = function (options) {
     allTests = allTests.map(function (test) {
       var newTags = [];
 
-      if (options.testRegexp && ! options.testRegexp.test(test.name)) {
+      if (options.inFile && test.file !== options.inFile) {
+        newTags.push('in other files');
+      } else if (options.testRegexp && ! options.testRegexp.test(test.name)) {
         newTags.push('non-matching');
       } else if (options.onlyChanged &&
                  test.fileHash === testState.lastPassedHashes[test.file]) {
@@ -1441,6 +1444,9 @@ var getFilteredTests = function (options) {
 
   // (order of tags is significant to the "skip counts" that are displayed)
   var tagsToSkip = [];
+  if (options.inFile) {
+    tagsToSkip.push('in other files');
+  }
   if (options.testRegexp) {
     tagsToSkip.push('non-matching');
   }
@@ -1528,9 +1534,14 @@ TestList.prototype.generateSkipReport = function () {
   _.each(self.skippedTags, function (tag) {
     var count = self.skipCounts[tag];
     if (count) {
-      result += ("Skipped " + count + " " + tag + " test" +
-                 (count > 1 ? "s" : "") + " (" +
-                 tagDescriptions[tag] + ")\n");
+      var noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
+      // "non-matching tests" or "tests in other files"
+      var nounPhrase = (/ /.test(tag) ?
+                        (noun + " " + tag) : (tag + " " + noun));
+      // " (foo)" or ""
+      var parenthetical = (tagDescriptions[tag] ? " (" +
+                           tagDescriptions[tag] + ")" : '');
+      result += ("Skipped " + count + " " + nounPhrase + parenthetical + '\n');
     }
   });
 

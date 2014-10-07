@@ -1709,7 +1709,8 @@ main.registerCommand({
     slow: { type: Boolean },
     browserstack: { type: Boolean },
     history: { type: Number },
-    list: { type: Boolean }
+    list: { type: Boolean },
+    file: { type: String }
   },
   hidden: true
 }, function (options) {
@@ -1743,7 +1744,8 @@ main.registerCommand({
       onlyChanged: options.changed,
       offline: offline,
       includeSlowTests: options.slow,
-      testRegexp: testRegexp
+      testRegexp: testRegexp,
+      inFile: options.file
     });
 
     return 0;
@@ -1759,7 +1761,8 @@ main.registerCommand({
     includeSlowTests: options.slow,
     historyLines: options.history,
     clients: clients,
-    testRegexp: testRegexp
+    testRegexp: testRegexp,
+    inFile: options.file
   });
 
 });
