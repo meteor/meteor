@@ -749,6 +749,7 @@ var buildCommand = function (options) {
       files.cp_r(buildPath, path.join(platformPath, 'project'));
       fs.writeFileSync(
         path.join(platformPath, 'README'),
+        "This is an auto-generated XCode project for your iOS application.\n\n" +
         "Instructions for publishing your iOS app to App Store can be found at:\n" +
           "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
         "utf8");
@@ -758,6 +759,7 @@ var buildCommand = function (options) {
       files.copyFile(apkPath, path.join(platformPath, 'unaligned.apk'));
       fs.writeFileSync(
         path.join(platformPath, 'README'),
+        "This is an auto-generated Ant project for your Android application.\n\n" +
         "Instructions for publishing your Android app to Play Store can be found at:\n" +
           "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
         "utf8");
