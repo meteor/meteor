@@ -1708,7 +1708,8 @@ main.registerCommand({
     'force-online': { type: Boolean },
     slow: { type: Boolean },
     browserstack: { type: Boolean },
-    history: { type: Number }
+    history: { type: Number },
+    list: { type: Boolean }
   },
   hidden: true
 }, function (options) {
@@ -1735,6 +1736,17 @@ main.registerCommand({
       Console.stderr.write("Bad regular expression: " + options.args[0] + "\n");
       return 1;
     }
+  }
+
+  if (options.list) {
+    selftest.listTests({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      testRegexp: testRegexp
+    });
+
+    return 0;
   }
 
   var clients = {
