@@ -349,6 +349,9 @@ var springboard = function (rel, releaseOverride) {
 
   // XXX split better
   try {
+    Console.setPretty(true);
+    Console.enableProgressBar(true);
+
     var messages = buildmessage.capture({
       title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
     }, function () {
@@ -359,6 +362,9 @@ var springboard = function (rel, releaseOverride) {
         definitelyNotLocal: true
       });
     });
+
+    Console.setPretty(false);
+    Console.enableProgressBar(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.

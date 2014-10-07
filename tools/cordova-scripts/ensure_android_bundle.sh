@@ -15,7 +15,7 @@ fi
 # import all the environment
 source "$(dirname "$0")/common_env.sh"
 
-"$(dirname "$0")/ensure_android_prereqs.sh"
+#"$(dirname "$0")/ensure_android_prereqs.sh"
 
 cd "$ORIG_DIR"
 

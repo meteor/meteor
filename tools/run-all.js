@@ -373,7 +373,7 @@ exports.run = function (appDir, options) {
     process.stderr.write(
 "Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
 ".\n" +
-"Restart meteor to use the new release.");
+"Restart meteor to use the new release.\n");
     return 254;
   }
 

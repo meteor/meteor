@@ -106,9 +106,23 @@ var Project = function () {
   // to tell the user that we are adding packages to an app during
   // test-packages.  (We still print other messages like packages downloading.)
   self.muted = false;
+
+  // If we are building this app in debug mode -- either because we are bundling
+  // for debug, or because we are running in terminal without the production
+  // flag, then we should include debug packages and build everything that we
+  // build as part of the app with debug build. Otherwise, don't.
+  self.includeDebug = true;
 };
 
 _.extend(Project.prototype, {
+  setDebug: function (debug) {
+    var self = this;
+    self._ensureDepsUpToDate();
+    if (self.includeDebug !== debug) {
+      self.includeDebug = debug;
+      self._generatePackageLoader();
+    }
+  },
 
   // Sets the mute flag on the project. Muted projects don't print out non-error
   // output.
@@ -160,9 +174,9 @@ _.extend(Project.prototype, {
     self.viableDepSource = true;
   },
 
-  // Rereads all the on-disk files by reinitalizing the project with the same directory.
-  // Caches the old versions, in case we were running with --release (and they don't
-  // match the ones on disk).
+  // Rereads all the on-disk files by reinitalizing the project with the same
+  // directory.  Caches the old versions, in case we were running with --release
+  // (and they don't match the ones on disk).
   //
   // We don't automatically reinitialize this singleton when an app is
   // restarted, but an app restart is very likely caused by changes to our
@@ -197,9 +211,9 @@ _.extend(Project.prototype, {
 
     if (!self._depsUpToDate) {
 
-      // We are calculating this project's dependencies, so we obviously should not
-      // use it as a source of version locks (unless specified explicitly through
-      // previousVersions).
+      // We are calculating this project's dependencies, so we obviously should
+      // not use it as a source of version locks (unless specified explicitly
+      // through previousVersions).
       self.viableDepSource = false;
 
       // Use current release to calculate packages & combined constraints.
@@ -241,15 +255,43 @@ _.extend(Project.prototype, {
         process.exit(1);
       }
 
-      // Finally, initialize the package loader.
-      self.packageLoader = new packageLoader.PackageLoader({
-        versions: newVersions,
-        catalog: catalog.complete
-      });
+      // We have successfully set our versions, so let's generate the package
+      // loader.
+      self._generatePackageLoader();
 
       // We are done!
       self._depsUpToDate = true;
       self.viableDepSource = true;
+    }
+  },
+
+  // Given a set of versions and combined constraints, generate a package loader
+  // for this project.
+  //
+  // This is part of _ensureDepsUpToDate. Assumes that VERSIONS HAVE BEEN
+  // GENERATED. If you are not sure if your project is up to date before you
+  // call this function, call _ensureUpToDate first.
+  _generatePackageLoader: function () {
+    var self = this;
+    // Finally, initialize the package loader. If we are building for prod, we
+    // are going to not load debug packages, so filter that out here.
+    if (self.includeDebug) {
+      self.packageLoader = new packageLoader.PackageLoader({
+        versions: self.dependencies,
+        catalog: catalog.complete,
+        excluded: {}
+      });
+    } else {
+      var prodVersions =
+            catalog.complete.separateOutDebugDeps(
+              _.pluck(self.combinedConstraints, 'name'),
+              self.dependencies);
+
+      self.packageLoader = new packageLoader.PackageLoader({
+        versions: prodVersions.versions,
+        catalog: catalog.complete,
+        excluded: prodVersions.excluded
+      });
     }
   },
 

@@ -111,6 +111,16 @@ cordova.filterPackages = function (packages) {
   return ret;
 };
 
+// used by packages commands
+cordova.checkIsValidPlugin = function (name) {
+  var pluginHash = {};
+  pluginHash[name.split('@')[0]] = name.split('@')[1];
+
+  // check that every plugin is specifying either an exact constraint or a
+  // tarball url with sha
+  utils.ensureOnlyExactVersions(pluginHash);
+};
+
 // --- helpers ---
 
 var localCordova = path.join(files.getCurrentToolsDir(),
@@ -854,8 +864,15 @@ _.extend(CordovaRunner.prototype, {
     var self = this;
 
     // android, not android-device
-    if (self.platformName == 'android') {
+    if (self.platformName === 'android') {
       Android.waitForEmulator();
+    }
+
+    if (self.platformName === 'ios') {
+      // Kill the running simulator before starting one to avoid a black-screen
+      // bug that happens when you deploy an app to emulator while it is running
+      // a previous version of it.
+      IOS.killSimulator();
     }
 
     execCordovaOnPlatform(self.localPath,
@@ -1107,7 +1124,7 @@ var checkAgreePlatformTerms = function (platform, name) {
 };
 
 var checkPlatformRequirements = function (platform, options) {
-  options = _.extend({fix: false, log: false}, options);
+  options = _.extend({log: false, fix: false, fixConsole: false, fixSilent: false}, options);
   if (platform == 'android') {
     return Android.checkRequirements(options);
   } else if (platform == 'ios') {
@@ -1386,6 +1403,21 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   files.mkdir_p(resourcesPath);
 
   verboseLog('Copying resources for mobile apps');
+
+  var imageXmlRec = function (name, width, height, src) {
+    var androidMatch = /.+(.?.dpi)_(landscape|portrait)/g.exec(name);
+    var xmlRec = {
+      src: src,
+      width: width,
+      height: height
+    };
+
+    // XXX special case for Android
+    if (androidMatch)
+      xmlRec.density = androidMatch[2].substr(0, 4) + '-' + androidMatch[1];
+
+    return xmlRec;
+  };
   var setImages = function (sizes, xmlEle, tag) {
     _.each(sizes, function (size, name) {
       var width = size.split('x')[0];
@@ -1397,17 +1429,14 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
 
       var extension = _.last(_.last(suppliedPath.split(path.sep)).split('.'));
       var fileName = name + '.' + tag + '.' + extension;
+      var src = path.join('resources', fileName);
 
       // copy the file to the build folder with a standardized name
       files.copyFile(path.join(project.rootDir, suppliedPath),
                      path.join(resourcesPath, fileName));
 
       // set it to the xml tree
-      xmlEle.ele(tag, {
-        src: path.join('resources', fileName),
-        width: width,
-        height: height
-      });
+      xmlEle.ele(tag, imageXmlRec(name, width, height, src));
 
       // XXX reuse one size for other dimensions
       var dups = {
@@ -1425,11 +1454,9 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       _.each(dups, function (size) {
         width = size.split('x')[0];
         height = size.split('x')[1];
-        xmlEle.ele(tag, {
-          src: path.join('resources', fileName),
-          width: width,
-          height: height
-        });
+        // XXX this is fine to not supply a name since it is always iOS, but
+        // this is a hack right now.
+        xmlEle.ele(tag, imageXmlRec('n/a', width, height, src));
       });
     });
   };
@@ -1639,6 +1666,11 @@ _.extend(IOS.prototype, {
     });
 
     return result;
+  },
+
+  killSimulator: function () {
+    var execFileSync = require('./utils.js').execFileSync;
+    execFileSync('killall', ['iOS Simulator']);
   }
 });
 
@@ -1893,6 +1925,29 @@ _.extend(Android.prototype, {
     }
   },
 
+  hasJdk: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      var javaHomes = files.run('/usr/libexec/java_home');
+
+      if (javaHomes) {
+        javaHomes = javaHomes.trim();
+
+        // /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home
+        if (javaHomes.indexOf('/Library/Java/JavaVirtualMachines/jdk') == 0) {
+          return true;
+        }
+      }
+
+      //Unable to find any JVMs matching version "(null)".
+      //No Java runtime present, try --request to install.
+      return false;
+    } else {
+      return !!Host.which('jarsigner');
+    }
+  },
+
   installJava: function () {
     var self = this;
 
@@ -1942,6 +1997,12 @@ _.extend(Android.prototype, {
     }
 
     throw new Error("Cannot automatically install Java on host: " + Host.getName());
+  },
+
+  installJdk: function () {
+    var self = this;
+
+    throw new Error("Cannot automatically install JDK on host: " + Host.getName());
   },
 
   hasAndroidBundle: function () {
@@ -2035,16 +2096,45 @@ _.extend(Android.prototype, {
     var log = !!options.log;
     var fix = !!options.fix;
     var fixConsole = !!options.fixConsole;
+    var fixSilent = !!options.fixSilent;
+
+    // fix => fixConsole
+    if (fix) {
+      fixConsole = true;
+    }
+    // fixConsole => fixSilent
+    if (fixConsole) {
+      fixSilent = true;
+    }
 
     var result = { acceptable: true, missing: [] };
 
-    if (self.hasJava()) {
-      log && Console.info(Console.success("Java is installed"));
+    var hasAndroid = false;
+    if (self.hasAndroidBundle()) {
+      log && Console.info(Console.success("Found Android bundle"));
+      hasAndroid = true;
     } else {
-      log && Console.info(Console.fail("Java is not installed"));
+      log && Console.info(Console.fail("Android bundle not found"));
+
+      if (fixConsole) {
+        self.installAndroidBundle();
+        hasAndroid = true;
+      } else {
+        result.missing.push("android-bundle");
+        result.acceptable = false;
+      }
+    }
+
+    var hasJava = false;
+    if (self.hasJdk()) {
+      log && Console.info(Console.success("A JDK is installed"));
+      hasJava = true;
+    } else {
+      log && Console.info(Console.fail("A JDK is not installed"));
 
       if (fix) {
-        self.installJava();
+        self.installJdk();
+        hasJava = true;
       } else {
         result.missing.push("jdk");
         result.acceptable = false;
@@ -2071,29 +2161,14 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("Android emulator acceleration is installed"));
     }
 
-    var hasAndroid = false;
-    if (self.hasAndroidBundle()) {
-      log && Console.info(Console.success("Found Android bundle"));
-      hasAndroid = true;
-    } else {
-      log && Console.info(Console.fail("Android bundle not found"));
-
-      if (fix || fixConsole) {
-        self.installAndroidBundle();
-        hasAndroid = true;
-      } else {
-        result.missing.push("android-bundle");
-        result.acceptable = false;
-      }
-    }
-
-    if (hasAndroid) {
+    if (hasAndroid && hasJava) {
       if (self.hasTarget('19', 'default/x86')) {
-        log && Console.info(Console.success("Found suitable Android API libraries"));
+        log && Console.info(Console.success("Found suitable Android x86 image"));
       } else {
-        log && Console.info(Console.fail("Suitable Android API libraries not found"));
+        log && Console.info(Console.fail("Suitable Android x86 image not found"));
 
-        if (fix || fixConsole) {
+        if (fixSilent) {
+          Console.info("Installing Android x86 image");
           self.installTarget('sys-img-x86-android-19');
         } else {
           result.missing.push("android-sys-img");
@@ -2107,7 +2182,7 @@ _.extend(Android.prototype, {
       } else {
         log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
 
-        if (fix || fixConsole) {
+        if (fixSilent) {
           var avdOptions = {};
           self.createAvd(avdName, avdOptions);
           Console.info(Console.success("Created android virtual device (AVD): " + avdName));
@@ -2327,7 +2402,7 @@ main.registerCommand({
     return 1;
   }
 
-  var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true } );
+  var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
   if (!installed.acceptable) {
     Console.warn("Platform requirements not yet met");
 

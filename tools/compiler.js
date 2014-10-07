@@ -44,7 +44,6 @@ compiler.BUILT_BY = 'meteor/14';
 //  - acceptableWeakPackages: if set, include direct weak dependencies
 //    that are on one of these packages (it's an object mapping
 //    package name -> true). Otherwise skip all weak dependencies.
-//  - constraintSolverOpts
 //
 // (Why does we need to list acceptable weak packages here rather than just
 // implement a skipWeak flag and allow the caller to filter the ones they care
@@ -77,11 +76,18 @@ compiler.eachUsedUnibuild = function (
       return;
     if (use.weak && !_.has(acceptableWeakPackages, use.package))
       return;
+    if (packageLoader.excludedPackage(use.package)) {
+      return;
+    }
     usesToProcess.push(use);
   });
 
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
+
+    if (packageLoader.excludedPackage(use.package)) {
+      return;
+    }
 
     var unibuild = packageLoader.getUnibuild(use.package, arch);
     if (!unibuild) {
@@ -89,7 +95,6 @@ compiler.eachUsedUnibuild = function (
       // already been issued. Recover by skipping.
       continue;
     }
-
 
     if (_.has(processedBuildId, unibuild.id))
       continue;
@@ -112,12 +117,20 @@ compiler.eachUsedUnibuild = function (
 // Output is an object with keys:
 // - directDependencies: map from package name to version string, for the
 //   package's direct, ordered, strong, non-implied dependencies.
-// - pluginDependencies: map from plugin name to complete (transitive)
-//   version information for all packages used to build the plugin, as
-//   a map from package name to version string.
 // - packageDependencies: map from package name to version string to complete
 //   transitive dependency in this package. We need for the version lock file
 //   and to deal with implies.
+// - packageExcluded: map from package name to version string of transitive
+//   dependencies that are not included in packageDependencies because we will
+//   not bundle them with the package. If we are bundling for production mode
+//   (default) this is the debugOnly packages and their dependencies.
+// - pluginDependencies: map from plugin name to complete (transitive)
+//   version information for all packages used to build the plugin, as
+//   a map from package name to version string.
+// - pluginExcluded: see: packageExcluded, but per plugin.
+//
+// Options:
+//   - (see options for the constraint solver in catalog-local.js)
 //
 // XXX You may get different results from this function depending on
 // when you call it (if, for example, the packages in the catalog
@@ -125,14 +138,6 @@ compiler.eachUsedUnibuild = function (
 // 'meteor update' for package build-time dependencies?
 //
 // XXX deal with _makeBuildTimePackageLoader callsites
-//
-// XXX this function is probably going to get called a huge number of
-// times. For example, the Catalog calls it on every local package
-// every time the local package list changes. We could memoize the
-// result on packageSource (and presumably make this a method on
-// PackgeSource), or we could have some kind of cache (the ideal place
-// for such a cache might be inside the constraint solver, since it
-// will know how/when to invalidate it).
 var determineBuildTimeDependencies = function (packageSource,
                                                constraintSolverOpts) {
   var ret = {};
@@ -212,7 +217,7 @@ var determineBuildTimeDependencies = function (packageSource,
   // the version lock file) and the direct dependencies (which are packages that
   // we are exactly using) in order to optimize build id generation.
   ret.directDependencies = {};
-  _.each(  ret.packageDependencies, function (version, packageName) {
+  _.each(ret.packageDependencies, function (version, packageName) {
     // Take only direct dependencies.
     if (_.has(constraints, packageName)) {
       ret.directDependencies[packageName] = version;
@@ -222,6 +227,7 @@ var determineBuildTimeDependencies = function (packageSource,
   // -- Dependencies of Plugins --
 
   ret.pluginDependencies = {};
+  var pluginConstraints = {};
   var pluginVersions = packageSource.dependencyVersions.pluginDependencies;
   _.each(packageSource.pluginInfo, function (info) {
     var constraints = {};
@@ -242,6 +248,7 @@ var determineBuildTimeDependencies = function (packageSource,
     });
 
     var pluginVersion = pluginVersions[info.name] || {};
+    pluginConstraints[info.name] = constraints_array;
     try {
       ret.pluginDependencies[info.name] =
         packageSource.catalog.resolveConstraints(
@@ -277,6 +284,59 @@ var determineBuildTimeDependencies = function (packageSource,
       release.current.getCurrentToolsVersion());
   }
 
+  // If we are building for production mode, we also care about filtering out
+  // debugOnly dependencies. Note, however, that we still record them in the
+  // versions file, since they influence the versions of other dependencies.
+  //
+  // We build for production mode by default, unless our project says
+  // otherwise. And we never build in debug mode for uniload, because that makes
+  // no sense.
+  _.each(["packageExcluded", "pluginExcluded"], function (key) {
+    ret[key] = {};
+  });
+  // Don't bother filtering things if we are in uniload. That's too complicated.
+  if (packageSource.catalog !== catalog.complete) {
+    return ret;
+  }
+  // If you have decided to build this package already, and this package is
+  // debugOnly, then it doesn't make sense to filter out its debugOnly subtrees.
+  if (packageSource.debugOnly) {
+    return ret;
+  }
+  // If the project tells us to include debugOnly packages, we shall do it.
+  var project = require('./project.js').project;
+  if (project && project.includeDebug) {
+    return ret;
+  }
+
+  var directVersions =
+        packageSource.catalog.separateOutDebugDeps(
+          _.pluck(constraints_array, 'name'),
+          ret.directDependencies);
+
+  var packageVersions =
+        packageSource.catalog.separateOutDebugDeps(
+          _.pluck(constraints_array, 'name'),
+          ret.packageDependencies);
+
+  var pluginExcluded = {};
+  var pluginVersions = {};
+  _.each(ret.pluginDependencies, function (versions, name) {
+    var filteredVersions =
+          packageSource.catalog.separateOutDebugDeps(
+            _.pluck(pluginConstraints[name], 'name'),
+            versions);
+    pluginVersions[name] = filteredVersions.versions;
+    pluginExcluded[name] = filteredVersions.excluded;
+  });
+
+  ret = {
+    directDependencies : directVersions.versions,
+    packageDependencies: packageVersions.versions,
+    packageExcluded: packageVersions.excluded,
+    pluginDependencies: pluginVersions,
+    pluginExcluded: pluginExcluded
+  };
   return ret;
 };
 
@@ -968,7 +1028,8 @@ compiler.compile = function (packageSource, options) {
 
       var loader = new packageLoader.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name],
-        catalog: packageSource.catalog
+        catalog: packageSource.catalog,
+        excluded: buildTimeDeps.pluginExcluded[info.name]
       });
       loader.downloadMissingPackages({serverArch: archinfo.host() });
 
@@ -1052,6 +1113,7 @@ compiler.compile = function (packageSource, options) {
   var loader = new packageLoader.PackageLoader({
     versions: buildTimeDeps.packageDependencies,
     catalog: packageSource.catalog,
+    excluded: buildTimeDeps.packageExcluded,
     constraintSolverOpts: {
       ignoreProjectDeps: options.ignoreProjectDeps
     }

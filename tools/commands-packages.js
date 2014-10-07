@@ -206,7 +206,8 @@ main.registerCommand({
         return; // already have errors, so skip the build
 
       var deps =
-            compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+          compiler.determineBuildTimeDependencies(packageSource)
+            .packageDependencies;
       tropohouse.default.downloadMissingPackages(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
@@ -1179,7 +1180,9 @@ main.registerCommand({
   options: {
     maintainer: {type: String, required: false },
     "show-old": {type: Boolean, required: false },
-    "show-rcs": {type: Boolean, required: false}
+    "show-rcs": {type: Boolean, required: false},
+    // Undocumented debug-only option for Velocity.
+    "debug-only": {type: Boolean, required: false}
   }
 }, function (options) {
 
@@ -1213,7 +1216,7 @@ main.registerCommand({
   var filterBroken = function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
-    if (!match || isRelease || options["show-old"])
+    if (!match || isRelease)
       return match;
     var vr;
     doOrDie(function () {
@@ -1223,7 +1226,20 @@ main.registerCommand({
         vr = catalog.official.getLatestVersion(name);
       }
     });
-    return vr && !vr.unmigrated;
+    if (!vr) {
+      return false;
+    }
+    // If we did NOT ask for unmigrated packages and this package is unmigrated,
+    // we don't care.
+    if (!options["show-old"] && vr.unmigrated){
+      return false;
+    }
+    // If we asked for debug-only packages and this package is NOT debug only,
+    // we don't care.
+    if (options["debug-only"] && !vr.debugOnly) {
+      return false;
+    }
+    return true;
   };
 
   if (options.maintainer) {

@@ -1841,9 +1841,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
- * - watchSet: Information about files and paths that were
+ * - serverWatchSet: Information about server files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
  *   changes when developing interactively, as a watch.WatchSet.
+ * - clientWatchSet: Like 'serverWatchSet', but for client files
+ * - starManifest: The manifest of the outputted star
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed).
@@ -2284,4 +2286,3 @@ exports.iterateOverAllUsedIsopacks =
     callback(unibuild.pkg);
   });
 };
-

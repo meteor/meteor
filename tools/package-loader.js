@@ -28,6 +28,7 @@ exports.PackageLoader = function (options) {
   self.uniloadDir = options.uniloadDir;
   self.constraintSolverOpts = options.constraintSolverOpts;
   self.catalog = options.catalog;
+  self.excluded = options.excluded;
 };
 
 _.extend(exports.PackageLoader.prototype, {
@@ -116,5 +117,13 @@ _.extend(exports.PackageLoader.prototype, {
     tropohouse.default.downloadMissingPackages(self.versions, {
       serverArch: options.serverArch
     });
+  },
+
+  // Sometimes, we have figured out the versions for packages, but we have no
+  // intention of loading them. In this case, they are considered 'excluded
+  // packages'. This function lets us know if we have hit one of those.
+  excludedPackage: function (packageName) {
+    var self = this;
+    return self.excluded && self.excluded[packageName];
   }
 });
