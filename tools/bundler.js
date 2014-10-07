@@ -1961,10 +1961,9 @@ exports.bundle = function (options) {
 
     if (includeDefaultTargets) {
       // Create a Isopack object that represents the app
-      var compileOpts = { forProd: true };
       var packageSource = new PackageSource(whichCatalog);
       packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource, compileOpts).isopack;
+      var app = compiler.compile(packageSource).isopack;
 
       var clientTargets = [];
       // Client

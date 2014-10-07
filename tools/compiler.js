@@ -991,8 +991,6 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
 //    the package's source. You should set it to true when you are
 //    building a package to publish as an official build with the
 //    package server.
-//  - forProd: defaults to false. If true, we will omit any debugOnly
-//    dependencies, including build plugins and transitive dependencies.
 //  - buildTimeDependencies: optional. If present with keys
 //    'directDependencies' and 'pluginDependencies', it will be used
 //    instead of calling 'determineBuildTimeDependencies'. This is used
@@ -1013,12 +1011,11 @@ compiler.compile = function (packageSource, options) {
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
 
-  options = _.extend({ officialBuild: false, forProd: false }, options);
+  options = _.extend({ officialBuild: false }, options);
 
   // Determine versions of build-time dependencies
   var buildTimeDeps = determineBuildTimeDependencies(packageSource, {
-    ignoreProjectDeps: options.ignoreProjectDeps,
-    forProd: options.forProd
+    ignoreProjectDeps: options.ignoreProjectDeps
   });
 
   // Build plugins
