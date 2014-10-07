@@ -1114,7 +1114,7 @@ var checkAgreePlatformTerms = function (platform, name) {
 };
 
 var checkPlatformRequirements = function (platform, options) {
-  options = _.extend({log: false, fix: false, fixConsole: false}, options);
+  options = _.extend({log: false, fix: false, fixConsole: false, fixSilent: false}, options);
   if (platform == 'android') {
     return Android.checkRequirements(options);
   } else if (platform == 'ios') {
@@ -2063,8 +2063,34 @@ _.extend(Android.prototype, {
     var log = !!options.log;
     var fix = !!options.fix;
     var fixConsole = !!options.fixConsole;
+    var fixSilent = !!options.fixSilent;
+
+    // fix => fixConsole
+    if (fix) {
+      fixConsole = true;
+    }
+    // fixConsole => fixSilent
+    if (fixConsole) {
+      fixSilent = true;
+    }
 
     var result = { acceptable: true, missing: [] };
+
+    var hasAndroid = false;
+    if (self.hasAndroidBundle()) {
+      log && Console.info(Console.success("Found Android bundle"));
+      hasAndroid = true;
+    } else {
+      log && Console.info(Console.fail("Android bundle not found"));
+
+      if (fixConsole) {
+        self.installAndroidBundle();
+        hasAndroid = true;
+      } else {
+        result.missing.push("android-bundle");
+        result.acceptable = false;
+      }
+    }
 
     var hasJava = false;
     if (self.hasJdk()) {
@@ -2102,29 +2128,13 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("Android emulator acceleration is installed"));
     }
 
-    var hasAndroid = false;
-    if (self.hasAndroidBundle()) {
-      log && Console.info(Console.success("Found Android bundle"));
-      hasAndroid = true;
-    } else {
-      log && Console.info(Console.fail("Android bundle not found"));
-
-      if (fix || fixConsole) {
-        self.installAndroidBundle();
-        hasAndroid = true;
-      } else {
-        result.missing.push("android-bundle");
-        result.acceptable = false;
-      }
-    }
-
     if (hasAndroid && hasJava) {
       if (self.hasTarget('19', 'default/x86')) {
         log && Console.info(Console.success("Found suitable Android API libraries"));
       } else {
         log && Console.info(Console.fail("Suitable Android API libraries not found"));
 
-        if (fix || fixConsole) {
+        if (fixSilent) {
           self.installTarget('sys-img-x86-android-19');
         } else {
           result.missing.push("android-sys-img");
@@ -2138,7 +2148,7 @@ _.extend(Android.prototype, {
       } else {
         log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
 
-        if (fix || fixConsole) {
+        if (fixSilent) {
           var avdOptions = {};
           self.createAvd(avdName, avdOptions);
           Console.info(Console.success("Created android virtual device (AVD): " + avdName));
@@ -2358,7 +2368,7 @@ main.registerCommand({
     return 1;
   }
 
-  var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true } );
+  var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
   if (!installed.acceptable) {
     Console.warn("Platform requirements not yet met");
 
