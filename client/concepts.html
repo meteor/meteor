@@ -442,8 +442,8 @@ When your app is loaded, it automatically renders the special template called
 `{{dstache}}> inclusion}}` operator.
 
 The easiest way to get data into templates is by defining helper
-functions in JavaScript. Just add the helper functions directly on the
-`Template.`*templateName* object. Putting it all together:
+functions in JavaScript. Define helpers with the
+`Template.templateName.helpers({ ... })` function. Putting it all together:
 
 
     <!-- in myapp.html -->
@@ -524,10 +524,10 @@ Helpers can also be used to pass in constant data.
       sections: ["Situation", "Complication", "Resolution"]
     });
 
-Finally, you can use an `events` declaration on a template function to set up a
-table of event handlers. The format is documented at [Event
-Maps](#eventmaps). The `this` argument to the event handler will be
-the data context of the element that triggered the event.
+Finally, you can use the `events` function on a template to attach
+event handlers. The object passed into `events` is documented at
+[Event Maps](#eventmaps). The `this` argument to the event handler will
+be the data context of the element that triggered the event.
 
     <!-- myapp.html -->
     <template name="scores">
@@ -538,13 +538,13 @@ the data context of the element that triggered the event.
 
     <template name="playerScore">
       <div>{{dstache}}name}}: {{dstache}}score}}
-        <span class="givePoints">Give points</span>
+        <span class="give-points">Give points</span>
       </div>
     {{lt}}/template>
 
     <!-- myapp.js -->
     Template.playerScore.events({
-      'click .givePoints': function () {
+      'click .give-points': function () {
         Users.update(this._id, {$inc: {score: 2}});
       }
     });
