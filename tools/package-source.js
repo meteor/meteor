@@ -484,11 +484,9 @@ _.extend(PackageSource.prototype, {
        * porting another package that uses semver versioning, you may want to
        * use the original version, postfixed with `_wrapnumber`. For example,
        * `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers sort after the original numbers:
-       * `1.2.3` < `1.2.3_1` < `1.2.3_2` < `1.2.4-rc.0`. By default, wrap
-       * numbers don't affect compatibility, so `1.2.3_1` is compatible with
-       * `1.2.3`, `1.2.3_3`, etc. If no version is specified, this field defaults to
-       * `0.0.0`. If you want to publish your package to the package server, you
-       * must specify a version.
+       * `1.2.3` < `1.2.3_1` < `1.2.3_2` < `1.2.4-rc.0`. If no version is specified,
+       * this field defaults to `0.0.0`. If you want to publish your package to
+       * the package server, you must specify a version.
        * @param {String} options.name Optional name override. By default, the
        * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
