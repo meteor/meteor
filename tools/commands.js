@@ -746,11 +746,21 @@ var buildCommand = function (options) {
     var platformPath = path.join(outputPath, platformName);
 
     if (platformName === 'ios') {
-      files.cp_r(buildPath, platformPath);
+      files.cp_r(buildPath, path.join(platformPath, 'project'));
+      fs.writeFileSync(
+        path.join(platformPath, 'README'),
+        "Instructions for publishing your iOS app to App Store can be found at:\n" +
+          "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
+        "utf8");
     } else if (platformName === 'android') {
       files.cp_r(buildPath, path.join(platformPath, 'project'));
       var apkPath = findApkPath(path.join(buildPath, 'ant-build'));
       files.copyFile(apkPath, path.join(platformPath, 'unaligned.apk'));
+      fs.writeFileSync(
+        path.join(platformPath, 'README'),
+        "Instructions for publishing your Android app to Play Store can be found at:\n" +
+          "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
+        "utf8");
     }
   });
 
