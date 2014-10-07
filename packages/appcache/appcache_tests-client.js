@@ -27,7 +27,7 @@ appcacheTest('content type', function (test, manifest) {
 
 
 // Verify that each section header is only set once.
-appcacheTest('sections unicity', function (test, manifest) {
+appcacheTest('sections uniqueness', function (test, manifest) {
   var content = manifest.content;
   var sectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:', 'SETTINGS'];
   _.each(sectionHeaders, function (sectionHeader) {
