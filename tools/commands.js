@@ -175,6 +175,7 @@ function doRunCommand (options) {
   // seems to fix it in a clear and understandable fashion.)
   var messages = buildmessage.capture(function () {
     project.getVersions();  // #StructuredProjectInitialization
+    project.setDebug(!options.production);
   });
   if (messages.hasMessages()) {
     Console.stderr.write(messages.formatMessages());
@@ -597,9 +598,7 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
-    verbose: { type: Boolean, short: "v" },
-    // Undocumented
-    'for-deploy': { type: Boolean }
+    verbose: { type: Boolean, short: "v" }
   }
 };
 
@@ -617,6 +616,11 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
 });
 
 var buildCommand = function (options) {
+  // Set the debug bit if we are bundling in debug mode. By default,
+  // options.debug will be false, which means that we will bundle for
+  // production.
+  project.setDebug(options.debug);
+
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -712,6 +716,7 @@ var buildCommand = function (options) {
     outputPath: bundlePath,
     buildOptions: {
       minify: ! options.debug,
+      includeTests: ! options.debug,
       // XXX is this a good idea, or should linux be the default since
       //     that's where most people are deploying
       //     default?  i guess the problem with using DEPLOY_ARCH as default
@@ -944,13 +949,18 @@ main.registerCommand({
   // issues are concurrency-related, or possibly some weird order-of-execution
   // of interaction that we are failing to understand. This seems to fix it in a
   // clear and understandable fashion.)
-  var messages = buildmessage.capture({ title: "Resolving versions" }, function () {
+  var messages = buildmessage.capture({ title: "Resolving versions" },
+    function () {
     project.getVersions();  // #StructuredProjectInitialization
   });
   if (messages.hasMessages()) {
     Console.stderr.write(messages.formatMessages());
     return 1;
   }
+  // Set the debug bit if we are bundling in debug mode. By default,
+  // options.debug will be false, which means that we will bundle for
+  // production.
+  project.setDebug(options.debug);
 
   if (options.password) {
     if (useGalaxy) {
@@ -1251,7 +1261,11 @@ main.registerCommand({
   // main project to the test directory.
   project.setRootDir(testRunnerAppDir);
   project.setMuted(true); // Mute output where applicable
+  // Hardset the proper release.
   project.writeMeteorReleaseVersion(release.current.name || 'none');
+  // Set debug mode directly, mostly to avoid running the constraint solver an
+  // extra time.
+  project.includeDebug = !options.production;
   project.forceEditPackages(
     [options['driver-package'] || 'test-in-browser'],
     'add');

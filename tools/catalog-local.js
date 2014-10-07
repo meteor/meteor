@@ -466,6 +466,7 @@ _.extend(LocalCatalog.prototype, {
         lastUpdated: null,
         published: null,
         isTest: packageSource.isTest,
+        debugOnly: packageSource.debugOnly,
         containsPlugins: packageSource.containsPlugins()
       };
     };

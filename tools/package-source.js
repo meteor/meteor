@@ -269,6 +269,11 @@ var PackageSource = function (catalog) {
   // to the catalog), so we need to keep track of them.
   self.isTest = false;
 
+  // Some packages belong to a test framework and should never be bundled into
+  // production. A package with this flag should not be picked up by the bundler
+  // for production builds.
+  self.debugOnly = false;
+
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
   // built isopacks for all the packages in uniload.ROOT_PACKAGES as well as
@@ -511,10 +516,11 @@ _.extend(PackageSource.prototype, {
               buildmessage.error(
                 "trying to initialize a nonexistent base package " + value);
             }
-          }
-          else {
-          // Do nothing. We might want to add some keys later, and we should err on
-          // the side of backwards compatibility.
+          } else if (key === "debugOnly") {
+            self.debugOnly = value;
+          } else {
+          // Do nothing. We might want to add some keys later, and we should err
+          // on the side of backwards compatibility.
           }
         });
       },
