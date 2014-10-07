@@ -2054,13 +2054,16 @@ _.extend(Android.prototype, {
 
     var result = { acceptable: true, missing: [] };
 
+    var hasJava = false;
     if (self.hasJdk()) {
       log && Console.info(Console.success("A JDK is installed"));
+      hasJava = true;
     } else {
       log && Console.info(Console.fail("A JDK is not installed"));
 
       if (fix) {
         self.installJdk();
+        hasJava = true;
       } else {
         result.missing.push("jdk");
         result.acceptable = false;
@@ -2103,7 +2106,7 @@ _.extend(Android.prototype, {
       }
     }
 
-    if (hasAndroid) {
+    if (hasAndroid && hasJava) {
       if (self.hasTarget('19', 'default/x86')) {
         log && Console.info(Console.success("Found suitable Android API libraries"));
       } else {
