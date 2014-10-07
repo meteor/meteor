@@ -37,6 +37,10 @@ body {
   background: @color-tertiary;
   opacity: 1;
 
+  @media screen and (min-width: 40em) {
+    left: @menu-width;
+  }
+
   .content-scrollable {
     .position(absolute, 0, 0, 0, 0);
     .transform(translate3d(0, 0, 0));
@@ -48,13 +52,14 @@ body {
   .menu-open & {
     .transform(translate3d(@menu-width, 0, 0));
     opacity: .85;
-  }
+    left: 0;
 
-  // Show menu on desktop, negate .menu-open
-  @media screen and (min-width: 40em) {
-    .transform(translate3d(0, 0, 0)); //reset transform and use position properties instead
-    left: @menu-width;
-    opacity: 1;
+    @media screen and (min-width: 40em) {
+      // Show menu on desktop, negate .menu-open
+      .transform(translate3d(0, 0, 0)); //reset transform and use position properties instead
+      opacity: 1;
+      left: @menu-width;
+    }
   }
 }
 
