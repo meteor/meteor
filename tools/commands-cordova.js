@@ -1393,6 +1393,21 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   files.mkdir_p(resourcesPath);
 
   verboseLog('Copying resources for mobile apps');
+
+  var imageXmlRec = function (name, width, height, src) {
+    var androidMatch = /.+(.?.dpi)-(landscape|portrait)/g.exec(name);
+    var xmlRec = {
+      src: src,
+      width: width,
+      height: height
+    };
+
+    // XXX special case for Android
+    if (androidMatch)
+      xmlRec.density = androidMatch[2].substr(0, 4) + '-' + androidMatch[1];
+
+    return xmlRec;
+  };
   var setImages = function (sizes, xmlEle, tag) {
     _.each(sizes, function (size, name) {
       var width = size.split('x')[0];
@@ -1404,17 +1419,14 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
 
       var extension = _.last(_.last(suppliedPath.split(path.sep)).split('.'));
       var fileName = name + '.' + tag + '.' + extension;
+      var src = path.join('resources', fileName);
 
       // copy the file to the build folder with a standardized name
       files.copyFile(path.join(project.rootDir, suppliedPath),
                      path.join(resourcesPath, fileName));
 
       // set it to the xml tree
-      xmlEle.ele(tag, {
-        src: path.join('resources', fileName),
-        width: width,
-        height: height
-      });
+      xmlEle.ele(tag, imageXmlRec(name, width, height, src));
 
       // XXX reuse one size for other dimensions
       var dups = {
@@ -1432,11 +1444,9 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       _.each(dups, function (size) {
         width = size.split('x')[0];
         height = size.split('x')[1];
-        xmlEle.ele(tag, {
-          src: path.join('resources', fileName),
-          width: width,
-          height: height
-        });
+        // XXX this is fine to not supply a name since it is always iOS, but
+        // this is a hack right now.
+        xmlEle.ele(tag, imageXmlRec('n/a', width, height, src));
       });
     });
   };
