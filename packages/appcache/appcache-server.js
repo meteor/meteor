@@ -5,7 +5,7 @@ var path = Npm.require('path');
 var _disableSizeCheck = false;
 
 Meteor.AppCache = {
-  config: function(options) {
+  config: function (options) {
     _.each(options, function (value, option) {
       if (option === 'browsers') {
         disabledBrowsers = {};
@@ -35,7 +35,7 @@ Meteor.AppCache = {
 };
 
 var disabledBrowsers = {};
-var browserDisabled = function(request) {
+var browserDisabled = function (request) {
   return disabledBrowsers[request.browser.name];
 };
 
@@ -46,7 +46,7 @@ WebApp.addHtmlAttributeHook(function (request) {
     return { manifest: "/app.manifest" };
 });
 
-WebApp.connectHandlers.use(function(req, res, next) {
+WebApp.connectHandlers.use(function (req, res, next) {
   if (req.url !== '/app.manifest') {
     return next();
   }
@@ -158,7 +158,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   return res.end(body);
 });
 
-var sizeCheck = function() {
+var sizeCheck = function () {
   var totalSize = 0;
   _.each(WebApp.clientPrograms[WebApp.defaultArch].manifest, function (resource) {
     if (resource.where === 'client' &&
@@ -184,7 +184,7 @@ var sizeCheck = function() {
 // want cached. Otherwise, the size check warning will still print even
 // if the user excludes their large files with
 // `Meteor.AppCache.config({onlineOnly: files})`.
-Meteor.startup(function() {
+Meteor.startup(function () {
   if (! _disableSizeCheck)
     sizeCheck();
 });
