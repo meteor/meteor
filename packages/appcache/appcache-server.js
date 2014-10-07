@@ -2,6 +2,8 @@ var crypto = Npm.require('crypto');
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 
+var _disableSizeCheck = false;
+
 Meteor.AppCache = {
   config: function(options) {
     _.each(options, function (value, option) {
@@ -15,6 +17,10 @@ Meteor.AppCache = {
         _.each(value, function (urlPrefix) {
           RoutePolicy.declare(urlPrefix, 'static-online');
         });
+      }
+      // option to suppress warnings for tests.
+      else if (option === '_disableSizeCheck') {
+        _disableSizeCheck = value;
       }
       else if (value === false) {
         disabledBrowsers[option] = true;
@@ -173,4 +179,12 @@ var sizeCheck = function() {
   }
 };
 
-sizeCheck();
+// Run the size check after user code has had a chance to run. That way,
+// the size check can take into account files that the user does not
+// want cached. Otherwise, the size check warning will still print even
+// if the user excludes their large files with
+// `Meteor.AppCache.config({onlineOnly: files})`.
+Meteor.startup(function() {
+  if (! _disableSizeCheck)
+    sizeCheck();
+});
