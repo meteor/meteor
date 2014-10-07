@@ -5,9 +5,11 @@
 // depending on the state of the browser cache.  To do that we disable
 // the "manifest" attribute of the <html> tag. This runs after appcache
 // registers its hook, so this hook overrides the return value of the
-// real hook.
+// real hook. We point to a non-existent file to clear the appcache in
+// case there was previously a site running with appcache on
+// localhost:3000.
 WebApp.addHtmlAttributeHook(function (request) {
-  return { manifest: "" };
+  return { manifest: "/no-such-file" };
 });
 
 
