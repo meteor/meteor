@@ -1413,6 +1413,12 @@ var tagDescriptions = {
   'in other files': ""
 };
 
+// Returns a TestList object representing a filtered list of tests,
+// according to the options given (which are based closely on the
+// command-line arguments).  Used as the first step of both listTests
+// and runTests.
+//
+// Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests
 var getFilteredTests = function (options) {
   options = options || {};
 
@@ -1421,11 +1427,12 @@ var getFilteredTests = function (options) {
   if (allTests.length) {
     var testState = readTestState();
 
-    // Add pseudo-tags 'non-matching' and 'unchanged'
+    // Add pseudo-tags 'non-matching', 'unchanged', and 'in other files'
+    // (but only so that we can then skip tests with those tags)
     allTests = allTests.map(function (test) {
       var newTags = [];
 
-      if (options.inFile && test.file !== options.inFile) {
+      if (options.fileRegexp && ! options.fileRegexp.test(test.file)) {
         newTags.push('in other files');
       } else if (options.testRegexp && ! options.testRegexp.test(test.name)) {
         newTags.push('non-matching');
@@ -1444,7 +1451,7 @@ var getFilteredTests = function (options) {
 
   // (order of tags is significant to the "skip counts" that are displayed)
   var tagsToSkip = [];
-  if (options.inFile) {
+  if (options.fileRegexp) {
     tagsToSkip.push('in other files');
   }
   if (options.testRegexp) {
@@ -1466,9 +1473,17 @@ var getFilteredTests = function (options) {
   return new TestList(allTests, tagsToSkip, testState);
 };
 
+// A TestList is the result of getFilteredTests.  It holds the original
+// list of all tests, the filtered list, and stats on how many tests
+// were skipped (see generateSkipReport).
+//
+// TestList is also used to save the hashes of files where all tests
+// ran and passed (for the `--changed` option).  If a testState is
+// passed, the caller can use notifyFailed and saveTestState to cause
+// TestList to calculate the new testState and write it out.
 var TestList = function (allTests, tagsToSkip, testState) {
   tagsToSkip = (tagsToSkip || []);
-  testState = (testState || null);
+  testState = (testState || null); // optional
 
   var self = this;
   self.allTests = allTests;
@@ -1493,6 +1508,9 @@ var TestList = function (allTests, tagsToSkip, testState) {
     }
     var fileInfo = self.fileInfo[test.file];
 
+    // We look for tagsToSkip *in order*, and when we decide to
+    // skip a test, we don't keep looking at more tags, and we don't
+    // add the test to any further "skip counts".
     return !_.any(tagsToSkip, function (tag) {
       if (_.contains(test.tags, tag)) {
         self.skipCounts[tag]++;
@@ -1505,10 +1523,15 @@ var TestList = function (allTests, tagsToSkip, testState) {
   });
 };
 
+// Mark a test's file as having failures so we don't
+// save its hash as a potentially "unchanged" file.
 TestList.prototype.notifyFailed = function (test) {
   this.fileInfo[test.file].hasFailures = true;
 };
 
+// If this TestList was constructed with a testState,
+// modify it and write it out based on which tests
+// were skipped and which tests had failures.
 TestList.prototype.saveTestState = function () {
   var self = this;
   var testState = self.testState;
@@ -1527,6 +1550,7 @@ TestList.prototype.saveTestState = function () {
   writeTestState(testState);
 };
 
+// Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
 TestList.prototype.generateSkipReport = function () {
   var self = this;
   var result = '';
@@ -1567,6 +1591,7 @@ var writeTestState = function (testState) {
   fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
 };
 
+// Same options as getFilteredTests.  Writes to stdout and stderr.
 var listTests = function (options) {
   var testList = getFilteredTests(options);
 
@@ -1583,8 +1608,8 @@ var listTests = function (options) {
                             : ''));
     });
   });
-  Console.stdout.write('\n');
 
+  Console.stderr.write('\n');
   Console.stderr.write(testList.filteredTests.length + " tests listed.");
   Console.stderr.write(testList.generateSkipReport());
 };
@@ -1593,7 +1618,8 @@ var listTests = function (options) {
 // Running tests
 ///////////////////////////////////////////////////////////////////////////////
 
-// options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
+// options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp,
+//          fileRegexp,
 //          clients:
 //             - browserstack (need s3cmd credentials)
 var runTests = function (options) {

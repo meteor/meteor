@@ -1727,14 +1727,29 @@ main.registerCommand({
     }
   }
 
-  var testRegexp = undefined;
-  if (options.args.length) {
+  var compileRegexp = function (str) {
     try {
-      testRegexp = new RegExp(options.args[0]);
+      return new RegExp(str);
     } catch (e) {
       if (!(e instanceof SyntaxError))
         throw e;
-      Console.stderr.write("Bad regular expression: " + options.args[0] + "\n");
+      Console.stderr.write("Bad regular expression: " + str + "\n");
+      return null;
+    }
+  };
+
+  var testRegexp = undefined;
+  if (options.args.length) {
+    testRegexp = compileRegexp(options.args[0]);
+    if (! testRegexp) {
+      return 1;
+    }
+  }
+
+  var fileRegexp = undefined;
+  if (options.file) {
+    fileRegexp = compileRegexp(options.file);
+    if (! fileRegexp) {
       return 1;
     }
   }
@@ -1745,7 +1760,7 @@ main.registerCommand({
       offline: offline,
       includeSlowTests: options.slow,
       testRegexp: testRegexp,
-      inFile: options.file
+      fileRegexp: fileRegexp
     });
 
     return 0;
@@ -1756,13 +1771,15 @@ main.registerCommand({
   };
 
   return selftest.runTests({
+    // filtering options
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
-    historyLines: options.history,
-    clients: clients,
     testRegexp: testRegexp,
-    inFile: options.file
+    fileRegexp: fileRegexp,
+    // other options
+    historyLines: options.history,
+    clients: clients
   });
 
 });
