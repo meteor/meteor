@@ -610,9 +610,9 @@ _.extend(PackageSource.prototype, {
        * package.
        * @param {String|String[]} options.use Meteor packages that this
        * plugin uses, independent of the packages specified in
-       * [api.onUse](#PackageAPI-onUse).
+       * [api.onUse](#pack_onUse).
        * @param {String[]} options.sources The source files that make up the
-       * build plugin, independent from [api.addFiles](#PackageAPI-addFiles).
+       * build plugin, independent from [api.addFiles](#pack_addFiles).
        * @param {Object} options.npmDependencies An object where the keys
        * are NPM package names, and the keys are the version numbers of
        * required NPM packages, just like in [Npm.depends](#Npm-depends).
