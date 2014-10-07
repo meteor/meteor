@@ -1919,7 +1919,20 @@ _.extend(Android.prototype, {
     var self = this;
 
     if (Host.isMac()) {
-      return files.statOrNull('/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/jarsigner') != null;
+      var javaHomes = files.run('/usr/libexec/java_home');
+
+      if (javaHomes) {
+        javaHomes = javaHomes.trim();
+
+        // /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home
+        if (javaHomes.indexOf('/Library/Java/JavaVirtualMachines/jdk') == 0) {
+          return true;
+        }
+      }
+
+      //Unable to find any JVMs matching version "(null)".
+      //No Java runtime present, try --request to install.
+      return false;
     } else {
       return !!Host.which('jarsigner');
     }
