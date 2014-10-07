@@ -2153,11 +2153,12 @@ _.extend(Android.prototype, {
 
     if (hasAndroid && hasJava) {
       if (self.hasTarget('19', 'default/x86')) {
-        log && Console.info(Console.success("Found suitable Android API libraries"));
+        log && Console.info(Console.success("Found suitable Android x86 image"));
       } else {
-        log && Console.info(Console.fail("Suitable Android API libraries not found"));
+        log && Console.info(Console.fail("Suitable Android x86 image not found"));
 
         if (fixSilent) {
+          Console.info("Installing Android x86 image");
           self.installTarget('sys-img-x86-android-19');
         } else {
           result.missing.push("android-sys-img");
