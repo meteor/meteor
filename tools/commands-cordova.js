@@ -1602,8 +1602,6 @@ _.extend(IOS.prototype, {
       }
     }
 
-    if (!result.acceptable) return result;
-
     //Check if the full Xcode package is already installed:
     //
     //  $ xcode-select -p
@@ -1626,8 +1624,6 @@ _.extend(IOS.prototype, {
         }
       }
     }
-
-    if (!result.acceptable) return result;
 
     _.each(['5.0', '5.0.1', '5.1', '6.0', '6.1'], function (version) {
       if (self.isSdkInstalled(version)) {
@@ -2038,6 +2034,7 @@ _.extend(Android.prototype, {
 
     var log = !!options.log;
     var fix = !!options.fix;
+    var fixConsole = !!options.fixConsole;
 
     var result = { acceptable: true, missing: [] };
 
@@ -2053,8 +2050,6 @@ _.extend(Android.prototype, {
         result.acceptable = false;
       }
     }
-
-    if (!result.acceptable) return result;
 
     // (hasAcceleration can also be undefined)
     var hasAcceleration = self.hasAcceleration();
@@ -2076,51 +2071,50 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("Android emulator acceleration is installed"));
     }
 
-    if (!result.acceptable) return result;
-
+    var hasAndroid = false;
     if (self.hasAndroidBundle()) {
       log && Console.info(Console.success("Found Android bundle"));
+      hasAndroid = true;
     } else {
       log && Console.info(Console.fail("Android bundle not found"));
 
-      if (fix) {
+      if (fix || fixConsole) {
         self.installAndroidBundle();
+        hasAndroid = true;
       } else {
         result.missing.push("android-bundle");
         result.acceptable = false;
       }
     }
 
-    if (!result.acceptable) return result;
-
-    if (self.hasTarget('19', 'default/x86')) {
-      log && Console.info(Console.success("Found suitable Android API libraries"));
-    } else {
-      log && Console.info(Console.fail("Suitable Android API libraries not found"));
-
-      if (fix) {
-        self.installTarget('sys-img-x86-android-19');
+    if (hasAndroid) {
+      if (self.hasTarget('19', 'default/x86')) {
+        log && Console.info(Console.success("Found suitable Android API libraries"));
       } else {
-        result.missing.push("android-sys-img");
-        result.acceptable = false;
+        log && Console.info(Console.fail("Suitable Android API libraries not found"));
+
+        if (fix || fixConsole) {
+          self.installTarget('sys-img-x86-android-19');
+        } else {
+          result.missing.push("android-sys-img");
+          result.acceptable = false;
+        }
       }
-    }
 
-    if (!result.acceptable) return result;
-
-    var avdName = self.getAvdName();
-    if (self.hasAvd(avdName)) {
-      log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
-    } else {
-      log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
-
-      if (fix) {
-        var avdOptions = {};
-        self.createAvd(avdName, avdOptions);
-        Console.info(Console.success("Created android virtual device (AVD): " + avdName));
+      var avdName = self.getAvdName();
+      if (self.hasAvd(avdName)) {
+        log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
       } else {
-        result.missing.push("android-avd");
-        result.acceptable = false;
+        log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+
+        if (fix || fixConsole) {
+          var avdOptions = {};
+          self.createAvd(avdName, avdOptions);
+          Console.info(Console.success("Created android virtual device (AVD): " + avdName));
+        } else {
+          result.missing.push("android-avd");
+          result.acceptable = false;
+        }
       }
     }
 
@@ -2333,7 +2327,7 @@ main.registerCommand({
     return 1;
   }
 
-  var installed = checkPlatformRequirements(platform, { log:true, fix: false} );
+  var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true } );
   if (!installed.acceptable) {
     Console.warn("Platform requirements not yet met");
 
