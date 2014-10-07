@@ -854,8 +854,15 @@ _.extend(CordovaRunner.prototype, {
     var self = this;
 
     // android, not android-device
-    if (self.platformName == 'android') {
+    if (self.platformName === 'android') {
       Android.waitForEmulator();
+    }
+
+    if (self.platformName === 'ios') {
+      // Kill the running simulator before starting one to avoid a black-screen
+      // bug that happens when you deploy an app to emulator while it is running
+      // a previous version of it.
+      IOS.killSimulator();
     }
 
     execCordovaOnPlatform(self.localPath,
@@ -1639,6 +1646,11 @@ _.extend(IOS.prototype, {
     });
 
     return result;
+  },
+
+  killSimulator: function () {
+    var execFileSync = require('./utils.js').execFileSync;
+    execFileSync('killall', ['iOS Simulator']);
   }
 });
 
