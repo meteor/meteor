@@ -1919,7 +1919,7 @@ _.extend(Android.prototype, {
     var self = this;
 
     if (Host.isMac()) {
-      return files.statOrNull('/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK') != null;
+      return files.statOrNull('/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/jarsigner') != null;
     } else {
       return !!Host.which('jarsigner');
     }
