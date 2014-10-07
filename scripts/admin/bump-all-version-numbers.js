@@ -14,7 +14,8 @@ _.each(packageNames, function (name) {
   if (match) {
     var versionNumber = match[0];
     var s = versionNumber.split(".");
-    s[3] = "rc.0";
+    s[2] = "rc.0";
+    s = s.slice(0, 3);
     var incremented = s.join(".");
 
     content = content.replace(versionNumber, incremented);
