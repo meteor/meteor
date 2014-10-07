@@ -795,8 +795,20 @@ var buildCordova = function (localPath, buildCommand, options) {
   try {
     var args = [buildCommand];
 
-    if (! options.debug)
+    // depending on the debug mode build the android part in different modes
+    if (_.contains(project.getPlatforms(), 'android')) {
+      var manifestPath =
+        path.join(cordovaPath, 'platforms', 'android', 'AndroidManifest.xml');
+
+      var manifest = fs.readFileSync(manifestPath, 'utf8');
+      manifest = manifest.replace(/android:debuggable=.(true|false)./g, '');
+      manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
+      fs.writeFileSync(manifestPath, manifest, 'utf8');
+    }
+
+    if (! options.debug) {
       args.push('--release');
+    }
 
     execFileSyncOrThrow(localCordova, args,
                         { cwd: cordovaPath, maxBuffer: 2000*1024 });
