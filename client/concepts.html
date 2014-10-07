@@ -558,30 +558,31 @@ README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md
 <template name="packages_concept">
 {{#markdown}}
 
-  <h2 id="usingpackages">Using packages</h2>
+<h2 id="usingpackages">Using packages</h2>
 
-All of the functionality you've read about so far is implemented as
-standard Meteor packages. This is possible thanks to Meteor's
-unusually powerful package and build system. The same packages work in
-the browser and on the server, and packages can contain plugins that
-extend the build process, such as `coffeescript` ([CoffeeScript](http://coffeescript.org)
-compilation) or `templating` (compiling HTML templates).
+All of the functionality you've read about so far is implemented in standard
+Meteor packages. This is possible thanks to Meteor's unusually powerful package
+and build system. The same packages work in the browser and on the server, and
+packages can contain plugins that extend the build process, such as
+`coffeescript` ([CoffeeScript](http://coffeescript.org) compilation) or
+`templating` (compiling HTML templates).
 
 Anyone can publish a Meteor package, and thousands of community-written packages
-have been published to date. The easiest way to browse these packages
-is <a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio. You can
-also use [`meteor search`](#meteorsearch) and [`meteor show`](#meteorshow) commands.
+have been published to date. The easiest way to browse these packages is
+<a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio.
+You can also use the [`meteor search`](#meteorsearch) and
+[`meteor show`](#meteorshow) commands.
 
 You can add packages to your project with [`meteor add`](#meteoradd) and remove
 them with [`meteor remove`](#meteorremove).
 Additionally, [`meteor list`](#meteorlist) will tell you what
 packages your project is using, and [`meteor update`](#meteorupdate)
-will help keep them up to date.
+will update them to the newest versions when possible.
 
-By default all apps include the `standard-app-packages` package. This
+By default all apps include the `meteor-platform` package. This
 automatically pulls in the packages that make up the core Meteor
 stack. If you want to build your own custom stack, just remove
-`standard-app-packages` from your app and add back in whichever of the standard
+`meteor-platform` from your app and add back in whichever of the standard
 packages you want to keep.
 
 Meteor uses a single-loading packaging system, meaning that it loads just one
