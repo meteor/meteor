@@ -1944,7 +1944,7 @@ main.registerCommand({
     });
 
     // If the version was specified, check that the version exists.
-    _.each(constraint.constraint, function (constr) {
+    _.each(constraint.constraints, function (constr) {
       if (constr.version !== null) {
         var versionInfo = doOrDie({ title: 'Fetching packages' }, function () {
           return catalog.complete.getVersion(constraint.name, constr.version);
