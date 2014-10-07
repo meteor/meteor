@@ -27,22 +27,23 @@ when writing those apps.
 Meteor is two things:
 
 * A _library of packages_: pre-written, self-contained modules that
-you might need in your app.<br>
-There are about a dozen core Meteor
-packages that most any app will use (for example [`webapp`](#webapp), which
-handles incoming HTTP connections, and `templating`, which lets you
-make HTML templates that automatically update live as data changes).
-Then there are optional packages like `email`, which lets your app
-send emails, or the Meteor Accounts series (`accounts-password`,
-`accounts-facebook`, `accounts-ui`, and others) which provide a
-full-featured user account system that you can drop right into your
-app. In addition to these "core" packages, there are thousands of
-community-written packages in [Atmosphere](https://atmospherejs.com/),
-one of which might do just what you need.
+  you might need in your app.
 
-* A _command-line tool_ called `meteor`.<br>
-`meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts of
-Visual Studio. It gathers up all of the source files and assets in your
+  There are about a dozen core Meteor packages that most any app will use. Two
+  examples: [`webapp`](#webapp), which handles incoming HTTP connections, and
+  `templating`, which lets you make HTML templates that automatically update
+  live as data changes. Then there are optional packages like `email`, which
+  lets your app send emails, or the Meteor Accounts series (`accounts-password`,
+  `accounts-facebook`, `accounts-ui`, and others) which provide a full-featured
+  user account system that you can drop right into your app. In addition to
+  these "core" packages, there are thousands of community-written packages in
+  [Atmosphere](https://atmospherejs.com/), one of which might do just what you
+  need.
+
+* A _command-line tool_ called `meteor`.
+
+  `meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts
+of Visual Studio. It gathers up all of the source files and assets in your
 application, carries out any necessary build steps (such as compiling
 [CoffeeScript](http://coffeescript.org), minifying CSS, building
 [npm](https://npmjs.org/) modules, or generating source maps), fetches the
@@ -52,11 +53,10 @@ whenever you change a file you immediately see the changes in your browser. It's
 super easy to use out of the box, but it's also extensible: you can add support
 for new languages and compilers by adding build plugin packages to your app.
 
-The key idea in the Meteor package system is that _everything should
-work identically in the browser and on the server_ (wherever it makes
-sense, of course: browsers can't send email and servers can't capture
-mouse events). Our whole ecosystem has been built from the ground up
-to support this.
+  The key idea in the Meteor package system is that _everything should work
+  identically in the browser and on the server_ (wherever it makes sense, of
+  course: browsers can't send email and servers can't capture mouse events). Our
+  whole ecosystem has been built from the ground up to support this.
 
 {{/markdown}}
 </template>
