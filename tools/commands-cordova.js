@@ -1107,7 +1107,7 @@ var checkAgreePlatformTerms = function (platform, name) {
 };
 
 var checkPlatformRequirements = function (platform, options) {
-  options = _.extend({fix: false, log: false}, options);
+  options = _.extend({log: false, fix: false, fixConsole: false}, options);
   if (platform == 'android') {
     return Android.checkRequirements(options);
   } else if (platform == 'ios') {
@@ -1893,6 +1893,16 @@ _.extend(Android.prototype, {
     }
   },
 
+  hasJdk: function () {
+    var self = this;
+
+    if (Host.isMac()) {
+      return files.statOrNull('/System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK') != null;
+    } else {
+      return !!Host.which('jarsigner');
+    }
+  },
+
   installJava: function () {
     var self = this;
 
@@ -1942,6 +1952,12 @@ _.extend(Android.prototype, {
     }
 
     throw new Error("Cannot automatically install Java on host: " + Host.getName());
+  },
+
+  installJdk: function () {
+    var self = this;
+
+    throw new Error("Cannot automatically install JDK on host: " + Host.getName());
   },
 
   hasAndroidBundle: function () {
@@ -2038,13 +2054,13 @@ _.extend(Android.prototype, {
 
     var result = { acceptable: true, missing: [] };
 
-    if (self.hasJava()) {
-      log && Console.info(Console.success("Java is installed"));
+    if (self.hasJdk()) {
+      log && Console.info(Console.success("A JDK is installed"));
     } else {
-      log && Console.info(Console.fail("Java is not installed"));
+      log && Console.info(Console.fail("A JDK is not installed"));
 
       if (fix) {
-        self.installJava();
+        self.installJdk();
       } else {
         result.missing.push("jdk");
         result.acceptable = false;
