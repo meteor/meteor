@@ -1395,7 +1395,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   verboseLog('Copying resources for mobile apps');
 
   var imageXmlRec = function (name, width, height, src) {
-    var androidMatch = /.+(.?.dpi)-(landscape|portrait)/g.exec(name);
+    var androidMatch = /.+(.?.dpi)_(landscape|portrait)/g.exec(name);
     var xmlRec = {
       src: src,
       width: width,
