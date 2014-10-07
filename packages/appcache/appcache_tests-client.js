@@ -29,12 +29,17 @@ appcacheTest('content type', function (test, manifest) {
 // Verify that each section header is only set once.
 appcacheTest('sections uniqueness', function (test, manifest) {
   var content = manifest.content;
-  var sectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:', 'SETTINGS'];
-  _.each(sectionHeaders, function (sectionHeader) {
-    var globalSearch = new RegExp(sectionHeader, "g");
-    var matches = content.match(globalSearch) || [];
-    test.isTrue(matches.length <= 1, sectionHeader + ' is set twice');
-  });
+  var mandatorySectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:'];
+  var optionalSectionHeaders = ['SETTINGS'];
+  _.each(_.union(mandatorySectionHeaders, optionalSectionHeaders),
+         function (sectionHeader) {
+           var globalSearch = new RegExp(sectionHeader, "g");
+           var matches = content.match(globalSearch) || [];
+           test.isTrue(matches.length <= 1, sectionHeader + ' is set twice');
+           if (_.contains(mandatorySectionHeaders, sectionHeader)) {
+             test.isTrue(matches.length == 1, sectionHeader + ' is not set');
+           }
+         });
 });
 
 
