@@ -1405,7 +1405,7 @@ var define = function (name, tagsList, f) {
 var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
-  slow: 'take quite a long time',
+  slow: 'take quite a long time; use --slow to include',
   // these last two are pseudo-tags, assigned to tests when you specify
   // --changed or a regex pattern
   unchanged: 'unchanged since last pass',
@@ -1564,11 +1564,17 @@ var listTests = function (options) {
     return;
   }
 
-  _.each(_.sortBy(testList.filteredTests, 'file'), function (test) {
-    Console.stdout.write(test.file + ': ' + test.name + ' [' +
-                         test.tags.join(' ') + ']');
+  _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
+    Console.stdout.write(file + ':\n');
+    _.each(tests, function (test) {
+      Console.stdout.write('  - ' + test.name +
+                           (test.tags.length ? ' [' + test.tags.join(' ') + ']'
+                            : ''));
+    });
   });
+  Console.stdout.write('\n');
 
+  Console.stderr.write(testList.filteredTests.length + " tests listed.");
   Console.stderr.write(testList.generateSkipReport());
 };
 
