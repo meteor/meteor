@@ -797,13 +797,17 @@ var buildCordova = function (localPath, buildCommand, options) {
 
     // depending on the debug mode build the android part in different modes
     if (_.contains(project.getPlatforms(), 'android')) {
-      var manifestPath =
-        path.join(cordovaPath, 'platforms', 'android', 'AndroidManifest.xml');
+      var androidBuildPath = path.join(cordovaPath, 'platforms', 'android');
+      var manifestPath = path.join(androidBuildPath, 'AndroidManifest.xml');
 
+      // XXX a hack to reset the debuggable mode
       var manifest = fs.readFileSync(manifestPath, 'utf8');
       manifest = manifest.replace(/android:debuggable=.(true|false)./g, '');
       manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
       fs.writeFileSync(manifestPath, manifest, 'utf8');
+
+      // XXX workaround the problem of cached apk invalidation
+      files.rm_recursive(path.join(androidBuildPath, 'ant-build'));
     }
 
     if (! options.debug) {
