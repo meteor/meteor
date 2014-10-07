@@ -793,7 +793,12 @@ var buildCordova = function (localPath, buildCommand, options) {
   verboseLog('Running the build command:', buildCommand);
   // Give the buffer more space as the output of the build is really huge
   try {
-    execFileSyncOrThrow(localCordova, [buildCommand],
+    var args = [buildCommand];
+
+    if (! options.debug)
+      args.push('--release');
+
+    execFileSyncOrThrow(localCordova, args,
                         { cwd: cordovaPath, maxBuffer: 2000*1024 });
   } catch (err) {
     // "ld: 100000 duplicate symbols for architecture i386" is a common error
