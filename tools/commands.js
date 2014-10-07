@@ -616,11 +616,6 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
 });
 
 var buildCommand = function (options) {
-  // Set the debug bit if we are bundling in debug mode. By default,
-  // options.debug will be false, which means that we will bundle for
-  // production.
-  project.setDebug(options.debug);
-
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -692,8 +687,13 @@ var buildCommand = function (options) {
   var bundlePath = options['directory'] ?
       path.join(outputPath, 'bundle') : path.join(buildDir, 'bundle');
 
+  // Creating the package loader with which to bundle our app here, probably
+  // calculating the dependencies.
   var loader;
   var messages = buildmessage.capture(function () {
+    // By default, options.debug will be false, which means that we will bundle
+    // for production.
+    project.setDebug(options.debug);
     loader = project.getPackageLoader();
   });
   if (messages.hasMessages()) {
