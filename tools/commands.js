@@ -31,7 +31,7 @@ var Console = require('./console.js').Console;
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
-var DEFAULT_PORT = 3000;
+var DEFAULT_PORT = '3000';
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -135,7 +135,7 @@ var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: '' + DEFAULT_PORT },
+    port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
