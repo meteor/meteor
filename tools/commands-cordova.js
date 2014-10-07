@@ -111,6 +111,16 @@ cordova.filterPackages = function (packages) {
   return ret;
 };
 
+// used by packages commands
+cordova.checkIsValidPlugin = function (name) {
+  var pluginHash = {};
+  pluginHash[name.split('@')[0]] = name.split('@')[1];
+
+  // check that every plugin is specifying either an exact constraint or a
+  // tarball url with sha
+  utils.ensureOnlyExactVersions(pluginHash);
+};
+
 // --- helpers ---
 
 var localCordova = path.join(files.getCurrentToolsDir(),
