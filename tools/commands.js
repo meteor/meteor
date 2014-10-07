@@ -716,7 +716,6 @@ var buildCommand = function (options) {
     outputPath: bundlePath,
     buildOptions: {
       minify: ! options.debug,
-      includeTests: ! options.debug,
       // XXX is this a good idea, or should linux be the default since
       //     that's where most people are deploying
       //     default?  i guess the problem with using DEPLOY_ARCH as default

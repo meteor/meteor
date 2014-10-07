@@ -294,9 +294,16 @@ var determineBuildTimeDependencies = function (packageSource,
   _.each(["packageExcluded", "pluginExcluded"], function (key) {
     ret[key] = {};
   });
+  // Don't bother filtering things if we are in uniload. That's too complicated.
   if (packageSource.catalog !== catalog.complete) {
     return ret;
   }
+  // If you have decided to build this package already, and this package is
+  // debugOnly, then it doesn't make sense to filter out its debugOnly subtrees.
+  if (packageSource.debugOnly) {
+    return ret;
+  }
+  // If the project tells us to include debugOnly packages, we shall do it.
   var project = require('./project.js').project;
   if (project && project.includeDebug) {
     return ret;

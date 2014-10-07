@@ -206,7 +206,8 @@ main.registerCommand({
         return; // already have errors, so skip the build
 
       var deps =
-            compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+          compiler.determineBuildTimeDependencies(packageSource)
+            .packageDependencies;
       tropohouse.default.downloadMissingPackages(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
