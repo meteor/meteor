@@ -15,8 +15,8 @@ var utils = exports;
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
 // <port>. We're not simply using 'url.parse' because we want '3000' to
-// parse as {host: undefined, protocol: undefined, port: 3000}, whereas
-// 'url.parse' would give us {protocol:3000, host: undefined, port:
+// parse as {host: undefined, protocol: undefined, port: '3000'}, whereas
+// 'url.parse' would give us {protocol:' 3000', host: undefined, port:
 // undefined} or something like that.
 //
 // 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
@@ -682,7 +682,7 @@ exports.mobileServerForRun = function (options) {
 
 
   // if we are running on a device, use the auto-detected IP
-  
+
   if (options.runOnDevice) {
     var myIp = ipAddress();
     if (! myIp) {
@@ -701,7 +701,7 @@ exports.mobileServerForRun = function (options) {
 
 
   // we are running a simulator, use localhost:3000
-  
+
   return {
     host: "localhost",
     port: parsedUrl.port,

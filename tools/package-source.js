@@ -480,15 +480,13 @@ _.extend(PackageSource.prototype, {
        * the package, required for publication.
        * @param {String} options.version The (extended)
        * [semver](http://www.semver.org) version for your package. Additionally,
-       * Meteor allows a wrap number, to follow the version number. If you are
+       * Meteor allows a wrap number: a positive integer that follows the version number. If you are
        * porting another package that uses semver versioning, you may want to
-       * use the original version, postfixed with the _<number>. For example,
-       * '1.2.3_1', '2.4.5-rc1_4'. Wrap numbers sort after the original numbers:
-       * '1.2.3' < '1.2.3_1' < '1.2.3_2' < '1.2.4-rc.0'. By default, wrap
-       * numbers don't affect compatibility, so 1.2.3_1 is compatible with
-       * 1.2.3, 1.2.3_3, etc. If no version is specified, this field defaults to
-       * `0.0.0`. You need to specify a version to publish to the package
-       * server.
+       * use the original version, postfixed with `_wrapnumber`. For example,
+       * `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers sort after the original numbers:
+       * `1.2.3` < `1.2.3_1` < `1.2.3_2` < `1.2.4-rc.0`. If no version is specified,
+       * this field defaults to `0.0.0`. If you want to publish your package to
+       * the package server, you must specify a version.
        * @param {String} options.name Optional name override. By default, the
        * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
@@ -1052,8 +1050,8 @@ _.extend(PackageSource.prototype, {
          * `accounts` package). If you are sourcing core
          * packages from a Meteor release with `versionsFrom`, you may leave
          * off version names for core packages. You may also specify constraints,
-         * such as 'my:forms@=1.0.0 (this package demands my:forms at 1.0.0 exactly),
-         * or 'my:forms@1.0.0 || =2.0.1' (my:forms at 1.x.y, or exactly 2.0.1).
+         * such as `my:forms@=1.0.0` (this package demands `my:forms` at `1.0.0` exactly),
+         * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.x.y`, or exactly `2.0.1`).
          * @param {String} [architecture] If you only use the package on the
          * server (or the client), you can pass in the second argument (e.g.,
          * `'server'` or `'client'`) to specify what architecture the package is
@@ -1193,9 +1191,9 @@ _.extend(PackageSource.prototype, {
         /**
          * @memberOf PackageAPI
          * @instance
-         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published. You may specify more than one release, in which case the constraints will be parsed with an or: 'jquery@1.0.0 || 2.0.0'.
+         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorRelease`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you can write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you later write `api.use('jquery')`, it will be equivalent to `api.use('jquery@1.0.0')`. You may specify an array of multiple releases, in which case the default value for constraints will be the "or" of the versions from each release: `api.versionsFrom(['METEOR@0.9.0', 'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as `api.use('jquery@1.0.0 || 2.0.0')`.
          * @locus package.js
-         * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
+         * @param {String | String[]} meteorRelease Specification of a release: track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the default release track `METEOR`.
          */
         versionsFrom: function (releases) {
           // Uniloaded packages really ought to be in the core release, by

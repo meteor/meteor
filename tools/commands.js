@@ -31,7 +31,7 @@ var Console = require('./console.js').Console;
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
-var DEFAULT_PORT = 3000;
+var DEFAULT_PORT = '3000';
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -135,7 +135,7 @@ var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: '' + DEFAULT_PORT },
+    port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
@@ -744,10 +744,27 @@ var buildCommand = function (options) {
     var buildPath = path.join(localPath, 'cordova-build',
                               'platforms', platformName);
     var platformPath = path.join(outputPath, platformName);
-    files.cp_r(buildPath, platformPath);
+
+    if (platformName === 'ios') {
+      files.cp_r(buildPath, platformPath);
+    } else if (platformName === 'android') {
+      files.cp_r(buildPath, path.join(platformPath, 'project'));
+      var apkPath = findApkPath(path.join(buildPath, 'ant-build'));
+      files.copyFile(apkPath, path.join(platformPath, 'unaligned.apk'));
+    }
   });
 
   files.rm_recursive(buildDir);
+};
+
+var findApkPath = function (dirPath) {
+  var apkPath = _.find(fs.readdirSync(dirPath), function (filePath) {
+    return path.extname(filePath) === '.apk';
+  });
+
+  if (! apkPath)
+    throw new Error('The APK file for the Android build was not found.');
+  return path.join(dirPath, apkPath);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
