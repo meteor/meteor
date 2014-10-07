@@ -682,7 +682,7 @@ exports.mobileServerForRun = function (options) {
 
 
   // if we are running on a device, use the auto-detected IP
-  
+
   if (options.runOnDevice) {
     var myIp = ipAddress();
     if (! myIp) {
@@ -701,7 +701,7 @@ exports.mobileServerForRun = function (options) {
 
 
   // we are running a simulator, use localhost:3000
-  
+
   return {
     host: "localhost",
     port: parsedUrl.port,
