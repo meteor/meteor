@@ -327,6 +327,10 @@ _.extend(LayeredCatalog.prototype, {
           // doesn't have access to it.
           utils.Patience.nudge();
           buildmessage.nudge();
+
+          // XXX: Call this more judiciously
+          // (I broke this when I removed Patience; need a quick fix for now)
+          utils.sleepMs(1);
         }
       });
   },
