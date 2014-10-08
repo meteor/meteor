@@ -7,6 +7,7 @@ var _= require('underscore');
 var fs = require("fs");
 var path = require("path");
 var packageClient = require("../package-client.js");
+var buildmessage = require("../buildmessage.js");
 
 var username = "test";
 var password = "testtest";
@@ -83,6 +84,76 @@ var checkVersions = function(sand, packages) {
   });
   selftest.expectEqual(packages.length, i);
 };
+
+// Takes in a remote catalog. Returns an object that can sort of immitate the
+// catalog. We don't bother to copy all of the information for memory/efficiency
+// reasons; the new 'catalog' has the following methods, which correspond to the
+// same methods on the normal catalog.
+//
+//  getAllPackageNames () - list of package names
+//  getPackage (p) - given a package name, return its record
+//  getSortedVersions (p) - given a package name, return a sorted list of its versions
+//  getAllReleaseTracks () - list of release tracks
+//  getSortedRecommendedReleaseVersions (t) - given a track name, get (see method name)
+//  getReleaseVersion (t, v) - given track & version, return the document record
+var DataStub = function (remoteCatalog) {
+  var self = this;
+  buildmessage.capture(
+      { title: "copying catalog data" },
+      function () {
+  var packageNames = remoteCatalog.getAllPackageNames();
+  self.packages = {};
+  _.each(packageNames, function (p) {
+    var versions = remoteCatalog.getSortedVersions(p);
+    var record = remoteCatalog.getPackage(p);
+    self.packages[p] = { versions: versions, record: record };
+  });
+  var releaseTracks = remoteCatalog.getAllReleaseTracks();
+  self.releases = {};
+  _.each(releaseTracks, function (t) {
+    var versions =
+        remoteCatalog.getSortedRecommendedReleaseVersions(t);
+    var records = {};
+    _.each(versions, function (v) {
+      records[v] = remoteCatalog.getReleaseVersion(t, v);
+    });
+    self.releases[t] = { versions: versions, records: records };
+  });
+ });
+};
+
+_.extend(DataStub.prototype, {
+  getAllPackageNames: function () {
+    return _.keys(this.packages);
+  },
+  getSortedVersions: function (p) {
+    var self = this;
+    var rec = self.packages[p];
+    if (!rec) return null;
+    return rec.versions;
+  },
+  getPackage: function (p) {
+    var self = this;
+    var rec = self.packages[p];
+    if (!rec) return null;
+    return rec.record;
+  },
+  getAllReleaseTracks: function () {
+    return _.keys(this.releases);
+  },
+  getSortedRecommendedReleaseVersions: function (t) {
+    var self = this;
+    var rec = self.releases[t];
+    if (!rec) return null;
+    return rec.versions;
+  },
+  getReleaseVersion: function (t, v) {
+    var self = this;
+    var rec = self.releases[t];
+    if (!rec) return null;
+    return rec.records[v];
+  }
+});
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
@@ -539,7 +610,6 @@ selftest.define("update server package data unit test",
                 function () {
   var s = new Sandbox();
   var run;
-  var buildmessage = require("../buildmessage.js");
 
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
 
@@ -560,7 +630,7 @@ selftest.define("update server package data unit test",
     packageServerUrl: selftest.testPackageServerUrl
   });
 
-  var oldStorage = _.clone(packageStorage);
+  var oldStorage = new DataStub(packageStorage);
 
   var newPackageNames = [];
   // Publish more than a (small) page worth of packages. When we pass the
