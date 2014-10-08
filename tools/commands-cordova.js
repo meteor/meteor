@@ -2051,20 +2051,22 @@ _.extend(Android.prototype, {
     if (self.hasAndroidBundle()) return;
 
     var uname = Host.getUname();
-    var tarball = "android_bundle_" + uname + "_" + ANDROID_BUNDLE_VERSION + ".tar.gz";
+    var tarballName = "android_bundle_" + uname + "_" + ANDROID_BUNDLE_VERSION + ".tar.gz";
 
     var tmpdir = files.mkdtemp("meteor-androidbundle");
 
     var progress = buildmessage.addChildTracker("Downloading Android bundle");
     try {
       buildmessage.capture({}, function () {
-        var tarball = httpHelpers.getUrl({
+        var url = "https://warehouse.meteor.com/cordova/" + tarballName;
+
+        var tarballStream = httpHelpers.getUrl({
           url: url,
           encoding: null,
           progress: progress,
           wait: false
         });
-        files.extractTarGz(tarball, tmpdir);
+        files.extractTarGz(tarballStream, tmpdir);
 
         files.renameDirAlmostAtomically(tmpdir, self.getAndroidBundlePath());
 
