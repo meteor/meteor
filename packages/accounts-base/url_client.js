@@ -80,6 +80,7 @@ AccountsTest = {
  * 2. `done`: A function to call when the password reset UI flow is complete. The normal
  * login process is suspended until this function is called, so that the
  * password for user A can be reset even if user B was logged in.
+ * @locus Client
  */
 Accounts.onResetPasswordLink = function (callback) {
   if (accountsCallbacks["reset-password"]) {
@@ -104,6 +105,7 @@ Accounts.onResetPasswordLink = function (callback) {
  * The normal login process is suspended until this function is called, so
  * that the user can be notified that they are verifying their email before
  * being logged in.
+ * @locus Client
  */
 Accounts.onEmailVerificationLink = function (callback) {
   if (accountsCallbacks["verify-email"]) {
@@ -128,6 +130,7 @@ Accounts.onEmailVerificationLink = function (callback) {
  * 2. `done`: A function to call when the enrollment UI flow is complete.
  * The normal login process is suspended until this function is called, so that
  * user A can be enrolled even if user B was logged in.
+ * @locus Client
  */
 Accounts.onEnrollmentLink = function (callback) {
   if (accountsCallbacks["enroll-account"]) {
