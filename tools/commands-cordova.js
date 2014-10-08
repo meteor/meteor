@@ -1788,7 +1788,7 @@ _.extend(Android.prototype, {
     var execution = cmd.run();
 
     if (options.progress) {
-      options.progress.reportDone();
+      options.progress.reportProgressDone();
     }
 
     if (execution.exitCode !== 0) {
