@@ -296,6 +296,8 @@ exports.run = function (appDir, options) {
       if (once ||
           result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
+          result.outcome === "outdated-cordova-platforms" ||
+          result.outcome === "outdated-cordova-plugins" ||
           (result.outcome === "terminated" &&
            result.signal === undefined && result.code === undefined)) {
         // Allow run() to continue (and call runner.stop()) only once the
@@ -324,6 +326,20 @@ exports.run = function (appDir, options) {
 "satisfy the constraints of .meteor/versions and .meteor/packages. This could be\n" +
 "caused by conflicts in .meteor/versions, conflicts in .meteor/packages, and/or\n" +
 "inconsistent changes to the dependencies in local packages.");
+    return 254;
+  }
+
+  if (result.outcome === "outdated-cordova-plugins") {
+    process.stderr.write(
+"Your app's Cordova plugins have changed.\n" +
+"Restart meteor to use the new set of plugins.\n");
+    return 254;
+  }
+
+  if (result.outcome === "outdated-cordova-platforms") {
+    process.stderr.write(
+"Your app's platforms have changed.\n" +
+"Restart meteor to use the new set of platforms.\n");
     return 254;
   }
 
