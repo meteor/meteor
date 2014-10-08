@@ -1790,7 +1790,7 @@ _.extend(Android.prototype, {
     var execution = cmd.run();
 
     if (options.progress) {
-      options.progress.reportDone();
+      options.progress.reportProgressDone();
     }
 
     if (execution.exitCode !== 0) {
@@ -1851,7 +1851,7 @@ _.extend(Android.prototype, {
   installTarget: function (target) {
     var self = this;
 
-    buildmessage.enterJob({ title: 'Installing Android API library'}, function () {
+    buildmessage.enterJob({ title: 'Installing Android SDK target (' + target + ')'}, function () {
       var options = {stdin: 'y\n'};
       options.progress = buildmessage.getCurrentProgressTracker();
       var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], options);
@@ -2080,13 +2080,18 @@ _.extend(Android.prototype, {
       buildmessage.capture({}, function () {
         var url = "https://warehouse.meteor.com/cordova/" + tarballName;
 
-        var tarballStream = httpHelpers.getUrl({
+        var future = new Future();
+        var extractStream = files.buildUntarGzStream(tmpdir, future);
+
+        var response = httpHelpers.getUrl({
           url: url,
           encoding: null,
           progress: progress,
-          wait: false
+          wait: false,
+          pipeTo: extractStream
         });
-        files.extractTarGz(tarballStream, tmpdir);
+
+        future.wait();
 
         files.renameDirAlmostAtomically(tmpdir, self.getAndroidBundlePath());
 

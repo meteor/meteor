@@ -131,6 +131,12 @@ _.extend(exports, {
       delete options.bodyStream;
     }
 
+    var pipeTo;
+    if (_.has(options, 'pipeTo')) {
+      pipeTo = options.pipeTo;
+      delete options.pipeTo;
+    }
+
     var progress = null;
     if (_.has(options, 'progress')) {
       progress = options.progress;
@@ -216,6 +222,10 @@ _.extend(exports, {
     // require it until we definitely need it.
     var request = require('request');
     var req = request(options, callback);
+
+    if (pipeTo) {
+      req.pipe(pipeTo);
+    }
 
     var bodyStreamLength = 0;
     if (bodyStream) {

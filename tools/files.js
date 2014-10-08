@@ -575,6 +575,67 @@ files.extractTarGz = function (buffer, destPath) {
   fs.rmdirSync(tempDir);
 };
 
+// Builds a stream that accepts `.tar.gz` data and extracts the archive
+// into a destination directory. destPath should not exist yet, and
+// the archive should contain a single top-level directory, which will
+// be renamed atomically to destPath. The entire tree will be made
+// readonly.
+files.buildUntarGzStream = function (destPath, future, options) {
+  options = options || {};
+
+  var parentDir = path.dirname(destPath);
+  var tempDir = path.join(parentDir, '.tmp' + utils.randomToken());
+  files.mkdir_p(tempDir);
+
+  var tar = require("tar");
+  var zlib = require("zlib");
+  var gunzip = zlib.createGunzip()
+    .on('error', function (e) {
+      future.isResolved() || future.throw(e);
+    });
+  var extractor = new tar.Extract({ path: tempDir })
+    .on('error', function (e) {
+      future.isResolved() || future.throw(e);
+    })
+    //.on('entry', function (entry) {
+    //  console.log("Extract: " + entry.path);
+    //})
+    .on('end', function () {
+      var srcDir = tempDir;
+
+      if (options.pluckTopLevel) {
+        // XXX: This is a little weird, and arguably doesn't belong at this abstraction level
+        // XXX: It is also similar to strip as passed to tar.Extract
+        var topLevelOfArchive = fs.readdirSync(tempDir);
+        if (topLevelOfArchive.length !== 1) {
+          console.log("Found these entries at top-level");
+          _.each(topLevelOfArchive, function (i) {
+            console.log("\t" + i);
+          });
+          throw new Error(
+            "Extracted archive '" + tempDir + "' should only contain one entry");
+        }
+        srcDir = path.join(tempDir, topLevelOfArchive[0]);
+      }
+
+      if (options.makeReadOnly) {
+        makeTreeReadOnly(srcDir);
+      }
+
+      fs.renameSync(srcDir, destPath);
+      if (tempDir != srcDir) {
+        fs.rmdirSync(tempDir);
+      }
+
+      future.isResolved() || future.return();
+    });
+
+  // Pipe the gunzip output to the untar stream; these calls
+  // cause the tar to be extracted to disk.
+  gunzip.pipe(extractor);
+  return gunzip;
+};
+
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
