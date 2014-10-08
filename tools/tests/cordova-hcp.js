@@ -39,4 +39,6 @@ selftest.define(
     if (! result.match(rootUrlRegExp)) {
       selftest.fail("Incorrect ROOT_URL");
     }
+
+    run.stop();
 });
