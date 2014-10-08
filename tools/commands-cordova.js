@@ -18,6 +18,8 @@ var processes = require('./processes.js');
 var tropo = tropohouse.default;
 var webArchName = "web.cordova";
 
+var ANDROID_BUNDLE_VERSION = "0.1";
+
 // android is available on all supported architectures
 var availablePlatforms =
   project.getDefaultPlatforms().concat(["android", "firefoxos"]);
@@ -259,7 +261,7 @@ var ensureAndroidBundle = function (command) {
   }
 
   try {
-    runCordovaScript('ensure_android_bundle.sh', true);
+    Android.ensureAndroidBundle();
   } catch (err) {
     verboseLog('Failed to install android_bundle ', err.stack);
     Console.warn("Failed to install android_bundle");
@@ -2029,8 +2031,7 @@ _.extend(Android.prototype, {
 
     if (files.statOrNull(versionPath)) {
       var version = fs.readFileSync(versionPath, { encoding: 'utf-8' });
-      // XXX: Dry violation with script
-      if (version.trim() == '0.1') {
+      if (version.trim() == ANDROID_BUNDLE_VERSION) {
         return true;
       }
     }
@@ -2041,7 +2042,43 @@ _.extend(Android.prototype, {
     var self = this;
 
     // XXX: Replace script
-    ensureAndroidBundle();
+    self.ensureAndroidBundle();
+  },
+
+  ensureAndroidBundle: function () {
+    var self = this;
+
+    if (self.hasAndroidBundle()) return;
+
+    var uname = Host.getUname();
+    var tarball = "android_bundle_" + uname + "_" + ANDROID_BUNDLE_VERSION + ".tar.gz";
+
+    var tmpdir = files.mkdtemp("meteor-androidbundle");
+
+    var progress = buildmessage.addChildTracker("Downloading Android bundle");
+    try {
+      buildmessage.capture({}, function () {
+        var tarball = httpHelpers.getUrl({
+          url: url,
+          encoding: null,
+          progress: progress,
+          wait: false
+        });
+        files.extractTarGz(tarball, tmpdir);
+
+        files.renameDirAlmostAtomically(tmpdir, self.getAndroidBundlePath());
+
+        // No need to delete tmpdir
+        tmpdir = null;
+      });
+    } finally {
+      progress.reportProgressDone();
+
+      // XXX: Proper tempdir helper?
+      if (tmpdir) {
+        files.rm_recursive(tmpdir);
+      }
+    }
   },
 
   waitForEmulator: function () {
