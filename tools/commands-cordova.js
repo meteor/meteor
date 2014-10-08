@@ -2443,7 +2443,7 @@ main.registerCommand({
         url += "#" + anchor;
       }
       openUrl(url);
-      Console.info("Please follow the instructions here: " + Console.bold(url));
+      Console.info("Please follow the instructions here:\n " + Console.bold(url) + "\n");
     } else {
       Console.info("We don't have installation instructions for your platform")
     }
