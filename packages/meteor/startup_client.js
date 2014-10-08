@@ -10,7 +10,7 @@ var ready = function() {
 
   // XXX hide the splash screen if such exists, only on mobile
   if (Meteor.isCordova) {
-    navigator.splashscree && navigator.splashscreen.hide();
+    navigator.splashscreen && navigator.splashscreen.hide();
   }
 
   loaded = true;
