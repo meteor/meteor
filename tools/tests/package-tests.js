@@ -289,18 +289,18 @@ selftest.define("add packages to app", ["net"], function () {
   run = s.run("add", "debug-only");
   run.match("debug-only");
   run.expectExit(0);
-  run = s.run();
-  run.waitSecs(15);
-  run.match("Testing a thing");
-  run.match("Started");
-  run.stop();
 
-  run = s.run("--production");
+  s.mkdir("server");
+  s.write("server/debug.js",
+          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
   run.waitSecs(15);
-  run.match("Started MongoDB.\n");
-  run.waitSecs(5);
-  run.read("=> Starting your app");
-  run.stop();
+  run.expectExit(234);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(235);
 });
 
 // Add a package that adds files to specific client architectures.

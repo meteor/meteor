@@ -300,53 +300,6 @@ _.extend(LayeredCatalog.prototype, {
       return ret.answer;
   },
 
-  // Separates out debugOnly packages and their dependencies. Goes through
-  // constraints recursively, and selects a subset of our versions that we use
-  // if we omit debug-only packages and their dependencies.
-  //
-  // Takes in a set of constraints (list of packages that we explicitly depend
-  // on) and a set of versions of those packages that we have agreed to use.
-  //
-  // Returns an object with news: versions (the versions we will use) and
-  // excluded (the versions that we will NOT use).
-  separateOutDebugDeps: function (constraints, versions) {
-    var self = this;
-    var processed = {};
-    var prodDeps = function (seed, versions) {
-      _.each(seed, function (s) {
-        if (processed[s])
-          return;
-        var vRec = self.getVersion(s, versions[s]);
-        if (vRec && !!vRec.debugOnly) {
-          // This is a debugOnly dependency. Stop.
-          return;
-        } else {
-          processed[s] = versions[s];
-          var next = [];
-          // Weak dependencies don't lead to packages that get bundled, so we
-          // don't have to worry if they are debugOnly. (Unless they are
-          // mentioned as non-weak dependencies elsewhere, in which case we
-          // will get to them then)
-          var next = _.filter(_.keys(vRec.dependencies), function (p) {
-            return _.has(versions, p);
-          });
-          prodDeps(next, versions);
-        }
-      });
-    };
-    prodDeps(constraints, versions);
-    var excluded = {};
-    _.each(versions, function(v, p) {
-      if (!_.has(processed, p)) {
-        excluded[p] = v;
-      }
-    });
-    return {
-      versions: processed,
-      excluded: excluded
-    };
-  },
-
   // Refresh the catalogs referenced by this catalog.
   // options:
   // - forceRefresh: even if there is a future in progress, refresh the catalog

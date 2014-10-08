@@ -1264,9 +1264,7 @@ main.registerCommand({
   project.setMuted(true); // Mute output where applicable
   // Hardset the proper release.
   project.writeMeteorReleaseVersion(release.current.name || 'none');
-  // Set debug mode directly, mostly to avoid running the constraint solver an
-  // extra time.
-  project.includeDebug = !options.production;
+  project.setDebug(!options.production);
   project.forceEditPackages(
     [options['driver-package'] || 'test-in-browser'],
     'add');
