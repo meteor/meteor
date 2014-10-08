@@ -9,9 +9,9 @@ App.info({
 App.icons({
   // iOS
   'iphone': 'resources/icons/icon-60.png',
-  'iphone-2x': 'resources/icons/icon-60@2x.png',
+  'iphone_2x': 'resources/icons/icon-60@2x.png',
   'ipad': 'resources/icons/icon-72.png',
-  'ipad-2x': 'resources/icons/icon-72@2x.png',
+  'ipad_2x': 'resources/icons/icon-72@2x.png',
 
   // Android - XXX these are the same as iOS for now
   'android_ldpi': 'resources/icons/icon-60.png',

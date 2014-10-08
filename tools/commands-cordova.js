@@ -1160,10 +1160,10 @@ var requirePlatformReady = function (platform) {
 // Hard-coded constants
 var iconIosSizes = {
   'iphone': '60x60',
-  'iphone-2x': '120x120',
-  'iphone-3x': '180x180',
+  'iphone_2x': '120x120',
+  'iphone_3x': '180x180',
   'ipad': '76x76',
-  'ipad-2x': '152x152'
+  'ipad_2x': '152x152'
 };
 
 var iconAndroidSizes = {
@@ -1288,10 +1288,10 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
      *
      * Valid key values:
      * - `iphone`
-     * - `iphone-2x`
-     * - `iphone-3x`
+     * - `iphone_2x`
+     * - `iphone_3x`
      * - `ipad`
-     * - `ipad-2x`
+     * - `ipad_2x`
      * - `android_ldpi`
      * - `android_mdpi`
      * - `android_hdpi`
