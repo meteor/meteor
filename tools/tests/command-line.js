@@ -56,52 +56,52 @@ selftest.define("argument parsing", function () {
 
   // successful command invocation, correct parsing of arguments
   run = s.run("dummy", "--email", "x");
-  run.read('"x" 3000 none []\n');
+  run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "", "");
-  run.read('"x" 3000 none ["",""]\n');
+  run.read('"x" "3000" none ["",""]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email=");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-e=");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "-");
-  run.read('"x" 3000 none ["-"]\n');
+  run.read('"x" "3000" none ["-"]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-e", "x");
-  run.read('"x" 3000 none []\n');
+  run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-e", "");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-exxx");
-  run.read('"xxx" 3000 none []\n');
+  run.read('"xxx" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "-");
-  run.read('"-" 3000 none []\n');
+  run.read('"-" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -121,7 +121,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "--port", "1234", "--changed");
-  run.read('"--port" 3000 true ["1234"]\n');
+  run.read('"--port" "3000" true ["1234"]\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -237,17 +237,17 @@ selftest.define("argument parsing", function () {
 
   // '--' to end parsing
   run = s.run("dummy", "--email", "x", "--", "-p", "4000");
-  run.read('"x" 3000 none ["-p","4000"]\n');
+  run.read('"x" "3000" none ["-p","4000"]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "--", "--changed", "--changed");
-  run.read('"x" 3000 none ["--changed","--changed"]\n');
+  run.read('"x" "3000" none ["--changed","--changed"]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "--");
-  run.read('"x" 3000 none []\n');
+  run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -258,7 +258,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "-UD", "--changed");
-  run.read('"x" 3000 true []\nurl\n\delete\n');
+  run.read('"x" "3000" true []\nurl\n\delete\n');
   run.expectEnd();
   run.expectExit(0);
 
