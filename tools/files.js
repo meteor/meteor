@@ -668,9 +668,9 @@ files.buildUntarStream = function (destPath, future, options) {
         future.isResolved() || future.return();
       });
   } else {
-    var options = {};
+    var tarOptions = {};
 
-    options.onExit = function (err, exitCode) {
+    tarOptions.onExit = function (err, exitCode) {
       if (!err && exitCode != 0) {
         err = new Error("Unexpected error from untar: " + exitCode);
       }
@@ -686,23 +686,62 @@ files.buildUntarStream = function (destPath, future, options) {
 
     var processes = require('./processes.js');
 
-    var cmd = new processes.RunCommand('tar', [ '-x', '-f', '-', '-C', tempDir ], options);
+    var cmd = new processes.RunCommand('tar', [ '-x', '-f', '-', '-C', tempDir ], tarOptions);
     cmd.start();
 
     untarStream = cmd.process.stdin;
   }
 
-  if (options.ungzip) {
-    var zlib = require("zlib");
-    var gunzip = zlib.createGunzip()
-      .on('error', function (e) {
-        future.isResolved() || future.throw(e);
-      });
-    gunzip.pipe(untarStream);
+  if (!!options.ungzip) {
+    var gunzip = files.buildUngzipStream(untarStream, future, {});
     return gunzip;
   }
 
   return untarStream;
+};
+
+
+files.buildUngzipStream = function (pipeTo, future, options) {
+  options = options || {};
+
+  var useNpmZlib = !!options.useNpmZlib;
+  var gunzipStream;
+  if (useNpmZlib) {
+    var zlib = require("zlib");
+    gunzipStream = zlib.createGunzip()
+      .on('error', function (e) {
+        future.isResolved() || future.throw(e);
+      });
+
+    gunzipStream.pipe(pipeTo);
+  } else {
+    var gunzipOptions = {};
+
+    gunzipOptions.onExit = function (err, exitCode) {
+      console.log("gunzip exit " + err + ", " + exitCode);
+      if (!err && exitCode != 0) {
+        err = new Error("Unexpected error from gunzip: " + exitCode);
+      }
+
+      if (err) {
+        future.isResolved() || future['throw'](err);
+        return;
+      }
+
+      future.isResolved() || future.return();
+    };
+
+    var processes = require('./processes.js');
+
+    var cmd = new processes.RunCommand('gunzip', [], gunzipOptions);
+
+    cmd.start();
+
+    cmd.process.stdout.pipe(pipeTo);
+    gunzipStream = cmd.process.stdin;
+  }
+
+  return gunzipStream;
 };
 
 
