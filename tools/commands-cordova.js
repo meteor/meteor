@@ -2428,6 +2428,11 @@ main.registerCommand({
 
   var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
   if (!installed.acceptable) {
+    if (Host.isLinux() && platform === "ios") {
+      Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+      return 1;
+    }
+
     Console.warn("Platform requirements not yet met");
 
     var host = null;
