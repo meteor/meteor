@@ -30,7 +30,7 @@ var localCordova = path.join(files.getCurrentToolsDir(), "tools",
 //
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
-var checkCordovaPlugins = function(sand, plugins) {
+var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
   var lines = selftest.execFileSync(localCordova, ['plugins'],
     {
       cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build'),
@@ -53,7 +53,7 @@ var checkCordovaPlugins = function(sand, plugins) {
     i++;
   });
   selftest.expectEqual(plugins.length, i);
-};
+});
 
 // Given a sandbox, that has the app as its cwd, read the cordova plugins
 // file and check that it contains exactly the plugins specified, in order.
@@ -147,7 +147,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
 
   run = s.run("run", "android");
   run.matchErr("not added to the project");
-  run.matchErr("meteor add-platform ");
+  run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
   run.match("Do you agree");
@@ -185,7 +185,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("list-platforms");
   run.match("android");
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(30);
   // This fails because the FB plugin does not compile without additional
   // configuration for android.
@@ -199,7 +199,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
 
@@ -209,7 +209,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("removed");
   run.expectExit(0);
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
 
@@ -219,7 +219,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("added");
   run.expectExit(0);
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
   checkCordovaPlugins(s, ["org.apache.cordova.device"]);
