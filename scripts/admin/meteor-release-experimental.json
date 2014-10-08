@@ -1,7 +1,7 @@
 {
  "track": "METEOR",
- "version": "0.9.4-pre.11",
+ "version": "0.9.4-rc.0",
  "recommended": false,
  "official": false,
- "description": "A preview of Meteor 0.9.4."
+ "description": "An RC of Meteor 0.9.4."
 }
