@@ -1,4 +1,5 @@
 # Meteor
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/meteor/meteor?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 Meteor is an ultra-simple environment for building modern web
 applications.
