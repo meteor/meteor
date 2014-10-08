@@ -1748,7 +1748,9 @@ main.registerCommand({
     'force-online': { type: Boolean },
     slow: { type: Boolean },
     browserstack: { type: Boolean },
-    history: { type: Number }
+    history: { type: Number },
+    list: { type: Boolean },
+    file: { type: String }
   },
   hidden: true
 }, function (options) {
@@ -1765,16 +1767,43 @@ main.registerCommand({
     }
   }
 
-  var testRegexp = undefined;
-  if (options.args.length) {
+  var compileRegexp = function (str) {
     try {
-      testRegexp = new RegExp(options.args[0]);
+      return new RegExp(str);
     } catch (e) {
       if (!(e instanceof SyntaxError))
         throw e;
-      Console.stderr.write("Bad regular expression: " + options.args[0] + "\n");
+      Console.stderr.write("Bad regular expression: " + str + "\n");
+      return null;
+    }
+  };
+
+  var testRegexp = undefined;
+  if (options.args.length) {
+    testRegexp = compileRegexp(options.args[0]);
+    if (! testRegexp) {
       return 1;
     }
+  }
+
+  var fileRegexp = undefined;
+  if (options.file) {
+    fileRegexp = compileRegexp(options.file);
+    if (! fileRegexp) {
+      return 1;
+    }
+  }
+
+  if (options.list) {
+    selftest.listTests({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp
+    });
+
+    return 0;
   }
 
   var clients = {
@@ -1782,12 +1811,15 @@ main.registerCommand({
   };
 
   return selftest.runTests({
+    // filtering options
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
+    testRegexp: testRegexp,
+    fileRegexp: fileRegexp,
+    // other options
     historyLines: options.history,
-    clients: clients,
-    testRegexp: testRegexp
+    clients: clients
   });
 
 });

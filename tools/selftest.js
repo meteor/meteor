@@ -18,6 +18,7 @@ var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
 var Package = uniload.load({ packages: ["ejson"] });
+var Console = require('./console.js').Console;
 
 var toolPackageName = "meteor-tool";
 
@@ -1390,10 +1391,8 @@ var define = function (name, tagsList, f) {
     tagsList = [];
   }
 
-  var tags = {};
-  _.each(tagsList, function (tag) {
-    tags[tag] = true;
-  });
+  var tags = tagsList.slice();
+  tags.sort();
 
   allTests.push(new Test({
     name: name,
@@ -1404,91 +1403,245 @@ var define = function (name, tagsList, f) {
   }));
 };
 
-
 ///////////////////////////////////////////////////////////////////////////////
-// Running tests
+// Choosing tests
 ///////////////////////////////////////////////////////////////////////////////
 
 var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
-  slow: 'take quite a long time',
-  // these last two are not actually test tags; they reflect the use of
-  // --changed and --tests
+  slow: 'take quite a long time; use --slow to include',
+  // these are pseudo-tags, assigned to tests when you specify
+  // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
-  'non-matching': "don't match specified pattern"
+  'non-matching': "don't match specified pattern",
+  'in other files': ""
 };
 
-// options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp
-//          clients:
-//             - browserstack (need s3cmd credentials)
-var runTests = function (options) {
-  var failureCount = 0;
+// Returns a TestList object representing a filtered list of tests,
+// according to the options given (which are based closely on the
+// command-line arguments).  Used as the first step of both listTests
+// and runTests.
+//
+// Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests
+var getFilteredTests = function (options) {
+  options = options || {};
 
-  var tests = getAllTests();
+  var allTests = getAllTests();
 
-  if (! tests.length) {
-    process.stderr.write("No tests defined.\n");
-    return 0;
+  if (allTests.length) {
+    var testState = readTestState();
+
+    // Add pseudo-tags 'non-matching', 'unchanged', and 'in other files'
+    // (but only so that we can then skip tests with those tags)
+    allTests = allTests.map(function (test) {
+      var newTags = [];
+
+      if (options.fileRegexp && ! options.fileRegexp.test(test.file)) {
+        newTags.push('in other files');
+      } else if (options.testRegexp && ! options.testRegexp.test(test.name)) {
+        newTags.push('non-matching');
+      } else if (options.onlyChanged &&
+                 test.fileHash === testState.lastPassedHashes[test.file]) {
+        newTags.push('unchanged');
+      }
+
+      if (! newTags.length) {
+        return test;
+      }
+
+      return _.extend({}, test, { tags: test.tags.concat(newTags) });
+    });
   }
 
-  var testStateFile = path.join(process.env.HOME, '.meteortest');
+  // (order of tags is significant to the "skip counts" that are displayed)
+  var tagsToSkip = [];
+  if (options.fileRegexp) {
+    tagsToSkip.push('in other files');
+  }
+  if (options.testRegexp) {
+    tagsToSkip.push('non-matching');
+  }
+  if (options.onlyChanged) {
+    tagsToSkip.push('unchanged');
+  }
+  if (! files.inCheckout()) {
+    tagsToSkip.push('checkout');
+  }
+  if (options.offline) {
+    tagsToSkip.push('net');
+  }
+  if (! options.includeSlowTests) {
+    tagsToSkip.push('slow');
+  }
+
+  return new TestList(allTests, tagsToSkip, testState);
+};
+
+// A TestList is the result of getFilteredTests.  It holds the original
+// list of all tests, the filtered list, and stats on how many tests
+// were skipped (see generateSkipReport).
+//
+// TestList also has code to save the hashes of files where all tests
+// ran and passed (for the `--changed` option).  If a testState is
+// provided, the notifyFailed and saveTestState can be used to modify
+// the testState appropriately and write it out.
+var TestList = function (allTests, tagsToSkip, testState) {
+  tagsToSkip = (tagsToSkip || []);
+  testState = (testState || null); // optional
+
+  var self = this;
+  self.allTests = allTests;
+  self.skippedTags = tagsToSkip;
+  self.skipCounts = {};
+  self.testState = testState;
+
+  _.each(tagsToSkip, function (tag) {
+    self.skipCounts[tag] = 0;
+  });
+
+  self.fileInfo = {}; // path -> {hash, hasSkips, hasFailures}
+
+  self.filteredTests = _.filter(allTests, function (test) {
+
+    if (! self.fileInfo[test.file]) {
+      self.fileInfo[test.file] = {
+        hash: test.fileHash,
+        hasSkips: false,
+        hasFailures: false
+      };
+    }
+    var fileInfo = self.fileInfo[test.file];
+
+    // We look for tagsToSkip *in order*, and when we decide to
+    // skip a test, we don't keep looking at more tags, and we don't
+    // add the test to any further "skip counts".
+    return !_.any(tagsToSkip, function (tag) {
+      if (_.contains(test.tags, tag)) {
+        self.skipCounts[tag]++;
+        fileInfo.hasSkips = true;
+        return true;
+      } else {
+        return false;
+      }
+    });
+  });
+};
+
+// Mark a test's file as having failures.  This prevents
+// saveTestState from saving its hash as a potentially
+// "unchanged" file to be skipped in a future run.
+TestList.prototype.notifyFailed = function (test) {
+  this.fileInfo[test.file].hasFailures = true;
+};
+
+// If this TestList was constructed with a testState,
+// modify it and write it out based on which tests
+// were skipped and which tests had failures.
+TestList.prototype.saveTestState = function () {
+  var self = this;
+  var testState = self.testState;
+  if (! (testState && self.filteredTests.length)) {
+    return;
+  }
+
+  _.each(self.fileInfo, function (info, f) {
+    if (info.hasFailures) {
+      delete testState.lastPassedHashes[f];
+    } else if (! info.hasSkips) {
+      testState.lastPassedHashes[f] = info.hash;
+    }
+  });
+
+  writeTestState(testState);
+};
+
+// Return a string like "Skipped 1 foo test\nSkipped 5 bar tests\n"
+TestList.prototype.generateSkipReport = function () {
+  var self = this;
+  var result = '';
+
+  _.each(self.skippedTags, function (tag) {
+    var count = self.skipCounts[tag];
+    if (count) {
+      var noun = "test" + (count > 1 ? "s" : ""); // "test" or "tests"
+      // "non-matching tests" or "tests in other files"
+      var nounPhrase = (/ /.test(tag) ?
+                        (noun + " " + tag) : (tag + " " + noun));
+      // " (foo)" or ""
+      var parenthetical = (tagDescriptions[tag] ? " (" +
+                           tagDescriptions[tag] + ")" : '');
+      result += ("Skipped " + count + " " + nounPhrase + parenthetical + '\n');
+    }
+  });
+
+  return result;
+};
+
+var getTestStateFilePath = function () {
+  return path.join(process.env.HOME, '.meteortest');
+};
+
+var readTestState = function () {
+  var testStateFile = getTestStateFilePath();
   var testState;
   if (fs.existsSync(testStateFile))
     testState = JSON.parse(fs.readFileSync(testStateFile, 'utf8'));
   if (! testState || testState.version !== 1)
     testState = { version: 1, lastPassedHashes: {} };
-  var currentHashes = {};
+  return testState;
+};
 
-  // _.keys(skipCounts) is the set of tags to skip
-  var skipCounts = {};
-  if (! files.inCheckout())
-    skipCounts['checkout'] = 0;
+var writeTestState = function (testState) {
+  var testStateFile = getTestStateFilePath();
+  fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
+};
 
-  if (options.offline)
-    skipCounts['net'] = 0;
+// Same options as getFilteredTests.  Writes to stdout and stderr.
+var listTests = function (options) {
+  var testList = getFilteredTests(options);
 
-  if (! options.includeSlowTests)
-    skipCounts['slow'] = 0;
-
-  if (options.testRegexp) {
-    var lengthBeforeTestRegexp = tests.length;
-    // Filter out tests whose name doesn't match.
-    tests = _.filter(tests, function (test) {
-      return options.testRegexp.test(test.name);
-    });
-    skipCounts['non-matching'] = lengthBeforeTestRegexp - tests.length;
+  if (! testList.allTests.length) {
+    Console.stderr.write("No tests defined.\n");
+    return;
   }
 
-  if (options.onlyChanged) {
-    var lengthBeforeOnlyChanged = tests.length;
-    // Filter out tests that haven't changed since they last passed.
-    tests = _.filter(tests, function (test) {
-      return test.fileHash !== testState.lastPassedHashes[test.file];
+  _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
+    Console.stdout.write(file + ':\n');
+    _.each(tests, function (test) {
+      Console.stdout.write('  - ' + test.name +
+                           (test.tags.length ? ' [' + test.tags.join(' ') + ']'
+                            : ''));
     });
-    skipCounts.unchanged = lengthBeforeOnlyChanged - tests.length;
+  });
+
+  Console.stderr.write('\n');
+  Console.stderr.write(testList.filteredTests.length + " tests listed.");
+  Console.stderr.write(testList.generateSkipReport());
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Running tests
+///////////////////////////////////////////////////////////////////////////////
+
+// options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp,
+//          fileRegexp,
+//          clients:
+//             - browserstack (need s3cmd credentials)
+var runTests = function (options) {
+  var testList = getFilteredTests(options);
+
+  if (! testList.allTests.length) {
+    Console.stderr.write("No tests defined.\n");
+    return 0;
   }
 
-  var failuresInFile = {};
-  var skipsInFile = {};
   var totalRun = 0;
-  _.each(tests, function (test) {
-    currentHashes[test.file] = test.fileHash;
-    // Is this a test we're supposed to skip?
-    var shouldSkip = false;
-    _.each(_.keys(test.tags), function (tag) {
-      if (_.has(skipCounts, tag)) {
-        shouldSkip = true;
-        skipCounts[tag] ++;
-      }
-    });
-    if (shouldSkip) {
-      skipsInFile[test.file] = true;
-      return;
-    }
+  var failedTests = [];
 
+  _.each(testList.filteredTests, function (test) {
     totalRun++;
-    process.stderr.write(test.name + "... ");
+    Console.stderr.write(test.file + ": " + test.name + " ... ");
 
     var failure = null;
     try {
@@ -1498,7 +1651,7 @@ var runTests = function (options) {
       if (e instanceof TestFailure) {
         failure = e;
       } else {
-        process.stderr.write("exception\n\n");
+        Console.stderr.write("exception\n\n");
         throw e;
       }
     } finally {
@@ -1507,12 +1660,14 @@ var runTests = function (options) {
     }
 
     if (failure) {
-      process.stderr.write("fail!\n");
-      failureCount++;
+      Console.stderr.write("fail!\n");
+      failedTests.push(test);
+      testList.notifyFailed(test);
+
       var frames = parseStack.parse(failure);
       var relpath = path.relative(files.getCurrentToolsDir(),
                                   frames[0].file);
-      process.stderr.write("  => " + failure.reason + " at " +
+      Console.stderr.write("  => " + failure.reason + " at " +
                            relpath + ":" + frames[0].line + "\n");
       if (failure.reason === 'no-match') {
       }
@@ -1521,28 +1676,28 @@ var runTests = function (options) {
           return status.signal || ('' + status.code) || "???";
         };
 
-        process.stderr.write("  => Expected: " + s(failure.details.expected) +
+        Console.stderr.write("  => Expected: " + s(failure.details.expected) +
                              "; actual: " + s(failure.details.actual) + "\n");
       }
       if (failure.reason === 'expected-exception') {
       }
       if (failure.reason === 'not-equal') {
-        process.stderr.write(
-"  => Expected: " + JSON.stringify(failure.details.expected) +
-"; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        Console.stderr.write(
+          "  => Expected: " + JSON.stringify(failure.details.expected) +
+            "; actual: " + JSON.stringify(failure.details.actual) + "\n");
       }
 
       if (failure.details.run) {
         failure.details.run.outputLog.end();
         var lines = failure.details.run.outputLog.get();
         if (! lines.length) {
-          process.stderr.write("  => No output\n");
+          Console.stderr.write("  => No output\n");
         } else {
           var historyLines = options.historyLines || 100;
 
-          process.stderr.write("  => Last " + historyLines + " lines:\n");
+          Console.stderr.write("  => Last " + historyLines + " lines:\n");
           _.each(lines.slice(-historyLines), function (line) {
-            process.stderr.write("  " +
+            Console.stderr.write("  " +
                                  (line.channel === "stderr" ? "2| " : "1| ") +
                                  line.text +
                                  (line.bare ? "%" : "") + "\n");
@@ -1551,51 +1706,37 @@ var runTests = function (options) {
       }
 
       if (failure.details.messages) {
-        process.stderr.write("  => Errors while building:\n");
-        process.stderr.write(failure.details.messages.formatMessages());
+        Console.stderr.write("  => Errors while building:\n");
+        Console.stderr.write(failure.details.messages.formatMessages());
       }
-
-      failuresInFile[test.file] = true;
     } else {
-      process.stderr.write("ok\n");
+      Console.stderr.write("ok\n");
     }
   });
 
-  _.each(_.keys(currentHashes), function (f) {
-    if (failuresInFile[f])
-      delete testState.lastPassedHashes[f];
-    else if (! skipsInFile[f])
-      testState.lastPassedHashes[f] = currentHashes[f];
-  });
-
-  if (tests.length)
-    fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
+  testList.saveTestState();
 
   if (totalRun > 0)
-    process.stderr.write("\n");
+    Console.stderr.write("\n");
 
-  var totalSkipCount = 0;
-  _.each(skipCounts, function (count, tag) {
-    totalSkipCount += count;
-    if (count) {
-      process.stderr.write("Skipped " + count + " " + tag + " test" +
-                           (count > 1 ? "s" : "") + " (" +
-                           tagDescriptions[tag] + ")\n");
-    }
-  });
+  Console.stderr.write(testList.generateSkipReport());
 
-  if (tests.length === 0) {
-    process.stderr.write("No tests run.\n");
+  if (testList.filteredTests.length === 0) {
+    Console.stderr.write("No tests run.\n");
     return 0;
-  } else if (failureCount === 0) {
+  } else if (failedTests.length === 0) {
     var disclaimers = '';
-    if (totalSkipCount > 0)
+    if (testList.filteredTests.length < testList.allTests.length)
       disclaimers += " other";
-    process.stderr.write("All" + disclaimers + " tests passed.\n");
+    Console.stderr.write("All" + disclaimers + " tests passed.\n");
     return 0;
   } else {
-    process.stderr.write(failureCount + " failure" +
-                         (failureCount > 1 ? "s" : "") + ".\n");
+    var failureCount = failedTests.length;
+    Console.stderr.write(failureCount + " failure" +
+                         (failureCount > 1 ? "s" : "") + ":\n");
+    _.each(failedTests, function (test) {
+      Console.stderr.write("  - " + test.file + ": " + test.name);
+    });
     return 1;
   }
 };
@@ -1633,6 +1774,7 @@ var runTests = function (options) {
 
 _.extend(exports, {
   runTests: runTests,
+  listTests: listTests,
   markStack: markStack,
   define: define,
   Sandbox: Sandbox,
