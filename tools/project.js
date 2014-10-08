@@ -106,9 +106,19 @@ var Project = function () {
   // to tell the user that we are adding packages to an app during
   // test-packages.  (We still print other messages like packages downloading.)
   self.muted = false;
+
+  // If we are building this app in debug mode -- either because we are bundling
+  // for debug, or because we are running in terminal without the production
+  // flag, then we should include debug packages and build everything that we
+  // build as part of the app with debug build. Otherwise, don't.
+  self.includeDebug = true;
 };
 
 _.extend(Project.prototype, {
+  setDebug: function (debug) {
+    var self = this;
+    self.includeDebug = debug;
+  },
 
   // Sets the mute flag on the project. Muted projects don't print out non-error
   // output.
@@ -160,9 +170,9 @@ _.extend(Project.prototype, {
     self.viableDepSource = true;
   },
 
-  // Rereads all the on-disk files by reinitalizing the project with the same directory.
-  // Caches the old versions, in case we were running with --release (and they don't
-  // match the ones on disk).
+  // Rereads all the on-disk files by reinitalizing the project with the same
+  // directory.  Caches the old versions, in case we were running with --release
+  // (and they don't match the ones on disk).
   //
   // We don't automatically reinitialize this singleton when an app is
   // restarted, but an app restart is very likely caused by changes to our
@@ -197,9 +207,9 @@ _.extend(Project.prototype, {
 
     if (!self._depsUpToDate) {
 
-      // We are calculating this project's dependencies, so we obviously should not
-      // use it as a source of version locks (unless specified explicitly through
-      // previousVersions).
+      // We are calculating this project's dependencies, so we obviously should
+      // not use it as a source of version locks (unless specified explicitly
+      // through previousVersions).
       self.viableDepSource = false;
 
       // Use current release to calculate packages & combined constraints.

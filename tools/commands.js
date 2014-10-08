@@ -175,6 +175,7 @@ function doRunCommand (options) {
   // seems to fix it in a clear and understandable fashion.)
   var messages = buildmessage.capture(function () {
     project.getVersions();  // #StructuredProjectInitialization
+    project.setDebug(!options.production);
   });
   if (messages.hasMessages()) {
     Console.stderr.write(messages.formatMessages());
@@ -597,9 +598,7 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
-    verbose: { type: Boolean, short: "v" },
-    // Undocumented
-    'for-deploy': { type: Boolean }
+    verbose: { type: Boolean, short: "v" }
   }
 };
 
@@ -688,8 +687,13 @@ var buildCommand = function (options) {
   var bundlePath = options['directory'] ?
       path.join(outputPath, 'bundle') : path.join(buildDir, 'bundle');
 
+  // Creating the package loader with which to bundle our app here, probably
+  // calculating the dependencies.
   var loader;
   var messages = buildmessage.capture(function () {
+    // By default, options.debug will be false, which means that we will bundle
+    // for production.
+    project.setDebug(options.debug);
     loader = project.getPackageLoader();
   });
   if (messages.hasMessages()) {
@@ -946,13 +950,18 @@ main.registerCommand({
   // issues are concurrency-related, or possibly some weird order-of-execution
   // of interaction that we are failing to understand. This seems to fix it in a
   // clear and understandable fashion.)
-  var messages = buildmessage.capture({ title: "Resolving versions" }, function () {
+  var messages = buildmessage.capture({ title: "Resolving versions" },
+    function () {
     project.getVersions();  // #StructuredProjectInitialization
   });
   if (messages.hasMessages()) {
     Console.stderr.write(messages.formatMessages());
     return 1;
   }
+  // Set the debug bit if we are bundling in debug mode. By default,
+  // options.debug will be false, which means that we will bundle for
+  // production.
+  project.setDebug(options.debug);
 
   if (options.password) {
     if (useGalaxy) {
@@ -1253,7 +1262,9 @@ main.registerCommand({
   // main project to the test directory.
   project.setRootDir(testRunnerAppDir);
   project.setMuted(true); // Mute output where applicable
+  // Hardset the proper release.
   project.writeMeteorReleaseVersion(release.current.name || 'none');
+  project.setDebug(!options.production);
   project.forceEditPackages(
     [options['driver-package'] || 'test-in-browser'],
     'add');

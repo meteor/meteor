@@ -192,8 +192,9 @@ selftest.define("change packages during hot code push", [], function () {
   run.stop();
 });
 
-// Add packages through the command line, and make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list
+// Add packages through the command line. Make sure that the correct set of
+// changes is reflected in .meteor/packages, .meteor/versions and list. Make
+// sure that debugOnly packages don't show up in production mode.
 selftest.define("add packages to app", ["net"], function () {
   var s = new Sandbox();
   var run;
@@ -203,6 +204,13 @@ selftest.define("add packages to app", ["net"], function () {
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
+
+  // This is a legit version, but accounts-base started with 1.0.0 and is
+  // unlikely to backtrack.
+  run = s.run("add", "accounts-base@0.123.123");
+  run.matchErr("no such version");
+  run.expectExit(1);
+
 
   run = s.run("add", "accounts-base");
 
@@ -275,6 +283,24 @@ selftest.define("add packages to app", ["net"], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
+
+  // Add a debugOnly package. It should work during a normal run, but print
+  // nothing in production mode.
+  run = s.run("add", "debug-only");
+  run.match("debug-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/debug.js",
+          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(234);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(235);
 });
 
 // Add a package that adds files to specific client architectures.

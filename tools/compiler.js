@@ -44,7 +44,6 @@ compiler.BUILT_BY = 'meteor/14';
 //  - acceptableWeakPackages: if set, include direct weak dependencies
 //    that are on one of these packages (it's an object mapping
 //    package name -> true). Otherwise skip all weak dependencies.
-//  - constraintSolverOpts
 //
 // (Why does we need to list acceptable weak packages here rather than just
 // implement a skipWeak flag and allow the caller to filter the ones they care
@@ -83,13 +82,20 @@ compiler.eachUsedUnibuild = function (
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var unibuild = packageLoader.getUnibuild(use.package, arch);
+    var usedPackage = packageLoader.getPackage(
+      use.package, { throwOnError: true });
+
+    // Ignore this package if we were told to skip debug-only packages and it is
+    // debug-only.
+    if (usedPackage.debugOnly && options.skipDebugOnly)
+      continue;
+
+    var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.
       continue;
     }
-
 
     if (_.has(processedBuildId, unibuild.id))
       continue;
@@ -125,14 +131,6 @@ compiler.eachUsedUnibuild = function (
 // 'meteor update' for package build-time dependencies?
 //
 // XXX deal with _makeBuildTimePackageLoader callsites
-//
-// XXX this function is probably going to get called a huge number of
-// times. For example, the Catalog calls it on every local package
-// every time the local package list changes. We could memoize the
-// result on packageSource (and presumably make this a method on
-// PackgeSource), or we could have some kind of cache (the ideal place
-// for such a cache might be inside the constraint solver, since it
-// will know how/when to invalidate it).
 var determineBuildTimeDependencies = function (packageSource,
                                                constraintSolverOpts) {
   var ret = {};
@@ -212,7 +210,7 @@ var determineBuildTimeDependencies = function (packageSource,
   // the version lock file) and the direct dependencies (which are packages that
   // we are exactly using) in order to optimize build id generation.
   ret.directDependencies = {};
-  _.each(  ret.packageDependencies, function (version, packageName) {
+  _.each(ret.packageDependencies, function (version, packageName) {
     // Take only direct dependencies.
     if (_.has(constraints, packageName)) {
       ret.directDependencies[packageName] = version;
@@ -1045,7 +1043,8 @@ compiler.compile = function (packageSource, options) {
     cordovaDependencies: packageSource.cordovaDependencies,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
-    includeTool: packageSource.includeTool
+    includeTool: packageSource.includeTool,
+    debugOnly: packageSource.debugOnly
   });
 
   // Compile unibuilds. Might use our plugins, so needs to happen second.

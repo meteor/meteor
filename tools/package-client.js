@@ -528,8 +528,10 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     }
 
     if (!exports.amIAuthorized(name, conn, false)) {
-      Console.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
-      Console.stderr.write('Only authorized maintainers may publish new versions. \n');
+      Console.stderr.write(
+        'You are not an authorized maintainer of ' + name + ".\n");
+      Console.stderr.write(
+        'Only authorized maintainers may publish new versions. \n');
       return 1;
     }
   }
@@ -661,6 +663,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
       compilerVersion: compiler.BUILT_BY,
       containsPlugins: packageSource.containsPlugins(),
+      debugOnly: packageSource.debugOnly,
       dependencies: packageDeps
     };
     try {

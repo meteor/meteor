@@ -8,6 +8,11 @@ var ready = function() {
   if (awaitingEventsCount > 0)
     return;
 
+  // XXX hide the splash screen if such exists, only on mobile
+  if (Meteor.isCordova) {
+    navigator.splashscreen && navigator.splashscreen.hide();
+  }
+
   loaded = true;
   while (queue.length)
     (queue.shift())();
