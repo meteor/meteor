@@ -144,3 +144,25 @@ Tinytest.add("webapp - valid pid check", function (test) {
   test.isFalse(WebAppInternals.validPid("foobar"));
   test.isFalse(WebAppInternals.validPid("123foo"));
 });
+
+// Regression test: `generateBoilerplateInstance` should not change
+// `__meteor_runtime_config__`.
+Tinytest.add("webapp - generating boilerplate should not change runtime config", function (test) {
+  // Set a dummy key in the runtime config served in the
+  // boilerplate. Test that the dummy key appears in the boilerplate,
+  // but not in __meteor_runtime_config__ after generating the
+  // boilerplate.
+
+  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+
+  var boilerplate = WebAppInternals.generateBoilerplateInstance(
+    "web.browser",
+    {}, // empty manifest
+    { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
+  );
+
+  var boilerplateHtml = boilerplate.toHTML();
+  test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
+
+  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+});
