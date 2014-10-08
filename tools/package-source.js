@@ -517,7 +517,7 @@ _.extend(PackageSource.prototype, {
                 "trying to initialize a nonexistent base package " + value);
             }
           } else if (key === "debugOnly") {
-            self.debugOnly = value;
+            self.debugOnly = !!value;
           } else {
           // Do nothing. We might want to add some keys later, and we should err
           // on the side of backwards compatibility.
@@ -869,6 +869,21 @@ _.extend(PackageSource.prototype, {
       // recover by ignoring
     }
 
+    // We want the "debug mode" to be a property of the *bundle* operation
+    // (turning a set of packages, including the app, into a star), not the
+    // *compile* operation (turning a package source into an isopack). This is
+    // so we don't have to publish two versions of each package. But we have no
+    // way to mark a file in an isopack as being the result of running a plugin
+    // from a debugOnly dependency, and so there is no way to tell which files
+    // to exclude in production mode from a published package. Eventually, we'll
+    // add such a flag to the isopack format, but until then we'll sidestep the
+    // issue by disallowing build plugins in debugOnly packages.
+    if (self.debugOnly && !_.isEmpty(self.pluginInfo)) {
+      buildmessage.error(
+        "can't register build plugins in debugOnly packages");
+      // recover by ignoring
+    }
+
     if (self.version === null && options.requireVersion) {
       if (options.defaultVersion) {
         self.version = options.defaultVersion;
@@ -1137,6 +1152,17 @@ _.extend(PackageSource.prototype, {
          * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
          */
         imply: function (names, arch) {
+          // We currently disallow build plugins in debugOnly packages; but if
+          // you could use imply in a debugOnly package, you could pull in the
+          // build plugin from an implied package, which would have the same
+          // problem as allowing build plugins directly in the package. So no
+          // imply either!
+          if (self.debugOnly) {
+            buildmessage.error("can't use imply in debugOnly packages");
+            // recover by ignoring
+            return;
+          }
+
           names = toArray(names);
           arch = toArchArray(arch);
 
