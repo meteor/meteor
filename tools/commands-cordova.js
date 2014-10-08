@@ -1620,11 +1620,13 @@ _.extend(IOS.prototype, {
     if (self.hasXcode()) {
       log && Console.info(Console.success("Xcode is installed"));
     } else {
-      log && Console.info(Console.fail("Xcode is not installed"));
-
       if (fix) {
+        log && Console.info("Installing Xcode");
+
         self.installXcode();
       } else {
+        log && Console.info(Console.fail("Xcode is not installed"));
+
         result.missing.push("xcode");
         result.acceptable = false;
       }
@@ -1642,11 +1644,15 @@ _.extend(IOS.prototype, {
       if (self.hasAgreedXcodeLicense()) {
         log && Console.info(Console.success("Xcode license agreed"));
       } else {
-        log && Console.info(Console.fail("You must accept the Xcode license"));
-
         if (fix) {
+          log && Console.info("Please accept the Xcode license");
+
           self.launchXcode();
+
+          // XXX: Wait?
         } else {
+          log && Console.info(Console.fail("You must accept the Xcode license"));
+
           result.missing.push("xcode-license");
           result.acceptable = false;
         }
@@ -2124,12 +2130,14 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("Found Android bundle"));
       hasAndroid = true;
     } else {
-      log && Console.info(Console.fail("Android bundle not found"));
-
       if (fixConsole) {
+        log && Console.info("Installing Android bundle");
+
         self.installAndroidBundle();
         hasAndroid = true;
       } else {
+        log && Console.info(Console.fail("Android bundle not found"));
+
         result.missing.push("android-bundle");
         result.acceptable = false;
       }
@@ -2140,12 +2148,14 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("A JDK is installed"));
       hasJava = true;
     } else {
-      log && Console.info(Console.fail("A JDK is not installed"));
-
       if (fix) {
+        log && Console.info("Installing JDK");
+
         self.installJdk();
         hasJava = true;
       } else {
+        log && Console.info(Console.fail("A JDK is not installed"));
+
         result.missing.push("jdk");
         result.acceptable = false;
       }
@@ -2154,12 +2164,11 @@ _.extend(Android.prototype, {
     // (hasAcceleration can also be undefined)
     var hasAcceleration = self.hasAcceleration();
     if (hasAcceleration === false) {
-      log && Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
-
-
       if (fix) {
         self.installAcceleration();
       } else {
+        log && Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
+
         result.missing.push("haxm");
 
         // Not all systems can install the accelerator, so don't block
@@ -2175,12 +2184,12 @@ _.extend(Android.prototype, {
       if (self.hasTarget('19', 'default/x86')) {
         log && Console.info(Console.success("Found suitable Android x86 image"));
       } else {
-        log && Console.info(Console.fail("Suitable Android x86 image not found"));
-
         if (fixSilent) {
-          Console.info("Installing Android x86 image");
+          log && Console.info("Installing Android x86 image");
           self.installTarget('sys-img-x86-android-19');
         } else {
+          log && Console.info(Console.fail("Suitable Android x86 image not found"));
+
           result.missing.push("android-sys-img");
           result.acceptable = false;
         }
@@ -2190,13 +2199,14 @@ _.extend(Android.prototype, {
       if (self.hasAvd(avdName)) {
         log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
       } else {
-        log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
-
         if (fixSilent) {
+          log && Console.info("Creating android virtual device (AVD): " + avdName);
+
           var avdOptions = {};
           self.createAvd(avdName, avdOptions);
-          Console.info(Console.success("Created android virtual device (AVD): " + avdName));
         } else {
+          log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+
           result.missing.push("android-avd");
           result.acceptable = false;
         }
