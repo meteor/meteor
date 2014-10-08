@@ -284,7 +284,7 @@ Example:
         check(arg2, [Number]);
         // .. do stuff ..
         if (you want to throw an error)
-          throw new Meteor.Error(404, "Can't find my pants");
+          throw new Meteor.Error("pants-not-found", "Can't find my pants");
         return "some return value";
       },
 
