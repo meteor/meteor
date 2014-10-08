@@ -527,14 +527,16 @@ _.extend(Target.prototype, {
     var packageLoader = self.packageLoader;
 
     // Find the roots
-    var rootUnibuilds =
-        _.map(options.packages || [], function (p) {
-          if (typeof p === "string") {
-            return packageLoader.getUnibuild(p, self.arch);
-          } else {
-            return p.getUnibuildAtArch(self.arch);
-          }
-        });
+    var rootUnibuilds = [];
+    _.each(options.packages, function (p) {
+      if (typeof p === "string") {
+        p = packageLoader.getPackage(p, { throwOnError: true });
+      }
+      if (p.debugOnly && !project.project.includeDebug) {
+        return;
+      }
+      rootUnibuilds.push(p.getUnibuildAtArch(self.arch));
+    });
 
     // PHASE 1: Which unibuilds will be used?
     //
@@ -552,7 +554,9 @@ _.extend(Target.prototype, {
       usedUnibuilds[unibuild.id] = unibuild;
       usedPackages[unibuild.pkg.name] = true;
       compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader, addToGetsUsed);
+        unibuild.uses, self.arch, packageLoader, {
+          skipDebugOnly: !project.project.includeDebug
+        }, addToGetsUsed);
     };
     _.each(rootUnibuilds, addToGetsUsed);
 
@@ -590,7 +594,10 @@ _.extend(Target.prototype, {
       // SOMETHING uses strongly).
       compiler.eachUsedUnibuild(
         unibuild.uses, self.arch, packageLoader,
-        { skipUnordered: true, acceptableWeakPackages: usedPackages},
+        { skipUnordered: true,
+          acceptableWeakPackages: usedPackages,
+          skipDebugOnly: !project.project.includeDebug
+        },
         function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
             buildmessage.error("circular dependency between packages " +
