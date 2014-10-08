@@ -361,7 +361,7 @@ var publishMostBasicPackage = function (s, fullPackageName) {
 
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(15);
+    run.waitSecs(60);
     run.expectExit(0);
     run.match("Done");
   });
@@ -711,14 +711,18 @@ selftest.define("talk to package server with expired or no accounts token",
 var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   var packageJs = s.read("package.js");
   // XXX Hack
-  var version = packageJs.match(/version: \"(\d\.\d\.\d)\"/)[1];
+  var versionMatch = packageJs.match(/version: \'(\d\.\d\.\d)\'/);
+  if (! versionMatch) {
+    selftest.fail("package.js does not match version field: " + packageJs);
+  }
+  var version = versionMatch[1];
   var versionParts = version.split(".");
   versionParts[0] = parseInt(versionParts[0]) + 1;
   packageJs = packageJs.replace(version, versionParts.join("."));
   s.write("package.js", packageJs);
 
   var run = s.run("publish");
-  run.waitSecs(30);
+  run.waitSecs(60);
   if (expectAuthorizationFailure) {
     run.matchErr("not an authorized maintainer");
     // XXX Why is this 3? Other unauthorized errors (e.g. maintainers
