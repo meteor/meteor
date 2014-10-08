@@ -1763,16 +1763,34 @@ _.extend(Android.prototype, {
     var self = this;
 
     var androidBundlePath = self.getAndroidBundlePath();
-
     var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', 'android');
 
     options = options || {};
     options.env = _.extend({}, process.env, options.env || {}, { 'ANDROID_SDK_HOME': androidBundlePath });
+
+    if (options.progress) {
+      options.onStdout = function (data) {
+        // Output looks like: (20%, ...
+        var re = /\((.{1,3})%,/;
+        var match = re.exec(data);
+        if (match) {
+          var status = {current: parseInt(match[1]), end: 100};
+          options.progress.reportProgress(status);
+        }
+      };
+    }
+
     var cmd = new processes.RunCommand(androidToolPath, args, options);
     if (options.detached) {
       return cmd.start();
     }
+
     var execution = cmd.run();
+
+    if (options.progress) {
+      options.progress.reportDone();
+    }
+
     if (execution.exitCode !== 0) {
       Console.warn("Unexpected exit code from android process: " + execution.exitCode);
       Console.warn("stdout: " + execution.stdout);
@@ -1832,7 +1850,9 @@ _.extend(Android.prototype, {
     var self = this;
 
     buildmessage.enterJob({ title: 'Installing Android API library'}, function () {
-      var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], {stdin: 'y\n'});
+      var options = {stdin: 'y\n'};
+      options.progress = buildmessage.getCurrentProgressTracker();
+      var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], options);
     });
   },
 
