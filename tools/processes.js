@@ -41,6 +41,10 @@ _.extend(RunCommand.prototype, {
     self.process.on('close', function (exitCode) {
       self.exitCode = exitCode;
 
+      if (self.options.onExit) {
+        self.options.onExit(null, exitCode);
+      }
+
       if (self.options.checkExitCode && exitCode != 0) {
         console.log("Unexpected exit code", exitCode, "from", self.command, self.args, "\nstdout:\n", self.stdout, "\nstderr:\n", self.stderr);
       }
@@ -51,6 +55,11 @@ _.extend(RunCommand.prototype, {
     self.process.on('error', function (err) {
       Console.debug("Error while running command", err);
       self.exitError = err;
+
+      if (self.options.onExit) {
+        self.options.onExit(err, null);
+      }
+
       self.exitFuture.isResolved() || self.exitFuture['throw'](err);
     });
 

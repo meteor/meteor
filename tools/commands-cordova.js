@@ -2081,7 +2081,7 @@ _.extend(Android.prototype, {
         var url = "https://warehouse.meteor.com/cordova/" + tarballName;
 
         var future = new Future();
-        var extractStream = files.buildUntarGzStream(tmpdir, future);
+        var extractStream = files.buildUntarStream(tmpdir, future, { ungzip: true });
 
         var response = httpHelpers.getUrl({
           url: url,

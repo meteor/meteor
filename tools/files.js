@@ -636,6 +636,76 @@ files.buildUntarGzStream = function (destPath, future, options) {
   return gunzip;
 };
 
+
+// Builds a stream that accepts `.tar` data and extracts the archive
+// into a destination directory. destPath should not exist yet, and
+// the archive should contain a single top-level directory, which will
+// be renamed atomically to destPath. The entire tree will be made
+// readonly.
+files.buildUntarStream = function (destPath, future, options) {
+  options = options || {};
+
+  var parentDir = path.dirname(destPath);
+  var tempDir = path.join(parentDir, '.tmp' + utils.randomToken());
+  files.mkdir_p(tempDir);
+
+  var useNpmTar = !!options.useNpmTar;
+  var untarStream;
+  if (useNpmTar) {
+    var tar = require("tar");
+    untarStream = new tar.Extract({path: tempDir})
+      .on('error', function (e) {
+        future.isResolved() || future.throw(e);
+      })
+      .on('end', function () {
+        var srcDir = tempDir;
+
+        fs.renameSync(srcDir, destPath);
+        if (tempDir != srcDir) {
+          fs.rmdirSync(tempDir);
+        }
+
+        future.isResolved() || future.return();
+      });
+  } else {
+    var options = {};
+
+    options.onExit = function (err, exitCode) {
+      if (!err && exitCode != 0) {
+        err = new Error("Unexpected error from untar: " + exitCode);
+      }
+
+      if (err) {
+        future.isResolved() || future['throw'](err);
+        return;
+      }
+
+      fs.renameSync(tempDir, destPath);
+      future.isResolved() || future.return();
+    };
+
+    var processes = require('./processes.js');
+
+    var cmd = new processes.RunCommand('tar', [ '-x', '-f', '-', '-C', tempDir ], options);
+    cmd.start();
+
+    untarStream = cmd.process.stdin;
+  }
+
+  if (options.ungzip) {
+    var zlib = require("zlib");
+    var gunzip = zlib.createGunzip()
+      .on('error', function (e) {
+        future.isResolved() || future.throw(e);
+      });
+    gunzip.pipe(untarStream);
+    return gunzip;
+  }
+
+  return untarStream;
+};
+
+
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
