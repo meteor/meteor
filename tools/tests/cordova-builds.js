@@ -7,7 +7,7 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 
 var checkMobileServer = selftest.markStack(function (s, expected) {
-  var output = s.read("android/assets/www/application/index.html");
+  var output = s.read("android/project/assets/www/application/index.html");
   if (! output.match(new RegExp(
     '"DDP_DEFAULT_CONNECTION_URL":"' + expected + '"'))) {
     selftest.fail(
