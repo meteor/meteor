@@ -1225,7 +1225,8 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   // set some defaults different from the Phonegap/Cordova defaults
   var additionalConfiguration = {
     'webviewbounce': false,
-    'DisallowOverscroll': true
+    'DisallowOverscroll': true,
+    'AutoHideSplashScreen': false
   };
   var imagePaths = {
     icon: {},
