@@ -318,7 +318,8 @@ var getBoilerplate = function (request, arch) {
 
 var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
   additionalOptions = additionalOptions || {};
-  var runtimeConfig = _.extend(__meteor_runtime_config__,
+  var runtimeConfig = _.extend(
+    _.clone(__meteor_runtime_config__),
     additionalOptions.runtimeConfigOverrides || {}
   );
 
