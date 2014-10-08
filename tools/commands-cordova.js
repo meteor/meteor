@@ -1934,8 +1934,17 @@ _.extend(Android.prototype, {
       if (javaHomes) {
         javaHomes = javaHomes.trim();
 
+        // JDK 8
         // /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home
-        if (javaHomes.indexOf('/Library/Java/JavaVirtualMachines/jdk') == 0) {
+        if (javaHomes.indexOf('/Library/Java/JavaVirtualMachines/jdk') != -1) {
+          return true;
+        }
+
+        // JDK 6 (which is I think unsupported)
+        // /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+
+        // XXX: This is a very liberal match
+        if (javaHomes.indexOf('.jdk/') != -1) {
           return true;
         }
       }
