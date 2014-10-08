@@ -1632,11 +1632,11 @@ var runTests = function (options) {
   }
 
   var totalRun = 0;
-  var failureCount = 0;
+  var failedTests = [];
 
   _.each(testList.filteredTests, function (test) {
     totalRun++;
-    Console.stderr.write(test.name + "... ");
+    Console.stderr.write(test.file + ": " + test.name + " ... ");
 
     var failure = null;
     try {
@@ -1656,7 +1656,7 @@ var runTests = function (options) {
 
     if (failure) {
       Console.stderr.write("fail!\n");
-      failureCount++;
+      failedTests.push(test);
       testList.notifyFailed(test);
 
       var frames = parseStack.parse(failure);
@@ -1719,15 +1719,19 @@ var runTests = function (options) {
   if (testList.filteredTests.length === 0) {
     Console.stderr.write("No tests run.\n");
     return 0;
-  } else if (failureCount === 0) {
+  } else if (failedTests.length === 0) {
     var disclaimers = '';
     if (testList.filteredTests.length < testList.allTests.length)
       disclaimers += " other";
     Console.stderr.write("All" + disclaimers + " tests passed.\n");
     return 0;
   } else {
+    var failureCount = failedTests.length;
     Console.stderr.write(failureCount + " failure" +
-                         (failureCount > 1 ? "s" : "") + ".\n");
+                         (failureCount > 1 ? "s" : "") + ":\n");
+    _.each(failedTests, function (test) {
+      Console.stderr.write("  - " + test.file + ": " + test.name);
+    });
     return 1;
   }
 };
