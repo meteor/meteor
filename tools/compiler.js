@@ -1106,7 +1106,8 @@ compiler.compile = function (packageSource, options) {
     cordovaDependencies: packageSource.cordovaDependencies,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
-    includeTool: packageSource.includeTool
+    includeTool: packageSource.includeTool,
+    debugOnly: packageSource.debugOnly
   });
 
   // Compile unibuilds. Might use our plugins, so needs to happen second.
