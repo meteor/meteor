@@ -59,6 +59,9 @@ _.extend(RunCommand.prototype, {
       if (self.options.pipeOutput) {
         Console.stdout.write(data);
       }
+      if (self.options.onStdout) {
+        self.options.onStdout(data);
+      }
     });
 
     self.process.stderr.on('data', function (data) {
