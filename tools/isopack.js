@@ -524,7 +524,7 @@ _.extend(Isopack.prototype, {
     // deal with different versions of "isopack.json", backwards compatible
     var isopackJsonPath = path.join(dir, "isopack.json");
     if (fs.existsSync(isopackJsonPath)) {
-      isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
+      var isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
 
       if (isopackJson[currentFormat]) {
         mainJson = isopackJson[currentFormat];
