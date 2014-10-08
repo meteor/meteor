@@ -5,6 +5,7 @@ var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../files.js');
+var httpHelpers = require('../http-helpers.js');
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
@@ -407,4 +408,52 @@ selftest.define("'meteor run --port' requires a port", function () {
   run.waitSecs(30);
   run.matchErr("--port must include a port");
   run.expectExit(1);
+});
+
+// Regression test: previously, if ROOT_URL was set, then the process of
+// generating the cordova boilerplate would change
+// __meteor_runtime_config__, resulting in an incorrect browser
+// boilerplate being generated the next time boilerplate generation
+// occurs.
+selftest.define("generating boilerplate does not change runtime config", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+
+  // Add 'android' to the .meteor/platforms file, just so that the
+  // Cordova boilerplate will be generated and served, without having
+  // to download the whole Android sdk.
+  var platforms = s.read(".meteor/platforms");
+  s.write(".meteor/platforms", platforms + "\nandroid\n");
+
+  s.set("ROOT_URL", "http://127.0.0.1:3000");
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  var body = httpHelpers.getUrl("http://localhost:3000");
+  var rootUrlRegExp = /"ROOT_URL":"http:\/\/127.0.0.1:3000"/;
+  if (! body.match(rootUrlRegExp)) {
+    selftest.fail("Incorrect ROOT_URL");
+  }
+
+  s.mkdir("client");
+  s.cd("client");
+  s.write("foo.js", "console.log(1);\n");
+
+  run.waitSecs(30);
+  // We don't expect the server to restart; we're testing that
+  // __meteor_runtime_config__ does not get modified over the life of
+  // a single server process.
+  run.forbidAll("restarted");
+  run.match("Client modified");
+
+  body = httpHelpers.getUrl("http://localhost:3000");
+  if (! body.match(rootUrlRegExp)) {
+    selftest.fail("Incorrect ROOT_URL after modifying client");
+  }
+
+  run.stop();
 });
