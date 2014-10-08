@@ -1,2 +1,1 @@
-// Write your package code here!
-console.log("Testing a thing");
+global.DEBUG_ONLY_LOADED = true;
