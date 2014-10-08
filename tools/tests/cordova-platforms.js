@@ -2,8 +2,6 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 
-// Add plugins to an app. Change the contents of the plugins and their
-// dependencies, make sure that the app still refreshes.
 selftest.define("add cordova platforms", function () {
   var s = new Sandbox();
   var run;
