@@ -13,6 +13,7 @@ var buildmessage = require('./buildmessage.js');
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
+var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 
 // Parse out s as if it were a bash command line.
@@ -348,6 +349,14 @@ var AppRunner = function (appDir, options) {
   self.recordPackageUsage =
     options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
 
+  // Keep track of the app's Cordova plugins and platforms. If the set
+  // of plugins or platforms changes from one run to the next, we just
+  // exit, because we don't yet have a way to, for example, get the new
+  // plugins to the mobile clients or stop a running client on a
+  // platform that has been removed.
+  self.cordovaPlugins = null;
+  self.cordovaPlatforms = null;
+
   self.fiber = null;
   self.startFuture = null;
   self.runFuture = null;
@@ -528,6 +537,28 @@ _.extend(AppRunner.prototype, {
         bundleResult: bundleResult
       };
     }
+
+    var plugins = cordova.getCordovaDependenciesFromStar(
+      bundleResult.starManifest);
+
+    if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
+      return {
+        outcome: 'outdated-cordova-plugins',
+        bundleResult: bundleResult
+      };
+    }
+    self.cordovaPlugins = plugins;
+
+    var platforms = project.getCordovaPlatforms();
+    platforms.sort();
+    if (self.cordovaPlatforms &&
+        ! _.isEqual(self.cordovaPlatforms, platforms)) {
+      return {
+        outcome: 'outdated-cordova-platforms',
+        bundleResult: bundleResult
+      };
+    }
+    self.cordovaPlatforms = platforms;
 
     var serverWatchSet = bundleResult.serverWatchSet;
 
