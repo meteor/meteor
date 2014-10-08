@@ -1406,8 +1406,8 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
-  // these last two are pseudo-tags, assigned to tests when you specify
-  // --changed or a regex pattern
+  // these are pseudo-tags, assigned to tests when you specify
+  // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
   'non-matching': "don't match specified pattern",
   'in other files': ""
@@ -1477,10 +1477,10 @@ var getFilteredTests = function (options) {
 // list of all tests, the filtered list, and stats on how many tests
 // were skipped (see generateSkipReport).
 //
-// TestList is also used to save the hashes of files where all tests
+// TestList also has code to save the hashes of files where all tests
 // ran and passed (for the `--changed` option).  If a testState is
-// passed, the caller can use notifyFailed and saveTestState to cause
-// TestList to calculate the new testState and write it out.
+// provided, the notifyFailed and saveTestState can be used to modify
+// the testState appropriately and write it out.
 var TestList = function (allTests, tagsToSkip, testState) {
   tagsToSkip = (tagsToSkip || []);
   testState = (testState || null); // optional
@@ -1523,8 +1523,9 @@ var TestList = function (allTests, tagsToSkip, testState) {
   });
 };
 
-// Mark a test's file as having failures so we don't
-// save its hash as a potentially "unchanged" file.
+// Mark a test's file as having failures.  This prevents
+// saveTestState from saving its hash as a potentially
+// "unchanged" file to be skipped in a future run.
 TestList.prototype.notifyFailed = function (test) {
   this.fileInfo[test.file].hasFailures = true;
 };
