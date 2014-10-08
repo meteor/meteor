@@ -1611,7 +1611,7 @@ _.extend(IOS.prototype, {
 
     if (!Host.isMac()) {
       log && Console.info("You are not running on OSX; we won't be able to install Xcode for local iOS development");
-      return undefined;
+      return { acceptable: false, missing: [ "ios" ] };
     }
 
     var result = { acceptable: true, missing: [] };
