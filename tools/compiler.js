@@ -76,20 +76,21 @@ compiler.eachUsedUnibuild = function (
       return;
     if (use.weak && !_.has(acceptableWeakPackages, use.package))
       return;
-    if (packageLoader.excludedPackage(use.package)) {
-      return;
-    }
     usesToProcess.push(use);
   });
 
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    if (packageLoader.excludedPackage(use.package)) {
-      return;
-    }
+    var usedPackage = packageLoader.getPackage(
+      use.package, { throwOnError: true });
 
-    var unibuild = packageLoader.getUnibuild(use.package, arch);
+    // Ignore this package if we were told to skip debug-only packages and it is
+    // debug-only.
+    if (usedPackage.debugOnly && options.skipDebugOnly)
+      continue;
+
+    var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.
@@ -117,20 +118,12 @@ compiler.eachUsedUnibuild = function (
 // Output is an object with keys:
 // - directDependencies: map from package name to version string, for the
 //   package's direct, ordered, strong, non-implied dependencies.
-// - packageDependencies: map from package name to version string to complete
-//   transitive dependency in this package. We need for the version lock file
-//   and to deal with implies.
-// - packageExcluded: map from package name to version string of transitive
-//   dependencies that are not included in packageDependencies because we will
-//   not bundle them with the package. If we are bundling for production mode
-//   (default) this is the debugOnly packages and their dependencies.
 // - pluginDependencies: map from plugin name to complete (transitive)
 //   version information for all packages used to build the plugin, as
 //   a map from package name to version string.
-// - pluginExcluded: see: packageExcluded, but per plugin.
-//
-// Options:
-//   - (see options for the constraint solver in catalog-local.js)
+// - packageDependencies: map from package name to version string to complete
+//   transitive dependency in this package. We need for the version lock file
+//   and to deal with implies.
 //
 // XXX You may get different results from this function depending on
 // when you call it (if, for example, the packages in the catalog
@@ -227,7 +220,6 @@ var determineBuildTimeDependencies = function (packageSource,
   // -- Dependencies of Plugins --
 
   ret.pluginDependencies = {};
-  var pluginConstraints = {};
   var pluginVersions = packageSource.dependencyVersions.pluginDependencies;
   _.each(packageSource.pluginInfo, function (info) {
     var constraints = {};
@@ -248,7 +240,6 @@ var determineBuildTimeDependencies = function (packageSource,
     });
 
     var pluginVersion = pluginVersions[info.name] || {};
-    pluginConstraints[info.name] = constraints_array;
     try {
       ret.pluginDependencies[info.name] =
         packageSource.catalog.resolveConstraints(
@@ -284,59 +275,6 @@ var determineBuildTimeDependencies = function (packageSource,
       release.current.getCurrentToolsVersion());
   }
 
-  // If we are building for production mode, we also care about filtering out
-  // debugOnly dependencies. Note, however, that we still record them in the
-  // versions file, since they influence the versions of other dependencies.
-  //
-  // We build for production mode by default, unless our project says
-  // otherwise. And we never build in debug mode for uniload, because that makes
-  // no sense.
-  _.each(["packageExcluded", "pluginExcluded"], function (key) {
-    ret[key] = {};
-  });
-  // Don't bother filtering things if we are in uniload. That's too complicated.
-  if (packageSource.catalog !== catalog.complete) {
-    return ret;
-  }
-  // If you have decided to build this package already, and this package is
-  // debugOnly, then it doesn't make sense to filter out its debugOnly subtrees.
-  if (packageSource.debugOnly) {
-    return ret;
-  }
-  // If the project tells us to include debugOnly packages, we shall do it.
-  var project = require('./project.js').project;
-  if (project && project.includeDebug) {
-    return ret;
-  }
-
-  var directVersions =
-        packageSource.catalog.separateOutDebugDeps(
-          _.pluck(constraints_array, 'name'),
-          ret.directDependencies);
-
-  var packageVersions =
-        packageSource.catalog.separateOutDebugDeps(
-          _.pluck(constraints_array, 'name'),
-          ret.packageDependencies);
-
-  var pluginExcluded = {};
-  var pluginVersions = {};
-  _.each(ret.pluginDependencies, function (versions, name) {
-    var filteredVersions =
-          packageSource.catalog.separateOutDebugDeps(
-            _.pluck(pluginConstraints[name], 'name'),
-            versions);
-    pluginVersions[name] = filteredVersions.versions;
-    pluginExcluded[name] = filteredVersions.excluded;
-  });
-
-  ret = {
-    directDependencies : directVersions.versions,
-    packageDependencies: packageVersions.versions,
-    packageExcluded: packageVersions.excluded,
-    pluginDependencies: pluginVersions,
-    pluginExcluded: pluginExcluded
-  };
   return ret;
 };
 
@@ -1028,8 +966,7 @@ compiler.compile = function (packageSource, options) {
 
       var loader = new packageLoader.PackageLoader({
         versions: buildTimeDeps.pluginDependencies[info.name],
-        catalog: packageSource.catalog,
-        excluded: buildTimeDeps.pluginExcluded[info.name]
+        catalog: packageSource.catalog
       });
       loader.downloadMissingPackages({serverArch: archinfo.host() });
 
@@ -1114,7 +1051,6 @@ compiler.compile = function (packageSource, options) {
   var loader = new packageLoader.PackageLoader({
     versions: buildTimeDeps.packageDependencies,
     catalog: packageSource.catalog,
-    excluded: buildTimeDeps.packageExcluded,
     constraintSolverOpts: {
       ignoreProjectDeps: options.ignoreProjectDeps
     }

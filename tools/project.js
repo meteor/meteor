@@ -117,11 +117,7 @@ var Project = function () {
 _.extend(Project.prototype, {
   setDebug: function (debug) {
     var self = this;
-    self._ensureDepsUpToDate();
-    if (self.includeDebug !== debug) {
-      self.includeDebug = debug;
-      self._generatePackageLoader();
-    }
+    self.includeDebug = debug;
   },
 
   // Sets the mute flag on the project. Muted projects don't print out non-error
@@ -255,43 +251,15 @@ _.extend(Project.prototype, {
         process.exit(1);
       }
 
-      // We have successfully set our versions, so let's generate the package
-      // loader.
-      self._generatePackageLoader();
+      // Finally, initialize the package loader.
+      self.packageLoader = new packageLoader.PackageLoader({
+        versions: newVersions,
+        catalog: catalog.complete
+      });
 
       // We are done!
       self._depsUpToDate = true;
       self.viableDepSource = true;
-    }
-  },
-
-  // Given a set of versions and combined constraints, generate a package loader
-  // for this project.
-  //
-  // This is part of _ensureDepsUpToDate. Assumes that VERSIONS HAVE BEEN
-  // GENERATED. If you are not sure if your project is up to date before you
-  // call this function, call _ensureUpToDate first.
-  _generatePackageLoader: function () {
-    var self = this;
-    // Finally, initialize the package loader. If we are building for prod, we
-    // are going to not load debug packages, so filter that out here.
-    if (self.includeDebug) {
-      self.packageLoader = new packageLoader.PackageLoader({
-        versions: self.dependencies,
-        catalog: catalog.complete,
-        excluded: {}
-      });
-    } else {
-      var prodVersions =
-            catalog.complete.separateOutDebugDeps(
-              _.pluck(self.combinedConstraints, 'name'),
-              self.dependencies);
-
-      self.packageLoader = new packageLoader.PackageLoader({
-        versions: prodVersions.versions,
-        catalog: catalog.complete,
-        excluded: prodVersions.excluded
-      });
     }
   },
 
