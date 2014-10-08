@@ -102,6 +102,16 @@ cordova.buildPlatformRunners = function (localPath, platforms, options) {
   return runners;
 };
 
+// Returns the cordovaDependencies of the Cordova arch from a star json.
+cordova.getCordovaDependenciesFromStar = function (star) {
+  var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
+  if (cordovaProgram) {
+    return cordovaProgram.cordovaDependencies;
+  } else {
+    return {};
+  }
+};
+
 // packages - list of strings
 cordova.filterPackages = function (packages) {
 // We hard-code the 'cordova' and 'platform' namespaces
@@ -613,8 +623,8 @@ var getInstalledPlugins = function (cordovaPath) {
   return installedPlugins;
 };
 
-// Ensures that the Cordova platforms are synchronized with the app-level
-// platforms.
+// Ensures that the Cordova plugins are synchronized with the app-level
+// plugins.
 
 var ensureCordovaPlugins = function (localPath, options) {
   options = options || {};
@@ -629,11 +639,9 @@ var ensureCordovaPlugins = function (localPath, options) {
     // XXX code copied from buildCordova
     var bundlePath = path.join(localPath, 'build-tar');
     var bundle = getBundle(bundlePath, [webArchName], options);
-    plugins = getCordovaDependenciesFromStar(bundle.starManifest);
+    plugins = cordova.getCordovaDependenciesFromStar(bundle.starManifest);
     files.rm_recursive(bundlePath);
   }
-  // XXX the project-level cordova plugins deps override the package-level ones
-  _.extend(plugins, project.getCordovaPlugins());
 
   var cordovaPath = path.join(localPath, 'cordova-build');
 
@@ -767,12 +775,6 @@ var localPluginsPathFromCordovaPath = function (cordovaPath) {
 // consumeControlFile and make more side-effects for simplicity.
 // This is populated only in consumeControlFile.
 var pluginsConfiguration = {};
-
-// Returns the cordovaDependencies of the Cordova arch from a star json.
-var getCordovaDependenciesFromStar = function (star) {
-  var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
-  return cordovaProgram.cordovaDependencies;
-};
 
 // Build a Cordova project, creating a Cordova project if necessary.
 var buildCordova = function (localPath, platforms, options) {
@@ -2601,5 +2603,3 @@ main.registerCommand({
 
   return 0;
 });
-
-
