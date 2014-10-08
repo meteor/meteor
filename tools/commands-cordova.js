@@ -2187,6 +2187,7 @@ _.extend(Android.prototype, {
         if (fixSilent) {
           log && Console.info("Installing Android x86 image");
           self.installTarget('sys-img-x86-android-19');
+          log && Console.info(Console.success("Installed Android x86 image"));
         } else {
           log && Console.info(Console.fail("Suitable Android x86 image not found"));
 
@@ -2204,6 +2205,8 @@ _.extend(Android.prototype, {
 
           var avdOptions = {};
           self.createAvd(avdName, avdOptions);
+
+          log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) created"));
         } else {
           log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
 
