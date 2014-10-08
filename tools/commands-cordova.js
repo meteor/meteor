@@ -2167,7 +2167,8 @@ _.extend(Android.prototype, {
       if (fix) {
         self.installAcceleration();
       } else {
-        log && Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
+        log && Console.info(Console.fail("Android emulator acceleration is not installed"));
+        log && Console.info("    (The Android emulator will be very slow without acceleration)");
 
         result.missing.push("haxm");
 
