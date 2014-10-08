@@ -137,6 +137,8 @@ var updateVersions = function (shouldReloadClientProgram) {
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function (appId) {
+    check(appId, Match.Optional(String));
+
     // Don't notify clients using wrong appId such as mobile apps built with a
     // different server but pointing at the same local url
     if (Autoupdate.appId && appId && Autoupdate.appId !== appId)
