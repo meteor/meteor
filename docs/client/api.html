@@ -2167,6 +2167,8 @@ Override fields of the object by assigning to them:
 - `siteName`: The public name of your application. Defaults to the DNS name of
    the application (eg: `awesome.meteor.com`).
 - `resetPassword`: An `Object` with two fields:
+ - `resetPassword.from`: An optional `Function` used to override the default
+   `from` address `String` defined on the `Accounts.emailTemplates` object.
  - `resetPassword.subject`: A `Function` that takes a user object and returns
    a `String` for the subject line of a reset password email.
  - `resetPassword.text`: A `Function` that takes a user object and a url, and
