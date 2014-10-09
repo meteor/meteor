@@ -10,22 +10,15 @@ Session.setDefault(SHOW_CONNECTION_ISSUE_KEY, false);
 var CONNECTION_ISSUE_TIMEOUT = 1000;
 
 Meteor.startup(function () {
-  if (Meteor.isCordova) {
-    // set up a swipe left / right handler
-    var hammer = new Hammer.Manager(document.body);
-
-    hammer.add(new Hammer.Swipe({
-      velocity: 0.1
-    }));
-
-    hammer.on('swipeleft', function () {
+  // set up a swipe left / right handler
+  $(document.body).touchwipe({
+    wipeLeft: function () {
       Session.set(MENU_KEY, false);
-    });
-
-    hammer.on('swiperight', function () {
+    },
+    wipeRight: function () {
       Session.set(MENU_KEY, true);
-    });
-  }
+    }
+  });
 
   // Don't show the connection error box unless we haven't connected within
   // 1 second of app starting
@@ -48,12 +41,6 @@ Template.appBody.rendered = function() {
       });
     }
   };
-};
-
-Template.appBody.destroyed = function() {
-  if (Meteor.isCordova) {
-    this.hammer.destroy();
-  }
 };
 
 Template.appBody.helpers({
