@@ -265,6 +265,8 @@ _.extend(LayeredCatalog.prototype, {
       if (ret["usedRCs"]) {
         var expPackages = [];
         _.each(ret.answer, function(version, package) {
+          if (self.isLocalPackage(package))
+            return;
           if (version.split('-').length > 1) {
             if (!(resolverOpts.previousSolution &&
               resolverOpts.previousSolution[package] === version)) {
@@ -275,7 +277,7 @@ _.extend(LayeredCatalog.prototype, {
                     if (specOC.version === version) {
                       printMe = false;
                     }
-                   });
+                  });
                 });
                 if (printMe) {
                   expPackages.push({
