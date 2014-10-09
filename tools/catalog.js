@@ -272,10 +272,11 @@ _.extend(LayeredCatalog.prototype, {
                 var printMe = true;
                 _.each(oldConstraints, function (oC) {
                   _.each(oC.constraints, function (specOC) {
-                    if (specOC.version === version) {
+                    if (specOC.version === version ||
+                        self.isLocalPackage(package)) {
                       printMe = false;
                     }
-                   });
+                  });
                 });
                 if (printMe) {
                   expPackages.push({
