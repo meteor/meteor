@@ -256,7 +256,8 @@ selftest.define(
       registrationEmail.bodyPage
     );
     if (! token || ! token[1]) {
-      throw new Error('No registration token in email');
+      selftest.fail('No registration token in email:\n' +
+                    registrationEmail.bodyPage);
     }
 
     testUtils.registerWithToken(token[1], username, 'testtest', email);
