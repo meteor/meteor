@@ -2094,7 +2094,7 @@ _.extend(Android.prototype, {
   waitForEmulator: function () {
     var self = this;
 
-    var timeLimit = 120 * 1000;
+    var timeLimit = 240 * 1000;
     var interval = 1000;
     for (var i = 0; i < timeLimit / interval; i++) {
       Console.debug("Waiting for emulator");
