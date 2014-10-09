@@ -638,6 +638,40 @@ _.extend(exports.Patience.prototype, {
   }
 });
 
+
+// This is a stripped down version of Patience, that just regulates the frequency of calling yield.
+// It should behave similarly to calling yield on every iteration of a loop,
+// except that it won't actually yield if there hasn't been a long enough time interval
+//
+// options:
+//   interval: minimum interval of time between yield calls
+//             (more frequent calls are simply dropped)
+//
+// XXX: Have Patience use ThrottledYield
+exports.ThrottledYield = function (options) {
+  var self = this;
+
+  options = _.extend({ interval: 150 }, options || {});
+  self.interval = options.interval;
+  var now = +(new Date);
+
+  // The next yield time is interval from now.
+  self.nextYield = now + self.interval;
+};
+
+_.extend(exports.ThrottledYield.prototype, {
+  yield: function () {
+    var self = this;
+    var now = +(new Date);
+
+    if (now >= self.nextYield) {
+      self.nextYield = now + self.interval;
+      utils.sleepMs(1);
+    }
+  }
+});
+
+
 // Are we running on device?
 exports.runOnDevice = function (options) {
   return !! _.intersection(options.args,
