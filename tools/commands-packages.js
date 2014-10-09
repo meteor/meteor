@@ -2125,10 +2125,15 @@ main.registerCommand({
   var cordovaPlugins = filteredPackages.plugins;
 
   // Update the plugins list
-  project.removeCordovaPlugins(cordovaPlugins);
+  var removedPlugins = project.removeCordovaPlugins(cordovaPlugins);
+  var notRemoved = _.difference(cordovaPlugins, removedPlugins);
 
-  _.each(cordovaPlugins, function (plugin) {
+  _.each(removedPlugins, function (plugin) {
     Console.info("removed cordova plugin " + plugin);
+  });
+
+  _.each(notRemoved, function (plugin) {
+    Console.error(plugin + " is not in this project.");
   });
 
   var args = filteredPackages.rest;
