@@ -2065,9 +2065,16 @@ exports.bundle = function (options) {
           "A program named ctl exists but no program has isControlProgram set");
         // recover by not making a control program
       }  else {
-        var target = makeServerTarget("ctl");
-        targets["ctl"] = target;
-        controlProgram = "ctl";
+        // only make a control program if the 'ctl' package is included
+        // in the app.
+        if (_.has(project.project.dependencies, 'ctl')) {
+          console.log("YES ctl");
+          var target = makeServerTarget("ctl");
+          targets["ctl"] = target;
+          controlProgram = "ctl";
+        } else {
+          console.log("NO ctl");
+        }
       }
     }
 

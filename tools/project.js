@@ -325,15 +325,6 @@ _.extend(Project.prototype, {
                            { weak: true }));
     });
 
-    // This is an UGLY HACK that has to do with our requirement to have a
-    // control package on everything (and preferably that package is ctl), even
-    // apps that don't actually need it because they don't go to galaxy. Maybe
-    // someday, this will make sense.  (The conditional here allows us to work
-    // in tests with releases that have no packages.)
-    if (catalog.complete.getPackage("ctl")) {
-      allDeps.push(utils.parseConstraint("ctl"));
-    }
-
     return allDeps;
   },
 
