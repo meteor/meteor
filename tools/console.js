@@ -370,7 +370,7 @@ _.extend(Console.prototype, {
     }
 
     if (info) {
-      message = info + ": " + message
+      message = info + ": " + message;
     }
 
     self.error(message);
