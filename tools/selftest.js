@@ -641,7 +641,7 @@ _.extend(Sandbox.prototype, {
     files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2'), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2.0.1'), 0755);
 
     var stubCatalog = {
       syncToken: {},
@@ -788,7 +788,8 @@ _.extend(Sandbox.prototype, {
 
     var dataFile = config.getLocalPackageCacheFilename(serverUrl);
     var tmpCatalog = new catalogRemote.RemoteCatalog();
-    tmpCatalog.initialize({packageStorage: path.join(self.warehouse, 'package-metadata', 'v2', dataFile)});
+    tmpCatalog.initialize({
+      packageStorage: path.join(self.warehouse, 'package-metadata', 'v2.0.1', dataFile)});
     tmpCatalog.insertData(stubCatalog);
 
     // And a cherry on top

@@ -9,7 +9,7 @@ var Sandbox = selftest.Sandbox;
 
 var getCatalog = function (sandbox) {
  var dataFile = path.join(sandbox.warehouse,
-                          'package-metadata', 'v2',
+                          'package-metadata', 'v2.0.1',
                           config.getLocalPackageCacheFilename());
  var catalog = new catalogRemote.RemoteCatalog();
  catalog.initialize( {packageStorage: dataFile});
