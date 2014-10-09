@@ -1596,6 +1596,13 @@ var maybeUpdateRelease = function (options) {
       return catalog.official.getReleaseVersion(appTrack, appVersion);
     });
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
+
+    // If on a 'none' app, try to update it to the head of the official release
+    // track METEOR@.
+    if (appTrack === 'none') {
+      appTrack = 'METEOR';
+    }
+
     releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
       appTrack, appOrderKey);
     if (!releaseVersionsToTry.length) {
