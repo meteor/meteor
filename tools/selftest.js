@@ -380,7 +380,7 @@ var Sandbox = function (options) {
   // assume that the release's packages can be found on the server should not.
   // Note that this only affects subprocess meteor runs, not direct invocation
   // of packageClient!
-  if (runningTest.tags['test-package-server']) {
+  if (_.contains(runningTest.tags, 'test-package-server')) {
     self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
   }
 
@@ -1330,7 +1330,7 @@ var Test = function (options) {
   self.name = options.name;
   self.file = options.file;
   self.fileHash = options.fileHash;
-  self.tags = options.tags || {};
+  self.tags = options.tags || [];
   self.f = options.func;
   self.cleanupHandlers = [];
 };
