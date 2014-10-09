@@ -1611,7 +1611,7 @@ _.extend(IOS.prototype, {
 
     if (!Host.isMac()) {
       log && Console.info("You are not running on OSX; we won't be able to install Xcode for local iOS development");
-      return undefined;
+      return { acceptable: false, missing: [ "ios" ] };
     }
 
     var result = { acceptable: true, missing: [] };
@@ -1620,11 +1620,13 @@ _.extend(IOS.prototype, {
     if (self.hasXcode()) {
       log && Console.info(Console.success("Xcode is installed"));
     } else {
-      log && Console.info(Console.fail("Xcode is not installed"));
-
       if (fix) {
+        log && Console.info("Installing Xcode");
+
         self.installXcode();
       } else {
+        log && Console.info(Console.fail("Xcode is not installed"));
+
         result.missing.push("xcode");
         result.acceptable = false;
       }
@@ -1642,11 +1644,15 @@ _.extend(IOS.prototype, {
       if (self.hasAgreedXcodeLicense()) {
         log && Console.info(Console.success("Xcode license agreed"));
       } else {
-        log && Console.info(Console.fail("You must accept the Xcode license"));
-
         if (fix) {
+          log && Console.info("Please accept the Xcode license");
+
           self.launchXcode();
+
+          // XXX: Wait?
         } else {
+          log && Console.info(Console.fail("You must accept the Xcode license"));
+
           result.missing.push("xcode-license");
           result.acceptable = false;
         }
@@ -1757,16 +1763,34 @@ _.extend(Android.prototype, {
     var self = this;
 
     var androidBundlePath = self.getAndroidBundlePath();
-
     var androidToolPath = path.join(androidBundlePath, 'android-sdk', 'tools', 'android');
 
     options = options || {};
     options.env = _.extend({}, process.env, options.env || {}, { 'ANDROID_SDK_HOME': androidBundlePath });
+
+    if (options.progress) {
+      options.onStdout = function (data) {
+        // Output looks like: (20%, ...
+        var re = /\((.{1,3})%,/;
+        var match = re.exec(data);
+        if (match) {
+          var status = {current: parseInt(match[1]), end: 100};
+          options.progress.reportProgress(status);
+        }
+      };
+    }
+
     var cmd = new processes.RunCommand(androidToolPath, args, options);
     if (options.detached) {
       return cmd.start();
     }
+
     var execution = cmd.run();
+
+    if (options.progress) {
+      options.progress.reportProgressDone();
+    }
+
     if (execution.exitCode !== 0) {
       Console.warn("Unexpected exit code from android process: " + execution.exitCode);
       Console.warn("stdout: " + execution.stdout);
@@ -1826,7 +1850,9 @@ _.extend(Android.prototype, {
     var self = this;
 
     buildmessage.enterJob({ title: 'Installing Android API library'}, function () {
-      var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], {stdin: 'y\n'});
+      var options = {stdin: 'y\n'};
+      options.progress = buildmessage.getCurrentProgressTracker();
+      var out = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], options);
     });
   },
 
@@ -2124,12 +2150,14 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("Found Android bundle"));
       hasAndroid = true;
     } else {
-      log && Console.info(Console.fail("Android bundle not found"));
-
       if (fixConsole) {
+        log && Console.info("Installing Android bundle");
+
         self.installAndroidBundle();
         hasAndroid = true;
       } else {
+        log && Console.info(Console.fail("Android bundle not found"));
+
         result.missing.push("android-bundle");
         result.acceptable = false;
       }
@@ -2140,12 +2168,14 @@ _.extend(Android.prototype, {
       log && Console.info(Console.success("A JDK is installed"));
       hasJava = true;
     } else {
-      log && Console.info(Console.fail("A JDK is not installed"));
-
       if (fix) {
+        log && Console.info("Installing JDK");
+
         self.installJdk();
         hasJava = true;
       } else {
+        log && Console.info(Console.fail("A JDK is not installed"));
+
         result.missing.push("jdk");
         result.acceptable = false;
       }
@@ -2154,12 +2184,12 @@ _.extend(Android.prototype, {
     // (hasAcceleration can also be undefined)
     var hasAcceleration = self.hasAcceleration();
     if (hasAcceleration === false) {
-      log && Console.info(Console.fail("Acceleration is not installed; the Android emulator will be very slow without it"));
-
-
       if (fix) {
         self.installAcceleration();
       } else {
+        log && Console.info(Console.fail("Android emulator acceleration is not installed"));
+        log && Console.info("    (The Android emulator will be very slow without acceleration)");
+
         result.missing.push("haxm");
 
         // Not all systems can install the accelerator, so don't block
@@ -2175,12 +2205,13 @@ _.extend(Android.prototype, {
       if (self.hasTarget('19', 'default/x86')) {
         log && Console.info(Console.success("Found suitable Android x86 image"));
       } else {
-        log && Console.info(Console.fail("Suitable Android x86 image not found"));
-
         if (fixSilent) {
-          Console.info("Installing Android x86 image");
+          log && Console.info("Installing Android x86 image");
           self.installTarget('sys-img-x86-android-19');
+          log && Console.info(Console.success("Installed Android x86 image"));
         } else {
+          log && Console.info(Console.fail("Suitable Android x86 image not found"));
+
           result.missing.push("android-sys-img");
           result.acceptable = false;
         }
@@ -2190,13 +2221,16 @@ _.extend(Android.prototype, {
       if (self.hasAvd(avdName)) {
         log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
       } else {
-        log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
-
         if (fixSilent) {
+          log && Console.info("Creating android virtual device (AVD): " + avdName);
+
           var avdOptions = {};
           self.createAvd(avdName, avdOptions);
-          Console.info(Console.success("Created android virtual device (AVD): " + avdName));
+
+          log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) created"));
         } else {
+          log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+
           result.missing.push("android-avd");
           result.acceptable = false;
         }
@@ -2414,6 +2448,11 @@ main.registerCommand({
 
   var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
   if (!installed.acceptable) {
+    if (Host.isLinux() && platform === "ios") {
+      Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+      return 1;
+    }
+
     Console.warn("Platform requirements not yet met");
 
     var host = null;
@@ -2430,7 +2469,7 @@ main.registerCommand({
         url += "#" + anchor;
       }
       openUrl(url);
-      Console.info("Please follow the instructions here: " + Console.bold(url));
+      Console.info("Please follow the instructions here:\n " + Console.bold(url) + "\n");
     } else {
       Console.info("We don't have installation instructions for your platform")
     }

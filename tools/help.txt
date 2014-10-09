@@ -196,6 +196,17 @@ After adding a mobile platform, you can use 'meteor run <mobile-platform>'
 to run on a mobile device or emulator. 'meteor build' will always build
 the project for every added platform.
 
+>>> install-sdk
+Installs SDKs for a platform.
+Usage: meteor install-sdk <platform>
+
+Installs the SDK for a platform; will also verify that the platform
+requirements are met.
+
+Available platforms:
+  android
+  ios (on OS X only)
+
 >>> remove-platform
 Remove a platform from this project.
 Usage: meteor remove-platform <platform> [platform..]
