@@ -363,8 +363,12 @@ var springboard = function (rel, releaseOverride) {
       });
     });
 
-    Console.setPretty(false);
+    // It's important to call setPretty *after* enableProgressBar,
+    // since `Console.enableProgressBar(false)` is silently ignored
+    // when not in pretty mode. XXX Maybe we should change that
+    // behavior?
     Console.enableProgressBar(false);
+    Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
