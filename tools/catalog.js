@@ -265,6 +265,8 @@ _.extend(LayeredCatalog.prototype, {
       if (ret["usedRCs"]) {
         var expPackages = [];
         _.each(ret.answer, function(version, package) {
+          if (self.isLocalPackage(package))
+            return;
           if (version.split('-').length > 1) {
             if (!(resolverOpts.previousSolution &&
               resolverOpts.previousSolution[package] === version)) {
@@ -272,8 +274,7 @@ _.extend(LayeredCatalog.prototype, {
                 var printMe = true;
                 _.each(oldConstraints, function (oC) {
                   _.each(oC.constraints, function (specOC) {
-                    if (specOC.version === version ||
-                        self.isLocalPackage(package)) {
+                    if (specOC.version === version) {
                       printMe = false;
                     }
                   });
