@@ -321,6 +321,9 @@ _.extend(LayeredCatalog.prototype, {
   _initializeResolver: function () {
     var self = this;
     var uniload = require('./uniload.js');
+
+    var yielder = new utils.ThrottledYield();
+
     var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
     })['constraint-solver'];
@@ -332,9 +335,7 @@ _.extend(LayeredCatalog.prototype, {
           utils.Patience.nudge();
           buildmessage.nudge();
 
-          // XXX: Call this more judiciously
-          // (I broke this when I removed Patience; need a quick fix for now)
-          utils.sleepMs(1);
+          yielder.yield();
         }
       });
   },
