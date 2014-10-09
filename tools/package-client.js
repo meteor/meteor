@@ -38,13 +38,6 @@ var openPackageServerConnection = function (packageServerUrl) {
      _dontPrintErrors: true});
 };
 
-var emptyCachedServerDataJson = function () {
-  return {
-    syncToken: { format: "1.1" },
-    collections: null
-  };
-};
-
 // Given a connection, makes a call to the package server.  (Checks to see if
 // the connection is connected, and reconnects if needed -- a workaround for
 // the fact that connections in the tool do not reconnect)
@@ -146,7 +139,7 @@ _updateServerPackageData = function (dataStore, options) {
   buildmessage.reportProgress(state);
 
   var getSomeData = function () {
-    var syncToken = dataStore.getSyncToken() || {};
+    var syncToken = dataStore.getSyncToken() || {format: "1.1"};
 
     if (!start) {
       start = {};

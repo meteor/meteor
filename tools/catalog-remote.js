@@ -825,7 +825,7 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._simpleQuery("SELECT content FROM syncToken WHERE _id=?", [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
-      return {};
+      return null;
     }
     if (result.length !== 1) {
       throw new Error("Unexpected number of sync tokens found");
