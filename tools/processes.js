@@ -69,6 +69,9 @@ _.extend(RunCommand.prototype, {
       if (self.options.pipeOutput) {
         Console.stderr.write(data);
       }
+      if (self.options.onStderr) {
+        self.options.onStderr(data);
+      }
     });
 
     self.stdin = self.process.stdin;
