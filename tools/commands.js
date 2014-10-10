@@ -607,12 +607,15 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     return buildCommand(options);
 });
 
-// Deprecated -- identical functionality to 'build'
+// Deprecated -- identical functionality to 'build' with one exception: it
+// doesn't output a directory with all builds but rather only one tarball with
+// server/client programs.
+// XXX COMPAT WITH 0.9.1.1
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
       Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
                            "Use 'build' instead.\n");
-      return buildCommand(options);
+      return buildCommand(_.extend(options, { _serverOnly: true }));
 });
 
 var buildCommand = function (options) {
@@ -645,8 +648,7 @@ var buildCommand = function (options) {
   var mobilePlatforms = project.getCordovaPlatforms();
   var appName = path.basename(options.appDir);
 
-  if (! _.isEmpty(mobilePlatforms)) {
-
+  if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
     // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
     var mobileServer = options.server || options["mobile-port"];
 
@@ -684,8 +686,10 @@ var buildCommand = function (options) {
 
   var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
+
   var bundlePath = options['directory'] ?
-      path.join(outputPath, 'bundle') : path.join(buildDir, 'bundle');
+      (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
+      path.join(buildDir, 'bundle');
 
   // Creating the package loader with which to bundle our app here, probably
   // calculating the dependencies.
@@ -731,10 +735,14 @@ var buildCommand = function (options) {
     return 1;
   }
 
-  files.mkdir_p(outputPath);
-  if (!options['directory']) {
+  if (! options._serverOnly)
+    files.mkdir_p(outputPath);
+
+  if (! options['directory']) {
     try {
-      var outputTar = path.join(outputPath, appName + '.tar.gz');
+      var outputTar = options._serverOnly ? outputPath :
+        path.join(outputPath, appName + '.tar.gz');
+
       files.createTarball(path.join(buildDir, 'bundle'), outputTar);
     } catch (err) {
       Console.stderr.write("Errors during tarball creation:\n");
@@ -746,7 +754,7 @@ var buildCommand = function (options) {
 
   // Copy over the Cordova builds AFTER we bundle so that they are not included
   // in the main bundle.
-  _.each(mobilePlatforms, function (platformName) {
+  !options._serverOnly && _.each(mobilePlatforms, function (platformName) {
     var buildPath = path.join(localPath, 'cordova-build',
                               'platforms', platformName);
     var platformPath = path.join(outputPath, platformName);
