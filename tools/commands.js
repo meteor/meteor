@@ -737,8 +737,10 @@ var buildCommand = function (options) {
       var outputTar = path.join(outputPath, appName + '.tar.gz');
       files.createTarball(path.join(buildDir, 'bundle'), outputTar);
     } catch (err) {
-      console.log(JSON.stringify(err));
-      Console.stderr.write("Couldn't create tarball\n");
+      Console.stderr.write("Errors during tarball creation:\n");
+      Console.stderr.write(err.message);
+      files.rm_recursive(buildDir);
+      return 1;
     }
   }
 
