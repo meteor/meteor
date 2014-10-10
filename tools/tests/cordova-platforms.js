@@ -17,6 +17,14 @@ selftest.define("add cordova platforms", function () {
   run.expectExit(1);
 
   run = s.run("add-platform", "android");
+  run.matchErr("Platform is not installed");
+  run.expectExit(2);
+
+  run = s.run("install-sdk", "android");
+  run.extraTime = 90; // Big downloads
+  run.expectExit(0);
+
+  run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
   run.extraTime = 90; // Huge download
