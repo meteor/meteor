@@ -144,10 +144,35 @@ var Db = function (dbFile, options) {
   self._transactionMutex = new Mutex();
 
   // WAL mode copes much better with (multi-process) concurrency
-  self._execute('PRAGMA journal_mode=WAL');
+  self._retry(function () {
+    self._execute('PRAGMA journal_mode=WAL');
+  });
 };
 
 _.extend(Db.prototype, {
+
+  // TODO: Move to utils?
+  _retry: function (f, options) {
+    options = options || {};
+    var maxAttempts = options.maxAttempts || 3;
+    var delay = options.delay || 500;
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return f();
+      } catch (err) {
+        if (attempt < maxAttempts) {
+          Console.warn("Retrying after error", err);
+        } else {
+          throw err;
+        }
+      }
+
+      if (delay) {
+        utils.sleepMs(delay);
+      }
+    }
+  },
 
   // Runs functions serially, in a mutex
   _serialize: function (f) {
