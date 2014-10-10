@@ -99,8 +99,8 @@ tar tvzf foo.tar.gz >>$OUTPUT
 
 rm foo.tar.gz
 
-$METEOR build foo.tar.gz
-tar tvzf foo.tar.gz >>$OUTPUT
+$METEOR build .
+tar tvzf "$DIR.tar.gz" >>$OUTPUT
 
 cd .. # we're now back to $DIR
 echo "... run"
