@@ -663,7 +663,7 @@ _.extend(Connection.prototype, {
   //                              be confused with server return values; we
   //                              may improve this in future.
   // @param callback {Optional Function}
-  
+
   /**
    * @memberOf Meteor
    * @summary Invoke a method passing an array of arguments.
