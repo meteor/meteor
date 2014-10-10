@@ -994,26 +994,25 @@ main.registerCommand({
       } catch (err) {
         Console.error(
           "Failed to push git tag. Please push git tag manually!");
+        Console.error(
+          "If you are publishing a non-prerelease version, then the readme will show up " +
+          "in atmosphere. To make sure that happens, after pushing the git tag, please run " +
+          " the following:");
+        _.each(toPublish, function (pack, name) {
+          Console.info("meteor admin set-latest-readme " + name + " --tag " + gitTag);
+        });
+        Console.error("If you are publishing an experimental version, don't worry about it.");
         fail = true;
       }
-      // If we decided that the tag is legal, and we can't push it, it is almost
-      // certainly because we have outstanding files to commit and we are going
-      // to push it later. Forcing us to then re-label readmes on our packages
-      // is not going to lead to a useful workflow. If we set them to something
-      // terrible, we can always unset them by going to 'packages.meteor.com'
-      // and calling '_changeReadmeURL' manually.
-      _.each(toPublish, function (pack, name) {
-        var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag + "/packages/" +
-              name + "/README.md";
-        var version = pack.compileResult.isopack.version;
-        packageClient.callPackageServer(
-          conn, '_changeReadmeURL', name,  version, url);
-        Console.info("Setting the readme of", name + "@" + version, "to", url);
-      });
-      if (fail && !_.isEmpty(toPublish)) {
-        Console.warning("Readmes for packages rely on pushing the correct tag to git!");
-        Console.warning("Please push the git tag manually, or call _changeReadmeURL on ",
-                        "the package server directly to unset the readme URLs.");
+      if (!fail) {
+        _.each(toPublish, function (pack, name) {
+          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag + "/packages/" +
+                name + "/README.md";
+          var version = pack.compileResult.isopack.version;
+          packageClient.callPackageServer(
+            conn, '_changeReadmeURL', name,  version, url);
+          Console.info("Setting the readme of", name + "@" + version, "to", url);
+        });
       }
     }
   }
