@@ -767,8 +767,6 @@ main.registerCommand({
                     path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
-                Console.info(".");
-
                 // Now compile it! Once again, everything should compile, and if
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
@@ -783,7 +781,6 @@ main.registerCommand({
                   canBuild = false;
                   return;
                 };
-                Console.info(".");
 
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
@@ -793,7 +790,6 @@ main.registerCommand({
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
-                Console.info(".");
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
@@ -853,6 +849,7 @@ main.registerCommand({
                   }
 
                   if (somethingChanged) {
+                    item = item + "@" + compileResult.isopack.version;
                     // The build ID of the old server record is not the same as
                     // the buildID that we have on disk. This means something
                     // has changed -- maybe our source files, or a buildId of
@@ -863,9 +860,9 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number.");
-                    Console.error("NOT OK");
+                    Console.error("  NOT OK");
                   } else {
-                    Console.info("ok");
+                    Console.info("   ok");
                   }
                 }
               });
@@ -988,10 +985,36 @@ main.registerCommand({
     } else {
       Console.info("Creating git tag " + gitTag);
       files.runGitInCheckout('tag', gitTag);
-      Console.info(
-        "Pushing git tag (this should fail if you are not from MDG)");
-      files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+      var fail = false;
+      try {
+        Console.info(
+          "Pushing git tag (this should fail if you are not from MDG)");
+        files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
                              'refs/tags/' + gitTag);
+      } catch (err) {
+        Console.error(
+          "Failed to push git tag. Please push git tag manually!");
+        fail = true;
+      }
+      // If we decided that the tag is legal, and we can't push it, it is almost
+      // certainly because we have outstanding files to commit and we are going
+      // to push it later. Forcing us to then re-label readmes on our packages
+      // is not going to lead to a useful workflow. If we set them to something
+      // terrible, we can always unset them by going to 'packages.meteor.com'
+      // and calling '_changeReadmeURL' manually.
+      _.each(toPublish, function (pack, name) {
+        var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag + "/packages/" +
+              name + "/README.md";
+        var version = pack.compileResult.isopack.version;
+        packageClient.callPackageServer(
+          conn, '_changeReadmeURL', name,  version, url);
+        Console.info("Setting the readme of", name + "@" + version, "to", url);
+      });
+      if (fail && !_.isEmpty(toPublish)) {
+        Console.warning("Readmes for packages rely on pushing the correct tag to git!");
+        Console.warning("Please push the git tag manually, or call _changeReadmeURL on ",
+                        "the package server directly to unset the readme URLs.");
+      }
     }
   }
 
