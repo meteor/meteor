@@ -17,7 +17,8 @@ Meteor.startup(function () {
     },
     wipeRight: function () {
       Session.set(MENU_KEY, true);
-    }
+    },
+    preventDefaultEvents: false
   });
 
   // Don't show the connection error box unless we haven't connected within
