@@ -45,7 +45,7 @@ selftest.define("publish-and-search",
   // set a github URL in the package
   var packageJsContents = s.read("package.js");
   var newPackageJsContents = packageJsContents.replace(
-      /git: \".*\"/, "git: \"" + githubUrl + "\"");
+      /git: \'.*\'/, "git: \'" + githubUrl + "\'");
   s.write("package.js", newPackageJsContents);
 
   run = s.run("publish");
