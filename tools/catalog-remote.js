@@ -153,23 +153,21 @@ _.extend(Db.prototype, {
 
   // TODO: Move to utils?
   _retry: function (f, options) {
-    options = options || {};
-    var maxAttempts = options.maxAttempts || 3;
-    var delay = options.delay || 500;
+    options = _.extend({ maxAttempts: 3, delay: 500}, options || {});
 
-    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
       try {
         return f();
       } catch (err) {
-        if (attempt < maxAttempts) {
+        if (attempt < options.maxAttempts) {
           Console.warn("Retrying after error", err);
         } else {
           throw err;
         }
       }
 
-      if (delay) {
-        utils.sleepMs(delay);
+      if (options.delay) {
+        utils.sleepMs(options.delay);
       }
     }
   },
