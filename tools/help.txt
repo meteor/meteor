@@ -743,3 +743,11 @@ Options:
   --add         add a member to the organization
   --remove      remove a member from the organization
   --list        list members of the organization (the default)
+
+>>> admin set-latest-readme
+Set the readme on the latest version of a core meteor package.
+Usage: meteor admin set-latest-core-readme name --commit commit
+       meteor admin set-latest-core-readme name --tag tag
+
+Set the readme field on the latest published version of a core package to the readme at
+a given git commit, or the readme at a given git tag.

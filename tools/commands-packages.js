@@ -2768,3 +2768,56 @@ main.registerCommand({
 
   return 0;
 });
+
+
+main.registerCommand({
+  name: 'admin set-latest-readme',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    "commit" : {type: String, required: false},
+    "tag" : {type: String, required: false}
+  },
+  hidden: true
+}, function (options) {
+
+  if (options.commit && options.tag)
+    throw new main.ShowUsage;
+  if (!options.commit && !options.tag)
+    throw new main.ShowUsage;
+
+  // We are going to start with getting the latest version of the package.
+  var name = options.args[0];
+  var version = doOrDie(function () {
+    return catalog.official.getLatestMainlineVersion(name).version;
+  });
+
+  var coords = options.tag || options.commit;
+  var url = "https://raw.githubusercontent.com/meteor/meteor/" +
+      coords + "/packages/" + name + "/README.md";
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+      Console.info(
+        "Setting README of "
+          + name + "@" + version + " to " + url);
+      packageClient.callPackageServer(
+        conn,
+        '_changeReadmeURL',
+        name, version, url);
+      Console.info(" done!\n");
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  conn.close();
+  refreshOfficialCatalogOrDie();
+
+  return 0;
+});
