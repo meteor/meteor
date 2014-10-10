@@ -25,6 +25,8 @@ Package.on_use(function (api) {
   api.add_files('templating.js', 'client');
   api.export('Template', 'client');
 
+  api.use('underscore'); // only the subset in packages/blaze/microscore.js
+
   // html_scanner.js emits client code that calls Meteor.startup and
   // Blaze, so anybody using templating (eg apps) need to implicitly use
   // 'meteor' and 'blaze'.
