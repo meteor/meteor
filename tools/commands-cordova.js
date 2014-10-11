@@ -2489,7 +2489,7 @@ main.registerCommand({
       host = "Linux";
     }
     if (host) {
-      var wikiPage = "Cordova-Installation:-" + capitalize(platform) + "-on-" + host;
+      var wikiPage = "Mobile-Dev-Install:-" + capitalize(platform) + "-on-" + host;
       var anchor = installed.missing.length ? installed.missing[0] : null;
       var url = "https://github.com/meteor/meteor/wiki/" + wikiPage; // URL escape?
       if (anchor) {

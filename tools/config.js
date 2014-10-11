@@ -213,7 +213,7 @@ _.extend(exports, {
   getPackageStorage: function (tropo) {
     var self = this;
     tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v2",
+    return path.join(tropo.root, "package-metadata", "v2.0.1",
                      self.getLocalPackageCacheFilename());
   },
 

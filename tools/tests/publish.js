@@ -45,7 +45,7 @@ selftest.define("publish-and-search",
   // set a github URL in the package
   var packageJsContents = s.read("package.js");
   var newPackageJsContents = packageJsContents.replace(
-      /git: \".*\"/, "git: \"" + githubUrl + "\"");
+      /git: \'.*\'/, "git: \'" + githubUrl + "\'");
   s.write("package.js", newPackageJsContents);
 
   run = s.run("publish");
@@ -400,6 +400,7 @@ selftest.define("package-depends-on-either-version",
   var password = "testtest";
   testUtils.login(s, username, password);
   var packageNameDependent = utils.randomToken();
+  var run;
 
   // First, we publish fullPackageNameDep at 1.0 and publish it..
   var fullPackageNameDep = username + ":" + packageNameDependent;
@@ -439,7 +440,6 @@ selftest.define("package-depends-on-either-version",
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
-  s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add", fullPackageNameDep + "@=1.0.0");
   run.match(fullPackageNameDep);

@@ -767,8 +767,6 @@ main.registerCommand({
                     path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
-                Console.info(".");
-
                 // Now compile it! Once again, everything should compile, and if
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
@@ -783,7 +781,6 @@ main.registerCommand({
                   canBuild = false;
                   return;
                 };
-                Console.info(".");
 
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
@@ -793,7 +790,6 @@ main.registerCommand({
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
-                Console.info(".");
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
@@ -853,6 +849,7 @@ main.registerCommand({
                   }
 
                   if (somethingChanged) {
+                    item = item + "@" + compileResult.isopack.version;
                     // The build ID of the old server record is not the same as
                     // the buildID that we have on disk. This means something
                     // has changed -- maybe our source files, or a buildId of
@@ -863,9 +860,9 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number.");
-                    Console.error("NOT OK");
+                    Console.error("  NOT OK");
                   } else {
-                    Console.info("ok");
+                    Console.info("   ok");
                   }
                 }
               });
@@ -988,10 +985,35 @@ main.registerCommand({
     } else {
       Console.info("Creating git tag " + gitTag);
       files.runGitInCheckout('tag', gitTag);
-      Console.info(
-        "Pushing git tag (this should fail if you are not from MDG)");
-      files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+      var fail = false;
+      try {
+        Console.info(
+          "Pushing git tag (this should fail if you are not from MDG)");
+        files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
                              'refs/tags/' + gitTag);
+      } catch (err) {
+        Console.error(
+          "Failed to push git tag. Please push git tag manually!");
+        Console.error(
+          "If you are publishing a non-prerelease version, then the readme will show up " +
+          "in atmosphere. To make sure that happens, after pushing the git tag, please run " +
+          " the following:");
+        _.each(toPublish, function (pack, name) {
+          Console.info("meteor admin set-latest-readme " + name + " --tag " + gitTag);
+        });
+        Console.error("If you are publishing an experimental version, don't worry about it.");
+        fail = true;
+      }
+      if (!fail) {
+        _.each(toPublish, function (pack, name) {
+          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag + "/packages/" +
+                name + "/README.md";
+          var version = pack.compileResult.isopack.version;
+          packageClient.callPackageServer(
+            conn, '_changeReadmeURL', name,  version, url);
+          Console.info("Setting the readme of", name + "@" + version, "to", url);
+        });
+      }
     }
   }
 
@@ -2132,10 +2154,15 @@ main.registerCommand({
   var cordovaPlugins = filteredPackages.plugins;
 
   // Update the plugins list
-  project.removeCordovaPlugins(cordovaPlugins);
+  var removedPlugins = project.removeCordovaPlugins(cordovaPlugins);
+  var notRemoved = _.difference(cordovaPlugins, removedPlugins);
 
-  _.each(cordovaPlugins, function (plugin) {
+  _.each(removedPlugins, function (plugin) {
     Console.info("removed cordova plugin " + plugin);
+  });
+
+  _.each(notRemoved, function (plugin) {
+    Console.error(plugin + " is not in this project.");
   });
 
   var args = filteredPackages.rest;
@@ -2731,6 +2758,59 @@ main.registerCommand({
         name, version, !options.success);
       process.stdout.write(" done!\n");
     });
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  conn.close();
+  refreshOfficialCatalogOrDie();
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: 'admin set-latest-readme',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    "commit" : {type: String, required: false},
+    "tag" : {type: String, required: false}
+  },
+  hidden: true
+}, function (options) {
+
+  if (options.commit && options.tag)
+    throw new main.ShowUsage;
+  if (!options.commit && !options.tag)
+    throw new main.ShowUsage;
+
+  // We are going to start with getting the latest version of the package.
+  var name = options.args[0];
+  var version = doOrDie(function () {
+    return catalog.official.getLatestMainlineVersion(name).version;
+  });
+
+  var coords = options.tag || options.commit;
+  var url = "https://raw.githubusercontent.com/meteor/meteor/" +
+      coords + "/packages/" + name + "/README.md";
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+      Console.info(
+        "Setting README of "
+          + name + "@" + version + " to " + url);
+      packageClient.callPackageServer(
+        conn,
+        '_changeReadmeURL',
+        name, version, url);
+      Console.info(" done!\n");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;

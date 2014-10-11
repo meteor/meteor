@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.8-rc.0'
+  version: '1.0.8-rc.3'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
@@ -24,6 +24,8 @@ Package.on_use(function (api) {
 
   api.add_files('templating.js', 'client');
   api.export('Template', 'client');
+
+  api.use('underscore'); // only the subset in packages/blaze/microscore.js
 
   // html_scanner.js emits client code that calls Meteor.startup and
   // Blaze, so anybody using templating (eg apps) need to implicitly use

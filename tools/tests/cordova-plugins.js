@@ -225,3 +225,31 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.expectExit(0);
   checkCordovaPlugins(s, ["org.apache.cordova.device"]);
 });
+
+selftest.define("remove cordova plugins", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
+  run.waitSecs(5);
+  run.expectExit(0);
+
+  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+
+  // Removing a plugin that hasn't been added should say that it isn't
+  // in this project.
+  run = s.run("remove", "cordova:blahblah");
+  run.matchErr("not in this project");
+  run.forbidAll("removed");
+  run.expectExit(0);
+
+  run = s.run("remove", "cordova:blahblah",
+              "cordova:org.apache.cordova.camera");
+  run.waitSecs(5);
+  run.matchErr("not in this project");
+  run.match("removed");
+  run.expectExit(0);
+  checkUserPlugins(s, []);
+});

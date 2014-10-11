@@ -107,6 +107,13 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
        { version: "3.0.0", type: "compatible-with"},
        { version: "4.0.0-rc1", type: "exactly"}]
    });
+  t("foo@1.0.0|| 2.0.0||3.0.0    ||     =4.0.0-rc1",
+    { name: "foo", constraints:
+      [{ version: "1.0.0", type: "compatible-with"},
+       { version: "2.0.0", type: "compatible-with"},
+       { version: "3.0.0", type: "compatible-with"},
+       { version: "4.0.0-rc1", type: "exactly"}]
+   });
   t("foo-bar@=3.2.1 || 1.0.0",
     { name: "foo-bar", constraints:
       [{ version: "3.2.1", type: "exactly"},
@@ -124,10 +131,12 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
     });
 
   FAIL("foo@1.0.0 1.0.0");
-  FAIL("foo@1.0.0||1.0.0");
   FAIL("foo@1.0.0 | 1.0.0");
   FAIL("foo || bar");
   FAIL("foo@1.0.0-rc|1.0.0");
+
+  // This is the current implementation, but is arguably not great.
+  FAIL("foo@1.0.0 ");
 });
 
 Tinytest.add(

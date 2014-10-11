@@ -1,7 +1,8 @@
 ## v.NEXT
 
 * Rename `{{> UI.dynamic}}` to `{{> Template.dynamic}}`, and likewise
-  with `UI.contentBlock` and `UI.elseBlock`.
+  with `UI.contentBlock` and `UI.elseBlock`. The UI namespace is no longer
+  used anywhere except for backwards compatibility.
 
 * Deprecate the `amplify`, `backbone`, `bootstrap`, and `d3` integration
   packages in favor of community alternatives.  These packages will no
@@ -22,6 +23,66 @@
     option for 'meteor run' and '--server' for 'meteor build'. --server
     is required for meteor build. describe defaults for --mobile-server.
 
+* The local package catalog now uses SQLite, which is much faster than the
+previous implementation.
+
+* Operations that take longer than a few seconds, such as downloading packages,
+installing the Android SDK, and some others, now show a progress bar.
+
+* Package.registerBuildPlugin its associated functions have been added to the
+public API, cleaned up, and documented. The new function is identical to the
+earlier _transitional_registerBuildPlugin except for one or two backwards-
+compatible API changes.
+
+* The `unipackage.json` file inside downloaded packages has been renamed to
+`isopack.json` and has an improved forwards-compatible format. To maintain
+backwards compatibility with previous releases, packages will have both
+files included. 
+
+* New callbacks that make it easier to build custom user interfaces on top of
+the accounts system: `Accounts.onResetPasswordLink`,
+`Accounts.onEnrollmentLink`, and `Accounts.onEmailVerificationLink`. These
+callbacks should be registered before `Meteor.startup` fires, and will be called
+if the URL matches a link in an email sent by `Accounts.resetPassword`, etc.
+
+* The `.meteor/cordova-platforms` file has been renamed to `.meteor/platforms`
+to reflect the possibility of adding non-Cordova platforms in the future. This
+file now automatically includes the platforms `server` and `browser`, which
+can't currently be removed. The old file will be automatically migrated to
+the new one when the app is run with Meteor 0.9.4 or above.
+
+* Meteor can now run [Velocity](https://github.com/meteor-velocity/velocity)
+  tests with `meteor run --test`.
+
+* There is a new `meteor debug` command and `--debug-port` command line option
+for `meteor run` that allows you to easily use node-inspector to debug your
+server-side code. Add a `debugger` statement to your code to create a
+breakpoint.
+
+* A new special file, `/mobile-config.js`, allows you to set app metadata,
+icons, splash screens, preferences, and PhoneGap/Cordova plugin settings without
+needing a `cordova_build_override` directory.
+
+* Change the mechanism that the Meteor tool uses to clean up app server
+processes. The new mechanism is more resilient to slow app bundles and
+other CPU-intensive tasks. #2536, #2588.
+
+* The constraint solver used by the client to find compatible versions of
+packages is now much faster.
+
+* The process and documentation for installing SDKs for Android and iOS has
+been significantly improved, and is more intelligent about detecting existing
+SDK installs.
+
+* Improved output from `meteor build` to make it easier to publish mobile
+apps to the App Store and Play Store, and added documentation about all of the
+steps from building the app to publishing it.
+
+* Packages can now be marked as `debugOnly` by adding `debugOnly: true` to
+`Package.describe`. Debug-only packages are not bundled for production, allowing
+package authors to build packages specifically for testing and debugging without
+increasing the size of the resulting app bundle or causing apps to ship with
+debug functionality built in.
 
 ## v0.9.3.1
 

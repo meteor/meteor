@@ -993,9 +993,12 @@ _.extend(Project.prototype, {
 
   // Removes the plugins from the cordova-plugins file if they existed.
   // pluginsToRemove - array of Cordova plugin identifiers
+  //
+  // Returns an array of plugin identifiers that were actually removed.
   removeCordovaPlugins: function (pluginsToRemove) {
     var self = this;
 
+    var removed = _.intersection(_.keys(self.cordovaPlugins), pluginsToRemove);
     self.cordovaPlugins =
       _.omit.apply(null, [self.cordovaPlugins].concat(pluginsToRemove));
 
@@ -1010,6 +1013,8 @@ _.extend(Project.prototype, {
     });
     lines.push('\n');
     fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
+
+    return removed;
   },
 
   // platforms - a list of strings
