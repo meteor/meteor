@@ -25,7 +25,7 @@ var password = "testtest";
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
 //    version explicitly. This is for packages that we included at a specific
 //    version.
-var checkPackages = function(sand, packages) {
+var checkPackages = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/packages").split("\n");
   var i = 0;
   _.each(lines, function(line) {
@@ -41,7 +41,7 @@ var checkPackages = function(sand, packages) {
     i++;
   });
   selftest.expectEqual(packages.length, i);
-};
+});
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and check that it contains the packages that we are looking for. We don't
@@ -60,7 +60,7 @@ var checkPackages = function(sand, packages) {
 //    version explicitly. This is for packages that only exist for the purpose
 //    of this test (for example, packages local to this app), so we know exactly
 //    what version we expect.
-var checkVersions = function(sand, packages) {
+var checkVersions = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/versions").split("\n");
   var depend = {};
   _.each(lines, function(line) {
@@ -83,7 +83,7 @@ var checkVersions = function(sand, packages) {
     i++;
   });
   selftest.expectEqual(packages.length, i);
-};
+});
 
 // Takes in a remote catalog. Returns an object that can sort of immitate the
 // catalog. We don't bother to copy all of the information for memory/efficiency
@@ -422,7 +422,7 @@ var cleanLocalCache = function () {
   }
 };
 
-var publishMostBasicPackage = function (s, fullPackageName) {
+var publishMostBasicPackage = selftest.markStack(function (s, fullPackageName) {
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
   run.expectExit(0);
@@ -434,9 +434,9 @@ var publishMostBasicPackage = function (s, fullPackageName) {
     run.expectExit(0);
     run.match("Done");
   });
-};
+});
 
-var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
+var publishReleaseInNewTrack = selftest.markStack(function (s, releaseTrack, tool, packages) {
   var relConf = {
     track: releaseTrack,
     version: "0.9",
@@ -450,7 +450,7 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
   run.waitSecs(15);
   run.match("Done");
   run.expectExit(0);
-};
+});
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
@@ -549,7 +549,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
 
 // `packageName` should be a full package name (i.e. <username>:<package
 // name>), and the sandbox should be logged in as that username.
-var createAndPublishPackage = function (s, packageName) {
+var createAndPublishPackage = selftest.markStack(function (s, packageName) {
   var run = s.run("create", "--package", packageName);
   run.waitSecs(20);
   run.expectExit(0);
@@ -558,7 +558,7 @@ var createAndPublishPackage = function (s, packageName) {
     run.waitSecs(25);
     run.expectExit(0);
   });
-};
+});
 
 selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {

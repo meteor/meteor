@@ -7,7 +7,7 @@ var httpHelpers = require('../http-helpers.js');
 
 // Poll the given app looking for the correct settings. Throws an error
 // if the settings aren't found after a timeout.
-var checkForSettings = function (appName, settings, timeoutSecs) {
+var checkForSettings = selftest.markStack(function (appName, settings, timeoutSecs) {
   var timer = setTimeout(function () {
     selftest.fail('Expected settings not found on app ' + appName);
   }, timeoutSecs * 1000);
@@ -29,7 +29,7 @@ var checkForSettings = function (appName, settings, timeoutSecs) {
       }
     }
   }
-};
+});
 
 selftest.define('deploy - with settings', ['net', 'slow'], function () {
   var s = new Sandbox;
