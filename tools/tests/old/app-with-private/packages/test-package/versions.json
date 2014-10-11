@@ -2,7 +2,7 @@
   "dependencies": [
     [
       "meteor",
-      "1.0.4-cordova6"
+      "1.1.1"
     ],
     [
       "underscore",

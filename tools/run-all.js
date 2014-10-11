@@ -1,17 +1,24 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
+
 var files = require('./files.js');
 var release = require('./release.js');
-
+var buildmessage = require('./buildmessage.js');
+var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');
+
+var Console = require('./console.js').Console;
+
 var Proxy = require('./run-proxy.js').Proxy;
+var Selenium = require('./run-selenium.js').Selenium;
+var HttpProxy = require('./run-httpproxy.js').HttpProxy;
 var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
 
 // options: proxyPort, proxyHost, appPort, appHost, buildOptions,
 // settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
-// quiet, rootUrl, mongoUrl, oplogUrl, disableOplog,
+// quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl, disableOplog,
 // appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
@@ -21,7 +28,7 @@ var Runner = function (appDir, options) {
     throw new Error("no proxyPort?");
 
   var listenPort = options.proxyPort;
-  var mongoPort = listenPort + 1;
+  var mongoPort = parseInt(listenPort) + 1;
   self.specifiedAppPort = options.appPort;
   self.regenerateAppPort();
 
@@ -36,6 +43,8 @@ var Runner = function (appDir, options) {
     self.rootUrl = 'http://localhost:' + listenPort + '/';
   }
 
+  self.extraRunners = options.extraRunners;
+
   self.proxy = new Proxy({
     listenPort: listenPort,
     listenHost: options.proxyHost,
@@ -43,6 +52,13 @@ var Runner = function (appDir, options) {
     proxyToHost: options.appHost,
     onFailure: options.onFailure
   });
+
+  self.httpProxy = null;
+  if (options.httpProxyPort) {
+    self.httpProxy = new HttpProxy({
+      listenPort: options.httpProxyPort
+    });
+  }
 
   self.mongoRunner = null;
   var mongoUrl, oplogUrl;
@@ -71,22 +87,41 @@ var Runner = function (appDir, options) {
     listenHost: options.appHost,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
+    mobileServerUrl: options.mobileServerUrl,
     buildOptions: options.buildOptions,
     rootUrl: self.rootUrl,
     settingsFile: options.settingsFile,
     program: options.program,
+    debugPort: options.debugPort,
     proxy: self.proxy,
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
     noRestartBanner: self.quiet,
     recordPackageUsage: options.recordPackageUsage
   });
+
+  self.selenium = null;
+  if (options.selenium) {
+    self.selenium = new Selenium({
+      runner: self,
+      browser: options.seleniumBrowser
+    });
+  }
 };
 
 _.extend(Runner.prototype, {
   // XXX leave a pidfile and check if we are already running
   start: function () {
     var self = this;
+
+    // XXX: Include all runners, and merge parallel-launch patch
+    var allRunners = [ ] ;
+    allRunners = allRunners.concat(self.extraRunners);
+    _.each(allRunners, function (runner) {
+      if (!runner) return;
+      runner.prestart && runner.prestart();
+    });
+
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
@@ -97,6 +132,14 @@ _.extend(Runner.prototype, {
 
     if (! self.stopped) {
       self.updater.start();
+    }
+
+    // print the banner only once we've successfully bound the port
+    if (! self.stopped && self.httpProxy) {
+      self.httpProxy.start();
+      if (! self.quiet) {
+        runLog.log("=> Started http proxy.");
+      }
     }
 
     if (! self.stopped && self.mongoRunner) {
@@ -118,16 +161,19 @@ _.extend(Runner.prototype, {
       // but all of the ones I tried look terrible in the terminal.
       if (! self.quiet) {
         var animationFrame = 0;
-        var printUpdate = function () {
-          runLog.logTemporary("=> Starting MongoDB... " +
-                              spinner[animationFrame]);
+        var printUpdate = fiberHelpers.bindEnvironment(function () {
+          //runLog.logTemporary("=> Starting MongoDB... " +
+          //                    spinner[animationFrame]);
+          buildmessage.nudge();
           animationFrame = (animationFrame + 1) % spinner.length;
-        };
+        });
         printUpdate();
         var mongoProgressTimer = setInterval(printUpdate, 200);
       }
 
-      self.mongoRunner.start();
+      buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
+        self.mongoRunner.start();
+      });
 
       if (! self.quiet) {
         clearInterval(mongoProgressTimer);
@@ -135,6 +181,17 @@ _.extend(Runner.prototype, {
           runLog.log("=> Started MongoDB.");
       }
     }
+
+    _.forEach(self.extraRunners, function (extraRunner) {
+      if (! self.stopped) {
+        var title = extraRunner.title;
+        if (! self.quiet)
+          runLog.logTemporary("=> Starting " + title + "...");
+        extraRunner.start();
+        if (! self.quiet && ! self.stopped)
+          runLog.log("=> Started " + title + ".");
+      }
+    });
 
     if (! self.stopped) {
       if (! self.quiet)
@@ -146,6 +203,14 @@ _.extend(Runner.prototype, {
 
     if (! self.stopped && ! self.quiet)
       runLog.log("\n=> App running at: " + self.rootUrl);
+
+    if (self.selenium && ! self.stopped) {
+      if (! self.quiet)
+        runLog.logTemporary("=> Starting Selenium...");
+      self.selenium.start();
+      if (! self.quiet && ! self.stopped)
+        runLog.log("=> Started Selenium.");
+    }
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
     // now we overwrite the "starting foo..." message with the
@@ -161,9 +226,14 @@ _.extend(Runner.prototype, {
 
     self.stopped = true;
     self.proxy.stop();
+    self.httpProxy && self.httpProxy.stop();
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
+    _.forEach(self.extraRunners, function (extraRunner) {
+      extraRunner.stop();
+    });
     self.appRunner.stop();
+    self.selenium && self.selenium.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();
@@ -273,6 +343,7 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
+  Console.enableProgressBar(false);
   var result = fut.wait();
   runner.stop();
 
@@ -302,7 +373,7 @@ exports.run = function (appDir, options) {
     process.stderr.write(
 "Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
 ".\n" +
-"Restart meteor to use the new release.");
+"Restart meteor to use the new release.\n");
     return 254;
   }
 

@@ -4,6 +4,7 @@ if (showRequireProfile)
 
 var _ = require('underscore');
 var Fiber = require('fibers');
+var Console = require('./console.js').Console;
 var files = require('./files.js');
 var path = require('path');
 var warehouse = require('./warehouse.js');
@@ -34,7 +35,8 @@ var Command = function (options) {
     options: {},
     requiresApp: false,
     requiresRelease: true,
-    hidden: false
+    hidden: false,
+    pretty: false
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -84,6 +86,13 @@ main.ExitWithCode = function (code) {
   this.code = code;
 };
 
+_.extend(main.ExitWithCode.prototype, {
+  toString: function () {
+    var self = this;
+    return "ExitWithCode:" + self.code;
+  }
+});
+
 // Exception to throw to skip the process.exit call.
 main.WaitForExit = function () {};
 
@@ -93,6 +102,13 @@ main.WaitForExit = function () {};
 // track instead of the default track.
 main.SpringboardToLatestRelease = function (track) {
   this.track = track;
+};
+
+// Exception to throw from a command to exit, restart, and reinvoke
+// the command with the given Meteor release.
+main.SpringboardToSpecificRelease = function (releaseRecord, msg) {
+  this.releaseRecord = releaseRecord;
+  this.msg = msg;
 };
 
 // Register a command-line command.
@@ -270,7 +286,7 @@ var longHelp = exports.longHelp = function (commandName) {
       // not appear in the top-level help. If we one day want to make
       // these kinds of commands visible to casual users, we'll need a
       // way to mark them as visible or hidden.
-      
+
       // Also, use helpDict to only include commands that have help text,
       // otherwise there is nothing to display
       if (n instanceof Command && ! n.hidden && helpDict[fullName])
@@ -316,7 +332,7 @@ var longHelp = exports.longHelp = function (commandName) {
 // Exit and restart the program, with the same arguments, but using a
 // different version of the tool and/or forcing a particular release.
 //
-// - toolsVersion: required. the version of the tool to run. must
+// - release: required. the version of the tool to run. must
 //   already be downloaded.
 // - releaseOverride: optional. if provided, a release name to force
 //   us to use when restarting (this functions exactly like --release
@@ -326,15 +342,18 @@ var springboard = function (rel, releaseOverride) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
   var archinfo = require('./archinfo.js');
-  var unipackage = require('./unipackage.js');
+  var isopack = require('./isopack.js');
 
   var toolsPkg = rel.getToolsPackage();
   var toolsVersion = rel.getToolsVersion();
 
   // XXX split better
   try {
+    Console.setPretty(true);
+    Console.enableProgressBar(true);
+
     var messages = buildmessage.capture({
-      title: "downloading tools package " + toolsPkg + "@" + toolsVersion
+      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
     }, function () {
       tropohouse.default.maybeDownloadPackageForArchitectures({
         packageName: toolsPkg,
@@ -343,6 +362,13 @@ var springboard = function (rel, releaseOverride) {
         definitelyNotLocal: true
       });
     });
+
+    // It's important to call setPretty *after* enableProgressBar,
+    // since `Console.enableProgressBar(false)` is silently ignored
+    // when not in pretty mode. XXX Maybe we should change that
+    // behavior?
+    Console.enableProgressBar(false);
+    Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
@@ -360,9 +386,9 @@ var springboard = function (rel, releaseOverride) {
   }
 
   var packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
-  var toolUnipackage = new unipackage.Unipackage;
-  toolUnipackage.initFromPath(toolsPkg, packagePath);
-  var toolRecord = _.findWhere(toolUnipackage.toolsOnDisk,
+  var toolIsopack = new isopack.Isopack;
+  toolIsopack.initFromPath(toolsPkg, packagePath);
+  var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
                                {arch: archinfo.host()});
   if (!toolRecord)
     throw Error("missing tool for " + archinfo.host() + " in " +
@@ -431,7 +457,7 @@ Fiber(function () {
   }
 
   // This is a bit of a hack, but: if we don't check this in the tool, then the
-  // first time we do a unipackage.load, it will fail due to the check in the
+  // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
     var parsedUrl = require('url').parse(process.env.ROOT_URL);
@@ -639,7 +665,7 @@ Fiber(function () {
     // One side effect of this: we really really expect them to all build, and
     // we're fine with dying if they don't (there's no worries about needing to
     // springboard).
-    var messages = buildmessage.capture(function () {
+    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
       catalog.uniload.initialize({
         localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
       });
@@ -652,7 +678,7 @@ Fiber(function () {
   } else {
     // This doesn't need to be in a buildmessage, because the
     // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
-    // bunch of precompiled unipackages!
+    // bunch of precompiled isopacks!
     catalog.uniload.initialize({
       uniloadDir: files.getUniloadDir()
     });
@@ -664,7 +690,7 @@ Fiber(function () {
   // build anything (except maybe, if running from a checkout, packages
   // that we need to uniload, which really ought to build) so it's OK
   // to die on errors.
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Initializing server catalog" }, function () {
     catalog.official.initialize({
       offline: !!process.env.METEOR_OFFLINE_CATALOG
     });
@@ -807,7 +833,7 @@ Fiber(function () {
 
     try {
       var rel;
-      var messages = buildmessage.capture(function () {
+      var messages = buildmessage.capture({ title: "Loading release" }, function () {
         rel = release.load(releaseName);
       });
       if (messages.hasMessages()) {
@@ -911,7 +937,7 @@ Fiber(function () {
       files.getCurrentToolsDir(), 'packages'));
   }
 
-  var messages = buildmessage.capture(function () {
+  var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
     catalog.complete.initialize({
       localPackageDirs: localPackageDirs
     });
@@ -1220,12 +1246,19 @@ commandName + ": You're not in a Meteor project directory.\n" +
   if (showRequireProfile)
     require('./profile-require.js').printReport();
 
+  Console.setPretty(command.pretty);
+
+  Console.enableProgressBar(true);
+
   // Run the command!
   try {
     var ret = command.func(options);
   } catch (e) {
+    Console.enableProgressBar(false);
+
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
+        e === main.SpringboardToSpecificReleaseg ||
         e === main.WaitForExit) {
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
@@ -1247,6 +1280,20 @@ commandName + ": You're not in a Meteor project directory.\n" +
       }
       springboard(latestRelease, latestRelease.name);
       // (does not return)
+    } else if (e instanceof main.SpringboardToSpecificRelease) {
+      // Springboard to a specific release.
+      var nextRelease;
+      var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
+      var messages = buildmessage.capture(function () {
+        nextRelease = release.load(relName);
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write("=> " + e.msg + ":\n\n");
+        process.stderr.write(messages.formatMessages());
+        process.exit(1);
+      }
+      springboard(nextRelease, relName);
+      // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;
     } else if (e instanceof main.ExitWithCode) {
@@ -1255,6 +1302,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
       throw e;
     }
   }
+
+  Console.enableProgressBar(false);
 
   // Exit. (We will not get here if the command threw an exception
   // such as main.WaitForExit).

@@ -99,10 +99,7 @@ _.extend(WatchSet.prototype, {
       if (self.files[filePath] === hash)
         return;
       // Nope, inconsistent.
-      console.log(filePath, hash, self.files[filePath]);
-      self.files[filePath] = hash;
-
-  //    self.alwaysFire = true;
+      self.alwaysFire = true;
       return;
     }
     self.files[filePath] = hash;

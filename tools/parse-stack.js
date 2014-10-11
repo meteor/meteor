@@ -26,7 +26,7 @@ exports.parse = function (err) {
       return;
     var m;
     if (m =
-        frame.match(/^\s*at\s*((new )?.+?)\s*(\[as\s*([^\]]*)\]\s*)?\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
+        frame.match(/^\s*at\s*((new )?.+?)\s*(\[as\s*([^\]]*)\]\s*)?\((.*?)(:(\d+))?(:(\d+))?\)\s*$/)) {
       // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
       // "    at My.Function (/path/to/myfile.js:532:39)"
       // "    at Array.forEach (native)"
@@ -53,7 +53,7 @@ exports.parse = function (err) {
         line: m[7] ? +m[7] : undefined,
         column: m[9] ? +m[9] : undefined
       });
-    } else if (m = frame.match(/^\s*at\s+([^:]+)(:(\d+))?(:(\d+))?\s*$/)) {
+    } else if (m = frame.match(/^\s*at\s+(.+?)(:(\d+))?(:(\d+))?\s*$/)) {
       // "    at /path/to/myfile.js:532:39"
       ret.push({
         file: m[1],

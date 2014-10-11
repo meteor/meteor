@@ -21,8 +21,8 @@ var copyFile = function(from, to, sand) {
 };
 
 
-var localCordova = path.join(files.getCurrentToolsDir(),
-  "scripts", "cordova.sh");
+var localCordova = path.join(files.getCurrentToolsDir(), "tools",
+  "cordova-scripts", "cordova.sh");
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and check that it contains the plugins that we are looking for. We don't
 // check the order, we just want to make sure that the right dependencies are
@@ -30,9 +30,14 @@ var localCordova = path.join(files.getCurrentToolsDir(),
 //
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
-var checkCordovaPlugins = function(sand, plugins) {
+var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
   var lines = selftest.execFileSync(localCordova, ['plugins'],
-    { cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build') }).split("\n");
+    {
+      cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build'),
+      env: {
+        METEOR_WAREHOUSE_DIR: sand.warehouse
+      }
+    }).split("\n");
   if (lines[0].match(/No plugins/)) {
     lines = [];
   }
@@ -48,7 +53,7 @@ var checkCordovaPlugins = function(sand, plugins) {
     i++;
   });
   selftest.expectEqual(plugins.length, i);
-};
+});
 
 // Given a sandbox, that has the app as its cwd, read the cordova plugins
 // file and check that it contains exactly the plugins specified, in order.
@@ -110,7 +115,7 @@ selftest.define("change cordova plugins", function () {
   run.match("localhost");
 
   // Add a local package contains-cordova-plugin.
-  s.write(".meteor/packages", "standard-app-packages \n contains-cordova-plugin");
+  s.write(".meteor/packages", "meteor-platform \n contains-cordova-plugin");
   run.waitSecs(2);
   run.match("restarted");
 
@@ -137,15 +142,17 @@ selftest.define("add cordova plugins", ["slow"], function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  run = s.run("remove", "standard-app-packages");
+  run = s.run("remove", "meteor-platform");
   run.match("removed");
 
   run = s.run("run", "android");
   run.matchErr("not added to the project");
-  run.matchErr("meteor add-platform ");
+  run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
-  run.waitSecs(5);
+  run.match("Do you agree");
+  run.write("Y\n");
+  run.extraTime = 90; // Huge download
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
@@ -178,47 +185,43 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("list-platforms");
   run.match("android");
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(30);
   // This fails because the FB plugin does not compile without additional
   // configuration for android.
   run.expectExit(8);
 
-  checkCordovaPlugins(s,
-    ["org.apache.cordova.camera",
-     "com.phonegap.plugins.facebookconnect",
-     "org.apache.cordova.console"]); // XXX we don't understand why
-                                     // but this shows up always, probably
-                                     // because of the 'logging' package
+  // When one plugin installation fails, we uninstall all the plugins
+  // (legend has it that Cordova can get in a weird inconsistent state
+  // if we don't do this).
+  checkCordovaPlugins(s, []);
 
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
-  run = s.run("build", "../a", "--settings", "settings.json");
-  run.waitSecs(30);
+  run = s.run("build", "../a", "--server", "localhost:3000");
+  run.waitSecs(60);
   run.expectExit(0);
 
-  checkCordovaPlugins(s, ["org.apache.cordova.camera",
-                          "org.apache.cordova.console"]);
+  checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("remove", "cordova:org.apache.cordova.camera");
   run.match("removed");
   run.expectExit(0);
 
-  run = s.run("build", "../a", "--settings", "settings.json");
-  run.waitSecs(30);
+  run = s.run("build", "../a", "--server", "localhost:3000");
+  run.waitSecs(60);
   run.expectExit(0);
 
-  checkCordovaPlugins(s, ["org.apache.cordova.console"]);
+  checkCordovaPlugins(s, []);
 
   run = s.run("add", "cordova:org.apache.cordova.device@0.2.11");
   run.match("added");
   run.expectExit(0);
 
-  run = s.run("build", "../a", "--settings", "settings.json");
-  run.waitSecs(30);
+  run = s.run("build", "../a", "--server", "localhost:3000");
+  run.waitSecs(60);
   run.expectExit(0);
-  checkCordovaPlugins(s, ["org.apache.cordova.console",
-                          "org.apache.cordova.device"]);
+  checkCordovaPlugins(s, ["org.apache.cordova.device"]);
 });

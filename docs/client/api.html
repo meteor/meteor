@@ -20,7 +20,7 @@ don't want served to the client, such as code containing passwords or
 authentication mechanisms, should be kept in the `server` directory.
 {{/note}}
 
-{{> api_box isCordova}}
+{{> autoApiBox "Meteor.isCordova"}}
 
 {{> autoApiBox "Meteor.startup"}}
 
@@ -44,7 +44,7 @@ followed by your application code.
       });
     }
 
-{{> api_box wrapAsync}}
+{{> autoApiBox "Meteor.wrapAsync"}}
 
 {{> autoApiBox "Meteor.absoluteUrl"}}
 
@@ -202,7 +202,7 @@ publish handler, this is the place to stop the observes.
 {{> autoApiBox "Subscription#stop"}}
 {{> autoApiBox "Subscription#connection"}}
 
-{{> api_box subscribe}}
+{{> autoApiBox "Meteor.subscribe"}}
 
 When you subscribe to a record set, it tells the server to send records to the
 client.  The client stores these records in local [Minimongo
@@ -284,7 +284,7 @@ Example:
         check(arg2, [Number]);
         // .. do stuff ..
         if (you want to throw an error)
-          throw new Meteor.Error(404, "Can't find my pants");
+          throw new Meteor.Error("pants-not-found", "Can't find my pants");
         return "some return value";
       },
 
@@ -374,7 +374,7 @@ a `Meteor.Error`, then that error will be sent to the client. Otherwise, if no
 sanitized version is available, the client gets
 `Meteor.Error(500, 'Internal server error')`.
 
-{{> api_box meteor_call}}
+{{> autoApiBox "Meteor.call"}}
 
 This is how to invoke a method.  It will run the method on the server.  If a
 stub is available, it will also run the stub on the client.  (See also
@@ -428,7 +428,7 @@ you want to process the method's result as soon as it arrives from the server,
 even if the method's writes are not available yet, you can specify an
 `onResultReceived` callback to [`Meteor.apply`](#meteor_apply).
 
-{{> api_box meteor_apply}}
+{{> autoApiBox "Meteor.apply"}}
 
 `Meteor.apply` is just like `Meteor.call`, except that the method arguments are
 passed as an array rather than directly as arguments, and you can specify
@@ -1093,7 +1093,7 @@ Server example:
       }
     });
 
-{{> api_box allow}}
+{{> autoApiBox "Mongo.Collection#allow"}}
 
 When a client calls `insert`, `update`, or `remove` on a collection, the
 collection's `allow` and [`deny`](#deny) callbacks are called
@@ -1218,7 +1218,7 @@ collection. This is the only effect of insecure mode. If you call `allow` or
 just like normal on that collection. __New Meteor projects start in insecure
 mode by default.__ To turn it off just run `$ meteor remove insecure`.
 
-{{> api_box deny}}
+{{> autoApiBox "Mongo.Collection#deny"}}
 
 This works just like [`allow`](#allow), except it lets you
 make sure that certain writes are definitely denied, even if there is an
@@ -1490,7 +1490,7 @@ supported by [validated updates](#allow).)
     Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
 
 See the [full list of
-modifiers](http://www.mongodb.org/display/DOCS/Updating#Updating-ModifierOperations).
+modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
 
 
 {{> apiBoxTitle name="Sort Specifiers" id="sortspecifiers"}}
@@ -1633,14 +1633,18 @@ Example:
     {{lt}}/template>
 
     ///// in JS file
-    Template.postsView.posts = function() {
-      return Posts.find();
-    };
+    Template.postsView.helpers({
+      posts: function() {
+        return Posts.find();
+      }
+    });
 
-    Template.postItem.postClass = function() {
-      return Session.equals("selectedPost", this._id) ?
-        "selected" : "";
-    };
+    Template.postItem.helpers({
+      postClass: function() {
+        return Session.equals("selectedPost", this._id) ?
+          "selected" : "";
+      }
+    });
 
     Template.postItem.events({
       'click': function() {
@@ -1798,7 +1802,7 @@ This function is provided by the `accounts-password` package. See the
 [Passwords](#accounts_passwords) section below.
 
 
-{{> api_box loginWithExternalService}}
+{{> autoApiBox "Meteor.loginWith<ExternalService>"}}
 
 Available functions are:
 
@@ -1872,9 +1876,9 @@ is loaded. The function `Accounts.loginServicesConfigured()` is a reactive data
 source that will return true once the login service is configured; you should
 not make login buttons visible or active until it is true.
 
+{{> autoApiBox "currentUser"}}
 
-{{> api_box currentUser}}
-{{> api_box loggingInTemplate}}
+{{> autoApiBox "loggingIn"}}
 
 {{> autoApiBox "Accounts.config"}}
 {{> autoApiBox "Accounts.ui.config"}}
@@ -2092,9 +2096,9 @@ service login flows do not use this function.
 
 This triggers a call
 to [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
-on the server. Pass the token the user receives in this email
-to [`Accounts.resetPassword`](#accounts_resetpassword) to
-complete the password reset process.
+on the server. When the user visits the link in this email, the callback
+registered with [`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink)
+will be called.
 
 If you are using the [`accounts-ui` package](#accountsui), this is handled
 automatically. Otherwise, it is your responsiblity to prompt the user for the
@@ -2102,42 +2106,51 @@ new password and call `resetPassword`.
 
 {{> autoApiBox "Accounts.resetPassword"}}
 
-This function accepts tokens generated
-by [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail)
-and
-[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
+This function accepts tokens passed into the callbacks registered with
+[`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink) and
+[`Accounts.onEnrollmentLink`](#Accounts-onEnrollmentLink).
 
 {{> autoApiBox "Accounts.setPassword"}}
 
 {{> autoApiBox "Accounts.verifyEmail"}}
 
-This function accepts tokens generated
-by [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail). It
-sets the `emails.verified` field in the user record.
+This function accepts tokens passed into the callback registered with
+[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink).
 
 {{> autoApiBox "Accounts.sendResetPasswordEmail"}}
 
-The token in this email should be passed
-to [`Accounts.resetPassword`](#accounts_resetpassword).
+When the user visits the link in this email, the callback registered with
+[`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink) will be called.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
 {{> autoApiBox "Accounts.sendEnrollmentEmail"}}
 
-The token in this email should be passed
-to [`Accounts.resetPassword`](#accounts_resetpassword).
+When the user visits the link in this email, the callback registered with
+[`Accounts.onEnrollmentLink`](#Accounts-onEnrollmentLink) will be called.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
 
 {{> autoApiBox "Accounts.sendVerificationEmail"}}
 
-The token in this email should be passed
-to [`Accounts.verifyEmail`](#accounts_verifyemail).
+When the user visits the link in this email, the callback registered with
+[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink) will
+be called.
 
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#accounts_emailtemplates).
+
+
+{{> autoApiBox "Accounts.onResetPasswordLink"}}
+
+{{> autoApiBox "Accounts.onEnrollmentLink"}}
+
+{{> autoApiBox "Accounts.onEmailVerificationLink"}}
+
+
+
 
 {{> autoApiBox "Accounts.emailTemplates"}}
 
@@ -2196,7 +2209,7 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
-{{> api_box template_events}}
+{{> autoApiBox "Template#events"}}
 
 Declare event handlers for instances of this template. Multiple calls add
 new event handlers in addition to the existing ones.
@@ -2204,7 +2217,7 @@ new event handlers in addition to the existing ones.
 See [Event Maps](#eventmaps) for a detailed description of the event
 map format and how event handling works in Meteor.
 
-{{> api_box template_helpers}}
+{{> autoApiBox "Template#helpers"}}
 
 Each template has a local dictionary of helpers that are made available to it,
 and this call specifies helpers to add to the template's dictionary.
@@ -2220,17 +2233,11 @@ Example:
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
 
-The following syntax is a shorthand for when you only have one helper to define:
-
-    Template.myTemplate.foo = function () {
-      return Session.get("foo");
-    };
-
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
 
 
-{{> api_box template_rendered}}
+{{> autoApiBox "Template#rendered"}}
 
 This callback is called once when an instance of Template.*myTemplate* is
 rendered into DOM nodes and put into the document for the first time.
@@ -2244,7 +2251,7 @@ object.
 Because your template has been rendered, you can use functions like
 [`this.findAll`](#template_findAll) which look at its DOM nodes.
 
-{{> api_box template_created}}
+{{> autoApiBox "Template#created"}}
 
 This callback is called before your template's logic is evaluated for the first
 time.  Inside the callback, `this` is the new [template
@@ -2256,14 +2263,10 @@ This callback fires once and is the first callback to fire.  Every
 `created` callback with a certain template instance object in `this`,
 you will eventually get a `destroyed` callback for the same object.
 
-{{#note}}
-  The `created` callback is not currently very useful. In a later release, the
-  template instance object (or something like it) will be visible from helper
-  functions, and `created` will be a useful way to set up values that are read
-  from helpers. For now, you probably just want to use `rendered`.
-{{/note}}
+`created` is a useful way to set up values on template instance that are
+read from template helpers using `Template.instance()`.
 
-{{> api_box template_destroyed}}
+{{> autoApiBox "Template#destroyed"}}
 
 This callback is called when an occurrence of a template is taken off
 the page for any reason and not replaced with a re-rendering.  Inside
@@ -2297,9 +2300,11 @@ in the DOM.
 
 Template instance objects are `instanceof Blaze.TemplateInstance`.
 
-{{> api_box template_findAll}}
+{{> autoApiBox "Blaze.TemplateInstance#findAll"}}
 
 `template.findAll` returns an array of DOM elements matching `selector`.
+
+{{> autoApiBox "Blaze.TemplateInstance#$"}}
 
 `template.$` returns a [jQuery object](http://api.jquery.com/Types/#jQuery) of
 those same elements. jQuery objects are similar to arrays, with
@@ -2309,7 +2314,7 @@ The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
 the selector.
 
-{{> api_box template_find}}
+{{> autoApiBox "Blaze.TemplateInstance#find"}}
 
 Returns one DOM element matching `selector`, or `null` if there are no
 such elements.
@@ -2318,7 +2323,7 @@ The template instance serves as the document root for the selector. Only
 elements inside the template and its sub-templates can match parts of
 the selector.
 
-{{> api_box template_firstNode}}
+{{> autoApiBox "Blaze.TemplateInstance#firstNode"}}
 
 The two nodes `firstNode` and `lastNode` indicate the extent of the
 rendered template in the DOM.  The rendered template includes these
@@ -2326,15 +2331,15 @@ nodes, their intervening siblings, and their descendents.  These two
 nodes are siblings (they have the same parent), and `lastNode` comes
 after `firstNode`, or else they are the same node.
 
-{{> api_box template_lastNode}}
+{{> autoApiBox "Blaze.TemplateInstance#lastNode"}}
 
-{{> api_box template_data}}
+{{> autoApiBox "Blaze.TemplateInstance#data"}}
 
 This property provides access to the data context at the top level of
 the template.  It is updated each time the template is re-rendered.
 Access is read-only and non-reactive.
 
-{{> api_box template_autorun}}
+{{> autoApiBox "Blaze.TemplateInstance#autorun"}}
 
 You can use `this.autorun` from a [`created`](#template_created) or
 [`rendered`](#template_rendered) callback to reactively update the DOM
@@ -2343,20 +2348,20 @@ when the template is destroyed.
 
 Alias for `template.view.autorun`.
 
-{{> api_box template_view}}
+{{> autoApiBox "Blaze.TemplateInstance#view"}}
 
-{{> api_box template_registerhelper}}
+{{> autoApiBox "Template.registerHelper"}}
 
-{{> api_box template_instance}}
+{{> autoApiBox "Template.instance"}}
 
-{{> api_box template_currentdata}}
+{{> autoApiBox "Template.currentData"}}
 
-{{> api_box template_parentdata}}
+{{> autoApiBox "Template.parentData"}}
 
 For example, `Template.parentData(0)` is equivalent to `Template.currentData()`.  `Template.parentData(2)`
 is equivalent to `{{dstache}}../..}}` in a template.
 
-{{> api_box template_body}}
+{{> autoApiBox "Template.body"}}
 
 You can define helpers and event maps on `Template.body` just like on
 any `Template.myTemplate` object.
@@ -2370,14 +2375,14 @@ body via `Blaze.render`, jQuery, or the DOM API, or to the body element
 itself.  To handle events on the body, window, or document, use jQuery
 or the DOM API.
 
-{{> api_box ui_dynamic}}
+{{> autoApiBox "Template.dynamic"}}
 
-`UI.dynamic` allows you to include a template by name, where the name
+`Template.dynamic` allows you to include a template by name, where the name
 may be calculated by a helper and may change reactively.  The `data`
 argument is optional, and if it is omitted, the current data context
 is used.
 
-For example, if there is a template named "foo", `{{dstache}}> UI.dynamic
+For example, if there is a template named "foo", `{{dstache}}> Template.dynamic
 template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
 
 {{> apiBoxTitle name="Event Maps" id="eventmaps"}}
@@ -2547,14 +2552,14 @@ Other DOM events are available as well, but for the events above,
 Meteor has taken some care to ensure that they work uniformly in all
 browsers.
 
-        
+
 <h2 id="blaze"><span>Blaze</span></h2>
 
 Blaze is the package that makes reactive templates possible.
 You can use the Blaze API directly in order to render templates programmatically
 and manipulate "Views," the building blocks of reactive templates.
 
-{{> api_box blaze_render}}
+{{> autoApiBox "Blaze.render"}}
 
 When you render a template, the
 template's [`created`](#template_created) callback is invoked
@@ -2576,12 +2581,12 @@ be mindful to always call [`Blaze.remove`](#blaze_remove) when the View is
 no longer needed.
 {{/warning}}
 
-{{> api_box blaze_renderwithdata}}
+{{> autoApiBox "Blaze.renderWithData"}}
 
 `Blaze.renderWithData(Template.myTemplate, data)` is essentially the same as
 `Blaze.render(Blaze.With(data, function () { return Template.myTemplate; }))`.
 
-{{> api_box blaze_remove}}
+{{> autoApiBox "Blaze.remove"}}
 
 Use `Blaze.remove` to remove a template or View previously inserted with
 `Blaze.render`, in such a way that any behaviors attached to the DOM by
@@ -2600,9 +2605,9 @@ update or with jQuery.
 been removed from the document, to tell Blaze to stop tracking and
 updating these nodes.
 
-{{> api_box blaze_getdata}}
+{{> autoApiBox "Blaze.getData"}}
 
-{{> api_box blaze_tohtml}}
+{{> autoApiBox "Blaze.toHTML"}}
 
 Rendering a template to HTML loses all fine-grained reactivity.  The
 normal way to render a template is to either include it from another
@@ -2615,9 +2620,9 @@ in response to reactive data changes.  Instead, any reactive data
 changes will invalidate the current Computation if there is one
 (for example, an autorun that is the caller of `Blaze.toHTML`).
 
-{{> api_box blaze_tohtmlwithdata}}
+{{> autoApiBox "Blaze.toHTMLWithData"}}
 
-{{> api_box blaze_view}}
+{{> autoApiBox "Blaze.View"}}
 
 Behind every template or part of a template &mdash; a template tag, say, like `{{dstache}}foo}}` or `{{dstache}}#if}}` &mdash; is
 a View object, which is a reactively updating region of DOM.
@@ -2720,7 +2725,7 @@ by Meteor have names like "Template.foo" and "if".
   In `func`, the View is bound to `this`.
 
   This hook is the basis for the [`rendered`](#template_rendered)
-  template callback.  
+  template callback.
 {{/dtdd}}
 
 {{#dtdd name="onViewDestroyed(func)" id="view_onviewdestroyed"}}
@@ -2767,19 +2772,19 @@ be updated.
 
 </dl>
 
-{{> api_box blaze_currentview}}
+{{> autoApiBox "Blaze.currentView"}}
 
 The "current view" is used by [`Template.currentData()`](#template_currentdata) and
 [`Template.instance()`](#template_instance) to determine
 the contextually relevant data context and template instance.
 
-{{> api_box blaze_getview}}
+{{> autoApiBox "Blaze.getView"}}
 
 If you don't specify an `element`, there must be a current View or an
 error will be thrown.  This is in contrast to
 [`Blaze.currentView`](#blaze_currentview).
 
-{{> api_box blaze_with}}
+{{> autoApiBox "Blaze.With"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
@@ -2787,25 +2792,25 @@ Unlike `{{dstache}}#with}}` (as used in templates), `Blaze.With` has no "else" c
 a falsy value for the data context will not prevent the content from
 rendering.
 
-{{> api_box blaze_if}}
+{{> autoApiBox "Blaze.If"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
 Matches the behavior of `{{dstache}}#if}}` in templates.
 
-{{> api_box blaze_unless}}
+{{> autoApiBox "Blaze.Unless"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
 Matches the behavior of `{{dstache}}#unless}}` in templates.
 
-{{> api_box blaze_each}}
+{{> autoApiBox "Blaze.Each"}}
 
 Returns an unrendered View object you can pass to `Blaze.render`.
 
 Matches the behavior of `{{dstache}}#each}}` in templates.
 
-{{> api_box blaze_template}}
+{{> autoApiBox "Blaze.Template"}}
 
 Templates defined by the template compiler, such as `Template.myTemplate`,
 are objects of type `Blaze.Template` (aliased as `Template`).
@@ -2828,7 +2833,7 @@ present on template objects:
   Constructs and returns an unrendered View object.  This method is invoked
   by Meteor whenever the template is used, such as by `Blaze.render` or by
   `{{dstache}}> foo}}` where `foo` resolves to a Template object.
-  
+
   `constructView()` constructs a View using `viewName` and `renderFunction`
   as constructor arguments, and then configures it as a template
   View, setting up `view.template`, `view.templateInstance()`, event maps, and so on.
@@ -2836,10 +2841,9 @@ present on template objects:
 
 </dl>
 
-{{> api_box blaze_istemplate}}
+{{> autoApiBox "Blaze.isTemplate"}}
 
-
-{{#api_box renderable_content}}
+{{> apiBoxTitle name="Renderable Content" id="renderable_content"}}
 
 A value is *renderable content* if it is one of the following:
 
@@ -2852,8 +2856,6 @@ Internally, renderable content includes objects representing HTML tags
 as well, but these objects are not yet part of the officially-supported,
 public API.
 {{/note}}
-
-{{/api_box}}
 
 <h2 id="timers"><span>Timers</span></h2>
 
@@ -3194,7 +3196,7 @@ to save memory.
 To use `ReactiveVar`, add the `reactive-var` package to your project with
 `$ meteor add reactive-var`.
 
-{{> api_box reactivevar}}
+{{> autoApiBox "ReactiveVar"}}
 
 A ReactiveVar holds a single value that can be get and set, such that calling
 `set` will invalidate any Computations that called `get`, according to the
@@ -3222,9 +3224,9 @@ while calling `set` on an argument that is an *object* (not a
 primitive) always counts as a change.  You can configure this behavior
 using the `equalsFunc` argument.
 
-{{> api_box reactivevar_get}}
+{{> autoApiBox "ReactiveVar#get"}}
 
-{{> api_box reactivevar_set}}
+{{> autoApiBox "ReactiveVar#set"}}
 
 <h2 id="ejson"><span>EJSON</span></h2>
 
@@ -3280,22 +3282,13 @@ When you add a type to EJSON, Meteor will be able to use that type in:
  - storing your type client-side in Minimongo.
  - allowing your type in [`Session`](#session) variables.
 
-{{#note}}
-
-  MongoDB cannot store most user-defined types natively on the server.  Your
-  type will work in Minimongo, and you can send it to the client using a custom
-  publisher, but MongoDB can only store the types defined in
-  [BSON](http://bsonspec.org/).
-
-{{/note}}
-
 Instances of your type must implement [`typeName`](#ejson_type_typeName) and
 [`toJSONValue`](#ejson_type_toJSONValue) methods, and may implement
 [`clone`](#ejson_type_clone) and [`equals`](#ejson_type_equals) methods if the
 default implementations are not sufficient.
 
-{{> api_box ejsonTypeName}}
-{{> api_box ejsonTypeToJSONValue}}
+{{> autoApiBox "EJSON.CustomType#typeName"}}
+{{> autoApiBox "EJSON.CustomType#toJSONValue"}}
 
 For example, the `toJSONValue` method for
 [`Mongo.ObjectID`](#mongo_object_id) could be:
@@ -3304,12 +3297,12 @@ For example, the `toJSONValue` method for
       return this.toHexString();
     };
 
-{{> api_box ejsonTypeClone}}
+{{> autoApiBox "EJSON.CustomType#clone"}}
 
 If your type does not have a `clone` method, `EJSON.clone` will use
 [`toJSONValue`](#ejson_type_toJSONValue) and the factory instead.
 
-{{> api_box ejsonTypeEquals}}
+{{> autoApiBox "EJSON.CustomType#equals"}}
 
 The `equals` method should define an [equivalence
 relation](http://en.wikipedia.org/wiki/Equivalence_relation).  It should have
@@ -3418,10 +3411,10 @@ Example asynchronous HTTP call:
               });
 
 
-{{> api_box http_get}}
-{{> api_box http_post}}
-{{> api_box http_put}}
-{{> api_box http_del}}
+{{> autoApiBox "HTTP.get"}}
+{{> autoApiBox "HTTP.post"}}
+{{> autoApiBox "HTTP.put"}}
+{{> autoApiBox "HTTP.del"}}
 
 
 <h2 id="email"><span>Email</span></h2>
@@ -3441,7 +3434,7 @@ before your first call to `Email.send`.
 If `MAIL_URL` is not set (eg, when running your application locally),
 `Email.send` outputs the message to standard output instead.
 
-{{> api_box email_send }}
+{{> autoApiBox "Email.send"}}
 
 You must provide the `from` option and at least one of `to`, `cc`, and `bcc`;
 all other options are optional.
@@ -3484,10 +3477,11 @@ by spammers.)
 {{#markdown}}
 `Assets` allows server code in a Meteor application to access static server
 assets, which are located in the `private` subdirectory of an application's
-tree.
+tree. Assets are not processed as source files and are copied directly
+into your application's bundle.
 
-{{> api_box assets_getText }}
-{{> api_box assets_getBinary }}
+{{> autoApiBox "Assets.getText"}}
+{{> autoApiBox "Assets.getBinary"}}
 
 Static server assets are included by placing them in the application's `private`
 subdirectory. For example, if an application's `private` subdirectory includes a
@@ -3567,7 +3561,7 @@ package, you must define `summary` and `version`.
 
 {{/markdown}}
 
-{{> api_box pack_describe }}
+{{> autoApiBox "Package.describe"}}
 
 
 <h3 id="packagedefinition"><span>Package Definition</span></h3>
@@ -3579,14 +3573,13 @@ depends on, what packages are implied by your package, and what object your
 package is exported to.
 {{/markdown}}
 
-{{> api_box pack_onUse }}
+{{> autoApiBox "Package.onUse"}}
 
-{{> api_box pack_versions }}
-{{> api_box pack_use }}
-{{> api_box pack_api_imply }}
-{{> api_box pack_export }}
-{{> api_box pack_addFiles }}
-
+{{> autoApiBox "PackageAPI#versionsFrom" }}
+{{> autoApiBox "PackageAPI#use" }}
+{{> autoApiBox "PackageAPI#imply" }}
+{{> autoApiBox "PackageAPI#export" }}
+{{> autoApiBox "PackageAPI#addFiles" }}
 
 <h3 id="packagetests"><span>Unit Tests</span></h3>
 
@@ -3602,6 +3595,75 @@ required scaffolding in `package.js`, and you'll only need to add unit test code
 in the `_test.js` file that was created.
 {{/markdown}}
 
-{{> api_box pack_onTest }}
+{{> autoApiBox "Package.onTest"}}
 
+
+<h3><span>External Packages and Plugins</span></h3>
+
+{{#markdown}}
+Meteor packages can include NPM packages and Cordova plugins by using
+`Npm.depends` and `Cordova.depends` in the `package.js` file.
+{{/markdown}}
+
+{{> autoApiBox "Npm.depends"}}
+{{> autoApiBox "Npm.require"}}
+{{> autoApiBox "Cordova.depends"}}
+{{> autoApiBox "Package.registerBuildPlugin"}}
+{{> autoApiBox "Plugin.registerSourceHandler"}}
+
+<h2 id="mobileconfigjs"><span>Mobile Config File</span></h2>
+
+{{#markdown}}
+If your Meteor application targets mobile platforms such as iOS or
+Android, you can configure your app's metadata and build process
+in a special top-level file called
+`mobile-config.js` which is *not* included in your application and is used only
+for this configuration.
+
+The code snippet below is an example `mobile-config.js` file. The rest of this
+section will explain the specific API commands in greater detail.
+
+```javascript
+// This section sets up some basic app metadata,
+// the entire section is optional.
+App.info({
+  id: 'com.example.matt.uber',
+  name: 'über',
+  description: 'Get über power in one button click',
+  author: 'Matt Development Group',
+  email: 'contact@example.com',
+  website: 'http://example.com'
+});
+
+// Set up resources such as icons and launch screens.
+App.icons({
+  'iphone': 'icons/icon-60.png',
+  'iphone_2x': 'icons/icon-60@2x.png',
+  // ... more screen sizes and platforms ...
+});
+
+App.launchScreens({
+  'iphone': 'splash/Default~iphone.png',
+  'iphone_2x': 'splash/Default@2x~iphone.png',
+  // ... more screen sizes and platforms ...
+});
+
+// Set PhoneGap/Cordova preferences
+App.setPreference('BackgroundColor', '0xff0000ff');
+App.setPreference('HideKeyboardFormAccessoryBar', true);
+
+// Pass preferences for a particular PhoneGap/Cordova plugin
+App.configurePlugin('com.phonegap.plugins.facebookconnect', {
+  APP_ID: '1234567890',
+  API_KEY: 'supersecretapikey'
+});
+```
+
+{{/markdown}}
+
+{{> autoApiBox "App.info"}}
+{{> autoApiBox "App.setPreference"}}
+{{> autoApiBox "App.configurePlugin"}}
+{{> autoApiBox "App.icons"}}
+{{> autoApiBox "App.launchScreens"}}
 </template>

@@ -1,14 +1,14 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.0.1'
+  version: '1.1.2-rc.0'
 });
 
 Package.on_use(function(api) {
-  // The "imply" here means that if your app uses "standard-app-packages", it is
+  // The "imply" here means that if your app uses "meteor-platform", it is
   // treated as if it also directly included all of these packages (and it gets
   // their exports, plugins, etc).
   //
-  // If you want, you can "meteor remove standard-app-packages" and add some of
+  // If you want, you can "meteor remove meteor-platform" and add some of
   // these back in individually. We haven't tested every subset, though :)
   api.imply([
     // The normal "every package uses 'meteor'" rule only applies to packages
@@ -22,14 +22,17 @@ Package.on_use(function(api) {
     'logging',
     // Tracker.autorun and friends. What's Meteor without reactivity?
     'tracker',
+    'deps', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
     // The easiest way to get a little reactivity into your app.
     'session',
     // DDP: Meteor's client/server protocol.
     'ddp',
+    'livedata', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
     // You want to keep your data somewhere? How about MongoDB?
     'mongo',
     // Blaze: Reactive DOM!
     'blaze',
+    'ui', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
     // A great template language!
     'spacebars',
     // Turn templates into views!
@@ -64,5 +67,6 @@ Package.on_use(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.device': '0.2.11'
+  'org.apache.cordova.device': '0.2.11',
+  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2'
 });

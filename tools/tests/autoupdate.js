@@ -3,30 +3,34 @@ var path = require('path');
 var fs = require('fs');
 var _ = require('underscore');
 var config = require("../config.js");
+var catalogRemote = require("../catalog-remote.js");
+var buildmessage = require("../buildmessage.js");
 var Sandbox = selftest.Sandbox;
 
-var editPackageMetadata = function (sandbox, f) {
-  var dataFile = path.join(sandbox.warehouse,
-                           'package-metadata', 'v1',
-                           config.getLocalPackageCacheFilename());
-  var data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-  f(data);
-  fs.writeFileSync(dataFile, JSON.stringify(data));
+var getCatalog = function (sandbox) {
+ var dataFile = path.join(sandbox.warehouse,
+                          'package-metadata', 'v2',
+                          config.getLocalPackageCacheFilename());
+ var catalog = new catalogRemote.RemoteCatalog();
+ catalog.initialize( {packageStorage: dataFile});
+ return catalog;
 };
 
 var setBanner = function (sandbox, version, banner) {
-  editPackageMetadata(sandbox, function (data) {
-    var release = _.findWhere(data.collections.releaseVersions,
-                              { version: version });
+  var messages = buildmessage.capture(function () {
+    var catalog = getCatalog(sandbox);
+    var release = catalog.getReleaseVersion("METEOR", version);
     release.banner = { text: banner, lastUpdated: new Date };
+    catalog._insertReleaseVersions([release]); //This is a hack
   });
 };
 
 var recommend = function (sandbox, version) {
-  editPackageMetadata(sandbox, function (data) {
-    var release = _.findWhere(data.collections.releaseVersions,
-                              { version: version });
+  var messages = buildmessage.capture(function () {
+    var catalog = getCatalog(sandbox);
+    var release = catalog.getReleaseVersion('METEOR', version);
     release.recommended = true;
+    catalog._insertReleaseVersions([release]);
   });
 };
 
@@ -143,7 +147,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     run = s.run("update");
     run.read("myapp: updated to Meteor v3.");
-    run.match("All your package dependencies are already up to date.\n");
+    run.match("Your packages are at their latest compatible versions.\n");
     run.expectEnd();
     run.expectExit(0);
 

@@ -24,7 +24,7 @@ var loginResultCallback = function (serviceName, err) {
 Accounts.onPageLoadLogin(function (attemptInfo) {
   // Ignore if we have a left over login attempt for a service that is no longer registered.
   if (_.contains(_.pluck(getLoginServices(), "name"), attemptInfo.type))
-    loginResultCallback(attemptInfo.type, attemptInfo.err);
+    loginResultCallback(attemptInfo.type, attemptInfo.error);
 });
 
 
@@ -54,19 +54,20 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
   }
 });
 
-Template._loginButtonsLoggedOutSingleLoginButton.configured = function () {
-  return !!ServiceConfiguration.configurations.findOne({service: this.name});
-};
-
-Template._loginButtonsLoggedOutSingleLoginButton.capitalizedName = function () {
-  if (this.name === 'github')
-    // XXX we should allow service packages to set their capitalized name
-    return 'GitHub';
-  else if (this.name === 'meteor-developer')
-    return 'Meteor';
-  else
-    return capitalize(this.name);
-};
+Template._loginButtonsLoggedOutSingleLoginButton.helpers({
+  configured: function () {
+    return !!ServiceConfiguration.configurations.findOne({service: this.name});
+  },
+  capitalizedName: function () {
+    if (this.name === 'github')
+      // XXX we should allow service packages to set their capitalized name
+      return 'GitHub';
+    else if (this.name === 'meteor-developer')
+      return 'Meteor';
+    else
+      return capitalize(this.name);
+  }
+});
 
 // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
 var capitalize = function(str){

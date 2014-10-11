@@ -1,5 +1,183 @@
 ## v.NEXT
 
+* Rename `{{> UI.dynamic}}` to `{{> Template.dynamic}}`, and likewise
+  with `UI.contentBlock` and `UI.elseBlock`.
+
+* Deprecate the `amplify`, `backbone`, `bootstrap`, and `d3` integration
+  packages in favor of community alternatives.  These packages will no
+  longer be maintained by MDG.
+
+* Rename the `showdown` package to `markdown`.
+
+* Deprecate the `Template.someTemplate.myHelper = ...` syntax in favor
+  of `Template.someTemplate.helpers(...)`.  Using the older syntax still
+  works, but it prints a deprecation warning to the console.
+
+* Fix behavior of ROOT_URL with path ending in `/`.
+
+* Fix source maps when using a ROOT_URL with a path. #2627
+
+* --port now requires a port (e.g. `meteor run --port example.com` is
+    not valid). XXX --mobile-port deprecated in favor of --mobile-server
+    option for 'meteor run' and '--server' for 'meteor build'. --server
+    is required for meteor build. describe defaults for --mobile-server.
+
+
+## v0.9.3.1
+
+* Don't crash when failing to contact the package server. #2713
+
+* Allow more than one dash in package versions. #2715
+
+* Fix `meteor update` on an app built from a checkout version
+  of Meteor.
+
+## v0.9.3
+
+### More Package Version Number Flexibility
+
+* Packages now support relying on multiple major versions of their
+  dependencies (eg `blaze@1.0.0 || 2.0.0`). Additionally, you can now
+  call `api.versionsFrom(<release>)` multiple times, or with an array
+  (eg `api.versionsFrom([<release1>, <release2>])`. Meteor will
+  interpret this to mean that the package will work with packages from
+  all the listed releases.
+
+* Support for "wrapped package" version numbers. There is now a `_` field
+  in version numbers. The `_` field must be an integer, and versions with
+  the `_` are sorted after versions without. This allows using the
+  upstream version number as the Meteor package version number and being
+  able to publish multiple version of the Meteor package (e.g.
+  `jquery@1.11.1_2`).
+
+Note: packages using the `||` operator or the `_` symbol in their
+versions or dependencies will be invisible to pre-0.9.3 users. Meteor
+versions 0.9.2 and before do not understand the new version formats and
+will not be able to use versions of packages that use the new features.
+
+
+### Other Command-line Tool Improvements
+
+* More detailed constraint solver output. Meteor now tells you which
+  constraints prevent upgrading or adding new packages. This will make
+  it much easier to update your app to new versions.
+
+* Better handling of pre-release versions (e.g. versions with
+  `-`). Pre-release packages will now be included in an app if and only
+  if there is no way to meet the app's constraints without using a
+  pre-release package.
+
+* Add `meteor admin set-unmigrated` to allow maintainers to hide
+  pre-0.9.0 packages in `meteor search` and `meteor show`. This will not
+  stop users from continuing to use the package, but it helps prevent
+  new users from finding old non-functional packages.
+
+* Progress bars for time-intensive operations, like downloading large
+  packages.
+
+
+### Other Changes
+
+* Offically support `Meteor.wrapAsync` (renamed from
+  `Meteor._wrapAsync`). Additionally, `Meteor.wrapAsync` now lets you
+  pass an object to bind as `this` in the wrapped call. See
+  https://docs.meteor.com/#meteor_wrapasync.
+
+* The `reactive-dict` package now allows an optional name argument to
+  enable data persistence during hot code push.
+
+
+Patches by Github users evliu, meonkeys, mitar, mizzao, mquandalle,
+prapicault, waitingkuo, wulfmeister.
+
+
+
+## v0.9.2.2
+
+* Fix regression in 0.9.2 that prevented some users from accessing the
+  Meteor development server in their browser. Specifically, 0.9.2
+  unintentionally changed the development mode server's default bind
+  host to localhost instead of 0.0.0.0. #2596
+
+
+## v0.9.2.1
+
+* Fix versions of packages that were published with `-cordova` versions
+  in 0.9.2 (appcache, fastclick, htmljs, logging, mobile-status-bar,
+  routepolicy, webapp-hashing).
+
+
+## v0.9.2
+
+This release contains our first support for building mobile apps in
+Meteor, for both iOS and Android. This support comes via an
+integration with Apache's Cordova/PhoneGap project.
+
+  * You can use Cordova/PhoneGap packages in your application or inside
+    a Meteor package to access a device's native functions directly from
+    JavaScript code.
+  * The `meteor add-platform` and `meteor run` commands now let you
+    launch the app in the iOS or Android simulator or run it on an
+    attached hardware device.
+  * This release extends hot code push to support live updates into
+    installed native apps.
+  * The `meteor bundle` command has been renamed to `meteor build` and
+    now outputs build projects for the mobile version of the targeted
+    app.
+  * See
+    https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration
+    for more information about how to get started building mobile apps
+    with Meteor.
+
+* Better mobile support for OAuth login: you can now use a
+  redirect-based flow inside UIWebViews, and the existing popup-based
+  flow has been adapted to work in Cordova/PhoneGap apps.
+
+#### Bug fixes and minor improvements
+
+* Fix sorting on non-trivial keys in Minimongo. #2439
+
+* Bug fixes and performance improvements for the package system's
+  constraint solver.
+
+* Improved error reporting for misbehaving oplog observe driver. #2033 #2244
+
+* Drop deprecated source map linking format used for older versions of
+  Firefox.  #2385
+
+* Allow Meteor tool to run from a symlink. #2462
+
+* Assets added via a plugin are no longer considered source files. #2488
+
+* Remove support for long deprecated `SERVER_ID` environment
+  variable. Use `AUTOUPDATE_VERSION` instead.
+
+* Fix bug in reload-safetybelt package that resulted in reload loops in
+  Chrome with cookies disabled.
+
+* Change the paths for static assets served from packages. The `:`
+  character is replaced with the `_` character in package names so as to
+  allow serving on mobile devices and ease operation on Windows. For
+  example, assets from the `abc:bootstrap` package are now served at
+  `/packages/abc_bootstrap` instead of `/packages/abc:bootstrap`.
+
+* Also change the paths within a bundled Meteor app to allow for
+  different client architectures (eg mobile). For example,
+  `bundle/programs/client` is now `bundle/programs/web.browser`.
+
+
+Patches by Github users awwx, mizzao, and mquandalle.
+
+
+
+## v0.9.1.1
+
+* Fix backwards compatibility for packages that had weak dependencies
+  on packages renamed in 0.9.1 (`ui`, `deps`, `livedata`). #2521
+
+* Fix error when using the `reactive-dict` package without the `mongo`
+  package.
+
 
 ## v0.9.1
 
@@ -32,7 +210,7 @@ prefix instead of your own username.
   * `Template.instance()` (previously `UI._templateInstance()`)
   * `Template.body` (previously `UI.body`)
   * `new Template` (previously `Template.__create__`)
-  * `Blaze.getData()` (previously `UI.getElementData`)
+  * `Blaze.getData()` (previously `UI.getElementData`, or `Blaze.getCurrentData` with no arguments)
 
 * Deprecate the `ui` package. Instead, use the `blaze` package. The
   `UI` and `Blaze` symbols are now the same.

@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e
+
 BUNDLE_VERSION=0.1
 
 # OS Check. Put here because here is where we download the precompiled
@@ -10,44 +13,15 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
 fi
 
 # import all the environment
-source $(dirname $0)/common_env.sh
+source "$(dirname "$0")/common_env.sh"
 
-command -v java >/dev/null 2>&1 || {
-  if [ ${UNAME} == "Linux" ] ; then
-    echo "Please install Java before running this command.";
-    echo "Directions can be found at: http://openjdk.java.net/install/"
-  else
-    echo "The android platform needs Java to be installed on your system."
-    java -version
-  fi
-
-  exit 1;
-}
-
+#"$(dirname "$0")/ensure_android_prereqs.sh"
 
 cd "$ORIG_DIR"
 
-
-if [ -z "$USE_GLOBAL_ADK" ] ; then
-  # not using global ADK
-  true
-else
-  # using global ADK, check all utilities
-  set -e
-  trap "echo One of the required utilities wasn't found in global PATH: java javac ant android" EXIT
-
-  which java
-  which javac
-  which ant
-  which android
-
-  trap - EXIT
-  set +e
-  exit 0
-fi
-
 install_android_bundle () {
-  echo "Going to install Android Bundle (300M-400M)."
+  echo ""
+  echo "Installing Android development bundle."
   echo "This might take a while, please hold on."
 
   set -e
@@ -60,13 +34,13 @@ install_android_bundle () {
   rm -rf "$BUNDLE_TMPDIR"
   mkdir "$BUNDLE_TMPDIR"
 
-  ANDROID_BUNDLE_URL_ROOT="http://s3.amazonaws.com/android-bundle/"
+  ANDROID_BUNDLE_URL_ROOT="https://warehouse.meteor.com/cordova/"
 
   if [ -f "$DEST_DIR/$TARBALL" ] ; then
       echo "Skipping download and installing kit from $DEST_DIR/$TARBALL" >&2
       tar -xzf "$DEST_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
   else
-      curl "$ANDROID_BUNDLE_URL_ROOT$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
+      curl --progress-bar "$ANDROID_BUNDLE_URL_ROOT$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
   fi
 
   # Delete old dev bundle and rename the new one on top of it.
@@ -87,16 +61,3 @@ elif [ ! -f "$ANDROID_BUNDLE/.bundle_version.txt" ] ||
   grep -qvx "$BUNDLE_VERSION" "$ANDROID_BUNDLE/.bundle_version.txt" ; then
   install_android_bundle
 fi
-
-command -v javac >/dev/null 2>&1 || {
-  echo >&2 "To add the android platform, please install a JDK. Here are some directions: http://openjdk.java.net/install/"; exit 1;
-}
-
-
-# create avd if necessary
-if [[ ! $("${ANDROID_BUNDLE}/android-sdk/tools/android" list avd | grep Name) ]] ; then
-  echo "
-" | "${ANDROID_BUNDLE}/android-sdk/tools/android" create avd --target 1 --name meteor --abi default/armeabi-v7a --path ${ANDROID_BUNDLE}/meteor_avd/ 1>&2
-fi
-
-

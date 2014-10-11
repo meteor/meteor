@@ -190,7 +190,7 @@ exports.deployWithNewEmail = function (s, email, appName) {
 
 var getLoadedPackages = function () {
   return uniload.load({
-    packages: ['ddp']
+    packages: ['meteor', 'ddp']
   });
 };
 

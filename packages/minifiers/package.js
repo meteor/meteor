@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript and CSS minifiers",
-  version: "1.0.2"
+  version: "1.1.1-rc.0"
 });
 
 Npm.depends({
@@ -11,7 +11,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.use('underscore', 'server');
-  api.export(['CssTools', 'UglifyJSMinify']);
+  api.export(['CssTools', 'UglifyJSMinify', 'UglifyJS']);
   api.add_files(['minification.js', 'minifiers.js'], 'server');
 });
 

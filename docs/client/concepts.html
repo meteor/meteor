@@ -191,16 +191,16 @@ server patches each client's cache.
 Today most Meteor apps use MongoDB as their database because it is the
 best supported, though support for other databases is coming in the
 future. The
-[`Meteor.Collection`](http://docs.meteor.com/#meteor_collection) class
+[`Mongo.Collection`](http://docs.meteor.com/#mongo_collection) class
 is used to declare Mongo collections and to manipulate them. Thanks to
-`minimongo`, Meteor's client-side Mongo emulator, `Meteor.Collection`
+`minimongo`, Meteor's client-side Mongo emulator, `Mongo.Collection`
 can be used from both client and server code.
 
     // declare collections
     // this code should be included in both the client and the server
-    Rooms = new Meteor.Collection("rooms");
-    Messages = new Meteor.Collection("messages");
-    Parties = new Meteor.Collection("parties");
+    Rooms = new Mongo.Collection("rooms");
+    Messages = new Mongo.Collection("messages");
+    Parties = new Mongo.Collection("parties");
 
     // server: populate collections with some initial documents
     Rooms.insert({name: "Conference Room A"});
@@ -457,9 +457,11 @@ functions in JavaScript. Just add the helper functions directly on the
     {{lt}}/template>
 
     // in client/myapp.js: reactive helper function
-    Template.forecast.prediction = function () {
-      return Session.get("weather");
-    };
+    Template.forecast.helpers({
+      prediction: function () {
+        return Session.get("weather");
+      }
+    });
 
     // in the JavaScript console
     > Session.set("weather", "cloudy");
@@ -481,9 +483,11 @@ To iterate over an array or database cursor, use `{{dstache}}#each}}`:
     {{lt}}/template>
 
     // in myapp.js
-    Template.players.topScorers = function () {
-      return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
-    };
+    Template.players.helpers({
+      topScorers: function () {
+        return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
+      }
+    });
 
 In this case, the data is coming from a database query. When the
 database cursor is passed to `{{dstache}}#each}}`, it will wire up all of the
@@ -495,9 +499,11 @@ in `this`. Note that some block helpers change the current context (notably
 `{{dstache}}#each}}` and `{{dstache}}#with}}`):
 
     // in a JavaScript file
-    Template.players.leagueIs = function (league) {
-      return this.league === league;
-    };
+    Template.players.helpers({
+      leagueIs: function (league) {
+        return this.league === league;
+      }
+    });
 
     <!-- in a HTML file -->
     <template name="players">
@@ -514,7 +520,9 @@ in `this`. Note that some block helpers change the current context (notably
 Helpers can also be used to pass in constant data.
 
     // Works fine with {{dstache}}#each sections}}
-    Template.report.sections = ["Situation", "Complication", "Resolution"];
+    Template.report.helpers({
+      sections: ["Situation", "Complication", "Resolution"]
+    });
 
 Finally, you can use an `events` declaration on a template function to set up a
 table of event handlers. The format is documented at [Event
@@ -737,7 +745,7 @@ MongoDB server.  (The current release of Meteor has been tested with Node
 to stall.) You can then run the application by invoking node, specifying the
 HTTP port for the application to listen on, and the MongoDB endpoint.  If
 you don't already have a MongoDB server, we can recommend our friends at
-[MongoHQ](http://mongohq.com).
+[Compose](http://compose.io).
 
     $ cd bundle
     $ (cd programs/server && npm install)
@@ -781,6 +789,13 @@ confusing to find your local packages built with different versions of
 things). However, we will still write the new versions.json file.
 
 {{/note}}
+
+Meteor uses extended semver versioning for its packages: that means that the version
+number has three parts separated by dots: major version, minor version and patch version
+(for example: 1.2.3) with an optional pre-release version. You can read more about it on
+[semver.org](http://www.semver.org).
+Additionally, because some meteor packages wrap external libraries,
+Meteor supports the convention of using `_` to denote a wrap number.
 
 You can read more about [`package.js`](#packagejs) files in the API
 section.

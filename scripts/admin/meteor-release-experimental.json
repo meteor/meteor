@@ -1,7 +1,7 @@
 {
- "track": "CORDOVA-PREVIEW",
- "version": "5",
- "recommended": true,
+ "track": "METEOR",
+ "version": "0.9.4-rc.1",
+ "recommended": false,
  "official": false,
- "description": "An experimental release of meteor with Cordova support."
+ "description": "An RC of Meteor 0.9.4."
 }

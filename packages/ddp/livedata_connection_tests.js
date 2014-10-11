@@ -1443,7 +1443,12 @@ _.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function (version) {
 
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
-    return Meteor._relativeToSiteRootUrl("/");
+    var ddpUrl = Meteor._relativeToSiteRootUrl("/");
+    if (typeof __meteor_runtime_config__ !== "undefined") {
+      if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
+        ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
+    }
+    return ddpUrl;
   } else {
     return Meteor.absoluteUrl();
   }

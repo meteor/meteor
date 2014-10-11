@@ -78,10 +78,18 @@ OAuth._stateFromQuery = function (query) {
     Log.warn('Unable to parse state from OAuth query: ' + string);
     throw e;
   }
-}
+};
 
 OAuth._loginStyleFromQuery = function (query) {
-  var style = OAuth._stateFromQuery(query).loginStyle;
+  var style;
+  // For backwards-compatibility for older clients, catch any errors
+  // that result from parsing the state parameter. If we can't parse it,
+  // set login style to popup by default.
+  try {
+    style = OAuth._stateFromQuery(query).loginStyle;
+  } catch (err) {
+    style = "popup";
+  }
   if (style !== "popup" && style !== "redirect") {
     throw new Error("Unrecognized login style: " + style);
   }
@@ -89,11 +97,44 @@ OAuth._loginStyleFromQuery = function (query) {
 };
 
 OAuth._credentialTokenFromQuery = function (query) {
-  return OAuth._stateFromQuery(query).credentialToken;
+  var state;
+  // For backwards-compatibility for older clients, catch any errors
+  // that result from parsing the state parameter. If we can't parse it,
+  // assume that the state parameter's value is the credential token, as
+  // it used to be for older clients.
+  try {
+    state = OAuth._stateFromQuery(query);
+  } catch (err) {
+    return query.state;
+  }
+  return state.credentialToken;
 };
 
 OAuth._isCordovaFromQuery = function (query) {
-  return !! OAuth._stateFromQuery(query).isCordova;
+  try {
+    return !! OAuth._stateFromQuery(query).isCordova;
+  } catch (err) {
+    // For backwards-compatibility for older clients, catch any errors
+    // that result from parsing the state parameter. If we can't parse
+    // it, assume that we are not on Cordova, since older Meteor didn't
+    // do Cordova.
+    return false;
+  }
+};
+
+// Checks if the `redirectUrl` matches the app host.
+// We export this function so that developers can override this
+// behavior to allow apps from external domains to login using the
+// redirect OAuth flow.
+OAuth._checkRedirectUrlOrigin = function (redirectUrl) {
+  var appHost = Meteor.absoluteUrl();
+  var appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
+    replaceLocalhost: true
+  });
+  return (
+    redirectUrl.substr(0, appHost.length) !== appHost &&
+    redirectUrl.substr(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
+  );
 };
 
 
@@ -248,7 +289,7 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 OAuth._endOfPopupResponseTemplate = Assets.getText(
   "end_of_popup_response.html");
 
-var endOfRedirectResponseTemplate = Assets.getText(
+OAuth._endOfRedirectResponseTemplate = Assets.getText(
   "end_of_redirect_response.html");
 
 // Renders the end of login response template into some HTML and JavaScript
@@ -296,7 +337,7 @@ var renderEndOfLoginResponse = function (options) {
   if (options.loginStyle === 'popup') {
     template = OAuth._endOfPopupResponseTemplate;
   } else if (options.loginStyle === 'redirect') {
-    template = endOfRedirectResponseTemplate;
+    template = OAuth._endOfRedirectResponseTemplate;
   } else {
     throw new Error('invalid loginStyle: ' + options.loginStyle);
   }
@@ -344,7 +385,7 @@ OAuth._endOfLoginResponse = function (res, details) {
   if (details.loginStyle === 'redirect') {
     redirectUrl = OAuth._stateFromQuery(details.query).redirectUrl;
     var appHost = Meteor.absoluteUrl();
-    if (redirectUrl.substr(0, appHost.length) !== appHost) {
+    if (OAuth._checkRedirectUrlOrigin(redirectUrl)) {
       details.error = "redirectUrl (" + redirectUrl +
         ") is not on the same host as the app (" + appHost + ")";
       redirectUrl = appHost;

@@ -77,7 +77,7 @@ Meteor.user = function () {
 Accounts.callLoginMethod = function (options) {
   options = _.extend({
     methodName: 'login',
-    methodArguments: [],
+    methodArguments: [{}],
     _suppressLoggingIn: false
   }, options);
   // Set defaults for callback arguments to no-op functions; make sure we
@@ -339,9 +339,22 @@ Accounts._pageLoadLogin = function (attemptInfo) {
 // If our app has a Blaze, register the {{currentUser}} and {{loggingIn}}
 // global helpers.
 if (Package.blaze) {
+  /**
+   * @global
+   * @name  currentUser
+   * @isHelper true
+   * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in.
+   */
   Package.blaze.Blaze.Template.registerHelper('currentUser', function () {
     return Meteor.user();
   });
+
+  /**
+   * @global
+   * @name  loggingIn
+   * @isHelper true
+   * @summary Calls [Meteor.loggingIn()](#meteor_loggingin).
+   */
   Package.blaze.Blaze.Template.registerHelper('loggingIn', function () {
     return Meteor.loggingIn();
   });

@@ -1,5 +1,4 @@
 var Future = require('fibers/future');
-var readline = require('readline');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
@@ -8,57 +7,127 @@ var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var fs = require('fs');
+var url = require('url');
+var child_process = require('child_process');
 
 var utils = exports;
 
-// options:
-//   - echo (boolean): defaults to true
-//   - prompt (string)
-//   - stream: defaults to process.stdout (you might want process.stderr)
-exports.readLine = function (options) {
-  var fut = new Future();
+// Parses <protocol>://<host>:<port> into an object { protocol: *, host:
+// *, port: * }. The input can also be of the form <host>:<port> or just
+// <port>. We're not simply using 'url.parse' because we want '3000' to
+// parse as {host: undefined, protocol: undefined, port: '3000'}, whereas
+// 'url.parse' would give us {protocol:' 3000', host: undefined, port:
+// undefined} or something like that.
+//
+// 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
+var parseUrl = function (str, defaults) {
+  // XXX factor this out into a {type: host/port}?
 
-  options = _.extend({
-    echo: true,
-    stream: process.stdout
-  }, options);
+  defaults = defaults || {};
+  var defaultHost = defaults.host || undefined;
+  var defaultPort = defaults.port || undefined;
+  var defaultProtocol = defaults.protocol || undefined;
 
-  var silentStream = {
-    write: function () {
-    },
-    on: function () {
-    },
-    end: function () {
-    },
-    isTTY: options.stream.isTTY,
-    removeListener: function () {
-    }
-  };
-
-  // Read a line, throwing away the echoed characters into our dummy stream.
-  var rl = readline.createInterface({
-    input: process.stdin,
-    output: options.echo ? options.stream : silentStream,
-    // `terminal: options.stream.isTTY` is the default, but emacs shell users
-    // don't want fancy ANSI.
-    terminal: options.stream.isTTY && process.env.EMACS !== 't'
-  });
-
-  if (! options.echo) {
-    options.stream.write(options.prompt);
-  } else {
-    rl.setPrompt(options.prompt);
-    rl.prompt();
+  if (str.match(/^[0-9]+$/)) { // just a port
+    return {
+      port: str,
+      host: defaultHost,
+      protocol: defaultProtocol };
   }
 
-  rl.on('line', function (line) {
-    rl.close();
-    if (! options.echo)
-      options.stream.write("\n");
-    fut['return'](line);
+  var hasScheme = exports.hasScheme(str);
+  if (! hasScheme) {
+    str = "http://" + str;
+  }
+
+  var parsed = url.parse(str);
+  if (! parsed.protocol.match(/\/\/$/)) {
+    // For easy concatenation, add double slashes to protocols.
+    parsed.protocol = parsed.protocol + "//";
+  }
+  return {
+    protocol: hasScheme ? parsed.protocol : defaultProtocol,
+    host: parsed.hostname || defaultHost,
+    port: parsed.port || defaultPort
+  };
+};
+
+var ipAddress = function () {
+  var uniload = require("./uniload.js");
+  var netroute = uniload.load({ packages: ["netroute"] }).
+        netroute.NpmModuleNetroute;
+  var info = netroute.getInfo();
+  var defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
+  if (! defaultRoute) {
+    return null;
+  }
+
+  var iface = defaultRoute["interface"];
+
+  var getAddress = function (iface) {
+    var interfaces = os.networkInterfaces();
+    return _.findWhere(interfaces[iface], { family: "IPv4" });
+  };
+
+  var address = getAddress(iface);
+  if (! address) {
+    // Retry after a couple seconds in case the user is connecting or
+    // disconnecting from the Internet.
+    utils.sleepMs(2000);
+    address = getAddress(iface);
+    if (! address) {
+      throw new Error(
+"Interface '" + iface + "' not found in interface list, or\n" +
+"does not have an IPv4 address.");
+    }
+  }
+  return address.address;
+};
+
+exports.hasScheme = function (str) {
+  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+};
+
+exports.parseUrl = parseUrl;
+
+exports.ipAddress = ipAddress;
+
+exports.hasScheme = function (str) {
+  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+};
+
+// Returns a pretty list suitable for showing to the user. Input is an
+// array of objects with keys 'name' and 'description'.
+exports.formatList = function (unsortedItems) {
+  var alphaSort = function (item) {
+    return item.name;
+  };
+  var items = _.sortBy(unsortedItems, alphaSort);
+  var longest = '';
+  _.each(items, function (item) {
+    if (item.name.length > longest.length)
+      longest = item.name;
   });
 
-  return fut.wait();
+  var pad = longest.replace(/./g, ' ');
+  // it'd be nice to read the actual terminal width, but I tried
+  // several methods and none of them work (COLUMNS isn't set in
+  // node's environment; `tput cols` returns a constant 80). maybe
+  // node is doing something weird with ptys.
+  var width = 80;
+
+  var out = '';
+  _.each(items, function (item) {
+    var name = item.name + pad.substr(item.name.length);
+    var description = item.description || 'No description';
+    var line = name + "  " + description;
+    if (line.length > width) {
+      line = line.substr(0, width - 3) + '...';
+    }
+    out += line + "\n";
+  });
+
+  return out;
 };
 
 // Determine a human-readable hostname for this computer. Prefer names
@@ -237,7 +306,7 @@ exports.timeoutScaleFactor = timeoutScaleFactor;
 // the prerelease for a given release will sort before it. Because $ sorts
 // before '.', this means that 1.2 will sort before 1.2.3.)
 exports.defaultOrderKeyForReleaseVersion = function (v) {
-  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z]{1,15})(\d{0,4}))?$/);
+  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
   if (!m)
     return null;
   var numberPart = m[1];
@@ -360,6 +429,9 @@ exports.isUrlWithSha = function (x) {
 // If there is a version that isn't exact, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
+//
+// This is talking about NPM versions specifically, not Meteor versions.
+// It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
@@ -422,7 +494,8 @@ exports.execFileAsync = function (file, args, opts) {
   var logOutput = fiberHelpers.bindEnvironment(function (line) {
     if (opts.verbose) {
       line = mapper(line);
-      console.log(line);
+      if (line)
+        console.log(line);
     }
   });
 
@@ -480,7 +553,7 @@ exports.Patience = function (options) {
         typeof(options.message) !== 'function') {
       throw Error("message must be string or function");
     }
-    self._message = options.message;
+    self._message = "\n" + options.message;
     self._whenMessage = now + options.messageAfterMs;
     self._messageTimeout = setTimeout(function () {
       self._messageTimeout = null;
@@ -565,3 +638,107 @@ _.extend(exports.Patience.prototype, {
   }
 });
 
+
+// This is a stripped down version of Patience, that just regulates the frequency of calling yield.
+// It should behave similarly to calling yield on every iteration of a loop,
+// except that it won't actually yield if there hasn't been a long enough time interval
+//
+// options:
+//   interval: minimum interval of time between yield calls
+//             (more frequent calls are simply dropped)
+//
+// XXX: Have Patience use ThrottledYield
+exports.ThrottledYield = function (options) {
+  var self = this;
+
+  options = _.extend({ interval: 150 }, options || {});
+  self.interval = options.interval;
+  var now = +(new Date);
+
+  // The next yield time is interval from now.
+  self.nextYield = now + self.interval;
+};
+
+_.extend(exports.ThrottledYield.prototype, {
+  yield: function () {
+    var self = this;
+    var now = +(new Date);
+
+    if (now >= self.nextYield) {
+      self.nextYield = now + self.interval;
+      utils.sleepMs(1);
+    }
+  }
+});
+
+
+// Are we running on device?
+exports.runOnDevice = function (options) {
+  return !! _.intersection(options.args,
+    ['ios-device', 'android-device']).length;
+};
+
+// Given the options for a 'meteor run' command, returns a parsed URL ({
+// host: *, protocol: *, port: * }. The rules for --mobile-server are:
+//   * If you don't specify anything for --mobile-server, then it
+//     defaults to <detected ip address>:<port from --port>.
+//   * If you specify something for --mobile-server, we use that,
+//     defaulting to http:// as the protocol and 80 or 443 as the port.
+exports.mobileServerForRun = function (options) {
+  // we want to do different IP generation depending on whether we
+  // are running for a device or simulator
+  options = _.extend({}, options, {
+    runOnDevice: exports.runOnDevice(options)
+  });
+
+  var parsedUrl = parseUrl(options.port);
+  if (! parsedUrl.port) {
+    throw new Error("--port must include a port.");
+  }
+
+  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
+  var mobileServer = options["mobile-server"] || options["mobile-port"];
+
+
+  // if we specified a mobile server, use that
+
+  if (mobileServer) {
+    var parsedMobileServer = parseUrl(mobileServer, {
+      protocol: "http://"
+    });
+
+    if (! parsedMobileServer.host) {
+      throw new Error("--mobile-server must specify a hostname.");
+    }
+
+    return parsedMobileServer;
+  }
+
+
+  // if we are running on a device, use the auto-detected IP
+
+  if (options.runOnDevice) {
+    var myIp = ipAddress();
+    if (! myIp) {
+      throw new Error(
+"Error detecting IP address for mobile app to connect to.\n" +
+"Please specify the address that the mobile app should connect\n" +
+"to with --mobile-server.");
+    }
+
+    return {
+      host: myIp,
+      port: parsedUrl.port,
+      protocol: "http://"
+    };
+  }
+
+
+  // we are running a simulator, use localhost:3000
+
+  return {
+    host: "localhost",
+    port: parsedUrl.port,
+    protocol: "http://"
+  };
+};

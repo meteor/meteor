@@ -8,7 +8,7 @@ var files = require('../files.js');
 
 selftest.define("css hot code push", function (options) {
   var s = new Sandbox({
-    clients: options.clients,
+    clients: options.clients
   });
 
   s.createApp("myapp", "css-injection-test");
@@ -74,6 +74,11 @@ selftest.define("css hot code push", function (options) {
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);
 
+    // XXX: Remove me.  This shouldn't be needed, but sometimes
+    // if we run too quickly on fast (or Linux?) machines, it looks
+    // like there's a race and we see a weird state
+    utils.sleepMs(10000);
+
     s.write(".meteor/packages", "standard-app-packages");
     run.match("removed my-package");
     run.match("numCssChanges: 0");
@@ -110,7 +115,7 @@ selftest.define("versioning hot code push", function (options) {
 
 selftest.define("javascript hot code push", function (options) {
   var s = new Sandbox({
-    clients: options.clients,
+    clients: options.clients
   });
 
   s.createApp("myapp", "hot-code-push-test");
@@ -142,6 +147,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: undefined");
+
 
     // Only the client should refresh if a client js file is added. Thus,
     // "client connected" variable will be incremented.
@@ -208,6 +214,11 @@ selftest.define("javascript hot code push", function (options) {
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: undefined");
+
+    // XXX: Remove me.  This shouldn't be needed, but sometimes
+    // if we run too quickly on fast (or Linux?) machines, it looks
+    // like there's a race and we see a weird state
+    utils.sleepMs(10000);
 
     s.write("client/test.js", "jsVar = 'bar'");
     run.match("client connected: 1");

@@ -2,15 +2,30 @@ var queue = [];
 var loaded = !Meteor.isCordova &&
   (document.readyState === "loaded" || document.readyState == "complete");
 
+var awaitingEventsCount = 1;
 var ready = function() {
+  awaitingEventsCount--;
+  if (awaitingEventsCount > 0)
+    return;
+
+  // XXX hide the splash screen if such exists, only on mobile
+  if (Meteor.isCordova) {
+    navigator.splashscreen && navigator.splashscreen.hide();
+  }
+
   loaded = true;
   while (queue.length)
     (queue.shift())();
 };
 
 if (document.addEventListener) {
-  var event = Meteor.isCordova ? 'meteor-cordova-loaded' : 'DOMContentLoaded';
-  document.addEventListener(event, ready, false);
+  document.addEventListener('DOMContentLoaded', ready, false);
+
+  if (Meteor.isCordova) {
+    awaitingEventsCount++;
+    document.addEventListener('deviceready', ready, false);
+  }
+
   window.addEventListener('load', ready, false);
 } else {
   document.attachEvent('onreadystatechange', function () {

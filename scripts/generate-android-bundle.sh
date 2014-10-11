@@ -30,13 +30,6 @@ if [ "$UNAME" == "Linux" ]; then
     rm android-sdk_r23.0.2-linux.tgz
 
     mv android-sdk-linux android-sdk
-
-    curl -O s3.amazonaws.com/android-bundle/jre-7u67-linux-i586.gz
-    tar zxvf jre-7u67-linux-i586.gz > /dev/null
-    rm jre-7u67-linux-i586.gz
-
-    mv jre1.7.0_67 jre
-
 else
     curl -O http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip
     unzip android-sdk_r23.0.2-macosx.zip > /dev/null
@@ -46,11 +39,15 @@ else
 fi
 
 {
-    curl -O http://www.motorlogy.com/apache//ant/binaries/apache-ant-1.9.4-bin.tar.gz
+    curl -O http://apache.osuosl.org/ant/binaries/apache-ant-1.9.4-bin.tar.gz
     tar xzf apache-ant-1.9.4-bin.tar.gz
     rm apache-ant-1.9.4-bin.tar.gz
 
-    # the below asks for confirmation... echo y seems to work lol
+    # Capture the license text so we can prompt the user
+    echo n | android-sdk/tools/android update sdk -t platform-tools -u > ${CHECKOUT_DIR}/license_cordova_android.txt
+
+
+    # the below asks for confirmation... echo y seems to work
 
     # platform tools
     echo y | android-sdk/tools/android update sdk -t platform-tools -u
@@ -58,8 +55,11 @@ fi
     # the platform that cordova likes
     echo y | android-sdk/tools/android update sdk -t android-19 -u
 
-    # system image for android 19
-    echo y | android-sdk/tools/android update sdk -t sys-img-armeabi-v7a-android-19 --all -u
+    # We now download system images only if needed, before starting the avd
+    # system image for android 19 - arm
+    #echo y | android-sdk/tools/android update sdk -t sys-img-armeabi-v7a-android-19 --all -u
+    # system image for android 19 - x86
+    #echo y | android-sdk/tools/android update sdk -t sys-img-x86-android-19 --all -u
 
     # build tools
     echo y | android-sdk/tools/android update sdk -t "build-tools-20.0.0" -u
@@ -69,12 +69,18 @@ fi
     # android-sdk/tools/android create avd -t 1 -n test
 } &> /dev/null
 
+# Strip header & footer from license
+sed -i '' '1,/License id:/d' ${CHECKOUT_DIR}/license_cordova_android.txt
+sed -i '' '1,/------------/d' ${CHECKOUT_DIR}/license_cordova_android.txt
+sed -i '' '/Do you accept the license/,$d'  ${CHECKOUT_DIR}/license_cordova_android.txt
+
 echo BUNDLING
 
 cd "$DIR"
 echo "${BUNDLE_VERSION}" > .bundle_version.txt
 
 echo "going to save in: ${CHECKOUT_DIR}/android_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz"
+echo "License file is at: ${CHECKOUT_DIR}/license_cordova_android.txt"
 
 tar czf "${CHECKOUT_DIR}/android_bundle_${UNAME}_${BUNDLE_VERSION}.tar.gz" . &> /dev/null
 

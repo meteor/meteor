@@ -1,5 +1,4 @@
 # QA Notes
-
 ## Hot Code Push Reload
 
 Run the leaderboard example, and click on one of the names.  Make a
@@ -71,11 +70,11 @@ see the variable without having the client also reload.
     $ meteor remove standard-app-packages
     $ meteor add meteor webapp logging deps session livedata
     $ meteor add mongo-livedata templating handlebars check underscore
-    $ meteor add jquery random ejson autoupdate
+    $ meteor add jquery random ejson autoupdate spacebars
 
 Add to leaderboard.js:
 
-    Template.leaderboard.available = Autoupdate.newClientAvailable;
+    Template.leaderboard.helpers({available: Autoupdate.newClientAvailable});
 
 And add `{{available}}` to the leaderboard template in
 leaderboard.html.

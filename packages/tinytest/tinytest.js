@@ -206,7 +206,7 @@ _.extend(TestCaseResults.prototype, {
       };
     else if (expected instanceof RegExp)
       predicate = function (actual) {
-        return expected.test(actual.message)
+        return expected.test(actual.message);
       };
     else if (typeof expected === 'function')
       predicate = expected;
@@ -522,7 +522,7 @@ _.extend(TestRun.prototype, {
         }, stop_at_offset);
         // Wait for the test to complete or time out.
         future.wait();
-        onComplete & onComplete();
+        onComplete && onComplete();
       });
     } else {
       // client

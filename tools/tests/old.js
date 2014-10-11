@@ -79,22 +79,3 @@ selftest.define("old cli tests", ["slow", "net"], function () {
   run.match("PASSED\n");
   run.expectExit(0);
 });
-
-selftest.define("old cli tests (warehouse)", ["slow", "checkout", "net"], function () {
-  var s = new Sandbox({
-    warehouse: {
-      v1: { recommended: true }
-    }
-  });
-
-  var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
-    env: {
-      METEOR_TOOL_PATH: s.execPath,
-      METEOR_WAREHOUSE_DIR: s.warehouse,
-      NODE: process.execPath
-    }
-  });
-  run.waitSecs(1000);
-  run.match("PASSED\n");
-  run.expectExit(0);
-});

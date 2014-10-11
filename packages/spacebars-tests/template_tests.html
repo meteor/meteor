@@ -17,18 +17,18 @@
 </template>
 
 <template name="spacebars_template_test_content">
-  {{> UI.contentBlock}}
+  {{> Template.contentBlock}}
 </template>
 
 <template name="spacebars_template_test_elsecontent">
-  {{> UI.elseBlock}}
+  {{> Template.elseBlock}}
 </template>
 
 <template name="spacebars_template_test_iftemplate">
   {{#if condition}}
-    {{> UI.contentBlock}}
+    {{> Template.contentBlock}}
   {{else}}
-    {{> UI.elseBlock}}
+    {{> Template.elseBlock}}
   {{/if}}
 </template>
 
@@ -122,9 +122,9 @@
 
 <template name="spacebars_template_test_iftemplate2">
   {{#spacebars_template_test_iftemplate condition=flag}}
-    {{> UI.contentBlock}}
+    {{> Template.contentBlock}}
   {{else}}
-    {{> UI.elseBlock}}
+    {{> Template.elseBlock}}
   {{/spacebars_template_test_iftemplate}}
 </template>
 
@@ -407,7 +407,7 @@ Hi there!
 </template>
 
 <template name="spacebars_template_test_just_content">
-  {{> UI.contentBlock}}
+  {{> Template.contentBlock}}
 </template>
 
 <template name="spacebars_template_test_simple_helpers_are_isolated">
@@ -957,10 +957,46 @@ Hi there!
 
 <template name="spacebars_test_contentBlock_arg_inner">
   {{#with foo="AAA" bar="BBB"}}
-    {{this.foo}} {{> UI.contentBlock this}}
+    {{this.foo}} {{> Template.contentBlock this}}
   {{/with}}
 </template>
 
 <template name="spacebars_template_test_input_field_to_same_value">
   <input type="text" value={{foo}}>
+</template>
+
+<template name="spacebars_template_test_content_backcompat">
+  {{#spacebars_template_test_iftemplate_backcompat condition=flag}}
+    hello
+  {{else}}
+    world
+  {{/spacebars_template_test_iftemplate_backcompat}}
+</template>
+
+<template name="spacebars_template_test_iftemplate_backcompat">
+  {{#if condition}}
+    {{> UI.contentBlock}}
+  {{else}}
+    {{> UI.elseBlock}}
+  {{/if}}
+</template>
+
+<template name="spacebars_template_test_content_context_backcompat">
+  {{#with foo}}
+    {{#with bar}}
+      {{#spacebars_template_test_iftemplate_backcompat condition=cond}}
+        {{firstLetter}}{{../secondLetter}}
+      {{else}}
+        {{../firstLetter}}{{secondLetter}}
+      {{/spacebars_template_test_iftemplate_backcompat}}
+    {{/with}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_falsy_helper">
+  foo:{{foo}} GLOBAL_ZERO:{{GLOBAL_ZERO}}
+</template>
+
+<template name="spacebars_template_test_oldstyle_helpers">
+  {{foo}}
 </template>
