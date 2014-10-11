@@ -1252,9 +1252,13 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   // set some defaults different from the Phonegap/Cordova defaults
   var additionalConfiguration = {
     'webviewbounce': false,
-    'DisallowOverscroll': true,
-    'AutoHideSplashScreen': false
+    'DisallowOverscroll': true
   };
+
+  if (project.dependencies['mobile-launch-screen']) {
+    additionalConfiguration.AutoHideSplashScreen = false;
+  }
+
   var imagePaths = {
     icon: {},
     splash: {}
