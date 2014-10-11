@@ -1109,7 +1109,7 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 
   // Either we didn't have an existing token, or it didn't work. Do an
   // OAuth flow to log in.
-  var redirectUri = url + '/_oauth/meteor-developer';
+  var redirectUri = url + '/_oauth/meteor-developer?close';
   loginResult = oauthFlow(conn, {
     clientId: clientId,
     redirectUri: redirectUri,
