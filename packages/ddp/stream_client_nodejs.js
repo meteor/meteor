@@ -128,24 +128,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
     var wsUrl = toWebsocketUrl(self.endpoint);
     var client = self.client = websocketDriver.client(wsUrl);
 
-    var parsedUrl = Npm.require('url').parse(wsUrl);
-    var stream;
-    var onConnect = function () {
-      client.start();
-    };
-    if (parsedUrl.protocol === 'wss:') {
-      stream = Npm.require('tls').connect(
-        parsedUrl.port || 443, parsedUrl.hostname, onConnect);
-    } else {
-      stream = Npm.require('net').createConnection(
-        parsedUrl.port || 80, parsedUrl.hostname);
-      stream.on('connect', onConnect);
-    }
-
-    _.each(self.headers, function (header, name) {
-      client.setHeader(name, header);
-    });
-
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
       function () {
@@ -153,6 +135,22 @@ _.extend(LivedataTest.ClientStream.prototype, {
           new DDP.ConnectionError("DDP connection timed out"));
       },
       self.CONNECT_TIMEOUT);
+
+    var onConnect = function () {
+      client.start();
+    };
+    var stream = self._createSocket(wsUrl, onConnect);
+
+    if (!self.client) {
+      // We hit a connection timeout or other issue while yielding in
+      // _createSocket. Drop the connection.
+      stream.end();
+      return;
+    }
+
+    _.each(self.headers, function (header, name) {
+      client.setHeader(name, header);
+    });
 
     self.client.on('open', Meteor.bindEnvironment(function () {
       return self._onConnect(client);
@@ -209,5 +207,83 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     stream.pipe(self.client.io);
     self.client.io.pipe(stream);
+  },
+
+  _createSocket: function (wsUrl, onConnect) {
+    var self = this;
+    var urlModule = Npm.require('url');
+    var parsedTargetUrl = urlModule.parse(wsUrl);
+    var targetUrlPort = +parsedTargetUrl.port;
+    if (!targetUrlPort) {
+      targetUrlPort = parsedTargetUrl.protocol === 'wss:' ? 443 : 80;
+    }
+
+    // Corporate proxy tunneling support.
+    var proxyUrl = self._getProxyUrl(parsedTargetUrl.protocol);
+    if (proxyUrl) {
+      var targetProtocol =
+            (parsedTargetUrl.protocol === 'wss:' ? 'https' : 'http');
+      var parsedProxyUrl = urlModule.parse(proxyUrl);
+      var proxyProtocol =
+            (parsedProxyUrl.protocol === 'https:' ? 'Https' : 'Http');
+      var proxyUrlPort = +parsedProxyUrl.port;
+      if (!proxyUrlPort) {
+        proxyUrlPort = parsedProxyUrl.protocol === 'https:' ? 443 : 80;
+      }
+      var tunnelFnName = targetProtocol + 'Over' + proxyProtocol;
+      var tunnelAgent = Npm.require('tunnel-agent');
+      var proxyOptions = {
+        host: parsedProxyUrl.hostname,
+        port: proxyUrlPort,
+        headers: {
+          host: parsedTargetUrl.host + ':' + targetUrlPort
+        }
+      };
+      if (parsedProxyUrl.auth) {
+        proxyOptions.proxyAuth = Npm.require('querystring').unescape(
+          parsedProxyUrl.auth);
+      }
+      var tunneler = tunnelAgent[tunnelFnName]({proxy: proxyOptions});
+      var events = Npm.require('events');
+      var fakeRequest = new events.EventEmitter();
+      var Future = Npm.require('fibers/future');
+      var fut = new Future;
+      fakeRequest.on('error', function (e) {
+        fut.isResolved() || fut.throw(e);
+      });
+      tunneler.createSocket({
+        host: parsedTargetUrl.host,
+        port: targetUrlPort,
+        request: fakeRequest
+      }, function (socket) {
+        socket.on('close', function () {
+          tunneler.removeSocket(socket);
+        });
+        process.nextTick(onConnect);
+        fut.return(socket);
+      });
+      return fut.wait();
+    }
+
+    if (parsedTargetUrl.protocol === 'wss:') {
+      return Npm.require('tls').connect(
+        targetUrlPort, parsedTargetUrl.hostname, onConnect);
+    } else {
+      var stream = Npm.require('net').createConnection(
+        targetUrlPort, parsedTargetUrl.hostname);
+      stream.on('connect', onConnect);
+      return stream;
+    }
+  },
+
+  _getProxyUrl: function (protocol) {
+    var self = this;
+    // Similar to code in tools/http-helpers.js.
+    var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
+    // if we're going to a secure url, try the https_proxy env variable first.
+    if (protocol === 'wss:') {
+      proxy = process.env.HTTPS_PROXY || process.env.https_proxy || proxy;
+    }
+    return proxy;
   }
 });

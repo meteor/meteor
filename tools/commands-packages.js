@@ -1219,8 +1219,11 @@ main.registerCommand({
   // refreshing" from "can't connect to catalog"
   refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
-  var allPackages = catalog.official.getAllPackageNames();
-  var allReleases = catalog.official.getAllReleaseTracks();
+  var allPackages, allReleases;
+  doOrDie(function () {
+    allPackages = catalog.official.getAllPackageNames();
+    allReleases = catalog.official.getAllReleaseTracks();
+  });
   var matchingPackages = [];
   var matchingReleases = [];
 
