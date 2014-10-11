@@ -421,19 +421,19 @@ main.registerCommand({
       files.cp_r(path.join(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
-   } catch (err) {
-     Console.stderr.write("Could not create package: " + err.message + "\n");
-     return 1;
-   }
+        },
+        transformContents: function (contents, f) {
+          if ((/(\.html|\.js|\.css)/).test(f))
+            return new Buffer(transform(contents.toString()));
+          else
+            return contents;
+        },
+        ignore: [/^local$/]
+      });
+    } catch (err) {
+      Console.stderr.write("Could not create package: " + err.message + "\n");
+      return 1;
+    }
 
     Console.stdout.write(packageName + ": created" + inYourApp + "\n");
     return 0;
@@ -472,27 +472,27 @@ main.registerCommand({
     return 0;
   };
 
+
+  // Rules for creation of new meteor app are:
+  //
+  // * Always an error to have .meteor already there
+  // * These files are ignored:
+  //   - Hidden (dot) files: ex. .git
+  //   - Files without extension: ex. LICENSE
+  //   - Text files: ex. README.md, readme.txt
+  //   - Json files: ex. data.json
+  //   - Shell scripts: ex. deploy.sh
+  // * If other files exist, are we:
+  //   - creating example?  throw error
+  //   - creating skeleton app?  create but skip skeleton files (html/js/css)
+  
   var appPath;
   if (options.args.length === 1)
-    appPath = options.args[0];
+    appPath = path.normalize(options.args[0]);
   else if (options.example)
     appPath = options.example;
   else
     throw new main.ShowUsage;
-
-  appPath = path.normalize(appPath);
-
-  // remove trailing slash, if any
-  if (appPath[appPath.length - 1] === path.sep) {
-    appPath = appPath.substring(0, appPath.length - 1);
-  }
-
-  var isCurrentDir = (appPath === '.');
-
-  if (!isCurrentDir && fs.existsSync(appPath)) {
-    Console.stderr.write(appPath + ": Already exists\n");
-    return 1;
-  }
 
   if (files.findAppDir(appPath)) {
     Console.stderr.write(
@@ -500,14 +500,40 @@ main.registerCommand({
     return 1;
   }
 
+  var isCurrentDir = (appPath === '.' || appPath === ('.' + path.sep));
   var appName = isCurrentDir ? path.basename(process.env.PWD)
                              : path.basename(appPath);
 
-  var transform = function (x) {
-    return x.replace(/~name~/g, appName);
+  var ignoreWhiteList = ['.txt', '.md', '.json', '.sh'];
+  var shouldIgnoreFile = function (filePath) {
+    var isHidden = /^\./.test(filePath);
+    if (isHidden) 
+      return true;
+
+    var stats = fs.statSync(path.join(appPath, filePath));
+    if (stats.isDirectory())
+      return false;
+
+    var ext = path.extname(filePath);
+    if (ext == '' || _.contains(ignoreWhiteList, ext))
+      return true;
+
+    return false;
   };
+  var destinationEmpty = true;
+  if (fs.existsSync(appPath)) {
+    destinationEmpty = ! _.some(fs.readdirSync(appPath), function (filePath) {
+      return !shouldIgnoreFile(filePath);
+    });
+  }
 
   if (options.example) {
+    if (! destinationEmpty) {
+      Console.stderr.write("Example destination directory may only contain " +
+          "the following types of items: dot-files, extension-less files, or " +
+          "files with these extensions: " + ignoreWhiteList.join(', ') + "\n");
+      return 1;
+    }
     if (examples.indexOf(options.example) === -1) {
       Console.stderr.write(options.example + ": no such example\n\n");
       Console.stderr.write("List available applications with 'meteor create --list'.\n");
@@ -522,6 +548,15 @@ main.registerCommand({
       });
     }
   } else {
+    var transform = function (x) {
+      return x.replace(/~name~/g, appName);
+    };
+
+    var toIgnore = [/^local$/, /^\.id$/]
+    if (!destinationEmpty) {
+      toIgnore.push(/(\.html|\.js|\.css)/)
+    }
+    Console.stdout.write("ToIgnore: " + toIgnore.length + "\n");
     files.cp_r(path.join(__dirname, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
@@ -532,7 +567,7 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/, /^\.id$/]
+      ignore: toIgnore
     });
   }
 
@@ -563,7 +598,7 @@ main.registerCommand({
   }
 
   {
-    var message = appPath + ": created";
+    var message = appName + ": created";
     if (options.example && options.example !== appPath)
       message += (" (from '" + options.example + "' template)");
     message += ".\n";
