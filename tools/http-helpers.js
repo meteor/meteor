@@ -202,7 +202,8 @@ _.extend(exports, {
       };
     }
 
-    // try to get proxy from environment
+    // try to get proxy from environment.
+    // similar code is in packages/ddp/stream_client_nodejs.js
     var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
     // if we're going to an https url, try the https_proxy env variable first.
     if (/^https/i.test(options.url)) {
