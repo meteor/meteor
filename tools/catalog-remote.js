@@ -140,9 +140,11 @@ var Db = function (dbFile, options) {
   self._autoPrepare = true;
   self._prepared = {};
 
-  self._db = self.open(dbFile);
-
   self._transactionMutex = new Mutex();
+
+  self._db = self._retry(function () {
+    return self.open(dbFile);
+  });
 
   // WAL mode copes much better with (multi-process) concurrency
   self._retry(function () {
@@ -259,6 +261,8 @@ _.extend(Db.prototype, {
     var self = this;
 
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
+      Console.debug("Creating database directory", dbFile);
+
       var folder = path.dirname(dbFile);
       if ( !files.mkdir_p(folder) )
         throw new Error("Could not create folder at " + folder);
