@@ -13,11 +13,12 @@ var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
 var tropohouse = require('./tropohouse.js');
 var config = require('./config.js');
-var semver = require('semver');
 var packageClient = require('./package-client.js');
+var VersionParser = require('./package-version-parser.js');
 var sqlite3 = require('sqlite3');
 var archinfo = require('./archinfo.js');
 var Console = require('./console.js').Console;
+
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
@@ -517,7 +518,7 @@ _.extend(RemoteCatalog.prototype, {
     var match = this._getPackageVersions(name);
     if (match === null)
       return [];
-    return _.pluck(match, 'version').sort(semver.compare);
+    return _.pluck(match, 'version').sort(VersionParser.compare);
   },
 
   getLatestMainlineVersion: function (name) {
