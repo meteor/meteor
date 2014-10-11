@@ -31,6 +31,11 @@ Router.map(function() {
     },
     data: function() {
       return Lists.findOne(this.params._id);
+    },
+    action: function () {
+      this.render();
+      if (Meteor.isCordova)
+        LaunchScreen.hide();
     }
   });
   
