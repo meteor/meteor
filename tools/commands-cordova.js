@@ -336,7 +336,7 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     runtimeConfig.PUBLIC_SETTINGS = publicSettings;
 
   var boilerplate = new Boilerplate(webArchName, manifest, {
-    urlMapper: function (url) { return url ? url.substr(1) : ''; },
+    urlMapper: _.identity,
     pathMapper: function (p) { return path.join(clientDir, p); },
     baseDataExtension: {
       meteorRuntimeConfig: JSON.stringify(runtimeConfig)
