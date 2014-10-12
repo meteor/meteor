@@ -137,7 +137,10 @@ var updateVersions = function (shouldReloadClientProgram) {
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function (appId) {
-    check(appId, Match.Optional(String));
+    // `null` happens when a client doesn't have an appId and passes
+    // `undefined` to `Meteor.subscribe`. `undefined` is translated to
+    // `null` as JSON doesn't have `undefined.
+    check(appId, Match.OneOf(String, undefined, null));
 
     // Don't notify clients using wrong appId such as mobile apps built with a
     // different server but pointing at the same local url
