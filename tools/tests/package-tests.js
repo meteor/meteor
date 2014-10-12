@@ -455,6 +455,10 @@ var publishReleaseInNewTrack = selftest.markStack(function (s, releaseTrack, too
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
 selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
+  selftest.fail("this test is broken and breaks other tests by deleting their catalog.");
+  return;
+
+
   var s = new Sandbox();
   var run;
 
