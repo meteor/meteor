@@ -611,8 +611,6 @@ _.extend(Sandbox.prototype, {
     var env = _.clone(self.env);
     env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
 
-    env.METEOR_LOG = 'debug';
-
     if (self.warehouse) {
       // Tell it where the warehouse lives.
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
