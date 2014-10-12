@@ -669,7 +669,7 @@ _.extend(RemoteCatalog.prototype, {
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          Console.info("Catalog is sufficiently up-to-date; not refreshing\n");
+          Console.debug("Catalog is sufficiently up-to-date; not refreshing\n");
           return;
         }
       }
