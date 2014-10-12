@@ -84,6 +84,10 @@ package authors to build packages specifically for testing and debugging without
 increasing the size of the resulting app bundle or causing apps to ship with
 debug functionality built in.
 
+
+Patches by Github users cryptoquick, Gaelan, jperl, meonkeys, mitar, mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen, rissem, rosh93, rzymek, and timoabend
+
+
 ## v0.9.3.1
 
 * Don't crash when failing to contact the package server. #2713
@@ -92,6 +96,7 @@ debug functionality built in.
 
 * Fix `meteor update` on an app built from a checkout version
   of Meteor.
+
 
 ## v0.9.3
 
