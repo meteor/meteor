@@ -825,6 +825,8 @@ var PhantomClient = function (options) {
 
   self.name = "phantomjs";
   self.process = null;
+
+  self._logError = true;
 };
 
 util.inherits(PhantomClient, Client);
@@ -840,15 +842,17 @@ _.extend(PhantomClient.prototype, {
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
         phantomScript + "\nEND\n")],
-      {}, function (exitCode, stdout, stderr) {
-        if (exitCode != 0) {
-          console.log("PhantomJS exited with exitCode ", exitCode, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
+      {}, function (error, stdout, stderr) {
+        if (self._logError && error) {
+          console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
         }
       });
   },
 
   stop: function() {
     var self = this;
+    // Suppress the expected SIGTERM exit 'failure'
+    self._logError = false;
     self.process && self.process.kill();
     self.process = null;
   }
