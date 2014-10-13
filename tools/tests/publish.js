@@ -274,13 +274,11 @@ selftest.define("do-not-update-to-rcs",
     ["slow", "net", "test-package-server", "checkout"],
     function () {
 
-  var s = new Sandbox({warehouse: {
-    "v1": {recommended: true}
-  }});
+  var s = new Sandbox;
 
   // This makes packages not depend on meteor (specifically, makes our empty
   // control program not depend on meteor).
-  s.set("NO_METEOR_PACKAGE", "t");
+      // s.set("NO_METEOR_PACKAGE", "t");
 
   var username = "test";
   var password = "testtest";
