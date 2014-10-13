@@ -99,7 +99,8 @@
 * The `--mobile-port` option `meteor run` has been reworked. The option
   is now `--mobile-server` in `meteor run` and `--server` in `meteor
   build`. `--server` is required for `meteor build` in apps with mobile
-  platforms installed. XXX describe defaults for --mobile-server.
+  platforms installed. `--mobile-server` defaults to an automatically
+  detected IP address on port 3000, and `--server` requires a hostname but defaults to port 80 if a port is not specified.
 
 * Operations that take longer than a few seconds (e.g. downloading
   packages, installing the Android SDK, etc) now show a progress bar.
