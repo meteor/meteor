@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v0.9.4
+
 ### New Features
 
 * The new `meteor debug` command and `--debug-port` command line option
