@@ -1,5 +1,5 @@
 Package.describe({
-  name: 'mobile-launch-screen',
+  name: 'launch-screen',
   summary: 'More control over launch screen on mobile.',
   version: '1.0.0'
 });
@@ -9,8 +9,8 @@ Cordova.depends({
 });
 
 Package.onUse(function(api) {
-  api.addFiles('mobile-launch-screen.js', 'web.cordova');
-  api.use(['blaze', 'templating'], 'web.cordova', { weak: true });
+  api.addFiles('mobile-launch-screen.js', 'web');
+  api.use(['blaze', 'templating', 'iron:router'], 'web', { weak: true });
   api.export('LaunchScreen');
 });
 

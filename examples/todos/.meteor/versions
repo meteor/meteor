@@ -29,6 +29,7 @@ iron:layout@0.4.1
 iron:router@0.9.4
 jquery@1.0.1
 json@1.0.1
+launch-screen@1.0.0
 less@1.0.10
 livedata@1.0.11
 localstorage@1.0.1

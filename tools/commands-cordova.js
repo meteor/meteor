@@ -1283,7 +1283,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     'DisallowOverscroll': true
   };
 
-  if (project.dependencies['mobile-launch-screen']) {
+  if (project.dependencies['launch-screen']) {
     additionalConfiguration.AutoHideSplashScreen = false;
   }
 

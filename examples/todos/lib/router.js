@@ -18,27 +18,29 @@ Router.configure({
   }
 });
 
+if (Meteor.isClient)
+  LaunchScreen.hold();
+
 Router.map(function() {
   this.route('join');
   this.route('signin');
 
   this.route('listsShow', {
     path: '/lists/:_id',
-    // subscribe to todos before the page is rendered but don't wait on the 
+    // subscribe to todos before the page is rendered but don't wait on the
     // subscription, we'll just render the items as they arrive
-    onBeforeAction: function() {
+    onBeforeAction: function () {
       this.todosHandle = Meteor.subscribe('todos', this.params._id);
     },
-    data: function() {
+    data: function () {
       return Lists.findOne(this.params._id);
     },
     action: function () {
       this.render();
-      if (Meteor.isCordova)
-        LaunchScreen.hide();
+      LaunchScreen.release();
     }
   });
-  
+
   this.route('home', {
     path: '/',
     action: function() {
