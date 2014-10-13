@@ -2,24 +2,28 @@
 
 ### New Features
 
-* There is a new `meteor debug` command and `--debug-port` command line
-  option for `meteor run` that allows you to easily use node-inspector
-  to debug your server-side code. Add a `debugger` statement to your
-  code to create a breakpoint.
+* The new `meteor debug` command and `--debug-port` command line option
+  to `meteor run` allow you to easily use node-inspector to debug your
+  server-side code. Add a `debugger` statement to your code to create a
+  breakpoint.
 
-* Meteor can now run [Velocity](https://github.com/meteor-velocity/velocity)
-  tests with `meteor run --test`.
+* Add new a `meteor run --test` command that runs
+  [Velocity](https://github.com/meteor-velocity/velocity) tests in your
+  app .
 
-* New callbacks that make it easier to build custom user interfaces on
-  top of the accounts system: `Accounts.onResetPasswordLink`,
-  `Accounts.onEnrollmentLink`, and
-  `Accounts.onEmailVerificationLink`. These callbacks should be
-  registered before `Meteor.startup` fires, and will be called if the
-  URL matches a link in an email sent by `Accounts.resetPassword`, etc.
+* Add new callbacks `Accounts.onResetPasswordLink`,
+  `Accounts.onEnrollmentLink`, and `Accounts.onEmailVerificationLink`
+  that make it easier to build custom user interfaces on top of the
+  accounts system. These callbacks should be registered before
+  `Meteor.startup` fires, and will be called if the URL matches a link
+  in an email sent by `Accounts.resetPassword`, etc. See
+  https://docs.meteor.com/#Accounts-onResetPasswordLink.
 
-* A new special file, `/mobile-config.js`, allows you to set app
-  metadata, icons, splash screens, preferences, and PhoneGap/Cordova
-  plugin settings without needing a `cordova_build_override` directory.
+* A new configuration file for mobile apps,
+  `<APP>/mobile-config.js`. This allows you to set app metadata, icons,
+  splash screens, preferences, and PhoneGap/Cordova plugin settings
+  without needing a `cordova_build_override` directory. See
+  https://docs.meteor.com/#mobileconfigjs.
 
 
 ### API Changes
@@ -30,12 +34,13 @@
 
 * Deprecate the `Template.someTemplate.myHelper = ...` syntax in favor
   of `Template.someTemplate.helpers(...)`.  Using the older syntax still
-  works, but it prints a deprecation warning to the console.
+  works, but prints a deprecation warning to the console.
 
-* Package.registerBuildPlugin its associated functions have been added
+* `Package.registerBuildPlugin` its associated functions have been added
   to the public API, cleaned up, and documented. The new function is
   identical to the earlier _transitional_registerBuildPlugin except for
-  one or two backwards- compatible API changes.
+  minor backwards- compatible API changes. See
+  https://docs.meteor.com/#Package-registerBuildPlugin
 
 * Rename the `showdown` package to `markdown`.
 
@@ -47,45 +52,55 @@
 ### Tool Changes
 
 * Improved output from `meteor build` to make it easier to publish
-  mobile apps to the App Store and Play Store, and added documentation
-  about all of the steps from building the app to publishing it.
+  mobile apps to the App Store and Play Store. See the wiki pages for
+  instructions on how to publish your
+  [iOS](https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store)
+  and
+  [Android](https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store)
+  apps.
 
-* Packages can now be marked as `debugOnly` by adding `debugOnly: true`
-  to `Package.describe`. Debug-only packages are not bundled for
-  production, allowing package authors to build packages specifically
-  for testing and debugging without increasing the size of the resulting
-  app bundle or causing apps to ship with debug functionality built in.
+* Packages can now be marked as debug-mode only by adding `debugOnly:
+  true` to `Package.describe`. Debug-only packages are not included in
+  the app when it is bundled for production (`meteor build` or `meteor
+  run --production`). This allows package authors to build packages
+  specifically for testing and debugging without increasing the size of
+  the resulting app bundle or causing apps to ship with debug
+  functionality built in.
+
+* Rework the process for installing mobile development SDKs. There is
+  now a `meteor install-sdk` command that automatically install what
+  software it can and points to documentation for the parts that
+  require manual installation.
 
 * The `.meteor/cordova-platforms` file has been renamed to
-  `.meteor/platforms` to reflect the possibility of adding non-Cordova
-  platforms in the future. This file now automatically includes the
-  platforms `server` and `browser`, which can't currently be
-  removed. The old file will be automatically migrated to the new one
-  when the app is run with Meteor 0.9.4 or above.
+  `.meteor/platforms` and now includes the default `server` and
+  `browser` platforms. The default platforms can't currently be removed
+  from a project, though this will be possible in the future. The old
+  file will be automatically migrated to the new one when the app is run
+  with Meteor 0.9.4 or above.
 
 * The `unipackage.json` file inside downloaded packages has been renamed
   to `isopack.json` and has an improved forwards-compatible format. To
   maintain backwards compatibility with previous releases, packages will
-  have both files included.
+  be built with both files.
 
-* --port now requires a port (e.g. `meteor run --port example.com` is
-  not valid). XXX --mobile-port deprecated in favor of --mobile-server
-  option for 'meteor run' and '--server' for 'meteor build'. --server is
-  required for meteor build. describe defaults for --mobile-server.
-
-* The local package catalog now uses SQLite, which is much faster than
-  the previous implementation.
+* The local package metadata cache now uses SQLite, which is much faster
+  than the previous implementation. This improves `meteor` command line
+  tool startup time.
 
 * The constraint solver used by the client to find compatible versions
   of packages is now much faster.
 
-* Operations that take longer than a few seconds, such as downloading
-  packages, installing the Android SDK, and some others, now show a
-  progress bar.
+* The `--port` option to `meteor run` now requires a numeric port
+  (e.g. `meteor run --port example.com` is no longer valid).
 
-* The process and documentation for installing SDKs for Android and iOS
-  has been significantly improved, and is more intelligent about
-  detecting existing SDK installs.
+* The `--mobile-port` option `meteor run` has been reworked. The option
+  is now `--mobile-server` in `meteor run` and `--server` in `meteor
+  build`. `--server` is required for `meteor build` in apps with mobile
+  platforms installed. XXX describe defaults for --mobile-server.
+
+* Operations that take longer than a few seconds (e.g. downloading
+  packages, installing the Android SDK, etc) now show a progress bar.
 
 
 ### Bug Fixes
@@ -99,7 +114,9 @@
   other CPU-intensive tasks. #2536, #2588.
 
 
-Patches by Github users cryptoquick, Gaelan, jperl, meonkeys, mitar, mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen, rissem, rosh93, rzymek, and timoabend
+Patches by Github users cryptoquick, Gaelan, jperl, meonkeys, mitar,
+mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen,
+rissem, rosh93, rzymek, and timoabend
 
 
 ## v0.9.3.1
