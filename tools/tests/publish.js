@@ -273,7 +273,14 @@ selftest.define("list-with-a-new-version",
 selftest.define("do-not-update-to-rcs",
     ["slow", "net", "test-package-server", "checkout"],
     function () {
-  var s = new Sandbox;
+
+  var s = new Sandbox({warehouse: {
+    "v1": {recommended: true}
+  }});
+
+  // This makes packages not depend on meteor (specifically, makes our empty
+  // control program not depend on meteor).
+  s.set("NO_METEOR_PACKAGE", "t");
 
   var username = "test";
   var password = "testtest";
@@ -288,7 +295,7 @@ selftest.define("do-not-update-to-rcs",
   // Publish the first version.
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(30);
+    run.waitSecs(120);
     run.expectExit(0);
     run.match("Done");
   });
