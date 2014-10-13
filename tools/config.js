@@ -193,7 +193,7 @@ _.extend(exports, {
   getPackagesDirectoryName: function (serverUrl) {
     var self = this;
 
-    var prefix = config.getPackageServerFilePrefix(serverUrl);
+    var prefix = config.getPackageServerFilePrefix();
     if (prefix !== 'packages') {
       prefix = path.join('packages-from-server', prefix);
     }
@@ -203,7 +203,7 @@ _.extend(exports, {
 
   getLocalPackageCacheFilename: function (serverUrl) {
     var self = this;
-    var prefix = self.getPackageServerFilePrefix(serverUrl);
+    var prefix = self.getPackageServerFilePrefix();
 
     // Should look like 'packages.data.db' in the default case
     // (packages.data.json before 0.9.4).
