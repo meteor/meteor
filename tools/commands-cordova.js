@@ -3,6 +3,7 @@ var path = require('path');
 var _ = require('underscore');
 var fs = require('fs');
 var util = require('util');
+var chalk = require('chalk');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
@@ -951,11 +952,25 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   // XXX assert we have a valid Cordova project
   if (platform === 'ios' && isDevice) {
     verboseLog('It is ios-device, just opening the Xcode project with `open` command');
-    // ios-deploy is super buggy, so we just open xcode and let the user
-    // start the app themselves. XXX print a message about this?
+
     execFileSyncOrThrow('sh',
       ['-c', 'open ' + path.join(localPath, 'cordova-build',
              'platforms', 'ios', '*.xcodeproj')]);
+
+    // ios-deploy is super buggy, so we just open xcode and let the user
+    // start the app themselves.
+    Console.stdout.write([
+      "",
+      chalk.green([
+        "Your project has been opened in Xcode so that you can run your app on ",
+        "an iOS device. For further instructions, visit this wiki page:",
+      ].join("\n")),
+      chalk.cyan(
+        "https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-iOS-device"
+      ),
+      ""
+    ].join("\n"));
+
   } else {
     verboseLog('Running emulator:', localCordova, args);
     var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
