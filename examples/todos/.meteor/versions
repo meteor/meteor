@@ -11,7 +11,7 @@ callback-hook@1.0.1-rc.0
 check@1.0.2-rc.0
 ctl-helper@1.0.4-rc.0
 ctl@1.0.2-rc.0
-ddp@1.0.10-rc.2
+ddp@1.0.10-rc.3
 deps@1.0.5-rc.0
 ejson@1.0.4-rc.0
 email@1.0.4-rc.0
@@ -20,7 +20,7 @@ follower-livedata@1.0.2-rc.0
 geojson-utils@1.0.1-rc.0
 html-tools@1.0.2-rc.0
 htmljs@1.0.2-rc.0
-http@1.0.7-rc.3
+http@1.0.7-rc.4
 id-map@1.0.1-rc.0
 insecure@1.0.1-rc.0
 iron:core@0.3.4
@@ -29,7 +29,7 @@ iron:layout@0.4.1
 iron:router@0.9.4
 jquery@1.0.1-rc.0
 json@1.0.1-rc.0
-less@1.0.10-rc.3
+less@1.0.10-rc.4
 livedata@1.0.11-rc.0
 localstorage@1.0.1-rc.0
 logging@1.0.4-rc.0
@@ -55,7 +55,7 @@ spacebars-compiler@1.0.3-rc.0
 spacebars@1.0.3-rc.0
 srp@1.0.1-rc.0
 standard-app-packages@1.0.3-rc.0
-templating@1.0.8-rc.2
+templating@1.0.8-rc.3
 tracker@1.0.3-rc.0
 ui@1.0.4-rc.0
 underscore@1.0.1-rc.0
