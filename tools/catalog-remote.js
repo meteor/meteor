@@ -162,6 +162,18 @@ _.extend(Db.prototype, {
     }
   },
 
+  // Do not call any other methods on this object after calling this one.
+  // This yields.
+  closePermanently: function () {
+    var self = this;
+    self._closePreparedStatements();
+    var db = self._db;
+    self._db = null;
+    var future = new Future;
+    db.close(future.resolver());
+    future.wait();
+  },
+
   // Runs the function inside a transaction block
   runInTransaction: function (action) {
     var self = this;
@@ -475,15 +487,13 @@ _.extend(Table.prototype, {
 // under the variable "official" from the catalog.js
 //
 // The remote catalog is backed by a db to make things easier on the memory and for faster queries
-var RemoteCatalog = function (options) {
+var RemoteCatalog = function () {
   var self = this;
 
   // Set this to true if we are not going to connect to the remote package
   // server, and will only use the cached data for our package information
   // This means that the catalog might be out of date on the latest developments.
   self.offline = null;
-
-  self.options = options || {};
 
   self.db = null;
   self._currentRefreshIsLoud = false;
@@ -492,7 +502,17 @@ var RemoteCatalog = function (options) {
 _.extend(RemoteCatalog.prototype, {
   toString: function () {
     var self = this;
-    return "RemoteCatalog [options=" + JSON.stringify(self.options) + "]";
+    return "RemoteCatalog";
+  },
+
+  // Used for special cases that want to ensure that all connections to the DB
+  // are closed (eg to ensure that all writes have been flushed from the '-wal'
+  // file to the main DB file). Most methods on this class will stop working
+  // after you call this method. Note that this yields.
+  closePermanently: function () {
+    var self = this;
+    self.db.closePermanently();
+    self.db = null;
   },
 
   getVersion: function (name, version) {
@@ -597,6 +617,19 @@ _.extend(RemoteCatalog.prototype, {
     if (!result || result.length === 0)
       return null;
     return result[0];
+  },
+
+  // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
+  // specially constructed for bootstrap tarballs.
+  forceRecommendRelease: function (track, version) {
+    var self = this;
+    var releaseVersionData = self.getReleaseVersion(track, version);
+    if (!releaseVersionData) {
+      throw Error("Can't force-recommend unknown release " + track + "@"
+                  + version);
+    }
+    releaseVersionData.recommended = true;
+    self._insertReleaseVersions([releaseVersionData]);
   },
 
   getAllReleaseTracks: function () {
@@ -783,7 +816,6 @@ _.extend(RemoteCatalog.prototype, {
     });
   },
 
-  // XXX: Remove this; it is only here for the tests, and that is a hack
   _insertReleaseVersions: function(releaseVersions) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
