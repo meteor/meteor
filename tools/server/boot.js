@@ -77,6 +77,10 @@ sourcemap_support.install({
   handleUncaughtExceptions: false
 });
 
+// Only enabled by default in development.
+if (process.env.ENABLE_METEOR_SHELL) {
+  require('./shell.js').listen();
+}
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {

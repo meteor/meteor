@@ -1630,6 +1630,8 @@ _.extend(ServerTarget.prototype, {
     // Server bootstrap
     builder.write('boot.js',
                   { file: path.join(__dirname, 'server', 'boot.js') });
+    builder.write('shell.js',
+                  { file: path.join(__dirname, 'server', 'shell.js') });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
@@ -1755,8 +1757,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
-      var stub = new Buffer(exports._mainJsContents, 'utf8');
-      builder.write('main.js', { data: stub });
+      builder.write('main.js', {
+        data: new Buffer(exports._mainJsContents, 'utf8')
+      });
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one external dependency:\n" +

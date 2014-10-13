@@ -52,6 +52,7 @@ var getNodeOptionsFromEnvironment = function () {
 var AppProcess = function (options) {
   var self = this;
 
+  self.appDir = options.appDir;
   self.bundlePath = options.bundlePath;
   self.port = options.port;
   self.listenHost = options.listenHost;
@@ -96,6 +97,7 @@ _.extend(AppProcess.prototype, {
         // This is the child process telling us that it's ready to
         // receive connections.
         self.onListen && self.onListen();
+
       } else {
         runLog.logAppOutput(line);
       }
@@ -133,6 +135,13 @@ _.extend(AppProcess.prototype, {
     // exception and the whole app dies.
     // http://stackoverflow.com/questions/2893458/uncatchable-errors-in-node-js
     self.proc.stdin.on('error', function () {});
+
+    // When the parent process exits (i.e. the server is shutting down and
+    // not merely restarting), make sure to disconnect any still-connected
+    // shell clients.
+    require("./cleanup.js").onExit(function() {
+      require("./server/shell.js").unlinkSocketFile(self.appDir);
+    });
   },
 
   _maybeCallOnExit: function (code, signal) {
@@ -193,6 +202,8 @@ _.extend(AppProcess.prototype, {
     env.HTTP_FORWARDED_COUNT =
       "" + ((parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0) + 1);
 
+    env.ENABLE_METEOR_SHELL = 'true';
+
     return env;
   },
 
@@ -207,13 +218,14 @@ _.extend(AppProcess.prototype, {
     if (! self.program) {
       // Old-style bundle
       var opts = _.clone(self.nodeOptions);
+
       if (self.debugPort) {
         require("./inspector.js").start(self.debugPort);
         opts.push("--debug-brk=" + self.debugPort);
       }
-      opts.push(path.join(self.bundlePath, 'main.js'));
 
       opts.push(
+        path.join(self.bundlePath, 'main.js'),
         '--parent-pid',
         process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
       );
@@ -561,6 +573,7 @@ _.extend(AppRunner.prototype, {
     // Run the program
     options.beforeRun && options.beforeRun();
     var appProcess = new AppProcess({
+      appDir: self.appDir,
       bundlePath: bundlePath,
       port: self.port,
       listenHost: self.listenHost,
