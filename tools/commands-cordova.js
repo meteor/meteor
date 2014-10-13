@@ -980,9 +980,22 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
       // This is odd; the IP address is on the host, not inside the emulator
       emulatorOptions.env['http_proxy'] = '127.0.0.1:' + options.httpProxyPort;
     }
+
     execFileAsyncOrThrow(
-      localCordova, args,
-      emulatorOptions);
+      localCordova, args, emulatorOptions,
+      function(err, code) {
+        if (err && platform === "android" && isDevice) {
+          Console.stderr.write([
+            "",
+            chalk.green("Instructions for running your app on an Android device:"),
+            chalk.cyan("https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-Android-device"),
+            ""
+          ].join("\n"));
+
+          throw err;
+        }
+      }
+    );
   }
 
   var Log = getLoadedPackages().logging.Log;
