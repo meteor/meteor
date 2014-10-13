@@ -20,6 +20,7 @@ var tropohouse = require('./tropohouse.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
+var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
@@ -2426,9 +2427,12 @@ main.registerCommand({
 
   // Get a copy of the data.json.
   var dataTmpdir = files.mkdtemp();
-  var tmpDataJson = path.join(dataTmpdir, 'data.db');
+  var tmpDataFile = path.join(dataTmpdir, 'packages.data.db');
 
-  var tmpCatalog = new catalog.Remote({packageStorage : tmpDataJson});
+  var tmpCatalog = new catalogRemote.RemoteCatalog();
+  tmpCatalog.initialize({
+    packageStorage: tmpDataFile
+  });
   var savedData = packageClient.updateServerPackageData(tmpCatalog, null);
   if (!savedData) {
     // will have already printed an error
@@ -2439,16 +2443,12 @@ main.registerCommand({
   // so we should ensure that once it is downloaded, it knows it is recommended
   // rather than having a little identity crisis and thinking that a past
   // release is the latest recommended until it manages to sync.
-  var dataFromDisk = JSON.parse(fs.readFileSync(tmpDataJson));
-  var releaseInData = _.findWhere(dataFromDisk.collections.releaseVersions, {
-    track: parsed.package, version: parsed.constraint
-  });
-  if (!releaseInData) {
-    Console.error("Can't find release in data!");
-    return 3;
+  tmpCatalog.forceRecommendRelease(parsed.package, parsed.constraint);
+  tmpCatalog.closePermanently();
+  if (fs.existsSync(tmpDataFile + '-wal')) {
+    throw Error("Write-ahead log still exists for " + tmpDataFile
+                + " so the data file will be incomplete!");
   }
-  releaseInData.recommended = true;
-  files.writeFileAtomically(tmpDataJson, JSON.stringify(dataFromDisk, null, 2));
 
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
@@ -2486,8 +2486,11 @@ main.registerCommand({
       return 1;
     }
 
-    // Install the data.json file we synced earlier.
-    files.copyFile(tmpDataJson, config.getPackageStorage(tmpTropo));
+    // Install the sqlite DB file we synced earlier. We have previously
+    // confirmed that the "-wal" file (which could contain extra log entries
+    // that haven't been flushed to the main file yet) doesn't exist, so we
+    // don't have to copy it.
+    files.copyFile(tmpDataFile, config.getPackageStorage(tmpTropo));
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.

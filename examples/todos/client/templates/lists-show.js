@@ -34,10 +34,9 @@ Template.listsShow.helpers({
 var editList = function(list, template) {
   Session.set(EDITING_KEY, true);
   
-  // wait for the template to redraw based on the reactive change
-  Tracker.afterFlush(function() {
-    template.$('.js-edit-form input[type=text]').focus();
-  });
+  // force the template to redraw based on the reactive change
+  Tracker.flush();
+  template.$('.js-edit-form input[type=text]').focus();
 };
 
 var saveList = function(list, template) {

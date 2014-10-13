@@ -58,8 +58,9 @@ Template.appBody.helpers({
   cordova: function() {
     return Meteor.isCordova && 'cordova';
   },
-  email: function() {
-    return Meteor.user().emails[0].address;
+  emailLocalPart: function() {
+    var email = Meteor.user().emails[0].address;
+    return email.substring(0, email.indexOf('@'));
   },
   userMenuOpen: function() {
     return Session.get(USER_MENU_KEY);
