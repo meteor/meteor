@@ -31,9 +31,21 @@ Blaze.Template = function (viewName, renderFunction) {
   this.viewName = viewName;
   this.renderFunction = renderFunction;
 
+  this.__helpers = new HelperMap;
   this.__eventMaps = [];
 };
 var Template = Blaze.Template;
+
+var HelperMap = function () {};
+HelperMap.prototype.get = function (name) {
+  return this[' '+name];
+};
+HelperMap.prototype.set = function (name, helper) {
+  this[' '+name] = helper;
+};
+HelperMap.prototype.has = function (name) {
+  return (' '+name) in this;
+};
 
 /**
  * @summary Returns true if `value` is a template object like `Template.myTemplate`.
@@ -236,7 +248,7 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
  */
 Template.prototype.helpers = function (dict) {
   for (var k in dict)
-    this[k] = dict[k];
+    this.__helpers.set(k, dict[k]);
 };
 
 /**

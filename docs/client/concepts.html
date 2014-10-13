@@ -457,9 +457,11 @@ functions in JavaScript. Just add the helper functions directly on the
     {{lt}}/template>
 
     // in client/myapp.js: reactive helper function
-    Template.forecast.prediction = function () {
-      return Session.get("weather");
-    };
+    Template.forecast.helpers({
+      prediction: function () {
+        return Session.get("weather");
+      }
+    });
 
     // in the JavaScript console
     > Session.set("weather", "cloudy");
@@ -481,9 +483,11 @@ To iterate over an array or database cursor, use `{{dstache}}#each}}`:
     {{lt}}/template>
 
     // in myapp.js
-    Template.players.topScorers = function () {
-      return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
-    };
+    Template.players.helpers({
+      topScorers: function () {
+        return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
+      }
+    });
 
 In this case, the data is coming from a database query. When the
 database cursor is passed to `{{dstache}}#each}}`, it will wire up all of the
@@ -495,9 +499,11 @@ in `this`. Note that some block helpers change the current context (notably
 `{{dstache}}#each}}` and `{{dstache}}#with}}`):
 
     // in a JavaScript file
-    Template.players.leagueIs = function (league) {
-      return this.league === league;
-    };
+    Template.players.helpers({
+      leagueIs: function (league) {
+        return this.league === league;
+      }
+    });
 
     <!-- in a HTML file -->
     <template name="players">
@@ -514,7 +520,9 @@ in `this`. Note that some block helpers change the current context (notably
 Helpers can also be used to pass in constant data.
 
     // Works fine with {{dstache}}#each sections}}
-    Template.report.sections = ["Situation", "Complication", "Resolution"];
+    Template.report.helpers({
+      sections: ["Situation", "Complication", "Resolution"]
+    });
 
 Finally, you can use an `events` declaration on a template function to set up a
 table of event handlers. The format is documented at [Event
@@ -784,9 +792,10 @@ things). However, we will still write the new versions.json file.
 
 Meteor uses extended semver versioning for its packages: that means that the version
 number has three parts separated by dots: major version, minor version and patch version
-(for example: 1.2.3) with an optional pre-release version. You can read more about it here
-(www.semver.org). Additionally, because some meteor packages wrap external libraries,
-Meteor supports the convention of using _ to denote a wrap number.
+(for example: 1.2.3) with an optional pre-release version. You can read more about it on
+[semver.org](http://www.semver.org).
+Additionally, because some meteor packages wrap external libraries,
+Meteor supports the convention of using `_` to denote a wrap number.
 
 You can read more about [`package.js`](#packagejs) files in the API
 section.

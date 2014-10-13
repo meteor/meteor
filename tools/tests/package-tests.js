@@ -7,6 +7,7 @@ var _= require('underscore');
 var fs = require("fs");
 var path = require("path");
 var packageClient = require("../package-client.js");
+var buildmessage = require("../buildmessage.js");
 
 var username = "test";
 var password = "testtest";
@@ -83,6 +84,74 @@ var checkVersions = function(sand, packages) {
   });
   selftest.expectEqual(packages.length, i);
 };
+
+// Takes in a remote catalog. Returns an object that can sort of immitate the
+// catalog. We don't bother to copy all of the information for memory/efficiency
+// reasons; the new 'catalog' has the following methods, which correspond to the
+// same methods on the normal catalog.
+//
+//  getAllPackageNames () - list of package names
+//  getPackage (p) - given a package name, return its record
+//  getSortedVersions (p) - given a package name, return a sorted list of its versions
+//  getAllReleaseTracks () - list of release tracks
+//  getSortedRecommendedReleaseVersions (t) - given a track name, get (see method name)
+//  getReleaseVersion (t, v) - given track & version, return the document record
+var DataStub = function (remoteCatalog) {
+  var self = this;
+  selftest.doOrThrow(function () {
+    var packageNames = remoteCatalog.getAllPackageNames();
+    self.packages = {};
+    _.each(packageNames, function (p) {
+      var versions = remoteCatalog.getSortedVersions(p);
+      var record = remoteCatalog.getPackage(p);
+      self.packages[p] = { versions: versions, record: record };
+    });
+    var releaseTracks = remoteCatalog.getAllReleaseTracks();
+    self.releases = {};
+    _.each(releaseTracks, function (t) {
+      var versions =
+            remoteCatalog.getSortedRecommendedReleaseVersions(t);
+      var records = {};
+      _.each(versions, function (v) {
+        records[v] = remoteCatalog.getReleaseVersion(t, v);
+      });
+      self.releases[t] = { versions: versions, records: records };
+    });
+  });
+};
+
+_.extend(DataStub.prototype, {
+  getAllPackageNames: function () {
+    return _.keys(this.packages);
+  },
+  getSortedVersions: function (p) {
+    var self = this;
+    var rec = self.packages[p];
+    if (!rec) return null;
+    return rec.versions;
+  },
+  getPackage: function (p) {
+    var self = this;
+    var rec = self.packages[p];
+    if (!rec) return null;
+    return rec.record;
+  },
+  getAllReleaseTracks: function () {
+    return _.keys(this.releases);
+  },
+  getSortedRecommendedReleaseVersions: function (t) {
+    var self = this;
+    var rec = self.releases[t];
+    if (!rec) return null;
+    return rec.versions;
+  },
+  getReleaseVersion: function (t, v) {
+    var self = this;
+    var rec = self.releases[t];
+    if (!rec) return null;
+    return rec.records[v];
+  }
+});
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
@@ -192,8 +261,9 @@ selftest.define("change packages during hot code push", [], function () {
   run.stop();
 });
 
-// Add packages through the command line, and make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list
+// Add packages through the command line. Make sure that the correct set of
+// changes is reflected in .meteor/packages, .meteor/versions and list. Make
+// sure that debugOnly packages don't show up in production mode.
 selftest.define("add packages to app", ["net"], function () {
   var s = new Sandbox();
   var run;
@@ -203,6 +273,13 @@ selftest.define("add packages to app", ["net"], function () {
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
+
+  // This is a legit version, but accounts-base started with 1.0.0 and is
+  // unlikely to backtrack.
+  run = s.run("add", "accounts-base@0.123.123");
+  run.matchErr("no such version");
+  run.expectExit(1);
+
 
   run = s.run("add", "accounts-base");
 
@@ -275,6 +352,24 @@ selftest.define("add packages to app", ["net"], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
+
+  // Add a debugOnly package. It should work during a normal run, but print
+  // nothing in production mode.
+  run = s.run("add", "debug-only");
+  run.match("debug-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/debug.js",
+          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(234);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(235);
 });
 
 // Add a package that adds files to specific client architectures.
@@ -335,7 +430,7 @@ var publishMostBasicPackage = function (s, fullPackageName) {
 
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(15);
+    run.waitSecs(60);
     run.expectExit(0);
     run.match("Done");
   });
@@ -456,7 +551,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
 // name>), and the sandbox should be logged in as that username.
 var createAndPublishPackage = function (s, packageName) {
   var run = s.run("create", "--package", packageName);
-  run.waitSecs(10);
+  run.waitSecs(20);
   run.expectExit(0);
   s.cd(packageName, function (){
     run = s.run("publish", "--create");
@@ -467,6 +562,7 @@ var createAndPublishPackage = function (s, packageName) {
 
 selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {
+
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
@@ -503,85 +599,89 @@ selftest.define("release track defaults to METEOR",
 // THIS TEST RELIES ON THE TEST SERVER HAVING THE SAME RELEASE AS THE PRODUCTION
 // SERVER. YOU *CAN* RUN IT FROM RELEASE IFF YOU PUBLISH A CORRESPONDING RELEASE
 // TO THE TEST SERVER. (XXX: fix this post-0.9.0)
+//
+// XXX: This test is going to take progressively more time as we run more
+// tests, and perhaps checks too much information. We should consider
+// rethinking it in the future.
 selftest.define("update server package data unit test",
-                ["net", "test-package-server", "checkout"], function () {
-  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
-  var packageStorageFile = path.join(packageStorageFileDir, "data.json");
-
+                ["net", "test-package-server", "checkout", "slow"],
+                function () {
   var s = new Sandbox();
   var run;
 
+  var packageStorageFileDir = files.mkdtemp("update-server-package-data");
+
+  var rC = require('../catalog-remote.js');
+  var config = require('../config.js');
+  var packageStorage = new rC.RemoteCatalog();
+  var packageStorageFile =
+    config.getPackageStorage({root: packageStorageFileDir});
+  packageStorage.initialize({
+    packageStorage : packageStorageFile,
+    // Don't let this catalog refresh: we do that manually, and in any case the
+    // catalog isn't smart enough to refresh with the right URL.
+    offline: true
+  });
   testUtils.login(s, username, password);
 
   // Get the current data from the server. Once we publish new packages,
   // we'll check that all this data still appears on disk and hasn't
   // been overwritten.
-  var data = packageClient.updateServerPackageData({ syncToken: {} }, {
-    packageStorageFile: packageStorageFile,
+  packageClient.updateServerPackageData(packageStorage, {
     packageServerUrl: selftest.testPackageServerUrl
-  }).data;
+  });
 
-  var packageNames = [];
+  var oldStorage = new DataStub(packageStorage);
 
+  var newPackageNames = [];
   // Publish more than a (small) page worth of packages. When we pass the
   // `useShortPages` option to updateServerPackageData, the server will send 3
   // records at a time instead of 100, so this is more than a page.
   _.times(5, function (i) {
     var packageName = username + ":" + utils.randomToken();
     createAndPublishPackage(s, packageName);
-    packageNames.push(packageName);
+    newPackageNames.push(packageName);
   });
 
-  var newData = packageClient.updateServerPackageData(data, {
-    packageStorageFile: packageStorageFile,
+  packageClient.updateServerPackageData(packageStorage, {
     packageServerUrl: selftest.testPackageServerUrl,
     useShortPages: true
-  }).data;
-  var newOnDiskData = packageClient.loadCachedServerData(packageStorageFile);
-
-  // Check that we didn't lose any data.
-  _.each(data.collections, function (collectionData, name) {
-    _.each(collectionData, function (record, i) {
-      selftest.expectEqual(newData.collections[name][i], record);
-
-      var onDisk = newOnDiskData.collections[name][i];
-
-      // XXX Probably because we're using JSON.parse/stringify instead
-      // of EJSON to serialize/deserialize to disk, we can't compare
-      // records with date fields using `selftest.expectEqual`.
-      _.each(
-        ["lastUpdated", "published", "buildPublished"],
-        function (dateFieldName) {
-          if (record[dateFieldName]) {
-            selftest.expectEqual(new Date(onDisk[dateFieldName]),
-                                 new Date(record[dateFieldName]));
-          } else {
-            selftest.expectEqual(onDisk[dateFieldName], record[dateFieldName]);
-          }
-
-          delete onDisk[dateFieldName];
-          delete record[dateFieldName];
-        }
-      );
-
-      selftest.expectEqual(onDisk, record);
-    });
   });
 
-  // Check that our newly published packages appear in newData and on disk.
-  _.each(packageNames, function (name) {
-    var found = _.findWhere(newData.collections.packages, { name: name });
-    selftest.expectEqual(!! found, true);
-    var foundOnDisk = _.findWhere(newOnDiskData.collections.packages,
-                                  { name: name });
-    selftest.expectEqual(!! foundOnDisk, true);
+  selftest.doOrThrow(function () {
+    var packages = oldStorage.getAllPackageNames();
+    _.each(packages, function (p) {
+      // We could be more pedantic about comparing all the records, but it
+      // is a significant effort, time-wise to do that.
+      selftest.expectEqual(
+        packageStorage.getPackage(p), oldStorage.getPackage(p));
+      selftest.expectEqual(
+        packageStorage.getSortedVersions(p),
+        oldStorage.getSortedVersions(p));
+    });
+    var releaseTracks = oldStorage.getAllReleaseTracks;
+    _.each(releaseTracks, function (t) {
+      _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
+             function (v) {
+               selftest.expectEqual(
+                 packageStorage.getReleaseVersion(t, v),
+                 oldStorage.getReleaseVersion(t, v));
+             });
+    });
+
+    // Check that our newly published packages appear in newData and on disk.
+    _.each(newPackageNames, function (name) {
+      var found = packageStorage.getPackage(name);
+      selftest.expectEqual(!! found, true);
+    });
   });
 });
 
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("package with --name", ['test-package-server'], function () {
+selftest.define("package with --name",
+    ['test-package-server', "checkout"], function () {
   var s = new Sandbox();
   var run;
 
@@ -626,7 +726,8 @@ selftest.define("package with --name", ['test-package-server'], function () {
   run.stop();
 });
 
-selftest.define("talk to package server with expired or no accounts token", ['net', 'test-package-server'], function () {
+selftest.define("talk to package server with expired or no accounts token",
+  ['net', 'test-package-server'], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
@@ -679,14 +780,18 @@ selftest.define("talk to package server with expired or no accounts token", ['ne
 var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   var packageJs = s.read("package.js");
   // XXX Hack
-  var version = packageJs.match(/version: \"(\d\.\d\.\d)\"/)[1];
+  var versionMatch = packageJs.match(/version: \'(\d\.\d\.\d)\'/);
+  if (! versionMatch) {
+    selftest.fail("package.js does not match version field: " + packageJs);
+  }
+  var version = versionMatch[1];
   var versionParts = version.split(".");
   versionParts[0] = parseInt(versionParts[0]) + 1;
   packageJs = packageJs.replace(version, versionParts.join("."));
   s.write("package.js", packageJs);
 
   var run = s.run("publish");
-  run.waitSecs(30);
+  run.waitSecs(60);
   if (expectAuthorizationFailure) {
     run.matchErr("not an authorized maintainer");
     // XXX Why is this 3? Other unauthorized errors (e.g. maintainers
@@ -698,7 +803,8 @@ var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   }
 };
 
-selftest.define("packages with organizations", ["net", "test-package-server"], function () {
+selftest.define("packages with organizations",
+    ["net", "test-package-server"], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 

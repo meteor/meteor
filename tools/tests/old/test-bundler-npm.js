@@ -185,6 +185,10 @@ var looksInstalled = function (nodeModulesDir, name) {
 ///
 
 var runTest = function () {
+   // As preparation, we need to initialize the official catalog, which serves
+   // as our sql data store.
+   catalog.official.initialize();
+
   // XXX this is a huge nasty hack. see release.js,
   // #HandlePackageDirsDifferently
   console.log("app that uses gcd - clean run");
@@ -245,7 +249,6 @@ var runTest = function () {
     _assertCorrectPackageNpmDir({gcd: '0.0.0'});
     _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
   });
-
 
   console.log("app that uses gcd - add mime and semver");
   assert.doesNotThrow(function () {
@@ -323,7 +326,6 @@ var runTest = function () {
     _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7'});
   });
 
-
   console.log("app that uses gcd - install gzippo via tarball");
   assert.doesNotThrow(function () {
     var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
@@ -374,6 +376,7 @@ var runTest = function () {
           var env = _.clone(process.env);
           env.PACKAGE_DIRS = tmpPackageDirContainer;
 
+          // XXX: Calling this causes an SQLITE_BUSY error!
           var result = meteorNpm._execFileSync(
             process.env.METEOR_TOOL_PATH,
             ["bundle", path.join(tmpDirToPutBundleTarball, "bundle.tar.gz")],
@@ -396,6 +399,7 @@ var runTest = function () {
 
     Future.wait(futures);
   });
+
 };
 
 

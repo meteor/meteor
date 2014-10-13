@@ -193,7 +193,17 @@ var stripLeadingSlash = function (p) {
 
 // Contents of main.js in bundles. Exported for use by the bundler
 // tests.
-exports._mainJsContents = "process.argv.splice(2, 0, 'program.json');\nprocess.chdir(require('path').join(__dirname, 'programs', 'server'));\nrequire('./programs/server/boot.js');\n";
+exports._mainJsContents = [
+  "",
+  "// The debugger pauses here when you run `meteor debug`, because this is ",
+  "// the very first code to be executed by the server process. If you have ",
+  "// not already added any `debugger` statements to your code, feel free to ",
+  "// do so now, wait for the server to restart, then reload this page and ",
+  "// click the |\u25b6 button to continue.",
+  "process.argv.splice(2, 0, 'program.json');",
+  "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
+  "require('./programs/server/boot.js');",
+].join("\n");
 
 ///////////////////////////////////////////////////////////////////////////////
 // NodeModulesDirectory
@@ -236,6 +246,8 @@ var File = function (options) {
   // disk).
   self.sourcePath = options.sourcePath;
 
+  self.info = options.info || '?';
+
   // If this file was generated, a sourceMap (as a string) with debugging
   // information, as well as the "root" that paths in it should be resolved
   // against. Set with setSourceMap.
@@ -270,6 +282,11 @@ var File = function (options) {
 };
 
 _.extend(File.prototype, {
+  toString: function() {
+    var self = this;
+    return "File: [info=" + self.info + "]";
+  },
+
   hash: function () {
     var self = this;
     if (! self._hash)
@@ -430,6 +447,15 @@ var Target = function (options) {
 
   // A mapping from Cordova plugin name to Cordova plugin version number.
   self.cordovaDependencies = {};
+
+  // For the todos sample app:
+  // false: 99.6 KB / 316 KB
+  // vs
+  // true: 99 KB / 315 KB
+
+  // METEOR_MINIFY_LEGACY is an undocumented safety-valve environment variable,
+  //  in case people hit trouble
+  self._minifyTogether = !!process.env.METEOR_MINIFY_LEGACY;
 };
 
 _.extend(Target.prototype, {
@@ -440,7 +466,7 @@ _.extend(Target.prototype, {
   // target-type-dependent function such as write() or toJsImage().
   //
   // options
-  // - packages: packages to include (Unipackage or 'foo'), per
+  // - packages: packages to include (Isopack or 'foo'), per
   //   _determineLoadOrder
   // - minify: true to minify
   // - addCacheBusters: if true, make all files cacheable by adding
@@ -488,11 +514,11 @@ _.extend(Target.prototype, {
   // them, put them in load order, save in unibuilds.
   //
   // (Note: this is also called directly by
-  // bundler.iterateOverAllUsedUnipackages, kinda hackily.)
+  // bundler.iterateOverAllUsedIsopacks, kinda hackily.)
   //
   // options include:
   // - packages: an array of packages (or, properly speaking, unibuilds)
-  //   to include. Each element should either be a Unipackage object or a
+  //   to include. Each element should either be a Isopack object or a
   //   package name as a string
   _determineLoadOrder: function (options) {
     var self = this;
@@ -501,14 +527,16 @@ _.extend(Target.prototype, {
     var packageLoader = self.packageLoader;
 
     // Find the roots
-    var rootUnibuilds =
-        _.map(options.packages || [], function (p) {
-          if (typeof p === "string") {
-            return packageLoader.getUnibuild(p, self.arch);
-          } else {
-            return p.getUnibuildAtArch(self.arch);
-          }
-        });
+    var rootUnibuilds = [];
+    _.each(options.packages, function (p) {
+      if (typeof p === "string") {
+        p = packageLoader.getPackage(p, { throwOnError: true });
+      }
+      if (p.debugOnly && !project.project.includeDebug) {
+        return;
+      }
+      rootUnibuilds.push(p.getUnibuildAtArch(self.arch));
+    });
 
     // PHASE 1: Which unibuilds will be used?
     //
@@ -526,7 +554,9 @@ _.extend(Target.prototype, {
       usedUnibuilds[unibuild.id] = unibuild;
       usedPackages[unibuild.pkg.name] = true;
       compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader, addToGetsUsed);
+        unibuild.uses, self.arch, packageLoader, {
+          skipDebugOnly: !project.project.includeDebug
+        }, addToGetsUsed);
     };
     _.each(rootUnibuilds, addToGetsUsed);
 
@@ -564,7 +594,10 @@ _.extend(Target.prototype, {
       // SOMETHING uses strongly).
       compiler.eachUsedUnibuild(
         unibuild.uses, self.arch, packageLoader,
-        { skipUnordered: true, acceptableWeakPackages: usedPackages},
+        { skipUnordered: true,
+          acceptableWeakPackages: usedPackages,
+          skipDebugOnly: !project.project.includeDebug
+        },
         function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
             buildmessage.error("circular dependency between packages " +
@@ -625,6 +658,7 @@ _.extend(Target.prototype, {
           return;
 
         var f = new File({
+          info: 'unbuild ' + resource,
           data: resource.data,
           cacheable: false,
           hash: resource.hash
@@ -659,7 +693,7 @@ _.extend(Target.prototype, {
             // meteor.js?
             return;
 
-          var f = new File({data: resource.data, cacheable: false});
+          var f = new File({ info: 'resource ' + resource.servePath, data: resource.data, cacheable: false});
 
           var relPath = stripLeadingSlash(resource.servePath);
           f.setTargetPathFromRelPath(relPath);
@@ -726,16 +760,32 @@ _.extend(Target.prototype, {
   minifyJs: function (minifiers) {
     var self = this;
 
-    var allJs = _.map(self.js, function (file) {
-      return file.contents('utf8');
-    }).join('\n;\n');
+    var allJs;
 
-    allJs = minifiers.UglifyJSMinify(allJs, {
+    var minifyOptions = {
       fromString: true,
-      compress: {drop_debugger: false}
-    }).code;
+      compress: {drop_debugger: false }
+    };
 
-    self.js = [new File({ data: new Buffer(allJs, 'utf8') })];
+    if (self._minifyTogether) {
+      var sources = _.map(self.js, function (file) {
+        return file.contents('utf8');
+      });
+
+      buildmessage.enterJob({title: "Minifying"}, function () {
+        allJs = _minify(minifiers.UglifyJS, '', sources, minifyOptions).code;
+      });
+    } else {
+      minifyOptions.compress.unused = false;
+      minifyOptions.compress.dead_code = false;
+
+      allJs = buildmessage.forkJoin({title: "Minifying" }, self.js, function (file) {
+        var source = file.contents('utf8');
+        return _minify(minifiers.UglifyJS, file.info, source, minifyOptions).code;
+      }).join("\n\n");
+    }
+
+    self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
   },
 
@@ -770,6 +820,127 @@ _.extend(Target.prototype, {
     return archinfo.leastSpecificDescription(_.pluck(self.unibuilds, 'arch'));
   }
 });
+
+// This code should mirror the minify function in UglifyJs2,
+_minify = function(UglifyJS, key, files, options) {
+  options = UglifyJS.defaults(options, {
+    spidermonkey : false,
+    outSourceMap : null,
+    sourceRoot   : null,
+    inSourceMap  : null,
+    fromString   : false,
+    warnings     : false,
+    mangle       : {},
+    output       : null,
+    compress     : {}
+  });
+  UglifyJS.base54.reset();
+
+  var totalFileSize = 0;
+  _.forEach(files, function (file) {
+    totalFileSize += file.length;
+  });
+
+  var phases = 2;
+  if (options.compress) phases++;
+  if (options.mangle) phases++;
+  if (options.output) phases++;
+
+  var progress = {current: 0, end: totalFileSize * phases, done: false};
+  var progressTracker = buildmessage.getCurrentProgressTracker();
+
+  // 1. parse
+  var toplevel = null,
+    sourcesContent = {};
+
+  if (options.spidermonkey) {
+    toplevel = UglifyJS.AST_Node.from_mozilla_ast(files);
+  } else {
+    if (typeof files == "string")
+      files = [ files ];
+    buildmessage.forkJoin({title: 'Minifying: parsing ' + key}, files, function (file) {
+      var code = options.fromString
+        ? file
+        : fs.readFileSync(file, "utf8");
+      sourcesContent[file] = code;
+      toplevel = UglifyJS.parse(code, {
+        filename: options.fromString ? "?" : file,
+        toplevel: toplevel
+      });
+
+      progress.current += code.length;
+      progressTracker.reportProgress(progress);
+    });
+  }
+
+  // 2. compress
+  var compress;
+  if (options.compress) buildmessage.enterJob({title: "Minify: compress 1 " + key}, function () {
+    compress = { warnings: options.warnings };
+    UglifyJS.merge(compress, options.compress);
+    toplevel.figure_out_scope();
+  });
+  if (options.compress) buildmessage.enterJob({title: "Minify: compress 2 " + key}, function () {
+    var sq = UglifyJS.Compressor(compress);
+    toplevel = toplevel.transform(sq);
+
+    progress.current += totalFileSize;
+    progressTracker.reportProgress(progress);
+  });
+
+  // 3. mangle
+  if (options.mangle) buildmessage.enterJob({title: "Minify: mangling " + key}, function () {
+    toplevel.figure_out_scope();
+    toplevel.compute_char_frequency();
+    toplevel.mangle_names(options.mangle);
+
+    progress.current += totalFileSize;
+    progressTracker.reportProgress(progress);
+  });
+
+  // 4. output
+  var inMap = options.inSourceMap;
+  var output = {};
+  if (typeof options.inSourceMap == "string") {
+    inMap = fs.readFileSync(options.inSourceMap, "utf8");
+  }
+  if (options.outSourceMap) {
+    output.source_map = UglifyJS.SourceMap({
+      file: options.outSourceMap,
+      orig: inMap,
+      root: options.sourceRoot
+    });
+    if (options.sourceMapIncludeSources) {
+      for (var file in sourcesContent) {
+        if (sourcesContent.hasOwnProperty(file)) {
+          options.source_map.get().setSourceContent(file, sourcesContent[file]);
+        }
+      }
+    }
+  }
+  if (options.output) buildmessage.enterJob({title: "Minify: merging " + key}, function () {
+    UglifyJS.merge(output, options.output);
+
+    progress.current += totalFileSize;
+    progressTracker.reportProgress(progress);
+  });
+
+
+  var stream;
+  buildmessage.enterJob({title: "Minify: printing " + key}, function () {
+    stream = UglifyJS.OutputStream(output);
+    toplevel.print(stream);
+
+    progress.current += totalFileSize;
+    progressTracker.reportProgress(progress);
+  });
+
+  return {
+    code : stream + "",
+    map  : output.source_map + ""
+  };
+};
+
 
 
 //////////////////// ClientTarget ////////////////////
@@ -842,7 +1013,7 @@ _.extend(ClientTarget.prototype, {
     if (! stringifiedCss.code)
       return;
 
-    self.css = [new File({ data: new Buffer(stringifiedCss.code, 'utf8') })];
+    self.css = [new File({ info: 'combined css', data: new Buffer(stringifiedCss.code, 'utf8') })];
 
     // Add the contents of the input files to the source map of the new file
     stringifiedCss.map.sourcesContent =
@@ -890,7 +1061,7 @@ _.extend(ClientTarget.prototype, {
       minifiedCss = minifiers.CssTools.minifyCss(allCss);
     }
     if (!! minifiedCss) {
-      self.css = [new File({ data: new Buffer(minifiedCss, 'utf8') })];
+      self.css = [new File({ info: 'minified css', data: new Buffer(minifiedCss, 'utf8') })];
       self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
     }
   },
@@ -1023,7 +1194,7 @@ var JsImage = function () {
 _.extend(JsImage.prototype, {
   // Load the image into the current process. It gets its own unique
   // Package object containing its own private copy of every
-  // unipackage that it uses. This Package object is returned.
+  // isopack that it uses. This Package object is returned.
   //
   // If `bindings` is provided, it is a object containing a set of
   // variables to set in the global environment of the executed
@@ -1217,6 +1388,12 @@ _.extend(JsImage.prototype, {
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
 
+        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        // Remove any existing sourceMappingURL line. (eg, if roundtripping
+        // through JsImage.readFromDisk, don't end up with two!)
+        item.source = item.source.replace(
+            /\n\/\/# sourceMappingURL=.+\n?$/g, '');
+        item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
@@ -1314,7 +1491,7 @@ JsImage.readFromDisk = function (controlFilePath) {
     };
 
     if (item.sourceMap) {
-      // XXX this is the same code as unipackage.initFromPath
+      // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
       loadItem.sourceMap = fs.readFileSync(
         path.join(dir, item.sourceMap), 'utf8');
@@ -1671,9 +1848,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
- * - watchSet: Information about files and paths that were
+ * - serverWatchSet: Information about server files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
  *   changes when developing interactively, as a watch.WatchSet.
+ * - clientWatchSet: Like 'serverWatchSet', but for client files
+ * - starManifest: The manifest of the outputted star
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed).
@@ -1714,7 +1893,7 @@ exports.bundle = function (options) {
   var targets = {};
 
   var messages = buildmessage.capture({
-    title: "building the application"
+    title: "Building the application"
   }, function () {
     if (! release.usingRightReleaseForApp(appDir))
       throw new Error("running wrong release for app?");
@@ -1788,10 +1967,10 @@ exports.bundle = function (options) {
       serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
 
     if (includeDefaultTargets) {
-      // Create a Unipackage object that represents the app
+      // Create a Isopack object that represents the app
       var packageSource = new PackageSource(whichCatalog);
       packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource).unipackage;
+      var app = compiler.compile(packageSource).isopack;
 
       var clientTargets = [];
       // Client
@@ -2072,20 +2251,20 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var unipackage = compiler.compile(packageSource, {
+  var isopack = compiler.compile(packageSource, {
     ignoreProjectDeps: options.ignoreProjectDeps
-  }).unipackage;
+  }).isopack;
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only
-    // used to build plugins (during package build) and for unipackage.load
+    // used to build plugins (during package build) and for isopack.load
     // (which always wants to build for the current host).
     arch: archinfo.host()
   });
-  target.make({ packages: [unipackage] });
+  target.make({ packages: [isopack] });
 
   return {
     image: target.toJsImage(),
@@ -2101,11 +2280,11 @@ exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
 };
 
-// Given an array of unipackage names, invokes the callback with each
-// corresponding Unipackage object, plus all of their transitive dependencies,
+// Given an array of isopack names, invokes the callback with each
+// corresponding Isopack object, plus all of their transitive dependencies,
 // with a topological sort.
-exports.iterateOverAllUsedUnipackages = function (loader, arch,
-                                                  packageNames, callback) {
+exports.iterateOverAllUsedIsopacks =
+  function (loader, arch, packageNames, callback) {
   buildmessage.assertInCapture();
   var target = new Target({packageLoader: loader,
                            arch: arch});

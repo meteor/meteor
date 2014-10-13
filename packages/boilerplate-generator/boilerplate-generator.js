@@ -1,10 +1,9 @@
 var fs = Npm.require('fs');
-var Future = Npm.require('fibers/future');
 var path = Npm.require('path');
 
 // Copied from webapp_server
 var readUtf8FileSync = function (filename) {
-  return Future.wrap(fs.readFile)(filename, 'utf8').wait();
+  return Meteor.wrapAsync(fs.readFile)(filename, 'utf8');
 };
 
 Boilerplate = function (arch, manifest, options) {

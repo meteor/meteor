@@ -238,7 +238,7 @@ a `pong` message. If the received `ping` message includes an `id` field, the
 Errors appear in `result` and `nosub` messages in an optional error field. An
 error is an Object with the following fields:
 
- * `error`: number
+ * `error`: string (previously a number. See appendix 3)
  * `reason`: optional string
  * `details`: optional string
 
@@ -334,12 +334,25 @@ behaves differently to the server, then syncing will fix this.
 generated will be the same, and syncing will be a no-op.
 
 
+## Appendix 3: Error message `error` field can be a string or a number
+
+In the `pre1` and `pre2` specifications for DDP, the `error` field on error
+messages was documented as a number, and in practice often matched the closest
+HTTP error code.
+
+It is typically better to be specific about the type of error being returned, so
+new code should use strings like `'wrong-password'` instead of `401`. To support
+both the new string error codes and the old number codes, a DDP client should
+accept a string or a number in this field. Many meteor packages, including some
+core packages, still use the old numeric codes.
+
+
 ## Version History
 
-```pre1``` was the first version of DDP
+`pre1` was the first version of DDP
 
-```pre2``` added keep-alive (ping & pong messages), and randomSeed.
+`pre2` added keep-alive (ping & pong messages), and randomSeed.
 
-```1``` should be considered the first official version of DDP.  It is
-currently identical to pre2, although non-incompatible changes may be made to
-it in future.
+`1` should be considered the first official version of DDP. The type of the
+error code field has been clarified to reflect the behavior of existing clients
+and servers.

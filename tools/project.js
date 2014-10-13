@@ -78,8 +78,8 @@ var Project = function () {
   // XXX Ignores the transitive dependencies.
   self.cordovaPlugins = null;
 
-  // Platfroms & versions used by the Cordova project.
-  self.cordovaPlatforms = null;
+  // Platforms for this project.
+  self.platforms = null;
 
   // The package loader for this project, with the project's dependencies as its
   // version file. (See package-loader.js for more information about package
@@ -106,9 +106,19 @@ var Project = function () {
   // to tell the user that we are adding packages to an app during
   // test-packages.  (We still print other messages like packages downloading.)
   self.muted = false;
+
+  // If we are building this app in debug mode -- either because we are bundling
+  // for debug, or because we are running in terminal without the production
+  // flag, then we should include debug packages and build everything that we
+  // build as part of the app with debug build. Otherwise, don't.
+  self.includeDebug = true;
 };
 
 _.extend(Project.prototype, {
+  setDebug: function (debug) {
+    var self = this;
+    self.includeDebug = debug;
+  },
 
   // Sets the mute flag on the project. Muted projects don't print out non-error
   // output.
@@ -148,8 +158,7 @@ _.extend(Project.prototype, {
     self.cordovaPlugins = processPerConstraintLines(
       files.getLinesOrEmpty(self._getCordovaPluginsFile()));
 
-    self.cordovaPlatforms =
-      files.getLinesOrEmpty(self._getCordovaPlatformsFile());
+    self.ensurePlatforms();
 
     // Lastly, invalidate everything that we have computed -- obviously the
     // dependencies that we counted with the previous rootPath are wrong and we
@@ -161,9 +170,9 @@ _.extend(Project.prototype, {
     self.viableDepSource = true;
   },
 
-  // Rereads all the on-disk files by reinitalizing the project with the same directory.
-  // Caches the old versions, in case we were running with --release (and they don't
-  // match the ones on disk).
+  // Rereads all the on-disk files by reinitalizing the project with the same
+  // directory.  Caches the old versions, in case we were running with --release
+  // (and they don't match the ones on disk).
   //
   // We don't automatically reinitialize this singleton when an app is
   // restarted, but an app restart is very likely caused by changes to our
@@ -198,9 +207,9 @@ _.extend(Project.prototype, {
 
     if (!self._depsUpToDate) {
 
-      // We are calculating this project's dependencies, so we obviously should not
-      // use it as a source of version locks (unless specified explicitly through
-      // previousVersions).
+      // We are calculating this project's dependencies, so we obviously should
+      // not use it as a source of version locks (unless specified explicitly
+      // through previousVersions).
       self.viableDepSource = false;
 
       // Use current release to calculate packages & combined constraints.
@@ -290,11 +299,11 @@ _.extend(Project.prototype, {
 
       var programSubdir = path.join(self.getProgramsDirectory(), item);
       buildmessage.enterJob({
-        title: "initializing program `" + programName + "`",
+        title: "Initializing program `" + programName + "`",
         rootPath: self.rootDir
       }, function () {
         var packageSource;
-        // For now, if it turns into a unipackage, it should have a version.
+        // For now, if it turns into a isopack, it should have a version.
         var programSource = new PackageSource(catalog.complete);
         programSource.initFromPackageDir(programSubdir);
         _.each(programSource.architectures, function (sourceUnibuild) {
@@ -555,9 +564,21 @@ _.extend(Project.prototype, {
     return _.clone(self.cordovaPlugins);
   },
 
+  getPlatforms: function () {
+    var self = this;
+    return _.clone(self.platforms);
+  },
+
+  getDefaultPlatforms: function () {
+    // these platforms are always present and can be neither added or removed
+    var defaultPlatforms = ["server", "browser"];
+
+    return defaultPlatforms;
+  },
+
   getCordovaPlatforms: function () {
     var self = this;
-    return _.clone(self.cordovaPlatforms);
+    return _.difference(self.getPlatforms(), self.getDefaultPlatforms());
   },
 
   // Returns the set of web archs that are targeted by the project
@@ -577,11 +598,29 @@ _.extend(Project.prototype, {
     return path.join(self.rootDir, '.meteor', 'cordova-plugins');
   },
 
-  // Returns the file path to the .meteor/cordova-platforms file, containing the
-  // targetted Cordova platforms for this specific project.
-  _getCordovaPlatformsFile: function () {
+  // Returns the file path to the .meteor/platforms file, containing the
+  // platforms for this specific project.
+  _getPlatformsFile: function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'cordova-platforms');
+    return path.join(self.rootDir, '.meteor', 'platforms');
+  },
+
+  ensurePlatforms: function () {
+    var self = this;
+
+    var lines = files.getLinesOrEmpty(self._getPlatformsFile());
+    self.platforms = _.compact(_.map(lines, files.trimLine));
+
+    if (! self.platforms) {
+      self.platforms = self.getDefaultPlatforms();
+      self.writePlatformsFile();
+    }
+  },
+
+  writePlatformsFile: function () {
+    var self = this;
+    fs.writeFileSync(self._getPlatformsFile(),
+      self.platforms.join("\n") + "\n", 'utf8');
   },
 
   // Give the package loader attached to this project to the caller.
@@ -954,9 +993,12 @@ _.extend(Project.prototype, {
 
   // Removes the plugins from the cordova-plugins file if they existed.
   // pluginsToRemove - array of Cordova plugin identifiers
+  //
+  // Returns an array of plugin identifiers that were actually removed.
   removeCordovaPlugins: function (pluginsToRemove) {
     var self = this;
 
+    var removed = _.intersection(_.keys(self.cordovaPlugins), pluginsToRemove);
     self.cordovaPlugins =
       _.omit.apply(null, [self.cordovaPlugins].concat(pluginsToRemove));
 
@@ -971,22 +1013,22 @@ _.extend(Project.prototype, {
     });
     lines.push('\n');
     fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
+
+    return removed;
   },
 
   // platforms - a list of strings
   addCordovaPlatforms: function (platforms) {
     var self = this;
-    self.cordovaPlatforms = _.uniq(platforms.concat(self.cordovaPlatforms));
-    fs.writeFileSync(self._getCordovaPlatformsFile(),
-                     self.cordovaPlatforms.join('\n'), 'utf8');
+    self.platforms = _.union(self.platforms, platforms);
+    self.writePlatformsFile();
   },
 
   // platforms - a list of strings
   removeCordovaPlatforms: function (platforms) {
     var self = this;
-    self.cordovaPlatforms = _.difference(self.cordovaPlatforms, platforms);
-    fs.writeFileSync(self._getCordovaPlatformsFile(),
-                     self.cordovaPlatforms.join('\n'), 'utf8');
+    self.platforms = _.difference(self.platforms, platforms);
+    self.writePlatformsFile();
   }
 });
 

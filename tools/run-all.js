@@ -1,9 +1,14 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
+
 var files = require('./files.js');
 var release = require('./release.js');
-
+var buildmessage = require('./buildmessage.js');
+var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');
+
+var Console = require('./console.js').Console;
+
 var Proxy = require('./run-proxy.js').Proxy;
 var Selenium = require('./run-selenium.js').Selenium;
 var HttpProxy = require('./run-httpproxy.js').HttpProxy;
@@ -13,7 +18,7 @@ var Updater = require('./run-updater.js').Updater;
 
 // options: proxyPort, proxyHost, appPort, appHost, buildOptions,
 // settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
-// quiet, rootUrl, mongoUrl, oplogUrl, disableOplog,
+// quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl, disableOplog,
 // appDirForVersionCheck
 var Runner = function (appDir, options) {
   var self = this;
@@ -23,7 +28,7 @@ var Runner = function (appDir, options) {
     throw new Error("no proxyPort?");
 
   var listenPort = options.proxyPort;
-  var mongoPort = listenPort + 1;
+  var mongoPort = parseInt(listenPort) + 1;
   self.specifiedAppPort = options.appPort;
   self.regenerateAppPort();
 
@@ -82,10 +87,12 @@ var Runner = function (appDir, options) {
     listenHost: options.appHost,
     mongoUrl: mongoUrl,
     oplogUrl: oplogUrl,
+    mobileServerUrl: options.mobileServerUrl,
     buildOptions: options.buildOptions,
     rootUrl: self.rootUrl,
     settingsFile: options.settingsFile,
     program: options.program,
+    debugPort: options.debugPort,
     proxy: self.proxy,
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
@@ -106,6 +113,15 @@ _.extend(Runner.prototype, {
   // XXX leave a pidfile and check if we are already running
   start: function () {
     var self = this;
+
+    // XXX: Include all runners, and merge parallel-launch patch
+    var allRunners = [ ] ;
+    allRunners = allRunners.concat(self.extraRunners);
+    _.each(allRunners, function (runner) {
+      if (!runner) return;
+      runner.prestart && runner.prestart();
+    });
+
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
@@ -145,16 +161,19 @@ _.extend(Runner.prototype, {
       // but all of the ones I tried look terrible in the terminal.
       if (! self.quiet) {
         var animationFrame = 0;
-        var printUpdate = function () {
-          runLog.logTemporary("=> Starting MongoDB... " +
-                              spinner[animationFrame]);
+        var printUpdate = fiberHelpers.bindEnvironment(function () {
+          //runLog.logTemporary("=> Starting MongoDB... " +
+          //                    spinner[animationFrame]);
+          buildmessage.nudge();
           animationFrame = (animationFrame + 1) % spinner.length;
-        };
+        });
         printUpdate();
         var mongoProgressTimer = setInterval(printUpdate, 200);
       }
 
-      self.mongoRunner.start();
+      buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
+        self.mongoRunner.start();
+      });
 
       if (! self.quiet) {
         clearInterval(mongoProgressTimer);
@@ -324,6 +343,7 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
+  Console.enableProgressBar(false);
   var result = fut.wait();
   runner.stop();
 
@@ -353,7 +373,7 @@ exports.run = function (appDir, options) {
     process.stderr.write(
 "Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
 ".\n" +
-"Restart meteor to use the new release.");
+"Restart meteor to use the new release.\n");
     return 254;
   }
 

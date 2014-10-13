@@ -1,0 +1,95 @@
+#menu {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  .btns-group,
+  .btns-group-vertical {
+    margin: 2em auto 2em;
+    width: 80%;
+
+    .btn-secondary {
+      .font-s1;
+      padding-top: .5em;
+      padding-bottom: .5em;
+    }
+  }
+
+  .btns-group-vertical .btn-secondary {
+    .force-wrap;
+    padding-right: 2.5em;
+    text-align: left;
+    text-indent: 0;
+    white-space: normal; // Resets wrapping
+    width: 100%;
+
+    & + .btn-secondary {
+      margin-top: .5rem;
+
+      &:before {
+        .position(absolute, -.5rem, 50%, auto, auto, 1px, .5rem);
+        background: lighten(#517096, 5%);
+        content: '';
+      }
+    }
+
+    [class^="icon-"],
+    [class*=" icon-"] {
+      .position(absolute, .5em, .5em, auto, auto);
+      line-height: 20px;
+    }
+  }
+
+  .list-todos {
+    a {
+      box-shadow: rgba(255,255,255,.15) 0 1px 0 0;
+      display: block;
+      line-height: 1.5em;
+      padding: .75em 2.5em;
+      position: relative;
+    }
+
+    .count-list {
+      .transition( all 200ms ease-in );
+      background: rgba(255,255,255,.1);
+      border-radius: 1em;
+      float: right;
+      font-size: .7rem;
+      line-height: 1;
+      margin-top: .25rem;
+      margin-right: -1.5em;
+      padding: .3em .5em;
+    }
+
+    [class^="icon-"],
+    [class*=" icon-"] {
+      .font-s2;
+      float: left;
+      margin-left: -1.5rem;
+      margin-right: .5rem;
+      margin-top: .1rem;
+      width: 1em;
+    }
+
+    .icon-lock {
+      .font-s1;
+      margin-top: .2rem;
+      opacity: .8;
+    }
+
+    .list-todo {
+      color: rgba(255,255,255,.4);
+
+      &:hover,
+      &:active,
+      &.active {
+        color: @color-empty;
+        .count-list { background: @color-primary; }
+      }
+
+      .cordova &:hover {
+        // Prevent hover states from being noticeable on Cordova apps
+        color: rgba(255,255,255,.4);
+      }
+    }
+  }
+}

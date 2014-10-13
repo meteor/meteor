@@ -156,7 +156,7 @@ var authedRpc = function (options) {
   if (infoResult.statusCode === 401 && rpcOptions.promptIfAuthFails) {
     // Our authentication didn't validate, so prompt the user to log in
     // again, and resend the RPC if the login succeeds.
-    var username = utils.readLine({
+    var username = Console.readLine({
       prompt: "Username: ",
       stream: process.stderr
     });
@@ -197,7 +197,7 @@ var authedRpc = function (options) {
     // Password protected. Read a password, hash it, and include the
     // hashed password as a query parameter when doing the RPC.
     var password;
-    password = utils.readLine({
+    password = Console.readLine({
       echo: false,
       prompt: "Password: ",
       stream: process.stderr
@@ -390,7 +390,7 @@ var bundleAndDeploy = function (options) {
 
   var settings = null;
   var messages = buildmessage.capture({
-    title: "preparing to deploy",
+    title: "Preparing to deploy",
     rootPath: process.cwd()
   }, function () {
     if (options.settingsFile)
@@ -399,6 +399,14 @@ var bundleAndDeploy = function (options) {
 
   if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
+
+    var bundleResult = bundler.bundle({
+      outputPath: bundlePath,
+      buildOptions: options.buildOptions
+    });
+
+    if (bundleResult.errors)
+      messages.merge(bundleResult.errors);
 
     if (options.recordPackageUsage) {
       var statsMessages = buildmessage.capture({ title: 'Reporting statistics' }, function () {
@@ -411,13 +419,6 @@ var bundleAndDeploy = function (options) {
       }
     }
 
-    var bundleResult = bundler.bundle({
-      outputPath: bundlePath,
-      buildOptions: options.buildOptions
-    });
-
-    if (bundleResult.errors)
-      messages.merge(bundleResult.errors);
   }
 
   if (messages.hasMessages()) {

@@ -30,7 +30,7 @@ var localCordova = path.join(files.getCurrentToolsDir(), "tools",
 //
 // sand: a sandbox, that has the main app directory as its cwd.
 // plugins: an array of plugins in order.
-var checkCordovaPlugins = function(sand, plugins) {
+var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
   var lines = selftest.execFileSync(localCordova, ['plugins'],
     {
       cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build'),
@@ -53,7 +53,7 @@ var checkCordovaPlugins = function(sand, plugins) {
     i++;
   });
   selftest.expectEqual(plugins.length, i);
-};
+});
 
 // Given a sandbox, that has the app as its cwd, read the cordova plugins
 // file and check that it contains exactly the plugins specified, in order.
@@ -147,7 +147,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
 
   run = s.run("run", "android");
   run.matchErr("not added to the project");
-  run.matchErr("meteor add-platform ");
+  run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
   run.match("Do you agree");
@@ -185,21 +185,22 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("list-platforms");
   run.match("android");
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(30);
   // This fails because the FB plugin does not compile without additional
   // configuration for android.
   run.expectExit(8);
 
-  checkCordovaPlugins(s,
-    ["org.apache.cordova.camera",
-     "com.phonegap.plugins.facebookconnect"]);
+  // When one plugin installation fails, we uninstall all the plugins
+  // (legend has it that Cordova can get in a weird inconsistent state
+  // if we don't do this).
+  checkCordovaPlugins(s, []);
 
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
 
@@ -209,7 +210,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("removed");
   run.expectExit(0);
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
 
@@ -219,8 +220,36 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("added");
   run.expectExit(0);
 
-  run = s.run("build", "../a", "--settings", "settings.json");
+  run = s.run("build", "../a", "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
   checkCordovaPlugins(s, ["org.apache.cordova.device"]);
+});
+
+selftest.define("remove cordova plugins", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
+  run.waitSecs(5);
+  run.expectExit(0);
+
+  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+
+  // Removing a plugin that hasn't been added should say that it isn't
+  // in this project.
+  run = s.run("remove", "cordova:blahblah");
+  run.matchErr("not in this project");
+  run.forbidAll("removed");
+  run.expectExit(0);
+
+  run = s.run("remove", "cordova:blahblah",
+              "cordova:org.apache.cordova.camera");
+  run.waitSecs(5);
+  run.matchErr("not in this project");
+  run.match("removed");
+  run.expectExit(0);
+  checkUserPlugins(s, []);
 });

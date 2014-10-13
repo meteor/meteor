@@ -1,6 +1,8 @@
-Template.configureLoginServiceDialogForGoogle.siteUrl = function () {
-  return Meteor.absoluteUrl();
-};
+Template.configureLoginServiceDialogForGoogle.helpers({
+  siteUrl: function () {
+    return Meteor.absoluteUrl();
+  }
+});
 
 Template.configureLoginServiceDialogForGoogle.fields = function () {
   return [

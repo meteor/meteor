@@ -28,7 +28,9 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     // support for scope/name parameters
     var redirectUrl = undefined;
     if(typeof urls.authenticate === "function") {
-      redirectUrl = urls.authenticate(oauthBinding);
+      redirectUrl = urls.authenticate(oauthBinding, {
+        query: query
+      });
     } else {
       // Parse the URL to support additional query parameters in urls.authenticate
       var redirectUrlObj = url.parse(urls.authenticate, true);

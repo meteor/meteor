@@ -4,7 +4,7 @@ var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
-var unipackage = require('./unipackage.js');
+var isopack = require('./isopack.js');
 var packageLoader = require('./package-loader.js');
 var uniload = require('./uniload.js');
 var bundler = require('./bundler.js');
@@ -15,20 +15,20 @@ var release = require('./release.js');
 
 var compiler = exports;
 
-// Whenever you change anything about the code that generates unipackages, bump
-// this version number. The idea is that the "format" field of the unipackage
+// Whenever you change anything about the code that generates isopacks, bump
+// this version number. The idea is that the "format" field of the isopack
 // JSON file only changes when the actual specified structure of the
-// unipackage/unibuild changes, but this version (which is build-tool-specific)
+// isopack/unibuild changes, but this version (which is build-tool-specific)
 // can change when the the contents (not structure) of the built output
 // changes. So eg, if we improve the linker's static analysis, this should be
 // bumped.
 //
 // You should also update this whenever you update any of the packages used
-// directly by the unipackage creation process (eg js-analyze) since they do not
+// directly by the isopack creation process (eg js-analyze) since they do not
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers and dev-bundle-fetcher) don't require you to
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/13';
+compiler.BUILT_BY = 'meteor/14';
 
 // XXX where should this go? I'll make it a random utility function
 // for now
@@ -44,7 +44,6 @@ compiler.BUILT_BY = 'meteor/13';
 //  - acceptableWeakPackages: if set, include direct weak dependencies
 //    that are on one of these packages (it's an object mapping
 //    package name -> true). Otherwise skip all weak dependencies.
-//  - constraintSolverOpts
 //
 // (Why does we need to list acceptable weak packages here rather than just
 // implement a skipWeak flag and allow the caller to filter the ones they care
@@ -83,13 +82,20 @@ compiler.eachUsedUnibuild = function (
   while (!_.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
 
-    var unibuild = packageLoader.getUnibuild(use.package, arch);
+    var usedPackage = packageLoader.getPackage(
+      use.package, { throwOnError: true });
+
+    // Ignore this package if we were told to skip debug-only packages and it is
+    // debug-only.
+    if (usedPackage.debugOnly && options.skipDebugOnly)
+      continue;
+
+    var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.
       continue;
     }
-
 
     if (_.has(processedBuildId, unibuild.id))
       continue;
@@ -125,14 +131,6 @@ compiler.eachUsedUnibuild = function (
 // 'meteor update' for package build-time dependencies?
 //
 // XXX deal with _makeBuildTimePackageLoader callsites
-//
-// XXX this function is probably going to get called a huge number of
-// times. For example, the Catalog calls it on every local package
-// every time the local package list changes. We could memoize the
-// result on packageSource (and presumably make this a method on
-// PackgeSource), or we could have some kind of cache (the ideal place
-// for such a cache might be inside the constraint solver, since it
-// will know how/when to invalidate it).
 var determineBuildTimeDependencies = function (packageSource,
                                                constraintSolverOpts) {
   var ret = {};
@@ -212,7 +210,7 @@ var determineBuildTimeDependencies = function (packageSource,
   // the version lock file) and the direct dependencies (which are packages that
   // we are exactly using) in order to optimize build id generation.
   ret.directDependencies = {};
-  _.each(  ret.packageDependencies, function (version, packageName) {
+  _.each(ret.packageDependencies, function (version, packageName) {
     // Take only direct dependencies.
     if (_.has(constraints, packageName)) {
       ret.directDependencies[packageName] = version;
@@ -284,7 +282,7 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 
 // inputSourceArch is a SourceArch to compile. Process all source files through
 // the appropriate handlers and run the prelink phase on any resulting
-// JavaScript. Create a new Unibuild and add it to 'unipackage'.
+// JavaScript. Create a new Unibuild and add it to 'isopack'.
 //
 // packageLoader is a PackageLoader that can load our build-time
 // direct dependencies at the correct versions. It is only used to
@@ -292,7 +290,7 @@ compiler.determineBuildTimeDependencies = determineBuildTimeDependencies;
 // not be able to) load transitive dependencies of those packages.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
+var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
                                 nodeModulesPath, isPortable) {
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
@@ -317,7 +315,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   // (there's also some weirdness here with handling implies, because
   // the implies field is on the target unibuild, but we really only care
   // about packages.)
-  var activePluginPackages = [unipkg];
+  var activePluginPackages = [isopk];
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
@@ -339,7 +337,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
     compiler.eachUsedUnibuild(
       inputSourceArch.uses, archinfo.host(),
       packageLoader, {skipUnordered: true}, function (unibuild) {
-        if (unibuild.pkg.name === unipkg.name)
+        if (unibuild.pkg.name === isopk.name)
           return;
         if (_.isEmpty(unibuild.pkg.plugins))
           return;
@@ -578,25 +576,121 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
     // way to return errors (that could go in an overall list of
     // errors experienced across all files)
     var readOffset = 0;
+
+    /**
+     * The comments for this class aren't used to generate docs right now.
+     * The docs live in the GitHub Wiki at: https://github.com/meteor/meteor/wiki/CompileStep-API-for-Build-Plugin-Source-Handlers
+     * @class CompileStep
+     * @summary The object passed into Plugin.registerSourceHandler
+     * @global
+     */
     var compileStep = {
+
+      /**
+       * @summary The total number of bytes in the input file.
+       * @memberOf CompileStep
+       * @instance
+       * @type {Integer}
+       */
       inputSize: contents.length,
+
+      /**
+       * @summary The filename and relative path of the input file.
+       * Please don't use this filename to read the file from disk, instead
+       * use [compileStep.read](CompileStep-read).
+       * @type {String}
+       * @instance
+       * @memberOf CompileStep
+       */
       inputPath: relPath,
+
+      /**
+       * @summary The filename and absolute path of the input file.
+       * Please don't use this filename to read the file from disk, instead
+       * use [compileStep.read](CompileStep-read).
+       * @type {String}
+       * @instance
+       * @memberOf CompileStep
+       */
+      fullInputPath: absPath,
+
+      // The below is used in the less and stylus packages... so it should be
+      // public API.
       _fullInputPath: absPath, // avoid, see above..
+
       // XXX duplicates _pathForSourceMap() in linker
-      pathForSourceMap: (
-        inputSourceArch.pkg.name
-          ? inputSourceArch.pkg.name + "/" + relPath
-          : path.basename(relPath)),
+      /**
+       * @summary If you are generating a sourcemap for the compiled file, use
+       * this path for the original file in the sourcemap.
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
+      pathForSourceMap: (inputSourceArch.pkg.name ?
+        inputSourceArch.pkg.name + "/" + relPath : path.basename(relPath)),
+
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
+      /**
+       * @summary The name of the package in which the file being built exists.
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
       packageName: inputSourceArch.pkg.name,
+
+      /**
+       * @summary On web targets, this will be the root URL prepended
+       * to the paths you pick for your output files. For example,
+       * it could be "/packages/my-package".
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
       rootOutputPath: inputSourceArch.pkg.serveRoot,
-      arch: inputSourceArch.arch, // XXX: what is the story with arch?
+
+      /**
+       * @summary The architecture for which we are building. Can be "os",
+       * "web.browser", or "web.cordova".
+       * @type {String}
+       * @memberOf CompileStep
+       * @instance
+       */
+      arch: inputSourceArch.arch,
+
+      /**
+       * @deprecated in 0.9.4
+       * This is a duplicate API of the above, we don't need it.
+       */
       archMatches: function (pattern) {
         return archinfo.matches(inputSourceArch.arch, pattern);
       },
+
+      /**
+       * @summary Any options passed to "api.addFiles".
+       * @type {Object}
+       * @memberOf CompileStep
+       * @instance
+       */
       fileOptions: fileOptions,
+
+      /**
+       * @summary The list of exports that the current package has defined.
+       * Can be used to treat those symbols differently during compilation.
+       * @type {Object}
+       * @memberOf CompileStep
+       * @instance
+       */
       declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
+
+      /**
+       * @summary Read from the input file. If `n` is specified, returns the
+       * next `n` bytes of the file as a Buffer. XXX not sure if this actually
+       * returns a String sometimes...
+       * @param  {Integer} [n] The number of bytes to return.
+       * @instance
+       * @memberOf CompileStep
+       */
       read: function (n) {
         if (n === undefined || readOffset + n > contents.length)
           n = contents.length - readOffset;
@@ -604,7 +698,18 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
         readOffset += n;
         return ret;
       },
-      appendDocument: function (options) {
+
+      /**
+       * @summary Works in web targets only. Add markup to the `head` or `body`
+       * section of the document.
+       * @param  {Object} options
+       * @param {String} options.section Which section of the document should
+       * be appended to. Can only be "head" or "body".
+       * @param {String} options.data The content to append.
+       * @memberOf CompileStep
+       * @instance
+       */
+      addHtml: function (options) {
         if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Document sections can only be emitted to " +
                           "web targets");
@@ -617,6 +722,26 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           data: new Buffer(options.data, 'utf8')
         });
       },
+
+      /**
+       * @deprecated in 0.9.4
+       */
+      appendDocument: function (options) {
+        this.addHtml(options);
+      },
+
+      /**
+       * @summary Web targets only. Add a stylesheet to the document.
+       * @param {Object} options
+       * @param {String} path The requested path for the added CSS, may not be
+       * satisfied if there are path conflicts.
+       * @param {String} data The content of the stylesheet that should be
+       * added.
+       * @param {String} sourceMap A stringified JSON sourcemap, in case the
+       * stylesheet was generated from a different file.
+       * @memberOf CompileStep
+       * @instance
+       */
       addStylesheet: function (options) {
         if (! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("Stylesheets can only be emitted to " +
@@ -631,6 +756,22 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           sourceMap: options.sourceMap
         });
       },
+
+      /**
+       * @summary Add JavaScript code. The code added will only see the
+       * namespaces imported by this package as runtime dependencies using
+       * ['api.use'](#PackageAPI-use). If the file being compiled was added
+       * with the bare flag, the resulting JavaScript won't be wrapped in a
+       * closure.
+       * @param {Object} options
+       * @param {String} options.path The path at which the JavaScript file
+       * should be inserted, may not be honored in case of path conflicts.
+       * @param {String} options.data The code to be added.
+       * @param {String} options.sourcePath The path that will be used in
+       * any error messages generated by this file, e.g. `foo.js:4:1: error`.
+       * @memberOf CompileStep
+       * @instance
+       */
       addJavaScript: function (options) {
         if (typeof options.data !== "string")
           throw new Error("'data' option to addJavaScript must be a string");
@@ -642,15 +783,45 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
           source: options.data,
           sourcePath: options.sourcePath,
           servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
-          bare: !! options.bare,
+          bare: !! fileOptions.bare,
           sourceMap: options.sourceMap
         });
       },
+
+      /**
+       * @summary Add a file to serve as-is to the browser or to include on
+       * the browser, depending on the target. On the web, it will be served
+       * at the exact path requested. For server targets, it can be retrieved
+       * using `Assets.getText` or `Assets.getBinary`.
+       * @param {Object} options
+       * @param {String} path The path at which to serve the asset.
+       * @param {Buffer|String} data The data that should be placed in
+       * the file.
+       * @memberOf CompileStep
+       * @instance
+       */
       addAsset: function (options) {
-        if (! (options.data instanceof Buffer))
-          throw new Error("'data' option to addAsset must be a Buffer");
+        if (! (options.data instanceof Buffer)) {
+          if (_.isString(options.data)) {
+            options.data = new Buffer(options.data);
+          } else {
+            throw new Error("'data' option to addAsset must be a Buffer or String.");
+          }
+        }
+
         addAsset(options.data, options.path);
       },
+
+      /**
+       * @summary Display a build error.
+       * @param  {Object} options
+       * @param {String} message The error message to display.
+       * @param {String} [sourcePath] The path to display in the error message.
+       * @param {Integer} line The line number to display in the error message.
+       * @param {String} func The function name to display in the error message.
+       * @memberOf CompileStep
+       * @instance
+       */
       error: function (options) {
         buildmessage.error(options.message || ("error building " + relPath), {
           file: options.sourcePath,
@@ -731,7 +902,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   }
 
   // *** Output unibuild object
-  unipkg.addUnibuild({
+  isopk.addUnibuild({
     name: inputSourceArch.archName,
     arch: arch,
     uses: inputSourceArch.uses,
@@ -746,14 +917,14 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
   return sources;
 };
 
-// Build a PackageSource into a Unipackage by running its source files through
+// Build a PackageSource into a Isopack by running its source files through
 // the appropriate compiler plugins. Once build has completed, any errors
 // detected in the package will have been emitted to buildmessage.
 //
 // Options:
 //  - officialBuild: defaults to false. If false, then we will compute a
 //    build identifier (a hash of the package's dependency versions and
-//    source files) and include it as part of the unipackage's version
+//    source files) and include it as part of the isopack's version
 //    string. If true, then we will use the version that is contained in
 //    the package's source. You should set it to true when you are
 //    building a package to publish as an official build with the
@@ -768,7 +939,7 @@ var compileUnibuild = function (unipkg, inputSourceArch, packageLoader,
 //    glasser only half understands, ignore the current project deps
 //
 // Returns an object with keys:
-// - unipackage: the built Unipackage
+// - isopack: the built Isopack
 // - sources: array of source files (identified by their path on local
 //   disk) that were used by the compilation (the source files you'd have to
 //   ship to a different machine to replicate the build there)
@@ -788,7 +959,7 @@ compiler.compile = function (packageSource, options) {
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
     buildmessage.enterJob({
-      title: "building plugin `" + info.name +
+      title: "Building plugin `" + info.name +
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
@@ -860,8 +1031,8 @@ compiler.compile = function (packageSource, options) {
     }
   }
 
-  var unipkg = new unipackage.Unipackage;
-  unipkg.initFromOptions({
+  var isopk = new isopack.Isopack;
+  isopk.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
     version: packageSource.version,
@@ -872,7 +1043,8 @@ compiler.compile = function (packageSource, options) {
     cordovaDependencies: packageSource.cordovaDependencies,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
-    includeTool: packageSource.includeTool
+    includeTool: packageSource.includeTool,
+    debugOnly: packageSource.debugOnly
   });
 
   // Compile unibuilds. Might use our plugins, so needs to happen second.
@@ -885,7 +1057,7 @@ compiler.compile = function (packageSource, options) {
   });
 
   _.each(packageSource.architectures, function (unibuild) {
-    var unibuildSources = compileUnibuild(unipkg, unibuild, loader,
+    var unibuildSources = compileUnibuild(isopk, unibuild, loader,
                                           nodeModulesPath, isPortable);
     sources.push.apply(sources, unibuildSources);
   });
@@ -896,7 +1068,7 @@ compiler.compile = function (packageSource, options) {
     // XXX I have no idea if this should be using buildmessage.enterJob
     // or not. test what happens on error
     buildmessage.enterJob({
-      title: "compute build identifier for package `" +
+      title: "Compute build identifier for package `" +
         packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
@@ -906,7 +1078,7 @@ compiler.compile = function (packageSource, options) {
                            packageSource.version + "because it already " +
                            "has a build identifier");
       } else {
-        unipkg.addBuildIdentifierToVersion({
+        isopk.addBuildIdentifierToVersion({
           relativeTo: packageSource.sourceRoot,
           catalog: packageSource.catalog
         });
@@ -916,7 +1088,7 @@ compiler.compile = function (packageSource, options) {
 
   return {
     sources: _.uniq(sources),
-    unipackage: unipkg
+    isopack: isopk
   };
 };
 
@@ -995,20 +1167,20 @@ compiler.getBuildOrderConstraints = function (
 // says that the package is up-to-date. False if a source file or
 // build-time dependency has changed.
 compiler.checkUpToDate = function (
-    packageSource, unipkg, constraintSolverOpts) {
+    packageSource, isopk, constraintSolverOpts) {
   buildmessage.assertInCapture();
 
-  if (unipkg.forceNotUpToDate) {
+  if (isopk.forceNotUpToDate) {
     return false;
   }
 
   // Do we think we'd generate different contents than the tool that
   // built this package?
-  if (unipkg.builtBy !== compiler.BUILT_BY) {
+  if (isopk.builtBy !== compiler.BUILT_BY) {
     return false;
   }
 
-  // Compute the unipackage's direct and plugin dependencies to
+  // Compute the isopack's direct and plugin dependencies to
   // `buildTimeDeps`, by comparing versions (including build
   // identifiers). For direct dependencies, we only care if the set of
   // direct dependencies that provide plugins has changed.
@@ -1018,11 +1190,11 @@ compiler.checkUpToDate = function (
   var sourcePluginProviders = getPluginProviders(
     buildTimeDeps.directDependencies, packageSource.catalog);
 
-  var unipackagePluginProviders = getPluginProviders(
-    unipkg.buildTimeDirectDependencies, packageSource.catalog);
+  var isopackPluginProviders = getPluginProviders(
+    isopk.buildTimeDirectDependencies, packageSource.catalog);
 
   if (_.keys(sourcePluginProviders).length !==
-      _.keys(unipackagePluginProviders).length) {
+      _.keys(isopackPluginProviders).length) {
     return false;
   }
 
@@ -1037,7 +1209,7 @@ compiler.checkUpToDate = function (
       // XXX Check that `versionWithBuildId` is the same as `version`
       // except for the build id?
       return (loadedPackage &&
-              unipackagePluginProviders[packageName] ===
+              isopackPluginProviders[packageName] ===
               loadedPackage.version);
     }
   );
@@ -1046,7 +1218,7 @@ compiler.checkUpToDate = function (
   }
 
   if (_.keys(buildTimeDeps.pluginDependencies).length !==
-      _.keys(unipkg.buildTimePluginDependencies).length) {
+      _.keys(isopk.buildTimePluginDependencies).length) {
     return false;
   }
 
@@ -1059,20 +1231,20 @@ compiler.checkUpToDate = function (
         return false;
 
       // For each plugin, check that the resolved build-time deps for
-      // that plugin match the unipackage's build time deps for it.
+      // that plugin match the isopack's build time deps for it.
       var packageLoaderForPlugin = new packageLoader.PackageLoader({
         catalog: packageSource.catalog,
         versions: buildTimeDeps.pluginDependencies[pluginName]
       });
-      var unipackagePluginDeps = unipkg.buildTimePluginDependencies[pluginName];
-      if (! unipackagePluginDeps ||
-          _.keys(pluginDeps).length !== _.keys(unipackagePluginDeps).length) {
+      var isopackPluginDeps = isopk.buildTimePluginDependencies[pluginName];
+      if (! isopackPluginDeps ||
+          _.keys(pluginDeps).length !== _.keys(isopackPluginDeps).length) {
         return false;
       }
       return _.all(pluginDeps, function (version, packageName) {
         var loadedPackage = packageLoaderForPlugin.getPackage(packageName);
         return loadedPackage &&
-          unipackagePluginDeps[packageName] === loadedPackage.version;
+          isopackPluginDeps[packageName] === loadedPackage.version;
       });
     }
   );
@@ -1082,8 +1254,8 @@ compiler.checkUpToDate = function (
   }
 
   var watchSet = new watch.WatchSet();
-  watchSet.merge(unipkg.pluginWatchSet);
-  _.each(unipkg.unibuilds, function (unibuild) {
+  watchSet.merge(isopk.pluginWatchSet);
+  _.each(isopk.unibuilds, function (unibuild) {
     watchSet.merge(unibuild.watchSet);
   });
 

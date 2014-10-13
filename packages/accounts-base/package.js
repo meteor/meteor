@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.1.1"
+  version: "1.1.2"
 });
 
 Package.on_use(function (api) {
@@ -34,6 +34,7 @@ Package.on_use(function (api) {
   api.use('oauth-encryption', 'server', {weak: true});
 
   api.export('Accounts');
+  api.export('AccountsTest', {testOnly: true});
 
   api.add_files('accounts_common.js', ['client', 'server']);
   api.add_files('accounts_server.js', 'server');
@@ -55,4 +56,5 @@ Package.on_test(function (api) {
   api.use('test-helpers');
   api.use('oauth-encryption');
   api.add_files('accounts_tests.js', 'server');
+  api.add_files("accounts_url_tests.js", "client");
 });

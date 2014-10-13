@@ -13,6 +13,7 @@ var buildmessage = require('./buildmessage.js');
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
+var Console = require('./console.js').Console;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -57,15 +58,16 @@ var AppProcess = function (options) {
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
+  self.mobileServerUrl = options.mobileServerUrl;
 
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.program = options.program || null;
   self.nodeOptions = options.nodeOptions || [];
+  self.debugPort = options.debugPort;
   self.settings = options.settings;
 
   self.proc = null;
-  self.keepaliveTimer = null;
   self.madeExitCallback = false;
 };
 
@@ -100,6 +102,14 @@ _.extend(AppProcess.prototype, {
     }));
 
     eachline(self.proc.stderr, 'utf8', fiberHelpers.inBareFiber(function (line) {
+      if (self.debugPort &&
+          line.indexOf("debugger listening on port " + self.debugPort) >= 0) {
+        Console.enableProgressBar(false);
+        process.stdout.write(
+          require("./inspector.js").banner(self.debugPort)
+        );
+      }
+
       runLog.logAppOutput(line, true);
     }));
 
@@ -123,17 +133,6 @@ _.extend(AppProcess.prototype, {
     // exception and the whole app dies.
     // http://stackoverflow.com/questions/2893458/uncatchable-errors-in-node-js
     self.proc.stdin.on('error', function () {});
-
-    // Keepalive so child process can detect when we die
-    self.keepaliveTimer = setInterval(function () {
-      try {
-        if (self.proc && self.proc.pid &&
-            self.proc.stdin && self.proc.stdin.write)
-          self.proc.stdin.write('k');
-      } catch (e) {
-        // do nothing. this fails when the process dies.
-      }
-    }, 2000);
   },
 
   _maybeCallOnExit: function (code, signal) {
@@ -156,10 +155,6 @@ _.extend(AppProcess.prototype, {
     }
     self.proc = null;
 
-    if (self.keepaliveTimer)
-      clearInterval(self.keepaliveTimer);
-    self.keepaliveTimer = null;
-
     self.onListen = null;
     self.onExit = null;
   },
@@ -171,6 +166,11 @@ _.extend(AppProcess.prototype, {
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
     env.MONGO_URL = self.mongoUrl;
+    if (self.mobileServerUrl) {
+      env.MOBILE_DDP_URL = self.mobileServerUrl;
+      env.MOBILE_ROOT_URL = self.mobileServerUrl;
+    }
+
     if (self.oplogUrl) {
       env.MONGO_OPLOG_URL = self.oplogUrl;
     }
@@ -184,6 +184,7 @@ _.extend(AppProcess.prototype, {
     } else {
       delete env.BIND_IP;
     }
+    env.APP_ID = project.appId;
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
@@ -206,8 +207,16 @@ _.extend(AppProcess.prototype, {
     if (! self.program) {
       // Old-style bundle
       var opts = _.clone(self.nodeOptions);
+      if (self.debugPort) {
+        require("./inspector.js").start(self.debugPort);
+        opts.push("--debug-brk=" + self.debugPort);
+      }
       opts.push(path.join(self.bundlePath, 'main.js'));
-      opts.push('--keepalive');
+
+      opts.push(
+        '--parent-pid',
+        process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
+      );
 
       return child_process.spawn(process.execPath, opts, {
         env: self._computeEnvironment()
@@ -327,8 +336,10 @@ var AppRunner = function (appDir, options) {
   self.oplogUrl = options.oplogUrl;
   self.buildOptions = options.buildOptions;
   self.rootUrl = options.rootUrl;
+  self.mobileServerUrl = options.mobileServerUrl;
   self.settingsFile = options.settingsFile;
   self.program = options.program;
+  self.debugPort = options.debugPort;
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
@@ -511,7 +522,7 @@ _.extend(AppRunner.prototype, {
     var settings = null;
     var settingsWatchSet = new watch.WatchSet;
     var settingsMessages = buildmessage.capture({
-      title: "preparing to run",
+      title: "Preparing to run",
       rootPath: process.cwd()
     }, function () {
       if (self.settingsFile)
@@ -550,6 +561,7 @@ _.extend(AppRunner.prototype, {
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,
+      mobileServerUrl: self.mobileServerUrl,
       onExit: function (code, signal) {
         self._runFutureReturn({
           outcome: 'terminated',
@@ -559,6 +571,7 @@ _.extend(AppRunner.prototype, {
         });
       },
       program: self.program,
+      debugPort: self.debugPort,
       onListen: function () {
         self.proxy.setMode("proxy");
         options.onListen && options.onListen();

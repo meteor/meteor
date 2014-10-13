@@ -144,12 +144,29 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    var unipackageJson = fs.readFileSync(
-      path.join(files.getCurrentToolsDir(),
-                '..',  // get out of tool, back to package
-                'unipackage.json'));
-    var parsed = JSON.parse(unipackageJson);
+    var isopackJsonPath = path.join(files.getCurrentToolsDir(),
+      '..',  // get out of tool, back to package
+      'isopack.json');
+
+    var parsed;
+
+    if (fs.existsSync(isopackJsonPath)) {
+      var isopackJson = fs.readFileSync(isopackJsonPath);
+      parsed = JSON.parse(isopackJson);
+
+      // XXX "isopack-1" is duplicate of isopack.currentFormat
+      parsed = parsed["isopack-1"]; // get the right format from the JSON
+      return parsed.name + '@' + parsed.version;
+    }
+
+    // XXX COMPAT WITH 0.9.3
+    var unipackageJsonPath = path.join(files.getCurrentToolsDir(),
+      '..',  // get out of tool, back to package
+      'unipackage.json');
+    var unipackageJson = fs.readFileSync(unipackageJsonPath);
+    parsed = JSON.parse(unipackageJson);
     return parsed.name + '@' + parsed.version;
+
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
@@ -166,12 +183,12 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Returns a directory with pre-built unipackages for use by the tool, or 'null'
+// Returns a directory with pre-built isopacks for use by the tool, or 'null'
 // if in a checkout.
 files.getUniloadDir = function () {
   if (files.inCheckout())
     return null;
-  return path.join(files.getCurrentToolsDir(), 'unipackages');
+  return path.join(files.getCurrentToolsDir(), 'isopacks');
 };
 
 // Read a settings file and sanity-check it. Returns a string on
@@ -217,6 +234,18 @@ files.prettyPath = function (path) {
     path = "~" + path.substr(home.length);
   return path;
 };
+
+// Like statSync, but null if file not found
+files.statOrNull = function (path) {
+  try {
+    return Future.wrap(fs.stat)(path).wait();
+  } catch (e) {
+    if (e.code == "ENOENT")
+      return null;
+    throw e;
+  }
+};
+
 
 // Like rm -r.
 files.rm_recursive = function (p) {
@@ -487,7 +516,7 @@ files.mkdtemp = function (prefix) {
         tries--;
       }
     }
-    throw new Error("failed to make tempory directory in " + tmpDir);
+    throw new Error("failed to make temporary directory in " + tmpDir);
   };
   var dir = make();
   tempDirs.push(dir);
@@ -553,7 +582,33 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
-  return fstream.Reader({ path: dirPath, type: 'Directory' }).pipe(
+
+  // Use `dirPath` as the argument to `fstream.Reader` here instead of
+  // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
+  // collection of odd behaviors in fstream (which might be bugs or
+  // might just be weirdnesses). First, if we pass an object with `type:
+  // 'Directory'` as an argument, then the resulting tarball has no
+  // entry for the top-level directory, because the reader emits an
+  // entry (with just the path, no permissions or other properties)
+  // before the pipe to gzip is even set up, so that entry gets
+  // lost. Even if we pause the streams until all the pipes are set up,
+  // we'll get the entry in the tarball for the top-level directory
+  // without permissions or other properties, which is problematic. Just
+  // passing `dirPath` appears to cause `fstream` to stat the directory
+  // before emitting an entry for it, so the pipes are set up by the
+  // time the entry is emitted, and the entry has all the right
+  // permissions, etc. from statting it.
+  //
+  // The second weird behavior is that we need an entry for the
+  // top-level directory in the tarball to untar it with npm `tar`. (GNU
+  // tar, in contrast, appears to have no problems untarring tarballs
+  // without entries for the top-level directory inside them.) The
+  // problem is that, without an entry for the top-level directory,
+  // `fstream` will create the directory with the same permissions as
+  // the first file inside it. This manifests as an EACCESS when
+  // untarring if the first file inside the top-level directory is not
+  // writeable.
+  return fstream.Reader(dirPath).pipe(
     tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
 };
 
@@ -880,3 +935,42 @@ exports.trimLine = function (line) {
   line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
   return line;
 };
+
+
+files.KeyValueFile = function (path) {
+  var self = this;
+  self.path = path;
+}
+
+_.extend(files.KeyValueFile.prototype, {
+  set: function (k, v) {
+    var self = this;
+
+    var data = self._readAll() || '';
+    var lines = data.split(/\n/);
+
+    var found = false;
+    for (var i = 0; i < lines.length; i++) {
+      var trimmed = lines[i].trim();
+      if (trimmed.indexOf(k + '=') == 0) {
+        lines[i] = k + '=' + v;
+        found = true;
+      }
+    }
+    if (!found) {
+      lines.push(k + "=" + v);
+    }
+    var newdata = lines.join('\n') + '\n';
+    fs.writeFileSync(self.path, newdata, 'utf8');
+  },
+
+  _readAll: function () {
+    var self = this;
+
+    if (fs.existsSync(self.path)) {
+      return fs.readFileSync(self.path, 'utf8');
+    } else {
+      return null;
+    }
+  }
+});

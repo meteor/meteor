@@ -39,19 +39,45 @@ physical device. "ios-device" will open XCode and allow you to manually run
 the app on a device.
 
 Options:
-  --port, -p     Port to listen on (instead of the default 3000). Also
-                 uses port N+1 and a port specified by --app-port.
-                 Specify as --port=host:port to bind to a specific interface.
-  --mobile-port  Port (or interface, if specified as --mobile-port=host:port)
-                 where mobile builds connect to the Meteor server. Defaults
-                 to the host and port that the Meteor server binds to.
-  --production   Simulate production mode. Minify and bundle CSS and JS files.
-  --raw-logs     Run without parsing logs from stdout and stderr.
-  --settings     Set optional data for Meteor.settings on the server
-  --release      Specify the release of Meteor to use
-  --program      The program in the app to run (Advanced)
-  --verbose      Print all output from builds logs.
+  --port, -p       Port to listen on (instead of the default 3000). Also
+                   uses port N+1 and a port specified by --app-port.
+                   Specify as --port=host:port to bind to a specific interface.
+  --debug-port     Specify a port to enable server-side debugging. The
+                   server will be paused at startup, waiting for incoming
+                   connections from debugger clients on the specified port.
+  --mobile-server  Location where mobile builds connect to the Meteor server.
+                   Defaults to the host and port that the Meteor server
+                   binds to. Can include a URL scheme (for example,
+                   --mobile-server=https://example.com:443).
+  --production     Simulate production mode. Minify and bundle CSS and JS files.
+  --raw-logs       Run without parsing logs from stdout and stderr.
+  --settings       Set optional data for Meteor.settings on the server.
+  --release        Specify the release of Meteor to use.
+  --program        The program in the app to run (Advanced).
+  --verbose        Print all output from builds logs.
+  --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
+>>> debug
+Run the project, but suspend the server process for debugging.
+
+Usage: meteor debug [--debug-port <port>] [run options]
+       meteor run --debug-port <port> [run options]
+
+The server process will be suspended just before the first statement of
+server code that would normally execute. In order to continue execution of
+server code, use either the web-based Node Inspector or the command-line
+debugger (further instructions will be printed in the console).
+
+The easiest way to set breakpoints is to use the `debugger` keyword:
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger
+
+The options for 'meteor debug' are identical to those for 'meteor run',
+with one addition:
+
+Options:
+  --debug-port   Port on which the server process debugger should listen
+                 for incoming connections from debugging clients, such as
+                 node-inspector (default 5858).
 
 >>> create
 Create a new project.
@@ -146,7 +172,7 @@ list of the packages that your application is currently using, see
 List the packages explicitly used by your project.
 Usage: meteor list
 
-List the packages that you have explicitly added to your project.
+Lists the packages that you have explicitly added to your project.
 This will not list transitive dependencies.
 
 >>> add-platform
@@ -154,9 +180,32 @@ Add a platform to this project.
 Usage: meteor add-platform <platform> [platform..]
 
 Adds platforms to your Meteor project. You can add multiple
-platforms with one command. Once a platform has been added, you
-can use 'meteor run <platform>' to run on the platform, and 'meteor build'
-to build the Meteor project for every added platform.
+platforms with one command.
+
+Available platforms:
+  server
+  browser
+  android
+  ios (on OS X only)
+
+Currently, the server and browser platforms are present in every
+Meteor project and cannot be removed.
+
+`meteor run` by default runs the server and browser platforms.
+After adding a mobile platform, you can use 'meteor run <mobile-platform>'
+to run on a mobile device or emulator. 'meteor build' will always build
+the project for every added platform.
+
+>>> install-sdk
+Installs SDKs for a platform.
+Usage: meteor install-sdk <platform>
+
+Installs the SDK for a platform; will also verify that the platform
+requirements are met.
+
+Available platforms:
+  android
+  ios (on OS X only)
 
 >>> remove-platform
 Remove a platform from this project.
@@ -170,7 +219,7 @@ list of the platforms that your application is currently using, see
 List the platforms added to your project.
 Usage: meteor list-platforms
 
-Lists all of the platforms that have been explicitly added to your project.
+Lists all of the platforms added to your project.
 
 >>> configure-android
 Run the Android configuration tool from Meteor's ADK environment.
@@ -185,7 +234,8 @@ Deprecated command. Use 'build' instead.
 
 >>> build
 Outputs builds for all targeted platforms.
-Usage: meteor build <output path> [--debug] [--directory] [--settings settings.json]
+Usage: meteor build <output path> [--debug] [--directory]
+          [--server http://example.com:3000]
 
 Package this project up for deployment. The output is a directory with several
 build artifacts:
@@ -199,12 +249,13 @@ build artifacts:
 
 
 Options:
-  --debug        build in debug mode (don't minify, etc)
-  --directory    output a directory (rather than a tarball) for the
-                 application server bundle. If the output location exists,
-                 it will be recursively deleted first.
-  --settings     set optional data for Meteor.settings for the build-time
-                 settings (such as settings required by Cordova plugins).
+  --debug          build in debug mode (don't minify, etc)
+  --directory      output a directory (rather than a tarball) for the
+                   application server bundle. If the output location exists,
+                   it will be recursively deleted first.
+  --server         Location where mobile builds connect to the Meteor server.
+                   Defaults to localhost:3000. Can include a URL scheme
+                   (for example, --server=https://example.com:443).
 
 
 >>> mongo
@@ -358,6 +409,14 @@ to try the tests against many different browser versions.
 Options:
   --port, -p        Port to listen on (instead of the default 3000). Also
                     uses port N+1 and N+2.
+  --debug-port      Specify a port to enable server-side debugging. The
+                    server will be paused before any tests run, waiting
+                    for incoming connections from debugger clients.
+  --mobile-server   If running tests in an emulator or on a mobile device,
+                    the location where mobile builds connect to the Meteor
+                    server. Defaults to the host and port that the Meteor
+                    server binds to. Can include a URL scheme (for example,
+                    --mobile-server=https://example.com:443).
   --deploy          Optionally, specify a domain to deploy to, rather than
                     running locally.
   --production      Simulate production mode. Minify and bundle CSS and JS files.
@@ -367,19 +426,26 @@ Options:
   --android,        the tests for client and server will run in addition to
   --ios-device,     mobile-specific tests.
   --android-device
+  --test-app-path   Set the location where to create and run a temporary app
+                    used for tests. Defaults to systems temporary directory /tmp.
   --verbose         Print all output from builds logs.
 
 
 >>> self-test
 Run tests of the 'meteor' tool.
-Usage: meteor self-test [pattern] [--changed] [--slow]
-                        [--force-online] [--history n]
+Usage: meteor self-test [pattern] [--list] [--file pattern] [--changed]
+                        [--slow] [--force-online] [--history n]
                         [--browserstack]
 
 Runs internal tests. Exits with status 0 on success.
 
 If 'pattern' is provided, it should be a regular expression. Only
 tests that match the regular expression will be run.
+
+Use --list to list the tests that would be run according to the other
+options, without running them.
+
+Pass --file to run only tests in files that match the regular expression.
 
 Pass --changed to run only tests that have changed since they last
 passed. This uses a really rough heuristic: A test has changed iff
@@ -677,3 +743,11 @@ Options:
   --add         add a member to the organization
   --remove      remove a member from the organization
   --list        list members of the organization (the default)
+
+>>> admin set-latest-readme
+Set the readme on the latest version of a core meteor package.
+Usage: meteor admin set-latest-core-readme name --commit commit
+       meteor admin set-latest-core-readme name --tag tag
+
+Set the readme field on the latest published version of a core package to the readme at
+a given git commit, or the readme at a given git tag.

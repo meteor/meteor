@@ -1,6 +1,10 @@
-Template.headline.release = function () {
-  return Meteor.release ? "0.9.3.1" : "(checkout)";
-};
+var release = Meteor.release ? "0.9.4" : "(checkout)";
+
+Template.headline.helpers({
+  release: function () {
+    return release;
+  }
+});
 
 Meteor.startup(function () {
   // XXX this is broken by the new multi-page layout.  Also, it was
@@ -101,7 +105,7 @@ var hideMenu = function () {
 };
 
 var toc = [
-  {name: "Meteor " + Template.headline.release(), id: "top"}, [
+  {name: "Meteor " + release, id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
@@ -244,6 +248,13 @@ var toc = [
       "Accounts.sendResetPasswordEmail",
       "Accounts.sendEnrollmentEmail",
       "Accounts.sendVerificationEmail",
+      {type: "spacer"},
+
+      {name: "Accounts.onResetPasswordLink", id: "Accounts-onResetPasswordLink"},
+      {name: "Accounts.onEnrollmentLink", id: "Accounts-onEnrollmentLink"},
+      {name: "Accounts.onEmailVerificationLink", id: "Accounts-onEmailVerificationLink"},
+      {type: "spacer"},
+
       "Accounts.emailTemplates"
     ],
 
@@ -270,7 +281,7 @@ var toc = [
       "Template.currentData",
       "Template.parentData",
       "Template.body",
-      {name: "{{> UI.dynamic}}", id: "ui_dynamic"},
+      {name: "{{> Template.dynamic}}", id: "template_dynamic"},
       {type: "spacer"},
       {name: "Event maps", style: "noncode"}
     ],
@@ -373,7 +384,7 @@ var toc = [
       {name: "Assets.getBinary", id: "assets_getBinary"}
     ],
 
-    {name: "Package.js", id: "packagejs"}, [
+    {name: "package.js", id: "packagejs"}, [
       {name: "Package.describe", id: "packagedescription"},
       {name: "Package.onUse", id: "packagedefinition"}, [
         {name: "api.versionsFrom", id: "pack_versions"},
@@ -385,20 +396,27 @@ var toc = [
       {name: "Package.onTest", id: "packagetests"},
       {name: "Npm.depends", id: "Npm-depends"},
       {name: "Npm.require", id: "Npm-require"},
-      {name: "Cordova.depends", id: "Cordova-depends"}
+      {name: "Cordova.depends", id: "Cordova-depends"},
+      {name: "Package.registerBuildPlugin", id: "Package-registerBuildPlugin"}, [
+        {name: "Plugin.registerSourceHandler", id: "Plugin-registerSourceHandler"}
+      ]
+    ],
+
+    {name: "mobile-config.js", id: "mobileconfigjs"}, [
+      {name: "App.info", id: "App-info"},
+      {name: "App.setPreference", id: "App-setPreference"},
+      {name: "App.configurePlugin", id: "App-configurePlugin"},
+      {name: "App.icons", id: "App-icons"},
+      {name: "App.launchScreens", id: "App-launchScreens"}
     ]
   ],
 
   "Packages", [ [
     "accounts-ui",
-    "amplify",
     "appcache",
     "audit-argument-checks",
-    "backbone",
-    "bootstrap",
     "browser-policy",
     "coffeescript",
-    "d3",
     "fastclick",
     "force-ssl",
     "jquery",
@@ -440,44 +458,48 @@ var name_to_id = function (name) {
   return x;
 };
 
-Template.nav.sections = function () {
-  var ret = [];
-  var walk = function (items, depth) {
-    _.each(items, function (item) {
-      // Work around (eg) accidental trailing commas leading to spurious holes
-      // in IE8.
-      if (!item)
-        return;
-      if (item instanceof Array)
-        walk(item, depth + 1);
-      else {
-        if (typeof(item) === "string")
-          item = {name: item};
-        ret.push(_.extend({
-          type: "section",
-          id: item.name && name_to_id(item.name) || undefined,
-          depth: depth,
-          style: ''
-        }, item));
-      }
-    });
-  };
+Template.nav.helpers({
+  sections: function () {
+    var ret = [];
+    var walk = function (items, depth) {
+      _.each(items, function (item) {
+        // Work around (eg) accidental trailing commas leading to spurious holes
+        // in IE8.
+        if (!item)
+          return;
+        if (item instanceof Array)
+          walk(item, depth + 1);
+        else {
+          if (typeof(item) === "string")
+            item = {name: item};
+          ret.push(_.extend({
+            type: "section",
+            id: item.name && name_to_id(item.name) || undefined,
+            depth: depth,
+            style: ''
+          }, item));
+        }
+      });
+    };
 
-  walk(toc, 1);
-  return ret;
-};
+    walk(toc, 1);
+    return ret;
+  },
 
-Template.nav.type = function (what) {
-  return this.type === what;
-};
+  type: function (what) {
+    return this.type === what;
+  },
 
-Template.nav.maybe_current = function () {
-  return Session.equals("section", this.id) ? "current" : "";
-};
+  maybe_current: function () {
+    return Session.equals("section", this.id) ? "current" : "";
+  }
+});
 
-Template.nav_section.depthIs = function (n) {
-  return this.depth === n;
-};
+Template.nav_section.helpers({
+  depthIs: function (n) {
+    return this.depth === n;
+  }
+});
 
 // Show hidden TOC when menu icon is tapped
 Template.nav.events({

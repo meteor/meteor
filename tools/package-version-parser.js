@@ -188,8 +188,8 @@ PV.parseVersionConstraint = function (versionString, options) {
   PV.getValidServerVersion(versionString);
 
   if (options.removeBuildIDs) {
-    versionString = versionString.replace(/\+.*$/, '');
-   }
+    versionString = PV.removeBuildID(versionString);
+  }
 
   versionDesc.version = versionString;
 
@@ -281,7 +281,7 @@ PV.parseConstraint = function (constraintString, options) {
   }
 
   // Let's parse out the versionString.
-  var versionConstraints = versionString.split(' || ');
+  var versionConstraints = versionString.split(/ *\|\| */);
   constraint.constraints = [];
   __.each(versionConstraints, function (versionCon) {
     constraint.constraints.push(
@@ -339,4 +339,9 @@ PV.invalidFirstFormatConstraint = function (validConstraint) {
   // complicated regex.
   return (/_/.test(validConstraint) ||
           /\|/.test(validConstraint));
+};
+
+// Remove a suffix like "+local" if present.
+PV.removeBuildID = function (versionString) {
+  return versionString.replace(/\+.*$/, '');
 };

@@ -7,7 +7,8 @@ var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 
-selftest.define("publish-and-search", ["slow", "net", "test-package-server"], function () {
+selftest.define("publish-and-search",
+    ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -44,7 +45,7 @@ selftest.define("publish-and-search", ["slow", "net", "test-package-server"], fu
   // set a github URL in the package
   var packageJsContents = s.read("package.js");
   var newPackageJsContents = packageJsContents.replace(
-      /git: \".*\"/, "git: \"" + githubUrl + "\"");
+      /git: \'.*\'/, "git: \'" + githubUrl + "\'");
   s.write("package.js", newPackageJsContents);
 
   run = s.run("publish");
@@ -101,7 +102,8 @@ selftest.define("publish-and-search", ["slow", "net", "test-package-server"], fu
   run.match("package: " + packageName);
 });
 
-selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], function () {
+selftest.define("publish-one-arch",
+    ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -139,7 +141,8 @@ selftest.define("publish-one-arch", ["slow", "net", "test-package-server"], func
 });
 
 selftest.define("list-with-a-new-version",
-                ["slow", "net", "test-package-server"], function () {
+    ["slow", "net", "test-package-server", "checkout"],
+    function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -268,7 +271,8 @@ selftest.define("list-with-a-new-version",
 
 
 selftest.define("do-not-update-to-rcs",
-                ["slow", "net", "test-package-server"], function () {
+    ["slow", "net", "test-package-server", "checkout"],
+    function () {
   var s = new Sandbox;
 
   var username = "test";
@@ -389,13 +393,14 @@ selftest.define("do-not-update-to-rcs",
 
 
 selftest.define("package-depends-on-either-version",
-    ["slow", "net", "test-package-server"], function () {
+    ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
   var username = "test";
   var password = "testtest";
   testUtils.login(s, username, password);
   var packageNameDependent = utils.randomToken();
+  var run;
 
   // First, we publish fullPackageNameDep at 1.0 and publish it..
   var fullPackageNameDep = username + ":" + packageNameDependent;
@@ -435,7 +440,6 @@ selftest.define("package-depends-on-either-version",
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
-  s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add", fullPackageNameDep + "@=1.0.0");
   run.match(fullPackageNameDep);
