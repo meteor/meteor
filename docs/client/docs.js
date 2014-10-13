@@ -1,4 +1,4 @@
-var release = Meteor.release ? "0.9.4-pre.11" : "(checkout)";
+var release = Meteor.release ? "0.9.4" : "(checkout)";
 
 Template.headline.helpers({
   release: function () {
