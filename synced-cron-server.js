@@ -10,16 +10,18 @@ SyncedCron = {
 
 Later = Npm.require('later');
 
-// Use UTC or localtime for evaluating schedules
-if (SyncedCron.options.utc)
-  Later.date.UTC();
-else
-  Later.date.localTime();
+Meteor.startup(function() {
+  // Use UTC or localtime for evaluating schedules
+  if (SyncedCron.options.utc)
+    Later.date.UTC();
+  else
+    Later.date.localTime();
 
-// collection holding the job history records
-SyncedCron._collection = 
-  new Mongo.Collection(SyncedCron.options.collectionName);
-SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
+  // collection holding the job history records
+  SyncedCron._collection = 
+    new Mongo.Collection(SyncedCron.options.collectionName);
+  SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
+});
 
 var log = {
   info: function(message) {
@@ -47,13 +49,15 @@ SyncedCron.add = function(entry) {
 SyncedCron.start = function() {
   var self = this;
 
-  // Schedule each job with later.js
-  this._entries.forEach(function(entry) {
-    var schedule = entry.schedule(Later.parse);
-    entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
+  Meteor.startup(function() {
+    // Schedule each job with later.js
+    self._entries.forEach(function(entry) {
+      var schedule = entry.schedule(Later.parse);
+      entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
 
-    log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
-      + Later.schedule(schedule).next(1));
+      log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
+        + Later.schedule(schedule).next(1));
+    });
   });
 }
 
