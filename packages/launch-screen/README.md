@@ -1,41 +1,46 @@
 Launch Screen package
 ===
 
-A mobile-only package that provides an API for controlling the launch screen
-users see when the app is booting app.
+A mobile-only package that provides an API for postponing when your
+app's launch screen is removed and your app is made visible. For
+example, your app can avoid showing the user a white page while first
+rendering the UI.
 
-It is used only to avoid showing the user a white page slowly building up the UI
-elements. Not to hide the whole process of retrieving data. For the best user
-experience don't hold the launch screen for too long.
+### Simple usage
 
-###Simple usage
-
-```
+```js
 // just add the package, no special configuration required
 ```
 
-When this package is added, the app will hold the launch screen until the
-`body` template is fully loaded on the screen or, in case you use the IronRouter
-package, unless first route is rendered.
+When this package is added, the app will hold the launch screen until
+the `body` template is rendered. If you're using iron:router in your
+app, it waits until the first route is rendered.
 
-You can also control it manually if you want to wait on other UI elements to be
-loaded before releasing the launch screen and showing the user the actual app.
+You can also control it manually if you want to wait on other UI
+elements to be loaded before releasing the launch screen and showing
+the user the actual app.
 
-###Manually adding more actions to await before releasing the launch screen
+### Additional waiting before releasing the launch screen
 
-To tell the package that there is another action you want to be awaited on
-startup, declare it by holding the screen in the top-level code once per action
-and the release it when the action is completed.
+To wait on more events before releasing the launch screen, call
+`LaunchScreen.hold()` in the top-level of the client code of your app,
+and when you're ready to show the launch screen, call
+`LaunchScreen.release()`.
 
-The example awaiting for a template to be rendered is shown below.
+For example, to wait for a template to be rendered:
 
 ```javascript
-// declare that there is a new block to hold
-if (Meteor.isClient)
-  LaunchScreen.hold();
+// in a client-only javascript file
+
+LaunchScreen.hold();
 
 Template.myUI.rendered = function () {
   LaunchScreen.release();
 };
 ```
+
+Your app, or packages used in your app, can call `LaunchScreen.hold()`
+multiple times. The launch screen will be removed once
+`LaunchScreen.release()` is called a matching number of times.
+
 
