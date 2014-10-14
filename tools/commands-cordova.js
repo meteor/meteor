@@ -1285,6 +1285,8 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
 
   if (project.dependencies['launch-screen']) {
     additionalConfiguration.AutoHideSplashScreen = false;
+    additionalConfiguration.SplashScreen = 'screen';
+    additionalConfiguration.SplashScreenDelay = 10000;
   }
 
   var imagePaths = {
