@@ -1,10 +1,10 @@
-<template name="pkg_browser_policy">
-{{#markdown}}
-## `browser-policy`
+# browser-policy
 
-The `browser-policy` package lets you set security-related policies that will be
-enforced by newer browsers. These policies help you prevent and mitigate common
-attacks like cross-site scripting and clickjacking.
+The `browser-policy` family of packages, part of
+[Webapp](https://www.meteor.com/webapp), lets you set security-related
+policies that will be enforced by newer browsers. These policies help
+you prevent and mitigate common attacks like cross-site scripting and
+clickjacking.
 
 When you add `browser-policy` to your app, you get default configurations for
 the HTTP headers X-Frame-Options and Content-Security-Policy. X-Frame-Options
@@ -43,35 +43,37 @@ Meteor determines the browser policy when the server starts up, so you should
 call `BrowserPolicy` functions on the server in top-level application code or in
 `Meteor.startup`. `BrowserPolicy` functions cannot be used in client code.
 
-#### Frame options
+## Frame options
 
-By default, if you add `browser-policy` or `browser-policy-framing`, only web
-pages on the same origin as your app are allowed to frame your app. You can use
+By default, if you add `browser-policy` or `browser-policy-framing`, only web pages on the same origin as your app are allowed to frame your app. You can use
 the following functions to modify this policy.
-<dl class="callbacks">
-{{#dtdd "BrowserPolicy.framing.disallow()"}}
-Your app will never render inside a frame or iframe.
-{{/dtdd}}
 
-{{#dtdd "BrowserPolicy.framing.restrictToOrigin(origin)"}}
-Your app will only render inside frames loaded by `origin`. You can only call
-this function once with a single origin, and cannot use wildcards or specify
-multiple origins that are allowed to frame your app. (This is a limitation of
-the X-Frame-Options header.) Example values of `origin` include
-"http://example.com" and "https://foo.example.com".
-{{#warning}}
-This value of the X-Frame-Options header is not yet supported in Chrome or
-Safari and will be ignored in those browsers.
-{{/warning}}
-{{/dtdd}}
+<dl>
 
-{{#dtdd "BrowserPolicy.framing.allowAll()"}}
+<dt><code>BrowserPolicy.framing.disallow()</code><dt>
+<dd>Your app will never render inside a frame or iframe.</dd>
+
+<dt><code>BrowserPolicy.framing.restrictToOrigin(origin)</code></dt>
+<dd>
+Your app will only render inside frames loaded by
+<code>origin</code>. You can only call this function once with a
+single origin, and cannot use wildcards or specify multiple origins
+that are allowed to frame your app. (This is a limitation of the
+X-Frame-Options header.) Example values of <code>origin</code> include
+"http://example.com" and "https://foo.example.com". <b>This value of
+the X-Frame-Options header is not yet supported in Chrome or Safari
+and will be ignored in those browsers.</b>
+</dd>
+
+
+<dt><code>BrowserPolicy.framing.allowAll()</code><dt>
+<dd>
 This unsets the X-Frame-Options header, so that your app can be framed by
 any webpage.
-{{/dtdd}}
+</dd>
 </dl>
 
-#### Content options
+## Content options
 
 You can use the functions in this section to control how different types of
 content can be loaded on your site.
@@ -79,64 +81,82 @@ content can be loaded on your site.
 You can use the following functions to adjust policies on where Javascript and
 CSS can be run:
 
-<dl class="callbacks">
-{{#dtdd "BrowserPolicy.content.allowInlineScripts()"}}
-Allows inline `<script>` tags, `javascript:` URLs, and inline event handlers.
-The default policy already allows inline scripts.
-{{/dtdd}}
+<dl>
 
-{{#dtdd "BrowserPolicy.content.disallowInlineScripts()"}}
+<dt><code>BrowserPolicy.content.allowInlineScripts()</code></dt>
+<dd>
+Allows inline <code>&lt;script&gt;</code> tags,
+<code>javascript:</code> URLs, and inline event handlers.  The default
+policy already allows inline scripts.
+</dd>
+
+<dt><code>BrowserPolicy.content.disallowInlineScripts()</code></dt>
+<dd>
 Disallows inline Javascript. Calling this function results in an extra
-round-trip on page load to retrieve Meteor runtime configuration that is usually
-part of an inline script tag.
-{{/dtdd}}
+round-trip on page load to retrieve Meteor runtime configuration that
+is usually part of an inline script tag.
+</dd>
 
-{{#dtdd "BrowserPolicy.content.allowEval()"}}
-Allows the creation of Javascript code from strings using function such as `eval()`.
-{{/dtdd}}
+<dt><code>BrowserPolicy.content.allowEval()</code></dt>
+<dd>
+Allows the creation of Javascript code from strings using function such as <code>eval()</code>.
+</dd>
 
-{{#dtdd "BrowserPolicy.content.disallowEval()"}}
+<dt><code>BrowserPolicy.content.disallowEval()</code></dt>
+<dd>
 Disallows eval and related functions. The default policy already disallows eval.
-{{/dtdd}}
+</dd>
 
-{{#dtdd "BrowserPolicy.content.allowInlineStyles()"}}
+<dt><code>BrowserPolicy.content.allowInlineStyles()</code></dt>
+<dd>
 Allows inline style tags and style attributes. The default policy already allows
 inline styles.
-{{/dtdd}}
+</dd>
 
-{{#dtdd "BrowserPolicy.content.disallowInlineStyles()"}}
+<dt><code>BrowserPolicy.content.disallowInlineStyles()</code></dt>
+<dd>
 Disallows inline CSS.
-{{/dtdd}}
+</dd>
+
 </dl>
 
 Finally, you can configure a whitelist of allowed requests that various types of
 content can make. The following functions are defined for the content types
 script, object, image, media, font, frame, and connect.
 
-<dl class="callbacks">
-{{#dtdd "BrowserPolicy.content.allow&lt;ContentType&gt;Origin(origin)"}}
-Allows this type of content to be loaded from the given origin. `origin` is a
-string and can include an optional scheme (such as `http` or `https`), an
-optional wildcard at the beginning, and an optional port which can be a
-wildcard. Examples include `example.com`, `https://*.example.com`, and
-`example.com:*`. You can call these functions multiple times with
-different origins to specify a whitelist of allowed origins. Origins
-that don't specify a protocol will allow content over both HTTP and
-HTTPS: passing `example.com` will allow content from both
-`http://example.com` and `https://example.com`.
-{{/dtdd}}
+<dl>
 
-{{#dtdd "BrowserPolicy.content.allow&lt;ContentType&gt;DataUrl()"}}
-Allows this type of content to be loaded from a `data:` URL.
-{{/dtdd}}
+<dt><code>BrowserPolicy.content.allow&lt;ContentType&gt;Origin(origin)</code></dt>
+<dd>
+Allows this type of content to be loaded from the given
+origin. <code>origin</code> is a string and can include an optional
+scheme (such as <code>http</code> or <code>https</code>), an optional
+wildcard at the beginning, and an optional port which can be a
+wildcard. Examples include <code>example.com</code>,
+<code>https://*.example.com</code>, and
+<code>example.com:*</code>. You can call these functions multiple
+times with different origins to specify a whitelist of allowed
+origins. Origins that don't specify a protocol will allow content over
+both HTTP and HTTPS: passing <code>example.com</code> will allow
+content from both <code>http://example.com</code> and
+<code>https://example.com</code>.
+<dd>
 
-{{#dtdd "BrowserPolicy.content.allow&lt;ContentType&gt;SameOrigin()"}}
+<dt><code>BrowserPolicy.content.allow&lt;ContentType&gt;DataUrl()</code></dt>
+<dd>
+Allows this type of content to be loaded from a <code>data:</code> URL.
+</dd>
+
+<dt><code>BrowserPolicy.content.allow&lt;ContentType&gt;SameOrigin()</code></dt>
+<dd>
 Allows this type of content to be loaded from the same origin as your app.
-{{/dtdd}}
+</dd>
 
-{{#dtdd "BrowserPolicy.content.disallow&lt;ContentType&gt;()"}}
+<dt><code>BrowserPolicy.content.disallow&lt;ContentType&gt;()</code></dt>
+<dd>
 Disallows this type of content on your app.
-{{/dtdd}}
+</dd>
+
 </dl>
 
 You can also set policies for all these types of content at once, using these
@@ -172,9 +192,6 @@ sites can be loaded inside frames on your site.
 Adding `browser-policy-content` to your app also tells certain
 browsers to avoid sniffing content types away from the declared type
 (for example, interpreting a text file as JavaScript), using the
-[X-Content-Type-Options](http://msdn.microsoft.com/en-us/library/ie/gg622941(v=vs.85).aspx)
+[X-Content-Type-Options](http://msdn.microsoft.com/en-us/library/ie/gg622941%28v=vs.85%29.aspx)
 header. To re-enable content sniffing, you can call
 `BrowserPolicy.content.allowContentTypeSniffing()`.
-
-{{/markdown}}
-</template>
