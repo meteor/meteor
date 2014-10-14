@@ -82,7 +82,7 @@ _.extend(ProgressDisplayNone.prototype, {
 
   stop: function () {
 
-  }
+  },
 });
 
 // Status display only, primarily for use with emacs
@@ -154,7 +154,8 @@ _.extend(ProgressDisplayStatus.prototype, {
 var Spinner = function () {
   var self = this;
   self.frames = ['-', '\\', '|', '/'];
-  self.frame = 0;
+  self.start = +(new Date);
+  self.interval = 250;
   //// I looked at some Unicode indeterminate progress indicators, such as:
   ////
   //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
@@ -172,9 +173,12 @@ var Spinner = function () {
   //// but all of the ones I tried look terrible in the terminal.
 };
 
-Spinner.prototype.takeFrame = function () {
+Spinner.prototype.currentFrame = function () {
   var self = this;
-  self.frame = self.frame % self.frames.length;
+  var now = +(new Date);
+
+  var t = now - self.start;
+  var frame = (t / self.interval) % self.frames.length;
   return self.frames[self.frame];
 };
 
@@ -247,14 +251,17 @@ _.extend(ProgressDisplayBar.prototype, {
     }
 
     if (self._fraction !== undefined) {
+      // XXX: Throttle progress bar repaints (but it looks like we're doing our own anyway)
       // Force repaint
       self._progressBar.lastDraw = '';
       self._progressBar.render();
     } else {
+      // XXX: Maybe throttle here too?
+      // XXX: Or maybe just jump to the correct position
       self._stream.clearLine();
       self._stream.cursorTo(0);
 
-      self._stream.write(self._spinner.takeFrame());
+      self._stream.write(self._spinner.currentFrame());
     }
 
     if (text) {
@@ -309,7 +316,7 @@ _.extend(StatusPoller.prototype, {
     var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
 
     var progressDisplay = self._progressDisplay;
-    progressDisplay.updateStatus(title);
+    progressDisplay.updateStatus && progressDisplay.updateStatus(title);
 
     if (watching) {
       watching.addWatcher(function (state) {
@@ -322,6 +329,11 @@ _.extend(StatusPoller.prototype, {
         var progressDisplay = self._progressDisplay;
         if (progressDisplay.updateProgress) {
           // Progress bar doesn't show progress; don't bother with the % computation
+          return;
+        }
+
+        if (state.end === undefined) {
+          progressDisplay.updateProgress(undefined);
           return;
         }
 
