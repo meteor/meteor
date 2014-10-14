@@ -113,7 +113,7 @@ exports.createAndDeployApp = function (sandbox, options) {
   }
   var run = sandbox.run.apply(sandbox, runArgs);
   run.waitSecs(90);
-  run.match('Now serving at ' + name);
+  run.match('Now serving at http://' + name);
   run.waitSecs(10);
   run.expectExit(0);
   return name;
