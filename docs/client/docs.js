@@ -416,7 +416,6 @@ var toc = [
     "audit-argument-checks",
     "coffeescript",
     "fastclick",
-    "force-ssl",
     "jquery",
     "less",
     "oauth-encryption",

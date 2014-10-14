@@ -1,11 +1,9 @@
-<template name="pkg_force_ssl">
-{{#markdown}}
-## `force-ssl`
+# force-ssl
 
-This package causes Meteor to redirect insecure connections (HTTP) to a
-secure URL (HTTPS). Use this package to ensure that communication to the
-server is always encrypted to protect users from active spoofing
-attacks.
+This package, part of [Webapp](https://www.meteor.com/webapp), causes
+Meteor to redirect insecure connections (HTTP) to a secure URL
+(HTTPS). Use this package to ensure that communication to the server
+is always encrypted to protect users from active spoofing attacks.
 
 To simplify development, unencrypted connections from `localhost` are
 always accepted over HTTP.
@@ -18,6 +16,3 @@ bundle must set the standard `x-forwarded-proto` header for the
 Applications deployed to `meteor.com` subdomains with
 `meteor deploy` are automatically served via HTTPS using Meteor's
 certificate.
-
-{{/markdown}}
-</template>
