@@ -1,4 +1,4 @@
-# route-policy
+# RoutePolicy
 
 RoutePolicy, part of [Webapp](https://www.meteor.com/webapp), is a
 low-level API for declaring the offline access semantics that apply to
