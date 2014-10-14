@@ -24,6 +24,6 @@ Blaze._warn = function (msg) {
 
   if ((typeof Log !== 'undefined') && Log && Log.warn)
     Log.warn(msg); // use Meteor's "logging" package
-  else if ((typeof 'console' !== 'undefined') && console.log)
+  else if ((typeof console !== 'undefined') && console.log)
     console.log(msg);
 };
