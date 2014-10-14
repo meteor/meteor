@@ -665,7 +665,6 @@ are known to not be compatible with Meteor 0.9.0 and later. If you
 want to see those versions anyway, use the --show-old option.
 
 Options:
-  --maintainer    filter by authorized maintainer
   --show-old      show versions incompatible with Meteor 0.9.0 and later.
 
 
