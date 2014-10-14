@@ -31,6 +31,18 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
 }
 
+PROGRESS_BAR_WIDTH = 20;
+PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
+STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
+STATUS_MAX_LENGTH = 40;
+TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
+
+STATUS_INTERVAL_MS = 500;
+
+// Message to show when we don't know what we're doing
+// XXX: ? FALLBACK_STATUS = 'Pondering';
+FALLBACK_STATUS = '';
+
 var spacesArray = new Array(200).join(' ');
 var spacesString = function (length) {
   if (length > spacesArray.length) {
@@ -361,18 +373,6 @@ var Console = function (options) {
   });
 };
 
-
-PROGRESS_BAR_WIDTH = 20;
-PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
-STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
-STATUS_MAX_LENGTH = 40;
-TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
-
-STATUS_INTERVAL_MS = 500;
-
-// Message to show when we don't know what we're doing
-// XXX: ? FALLBACK_STATUS = 'Pondering';
-FALLBACK_STATUS = '';
 
 // This function returns a future which resolves after a timeout. This
 // demonstrates manually resolving futures.
