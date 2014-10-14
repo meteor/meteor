@@ -18,9 +18,9 @@ Tinytest.add('Syncing works', function(test) {
 
   // added the entry ok
   SyncedCron.add(TestEntry);
-  test.equal(SyncedCron._entries.length, 1);
+  test.equal(_.keys(SyncedCron._entries).length, 1);
 
-  var entry = SyncedCron._entries[0];
+  var entry = SyncedCron._entries[TestEntry.name];
   var intendedAt = new Date(); //whatever
 
   // first run
@@ -45,7 +45,7 @@ Tinytest.add('Exceptions work', function(test) {
     })
   );
 
-  var entry = SyncedCron._entries[0];
+  var entry = SyncedCron._entries[TestEntry.name];
   var intendedAt = new Date(); //whatever
 
   // error without result
@@ -71,7 +71,7 @@ Tinytest.add('SyncedCron.nextScheduledAtDate works', function(test) {
   });
   SyncedCron.add(entry2);
 
-  test.equal(SyncedCron._entries.length, 2);
+  test.equal(_.keys(SyncedCron._entries).length, 2);
 
   SyncedCron.start();
 
@@ -79,5 +79,30 @@ Tinytest.add('SyncedCron.nextScheduledAtDate works', function(test) {
   var correctDate = Later.schedule(entry2.schedule(Later.parse)).next(1);
   
   test.equal(date, correctDate);
+});
+
+// Tests SyncedCron.remove in the process
+Tinytest.add('SyncedCron.stop works', function(test) {
+  SyncedCron._reset();
+  test.equal(SyncedCron._collection.find().count(), 0);
+
+  // addd 2 entries
+  SyncedCron.add(TestEntry);
+
+  var entry2 = _.extend({}, TestEntry, {
+    name: 'Test Job2',
+    schedule: function(parser) {
+      return parser.cron('30 11 * * ? *');
+    }
+  });
+  SyncedCron.add(entry2);
+  
+  SyncedCron.start();
+  
+  test.equal(_.keys(SyncedCron._entries).length, 2);
+
+  SyncedCron.stop();
+
+  test.equal(_.keys(SyncedCron._entries).length, 0);
 });
 

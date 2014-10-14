@@ -1,6 +1,6 @@
 // A package for running jobs synchronized across multiple processes
 SyncedCron = {
-  _entries: [],
+  _entries: {},
   options: {
     //Log job run details to console
     log: true,
@@ -64,7 +64,7 @@ SyncedCron.add = function(entry) {
   check(entry.job, Function);
 
   // check
-  this._entries.push(entry);
+  this._entries[entry.name] = entry;
 }
 
 // Start processing added jobs
@@ -73,7 +73,7 @@ SyncedCron.start = function() {
 
   Meteor.startup(function() {
     // Schedule each job with later.js
-    self._entries.forEach(function(entry) {
+    _.each(self._entries, function(entry, name) {
       var schedule = entry.schedule(Later.parse);
       entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
 
@@ -84,21 +84,31 @@ SyncedCron.start = function() {
 }
 
 // Return the next scheduled date of the first matching entry or undefined
-SyncedCron.nextScheduledAtDate = function (jobName) {
-  var entry = _.find(this._entries, function(entry) {
-    return entry.name === jobName;
-  });
+SyncedCron.nextScheduledAtDate = function(jobName) {
+  var entry = this._entries[jobName];
   
   if (entry)
     return Later.schedule(entry.schedule(Later.parse)).next(1);
 }
 
-// Stop processing jobs
-SyncedCron.stop = function() {
-  if (this._timer) {
-    this._timer.clear();
-    this._timer = null;
+// Remove and stop the entry referenced by jobName
+SyncedCron.remove = function(jobName) {
+  var entry = this._entries[jobName];
+  
+  if (entry) {
+    if (entry._timer)
+      entry._timer.clear();
+
+    delete this._entries[jobName];
+    log.info('SyncedCron: Removed "' + entry.name);
   }
+}
+
+// Stop processing and remove ALL jobs
+SyncedCron.stop = function() {
+  _.each(this._entries, function(entry, name) {
+    SyncedCron.remove(name);
+  });
 }
 
 // The meat of our logic. Checks if the specified has already run. If not,
@@ -154,7 +164,7 @@ SyncedCron._entryWrapper = function(entry) {
 
 // for tests
 SyncedCron._reset = function() {
-  this._entries = [];
+  this._entries = {};
   this._collection.remove({});
 }
 

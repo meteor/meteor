@@ -50,20 +50,31 @@ SyncedCron uses a collection called `cronHistory` to syncronize between processe
 }
 ```
 
-If you want old entries in the log cleaned out, simply set the `purgeLogsAfterDays`
-parameter on an entry to specify the number of days of logs to keep.
-
 Call `SyncedCron.nextScheduledAtDate(jobName)` to find the date that the job
 referenced by `jobName` will run next.
+
+Call `SyncedCron.remove(jobName)` to remove and stop running the job referenced by jobName.
+
+Call `SyncedCron.stop()` to remove and stop all jobs.
 
 ### Configuration
 
 ```
-SyncedCron.options: {
-  log: true, // log debug info to the console
-  collectionName: 'cronHistory' // default name of the collection used to store job history,
-  utc: false // use UTC for evaluating schedules (default: local time)
-}
+  SyncedCron.options = {
+    //Log job run details to console
+    log: true,
+
+    //Name of collection to use for synchronisation and logging
+    collectionName: 'cronHistory',
+
+    //Default to using localTime
+    utc: false, 
+
+    //TTL in seconds for history records in collection to expire
+    //NOTE: Unset to remove expiry but ensure you remove the index from 
+    //mongo by hand
+    collectionTTL: 172800
+  }
 ```
 
 
