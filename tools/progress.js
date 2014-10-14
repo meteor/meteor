@@ -27,25 +27,14 @@ var Progress = function (options) {
   //}
   self._forkJoin = options.forkJoin;
 
-  // XXX: Rationalize this; we probably don't need _completedChildren
-  // XXX: or _activeChildTasks (?)
-  self._completedChildren = { current: 0, end: 0};
-  self._activeChildTasks = [];
   self._allTasks = [];
 
-  self._selfState = { current: 0, end: 0, done: false };
-  if (options.estimate) {
-    self._selfState.end = options.estimate;
-  }
+  self._selfState = { current: 0, done: false };
   self._state = _.clone(self._selfState);
 
   self._isDone = false;
 
   self._selfActive = false;
-
-  // If we're faking progress using the exponential trick, the counter
-  // stores the number of actual ticks
-  self._exponentialCounter = undefined;
 };
 
 _.extend(Progress.prototype, {
@@ -59,11 +48,11 @@ _.extend(Progress.prototype, {
 
     var state = _.clone(self._selfState);
     state.done = true;
-    if (state.current === 0) {
-      state.current = 1;
-    }
-    if (!state.end || state.end < state.current) {
-      state.end = state.current;
+    if (state.end !== undefined) {
+      if (state.current > state.end) {
+        state.end = state.current;
+      }
+      state.current = state.end;
     }
     self.reportProgress(state);
   },
@@ -104,20 +93,6 @@ _.extend(Progress.prototype, {
       return self;
     }
 
-    //if (self._activeChildTasks.length) {
-    //  var titles = _.map(self._activeChildTasks, function (task) {
-    //    return task.getCurrent();
-    //  });
-    //  titles = _.filter(titles, function (s) { return !!s; });
-    //  if (titles.length == 1) {
-    //    return titles[0];
-    //  }
-    //  //if (titles.length > 1) {
-    //  //  console.log("Multiple titles: " + titles);
-    //  //}
-    //  return self._title;
-    //}
-
     return null;
   },
 
@@ -127,7 +102,6 @@ _.extend(Progress.prototype, {
     options = options || {};
     var options = _.extend({ parent: self }, options);
     var child = new Progress(options);
-    self._activeChildTasks.push(child);
     self._allTasks.push(child);
     self._reportChildState(child, child._state);
     return child;
@@ -201,35 +175,6 @@ _.extend(Progress.prototype, {
 
     var state = _.clone(self._selfState);
 
-    //state.current += self._completedChildren.current;
-    //if (state.end !== undefined) {
-    //  state.end += self._completedChildren.end;
-    //}
-
-    //var allChildrenDone = true;
-    //_.each(self._activeChildTasks, function (child) {
-    //  var childState = child._state;
-    //  state.current += childState.current;
-    //  if (!state.done) {
-    //    allChildrenDone = false;
-    //  }
-    //
-    //  if (state.done) {
-    //    if (state.end !== undefined) {
-    //      state.end += childState.current;
-    //    }
-    //  } else if (state.end !== undefined) {
-    //    if (childState.end !== undefined) {
-    //      state.end += childState.end;
-    //    } else {
-    //      state.end = undefined;
-    //    }
-    //  }
-    //});
-    //if (!allChildrenDone) {
-    //  state.done = false;
-    //}
-
     var allChildrenDone = true;
     var state = _.clone(self._selfState);
     _.each(self._allTasks, function (child) {
@@ -266,13 +211,6 @@ _.extend(Progress.prototype, {
   // Called by a child when its state changes
   _reportChildState: function (child, state) {
     var self = this;
-
-    if (state.done) {
-      self._activeChildTasks = _.without(self._activeChildTasks, child);
-      var weight = state.current;
-      self._completedChildren.current += weight;
-      self._completedChildren.end += weight;
-    }
 
     self._updateTotalState();
     self._notifyState();
