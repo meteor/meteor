@@ -354,7 +354,7 @@ When "score" changes, the autorun is updated and new messages are printed. Chang
       // "DEBUG: current game umpire is Hippo"
       // "The game score is now 137!"
 
-# Fine-Grained Reactivity
+## Fine-Grained Reactivity
 
 When using reactive APIs, it is best to ask only for the data that your app actually needs. For example, if your app stores `Person` objects, and needs only the given and family name of a particular `Person`, it should retrieve only those fields and not other fields, like mailing address or date of birth, that aren't needed.
 
@@ -371,7 +371,7 @@ Fine-grained reactivity can improve performance, but it's also important to not 
 
 Here are some examples of fine-grained reactivity in common Meteor APIs.
 
-ReactiveDict:`get` versus `equals`
+### ReactiveDict:`get` versus `equals`
 
 What's the difference between these two ways of writing an autorun?
 
