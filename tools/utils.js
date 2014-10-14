@@ -513,6 +513,7 @@ exports.execFileAsync = function (file, args, opts) {
   return p;
 };
 
+// XXX: Remove Patience
 // Patience: a way to make slow operations a little more bearable.
 //
 // It's frustrating when you write code that takes a while, either because it
@@ -576,7 +577,6 @@ exports.Patience = function (options) {
   }
 };
 
-// XXX: Remove
 var nextYield = null;
 var YIELD_EVERY_MS = 150;
 var ACTIVE_PATIENCES = {};
