@@ -413,7 +413,6 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
-    "appcache",
     "audit-argument-checks",
     "browser-policy",
     "coffeescript",
