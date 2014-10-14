@@ -20,9 +20,13 @@ Meteor.startup(function () {
   LaunchScreen.hold();
 
   if (Package['iron:router']) {
-    Package['iron:router'].Router.onAfterAction(_.once(function () {
-      LaunchScreen.release();
-    }));
+    var released = false;
+    Package['iron:router'].Router.onAfterAction(function () {
+      if (! released) {
+        released = true;
+        LaunchScreen.release();
+      }
+    });
   } else {
     Template.body.rendered = function () {
       LaunchScreen.release();
