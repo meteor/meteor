@@ -112,6 +112,25 @@ _.extend(exports, {
     return addScheme(getAuthServiceHost()) + "/auth";
   },
 
+  // URL for the DDP interface to the meteor build farm, typically
+  // "https://build.meteor.com".
+  getBuildFarmUrl: function () {
+    if (process.env.METEOR_BUILD_FARM_URL)
+      return process.env.METEOR_BUILD_FARM_URL;
+    var host = config.getBuildFarmDomain();
+
+    return addScheme(host);
+  },
+
+  getBuildFarmDomain: function () {
+    if (process.env.METEOR_BUILD_FARM_URL) {
+      var parsed = url.parse(process.env.METEOR_BUILD_FARM_URL);
+      return parsed.host;
+    } else {
+      return getUniverse().replace(/^www\./, 'test-build.');
+    }
+  },
+
   // URL for the DDP interface to the package server, typically
   // "https://packages.meteor.com". (Really should be a ddp:// URL --
   // we'll get there soon enough.)

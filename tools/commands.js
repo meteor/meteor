@@ -8,6 +8,7 @@ var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
+var authClient = require('./auth-client.js');
 var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
@@ -32,6 +33,12 @@ var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
 var DEFAULT_PORT = '3000';
+
+// Valid architectures that Meteor officially supports.
+var VALID_ARCHITECTURES = {
+  "os.osx.x86_64" : true,
+  "os.linux.x86_64": true,
+  "os.linux.x86_32" : true };
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -630,13 +637,11 @@ var buildCommand = function (options) {
   // Error handling for options.architecture. We must pass in only one of three
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
-  var VALID_ARCHITECTURES =
-  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
   if (options.architecture &&
-      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
+      !VALID_ARCHITECTURES[options.architecture]) {
     Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
     Console.stderr.write(
-      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
+      "Please use one of the following: " + _.keys(VALID_ARCHITECTURES) + "\n");
     return 1;
   }
 
@@ -1852,6 +1857,133 @@ main.registerCommand({
 
   return deploy.listSites();
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// admin get-machine
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'admin get-machine',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    json: { type: Boolean, required: false },
+    verbose: { type: Boolean, short: "v", required: false },
+    // By default, we give you a machine for 5 minutes. You can request up to
+    // 15. (MDG can reserve machines for longer than that.)
+    length: { type: Number, required: false }
+  }
+}, function (options) {
+
+  // Check that we are asking for a valid architecture.
+  var arch = options.args[0];
+  if (!VALID_ARCHITECTURES[arch]){
+    Console.info("Invalid architecture: " + arch);
+    Console.info("The following are valid Meteor architectures:");
+    _.each(_.keys(VALID_ARCHITECTURES), function (va) {
+      Console.info("  " + va);
+    });
+    return 1;
+  }
+
+  // Set the length. We will check validity on the server.
+  var length = options.length || 5;
+
+  // In verbose mode, we let you know what is going on.
+  var maybeLog = function (string) {
+    if (options.verbose) {
+      Console.info(string);
+    }
+  };
+
+  try {
+    maybeLog("Logging into the build farm server ...");
+    var conn = authClient.loggedInConnection(
+      config.getBuildFarmUrl(),
+      config.getBuildFarmDomain(),
+      "build-farm");
+   } catch (err) {
+    authClient.handlerConnectionError(err, "build farm");
+    return 1;
+  }
+
+  try {
+    maybeLog("Reserving machine ...");
+
+    // The server returns to us an object with the following keys:
+    // username & sshKey : use this to log in.
+    // host: what you login into
+    // port: port you should use
+    // hostKey: RSA key to compare for safety.
+    var ret = conn.call('createBuildServer', arch, length);
+  } catch (err) {
+    authClient.handlerConnectionError(err, "build farm");
+    return 1;
+  }
+  conn.close();
+
+  var child_process = require('child_process');
+
+  // Record the SSH Key in a temporary file on disk and give it the permissions
+  // that ssh-agent requires it to have.
+  var idpath = "/tmp/key-" + utils.randomToken();
+  fs.writeFileSync(idpath, ret.sshKey, 'utf8');
+  child_process.exec("chmod 400 " + idpath,
+    function (error, stdout, stderr) {
+      maybeLog(stdout);
+      if (error !== null) {
+        maybeLog("ERROR from chmod: " + stderr);
+        Console.error('cannot set permissions on SSH key: ' + error);
+        process.exit(1);
+      }
+    });
+
+  // Possibly, the user asked us to return a JSON of the data and is going to process it
+  // themselves. In that case, let's do that and exit.
+  if (options.json) {
+    var retJson = {
+      'username': ret.username,
+      'host' : ret.host,
+      'port' : ret.port,
+      'key' : idpath,
+      'hostKey' : ret.hostKey
+    };
+    Console.info(JSON.stringify(retJson, null, 2));
+    return 0;
+  }
+
+  // Add the known host key to a custom known hosts file.
+  var hostpath = "/tmp/host-" + utils.randomToken();
+  var addendum = ret.host + " " + ret.hostKey;
+  fs.writeFileSync(hostpath, addendum, 'utf8');
+
+  // Finally, connect to the machine.
+  var login = ret.username + "@" + ret.host;
+  var maybeVerbose = options.verbose ? "-v" : "-q";
+  maybeLog(
+    "Connecting: ssh " + login +
+      " -i " + idpath +
+      " -p " + ret.port +
+      " -oUserKnownHostsFile=" + hostpath +
+      " " + maybeVerbose);
+
+  var future = new Future;
+  var sshCommand = child_process.spawn(
+    "ssh",
+    [login,
+     "-i" + idpath,
+     "-p" + ret.port,
+     "-oUserKnownHostsFile=" + hostpath,
+     maybeVerbose],
+    { stdio: 'inherit' }); // Redirect spawn stdio to process
+
+  sshCommand.on('exit', function (code) {
+    future.return(code);
+  });
+  return future.wait();
+});
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // dummy

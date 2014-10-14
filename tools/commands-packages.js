@@ -254,6 +254,10 @@ main.registerCommand({
   };
 
   // We have initialized everything, so perform the publish oepration.
+  var allArchs = compileResult.isopack.buildArchitectures().split('+');
+  var binary = !!(_.any(allArchs, function (arch) {
+    return arch.match(/^os\./);
+  }));
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
@@ -262,7 +266,8 @@ main.registerCommand({
       ec = packageClient.publishPackage(
         packageSource, compileResult, conn, {
           new: options.create,
-          existingVersion: options['existing-version']
+          existingVersion: options['existing-version'],
+          doNotPublishBuild: binary && !options['existing-version']
         });
     });
   } catch (e) {
@@ -284,14 +289,26 @@ main.registerCommand({
     return ec;
 
   // Warn the user if their package is not good for all architectures.
-  var allArchs = compileResult.isopack.buildArchitectures().split('+');
-  if (_.any(allArchs, function (arch) {
-    return arch.match(/^os\./);
-  })) {
+  if (binary && options['existing-version']) {
+    // This is an undocumented command that you are not supposed to run! We
+    // assume that you know what you are doing, if you ran it, and are OK with
+    // overrwriting normal compatibilities.
+    Console.warn("\nWARNING: Your package contains binary code.");
+  } else if (binary) {
+    Console.warn("\nWARNING: Your package contains binary code!");
+    // Now, a gentle message.
     Console.warn(
-      "\nWARNING: Your package contains binary code and is only compatible with " +
-        archinfo.host() + " architecture.\n" +
-        "Please use publish-for-arch to publish new builds of the package.\n");
+"It is not safe to build binary packages on non-standard machines. See more here: <url>");
+    Console.warn(
+"For now, you can use 'meteor admin get-machine <architecture>' to open a secure shell to a " +
+"preconfigured meteor build machine.");
+    Console.warn("To request built machines from the meteor build farm, please run:");
+    _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
+      Console.info("meteor admin get-machine", a);
+    });
+    Console.warn(
+"One you are logged into a build machine, you can run 'meteor publish-for-arch",
+packageSource.name + "@" + packageSource.version + "' to publish a valid build.");
   }
 
   // Refresh, so that we actually learn about the thing we just published.
@@ -878,6 +895,7 @@ main.registerCommand({
 
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.
+    var unfinishedBuilds = {};
     for (var name in toPublish) {  // don't use _.each so we can return
       if (!_.has(toPublish, name))
         continue;
@@ -892,8 +910,15 @@ main.registerCommand({
         messages = buildmessage.capture({
           title: "Publishing package " + name
         }, function () {
+          var allArchs =
+             prebuilt.compileResult.isopack.buildArchitectures().split('+');
+          var binary = !!(_.any(allArchs, function (arch) {
+            return arch.match(/^os\./);
+          }));
+
           var opts = {
-            new: !catalog.official.getPackage(name)
+            new: !catalog.official.getPackage(name),
+            doNotPublishBuild: binary
           };
 
           // If we are creating a new package, dsPS will document this for us,
@@ -905,6 +930,10 @@ main.registerCommand({
             prebuilt.compileResult,
             conn,
             opts);
+
+          if (binary) {
+            unfinishedBuilds[name] = prebuilt.source.version;
+          }
         });
       } catch (e) {
           packageClient.handlePackageServerConnectionError(e);
@@ -997,8 +1026,8 @@ main.registerCommand({
           "Failed to push git tag. Please push git tag manually!");
         Console.error(
           "If you are publishing a non-prerelease version, then the readme will show up " +
-          "in atmosphere. To make sure that happens, after pushing the git tag, please run " +
-          " the following:");
+          "in atmosphere. To make sure that happens, after pushing the git tag, please " +
+          "run the following:");
         _.each(toPublish, function (pack, name) {
           Console.info("meteor admin set-latest-readme " + name + " --tag " + gitTag);
         });
@@ -1007,7 +1036,8 @@ main.registerCommand({
       }
       if (!fail) {
         _.each(toPublish, function (pack, name) {
-          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag + "/packages/" +
+          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag +
+                "/packages/" +
                 name + "/README.md";
           var version = pack.compileResult.isopack.version;
           packageClient.callPackageServer(
@@ -1017,6 +1047,27 @@ main.registerCommand({
       }
     }
   }
+
+  // We need to warn the user that we didn't publish some of their
+  // packages. Unlike publish, this is advanced functionality, so the user
+  // should be familiar with the concept.
+  if (!_.isEmpty(unfinishedBuilds)) {
+    Console.warning(
+      "WARNING: Some packages contain binary dependencies.");
+    Console.warning("Builds have not been published for the following packages:");
+    _.each(unfinishedBuilds, function (version, name) {
+      Console.warning(name + "@" + version);
+    });
+    // Note: we don't actually enforce the proper build machine thing. You can't
+    // use publish-for-arch for meteor-tool, for example, you need to use
+    // publish --existing-version and to do it from checkout. Setting that up on
+    // a build machine for a one-off experimental release could be a pain. In
+    // that case, I guess, you can just run publish --existing-version:
+    // presumably you don't care about compatibility etc. If it is an official
+    // release, you ought to use a build machine though.
+    Console.warning(
+      "Please publish the builds separately, from a proper build machine.");
+  };
 
   return 0;
 });
