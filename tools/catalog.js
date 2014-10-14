@@ -322,20 +322,13 @@ _.extend(LayeredCatalog.prototype, {
     var self = this;
     var uniload = require('./uniload.js');
 
-    var yielder = new utils.ThrottledYield();
-
     var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
     })['constraint-solver'];
     self.resolver =
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
         nudge: function () {
-          // This may be a singleton, but the resolver is in a package so it
-          // doesn't have access to it.
-          utils.Patience.nudge();
-          buildmessage.nudge();
-
-          yielder.yield();
+          Console.nudge(true);
         }
       });
   },

@@ -143,40 +143,11 @@ _.extend(Runner.prototype, {
     }
 
     if (! self.stopped && self.mongoRunner) {
-      var spinner = ['-', '\\', '|', '/'];
-      // I looked at some Unicode indeterminate progress indicators, such as:
-      //
-      // spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
-      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
-      // spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
-      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
-      // spinner = "⠉⠒⠤⣀⠤⠒".split('');
-      //
-      // but none of them really seemed like an improvement. I think
-      // the case for using unicode would be stronger in a determinate
-      // progress indicator.
-      //
-      // There are also some four-frame options such as ◐◓◑◒ at
-      //   http://stackoverflow.com/a/2685827/157965
-      // but all of the ones I tried look terrible in the terminal.
-      if (! self.quiet) {
-        var animationFrame = 0;
-        var printUpdate = fiberHelpers.bindEnvironment(function () {
-          //runLog.logTemporary("=> Starting MongoDB... " +
-          //                    spinner[animationFrame]);
-          buildmessage.nudge();
-          animationFrame = (animationFrame + 1) % spinner.length;
-        });
-        printUpdate();
-        var mongoProgressTimer = setInterval(printUpdate, 200);
-      }
-
       buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
         self.mongoRunner.start();
       });
 
       if (! self.quiet) {
-        clearInterval(mongoProgressTimer);
         if (! self.stopped)
           runLog.log("=> Started MongoDB.");
       }
