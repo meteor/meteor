@@ -423,7 +423,6 @@ var toc = [
     "less",
     "oauth-encryption",
     "random",
-    "spiderable",
     "stylus",
     "showdown",
     "underscore",
