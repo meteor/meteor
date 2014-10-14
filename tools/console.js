@@ -424,7 +424,7 @@ _.extend(Console.prototype, {
   // Like Patience.nudge(); this can be called during long lived operations
   // where the timer may be starved off the CPU.  It will execute the poll if
   // it has been 'too long'
-  statusPollMaybe: function () {
+  nudge: function () {
     var self = this;
     var now = Date.now();
     if ((now - self._lastStatusPoll) < STATUS_INTERVAL_MS) {

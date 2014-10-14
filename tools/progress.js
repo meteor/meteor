@@ -192,7 +192,7 @@ _.extend(Progress.prototype, {
 
     self._updateTotalState();
 
-    console.Console.statusPollMaybe();
+    console.Console.nudge();
 
     self._notifyState();
   },
