@@ -284,50 +284,6 @@ _.extend(StatusPoller.prototype, {
         }
       });
     }
-  },
-
-
-  _watchProgress: function () {
-    var self = this;
-
-    var watching = self._watching;
-    if (!watching) {
-      // No active task
-      return;
-    }
-
-    watching.addWatcher(function (state) {
-      if (watching != self._watching) {
-        // No longer active
-        // XXX: De-register with watching?
-        return;
-      }
-
-      var progressDisplay = self._progressDisplay;
-      if (!progressDisplay.showsProgress) {
-        // Progress bar doesn't show progress; don't bother with the computation
-        return;
-      }
-
-      var fraction;
-      if (state.done) {
-        fraction = 1.0;
-      } else {
-        var current = state.current;
-        var end = state.end;
-        if (end === undefined || end == 0 || current == 0) {
-          // Arbitrary end-point
-          fraction = progressBar.curr / 100;
-        } else {
-          fraction = current / end;
-        }
-      }
-
-      if (!isNaN(fraction) && fraction >= 0) {
-        progressBar.curr = Math.floor(fraction * progressBar.total);
-        self._renderProgressBar();
-      }
-    });
   }
 
 });
