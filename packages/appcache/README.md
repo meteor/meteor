@@ -1,12 +1,11 @@
-<template name="pkg_appcache">
-{{#markdown}}
+# appcache
 
-## `appcache`
-
-The `appcache` package stores the static parts of a Meteor application
-(the client side Javascript, HTML, CSS, and images) in the browser's
-[application cache](https://en.wikipedia.org/wiki/AppCache). To enable
-caching simply add the `appcache` package to your project.
+The `appcache` package, part of
+[Webapp](https://www.meteor.com/webapp), stores the static parts of a
+Meteor application (the client side Javascript, HTML, CSS, and images)
+in the browser's [application
+cache](https://en.wikipedia.org/wiki/AppCache). To enable caching
+simply add the `appcache` package to your project.
 
 * Once a user has visited a Meteor application for the first time and
   the application has been cached, on subsequent visits the web page
@@ -79,6 +78,3 @@ For more information about how Meteor interacts with the application
 cache, see the
 [AppCache page](https://github.com/meteor/meteor/wiki/AppCache)
 in the Meteor wiki.
-
-{{/markdown}}
-</template>
