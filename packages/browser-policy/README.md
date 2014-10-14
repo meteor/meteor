@@ -102,7 +102,7 @@ is usually part of an inline script tag.
 Allows the creation of Javascript code from strings using function such as <code>eval()</code>.
 </dd>
 
-<dt><code>BrowserPolicy.content.disallowEval()"</code></dt>
+<dt><code>BrowserPolicy.content.disallowEval()</code></dt>
 <dd>
 Disallows eval and related functions. The default policy already disallows eval.
 </dd>
