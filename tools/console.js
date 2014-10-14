@@ -202,7 +202,7 @@ var ProgressDisplayBar = function (console) {
 };
 
 _.extend(ProgressDisplayBar.prototype, {
-  clear: function () {
+  depaint: function () {
     self._stream.clearLine();
     self._stream.cursorTo(0);
   },
@@ -228,6 +228,11 @@ _.extend(ProgressDisplayBar.prototype, {
     if (fraction !== undefined) {
       self._progressBar.curr = Math.floor(fraction * self._progressBar.total);
     }
+    self._render();
+  },
+
+  repaint: function () {
+    var self = this;
     self._render();
   },
 
