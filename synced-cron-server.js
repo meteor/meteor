@@ -2,25 +2,47 @@
 SyncedCron = {
   _entries: [],
   options: {
+    //Log job run details to console
     log: true,
+
+    //Name of collection to use for synchronisation and logging
     collectionName: 'cronHistory',
-    utc: false //default to using localTime
+
+    //Default to using localTime
+    utc: false, 
+
+    //TTL in seconds for history records in collection to expire
+    //NOTE: Unset to remove expiry but ensure you remove the index from 
+    //mongo by hand
+    collectionTTL: 172800
   }
 }
 
 Later = Npm.require('later');
 
 Meteor.startup(function() {
+  var options = SyncedCron.options;
+
+  // Don't allow TTL less than 5 minutes so we don't break synchronization
+  var minTTL = 300; 
+
   // Use UTC or localtime for evaluating schedules
-  if (SyncedCron.options.utc)
+  if (options.utc)
     Later.date.UTC();
   else
     Later.date.localTime();
 
   // collection holding the job history records
-  SyncedCron._collection = 
-    new Mongo.Collection(SyncedCron.options.collectionName);
+  SyncedCron._collection = new Mongo.Collection(options.collectionName);
   SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
+  
+  if (options.collectionTTL) {
+    if (options.collectionTTL > minTTL)
+      SyncedCron._collection._ensureIndex({startedAt: 1 },
+        { expireAfterSeconds: options.collectionTTL } );
+    else
+      console.log('Warning: Not going to use a TTL that is shorter than:' + minTTL);
+  }
 });
 
 var log = {
@@ -118,9 +140,6 @@ SyncedCron._entryWrapper = function(entry) {
           result: output
         }
       });
-
-      if (entry.purgeLogsAfterDays)
-        SyncedCron._purgeEntries(entry.name, entry.purgeLogsAfterDays);
     } catch(e) {
       log.info('SyncedCron: Exception "' + entry.name +'" ' + e.stack);
       self._collection.update({_id: jobHistory._id}, {
@@ -131,14 +150,6 @@ SyncedCron._entryWrapper = function(entry) {
       });
     }
   };
-}
-
-// remove entries that are older than daysBefore
-SyncedCron._purgeEntries = function(name, daysBefore) {
-  var beforeDate = new Date;
-  beforeDate.setDate(beforeDate.getDate() - daysBefore);
-  
-  this._collection.remove({name: name, startedAt: {$lte: beforeDate}});
 }
 
 // for tests

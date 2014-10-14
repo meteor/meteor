@@ -5,7 +5,7 @@ Package.describe({
   git: "https://github.com/percolatestudio/meteor-synced-cron.git"
 });
 
-Npm.depends({later: "1.1.6", sinon: "1.10.2"});
+Npm.depends({later: "1.1.6"});
 
 Package.onUse(function (api) {
   api.versionsFrom('METEOR@0.9.1.1');
