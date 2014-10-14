@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows you to define and run scheduled jobs across multiple servers.",
-  version: "0.3.0",
+  version: "1.0.0",
   name: "percolatestudio:synced-cron",
   git: "https://github.com/percolatestudio/meteor-synced-cron.git"
 });
