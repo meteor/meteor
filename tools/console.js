@@ -30,17 +30,315 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
 }
 
+var spacesArray = new Array(200).join(' ');
+var spacesString = function (length) {
+  if (length > spacesArray.length) {
+    spacesArray = new Array(length * 2).join(' ');
+  }
+  return spacesArray.substring(0, length);
+};
+
+var toFixedLength = function (text, length) {
+  text = text || "";
+
+  // pad or truncate `text` to length
+  var pad = length - text.length;
+  if (pad < 0) {
+    // Truncate
+    text = text.substring(0, length - 3) + "...";
+  } else if (delta > 0) {
+    // Pad
+    text = text + spacesString(delta);
+  }
+  return text;
+};
+
+// No-op progress display, that means we don't have to handle the 'no progress display' case
+var ProgressDisplayNone = function () {
+};
+
+_.extend(ProgressDisplayNone.prototype, {
+  depaint: function () {
+  },
+
+  repaint: function () {
+
+  },
+
+  stop: function () {
+
+  }
+});
+
+// Status display only, primarily for use with emacs
+// No fancy terminal support available, but we have a TTY.
+// Print messages that will be overwritten because they
+// end in `\r`.
+// Status message mode is where we see status messages but not the
+// fancy progress bar.  It's used when we detect a "pseudo-TTY"
+// of the type used by Emacs, and possibly SSH.
+var ProgressDisplayStatus = function (console) {
+  var self = this;
+
+  self._console = console;
+  self._stream = console._stream;
+
+  self._status = null;
+  self._wroteStatusMessage = false;
+};
+
+_.extend(ProgressDisplayStatus.prototype, {
+  depaint: function () {
+    var self = this;
+    // For the non-progress-bar status mode, we may need to
+    // clear some characters that we printed with a trailing `\r`.
+    if (self._wroteStatusMessage) {
+      var spaces = spacesString(TEMP_STATUS_LENGTH + 1);
+      self._stream.write(spaces + '\r');
+      self._wroteStatusMessage = false;
+    }
+  },
+
+  repaint: function () {
+    // We don't repaint after a log message (is that right?)
+  },
+
+  updateStatus: function (status) {
+    var self = this;
+
+    if (status == self._status) {
+      return;
+    }
+
+    self._status = status;
+    self._render();
+  },
+
+  _render: function () {
+    var self = this;
+
+    var text = self._status;
+    if (text) {
+      text = toFixedLength(text, STATUS_MAX_LENGTH);
+    }
+
+    if (text) {
+      // the number of characters besides `text` here must
+      // be accounted for in TEMP_STATUS_LENGTH.
+      self._stream.write('  (  ' + text + '  ... )\r');
+      self._wroteStatusMessage = true;
+    }
+  },
+
+  stop: function () {
+    self.depaint();
+  }
+});
+
+var ProgressDisplayBar = function (console) {
+  var self = this;
+
+  self._console = console;
+  self._stream = console._stream;
+
+  self._status = '';
+
+  var options = {
+    complete: '=',
+    incomplete: ' ',
+    width: PROGRESS_BAR_WIDTH,
+    total: 100,
+    clear: true,
+    stream: self._stream
+  };
+
+  var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
+  progressBar.start = new Date;
+  self._progressBar = progressBar;
+};
+
+_.extend(ProgressDisplayBar.prototype, {
+  clear: function () {
+    self._stream.clearLine();
+    self._stream.cursorTo(0);
+  },
+
+
+  stop: function () {
+    self._progressBar.terminate();
+    self._progressBar = null;
+  },
+
+  updateStatus: function (status) {
+    var self = this;
+
+    if (status == self._status) {
+      return;
+    }
+
+    self._status = status;
+    self._render();
+  },
+
+  updateProgress: function (fraction) {
+    self._progressBar.curr = Math.floor(fraction * self._progressBar.total);
+    self._render();
+  },
+
+  _render: function () {
+    var self = this;
+
+    var text = self._status;
+    if (text) {
+      text = toFixedLength(text, STATUS_MAX_LENGTH);
+    }
+
+    // Force repaint
+    self._progressBar.lastDraw = '';
+    self._progressBar.render();
+
+    if (text) {
+      self._stream.cursorTo(STATUS_POSITION);
+      self._stream.write(chalk.bold(text));
+    }
+  }
+});
+
+var StatusPoller = function () {
+  var self = this;
+
+  // The current progress we are watching
+  self._watching = null;
+
+  self._startPoller();
+};
+
+_.extend(StatusPoller.prototype, {
+  _startPoller: function () {
+    if (self._statusPoller) {
+      throw new Error("Already started");
+    }
+
+    self._statusPoller = Fiber(function () {
+      while (true) {
+        sleep(100);
+
+        self._statusPoll();
+      }
+    });
+    self._statusPoller.run();
+  },
+
+  _statusPoll: function () {
+    var self = this;
+
+    // XXX: Early exit here if we're not showing status at all?
+
+    self._lastStatusPoll = Date.now();
+
+    var rootProgress = buildmessage.getRootProgress();
+    if (PROGRESS_DEBUG) {
+      rootProgress.dump(process.stdout, {skipDone: true});
+    }
+    var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
+    if (self._watching === watching) {
+      return;
+    }
+
+    self._watching = watching;
+    var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
+
+    var progressDisplay = self._progressDisplay;
+    progressDisplay.updateStatus(title);
+
+    if (watching) {
+      watching.addWatcher(function (state) {
+        if (watching != self._watching) {
+          // No longer active
+          // XXX: De-register with watching? (we don't bother right now because dead tasks tell no status)
+          return;
+        }
+
+        var progressDisplay = self._progressDisplay;
+        if (progressDisplay.updateProgress) {
+          // Progress bar doesn't show progress; don't bother with the % computation
+          return;
+        }
+
+        var fraction;
+        if (state.done) {
+          fraction = 1.0;
+        } else {
+          var current = state.current;
+          var end = state.end;
+          if (end === undefined || end == 0 || current == 0) {
+            // Arbitrary end-point
+            fraction = progressBar.curr / 100;
+          } else {
+            fraction = current / end;
+          }
+        }
+
+        if (!isNaN(fraction) && fraction >= 0) {
+          progressDisplay.updateProgress(fraction);
+        }
+      });
+    }
+  },
+
+
+  _watchProgress: function () {
+    var self = this;
+
+    var watching = self._watching;
+    if (!watching) {
+      // No active task
+      return;
+    }
+
+    watching.addWatcher(function (state) {
+      if (watching != self._watching) {
+        // No longer active
+        // XXX: De-register with watching?
+        return;
+      }
+
+      var progressDisplay = self._progressDisplay;
+      if (!progressDisplay.showsProgress) {
+        // Progress bar doesn't show progress; don't bother with the computation
+        return;
+      }
+
+      var fraction;
+      if (state.done) {
+        fraction = 1.0;
+      } else {
+        var current = state.current;
+        var end = state.end;
+        if (end === undefined || end == 0 || current == 0) {
+          // Arbitrary end-point
+          fraction = progressBar.curr / 100;
+        } else {
+          fraction = current / end;
+        }
+      }
+
+      if (!isNaN(fraction) && fraction >= 0) {
+        progressBar.curr = Math.floor(fraction * progressBar.total);
+        self._renderProgressBar();
+      }
+    });
+  }
+
+});
+
 var Console = function (options) {
   var self = this;
 
   options = options || {};
 
-  // The progress bar we are showing on-screen, if enabled
-  self._progressBar = null;
-  // The current status text for the progress bar
-  self._progressBarText = null;
-  // The current progress we are watching
-  self._watching = null;
+  // The progress display we are showing on-screen
+  self._progressDisplay = new ProgressDisplayNone(self);
 
   self._statusPoller = null;
   self._lastStatusPoll = 0;
@@ -60,11 +358,7 @@ var Console = function (options) {
   self._stream = process.stdout;
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
-  // Status message mode is where we see status messages but not the
-  // fancy progress bar.  It's used when we detect a "pseudo-TTY"
-  // of the type used by Emacs, and possibly SSH.
-  self._inStatusMessageMode = false;
-  self._wroteStatusMessage = false;
+  self._progressBarEnabled = false;
 
   self._logThreshold = LEVEL_CODE_INFO;
   var logspec = process.env.METEOR_LOG;
@@ -119,73 +413,12 @@ _.extend(Console.prototype, {
     if (FORCE_PRETTY === undefined) {
       self._pretty = pretty;
     }
+    self._updateProgressDisplay();
   },
 
   setVerbose: function (verbose) {
     var self = this;
     self.verbose = verbose;
-  },
-
-  _renderProgressBar: function () {
-    var self = this;
-
-    var text = self._progressBarText;
-    if (text) {
-      // pad or truncate `text` to STATUS_MAX_LENGTH
-      if (text.length > STATUS_MAX_LENGTH) {
-        text = text.substring(0, STATUS_MAX_LENGTH - 3) + "...";
-      } else {
-        while (text.length < STATUS_MAX_LENGTH) {
-          text = text + ' ';
-        }
-      }
-    }
-
-    if (self._progressBar) {
-      // Force repaint
-      self._progressBar.lastDraw = '';
-
-      self._progressBar.render();
-
-      if (text) {
-        self._stream.cursorTo(STATUS_POSITION);
-        self._stream.write(chalk.bold(text));
-      }
-    } else if (self._inStatusMessageMode) {
-      // No fancy terminal support available, but we have a TTY.
-      // Print messages that will be overwritten because they
-      // end in `\r`.
-      if (text) {
-        // the number of characters besides `text` here must
-        // be accounted for in TEMP_STATUS_LENGTH.
-        self._stream.write('  (  ' + text + '  ... )\r');
-        self._wroteStatusMessage = true;
-      }
-    }
-  },
-
-  _statusPoll: function () {
-    var self = this;
-
-    self._lastStatusPoll = Date.now();
-
-    var rootProgress = buildmessage.getRootProgress();
-    if (PROGRESS_DEBUG) {
-      rootProgress.dump(process.stdout, {skipDone: true});
-    }
-    var current = (rootProgress ? rootProgress.getCurrentProgress() : null);
-    if (self._watching === current) {
-      return;
-    }
-
-    self._watching = current;
-    var title = (current != null ? current._title : null) || FALLBACK_STATUS;
-    if (title != self._progressBarText) {
-      self._progressBarText = title;
-      self._renderProgressBar();
-    }
-
-    self._watchProgress();
   },
 
   // Like Patience.nudge(); this can be called during long lived operations
@@ -194,22 +427,13 @@ _.extend(Console.prototype, {
   statusPollMaybe: function () {
     var self = this;
     var now = Date.now();
-
     if ((now - self._lastStatusPoll) < STATUS_INTERVAL_MS) {
       return;
     }
-    self._statusPoll();
-  },
-
-  enableStatusPoll: function () {
-    var self = this;
-    Fiber(function () {
-      while (true) {
-        sleep(STATUS_INTERVAL_MS);
-
-        self._statusPoll();
-      }
-    }).run();
+    // XXX: TODO: Add canYield argument and yield?
+    if (self._statusPoller) {
+      self._statusPoller.statusPoll();
+    }
   },
 
   debug: function(/*arguments*/) {
@@ -260,12 +484,9 @@ _.extend(Console.prototype, {
   _print: function(level, message) {
     var self = this;
 
-    // We need to hide the progress bar before printing the message
-    var progressBar = self._progressBar;
-    if (progressBar) {
-      self._stream.clearLine();
-      self._stream.cursorTo(0);
-    }
+    // We need to hide the progress bar/spinner before printing the message
+    var progressDisplay = self._progressDisplay;
+    progressDisplay.depaint();
 
     // stdout/stderr is determined by the log level
     // XXX: We should probably just implement Loggers with observers
@@ -294,18 +515,14 @@ _.extend(Console.prototype, {
       }
     }
 
-    self._clearStatusMessage();
-
     if (style) {
       dest.write(style(message + '\n'));
     } else {
       dest.write(message + '\n');
     }
 
-    // Repaint the progress bar if we hid it
-    if (progressBar) {
-      self._renderProgressBar();
-    }
+    // Repaint the progress bar
+    progressDisplay.repaint();
   },
 
   success: function (message) {
@@ -333,17 +550,6 @@ _.extend(Console.prototype, {
       return message;
     }
     return chalk.bold(message);
-  },
-
-  _clearStatusMessage: function () {
-    var self = this;
-    // For the non-progress-bar status mode, we may need to
-    // clear some characters that we printed with a trailing `\r`.
-    if (self._wroteStatusMessage) {
-      var spaces = new Array(TEMP_STATUS_LENGTH + 1).join(' ');
-      self._stream.write(spaces + '\r');
-      self._wroteStatusMessage = false;
-    }
   },
 
   _format: function (logArguments) {
@@ -387,14 +593,6 @@ _.extend(Console.prototype, {
     }
   },
 
-  isProgressBarEnabled: function () {
-    // "status message mode" counts as having a progress bar
-    // as far as the caller of enableProgressBar is considered,
-    // because you get it by calling enableProgressBar(true)
-    // and not having a real TTY.
-    return this._progressBar || this._inStatusMessageMode;
-  },
-
   // Enables the progress bar, or disables it when called with (false)
   enableProgressBar: function (enabled) {
     var self = this;
@@ -404,111 +602,52 @@ _.extend(Console.prototype, {
       enabled = true;
     }
 
-    // Ignore if not in pretty / on TTY.
-    if ((! self._stream.isTTY) || (! self._pretty)) {
-      self._inStatusMessageMode = false;
-      return;
-    }
-    if (self._stream.isTTY && ! self._stream.columns) {
+    self._progressBarEnabled = enabled;
+    self._updateProgressDisplay();
+  },
+
+  // In response to a change in setPretty or enableProgressBar,
+  // configure the appropriate progressDisplay
+  _updateProgressDisplay: function () {
+    var self = this;
+
+    var newProgressDisplay;
+
+    if (!self._progressBarEnabled) {
+      newProgressDisplay = new ProgressDisplayNone();
+    } else if ((!self._stream.isTTY) || (!self._pretty)) {
+      // No progress bar if not in pretty / on TTY.
+      newProgressDisplay = new ProgressDisplayNone(self);
+    } else if (self._stream.isTTY && !self._stream.columns) {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
       // if self._pretty, so that we don't start displaying
       // status messages too soon.
-      if (enabled) {
-        self._inStatusMessageMode = true;
-      } else if (self._inStatusMessageMode) {
-        self._clearStatusMessage();
-        self._inStatusMessageMode = false;
-      }
-      return;
-    }
-
-    if (enabled && !self._progressBar) {
-      var options = {
-        complete: '=',
-        incomplete: ' ',
-        width: PROGRESS_BAR_WIDTH,
-        total: 100,
-        clear: true,
-        stream: self._stream
-      };
-
-      var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
-      progressBar.start = new Date;
-
-      self._progressBar = progressBar;
-    } else if (!enabled && self._progressBar) {
-      self._progressBar.terminate();
-      self._progressBar = null;
-    }
-
-    // Start the status poller, which watches the task tree, and periodically
-    // repoints the progress bar to the 'active' task.
-    if (enabled && !self._statusPoller) {
-      self._statusPoller = Fiber(function () {
-        while (true) {
-          sleep(100);
-
-          if (!self._progressBar) {
-            // Stop when we are turned off
-            // XXX: In theory, this is a race (?)
-            self._statusPoller = null;
-            return;
-          }
-
-          self._statusPoll();
-        }
-      });
-      self._statusPoller.run();
+      newProgressDisplay = new ProgressDisplayStatus(self);
     } else {
-      // The status-poller self-exits when _progressBar is null
+      // Otherwise we can do the full progress bar
+      newProgressDisplay = new ProgressDisplayBar(self);
     }
+
+    // Start the status poller if it hasn't been started
+    if (!self._statusPoller) {
+      self._statusPoller = new StatusPoller();
+    }
+
+    self._setProgressDisplay(newProgressDisplay);
   },
 
-  _watchProgress: function () {
+  _setProgressDisplay: function (newProgressDisplay) {
     var self = this;
 
-    var watching = self._watching;
-    if (!watching) {
-      // No active task
-      return;
-    }
+    // XXX: Optimize case of no-op transitions? (same mode -> same mode)
 
-    watching.addWatcher(function (state) {
-      if (watching != self._watching) {
-        // No longer active
-        // XXX: De-register with watching?
-        return;
-      }
+    var oldProgressDisplay = self._progressDisplay;
+    oldProgressDisplay.destroy();
 
-      var progressBar = self._progressBar;
-      if (!progressBar) {
-        // Progress bar disabled; don't bother with the computation
-        return;
-      }
-
-      var fraction;
-      if (state.done) {
-        fraction = 1.0;
-      } else {
-        var current = state.current;
-        var end = state.end;
-        if (end === undefined || end == 0 || current == 0) {
-          // Arbitrary end-point
-          fraction = progressBar.curr / 100;
-        } else {
-          fraction = current / end;
-        }
-      }
-
-      if (!isNaN(fraction) && fraction >= 0) {
-        progressBar.curr = Math.floor(fraction * progressBar.total);
-        self._renderProgressBar();
-      }
-    });
+    self._progressDisplay = newProgressDisplay;
   }
-
 });
 
 Console.prototype.warning = Console.prototype.warn;
@@ -539,8 +678,8 @@ Console.prototype.readLine = function (options) {
     }
   };
 
-  var wasProgressBar = self.isProgressBarEnabled();
-  self.enableProgressBar(false);
+  var previousProgressDisplay = self._progressDisplay;
+  self._setProgressDisplay(new ProgressDisplayNone());
 
   // Read a line, throwing away the echoed characters into our dummy stream.
   var rl = readline.createInterface({
@@ -562,8 +701,7 @@ Console.prototype.readLine = function (options) {
     rl.close();
     if (! options.echo)
       options.stream.write("\n");
-    if (wasProgressBar)
-      self.enableProgressBar(true);
+    self._setProgressDisplay(previousProgressDisplay);
     fut['return'](line);
   });
 
