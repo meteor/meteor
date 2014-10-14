@@ -1,7 +1,7 @@
 # session
 
 This package provide `Session`. `Session` is a special
-[ReactiveDict] (https://atmospherejs.com/meteor/reactive-dict) whose
+[`ReactiveDict`](https://atmospherejs.com/meteor/reactive-dict) whose
 contents are preserved across Hot Code Push. It's usually used to
 store the current state of the user interface, for example, the
 currently selected row in a table, ora flag indicating if a dialog box
