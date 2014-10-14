@@ -199,6 +199,8 @@ var ProgressDisplayBar = function (console) {
   progressBar.start = new Date;
   self._progressBar = progressBar;
   self._spinner = new Spinner();
+
+  self._fraction = undefined;
 };
 
 _.extend(ProgressDisplayBar.prototype, {
