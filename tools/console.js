@@ -31,10 +31,12 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
 }
 
+STATUS_MAX_LENGTH = 40;
+
+// XXX: We're going to have to put the progress bar to the right of the text, I think...
 PROGRESS_BAR_WIDTH = 20;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
-STATUS_MAX_LENGTH = 40;
 TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
 STATUS_INTERVAL_MS = 500;
@@ -148,34 +150,33 @@ _.extend(ProgressDisplayStatus.prototype, {
   }
 });
 
-//var spinner = ['-', '\\', '|', '/'];
-//// I looked at some Unicode indeterminate progress indicators, such as:
-////
-//// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
-//// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
-//// spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
-//// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
-//// spinner = "⠉⠒⠤⣀⠤⠒".split('');
-////
-//// but none of them really seemed like an improvement. I think
-//// the case for using unicode would be stronger in a determinate
-//// progress indicator.
-////
-//// There are also some four-frame options such as ◐◓◑◒ at
-////   http://stackoverflow.com/a/2685827/157965
-//// but all of the ones I tried look terrible in the terminal.
-//if (! self.quiet) {
-//  var animationFrame = 0;
-//  var printUpdate = fiberHelpers.bindEnvironment(function () {
-//    //runLog.logTemporary("=> Starting MongoDB... " +
-//    //                    spinner[animationFrame]);
-//    buildmessage.nudge();
-//    animationFrame = (animationFrame + 1) % spinner.length;
-//  });
-//  printUpdate();
-//  var mongoProgressTimer = setInterval(printUpdate, 200);
-//}
 
+var Spinner = function () {
+  var self = this;
+  self.frames = ['-', '\\', '|', '/'];
+  self.frame = 0;
+  //// I looked at some Unicode indeterminate progress indicators, such as:
+  ////
+  //// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
+  //// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
+  //// spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
+  //// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
+  //// spinner = "⠉⠒⠤⣀⠤⠒".split('');
+  ////
+  //// but none of them really seemed like an improvement. I think
+  //// the case for using unicode would be stronger in a determinate
+  //// progress indicator.
+  ////
+  //// There are also some four-frame options such as ◐◓◑◒ at
+  ////   http://stackoverflow.com/a/2685827/157965
+  //// but all of the ones I tried look terrible in the terminal.
+};
+
+Spinner.prototype.takeFrame = function () {
+  var self = this;
+  self.frame = self.frame % self.frames.length;
+  return self.frames[self.frame];
+};
 
 var ProgressDisplayBar = function (console) {
   var self = this;
@@ -197,6 +198,7 @@ var ProgressDisplayBar = function (console) {
   var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
   progressBar.start = new Date;
   self._progressBar = progressBar;
+  self._spinner = new Spinner();
 };
 
 _.extend(ProgressDisplayBar.prototype, {
@@ -204,7 +206,6 @@ _.extend(ProgressDisplayBar.prototype, {
     self._stream.clearLine();
     self._stream.cursorTo(0);
   },
-
 
   stop: function () {
     self._progressBar.terminate();
@@ -223,7 +224,10 @@ _.extend(ProgressDisplayBar.prototype, {
   },
 
   updateProgress: function (fraction) {
-    self._progressBar.curr = Math.floor(fraction * self._progressBar.total);
+    self._fraction = fraction;
+    if (fraction !== undefined) {
+      self._progressBar.curr = Math.floor(fraction * self._progressBar.total);
+    }
     self._render();
   },
 
@@ -235,9 +239,16 @@ _.extend(ProgressDisplayBar.prototype, {
       text = toFixedLength(text, STATUS_MAX_LENGTH);
     }
 
-    // Force repaint
-    self._progressBar.lastDraw = '';
-    self._progressBar.render();
+    if (self._fraction !== undefined) {
+      // Force repaint
+      self._progressBar.lastDraw = '';
+      self._progressBar.render();
+    } else {
+      self._stream.clearLine();
+      self._stream.cursorTo(0);
+
+      self._stream.write(self._spinner.takeFrame());
+    }
 
     if (text) {
       self._stream.cursorTo(STATUS_POSITION);
