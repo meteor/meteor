@@ -22,9 +22,11 @@ var Progress = function (options) {
 
   self._title = options.title;
 
+  // XXX: Should we have a strict/mdg mode that enables this test?
   //if (!self._title && self._parent) {
   //  throw new Error("No title passed");
   //}
+
   self._forkJoin = options.forkJoin;
 
   self._allTasks = [];
