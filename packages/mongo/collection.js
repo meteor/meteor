@@ -855,7 +855,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
             //     we get from the network to this function, we should actually
             //     know the correct arguments for the function and pass just
             //     them.  For example, if you have an extraneous extra null
-            //     argument and this is Mongo on the server, the _wrapAsync'd
+            //     argument and this is Mongo on the server, the .wrapAsync'd
             //     functions like update will get confused and pass the
             //     "fut.resolver()" in the wrong slot, where _update will never
             //     invoke it. Bam, broken DDP connection.  Probably should just
