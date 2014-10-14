@@ -414,7 +414,6 @@ var toc = [
   "Packages", [ [
     "accounts-ui",
     "audit-argument-checks",
-    "browser-policy",
     "coffeescript",
     "fastclick",
     "force-ssl",
