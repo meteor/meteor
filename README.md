@@ -31,9 +31,7 @@ SyncedCron.add({
 To start processing your jobs, somewhere in your project add:
 
 ``` javascript
-Meteor.startup(function() {
-  SyncedCron.start();
-});
+SyncedCron.start();
 ```
 
 ### Advanced
@@ -58,6 +56,8 @@ Call `SyncedCron.remove(jobName)` to remove and stop running the job referenced 
 Call `SyncedCron.stop()` to remove and stop all jobs.
 
 ### Configuration
+
+Modify the object `SyncedCron.options` to set configuration entries. Defaults are: 
 
 ```
   SyncedCron.options = {
