@@ -576,6 +576,7 @@ exports.Patience = function (options) {
   }
 };
 
+// XXX: Remove
 var nextYield = null;
 var YIELD_EVERY_MS = 150;
 var ACTIVE_PATIENCES = {};
@@ -646,34 +647,48 @@ _.extend(exports.Patience.prototype, {
   }
 });
 
-
-// This is a stripped down version of Patience, that just regulates the frequency of calling yield.
-// It should behave similarly to calling yield on every iteration of a loop,
-// except that it won't actually yield if there hasn't been a long enough time interval
-//
-// options:
-//   interval: minimum interval of time between yield calls
-//             (more frequent calls are simply dropped)
-//
-// XXX: Have Patience use ThrottledYield
-exports.ThrottledYield = function (options) {
+exports.Throttled = function (options) {
   var self = this;
 
   options = _.extend({ interval: 150 }, options || {});
   self.interval = options.interval;
   var now = +(new Date);
 
-  // The next yield time is interval from now.
-  self.nextYield = now + self.interval;
+  self.next = now;
+};
+
+_.extend(exports.Throttled.prototype, {
+  isAllowed: function () {
+    var self = this;
+    var now = +(new Date);
+
+    if (now < self.next) {
+      return false;
+    }
+
+    self.next = now + self.interval;
+    return true;
+  }
+});
+
+
+// ThrottledYield just regulates the frequency of calling yield.
+// It should behave similarly to calling yield on every iteration of a loop,
+// except that it won't actually yield if there hasn't been a long enough time interval
+//
+// options:
+//   interval: minimum interval of time between yield calls
+//             (more frequent calls are simply dropped)
+exports.ThrottledYield = function (options) {
+  var self = this;
+
+  self._throttle = new exports.Throttled(options);
 };
 
 _.extend(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
-    var now = +(new Date);
-
-    if (now >= self.nextYield) {
-      self.nextYield = now + self.interval;
+    if (self._throttle.isAllowed()) {
       utils.sleepMs(1);
     }
   }

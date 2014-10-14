@@ -23,6 +23,7 @@ var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
 var cleanup = require('./cleanup.js');
+var utils = require('./utils.js');
 
 PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 FORCE_PRETTY=undefined;
@@ -134,6 +135,35 @@ _.extend(ProgressDisplayStatus.prototype, {
     self.depaint();
   }
 });
+
+//var spinner = ['-', '\\', '|', '/'];
+//// I looked at some Unicode indeterminate progress indicators, such as:
+////
+//// spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
+//// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
+//// spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
+//// spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
+//// spinner = "⠉⠒⠤⣀⠤⠒".split('');
+////
+//// but none of them really seemed like an improvement. I think
+//// the case for using unicode would be stronger in a determinate
+//// progress indicator.
+////
+//// There are also some four-frame options such as ◐◓◑◒ at
+////   http://stackoverflow.com/a/2685827/157965
+//// but all of the ones I tried look terrible in the terminal.
+//if (! self.quiet) {
+//  var animationFrame = 0;
+//  var printUpdate = fiberHelpers.bindEnvironment(function () {
+//    //runLog.logTemporary("=> Starting MongoDB... " +
+//    //                    spinner[animationFrame]);
+//    buildmessage.nudge();
+//    animationFrame = (animationFrame + 1) % spinner.length;
+//  });
+//  printUpdate();
+//  var mongoProgressTimer = setInterval(printUpdate, 200);
+//}
+
 
 var ProgressDisplayBar = function (console) {
   var self = this;
@@ -285,7 +315,6 @@ _.extend(StatusPoller.prototype, {
       });
     }
   }
-
 });
 
 var Console = function (options) {
@@ -297,7 +326,9 @@ var Console = function (options) {
   self._progressDisplay = new ProgressDisplayNone(self);
 
   self._statusPoller = null;
-  self._lastStatusPoll = 0;
+
+  self._throttledYield = new utils.ThrottledYield();
+  self._throttledStatusPoll = new utils.Throttled(STATUS_INTERVAL_MS);
 
   self.verbose = false;
 
@@ -382,18 +413,19 @@ _.extend(Console.prototype, {
     self.verbose = verbose;
   },
 
+  // XXX: Move docs from Patience.nudge()
   // Like Patience.nudge(); this can be called during long lived operations
   // where the timer may be starved off the CPU.  It will execute the poll if
   // it has been 'too long'
-  nudge: function () {
+  nudge: function (canYield) {
     var self = this;
-    var now = Date.now();
-    if ((now - self._lastStatusPoll) < STATUS_INTERVAL_MS) {
-      return;
+    if (self._throttledStatusPoll.isAllowed()) {
+      if (self._statusPoller) {
+        self._statusPoller.statusPoll();
+      }
     }
-    // XXX: TODO: Add canYield argument and yield?
-    if (self._statusPoller) {
-      self._statusPoller.statusPoll();
+    if (canYield === true) {
+      self._throttledYield.yield();
     }
   },
 

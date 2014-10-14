@@ -68,30 +68,6 @@ _.extend(Progress.prototype, {
     self.reportProgress(state);
   },
 
-  // For when we don't have a clear idea how long something will take,
-  // (i.e. no end estimate), just call nudge occasionally.  We'll build
-  // an exponential progress bar for the task.
-  nudge: function () {
-    var self = this;
-
-    var halfLife = 25;
-
-    var state = _.clone(self._selfState);
-
-    if (!self._exponentialCounter) {
-      self._exponentialCounter = 1;
-      // Arbitrary endpoint
-      state.end = 100;
-    } else {
-      self._exponentialCounter++;
-    }
-
-    var fractionLeft = Math.pow(0.5, self._exponentialCounter / halfLife);
-    state.current = state.end * (1 - fractionLeft);
-
-    self.reportProgress(state);
-  },
-
   // Tries to determine which is the 'current' job in the tree
   // This is very heuristical... we use some hints, like:
   // don't descend into fork-join jobs; we know these execute concurrently,
@@ -192,7 +168,7 @@ _.extend(Progress.prototype, {
 
     self._updateTotalState();
 
-    console.Console.nudge();
+    console.Console.nudge(false);
 
     self._notifyState();
   },
