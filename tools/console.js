@@ -61,9 +61,9 @@ var toFixedLength = function (text, length) {
   if (pad < 0) {
     // Truncate
     text = text.substring(0, length - 3) + "...";
-  } else if (delta > 0) {
+  } else if (pad > 0) {
     // Pad
-    text = text + spacesString(delta);
+    text = text + spacesString(pad);
   }
   return text;
 };
@@ -82,7 +82,7 @@ _.extend(ProgressDisplayNone.prototype, {
 
   stop: function () {
 
-  },
+  }
 });
 
 // Status display only, primarily for use with emacs
@@ -146,6 +146,8 @@ _.extend(ProgressDisplayStatus.prototype, {
   },
 
   stop: function () {
+    var self = this;
+
     self.depaint();
   }
 });
@@ -178,8 +180,8 @@ Spinner.prototype.currentFrame = function () {
   var now = +(new Date);
 
   var t = now - self.start;
-  var frame = (t / self.interval) % self.frames.length;
-  return self.frames[self.frame];
+  var frame = Math.floor(t / self.interval) % self.frames.length;
+  return self.frames[frame];
 };
 
 var ProgressDisplayBar = function (console) {
@@ -209,11 +211,15 @@ var ProgressDisplayBar = function (console) {
 
 _.extend(ProgressDisplayBar.prototype, {
   depaint: function () {
+    var self = this;
+
     self._stream.clearLine();
     self._stream.cursorTo(0);
   },
 
   stop: function () {
+    var self = this;
+
     self._progressBar.terminate();
     self._progressBar = null;
   },
@@ -230,6 +236,8 @@ _.extend(ProgressDisplayBar.prototype, {
   },
 
   updateProgress: function (fraction) {
+    var self = this;
+
     self._fraction = fraction;
     if (fraction !== undefined) {
       self._progressBar.curr = Math.floor(fraction * self._progressBar.total);
@@ -271,32 +279,37 @@ _.extend(ProgressDisplayBar.prototype, {
   }
 });
 
-var StatusPoller = function () {
+var StatusPoller = function (console) {
   var self = this;
 
   // The current progress we are watching
   self._watching = null;
 
+  self._console = console;
+
+  self._pollFiber = null;
   self._startPoller();
 };
 
 _.extend(StatusPoller.prototype, {
   _startPoller: function () {
-    if (self._statusPoller) {
+    var self = this;
+
+    if (self._pollFiber) {
       throw new Error("Already started");
     }
 
-    self._statusPoller = Fiber(function () {
+    self._pollFiber = Fiber(function () {
       while (true) {
         sleep(100);
 
-        self._statusPoll();
+        self.statusPoll();
       }
     });
-    self._statusPoller.run();
+    self._pollFiber.run();
   },
 
-  _statusPoll: function () {
+  statusPoll: function () {
     var self = this;
 
     // XXX: Early exit here if we're not showing status at all?
@@ -315,7 +328,7 @@ _.extend(StatusPoller.prototype, {
     self._watching = watching;
     var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
 
-    var progressDisplay = self._progressDisplay;
+    var progressDisplay = self._console._progressDisplay;
     progressDisplay.updateStatus && progressDisplay.updateStatus(title);
 
     if (watching) {
@@ -326,13 +339,13 @@ _.extend(StatusPoller.prototype, {
           return;
         }
 
-        var progressDisplay = self._progressDisplay;
-        if (progressDisplay.updateProgress) {
+        var progressDisplay = self._console._progressDisplay;
+        if (!progressDisplay.updateProgress) {
           // Progress bar doesn't show progress; don't bother with the % computation
           return;
         }
 
-        if (state.end === undefined) {
+        if (state.end === undefined || state.end == 0) {
           progressDisplay.updateProgress(undefined);
           return;
         }
@@ -345,7 +358,7 @@ _.extend(StatusPoller.prototype, {
           var end = state.end;
           if (end === undefined || end == 0 || current == 0) {
             // Arbitrary end-point
-            fraction = progressBar.curr / 100;
+            fraction = 0;
           } else {
             fraction = current / end;
           }
@@ -353,6 +366,8 @@ _.extend(StatusPoller.prototype, {
 
         if (!isNaN(fraction) && fraction >= 0) {
           progressDisplay.updateProgress(fraction);
+        } else {
+          progressDisplay.updateProgress(0);
         }
       });
     }
@@ -688,7 +703,7 @@ _.extend(Console.prototype, {
 
     // Start the status poller if it hasn't been started
     if (!self._statusPoller) {
-      self._statusPoller = new StatusPoller();
+      self._statusPoller = new StatusPoller(self);
     }
 
     self._setProgressDisplay(newProgressDisplay);
@@ -700,7 +715,7 @@ _.extend(Console.prototype, {
     // XXX: Optimize case of no-op transitions? (same mode -> same mode)
 
     var oldProgressDisplay = self._progressDisplay;
-    oldProgressDisplay.destroy();
+    oldProgressDisplay.stop();
 
     self._progressDisplay = newProgressDisplay;
   }
