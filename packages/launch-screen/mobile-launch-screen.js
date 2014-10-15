@@ -8,32 +8,36 @@ var alreadyHidden = false;
 
 LaunchScreen = {
   hold: function () {
-    if (! Meteor.isCordova)
-      return;
+    if (! Meteor.isCordova) {
+      return {
+        release: function () { /* noop */ }
+      };
+    }
 
     if (alreadyHidden) {
       throw new Error("Can't show launch screen once it's hidden");
     }
 
     holdCount++;
-  },
-  release: function () {
-    if (! Meteor.isCordova)
-      return;
 
-    if (holdCount === 0) {
-      throw new Error(
-        "Called LaunchScreen.release() more times than " +
-          "LaunchScreen.hold(). Make sure to pair " +
-          "each call to LaunchScreen.hold() with a single call to " +
-          "LaunchScreen.release().");
-    }
+    var released = false;
+    var release = function () {
+      if (! Meteor.isCordova)
+        return;
 
-    holdCount--;
-    if (holdCount === 0 &&
-        typeof navigator !== 'undefined' && navigator.splashscreen) {
-      navigator.splashscreen.hide();
-    }
+      if (! released) {
+        holdCount--;
+        if (holdCount === 0 &&
+            typeof navigator !== 'undefined' && navigator.splashscreen) {
+          navigator.splashscreen.hide();
+        }
+      }
+    };
+
+    // Returns a launch screen handle with a release method
+    return {
+      release: release
+    };
   }
 };
 
@@ -41,22 +45,22 @@ LaunchScreen = {
 // mobile apps that use this package always start with a launch screen
 // visible. (see XXX comment at the top of package.js for more
 // details)
-LaunchScreen.hold();
+var handle = LaunchScreen.hold();
 
 Meteor.startup(function () {
   if (! Template) {
-    LaunchScreen.release();
+    handle.release();
   } else if (Package['iron:router']) {
     var released = false;
     Package['iron:router'].Router.onAfterAction(function () {
       if (! released) {
         released = true;
-        LaunchScreen.release();
+        handle.release();
       }
     });
   } else {
     Template.body.rendered = function () {
-      LaunchScreen.release();
+      handle.release();
     };
   }
 });
