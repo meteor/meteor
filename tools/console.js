@@ -154,6 +154,9 @@ _.extend(ProgressDisplayStatus.prototype, {
 
 
 // XXX: Remove Patience
+// XXX: Preserve comments
+// XXX: Implement the delay-before-print logic?
+
 // Patience: a way to make slow operations a little more bearable.
 //
 // It's frustrating when you write code that takes a while, either because it
@@ -183,109 +186,109 @@ _.extend(ProgressDisplayStatus.prototype, {
 // in case we're getting CPU-starved, we also check during each nudge.  The
 // message will not be printed after the Patience is stopped, which prevents you
 // from apologizing to users about operations that don't end up being slow.
-exports.Patience = function (options) {
-  var self = this;
+//exports.Patience = function (options) {
+//  var self = this;
+//
+//  self._id = nextPatienceId++;
+//  ACTIVE_PATIENCES[self._id] = self;
+//
+//  self._whenMessage = null;
+//  self._message = null;
+//  self._messageTimeout = null;
+//
+//  var now = +(new Date);
+//
+//  if (options.messageAfterMs) {
+//    if (!options.message)
+//      throw Error("missing message!");
+//    if (typeof(options.message) !== 'string' &&
+//      typeof(options.message) !== 'function') {
+//      throw Error("message must be string or function");
+//    }
+//    self._message = "\n" + options.message;
+//    self._whenMessage = now + options.messageAfterMs;
+//    self._messageTimeout = setTimeout(function () {
+//      self._messageTimeout = null;
+//      self._printMessage();
+//    }, options.messageAfterMs);
+//  }
+//
+//  // If this is the first patience we made, the next yield time is
+//  // YIELD_EVERY_MS from now.
+//  if (_.size(ACTIVE_PATIENCES) === 1) {
+//    nextYield = now + YIELD_EVERY_MS;
+//  }
+//};
 
-  self._id = nextPatienceId++;
-  ACTIVE_PATIENCES[self._id] = self;
-
-  self._whenMessage = null;
-  self._message = null;
-  self._messageTimeout = null;
-
-  var now = +(new Date);
-
-  if (options.messageAfterMs) {
-    if (!options.message)
-      throw Error("missing message!");
-    if (typeof(options.message) !== 'string' &&
-      typeof(options.message) !== 'function') {
-      throw Error("message must be string or function");
-    }
-    self._message = "\n" + options.message;
-    self._whenMessage = now + options.messageAfterMs;
-    self._messageTimeout = setTimeout(function () {
-      self._messageTimeout = null;
-      self._printMessage();
-    }, options.messageAfterMs);
-  }
-
-  // If this is the first patience we made, the next yield time is
-  // YIELD_EVERY_MS from now.
-  if (_.size(ACTIVE_PATIENCES) === 1) {
-    nextYield = now + YIELD_EVERY_MS;
-  }
-};
-
-var nextYield = null;
-var YIELD_EVERY_MS = 150;
-var ACTIVE_PATIENCES = {};
-var nextPatienceId = 1;
-
-exports.Patience.nudge = function () {
-  // Is it time to yield?
-  if (!_.isEmpty(ACTIVE_PATIENCES) &&
-    +(new Date) >= nextYield) {
-    nextYield = +(new Date) + YIELD_EVERY_MS;
-    utils.sleepMs(1);
-  }
-
-  // save a copy, in case it gets updated
-  var patienceIds = _.keys(ACTIVE_PATIENCES);
-  _.each(patienceIds, function (id) {
-    if (_.has(ACTIVE_PATIENCES, id)) {
-      ACTIVE_PATIENCES[id]._maybePrintMessage();
-    }
-  });
-};
-
-_.extend(exports.Patience.prototype, {
-  stop: function () {
-    var self = this;
-    delete ACTIVE_PATIENCES[self._id];
-    if (_.isEmpty(ACTIVE_PATIENCES)) {
-      nextYield = null;
-    }
-    self._clearMessageTimeout();
-  },
-
-  _maybePrintMessage: function () {
-    var self = this;
-    var now = +(new Date);
-
-    // Is it time to print a message?
-    if (self._whenMessage && +(new Date) >= self._whenMessage) {
-      self._printMessage();
-    }
-  },
-
-  _printMessage: function () {
-    var self = this;
-    // Did the timeout just fire, but we already printed the message due to a
-    // nudge while CPU-bound? We're done. (This shouldn't happen since we clear
-    // the timeout, but just in case...)
-    if (self._message === null)
-      return;
-    self._clearMessageTimeout();
-    // Pull out message, in case it's a function and it yields.
-    var message = self._message;
-    self._message = null;
-    if (typeof (message) === 'function') {
-      message();
-    } else {
-      console.log(message);
-    }
-  },
-
-  _clearMessageTimeout: function () {
-    var self = this;
-    if (self._messageTimeout) {
-      clearTimeout(self._messageTimeout);
-      self._messageTimeout = null;
-    }
-    self._whenMessage = null;
-  }
-});
+//var nextYield = null;
+//var YIELD_EVERY_MS = 150;
+//var ACTIVE_PATIENCES = {};
+//var nextPatienceId = 1;
+//
+//exports.Patience.nudge = function () {
+//  // Is it time to yield?
+//  if (!_.isEmpty(ACTIVE_PATIENCES) &&
+//    +(new Date) >= nextYield) {
+//    nextYield = +(new Date) + YIELD_EVERY_MS;
+//    utils.sleepMs(1);
+//  }
+//
+//  // save a copy, in case it gets updated
+//  var patienceIds = _.keys(ACTIVE_PATIENCES);
+//  _.each(patienceIds, function (id) {
+//    if (_.has(ACTIVE_PATIENCES, id)) {
+//      ACTIVE_PATIENCES[id]._maybePrintMessage();
+//    }
+//  });
+//};
+//
+//_.extend(exports.Patience.prototype, {
+//  stop: function () {
+//    var self = this;
+//    delete ACTIVE_PATIENCES[self._id];
+//    if (_.isEmpty(ACTIVE_PATIENCES)) {
+//      nextYield = null;
+//    }
+//    self._clearMessageTimeout();
+//  },
+//
+//  _maybePrintMessage: function () {
+//    var self = this;
+//    var now = +(new Date);
+//
+//    // Is it time to print a message?
+//    if (self._whenMessage && +(new Date) >= self._whenMessage) {
+//      self._printMessage();
+//    }
+//  },
+//
+//  _printMessage: function () {
+//    var self = this;
+//    // Did the timeout just fire, but we already printed the message due to a
+//    // nudge while CPU-bound? We're done. (This shouldn't happen since we clear
+//    // the timeout, but just in case...)
+//    if (self._message === null)
+//      return;
+//    self._clearMessageTimeout();
+//    // Pull out message, in case it's a function and it yields.
+//    var message = self._message;
+//    self._message = null;
+//    if (typeof (message) === 'function') {
+//      message();
+//    } else {
+//      console.log(message);
+//    }
+//  },
+//
+//  _clearMessageTimeout: function () {
+//    var self = this;
+//    if (self._messageTimeout) {
+//      clearTimeout(self._messageTimeout);
+//      self._messageTimeout = null;
+//    }
+//    self._whenMessage = null;
+//  }
+//});
 
 var Spinner = function () {
   var self = this;
@@ -598,6 +601,7 @@ _.extend(Console.prototype, {
         self._statusPoller.statusPoll();
       }
     }
+    // XXX: Maybe we should make canYield the default?
     if (canYield === true) {
       self._throttledYield.yield();
     }
