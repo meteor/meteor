@@ -164,6 +164,7 @@ npm install node-inspector@0.7.4
 npm install progress@1.1.8
 npm install chalk@0.5.1
 npm install sqlite3@3.0.0
+npm install netroute@0.2.5
 
 # Clean up a big zip file it leaves behind.
 npm install phantomjs@1.8.1-1
