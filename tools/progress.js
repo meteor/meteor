@@ -11,7 +11,7 @@
 
 var _ = require('underscore');
 var Future = require('fibers/future');
-var console = require('./console.js');
+var consolejs = require('./console.js');
 
 var Progress = function (options) {
   var self = this;
@@ -37,8 +37,6 @@ var Progress = function (options) {
   self._state = _.clone(self._selfState);
 
   self._isDone = false;
-
-  self._selfActive = false;
 };
 
 _.extend(Progress.prototype, {
@@ -72,39 +70,41 @@ _.extend(Progress.prototype, {
     var isRoot = !self._parent;
 
     if (self._isDone) {
+      // A done task cannot be the active task
       return null;
     }
 
-    if (self._selfActive && !isRoot) {
+    if (!self._state.done && (self._state.current != 0) && !isRoot) {
+      // We are not done and we have interesting state to report
       return self;
     }
 
     if (self._forkJoin) {
-      // Don't descend into fork-join tasks
+      // Don't descend into fork-join tasks (by choice)
       return self;
     }
 
     if (self._allTasks.length) {
-      var active = _.map(self._allTasks, function (task) {
+      var candidates = _.map(self._allTasks, function (task) {
         return task.getCurrentProgress();
       });
-      active = _.filter(active, function (s) {
+      var active = _.filter(candidates, function (s) {
         return !!s;
       });
       if (active.length == 1) {
         return active[0];
       }
+      // No single active task, return self
       return self;
     }
 
-    return null;
+    return self;
   },
 
   // Creates a subtask that must be completed as part of this (bigger) task
   addChildTask: function (options) {
     var self = this;
-    options = options || {};
-    var options = _.extend({ parent: self }, options);
+    options = _.extend({ parent: self }, options || {});
     var child = new Progress(options);
     self._allTasks.push(child);
     self._reportChildState(child, child._state);
@@ -128,8 +128,7 @@ _.extend(Progress.prototype, {
       end = '?';
     }
     stream.write("Task [" + self._title + "] " + self._state.current + "/" + end
-      + (self._isDone ? " done" : "")
-      + (self._selfActive ? " active" : "") +"\n");
+      + (self._isDone ? " done" : "") +"\n");
     if (self._allTasks.length) {
       _.each(self._allTasks, function (child) {
         child.dump(stream, options, (prefix || '') + '  ');
@@ -142,12 +141,11 @@ _.extend(Progress.prototype, {
     var self = this;
 
     self._selfState = state;
-    self._selfActive = !state.done;
 
     self._updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    console.Console.nudge(false);
+    consolejs.Console.nudge(false);
 
     self._notifyState();
   },
@@ -200,7 +198,7 @@ _.extend(Progress.prototype, {
         }
       }
     });
-    self._isDone = allChildrenDone && !self._selfActive;
+    self._isDone = allChildrenDone && !!self._selfState.done;
     if (!allChildrenDone) {
       state.done = false;
     }
@@ -219,6 +217,10 @@ _.extend(Progress.prototype, {
 
     self._updateTotalState();
     self._notifyState();
+  },
+
+  getState: function() {
+    return this._state;
   }
 });
 

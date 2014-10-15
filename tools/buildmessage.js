@@ -309,7 +309,9 @@ var enterJob = function (options, f) {
         console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
       }
       try {
-        return f();
+        return currentNestingLevel.withValue(nestingLevel + 1, function () {
+          return f();
+        });
       } finally {
         progress.reportProgressDone();
         if (debugBuild) {
@@ -330,7 +332,7 @@ var enterJob = function (options, f) {
         var start;
         if (debugBuild) {
           start = Date.now();
-          console.log("START", nestingLevel, options.title);
+          console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
         }
         try {
           return f();
@@ -338,7 +340,7 @@ var enterJob = function (options, f) {
           progress.reportProgressDone();
           if (debugBuild) {
             var end = Date.now();
-            console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+            console.log(spaces(nestingLevel * 2), "DONE", nestingLevel, options.title, "took " + (end - start));
           }
         }
       });
@@ -500,6 +502,7 @@ var forkJoin = function (options, iterable, fn) {
     var job = currentJob.get();
     var messageSet = currentMessageSet.get();
     var progress = currentProgress.get();
+    var nestingLevel = currentNestingLevel.get();
 
     var parallel = (options.parallel !== undefined) ? options.parallel : true;
     if (parallel) {
@@ -507,17 +510,19 @@ var forkJoin = function (options, iterable, fn) {
         var fut = new Future();
         var fnArguments = arguments;
         Fiber(function () {
-          currentProgress.withValue(progress, function () {
-            currentMessageSet.withValue(messageSet, function () {
-              currentJob.withValue(job, function () {
-                try {
-                  var result = enterJob({title: (options.title || '') + ' child' }, function () {
-                    return fn.apply(null, fnArguments);
-                  });
-                  fut['return'](result);
-                } catch (e) {
-                  fut['throw'](e);
-                }
+          currentNestingLevel.withValue(nestingLevel, function() {
+            currentProgress.withValue(progress, function () {
+              currentMessageSet.withValue(messageSet, function () {
+                currentJob.withValue(job, function () {
+                  try {
+                    var result = enterJob({title: (options.title || '') + ' child'}, function () {
+                      return fn.apply(null, fnArguments);
+                    });
+                    fut['return'](result);
+                  } catch (e) {
+                    fut['throw'](e);
+                  }
+                });
               });
             });
           });

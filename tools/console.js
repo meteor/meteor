@@ -376,12 +376,35 @@ _.extend(StatusPoller.prototype, {
       // It can be handy for dev purposes to see all the executing tasks
       rootProgress.dump(process.stdout, {skipDone: true});
     }
+
+    var reportState = function (state) {
+      var progressDisplay = self._console._progressDisplay;
+      // Do the % computation, if it is going to be used
+      if (progressDisplay.updateProgress) {
+        if (state.end === undefined || state.end == 0) {
+          progressDisplay.updateProgress(undefined);
+        } else {
+          var fraction = state.done ? 1.0 : (state.current / state.end);
+
+          if (!isNaN(fraction) && fraction >= 0) {
+            progressDisplay.updateProgress(fraction);
+          } else {
+            progressDisplay.updateProgress(0);
+          }
+        }
+      }
+    };
+
     var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
     if (self._watching === watching) {
+      // We need to do this to keep the spinner spinning
+      // XXX: Should we _only_ do this when we're showing the spinner?
+      reportState(watching.getState());
       return;
     }
 
     self._watching = watching;
+
     var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
 
     var progressDisplay = self._console._progressDisplay;
@@ -395,21 +418,7 @@ _.extend(StatusPoller.prototype, {
           return;
         }
 
-        var progressDisplay = self._console._progressDisplay;
-        // Do the % computation, if it is going to be used
-        if (progressDisplay.updateProgress) {
-          if (state.end === undefined || state.end == 0) {
-            progressDisplay.updateProgress(undefined);
-          } else {
-            var fraction = state.done ? 1.0 : (state.current / state.end);
-
-            if (!isNaN(fraction) && fraction >= 0) {
-              progressDisplay.updateProgress(fraction);
-            } else {
-              progressDisplay.updateProgress(0);
-            }
-          }
-        }
+        reportState(state);
       });
     }
   }
