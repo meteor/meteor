@@ -314,7 +314,7 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
-  Console.enableProgressBar(false);
+  Console.enableProgressDisplay(false);
   var result = fut.wait();
   runner.stop();
 
