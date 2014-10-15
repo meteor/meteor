@@ -9,6 +9,7 @@ var os = require('os');
 var fs = require('fs');
 var url = require('url');
 var child_process = require('child_process');
+var netroute = require('netroute');
 
 var utils = exports;
 
@@ -54,8 +55,6 @@ var parseUrl = function (str, defaults) {
 
 var ipAddress = function () {
   var uniload = require("./uniload.js");
-  var netroute = uniload.load({ packages: ["netroute"] }).
-        netroute.NpmModuleNetroute;
   var info = netroute.getInfo();
   var defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
   if (! defaultRoute) {
