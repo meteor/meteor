@@ -104,7 +104,7 @@ _.extend(AppProcess.prototype, {
     eachline(self.proc.stderr, 'utf8', fiberHelpers.inBareFiber(function (line) {
       if (self.debugPort &&
           line.indexOf("debugger listening on port " + self.debugPort) >= 0) {
-        Console.enableProgressBar(false);
+        Console.enableProgressDisplay(false);
         process.stdout.write(
           require("./inspector.js").banner(self.debugPort)
         );

@@ -18,7 +18,6 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 var readline = require('readline');
-var ProgressBar = require('progress');
 var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
@@ -31,12 +30,11 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
 }
 
+STATUSLINE_MAX_LENGTH = 60;
 STATUS_MAX_LENGTH = 40;
 
-// XXX: We're going to have to put the progress bar to the right of the text, I think...
-PROGRESS_BAR_WIDTH = 20;
+PROGRESS_MAX_WIDTH = 40;
 PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
-STATUS_POSITION = PROGRESS_BAR_WIDTH + 15;
 TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
 STATUS_INTERVAL_MS = 500;
@@ -290,7 +288,7 @@ _.extend(ProgressDisplayStatus.prototype, {
 //  }
 //});
 
-var Spinner = function () {
+var SpinnerRenderer = function () {
   var self = this;
   self.frames = ['-', '\\', '|', '/'];
   self.start = +(new Date);
@@ -312,7 +310,7 @@ var Spinner = function () {
   //// but all of the ones I tried look terrible in the terminal.
 };
 
-Spinner.prototype.currentFrame = function () {
+SpinnerRenderer.prototype.asString = function () {
   var self = this;
   var now = +(new Date);
 
@@ -320,6 +318,58 @@ Spinner.prototype.currentFrame = function () {
   var frame = Math.floor(t / self.interval) % self.frames.length;
   return self.frames[frame];
 };
+
+// Renders a progressbar.  Based on the node module, but tailored to our needs (emacs, positioned right)
+var ProgressRenderer = function (format, options) {
+  var self = this;
+
+  options = options || {};
+
+  self.fmt = format;
+  self.curr = 0;
+  self.total = 100;
+  self.maxWidth = options.maxWidth || self.total;
+  self.chars = {
+    complete   : '=',
+    incomplete : ' '
+  };
+};
+
+_.extend(ProgressRenderer.prototype, {
+  asString: function (availableSpace) {
+    var self = this;
+
+    var ratio = self.curr / self.total;
+    ratio = Math.min(Math.max(ratio, 0), 1);
+
+    var percent = ratio * 100;
+    var incomplete, complete, completeLength;
+    var elapsed = new Date - self.start;
+    var eta = (percent == 100) ? 0 : elapsed * (self.total / self.curr - 1);
+
+    /* populate the bar template with percentages and timestamps */
+    var str = self.fmt
+      .replace(':current', self.curr)
+      .replace(':total', self.total)
+      .replace(':elapsed', isNaN(elapsed) ? '0.0' : (elapsed / 1000).toFixed(1))
+      .replace(':eta', (isNaN(eta) || !isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
+      .replace(':percent', percent.toFixed(0) + '%');
+
+    /* compute the available space (non-zero) for the bar */
+    var width = Math.min(self.maxWidth, availableSpace - str.replace(':bar', '').length);
+
+    /* NOTE: the following assumes the user has one ':bar' token */
+    completeLength = Math.round(width * ratio);
+    complete = Array(completeLength + 1).join(self.chars.complete);
+    incomplete = Array(width - completeLength + 1).join(self.chars.incomplete);
+
+    /* fill in the actual progress bar */
+    str = str.replace(':bar', complete + incomplete);
+
+    return str;
+  }
+});
+
 
 var ProgressDisplayBar = function (console) {
   var self = this;
@@ -332,33 +382,30 @@ var ProgressDisplayBar = function (console) {
   var options = {
     complete: '=',
     incomplete: ' ',
-    width: PROGRESS_BAR_WIDTH,
-    total: 100,
-    clear: true,
-    stream: self._stream
+    maxWidth: PROGRESS_MAX_WIDTH,
+    total: 100
   };
+  self._progressRenderer = new ProgressRenderer(PROGRESS_BAR_FORMAT, options);
+  self._progressRenderer.start = new Date();
 
-  var progressBar = new ProgressBar(PROGRESS_BAR_FORMAT, options);
-  progressBar.start = new Date;
-  self._progressBar = progressBar;
-  self._spinner = new Spinner();
+  self._spinnerRenderer = new SpinnerRenderer();
 
   self._fraction = undefined;
+
+  self._printedLength = 0;
 };
 
 _.extend(ProgressDisplayBar.prototype, {
   depaint: function () {
     var self = this;
 
-    self._stream.clearLine();
-    self._stream.cursorTo(0);
+    self._stream.write(spacesString(self._printedLength) + "\r");
   },
 
   stop: function () {
     var self = this;
 
-    self._progressBar.terminate();
-    self._progressBar = null;
+    self.depaint();
   },
 
   updateStatus: function (status) {
@@ -377,7 +424,7 @@ _.extend(ProgressDisplayBar.prototype, {
 
     self._fraction = fraction;
     if (fraction !== undefined) {
-      self._progressBar.curr = Math.floor(fraction * self._progressBar.total);
+      self._progressRenderer.curr = Math.floor(fraction * self._progressRenderer.total);
     }
     self._render();
   },
@@ -391,27 +438,51 @@ _.extend(ProgressDisplayBar.prototype, {
     var self = this;
 
     var text = self._status;
-    if (text) {
-      text = toFixedLength(text, STATUS_MAX_LENGTH);
-    }
 
-    if (self._fraction !== undefined) {
-      // XXX: Throttle progress bar repaints (but it looks like we're doing our own anyway)
-      // Force repaint
-      self._progressBar.lastDraw = '';
-      self._progressBar.render();
+    // XXX: Throttle these updates?
+    // XXX: Or maybe just jump to the correct position?
+    var progressGraphic = '';
+
+    var streamColumns = this._stream.columns;
+    var statusAllocation;
+    var progressAllocation;
+    if (!streamColumns) {
+      statusAllocation = STATUS_MAX_LENGTH;
+      progressAllocation = 0;
     } else {
-      // XXX: Maybe throttle here too?
-      // XXX: Or maybe just jump to the correct position
-      self._stream.clearLine();
-      self._stream.cursorTo(0);
-
-      self._stream.write(self._spinner.currentFrame());
+      statusAllocation = Math.min(STATUS_MAX_LENGTH, streamColumns);
+      progressAllocation = Math.min(PROGRESS_MAX_WIDTH, streamColumns - statusAllocation);
     }
 
-    if (text) {
-      self._stream.cursorTo(STATUS_POSITION);
-      self._stream.write(chalk.bold(text));
+    if (self._fraction !== undefined && progressAllocation > 16) {
+      progressGraphic = "  " + self._progressRenderer.asString(progressAllocation - 2);
+    } else if (progressAllocation > 3) {
+      progressGraphic = "  " + self._spinnerRenderer.asString();
+    }
+
+    if (text || progressGraphic) {
+      // XXX: Just update the graphic, to avoid text flicker?
+
+      // The cursor appears in position 0; we indent it a little to avoid this
+      // This also means it appears less important, which is good
+      var line = '    ';
+      var length = line.length;
+
+      if (self._status) {
+        var fixedWidth = toFixedLength(self._status, statusAllocation);
+        line += chalk.bold(fixedWidth);
+        length += statusAllocation;
+      } else {
+        line += spacesString(statusAllocation);
+        length += statusAllocation;
+      }
+
+      line += progressGraphic + "\r";
+      length += progressGraphic.length;
+
+      self.depaint();
+      self._stream.write(line);
+      self._printedLength = length;
     }
   }
 });
@@ -539,7 +610,7 @@ var Console = function (options) {
   self._stream = process.stdout;
 
   self._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
-  self._progressBarEnabled = false;
+  self._progressDisplayEnabled = false;
 
   self._logThreshold = LEVEL_CODE_INFO;
   var logspec = process.env.METEOR_LOG;
@@ -551,7 +622,7 @@ var Console = function (options) {
   }
 
   cleanup.onExit(function (sig) {
-    self.enableProgressBar(false);
+    self.enableProgressDisplay(false);
   });
 };
 
@@ -765,7 +836,7 @@ _.extend(Console.prototype, {
   },
 
   // Enables the progress bar, or disables it when called with (false)
-  enableProgressBar: function (enabled) {
+  enableProgressDisplay: function (enabled) {
     var self = this;
 
     // No arg => enable
@@ -773,18 +844,18 @@ _.extend(Console.prototype, {
       enabled = true;
     }
 
-    self._progressBarEnabled = enabled;
+    self._progressDisplayEnabled = enabled;
     self._updateProgressDisplay();
   },
 
-  // In response to a change in setPretty or enableProgressBar,
+  // In response to a change in setPretty or enableProgressDisplay,
   // configure the appropriate progressDisplay
   _updateProgressDisplay: function () {
     var self = this;
 
     var newProgressDisplay;
 
-    if (!self._progressBarEnabled) {
+    if (!self._progressDisplayEnabled) {
       newProgressDisplay = new ProgressDisplayNone();
     } else if ((!self._stream.isTTY) || (!self._pretty)) {
       // No progress bar if not in pretty / on TTY.
