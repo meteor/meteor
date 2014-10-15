@@ -302,9 +302,13 @@ _.extend(ProgressDisplayFull.prototype, {
     }
 
     if (self._fraction !== undefined && progressColumns > 16) {
+      // 16 is a heuristic number that allows enough space for a meaningful progress bar
       progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
     } else if (progressColumns > 3) {
+      // 3 = 2 spaces + 1 spinner character
       progressGraphic = "  " + self._spinnerRenderer.asString();
+    } else {
+      // Don't show any progress graphic - no room!
     }
 
     if (text || progressGraphic) {
