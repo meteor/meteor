@@ -185,18 +185,18 @@ _.extend(Runner.prototype, {
     _.forEach(self.extraRunners, function (extraRunner) {
       if (! self.stopped) {
         var title = extraRunner.title;
-        if (! self.quiet)
-          runLog.logTemporary("=> Starting " + title + "...");
-        extraRunner.start();
+        buildmessage.enterJob({ title: "Starting " + title }, function () {
+          extraRunner.start();
+        });
         if (! self.quiet && ! self.stopped)
           runLog.log("=> Started " + title + ".");
       }
     });
 
     if (! self.stopped) {
-      if (! self.quiet)
-        runLog.logTemporary("=> Starting your app...");
-      self.appRunner.start();
+      buildmessage.enterJob({ title: "Starting your app" }, function () {
+        self.appRunner.start();
+      });
       if (! self.quiet && ! self.stopped)
         runLog.log("=> Started your app.");
     }
@@ -205,9 +205,9 @@ _.extend(Runner.prototype, {
       runLog.log("\n=> App running at: " + self.rootUrl);
 
     if (self.selenium && ! self.stopped) {
-      if (! self.quiet)
-        runLog.logTemporary("=> Starting Selenium...");
-      self.selenium.start();
+      buildmessage.enterJob({ title: "Starting Selenium" }, function () {
+        self.selenium.start();
+      });
       if (! self.quiet && ! self.stopped)
         runLog.log("=> Started Selenium.");
     }
