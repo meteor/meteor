@@ -215,8 +215,11 @@ regexpElementMatcher = function (regexp) {
     if (typeof value !== 'string')
       return false;
 
-    // reset regexp's state to avoid inconsistent matching for objects with the
-    // same value on consecutive calls of regexp.test
+    // Reset regexp's state to avoid inconsistent matching for objects with the
+    // same value on consecutive calls of regexp.test. This happens only if the
+    // regexp has the 'g' flag. Also note that ES6 introduces a new flag 'y' for
+    // which we should *not* change the lastIndex but MongoDB doesn't support
+    // either of these flags.
     regexp.lastIndex = 0;
 
     return regexp.test(value);
