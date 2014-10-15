@@ -10,7 +10,7 @@
 ///     Displays a progress bar on the screen, but hides it around log messages
 ///     (The need to hide it is why we have this class)
 ///
-/// In future, we might do things like support verbose mode in here,
+/// In future, we might do things like move all support for verbose mode in here,
 /// and also integrate the buildmessage functionality into here
 ///
 
@@ -72,10 +72,11 @@ var ProgressDisplayNone = function () {
 
 _.extend(ProgressDisplayNone.prototype, {
   depaint: function () {
+    // No-op
   },
 
   repaint: function () {
-
+    // No-op
   }
 });
 
@@ -140,144 +141,6 @@ _.extend(ProgressDisplayStatus.prototype, {
   }
 });
 
-
-// XXX: Remove Patience
-// XXX: Preserve comments
-// XXX: Implement the delay-before-print logic?
-
-// Patience: a way to make slow operations a little more bearable.
-//
-// It's frustrating when you write code that takes a while, either because it
-// uses a lot of CPU or because it uses a lot of network/IO. There are two
-// issues:
-//   - It would be nice to apologize/explain to users that an operation is
-//     taking a while... but not to spam them with the message when the
-//     operation is fast. This is true no matter which kind of slowness we
-///    have.
-//   - In Node, consuming lots of CPU without yielding is especially bad.
-//     Other IO/network tasks will stall, and you can't even kill the process!
-//
-// Patience is a class to help alleviate the pain of long waits.  When you're
-// going to run a long operation, create a Patience object; when it's done (make
-// sure to use try/finally!), stop() it.
-//
-// Within any code that may burn CPU for too long, call
-// `utils.Patience.nudge()`.  (This is a singleton method, not a method on your
-// particular patience.)  If there are any active Patience objects and it's been
-// a while since your last yield, your Fiber will sleep momentarily.  (So the
-// caller has to be OK with yielding --- it has to be in a Fiber and it can't be
-// anything that depends for correctness on not yielding!)
-//
-// In addition, for each Patience, you can specify a message (a string to print
-// or a function to call) and a timeout for when that gets called.  We use two
-// strategies to try to call it: a standard JavaScript timeout, and as a backup
-// in case we're getting CPU-starved, we also check during each nudge.  The
-// message will not be printed after the Patience is stopped, which prevents you
-// from apologizing to users about operations that don't end up being slow.
-//exports.Patience = function (options) {
-//  var self = this;
-//
-//  self._id = nextPatienceId++;
-//  ACTIVE_PATIENCES[self._id] = self;
-//
-//  self._whenMessage = null;
-//  self._message = null;
-//  self._messageTimeout = null;
-//
-//  var now = +(new Date);
-//
-//  if (options.messageAfterMs) {
-//    if (!options.message)
-//      throw Error("missing message!");
-//    if (typeof(options.message) !== 'string' &&
-//      typeof(options.message) !== 'function') {
-//      throw Error("message must be string or function");
-//    }
-//    self._message = "\n" + options.message;
-//    self._whenMessage = now + options.messageAfterMs;
-//    self._messageTimeout = setTimeout(function () {
-//      self._messageTimeout = null;
-//      self._printMessage();
-//    }, options.messageAfterMs);
-//  }
-//
-//  // If this is the first patience we made, the next yield time is
-//  // YIELD_EVERY_MS from now.
-//  if (_.size(ACTIVE_PATIENCES) === 1) {
-//    nextYield = now + YIELD_EVERY_MS;
-//  }
-//};
-
-//var nextYield = null;
-//var YIELD_EVERY_MS = 150;
-//var ACTIVE_PATIENCES = {};
-//var nextPatienceId = 1;
-//
-//exports.Patience.nudge = function () {
-//  // Is it time to yield?
-//  if (!_.isEmpty(ACTIVE_PATIENCES) &&
-//    +(new Date) >= nextYield) {
-//    nextYield = +(new Date) + YIELD_EVERY_MS;
-//    utils.sleepMs(1);
-//  }
-//
-//  // save a copy, in case it gets updated
-//  var patienceIds = _.keys(ACTIVE_PATIENCES);
-//  _.each(patienceIds, function (id) {
-//    if (_.has(ACTIVE_PATIENCES, id)) {
-//      ACTIVE_PATIENCES[id]._maybePrintMessage();
-//    }
-//  });
-//};
-//
-//_.extend(exports.Patience.prototype, {
-//  stop: function () {
-//    var self = this;
-//    delete ACTIVE_PATIENCES[self._id];
-//    if (_.isEmpty(ACTIVE_PATIENCES)) {
-//      nextYield = null;
-//    }
-//    self._clearMessageTimeout();
-//  },
-//
-//  _maybePrintMessage: function () {
-//    var self = this;
-//    var now = +(new Date);
-//
-//    // Is it time to print a message?
-//    if (self._whenMessage && +(new Date) >= self._whenMessage) {
-//      self._printMessage();
-//    }
-//  },
-//
-//  _printMessage: function () {
-//    var self = this;
-//    // Did the timeout just fire, but we already printed the message due to a
-//    // nudge while CPU-bound? We're done. (This shouldn't happen since we clear
-//    // the timeout, but just in case...)
-//    if (self._message === null)
-//      return;
-//    self._clearMessageTimeout();
-//    // Pull out message, in case it's a function and it yields.
-//    var message = self._message;
-//    self._message = null;
-//    if (typeof (message) === 'function') {
-//      message();
-//    } else {
-//      console.log(message);
-//    }
-//  },
-//
-//  _clearMessageTimeout: function () {
-//    var self = this;
-//    if (self._messageTimeout) {
-//      clearTimeout(self._messageTimeout);
-//      self._messageTimeout = null;
-//    }
-//    self._whenMessage = null;
-//  }
-//});
-
 var SpinnerRenderer = function () {
   var self = this;
   self.frames = ['-', '\\', '|', '/'];
@@ -309,8 +172,8 @@ SpinnerRenderer.prototype.asString = function () {
   return self.frames[frame];
 };
 
-// Renders a progressbar.  Based on the node module, but tailored to our needs (emacs, positioned right)
-var ProgressRenderer = function (format, options) {
+// Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
+var ProgressBarRenderer = function (format, options) {
   var self = this;
 
   options = options || {};
@@ -325,7 +188,7 @@ var ProgressRenderer = function (format, options) {
   };
 };
 
-_.extend(ProgressRenderer.prototype, {
+_.extend(ProgressBarRenderer.prototype, {
   asString: function (availableSpace) {
     var self = this;
 
@@ -361,7 +224,7 @@ _.extend(ProgressRenderer.prototype, {
 });
 
 
-var ProgressDisplayBar = function (console) {
+var ProgressDisplayFull = function (console) {
   var self = this;
 
   self._console = console;
@@ -375,8 +238,8 @@ var ProgressDisplayBar = function (console) {
     maxWidth: PROGRESS_MAX_WIDTH,
     total: 100
   };
-  self._progressRenderer = new ProgressRenderer(PROGRESS_BAR_FORMAT, options);
-  self._progressRenderer.start = new Date();
+  self._progressBarRenderer = new ProgressBarRenderer(PROGRESS_BAR_FORMAT, options);
+  self._progressBarRenderer.start = new Date();
 
   self._spinnerRenderer = new SpinnerRenderer();
 
@@ -385,7 +248,7 @@ var ProgressDisplayBar = function (console) {
   self._printedLength = 0;
 };
 
-_.extend(ProgressDisplayBar.prototype, {
+_.extend(ProgressDisplayFull.prototype, {
   depaint: function () {
     var self = this;
 
@@ -408,7 +271,7 @@ _.extend(ProgressDisplayBar.prototype, {
 
     self._fraction = fraction;
     if (fraction !== undefined) {
-      self._progressRenderer.curr = Math.floor(fraction * self._progressRenderer.total);
+      self._progressBarRenderer.curr = Math.floor(fraction * self._progressBarRenderer.total);
     }
     self._render();
   },
@@ -428,19 +291,19 @@ _.extend(ProgressDisplayBar.prototype, {
     var progressGraphic = '';
 
     var streamColumns = this._stream.columns;
-    var statusAllocation;
-    var progressAllocation;
+    var statusColumns;
+    var progressColumns;
     if (!streamColumns) {
-      statusAllocation = STATUS_MAX_LENGTH;
-      progressAllocation = 0;
+      statusColumns = STATUS_MAX_LENGTH;
+      progressColumns = 0;
     } else {
-      statusAllocation = Math.min(STATUS_MAX_LENGTH, streamColumns);
-      progressAllocation = Math.min(PROGRESS_MAX_WIDTH, streamColumns - statusAllocation);
+      statusColumns = Math.min(STATUS_MAX_LENGTH, streamColumns);
+      progressColumns = Math.min(PROGRESS_MAX_WIDTH, streamColumns - statusColumns);
     }
 
-    if (self._fraction !== undefined && progressAllocation > 16) {
-      progressGraphic = "  " + self._progressRenderer.asString(progressAllocation - 2);
-    } else if (progressAllocation > 3) {
+    if (self._fraction !== undefined && progressColumns > 16) {
+      progressGraphic = "  " + self._progressBarRenderer.asString(progressColumns - 2);
+    } else if (progressColumns > 3) {
       progressGraphic = "  " + self._spinnerRenderer.asString();
     }
 
@@ -453,12 +316,12 @@ _.extend(ProgressDisplayBar.prototype, {
       var length = line.length;
 
       if (self._status) {
-        var fixedWidth = toFixedLength(self._status, statusAllocation);
-        line += chalk.bold(fixedWidth);
-        length += statusAllocation;
+        var fixedLength = toFixedLength(self._status, statusColumns);
+        line += chalk.bold(fixedLength);
+        length += statusColumns;
       } else {
-        line += spacesString(statusAllocation);
-        length += statusAllocation;
+        line += spacesString(statusColumns);
+        length += statusColumns;
       }
 
       line += progressGraphic + "\r";
@@ -510,6 +373,7 @@ _.extend(StatusPoller.prototype, {
 
     var rootProgress = buildmessage.getRootProgress();
     if (PROGRESS_DEBUG) {
+      // It can be handy for dev purposes to see all the executing tasks
       rootProgress.dump(process.stdout, {skipDone: true});
     }
     var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
@@ -532,34 +396,19 @@ _.extend(StatusPoller.prototype, {
         }
 
         var progressDisplay = self._console._progressDisplay;
-        if (!progressDisplay.updateProgress) {
-          // Progress bar doesn't show progress; don't bother with the % computation
-          return;
-        }
-
-        if (state.end === undefined || state.end == 0) {
-          progressDisplay.updateProgress(undefined);
-          return;
-        }
-
-        var fraction;
-        if (state.done) {
-          fraction = 1.0;
-        } else {
-          var current = state.current;
-          var end = state.end;
-          if (end === undefined || end == 0 || current == 0) {
-            // Arbitrary end-point
-            fraction = 0;
+        // Do the % computation, if it is going to be used
+        if (progressDisplay.updateProgress) {
+          if (state.end === undefined || state.end == 0) {
+            progressDisplay.updateProgress(undefined);
           } else {
-            fraction = current / end;
-          }
-        }
+            var fraction = state.done ? 1.0 : (state.current / state.end);
 
-        if (!isNaN(fraction) && fraction >= 0) {
-          progressDisplay.updateProgress(fraction);
-        } else {
-          progressDisplay.updateProgress(0);
+            if (!isNaN(fraction) && fraction >= 0) {
+              progressDisplay.updateProgress(fraction);
+            } else {
+              progressDisplay.updateProgress(0);
+            }
+          }
         }
       });
     }
@@ -645,10 +494,20 @@ _.extend(Console.prototype, {
     self.verbose = verbose;
   },
 
-  // XXX: Move docs from Patience.nudge()
-  // Like Patience.nudge(); this can be called during long lived operations
-  // where the timer may be starved off the CPU.  It will execute the poll if
-  // it has been 'too long'
+  // This can be called during long lived operations; it will keep the spinner spinning.
+  // (This code used to be in Patience.nudge)
+  //
+  // It's frustrating when you write code that takes a while, either because it
+  // uses a lot of CPU or because it uses a lot of network/IO.  In Node,
+  // consuming lots of CPU without yielding is especially bad.
+  // Other IO/network tasks will stall, and you can't even kill the process!
+  //
+  // Within any code that may burn CPU for too long, call `Console.nudge()`.
+  // If it's been a while since your last yield, your Fiber will sleep momentarily.
+  // It will also update the spinner if there is one and it's been a while.
+  // The caller should be OK with yielding --- it has to be in a Fiber and it can't be
+  // anything that depends for correctness on not yielding.  You can also call nudge(false)
+  // if you just want to update the spinner and not yield, but you should avoid this.
   nudge: function (canYield) {
     var self = this;
     if (self._throttledStatusPoll.isAllowed()) {
@@ -656,8 +515,7 @@ _.extend(Console.prototype, {
         self._statusPoller.statusPoll();
       }
     }
-    // XXX: Maybe we should make canYield the default?
-    if (canYield === true) {
+    if (canYield === undefined || canYield === true) {
       self._throttledYield.yield();
     }
   },
@@ -747,7 +605,8 @@ _.extend(Console.prototype, {
       dest.write(message + '\n');
     }
 
-    // Repaint the progress bar
+    // XXX: Pause before showing the progress display, to prevent flicker/spewing messages
+    // Repaint the progress display
     progressDisplay.repaint();
   },
 
@@ -853,7 +712,7 @@ _.extend(Console.prototype, {
       newProgressDisplay = new ProgressDisplayStatus(self);
     } else {
       // Otherwise we can do the full progress bar
-      newProgressDisplay = new ProgressDisplayBar(self);
+      newProgressDisplay = new ProgressDisplayFull(self);
     }
 
     // Start the status poller if it hasn't been started

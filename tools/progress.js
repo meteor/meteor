@@ -6,6 +6,8 @@
 ///   current: number, the current progress value
 ///   end: number, optional, the value of current where we expect to be done
 ///
+/// If end is not set, we'll display a spinner instead of a progress bar
+///
 
 var _ = require('underscore');
 var Future = require('fibers/future');
@@ -144,6 +146,7 @@ _.extend(Progress.prototype, {
 
     self._updateTotalState();
 
+    // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
     console.Console.nudge(false);
 
     self._notifyState();
