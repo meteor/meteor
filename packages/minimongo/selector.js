@@ -214,6 +214,11 @@ regexpElementMatcher = function (regexp) {
     // Regexps only work against strings.
     if (typeof value !== 'string')
       return false;
+
+    // reset regexp's state to avoid inconsistent matching for objects with the
+    // same value on consecutive calls of regexp.test
+    regexp.lastIndex = 0;
+
     return regexp.test(value);
   };
 };
