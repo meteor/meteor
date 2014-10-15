@@ -76,10 +76,6 @@ _.extend(ProgressDisplayNone.prototype, {
 
   repaint: function () {
 
-  },
-
-  stop: function () {
-
   }
 });
 
@@ -141,12 +137,6 @@ _.extend(ProgressDisplayStatus.prototype, {
       self._stream.write('  (  ' + text + '  ... )\r');
       self._wroteStatusMessage = true;
     }
-  },
-
-  stop: function () {
-    var self = this;
-
-    self.depaint();
   }
 });
 
@@ -400,12 +390,6 @@ _.extend(ProgressDisplayBar.prototype, {
     var self = this;
 
     self._stream.write(spacesString(self._printedLength) + "\r");
-  },
-
-  stop: function () {
-    var self = this;
-
-    self.depaint();
   },
 
   updateStatus: function (status) {
@@ -924,7 +908,7 @@ _.extend(Console.prototype, {
     // XXX: Optimize case of no-op transitions? (same mode -> same mode)
 
     var oldProgressDisplay = self._progressDisplay;
-    oldProgressDisplay.stop();
+    oldProgressDisplay.depaint();
 
     self._progressDisplay = newProgressDisplay;
   }
