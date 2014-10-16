@@ -57,7 +57,7 @@ var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
 
 var reloadPackages = function () {
   doOrThrow(function () {
-    catalog.complete.refresh();
+    catalog.complete.refreshLocalPackages();
   });
 };
 

@@ -423,7 +423,7 @@ _.extend(AppRunner.prototype, {
       var refreshWatchSet = new watch.WatchSet;
       var refreshMessages = buildmessage.capture(function () {
         try {
-          catalog.complete.refresh({
+          catalog.complete.refreshLocalPackages({
             forceRefresh: true,
             watchSet: refreshWatchSet
           });

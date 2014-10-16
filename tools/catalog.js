@@ -99,9 +99,6 @@ var LayeredCatalog = function() {
   self.localCatalog = null;
   self.otherCatalog = null;
 
-  // Constraint solver using this catalog.
-  self.resolver = null;
-
   // Each complete catalog needs its own package cache.
   self.packageCache = new packageCache.PackageCache(self);
 };
@@ -252,7 +249,7 @@ _.extend(LayeredCatalog.prototype, {
       // already. (Putting this off until the first call to resolveConstraints
       // also helps with performance: no need to build this package and load the
       // large mori module unless we actually need it.)
-      self.resolver || self._initializeResolver();
+      var resolver = self._buildResolver();
 
       // Looks like we are not going to be able to avoid calling the constraint
       // solver, so let's process the input (constraints) into the correct
@@ -302,7 +299,7 @@ _.extend(LayeredCatalog.prototype, {
           // subset of those versions to record for our solution. (We don't just
           // return the original version lock because we want to record the
           // correct transitive dependencies)
-          return self.resolver.resolve(deps, constr, resolverOpts);
+          return resolver.resolve(deps, constr, resolverOpts);
         });
       if (ret["usedRCs"]) {
         var expPackages = [];
@@ -352,30 +349,29 @@ _.extend(LayeredCatalog.prototype, {
   //   on the official catalog to refresh data.json, in this case.
   // - watchSet: if provided, any files read in reloading packages will be added
   //   to this set.
-  refresh: function (options) {
+  refreshLocalPackages: function (options) {
     var self = this;
     self.localCatalog.refresh(options);
-
-    // Note that otherCatalog can throw, if we fail to connect
-    // XXX: Order of refreshes?  Continue on error?
-    self.otherCatalog.refresh(options);
+    //// Note that otherCatalog can throw, if we fail to connect
+    //// XXX: Order of refreshes?  Continue on error?
+    //self.otherCatalog.refresh(options);
     self.packageCache.refresh();
-    self.resolver = null;
   },
 
-  _initializeResolver: function () {
+  _buildResolver: function () {
     var self = this;
     var uniload = require('./uniload.js');
 
     var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
     })['constraint-solver'];
-    self.resolver =
+    var resolver =
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
         nudge: function () {
           Console.nudge(true);
         }
       });
+    return resolver;
   },
 
   watchLocalPackageDirs: function (watchSet) {
