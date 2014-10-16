@@ -15,6 +15,7 @@ Cordova.depends({
 
 Package.onUse(function(api) {
   api.addFiles('mobile-launch-screen.js', 'web');
+  api.addFiles('default-behavior.js', 'web');
   api.use(['blaze', 'templating'], 'web', { weak: true });
 
   api.export('LaunchScreen');
