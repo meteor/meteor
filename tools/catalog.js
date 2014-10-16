@@ -24,11 +24,49 @@ catalog.Refresh = {};
 catalog.Refresh.OnceAtStart = function (options) {
   var self = this;
   self.options = _.extend({}, options);
+  self.refreshFailed = undefined;
 };
 
 catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
   var self = this;
-  catalog.official.refresh(self.options);
+  try {
+    catalog.official.refresh(self.options);
+    self.refreshFailed = false;
+  } catch (err) {
+    // XXX: Should we fail-hard if the catalog is empty???
+    self.refreshFailed = true;
+
+    var errorType = err.errorType;
+
+    // Example errors:
+
+    // Offline, with name-based host:
+    //   errorType: DDP.ConnectionError
+    //   Network error: ws://packages.meteor.com/websocket: getaddrinfo ENOTFOUND
+
+    // Offline, with IP-based host:
+    //   errorType: DDP.ConnectionError
+    //   Network error: ws://8.8.8.8/websocket: connect ENETUNREACH
+
+    // Online, bad port:
+    //    errorType: DDP.ConnectionError
+    //    Network error: wss://packages.meteor.com:8888/websocket: connect ECONNREFUSED
+
+    // Online, socket hangup:
+    //   errorType: DDP.ConnectionError
+    //   Network error: wss://packages.meteor.com:80/websocket: socket hang up
+    Console.warn("Unable to refresh catalog (are you offline?)\n");
+
+    // XXX: Make this Console.debug(err)
+    if (Console.isDebugEnabled()) {
+      Console.printError(err);
+    }
+
+    // XXX: Support refreshCanFail?
+    //if (!self.options.refreshCanFail) {
+    //  throw err;
+    //}
+  }
 };
 
 // Refresh strategy: never (we don't use the package catalog)
