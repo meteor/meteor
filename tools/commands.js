@@ -469,11 +469,9 @@ main.registerCommand({
   // this version of the tools, and then stamp on the correct release
   // at the end.)
   if (! release.current.isCheckout() && !release.forced) {
-    var needToSpringboard = commandsPackages.doOrDie(function () {
-      return release.current.name !== release.latestDownloaded();
-    });
-    if (needToSpringboard)
+    if (release.current.name !== release.latestKnown()) {
       throw new main.SpringboardToLatestRelease;
+    }
   }
 
   var exampleDir = path.join(__dirname, '..', 'examples');

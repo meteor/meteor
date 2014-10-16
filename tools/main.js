@@ -806,12 +806,23 @@ Fiber(function () {
     } else {
       // Run outside an app dir with no --release flag. Use the latest
       // release we know about (in the default track).
-      var messages = buildmessage.capture(function () {
-        releaseName = release.latestDownloaded();
-      });
-      if (messages.hasMessages()) {
-        process.stderr.write("=> Errors while determining latest release:\n" +
-                             messages.formatMessages());
+      releaseName = release.latestKnown();
+      if (!releaseName) {
+        // Somehow we have a catalog that doesn't have any releases on the
+        // default track. Try syncing, at least.  (This is a pretty unlikely
+        // error case, since you should always start with a non-empty catalog.)
+        var refreshFailed = !catalog.refreshOrWarn();
+        releaseName = release.latestKnown();
+      }
+      if (!releaseName) {
+        if (refreshFailed) {
+          process.stderr.write(
+"The package catalog has no information about any Meteor releases, and we\n" +
+"had trouble connecting to the package server.\n");
+        } else {
+          process.stderr.write(
+"The package catalog has no information about any Meteor releases.\n");
+        }
         process.exit(1);
       }
     }
@@ -1298,7 +1309,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // is some latest release on this track. Note that this is only throw by
       // 'update' and 'create', which are both catalog.Refresh.OnceAtStart
       // commands, so we ought to have decent knowledge of the latest release.
-      var latestRelease = release.load(release.latestDownloaded(e.track));
+      var latestRelease = release.load(release.latestKnown(e.track));
       springboard(latestRelease, latestRelease.name);
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {

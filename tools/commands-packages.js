@@ -1613,9 +1613,8 @@ var maybeUpdateRelease = function (options) {
   // double-springboard.  (We might miss an super recently published release,
   // but that's probably OK.)
   if (! release.forced) {
-    var latestRelease = doOrDie(function () {
-      return release.latestDownloaded(releaseTrack);
-    });
+    var latestRelease = release.latestKnown(releaseTrack);
+
     // Are we on some track without ANY recommended releases at all,
     // and the user ran 'meteor update' without specifying a release? We
     // really can't do much here.

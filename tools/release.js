@@ -172,17 +172,17 @@ release.usingRightReleaseForApp = function () {
     return true;
 
   var appRelease = project.getMeteorReleaseVersion();
-  if (appRelease === null)
+  if (appRelease === null) {
     // Really old app that has no release specified.
-    appRelease = release.latestDownloaded();
+    appRelease = release.latestKnown();
+  }
   return release.current.name === appRelease;
 };
 
 // Return the name of the latest release that is downloaded and ready
 // for use. May not be called when running from a checkout.
 // 'track' is optional (it defaults to the default track).
-release.latestDownloaded = function (track) {
-  buildmessage.assertInCapture();
+release.latestKnown = function (track) {
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
   // For self-test only.
@@ -193,9 +193,6 @@ release.latestDownloaded = function (track) {
   var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
-    if (!track || track === catalog.DEFAULT_TRACK) {
-      throw new Error("no latest release available on default track?");
-    }
     return null;
   }
   return defaultRelease.track + '@' + defaultRelease.version;
