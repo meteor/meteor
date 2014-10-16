@@ -366,6 +366,15 @@ _.extend(Isopack.prototype, {
     return self.architectures().join('+');
   },
 
+  // Returns true if we think that this isopack is platform specific (contains
+  // binary builds)
+  platformSpecific: function () {
+    var self = this;
+    return _.any(self.architectures(), function (arch) {
+      return arch.match(/^os\./);
+    });
+  },
+
   tarballName: function () {
     var self = this;
     return self.name + '-' + self.version + '-' + self.buildArchitectures();

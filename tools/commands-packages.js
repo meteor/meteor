@@ -254,10 +254,7 @@ main.registerCommand({
   };
 
   // We have initialized everything, so perform the publish oepration.
-  var allArchs = compileResult.isopack.buildArchitectures().split('+');
-  var binary = !!(_.any(allArchs, function (arch) {
-    return arch.match(/^os\./);
-  }));
+  var binary = compileResult.isopack.platformSpecific();
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
@@ -910,11 +907,7 @@ main.registerCommand({
         messages = buildmessage.capture({
           title: "Publishing package " + name
         }, function () {
-          var allArchs =
-             prebuilt.compileResult.isopack.buildArchitectures().split('+');
-          var binary = !!(_.any(allArchs, function (arch) {
-            return arch.match(/^os\./);
-          }));
+          var binary =  prebuilt.compileResult.isopack.platformSpecific();
 
           var opts = {
             new: !catalog.official.getPackage(name),

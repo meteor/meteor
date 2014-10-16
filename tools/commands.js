@@ -36,9 +36,10 @@ var DEFAULT_PORT = '3000';
 
 // Valid architectures that Meteor officially supports.
 var VALID_ARCHITECTURES = {
-  "os.osx.x86_64" : true,
+  "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32" : true };
+  "os.linux.x86_32": true
+};
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -64,6 +65,15 @@ var qualifySitename = function (site) {
 var hostedWithGalaxy = function (site) {
   var site = qualifySitename(site);
   return !! require('./deploy-galaxy.js').discoverGalaxy(site);
+};
+
+// Display a message showing valid Meteor architectures.
+var showInvalidArchMsg = function (arch) {
+  Console.info("Invalid architecture: " + arch);
+  Console.info("The following are valid Meteor architectures:");
+  _.each(_.keys(VALID_ARCHITECTURES), function (va) {
+    Console.info("  " + va);
+  });
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -638,10 +648,8 @@ var buildCommand = function (options) {
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
   if (options.architecture &&
-      !VALID_ARCHITECTURES[options.architecture]) {
-    Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
-    Console.stderr.write(
-      "Please use one of the following: " + _.keys(VALID_ARCHITECTURES) + "\n");
+      !_.has(VALID_ARCHITECTURES, options.architecture)) {
+    showInvalidArchMsg(options.architecture);
     return 1;
   }
 
@@ -1877,23 +1885,19 @@ main.registerCommand({
     verbose: { type: Boolean, short: "v", required: false },
     // By default, we give you a machine for 5 minutes. You can request up to
     // 15. (MDG can reserve machines for longer than that.)
-    length: { type: Number, required: false }
+    minutes: { type: Number, required: false }
   }
 }, function (options) {
 
   // Check that we are asking for a valid architecture.
   var arch = options.args[0];
-  if (!VALID_ARCHITECTURES[arch]){
-    Console.info("Invalid architecture: " + arch);
-    Console.info("The following are valid Meteor architectures:");
-    _.each(_.keys(VALID_ARCHITECTURES), function (va) {
-      Console.info("  " + va);
-    });
+  if (!_.has(VALID_ARCHITECTURES, arch)){
+    showInvalidArchMsg(arch);
     return 1;
   }
 
-  // Set the length. We will check validity on the server.
-  var length = options.length || 5;
+  // Set the minutes. We will check validity on the server.
+  var minutes = options.minutes || 5;
 
   // In verbose mode, we let you know what is going on.
   var maybeLog = function (string) {
@@ -1908,7 +1912,7 @@ main.registerCommand({
       config.getBuildFarmUrl(),
       config.getBuildFarmDomain(),
       "build-farm");
-   } catch (err) {
+  } catch (err) {
     authClient.handlerConnectionError(err, "build farm");
     return 1;
   }
@@ -1921,28 +1925,12 @@ main.registerCommand({
     // host: what you login into
     // port: port you should use
     // hostKey: RSA key to compare for safety.
-    var ret = conn.call('createBuildServer', arch, length);
+    var ret = conn.call('createBuildServer', arch, minutes);
   } catch (err) {
     authClient.handlerConnectionError(err, "build farm");
     return 1;
   }
   conn.close();
-
-  var child_process = require('child_process');
-
-  // Record the SSH Key in a temporary file on disk and give it the permissions
-  // that ssh-agent requires it to have.
-  var idpath = "/tmp/key-" + utils.randomToken();
-  fs.writeFileSync(idpath, ret.sshKey, 'utf8');
-  child_process.exec("chmod 400 " + idpath,
-    function (error, stdout, stderr) {
-      maybeLog(stdout);
-      if (error !== null) {
-        maybeLog("ERROR from chmod: " + stderr);
-        Console.error('cannot set permissions on SSH key: ' + error);
-        process.exit(1);
-      }
-    });
 
   // Possibly, the user asked us to return a JSON of the data and is going to process it
   // themselves. In that case, let's do that and exit.
@@ -1958,35 +1946,56 @@ main.registerCommand({
     return 0;
   }
 
+  // Record the SSH Key in a temporary file on disk and give it the permissions
+  // that ssh-agent requires it to have.
+  var idpath = "/tmp/meteor-key-" + utils.randomToken();
+  maybeLog("Writing ssh key to " + idpath);
+  fs.writeFileSync(idpath, ret.sshKey, {encoding: 'utf8', mode: 400});
+
   // Add the known host key to a custom known hosts file.
-  var hostpath = "/tmp/host-" + utils.randomToken();
+  var hostpath = "/tmp/meteor-host-" + utils.randomToken();
   var addendum = ret.host + " " + ret.hostKey;
+  maybeLog("Writing host key to " + hostpath);
   fs.writeFileSync(hostpath, addendum, 'utf8');
 
   // Finally, connect to the machine.
   var login = ret.username + "@" + ret.host;
   var maybeVerbose = options.verbose ? "-v" : "-q";
-  maybeLog(
-    "Connecting: ssh " + login +
-      " -i " + idpath +
-      " -p " + ret.port +
-      " -oUserKnownHostsFile=" + hostpath +
-      " " + maybeVerbose);
 
-  var future = new Future;
-  var sshCommand = child_process.spawn(
-    "ssh",
-    [login,
+  var connOptions = [
+    login,
      "-i" + idpath,
      "-p" + ret.port,
      "-oUserKnownHostsFile=" + hostpath,
-     maybeVerbose],
+     maybeVerbose];
+
+  var printOptions = _.reduce(connOptions,
+    function (x, y) {
+      return x + " " + y;
+  });
+  maybeLog("Connecting: ssh " + printOptions);
+
+  var child_process = require('child_process');
+  var future = new Future;
+  var sshCommand = child_process.spawn(
+    "ssh", connOptions,
     { stdio: 'inherit' }); // Redirect spawn stdio to process
 
-  sshCommand.on('exit', function (code) {
-    future.return(code);
+  sshCommand.on('exit', function (code, signal) {
+    if (signal) {
+      // XXX: We should process the signal in some way, but I am not sure we
+      // care right now.
+      future.return(1);
+    } else {
+      future.return(code);
+    }
   });
-  return future.wait();
+  var sshEnd = future.wait();
+  maybeLog("Removing hostkey at " + hostpath);
+  fs.unlinkSync(hostpath);
+  maybeLog("Removing sshkey at " + idpath);
+  fs.unlinkSync(idpath);
+  return sshEnd;
 });
 
 
