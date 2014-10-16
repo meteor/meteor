@@ -134,15 +134,17 @@ Override fields of the object by assigning to them:
 
 Example:
 
-    Accounts.emailTemplates.siteName = "AwesomeSite";
-    Accounts.emailTemplates.from = "AwesomeSite Admin <accounts@example.com>";
-    Accounts.emailTemplates.enrollAccount.subject = function (user) {
-        return "Welcome to Awesome Town, " + user.profile.name;
-    };
-    Accounts.emailTemplates.enrollAccount.text = function (user, url) {
-       return "You have been selected to participate in building a better future!"
-         + " To activate your account, simply click the link below:\n\n"
-         + url;
-    };
+```js
+Accounts.emailTemplates.siteName = "AwesomeSite";
+Accounts.emailTemplates.from = "AwesomeSite Admin <accounts@example.com>";
+Accounts.emailTemplates.enrollAccount.subject = function (user) {
+    return "Welcome to Awesome Town, " + user.profile.name;
+};
+Accounts.emailTemplates.enrollAccount.text = function (user, url) {
+   return "You have been selected to participate in building a better future!"
+     + " To activate your account, simply click the link below:\n\n"
+     + url;
+};
+```
 
 {{/template}}
