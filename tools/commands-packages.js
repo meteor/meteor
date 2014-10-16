@@ -2553,9 +2553,10 @@ main.registerCommand({
   tmpCatalog.initialize({
     packageStorage: tmpDataFile
   });
-  var savedData = packageClient.updateServerPackageData(tmpCatalog, null);
-  if (!savedData) {
-    // will have already printed an error
+  try {
+    packageClient.updateServerPackageData(tmpCatalog, null);
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
     return 2;
   }
 
