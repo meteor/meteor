@@ -77,7 +77,9 @@ var refreshOfficialCatalogOrDie = function (options) {
 };
 
 var explainIfRefreshFailed = function (command) {
-  if (command.catalogRefresh.refreshFailed) {
+  if (catalog.official.offline) {
+    Console.info("(But we're offline, so we didn't update the local catalog, so it might exist)");
+  } else if (command.catalogRefresh.refreshFailed) {
     Console.info("(But the update of the local catalog failed, so it might exist)");
   }
 };
