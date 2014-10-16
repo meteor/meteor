@@ -1232,7 +1232,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
       throw new Error("Command does not define catalogRefresh");
     }
     if (catalogRefreshStrategy && catalogRefreshStrategy.beforeCommand) {
-      var messages = buildmessage.capture({title: 'Refreshing package catalog'}, function () {
+      var messages = buildmessage.capture({title: 'Updating package catalog'}, function () {
         catalogRefreshStrategy.beforeCommand();
       });
       if (messages.hasMessages()) {

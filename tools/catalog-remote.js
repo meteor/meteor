@@ -750,14 +750,14 @@ _.extend(RemoteCatalog.prototype, {
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          Console.debug("Catalog is sufficiently up-to-date; not refreshing\n");
+          Console.debug("Package catalog is sufficiently up-to-date; not updating\n");
           return false;
         }
       }
     }
 
     var updateResult = {};
-    buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
+    buildmessage.enterJob({ title: 'Updating package catalog.' }, function () {
       updateResult = packageClient.updateServerPackageData(self);
     });
 

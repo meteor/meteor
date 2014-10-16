@@ -67,20 +67,20 @@ var doOrDie = exports.doOrDie = function (options, f) {
 
 };
 var refreshOfficialCatalogOrDie = function (options) {
-  doOrDie({title: 'Refreshing package catalog'}, function () {
+  doOrDie({title: 'Updating package catalog'}, function () {
     try {
       catalog.official.refresh(options);
     } catch (err) {
-      buildmessage.error("Unable to refresh package catalog", err);
+      buildmessage.error("Unable to update the package catalog", err);
     }
   });
 };
 
 var explainIfRefreshFailed = function (command) {
   if (catalog.official.offline) {
-    Console.info("(But we're offline, so we didn't update the local catalog, so it might exist)");
+    Console.info("(But we're offline, so we didn't update the package catalog, so it might exist)");
   } else if (command.catalogRefresh.refreshFailed) {
-    Console.info("(But the update of the local catalog failed, so it might exist)");
+    Console.info("(But the update of the package catalog failed, so it might exist)");
   }
 };
 

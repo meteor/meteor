@@ -430,7 +430,7 @@ _.extend(AppRunner.prototype, {
         } catch (err) {
           // XXX: Should we throw here?
           // XXX: Should we remove this entirely?
-          Console.debug("Ignoring error refreshing package catalog", err);
+          Console.debug("Ignoring error updating package catalog", err);
         }
       });
       if (refreshMessages.hasMessages()) {
