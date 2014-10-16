@@ -96,11 +96,9 @@ var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (dataStore, options) {
-  var results;
-  buildmessage.capture({ title: 'Updating package catalog' }, function () {
-    results = _updateServerPackageData(dataStore, options);
+  return buildmessage.enterJob({ title: 'Updating package catalog' }, function () {
+    return _updateServerPackageData(dataStore, options);
   });
-  return results;
 };
 
 
@@ -139,20 +137,10 @@ _updateServerPackageData = function (dataStore, options) {
       (syncToken.versions - start.versions);
     buildmessage.reportProgress(state);
 
-    var remoteData;
-    try {
-      remoteData = loadRemotePackageData(conn, syncToken, {
-        useShortPages: options.useShortPages
-      });
-    } catch (err) {
-      exports.handlePackageServerConnectionError(err);
-      if (err.errorType === "DDP.ConnectionError") {
-        done = true;
-        return;
-      } else {
-        throw err;
-      }
-    }
+    // (loadRemotePackageData may throw)
+    var remoteData = loadRemotePackageData(conn, syncToken, {
+      useShortPages: options.useShortPages
+    });
 
     // Is the remote server telling us to ignore everything we've heard before?
     // OK, we can do that.
