@@ -304,7 +304,7 @@ main.registerCommand({
       Console.info("meteor admin get-machine", a);
     });
     Console.warn(
-"One you are logged into a build machine, you can run 'meteor publish-for-arch",
+"Once you are logged into a build machine, you can run 'meteor publish-for-arch",
 packageSource.name + "@" + packageSource.version + "' to publish a valid build.");
   }
 
