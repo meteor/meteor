@@ -27,22 +27,23 @@ when writing those apps.
 Meteor is two things:
 
 * A _library of packages_: pre-written, self-contained modules that
-you might need in your app.<br>
-There are about a dozen core Meteor
-packages that most any app will use (for example [`webapp`](#webapp), which
-handles incoming HTTP connections, and `templating`, which lets you
-make HTML templates that automatically update live as data changes).
-Then there are optional packages like `email`, which lets your app
-send emails, or the Meteor Accounts series (`accounts-password`,
-`accounts-facebook`, `accounts-ui`, and others) which provide a
-full-featured user account system that you can drop right into your
-app. In addition to these "core" packages, there are thousands of
-community-written packages in [Atmosphere](https://atmospherejs.com/),
-one of which might do just what you need.
+  you might need in your app.
 
-* A _command-line tool_ called `meteor`.<br>
-`meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts of
-Visual Studio. It gathers up all of the source files and assets in your
+  There are about a dozen core Meteor packages that most any app will use. Two
+  examples: [`webapp`](#webapp), which handles incoming HTTP connections, and
+  `templating`, which lets you make HTML templates that automatically update
+  live as data changes. Then there are optional packages like `email`, which
+  lets your app send emails, or the Meteor Accounts series (`accounts-password`,
+  `accounts-facebook`, `accounts-ui`, and others) which provide a full-featured
+  user account system that you can drop right into your app. In addition to
+  these "core" packages, there are thousands of community-written packages in
+  [Atmosphere](https://atmospherejs.com/), one of which might do just what you
+  need.
+
+* A _command-line tool_ called `meteor`.
+
+  `meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts
+of Visual Studio. It gathers up all of the source files and assets in your
 application, carries out any necessary build steps (such as compiling
 [CoffeeScript](http://coffeescript.org), minifying CSS, building
 [npm](https://npmjs.org/) modules, or generating source maps), fetches the
@@ -52,11 +53,10 @@ whenever you change a file you immediately see the changes in your browser. It's
 super easy to use out of the box, but it's also extensible: you can add support
 for new languages and compilers by adding build plugin packages to your app.
 
-The key idea in the Meteor package system is that _everything should
-work identically in the browser and on the server_ (wherever it makes
-sense, of course: browsers can't send email and servers can't capture
-mouse events). Our whole ecosystem has been built from the ground up
-to support this.
+  The key idea in the Meteor package system is that _everything should work
+  identically in the browser and on the server_ (wherever it makes sense, of
+  course: browsers can't send email and servers can't capture mouse events). Our
+  whole ecosystem has been built from the ground up to support this.
 
 {{/markdown}}
 </template>
@@ -164,7 +164,7 @@ application are loaded according to these rules:
 <h2 id="dataandsecurity">Data and security</h2>
 
 Meteor makes writing distributed client code as simple as talking to a
-local database.  It's a clean, simple, and secure approach that obviates
+local database.  It's a clean, simple, and secure approach that removes
 the need to implement individual RPC endpoints, manually cache data on
 the client to avoid slow roundtrips to the server, and carefully
 orchestrate invalidation messages to every client as data changes.
@@ -442,8 +442,8 @@ When your app is loaded, it automatically renders the special template called
 `{{dstache}}> inclusion}}` operator.
 
 The easiest way to get data into templates is by defining helper
-functions in JavaScript. Just add the helper functions directly on the
-`Template.`*templateName* object. Putting it all together:
+functions in JavaScript. Define helpers with the
+`Template.templateName.helpers({ ... })` function. Putting it all together:
 
 
     <!-- in myapp.html -->
@@ -524,10 +524,10 @@ Helpers can also be used to pass in constant data.
       sections: ["Situation", "Complication", "Resolution"]
     });
 
-Finally, you can use an `events` declaration on a template function to set up a
-table of event handlers. The format is documented at [Event
-Maps](#eventmaps). The `this` argument to the event handler will be
-the data context of the element that triggered the event.
+Finally, you can use the `events` function on a template to attach
+event handlers. The object passed into `events` is documented at
+[Event Maps](#eventmaps). The `this` argument to the event handler will
+be the data context of the element that triggered the event.
 
     <!-- myapp.html -->
     <template name="scores">
@@ -538,13 +538,13 @@ the data context of the element that triggered the event.
 
     <template name="playerScore">
       <div>{{dstache}}name}}: {{dstache}}score}}
-        <span class="givePoints">Give points</span>
+        <span class="give-points">Give points</span>
       </div>
     {{lt}}/template>
 
     <!-- myapp.js -->
     Template.playerScore.events({
-      'click .givePoints': function () {
+      'click .give-points': function () {
         Users.update(this._id, {$inc: {score: 2}});
       }
     });
@@ -558,30 +558,32 @@ README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md
 <template name="packages_concept">
 {{#markdown}}
 
-  <h2 id="usingpackages">Using packages</h2>
+<h2 id="usingpackages">Using packages</h2>
 
-All of the functionality you've read about so far is implemented as
-standard Meteor packages. This is possible thanks to Meteor's
-unusually powerful package and build system. The same packages work in
-the browser and on the server, and packages can contain plugins that
-extend the build process, such as `coffeescript` ([CoffeeScript](http://coffeescript.org)
-compilation) or `templating` (compiling HTML templates).
+All of the functionality you've read about so far is implemented in standard
+Meteor packages. This is possible thanks to Meteor's unusually powerful
+isomorphic package and build system. Isomorphic means the same packages work in
+the web browser, in mobile apps, and on the server. Packages can also contain
+plugins that extend the build process, such as `coffeescript`
+([CoffeeScript](http://coffeescript.org) compilation) or `templating` (compiling
+HTML templates).
 
 Anyone can publish a Meteor package, and thousands of community-written packages
-have been published to date. The easiest way to browse these packages
-is <a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio. You can
-also use [`meteor search`](#meteorsearch) and [`meteor show`](#meteorshow) commands.
+have been published to date. The easiest way to browse these packages is
+<a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio.
+You can also use the [`meteor search`](#meteorsearch) and
+[`meteor show`](#meteorshow) commands.
 
 You can add packages to your project with [`meteor add`](#meteoradd) and remove
 them with [`meteor remove`](#meteorremove).
 Additionally, [`meteor list`](#meteorlist) will tell you what
 packages your project is using, and [`meteor update`](#meteorupdate)
-will help keep them up to date.
+will update them to the newest versions when possible.
 
-By default all apps include the `standard-app-packages` package. This
+By default all apps include the `meteor-platform` package. This
 automatically pulls in the packages that make up the core Meteor
 stack. If you want to build your own custom stack, just remove
-`standard-app-packages` from your app and add back in whichever of the standard
+`meteor-platform` from your app and add back in whichever of the standard
 packages you want to keep.
 
 Meteor uses a single-loading packaging system, meaning that it loads just one
@@ -731,28 +733,26 @@ more information, see [meteor deploy](#meteordeploy).
 
 <h3 class="nosection">Running on your own infrastructure</h3>
 
-You can also run your application on your own infrastructure, or any
-other hosting provider like Heroku.
+You can also run your application on your own infrastructure or any
+hosting provider that can run Node.js apps.
 
 To get started, run
 
-    $ meteor bundle myapp.tgz
+    $ meteor build my_directory
 
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
 0.10.29; older versions contain a serious bug that can cause production servers
 to stall.) You can then run the application by invoking node, specifying the
-HTTP port for the application to listen on, and the MongoDB endpoint.  If
-you don't already have a MongoDB server, we can recommend our friends at
-[Compose](http://compose.io).
+HTTP port for the application to listen on, and the MongoDB endpoint.
 
-    $ cd bundle
+    $ cd my_directory
     $ (cd programs/server && npm install)
     $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
 
-Other packages may require other environment variables (for example, the `email`
-package requires a `MAIL_URL` environment variable).
+Some packages might require other environment variables. For example,
+the `email` package requires a `MAIL_URL` environment variable.
 
 {{/markdown}}
 </template>
