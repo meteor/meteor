@@ -42,8 +42,12 @@ pre {
 
 code {
     font-family: monospace;
-    font-size: 1.1em;
     white-space: pre;
+    font-size: 1.2em;
+}
+
+pre code {
+    font-size: 1.1em;
 }
 
 ul {
@@ -392,23 +396,7 @@ h3.api-title {
 }
 
 #main pre {
-    -moz-border-radius: 10px;
-    -webkit-border-radius: 10px;
-    -o-border-radius: 10px;
-    -ms-border-radius: 10px;
-    -khtml-border-radius: 10px;
-    border-radius: 10px;
-    border-color: #777;
-    border-style: solid;
-    background-color: white;
-    border-width: 1px;
-    padding: 5px;
-    margin: 1em 0 1em 0;
-}
-
-#main pre, #main pre code { /* override inline code font and white-space*/
-  font-size: 12px;
-  font-weight: bold;
+    margin: 1em 0;
 }
 
 #main a.selflink:link, #main a.selflink:visited, #main a.selflink:hover {
