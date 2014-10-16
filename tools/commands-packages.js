@@ -2460,16 +2460,15 @@ main.registerCommand({
   name: 'admin make-bootstrap-tarballs',
   minArgs: 2,
   maxArgs: 2,
-  hidden: true
-}, function (options) {
-  var releaseNameAndVersion = options.args[0];
-  var outputDirectory = options.args[1];
+  hidden: true,
 
-  // XXX: refresh strategy...
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  refreshOfficialCatalogOrDie();
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
+}, function (options) {
+  var releaseNameAndVersion = options.args[0];
+  var outputDirectory = options.args[1];
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
