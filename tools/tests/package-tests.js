@@ -891,7 +891,7 @@ selftest.define("add package with no builds", ["net", "test-package-server"], fu
     s.write("package.js", packageJs);
 
     run = s.run("publish", "--create");
-    run.waitSecs(30);
+    run.waitSecs(60);
     run.expectExit(0);
   });
 
