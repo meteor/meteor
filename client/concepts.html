@@ -561,11 +561,12 @@ README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md
 <h2 id="usingpackages">Using packages</h2>
 
 All of the functionality you've read about so far is implemented in standard
-Meteor packages. This is possible thanks to Meteor's unusually powerful package
-and build system. The same packages work in the browser and on the server, and
-packages can contain plugins that extend the build process, such as
-`coffeescript` ([CoffeeScript](http://coffeescript.org) compilation) or
-`templating` (compiling HTML templates).
+Meteor packages. This is possible thanks to Meteor's unusually powerful
+isomorphic package and build system. Isomorphic means the same packages work in
+the web browser, in mobile apps, and on the server. Packages can also contain
+plugins that extend the build process, such as `coffeescript`
+([CoffeeScript](http://coffeescript.org) compilation) or `templating` (compiling
+HTML templates).
 
 Anyone can publish a Meteor package, and thousands of community-written packages
 have been published to date. The easiest way to browse these packages is
@@ -733,7 +734,7 @@ more information, see [meteor deploy](#meteordeploy).
 <h3 class="nosection">Running on your own infrastructure</h3>
 
 You can also run your application on your own infrastructure or any
-other hosting provider, like Heroku.
+hosting provider that can run Node.js apps.
 
 To get started, run
 
@@ -744,9 +745,7 @@ a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
 0.10.29; older versions contain a serious bug that can cause production servers
 to stall.) You can then run the application by invoking node, specifying the
-HTTP port for the application to listen on, and the MongoDB endpoint.  If
-you don't already have a MongoDB server, we can recommend our friends at
-[Compose](http://compose.io).
+HTTP port for the application to listen on, and the MongoDB endpoint.
 
     $ cd my_directory
     $ (cd programs/server && npm install)
