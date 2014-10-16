@@ -7,12 +7,6 @@ Template.headline.helpers({
 });
 
 Meteor.startup(function () {
-  // XXX this is broken by the new multi-page layout.  Also, it was
-  // broken before the multi-page layout because it had illegible
-  // colors. Just turn it off for now. We'll fix it and turn it on
-  // later.
-  // prettyPrint();
-
   //mixpanel tracking
   mixpanel.track('docs');
 
