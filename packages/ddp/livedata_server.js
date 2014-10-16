@@ -1203,6 +1203,9 @@ Server = function (options) {
   // seconds on the client.  Since the client doesn't need to send a
   // ping as long as it is receiving pings, this means that pings
   // normally go from the server to the client.
+  //
+  // Note: Troposphere depends on the ability to mutate
+  // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
   self.options = _.defaults(options || {}, {
     heartbeatInterval: 30000,
     heartbeatTimeout: 15000,
@@ -1329,6 +1332,8 @@ _.extend(Server.prototype, {
     }
 
     // Yay, version matches! Create a new session.
+    // Note: Troposphere depends on the ability to mutate
+    // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
     socket._meteorSession = new Session(self, version, socket, self.options);
     self.sessions[socket._meteorSession.id] = socket._meteorSession;
     self.onConnectionHook.each(function (callback) {
