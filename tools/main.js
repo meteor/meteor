@@ -1293,14 +1293,18 @@ commandName + ": You're not in a Meteor project directory.\n" +
       process.stderr.write(longHelp(commandName) + "\n");
       process.exit(1);
     } else if (e instanceof main.SpringboardToLatestRelease) {
-      // Load the latest release's metadata so that we can figure out
-      // the tools version that it uses. We should only do this if
-      // we know there is some latest release on this track.
+      // Load the metadata for the latest release (or at least, the latest
+      // release we know about locally). We should only do this if we know there
+      // is some latest release on this track. Note that this is only throw by
+      // 'update' and 'create', which are both catalog.Refresh.OnceAtStart
+      // commands, so we ought to have decent knowledge of the latest release.
       var latestRelease = release.load(release.latestDownloaded(e.track));
       springboard(latestRelease, latestRelease.name);
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {
-      // Springboard to a specific release.
+      // Springboard to a specific release. This is only throw by
+      // publish-for-arch, which is catalog.Refresh.OnceAtStart, so we ought to
+      // have decent knowledge of the latest release.
       var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
       var nextRelease = release.load(relName);
       springboard(nextRelease, relName);
