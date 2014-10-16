@@ -681,11 +681,12 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getAllReleaseTracks: function () {
-    return _.pluck(this._queryWithRetry("SELECT name FROM releaseTracks"), 'name');
+    return _.pluck(this._columnsQuery("SELECT name FROM releaseTracks"),
+                   'name');
   },
 
   getAllPackageNames: function () {
-    return _.pluck(this._queryWithRetry("SELECT name FROM packages"), 'name');
+    return _.pluck(this._columnsQuery("SELECT name FROM packages"), 'name');
   },
 
   initialize: function (options) {
@@ -817,39 +818,23 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
-  _queryWithRetry: function (query, params, options) {
-    var self = this;
-    options = options || {};
-
-    var rows = self.db.runInTransaction(function (txn) {
-      return txn.query(query, params);
-    });
-    if (rows.length !== 0 || options.noRefresh)
-      return rows;
-
-    // XXX: This causes unnecessary refreshes
-
-    // XXX: It would be nice to Console.warn this, but that breaks some of our self-tests
-    Console.debug("Forcing refresh because of unexpected missing data");
-    Console.debug("No data was returned from query: ", query, params);
-    self.refresh();
-
-    options = _.clone(options);
-    options.noRefresh = true;
-
-    return self._queryWithRetry(query, params, options);
-  },
-
-  // Executes a query, parsing the content column as JSON
-  // No refreshes
+  // Executes a query, returning an array of each content column parsed as JSON
   _contentQuery: function (query, params) {
     var self = this;
-    var rows = self.db.runInTransaction(function (txn) {
-      return txn.query(query, params);
-    });
+    var rows = self._columnsQuery(query, params);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
+  },
+
+  // Executes a query, returning an array of maps from column name to data.
+  // No JSON parsing is performed.
+  _columnsQuery: function (query, params) {
+    var self = this;
+    var rows = self.db.runInTransaction(function (txn) {
+      return txn.query(query, params);
+    });
+    return rows;
   },
 
   _insertReleaseVersions: function(releaseVersions) {
