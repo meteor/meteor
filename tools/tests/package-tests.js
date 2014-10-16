@@ -702,9 +702,7 @@ selftest.define("package with --name",
   run.match("myapp");
   run.match("proxy");
   run.match("MongoDB.\n");
-  run.waitSecs(5);
-  run.read("=> Starting your app");
-  run.waitSecs(5);
+  run.waitSecs(10);
   run.match("running at");
   run.match("localhost");
 

@@ -212,9 +212,17 @@ _.extend(Console.prototype, {
     }).run();
   },
 
+  isLevelEnabled: function (levelCode) {
+    return (this.verbose || this._logThreshold <= levelCode);
+  },
+
+  isDebugEnabled: function () {
+    return this.isLevelEnabled(LEVEL_CODE_DEBUG);
+  },
+
   debug: function(/*arguments*/) {
     var self = this;
-    if (!self.verbose && self._logThreshold > LEVEL_CODE_DEBUG) {
+    if (!self.isDebugEnabled()) {
       return;
     }
 
@@ -222,9 +230,13 @@ _.extend(Console.prototype, {
     self._print(LEVEL_DEBUG, message);
   },
 
+  isInfoEnabled: function () {
+    return this.isLevelEnabled(LEVEL_CODE_INFO);
+  },
+
   info: function(/*arguments*/) {
     var self = this;
-    if (self._logThreshold > LEVEL_CODE_INFO) {
+    if (!self.isInfoEnabled()) {
       return;
     }
 
@@ -232,9 +244,13 @@ _.extend(Console.prototype, {
     self._print(LEVEL_INFO, message);
   },
 
+  isWarnEnabled: function () {
+    return this.isLevelEnabled(LEVEL_CODE_WARN);
+  },
+
   warn: function(/*arguments*/) {
     var self = this;
-    if (self._logThreshold > LEVEL_CODE_WARN) {
+    if (!self.isWarnEnabled()) {
       return;
     }
 

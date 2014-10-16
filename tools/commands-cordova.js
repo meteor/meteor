@@ -758,119 +758,121 @@ var getCordovaDependenciesFromStar = function (star) {
 var buildCordova = function (localPath, buildCommand, options) {
   verboseLog('Building the cordova build project');
 
-  var bundlePath = path.join(localPath, 'build-cordova-temp');
-  var programPath = path.join(bundlePath, 'programs');
+  buildmessage.enterJob({ title: 'Building for mobile devices' }, function () {
+    var bundlePath = path.join(localPath, 'build-cordova-temp');
+    var programPath = path.join(bundlePath, 'programs');
 
-  var cordovaPath = path.join(localPath, 'cordova-build');
-  var wwwPath = path.join(cordovaPath, 'www');
-  var applicationPath = path.join(wwwPath, 'application');
-  var cordovaProgramPath = path.join(programPath, webArchName);
-  var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
+    var cordovaPath = path.join(localPath, 'cordova-build');
+    var wwwPath = path.join(cordovaPath, 'www');
+    var applicationPath = path.join(wwwPath, 'application');
+    var cordovaProgramPath = path.join(programPath, webArchName);
+    var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
-  verboseLog('Bundling the web.cordova program of the app');
-  var bundle = getBundle(bundlePath, [webArchName], options);
+    verboseLog('Bundling the web.cordova program of the app');
+    var bundle = getBundle(bundlePath, [webArchName], options);
 
-  // Make there is a project as all other operations depend on that
-  ensureCordovaProject(localPath, options.appName);
+    // Make there is a project as all other operations depend on that
+    ensureCordovaProject(localPath, options.appName);
 
-  // Check and consume the control file
-  var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
-  consumeControlFile(controlFilePath, cordovaPath);
+    // Check and consume the control file
+    var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
+    consumeControlFile(controlFilePath, cordovaPath);
 
-  ensureCordovaPlatforms(localPath);
-  ensureCordovaPlugins(localPath, _.extend({}, options, {
-    packagePlugins: getCordovaDependenciesFromStar(bundle.starManifest)
-  }));
+    ensureCordovaPlatforms(localPath);
+    ensureCordovaPlugins(localPath, _.extend({}, options, {
+      packagePlugins: getCordovaDependenciesFromStar(bundle.starManifest)
+    }));
 
-  // XXX hack, copy files from app folder one level up
-  if (fs.existsSync(cordovaProgramAppPath)) {
-    verboseLog('Copying the JS/CSS files one level up');
-    files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
-    files.rm_recursive(cordovaProgramAppPath);
-  }
+    // XXX hack, copy files from app folder one level up
+    if (fs.existsSync(cordovaProgramAppPath)) {
+      verboseLog('Copying the JS/CSS files one level up');
+      files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
+      files.rm_recursive(cordovaProgramAppPath);
+    }
 
-  verboseLog('Removing the www folder');
-  // rewrite the www folder
-  files.rm_recursive(wwwPath);
+    verboseLog('Removing the www folder');
+    // rewrite the www folder
+    files.rm_recursive(wwwPath);
 
-  files.mkdir_p(applicationPath);
-  verboseLog('Writing www/application folder');
-  files.cp_r(cordovaProgramPath, applicationPath);
+    files.mkdir_p(applicationPath);
+    verboseLog('Writing www/application folder');
+    files.cp_r(cordovaProgramPath, applicationPath);
 
-  // clean up the temporary bundle directory
-  files.rm_recursive(bundlePath);
+    // clean up the temporary bundle directory
+    files.rm_recursive(bundlePath);
 
-  verboseLog('Writing index.html');
+    verboseLog('Writing index.html');
 
-  // generate index.html
-  var indexHtml = generateCordovaBoilerplate(applicationPath, options);
-  fs.writeFileSync(path.join(applicationPath, 'index.html'), indexHtml, 'utf8');
+    // generate index.html
+    var indexHtml = generateCordovaBoilerplate(applicationPath, options);
+    fs.writeFileSync(path.join(applicationPath, 'index.html'), indexHtml, 'utf8');
 
-  // write the cordova loader
-  verboseLog('Writing meteor_cordova_loader');
-  var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
-  var loaderCode = fs.readFileSync(loaderPath);
-  fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
+    // write the cordova loader
+    verboseLog('Writing meteor_cordova_loader');
+    var loaderPath = path.join(__dirname, 'client', 'meteor_cordova_loader.js');
+    var loaderCode = fs.readFileSync(loaderPath);
+    fs.writeFileSync(path.join(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
-  verboseLog('Writing a default index.html for cordova app');
-  var indexPath = path.join(__dirname, 'client', 'cordova_index.html');
-  var indexContent = fs.readFileSync(indexPath);
-  fs.writeFileSync(path.join(wwwPath, 'index.html'), indexContent);
+    verboseLog('Writing a default index.html for cordova app');
+    var indexPath = path.join(__dirname, 'client', 'cordova_index.html');
+    var indexContent = fs.readFileSync(indexPath);
+    fs.writeFileSync(path.join(wwwPath, 'index.html'), indexContent);
 
 
-  // Cordova Build Override feature (c)
-  var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
+    // Cordova Build Override feature (c)
+    var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
 
-  if (fs.existsSync(buildOverridePath) &&
+    if (fs.existsSync(buildOverridePath) &&
       fs.statSync(buildOverridePath).isDirectory()) {
-    verboseLog('Copying over the cordova-build-override');
-    files.cp_r(buildOverridePath, cordovaPath);
-  }
-
-  // Run the actual build
-  verboseLog('Running the build command:', buildCommand);
-  // Give the buffer more space as the output of the build is really huge
-  try {
-    var args = [buildCommand];
-
-    // depending on the debug mode build the android part in different modes
-    if (_.contains(project.getPlatforms(), 'android')) {
-      var androidBuildPath = path.join(cordovaPath, 'platforms', 'android');
-      var manifestPath = path.join(androidBuildPath, 'AndroidManifest.xml');
-
-      // XXX a hack to reset the debuggable mode
-      var manifest = fs.readFileSync(manifestPath, 'utf8');
-      manifest = manifest.replace(/android:debuggable=.(true|false)./g, '');
-      manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
-      fs.writeFileSync(manifestPath, manifest, 'utf8');
-
-      // XXX workaround the problem of cached apk invalidation
-      files.rm_recursive(path.join(androidBuildPath, 'ant-build'));
+      verboseLog('Copying over the cordova-build-override');
+      files.cp_r(buildOverridePath, cordovaPath);
     }
 
-    if (! options.debug) {
-      args.push('--release');
+    // Run the actual build
+    verboseLog('Running the build command:', buildCommand);
+    // Give the buffer more space as the output of the build is really huge
+    try {
+      var args = [buildCommand];
+
+      // depending on the debug mode build the android part in different modes
+      if (_.contains(project.getPlatforms(), 'android')) {
+        var androidBuildPath = path.join(cordovaPath, 'platforms', 'android');
+        var manifestPath = path.join(androidBuildPath, 'AndroidManifest.xml');
+
+        // XXX a hack to reset the debuggable mode
+        var manifest = fs.readFileSync(manifestPath, 'utf8');
+        manifest = manifest.replace(/android:debuggable=.(true|false)./g, '');
+        manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
+        fs.writeFileSync(manifestPath, manifest, 'utf8');
+
+        // XXX workaround the problem of cached apk invalidation
+        files.rm_recursive(path.join(androidBuildPath, 'ant-build'));
+      }
+
+      if (!options.debug) {
+        args.push('--release');
+      }
+
+      execFileSyncOrThrow(localCordova, args,
+        {cwd: cordovaPath, maxBuffer: 2000 * 1024});
+    } catch (err) {
+      // "ld: 100000 duplicate symbols for architecture i386" is a common error
+      // message that occurs when you run an iOS project compilation from /tmp or
+      // whenever there is a symbolic link cycle reachable for ld to multiple
+      // object files.
+      if (err.message.match(/ld: \d+ duplicate symbols/g)) {
+        // XXX a better message
+        var message = "Can't build an iOS project from the /tmp directory.";
+
+        if (verboseness)
+          message = err.message + '\n' + message;
+
+        throw new Error(message);
+      } else {
+        throw err;
+      }
     }
-
-    execFileSyncOrThrow(localCordova, args,
-                        { cwd: cordovaPath, maxBuffer: 2000*1024 });
-  } catch (err) {
-    // "ld: 100000 duplicate symbols for architecture i386" is a common error
-    // message that occurs when you run an iOS project compilation from /tmp or
-    // whenever there is a symbolic link cycle reachable for ld to multiple
-    // object files.
-    if (err.message.match(/ld: \d+ duplicate symbols/g)) {
-      // XXX a better message
-      var message = "Can't build an iOS project from the /tmp directory.";
-
-      if (verboseness)
-        message = err.message + '\n' + message;
-
-      throw new Error(message);
-    } else {
-      throw err;
-    }
-  }
+  });
 
   verboseLog('Done building the cordova build project');
 };

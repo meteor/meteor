@@ -157,7 +157,7 @@ var onNewVersion = function () {
             log("Download error, will retry (#" + tries + "): " + uri);
             tryDownload();
           } else {
-            log('Download failed: ' + err + ", source=" + err.source + ", target=" + err.target);
+            log('Download failed: ' + JSON.stringify(err) + ", source=" + err.source + ", target=" + err.target);
           }
         });
       };
