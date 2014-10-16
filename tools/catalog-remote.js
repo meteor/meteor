@@ -543,7 +543,7 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getVersion: function (name, version) {
-    var result = this._simpleQuery(
+    var result = this._contentQuery(
       "SELECT content FROM versions WHERE packageName=? AND version=?",
       [name, version]);
     if(!result || result.length === 0) {
@@ -583,7 +583,8 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getPackage: function (name, options) {
-    var result = this._simpleQuery("SELECT * FROM packages WHERE name=?", name);
+    var result = this._contentQuery(
+      "SELECT * FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     if (result.length !== 1) {
@@ -596,12 +597,12 @@ _.extend(RemoteCatalog.prototype, {
     if (!name) {
       throw new Error("No name provided");
     }
-    return this._simpleQuery("SELECT content FROM versions WHERE packageName=?",
-                             name);
+    return this._contentQuery(
+      "SELECT content FROM versions WHERE packageName=?", name);
   },
 
   getAllBuilds: function (name, version) {
-    var result = this._simpleQuery(
+    var result = this._contentQuery(
       "SELECT * FROM builds WHERE builds.versionId = " +
         "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
         "versions.version=?)",
@@ -639,7 +640,7 @@ _.extend(RemoteCatalog.prototype, {
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
-    var result = self._simpleQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseTracks WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
@@ -648,7 +649,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getReleaseVersion: function (track, version) {
     var self = this;
-    var result = self._simpleQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=? AND version=?",
       [track, version]);
     if (!result || result.length === 0)
@@ -777,7 +778,7 @@ _.extend(RemoteCatalog.prototype, {
   // exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
-    var result = self._simpleQuery(
+    var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
@@ -807,7 +808,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._simpleQuery(
+    var matchingBuilds = this._contentQuery(
       "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
@@ -841,7 +842,7 @@ _.extend(RemoteCatalog.prototype, {
 
   // Executes a query, parsing the content column as JSON
   // No refreshes
-  _simpleQuery: function (query, params) {
+  _contentQuery: function (query, params) {
     var self = this;
     var rows = self.db.runInTransaction(function (txn) {
       return txn.query(query, params);
@@ -890,7 +891,8 @@ _.extend(RemoteCatalog.prototype, {
 
   getSyncToken: function() {
     var self = this;
-    var result = self._simpleQuery("SELECT content FROM syncToken WHERE _id=?", [ SYNCTOKEN_ID ]);
+    var result = self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
+                                    [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
       return null;
