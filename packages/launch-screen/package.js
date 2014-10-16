@@ -17,8 +17,6 @@ Package.onUse(function(api) {
   api.addFiles('mobile-launch-screen.js', 'web');
   api.use(['blaze', 'templating'], 'web', { weak: true });
 
-  // XXX remove weak dependency on iron:router. Instead, add
-  // code to iron:router to use this package directly.
   api.use(['iron:router'], 'web', { weak: true });
 
   api.export('LaunchScreen');
