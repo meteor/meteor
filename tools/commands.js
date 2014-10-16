@@ -165,7 +165,7 @@ var runCommandOptions = {
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean}
   },
-  catalogRefresh: new catalog.Refresh.SpecialEvents()
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 };
 
 main.registerCommand(_.extend(
@@ -1229,7 +1229,7 @@ main.registerCommand({
     android: { type: Boolean },
     'android-device': { type: Boolean }
   },
-  catalogRefresh: new catalog.Refresh.SpecialEvents()
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   try {
     var parsedUrl = utils.parseUrl(options.port);
