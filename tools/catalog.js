@@ -349,7 +349,7 @@ _.extend(LayeredCatalog.prototype, {
           Console.info(
             "\nIn order to resolve constraints, we had to use the following\n"+
             "experimental package versions:");
-          Console.info(utils.formatList(expPackages));
+          utils.printPackageList(expPackages);
         }
       }
       return ret.answer;

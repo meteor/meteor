@@ -114,6 +114,11 @@ LEVEL_INFO = { code: LEVEL_CODE_INFO };
 LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 
 _.extend(Console.prototype, {
+  LEVEL_ERROR: LEVEL_ERROR,
+  LEVEL_WARN: LEVEL_WARN,
+  LEVEL_INFO: LEVEL_INFO,
+  LEVEL_DEBUG: LEVEL_DEBUG,
+
   setPretty: function (pretty) {
     var self = this;
     if (FORCE_PRETTY === undefined) {

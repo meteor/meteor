@@ -459,7 +459,7 @@ _.extend(Project.prototype, {
         Console.warn(
           "\nThe following packages have been updated to new versions that are not " +
             "backwards compatible:");
-        Console.warn(utils.formatList(incompatibleUpdates));
+        utils.printPackageList(incompatibleUpdates, { level: Console.LEVEL_WARN });
         Console.warn("\n");
       };
     }

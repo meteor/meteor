@@ -96,7 +96,9 @@ exports.hasScheme = function (str) {
 
 // Returns a pretty list suitable for showing to the user. Input is an
 // array of objects with keys 'name' and 'description'.
-exports.formatList = function (unsortedItems) {
+exports.printPackageList = function (unsortedItems, options) {
+  options = options || {};
+
   var alphaSort = function (item) {
     return item.name;
   };
@@ -112,11 +114,18 @@ exports.formatList = function (unsortedItems) {
   // several methods and none of them work (COLUMNS isn't set in
   // node's environment; `tput cols` returns a constant 80). maybe
   // node is doing something weird with ptys.
+
   var width = 80;
+  var stream = process.stdout;
+  if (stream && stream.isTTY && stream.columns) {
+    width = stream.columns;
+  }
+
+  var Console = require("./console.js").Console;
 
   var out = '';
   _.each(items, function (item) {
-    var name = item.name + pad.substr(item.name.length);
+    var name = Console.bold(item.name) + pad.substr(item.name.length);
     var description = item.description || 'No description';
     var line = name + "  " + description;
     if (line.length > width) {
@@ -124,6 +133,10 @@ exports.formatList = function (unsortedItems) {
     }
     out += line + "\n";
   });
+
+  // XXX: Naughty call to 'private' function
+  var level = options.level || Console.LEVEL_INFO;
+  Console._print(level, out);
 
   return out;
 };
