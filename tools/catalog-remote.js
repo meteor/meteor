@@ -21,14 +21,14 @@ var Console = require('./console.js').Console;
 
 
 // XXX: Rationalize these flags.  Maybe use the logger?
-DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
+var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
 
-SYNCTOKEN_ID = "1";
+var SYNCTOKEN_ID = "1";
 
-METADATA_LAST_SYNC = "lastsync";
+var METADATA_LAST_SYNC = "lastsync";
 
-BUSY_RETRY_ATTEMPTS = 10;
-BUSY_RETRY_INTERVAL = 1000;
+var BUSY_RETRY_ATTEMPTS = 10;
+var BUSY_RETRY_INTERVAL = 1000;
 
 var Mutex = function () {
   var self = this;
