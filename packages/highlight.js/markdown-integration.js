@@ -7,7 +7,8 @@ if (Package.markdown) {
       return hljs.highlightAuto(decoded);
     };
   } else {
-    var entities = new Npm.require("html-entities").XmlEntities();
+    var entities = Npm.require("html-entities").XmlEntities;
+    entities = new entities();
     decodeEntitiesAndHighlight = function (codeWithEntities) {
       var decoded = entities.decode(codeWithEntities);
       return hljs.highlightAuto(decoded);
