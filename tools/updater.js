@@ -56,6 +56,27 @@ var checkForUpdate = function (showBanner) {
   }
 };
 
+var lastShowTimes = {};
+
+var shouldShow = function (key, maxAge) {
+  var now = +(new Date);
+
+  if (maxAge === undefined) {
+    maxAge = 12 * 60 * 60 * 1000;
+  }
+
+  var lastShow = lastShowTimes[key];
+  if (lastShow !== undefined) {
+    var age = now - lastShow;
+    if (age < maxAge) {
+      return false;
+    }
+  }
+
+  lastShowTimes[key] = now;
+  return true;
+};
+
 var maybeShowBanners = function () {
   var releaseData = release.current.getCatalogReleaseData();
 
@@ -109,10 +130,14 @@ var maybeShowBanners = function () {
     var patchRelease = catalog.official.getReleaseVersion(
       track, patchReleaseVersion);
     if (patchRelease && patchRelease.recommended) {
-      runLog.log("=> A patch (" +
-                 utils.displayRelease(track, patchReleaseVersion) +
-                 ") for your current release is available!");
-      runLog.log("   Update this project now with 'meteor update --patch'.");
+      var key = "patchrelease-" + track + "-" + patchReleaseVersion;
+      if (shouldShow(key)) {
+        runLog.log(
+          "=> A patch (" +
+          utils.displayRelease(track, patchReleaseVersion) +
+          ") for your current release is available!");
+        runLog.log("   Update this project now with 'meteor update --patch'.");
+      }
       return;
     }
   }
@@ -125,9 +150,12 @@ var maybeShowBanners = function () {
   var futureReleases = catalog.official.getSortedRecommendedReleaseVersions(
     track, currentReleaseOrderKey);
   if (futureReleases.length) {
-    runLog.log(
-      "=> " + utils.displayRelease(track, futureReleases[0]) +
+    var key = "futurerelease-" + track + "-" + futureReleases[0];
+    if (shouldShow(key)) {
+      runLog.log(
+        "=> " + utils.displayRelease(track, futureReleases[0]) +
         " is available. Update this project with 'meteor update'.");
+    }
     return;
   }
 };
