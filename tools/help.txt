@@ -230,7 +230,14 @@ This command can be useful to configure AVDs, HAX and update the SDK.
 
 >>> bundle
 Deprecated command. Use 'build' instead.
-Deprecated command. Use 'build' instead.
+Usage: meteor bundle <output_file.tar.gz>
+
+Pack this project up into a tarball.
+
+This command has been deprecated in favor of 'meteor build', which allows you to
+build for multiple platforms and outputs a directory instead of a single
+tarball. See 'meteor help build' for more information.
+
 
 >>> build
 Build this project for all platforms.

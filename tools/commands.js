@@ -630,8 +630,12 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // XXX COMPAT WITH 0.9.1.1
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
-      Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
-                           "Use 'build' instead.\n");
+
+      Console.stderr.write(
+"This command has been deprecated in favor of 'meteor build', which allows you to\n" +
+"build for multiple platforms and outputs a directory instead of a single\n" +
+"tarball. See 'meteor help build' for more information.\n\n");
+
       return buildCommand(_.extend(options, { _serverOnly: true }));
 });
 
