@@ -818,50 +818,88 @@ Fiber(function () {
   }
 
   if (releaseName !== undefined) {
-    // First, if we know just by looking at our disk that this is a legacy
-    // pre-0.9.0 release, springboard to it immediately, before calling
-    // release.load (which will refresh the catalog because the release
-    // presumably doesn't exist on the new server, and this is a slow
-    // operation).
-    if (releaseName !== null &&
-        warehouse.realReleaseExistsInWarehouse(releaseName)) {
-      var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
-        releaseName);
-      oldSpringboard(manifest.tools);  // doesn't return
+    // Yay, it's time to load releases!
+    //
+    // The release could be a modern (0.9.0+) tropohouse release or a legacy
+    // (pre-0.9.0) warehouse release.
+    //
+    // The release could be something we already know about on our local disk,
+    // or it could be something we have to ask a server about.
+    //
+    // We want to check both possibilities on disk before talking to any
+    // server. And we want to check for modern releases first in both cases.
+
+    var rel = null;
+
+    // ATTEMPT 1: modern release, on disk.  (For modern releases, "on disk" just
+    // means we have the metadata about it in our catalog; it doesn't mean we've
+    // downloaded the tool or any packages yet.)  release.load just does a
+    // single sqlite query; it doesn't refresh the catalog.
+    try {
+      rel = release.load(releaseName);
+    } catch (e) {
+      if (!(e instanceof release.NoSuchReleaseError))
+        throw e;
     }
 
-    try {
-      var rel = release.load(releaseName);
-    } catch (e) {
-      if (e instanceof release.NoSuchReleaseError) {
-        // OK, this release doesn't exist... unless it's an old pre-0.9.0
-        // release. Let's try using the legacy "warehouse" module to load it.
-        try {
-          var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
-            releaseName);
-        } catch (e) {
-          // XXX handle OfflineError too?
-          if (e instanceof warehouse.NoSuchReleaseError) {
-            if (releaseOverride) {
-              process.stderr.write(releaseName + ": unknown release.\n");
-            } else if (appDir) {
-              process.stderr.write(
+    if (!rel) {
+      if (releaseName === null)
+        throw Error("huh? couldn't load from-checkout release?");
+
+      // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
+      // "red pill" release which has the same name as a modern release!)
+      if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
+        var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+          releaseName);
+        oldSpringboard(manifest.tools);  // doesn't return
+      }
+
+      // ATTEMPT 3: modern release, troposphere sync needed.
+      catalog.refreshOrWarn();
+      // Try to load the release even if the refresh failed, since it might have
+      // failed on a later page than the one we needed.
+      try {
+        rel = release.load(releaseName);
+      } catch (e) {
+        if (!(e instanceof release.NoSuchReleaseError)) {
+          throw e;
+        }
+      }
+    }
+
+    if (!rel) {
+      // ATTEMPT 4: legacy release, loading from warehouse server.
+      manifest = null;
+      try {
+        manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+          releaseName);
+      } catch (e) {
+        // XXX handle OfflineError too?
+        // Note: this is WAREHOUSE's NoSuchReleaseError, not RELEASE's
+        if (!(e instanceof warehouse.NoSuchReleaseError)) {
+          throw e;
+        }
+      }
+      if (manifest) {
+        // OK, it was an legacy release. We should old-springboard to it.
+        oldSpringboard(manifest.tools);  // doesn't return
+      }
+    }
+
+    if (!rel) {
+      // Nope, still have no idea about this release!
+      if (releaseOverride) {
+        process.stderr.write(releaseName + ": unknown release.\n");
+      } else if (appDir) {
+        process.stderr.write(
 "Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
 "but you don't have that version of Meteor installed and the Meteor update\n" +
 "servers don't have it either. Please edit the .meteor/release file in the\n" +
 "project and change it to a valid Meteor release.\n");
-            } else {
-              throw new Error("can't load latest release?");
-            }
-            process.exit(1);
-          }
-          throw e;
-        }
-        // OK, it was an old release. We should old-springboard to it.
-        oldSpringboard(manifest.tools);
+      } else {
+        throw new Error("can't load latest release?");
       }
-
-      throw e;
+      process.exit(1);
     }
 
     // Let's keep track of whether this is an explicit release, due to different

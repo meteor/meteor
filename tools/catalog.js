@@ -29,50 +29,52 @@ catalog.Refresh.OnceAtStart = function (options) {
 
 catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
   var self = this;
-  try {
-    catalog.official.refresh(self.options);
-    self.refreshFailed = false;
-  } catch (err) {
-    // XXX: Should we fail-hard if the catalog is empty???
-    self.refreshFailed = true;
-
-    var errorType = err.errorType;
-
-    // Example errors:
-
-    // Offline, with name-based host:
-    //   errorType: DDP.ConnectionError
-    //   Network error: ws://packages.meteor.com/websocket: getaddrinfo ENOTFOUND
-
-    // Offline, with IP-based host:
-    //   errorType: DDP.ConnectionError
-    //   Network error: ws://8.8.8.8/websocket: connect ENETUNREACH
-
-    // Online, bad port:
-    //    errorType: DDP.ConnectionError
-    //    Network error: wss://packages.meteor.com:8888/websocket: connect ECONNREFUSED
-
-    // Online, socket hangup:
-    //   errorType: DDP.ConnectionError
-    //   Network error: wss://packages.meteor.com:80/websocket: socket hang up
-    Console.warn("Unable to refresh catalog (are you offline?)\n");
-
-    // XXX: Make this Console.debug(err)
-    if (Console.isDebugEnabled()) {
-      Console.printError(err);
-    }
-
-    // XXX: Support refreshCanFail?
-    //if (!self.options.refreshCanFail) {
-    //  throw err;
-    //}
-  }
+  self.refreshFailed = !catalog.refreshOrWarn(self.options);
 };
 
 // Refresh strategy: never (we don't use the package catalog)
 catalog.Refresh.Never = function (options) {
   var self = this;
   self.options = _.extend({}, options);
+};
+
+// Refreshes the catalog. Returns true on success.
+// On network error, warns and returns false.
+// Throws other errors (ie, programming errors in the tool).
+//
+// THIS IS A HIGH-LEVEL UI COMMAND. DO NOT CALL IT FROM LOW-LEVEL CODE (ie, call
+// it only from main.js or command implementations).
+catalog.refreshOrWarn = function (options) {
+  try {
+    catalog.official.refresh(options);
+    return true;
+  } catch (err) {
+    // Example errors:
+
+    // Offline, with name-based host:
+    //   Network error: ws://packages.meteor.com/websocket: getaddrinfo ENOTFOUND
+
+    // Offline, with IP-based host:
+    //   Network error: ws://8.8.8.8/websocket: connect ENETUNREACH
+
+    // Online, bad port:
+    //    Network error: wss://packages.meteor.com:8888/websocket: connect ECONNREFUSED
+
+    // Online, socket hangup:
+    //   Network error: wss://packages.meteor.com:80/websocket: socket hang up
+
+    if (err.errorType !== 'DDP.ConnectionError')
+      throw err;
+
+    // XXX is throwing correct for SQLite errors too? probably.
+
+    Console.warn("Unable to refresh catalog (are you offline?)\n");
+
+    // XXX: Make this Console.debug(err)
+    if (Console.isDebugEnabled()) {
+      Console.printError(err);
+    }
+  }
 };
 
 
