@@ -2328,7 +2328,7 @@ main.registerCommand({
   try {
     _.each(platforms, function (platform) {
       if (_.contains(currentPlatforms, platform)) {
-        throw new Error("platform " + platform + " already added");
+        throw new Error(platform + ": platform is already added");
       }
 
       isValidPlatform(platform);
@@ -2373,7 +2373,7 @@ main.registerCommand({
   });
 
   _.each(platforms, function (platform) {
-    Console.info("added platform " + platform);
+    Console.info(platform + ": added platform");
   });
 });
 
@@ -2389,17 +2389,17 @@ main.registerCommand({
   _.each(platforms, function (platform) {
     // explain why we can't remove server or browser platforms
     if (_.contains(project.getDefaultPlatforms(), platform)) {
-      Console.stdout.write("cannot remove platform " + platform +
-        " in this version of Meteor\n");
+      Console.stdout.write(platform + ": cannot remove platform " +
+                           "in this version of Meteor\n");
       return;
     }
 
     if (_.contains(project.getPlatforms(), platform)) {
-      Console.stdout.write("removed platform " + platform + "\n");
+      Console.stdout.write(platform + ": removed platform\n");
       return;
     }
 
-    Console.stdout.write(platform + " is not in this project\n");
+    Console.stdout.write(platform + ": platform is not in this project\n");
   });
   project.removeCordovaPlatforms(platforms);
 
