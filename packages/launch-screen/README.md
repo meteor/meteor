@@ -32,15 +32,13 @@ For example, to wait for a template to be rendered:
 ```javascript
 // in a client-only javascript file
 
-LaunchScreen.hold();
+var handle = LaunchScreen.hold();
 
 Template.myUI.rendered = function () {
-  LaunchScreen.release();
+  handle.release();
 };
 ```
 
 Your app, or packages used in your app, can call `LaunchScreen.hold()`
-multiple times. The launch screen will be removed once
-`LaunchScreen.release()` is called a matching number of times.
-
-
+multiple times. The launch screen will be removed once `release` has been
+called on all of the handles.
