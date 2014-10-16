@@ -680,13 +680,18 @@ var buildCommand = function (options) {
     }
     var cordovaSettings = {};
 
-    cordova.buildPlatforms(localPath, mobilePlatforms,
-      _.extend({}, options, {
-        host: parsedMobileServer.host,
-        port: parsedMobileServer.port,
-        protocol: parsedMobileServer.protocol,
-        appName: appName
-      }));
+    try {
+      cordova.buildPlatforms(localPath, mobilePlatforms,
+                             _.extend({}, options, {
+                               host: parsedMobileServer.host,
+                               port: parsedMobileServer.port,
+                               protocol: parsedMobileServer.protocol,
+                               appName: appName
+                             }));
+    } catch (err) {
+      Console.printError(err, "Error while building for mobile platforms");
+      return 1;
+    }
   }
 
   var buildDir = path.join(localPath, 'build_tar');
