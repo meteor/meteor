@@ -743,7 +743,7 @@ _.extend(RemoteCatalog.prototype, {
 
     buildmessage.assertInCapture();
     if (self.offline)
-      return;
+      return false;
 
     if (options.maxAge) {
       var lastSync = self.getMetadata(METADATA_LAST_SYNC);
@@ -751,29 +751,21 @@ _.extend(RemoteCatalog.prototype, {
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
           Console.debug("Catalog is sufficiently up-to-date; not refreshing\n");
-          return;
+          return false;
         }
       }
     }
 
     var updateResult = {};
-    var connectionFailed = false;
-    try {
-      buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
-        updateResult = packageClient.updateServerPackageData(self);
-      });
-    } catch (err) {
-      packageClient.handlePackageServerConnectionError(err);
-      connectionFailed = true;
-    }
+    buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
+      updateResult = packageClient.updateServerPackageData(self);
+    });
 
-    if (connectionFailed) {
-      Console.warn("Warning: could not connect to package server\n");
-    }
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
     }
 
+    return true;
   },
 
   // Given a release track, return all recommended versions for this track, sorted
