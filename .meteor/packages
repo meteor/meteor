@@ -7,7 +7,6 @@ standard-app-packages
 jquery
 underscore
 showdown
-code-prettify
 jquery-waypoints
 less
 spiderable
