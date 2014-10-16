@@ -608,7 +608,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
 
     var solution = null;
-    var allBuilds = self.getAllBuilds(name, version);
+    var allBuilds = self.getAllBuilds(name, version) || [];
 
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
       // This build subset works if for all the arches we need, at least one

@@ -866,3 +866,41 @@ selftest.define("packages with organizations",
   testUtils.login(s, "testtest", "testtest");
   changeVersionAndPublish(s, true /* expect authorization failure */);
 });
+
+selftest.define("add package with no builds", ["net", "test-package-server"], function () {
+  var s = new Sandbox();
+  testUtils.login(s, "test", "testtest");
+  var packageName = utils.randomToken();
+  var fullPackageName = "test:" + packageName;
+
+  // Create and publish a package with a binary dependency.
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+
+  s.cd(fullPackageName, function () {
+    // Add a binary dependency.
+    var packageJs = s.read("package.js");
+    // XXX HACK: prepend Npm.depends to the first 'api.addFiles'
+    packageJs = packageJs.replace(
+      "api.addFiles",
+      "Npm.depends({ bcrypt: '0.7.7' });\n  api.addFiles"
+    );
+
+    s.write("package.js", packageJs);
+
+    run = s.run("publish", "--create");
+    run.waitSecs(30);
+    run.expectExit(0);
+  });
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+
+  run = s.run("add", fullPackageName);
+  run.waitSecs(30);
+  run.matchErr("Package " + fullPackageName +
+               " has no compatible build");
+  run.expectExit(1);
+});
