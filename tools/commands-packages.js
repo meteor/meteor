@@ -76,6 +76,11 @@ var refreshOfficialCatalogOrDie = function (options) {
   });
 };
 
+var explainIfRefreshFailed = function (command) {
+  if (command.catalogRefresh.refreshFailed) {
+    Console.info("(But the update of the local catalog failed, so it might exist)")
+  }
+};
 
 // Internal use only. Makes sure that your Meteor install is totally good to go
 // (is "airplane safe"). Specifically, it:
@@ -1096,6 +1101,7 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
 }, function (options) {
+  var self = this;
 
   // We should refresh the catalog in case there are new versions.
   //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
@@ -1115,6 +1121,7 @@ main.registerCommand({
   var record = allRecord.record;
   if (!record) {
     Console.error("Unknown package or release: " +  name);
+    explainIfRefreshFailed(self);
     return 1;
   }
 
@@ -1270,6 +1277,7 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
 }, function (options) {
+  var self = this;
 
   // Show all means don't do any filtering at all. So, don't do any filtering
   // for anything at all.
@@ -1405,6 +1413,8 @@ main.registerCommand({
     Console.error(
       "Neither packages nor releases matching \'" +
         search + "\' could be found.");
+
+    explainIfRefreshFailed(self);
   } else {
     Console.info(
       "To get more information on a specific item, use meteor show.");
