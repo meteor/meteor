@@ -34,6 +34,11 @@ var ServiceConnection = function (Package, endpointUrl, options) {
     // especially if the CPU is churning on bundling (eg, for the stats
     // connection which we start in parallel with bundling).
     connectTimeoutMs: 15000,
+    // Disable client->server heartbeats for service connections.  Users with
+    // slow internet connections were seeing heartbeat timeouts because the
+    // heartbeats were buried behind large responses (eg
+    // https://github.com/meteor/meteor/issues/2777).
+    heartbeatInterval: 0,
     retry: false,
     onConnected: function () {
       self.connected = true;
