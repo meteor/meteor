@@ -831,20 +831,7 @@ Fiber(function () {
     }
 
     try {
-      var rel;
-      var messages = buildmessage.capture({ title: "Loading release" }, function () {
-        rel = release.load(releaseName);
-      });
-      if (messages.hasMessages()) {
-        // XXX The errors that trigger this are likely things like failure to
-        // load livedata when trying to refresh, or maybe failure to build some
-        // local packages, or something. They probably aren't "release doesn't
-        // exist"? But who knows?
-        process.stderr.write("=> Errors while loading release:\n" +
-                             messages.formatMessages());
-        process.exit(1);
-      }
-
+      var rel = release.load(releaseName);
     } catch (e) {
       var name = releaseName;
       if (e instanceof files.OfflineError) {
@@ -1283,29 +1270,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // Load the latest release's metadata so that we can figure out
       // the tools version that it uses. We should only do this if
       // we know there is some latest release on this track.
-      var latestRelease;
-      var messages = buildmessage.capture(function () {
-        latestRelease = release.load(release.latestDownloaded(e.track));
-      });
-      if (messages.hasMessages()) {
-        process.stderr.write("=> Errors while loading latest release:\n\n");
-        process.stderr.write(messages.formatMessages());
-        process.exit(1);
-      }
+      var latestRelease = release.load(release.latestDownloaded(e.track));
       springboard(latestRelease, latestRelease.name);
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {
       // Springboard to a specific release.
-      var nextRelease;
       var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
-      var messages = buildmessage.capture(function () {
-        nextRelease = release.load(relName);
-      });
-      if (messages.hasMessages()) {
-        process.stderr.write("=> " + e.msg + ":\n\n");
-        process.stderr.write(messages.formatMessages());
-        process.exit(1);
-      }
+      var nextRelease = release.load(relName);
       springboard(nextRelease, relName);
       // (does not return)
     } else if (e instanceof main.WaitForExit) {

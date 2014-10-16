@@ -406,9 +406,7 @@ var runTest = function () {
 var Fiber = require('fibers');
 Fiber(function () {
   setAppDir(appWithPackageDir);
-  doOrThrow(function () {
-    release._setCurrentForOldTest();
-  });
+  release._setCurrentForOldTest();
   meteorNpm._printNpmCalls = true;
 
   try {

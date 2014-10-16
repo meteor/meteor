@@ -221,7 +221,6 @@ release.latestDownloaded = function (track) {
 //   in the world (confirmed with server).
 release.load = function (name, options) {
   options = options || {};
-  buildmessage.assertInCapture();
 
   if (! name) {
     return new Release({ name: null });
@@ -274,7 +273,6 @@ release.setCurrent = function (releaseObject, forced, explicit) {
 
 // XXX hack
 release._setCurrentForOldTest = function () {
-  buildmessage.assertInCapture();
   if (process.env.METEOR_SPRINGBOARD_RELEASE) {
     release.setCurrent(release.load(process.env.METEOR_SPRINGBOARD_RELEASE),
                        true);
