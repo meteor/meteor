@@ -35,7 +35,13 @@ exports.tryToDownloadUpdate = function (options) {
 
 var checkForUpdate = function (showBanner) {
   var messages = buildmessage.capture(function () {
-    catalog.official.refresh({silent: true});
+    // Silent is currently unused, but we keep it as a hint here...
+    try {
+      catalog.official.refresh({silent: true});
+    } catch (err) {
+      Console.debug("Failed to refresh catalog, ignoring error", err);
+      return;
+    }
 
     if (!release.current.isProperRelease())
       return;

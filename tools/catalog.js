@@ -317,6 +317,9 @@ _.extend(LayeredCatalog.prototype, {
   refresh: function (options) {
     var self = this;
     self.localCatalog.refresh(options);
+
+    // Note that otherCatalog can throw, if we fail to connect
+    // XXX: Order of refreshes?  Continue on error?
     self.otherCatalog.refresh(options);
     self.packageCache.refresh();
     self.resolver = null;
