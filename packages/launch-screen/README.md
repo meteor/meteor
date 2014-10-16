@@ -22,16 +22,14 @@ the user the actual app.
 
 ### Additional waiting before releasing the launch screen
 
-To wait on more events before releasing the launch screen, call
-`LaunchScreen.hold()` in the top-level of the client code of your app,
-and when you're ready to show the launch screen, call
-`LaunchScreen.release()`.
+To wait on more events before releasing the launch screen, call `var handle =
+LaunchScreen.hold()` in the top-level of the client code of your app, and when
+you're ready to show the launch screen, call `handle.release()`.
 
 For example, to wait for a template to be rendered:
 
 ```javascript
 // in a client-only javascript file
-
 var handle = LaunchScreen.hold();
 
 Template.myUI.rendered = function () {
