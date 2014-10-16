@@ -19,7 +19,7 @@ Router.configure({
 });
 
 if (Meteor.isClient) {
-  var launchScreenHandler = LaunchScreen.hold();
+  var launchScreenHandle = LaunchScreen.hold();
 }
 
 Router.map(function() {
@@ -38,7 +38,9 @@ Router.map(function() {
     },
     action: function () {
       this.render();
-      launchScreenHandler.release();
+      if (Meteor.isClient) {
+        launchScreenHandle.release();
+      }
     }
   });
 
