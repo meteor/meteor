@@ -527,14 +527,16 @@ _.extend(Target.prototype, {
     var packageLoader = self.packageLoader;
 
     // Find the roots
-    var rootUnibuilds =
-        _.map(options.packages || [], function (p) {
-          if (typeof p === "string") {
-            return packageLoader.getUnibuild(p, self.arch);
-          } else {
-            return p.getUnibuildAtArch(self.arch);
-          }
-        });
+    var rootUnibuilds = [];
+    _.each(options.packages, function (p) {
+      if (typeof p === "string") {
+        p = packageLoader.getPackage(p, { throwOnError: true });
+      }
+      if (p.debugOnly && !project.project.includeDebug) {
+        return;
+      }
+      rootUnibuilds.push(p.getUnibuildAtArch(self.arch));
+    });
 
     // PHASE 1: Which unibuilds will be used?
     //
@@ -552,7 +554,9 @@ _.extend(Target.prototype, {
       usedUnibuilds[unibuild.id] = unibuild;
       usedPackages[unibuild.pkg.name] = true;
       compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader, addToGetsUsed);
+        unibuild.uses, self.arch, packageLoader, {
+          skipDebugOnly: !project.project.includeDebug
+        }, addToGetsUsed);
     };
     _.each(rootUnibuilds, addToGetsUsed);
 
@@ -590,7 +594,10 @@ _.extend(Target.prototype, {
       // SOMETHING uses strongly).
       compiler.eachUsedUnibuild(
         unibuild.uses, self.arch, packageLoader,
-        { skipUnordered: true, acceptableWeakPackages: usedPackages},
+        { skipUnordered: true,
+          acceptableWeakPackages: usedPackages,
+          skipDebugOnly: !project.project.includeDebug
+        },
         function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
             buildmessage.error("circular dependency between packages " +
@@ -1841,9 +1848,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
- * - watchSet: Information about files and paths that were
+ * - serverWatchSet: Information about server files and paths that were
  *   inputs into the bundle and that we may wish to monitor for
  *   changes when developing interactively, as a watch.WatchSet.
+ * - clientWatchSet: Like 'serverWatchSet', but for client files
+ * - starManifest: The manifest of the outputted star
  *
  * On failure ('errors' is truthy), no bundle will be output (in fact,
  * outputPath will have been removed if it existed).
@@ -2055,7 +2064,7 @@ exports.bundle = function (options) {
         buildmessage.error(
           "A program named ctl exists but no program has isControlProgram set");
         // recover by not making a control program
-      }  else {
+      } else if (options.requireControlProgram) {
         var target = makeServerTarget("ctl");
         targets["ctl"] = target;
         controlProgram = "ctl";
@@ -2123,7 +2132,7 @@ exports.bundle = function (options) {
 
     // If we omitted a target due to an error, we might not have a
     // controlProgram anymore.
-    if (! (controlProgram in targets))
+    if (controlProgram && ! (controlProgram in targets))
       controlProgram = undefined;
 
 
@@ -2284,4 +2293,3 @@ exports.iterateOverAllUsedIsopacks =
     callback(unibuild.pkg);
   });
 };
-

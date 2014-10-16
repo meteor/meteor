@@ -246,7 +246,9 @@ _.extend(LayeredCatalog.prototype, {
         constr.push(utils.parseConstraint(name + "@=" + packageSource.version));
       });
 
-      var ret = buildmessage.enterJob({ title: "Figuring out the best package versions to use." }, function () {
+      var ret = buildmessage.enterJob({
+          title: "Figuring out the best package versions to use." },
+        function () {
         // Then, call the constraint solver, to get the valid transitive subset of
         // those versions to record for our solution. (We don't just return the
         // original version lock because we want to record the correct transitive
@@ -263,6 +265,8 @@ _.extend(LayeredCatalog.prototype, {
       if (ret["usedRCs"]) {
         var expPackages = [];
         _.each(ret.answer, function(version, package) {
+          if (self.isLocalPackage(package))
+            return;
           if (version.split('-').length > 1) {
             if (!(resolverOpts.previousSolution &&
               resolverOpts.previousSolution[package] === version)) {
@@ -273,7 +277,7 @@ _.extend(LayeredCatalog.prototype, {
                     if (specOC.version === version) {
                       printMe = false;
                     }
-                   });
+                  });
                 });
                 if (printMe) {
                   expPackages.push({
@@ -317,6 +321,9 @@ _.extend(LayeredCatalog.prototype, {
   _initializeResolver: function () {
     var self = this;
     var uniload = require('./uniload.js');
+
+    var yielder = new utils.ThrottledYield();
+
     var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
     })['constraint-solver'];
@@ -327,6 +334,8 @@ _.extend(LayeredCatalog.prototype, {
           // doesn't have access to it.
           utils.Patience.nudge();
           buildmessage.nudge();
+
+          yielder.yield();
         }
       });
   },

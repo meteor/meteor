@@ -7,7 +7,7 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 
 var checkMobileServer = selftest.markStack(function (s, expected) {
-  var output = s.read("android/assets/www/application/index.html");
+  var output = s.read("android/project/assets/www/application/index.html");
   if (! output.match(new RegExp(
     '"DDP_DEFAULT_CONNECTION_URL":"' + expected + '"'))) {
     selftest.fail(
@@ -28,6 +28,11 @@ selftest.define("cordova builds with server options", ["slow"], function () {
 
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
+
+  run = s.run("install-sdk", "android");
+  run.extraTime = 90; // Huge download
+  run.expectExit(0);
+
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");

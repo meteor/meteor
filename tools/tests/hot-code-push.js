@@ -74,6 +74,11 @@ selftest.define("css hot code push", function (options) {
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);
 
+    // XXX: Remove me.  This shouldn't be needed, but sometimes
+    // if we run too quickly on fast (or Linux?) machines, it looks
+    // like there's a race and we see a weird state
+    utils.sleepMs(10000);
+
     s.write(".meteor/packages", "standard-app-packages");
     run.match("removed my-package");
     run.match("numCssChanges: 0");

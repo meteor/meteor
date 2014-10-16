@@ -132,14 +132,15 @@ _.extend(Unibuild.prototype, {
     // packages get precedence.
     //
     // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak dependencies (because the meaning of a name
-    // shouldn't be affected by the non-local decision of whether or not an
-    // unrelated package in the target depends on something).
+    // defined yet) or from weak/debugOnly dependencies (because the meaning of
+    // a name shouldn't be affected by the non-local decision of whether or not
+    // an unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
     compiler.eachUsedUnibuild(
       self.uses,
       bundleArch, loader,
-      {skipUnordered: true}, function (depUnibuild) {
+      { skipUnordered: true, skipDebugOnly: true },
+      function (depUnibuild) {
         _.each(depUnibuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||
@@ -235,6 +236,7 @@ var Isopack = function () {
   self.version = null;
   self.earliestCompatibleVersion = null;
   self.isTest = false;
+  self.debugOnly = false;
 
   // Unibuilds, an array of class Unibuild.
   self.unibuilds = [];
@@ -317,6 +319,7 @@ _.extend(Isopack.prototype, {
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
     self.includeTool = options.includeTool;
+    self.debugOnly = options.debugOnly;
   },
 
   // Programmatically add a unibuild to this Isopack. Should only be
@@ -524,7 +527,7 @@ _.extend(Isopack.prototype, {
     // deal with different versions of "isopack.json", backwards compatible
     var isopackJsonPath = path.join(dir, "isopack.json");
     if (fs.existsSync(isopackJsonPath)) {
-      isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
+      var isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
 
       if (isopackJson[currentFormat]) {
         mainJson = isopackJson[currentFormat];
@@ -626,6 +629,7 @@ _.extend(Isopack.prototype, {
       self.version = mainJson.version;
       self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
       self.isTest = mainJson.isTest;
+      self.debugOnly = !!mainJson.debugOnly;
     }
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
@@ -765,6 +769,9 @@ _.extend(Isopack.prototype, {
         plugins: []
       };
 
+      if (self.debugOnly) {
+        mainJson.debugOnly = true;
+      }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }

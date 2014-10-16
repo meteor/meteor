@@ -13,11 +13,12 @@ var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
 var tropohouse = require('./tropohouse.js');
 var config = require('./config.js');
-var semver = require('semver');
 var packageClient = require('./package-client.js');
+var VersionParser = require('./package-version-parser.js');
 var sqlite3 = require('sqlite3');
 var archinfo = require('./archinfo.js');
 var Console = require('./console.js').Console;
+
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
@@ -139,15 +140,40 @@ var Db = function (dbFile, options) {
   self._autoPrepare = true;
   self._prepared = {};
 
-  self._db = self.open(dbFile);
-
   self._transactionMutex = new Mutex();
 
+  self._db = self._retry(function () {
+    return self.open(dbFile);
+  });
+
   // WAL mode copes much better with (multi-process) concurrency
-  self._execute('PRAGMA journal_mode=WAL');
+  self._retry(function () {
+    self._execute('PRAGMA journal_mode=WAL');
+  });
 };
 
 _.extend(Db.prototype, {
+
+  // TODO: Move to utils?
+  _retry: function (f, options) {
+    options = _.extend({ maxAttempts: 3, delay: 500}, options || {});
+
+    for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
+      try {
+        return f();
+      } catch (err) {
+        if (attempt < options.maxAttempts) {
+          Console.warn("Retrying after error", err);
+        } else {
+          throw err;
+        }
+      }
+
+      if (options.delay) {
+        utils.sleepMs(options.delay);
+      }
+    }
+  },
 
   // Runs functions serially, in a mutex
   _serialize: function (f) {
@@ -159,6 +185,18 @@ _.extend(Db.prototype, {
     } finally {
       self._transactionMutex.unlock();
     }
+  },
+
+  // Do not call any other methods on this object after calling this one.
+  // This yields.
+  closePermanently: function () {
+    var self = this;
+    self._closePreparedStatements();
+    var db = self._db;
+    self._db = null;
+    var future = new Future;
+    db.close(future.resolver());
+    future.wait();
   },
 
   // Runs the function inside a transaction block
@@ -235,6 +273,8 @@ _.extend(Db.prototype, {
     var self = this;
 
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
+      Console.debug("Creating database directory", dbFile);
+
       var folder = path.dirname(dbFile);
       if ( !files.mkdir_p(folder) )
         throw new Error("Could not create folder at " + folder);
@@ -474,15 +514,13 @@ _.extend(Table.prototype, {
 // under the variable "official" from the catalog.js
 //
 // The remote catalog is backed by a db to make things easier on the memory and for faster queries
-var RemoteCatalog = function (options) {
+var RemoteCatalog = function () {
   var self = this;
 
   // Set this to true if we are not going to connect to the remote package
   // server, and will only use the cached data for our package information
   // This means that the catalog might be out of date on the latest developments.
   self.offline = null;
-
-  self.options = options || {};
 
   self.db = null;
   self._currentRefreshIsLoud = false;
@@ -491,7 +529,17 @@ var RemoteCatalog = function (options) {
 _.extend(RemoteCatalog.prototype, {
   toString: function () {
     var self = this;
-    return "RemoteCatalog [options=" + JSON.stringify(self.options) + "]";
+    return "RemoteCatalog";
+  },
+
+  // Used for special cases that want to ensure that all connections to the DB
+  // are closed (eg to ensure that all writes have been flushed from the '-wal'
+  // file to the main DB file). Most methods on this class will stop working
+  // after you call this method. Note that this yields.
+  closePermanently: function () {
+    var self = this;
+    self.db.closePermanently();
+    self.db = null;
   },
 
   getVersion: function (name, version) {
@@ -517,7 +565,7 @@ _.extend(RemoteCatalog.prototype, {
     var match = this._getPackageVersions(name);
     if (match === null)
       return [];
-    return _.pluck(match, 'version').sort(semver.compare);
+    return _.pluck(match, 'version').sort(VersionParser.compare);
   },
 
   getLatestMainlineVersion: function (name) {
@@ -598,6 +646,19 @@ _.extend(RemoteCatalog.prototype, {
     return result[0];
   },
 
+  // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
+  // specially constructed for bootstrap tarballs.
+  forceRecommendRelease: function (track, version) {
+    var self = this;
+    var releaseVersionData = self.getReleaseVersion(track, version);
+    if (!releaseVersionData) {
+      throw Error("Can't force-recommend unknown release " + track + "@"
+                  + version);
+    }
+    releaseVersionData.recommended = true;
+    self._insertReleaseVersions([releaseVersionData]);
+  },
+
   getAllReleaseTracks: function () {
     return _.pluck(this._queryWithRetry("SELECT name FROM releaseTracks"), 'name');
   },
@@ -668,7 +729,7 @@ _.extend(RemoteCatalog.prototype, {
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          Console.info("Catalog is sufficiently up-to-date; not refreshing\n");
+          Console.debug("Catalog is sufficiently up-to-date; not refreshing\n");
           return;
         }
       }
@@ -782,7 +843,6 @@ _.extend(RemoteCatalog.prototype, {
     });
   },
 
-  // XXX: Remove this; it is only here for the tests, and that is a hack
   _insertReleaseVersions: function(releaseVersions) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
@@ -825,7 +885,7 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._simpleQuery("SELECT content FROM syncToken WHERE _id=?", [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
-      return {};
+      return null;
     }
     if (result.length !== 1) {
       throw new Error("Unexpected number of sync tokens found");

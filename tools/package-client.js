@@ -14,41 +14,20 @@ var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
 var Console = require('./console.js').Console;
 var packageVersionParser = require('./package-version-parser.js');
-
-// Use uniload to load the packages that we need to open a connection to the
-// current package server and use minimongo in memory. We need the following
-// packages.
-//
-// meteor: base package and prerequsite for all others.
-// ddp: DDP client interface to make a connection to the package server.
-var getLoadedPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp']
-  });
-};
+var authClient = require('./auth-client.js');
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
 var openPackageServerConnection = function (packageServerUrl) {
-  return new ServiceConnection(
-    getLoadedPackages(),
-    packageServerUrl || config.getPackageServerUrl(),
-    {headers: {"User-Agent": httpHelpers.getUserAgent()},
-     _dontPrintErrors: true});
-};
-
-var emptyCachedServerDataJson = function () {
-  return {
-    syncToken: { format: "1.1" },
-    collections: null
-  };
+  var serverUrl = packageServerUrl || config.getPackageServerUrl();
+  return authClient.openServiceConnection(serverUrl);
 };
 
 // Given a connection, makes a call to the package server.  (Checks to see if
 // the connection is connected, and reconnects if needed -- a workaround for
 // the fact that connections in the tool do not reconnect)
-exports.callPackageServer = function (conn) {
+exports.callPackageServer = function (conn, options) {
   if (!conn.connected) {
     conn.close();
     conn = exports.loggedInPackagesConnection();
@@ -76,17 +55,23 @@ exports.callPackageServer = function (conn) {
 var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
   _optionsForTest = _optionsForTest || {};
 
+  // Did we get disconnected between retries somehow? Then we should open a new
+  // connection. We shouldn't use the callPackageServer method here though,
+  // since we don't need to authenticate.
+  if (!conn.connected) {
+    conn.close();
+    conn =  openPackageServerConnection();
+  }
+
   var syncOpts;
   if (_optionsForTest && _optionsForTest.useShortPages) {
     syncOpts = { shortPagesForTest: _optionsForTest.useShortPages };
   }
   var collectionData;
   if (syncOpts) {
-    collectionData = exports.callPackageServer(conn,
-        'syncNewPackageData', syncToken, syncOpts);
+    collectionData = conn.call('syncNewPackageData', syncToken, syncOpts);
   } else {
-    collectionData = exports.callPackageServer(conn,
-        'syncNewPackageData', syncToken);
+    collectionData = conn.call('syncNewPackageData', syncToken);
   }
   return collectionData;
 };
@@ -146,7 +131,7 @@ _updateServerPackageData = function (dataStore, options) {
   buildmessage.reportProgress(state);
 
   var getSomeData = function () {
-    var syncToken = dataStore.getSyncToken() || {};
+    var syncToken = dataStore.getSyncToken() || {format: "1.1"};
 
     if (!start) {
       start = {};
@@ -216,63 +201,16 @@ _updateServerPackageData = function (dataStore, options) {
   return ret;
 };
 
-var AlreadyPrintedMessageError = function () {};
-
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
 // (e.g. connection to package server times out), then it will be
 // thrown.
 exports.loggedInPackagesConnection = function () {
-  // Make sure that we are logged in with Meteor Accounts so that we can
-  // do an OAuth flow.
-
-  if (auth.maybePrintRegistrationLink({onlyAllowIfRegistered: true})) {
-    // Oops, we're logged in but with a deferred-registration account.
-    // Message has already been printed.
-    throw new AlreadyPrintedMessageError;
-  }
-
-  if (! auth.isLoggedIn()) {
-    // XXX we should have a better account signup page.
-    Console.stderr.write(
-"Please log in with your Meteor developer account. If you don't have one,\n" +
-"you can quickly create one at www.meteor.com.\n");
-    auth.doUsernamePasswordLogin({ retry: true });
-  }
-
-  var conn = openPackageServerConnection();
-
-  var accountsConfiguration = auth.getAccountsConfiguration(conn);
-
-  try {
-    auth.loginWithTokenOrOAuth(
-      conn,
-      accountsConfiguration,
-      config.getPackageServerUrl(),
-      config.getPackageServerDomain(),
-      "package-server"
-    );
-  } catch (err) {
-    if (err.message === "access-denied") {
-      // Maybe we thought we were logged in, but our token had been
-      // revoked.
-      Console.stderr.write(
-"It looks like you have been logged out! Please log in with your Meteor\n" +
-"developer account. If you don't have one, you can quickly create one\n" +
-"at www.meteor.com.\n");
-      auth.doUsernamePasswordLogin({ retry: true });
-      auth.loginWithTokenOrOAuth(
-        conn,
-        accountsConfiguration,
-        config.getPackageServerUrl(),
-        config.getPackageServerDomain(),
-        "package-server"
-      );
-    } else {
-      throw err;
-    }
-  }
-  return conn;
+  return authClient.loggedInConnection(
+    config.getPackageServerUrl(),
+    config.getPackageServerDomain(),
+    "package-server"
+  );
 };
 
 // XXX this is missing a few things:
@@ -439,21 +377,9 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
 
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 
+// Handle an error thrown on trying to connect to the package server.
 exports.handlePackageServerConnectionError = function (error) {
-  if (error instanceof AlreadyPrintedMessageError) {
-    // do nothing
-  } else if (error.errorType === 'Meteor.Error') {
-    Console.stderr.write("Error from package server");
-    if (error.message) {
-      Console.stderr.write(": " + error.message);
-    }
-    Console.stderr.write("\n");
-  } else if (error.errorType === "DDP.ConnectionError") {
-    Console.stderr.write("Error connecting to package server: "
-                         + error.message + "\n");
-  } else {
-    throw error;
-  }
+  authClient.handlerConnectionError(error, "package server");
 };
 
 // Publish the package information into the server catalog. Create new records
@@ -469,6 +395,7 @@ exports.handlePackageServerConnectionError = function (error) {
 //           package record.
 //      existingVersion: we expect the version to exist already, and for us
 //           to merely be providing a new build of the same source
+//      doNotPublishBuild: do not publish the build of this package.
 //
 // Return true on success and an error code otherwise.
 exports.publishPackage = function (packageSource, compileResult, conn, options) {
@@ -528,8 +455,10 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
     }
 
     if (!exports.amIAuthorized(name, conn, false)) {
-      Console.stderr.write('You are not an authorized maintainer of ' + name + ".\n");
-      Console.stderr.write('Only authorized maintainers may publish new versions. \n');
+      Console.stderr.write(
+        'You are not an authorized maintainer of ' + name + ".\n");
+      Console.stderr.write(
+        'Only authorized maintainers may publish new versions. \n');
       return 1;
     }
   }
@@ -661,6 +590,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
       compilerVersion: compiler.BUILT_BY,
       containsPlugins: packageSource.containsPlugins(),
+      debugOnly: packageSource.debugOnly,
       dependencies: packageDeps
     };
     try {
@@ -692,7 +622,9 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
 
   }
 
-  createAndPublishBuiltPackage(conn, compileResult.isopack);
+  if (!options.doNotPublishBuild) {
+    createAndPublishBuiltPackage(conn, compileResult.isopack);
+  }
 
   return 0;
 };

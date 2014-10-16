@@ -316,9 +316,13 @@ var getBoilerplate = function (request, arch) {
   return memoizedBoilerplate[memHash];
 };
 
-var generateBoilerplateInstance = function (arch, manifest, additionalOptions) {
+WebAppInternals.generateBoilerplateInstance = function (arch,
+                                                        manifest,
+                                                        additionalOptions) {
   additionalOptions = additionalOptions || {};
-  var runtimeConfig = _.extend(__meteor_runtime_config__,
+
+  var runtimeConfig = _.extend(
+    _.clone(__meteor_runtime_config__),
     additionalOptions.runtimeConfigOverrides || {}
   );
 
@@ -574,8 +578,9 @@ var runWebAppServer = function () {
     syncQueue.runTask(function() {
       _.each(WebApp.clientPrograms, function (program, archName) {
         boilerplateByArch[archName] =
-          generateBoilerplateInstance(archName, program.manifest,
-                                      defaultOptionsForArch[archName]);
+          WebAppInternals.generateBoilerplateInstance(
+            archName, program.manifest,
+            defaultOptionsForArch[archName]);
       });
 
       // Clear the memoized boilerplate cache.

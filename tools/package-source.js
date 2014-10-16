@@ -269,6 +269,11 @@ var PackageSource = function (catalog) {
   // to the catalog), so we need to keep track of them.
   self.isTest = false;
 
+  // Some packages belong to a test framework and should never be bundled into
+  // production. A package with this flag should not be picked up by the bundler
+  // for production builds.
+  self.debugOnly = false;
+
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
   // built isopacks for all the packages in uniload.ROOT_PACKAGES as well as
@@ -480,15 +485,13 @@ _.extend(PackageSource.prototype, {
        * the package, required for publication.
        * @param {String} options.version The (extended)
        * [semver](http://www.semver.org) version for your package. Additionally,
-       * Meteor allows a wrap number, to follow the version number. If you are
+       * Meteor allows a wrap number: a positive integer that follows the version number. If you are
        * porting another package that uses semver versioning, you may want to
-       * use the original version, postfixed with the _<number>. For example,
-       * '1.2.3_1', '2.4.5-rc1_4'. Wrap numbers sort after the original numbers:
-       * '1.2.3' < '1.2.3_1' < '1.2.3_2' < '1.2.4-rc.0'. By default, wrap
-       * numbers don't affect compatibility, so 1.2.3_1 is compatible with
-       * 1.2.3, 1.2.3_3, etc. If no version is specified, this field defaults to
-       * `0.0.0`. You need to specify a version to publish to the package
-       * server.
+       * use the original version, postfixed with `_wrapnumber`. For example,
+       * `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers sort after the original numbers:
+       * `1.2.3` < `1.2.3_1` < `1.2.3_2` < `1.2.4-rc.0`. If no version is specified,
+       * this field defaults to `0.0.0`. If you want to publish your package to
+       * the package server, you must specify a version.
        * @param {String} options.name Optional name override. By default, the
        * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
@@ -513,10 +516,11 @@ _.extend(PackageSource.prototype, {
               buildmessage.error(
                 "trying to initialize a nonexistent base package " + value);
             }
-          }
-          else {
-          // Do nothing. We might want to add some keys later, and we should err on
-          // the side of backwards compatibility.
+          } else if (key === "debugOnly") {
+            self.debugOnly = !!value;
+          } else {
+          // Do nothing. We might want to add some keys later, and we should err
+          // on the side of backwards compatibility.
           }
         });
       },
@@ -610,9 +614,9 @@ _.extend(PackageSource.prototype, {
        * package.
        * @param {String|String[]} options.use Meteor packages that this
        * plugin uses, independent of the packages specified in
-       * [api.onUse](#PackageAPI-onUse).
+       * [api.onUse](#pack_onUse).
        * @param {String[]} options.sources The source files that make up the
-       * build plugin, independent from [api.addFiles](#PackageAPI-addFiles).
+       * build plugin, independent from [api.addFiles](#pack_addFiles).
        * @param {Object} options.npmDependencies An object where the keys
        * are NPM package names, and the keys are the version numbers of
        * required NPM packages, just like in [Npm.depends](#Npm-depends).
@@ -865,6 +869,21 @@ _.extend(PackageSource.prototype, {
       // recover by ignoring
     }
 
+    // We want the "debug mode" to be a property of the *bundle* operation
+    // (turning a set of packages, including the app, into a star), not the
+    // *compile* operation (turning a package source into an isopack). This is
+    // so we don't have to publish two versions of each package. But we have no
+    // way to mark a file in an isopack as being the result of running a plugin
+    // from a debugOnly dependency, and so there is no way to tell which files
+    // to exclude in production mode from a published package. Eventually, we'll
+    // add such a flag to the isopack format, but until then we'll sidestep the
+    // issue by disallowing build plugins in debugOnly packages.
+    if (self.debugOnly && !_.isEmpty(self.pluginInfo)) {
+      buildmessage.error(
+        "can't register build plugins in debugOnly packages");
+      // recover by ignoring
+    }
+
     if (self.version === null && options.requireVersion) {
       if (options.defaultVersion) {
         self.version = options.defaultVersion;
@@ -1052,8 +1071,8 @@ _.extend(PackageSource.prototype, {
          * `accounts` package). If you are sourcing core
          * packages from a Meteor release with `versionsFrom`, you may leave
          * off version names for core packages. You may also specify constraints,
-         * such as 'my:forms@=1.0.0 (this package demands my:forms at 1.0.0 exactly),
-         * or 'my:forms@1.0.0 || =2.0.1' (my:forms at 1.x.y, or exactly 2.0.1).
+         * such as `my:forms@=1.0.0` (this package demands `my:forms` at `1.0.0` exactly),
+         * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.x.y`, or exactly `2.0.1`).
          * @param {String} [architecture] If you only use the package on the
          * server (or the client), you can pass in the second argument (e.g.,
          * `'server'` or `'client'`) to specify what architecture the package is
@@ -1133,6 +1152,17 @@ _.extend(PackageSource.prototype, {
          * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
          */
         imply: function (names, arch) {
+          // We currently disallow build plugins in debugOnly packages; but if
+          // you could use imply in a debugOnly package, you could pull in the
+          // build plugin from an implied package, which would have the same
+          // problem as allowing build plugins directly in the package. So no
+          // imply either!
+          if (self.debugOnly) {
+            buildmessage.error("can't use imply in debugOnly packages");
+            // recover by ignoring
+            return;
+          }
+
           names = toArray(names);
           arch = toArchArray(arch);
 
@@ -1193,9 +1223,9 @@ _.extend(PackageSource.prototype, {
         /**
          * @memberOf PackageAPI
          * @instance
-         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorversion`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is METEOR@0.9.0 and it uses jquery@1.0.0, you can use `api.versionsFrom('METEOR@0.9.0')`. If your package uses jQuery, it will automatically depend on jQuery 1.0.0 when it is published. You may specify more than one release, in which case the constraints will be parsed with an or: 'jquery@1.0.0 || 2.0.0'.
+         * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorRelease`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you can write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you later write `api.use('jquery')`, it will be equivalent to `api.use('jquery@1.0.0')`. You may specify an array of multiple releases, in which case the default value for constraints will be the "or" of the versions from each release: `api.versionsFrom(['METEOR@0.9.0', 'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as `api.use('jquery@1.0.0 || 2.0.0')`.
          * @locus package.js
-         * @param {String} meteorRelease Specification of a release: track@version. Just 'version' (ex: `"0.9.0"`) is sufficient if using the default release track
+         * @param {String | String[]} meteorRelease Specification of a release: track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the default release track `METEOR`.
          */
         versionsFrom: function (releases) {
           // Uniloaded packages really ought to be in the core release, by

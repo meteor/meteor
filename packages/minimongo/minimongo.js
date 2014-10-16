@@ -323,7 +323,7 @@ _.extend(LocalCollection.Cursor.prototype, {
     // comment in _modifyAndNotify
     // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (self.skip || self.limit))
-      throw new Error("must use ordered observe with skip or limit");
+      throw new Error("must use ordered observe (ie, 'addedBefore' instead of 'added') with skip or limit");
 
     if (self.fields && (self.fields._id === 0 || self.fields._id === false))
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");

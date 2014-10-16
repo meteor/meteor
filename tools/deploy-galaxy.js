@@ -212,7 +212,8 @@ exports.deploy = function (options) {
       }
       var bundleResult = bundler.bundle({
         outputPath: bundlePath,
-        buildOptions: options.buildOptions
+        buildOptions: options.buildOptions,
+        requireControlProgram: true
       });
 
       if (bundleResult.errors) {

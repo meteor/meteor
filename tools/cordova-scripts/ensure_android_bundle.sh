@@ -15,7 +15,7 @@ fi
 # import all the environment
 source "$(dirname "$0")/common_env.sh"
 
-"$(dirname "$0")/ensure_android_prereqs.sh"
+#"$(dirname "$0")/ensure_android_prereqs.sh"
 
 cd "$ORIG_DIR"
 
@@ -40,7 +40,7 @@ install_android_bundle () {
       echo "Skipping download and installing kit from $DEST_DIR/$TARBALL" >&2
       tar -xzf "$DEST_DIR/$TARBALL" -C "$BUNDLE_TMPDIR"
   else
-      curl "$ANDROID_BUNDLE_URL_ROOT$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
+      curl --progress-bar "$ANDROID_BUNDLE_URL_ROOT$TARBALL" | tar -xzf - -C "$BUNDLE_TMPDIR"
   fi
 
   # Delete old dev bundle and rename the new one on top of it.

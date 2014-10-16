@@ -155,7 +155,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     var url = buildRecord.build.url;
 
-    var progress = buildmessage.addChildTracker("Download build");
+    var progress = buildmessage.addChildTracker("Downloading build");
     try {
       buildmessage.capture({}, function () {
         var packageTarball = httpHelpers.getUrl({
@@ -253,7 +253,7 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     buildmessage.enterJob({
-      title: "  downloading " + packageName + " at version " + version + " ...",
+      title: "  Installing " + packageName + "@" + version + "..."
     }, function() {
       var buildTempDirs = [];
       // If there's already a package in the tropohouse, start with it.

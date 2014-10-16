@@ -1,6 +1,5 @@
 var fs = require('fs');
 var path = require('path');
-var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var watch = require('./watch.js');
@@ -14,6 +13,7 @@ var utils = require('./utils.js');
 var catalog = require('./catalog.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
+var VersionParser = require('./package-version-parser.js');
 
 // LocalCatalog represents the packages located into an application folder
 // A default instance of this catalog is created in catalog.js
@@ -137,6 +137,9 @@ _.extend(LocalCatalog.prototype, {
   // (according to the version string, not according to their
   // publication date). Returns the empty array if the package doesn't
   // exist or doesn't have any versions.
+  //
+  // (XXX: If local catalog is just the local overrides, wouldn't this always
+  // just return one record?)
   getSortedVersions: function (name) {
     var self = this;
     self._requireInitialized();
@@ -144,7 +147,7 @@ _.extend(LocalCatalog.prototype, {
       return [];
     }
     var ret = _.keys(self.versions[name]);
-    ret.sort(semver.compare);
+    ret.sort(VersionParser.compare);
     return ret;
   },
 
@@ -466,6 +469,7 @@ _.extend(LocalCatalog.prototype, {
         lastUpdated: null,
         published: null,
         isTest: packageSource.isTest,
+        debugOnly: packageSource.debugOnly,
         containsPlugins: packageSource.containsPlugins()
       };
     };

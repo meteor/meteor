@@ -34,10 +34,9 @@ Template.listsShow.helpers({
 var editList = function(list, template) {
   Session.set(EDITING_KEY, true);
   
-  // wait for the template to redraw based on the reactive change
-  Tracker.afterFlush(function() {
-    template.$('.js-edit-form input[type=text]').focus();
-  });
+  // force the template to redraw based on the reactive change
+  Tracker.flush();
+  template.$('.js-edit-form input[type=text]').focus();
 };
 
 var saveList = function(list, template) {
@@ -117,15 +116,13 @@ Template.listsShow.events({
   'change .list-edit': function(event, template) {
     if ($(event.target).val() === 'edit') {
       editList(this, template);
-      
     } else if ($(event.target).val() === 'delete') {
-      if (! deleteList(this, template)) {
-        // reset the select
-        event.target.selectedIndex = 0;
-      }
+      deleteList(this, template);
     } else {
       toggleListPrivacy(this, template);
     }
+
+    event.target.selectedIndex = 0;
   },
   
   'click .js-edit-list': function(event, template) {

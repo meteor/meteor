@@ -1,16 +1,12 @@
+var release = Meteor.release ? "0.9.4" : "(checkout)";
+
 Template.headline.helpers({
   release: function () {
-    return Meteor.release ? "0.9.4-pre.11" : "(checkout)";
+    return release;
   }
 });
 
 Meteor.startup(function () {
-  // XXX this is broken by the new multi-page layout.  Also, it was
-  // broken before the multi-page layout because it had illegible
-  // colors. Just turn it off for now. We'll fix it and turn it on
-  // later.
-  // prettyPrint();
-
   //mixpanel tracking
   mixpanel.track('docs');
 
@@ -103,7 +99,7 @@ var hideMenu = function () {
 };
 
 var toc = [
-  {name: "Meteor " + Template.headline.release(), id: "top"}, [
+  {name: "Meteor " + release, id: "top"}, [
     "Quick start",
     "Seven principles",
     "Resources"
@@ -402,7 +398,7 @@ var toc = [
 
     {name: "mobile-config.js", id: "mobileconfigjs"}, [
       {name: "App.info", id: "App-info"},
-      {name: "App.set", id: "App-set"},
+      {name: "App.setPreference", id: "App-setPreference"},
       {name: "App.configurePlugin", id: "App-configurePlugin"},
       {name: "App.icons", id: "App-icons"},
       {name: "App.launchScreens", id: "App-launchScreens"}
@@ -411,17 +407,13 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
-    "appcache",
     "audit-argument-checks",
-    "browser-policy",
     "coffeescript",
     "fastclick",
-    "force-ssl",
     "jquery",
     "less",
     "oauth-encryption",
     "random",
-    "spiderable",
     "stylus",
     "showdown",
     "underscore",

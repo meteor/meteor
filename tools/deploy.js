@@ -386,7 +386,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  Console.stdout.write('Deploying to ' + site + '. Bundling...\n');
+  Console.stdout.write('Deploying to http://' + site + '. Bundling...\n');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -452,7 +452,7 @@ var bundleAndDeploy = function (options) {
   var deployedAt = require('url').parse(result.payload.url);
   var hostname = deployedAt.hostname;
 
-  Console.stdout.write('Now serving at ' + hostname + '\n');
+  Console.stdout.write('Now serving at http://' + hostname + '\n');
   files.rm_recursive(buildDir);
 
   if (! hostname.match(/meteor\.com$/)) {

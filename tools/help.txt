@@ -196,6 +196,17 @@ After adding a mobile platform, you can use 'meteor run <mobile-platform>'
 to run on a mobile device or emulator. 'meteor build' will always build
 the project for every added platform.
 
+>>> install-sdk
+Installs SDKs for a platform.
+Usage: meteor install-sdk <platform>
+
+Installs the SDK for a platform; will also verify that the platform
+requirements are met.
+
+Available platforms:
+  android
+  ios (on OS X only)
+
 >>> remove-platform
 Remove a platform from this project.
 Usage: meteor remove-platform <platform> [platform..]
@@ -422,14 +433,19 @@ Options:
 
 >>> self-test
 Run tests of the 'meteor' tool.
-Usage: meteor self-test [pattern] [--changed] [--slow]
-                        [--force-online] [--history n]
+Usage: meteor self-test [pattern] [--list] [--file pattern] [--changed]
+                        [--slow] [--force-online] [--history n]
                         [--browserstack]
 
 Runs internal tests. Exits with status 0 on success.
 
 If 'pattern' is provided, it should be a regular expression. Only
 tests that match the regular expression will be run.
+
+Use --list to list the tests that would be run according to the other
+options, without running them.
+
+Pass --file to run only tests in files that match the regular expression.
 
 Pass --changed to run only tests that have changed since they last
 passed. This uses a really rough heuristic: A test has changed iff
@@ -727,3 +743,27 @@ Options:
   --add         add a member to the organization
   --remove      remove a member from the organization
   --list        list members of the organization (the default)
+
+>>> admin set-latest-readme
+Set the readme on the latest version of a core meteor package.
+Usage: meteor admin set-latest-core-readme name --commit commit
+       meteor admin set-latest-core-readme name --tag tag
+
+Set the readme field on the latest published version of a core package to the readme at
+a given git commit, or the readme at a given git tag.
+
+>>> admin get-machine
+Open an ssh shell to a machine in the meteor build farm.
+Usage: meteor admin get-machine <arch> [--json] [--verbose] [--length min]
+
+Asks the meteor build farm for a build server and opens a secure shell to it.
+Reservations are capped at 15 minutes at a time, and 60 minutes per week.
+Default reservation length is 5 minutes.
+
+Pass in the --json option to get a json of authentication information and
+open the shell manually.
+
+Options:
+  --json     return information as json instead of opening a shell
+  --length   specify the length of the reservation
+  --verbose  print all output from commands

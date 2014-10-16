@@ -8,6 +8,7 @@ var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
+var authClient = require('./auth-client.js');
 var config = require('./config.js');
 var release = require('./release.js');
 var Future = require('fibers/future');
@@ -31,7 +32,13 @@ var Console = require('./console.js').Console;
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
-var DEFAULT_PORT = 3000;
+var DEFAULT_PORT = '3000';
+
+// Valid architectures that Meteor officially supports.
+var VALID_ARCHITECTURES = {
+  "os.osx.x86_64" : true,
+  "os.linux.x86_64": true,
+  "os.linux.x86_32" : true };
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -135,7 +142,7 @@ var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: '' + DEFAULT_PORT },
+    port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
@@ -175,6 +182,7 @@ function doRunCommand (options) {
   // seems to fix it in a clear and understandable fashion.)
   var messages = buildmessage.capture(function () {
     project.getVersions();  // #StructuredProjectInitialization
+    project.setDebug(!options.production);
   });
   if (messages.hasMessages()) {
     Console.stderr.write(messages.formatMessages());
@@ -597,9 +605,7 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
-    verbose: { type: Boolean, short: "v" },
-    // Undocumented
-    'for-deploy': { type: Boolean }
+    verbose: { type: Boolean, short: "v" }
   }
 };
 
@@ -608,12 +614,15 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
     return buildCommand(options);
 });
 
-// Deprecated -- identical functionality to 'build'
+// Deprecated -- identical functionality to 'build' with one exception: it
+// doesn't output a directory with all builds but rather only one tarball with
+// server/client programs.
+// XXX COMPAT WITH 0.9.1.1
 main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
     function (options) {
       Console.stdout.write("WARNING: 'bundle' has been deprecated. " +
                            "Use 'build' instead.\n");
-      return buildCommand(options);
+      return buildCommand(_.extend(options, { _serverOnly: true }));
 });
 
 var buildCommand = function (options) {
@@ -628,13 +637,11 @@ var buildCommand = function (options) {
   // Error handling for options.architecture. We must pass in only one of three
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
-  var VALID_ARCHITECTURES =
-  ["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"];
   if (options.architecture &&
-      _.indexOf(VALID_ARCHITECTURES, options.architecture) === -1) {
+      !VALID_ARCHITECTURES[options.architecture]) {
     Console.stderr.write("Invalid architecture: " + options.architecture + "\n");
     Console.stderr.write(
-      "Please use one of the following: " + VALID_ARCHITECTURES + "\n");
+      "Please use one of the following: " + _.keys(VALID_ARCHITECTURES) + "\n");
     return 1;
   }
 
@@ -646,8 +653,7 @@ var buildCommand = function (options) {
   var mobilePlatforms = project.getCordovaPlatforms();
   var appName = path.basename(options.appDir);
 
-  if (! _.isEmpty(mobilePlatforms)) {
-
+  if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
     // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
     var mobileServer = options.server || options["mobile-port"];
 
@@ -685,11 +691,18 @@ var buildCommand = function (options) {
 
   var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
-  var bundlePath = options['directory'] ?
-      path.join(outputPath, 'bundle') : path.join(buildDir, 'bundle');
 
+  var bundlePath = options['directory'] ?
+      (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
+      path.join(buildDir, 'bundle');
+
+  // Creating the package loader with which to bundle our app here, probably
+  // calculating the dependencies.
   var loader;
   var messages = buildmessage.capture(function () {
+    // By default, options.debug will be false, which means that we will bundle
+    // for production.
+    project.setDebug(options.debug);
     loader = project.getPackageLoader();
   });
   if (messages.hasMessages()) {
@@ -727,27 +740,62 @@ var buildCommand = function (options) {
     return 1;
   }
 
-  files.mkdir_p(outputPath);
-  if (!options['directory']) {
+  if (! options._serverOnly)
+    files.mkdir_p(outputPath);
+
+  if (! options['directory']) {
     try {
-      var outputTar = path.join(outputPath, appName + '.tar.gz');
+      var outputTar = options._serverOnly ? outputPath :
+        path.join(outputPath, appName + '.tar.gz');
+
       files.createTarball(path.join(buildDir, 'bundle'), outputTar);
     } catch (err) {
-      console.log(JSON.stringify(err));
-      Console.stderr.write("Couldn't create tarball\n");
+      Console.stderr.write("Errors during tarball creation:\n");
+      Console.stderr.write(err.message);
+      files.rm_recursive(buildDir);
+      return 1;
     }
   }
 
   // Copy over the Cordova builds AFTER we bundle so that they are not included
   // in the main bundle.
-  _.each(mobilePlatforms, function (platformName) {
+  !options._serverOnly && _.each(mobilePlatforms, function (platformName) {
     var buildPath = path.join(localPath, 'cordova-build',
                               'platforms', platformName);
     var platformPath = path.join(outputPath, platformName);
-    files.cp_r(buildPath, platformPath);
+
+    if (platformName === 'ios') {
+      files.cp_r(buildPath, path.join(platformPath, 'project'));
+      fs.writeFileSync(
+        path.join(platformPath, 'README'),
+        "This is an auto-generated XCode project for your iOS application.\n\n" +
+        "Instructions for publishing your iOS app to App Store can be found at:\n" +
+          "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
+        "utf8");
+    } else if (platformName === 'android') {
+      files.cp_r(buildPath, path.join(platformPath, 'project'));
+      var apkPath = findApkPath(path.join(buildPath, 'ant-build'));
+      files.copyFile(apkPath, path.join(platformPath, 'unaligned.apk'));
+      fs.writeFileSync(
+        path.join(platformPath, 'README'),
+        "This is an auto-generated Ant project for your Android application.\n\n" +
+        "Instructions for publishing your Android app to Play Store can be found at:\n" +
+          "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
+        "utf8");
+    }
   });
 
   files.rm_recursive(buildDir);
+};
+
+var findApkPath = function (dirPath) {
+  var apkPath = _.find(fs.readdirSync(dirPath), function (filePath) {
+    return path.extname(filePath) === '.apk';
+  });
+
+  if (! apkPath)
+    throw new Error('The APK file for the Android build was not found.');
+  return path.join(dirPath, apkPath);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -917,13 +965,18 @@ main.registerCommand({
   // issues are concurrency-related, or possibly some weird order-of-execution
   // of interaction that we are failing to understand. This seems to fix it in a
   // clear and understandable fashion.)
-  var messages = buildmessage.capture({ title: "Resolving versions" }, function () {
+  var messages = buildmessage.capture({ title: "Resolving versions" },
+    function () {
     project.getVersions();  // #StructuredProjectInitialization
   });
   if (messages.hasMessages()) {
     Console.stderr.write(messages.formatMessages());
     return 1;
   }
+  // Set the debug bit if we are bundling in debug mode. By default,
+  // options.debug will be false, which means that we will bundle for
+  // production.
+  project.setDebug(options.debug);
 
   if (options.password) {
     if (useGalaxy) {
@@ -1224,7 +1277,9 @@ main.registerCommand({
   // main project to the test directory.
   project.setRootDir(testRunnerAppDir);
   project.setMuted(true); // Mute output where applicable
+  // Hardset the proper release.
   project.writeMeteorReleaseVersion(release.current.name || 'none');
+  project.setDebug(!options.production);
   project.forceEditPackages(
     [options['driver-package'] || 'test-in-browser'],
     'add');
@@ -1708,7 +1763,9 @@ main.registerCommand({
     'force-online': { type: Boolean },
     slow: { type: Boolean },
     browserstack: { type: Boolean },
-    history: { type: Number }
+    history: { type: Number },
+    list: { type: Boolean },
+    file: { type: String }
   },
   hidden: true
 }, function (options) {
@@ -1725,16 +1782,43 @@ main.registerCommand({
     }
   }
 
-  var testRegexp = undefined;
-  if (options.args.length) {
+  var compileRegexp = function (str) {
     try {
-      testRegexp = new RegExp(options.args[0]);
+      return new RegExp(str);
     } catch (e) {
       if (!(e instanceof SyntaxError))
         throw e;
-      Console.stderr.write("Bad regular expression: " + options.args[0] + "\n");
+      Console.stderr.write("Bad regular expression: " + str + "\n");
+      return null;
+    }
+  };
+
+  var testRegexp = undefined;
+  if (options.args.length) {
+    testRegexp = compileRegexp(options.args[0]);
+    if (! testRegexp) {
       return 1;
     }
+  }
+
+  var fileRegexp = undefined;
+  if (options.file) {
+    fileRegexp = compileRegexp(options.file);
+    if (! fileRegexp) {
+      return 1;
+    }
+  }
+
+  if (options.list) {
+    selftest.listTests({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp
+    });
+
+    return 0;
   }
 
   var clients = {
@@ -1742,12 +1826,15 @@ main.registerCommand({
   };
 
   return selftest.runTests({
+    // filtering options
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
+    testRegexp: testRegexp,
+    fileRegexp: fileRegexp,
+    // other options
     historyLines: options.history,
-    clients: clients,
-    testRegexp: testRegexp
+    clients: clients
   });
 
 });
@@ -1770,6 +1857,133 @@ main.registerCommand({
 
   return deploy.listSites();
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// admin get-machine
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'admin get-machine',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    json: { type: Boolean, required: false },
+    verbose: { type: Boolean, short: "v", required: false },
+    // By default, we give you a machine for 5 minutes. You can request up to
+    // 15. (MDG can reserve machines for longer than that.)
+    length: { type: Number, required: false }
+  }
+}, function (options) {
+
+  // Check that we are asking for a valid architecture.
+  var arch = options.args[0];
+  if (!VALID_ARCHITECTURES[arch]){
+    Console.info("Invalid architecture: " + arch);
+    Console.info("The following are valid Meteor architectures:");
+    _.each(_.keys(VALID_ARCHITECTURES), function (va) {
+      Console.info("  " + va);
+    });
+    return 1;
+  }
+
+  // Set the length. We will check validity on the server.
+  var length = options.length || 5;
+
+  // In verbose mode, we let you know what is going on.
+  var maybeLog = function (string) {
+    if (options.verbose) {
+      Console.info(string);
+    }
+  };
+
+  try {
+    maybeLog("Logging into the build farm server ...");
+    var conn = authClient.loggedInConnection(
+      config.getBuildFarmUrl(),
+      config.getBuildFarmDomain(),
+      "build-farm");
+   } catch (err) {
+    authClient.handlerConnectionError(err, "build farm");
+    return 1;
+  }
+
+  try {
+    maybeLog("Reserving machine ...");
+
+    // The server returns to us an object with the following keys:
+    // username & sshKey : use this to log in.
+    // host: what you login into
+    // port: port you should use
+    // hostKey: RSA key to compare for safety.
+    var ret = conn.call('createBuildServer', arch, length);
+  } catch (err) {
+    authClient.handlerConnectionError(err, "build farm");
+    return 1;
+  }
+  conn.close();
+
+  var child_process = require('child_process');
+
+  // Record the SSH Key in a temporary file on disk and give it the permissions
+  // that ssh-agent requires it to have.
+  var idpath = "/tmp/key-" + utils.randomToken();
+  fs.writeFileSync(idpath, ret.sshKey, 'utf8');
+  child_process.exec("chmod 400 " + idpath,
+    function (error, stdout, stderr) {
+      maybeLog(stdout);
+      if (error !== null) {
+        maybeLog("ERROR from chmod: " + stderr);
+        Console.error('cannot set permissions on SSH key: ' + error);
+        process.exit(1);
+      }
+    });
+
+  // Possibly, the user asked us to return a JSON of the data and is going to process it
+  // themselves. In that case, let's do that and exit.
+  if (options.json) {
+    var retJson = {
+      'username': ret.username,
+      'host' : ret.host,
+      'port' : ret.port,
+      'key' : idpath,
+      'hostKey' : ret.hostKey
+    };
+    Console.info(JSON.stringify(retJson, null, 2));
+    return 0;
+  }
+
+  // Add the known host key to a custom known hosts file.
+  var hostpath = "/tmp/host-" + utils.randomToken();
+  var addendum = ret.host + " " + ret.hostKey;
+  fs.writeFileSync(hostpath, addendum, 'utf8');
+
+  // Finally, connect to the machine.
+  var login = ret.username + "@" + ret.host;
+  var maybeVerbose = options.verbose ? "-v" : "-q";
+  maybeLog(
+    "Connecting: ssh " + login +
+      " -i " + idpath +
+      " -p " + ret.port +
+      " -oUserKnownHostsFile=" + hostpath +
+      " " + maybeVerbose);
+
+  var future = new Future;
+  var sshCommand = child_process.spawn(
+    "ssh",
+    [login,
+     "-i" + idpath,
+     "-p" + ret.port,
+     "-oUserKnownHostsFile=" + hostpath,
+     maybeVerbose],
+    { stdio: 'inherit' }); // Redirect spawn stdio to process
+
+  sshCommand.on('exit', function (code) {
+    future.return(code);
+  });
+  return future.wait();
+});
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // dummy

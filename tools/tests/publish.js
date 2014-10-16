@@ -45,7 +45,7 @@ selftest.define("publish-and-search",
   // set a github URL in the package
   var packageJsContents = s.read("package.js");
   var newPackageJsContents = packageJsContents.replace(
-      /git: \".*\"/, "git: \"" + githubUrl + "\"");
+      /git: \'.*\'/, "git: \'" + githubUrl + "\'");
   s.write("package.js", newPackageJsContents);
 
   run = s.run("publish");
@@ -270,10 +270,26 @@ selftest.define("list-with-a-new-version",
 });
 
 
+// Test that we only try to upgrade to pre-release versions of
+// packages (eg 0.0.1-rc, 0.0.2-pre, ...) if there is at least one
+// package already on a pre-release verison. That is -- adding a
+// single pre-release version of a package is opting into "try to find
+// use pre-release versions of any package if necessary"
 selftest.define("do-not-update-to-rcs",
     ["slow", "net", "test-package-server", "checkout"],
     function () {
-  var s = new Sandbox;
+
+  // This test needs to run with a stub warehouse, since otherwise we
+  // might find outselves running while a Meteor release is being
+  // prepared, in which case we already have some packages in
+  // pre-release version.
+  var s = new Sandbox({warehouse: {
+    "v1": {recommended: true}
+  }});
+
+  // This makes packages not depend on meteor (specifically, makes our empty
+  // control program not depend on meteor).
+  s.set("NO_METEOR_PACKAGE", "t");
 
   var username = "test";
   var password = "testtest";
@@ -288,7 +304,7 @@ selftest.define("do-not-update-to-rcs",
   // Publish the first version.
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(30);
+    run.waitSecs(120);
     run.expectExit(0);
     run.match("Done");
   });
@@ -400,6 +416,7 @@ selftest.define("package-depends-on-either-version",
   var password = "testtest";
   testUtils.login(s, username, password);
   var packageNameDependent = utils.randomToken();
+  var run;
 
   // First, we publish fullPackageNameDep at 1.0 and publish it..
   var fullPackageNameDep = username + ":" + packageNameDependent;
@@ -439,7 +456,6 @@ selftest.define("package-depends-on-either-version",
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
-  s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add", fullPackageNameDep + "@=1.0.0");
   run.match(fullPackageNameDep);

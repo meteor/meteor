@@ -1,26 +1,126 @@
 ## v.NEXT
 
+## v0.9.4
+
+### New Features
+
+* The new `meteor debug` command and `--debug-port` command line option
+  to `meteor run` allow you to easily use node-inspector to debug your
+  server-side code. Add a `debugger` statement to your code to create a
+  breakpoint.
+
+* Add new a `meteor run --test` command that runs
+  [Velocity](https://github.com/meteor-velocity/velocity) tests in your
+  app .
+
+* Add new callbacks `Accounts.onResetPasswordLink`,
+  `Accounts.onEnrollmentLink`, and `Accounts.onEmailVerificationLink`
+  that make it easier to build custom user interfaces on top of the
+  accounts system. These callbacks should be registered before
+  `Meteor.startup` fires, and will be called if the URL matches a link
+  in an email sent by `Accounts.resetPassword`, etc. See
+  https://docs.meteor.com/#Accounts-onResetPasswordLink.
+
+* A new configuration file for mobile apps,
+  `<APP>/mobile-config.js`. This allows you to set app metadata, icons,
+  splash screens, preferences, and PhoneGap/Cordova plugin settings
+  without needing a `cordova_build_override` directory. See
+  https://docs.meteor.com/#mobileconfigjs.
+
+
+### API Changes
+
 * Rename `{{> UI.dynamic}}` to `{{> Template.dynamic}}`, and likewise
-  with `UI.contentBlock` and `UI.elseBlock`.
+  with `UI.contentBlock` and `UI.elseBlock`. The UI namespace is no
+  longer used anywhere except for backwards compatibility.
+
+* Deprecate the `Template.someTemplate.myHelper = ...` syntax in favor
+  of `Template.someTemplate.helpers(...)`.  Using the older syntax still
+  works, but prints a deprecation warning to the console.
+
+* `Package.registerBuildPlugin` its associated functions have been added
+  to the public API, cleaned up, and documented. The new function is
+  identical to the earlier _transitional_registerBuildPlugin except for
+  minor backwards- compatible API changes. See
+  https://docs.meteor.com/#Package-registerBuildPlugin
+
+* Rename the `showdown` package to `markdown`.
 
 * Deprecate the `amplify`, `backbone`, `bootstrap`, and `d3` integration
   packages in favor of community alternatives.  These packages will no
   longer be maintained by MDG.
 
-* Rename the `showdown` package to `markdown`.
 
-* Deprecate the `Template.someTemplate.myHelper = ...` syntax in favor
-  of `Template.someTemplate.helpers(...)`.  Using the older syntax still
-  works, but it prints a deprecation warning to the console.
+### Tool Changes
+
+* Improved output from `meteor build` to make it easier to publish
+  mobile apps to the App Store and Play Store. See the wiki pages for
+  instructions on how to publish your
+  [iOS](https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store)
+  and
+  [Android](https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store)
+  apps.
+
+* Packages can now be marked as debug-mode only by adding `debugOnly:
+  true` to `Package.describe`. Debug-only packages are not included in
+  the app when it is bundled for production (`meteor build` or `meteor
+  run --production`). This allows package authors to build packages
+  specifically for testing and debugging without increasing the size of
+  the resulting app bundle or causing apps to ship with debug
+  functionality built in.
+
+* Rework the process for installing mobile development SDKs. There is
+  now a `meteor install-sdk` command that automatically install what
+  software it can and points to documentation for the parts that
+  require manual installation.
+
+* The `.meteor/cordova-platforms` file has been renamed to
+  `.meteor/platforms` and now includes the default `server` and
+  `browser` platforms. The default platforms can't currently be removed
+  from a project, though this will be possible in the future. The old
+  file will be automatically migrated to the new one when the app is run
+  with Meteor 0.9.4 or above.
+
+* The `unipackage.json` file inside downloaded packages has been renamed
+  to `isopack.json` and has an improved forwards-compatible format. To
+  maintain backwards compatibility with previous releases, packages will
+  be built with both files.
+
+* The local package metadata cache now uses SQLite, which is much faster
+  than the previous implementation. This improves `meteor` command line
+  tool startup time.
+
+* The constraint solver used by the client to find compatible versions
+  of packages is now much faster.
+
+* The `--port` option to `meteor run` now requires a numeric port
+  (e.g. `meteor run --port example.com` is no longer valid).
+
+* The `--mobile-port` option `meteor run` has been reworked. The option
+  is now `--mobile-server` in `meteor run` and `--server` in `meteor
+  build`. `--server` is required for `meteor build` in apps with mobile
+  platforms installed. `--mobile-server` defaults to an automatically
+  detected IP address on port 3000, and `--server` requires a hostname
+  but defaults to port 80 if a port is not specified.
+
+* Operations that take longer than a few seconds (e.g. downloading
+  packages, installing the Android SDK, etc) now show a progress bar.
+
+
+### Bug Fixes
 
 * Fix behavior of ROOT_URL with path ending in `/`.
 
 * Fix source maps when using a ROOT_URL with a path. #2627
 
-* --port now requires a port (e.g. `meteor run --port example.com` is
-    not valid). XXX --mobile-port deprecated in favor of --mobile-server
-    option for 'meteor run' and '--server' for 'meteor build'. --server
-    is required for meteor build. describe defaults for --mobile-server.
+* Change the mechanism that the Meteor tool uses to clean up app server
+  processes. The new mechanism is more resilient to slow app bundles and
+  other CPU-intensive tasks. #2536, #2588.
+
+
+Patches by Github users cryptoquick, Gaelan, jperl, meonkeys, mitar,
+mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen,
+rissem, rosh93, rzymek, and timoabend
 
 
 ## v0.9.3.1
@@ -29,8 +129,6 @@
 
 * Allow more than one dash in package versions. #2715
 
-* Fix `meteor update` on an app built from a checkout version
-  of Meteor.
 
 ## v0.9.3
 

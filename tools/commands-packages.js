@@ -20,6 +20,7 @@ var tropohouse = require('./tropohouse.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
+var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
@@ -206,7 +207,8 @@ main.registerCommand({
         return; // already have errors, so skip the build
 
       var deps =
-            compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+          compiler.determineBuildTimeDependencies(packageSource)
+            .packageDependencies;
       tropohouse.default.downloadMissingPackages(deps);
 
       compileResult = compiler.compile(packageSource, { officialBuild: true });
@@ -252,6 +254,10 @@ main.registerCommand({
   };
 
   // We have initialized everything, so perform the publish oepration.
+  var allArchs = compileResult.isopack.buildArchitectures().split('+');
+  var binary = !!(_.any(allArchs, function (arch) {
+    return arch.match(/^os\./);
+  }));
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
@@ -260,7 +266,8 @@ main.registerCommand({
       ec = packageClient.publishPackage(
         packageSource, compileResult, conn, {
           new: options.create,
-          existingVersion: options['existing-version']
+          existingVersion: options['existing-version'],
+          doNotPublishBuild: binary && !options['existing-version']
         });
     });
   } catch (e) {
@@ -282,14 +289,26 @@ main.registerCommand({
     return ec;
 
   // Warn the user if their package is not good for all architectures.
-  var allArchs = compileResult.isopack.buildArchitectures().split('+');
-  if (_.any(allArchs, function (arch) {
-    return arch.match(/^os\./);
-  })) {
+  if (binary && options['existing-version']) {
+    // This is an undocumented command that you are not supposed to run! We
+    // assume that you know what you are doing, if you ran it, and are OK with
+    // overrwriting normal compatibilities.
+    Console.warn("\nWARNING: Your package contains binary code.");
+  } else if (binary) {
+    Console.warn("\nWARNING: Your package contains binary code!");
+    // Now, a gentle message.
     Console.warn(
-      "\nWARNING: Your package contains binary code and is only compatible with " +
-        archinfo.host() + " architecture.\n" +
-        "Please use publish-for-arch to publish new builds of the package.\n");
+"It is not safe to build binary packages on non-standard machines. See more here: <url>");
+    Console.warn(
+"For now, you can use 'meteor admin get-machine <architecture>' to open a secure shell to a " +
+"preconfigured meteor build machine.");
+    Console.warn("To request built machines from the meteor build farm, please run:");
+    _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
+      Console.info("meteor admin get-machine", a);
+    });
+    Console.warn(
+"One you are logged into a build machine, you can run 'meteor publish-for-arch",
+packageSource.name + "@" + packageSource.version + "' to publish a valid build.");
   }
 
   // Refresh, so that we actually learn about the thing we just published.
@@ -766,8 +785,6 @@ main.registerCommand({
                     path.join(packageSource.sourceRoot, '.build.' + item));
                 }
 
-                Console.info(".");
-
                 // Now compile it! Once again, everything should compile, and if
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
@@ -782,7 +799,6 @@ main.registerCommand({
                   canBuild = false;
                   return;
                 };
-                Console.info(".");
 
                 // Let's get the server version that this local package is
                 // overwriting. If such a version exists, we will need to make sure
@@ -792,7 +808,6 @@ main.registerCommand({
 
                 // Include this package in our release.
                 myPackages[item] = packageSource.version;
-                Console.info(".");
 
                 // If there is no old version, then we need to publish this package.
                 if (!oldVersion) {
@@ -852,6 +867,7 @@ main.registerCommand({
                   }
 
                   if (somethingChanged) {
+                    item = item + "@" + compileResult.isopack.version;
                     // The build ID of the old server record is not the same as
                     // the buildID that we have on disk. This means something
                     // has changed -- maybe our source files, or a buildId of
@@ -862,9 +878,9 @@ main.registerCommand({
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item
                                        + ". Please upgrade version number.");
-                    Console.error("NOT OK");
+                    Console.error("  NOT OK");
                   } else {
-                    Console.info("ok");
+                    Console.info("   ok");
                   }
                 }
               });
@@ -879,6 +895,7 @@ main.registerCommand({
 
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.
+    var unfinishedBuilds = {};
     for (var name in toPublish) {  // don't use _.each so we can return
       if (!_.has(toPublish, name))
         continue;
@@ -893,8 +910,15 @@ main.registerCommand({
         messages = buildmessage.capture({
           title: "Publishing package " + name
         }, function () {
+          var allArchs =
+             prebuilt.compileResult.isopack.buildArchitectures().split('+');
+          var binary = !!(_.any(allArchs, function (arch) {
+            return arch.match(/^os\./);
+          }));
+
           var opts = {
-            new: !catalog.official.getPackage(name)
+            new: !catalog.official.getPackage(name),
+            doNotPublishBuild: binary
           };
 
           // If we are creating a new package, dsPS will document this for us,
@@ -906,6 +930,10 @@ main.registerCommand({
             prebuilt.compileResult,
             conn,
             opts);
+
+          if (binary) {
+            unfinishedBuilds[name] = prebuilt.source.version;
+          }
         });
       } catch (e) {
           packageClient.handlePackageServerConnectionError(e);
@@ -987,12 +1015,59 @@ main.registerCommand({
     } else {
       Console.info("Creating git tag " + gitTag);
       files.runGitInCheckout('tag', gitTag);
-      Console.info(
-        "Pushing git tag (this should fail if you are not from MDG)");
-      files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+      var fail = false;
+      try {
+        Console.info(
+          "Pushing git tag (this should fail if you are not from MDG)");
+        files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
                              'refs/tags/' + gitTag);
+      } catch (err) {
+        Console.error(
+          "Failed to push git tag. Please push git tag manually!");
+        Console.error(
+          "If you are publishing a non-prerelease version, then the readme will show up " +
+          "in atmosphere. To make sure that happens, after pushing the git tag, please " +
+          "run the following:");
+        _.each(toPublish, function (pack, name) {
+          Console.info("meteor admin set-latest-readme " + name + " --tag " + gitTag);
+        });
+        Console.error("If you are publishing an experimental version, don't worry about it.");
+        fail = true;
+      }
+      if (!fail) {
+        _.each(toPublish, function (pack, name) {
+          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag +
+                "/packages/" +
+                name + "/README.md";
+          var version = pack.compileResult.isopack.version;
+          packageClient.callPackageServer(
+            conn, '_changeReadmeURL', name,  version, url);
+          Console.info("Setting the readme of", name + "@" + version, "to", url);
+        });
+      }
     }
   }
+
+  // We need to warn the user that we didn't publish some of their
+  // packages. Unlike publish, this is advanced functionality, so the user
+  // should be familiar with the concept.
+  if (!_.isEmpty(unfinishedBuilds)) {
+    Console.warning(
+      "WARNING: Some packages contain binary dependencies.");
+    Console.warning("Builds have not been published for the following packages:");
+    _.each(unfinishedBuilds, function (version, name) {
+      Console.warning(name + "@" + version);
+    });
+    // Note: we don't actually enforce the proper build machine thing. You can't
+    // use publish-for-arch for meteor-tool, for example, you need to use
+    // publish --existing-version and to do it from checkout. Setting that up on
+    // a build machine for a one-off experimental release could be a pain. In
+    // that case, I guess, you can just run publish --existing-version:
+    // presumably you don't care about compatibility etc. If it is an official
+    // release, you ought to use a build machine though.
+    Console.warning(
+      "Please publish the builds separately, from a proper build machine.");
+  };
 
   return 0;
 });
@@ -1179,7 +1254,9 @@ main.registerCommand({
   options: {
     maintainer: {type: String, required: false },
     "show-old": {type: Boolean, required: false },
-    "show-rcs": {type: Boolean, required: false}
+    "show-rcs": {type: Boolean, required: false},
+    // Undocumented debug-only option for Velocity.
+    "debug-only": {type: Boolean, required: false}
   }
 }, function (options) {
 
@@ -1194,8 +1271,11 @@ main.registerCommand({
   // refreshing" from "can't connect to catalog"
   refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
-  var allPackages = catalog.official.getAllPackageNames();
-  var allReleases = catalog.official.getAllReleaseTracks();
+  var allPackages, allReleases;
+  doOrDie(function () {
+    allPackages = catalog.official.getAllPackageNames();
+    allReleases = catalog.official.getAllReleaseTracks();
+  });
   var matchingPackages = [];
   var matchingReleases = [];
 
@@ -1213,7 +1293,7 @@ main.registerCommand({
   var filterBroken = function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
-    if (!match || isRelease || options["show-old"])
+    if (!match || isRelease)
       return match;
     var vr;
     doOrDie(function () {
@@ -1223,7 +1303,20 @@ main.registerCommand({
         vr = catalog.official.getLatestVersion(name);
       }
     });
-    return vr && !vr.unmigrated;
+    if (!vr) {
+      return false;
+    }
+    // If we did NOT ask for unmigrated packages and this package is unmigrated,
+    // we don't care.
+    if (!options["show-old"] && vr.unmigrated){
+      return false;
+    }
+    // If we asked for debug-only packages and this package is NOT debug only,
+    // we don't care.
+    if (options["debug-only"] && !vr.debugOnly) {
+      return false;
+    }
+    return true;
   };
 
   if (options.maintainer) {
@@ -1580,6 +1673,13 @@ var maybeUpdateRelease = function (options) {
       return catalog.official.getReleaseVersion(appTrack, appVersion);
     });
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
+
+    // If on a 'none' app, try to update it to the head of the official release
+    // track METEOR@.
+    if (appTrack === 'none') {
+      appTrack = 'METEOR';
+    }
+
     releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
       appTrack, appOrderKey);
     if (!releaseVersionsToTry.length) {
@@ -1944,7 +2044,7 @@ main.registerCommand({
     });
 
     // If the version was specified, check that the version exists.
-    _.each(constraint.constraint, function (constr) {
+    _.each(constraint.constraints, function (constr) {
       if (constr.version !== null) {
         var versionInfo = doOrDie({ title: 'Fetching packages' }, function () {
           return catalog.complete.getVersion(constraint.name, constr.version);
@@ -2109,10 +2209,15 @@ main.registerCommand({
   var cordovaPlugins = filteredPackages.plugins;
 
   // Update the plugins list
-  project.removeCordovaPlugins(cordovaPlugins);
+  var removedPlugins = project.removeCordovaPlugins(cordovaPlugins);
+  var notRemoved = _.difference(cordovaPlugins, removedPlugins);
 
-  _.each(cordovaPlugins, function (plugin) {
+  _.each(removedPlugins, function (plugin) {
     Console.info("removed cordova plugin " + plugin);
+  });
+
+  _.each(notRemoved, function (plugin) {
+    Console.error(plugin + " is not in this project.");
   });
 
   var args = filteredPackages.rest;
@@ -2373,9 +2478,12 @@ main.registerCommand({
 
   // Get a copy of the data.json.
   var dataTmpdir = files.mkdtemp();
-  var tmpDataJson = path.join(dataTmpdir, 'data.db');
+  var tmpDataFile = path.join(dataTmpdir, 'packages.data.db');
 
-  var tmpCatalog = new catalog.Remote({packageStorage : tmpDataJson});
+  var tmpCatalog = new catalogRemote.RemoteCatalog();
+  tmpCatalog.initialize({
+    packageStorage: tmpDataFile
+  });
   var savedData = packageClient.updateServerPackageData(tmpCatalog, null);
   if (!savedData) {
     // will have already printed an error
@@ -2386,16 +2494,12 @@ main.registerCommand({
   // so we should ensure that once it is downloaded, it knows it is recommended
   // rather than having a little identity crisis and thinking that a past
   // release is the latest recommended until it manages to sync.
-  var dataFromDisk = JSON.parse(fs.readFileSync(tmpDataJson));
-  var releaseInData = _.findWhere(dataFromDisk.collections.releaseVersions, {
-    track: parsed.package, version: parsed.constraint
-  });
-  if (!releaseInData) {
-    Console.error("Can't find release in data!");
-    return 3;
+  tmpCatalog.forceRecommendRelease(parsed.package, parsed.constraint);
+  tmpCatalog.closePermanently();
+  if (fs.existsSync(tmpDataFile + '-wal')) {
+    throw Error("Write-ahead log still exists for " + tmpDataFile
+                + " so the data file will be incomplete!");
   }
-  releaseInData.recommended = true;
-  files.writeFileAtomically(tmpDataJson, JSON.stringify(dataFromDisk, null, 2));
 
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
@@ -2433,8 +2537,11 @@ main.registerCommand({
       return 1;
     }
 
-    // Install the data.json file we synced earlier.
-    files.copyFile(tmpDataJson, config.getPackageStorage(tmpTropo));
+    // Install the sqlite DB file we synced earlier. We have previously
+    // confirmed that the "-wal" file (which could contain extra log entries
+    // that haven't been flushed to the main file yet) doesn't exist, so we
+    // don't have to copy it.
+    files.copyFile(tmpDataFile, config.getPackageStorage(tmpTropo));
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
@@ -2708,6 +2815,59 @@ main.registerCommand({
         name, version, !options.success);
       process.stdout.write(" done!\n");
     });
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+  conn.close();
+  refreshOfficialCatalogOrDie();
+
+  return 0;
+});
+
+
+main.registerCommand({
+  name: 'admin set-latest-readme',
+  minArgs: 1,
+  maxArgs: 1,
+  options: {
+    "commit" : {type: String, required: false},
+    "tag" : {type: String, required: false}
+  },
+  hidden: true
+}, function (options) {
+
+  if (options.commit && options.tag)
+    throw new main.ShowUsage;
+  if (!options.commit && !options.tag)
+    throw new main.ShowUsage;
+
+  // We are going to start with getting the latest version of the package.
+  var name = options.args[0];
+  var version = doOrDie(function () {
+    return catalog.official.getLatestMainlineVersion(name).version;
+  });
+
+  var coords = options.tag || options.commit;
+  var url = "https://raw.githubusercontent.com/meteor/meteor/" +
+      coords + "/packages/" + name + "/README.md";
+
+  try {
+    var conn = packageClient.loggedInPackagesConnection();
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
+    return 1;
+  }
+
+  try {
+      Console.info(
+        "Setting README of "
+          + name + "@" + version + " to " + url);
+      packageClient.callPackageServer(
+        conn,
+        '_changeReadmeURL',
+        name, version, url);
+      Console.info(" done!\n");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
