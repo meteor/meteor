@@ -90,12 +90,13 @@ var refreshOfficialCatalogOrDie = function (options) {
 // bug in the build tool... otherwise, packages should be rebuilt whenever
 // necessary!
 main.registerCommand({
-  name: '--get-ready'
+  name: '--get-ready',
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   // It is not strictly needed, but it is thematically a good idea to refresh
   // the official catalog when we call get-ready, since it is an
   // internet-requiring action.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   var loadPackages = function (packagesToLoad, loader) {
     buildmessage.assertInCapture();
@@ -164,7 +165,8 @@ main.registerCommand({
     // accidentally put their personal packages in the top level namespace.
     'top-level': { type: Boolean }
   },
-  requiresPackage: true
+  requiresPackage: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
@@ -176,7 +178,7 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -321,7 +323,8 @@ packageSource.name + "@" + packageSource.version + "' to publish a valid build."
 main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   // argument processing
   var all = options.args[0].split('@');
@@ -334,7 +337,7 @@ main.registerCommand({
   var versionString = all[1];
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   var packageInfo = doOrDie(function () {
     return catalog.complete.getPackage(name);
@@ -565,11 +568,12 @@ main.registerCommand({
   options: {
     'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
-  Console.info("Resyncing with package server...");
-  refreshOfficialCatalogOrDie();
+  //Console.info("Resyncing with package server...");
+  //refreshOfficialCatalogOrDie();
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -1085,11 +1089,12 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     "show-old": {type: Boolean, required: false }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
 }, function (options) {
 
   // We should refresh the catalog in case there are new versions.
-  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
+  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
@@ -1241,9 +1246,10 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'refresh',
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 });
 
 main.registerCommand({
@@ -1257,7 +1263,8 @@ main.registerCommand({
     "show-rcs": {type: Boolean, required: false},
     // Undocumented debug-only option for Velocity.
     "debug-only": {type: Boolean, required: false}
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
 }, function (options) {
 
   // Show all means don't do any filtering at all. So, don't do any filtering
@@ -1269,7 +1276,7 @@ main.registerCommand({
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
   // refreshing" from "can't connect to catalog"
-  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
+  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   var allPackages, allReleases;
   doOrDie(function () {
@@ -1408,7 +1415,8 @@ main.registerCommand({
   name: 'list',
   requiresApp: true,
   options: {
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   var items = [];
 
@@ -1812,12 +1820,13 @@ main.registerCommand({
   // update' is how you fix apps that don't have a release.
   requiresRelease: false,
   minArgs: 0,
-  maxArgs: Infinity
+  maxArgs: Infinity,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
   // XXX should be able to update even without a refresh, esp to a specific
   //     server
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   // If you are specifying packaging individually, you probably don't want to
   // update the release.
@@ -1955,7 +1964,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // Special case on reserved package namespaces, such as 'cordova'
@@ -2017,7 +2027,7 @@ main.registerCommand({
 
   // Refresh the catalog, cacheing the remote package data on the server.
   // XXX ensure this works while offline
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -2202,7 +2212,8 @@ main.registerCommand({
   name: 'remove',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   // Special case on reserved package namespaces, such as 'cordova'
   var filteredPackages = cordova.filterPackages(options.args);
@@ -2285,7 +2296,7 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 // For admin commands, at least in preview0.90, we can be kind of lazy and not bother
-// to pre-check if the command will suceed client-side. That's because we both
+// to pre-check if the command will succeed client-side. That's because we both
 // don't expect them to be called often and don't expect them to be called by
 // inexperienced users, so waiting to get rejected by the server is OK.
 
@@ -2297,11 +2308,13 @@ main.registerCommand({
     add: { type: String, short: "a" },
     remove: { type: String, short: "r" },
     list: { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
+
   var name = options.args[0];
 
   // Yay, checking that options are correct.
@@ -2619,11 +2632,12 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     unrecommend: { type: Boolean, short: "u" }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
   var release = options.args[0].split('@');
   var name = release[0];
   var version = release[1];
@@ -2675,11 +2689,12 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin set-earliest-compatible-version',
   minArgs: 2,
-  maxArgs: 2
+  maxArgs: 2,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
   var package = options.args[0].split('@');
   var name = package[0];
   var version = package[1];
@@ -2727,11 +2742,12 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin change-homepage',
   minArgs: 2,
-  maxArgs: 2
+  maxArgs: 2,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
   var name = options.args[0];
   var url = options.args[1];
 

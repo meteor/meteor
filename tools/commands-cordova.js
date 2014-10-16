@@ -14,6 +14,7 @@ var tropohouse = require('./tropohouse.js');
 var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
 var processes = require('./processes.js');
+var catalog = require('./catalog.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -2315,7 +2316,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -2380,7 +2382,8 @@ main.registerCommand({
   name: "remove-platform",
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var platforms = options.args;
 
@@ -2414,7 +2417,9 @@ main.registerCommand({
 
 main.registerCommand({
   name: "list-platforms",
-  requiresApp: true
+  requiresApp: true,
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function () {
   var platforms = project.getPlatforms();
 
@@ -2427,7 +2432,8 @@ main.registerCommand({
     verbose: { type: Boolean, short: "v" }
   },
   minArgs: 0,
-  maxArgs: Infinity
+  maxArgs: Infinity,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -2494,7 +2500,8 @@ main.registerCommand({
     verbose: { type: Boolean, short: "v" }
   },
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   Console.setVerbose(options.verbose);
 

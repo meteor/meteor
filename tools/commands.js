@@ -164,7 +164,8 @@ var runCommandOptions = {
     // bundled assets only. Encapsulates the behavior of once (does not rerun)
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean}
-  }
+  },
+  catalogRefresh: new catalog.Refresh.SpecialEvents()
 };
 
 main.registerCommand(_.extend(
@@ -369,7 +370,8 @@ main.registerCommand({
     example: { type: String },
     package: { type: Boolean }
   },
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // Creating a package is much easier than creating an app, so if that's what
@@ -606,7 +608,8 @@ var buildCommands = {
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
     verbose: { type: Boolean, short: "v" }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
@@ -810,7 +813,8 @@ main.registerCommand({
   },
   requiresApp: function (options) {
     return options.args.length === 0;
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var mongoUrl;
   var usedMeteorAccount = false;
@@ -878,7 +882,8 @@ main.registerCommand({
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
   maxArgs: 1,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (options.args.length !== 0) {
     Console.stderr.write(
@@ -941,7 +946,8 @@ main.registerCommand({
   },
   requiresApp: function (options) {
     return options.delete || options.star ? false : true;
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
@@ -1072,7 +1078,8 @@ main.registerCommand({
   options: {
     // XXX once Galaxy is released, document this
     stream: { type: Boolean, short: 'f' }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
 
@@ -1103,7 +1110,8 @@ main.registerCommand({
     add: { type: String, short: "a" },
     remove: { type: String, short: "r" },
     list: { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   if (options.add && options.remove) {
@@ -1151,7 +1159,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'claim',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
@@ -1219,7 +1228,8 @@ main.registerCommand({
     'ios-device': { type: Boolean },
     android: { type: Boolean },
     'android-device': { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.SpecialEvents()
 }, function (options) {
   try {
     var parsedUrl = utils.parseUrl(options.port);
@@ -1583,7 +1593,8 @@ main.registerCommand({
     // Undocumented: get credentials on a specific Galaxy. Do we still
     // need this?
     galaxy: { type: String }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return auth.loginCommand(_.extend({
     overwriteExistingToken: true
@@ -1596,7 +1607,8 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'logout'
+  name: 'logout',
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return auth.logoutCommand(options);
 });
@@ -1607,7 +1619,8 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'whoami'
+  name: 'whoami',
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return auth.whoAmICommand(options);
 });
@@ -1846,7 +1859,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'list-sites',
   minArgs: 0,
-  maxArgs: 0
+  maxArgs: 0,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   auth.pollForRegistrationCompletion();
   if (! auth.isLoggedIn()) {
