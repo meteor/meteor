@@ -523,7 +523,6 @@ var RemoteCatalog = function () {
   self.offline = null;
 
   self.db = null;
-  self._currentRefreshIsLoud = false;
 };
 
 _.extend(RemoteCatalog.prototype, {
@@ -755,10 +754,6 @@ _.extend(RemoteCatalog.prototype, {
           return;
         }
       }
-    }
-
-    if (!options.silent) {
-      self._currentRefreshIsLoud = true;
     }
 
     var updateResult = {};
