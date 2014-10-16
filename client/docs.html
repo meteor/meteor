@@ -8,64 +8,34 @@
 </head>
 
 <body>
-  <div id="nav" class="hide">
-    {{> nav }}
-  </div>
-  <div id="main">
-    <div id="top"></div>
-    {{> headline }}
-    {{> introduction }}
-    {{> concepts }}
-    {{> api }}
-    {{> packages }}
-    {{> commandline }}
+  <div class="body {{openSidebar}}">
+    <div id="nav">
+      {{> sidebar}}
+    </div>
+    <div class="overlay close-sidebar"></div>
+    <div class="main-content">
+      {{> topBar}}
+      <div id="main">
+        <div id="top"></div>
+        {{> introduction }}
+        {{> api }}
+        {{> packages }}
+      </div>
+    </div>
   </div>
 </body>
 
-<template name="nav">
-  <div id="menu-ico"><a href="#">&#9776;</a></div>
+<template name="sidebar">
   <div id="nav-inner">
-    {{#each sections}}
-      {{#if type "spacer"}}
-        <div class="spacer"> </div>
-      {{/if}}
-      {{#if type "section"}}
-        {{#nav_section}}
-          <a href="#{{id}}" class="{{maybe_current}} {{style}}">
-            {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
-          </a>
-        {{/nav_section}}
-      {{/if}}
-    {{/each}}
+    {{> tableOfContents}}
   </div>
 </template>
 
-<template name="nav_section">
-  {{#if depthIs 1}}
-    <h1>{{> UI.contentBlock}}</h1>
-  {{/if}}
-  {{#if depthIs 2}}
-    <h2>{{> UI.contentBlock}}</h2>
-  {{/if}}
-  {{#if depthIs 3}}
-    <h3>{{> UI.contentBlock}}</h3>
-  {{/if}}
-  {{#if depthIs 4}}
-    <h4>{{> UI.contentBlock}}</h4>
-  {{/if}}
-  {{#if depthIs 5}}
-    <h5>{{> UI.contentBlock}}</h5>
-  {{/if}}
-  {{#if depthIs 6}}
-    <h6>{{> UI.contentBlock}}</h6>
-  {{/if}}
+<template name="topBar">
+  <div class="top-bar">
+    <button class="open-sidebar">Open Sidebar</button>
+  </div>
 </template>
-
-<!-- This only is displayed on narrow displays (eg phone) -->
-<template name="headline">
-  <h1 class="main-headline">Meteor {{release}}</h1>
-</template>
-
 
 <template name="dtdd">
   {{! can be used with either one argument (which ends up in the data
