@@ -290,6 +290,10 @@ _.extend(ProgressDisplayFull.prototype, {
     // XXX: Or maybe just jump to the correct position?
     var progressGraphic = '';
 
+    // The cursor appears in position 0; we indent it a little to avoid this
+    // This also means it appears less important, which is good
+    var indentColumns = 4;
+
     var streamColumns = this._stream.columns;
     var statusColumns;
     var progressColumns;
@@ -297,8 +301,8 @@ _.extend(ProgressDisplayFull.prototype, {
       statusColumns = STATUS_MAX_LENGTH;
       progressColumns = 0;
     } else {
-      statusColumns = Math.min(STATUS_MAX_LENGTH, streamColumns);
-      progressColumns = Math.min(PROGRESS_MAX_WIDTH, streamColumns - statusColumns);
+      statusColumns = Math.min(STATUS_MAX_LENGTH, streamColumns - indentColumns);
+      progressColumns = Math.min(PROGRESS_MAX_WIDTH, streamColumns - indentColumns - statusColumns);
     }
 
     if (self._fraction !== undefined && progressColumns > 16) {
@@ -314,10 +318,8 @@ _.extend(ProgressDisplayFull.prototype, {
     if (text || progressGraphic) {
       // XXX: Just update the graphic, to avoid text flicker?
 
-      // The cursor appears in position 0; we indent it a little to avoid this
-      // This also means it appears less important, which is good
-      var line = '    ';
-      var length = line.length;
+      var line = spacesString(indentColumns);
+      var length = indentColumns;
 
       if (self._status) {
         var fixedLength = toFixedLength(self._status, statusColumns);
