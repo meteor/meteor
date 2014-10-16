@@ -2465,12 +2465,11 @@ main.registerCommand({
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
 
+  // XXX: refresh strategy...
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  doOrDie(function () {
-    catalog.official.refresh();
-  });
+  refreshOfficialCatalogOrDie();
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
