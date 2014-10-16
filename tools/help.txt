@@ -18,7 +18,7 @@ See 'meteor help <command>' for details on a command.
 
 >>> run
 [default] Run this project in local development mode.
-Usage: meteor run [platform..] [options]
+Usage: meteor run [target..] [options]
 
 Searches upward from the current directory for the root directory of a
 Meteor project, then runs that project in local development
@@ -31,12 +31,15 @@ are automatically detected and applied to the running application.
 The application's database persists between runs. It's stored under
 the .meteor directory in the root of the project.
 
-You can specify additional platforms where the app should be run if they have
-been previously added with 'meteor add-platform'.
-By default, Meteor will run the app in an emulator. Appending "-device" to the
-end of a platform string (such as "android-device") will run the app on a
-physical device. "ios-device" will open XCode and allow you to manually run
-the app on a device.
+If you have added a platform to your app with 'meteor add-platform', you can
+pass one of the following targets as an argument to this command.
+
+Targets:
+  android          Run on the Android emulator.
+  android-device   Run on a connected Android device.
+  ios              Run on the iOS simulator.
+  ios-device       Open Xcode with the iOS project for this app, where you can
+                   run your app on a connected iOS device.
 
 Options:
   --port, -p       Port to listen on (instead of the default 3000). Also
@@ -152,7 +155,7 @@ internal functionality of Meteor.
 
 >>> add
 Add a package to this project.
-Usage: meteor add <package> [package] [package..]
+Usage: meteor add <package> [package..]
 
 Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
@@ -161,7 +164,7 @@ the meteor search command.
 
 >>> remove
 Remove a package from this project.
-Usage: meteor remove <package> [package] [package..]
+Usage: meteor remove <package> [package..]
 
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
