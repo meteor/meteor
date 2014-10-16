@@ -112,7 +112,8 @@ _updateServerPackageData = function (dataStore, options) {
   var ret = {resetData: false};
 
   var start = undefined;
-  var state = { current: 0, end: 10, done: false};
+  // Guess that we're about an hour behind, as an opening guess
+  var state = { current: 0, end: 60 * 60 * 1000, done: false};
   buildmessage.reportProgress(state);
 
   var conn = openPackageServerConnection(options.packageServerUrl);
@@ -176,9 +177,6 @@ _updateServerPackageData = function (dataStore, options) {
   } finally {
     conn.close();
   }
-
-  state.done = true;
-  buildmessage.reportProgress(state);
 
   return ret;
 };
