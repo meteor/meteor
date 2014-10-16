@@ -1943,7 +1943,7 @@ main.registerCommand({
       'username': ret.username,
       'host' : ret.host,
       'port' : ret.port,
-      'key' : idpath,
+      'key' : ret.sshKey,
       'hostKey' : ret.hostKey
     };
     Console.info(JSON.stringify(retJson, null, 2));
@@ -1954,11 +1954,11 @@ main.registerCommand({
   // that ssh-agent requires it to have.
   var idpath = "/tmp/meteor-key-" + utils.randomToken();
   maybeLog("Writing ssh key to " + idpath);
-  fs.writeFileSync(idpath, ret.sshKey, {encoding: 'utf8', mode: 400});
+  fs.writeFileSync(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
 
   // Add the known host key to a custom known hosts file.
   var hostpath = "/tmp/meteor-host-" + utils.randomToken();
-  var addendum = ret.host + " " + ret.hostKey;
+  var addendum = ret.host + " " + ret.hostKey + "\n";
   maybeLog("Writing host key to " + hostpath);
   fs.writeFileSync(hostpath, addendum, 'utf8');
 
@@ -1973,10 +1973,7 @@ main.registerCommand({
      "-oUserKnownHostsFile=" + hostpath,
      maybeVerbose];
 
-  var printOptions = _.reduce(connOptions,
-    function (x, y) {
-      return x + " " + y;
-  });
+  var printOptions = connOptions.join(' ');
   maybeLog("Connecting: ssh " + printOptions);
 
   var child_process = require('child_process');

@@ -127,7 +127,7 @@ _.extend(exports, {
       var parsed = url.parse(process.env.METEOR_BUILD_FARM_URL);
       return parsed.host;
     } else {
-      return getUniverse().replace(/^www\./, 'test-build.');
+      return getUniverse().replace(/^www\./, 'build.');
     }
   },
 
