@@ -17,8 +17,6 @@ Package.onUse(function(api) {
   api.addFiles('mobile-launch-screen.js', 'web');
   api.use(['blaze', 'templating'], 'web', { weak: true });
 
-  api.use(['iron:router'], 'web', { weak: true });
-
   api.export('LaunchScreen');
 });
 
