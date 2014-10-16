@@ -73,7 +73,6 @@ h1, h2, h3, h4 {
 
 h1 {
     font-size: 2em;
-    letter-spacing: -1px;
 }
 
 h1 {
@@ -83,13 +82,11 @@ h1 {
 h2 {
     font-size: 1.5em;
     margin: 1.25em 0 .5em 0;
-    letter-spacing: -1px;
 }
 
 h3 {
     font-size: 1.17em;
     margin: 1em 0 1em 0;
-    letter-spacing: -1px;
 }
 
 h4 {
@@ -134,23 +131,22 @@ a:hover {
 }
 
 #nav h1 {
-    font-size: 1.8em;
+    font-size: 1.7em;
     margin: 1.2em 0 .2em 0;
 }
 
 #nav h2 {
-    font-size: 1.33em;
+    font-size: 1.2em;
     font-weight: normal;
-    margin: .6em 0 .3em 0;
+    margin: .3em 0 0 0;
 }
 
 #nav h3 {
     font-size: .8em;
     font-weight: normal;
-    margin: 4px 0px 4px 0px;
+    margin: 4px 0px 2px 0px;
     padding-left: 10px;
     color: #333333;
-    letter-spacing: 0px;
 }
 
 #nav h4 {
@@ -159,7 +155,6 @@ a:hover {
     margin: 4px 0px 4px 0px;
     padding-left: 20px;
     color: #333333;
-    letter-spacing: 0px;
 }
 
 #nav .spacer {
@@ -473,7 +468,7 @@ pre {
     /* ipad landscape and desktop */
     #main {
         width: auto;
-        max-width: 700px;
+        max-width: 720px;
         margin-left: 330px; /* nav width + padding */
     }
     #nav {
