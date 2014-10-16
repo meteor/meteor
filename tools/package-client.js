@@ -117,13 +117,7 @@ _updateServerPackageData = function (dataStore, options) {
   var state = { current: 0, end: 10, done: false};
   buildmessage.reportProgress(state);
 
-  try {
-    var conn = openPackageServerConnection(options.packageServerUrl);
-  } catch (err) {
-    exports.handlePackageServerConnectionError(err);
-    ret.connectionFailed = true;
-    return ret;
-  }
+  var conn = openPackageServerConnection(options.packageServerUrl);
 
   // Provide some progress indication for connection
   // XXX though it is just a hack

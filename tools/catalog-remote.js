@@ -752,10 +752,17 @@ _.extend(RemoteCatalog.prototype, {
     }
 
     var updateResult = {};
-    buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
-      updateResult = packageClient.updateServerPackageData(self);
-    });
-    if (updateResult.connectionFailed) {
+    var connectionFailed = false;
+    try {
+      buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
+        updateResult = packageClient.updateServerPackageData(self);
+      });
+    } catch (err) {
+      packageClient.handlePackageServerConnectionError(err);
+      connectionFailed = true;
+    }
+
+    if (connectionFailed) {
       Console.warn("Warning: could not connect to package server\n");
     }
     if (updateResult.resetData) {
