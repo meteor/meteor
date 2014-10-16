@@ -16,6 +16,10 @@ Npm.depends({
   mongodb: "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1"
 });
 
+Npm.strip({
+  mongodb: ["test/"]
+});
+
 Package.on_use(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
            'ddp', 'tracker', 'application-configuration'],

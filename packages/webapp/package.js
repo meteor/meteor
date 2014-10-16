@@ -7,6 +7,11 @@ Npm.depends({connect: "2.9.0",
              send: "0.1.4",
              useragent: "2.0.7"});
 
+Npm.strip({
+  multiparty: ["test/"],
+  useragent: ["test/"]
+});
+
 Package.on_use(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
            'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');

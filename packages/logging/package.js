@@ -7,6 +7,10 @@ Npm.depends({
   "cli-color": "0.2.3"
 });
 
+Npm.strip({
+  "es5-ext": ["test/"]
+});
+
 Cordova.depends({
   'org.apache.cordova.console': '0.2.10'
 });

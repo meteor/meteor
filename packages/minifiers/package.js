@@ -9,6 +9,12 @@ Npm.depends({
   "css-stringify": "https://github.com/reworkcss/css-stringify/tarball/a7fe6de82e055d41d1c5923ec2ccef06f2a45efa"
 });
 
+Npm.strip({
+  "uglify-js": ["test/"],
+  "css-parse": ["test/"],
+  "css-stringify": ["test/"],
+});
+
 Package.on_use(function (api) {
   api.use('underscore', 'server');
   api.export(['CssTools', 'UglifyJSMinify', 'UglifyJS']);
