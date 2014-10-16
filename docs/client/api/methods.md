@@ -8,21 +8,27 @@ Methods are remote functions that Meteor clients can invoke.
 
 Example:
 
-    Meteor.methods({
-      foo: function (arg1, arg2) {
-        check(arg1, String);
-        check(arg2, [Number]);
-        // .. do stuff ..
-        if (you want to throw an error)
-          throw new Meteor.Error("pants-not-found", "Can't find my pants");
-        return "some return value";
-      },
+```js
+Meteor.methods({
+  foo: function (arg1, arg2) {
+    check(arg1, String);
+    check(arg2, [Number]);
 
-      bar: function () {
-        // .. do other stuff ..
-        return "baz";
-      }
-    });
+    // .. do stuff ..
+
+    if (/* you want to throw an error */) {
+      throw new Meteor.Error("pants-not-found", "Can't find my pants");
+    }
+
+    return "some return value";
+  },
+
+  bar: function () {
+    // .. do other stuff ..
+    return "baz";
+  }
+});
+```
 
 Calling `methods` on the server defines functions that can be called remotely by
 clients.  They should return an [EJSON](#ejson)-able value or throw an
