@@ -1043,6 +1043,7 @@ compiler.compile = function (packageSource, options) {
     cordovaDependencies: packageSource.cordovaDependencies,
     buildTimeDirectDependencies: buildTimeDeps.directDependencies,
     buildTimePluginDependencies: buildTimeDeps.pluginDependencies,
+    npmDiscards: packageSource.npmDiscards,
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly
   });

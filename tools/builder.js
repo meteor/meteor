@@ -371,6 +371,10 @@ _.extend(Builder.prototype, {
       });
     }
 
+    var discardChecker =
+      options.npmDiscards &&
+      options.npmDiscards.buildDiscardChecker(options.from);
+
     var walk = function (absFrom, relTo) {
       self._ensureDirectory(relTo);
 
@@ -390,6 +394,11 @@ _.extend(Builder.prototype, {
         if (_.any(ignore, function (pattern) {
           return itemForMatch.match(pattern);
         })) return; // skip excluded files
+
+        if (discardChecker &&
+            discardChecker.shouldDiscard(thisAbsFrom)) {
+          return;
+        }
 
         if (fileStatus.isDirectory()) {
           walk(thisAbsFrom, thisRelTo);

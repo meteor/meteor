@@ -318,6 +318,7 @@ _.extend(Isopack.prototype, {
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
+    self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
   },
@@ -977,7 +978,8 @@ _.extend(Isopack.prototype, {
         if (needToCopyNodeModules) {
           builder.copyDirectory({
             from: unibuild.nodeModulesPath,
-            to: nodeModulesPath
+            to: nodeModulesPath,
+            npmDiscards: self.npmDiscards
           });
         }
 
