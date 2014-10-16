@@ -2310,7 +2310,7 @@ var Android = new Android();
 
 // add one or more Cordova platforms
 main.registerCommand({
-  name: "add-platform",
+  name: 'add-platform',
   options: {
     verbose: { type: Boolean, short: "v" }
   },
@@ -2379,7 +2379,7 @@ main.registerCommand({
 
 // remove one or more Cordova platforms
 main.registerCommand({
-  name: "remove-platform",
+  name: 'remove-platform',
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true
@@ -2415,7 +2415,7 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: "list-platforms",
+  name: 'list-platforms',
   requiresApp: true
 }, function () {
   var platforms = project.getPlatforms();
@@ -2424,7 +2424,7 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: "configure-android",
+  name: 'configure-android',
   options: {
     verbose: { type: Boolean, short: "v" }
   },
@@ -2451,7 +2451,7 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: "android-launch",
+  name: 'android-launch',
   pretty: true,
   options: {
     verbose: { type: Boolean, short: "v" }
@@ -2490,7 +2490,7 @@ var openUrl = function (url) {
 };
 
 main.registerCommand({
-  name: "install-sdk",
+  name: 'install-sdk',
   pretty: true,
   options: {
     verbose: { type: Boolean, short: "v" }
