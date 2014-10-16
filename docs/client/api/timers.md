@@ -1,4 +1,4 @@
-{{#template name="api_timers"}}
+{{#template name="apiTimers"}}
 <h2 id="timers"><span>Timers</span></h2>
 
 Meteor uses global environment variables

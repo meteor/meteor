@@ -1,4 +1,4 @@
-{{#template name="api_packagejs"}}
+{{#template name="apiPackagejs"}}
 
 <h2 id="packagejs"><span>Package.js</span></h2>
 

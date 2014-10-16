@@ -1,4 +1,4 @@
-{{#template name="api_connections"}}
+{{#template name="apiConnections"}}
 
 <h2 id="connections"><span>Server connections</span></h2>
 

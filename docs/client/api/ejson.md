@@ -1,4 +1,4 @@
-{{#template name="api_ejson"}}
+{{#template name="apiEjson"}}
 
 <h2 id="ejson"><span>EJSON</span></h2>
 

@@ -1,4 +1,4 @@
-{{#template name="api_accounts"}}
+{{#template name="apiAccounts"}}
 
 <h2 id="accounts_api"><span>Accounts</span></h2>
 

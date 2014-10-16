@@ -1,4 +1,4 @@
-{{#template name="api_methods"}}
+{{#template name="apiMethods"}}
 
 <h2 id="methods_header"><span>Methods</span></h2>
 

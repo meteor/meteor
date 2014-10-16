@@ -1,4 +1,4 @@
-{{#template name="api_check"}}
+{{#template name="apiCheck"}}
 
 <h2 id="check_package"><span>Check</span></h2>
 

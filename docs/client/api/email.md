@@ -1,4 +1,4 @@
-{{#template name="api_email"}}
+{{#template name="apiEmail"}}
 
 <h2 id="email"><span>Email</span></h2>
 
