@@ -84,27 +84,29 @@ the `autopublish` package:
 and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
 your collection should be published to which users.
 
-    // Create a collection called Posts and put a document in it. The
-    // document will be immediately visible in the local copy of the
-    // collection. It will be written to the server-side database
-    // a fraction of a second later, and a fraction of a second
-    // after that, it will be synchronized down to any other clients
-    // that are subscribed to a query that includes it (see
-    // Meteor.subscribe and autopublish)
-    Posts = new Mongo.Collection("posts");
-    Posts.insert({title: "Hello world", body: "First post"});
+```js
+// Create a collection called Posts and put a document in it. The
+// document will be immediately visible in the local copy of the
+// collection. It will be written to the server-side database
+// a fraction of a second later, and a fraction of a second
+// after that, it will be synchronized down to any other clients
+// that are subscribed to a query that includes it (see
+// Meteor.subscribe and autopublish)
+Posts = new Mongo.Collection("posts");
+Posts.insert({title: "Hello world", body: "First post"});
 
-    // Changes are visible immediately -- no waiting for a round trip to
-    // the server.
-    assert(Posts.find().count() === 1);
+// Changes are visible immediately -- no waiting for a round trip to
+// the server.
+assert(Posts.find().count() === 1);
 
-    // Create a temporary, local collection. It works just like any other
-    // collection, but it doesn't send changes to the server, and it
-    // can't receive any data from subscriptions.
-    Scratchpad = new Mongo.Collection;
-    for (var i = 0; i < 10; i++)
-      Scratchpad.insert({number: i * 2});
-    assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
+// Create a temporary, local collection. It works just like any other
+// collection, but it doesn't send changes to the server, and it
+// can't receive any data from subscriptions.
+Scratchpad = new Mongo.Collection;
+for (var i = 0; i < 10; i++)
+  Scratchpad.insert({number: i * 2});
+assert(Scratchpad.find({number: {$lt: 9}}).count() === 5);
+```
 
 Generally, you'll assign `Mongo.Collection` objects in your app to global
 variables.  You can only create one `Mongo.Collection` object for each
@@ -434,42 +436,44 @@ names to retrieve.
 
 Example:
 
-    // Create a collection where users can only modify documents that
-    // they own. Ownership is tracked by an 'owner' field on each
-    // document. All documents must be owned by the user that created
-    // them and ownership can't be changed. Only a document's owner
-    // is allowed to delete it, and the 'locked' attribute can be
-    // set on a document to prevent its accidental deletion.
+```js
+// Create a collection where users can only modify documents that
+// they own. Ownership is tracked by an 'owner' field on each
+// document. All documents must be owned by the user that created
+// them and ownership can't be changed. Only a document's owner
+// is allowed to delete it, and the 'locked' attribute can be
+// set on a document to prevent its accidental deletion.
 
-    Posts = new Mongo.Collection("posts");
+Posts = new Mongo.Collection("posts");
 
-    Posts.allow({
-      insert: function (userId, doc) {
-        // the user must be logged in, and the document must be owned by the user
-        return (userId && doc.owner === userId);
-      },
-      update: function (userId, doc, fields, modifier) {
-        // can only change your own documents
-        return doc.owner === userId;
-      },
-      remove: function (userId, doc) {
-        // can only remove your own documents
-        return doc.owner === userId;
-      },
-      fetch: ['owner']
-    });
+Posts.allow({
+  insert: function (userId, doc) {
+    // the user must be logged in, and the document must be owned by the user
+    return (userId && doc.owner === userId);
+  },
+  update: function (userId, doc, fields, modifier) {
+    // can only change your own documents
+    return doc.owner === userId;
+  },
+  remove: function (userId, doc) {
+    // can only remove your own documents
+    return doc.owner === userId;
+  },
+  fetch: ['owner']
+});
 
-    Posts.deny({
-      update: function (userId, docs, fields, modifier) {
-        // can't change owners
-        return _.contains(fields, 'owner');
-      },
-      remove: function (userId, doc) {
-        // can't remove locked documents
-        return doc.locked;
-      },
-      fetch: ['locked'] // no need to fetch 'owner'
-    });
+Posts.deny({
+  update: function (userId, docs, fields, modifier) {
+    // can't change owners
+    return _.contains(fields, 'owner');
+  },
+  remove: function (userId, doc) {
+    // can't remove locked documents
+    return doc.locked;
+  },
+  fetch: ['locked'] // no need to fetch 'owner'
+});
+```
 
 If you never set up any `allow` rules on a collection then all client
 writes to the collection will be denied, and it will only be possible to
@@ -673,22 +677,24 @@ positions.) This is for efficiency.
 
 Example:
 
-    // Keep track of how many administrators are online.
-    var count = 0;
-    var query = Users.find({admin: true, onlineNow: true});
-    var handle = query.observeChanges({
-      added: function (id, user) {
-        count++;
-        console.log(user.name + " brings the total to " + count + " admins.");
-      },
-      removed: function () {
-        count--;
-        console.log("Lost one. We're now down to " + count + " admins.");
-      }
-    });
+```js
+// Keep track of how many administrators are online.
+var count = 0;
+var query = Users.find({admin: true, onlineNow: true});
+var handle = query.observeChanges({
+  added: function (id, user) {
+    count++;
+    console.log(user.name + " brings the total to " + count + " admins.");
+  },
+  removed: function () {
+    count--;
+    console.log("Lost one. We're now down to " + count + " admins.");
+  }
+});
 
-    // After five seconds, stop keeping the count.
-    setTimeout(function () {handle.stop();}, 5000);
+// After five seconds, stop keeping the count.
+setTimeout(function () {handle.stop();}, 5000);
+```
 
 {{> autoApiBox "Mongo.ObjectID"}}
 
@@ -715,25 +721,29 @@ document with that value in its `_id` field.
 A slightly more complex form of selector is an object containing a set of keys
 that must match in a document:
 
-    // Matches all documents where deleted is false
-    {deleted: false}
+```js
+// Matches all documents where deleted is false
+{deleted: false}
 
-    // Matches all documents where the name and cognomen are as given
-    {name: "Rhialto", cognomen: "the Marvelous"}
+// Matches all documents where the name and cognomen are as given
+{name: "Rhialto", cognomen: "the Marvelous"}
 
-    // Matches every document
-    {}
+// Matches every document
+{}
+```
 
 But they can also contain more complicated tests:
 
-    // Matches documents where age is greater than 18
-    {age: {$gt: 18}}
+```js
+// Matches documents where age is greater than 18
+{age: {$gt: 18}}
 
-    // Also matches documents where tags is an array containing "popular"
-    {tags: "popular"}
+// Also matches documents where tags is an array containing "popular"
+{tags: "popular"}
 
-    // Matches documents where fruit is one of three possibilities
-    {fruit: {$in: ["peach", "plum", "pear"]}}
+// Matches documents where fruit is one of three possibilities
+{fruit: {$in: ["peach", "plum", "pear"]}}
+```
 
 See the [complete
 documentation](http://docs.mongodb.org/manual/reference/operator/).
@@ -743,20 +753,24 @@ documentation](http://docs.mongodb.org/manual/reference/operator/).
 A modifier is an object that describes how to update a document in
 place by changing some of its fields. Some examples:
 
-    // Set the 'admin' property on the document to true
-    {$set: {admin: true}}
+```js
+// Set the 'admin' property on the document to true
+{$set: {admin: true}}
 
-    // Add 2 to the 'votes' property, and add "Traz"
-    // to the end of the 'supporters' array
-    {$inc: {votes: 2}, $push: {supporters: "Traz"}}
+// Add 2 to the 'votes' property, and add "Traz"
+// to the end of the 'supporters' array
+{$inc: {votes: 2}, $push: {supporters: "Traz"}}
+```
 
 But if a modifier doesn't contain any $-operators, then it is instead
 interpreted as a literal document, and completely replaces whatever was
 previously in the database. (Literal document modifiers are not currently
 supported by [validated updates](#allow).)
 
-    // Find the document with id "123", and completely replace it.
-    Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
+```
+// Find the document with id "123", and completely replace it.
+Users.update({_id: "123"}, {name: "Alice", friends: ["Bob"]});
+```
 
 See the [full list of
 modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
@@ -766,12 +780,14 @@ modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
 
 Sorts may be specified using your choice of several syntaxes:
 
-    // All of these do the same thing (sort in ascending order by
-    // key "a", breaking ties in descending order of key "b")
+```
+// All of these do the same thing (sort in ascending order by
+// key "a", breaking ties in descending order of key "b")
 
-    [["a", "asc"], ["b", "desc"]]
-    ["a", ["b", "desc"]]
-    {a: 1, b: -1}
+[["a", "asc"], ["b", "desc"]]
+["a", ["b", "desc"]]
+{a: 1, b: -1}
+```
 
 The last form will only work if your JavaScript implementation
 preserves the order of keys in objects. Most do, most of the time, but
@@ -788,12 +804,16 @@ To exclude specific fields from the result objects, the field specifier is a
 dictionary whose keys are field names and whose values are `0`. All unspecified
 fields are included.
 
-    // Users.find({}, {fields: {password: 0, hash: 0}})
+```js
+Users.find({}, {fields: {password: 0, hash: 0}})
+```
 
 To include only specific fields in the result documents, use `1` as
 the value. The `_id` field is still included in the result.
 
-    // Users.find({}, {fields: {firstname: 1, lastname: 1}})
+```js
+Users.find({}, {fields: {firstname: 1, lastname: 1}})
+```
 
 With one exception, it is not possible to mix inclusion and exclusion styles:
 the keys must either be all 1 or all 0.  The exception is that you may specify
@@ -811,13 +831,15 @@ yet.
 
 A more advanced example:
 
-    Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
-                               { name: "L", alliance: "police" }],
-                   name: "Yagami Light" });
+```js
+Users.insert({ alterEgos: [{ name: "Kira", alliance: "murderer" },
+                           { name: "L", alliance: "police" }],
+               name: "Yagami Light" });
 
-    Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
+Users.findOne({}, { fields: { 'alterEgos.name': 1, _id: 0 } });
 
-    // returns { alterEgos: [{ name: "Kira" }, { name: "L" }] }
+// returns { alterEgos: [{ name: "Kira" }, { name: "L" }] }
+```
 
 See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
 the MongoDB docs</a> for details of the nested field rules and array behavior.
