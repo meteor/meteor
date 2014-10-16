@@ -1380,13 +1380,13 @@ main.registerCommand({
   if (!_.isEqual(matchingPackages, [])) {
     output = true;
     Console.info("Found the following packages:");
-    Console.info(utils.formatList(matchingPackages) + "");
+    utils.printPackageList(matchingPackages);
   }
 
   if (!_.isEqual(matchingReleases, [])) {
     output = true;
     Console.info("Found the following releases:");
-    Console.info(utils.formatList(matchingReleases) + "");
+    utils.printPackageList(matchingReleases);
   }
 
   if (!output) {
@@ -1475,7 +1475,7 @@ main.registerCommand({
     items.push({ name: 'cordova:' + name, description: version });
   });
 
-  Console.info(utils.formatList(items));
+  utils.printPackageList(items);
 
   if (newVersionsAvailable) {
     Console.info(
