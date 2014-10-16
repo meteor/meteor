@@ -65,6 +65,8 @@ selftest.define("springboard", ['checkout', 'net'], function () {
 
   // Suppose you're offline and you ask for a release you don't have
   // cached.
+  // XXX On the refreshpolicy branch, we removed some of the support
+  // code for this test. Make sure we get it to pass before merging.
   s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
   run = s.run("--release", "weird");
   run.matchErr("Meteor weird");

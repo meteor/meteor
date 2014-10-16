@@ -827,25 +827,13 @@ Fiber(function () {
         warehouse.realReleaseExistsInWarehouse(releaseName)) {
       var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
         releaseName);
-      oldSpringboard(manifest.tools);
+      oldSpringboard(manifest.tools);  // doesn't return
     }
 
     try {
       var rel = release.load(releaseName);
     } catch (e) {
-      var name = releaseName;
-      if (e instanceof files.OfflineError) {
-        if (appDir) {
-          process.stderr.write(
-"Sorry, this project uses Meteor " + name + ", which is not installed and\n"+
-"could not be downloaded. Please check to make sure that you are online.\n");
-        } else {
-          process.stderr.write(
-"Sorry, Meteor " + name + " is not installed and could not be downloaded.\n"+
-"Please check to make sure that you are online.\n");
-        }
-        process.exit(1);
-      } else if (e instanceof release.NoSuchReleaseError) {
+      if (e instanceof release.NoSuchReleaseError) {
         // OK, this release doesn't exist... unless it's an old pre-0.9.0
         // release. Let's try using the legacy "warehouse" module to load it.
         try {

@@ -243,9 +243,6 @@ release.load = function (name, options) {
 
   var releaseVersion = catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
-    if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline") {
-      throw new files.OfflineError(new Error("scripted failure for tests"));
-    }
     throw new release.NoSuchReleaseError;
   }
 
