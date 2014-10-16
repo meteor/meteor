@@ -1,4 +1,4 @@
-{{#template name="api_passwords"}}
+{{#template name="apiPasswords"}}
 
 <h2 id="accounts_passwords"><span>Passwords</span></h2>
 

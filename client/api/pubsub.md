@@ -1,4 +1,4 @@
-{{#template name="api_pubsub"}}
+{{#template name="apiPubsub"}}
 
 <h2 id="publishandsubscribe"><span>Publish and subscribe</span></h2>
 

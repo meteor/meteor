@@ -1,4 +1,4 @@
-{{#template name="api_reactive_var"}}
+{{#template name="apiReactiveVar"}}
 
 
 <h2 id="reactivevar_pkg"><span>ReactiveVar</span></h2>

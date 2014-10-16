@@ -1,4 +1,4 @@
-{{#template name="api_tracker"}}
+{{#template name="apiTracker"}}
 
 <h2 id="tracker"><span>Tracker</span></h2>
 

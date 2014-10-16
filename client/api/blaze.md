@@ -1,4 +1,4 @@
-{{#template name="api_blaze"}}
+{{#template name="apiBlaze"}}
 
 <h2 id="blaze"><span>Blaze</span></h2>
 

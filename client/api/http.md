@@ -1,4 +1,4 @@
-{{#template name="api_http"}}
+{{#template name="apiHttp"}}
 
 <h2 id="http"><span>HTTP</span></h2>
 

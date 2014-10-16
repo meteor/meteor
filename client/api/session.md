@@ -1,4 +1,4 @@
-{{#template name="api_session"}}
+{{#template name="apiSession"}}
 
 
 <h2 id="session"><span>Session</span></h2>
@@ -16,13 +16,15 @@ whenever [`Session.set`](#session_set)`("currentList", x)` is called.
 
 Example:
 
-    Tracker.autorun(function () {
-      Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
-    });
+```js
+Tracker.autorun(function () {
+  Meteor.subscribe("chat-history", {room: Session.get("currentRoomId")});
+});
 
-    // Causes the function passed to Tracker.autorun to be re-run, so
-    // that the chat-history subscription is moved to the room "home".
-    Session.set("currentRoomId", "home");
+// Causes the function passed to Tracker.autorun to be re-run, so
+// that the chat-history subscription is moved to the room "home".
+Session.set("currentRoomId", "home");
+```
 
 {{> autoApiBox "Session.setDefault"}}
 
@@ -33,23 +35,27 @@ variable every time a new version of your app is loaded.
 
 Example:
 
-    // in main.html
-    {{lt}}template name="main">
-      <p>We've always been at war with {{dstache}}theEnemy}}.</p>
-    {{lt}}/template>
+```html
+<!-- in main.html -->
+<template name="main">
+  <p>We've always been at war with {{dstache}}theEnemy}}.</p>
+{{lt}}/template>
+```
 
-    // in main.js
-    Template.main.helpers({
-      theEnemy: function () {
-        return Session.get("enemy");
-      }
-    });
+```js
+// in main.js
+Template.main.helpers({
+  theEnemy: function () {
+    return Session.get("enemy");
+  }
+});
 
-    Session.set("enemy", "Eastasia");
-    // Page will say "We've always been at war with Eastasia"
+Session.set("enemy", "Eastasia");
+// Page will say "We've always been at war with Eastasia"
 
-    Session.set("enemy", "Eurasia");
-    // Page will change to say "We've always been at war with Eurasia"
+Session.set("enemy", "Eurasia");
+// Page will change to say "We've always been at war with Eurasia"
+```
 
 
 {{> autoApiBox "Session.equals"}}
@@ -64,46 +70,50 @@ If value is a scalar, then these two expressions do the same thing:
 
 Example:
 
-    {{lt}}template name="postsView">
-    {{dstache}}! Show a dynamically updating list of items. Let the user click on an
-        item to select it. The selected item is given a CSS class so it
-        can be rendered differently. }}
+```html
+{{lt}}template name="postsView">
+{{dstache}}! Show a dynamically updating list of items. Let the user click on an
+    item to select it. The selected item is given a CSS class so it
+    can be rendered differently. }}
 
-    {{dstache}}#each posts}}
-      {{dstache}}> postItem }}
-    {{dstache}}/each}}
-    {{lt}}/template>
+{{dstache}}#each posts}}
+  {{dstache}}> postItem }}
+{{dstache}}/each}}
+{{lt}}/template>
 
-    {{lt}}template name="postItem">
-      <div class="{{dstache}}postClass}}">{{dstache}}title}}</div>
-    {{lt}}/template>
+{{lt}}template name="postItem">
+  <div class="{{dstache}}postClass}}">{{dstache}}title}}</div>
+{{lt}}/template>
+```
 
-    ///// in JS file
-    Template.postsView.helpers({
-      posts: function() {
-        return Posts.find();
-      }
-    });
+```js
+// in JS file
+Template.postsView.helpers({
+  posts: function() {
+    return Posts.find();
+  }
+});
 
-    Template.postItem.helpers({
-      postClass: function() {
-        return Session.equals("selectedPost", this._id) ?
-          "selected" : "";
-      }
-    });
+Template.postItem.helpers({
+  postClass: function() {
+    return Session.equals("selectedPost", this._id) ?
+      "selected" : "";
+  }
+});
 
-    Template.postItem.events({
-      'click': function() {
-        Session.set("selectedPost", this._id);
-      }
-    });
+Template.postItem.events({
+  'click': function() {
+    Session.set("selectedPost", this._id);
+  }
+});
+```
 
-    // Using Session.equals here means that when the user clicks
-    // on an item and changes the selection, only the newly selected
-    // and the newly unselected items are re-rendered.
-    //
-    // If Session.get had been used instead of Session.equals, then
-    // when the selection changed, all the items would be re-rendered.
+Using Session.equals here means that when the user clicks
+on an item and changes the selection, only the newly selected
+and the newly unselected items are re-rendered.
+
+If Session.get had been used instead of Session.equals, then
+when the selection changed, all the items would be re-rendered.
 
 For object and array session values, you cannot use `Session.equals`; instead,
 you need to use the `underscore` package and write

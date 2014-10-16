@@ -1,4 +1,4 @@
-{{#template name="api_assets"}}
+{{#template name="apiAssets"}}
 
 <h2 id="assets"><span>Assets</span></h2>
 

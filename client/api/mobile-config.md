@@ -1,4 +1,4 @@
-{{#template name="api_mobile_config"}}
+{{#template name="apiMobileConfig"}}
 
 
 <h2 id="mobileconfigjs"><span>Mobile Config File</span></h2>

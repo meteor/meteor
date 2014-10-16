@@ -46,7 +46,7 @@ routepolicy@1.0.2
 session@1.0.3
 showdown@1.0.2
 simple:highlight.js@1.0.2
-simple:markdown-templating@1.2.5
+simple:markdown-templating@1.2.6
 spacebars-compiler@1.0.3
 spacebars@1.0.3
 spiderable@1.0.4

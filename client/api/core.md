@@ -1,4 +1,4 @@
-{{#template name="api_core"}}
+{{#template name="apiCore"}}
 
 <h2 id="core"><span>Meteor Core</span></h2>
 

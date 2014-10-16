@@ -1,4 +1,4 @@
-{{#template name="api_collections"}}
+{{#template name="apiCollections"}}
 
 
 <h2 id="collections"><span>Collections</span></h2>
