@@ -14,7 +14,6 @@ var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var Console = require('./console.js').Console;
-var Events = require('./events.js').Events;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -695,10 +694,6 @@ _.extend(AppRunner.prototype, {
           crashCount = 0;
         }, 3000);
       };
-
-      if (!firstRun) {
-        Events.emit('appStart', self, firstRun);
-      }
 
       var runResult = self._runOnce({
         onListen: function () {
