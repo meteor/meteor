@@ -172,7 +172,7 @@ a:hover {
 /** Main pane **/
 
 #main {
-    margin: 10px 10px 10px 60px;
+    margin: 10px;
     line-height: 1.3;
     color: #333333;
 }
@@ -412,15 +412,52 @@ ol {
     display: none;
 }
 
+
+/** layout control **/
+
+#menu-ico {
+    font-size: 30px;
+    float: right;
+    position: fixed;
+    top: 3px;
+    left: 6px;
+}
+
+#menu-ico.hidden {
+    display: none;
+}
+
+@nav-width: 270px;
+
 /* default to no sidebar */
 #nav {
     display: block;
-    background: #FFF;
     position: fixed;
-    width: 260px;
+    width: @nav-width;
     height: 100%;
     top: 0;
-    left: -220px;
+    overflow-y: scroll;
+}
+
+.main-content {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    bottom: 0;
+    padding-top: 50px;
+    z-index: 1;
+    background: white;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    margin-left: 0;
+    transition: margin-left 300ms ease-out;
+}
+
+.overlay {
+    margin-left: 0;
+    transition: margin-left 300ms ease-out, opacity 300ms ease-out;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.3);
 }
 
 #nav.show {
@@ -435,17 +472,51 @@ pre {
     white-space: pre-wrap;
 }
 
+#main {
+    padding: 10px;
+}
+
+.sidebar-open {
+    overflow: hidden;
+    width: 100%;
+    position: absolute;
+    height: 100%;
+
+    .main-content {
+        margin-left: @nav-width;
+    }
+
+    .overlay {
+        position: absolute;
+        margin-left: @nav-width;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
+        opacity: 1;
+    }
+}
+
+.top-bar {
+    position: absolute;
+    background: white;
+    width: 100%;
+    top: 0;
+    left: 0;
+    height: 50px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
 @media (min-width: 768px) {
     /* ipad portrait or better */
-    #main {
-        width: 440px;
+    .main-content {
         height: 100%;
-        margin-left: 260px; /* nav width + padding */
-        padding: 30px;
+        margin-left: @nav-width; /* nav width + padding */
+        padding-top: 0;
     }
+    
     #nav {
         display: block;
-        width: 200px;
+        width: @nav-width;
         position: fixed;
         overflow: auto;
         height: 100%;
@@ -459,22 +530,21 @@ pre {
     #menu-ico {
         display: none;
     }
-}
 
-@media (min-width: 1024px) {
-    /* ipad landscape and desktop */
-    #main {
-        width: auto;
-        max-width: 720px;
-        margin-left: 330px; /* nav width + padding */
-    }
-    #nav {
-        width: 270px;
-    }
-    .github-ribbon {
-        display: block;
-    }
-    #menu-ico {
+    .overlay {
         display: none;
     }
+
+    .top-bar {
+        display: none;
+    }
+
+    #main {
+        padding: 30px;
+    }
+}
+
+.complete-link {
+    font-size: 0.9em;
+    text-decoration: underline !important;
 }
