@@ -42,7 +42,6 @@ routepolicy@1.0.2
 session@1.0.3
 spacebars-compiler@1.0.3
 spacebars@1.0.3
-standard-app-packages@1.0.3
 templating@1.0.8
 tracker@1.0.3
 ui@1.0.4
