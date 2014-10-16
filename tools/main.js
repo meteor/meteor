@@ -25,6 +25,8 @@ var main = exports;
 // http://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
 Error.stackTraceLimit = Infinity;
 
+STRICT_MODE = !!process.env.METEOR_MDG_STRICT_MODE;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Command registration
 ///////////////////////////////////////////////////////////////////////////////
@@ -1248,6 +1250,21 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   // Run the command!
   try {
+    // Before run, do a package sync if one is configured
+    var catalogRefreshStrategy = command.catalogRefresh;
+    if (STRICT_MODE && catalogRefreshStrategy === undefined) {
+      throw new Error("Command does not define catalogRefresh");
+    }
+    if (catalogRefreshStrategy && catalogRefreshStrategy.beforeCommand) {
+      var messages = buildmessage.capture({title: 'Refreshing package catalog'}, function () {
+        catalogRefreshStrategy.beforeCommand();
+      });
+      if (messages.hasMessages()) {
+        Console.printMessages(messages);
+        throw main.ExitWithCode(1);
+      }
+    }
+
     var ret = command.func(options);
   } catch (e) {
     Console.enableProgressDisplay(false);

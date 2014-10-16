@@ -15,6 +15,61 @@ var utils = require('./utils.js');
 var config = require('./config.js');
 var packageClient = require('./package-client.js');
 var Console = require('./console.js').Console;
+var Events = require('./events.js').Events;
+
+var catalog = exports;
+
+catalog.Refresh = {};
+
+// Refresh strategy: once at program start
+catalog.Refresh.OnceAtStart = function (options) {
+  var self = this;
+  self.options = _.extend({}, options);
+};
+
+catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
+  var self = this;
+  catalog.official.refresh(self.options);
+};
+
+// Refresh strategy: never (we don't use the package catalog)
+catalog.Refresh.Never = function (options) {
+  var self = this;
+  self.options = _.extend({}, options);
+};
+
+// Refresh strategy: once at start, and then whenever the app restarts (but only if > 15 minutes have passed)
+catalog.Refresh.SpecialEvents = function (options) {
+  var self = this;
+  self.options = _.extend({ maxAge: 15 * 60 * 1000 }, options);
+
+  Events.on('appStart', function (runner, firstRun) {
+    if (!firstRun) {
+      // Refresh (with maxAge)
+      // XXX: Move enterJob to catalog.official.refresh?
+      var messages = buildmessage.capture({ title: "Refreshing catalog" }, function () {
+        catalog.official.refresh(self.options);
+      });
+      if (messages.hasMessages()) {
+        // XXX: Only if verbose?
+        Console.printMessages(messages);
+        Console.info("We weren't able to refresh the package catalog");
+        // But keep going!
+      }
+    }
+  });
+};
+
+catalog.Refresh.SpecialEvents.prototype.beforeCommand = function () {
+  var self = this;
+
+  // Remove maxAge, if present (force refresh)
+  var options = _.clone(self.options);
+  delete options.maxAge;
+
+  catalog.official.refresh(options);
+};
+
 
 // As a work-around for [] !== [], we use a function to check whether values are acceptable
 var ACCEPT_NON_EMPTY = function (result) {
