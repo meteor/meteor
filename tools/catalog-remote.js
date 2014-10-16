@@ -543,7 +543,9 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getVersion: function (name, version) {
-    var result = this._queryAsJSON("SELECT content FROM versions WHERE packageName=? AND version=?", [name, version]);
+    var result = this._simpleQuery(
+      "SELECT content FROM versions WHERE packageName=? AND version=?",
+      [name, version]);
     if(!result || result.length === 0) {
       return null;
     }
@@ -581,7 +583,7 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getPackage: function (name, options) {
-    var result = this._queryAsJSON("SELECT * FROM packages WHERE name=?", name);
+    var result = this._simpleQuery("SELECT * FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     if (result.length !== 1) {
@@ -594,11 +596,16 @@ _.extend(RemoteCatalog.prototype, {
     if (!name) {
       throw new Error("No name provided");
     }
-    return this._queryAsJSON("SELECT content FROM versions WHERE packageName=?", name);
+    return this._simpleQuery("SELECT content FROM versions WHERE packageName=?",
+                             name);
   },
 
   getAllBuilds: function (name, version) {
-    var result = this._queryAsJSON("SELECT * FROM builds WHERE builds.versionId = (SELECT _id FROM versions WHERE versions.packageName=? AND versions.version=?)", [name, version]);
+    var result = this._simpleQuery(
+      "SELECT * FROM builds WHERE builds.versionId = " +
+        "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
+        "versions.version=?)",
+      [name, version]);
     if (!result || result.length === 0)
       return null;
     return result;
@@ -632,7 +639,8 @@ _.extend(RemoteCatalog.prototype, {
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseTracks WHERE name=?", name);
+    var result = self._simpleQuery(
+      "SELECT content FROM releaseTracks WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     return result[0];
@@ -640,7 +648,9 @@ _.extend(RemoteCatalog.prototype, {
 
   getReleaseVersion: function (track, version) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=? AND version=?", [track, version]);
+    var result = self._simpleQuery(
+      "SELECT content FROM releaseVersions WHERE track=? AND version=?",
+      [track, version]);
     if (!result || result.length === 0)
       return null;
     return result[0];
@@ -758,7 +768,8 @@ _.extend(RemoteCatalog.prototype, {
   // exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=?", track);
+    var result = self._simpleQuery(
+      "SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
       if (!v.recommended)
@@ -787,7 +798,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._queryAsJSON(
+    var matchingBuilds = this._simpleQuery(
       "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
@@ -817,18 +828,6 @@ _.extend(RemoteCatalog.prototype, {
     options.noRefresh = true;
 
     return self._queryWithRetry(query, params, options);
-  },
-
-
-  // Execute a query using the values as arguments of the query and return the result as JSON.
-  // This code assumes that the table being queried always have a column called "content"
-  _queryAsJSON: function (query, params, options) {
-    var self = this;
-    Console.debug("Executing query with _queryAsJSON: ", query, params);
-    var rows = self._queryWithRetry(query, params, options);
-    return _.map(rows, function(entity) {
-      return JSON.parse(entity.content);
-    });
   },
 
   // Executes a query, parsing the content column as JSON
