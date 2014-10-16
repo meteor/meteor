@@ -843,10 +843,10 @@ Fiber(function () {
           // XXX handle OfflineError too?
           if (e instanceof warehouse.NoSuchReleaseError) {
             if (releaseOverride) {
-              process.stderr.write(name + ": unknown release.\n");
+              process.stderr.write(releaseName + ": unknown release.\n");
             } else if (appDir) {
               process.stderr.write(
-"Problem! This project says that it uses version " + name + " of Meteor,\n" +
+"Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
 "but you don't have that version of Meteor installed and the Meteor update\n" +
 "servers don't have it either. Please edit the .meteor/release file in the\n" +
 "project and change it to a valid Meteor release.\n");
