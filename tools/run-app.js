@@ -422,8 +422,16 @@ _.extend(AppRunner.prototype, {
       // caches only when actually necessary.
       var refreshWatchSet = new watch.WatchSet;
       var refreshMessages = buildmessage.capture(function () {
-        catalog.complete.refresh({ forceRefresh: true,
-                                   watchSet: refreshWatchSet});
+        try {
+          catalog.complete.refresh({
+            forceRefresh: true,
+            watchSet: refreshWatchSet
+          });
+        } catch (err) {
+          // XXX: Should we throw here?
+          // XXX: Should we remove this entirely?
+          Console.debug("Ignoring error refreshing package catalog", err);
+        }
       });
       if (refreshMessages.hasMessages()) {
         return {

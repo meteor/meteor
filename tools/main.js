@@ -125,6 +125,7 @@ main.SpringboardToSpecificRelease = function (releaseRecord, msg) {
 // - minArgs: minimum non-option arguments that can be present (default 0)
 // - maxArgs: maximum non-option arguments that can be present (defaults to
 //   whatever value you passed for minArgs; use Infinity for unlimited)
+// - catalogRefresh: strategy object specifying when to refresh the catalog.
 // - options: map from long option name to:
 //   - type: String, Number, or Boolean. default is String. a future
 //     version could support [String] and [Number] to allow the option to

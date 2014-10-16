@@ -68,7 +68,11 @@ var doOrDie = exports.doOrDie = function (options, f) {
 };
 var refreshOfficialCatalogOrDie = function (options) {
   doOrDie({title: 'Refreshing package catalog'}, function () {
-    catalog.official.refresh(options);
+    try {
+      catalog.official.refresh(options);
+    } catch (err) {
+      buildmessage.error("Unable to refresh package catalog", err);
+    }
   });
 };
 
