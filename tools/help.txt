@@ -99,8 +99,8 @@ package created in an app, will be created using the application's version of
 meteor and a package created outside a meteor app will use the latest release).
 
 You can pass --example to start off with a copy of one of the Meteor
-sample applications. Use --list to see the available examples. There are currently
-no package examples.
+sample applications. Use --list to see the available examples. There are
+currently no package examples.
 
 Options:
   --package  Create a new meteor package instead of an app.
@@ -125,16 +125,16 @@ Patch releases contain very minor changes, usually bug fixes. Updating to
 the latest patch is always recommended. This will try to not update non-core
 packages unless strictly nessessary.
 
-Passing the --release argument will force update to a specific release of meteor.
-This will not update non-core packages unless strictly nessessary. It is also
-possible that some packages cannot be updated to be compatible with the new
-release. If that happens, the app will not build until dependencies on those
+Passing the --release argument will force update to a specific release of
+meteor.  This will not update non-core packages unless strictly nessessary. It
+is also possible that some packages cannot be updated to be compatible with the
+new release. If that happens, the app will not build until dependencies on those
 packages are removed.
 
 Passing --packages-only will try to update non-core packages to their latest
-versions. It will not update the version of meteor. To update individual packages
-(for example: 'foo:awesome') pass in their names instead, with no options. ('meteor
-update foo:awesome').
+versions. It will not update the version of meteor. To update individual
+packages (for example: 'foo:awesome') pass in their names instead, with no
+options. ('meteor update foo:awesome').
 
 Options:
   --packages-only  Update the package versions only. Do not update the release.
@@ -419,15 +419,16 @@ Options:
                     --mobile-server=https://example.com:443).
   --deploy          Optionally, specify a domain to deploy to, rather than
                     running locally.
-  --production      Simulate production mode. Minify and bundle CSS and JS files.
+  --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings        Set optional data for Meteor.settings on the server
 
   --ios,            Run tests in an emulator or on a mobile device. All of
   --android,        the tests for client and server will run in addition to
   --ios-device,     mobile-specific tests.
   --android-device
-  --test-app-path   Set the location where to create and run a temporary app
-                    used for tests. Defaults to systems temporary directory /tmp.
+  --test-app-path   Set the directory in which to create a temporary app used
+                    for tests. Defaults to the system's temporary directory,
+                    usually /tmp.
   --verbose         Print all output from builds logs.
 
 
@@ -530,7 +531,7 @@ configuration file, which must have the following keys:
   version: the version of this release
   recommended: is this a recommended release? (see below)
   description: a brief description of the release
-  patchFrom: (Optional) an array of strings specifying releases from which this is a patch
+  patchFrom: (Optional) releases from which this is a patch (array of strings)
   tool: <package name>@<version> of the meteor tool that this release specifies
   packages: object of <package name> to <version> for specified package versions
 
@@ -679,7 +680,8 @@ Options:
 
 >>> admin recommend-release
 Recommend a previously published release.
-Usage: meteor admin recommend-release <release track>@<release version> [--unrecomend]
+Usage: meteor admin recommend-release
+         <release track>@<release version> [--unrecommend]
 
 Recommend a version of a meteor release. Users can be upgraded to recommended
 releases automatically when they run meteor update. Users will never be updated
@@ -705,13 +707,13 @@ Set the package as unmigrated.
 Usage: meteor admin set-unmigrated <package name> [--success]
        meteor admin set-unmigrated <package name>@<version> [--success]
 
-Set a version of a package, as unmigrated: make it invisible in search
-and show, without a special option. (You should use this to hide packages that have been
-renamed in the aftermath of the 0.9.0 migration.) This will not stop the users from
-adding the package to their app.
+Set a version of a package, as unmigrated: make it invisible in search and show,
+without a special option. (You should use this to hide packages that have been
+renamed in the aftermath of the 0.9.0 migration.) This will not stop the users
+from adding the package to their app.
 
-If no version is passed in, all versions will be set. Use the --success option to
-mark the package version as successfully migrated, making it show up again.
+If no version is passed in, all versions will be set. Use the --success option
+to mark the package version as successfully migrated, making it show up again.
 
 Options:
   --success         mark the package as successfully migrated.
@@ -749,8 +751,8 @@ Set the readme on the latest version of a core meteor package.
 Usage: meteor admin set-latest-core-readme name --commit commit
        meteor admin set-latest-core-readme name --tag tag
 
-Set the readme field on the latest published version of a core package to the readme at
-a given git commit, or the readme at a given git tag.
+Set the readme field on the latest published version of a core package to the
+readme at a given git commit, or the readme at a given git tag.
 
 >>> admin get-machine
 Open an ssh shell to a machine in the meteor build farm.
