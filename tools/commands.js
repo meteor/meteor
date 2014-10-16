@@ -425,10 +425,10 @@ main.registerCommand({
         var rel = commandsPackages.doOrDie(function () {
           return catalog.official.getDefaultReleaseVersion();
         });
-        var relString = rel.version;
+        relString = rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
-        relString = release.current.version;
+        relString = release.current.getReleaseVersion();
       }
 
       // If we are not in checkout, write the current release here.

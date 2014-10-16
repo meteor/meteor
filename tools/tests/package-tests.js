@@ -904,3 +904,19 @@ selftest.define("add package with no builds", ["net", "test-package-server"], fu
                " has no compatible build");
   run.expectExit(1);
 });
+
+selftest.define("package skeleton creates correct versionsFrom", function () {
+  var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
+  var fullPackageName = "test:" + utils.randomToken();
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+
+  s.cd(fullPackageName);
+  var packageJs = s.read("package.js");
+  if (! packageJs.match(/api.versionsFrom\('v1'\);/)) {
+    selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
+                  packageJs);
+  }
+});
