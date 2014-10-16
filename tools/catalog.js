@@ -260,19 +260,12 @@ _.extend(LayeredCatalog.prototype, {
       var ret = buildmessage.enterJob({
           title: "Figuring out the best package versions to use." },
         function () {
-        // Then, call the constraint solver, to get the valid transitive subset of
-        // those versions to record for our solution. (We don't just return the
-        // original version lock because we want to record the correct transitive
-        // dependencies)
-        try {
+          // Then, call the constraint solver, to get the valid transitive
+          // subset of those versions to record for our solution. (We don't just
+          // return the original version lock because we want to record the
+          // correct transitive dependencies)
           return self.resolver.resolve(deps, constr, resolverOpts);
-        } catch (e) {
-          console.log("Got error during resolve; trying refresh", e);
-          remoteCatalog.official.refresh();
-          self.resolver || self._initializeResolver();
-          return self.resolver.resolve(deps, constr, resolverOpts);
-        }
-      });
+        });
       if (ret["usedRCs"]) {
         var expPackages = [];
         _.each(ret.answer, function(version, package) {
