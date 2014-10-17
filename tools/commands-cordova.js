@@ -878,9 +878,9 @@ var buildCordova = function (localPath, buildCommand, options) {
 };
 
 var platformDisplayName = function (name) {
-  return name === 'ios' ? 'iOS simulator' :
+  return name === 'ios' ? 'iOS Simulator' :
          name === 'ios-device' ? 'iOS Device' :
-         name === 'android' ? 'Android emulator':
+         name === 'android' ? 'Android Emulator':
          'Android Device';
 };
 
