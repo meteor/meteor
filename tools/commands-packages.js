@@ -1246,9 +1246,8 @@ main.registerCommand({
         Console.info("      tool: " + v.tool);
         Console.info("      packages:");
 
-        versionDesc = versionDesc + "\n      packages:\n";
         _.each(v.packages, function(pv, pn) {
-          Console.info("          " + pn + ":" + pv);
+          Console.info("          " + pn + "@" + pv);
         });
       }
     });
