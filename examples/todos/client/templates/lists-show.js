@@ -26,8 +26,8 @@ Template.listsShow.helpers({
     return Router.current().todosHandle.ready();
   },
 
-  todos: function() {
-    return Todos.find({listId: this._id}, {sort: {createdAt : -1}});
+  todos: function(listId) {
+    return Todos.find({listId: listId}, {sort: {createdAt : -1}});
   }
 });
 
