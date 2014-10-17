@@ -1182,7 +1182,7 @@ main.registerCommand({
       versions = [full[1]];
     }
     versionRecords = _.map(versions, getRelevantRecord);
-    if (full.length > 1 && versionRecords.length == 1) {
+    if (full.length > 1 && versionRecords.length == 1 && versionRecords[0]) {
       showName += Console.bold("@" + versionRecords[0].version);
     }
   } else {
@@ -1192,7 +1192,7 @@ main.registerCommand({
       doOrDie(function () {
         versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
       });
-      if (versionRecords.length == 1) {
+      if (versionRecords.length == 1 && versionRecords[0]) {
         showName += Console.bold("@" + versionRecords[0].version);
       }
     } else {
@@ -1214,16 +1214,17 @@ main.registerCommand({
       Console.error("No versions of package" + name + " exist.");
     }
   } else {
-    if (showName) {
-      Console.info("Showing", showName, "\n");
-    }
-
     var lastVersion = versionRecords[versionRecords.length - 1];
     if (!lastVersion && full.length > 1) {
       Console.error(
         full[1] + ": unknown version of " + name);
       return 1;
     }
+
+    if (showName) {
+      Console.info("Showing", showName, "\n");
+    }
+
     var unknown = "< unknown >";
     _.each(versionRecords, function (v) {
       // Don't show versions that we shouldn't be showing.
