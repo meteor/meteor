@@ -816,7 +816,11 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
+        Console.setPretty(true);
+        Console.enableProgressDisplay(true);
         alreadyRefreshed = catalog.refreshOrWarn();
+        Console.enableProgressDisplay(false);
+        Console.setPretty(false);
         releaseName = release.latestKnown();
       }
       if (!releaseName) {
@@ -872,7 +876,11 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
+        Console.setPretty(true);
+        Console.enableProgressDisplay(true);
         alreadyRefreshed = catalog.refreshOrWarn();
+        Console.enableProgressDisplay(false);
+        Console.setPretty(false);
 
         // Try to load the release even if the refresh failed, since it might
         // have failed on a later page than the one we needed.
