@@ -617,6 +617,7 @@ var buildCommands = {
     debug: { type: Boolean },
     directory: { type: Boolean },
     architecture: { type: String },
+    'mobile-settings': { type: String },
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
@@ -661,6 +662,11 @@ var buildCommand = function (options) {
       !_.has(VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
     return 1;
+  }
+
+  // XXX 'mobile-settings' is an alias for 'settings' for the build command
+  if (options['mobile-settings']) {
+    options.settings = options['mobile-settings'];
   }
 
   var bundleArch =  options.architecture || archinfo.host();

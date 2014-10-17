@@ -245,7 +245,7 @@ tarball. See 'meteor help build' for more information.
 >>> build
 Build this project for all platforms.
 Usage: meteor build <output path> [--debug] [--directory]
-          [--server http://example.com:3000]
+          [--mobile-settings settings.json] [--server http://example.com:3000]
 
 Package this project up for deployment. The command outputs a directory with
 builds for all platforms in this project.
@@ -261,14 +261,15 @@ source) and/or 'ios' (with the Xcode project source).
 
 
 Options:
-  --debug          Build in debug mode (don't minify, etc).
-  --directory      Output a directory (rather than a tarball) for the
-                   application server bundle. If the output location exists,
-                   it will be recursively deleted first.
-  --server         Location where mobile builds connect to the Meteor server.
-                   Defaults to localhost:3000. Can include a URL scheme
-                   (for example, --server=https://example.com:443).
-
+  --debug             Build in debug mode (don't minify, etc).
+  --directory         Output a directory (rather than a tarball) for the
+                      application server bundle. If the output location exists,
+                      it will be recursively deleted first.
+  --mobile-settings   Set optional data for Meteor.settings available on mobile
+                      applications' first launch.
+  --server            Location where mobile builds connect to the Meteor server.
+                      Defaults to localhost:3000. Can include a URL scheme
+                      (for example, --server=https://example.com:443).
 
 >>> mongo
 Connect to the Mongo database for the specified site.
