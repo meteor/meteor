@@ -1,5 +1,45 @@
 ## v.NEXT
 
+* Add the `meteor admin get-machine` command to make it easier to
+  publish packages with binary dependencies for all
+  architectures. `meteor publish` no longer publishes builds
+  automatically.
+
+* Speed up `meteor deploy` by not bundling unnecessary files and
+  programs.
+
+* Implemented reasonable default behavior for launch screens on mobile
+  apps.
+
+* Don't build for Android when only the iOS build is required, and
+  vice versa.
+
+* Fix `meteor publish-for-arch` springboarding. XXX more detail?
+
+* Restyle the 'leaderboard' example, and optimize it for both desktop
+  and mobile.
+
+* Fix bug that could cause mobile apps to stop being able to receive hot
+  code push updates.
+
+* Fix default `api.versionsFrom` field in packages created with `meteor
+  create --package`.
+
+* Work around the `meteor run` proxy occasionally running out of sockets.
+
+* To make Meteor easier to use on slow or unreliable network
+  connections, increase timeouts for DDP connections that the Meteor
+  tool uses to communicate with the package server. #2777, #2789.
+
+* Fix bug with regular expressions in minimongo. #2817
+
+* Add READMEs for several core packages.
+
+* Include protocols in URLs printed by `meteor deploy`.
+
+* Improve error message for limited ordered observe. #1643
+
+
 ## v0.9.4
 
 ### New Features
