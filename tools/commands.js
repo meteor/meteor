@@ -664,7 +664,9 @@ var buildCommand = function (options) {
     return 1;
   }
 
-  // XXX 'mobile-settings' is an alias for 'settings' for the build command
+  // options['mobile-settings'] is used to set the initial value of
+  // `Meteor.settings` on mobile apps. Pass it on to options.settings,
+  // which is used in this command.
   if (options['mobile-settings']) {
     options.settings = options['mobile-settings'];
   }

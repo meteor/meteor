@@ -265,8 +265,10 @@ Options:
   --directory         Output a directory (rather than a tarball) for the
                       application server bundle. If the output location exists,
                       it will be recursively deleted first.
-  --mobile-settings   Set optional data for Meteor.settings available on mobile
-                      applications' first launch.
+  --mobile-settings   Set optional data for the initial value of Meteor.settings
+                      in your mobile application. A new value for
+                      Meteor.settings can be set later by the server as part of
+                      hot code push.
   --server            Location where mobile builds connect to the Meteor server.
                       Defaults to localhost:3000. Can include a URL scheme
                       (for example, --server=https://example.com:443).
