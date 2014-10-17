@@ -753,31 +753,6 @@ _.extend(PackageSource.prototype, {
       // This means (1) "remove any files with the `.wmv` extension from
       // the 'connect' package directory" and (2) "remove the 'tests'
       // directory from the 'useragent' package directory."
-      //
-      // The values can also be objects, in which case the keys of the
-      // nested objects will match nested dependency names. For example,
-      //
-      //   Npm.strip({
-      //     connect: {
-      //       multiparty: ["test/"]
-      //     }
-      //   });
-      //
-      // will discard the "test" directory from the "multiparty" package
-      // that is depended upon by the "connect" package.
-      //
-      // If you need to discard files from both "connect" and
-      // "multiparty", here's a little trick you can use:
-      //
-      //   Npm.strip({
-      //     connect: {
-      //       connect: ["huge.wmv"],
-      //       multiparty: ["test/"]
-      //     }
-      //   });
-      //
-      // This makes intuitive sense because requiring the "connect" package
-      // from the "connect" package always returns the package itself.
       strip: function(discards) {
         self.npmDiscards.merge(discards);
       },
