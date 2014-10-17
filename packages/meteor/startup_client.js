@@ -21,7 +21,6 @@ var ready = function() {
         // plugin that we always include for sure) and retry a bit later if it
         // is nowhere to be found. Experiments have found that either all
         // plugins are attached or none.
-        console.log("retrying")
         Meteor.setTimeout(runStartupCallbacks, 20);
         return;
       }
