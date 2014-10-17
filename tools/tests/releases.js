@@ -86,8 +86,9 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
     run.matchErr("offline");
-    run.matchErr("Meteor strange");
-    run.matchErr("not installed");
+    run.matchErr("version strange of Meteor");
+    run.matchErr("don't have that version of Meteor installed");
+    run.matchErr("update servers");
     run.expectExit(1);
 
     // You create an app from a checkout, and then try to use it from an
