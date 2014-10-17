@@ -16,6 +16,82 @@ var config = require('./config.js');
 var packageClient = require('./package-client.js');
 var Console = require('./console.js').Console;
 
+var catalog = exports;
+
+catalog.refreshFailed = undefined;
+
+catalog.Refresh = {};
+
+// Refresh strategy: once at program start
+catalog.Refresh.OnceAtStart = function (options) {
+  var self = this;
+  self.options = _.extend({}, options);
+};
+
+catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
+  var self = this;
+  if (!catalog.refreshOrWarn(self.options)) {
+    if (self.options.ignoreFailure) {
+      Console.debug("Failed to update package catalog, but will continue.");
+    } else {
+      Console.error("This command requires an up-to-date package catalog.  Exiting.");
+      // Avoid circular dependency.
+      throw require('./main.js').ExitWithCode(1);
+    }
+  }
+};
+
+// Refresh strategy: never (we don't use the package catalog)
+catalog.Refresh.Never = function (options) {
+  var self = this;
+  self.options = _.extend({}, options);
+  self.doesNotUsePackages = true;
+};
+
+// Refreshes the catalog. Returns true on success.
+// On network error, warns and returns false.
+// Throws other errors (ie, programming errors in the tool).
+//
+// THIS IS A HIGH-LEVEL UI COMMAND. DO NOT CALL IT FROM LOW-LEVEL CODE (ie, call
+// it only from main.js or command implementations).
+catalog.refreshOrWarn = function (options) {
+  try {
+    catalog.complete.refreshOfficialCatalog(options);
+    catalog.refreshFailed = false;
+    return true;
+  } catch (err) {
+    // Example errors:
+
+    // Offline, with name-based host:
+    //   Network error: ws://packages.meteor.com/websocket: getaddrinfo ENOTFOUND
+
+    // Offline, with IP-based host:
+    //   Network error: ws://8.8.8.8/websocket: connect ENETUNREACH
+
+    // Online, bad port:
+    //    Network error: wss://packages.meteor.com:8888/websocket: connect ECONNREFUSED
+
+    // Online, socket hangup:
+    //   Network error: wss://packages.meteor.com:80/websocket: socket hang up
+
+    if (err.errorType !== 'DDP.ConnectionError')
+      throw err;
+
+    // XXX is throwing correct for SQLite errors too? probably.
+
+    Console.warn("Unable to refresh catalog (are you offline?)\n");
+
+    // XXX: Make this Console.debug(err)
+    if (Console.isDebugEnabled()) {
+      Console.printError(err);
+    }
+
+    catalog.refreshFailed = true;
+    return false;
+  }
+};
+
+
 // As a work-around for [] !== [], we use a function to check whether values are acceptable
 var ACCEPT_NON_EMPTY = function (result) {
   // null, undefined
@@ -160,6 +236,8 @@ _.extend(LayeredCatalog.prototype, {
 
   rebuildLocalPackages: function (namedPackages) {
     this.packageCache.refresh();
+    this.resolver = null;
+
     return this.localCatalog.rebuildLocalPackages(namedPackages);
   },
 
@@ -192,7 +270,7 @@ _.extend(LayeredCatalog.prototype, {
       // already. (Putting this off until the first call to resolveConstraints
       // also helps with performance: no need to build this package and load the
       // large mori module unless we actually need it.)
-      self.resolver || self._initializeResolver();
+      self.resolver = self.resolver || self._buildResolver();
 
       // Looks like we are not going to be able to avoid calling the constraint
       // solver, so let's process the input (constraints) into the correct
@@ -238,19 +316,12 @@ _.extend(LayeredCatalog.prototype, {
       var ret = buildmessage.enterJob({
           title: "Figuring out the best package versions to use." },
         function () {
-        // Then, call the constraint solver, to get the valid transitive subset of
-        // those versions to record for our solution. (We don't just return the
-        // original version lock because we want to record the correct transitive
-        // dependencies)
-        try {
+          // Then, call the constraint solver, to get the valid transitive
+          // subset of those versions to record for our solution. (We don't just
+          // return the original version lock because we want to record the
+          // correct transitive dependencies)
           return self.resolver.resolve(deps, constr, resolverOpts);
-        } catch (e) {
-          console.log("Got error during resolve; trying refresh", e);
-          remoteCatalog.official.refresh();
-          self.resolver || self._initializeResolver();
-          return self.resolver.resolve(deps, constr, resolverOpts);
-        }
-      });
+        });
       if (ret["usedRCs"]) {
         var expPackages = [];
         _.each(ret.answer, function(version, package) {
@@ -293,33 +364,46 @@ _.extend(LayeredCatalog.prototype, {
 
   // Refresh the catalogs referenced by this catalog.
   // options:
-  // - forceRefresh: even if there is a future in progress, refresh the catalog
-  //   anyway. When we are using hot code push, we may be restarting the app
-  //   because of a local package change that impacts that catalog. Don't wait
-  //   on the official catalog to refresh data.json, in this case.
   // - watchSet: if provided, any files read in reloading packages will be added
   //   to this set.
-  refresh: function (options) {
+  refreshLocalPackages: function (options) {
     var self = this;
     self.localCatalog.refresh(options);
-    self.otherCatalog.refresh(options);
+    //// Note that otherCatalog can throw, if we fail to connect
+    //// XXX: Order of refreshes?  Continue on error?
+    //self.otherCatalog.refresh(options);
     self.packageCache.refresh();
     self.resolver = null;
   },
 
-  _initializeResolver: function () {
+  // Refresh the official catalog referenced by this catalog.
+  refreshOfficialCatalog: function (options) {
+    var self = this;
+
+    //self.localCatalog.refresh(options);
+    // Note that otherCatalog can throw, if we fail to connect
+    // XXX: Order of refreshes?  Continue on error?
+    self.otherCatalog.refresh(options);
+
+    self.packageCache.refresh();
+    self.resolver = null;
+  },
+
+
+  _buildResolver: function () {
     var self = this;
     var uniload = require('./uniload.js');
 
     var constraintSolverPackage =  uniload.load({
       packages: [ 'constraint-solver']
     })['constraint-solver'];
-    self.resolver =
+    var resolver =
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
         nudge: function () {
           Console.nudge(true);
         }
       });
+    return resolver;
   },
 
   watchLocalPackageDirs: function (watchSet) {

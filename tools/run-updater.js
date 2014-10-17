@@ -17,11 +17,11 @@ _.extend(Updater.prototype, {
     if (self.timer)
       throw new Error("already running?");
 
-    // Check twice a day. (Should not share buildmessage state with
+    // Check every 15 minutes. (Should not share buildmessage state with
     // the main fiber.)
     self.timer = setInterval(fiberHelpers.inBareFiber(function () {
       self._check();
-    }), 12*60*60*1000);
+    }), 15 * 60 * 1000);
 
     // Also start a check now, but don't block on it. (This should
     // not share buildmessage state with the main fiber.)

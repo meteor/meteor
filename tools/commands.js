@@ -83,7 +83,8 @@ var showInvalidArchMsg = function (arch) {
 // Prints the Meteor architecture name of this host
 main.registerCommand({
   name: '--arch',
-  requiresRelease: false
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var archinfo = require('./archinfo.js');
   console.log(archinfo.host());
@@ -96,7 +97,8 @@ main.registerCommand({
 // XXX: What does this mean in our new release-free world?
 main.registerCommand({
   name: '--version',
-  requiresRelease: false
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (release.current === null) {
     if (! options.appDir)
@@ -119,7 +121,8 @@ main.registerCommand({
 // Internal use only. For automated testing.
 main.registerCommand({
   name: '--long-version',
-  requiresRelease: false
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (files.inCheckout()) {
     Console.stderr.write("checkout\n");
@@ -138,7 +141,8 @@ main.registerCommand({
 // Internal use only. For automated testing.
 main.registerCommand({
   name: '--requires-release',
-  requiresRelease: true
+  requiresRelease: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return 0;
 });
@@ -174,7 +178,8 @@ var runCommandOptions = {
     // bundled assets only. Encapsulates the behavior of once (does not rerun)
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean}
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 
 main.registerCommand(_.extend(
@@ -379,7 +384,8 @@ main.registerCommand({
     example: { type: String },
     package: { type: Boolean }
   },
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
 
   // Creating a package is much easier than creating an app, so if that's what
@@ -422,9 +428,7 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = commandsPackages.doOrDie(function () {
-          return catalog.official.getDefaultReleaseVersion();
-        });
+        var rel = catalog.official.getDefaultReleaseVersion();
         relString = rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
@@ -467,11 +471,9 @@ main.registerCommand({
   // this version of the tools, and then stamp on the correct release
   // at the end.)
   if (! release.current.isCheckout() && !release.forced) {
-    var needToSpringboard = commandsPackages.doOrDie(function () {
-      return release.current.name !== release.latestDownloaded();
-    });
-    if (needToSpringboard)
+    if (release.current.name !== release.latestKnown()) {
       throw new main.SpringboardToLatestRelease;
+    }
   }
 
   var exampleDir = path.join(__dirname, '..', 'examples');
@@ -585,12 +587,15 @@ main.registerCommand({
 // run-upgrader
 ///////////////////////////////////////////////////////////////////////////////
 
+// For testing upgraders during development.
+// XXX move under admin?
 main.registerCommand({
   name: 'run-upgrader',
   hidden: true,
   minArgs: 1,
   maxArgs: 1,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var upgrader = options.args[0];
 
@@ -616,7 +621,8 @@ var buildCommands = {
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
     verbose: { type: Boolean, short: "v" }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
@@ -827,7 +833,8 @@ main.registerCommand({
   },
   requiresApp: function (options) {
     return options.args.length === 0;
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var mongoUrl;
   var usedMeteorAccount = false;
@@ -895,7 +902,8 @@ main.registerCommand({
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
   maxArgs: 1,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (options.args.length !== 0) {
     Console.stderr.write(
@@ -958,7 +966,8 @@ main.registerCommand({
   },
   requiresApp: function (options) {
     return options.delete || options.star ? false : true;
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
@@ -1089,7 +1098,8 @@ main.registerCommand({
   options: {
     // XXX once Galaxy is released, document this
     stream: { type: Boolean, short: 'f' }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
 
@@ -1120,7 +1130,8 @@ main.registerCommand({
     add: { type: String, short: "a" },
     remove: { type: String, short: "r" },
     list: { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   if (options.add && options.remove) {
@@ -1168,7 +1179,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'claim',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   config.printUniverseBanner();
   auth.pollForRegistrationCompletion();
@@ -1236,7 +1248,8 @@ main.registerCommand({
     'ios-device': { type: Boolean },
     android: { type: Boolean },
     'android-device': { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   try {
     var parsedUrl = utils.parseUrl(options.port);
@@ -1553,7 +1566,8 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
 main.registerCommand({
   name: 'rebuild',
   maxArgs: Infinity,
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var messages;
   var count = 0;
@@ -1600,7 +1614,8 @@ main.registerCommand({
     // Undocumented: get credentials on a specific Galaxy. Do we still
     // need this?
     galaxy: { type: String }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return auth.loginCommand(_.extend({
     overwriteExistingToken: true
@@ -1613,7 +1628,8 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'logout'
+  name: 'logout',
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return auth.logoutCommand(options);
 });
@@ -1624,7 +1640,8 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
-  name: 'whoami'
+  name: 'whoami',
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return auth.whoAmICommand(options);
 });
@@ -1659,7 +1676,8 @@ var loggedInAccountsConnectionOrPrompt = function (action) {
 main.registerCommand({
   name: 'admin list-organizations',
   minArgs: 0,
-  maxArgs: 0
+  maxArgs: 0,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   var token = auth.getSessionToken(config.getAccountsDomain());
@@ -1713,7 +1731,8 @@ main.registerCommand({
     add: { type: String },
     remove: { type: String },
     list: { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   if (options.add && options.remove) {
@@ -1784,7 +1803,9 @@ main.registerCommand({
     list: { type: Boolean },
     file: { type: String }
   },
-  hidden: true
+  hidden: true,
+  // It needs to deal with packages (catalog.complete)
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var selftest = require('./selftest.js');
 
@@ -1863,7 +1884,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'list-sites',
   minArgs: 0,
-  maxArgs: 0
+  maxArgs: 0,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   auth.pollForRegistrationCompletion();
   if (! auth.isLoggedIn()) {
@@ -1890,7 +1912,8 @@ main.registerCommand({
     // By default, we give you a machine for 5 minutes. You can request up to
     // 15. (MDG can reserve machines for longer than that.)
     minutes: { type: Number, required: false }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   // Check that we are asking for a valid architecture.
@@ -2017,7 +2040,8 @@ main.registerCommand({
     changed: { type: Boolean }
   },
   maxArgs: 2,
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var p = function (key) {
     if (_.has(options, key))

@@ -731,7 +731,7 @@ _.extend(Sandbox.prototype, {
     var oldOffline = catalog.official.offline;
     catalog.official.offline = true;
     doOrThrow(function () {
-      catalog.official.refresh();
+      catalog.complete.refreshOfficialCatalog();
     });
     _.each(
       ['autopublish', 'meteor-platform', 'insecure'],
@@ -742,7 +742,7 @@ _.extend(Sandbox.prototype, {
         if (!versionRec) {
           catalog.official.offline = false;
           doOrThrow(function () {
-            catalog.official.refresh();
+            catalog.complete.refreshOfficialCatalog();
           });
           catalog.official.offline = true;
           versionRec = doOrThrow(function () {

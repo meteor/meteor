@@ -154,9 +154,7 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  doOrThrow(function () {
-    release._setCurrentForOldTest();
-  });
+  release._setCurrentForOldTest();
 
   try {
     runTest();
