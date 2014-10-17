@@ -1149,9 +1149,10 @@ main.registerCommand({
 
   var versionRecords;
   var label;
+  var showName;
   if (!allRecord.isRelease) {
     label = "package";
-    Console.info("Showing package", Console.bold(allRecord.record.name), "\n");
+    showName = "package " + Console.bold(allRecord.record.name);
     var getRelevantRecord = function (version) {
       var versionRecord = doOrDie({ title: 'Get relevant record' }, function () {
         return catalog.official.getVersion(name, version);
@@ -1181,13 +1182,19 @@ main.registerCommand({
       versions = [full[1]];
     }
     versionRecords = _.map(versions, getRelevantRecord);
+    if (full.length > 1 && versionRecords.length == 1) {
+      showName += Console.bold("@" + versionRecords[0].version);
+    }
   } else {
     label = "release";
-    Console.info("Showing release", Console.bold(allRecord.record.name), "\n");
+    showName = "release " + Console.bold(allRecord.record.name);
     if (full.length > 1) {
       doOrDie(function () {
         versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
       });
+      if (versionRecords.length == 1) {
+        showName += Console.bold("@" + versionRecords[0].version);
+      }
     } else {
       versionRecords =
         _.map(
@@ -1207,6 +1214,10 @@ main.registerCommand({
       Console.error("No versions of package" + name + " exist.");
     }
   } else {
+    if (showName) {
+      Console.info("Showing", showName, "\n");
+    }
+
     var lastVersion = versionRecords[versionRecords.length - 1];
     if (!lastVersion && full.length > 1) {
       Console.error(
