@@ -33,14 +33,23 @@ exports.tryToDownloadUpdate = function (options) {
   checkInProgress = false;
 };
 
+var firstCheck = true;
+
 var checkForUpdate = function (showBanner) {
   var messages = buildmessage.capture(function () {
-    // Silent is currently unused, but we keep it as a hint here...
-    try {
-      catalog.complete.refreshOfficialCatalog({silent: true});
-    } catch (err) {
-      Console.debug("Failed to refresh catalog, ignoring error", err);
-      return;
+    if (firstCheck) {
+      // We want to avoid a potential race condition here, because we run an update almost immediately
+      // at run.  We don't want to drop the resolver cache; that would be slow.  "meteor run" itself
+      // should have run a refresh anyway.  So, the first time, we just skip the remote catalog sync.
+      firstCheck = false;
+    } else {
+      // Silent is currently unused, but we keep it as a hint here...
+      try {
+        catalog.complete.refreshOfficialCatalog({silent: true});
+      } catch (err) {
+        Console.debug("Failed to refresh catalog, ignoring error", err);
+        return;
+      }
     }
 
     if (!release.current.isProperRelease())
