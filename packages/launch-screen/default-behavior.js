@@ -34,5 +34,11 @@ Meteor.startup(function () {
         clearInterval(checkBody);
       }
     }, 50);
+
+    // In case `Template.body` never gets rendered (due to some bug),
+    // hide the launch screen after 5 seconds.
+    setTimeout(function () {
+      handle.release();
+    }, 5000);
   }
 });
