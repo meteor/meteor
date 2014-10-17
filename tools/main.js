@@ -1304,14 +1304,9 @@ commandName + ": You're not in a Meteor project directory.\n" +
     // Before run, do a package sync if one is configured
     var catalogRefreshStrategy = command.catalogRefresh;
     if (!alreadyRefreshed && catalogRefreshStrategy.beforeCommand) {
-      // XXX This buildmessage.capture only exists for showing progress.
-      var messages = buildmessage.capture({title: 'Updating package catalog'}, function () {
+      buildmessage.enterJob({title: 'Updating package catalog'}, function () {
         catalogRefreshStrategy.beforeCommand();
       });
-      if (messages.hasMessages()) {
-        Console.printMessages(messages);
-        throw main.ExitWithCode(1);
-      }
     }
 
     var ret = command.func(options);

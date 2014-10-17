@@ -179,7 +179,7 @@ var runCommandOptions = {
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean}
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 
 main.registerCommand(_.extend(
@@ -385,7 +385,7 @@ main.registerCommand({
     package: { type: Boolean }
   },
   pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
 
   // Creating a package is much easier than creating an app, so if that's what
@@ -622,7 +622,7 @@ var buildCommands = {
     "mobile-port": { type: String },
     verbose: { type: Boolean, short: "v" }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
@@ -967,7 +967,7 @@ main.registerCommand({
   requiresApp: function (options) {
     return options.delete || options.star ? false : true;
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
@@ -1249,7 +1249,7 @@ main.registerCommand({
     android: { type: Boolean },
     'android-device': { type: Boolean }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   try {
     var parsedUrl = utils.parseUrl(options.port);
@@ -1567,7 +1567,7 @@ main.registerCommand({
   name: 'rebuild',
   maxArgs: Infinity,
   hidden: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var messages;
   var count = 0;

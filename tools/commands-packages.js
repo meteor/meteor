@@ -145,7 +145,7 @@ var formatArchitecture = function (s) {
 // necessary!
 main.registerCommand({
   name: '--get-ready',
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // It is not strictly needed, but it is thematically a good idea to refresh
   // the official catalog when we call get-ready, since it is an
@@ -220,7 +220,7 @@ main.registerCommand({
     'top-level': { type: Boolean }
   },
   requiresPackage: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
@@ -373,7 +373,7 @@ main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // argument processing
   var all = options.args[0].split('@');
@@ -616,7 +616,7 @@ main.registerCommand({
     'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
   //Console.info("Resyncing with package server...");
@@ -1130,7 +1130,7 @@ main.registerCommand({
   options: {
     "show-old": {type: Boolean, required: false }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE, ignoreErrors: true })
 }, function (options) {
   // We should refresh the catalog in case there are new versions.
   //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
@@ -1290,7 +1290,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'refresh',
   pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   //refreshOfficialCatalogOrDie();
 });
@@ -1307,7 +1307,7 @@ main.registerCommand({
     // Undocumented debug-only option for Velocity.
     "debug-only": {type: Boolean, required: false}
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE, ignoreErrors: true })
 }, function (options) {
   if (options.args.length === 0) {
     Console.info("To show all packages, do", Console.command("meteor search ."));
@@ -1454,7 +1454,7 @@ main.registerCommand({
   requiresApp: true,
   options: {
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var items = [];
 
@@ -1850,7 +1850,7 @@ main.registerCommand({
   requiresRelease: false,
   minArgs: 0,
   maxArgs: Infinity,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
   // XXX should be able to update even without a refresh, esp to a specific
@@ -1992,7 +1992,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
 
   // Special case on reserved package namespaces, such as 'cordova'
@@ -2067,6 +2067,7 @@ main.registerCommand({
   });
   if (messages.hasMessages()) {
     Console.printMessages(messages);
+    explainIfRefreshFailed();
     return 1;
   }
 
@@ -2162,6 +2163,8 @@ main.registerCommand({
   // different result than what they are going to get. We have already logged an
   // error, so we should exit.
   if ( failed ) {
+    explainIfRefreshFailed();
+
     return 1;
   }
 
@@ -2183,6 +2186,7 @@ main.registerCommand({
       if ( ! newVersions) {
         // XXX: Better error handling.
         Console.error("Cannot resolve package dependencies.");
+        explainIfRefreshFailed();
         return;
       }
 
@@ -2203,10 +2207,12 @@ main.registerCommand({
     Console.error(
       "Could not satisfy all the specified constraints:\n"
         + e + "");
+    explainIfRefreshFailed();
     return 1;
   }
   if (messages.hasMessages()) {
     Console.printMessages(messages);
+    explainIfRefreshFailed();
     return 1;
   }
 
@@ -2240,7 +2246,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   // Special case on reserved package namespaces, such as 'cordova'
   var filteredPackages = cordova.filterPackages(options.args);
@@ -2336,7 +2342,7 @@ main.registerCommand({
     remove: { type: String, short: "r" },
     list: { type: Boolean }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
@@ -2431,7 +2437,7 @@ main.registerCommand({
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
@@ -2603,7 +2609,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   hidden: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   var bannersFile = options.args[0];
   try {
@@ -2651,7 +2657,7 @@ main.registerCommand({
   options: {
     unrecommend: { type: Boolean, short: "u" }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
@@ -2705,7 +2711,7 @@ main.registerCommand({
   name: 'admin set-earliest-compatible-version',
   minArgs: 2,
   maxArgs: 2,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
@@ -2756,7 +2762,7 @@ main.registerCommand({
   name: 'admin change-homepage',
   minArgs: 2,
   maxArgs: 2,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
@@ -2803,7 +2809,7 @@ main.registerCommand({
     "success" : {type: Boolean, required: false}
   },
   hidden: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We don't care about having the most recent information, but we do want the
@@ -2861,7 +2867,7 @@ main.registerCommand({
     "tag" : {type: String, required: false}
   },
   hidden: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart()
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   if (options.commit && options.tag)
