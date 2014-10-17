@@ -1125,8 +1125,9 @@ main.registerCommand({
       // This package is only available for some architectures.
       // XXX show in a more human way?
       var myStringBuilds = myBuilds.join(' ');
-      return _.extend({ buildArchitectures: myStringBuilds },
-                      versionRecord);
+      return versionRecord ? _.extend({
+        buildArchitectures: myStringBuilds
+      }, versionRecord) : versionRecord;
     };
     // XXX should this skip pre-releases? No, it should.
     var versions = catalog.official.getSortedVersions(name);
@@ -1162,7 +1163,7 @@ main.registerCommand({
     var lastVersion = versionRecords[versionRecords.length - 1];
     if (!lastVersion && full.length > 1) {
       Console.error(
-        "Unknown version of" + name + ":" + full[1]);
+        full[1] + ": unknown version of " + name);
       return 1;;
     }
     var unknown = "< unknown >";

@@ -903,6 +903,8 @@ selftest.define("add package with no builds", ["net", "test-package-server"], fu
   run.matchErr("Package " + fullPackageName +
                " has no compatible build");
   run.expectExit(1);
+
+  testUtils.logout(s);
 });
 
 selftest.define("package skeleton creates correct versionsFrom", function () {
@@ -919,4 +921,33 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
     selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
                   packageJs);
   }
+});
+
+selftest.define("show unknown version of package", function () {
+  var s = new Sandbox();
+  var fullPackageName = "test:" + utils.randomToken();
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+
+  testUtils.login(s, "test", "testtest");
+
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(60);
+    run.expectExit(0);
+  });
+
+  run = s.run("show", fullPackageName);
+  run.waitSecs(15);
+  run.match("Version 1.0.0");
+  run.expectExit(0);
+
+  run = s.run("show", fullPackageName + "@2.0.0");
+  run.waitSecs(15);
+  run.matchErr("2.0.0: unknown version of " + fullPackageName);
+  run.expectExit(1);
+
+  testUtils.logout(s);
 });
