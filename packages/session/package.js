@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Session variable",
-  version: '1.0.3'
+  version: '1.0.3-refreshpolicy.1'
 });
 
 Package.on_use(function (api) {

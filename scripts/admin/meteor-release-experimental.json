@@ -1,7 +1,7 @@
 {
  "track": "METEOR",
- "version": "0.9.4-rc.8",
+ "version": "refreshpolicy-test.1",
  "recommended": false,
  "official": false,
- "description": "An RC of Meteor 0.9.4."
+ "description": "Test for refreshpolicy branch"
 }
