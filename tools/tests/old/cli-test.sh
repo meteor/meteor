@@ -49,7 +49,7 @@ $METEOR update --help | grep "Updates the meteor release" >> $OUTPUT
 $METEOR add --help | grep "Adds packages" >> $OUTPUT
 $METEOR remove --help | grep "Removes a package" >> $OUTPUT
 $METEOR list --help | grep "This will not list transitive dependencies" >> $OUTPUT
-$METEOR bundle --help | grep "Deprecated command. Use 'build' instead" >> $OUTPUT
+$METEOR bundle --help | grep "command has been deprecated" >> $OUTPUT
 $METEOR build --help | grep "Package this project" >> $OUTPUT
 $METEOR mongo --help | grep "Opens a Mongo" >> $OUTPUT
 $METEOR deploy --help | grep "Deploys the project" >> $OUTPUT
