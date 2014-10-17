@@ -411,15 +411,14 @@ _.extend(AppRunner.prototype, {
       // project constraints.
       //
       // XXX This is almost certainly both overly conservative and not
-      // conservative enough. On the one hand, catalog.complete.refresh is a
-      // slow operation (especially now when it involves reading the whole
-      // packages.data.json into memory) and it's likely that the existing
-      // buildinfo/watcher code with some extensions can detect relevant changes
-      // more precisely. On the other hand, we DON'T use this blunt hammer when
-      // only the client code has changed, which might not be good enough.  We
-      // need to take a thorough pass over all the package build/metadata
-      // caching mechanisms and come up with a unified system that flushes
-      // caches only when actually necessary.
+      // conservative enough. On the one hand,
+      // catalog.complete.refreshLocalPackages is a slow operation and it's
+      // likely that the existing buildinfo/watcher code with some extensions
+      // can detect relevant changes more precisely. On the other hand, we DON'T
+      // use this blunt hammer when only the client code has changed, which
+      // might not be good enough.  We need to take a thorough pass over all the
+      // package build/metadata caching mechanisms and come up with a unified
+      // system that flushes caches only when actually necessary.
       var refreshWatchSet = new watch.WatchSet;
       var refreshMessages = buildmessage.capture(function () {
         try {
