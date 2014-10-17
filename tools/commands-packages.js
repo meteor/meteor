@@ -1243,7 +1243,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'search',
   pretty: true,
-  minArgs: 1,
+  minArgs: 0, // So we can provide specific help
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
@@ -1253,6 +1253,11 @@ main.registerCommand({
     "debug-only": {type: Boolean, required: false}
   }
 }, function (options) {
+
+  if (options.args.length === 0) {
+    Console.info("To show all packages, do", Console.bold("meteor search ."));
+    return 1;
+  }
 
   // Show all means don't do any filtering at all. So, don't do any filtering
   // for anything at all.
