@@ -189,7 +189,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.waitSecs(30);
   // This fails because the FB plugin does not compile without additional
   // configuration for android.
-  run.expectExit(8);
+  run.expectExit(1);
 
   // When one plugin installation fails, we uninstall all the plugins
   // (legend has it that Cordova can get in a weird inconsistent state
