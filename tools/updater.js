@@ -41,6 +41,7 @@ var checkForUpdate = function (showBanner) {
       // We want to avoid a potential race condition here, because we run an update almost immediately
       // at run.  We don't want to drop the resolver cache; that would be slow.  "meteor run" itself
       // should have run a refresh anyway.  So, the first time, we just skip the remote catalog sync.
+      // But we do want to do the out-of-date release checks, so we can't just delay the first update cycle.
       firstCheck = false;
     } else {
       // Silent is currently unused, but we keep it as a hint here...
