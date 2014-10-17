@@ -694,7 +694,7 @@ selftest.define("package with --name",
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run("add", "accounts-base");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.match("accounts-base");
 
   run = s.run();
