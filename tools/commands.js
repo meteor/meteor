@@ -428,9 +428,7 @@ main.registerCommand({
       var relString;
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
-        var rel = commandsPackages.doOrDie(function () {
-          return catalog.official.getDefaultReleaseVersion();
-        });
+        var rel = catalog.official.getDefaultReleaseVersion();
         relString = rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
