@@ -16,9 +16,6 @@ var config = require('./config.js');
 var packageClient = require('./package-client.js');
 var Console = require('./console.js').Console;
 
-// XXX: Circular?
-var main = require("./main.js");
-
 var catalog = exports;
 
 catalog.refreshFailed = undefined;
@@ -38,7 +35,8 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
       Console.error("This command requires an up-to-date package catalog.  Exiting.");
-      throw main.ExitWithCode(1);
+      // Avoid circular dependency.
+      throw require('./main.js').ExitWithCode(1);
     }
   }
 };
