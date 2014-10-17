@@ -671,17 +671,23 @@ var ensureCordovaPlugins = function (localPath, options) {
       files.rm_recursive(path.join(cordovaPath, 'platforms'));
       ensureCordovaPlatforms(localPath);
     };
-    Console.info("Initializing Cordova plugins...");
 
-    buildmessage.enterJob({ title: "Initializing Cordova plugins..."}, function () {
+    buildmessage.enterJob({ title: "Installing Cordova plugins..."}, function () {
       uninstallAllPlugins();
 
       // Now install all of the plugins.
       try {
         // XXX: forkJoin with parallel false?
+        var pluginsInstalled = 0;
+
+        var pluginsCount = _.size(plugins);
+        buildmessage.reportProgress({ current: 0, end: pluginsCount });
         _.each(plugins, function (version, name) {
-          buildmessage.enterJob({ title: 'Installing Cordova plugin ' + name}, function () {
-            installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
+          installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
+
+          buildmessage.reportProgress({
+            current: ++pluginsInstalled,
+            end: pluginsCount
           });
         });
       } catch (err) {
@@ -853,8 +859,10 @@ var buildCordova = function (localPath, buildCommand, options) {
         args.push('--release');
       }
 
-      execFileSyncOrThrow(localCordova, args,
-        {cwd: cordovaPath, maxBuffer: 2000 * 1024});
+      buildmessage.enterJob({ title: 'Building mobile project' }, function () {
+        execFileSyncOrThrow(localCordova, args,
+                            {cwd: cordovaPath, maxBuffer: 2000 * 1024});
+      });
     } catch (err) {
       // "ld: 100000 duplicate symbols for architecture i386" is a common error
       // message that occurs when you run an iOS project compilation from /tmp or
