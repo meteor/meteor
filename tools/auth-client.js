@@ -42,10 +42,10 @@ exports.handlerConnectionError = function (error, label) {
     if (error.message) {
       errorMsg += ": " + error.message;
     }
-    Console.info(errorMsg);
+    Console.warn(errorMsg);
   } else if (error.errorType === "DDP.ConnectionError") {
-    Console.info("Error connecting to " + label + ": "
-                         + error.message);
+    Console.warn("Error connecting to " + label + ": "
+                 + error.message);
   } else {
     throw error;
   }
