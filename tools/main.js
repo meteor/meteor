@@ -1201,74 +1201,75 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  // Same check for commands that can only be run from a package dir.
-  var requiresPackage = command.requiresPackage;
-  if (typeof requiresPackage === "function") {
-    requiresPackage = requiresPackage(options);
-  }
+  if (!command.catalogRefresh.doesNotUsePackages) {
+    // OK, now it's finally time to set up the complete catalog. Only after this
+    // can we use the build system (other than via uniload).
 
-  // OK, now it's finally time to set up the complete catalog. Only after this
-  // can we use the build system (other than via uniload).
+    // Figure out the directories that we should search for local
+    // packages (in addition to packages downloaded from the package
+    // server)
+    var localPackageDirs = [];
+    if (appDir)
+      localPackageDirs.push(path.join(appDir, 'packages'));
 
-  // Figure out the directories that we should search for local
-  // packages (in addition to packages downloaded from the package
-  // server)
-  var localPackageDirs = [];
-  if (appDir)
-    localPackageDirs.push(path.join(appDir, 'packages'));
-
-  if (process.env.PACKAGE_DIRS) {
-    // User can provide additional package directories to search in
-    // PACKAGE_DIRS (colon-separated).
-    localPackageDirs = localPackageDirs.concat(
-      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
-        return path.resolve(p);
-      }));
-  }
-
-  if (!files.usesWarehouse()) {
-    // Running from a checkout, so use the Meteor core packages from
-    // the checkout.
-    localPackageDirs.push(path.join(
-      files.getCurrentToolsDir(), 'packages'));
-  }
-
-  var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
-    catalog.complete.initialize({
-      localPackageDirs: localPackageDirs
-    });
-  });
-  if (messages.hasMessages()) {
-    process.stderr.write("=> Errors while scanning packages:\n\n");
-    process.stderr.write(messages.formatMessages());
-    process.exit(1);
-  }
-
-
-  var packageDir = files.findPackageDir();
-  if (packageDir)
-    packageDir = path.resolve(packageDir);
-
-  if (packageDir) {
-    options.packageDir = packageDir;
-  }
-
-  if (requiresPackage) {
-    if (! options.packageDir) {
-      process.stderr.write(
-        commandName + ": You're not in a Meteor package directory.\n");
-      process.exit(1);
+    if (process.env.PACKAGE_DIRS) {
+      // User can provide additional package directories to search in
+      // PACKAGE_DIRS (colon-separated).
+      localPackageDirs = localPackageDirs.concat(
+        _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
+          return path.resolve(p);
+        }));
     }
-    // Commands that require you to be in a package directory add that package
-    // as a local package to the catalog. Other random commands don't (but if we
-    // see a reason for them to, we can change this rule).
-    messages = buildmessage.capture(function () {
-      catalog.complete.addLocalPackage(options.packageDir);
+
+    if (!files.usesWarehouse()) {
+      // Running from a checkout, so use the Meteor core packages from
+      // the checkout.
+      localPackageDirs.push(path.join(
+        files.getCurrentToolsDir(), 'packages'));
+    }
+
+    var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
+      catalog.complete.initialize({
+        localPackageDirs: localPackageDirs
+      });
     });
     if (messages.hasMessages()) {
-      process.stderr.write("=> Errors while scanning current package:\n\n");
+      process.stderr.write("=> Errors while scanning packages:\n\n");
       process.stderr.write(messages.formatMessages());
       process.exit(1);
+    }
+
+    // Same check for commands that can only be run from a package dir.
+    // You can't specify this on a Refresh.Never command.
+    var requiresPackage = command.requiresPackage;
+    if (typeof requiresPackage === "function") {
+      requiresPackage = requiresPackage(options);
+    }
+
+    if (requiresPackage) {
+      var packageDir = files.findPackageDir();
+      if (packageDir)
+        packageDir = path.resolve(packageDir);
+      if (packageDir) {
+        options.packageDir = packageDir;
+      }
+
+      if (! options.packageDir) {
+        process.stderr.write(
+          commandName + ": You're not in a Meteor package directory.\n");
+        process.exit(1);
+      }
+      // Commands that require you to be in a package directory add that package
+      // as a local package to the catalog. Other random commands don't (but if
+      // we see a reason for them to, we can change this rule).
+      messages = buildmessage.capture(function () {
+        catalog.complete.addLocalPackage(options.packageDir);
+      });
+      if (messages.hasMessages()) {
+        process.stderr.write("=> Errors while scanning current package:\n\n");
+        process.stderr.write(messages.formatMessages());
+        process.exit(1);
+      }
     }
   }
 

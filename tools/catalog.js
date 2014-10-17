@@ -47,6 +47,7 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
 catalog.Refresh.Never = function (options) {
   var self = this;
   self.options = _.extend({}, options);
+  self.doesNotUsePackages = true;
 };
 
 // Refreshes the catalog. Returns true on success.
