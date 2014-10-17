@@ -7,6 +7,13 @@
 {{else}}
 <script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_runtime_config.js'></script>
 {{/if}}
+
+{{{head}}}
+</head>
+<body>
+{{{body}}}
+{{{extraBody}}}
+
 {{#each js}}  <script type="text/javascript" src="{{../bundledJsCssPrefix}}{{url}}"></script>
 {{/each}}
 {{#each additionalStaticJs}}
@@ -19,11 +26,5 @@
             src='{{rootUrlPathPrefix}}{{pathname}}'></script>
   {{/if}}
 {{/each}}
-
-{{{head}}}
-</head>
-<body>
-{{{body}}}
-{{{extraBody}}}
 </body>
 </html>
