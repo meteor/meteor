@@ -3,7 +3,8 @@ App.info({
   description: 'A simple todo list app built in Meteor.',
   author: 'Percolate Studio Team',
   email: 'us@percolatestudio.com',
-  website: 'http://percolatestudio.com'
+  website: 'http://percolatestudio.com',
+  version: '0.0.1'
 });
 
 App.icons({
