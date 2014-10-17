@@ -786,7 +786,6 @@ Fiber(function () {
   }
 
   var alreadyRefreshed = false;
-  var refreshFailed = false;
 
   if (! files.usesWarehouse()) {
     // Running from a checkout
@@ -817,12 +816,12 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        refreshFailed = !catalog.refreshOrWarn();
+        catalog.refreshOrWarn();
         alreadyRefreshed = true;
         releaseName = release.latestKnown();
       }
       if (!releaseName) {
-        if (refreshFailed) {
+        if (catalog.refreshFailed) {
           process.stderr.write(
 "The package catalog has no information about any Meteor releases, and we\n" +
 "had trouble connecting to the package server.\n");
@@ -874,7 +873,7 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        refreshFailed = !catalog.refreshOrWarn();
+        catalog.refreshOrWarn();
         alreadyRefreshed = true;
 
         // Try to load the release even if the refresh failed, since it might
@@ -899,11 +898,13 @@ Fiber(function () {
           if (e instanceof warehouse.NoSuchReleaseError) {
             // pass ...
           } else if (e instanceof files.OfflineError) {
-            if (!refreshFailed) {
+            if (!catalog.refreshFailed) {
               // Warn if we didn't already warn.
               Console.warn("Unable to contact release server (are you offline?)");
             }
-            refreshFailed = true;
+            // Treat this like a failure to refresh the catalog
+            // (map the old world to the new world)
+            catalog.refreshFailed = true;
           } else {
             throw e;
           }
@@ -920,7 +921,7 @@ Fiber(function () {
       if (releaseOverride) {
         process.stderr.write(releaseName + ": unknown release.\n");
       } else if (appDir) {
-        if (refreshFailed) {
+        if (catalog.refreshFailed) {
           process.stderr.write(
 "Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
 "but you don't have that version of Meteor installed, and we were unable to\n" +

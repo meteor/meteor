@@ -73,10 +73,10 @@ var refreshOfficialCatalogOrDie = function (options) {
   }
 };
 
-var explainIfRefreshFailed = function (command) {
+var explainIfRefreshFailed = function () {
   if (catalog.official.offline) {
     Console.info("(But we're offline, so we didn't update the package catalog, so it might exist)");
-  } else if (command.catalogRefresh.refreshFailed) {
+  } else if (catalog.refreshFailed) {
     Console.info("(But the update of the package catalog failed, so it might exist)");
   }
 };
@@ -1132,8 +1132,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
 }, function (options) {
-  var self = this;
-
   // We should refresh the catalog in case there are new versions.
   //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
@@ -1149,7 +1147,7 @@ main.registerCommand({
   var record = allRecord.record;
   if (!record) {
     Console.error("Unknown package or release: " +  name);
-    explainIfRefreshFailed(self);
+    explainIfRefreshFailed();
     return 1;
   }
 
@@ -1311,8 +1309,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE })
 }, function (options) {
-  var self = this;
-
   if (options.args.length === 0) {
     Console.info("To show all packages, do", Console.command("meteor search ."));
     return 1;
@@ -1442,7 +1438,7 @@ main.registerCommand({
       "Neither packages nor releases matching \'" +
         search + "\' could be found.");
 
-    explainIfRefreshFailed(self);
+    explainIfRefreshFailed();
   } else {
     Console.info(
       "To get more information on a specific item, use", Console.command("meteor show"));

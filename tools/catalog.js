@@ -18,18 +18,19 @@ var Console = require('./console.js').Console;
 
 var catalog = exports;
 
+catalog.refreshFailed = undefined;
+
 catalog.Refresh = {};
 
 // Refresh strategy: once at program start
 catalog.Refresh.OnceAtStart = function (options) {
   var self = this;
   self.options = _.extend({}, options);
-  self.refreshFailed = undefined;
 };
 
 catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
   var self = this;
-  self.refreshFailed = !catalog.refreshOrWarn(self.options);
+  catalog.refreshOrWarn(self.options);
 };
 
 // Refresh strategy: never (we don't use the package catalog)
@@ -47,6 +48,7 @@ catalog.Refresh.Never = function (options) {
 catalog.refreshOrWarn = function (options) {
   try {
     catalog.complete.refreshOfficialCatalog(options);
+    catalog.refreshFailed = false;
     return true;
   } catch (err) {
     // Example errors:
@@ -75,6 +77,7 @@ catalog.refreshOrWarn = function (options) {
       Console.printError(err);
     }
 
+    catalog.refreshFailed = true;
     return false;
   }
 };
