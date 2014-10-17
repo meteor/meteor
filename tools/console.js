@@ -347,6 +347,23 @@ _.extend(Console.prototype, {
     return chalk.red('\u2717 ' + message);
   },
 
+  command: function (message) {
+    return this.bold(message);
+  },
+
+  url: function (message) {
+    return this.underline(message);
+  },
+
+  underline: function (message) {
+    var self = this;
+
+    if (!self._pretty) {
+      return message;
+    }
+    return chalk.underline(message);
+  },
+
   bold: function (message) {
     var self = this;
 

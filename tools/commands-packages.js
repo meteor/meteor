@@ -72,6 +72,51 @@ var refreshOfficialCatalogOrDie = function (options) {
   });
 };
 
+// XXX: To formatters.js ?
+var formatAsList = function (list, options) {
+  options = options || {};
+  var formatter = options.formatter;
+  if (!list || !list.length) {
+    return "";
+  }
+  var out = "";
+  for (var i = 0; i < list.length; i++) {
+    if (i != 0) {
+      out += ", ";
+    }
+    var v = list[i];
+    if (formatter) {
+      v = formatter(v);
+    }
+    out += v;
+  }
+  return out;
+};
+
+var endsWith = function (s, suffix) {
+  return s.length >= suffix.length && s.substr(s.length - suffix.length) == suffix;
+};
+
+var removeIfEndsWith = function (s, suffix) {
+  if (!endsWith(s, suffix)) {
+    return s;
+  }
+  return s.substring(0, s.length - suffix.length);
+};
+
+var formatArchitecture = function (s) {
+  while (true) {
+    var original = s;
+
+    // Remove well-known suffixes
+    s = removeIfEndsWith(s, "+web.cordova");
+    s = removeIfEndsWith(s, "+web.browser");
+
+    if (original === s) {
+      return s;
+    }
+  }
+};
 
 // Internal use only. Makes sure that your Meteor install is totally good to go
 // (is "airplane safe"). Specifically, it:
@@ -1106,6 +1151,7 @@ main.registerCommand({
   var label;
   if (!allRecord.isRelease) {
     label = "package";
+    Console.info("Showing package", Console.bold(allRecord.record.name), "\n");
     var getRelevantRecord = function (version) {
       var versionRecord = doOrDie({ title: 'Get relevant record' }, function () {
         return catalog.official.getVersion(name, version);
@@ -1137,6 +1183,7 @@ main.registerCommand({
     versionRecords = _.map(versions, getRelevantRecord);
   } else {
     label = "release";
+    Console.info("Showing release", Console.bold(allRecord.record.name), "\n");
     if (full.length > 1) {
       doOrDie(function () {
         versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
@@ -1173,13 +1220,17 @@ main.registerCommand({
         return;
       }
 
-      var versionDesc = "Version " + v.version;
+      var versionDesc = Console.bold("Version " + v.version);
       if (v.description)
         versionDesc = versionDesc + " : " + v.description;
-      Console.info(versionDesc + "");
-      if (v.buildArchitectures && full.length > 1)
-        Console.info("      Architectures: "
-                             + v.buildArchitectures);
+      Console.info(versionDesc);
+      if (full.length > 1) {
+        if (v.buildArchitectures) {
+          var buildArchitectures = v.buildArchitectures.split(' ');
+          Console.info("      Architectures: ", formatAsList(buildArchitectures, { formatter: formatArchitecture }));
+        }
+        // XXX: else show "no architectures"?
+      }
       if (v.packages && full.length > 1) {
         Console.info("      tool: " + v.tool);
         Console.info("      packages:");
@@ -1213,24 +1264,19 @@ main.registerCommand({
     myMaintainerString +=  " and " +  myMaintainers[myTotal - 1];
   }
 
-  var metamessage = "";
-
   if (myMaintainerString) {
-    metamessage += "Maintained by " + myMaintainerString + ".";
+    Console.info("Maintained by " + myMaintainerString + ".");
   }
 
   if (lastVersion && lastVersion.git) {
     // No full stop, as it makes copying and pasting painful
-    metamessage += "\nYou can find the git repository at: " +
-        lastVersion.git;
+    Console.info("You can find the git repository at:", Console.url(lastVersion.git));
   }
 
   if (record && record.homepage) {
     // No full stop, as it makes copying and pasting painful
-    metamessage = metamessage + "\nYou can find more information at "
-      + record.homepage;
+    Console.info("You can find more information at:", Console.url(record.homepage));
   }
-  Console.info(metamessage);
 });
 
 main.registerCommand({
@@ -1255,7 +1301,7 @@ main.registerCommand({
 }, function (options) {
 
   if (options.args.length === 0) {
-    Console.info("To show all packages, do", Console.bold("meteor search ."));
+    Console.info("To show all packages, do", Console.command("meteor search ."));
     return 1;
   }
 
@@ -1395,7 +1441,7 @@ main.registerCommand({
         search + "\' could be found.");
   } else {
     Console.info(
-      "To get more information on a specific item, use meteor show.");
+      "To get more information on a specific item, use", Console.command("meteor show"));
   }
 });
 

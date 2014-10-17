@@ -94,8 +94,9 @@ exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-// Returns a pretty list suitable for showing to the user. Input is an
-// array of objects with keys 'name' and 'description'.
+// XXX: Move to e.g. formatters.js?
+// Prints a package list in a nice format.
+// Input is an array of objects with keys 'name' and 'description'.
 exports.printPackageList = function (unsortedItems, options) {
   options = options || {};
 
@@ -110,10 +111,6 @@ exports.printPackageList = function (unsortedItems, options) {
   });
 
   var pad = longest.replace(/./g, ' ');
-  // it'd be nice to read the actual terminal width, but I tried
-  // several methods and none of them work (COLUMNS isn't set in
-  // node's environment; `tput cols` returns a constant 80). maybe
-  // node is doing something weird with ptys.
 
   var width = 80;
   var stream = process.stdout;
