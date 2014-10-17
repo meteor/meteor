@@ -36,9 +36,12 @@ Meteor.startup(function () {
     }, 50);
 
     // In case `Template.body` never gets rendered (due to some bug),
-    // hide the launch screen after 5 seconds.
+    // hide the launch screen after 6 seconds. This matches the
+    // observed timeout that Cordova apps on Android (but not iOS)
+    // have on hiding the launch screen (even if you don't call
+    // `navigator.splashscreen.hide()`)
     setTimeout(function () {
       handle.release();
-    }, 5000);
+    }, 6000);
   }
 });
