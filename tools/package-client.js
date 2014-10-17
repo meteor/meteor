@@ -102,7 +102,7 @@ exports.updateServerPackageData = function (dataStore, options) {
 };
 
 
-_updateServerPackageData = function (dataStore, options) {
+var _updateServerPackageData = function (dataStore, options) {
   var self = this;
   options = options || {};
   if (dataStore === null)

@@ -741,7 +741,6 @@ _.extend(RemoteCatalog.prototype, {
 
     Console.debug("In remote catalog refresh");
 
-    buildmessage.assertInCapture();
     if (self.offline)
       return false;
 
