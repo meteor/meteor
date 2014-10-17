@@ -69,8 +69,8 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   // code for this test. Make sure we get it to pass before merging.
   s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
   run = s.run("--release", "weird");
-  run.matchErr("Meteor weird");
-  run.matchErr("online");
+  run.matchErr("offline");
+  run.matchErr("weird: unknown release");
   run.expectExit(1);
 
   // Project asking for nonexistent release.
@@ -85,9 +85,9 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
+    run.matchErr("offline");
     run.matchErr("Meteor strange");
     run.matchErr("not installed");
-    run.matchErr("online");
     run.expectExit(1);
 
     // You create an app from a checkout, and then try to use it from an

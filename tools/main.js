@@ -786,6 +786,7 @@ Fiber(function () {
   }
 
   var alreadyRefreshed = false;
+  var refreshFailed = false;
 
   if (! files.usesWarehouse()) {
     // Running from a checkout
@@ -816,7 +817,7 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        var refreshFailed = !catalog.refreshOrWarn();
+        refreshFailed = !catalog.refreshOrWarn();
         alreadyRefreshed = true;
         releaseName = release.latestKnown();
       }
@@ -872,7 +873,7 @@ Fiber(function () {
       }
 
       // ATTEMPT 3: modern release, troposphere sync needed.
-      catalog.refreshOrWarn();
+      refreshFailed = !catalog.refreshOrWarn();
       alreadyRefreshed = true;
 
       // Try to load the release even if the refresh failed, since it might have
@@ -893,9 +894,16 @@ Fiber(function () {
         manifest = warehouse.ensureReleaseExistsAndReturnManifest(
           releaseName);
       } catch (e) {
-        // XXX handle OfflineError too?
         // Note: this is WAREHOUSE's NoSuchReleaseError, not RELEASE's
-        if (!(e instanceof warehouse.NoSuchReleaseError)) {
+        if (e instanceof warehouse.NoSuchReleaseError) {
+          // pass ...
+        } else if (e instanceof files.OfflineError) {
+          if (!refreshFailed) {
+            // Warn if we didn't already warn.
+            Console.warn("Unable to contact release server (are you offline?)");
+          }
+          refreshFailed = true;
+        } else {
           throw e;
         }
       }
@@ -910,11 +918,20 @@ Fiber(function () {
       if (releaseOverride) {
         process.stderr.write(releaseName + ": unknown release.\n");
       } else if (appDir) {
-        process.stderr.write(
+        if (refreshFailed) {
+          process.stderr.write(
+"Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
+"but you don't have that version of Meteor installed, and we were unable to\n" +
+"contact Meteor's update servers to find out about it. Please edit the\n" +
+".meteor/release file in the project and change it to a valid Meteor release,\n" +
+"or go online.\n");
+        } else {
+          process.stderr.write(
 "Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
 "but you don't have that version of Meteor installed and the Meteor update\n" +
 "servers don't have it either. Please edit the .meteor/release file in the\n" +
 "project and change it to a valid Meteor release.\n");
+        }
       } else {
         throw new Error("can't load latest release?");
       }

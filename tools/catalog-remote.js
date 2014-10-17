@@ -741,6 +741,12 @@ _.extend(RemoteCatalog.prototype, {
 
     Console.debug("In remote catalog refresh");
 
+    if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === 'offline') {
+      var e = new Error;
+      e.errorType = 'DDP.ConnectionError';
+      throw e;
+    }
+
     if (self.offline)
       return false;
 
