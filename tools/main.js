@@ -849,67 +849,69 @@ Fiber(function () {
 
     var rel = null;
 
-    // ATTEMPT 1: modern release, on disk.  (For modern releases, "on disk" just
-    // means we have the metadata about it in our catalog; it doesn't mean we've
-    // downloaded the tool or any packages yet.)  release.load just does a
-    // single sqlite query; it doesn't refresh the catalog.
-    try {
-      rel = release.load(releaseName);
-    } catch (e) {
-      if (!(e instanceof release.NoSuchReleaseError))
-        throw e;
-    }
-
-    if (!rel) {
-      if (releaseName === null)
-        throw Error("huh? couldn't load from-checkout release?");
-
-      // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
-      // "red pill" release which has the same name as a modern release!)
-      if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
-        var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
-          releaseName);
-        oldSpringboard(manifest.tools);  // doesn't return
-      }
-
-      // ATTEMPT 3: modern release, troposphere sync needed.
-      refreshFailed = !catalog.refreshOrWarn();
-      alreadyRefreshed = true;
-
-      // Try to load the release even if the refresh failed, since it might have
-      // failed on a later page than the one we needed.
+    if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD !== 'not-found') {
+      // ATTEMPT 1: modern release, on disk.  (For modern releases, "on disk"
+      // just means we have the metadata about it in our catalog; it doesn't
+      // mean we've downloaded the tool or any packages yet.)  release.load just
+      // does a single sqlite query; it doesn't refresh the catalog.
       try {
         rel = release.load(releaseName);
       } catch (e) {
-        if (!(e instanceof release.NoSuchReleaseError)) {
+        if (!(e instanceof release.NoSuchReleaseError))
           throw e;
-        }
       }
-    }
 
-    if (!rel) {
-      // ATTEMPT 4: legacy release, loading from warehouse server.
-      manifest = null;
-      try {
-        manifest = warehouse.ensureReleaseExistsAndReturnManifest(
-          releaseName);
-      } catch (e) {
-        // Note: this is WAREHOUSE's NoSuchReleaseError, not RELEASE's
-        if (e instanceof warehouse.NoSuchReleaseError) {
-          // pass ...
-        } else if (e instanceof files.OfflineError) {
-          if (!refreshFailed) {
-            // Warn if we didn't already warn.
-            Console.warn("Unable to contact release server (are you offline?)");
+      if (!rel) {
+        if (releaseName === null)
+          throw Error("huh? couldn't load from-checkout release?");
+
+        // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
+        // "red pill" release which has the same name as a modern release!)
+        if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
+          var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+            releaseName);
+          oldSpringboard(manifest.tools);  // doesn't return
+        }
+
+        // ATTEMPT 3: modern release, troposphere sync needed.
+        refreshFailed = !catalog.refreshOrWarn();
+        alreadyRefreshed = true;
+
+        // Try to load the release even if the refresh failed, since it might
+        // have failed on a later page than the one we needed.
+        try {
+          rel = release.load(releaseName);
+        } catch (e) {
+          if (!(e instanceof release.NoSuchReleaseError)) {
+            throw e;
           }
-          refreshFailed = true;
-        } else {
-          throw e;
         }
       }
-      if (manifest) {
-        // OK, it was an legacy release. We should old-springboard to it.
-        oldSpringboard(manifest.tools);  // doesn't return
+
+      if (!rel) {
+        // ATTEMPT 4: legacy release, loading from warehouse server.
+        manifest = null;
+        try {
+          manifest = warehouse.ensureReleaseExistsAndReturnManifest(
+            releaseName);
+        } catch (e) {
+          // Note: this is WAREHOUSE's NoSuchReleaseError, not RELEASE's
+          if (e instanceof warehouse.NoSuchReleaseError) {
+            // pass ...
+          } else if (e instanceof files.OfflineError) {
+            if (!refreshFailed) {
+              // Warn if we didn't already warn.
+              Console.warn("Unable to contact release server (are you offline?)");
+            }
+            refreshFailed = true;
+          } else {
+            throw e;
+          }
+        }
+        if (manifest) {
+          // OK, it was an legacy release. We should old-springboard to it.
+          oldSpringboard(manifest.tools);  // doesn't return
+        }
       }
     }
 
