@@ -1804,7 +1804,8 @@ main.registerCommand({
     file: { type: String }
   },
   hidden: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  // It needs to deal with packages (catalog.complete)
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var selftest = require('./selftest.js');
 
