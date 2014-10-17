@@ -37,7 +37,7 @@ var checkForUpdate = function (showBanner) {
   var messages = buildmessage.capture(function () {
     // Silent is currently unused, but we keep it as a hint here...
     try {
-      catalog.official.refresh({silent: true});
+      catalog.complete.refreshOfficialCatalog({silent: true});
     } catch (err) {
       Console.debug("Failed to refresh catalog, ignoring error", err);
       return;

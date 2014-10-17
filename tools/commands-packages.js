@@ -69,7 +69,7 @@ var doOrDie = exports.doOrDie = function (options, f) {
 var refreshOfficialCatalogOrDie = function (options) {
   doOrDie({title: 'Updating package catalog'}, function () {
     try {
-      catalog.official.refresh(options);
+      catalog.complete.refreshOfficialCatalog(options);
     } catch (err) {
       buildmessage.error("Unable to update the package catalog", err);
     }

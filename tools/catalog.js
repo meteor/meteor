@@ -46,7 +46,7 @@ catalog.Refresh.Never = function (options) {
 // it only from main.js or command implementations).
 catalog.refreshOrWarn = function (options) {
   try {
-    catalog.official.refresh(options);
+    catalog.complete.refreshOfficialCatalog(options);
     return true;
   } catch (err) {
     // Example errors:
@@ -222,6 +222,8 @@ _.extend(LayeredCatalog.prototype, {
 
   rebuildLocalPackages: function (namedPackages) {
     this.packageCache.refresh();
+    this.resolver = null;
+
     return this.localCatalog.rebuildLocalPackages(namedPackages);
   },
 
@@ -363,6 +365,20 @@ _.extend(LayeredCatalog.prototype, {
     self.packageCache.refresh();
     self.resolver = null;
   },
+
+  // Refresh the official catalog referenced by this catalog.
+  refreshOfficialCatalog: function (options) {
+    var self = this;
+
+    //self.localCatalog.refresh(options);
+    // Note that otherCatalog can throw, if we fail to connect
+    // XXX: Order of refreshes?  Continue on error?
+    self.otherCatalog.refresh(options);
+
+    self.packageCache.refresh();
+    self.resolver = null;
+  },
+
 
   _buildResolver: function () {
     var self = this;
