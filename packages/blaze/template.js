@@ -242,13 +242,18 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
 };
 
 /**
- * @summary Specify template helpers available to this template.
+ * @summary Specify template helpers available to this template. Or retrieve an existing helper.
  * @locus Client
- * @param {Object} helpers Dictionary of helper functions by name.
+ * @param {Object} helpers Dictionary of helper functions by name. Or a helper function name.
  */
-Template.prototype.helpers = function (dict) {
-  for (var k in dict)
-    this.__helpers.set(k, dict[k]);
+Template.prototype.helpers = function (keyOrDict) {
+  if (_.isString(keyOrDict)) {
+    return this.__helpers.get(keyOrDict);
+  }
+  else {
+    for (var k in keyOrDict)
+      this.__helpers.set(k, keyOrDict[k]);
+  }
 };
 
 /**
