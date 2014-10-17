@@ -1267,7 +1267,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     // If it's the first time we've called tellMongo on this sandbox,
-    // open a connection to fake-mongod. Wait up to 2 seconds for it
+    // open a connection to fake-mongod. Wait up to 10 seconds for it
     // to accept the connection, retrying every 100ms.
     //
     // XXX we never clean up this connection. Hopefully once
@@ -1279,7 +1279,7 @@ _.extend(Run.prototype, {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 50;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 100;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
