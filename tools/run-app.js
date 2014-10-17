@@ -424,7 +424,6 @@ _.extend(AppRunner.prototype, {
       var refreshMessages = buildmessage.capture(function () {
         try {
           catalog.complete.refreshLocalPackages({
-            forceRefresh: true,
             watchSet: refreshWatchSet
           });
         } catch (err) {

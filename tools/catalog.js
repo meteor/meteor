@@ -74,6 +74,8 @@ catalog.refreshOrWarn = function (options) {
     if (Console.isDebugEnabled()) {
       Console.printError(err);
     }
+
+    return false;
   }
 };
 
@@ -350,10 +352,6 @@ _.extend(LayeredCatalog.prototype, {
 
   // Refresh the catalogs referenced by this catalog.
   // options:
-  // - forceRefresh: even if there is a future in progress, refresh the catalog
-  //   anyway. When we are using hot code push, we may be restarting the app
-  //   because of a local package change that impacts that catalog. Don't wait
-  //   on the official catalog to refresh data.json, in this case.
   // - watchSet: if provided, any files read in reloading packages will be added
   //   to this set.
   refreshLocalPackages: function (options) {

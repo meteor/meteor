@@ -64,16 +64,14 @@ var doOrDie = exports.doOrDie = function (options, f) {
     throw main.ExitWithCode(1);
   }
   return ret;
-
 };
+
 var refreshOfficialCatalogOrDie = function (options) {
-  doOrDie({title: 'Updating package catalog'}, function () {
-    try {
-      catalog.complete.refreshOfficialCatalog(options);
-    } catch (err) {
-      buildmessage.error("Unable to update the package catalog", err);
-    }
-  });
+  if (!catalog.refreshOrWarn(options)) {
+    Console.error(
+      "This command requires an up-to-date package catalog. Exiting.");
+    throw main.ExitWithCode(1);
+  }
 };
 
 var explainIfRefreshFailed = function (command) {
