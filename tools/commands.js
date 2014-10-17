@@ -1942,13 +1942,13 @@ main.registerCommand({
   };
 
   try {
-    maybeLog("Logging into the build farm server ...");
+    maybeLog("Logging into the get-machines server ...");
     var conn = authClient.loggedInConnection(
       config.getBuildFarmUrl(),
       config.getBuildFarmDomain(),
       "build-farm");
   } catch (err) {
-    authClient.handlerConnectionError(err, "build farm");
+    authClient.handlerConnectionError(err, "get-machines server");
     return 1;
   }
 
