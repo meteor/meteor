@@ -73,7 +73,9 @@ var cordova = exports;
 //   - appName: the target path of the build
 //   - host
 //   - port
-cordova.buildPlatforms = function (localPath, platforms, options) {
+cordova.buildTargets = function (localPath, targets, options) {
+  var platforms = targetsToPlatforms(targets);
+
   verboseLog('Running build for platforms:', platforms);
   checkRequestedPlatforms(platforms);
 
@@ -81,7 +83,7 @@ cordova.buildPlatforms = function (localPath, platforms, options) {
     requirePlatformReady(platform);
   });
 
-  buildCordova(localPath, 'build', options);
+  buildCordova(localPath, platforms, options);
 };
 
 cordova.buildPlatformRunners = function (localPath, platforms, options) {
@@ -444,23 +446,27 @@ var ensureCordovaPlatforms = function (localPath) {
   return true;
 };
 
-// checks that every requested platform such as 'android' or 'ios' is already
-// added to the project
-var checkRequestedPlatforms = function (platforms) {
-  platforms = _.uniq(platforms);
+var targetsToPlatforms = function (targets) {
+  targets = _.uniq(targets);
 
-  var requestedPlatforms = [];
+  var platforms = [];
   // Find the required platforms.
   // ie. ["ios", "android", "ios-device"] will produce ["ios", "android"]
-  _.each(platforms, function (platformName) {
-    var platform = platformName.split('-')[0];
-    if (! _.contains(requestedPlatforms, platform)) {
-      requestedPlatforms.push(platform);
+  _.each(targets, function (targetName) {
+    var platform = targetName.split('-')[0];
+    if (! _.contains(platforms, platform)) {
+      platforms.push(platform);
     }
   });
 
+  return platforms;
+};
+
+// checks that every requested platform such as 'android' or 'ios' is already
+// added to the project
+var checkRequestedPlatforms = function (platforms) {
   var cordovaPlatforms = project.getCordovaPlatforms();
-  _.each(requestedPlatforms, function (platform) {
+  _.each(platforms, function (platform) {
     if (! _.contains(cordovaPlatforms, platform)) {
       Console.warn("Platform is not added to the project: " + platform);
 
@@ -761,7 +767,7 @@ var getCordovaDependenciesFromStar = function (star) {
 };
 
 // Build a Cordova project, creating a Cordova project if necessary.
-var buildCordova = function (localPath, buildCommand, options) {
+var buildCordova = function (localPath, platforms, options) {
   verboseLog('Building the cordova build project');
 
   buildmessage.enterJob({ title: 'Building for mobile devices' }, function () {
@@ -835,10 +841,10 @@ var buildCordova = function (localPath, buildCommand, options) {
     }
 
     // Run the actual build
-    verboseLog('Running the build command:', buildCommand);
+    verboseLog('Running the build command');
     // Give the buffer more space as the output of the build is really huge
     try {
-      var args = [buildCommand];
+      var args = ['build'].concat(platforms);
 
       // depending on the debug mode build the android part in different modes
       if (_.contains(project.getPlatforms(), 'android')) {

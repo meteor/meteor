@@ -258,7 +258,7 @@ function doRunCommand (options) {
       var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
 
-      cordova.buildPlatforms(localPath, options.args,
+      cordova.buildTargets(localPath, options.args,
         _.extend({ appName: appName, debug: ! options.production },
                  options, parsedMobileServer));
       runners = runners.concat(
@@ -693,7 +693,7 @@ var buildCommand = function (options) {
     var cordovaSettings = {};
 
     try {
-      cordova.buildPlatforms(localPath, mobilePlatforms,
+      cordova.buildTargets(localPath, mobilePlatforms,
                              _.extend({}, options, {
                                host: parsedMobileServer.host,
                                port: parsedMobileServer.port,
@@ -1328,7 +1328,7 @@ main.registerCommand({
     project.addCordovaPlatforms(platforms);
 
     try {
-      cordova.buildPlatforms(localPath, mobilePlatforms,
+      cordova.buildTargets(localPath, mobilePlatforms,
         _.extend({}, options, {
           appName: path.basename(testRunnerAppDir),
           debug: ! options.production,
