@@ -731,7 +731,6 @@ _.extend(RemoteCatalog.prototype, {
     }
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
-      self.reset();
     }
 
   },
