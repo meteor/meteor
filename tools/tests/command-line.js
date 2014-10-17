@@ -216,12 +216,12 @@ selftest.define("argument parsing", function () {
 
   run = s.run("bundle");
   run.matchErr("not enough arguments");
-  run.matchErr("Deprecated command");
+  run.matchErr("This command has been deprecated");
   run.expectExit(1);
 
   run = s.run("bundle", "a", "b");
   run.matchErr("too many arguments");
-  run.matchErr("Deprecated command");
+  run.matchErr("This command has been deprecated");
   run.expectExit(1);
 
 
