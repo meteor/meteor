@@ -877,6 +877,12 @@ var buildCordova = function (localPath, buildCommand, options) {
   verboseLog('Done building the cordova build project');
 };
 
+var platformDisplayName = function (name) {
+  return name === 'ios' ? 'iOS simulator' :
+         name === 'ios-device' ? 'iOS Device' :
+         name === 'android' ? 'Android emulator':
+         'Android Device';
+};
 
 // This is a runner, that we pass to Runner (run-all.js)
 var CordovaRunner = function (localPath, platformName, options) {
@@ -886,7 +892,7 @@ var CordovaRunner = function (localPath, platformName, options) {
   self.platformName = platformName;
   self.options = options;
 
-  self.title = 'Cordova (' + self.platformName + ')';
+  self.title = 'app on ' + platformDisplayName(platformName);
 };
 
 _.extend(CordovaRunner.prototype, {
@@ -905,9 +911,14 @@ _.extend(CordovaRunner.prototype, {
       IOS.killSimulator();
     }
 
-    execCordovaOnPlatform(self.localPath,
-                          self.platformName,
-                          self.options);
+    try {
+      execCordovaOnPlatform(self.localPath,
+                            self.platformName,
+                            self.options);
+    } catch (err) {
+      Console.error(self.platformName + ': failed to start the app.\n' +
+                    err.message);
+    }
   },
 
   prestart: function () {
