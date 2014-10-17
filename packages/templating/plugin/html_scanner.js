@@ -165,8 +165,10 @@ html_scanner = {
         var templateDotNameLiteral = JSON.stringify("Template." + name);
 
         results.js += "\nTemplate.__checkName(" + nameLiteral + ");\n" +
+          "if (!Template.__maybeOverride(" + nameLiteral +
+          ", " + renderFuncCode + ")) {\n" +
           "Template[" + nameLiteral + "] = new Template(" +
-          templateDotNameLiteral + ", " + renderFuncCode + ");\n";
+          templateDotNameLiteral + ", " + renderFuncCode + ");\n}\n";
       } else {
         // <body>
         if (hasAttribs)
