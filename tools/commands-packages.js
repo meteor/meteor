@@ -1164,7 +1164,7 @@ main.registerCommand({
     if (!lastVersion && full.length > 1) {
       Console.error(
         full[1] + ": unknown version of " + name);
-      return 1;;
+      return 1;
     }
     var unknown = "< unknown >";
     _.each(versionRecords, function (v) {
