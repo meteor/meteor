@@ -775,12 +775,16 @@ Usage: meteor admin get-machine <arch> [--json] [--verbose] [--length min]
 
 Asks the meteor build farm for a build server and opens a secure shell to it.
 Reservations are capped at 15 minutes at a time, and 60 minutes per week.
-Default reservation length is 5 minutes.
+Default reservation length is 5 minutes. Pass in the --json option to get
+a json of authentication information and open the shell manually, and --verbose
+or -v to run in verbose mode.
 
-Pass in the --json option to get a json of authentication information and
-open the shell manually.
+Valid machine architectures are:
+  os.osx.x86_64
+  os.linux.x86_64
+  os.linux.x86_32
 
 Options:
-  --json     return information as json instead of opening a shell
-  --length   specify the length of the reservation
-  --verbose  print all output from commands
+  --json       return information as json instead of opening a shell
+  --minutes    specify the length of the reservation
+  --verbose    print all output from commands
