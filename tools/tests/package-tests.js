@@ -923,7 +923,7 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
   }
 });
 
-selftest.define("show unknown version of package", function () {
+selftest.define("show unknown version of package", ["net", "test-package-server"], function () {
   var s = new Sandbox();
   var fullPackageName = "test:" + utils.randomToken();
 
