@@ -161,7 +161,6 @@ npm install kexec@0.2.0
 npm install source-map@0.1.32
 npm install browserstack-webdriver@2.41.1
 npm install node-inspector@0.7.4
-npm install progress@1.1.8
 npm install chalk@0.5.1
 npm install sqlite3@3.0.0
 npm install netroute@0.2.5

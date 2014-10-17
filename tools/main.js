@@ -350,7 +350,7 @@ var springboard = function (rel, releaseOverride) {
   // XXX split better
   try {
     Console.setPretty(true);
-    Console.enableProgressBar(true);
+    Console.enableProgressDisplay(true);
 
     var messages = buildmessage.capture({
       title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
@@ -363,11 +363,7 @@ var springboard = function (rel, releaseOverride) {
       });
     });
 
-    // It's important to call setPretty *after* enableProgressBar,
-    // since `Console.enableProgressBar(false)` is silently ignored
-    // when not in pretty mode. XXX Maybe we should change that
-    // behavior?
-    Console.enableProgressBar(false);
+    Console.enableProgressDisplay(false);
     Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
@@ -1248,13 +1244,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   Console.setPretty(command.pretty);
 
-  Console.enableProgressBar(true);
+  Console.enableProgressDisplay(true);
 
   // Run the command!
   try {
     var ret = command.func(options);
   } catch (e) {
-    Console.enableProgressBar(false);
+    Console.enableProgressDisplay(false);
 
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
@@ -1303,7 +1299,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
     }
   }
 
-  Console.enableProgressBar(false);
+  Console.enableProgressDisplay(false);
 
   // Exit. (We will not get here if the command threw an exception
   // such as main.WaitForExit).
