@@ -1495,7 +1495,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   verboseLog('Copying resources for mobile apps');
 
   var imageXmlRec = function (name, width, height, src) {
-    var androidMatch = /.+(.?.dpi)_(landscape|portrait)/g.exec(name);
+    var androidMatch = /android_(.?.dpi)_(landscape|portrait)/g.exec(name);
     var xmlRec = {
       src: src,
       width: width,
@@ -1517,7 +1517,14 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       if (! suppliedPath)
         return;
 
-      var extension = _.last(_.last(suppliedPath.split(path.sep)).split('.'));
+      var suppliedFilename = _.last(suppliedPath.split(path.sep));
+      var extension = _.last(suppliedFilename.split('.'));
+
+      // XXX special case for 9-patch png's
+      if (suppliedFilename.match(/\.9\.png$/)) {
+        extension = '9.png';
+      }
+
       var fileName = name + '.' + tag + '.' + extension;
       var src = path.join('resources', fileName);
 
