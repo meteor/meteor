@@ -1646,11 +1646,12 @@ var runTests = function (options) {
 
   _.each(testList.filteredTests, function (test) {
     totalRun++;
-    Console.stderr.write(test.file + ": " + test.name + " ... ");
+    process.stderr.write(test.file + ": " + test.name + " ... ");
 
     var failure = null;
     try {
       runningTest = test;
+      var startTime = +(new Date);
       test.f(options);
     } catch (e) {
       if (e instanceof TestFailure) {
@@ -1715,7 +1716,8 @@ var runTests = function (options) {
         Console.stderr.write(failure.details.messages.formatMessages());
       }
     } else {
-      Console.stderr.write("ok\n");
+      var durationMs = +(new Date) - startTime;
+      Console.stderr.write("ok (" + durationMs + " ms)\n");
     }
   });
 
