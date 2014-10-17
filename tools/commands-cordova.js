@@ -2488,7 +2488,8 @@ main.registerCommand({
     verbose: { type: Boolean, short: "v" }
   },
   minArgs: 0,
-  maxArgs: 1
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   requirePlatformReady('android');
 

@@ -25,8 +25,6 @@ var main = exports;
 // http://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
 Error.stackTraceLimit = Infinity;
 
-STRICT_MODE = !!process.env.METEOR_MDG_STRICT_MODE;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Command registration
 ///////////////////////////////////////////////////////////////////////////////
@@ -223,6 +221,11 @@ main.registerCommand = function (options, func) {
 
   if (_.has(target, nameParts[0])) {
     throw Error("Duplicate command: " + options.name);
+  }
+
+  if (!options.catalogRefresh) {
+    throw Error("Command does not select a catalogRefresh strategy: " +
+                options.name);
   }
 
   target[nameParts[0]] = new Command(options);
@@ -1277,10 +1280,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
   try {
     // Before run, do a package sync if one is configured
     var catalogRefreshStrategy = command.catalogRefresh;
-    if (STRICT_MODE && catalogRefreshStrategy === undefined) {
-      throw new Error("Command does not define catalogRefresh");
-    }
-    if (catalogRefreshStrategy && catalogRefreshStrategy.beforeCommand) {
+    if (catalogRefreshStrategy.beforeCommand) {
       var messages = buildmessage.capture({title: 'Updating package catalog'}, function () {
         catalogRefreshStrategy.beforeCommand();
       });

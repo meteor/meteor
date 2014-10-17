@@ -83,7 +83,8 @@ var showInvalidArchMsg = function (arch) {
 // Prints the Meteor architecture name of this host
 main.registerCommand({
   name: '--arch',
-  requiresRelease: false
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var archinfo = require('./archinfo.js');
   console.log(archinfo.host());
@@ -96,7 +97,8 @@ main.registerCommand({
 // XXX: What does this mean in our new release-free world?
 main.registerCommand({
   name: '--version',
-  requiresRelease: false
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (release.current === null) {
     if (! options.appDir)
@@ -119,7 +121,8 @@ main.registerCommand({
 // Internal use only. For automated testing.
 main.registerCommand({
   name: '--long-version',
-  requiresRelease: false
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (files.inCheckout()) {
     Console.stderr.write("checkout\n");
@@ -138,7 +141,8 @@ main.registerCommand({
 // Internal use only. For automated testing.
 main.registerCommand({
   name: '--requires-release',
-  requiresRelease: true
+  requiresRelease: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return 0;
 });
@@ -585,12 +589,15 @@ main.registerCommand({
 // run-upgrader
 ///////////////////////////////////////////////////////////////////////////////
 
+// For testing upgraders during development.
+// XXX move under admin?
 main.registerCommand({
   name: 'run-upgrader',
   hidden: true,
   minArgs: 1,
   maxArgs: 1,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var upgrader = options.args[0];
 
@@ -1561,7 +1568,8 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
 main.registerCommand({
   name: 'rebuild',
   maxArgs: Infinity,
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   var messages;
   var count = 0;
@@ -1670,7 +1678,8 @@ var loggedInAccountsConnectionOrPrompt = function (action) {
 main.registerCommand({
   name: 'admin list-organizations',
   minArgs: 0,
-  maxArgs: 0
+  maxArgs: 0,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   var token = auth.getSessionToken(config.getAccountsDomain());
@@ -1724,7 +1733,8 @@ main.registerCommand({
     add: { type: String },
     remove: { type: String },
     list: { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   if (options.add && options.remove) {
@@ -1795,7 +1805,8 @@ main.registerCommand({
     list: { type: Boolean },
     file: { type: String }
   },
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var selftest = require('./selftest.js');
 
@@ -1902,7 +1913,8 @@ main.registerCommand({
     // By default, we give you a machine for 5 minutes. You can request up to
     // 15. (MDG can reserve machines for longer than that.)
     minutes: { type: Number, required: false }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   // Check that we are asking for a valid architecture.
@@ -2029,7 +2041,8 @@ main.registerCommand({
     changed: { type: Boolean }
   },
   maxArgs: 2,
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var p = function (key) {
     if (_.has(options, key))

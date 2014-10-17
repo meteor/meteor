@@ -2656,7 +2656,8 @@ main.registerCommand({
   name: 'admin set-banners',
   minArgs: 1,
   maxArgs: 1,
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
   var bannersFile = options.args[0];
   try {
@@ -2862,7 +2863,8 @@ main.registerCommand({
   options: {
     "success" : {type: Boolean, required: false}
   },
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   // We don't care about having the most recent information, but we do want the
@@ -2921,7 +2923,8 @@ main.registerCommand({
     "commit" : {type: String, required: false},
     "tag" : {type: String, required: false}
   },
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart()
 }, function (options) {
 
   if (options.commit && options.tag)
