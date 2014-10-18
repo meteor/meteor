@@ -1,5 +1,8 @@
 ## v.NEXT
 
+
+## v1.0
+
 * Add the `meteor admin get-machine` command to make it easier to
   publish packages with binary dependencies for all
   architectures. `meteor publish` no longer publishes builds
