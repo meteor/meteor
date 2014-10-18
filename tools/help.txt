@@ -771,7 +771,7 @@ readme at a given git commit, or the readme at a given git tag.
 
 >>> admin get-machine
 Open an ssh shell to a machine in the meteor build farm.
-Usage: meteor admin get-machine <arch> [--json] [--verbose] [--length min]
+Usage: meteor admin get-machine <arch> [--json] [--verbose] [--minutes min]
 
 Asks the meteor build farm for a build server and opens a secure shell to it.
 Reservations are capped at 15 minutes at a time, and 60 minutes per week.
