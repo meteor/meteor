@@ -31,12 +31,12 @@ catalog.Refresh.OnceAtStart = function (options) {
 catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
   var self = this;
   if (!catalog.refreshOrWarn(self.options)) {
-    if (self.options.ignoreFailure) {
+    if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
       Console.error("This command requires an up-to-date package catalog.  Exiting.");
       // Avoid circular dependency.
-      throw require('./main.js').ExitWithCode(1);
+      throw new (require('./main.js').ExitWithCode)(1);
     }
   }
 };
