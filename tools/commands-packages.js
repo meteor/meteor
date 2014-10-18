@@ -346,20 +346,36 @@ main.registerCommand({
     // overrwriting normal compatibilities.
     Console.warn("\nWARNING: Your package contains binary code.");
   } else if (binary) {
-    Console.warn("\nWARNING: Your package contains binary code!");
-    // Now, a gentle message.
+    // Normal publish flow. Tell the user nicely.
+
+    // XXX this is only while we're in 1.0 RC period. Because of a
+    // springboarding bug in 0.9.4, you need to use --release on
+    // publish-for-arch. Also, you need --release to get the admin
+    // get-machine command until it is recommended.
+    var currentRelease = "";
+    if (!release.current.isCheckout()) {
+      currentRelease = " --release " + release.current.getReleaseVersion();
+    }
+
     Console.warn(
-"It is not safe to build binary packages on non-standard machines. See more here: <url>");
-    Console.warn(
-"For now, you can use 'meteor admin get-machine <architecture>' to open a secure shell to a " +
-"preconfigured meteor build machine.");
-    Console.warn("To request built machines from the meteor build farm, please run:");
+"\nThis package contains binary code and must be built on multiple architectures.\n");
+
+    Console.info(
+"You can access Meteor provided build machines, pre-configured to support\n" +
+"older versions of MacOS and Linux, by running:\n");
+
     _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
-      Console.info("meteor admin get-machine", a);
+      Console.info("  meteor" + currentRelease + " admin get-machine", a);
     });
-    Console.warn(
-"Once you are logged into a build machine, you can run 'meteor publish-for-arch",
-packageSource.name + "@" + packageSource.version + "' to publish a valid build.");
+
+    Console.info("\nOn each machine, run:\n");
+
+    Console.info("  meteor" + currentRelease,
+                 "publish-for-arch",
+                 packageSource.name + "@" + packageSource.version);
+
+    Console.info("\nFor more information on binary ABIs and consistent builds, see:");
+    Console.info("  https://github.com/meteor/meteor/wiki/Build-Machines\n");
   }
 
   // Refresh, so that we actually learn about the thing we just published.
