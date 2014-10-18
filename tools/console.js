@@ -350,6 +350,7 @@ var StatusPoller = function (console) {
 
   self._pollFiber = null;
   self._startPoller();
+  self._stop = false;
 };
 
 _.extend(StatusPoller.prototype, {
@@ -361,13 +362,19 @@ _.extend(StatusPoller.prototype, {
     }
 
     self._pollFiber = Fiber(function () {
-      while (true) {
+      while (!self._stop) {
         sleep(100);
 
         self.statusPoll();
       }
     });
     self._pollFiber.run();
+  },
+
+  stop: function () {
+    var self = this;
+
+    self._stop = true;
   },
 
   statusPoll: function () {
@@ -768,9 +775,16 @@ _.extend(Console.prototype, {
       newProgressDisplay = new ProgressDisplayFull(self);
     }
 
-    // Start the status poller if it hasn't been started
-    if (!self._statusPoller) {
-      self._statusPoller = new StatusPoller(self);
+    // Start/stop the status poller, so we never block exit
+    if (self._progressDisplayEnabled) {
+      if (!self._statusPoller) {
+        self._statusPoller = new StatusPoller(self);
+      }
+    } else {
+      if (self._statusPoller) {
+        self._statusPoller.stop();
+        self._statusPoller = null;
+      }
     }
 
     self._setProgressDisplay(newProgressDisplay);
