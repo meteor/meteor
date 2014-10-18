@@ -44,7 +44,7 @@ exports.callPackageServer = function (conn, options) {
 // - conn: the connection to use (does not have to be logged in)
 // - syncToken: a syncToken object to be sent to the server that
 //   represents the last time that we talked to the server.
-// - _optionsForTest:
+// - options:
 //    - useShortPages (Boolean). Ask the server for pages of ~3 records
 //      instead of ~100, for testing pagination.
 //
@@ -52,8 +52,8 @@ exports.callPackageServer = function (conn, options) {
 //  - syncToken: a new syncToken object, that we can pass to the server in the future.
 //  - collections: an object keyed by the name of server collections, with the
 //    records as an array of javascript objects.
-var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
-  _optionsForTest = _optionsForTest || {};
+var loadRemotePackageData = function (conn, syncToken, options) {
+  options = options || {};
 
   // Did we get disconnected between retries somehow? Then we should open a new
   // connection. We shouldn't use the callPackageServer method here though,
@@ -63,17 +63,14 @@ var loadRemotePackageData = function (conn, syncToken, _optionsForTest) {
     conn =  openPackageServerConnection();
   }
 
-  var syncOpts;
-  if (_optionsForTest && _optionsForTest.useShortPages) {
-    syncOpts = { shortPagesForTest: _optionsForTest.useShortPages };
+  var syncOpts = {};
+  if (options && options.useShortPages) {
+    syncOpts.shortPagesForTest = options.useShortPages;
   }
-  var collectionData;
-  if (syncOpts) {
-    collectionData = conn.call('syncNewPackageData', syncToken, syncOpts);
-  } else {
-    collectionData = conn.call('syncNewPackageData', syncToken);
+  if (options && options.compressCollections) {
+    syncOpts.compressCollections = options.compressCollections;
   }
-  return collectionData;
+  return conn.call('syncNewPackageData', syncToken, syncOpts);
 };
 
 // Contacts the package server to get the latest diff and writes changes to
@@ -100,7 +97,6 @@ exports.updateServerPackageData = function (dataStore, options) {
     return _updateServerPackageData(dataStore, options);
   });
 };
-
 
 var _updateServerPackageData = function (dataStore, options) {
   var self = this;
@@ -138,9 +134,12 @@ var _updateServerPackageData = function (dataStore, options) {
       (syncToken.versions - start.versions);
     buildmessage.reportProgress(state);
 
+    var compress = !!process.env.METEOR_CATALOG_COMPRESS_RPCS;
+
     // (loadRemotePackageData may throw)
     var remoteData = loadRemotePackageData(conn, syncToken, {
-      useShortPages: options.useShortPages
+      useShortPages: options.useShortPages,
+      compressCollections: compress
     });
 
     // Is the remote server telling us to ignore everything we've heard before?
@@ -150,6 +149,15 @@ var _updateServerPackageData = function (dataStore, options) {
       // The caller may want to take this as a cue to delete packages from the
       // tropohouse.
       ret.resetData = true;
+    }
+
+    if (compress) {
+      var zlib = require('zlib');
+      var colsGzippedBuffer = new Buffer(remoteData.collections, 'base64');
+      var fut = new Future;
+      zlib.gunzip(colsGzippedBuffer, fut.resolver());
+      var colsJSON = fut.wait();
+      remoteData.collections = JSON.parse(colsJSON);
     }
 
     // We always write to the data store; the fact there is no data is itself
