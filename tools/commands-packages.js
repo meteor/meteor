@@ -60,7 +60,7 @@ var doOrDie = exports.doOrDie = function (options, f) {
   });
   if (messages.hasMessages()) {
     Console.printMessages(messages);
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
   return ret;
 };
@@ -69,7 +69,7 @@ var refreshOfficialCatalogOrDie = function (options) {
   if (!catalog.refreshOrWarn(options)) {
     Console.error(
       "This command requires an up-to-date package catalog. Exiting.");
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
 };
 
