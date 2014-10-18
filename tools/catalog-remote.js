@@ -290,7 +290,7 @@ _.extend(Db.prototype, {
     var self = this;
 
     var prepared = null;
-    var prepare = self._autoPrepare;
+    var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
@@ -336,12 +336,14 @@ _.extend(Db.prototype, {
     var self = this;
 
     var prepared = null;
-    var prepare = self._autoPrepare;
-    if (prepare &&
-        (sql.indexOf("PRAGMA ") === 0 || sql.indexOf("BEGIN ") === 0 || sql.indexOf("END ") === 0 || sql.indexOf("ROLLBACK ") === 0)) {
-      //Console.debug("Not preparing PRAGMA/BEGIN/END/ROLLBACK command", sql);
-      prepare = false;
-    }
+    // We don't prepare non-parametrized statements, because (a) there's not
+    // that much of a win from doing so, since we don't tend to run them in bulk
+    // and (b) doing so can trigger
+    // https://github.com/mapbox/node-sqlite3/pull/355 .  (We can avoid that bug
+    // by being careful to pass in an empty array or no argument for params to
+    // prepared.run instead of undefined, but we can also just avoid the issue
+    // entirely.)
+    var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
