@@ -5,10 +5,13 @@
   architectures. `meteor publish` no longer publishes builds
   automatically.
 
+* Reduce unnecessary syncs with the package server, which speeds up
+  startup times for many commands.
+
 * Speed up `meteor deploy` by not bundling unnecessary files and
   programs.
 
-* Implemented reasonable default behavior for launch screens on mobile
+* Implement reasonable default behavior for launch screens on mobile
   apps.
 
 * Don't build for Android when only the iOS build is required, and
