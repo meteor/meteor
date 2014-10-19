@@ -28,6 +28,11 @@ selftest.define("cordova builds with server options", ["slow"], function () {
 
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
+
+  run = s.run("install-sdk", "android");
+  run.extraTime = 90; // Huge download
+  run.expectExit(0);
+
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");

@@ -1,6 +1,5 @@
 var fs = require('fs');
 var path = require('path');
-var semver = require('semver');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var watch = require('./watch.js');
@@ -14,6 +13,7 @@ var utils = require('./utils.js');
 var catalog = require('./catalog.js');
 var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
+var VersionParser = require('./package-version-parser.js');
 
 // LocalCatalog represents the packages located into an application folder
 // A default instance of this catalog is created in catalog.js
@@ -137,6 +137,9 @@ _.extend(LocalCatalog.prototype, {
   // (according to the version string, not according to their
   // publication date). Returns the empty array if the package doesn't
   // exist or doesn't have any versions.
+  //
+  // (XXX: If local catalog is just the local overrides, wouldn't this always
+  // just return one record?)
   getSortedVersions: function (name) {
     var self = this;
     self._requireInitialized();
@@ -144,7 +147,7 @@ _.extend(LocalCatalog.prototype, {
       return [];
     }
     var ret = _.keys(self.versions[name]);
-    ret.sort(semver.compare);
+    ret.sort(VersionParser.compare);
     return ret;
   },
 
@@ -212,11 +215,6 @@ _.extend(LocalCatalog.prototype, {
     //     so in practice we don't really support "maybe-platform-specific"
     //     packages
 
-    // Even though getVersion already has its own _recordOrRefresh, we need this
-    // one, in case our local cache says "version exists but only for the wrong
-    // arch" and the right arch has been recently published.
-    // XXX should ensure at most one refresh
-    // PASCAL - check with Ekate that it is ok to not explicitely refresh again
     var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
     var solution = null;
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
@@ -262,13 +260,9 @@ _.extend(LocalCatalog.prototype, {
     return _.where(self.builds, { versionId: versionRecord._id });
   },
 
-  // Refresh the packages in the catalog.
+  // Refresh the packages in the catalog, by re-scanning local packages.
   //
   // options:
-  // - forceRefresh: even if there is a future in progress, refresh the catalog
-  //   anyway. When we are using hot code push, we may be restarting the app
-  //   because of a local package change that impacts that catalog. Don't wait
-  //   on the official catalog to refresh data.json, in this case.
   // - watchSet: if provided, any files read in reloading packages will be added
   //   to this set.
   refresh: function (options) {

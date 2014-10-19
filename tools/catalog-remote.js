@@ -13,21 +13,22 @@ var compiler = require('./compiler.js');
 var uniload = require('./uniload.js');
 var tropohouse = require('./tropohouse.js');
 var config = require('./config.js');
-var semver = require('semver');
 var packageClient = require('./package-client.js');
+var VersionParser = require('./package-version-parser.js');
 var sqlite3 = require('sqlite3');
 var archinfo = require('./archinfo.js');
 var Console = require('./console.js').Console;
 
+
 // XXX: Rationalize these flags.  Maybe use the logger?
-DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
+var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
 
-SYNCTOKEN_ID = "1";
+var SYNCTOKEN_ID = "1";
 
-METADATA_LAST_SYNC = "lastsync";
+var METADATA_LAST_SYNC = "lastsync";
 
-BUSY_RETRY_ATTEMPTS = 10;
-BUSY_RETRY_INTERVAL = 1000;
+var BUSY_RETRY_ATTEMPTS = 10;
+var BUSY_RETRY_INTERVAL = 1000;
 
 var Mutex = function () {
   var self = this;
@@ -139,15 +140,40 @@ var Db = function (dbFile, options) {
   self._autoPrepare = true;
   self._prepared = {};
 
-  self._db = self.open(dbFile);
-
   self._transactionMutex = new Mutex();
 
+  self._db = self._retry(function () {
+    return self.open(dbFile);
+  });
+
   // WAL mode copes much better with (multi-process) concurrency
-  self._execute('PRAGMA journal_mode=WAL');
+  self._retry(function () {
+    self._execute('PRAGMA journal_mode=WAL');
+  });
 };
 
 _.extend(Db.prototype, {
+
+  // TODO: Move to utils?
+  _retry: function (f, options) {
+    options = _.extend({ maxAttempts: 3, delay: 500}, options || {});
+
+    for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
+      try {
+        return f();
+      } catch (err) {
+        if (attempt < options.maxAttempts) {
+          Console.warn("Retrying after error", err);
+        } else {
+          throw err;
+        }
+      }
+
+      if (options.delay) {
+        utils.sleepMs(options.delay);
+      }
+    }
+  },
 
   // Runs functions serially, in a mutex
   _serialize: function (f) {
@@ -159,6 +185,18 @@ _.extend(Db.prototype, {
     } finally {
       self._transactionMutex.unlock();
     }
+  },
+
+  // Do not call any other methods on this object after calling this one.
+  // This yields.
+  closePermanently: function () {
+    var self = this;
+    self._closePreparedStatements();
+    var db = self._db;
+    self._db = null;
+    var future = new Future;
+    db.close(future.resolver());
+    future.wait();
   },
 
   // Runs the function inside a transaction block
@@ -235,6 +273,8 @@ _.extend(Db.prototype, {
     var self = this;
 
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
+      Console.debug("Creating database directory", dbFile);
+
       var folder = path.dirname(dbFile);
       if ( !files.mkdir_p(folder) )
         throw new Error("Could not create folder at " + folder);
@@ -250,7 +290,7 @@ _.extend(Db.prototype, {
     var self = this;
 
     var prepared = null;
-    var prepare = self._autoPrepare;
+    var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
@@ -296,12 +336,14 @@ _.extend(Db.prototype, {
     var self = this;
 
     var prepared = null;
-    var prepare = self._autoPrepare;
-    if (prepare &&
-        (sql.indexOf("PRAGMA ") === 0 || sql.indexOf("BEGIN ") === 0 || sql.indexOf("END ") === 0 || sql.indexOf("ROLLBACK ") === 0)) {
-      //Console.debug("Not preparing PRAGMA/BEGIN/END/ROLLBACK command", sql);
-      prepare = false;
-    }
+    // We don't prepare non-parametrized statements, because (a) there's not
+    // that much of a win from doing so, since we don't tend to run them in bulk
+    // and (b) doing so can trigger
+    // https://github.com/mapbox/node-sqlite3/pull/355 .  (We can avoid that bug
+    // by being careful to pass in an empty array or no argument for params to
+    // prepared.run instead of undefined, but we can also just avoid the issue
+    // entirely.)
+    var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
       prepared = self._prepareWithCache(sql);
     }
@@ -474,7 +516,7 @@ _.extend(Table.prototype, {
 // under the variable "official" from the catalog.js
 //
 // The remote catalog is backed by a db to make things easier on the memory and for faster queries
-var RemoteCatalog = function (options) {
+var RemoteCatalog = function () {
   var self = this;
 
   // Set this to true if we are not going to connect to the remote package
@@ -482,20 +524,29 @@ var RemoteCatalog = function (options) {
   // This means that the catalog might be out of date on the latest developments.
   self.offline = null;
 
-  self.options = options || {};
-
   self.db = null;
-  self._currentRefreshIsLoud = false;
 };
 
 _.extend(RemoteCatalog.prototype, {
   toString: function () {
     var self = this;
-    return "RemoteCatalog [options=" + JSON.stringify(self.options) + "]";
+    return "RemoteCatalog";
+  },
+
+  // Used for special cases that want to ensure that all connections to the DB
+  // are closed (eg to ensure that all writes have been flushed from the '-wal'
+  // file to the main DB file). Most methods on this class will stop working
+  // after you call this method. Note that this yields.
+  closePermanently: function () {
+    var self = this;
+    self.db.closePermanently();
+    self.db = null;
   },
 
   getVersion: function (name, version) {
-    var result = this._queryAsJSON("SELECT content FROM versions WHERE packageName=? AND version=?", [name, version]);
+    var result = this._contentQuery(
+      "SELECT content FROM versions WHERE packageName=? AND version=?",
+      [name, version]);
     if(!result || result.length === 0) {
       return null;
     }
@@ -517,7 +568,7 @@ _.extend(RemoteCatalog.prototype, {
     var match = this._getPackageVersions(name);
     if (match === null)
       return [];
-    return _.pluck(match, 'version').sort(semver.compare);
+    return _.pluck(match, 'version').sort(VersionParser.compare);
   },
 
   getLatestMainlineVersion: function (name) {
@@ -533,7 +584,8 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getPackage: function (name, options) {
-    var result = this._queryAsJSON("SELECT * FROM packages WHERE name=?", name);
+    var result = this._contentQuery(
+      "SELECT * FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     if (result.length !== 1) {
@@ -546,11 +598,16 @@ _.extend(RemoteCatalog.prototype, {
     if (!name) {
       throw new Error("No name provided");
     }
-    return this._queryAsJSON("SELECT content FROM versions WHERE packageName=?", name);
+    return this._contentQuery(
+      "SELECT content FROM versions WHERE packageName=?", name);
   },
 
   getAllBuilds: function (name, version) {
-    var result = this._queryAsJSON("SELECT * FROM builds WHERE builds.versionId = (SELECT _id FROM versions WHERE versions.packageName=? AND versions.version=?)", [name, version]);
+    var result = this._contentQuery(
+      "SELECT * FROM builds WHERE builds.versionId = " +
+        "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
+        "versions.version=?)",
+      [name, version]);
     if (!result || result.length === 0)
       return null;
     return result;
@@ -560,7 +617,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
 
     var solution = null;
-    var allBuilds = self.getAllBuilds(name, version);
+    var allBuilds = self.getAllBuilds(name, version) || [];
 
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
       // This build subset works if for all the arches we need, at least one
@@ -584,7 +641,8 @@ _.extend(RemoteCatalog.prototype, {
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseTracks WHERE name=?", name);
+    var result = self._contentQuery(
+      "SELECT content FROM releaseTracks WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     return result[0];
@@ -592,18 +650,44 @@ _.extend(RemoteCatalog.prototype, {
 
   getReleaseVersion: function (track, version) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=? AND version=?", [track, version]);
+    var result = self._contentQuery(
+      "SELECT content FROM releaseVersions WHERE track=? AND version=?",
+      [track, version]);
     if (!result || result.length === 0)
       return null;
     return result[0];
   },
 
+  // Get a release version with a given tool
+  getReleaseWithTool: function (toolSpec) {
+    var self = this;
+    // XXX: In the future, we should consider adding tool as a column and
+    // implementing table upgrades
+    var allVersions = self._queryAsJSON(
+      "SELECT content FROM releaseVersions");
+    return _.findWhere(allVersions, { tool: toolSpec });
+  },
+
+  // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
+  // specially constructed for bootstrap tarballs.
+  forceRecommendRelease: function (track, version) {
+    var self = this;
+    var releaseVersionData = self.getReleaseVersion(track, version);
+    if (!releaseVersionData) {
+      throw Error("Can't force-recommend unknown release " + track + "@"
+                  + version);
+    }
+    releaseVersionData.recommended = true;
+    self._insertReleaseVersions([releaseVersionData]);
+  },
+
   getAllReleaseTracks: function () {
-    return _.pluck(this._queryWithRetry("SELECT name FROM releaseTracks"), 'name');
+    return _.pluck(this._columnsQuery("SELECT name FROM releaseTracks"),
+                   'name');
   },
 
   getAllPackageNames: function () {
-    return _.pluck(this._queryWithRetry("SELECT name FROM packages"), 'name');
+    return _.pluck(this._columnsQuery("SELECT name FROM packages"), 'name');
   },
 
   initialize: function (options) {
@@ -659,37 +743,37 @@ _.extend(RemoteCatalog.prototype, {
 
     Console.debug("In remote catalog refresh");
 
-    buildmessage.assertInCapture();
+    if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === 'offline') {
+      var e = new Error;
+      e.errorType = 'DDP.ConnectionError';
+      throw e;
+    }
+
     if (self.offline)
-      return;
+      return false;
 
     if (options.maxAge) {
       var lastSync = self.getMetadata(METADATA_LAST_SYNC);
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          Console.info("Catalog is sufficiently up-to-date; not refreshing\n");
-          return;
+          Console.debug("Package catalog is sufficiently up-to-date; not updating\n");
+          return false;
         }
       }
     }
 
-    if (!options.silent) {
-      self._currentRefreshIsLoud = true;
-    }
-
     var updateResult = {};
-    buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
+    // XXX This buildmessage.enterJob only exists for showing progress.
+    buildmessage.enterJob({ title: 'Updating package catalog.' }, function () {
       updateResult = packageClient.updateServerPackageData(self);
     });
-    if (updateResult.connectionFailed) {
-      Console.warn("Warning: could not connect to package server\n");
-    }
+
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
-      self.reset();
     }
 
+    return true;
   },
 
   // Given a release track, return all recommended versions for this track, sorted
@@ -697,7 +781,8 @@ _.extend(RemoteCatalog.prototype, {
   // exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=?", track);
+    var result = self._contentQuery(
+      "SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
       if (!v.recommended)
@@ -726,7 +811,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._queryAsJSON(
+    var matchingBuilds = this._contentQuery(
       "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
@@ -735,54 +820,25 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
-  _queryWithRetry: function (query, params, options) {
+  // Executes a query, returning an array of each content column parsed as JSON
+  _contentQuery: function (query, params) {
     var self = this;
-    options = options || {};
-
-    var rows = self.db.runInTransaction(function (txn) {
-      return txn.query(query, params);
-    });
-    if (rows.length !== 0 || options.noRefresh)
-      return rows;
-
-    // XXX: This causes unnecessary refreshes
-
-    // XXX: It would be nice to Console.warn this, but that breaks some of our self-tests
-    Console.debug("Forcing refresh because of unexpected missing data");
-    Console.debug("No data was returned from query: ", query, params);
-    self.refresh();
-
-    options = _.clone(options);
-    options.noRefresh = true;
-
-    return self._queryWithRetry(query, params, options);
-  },
-
-
-  // Execute a query using the values as arguments of the query and return the result as JSON.
-  // This code assumes that the table being queried always have a column called "content"
-  _queryAsJSON: function (query, params, options) {
-    var self = this;
-    Console.debug("Executing query with _queryAsJSON: ", query, params);
-    var rows = self._queryWithRetry(query, params, options);
+    var rows = self._columnsQuery(query, params);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
   },
 
-  // Executes a query, parsing the content column as JSON
-  // No refreshes
-  _simpleQuery: function (query, params) {
+  // Executes a query, returning an array of maps from column name to data.
+  // No JSON parsing is performed.
+  _columnsQuery: function (query, params) {
     var self = this;
     var rows = self.db.runInTransaction(function (txn) {
       return txn.query(query, params);
     });
-    return _.map(rows, function(entity) {
-      return JSON.parse(entity.content);
-    });
+    return rows;
   },
 
-  // XXX: Remove this; it is only here for the tests, and that is a hack
   _insertReleaseVersions: function(releaseVersions) {
     var self = this;
     return self.db.runInTransaction(function (txn) {
@@ -822,10 +878,11 @@ _.extend(RemoteCatalog.prototype, {
 
   getSyncToken: function() {
     var self = this;
-    var result = self._simpleQuery("SELECT content FROM syncToken WHERE _id=?", [ SYNCTOKEN_ID ]);
+    var result = self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
+                                    [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
-      return {};
+      return null;
     }
     if (result.length !== 1) {
       throw new Error("Unexpected number of sync tokens found");

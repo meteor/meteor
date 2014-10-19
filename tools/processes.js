@@ -33,7 +33,19 @@ _.extend(RunCommand.prototype, {
     if (self.process) {
       throw new Error("Process already started");
     }
-    Console.debug("Running command", self.command, self.args.join(' '));
+    if (Console.isDebugEnabled()) {
+      var envString = '';
+      var defaultEnv = process.env;
+      if (self.options.env) {
+        _.each(self.options.env, function (v,k) {
+          var defaultV = defaultEnv[k];
+          if (v !== defaultV) {
+            envString += k + "=" + v + " ";
+          }
+        });
+      }
+      Console.debug("Running command", envString, self.command, self.args.join(' '));
+    }
 
     self.process = child_process.spawn( self.command,
                                         self.args,
@@ -68,6 +80,9 @@ _.extend(RunCommand.prototype, {
       self.stderr = self.stderr + data;
       if (self.options.pipeOutput) {
         Console.stderr.write(data);
+      }
+      if (self.options.onStderr) {
+        self.options.onStderr(data);
       }
     });
 

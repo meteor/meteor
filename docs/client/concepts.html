@@ -27,22 +27,23 @@ when writing those apps.
 Meteor is two things:
 
 * A _library of packages_: pre-written, self-contained modules that
-you might need in your app.<br>
-There are about a dozen core Meteor
-packages that most any app will use (for example [`webapp`](#webapp), which
-handles incoming HTTP connections, and `templating`, which lets you
-make HTML templates that automatically update live as data changes).
-Then there are optional packages like `email`, which lets your app
-send emails, or the Meteor Accounts series (`accounts-password`,
-`accounts-facebook`, `accounts-ui`, and others) which provide a
-full-featured user account system that you can drop right into your
-app. In addition to these "core" packages, there are thousands of
-community-written packages in [Atmosphere](https://atmospherejs.com/),
-one of which might do just what you need.
+  you might need in your app.
 
-* A _command-line tool_ called `meteor`.<br>
-`meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts of
-Visual Studio. It gathers up all of the source files and assets in your
+  There are about a dozen core Meteor packages that most any app will use. Two
+  examples: [`webapp`](#webapp), which handles incoming HTTP connections, and
+  `templating`, which lets you make HTML templates that automatically update
+  live as data changes. Then there are optional packages like `email`, which
+  lets your app send emails, or the Meteor Accounts series (`accounts-password`,
+  `accounts-facebook`, `accounts-ui`, and others) which provide a full-featured
+  user account system that you can drop right into your app. In addition to
+  these "core" packages, there are thousands of community-written packages in
+  [Atmosphere](https://atmospherejs.com/), one of which might do just what you
+  need.
+
+* A _command-line tool_ called `meteor`.
+
+  `meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts
+of Visual Studio. It gathers up all of the source files and assets in your
 application, carries out any necessary build steps (such as compiling
 [CoffeeScript](http://coffeescript.org), minifying CSS, building
 [npm](https://npmjs.org/) modules, or generating source maps), fetches the
@@ -52,11 +53,10 @@ whenever you change a file you immediately see the changes in your browser. It's
 super easy to use out of the box, but it's also extensible: you can add support
 for new languages and compilers by adding build plugin packages to your app.
 
-The key idea in the Meteor package system is that _everything should
-work identically in the browser and on the server_ (wherever it makes
-sense, of course: browsers can't send email and servers can't capture
-mouse events). Our whole ecosystem has been built from the ground up
-to support this.
+  The key idea in the Meteor package system is that _everything should work
+  identically in the browser and on the server_ (wherever it makes sense, of
+  course: browsers can't send email and servers can't capture mouse events). Our
+  whole ecosystem has been built from the ground up to support this.
 
 {{/markdown}}
 </template>
@@ -66,94 +66,202 @@ to support this.
 
 <h2 id="structuringyourapp">Structuring your application</h2>
 
-A Meteor application is a mix of JavaScript that runs inside a client web
-browser, JavaScript that runs on the Meteor server inside a
-[Node.js](http://nodejs.org/) container, and all the supporting HTML fragments,
-CSS rules, and static assets.  Meteor automates the packaging and transmission
-of these different components.  And, it is quite flexible about how you choose
-to structure those components in your file tree.
+A Meteor application is a mix of client-side JavaScript that runs inside a web
+browser or PhoneGap mobile app, server-side JavaScript that runs on the Meteor
+server inside a [Node.js](http://nodejs.org/) container, and all the supporting
+HTML templates, CSS rules, and static assets.  Meteor automates the packaging
+and transmission of these different components, and it is quite flexible about
+how you choose to structure those components in your file tree.
 
-The only server assets are JavaScript and files in the `private` subdirectory.
-Meteor gathers all your JavaScript
-files, excluding anything under the `client`, `public`, and `private`
-subdirectories, and loads them into a Node.js
-server instance inside a fiber.  In Meteor, your server code runs in
-a single thread per request, not in the asynchronous callback style
-typical of Node.  We find the linear execution model a better fit for
-the typical server code in a Meteor application.
+### Special Directories
 
-Meteor gathers any files under the `private` subdirectory and makes the contents
-of these files available to server code via the [`Assets`](#assets) API. The
-`private` subdirectory is the place for any files that should be accessible to
-server code but not served to the client, like private data files.
+By default, any JavaScript files in your Meteor folder are bundled and sent to
+the client and the server. However, the names of the files and directories
+inside your project can affect their load order, where they are loaded, and some
+other characteristics. Here is a list of file and directory names that are
+treated specially by Meteor:
 
-There are more assets to consider on the client side.  Meteor
-gathers all JavaScript files in your tree, with the exception of
-the `server`, `public`, and `private` subdirectories, for the
-client.  It minifies this bundle and serves it to each new client.
-You're free to use a single JavaScript file for your entire application, or
-create a nested tree of separate files, or anything in between.
+- **client**
 
-Some JavaScript libraries only work when placed in the
-`client/compatibility` subdirectory.  Files in this directory are
-executed without being wrapped in a new variable scope.  This means
-that each top-level `var` defines a global variable. In addition,
-these files are executed before other client-side JavaScript files.
+    Any directory named `client` is not loaded on the server. Similar to
+    wrapping your code in `if (Meteor.isClient) { ... }`. All files loaded on
+    the client are automatically concatenated and minified when in production
+    mode. In development mode, each file is sent individually for easier
+    debugging.
+    
+    HTML files in a Meteor application are treated quite a bit differently
+    from a server-side framework.  Meteor scans all the HTML files in your
+    directory for three top-level elements: `<head>`, `<body>`, and
+    `<template>`.  The head and body sections are separately concatenated
+    into a single head and body, which are transmitted to the client on
+    initial page load.       
 
-Files outside the `client`, `server` and `tests` subdirectories are loaded on
-both the client and the server!  That's the place for model definitions and
-other functions.  Meteor provides the variables [`isClient`](#meteor_isclient) and
-[`isServer`](#meteor_isserver) so that your code can alter its behavior depending
-on whether it's running on the client or the server. (Files in directories named
-`tests` are not loaded anywhere.)
+- **server**
 
-Any sensitive code that you don't want served to the client, such as code
-containing passwords or authentication mechanisms, should be
-kept in the `server` directory.
+    Any directory named `server` is not loaded on the client. Similar to
+    wrapping your code in `if (Meteor.isServer) { ... }`, except the client
+    never even receives the code. Any sensitive code that you don't want served
+    to the client, such as code containing passwords or authentication
+    mechanisms, should be kept in the `server` directory.
+    
+    Meteor gathers all your JavaScript files, excluding anything under the
+    `client`, `public`, and `private` subdirectories, and loads them into a
+    Node.js server instance.  In Meteor, your server code runs in a single
+    thread per request, not in the asynchronous callback style typical of Node.
+    We find the linear execution model a better fit for the typical server code
+    in a Meteor application.
 
-CSS files are gathered together as well: the client will get a bundle with all
-the CSS in your tree (excluding the `server`,
-`public`, and `private` subdirectories).
+- **public**
 
-In development mode, JavaScript and CSS files are sent individually to make
-debugging easier.
+    All files inside a top-level directory called `public` are served as-is to
+    the client. When referencing these assets, do not include `public/` in the
+    URL, write the URL as if they were all in the top level. For example,
+    reference `public/bg.png` as `<img src='/bg.png' />`. This is the best place
+    for `favicon.ico`, `robots.txt`, and similar files.
 
-HTML files in a Meteor application are treated quite a bit differently
-from a server-side framework.  Meteor scans all the HTML files in your
-directory for three top-level elements: `<head>`, `<body>`, and
-`<template>`.  The head and body sections are separately concatenated
-into a single head and body, which are transmitted to the client on
-initial page load.
+- **private**
 
-Template sections, on the other hand, are converted into JavaScript
-functions, available under the `Template` namespace.  It's
-a really convenient way to ship HTML templates to the client.
-See the [templates](#livehtmltemplates) section for more.
+    All files inside a top-level directory called `private` are only accessible
+    from server code and can be loaded via the [`Assets`](#assets) API. This can
+    be used for private data files and any files that are in your project
+    directory that you don't want to be accessible from the outside.
 
-Lastly, the Meteor server will serve any files under the `public` directory.
-This is the place for images, `favicon.ico`, `robots.txt`, and anything else.
+- **client/compatibility**
 
-It is best to write your application in such a way that it is
-insensitive to the order in which files are loaded, for example by
-using [Meteor.startup](#meteor_startup), or by moving load order
-sensitive code into [packages](#usingpackages), which can explicitly control both
-the load order of their contents and their load order with respect to
-other packages. However sometimes load order dependencies in your
-application are unavoidable. The JavaScript and CSS files in an
-application are loaded according to these rules:
+    This folder is for compatibility JavaScript libraries that rely on variables
+    declared with var at the top level being exported as globals.  Files in this
+    directory are executed without being wrapped in a new variable scope.  These
+    files are executed before other client-side JavaScript fies.
 
-* Files in subdirectories are loaded before files in parent directories, so that
-  files in the deepest subdirectory are loaded first, and files in the root
-  directory are loaded last.
+- **tests**
 
-* Within a directory, files are loaded in alphabetical order by
-  filename.
+    Any directory named `tests` is not loaded anywhere. Use this for any local
+    test code.
 
-* After sorting as described above, all files under directories named `lib` are
-  moved before everything else (preserving their order).
+### Files outside special directories
 
-* Finally, all files that match `main.*` are moved after everything else
-  (preserving their order).
+All JavaScript files outside special directories are loaded on both the client
+and the server.  That's the place for model definitions and other functions.
+Meteor provides the variables [`Meteor.isClient`](#meteor_isclient) and
+[`Meteor.isServer`](#meteor_isserver) so that your code can alter its behavior
+depending on whether it's running on the client or the server.
+
+CSS and HTML files outside special directories are loaded on the client only,
+and cannot be used from server code.
+
+### Example File Structure
+
+The file structure of your Meteor app is very flexible. Here is an example layout that takes advantage of some of the special folders mentioned above.
+
+```bash
+lib/                      # common code like collections and utilities
+lib/methods.js            # Meteor.methods definitions
+lib/constants.js          # constants used in the rest of the code
+
+client/compatibility      # legacy libraries that expect to be global
+client/lib/               # code for the client to be loaded first
+client/lib/helpers.js     # useful helpers for your client code
+client/body.html          # content that goes in the <body> of your HTML
+client/head.html          # content for <head> of your HTML: <meta> tags, etc
+client/style.css          # some CSS code
+client/<feature>.html     # HTML templates related to a certain feature
+client/<feature>.js       # JavaScript code related to a certain feature
+
+server/lib/permissions.js # sensitive permissions code used by your server
+server/publications.js    # Meteor.publish definitions
+
+public/favicon.ico        # app icon
+
+settings.json             # configuration data to be passed to meteor --settings
+mobile-config.js          # define icons and metadata for Android/iOS
+```
+
+You can also model your directory structure after the example apps. Run `meteor
+create --example todos` and explore the directories to see where all the files
+in a real app could go.
+
+### File Load Order
+
+It is best to write your application in such a way that it is insensitive to the
+order in which files are loaded, for example by using
+[Meteor.startup](#meteor_startup), or by moving load order sensitive code into
+[packages](#usingpackages), which can explicitly control both the load order of
+their contents and their load order with respect to other packages. However
+sometimes load order dependencies in your application are unavoidable.
+
+When not using special filenames and directories: 
+
+- Files in subdirectories are loaded before files in parent directories, so that
+files in the deepest subdirectory are loaded first, and files in the root
+directory are loaded last. - Within a directory, files are loaded in
+alphabetical order by filename.
+
+Below is a complete list of special file and directory names that control file
+load order:
+
+- **lib**
+
+    After sorting as described above, all files under directories named `lib`
+    are moved before everything else, preserving their order.
+
+- **main.***
+
+    All files that match `main.*` are moved after everything else, preserving
+    their order.
+
+
+
+### Organizing Your Project
+
+There are three main ways to organize your files into features or components.
+Let's say we have two types of objects in our project: **apples** and
+**oranges**.
+
+#### Method 1: Root-Level Folders
+
+Since the special `client`, `server`, and `lib` directories work if they are
+anywhere in the path, you can use top-level folders to organize code into
+modules:
+
+```bash
+apples/lib/               # code for apple-related features
+apples/client/
+apples/server/
+
+oranges/lib/              # code for orange-related features
+oranges/client/
+oranges/server/
+```
+
+#### Method 2: Folders inside client/ and server/
+
+```bash
+lib/apples/               # common code for apples
+lib/oranges/              # and oranges
+
+client/apples/            # client code for apples
+client/oranges/           # and oranges
+
+server/apples/            # server code for apples
+server/oranges/           # and oranges
+```
+
+#### Method 3: Packages
+
+This is the ultimate in code separation, modularity, and reusability. If you put
+the code for each feature in a separate package, the code for one feature won't
+be able to access the code for the other feature except through exports, making
+every dependency explicit. This also allows for the easiest independent testing
+of features. You can also publish the packages and use them in multiple apps
+with `meteor add`.
+
+```bash
+packages/apples/package.js     # files, dependencies, exports for apple feature
+packages/apples/<anything>.js  # file loading is controlled by package.js
+
+packages/oranges/package.js    # files, dependencies, exports for orange feature
+packages/oranges/<anything>.js # file loading is controlled by package.js
+```
 
 {{/markdown}}
 </template>
@@ -164,7 +272,7 @@ application are loaded according to these rules:
 <h2 id="dataandsecurity">Data and security</h2>
 
 Meteor makes writing distributed client code as simple as talking to a
-local database.  It's a clean, simple, and secure approach that obviates
+local database.  It's a clean, simple, and secure approach that removes
 the need to implement individual RPC endpoints, manually cache data on
 the client to avoid slow roundtrips to the server, and carefully
 orchestrate invalidation messages to every client as data changes.
@@ -196,40 +304,44 @@ is used to declare Mongo collections and to manipulate them. Thanks to
 `minimongo`, Meteor's client-side Mongo emulator, `Mongo.Collection`
 can be used from both client and server code.
 
-    // declare collections
-    // this code should be included in both the client and the server
-    Rooms = new Mongo.Collection("rooms");
-    Messages = new Mongo.Collection("messages");
-    Parties = new Mongo.Collection("parties");
+```js
+// declare collections
+// this code should be included in both the client and the server
+Rooms = new Mongo.Collection("rooms");
+Messages = new Mongo.Collection("messages");
+Parties = new Mongo.Collection("parties");
 
-    // server: populate collections with some initial documents
-    Rooms.insert({name: "Conference Room A"});
-    var myRooms = Rooms.find({}).fetch();
-    Messages.insert({text: "Hello world", room: myRooms[0]._id});
-    Parties.insert({name: "Super Bowl Party"});
+// server: populate collections with some initial documents
+Rooms.insert({name: "Conference Room A"});
+var myRooms = Rooms.find({}).fetch();
+Messages.insert({text: "Hello world", room: myRooms[0]._id});
+Parties.insert({name: "Super Bowl Party"});
+```
 
 Each document set is defined by a publish function on the server.  The
 publish function runs each time a new client subscribes to a document
 set.  The data in a document set can come from anywhere, but the common
 case is to publish a database query.
 
-    // server: publish all room documents
-    Meteor.publish("all-rooms", function () {
-      return Rooms.find(); // everything
-    });
+```js
+// server: publish all room documents
+Meteor.publish("all-rooms", function () {
+  return Rooms.find(); // everything
+});
 
-    // server: publish all messages for a given room
-    Meteor.publish("messages", function (roomId) {
-      check(roomId, String);
-      return Messages.find({room: roomId});
-    });
+// server: publish all messages for a given room
+Meteor.publish("messages", function (roomId) {
+  check(roomId, String);
+  return Messages.find({room: roomId});
+});
 
-    // server: publish the set of parties the logged-in user can see.
-    Meteor.publish("parties", function () {
-      return Parties.find({$or: [{"public": true},
-                                 {invited: this.userId},
-                                 {owner: this.userId}]});
-    });
+// server: publish the set of parties the logged-in user can see.
+Meteor.publish("parties", function () {
+  return Parties.find({$or: [{"public": true},
+                             {invited: this.userId},
+                             {owner: this.userId}]});
+});
+```
 
 Publish functions can provide different results to each client.  In the
 last example, a logged in user can only see `Party` documents that
@@ -241,11 +353,13 @@ round trip to the server.  And they're limited to the contents of the
 cache: a query for every document in a collection on a client will only
 return documents the server is publishing to that client.
 
-    // client: start a parties subscription
-    Meteor.subscribe("parties");
+```js
+// client: start a parties subscription
+Meteor.subscribe("parties");
 
-    // client: return array of Parties this client can read
-    return Parties.find().fetch(); // synchronous!
+// client: return array of Parties this client can read
+return Parties.find().fetch(); // synchronous!
+```
 
 Sophisticated clients can turn subscriptions on and off to control how
 much data is kept in the cache and manage network traffic.  When a
@@ -258,16 +372,18 @@ the server requesting the change.  The server checks the proposed change
 against a set of allow/deny rules you write as JavaScript functions.
 The server only accepts the change if all the rules pass.
 
-    // server: don't allow client to insert a party
-    Parties.allow({
-      insert: function (userId, party) {
-        return false;
-      }
-    });
+```js
+// server: don't allow client to insert a party
+Parties.allow({
+  insert: function (userId, party) {
+    return false;
+  }
+});
 
-    // client: this will fail
-    var party = { ... };
-    Parties.insert(party);
+// client: this will fail
+var party = { ... };
+Parties.insert(party);
+```
 
 If the server accepts the change, it applies the change to the database
 and automatically propagates the change to other clients subscribed to
@@ -427,7 +543,7 @@ Meteor templates when compiled.
 {{#note}}
   Today, the only templating system that ships with Meteor is Spacebars, though
   our community has created packages for other languages such as
-  [Jade](https://atmospherejs.com/package/jade).
+  [Jade](https://atmospherejs.com/mquandalle/jade).
 {{/note}}
 
 To define templates, create a file in your project with the `.html`
@@ -442,52 +558,61 @@ When your app is loaded, it automatically renders the special template called
 `{{dstache}}> inclusion}}` operator.
 
 The easiest way to get data into templates is by defining helper
-functions in JavaScript. Just add the helper functions directly on the
-`Template.`*templateName* object. Putting it all together:
+functions in JavaScript. Define helpers with the
+`Template.templateName.helpers({ ... })` function. Putting it all together:
 
+```html
+<!-- in myapp.html -->
+<body>
+  <h1>Today's weather!</h1>
+  {{dstache}}> forecast}}
+</body>
 
-    <!-- in myapp.html -->
-    <body>
-      <h1>Today's weather!</h1>
-      {{dstache}}> forecast}}
-    </body>
+<template name="forecast">
+  <div>It'll be {{dstache}}prediction}} tonight</div>
+{{lt}}/template>
+```
 
-    <template name="forecast">
-      <div>It'll be {{dstache}}prediction}} tonight</div>
-    {{lt}}/template>
+```js
+// in client/myapp.js: reactive helper function
+Template.forecast.helpers({
+  prediction: function () {
+    return Session.get("weather");
+  }
+});
+```
 
-    // in client/myapp.js: reactive helper function
-    Template.forecast.helpers({
-      prediction: function () {
-        return Session.get("weather");
-      }
-    });
+```js
+// in the JavaScript console
+> Session.set("weather", "cloudy");
+> document.body.innerHTML
+ => "<h1>Today's weather!</h1> <div>It'll be cloudy tonight</div>"
 
-    // in the JavaScript console
-    > Session.set("weather", "cloudy");
-    > document.body.innerHTML
-     => "<h1>Today's weather!</h1> <div>It'll be cloudy tonight</div>"
-
-    > Session.set("weather", "cool and dry");
-    > document.body.innerHTML
-     => "<h1>Today's weather!</h1> <div>It'll be cool and dry tonight</div>"
+> Session.set("weather", "cool and dry");
+> document.body.innerHTML
+ => "<h1>Today's weather!</h1> <div>It'll be cool and dry tonight</div>"
+```
 
 
 To iterate over an array or database cursor, use `{{dstache}}#each}}`:
 
-    <!-- in myapp.html -->
-    <template name="players">
-      {{dstache}}#each topScorers}}
-        <div>{{dstache}}name}}</div>
-      {{dstache}}/each}}
-    {{lt}}/template>
+```html
+<!-- in myapp.html -->
+<template name="players">
+  {{dstache}}#each topScorers}}
+    <div>{{dstache}}name}}</div>
+  {{dstache}}/each}}
+{{lt}}/template>
+```
 
-    // in myapp.js
-    Template.players.helpers({
-      topScorers: function () {
-        return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
-      }
-    });
+```js
+// in myapp.js
+Template.players.helpers({
+  topScorers: function () {
+    return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
+  }
+});
+```
 
 In this case, the data is coming from a database query. When the
 database cursor is passed to `{{dstache}}#each}}`, it will wire up all of the
@@ -498,56 +623,66 @@ Helpers can take arguments, and they receive the current template context data
 in `this`. Note that some block helpers change the current context (notably
 `{{dstache}}#each}}` and `{{dstache}}#with}}`):
 
-    // in a JavaScript file
-    Template.players.helpers({
-      leagueIs: function (league) {
-        return this.league === league;
-      }
-    });
+```js
+// in a JavaScript file
+Template.players.helpers({
+  leagueIs: function (league) {
+    return this.league === league;
+  }
+});
+```
 
-    <!-- in a HTML file -->
-    <template name="players">
-      {{dstache}}#each topScorers}}
-        {{dstache}}#if leagueIs "junior"}}
-          <div>Junior: {{dstache}}name}}</div>
-        {{dstache}}/if}}
-        {{dstache}}#if leagueIs "senior"}}
-          <div>Senior: {{dstache}}name}}</div>
-        {{dstache}}/if}}
-      {{dstache}}/each}}
-    {{lt}}/template>
+```html
+<!-- in a HTML file -->
+<template name="players">
+  {{dstache}}#each topScorers}}
+    {{dstache}}#if leagueIs "junior"}}
+      <div>Junior: {{dstache}}name}}</div>
+    {{dstache}}/if}}
+    {{dstache}}#if leagueIs "senior"}}
+      <div>Senior: {{dstache}}name}}</div>
+    {{dstache}}/if}}
+  {{dstache}}/each}}
+{{lt}}/template>
+```
 
 Helpers can also be used to pass in constant data.
 
-    // Works fine with {{dstache}}#each sections}}
-    Template.report.helpers({
-      sections: ["Situation", "Complication", "Resolution"]
-    });
+```js
+// Works fine with {{dstache}}#each sections}}
+Template.report.helpers({
+  sections: ["Situation", "Complication", "Resolution"]
+});
+```
 
-Finally, you can use an `events` declaration on a template function to set up a
-table of event handlers. The format is documented at [Event
-Maps](#eventmaps). The `this` argument to the event handler will be
-the data context of the element that triggered the event.
+Finally, you can use the `events` function on a template to attach
+event handlers. The object passed into `events` is documented at
+[Event Maps](#eventmaps). The `this` argument to the event handler will
+be the data context of the element that triggered the event.
 
-    <!-- myapp.html -->
-    <template name="scores">
-      {{dstache}}#each player}}
-        {{dstache}}> playerScore}}
-      {{dstache}}/each}}
-    {{lt}}/template>
+```html
+<!-- myapp.html -->
+<template name="scores">
+  {{dstache}}#each player}}
+    {{dstache}}> playerScore}}
+  {{dstache}}/each}}
+{{lt}}/template>
 
-    <template name="playerScore">
-      <div>{{dstache}}name}}: {{dstache}}score}}
-        <span class="givePoints">Give points</span>
-      </div>
-    {{lt}}/template>
+<template name="playerScore">
+  <div>{{dstache}}name}}: {{dstache}}score}}
+    <span class="give-points">Give points</span>
+  </div>
+{{lt}}/template>
+```
 
-    <!-- myapp.js -->
-    Template.playerScore.events({
-      'click .givePoints': function () {
-        Users.update(this._id, {$inc: {score: 2}});
-      }
-    });
+```js
+// myapp.js
+Template.playerScore.events({
+  'click .give-points': function () {
+    Users.update(this._id, {$inc: {score: 2}});
+  }
+});
+```
 
 For more details about Spacebars, read [the Spacebars
 README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
@@ -558,30 +693,32 @@ README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md
 <template name="packages_concept">
 {{#markdown}}
 
-  <h2 id="usingpackages">Using packages</h2>
+<h2 id="usingpackages">Using packages</h2>
 
-All of the functionality you've read about so far is implemented as
-standard Meteor packages. This is possible thanks to Meteor's
-unusually powerful package and build system. The same packages work in
-the browser and on the server, and packages can contain plugins that
-extend the build process, such as `coffeescript` ([CoffeeScript](http://coffeescript.org)
-compilation) or `templating` (compiling HTML templates).
+All of the functionality you've read about so far is implemented in standard
+Meteor packages. This is possible thanks to Meteor's unusually powerful
+isomorphic package and build system. Isomorphic means the same packages work in
+the web browser, in mobile apps, and on the server. Packages can also contain
+plugins that extend the build process, such as `coffeescript`
+([CoffeeScript](http://coffeescript.org) compilation) or `templating` (compiling
+HTML templates).
 
 Anyone can publish a Meteor package, and thousands of community-written packages
-have been published to date. The easiest way to browse these packages
-is <a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio. You can
-also use [`meteor search`](#meteorsearch) and [`meteor show`](#meteorshow) commands.
+have been published to date. The easiest way to browse these packages is
+<a href="http://www.atmospherejs.com">Atmosphere</a>, by Percolate Studio.
+You can also use the [`meteor search`](#meteorsearch) and
+[`meteor show`](#meteorshow) commands.
 
 You can add packages to your project with [`meteor add`](#meteoradd) and remove
 them with [`meteor remove`](#meteorremove).
 Additionally, [`meteor list`](#meteorlist) will tell you what
 packages your project is using, and [`meteor update`](#meteorupdate)
-will help keep them up to date.
+will update them to the newest versions when possible.
 
-By default all apps include the `standard-app-packages` package. This
+By default all apps include the `meteor-platform` package. This
 automatically pulls in the packages that make up the core Meteor
 stack. If you want to build your own custom stack, just remove
-`standard-app-packages` from your app and add back in whichever of the standard
+`meteor-platform` from your app and add back in whichever of the standard
 packages you want to keep.
 
 Meteor uses a single-loading packaging system, meaning that it loads just one
@@ -731,28 +868,28 @@ more information, see [meteor deploy](#meteordeploy).
 
 <h3 class="nosection">Running on your own infrastructure</h3>
 
-You can also run your application on your own infrastructure, or any
-other hosting provider like Heroku.
+You can also run your application on your own infrastructure or any
+hosting provider that can run Node.js apps.
 
 To get started, run
 
-    $ meteor bundle myapp.tgz
+    $ meteor build my_directory
 
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
 0.10.29; older versions contain a serious bug that can cause production servers
 to stall.) You can then run the application by invoking node, specifying the
-HTTP port for the application to listen on, and the MongoDB endpoint.  If
-you don't already have a MongoDB server, we can recommend our friends at
-[Compose](http://compose.io).
+HTTP port for the application to listen on, and the MongoDB endpoint.
 
-    $ cd bundle
-    $ (cd programs/server && npm install)
-    $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
+```bash
+$ cd my_directory
+$ (cd programs/server && npm install)
+$ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
+```g
 
-Other packages may require other environment variables (for example, the `email`
-package requires a `MAIL_URL` environment variable).
+Some packages might require other environment variables. For example,
+the `email` package requires a `MAIL_URL` environment variable.
 
 {{/markdown}}
 </template>

@@ -15,10 +15,6 @@ var BootstrapCatalogCheckout = function () {
 util.inherits(BootstrapCatalogCheckout, LocalCatalog);
 
 _.extend(BootstrapCatalogCheckout.prototype, {
-  _refreshingIsProductive: function () {
-    return false;
-  },
-
   resolveConstraints: function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};

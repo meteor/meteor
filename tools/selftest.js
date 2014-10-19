@@ -641,7 +641,7 @@ _.extend(Sandbox.prototype, {
     files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
     files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2'), 0755);
+    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2.0.1'), 0755);
 
     var stubCatalog = {
       syncToken: {},
@@ -731,7 +731,7 @@ _.extend(Sandbox.prototype, {
     var oldOffline = catalog.official.offline;
     catalog.official.offline = true;
     doOrThrow(function () {
-      catalog.official.refresh();
+      catalog.complete.refreshOfficialCatalog();
     });
     _.each(
       ['autopublish', 'meteor-platform', 'insecure'],
@@ -742,7 +742,7 @@ _.extend(Sandbox.prototype, {
         if (!versionRec) {
           catalog.official.offline = false;
           doOrThrow(function () {
-            catalog.official.refresh();
+            catalog.complete.refreshOfficialCatalog();
           });
           catalog.official.offline = true;
           versionRec = doOrThrow(function () {
@@ -788,7 +788,8 @@ _.extend(Sandbox.prototype, {
 
     var dataFile = config.getLocalPackageCacheFilename(serverUrl);
     var tmpCatalog = new catalogRemote.RemoteCatalog();
-    tmpCatalog.initialize({packageStorage: path.join(self.warehouse, 'package-metadata', 'v2', dataFile)});
+    tmpCatalog.initialize({
+      packageStorage: path.join(self.warehouse, 'package-metadata', 'v2.0.1', dataFile)});
     tmpCatalog.insertData(stubCatalog);
 
     // And a cherry on top
@@ -824,6 +825,8 @@ var PhantomClient = function (options) {
 
   self.name = "phantomjs";
   self.process = null;
+
+  self._logError = true;
 };
 
 util.inherits(PhantomClient, Client);
@@ -839,15 +842,17 @@ _.extend(PhantomClient.prototype, {
       ['-c',
        ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
         phantomScript + "\nEND\n")],
-      {}, function (exitCode, stdout, stderr) {
-        if (exitCode != 0) {
-          console.log("PhantomJS exited with exitCode ", exitCode, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
+      {}, function (error, stdout, stderr) {
+        if (self._logError && error) {
+          console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
         }
       });
   },
 
   stop: function() {
     var self = this;
+    // Suppress the expected SIGTERM exit 'failure'
+    self._logError = false;
     self.process && self.process.kill();
     self.process = null;
   }
@@ -1262,7 +1267,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     // If it's the first time we've called tellMongo on this sandbox,
-    // open a connection to fake-mongod. Wait up to 2 seconds for it
+    // open a connection to fake-mongod. Wait up to 10 seconds for it
     // to accept the connection, retrying every 100ms.
     //
     // XXX we never clean up this connection. Hopefully once
@@ -1274,7 +1279,7 @@ _.extend(Run.prototype, {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 50;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 100;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
@@ -1641,11 +1646,12 @@ var runTests = function (options) {
 
   _.each(testList.filteredTests, function (test) {
     totalRun++;
-    Console.stderr.write(test.file + ": " + test.name + " ... ");
+    process.stderr.write(test.file + ": " + test.name + " ... ");
 
     var failure = null;
     try {
       runningTest = test;
+      var startTime = +(new Date);
       test.f(options);
     } catch (e) {
       if (e instanceof TestFailure) {
@@ -1710,7 +1716,8 @@ var runTests = function (options) {
         Console.stderr.write(failure.details.messages.formatMessages());
       }
     } else {
-      Console.stderr.write("ok\n");
+      var durationMs = +(new Date) - startTime;
+      Console.stderr.write("ok (" + durationMs + " ms)\n");
     }
   });
 

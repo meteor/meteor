@@ -281,7 +281,7 @@ PV.parseConstraint = function (constraintString, options) {
   }
 
   // Let's parse out the versionString.
-  var versionConstraints = versionString.split(' || ');
+  var versionConstraints = versionString.split(/ *\|\| */);
   constraint.constraints = [];
   __.each(versionConstraints, function (versionCon) {
     constraint.constraints.push(

@@ -143,40 +143,11 @@ _.extend(Runner.prototype, {
     }
 
     if (! self.stopped && self.mongoRunner) {
-      var spinner = ['-', '\\', '|', '/'];
-      // I looked at some Unicode indeterminate progress indicators, such as:
-      //
-      // spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
-      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
-      // spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
-      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
-      // spinner = "⠉⠒⠤⣀⠤⠒".split('');
-      //
-      // but none of them really seemed like an improvement. I think
-      // the case for using unicode would be stronger in a determinate
-      // progress indicator.
-      //
-      // There are also some four-frame options such as ◐◓◑◒ at
-      //   http://stackoverflow.com/a/2685827/157965
-      // but all of the ones I tried look terrible in the terminal.
-      if (! self.quiet) {
-        var animationFrame = 0;
-        var printUpdate = fiberHelpers.bindEnvironment(function () {
-          //runLog.logTemporary("=> Starting MongoDB... " +
-          //                    spinner[animationFrame]);
-          buildmessage.nudge();
-          animationFrame = (animationFrame + 1) % spinner.length;
-        });
-        printUpdate();
-        var mongoProgressTimer = setInterval(printUpdate, 200);
-      }
-
       buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
         self.mongoRunner.start();
       });
 
       if (! self.quiet) {
-        clearInterval(mongoProgressTimer);
         if (! self.stopped)
           runLog.log("=> Started MongoDB.");
       }
@@ -185,18 +156,18 @@ _.extend(Runner.prototype, {
     _.forEach(self.extraRunners, function (extraRunner) {
       if (! self.stopped) {
         var title = extraRunner.title;
-        if (! self.quiet)
-          runLog.logTemporary("=> Starting " + title + "...");
-        extraRunner.start();
+        buildmessage.enterJob({ title: "Starting " + title }, function () {
+          extraRunner.start();
+        });
         if (! self.quiet && ! self.stopped)
           runLog.log("=> Started " + title + ".");
       }
     });
 
     if (! self.stopped) {
-      if (! self.quiet)
-        runLog.logTemporary("=> Starting your app...");
-      self.appRunner.start();
+      buildmessage.enterJob({ title: "Starting your app" }, function () {
+        self.appRunner.start();
+      });
       if (! self.quiet && ! self.stopped)
         runLog.log("=> Started your app.");
     }
@@ -205,9 +176,9 @@ _.extend(Runner.prototype, {
       runLog.log("\n=> App running at: " + self.rootUrl);
 
     if (self.selenium && ! self.stopped) {
-      if (! self.quiet)
-        runLog.logTemporary("=> Starting Selenium...");
-      self.selenium.start();
+      buildmessage.enterJob({ title: "Starting Selenium" }, function () {
+        self.selenium.start();
+      });
       if (! self.quiet && ! self.stopped)
         runLog.log("=> Started Selenium.");
     }
@@ -343,7 +314,7 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
-  Console.enableProgressBar(false);
+  Console.enableProgressDisplay(false);
   var result = fut.wait();
   runner.stop();
 

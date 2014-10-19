@@ -132,14 +132,15 @@ _.extend(Unibuild.prototype, {
     // packages get precedence.
     //
     // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak dependencies (because the meaning of a name
-    // shouldn't be affected by the non-local decision of whether or not an
-    // unrelated package in the target depends on something).
+    // defined yet) or from weak/debugOnly dependencies (because the meaning of
+    // a name shouldn't be affected by the non-local decision of whether or not
+    // an unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
     compiler.eachUsedUnibuild(
       self.uses,
       bundleArch, loader,
-      {skipUnordered: true}, function (depUnibuild) {
+      { skipUnordered: true, skipDebugOnly: true },
+      function (depUnibuild) {
         _.each(depUnibuild.packageVariables, function (symbol) {
           // Slightly hacky implementation of test-only exports.
           if (symbol.export === true ||
@@ -317,6 +318,7 @@ _.extend(Isopack.prototype, {
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
+    self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
   },
@@ -363,6 +365,15 @@ _.extend(Isopack.prototype, {
   buildArchitectures: function () {
     var self = this;
     return self.architectures().join('+');
+  },
+
+  // Returns true if we think that this isopack is platform specific (contains
+  // binary builds)
+  platformSpecific: function () {
+    var self = this;
+    return _.any(self.architectures(), function (arch) {
+      return arch.match(/^os\./);
+    });
   },
 
   tarballName: function () {
@@ -967,7 +978,8 @@ _.extend(Isopack.prototype, {
         if (needToCopyNodeModules) {
           builder.copyDirectory({
             from: unibuild.nodeModulesPath,
-            to: nodeModulesPath
+            to: nodeModulesPath,
+            npmDiscards: self.npmDiscards
           });
         }
 

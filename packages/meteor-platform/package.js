@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.1.2-rc.0'
+  version: '1.1.2'
 });
 
 Package.on_use(function(api) {
@@ -58,12 +58,19 @@ Package.on_use(function(api) {
     'autoupdate'
   ], ['client', 'server']);
 
-  api.use([
+  // More mobile specific implies
+  api.imply([
     // Remove the 300ms click delay on mobile
     'fastclick',
     // Good defaults for the mobile status bar
     'mobile-status-bar'
   ], 'web.cordova');
+
+  api.imply([
+    // Launch screen configuration. Currently only on mobile but we include the
+    // no-op browser version anyway.
+    'launch-screen'
+  ], 'web');
 });
 
 Cordova.depends({

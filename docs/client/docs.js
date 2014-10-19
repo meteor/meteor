@@ -1,4 +1,4 @@
-var release = Meteor.release ? "0.9.4-pre.11" : "(checkout)";
+var release = Meteor.release ? "0.9.4" : "(checkout)";
 
 Template.headline.helpers({
   release: function () {
@@ -7,12 +7,6 @@ Template.headline.helpers({
 });
 
 Meteor.startup(function () {
-  // XXX this is broken by the new multi-page layout.  Also, it was
-  // broken before the multi-page layout because it had illegible
-  // colors. Just turn it off for now. We'll fix it and turn it on
-  // later.
-  // prettyPrint();
-
   //mixpanel tracking
   mixpanel.track('docs');
 
@@ -413,17 +407,13 @@ var toc = [
 
   "Packages", [ [
     "accounts-ui",
-    "appcache",
     "audit-argument-checks",
-    "browser-policy",
     "coffeescript",
     "fastclick",
-    "force-ssl",
     "jquery",
     "less",
     "oauth-encryption",
     "random",
-    "spiderable",
     "stylus",
     "showdown",
     "underscore",

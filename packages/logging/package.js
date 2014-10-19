@@ -1,10 +1,14 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.0.4-rc.0'
+  version: '1.0.4'
 });
 
 Npm.depends({
   "cli-color": "0.2.3"
+});
+
+Npm.strip({
+  "es5-ext": ["test/"]
 });
 
 Cordova.depends({

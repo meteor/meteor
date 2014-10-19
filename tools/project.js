@@ -426,9 +426,6 @@ _.extend(Project.prototype, {
         var oldVersion;
         var newRec;
         var messages = buildmessage.capture(function () {
-          // XXX: Lack of rate limiting, means that this could refresh a lot and
-          // be slow. Hopefully, that will not be happening often, and be fixed
-          // with sql stuff using a better pattern.
           oldVersion = catalog.complete.getVersion(package, oldV);
           newRec =
             catalog.complete.getVersion(package, newV);
@@ -459,7 +456,7 @@ _.extend(Project.prototype, {
         Console.warn(
           "\nThe following packages have been updated to new versions that are not " +
             "backwards compatible:");
-        Console.warn(utils.formatList(incompatibleUpdates));
+        utils.printPackageList(incompatibleUpdates, { level: Console.LEVEL_WARN });
         Console.warn("\n");
       };
     }
@@ -993,9 +990,12 @@ _.extend(Project.prototype, {
 
   // Removes the plugins from the cordova-plugins file if they existed.
   // pluginsToRemove - array of Cordova plugin identifiers
+  //
+  // Returns an array of plugin identifiers that were actually removed.
   removeCordovaPlugins: function (pluginsToRemove) {
     var self = this;
 
+    var removed = _.intersection(_.keys(self.cordovaPlugins), pluginsToRemove);
     self.cordovaPlugins =
       _.omit.apply(null, [self.cordovaPlugins].concat(pluginsToRemove));
 
@@ -1010,6 +1010,8 @@ _.extend(Project.prototype, {
     });
     lines.push('\n');
     fs.writeFileSync(plugins, lines.join('\n'), 'utf8');
+
+    return removed;
   },
 
   // platforms - a list of strings

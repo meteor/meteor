@@ -2064,7 +2064,7 @@ exports.bundle = function (options) {
         buildmessage.error(
           "A program named ctl exists but no program has isControlProgram set");
         // recover by not making a control program
-      }  else {
+      } else if (options.requireControlProgram) {
         var target = makeServerTarget("ctl");
         targets["ctl"] = target;
         controlProgram = "ctl";
@@ -2132,7 +2132,7 @@ exports.bundle = function (options) {
 
     // If we omitted a target due to an error, we might not have a
     // controlProgram anymore.
-    if (! (controlProgram in targets))
+    if (controlProgram && ! (controlProgram in targets))
       controlProgram = undefined;
 
 
