@@ -2334,8 +2334,10 @@ main.registerCommand({
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
+  if (! _.isEmpty(packagesToRemove))
+    Console.info("");
   _.each(packagesToRemove, function (packageName) {
-    Console.info("Removed top-level dependency on " + packageName + ".");
+    Console.info(packageName + ": removed dependency");
   });
 
   return 0;
