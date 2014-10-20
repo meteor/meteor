@@ -1948,6 +1948,17 @@ main.registerCommand({
     upgradePackages = options.args;
   }
 
+  // Check that every requested package exists
+  var unknownPackages = 0;
+  _.each(upgradePackages, function (packageName) {
+    if (! _.has(versions, packageName)) {
+      Console.error(packageName + ': package is not in the project');
+      unknownPackages++;
+    }
+  });
+  if (unknownPackages)
+    return 1;
+
   // Call the constraint solver. This should not fail, since we are not adding
   // any constraints that we didn't have before.
   var newVersions;
