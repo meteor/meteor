@@ -1347,10 +1347,11 @@ main.registerCommand({
   var matchingReleases = [];
 
   var selector;
+  var pattern = options.args[0];
 
   var search;
   try {
-    search = new RegExp(options.args[0]);
+    search = new RegExp(pattern);
   } catch (err) {
     Console.error(err + "");
     return 1;
@@ -1450,9 +1451,7 @@ main.registerCommand({
   }
 
   if (!output) {
-    Console.error(
-      "Neither packages nor releases matching \'" +
-        search + "\' could be found.");
+    Console.error(pattern + ': no matching packages or releases found');
 
     explainIfRefreshFailed();
   } else {
