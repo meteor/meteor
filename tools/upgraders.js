@@ -61,10 +61,10 @@ var upgradersByName = {
   "notices-for-0.9.1": function () {
     maybePrintNoticeHeader();
     console.log(
-"Meteor 0.9.1 includes changes to the Blaze API, in preparation for 1.0.\n" +
-"Many previously undocumented APIs are now public and documented. Most changes\n" +
-"are backwards compatible, except that templates can no longer be named \"body\"\n" +
-"or \"instance\".\n");
+"0.9.1: Meteor 0.9.1 includes changes to the Blaze API, in preparation for 1.0.\n" +
+"       Many previously undocumented APIs are now public and documented. Most\n" +
+"       changes are backwards compatible, except that templates can no longer\n" +
+"       be named \"body\" or \"instance\".\n");
     console.log();
   },
 
@@ -92,6 +92,15 @@ var upgradersByName = {
 
     fs.writeFileSync(newPlatformsPath, platforms.join("\n") + "\n", "utf-8");
   }
+
+  ////////////
+  // PLEASE. When adding new upgraders that print mesasges, follow the
+  // examples for 0.9.0 and 0.9.1 above. Specifically, formatting
+  // should be:
+  //
+  // 1.x.y: Lorem ipsum messages go here...
+  //        ...and linewrapped on the right column
+  ////////////
 };
 
 exports.runUpgrader = function (upgraderName) {
