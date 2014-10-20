@@ -913,12 +913,10 @@ var buildCordovaEnv = function () {
     envPath += ":" + path.join(androidSdk, 'platform-tools');
     env['PATH'] = envPath;
 
-    // # add ant
-    // http://www.us.apache.org/dist//ant/binaries/apache-ant-1.9.4-bin.tar.gz
-    // sha512: ee13c915a18f3c6e1283c43ce3716e2ed1b03fd87abe27d0e4964a84cba54474f95655c8d75ee12de2516f4df62402acfc9df064aa05f2cc80560a144b2128f8
-    //  //  export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
-    //  //  export PATH="${ANT_HOME}/bin:${PATH}"
-    //
+    // Currently we require ant to be in the path, but we could do this:
+    //  export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
+    // export PATH="${ANT_HOME}/bin:${PATH}"
+
     env["ANDROID_SDK_HOME"] = androidSdk;
   }
   return env;
@@ -1951,29 +1949,6 @@ _.extend(Android.prototype, {
     return false;
   },
 
-  listAvailableInstalls: function () {
-    var self = this;
-
-    var installs = [];
-
-    buildmessage.enterJob({ title: 'Listing available android installs' }, function () {
-      var stdout = self.runAndroidTool(['list', 'sdk', '--extended', '--all'], {});
-      _.each(stdout.split('\n'), function (line) {
-        if (line.indexOf("id: ") !== 0) {
-          return;
-        }
-        var re = /id: [0-9]+ or "(.+)"/;
-        var match = re.exec(line);
-        if (match) {
-          var install = match[1];
-          installs.push(install);
-        }
-      });
-    });
-
-    return installs;
-  },
-
   installTarget: function (target, checkFn) {
     var self = this;
 
@@ -1989,8 +1964,6 @@ _.extend(Android.prototype, {
     if (checkFn) {
       if (!checkFn()) {
         Console.debug("stdout from sdk install was:", stdout);
-        //var availableInstalls = self.listAvailableInstalls();
-        //Console.debug("availableInstalls:", availableInstalls);
         throw new Error("Failed to install android target: " + target);
       }
     } else {
@@ -2023,7 +1996,9 @@ _.extend(Android.prototype, {
   isPlatformToolsInstalled: function () {
     var self = this;
 
-    // XXX: Check version?
+    // XXX: We should check the platform-tools version (though that is not
+    // trivial).  If we have an old version, it is possible that some newer
+    // packages will fail to install (like an updated x86 image?)
     var androidSdkPath = self.findAndroidSdk();
     var stat = files.statOrNull(path.join(androidSdkPath, 'platform-tools', 'adb'));
     if (stat == null) {
