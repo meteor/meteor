@@ -13,6 +13,9 @@ if (Meteor.isClient) {
 }
 
 if (Meteor.isServer) {
+  // optionally set the collection's name that synced cron will use
+  SyncedCron.options.collectionName = 'somethingDifferent';
+
   SyncedCron.add({
     name: 'Crunch some important numbers for the marketing department',
     schedule: function(parser) {
