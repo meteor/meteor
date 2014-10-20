@@ -70,6 +70,26 @@ WebApp.connectHandlers.use(function (req, res, next) {
     var phantomScript = "var url = " + JSON.stringify(url) + ";" +
           PHANTOM_SCRIPT;
 
+    // Allow override of phantomjs args via env var
+    // We use one env var to try to keep env-var explosion under control.
+    // We're not going to document this unless it is actually needed;
+    // (if you find yourself needing this please let us know the use case!)
+    var phantomJsArgs = process.env.METEOR_PKG_SPIDERABLE_PHANTOMJS_ARGS || '';
+
+    // Default image loading to off (we don't need images)
+    if (phantomJsArgs.indexOf("--load-images=") === -1) {
+      phantomJsArgs += " --load-images=no";
+    }
+
+    // POODLE means SSLv3 is being turned off everywhere.
+    // phantomjs currently defaults to SSLv3, and won't use TLS.
+    // Use --ssl-protocol to set the default to TLSv1
+    // (another option would be 'any', but really, we want to say >= TLSv1)
+    // More info: https://groups.google.com/forum/#!topic/meteor-core/uZhT3AHwpsI
+    if (phantomJsArgs.indexOf("--ssl-protocol=") === -1) {
+      phantomJsArgs += " --ssl-protocol=TLSv1";
+    }
+
     // Run phantomjs.
     //
     // Use '/dev/stdin' to avoid writing to a temporary file. We can't
@@ -85,7 +105,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
     child_process.execFile(
       '/bin/bash',
       ['-c',
-       ("exec phantomjs --load-images=no /dev/stdin <<'END'\n" +
+       ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
       {timeout: REQUEST_TIMEOUT, maxBuffer: MAX_BUFFER},
       function (error, stdout, stderr) {
