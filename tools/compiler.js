@@ -355,7 +355,7 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   allHandlers['js'] = function (compileStep) {
     // This is a hardcoded handler for *.js files. Since plugins
     // are written in JavaScript we have to start somewhere.
-    
+
     var options = {
       data: compileStep.read().toString('utf8'),
       path: compileStep.inputPath,
@@ -1196,7 +1196,7 @@ compiler.checkUpToDate = function (
   // and doesn't have a control file (so it is hard to figure out if new files
   // were added). Let's play it safe and never ever ever pretend that the tool
   // is up to date.
-  if (packageSource.inludeTool) {
+  if (packageSource.includeTool) {
     return false;
   }
 
