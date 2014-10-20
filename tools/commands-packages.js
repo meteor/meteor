@@ -1172,7 +1172,7 @@ main.registerCommand({
   var showName;
   if (!allRecord.isRelease) {
     label = "package";
-    showName = "package " + Console.bold(allRecord.record.name);
+    showName = "Package " + Console.bold(allRecord.record.name);
     var getRelevantRecord = function (version) {
       var versionRecord = catalog.official.getVersion(name, version);
       var myBuilds = _.pluck(catalog.official.getAllBuilds(name, version),
@@ -1204,7 +1204,7 @@ main.registerCommand({
     }
   } else {
     label = "release";
-    showName = "release " + Console.bold(allRecord.record.name);
+    showName = "Release " + Console.bold(allRecord.record.name);
     if (full.length > 1) {
       versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
       if (versionRecords.length == 1 && versionRecords[0]) {
@@ -1235,7 +1235,7 @@ main.registerCommand({
     }
 
     if (showName) {
-      Console.info("Showing", showName, "\n");
+      Console.info(showName + ":\n");
     }
 
     var unknown = "< unknown >";
@@ -1247,7 +1247,7 @@ main.registerCommand({
 
       var versionDesc = Console.bold("Version " + v.version);
       if (v.description)
-        versionDesc = versionDesc + " : " + v.description;
+        versionDesc = versionDesc + "    " + v.description;
       Console.info(versionDesc);
       if (full.length > 1) {
         if (v.buildArchitectures) {
@@ -1289,17 +1289,17 @@ main.registerCommand({
   }
 
   if (myMaintainerString) {
-    Console.info("Maintained by " + myMaintainerString + ".");
+    Console.info("Maintained by:", myMaintainerString + ".");
   }
 
   if (lastVersion && lastVersion.git) {
     // No full stop, as it makes copying and pasting painful
-    Console.info("You can find the git repository at:", Console.url(lastVersion.git));
+    Console.info("Git repository at:", Console.url(lastVersion.git));
   }
 
   if (record && record.homepage) {
     // No full stop, as it makes copying and pasting painful
-    Console.info("You can find more information at:", Console.url(record.homepage));
+    Console.info("More information at:", Console.url(record.homepage));
   }
 });
 
