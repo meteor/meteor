@@ -345,7 +345,7 @@ function shellBanner() {
   bannerLines.push(
     "",
     "Type .reload to restart the server and the shell.",
-    "Type .exit to teminate the server and the shell.",
+    "Type .exit to disconnect from the server and leave the shell.",
     "Type .help for additional help.",
     EOL
   );
