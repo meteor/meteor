@@ -1191,11 +1191,21 @@ compiler.checkUpToDate = function (
     return false;
   }
 
+  // Does this isopack contain the tool? We are very bad at watching for tool
+  // changes, since the tool encompasses so much stuff (ex: uniload packages)
+  // and doesn't have a control file (so it is hard to figure out if new files
+  // were added). Let's play it safe and never ever ever pretend that the tool
+  // is up to date.
+  if (packageSource.inludeTool) {
+    return false;
+  }
+
   // Do we think we'd generate different contents than the tool that
   // built this package?
   if (isopk.builtBy !== compiler.BUILT_BY) {
     return false;
   }
+
 
   // Compute the isopack's direct and plugin dependencies to
   // `buildTimeDeps`, by comparing versions (including build
