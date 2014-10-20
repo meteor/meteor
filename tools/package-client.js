@@ -154,13 +154,15 @@ var _updateServerPackageData = function (dataStore, options) {
       ret.resetData = true;
     }
 
-    if (compress) {
+    if (remoteData.collectionsCompressed) {
       var zlib = require('zlib');
-      var colsGzippedBuffer = new Buffer(remoteData.collections, 'base64');
+      var colsGzippedBuffer = new Buffer(
+        remoteData.collectionsCompressed, 'base64');
       var fut = new Future;
       zlib.gunzip(colsGzippedBuffer, fut.resolver());
       var colsJSON = fut.wait();
       remoteData.collections = JSON.parse(colsJSON);
+      delete remoteData.collectionsCompressed;
     }
 
     // We always write to the data store; the fact there is no data is itself
