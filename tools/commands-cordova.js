@@ -168,7 +168,6 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
                       opts.env || {});
 
   var execFileAsync = require('./utils.js').execFileAsync;
-  //ensureAndroidBundle(file);
 
   var p = execFileAsync(file, args, opts);
   p.on('close', function (code) {
@@ -185,7 +184,6 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 
 var execFileSyncOrThrow = function (file, args, opts) {
   var execFileSync = require('./utils.js').execFileSync;
-  //ensureAndroidBundle(file);
 
   verboseLog('Running synchronously: ', file, args);
 
@@ -243,67 +241,6 @@ var getLoadedPackages = _.once(function () {
 
 
 // --- Cordova routines ---
-
-
-var ensureAndroidBundle = function (command, options) {
-  options = options || {};
-
-  if (command && ! _.contains([localAdb, localAndroid], command)) {
-    if (command !== localCordova ||
-        ! _.contains(project.getCordovaPlatforms(), 'android'))
-      return;
-  }
-
-  try {
-    buildmessage.enterJob({ title: 'Downloading Android bundle' }, function () {
-      var scriptPath = path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts', 'ensure_android_bundle.sh');
-
-      verboseLog('Running script ' + scriptPath);
-
-      var runOptions = {};
-      runOptions.env = _.extend( { "USE_GLOBAL_ADK": "" },
-        { "METEOR_WAREHOUSE_DIR": tropo.root },
-        process.env,
-        options.env || {});
-
-      var progress = buildmessage.getCurrentProgressTracker();
-
-      if (progress) {
-        runOptions.onStderr = function (data) {
-          var s = data.toString();
-          // Output looks like: ###   10.3%
-          var re = /#+\s*([0-9.]{1,4})%/;
-          var match = re.exec(s);
-          if (match) {
-            var status = {current: parseInt(match[1]), end: 100};
-            progress.reportProgress(status);
-          }
-        };
-      }
-
-      var cmd = new processes.RunCommand('bash', [scriptPath], runOptions);
-      var execution = cmd.run();
-
-      if (progress) {
-        progress.reportProgressDone();
-      }
-
-      if (execution.exitCode != 0) {
-        Console.warn("Unexpected exit code from script: " + execution.exitCode);
-        Console.warn("stdout: " + execution.stdout);
-        Console.warn("stderr: " + execution.stderr);
-        throw new Error('Could not download Android bundle');
-      }
-
-
-    });
-
-  } catch (err) {
-    verboseLog('Failed to install android_bundle ', err.stack);
-    Console.warn("Failed to install android_bundle");
-    throw new main.ExitWithCode(2);
-  }
-};
 
 var generateCordovaBoilerplate = function (clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
@@ -2307,7 +2244,52 @@ _.extend(Android.prototype, {
     var self = this;
 
     // XXX: Replace script
-    ensureAndroidBundle();
+    try {
+      buildmessage.enterJob({ title: 'Downloading Android bundle' }, function () {
+        var scriptPath = path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts', 'ensure_android_bundle.sh');
+
+        verboseLog('Running script ' + scriptPath);
+
+        var runOptions = {};
+        runOptions.env = _.extend( { "USE_GLOBAL_ADK": "" },
+          { "METEOR_WAREHOUSE_DIR": tropo.root },
+          process.env,
+          options.env || {});
+
+        var progress = buildmessage.getCurrentProgressTracker();
+
+        if (progress) {
+          runOptions.onStderr = function (data) {
+            var s = data.toString();
+            // Output looks like: ###   10.3%
+            var re = /#+\s*([0-9.]{1,4})%/;
+            var match = re.exec(s);
+            if (match) {
+              var status = {current: parseInt(match[1]), end: 100};
+              progress.reportProgress(status);
+            }
+          };
+        }
+
+        var cmd = new processes.RunCommand('bash', [scriptPath], runOptions);
+        var execution = cmd.run();
+
+        if (progress) {
+          progress.reportProgressDone();
+        }
+
+        if (execution.exitCode != 0) {
+          Console.warn("Unexpected exit code from script: " + execution.exitCode);
+          Console.warn("stdout: " + execution.stdout);
+          Console.warn("stderr: " + execution.stderr);
+          throw new Error('Could not download Android bundle');
+        }
+      });
+    } catch (err) {
+      verboseLog('Failed to install android_bundle ', err.stack);
+      Console.warn("Failed to install android_bundle");
+      throw new main.ExitWithCode(2);
+    }
   },
 
   waitForEmulator: function () {
