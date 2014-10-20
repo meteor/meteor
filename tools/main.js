@@ -2,6 +2,7 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
   require('./profile-require.js').start();
 
+var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('./console.js').Console;
@@ -29,7 +30,9 @@ Error.stackTraceLimit = Infinity;
 // Command registration
 ///////////////////////////////////////////////////////////////////////////////
 
-var Command = function (options) {
+function Command(options) {
+  assert.ok(this instanceof Command);
+
   options = _.extend({
     minArgs: 0,
     options: {},
@@ -76,13 +79,16 @@ var messages = {};
 
 // Exception to throw from a command to bail out and show command
 // usage information.
-main.ShowUsage = function () {};
+main.ShowUsage = function ShowUsage() {
+  assert.ok(this instanceof ShowUsage);
+};
 
 // Exception to throw from a helper function inside a command which is identical
 // to returning the given exit code from the command.  ONLY USE THIS IN HELPERS
 // THAT ARE ONLY CALLED DIRECTLY FROM COMMANDS! DON'T BE LAZY AND PUT THROW OF
 // THIS IN RANDOM LIBRARY CODE!
-main.ExitWithCode = function (code) {
+main.ExitWithCode = function ExitWithCode(code) {
+  assert.ok(this instanceof ExitWithCode);
   this.code = code;
 };
 
@@ -94,19 +100,25 @@ _.extend(main.ExitWithCode.prototype, {
 });
 
 // Exception to throw to skip the process.exit call.
-main.WaitForExit = function () {};
+main.WaitForExit = function WaitForExit() {
+  assert.ok(this instanceof WaitForExit);
+};
 
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the latest available (downloaded) Meteor release.
 // If track is specified, it uses the latest available in the given
 // track instead of the default track.
-main.SpringboardToLatestRelease = function (track) {
+main.SpringboardToLatestRelease =
+function SpringboardToLatestRelease(track) {
+  assert.ok(this instanceof SpringboardToLatestRelease);
   this.track = track;
 };
 
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the given Meteor release.
-main.SpringboardToSpecificRelease = function (releaseRecord, msg) {
+main.SpringboardToSpecificRelease =
+function SpringboardToSpecificRelease(releaseRecord, msg) {
+  assert.ok(this instanceof SpringboardToSpecificRelease);
   this.releaseRecord = releaseRecord;
   this.msg = msg;
 };
