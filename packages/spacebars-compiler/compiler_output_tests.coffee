@@ -251,3 +251,23 @@ function() {
     }) });
   }
   """
+
+  run "{{#spaceless}} \n <span> \n foo \n </span> \n {{/spaceless}}",
+  """
+  function() {
+    var view = this;
+    return (function() {
+      return [ HTML.SPAN("foo") ];
+    })();
+  }
+  """
+
+  run "{{#spaceless}} \n foo \n {{/spaceless}}",
+  """
+  function() {
+    var view = this;
+    return (function() {
+      return "foo" ;
+    })();
+  }
+  """

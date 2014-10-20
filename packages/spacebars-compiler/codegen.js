@@ -103,6 +103,18 @@ _.extend(CodeGen.prototype, {
           return BlazeTools.EmitCode(
             builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
 
+        } else if (tag.type === 'BLOCKOPEN' && path[0] === 'spaceless') {
+          if (path.length > 1)
+            throw new Error("Unexpected dotted path beginning with " + path[0]);
+          if (tag.args.length)
+            throw new Error("#" + path[0] + " does not expect any arguments");
+          if (! 'content' in tag)
+            throw new Error("#" + path[0] + " requires content");
+          if ('elseContent' in tag)
+            throw new Error("#" + path[0] + " does not support {{else}} content");
+
+          var content = self.codeGenBlock(self.spaceless(tag.content));
+          return BlazeTools.EmitCode(content + '()');
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
           if (path.length > 1) {
@@ -314,6 +326,38 @@ _.extend(CodeGen.prototype, {
     }
 
     return 'function () { return ' + dataFuncCode + '; }';
+  },
+
+  spaceless: function (content) {
+    var self = this;
+
+    if (! content) return content;
+
+    if (_.isString(content)) {
+      return content.trim();
+    }
+    else {
+      var newContent = [];
+      for (var i = 0; i < content.length; i++) {
+        if (_.isString(content[i])) {
+          content[i] = content[i].trim();
+          if (content[i]) {
+            newContent.push(content[i]);
+          }
+        }
+        else {
+          if ('content' in content[i]) {
+            content[i].content = self.spaceless(content[i].content);
+          }
+          if ('children' in content[i]) {
+            content[i].children = self.spaceless(content[i].children);
+          }
+          newContent.push(content[i]);
+        }
+      }
+
+      return newContent;
+    }
   }
 
 });
