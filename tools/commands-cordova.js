@@ -914,8 +914,8 @@ var buildCordovaEnv = function () {
     env['PATH'] = envPath;
 
     // Currently we require ant to be in the path, but we could do this:
-    //  export ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
-    // export PATH="${ANT_HOME}/bin:${PATH}"
+    // ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
+    // PATH="${ANT_HOME}/bin:${PATH}"
 
     env["ANDROID_SDK_HOME"] = androidSdk;
   }
