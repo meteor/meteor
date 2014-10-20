@@ -62,8 +62,6 @@ function onConnection(socket) {
   });
 }
 
-// The child process calls this function when it receives the SHELLSTART
-// command from the parent process (via stdin).
 function startREPL(options) {
   if (! options.output.columns) {
     // The REPL's tab completion logic assumes process.stdout is a TTY,
@@ -264,6 +262,8 @@ exports.connect = function(appDir) {
       reconnect.count = 0;
       connected = true;
 
+      // Sending a JSON-stringified options object (even just an empty
+      // object) over the socket is required to start the REPL session.
       sock.write(JSON.stringify({
         terminal: !process.env.EMACS
       }));
