@@ -107,17 +107,20 @@ var _updateServerPackageData = function (dataStore, options) {
   var done = false;
   var ret = {resetData: false};
 
+  // For now, we don't have a great progress metric, so just use a spinner
+  var useProgressbar = false;
+
   var start = undefined;
   // Guess that we're about an hour behind, as an opening guess
   var state = { current: 0, end: 60 * 60 * 1000, done: false};
-  buildmessage.reportProgress(state);
+  useProgressbar && buildmessage.reportProgress(state);
 
   var conn = openPackageServerConnection(options.packageServerUrl);
 
   // Provide some progress indication for connection
   // XXX though it is just a hack
   state.current = 1;
-  buildmessage.reportProgress(state);
+  useProgressbar && buildmessage.reportProgress(state);
 
   var getSomeData = function () {
     var syncToken = dataStore.getSyncToken() || {format: "1.1"};
@@ -132,7 +135,7 @@ var _updateServerPackageData = function (dataStore, options) {
     state.current =
       (syncToken.builds - start.builds) +
       (syncToken.versions - start.versions);
-    buildmessage.reportProgress(state);
+    useProgressbar && buildmessage.reportProgress(state);
 
     var compress = !!process.env.METEOR_CATALOG_COMPRESS_RPCS;
 
