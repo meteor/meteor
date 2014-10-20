@@ -950,9 +950,9 @@ _.extend(Connection.prototype, {
   // We detected via DDP-level heartbeats that we've lost the
   // connection.  Unlike `disconnect` or `close`, a lost connection
   // will be automatically retried.
-  _lostConnection: function () {
+  _lostConnection: function (error) {
     var self = this;
-    self._stream._lostConnection();
+    self._stream._lostConnection(error);
   },
 
   /**
@@ -1036,15 +1036,8 @@ _.extend(Connection.prototype, {
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
         onTimeout: function () {
-          if (Meteor.isClient && ! self._stream._isStub) {
-            // only print on the client. this message is useful on the
-            // browser console to see that we've lost connection. on the
-            // server (eg when doing server-to-server DDP), it gets
-            // kinda annoying. also this matches the behavior with
-            // sockjs timeouts.
-            Meteor._debug("Connection timeout. No DDP heartbeat received.");
-          }
-          self._lostConnection();
+          self._lostConnection(
+            new DDP.ConnectionError("DDP heartbeat timed out"));
         },
         sendPing: function () {
           self._send({msg: 'ping'});

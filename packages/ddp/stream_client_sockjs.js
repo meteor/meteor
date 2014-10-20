@@ -80,7 +80,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
   },
 
-  _cleanup: function () {
+  _cleanup: function (maybeError) {
     var self = this;
 
     self._clearConnectionAndHeartbeatTimers();
@@ -91,7 +91,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
       self.socket = null;
     }
 
-    _.each(self.eventCallbacks.disconnect, function (callback) { callback(); });
+    _.each(self.eventCallbacks.disconnect, function (callback) {
+      callback(maybeError);
+    });
   },
 
   _clearConnectionAndHeartbeatTimers: function () {
@@ -109,7 +111,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
   _heartbeat_timeout: function () {
     var self = this;
     Meteor._debug("Connection timeout. No sockjs heartbeat received.");
-    self._lostConnection();
+    self._lostConnection(new DDP.ConnectionError("Heartbeat timed out"));
   },
 
   _heartbeat_received: function () {
@@ -171,7 +173,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
         });
     };
     self.socket.onclose = function () {
-      // Meteor._debug("stream disconnect", _.toArray(arguments), (new Date()).toDateString());
       self._lostConnection();
     };
     self.socket.onerror = function () {
@@ -185,8 +186,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     if (self.connectionTimer)
       clearTimeout(self.connectionTimer);
-    self.connectionTimer = setTimeout(
-      _.bind(self._lostConnection, self),
-      self.CONNECT_TIMEOUT);
+    self.connectionTimer = setTimeout(function () {
+      self._lostConnection(
+        new DDP.ConnectionError("DDP connection timed out"));
+    }, self.CONNECT_TIMEOUT);
   }
 });

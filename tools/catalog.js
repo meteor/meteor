@@ -34,6 +34,7 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
     if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
+      Console.error(catalog.refreshError);
       Console.error("This command requires an up-to-date package catalog.  Exiting.");
       // Avoid circular dependency.
       throw new (require('./main.js').ExitWithCode)(1);
@@ -79,14 +80,17 @@ catalog.refreshOrWarn = function (options) {
 
     // XXX is throwing correct for SQLite errors too? probably.
 
-    Console.warn("Unable to refresh catalog (are you offline?)\n");
+    Console.warn("Unable to refresh catalog (are you offline?)");
 
     // XXX: Make this Console.debug(err)
     if (Console.isDebugEnabled()) {
       Console.printError(err);
     }
 
+    Console.warn();
+
     catalog.refreshFailed = true;
+    catalog.refreshError = err;
     return false;
   }
 };
