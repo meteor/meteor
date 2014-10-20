@@ -292,7 +292,7 @@ _.extend(ProgressDisplayFull.prototype, {
 
     // The cursor appears in position 0; we indent it a little to avoid this
     // This also means it appears less important, which is good
-    var indentColumns = 4;
+    var indentColumns = 3;
 
     var streamColumns = this._stream.columns;
     var statusColumns;
