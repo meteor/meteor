@@ -1411,29 +1411,32 @@ main.registerCommand({
     };
   }
 
-  _.each(allPackages, function (pack) {
-    if (selector(pack, false)) {
-      var vr;
-      if (!options['show-rcs']) {
-        vr = catalog.official.getLatestMainlineVersion(pack);
-      } else {
-        vr = catalog.official.getLatestVersion(pack);
+
+  buildmessage.enterJob({ title: 'Searching packages' }, function () {
+    _.each(allPackages, function (pack) {
+      if (selector(pack, false)) {
+        var vr;
+        if (!options['show-rcs']) {
+          vr = catalog.official.getLatestMainlineVersion(pack);
+        } else {
+          vr = catalog.official.getLatestVersion(pack);
+        }
+        if (vr) {
+          matchingPackages.push(
+            { name: pack, description: vr.description});
+        }
       }
-      if (vr) {
-        matchingPackages.push(
-          { name: pack, description: vr.description});
+    });
+    _.each(allReleases, function (track) {
+      if (selector(track, true)) {
+        var vr = catalog.official.getDefaultReleaseVersion(track);
+        if (vr) {
+          var vrlong = catalog.official.getReleaseVersion(track, vr.version);
+          matchingReleases.push(
+            { name: track, description: vrlong.description});
+        }
       }
-    }
-  });
-  _.each(allReleases, function (track) {
-    if (selector(track, true)) {
-      var vr = catalog.official.getDefaultReleaseVersion(track);
-      if (vr) {
-        var vrlong = catalog.official.getReleaseVersion(track, vr.version);
-        matchingReleases.push(
-          { name: track, description: vrlong.description});
-      }
-    }
+    });
   });
 
   var output = false;
