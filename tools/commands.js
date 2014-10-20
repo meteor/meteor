@@ -715,6 +715,8 @@ var buildCommand = function (options) {
                                appName: appName
                              }));
     } catch (err) {
+      if (err instanceof main.ExitWithCode)
+         throw err;
       Console.printError(err, "Error while building for mobile platforms");
       return 1;
     }
@@ -796,6 +798,7 @@ var buildCommand = function (options) {
     var platformPath = path.join(outputPath, platformName);
 
     if (platformName === 'ios') {
+      if (process.platform !== 'darwin') return;
       files.cp_r(buildPath, path.join(platformPath, 'project'));
       fs.writeFileSync(
         path.join(platformPath, 'README'),
