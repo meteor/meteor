@@ -20,6 +20,8 @@ var catalog = require('./catalog.js');
 var tropo = tropohouse.default;
 var webArchName = "web.cordova";
 
+var DEFAULT_AVD_NAME = "meteor";
+
 // android is available on all supported architectures
 var availablePlatforms =
   project.getDefaultPlatforms().concat(["android", "firefoxos"]);
@@ -901,26 +903,39 @@ _.extend(CordovaRunner.prototype, {
   }
 });
 
-var buildCordovaEnv = function () {
+var buildAndroidEnv = function () {
   var env = _.extend({}, process.env);
-  // XXX: Only for Android?
-  if (Android.useGlobalAdk()) {
-    var androidSdk = Android.findAndroidSdk();
 
-    // Put Android build tool-chain into path 
-    var envPath = env.PATH || '.';
-    envPath += ":" + path.join(androidSdk, 'tools');
-    envPath += ":" + path.join(androidSdk, 'platform-tools');
-    env['PATH'] = envPath;
+  var androidSdk = Android.findAndroidSdk();
 
-    // Currently we require ant to be in the path, but we could do this:
-    // ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
-    // PATH="${ANT_HOME}/bin:${PATH}"
+  // common-env.sh does a lot of this for us, but we might be running
+  // a tool directly.
 
-    env["ANDROID_SDK_HOME"] = androidSdk;
+  // Put Android build tool-chain into path
+  var envPath = env.PATH || '.';
+  envPath += ":" + path.join(androidSdk, 'tools');
+  envPath += ":" + path.join(androidSdk, 'platform-tools');
+  env['PATH'] = envPath;
+
+  if (!Android.useGlobalAdk()) {
+    env['ANDROID_SDK_HOME'] = Android.getAndroidSdkHome();
   }
+
   return env;
 };
+
+var buildCordovaEnv = function () {
+  // XXX: Only for Android?
+  var env = buildAndroidEnv();
+
+  // For global ADK, currently we require ant to be in the path;
+  // but we could do this:
+  // ANT_HOME="${ANDROID_BUNDLE}/apache-ant-1.9.4"
+  // PATH="${ANT_HOME}/bin:${PATH}"
+
+  return env;
+};
+
 
 // Start the simulator or physical device for a specific platform.
 // platformName is of the form ios/ios-device/android/android-device
@@ -1831,25 +1846,36 @@ _.extend(Android.prototype, {
   findAndroidSdk: function (optional) {
     var self = this;
     if (self.useGlobalAdk()) {
-      var androidSdkPath = process.env.ANDROID_SDK_HOME;
-      // XXX: Try some common paths?
+      var androidSdkPath;
 
       // See if USE_GLOBAL_ADK is a path
-      if (!androidSdkPath) {
-        var adkValue = process.env.USE_GLOBAL_ADK;
-        var stat = files.statOrNull(path.join(adkValue, "tools", "android"));
+      var globalAdk = process.env.USE_GLOBAL_ADK;
+      if (globalAdk) {
+        var stat = files.statOrNull(path.join(globalAdk, "tools", "android"));
         if (stat && stat.isFile()) {
-          androidSdkPath = adkValue;
+          androidSdkPath = globalAdk;
+        }
+      }
+
+      if (!androidSdkPath) {
+        var whichAndroid = Host.which('android');
+        if (whichAndroid) {
+          androidSdkPath = path.join(whichAndroid, '../..');
         }
       }
 
       if (!optional && !androidSdkPath) {
-        throw new Error("Cannot find Android SDK; be sure to set ANDROID_SDK_HOME if you set USE_GLOBAL_ADK");
+        throw new Error("Cannot find Android SDK; be sure the 'android' tool is on your path");
       }
+
+      Console.debug("Using (global) Android SDK at", androidSdkPath);
+
       return androidSdkPath;
     } else {
       var androidBundlePath = self.getAndroidBundlePath();
       var androidSdkPath = path.join(androidBundlePath, 'android-sdk');
+
+      Console.debug("Using (built-in) Android SDK at", androidSdkPath);
 
       return androidSdkPath;
     }
@@ -1870,7 +1896,7 @@ _.extend(Android.prototype, {
     var androidSdk = self.findAndroidSdk();
     var androidToolPath = path.join(androidSdk, 'tools', 'android');
 
-    options.env = _.extend({}, process.env, options.env || {}, { 'ANDROID_SDK_HOME': androidSdk });
+    options.env = _.extend(buildAndroidEnv(), options.env || {});
     if (options.progress) {
       options.onStdout = function (data) {
         // Output looks like: (20%, ...
@@ -1914,6 +1940,7 @@ _.extend(Android.prototype, {
       line = line.trim();
       avds.push(line);
     });
+    Console.debug("Found AVDS:", avds);
     return avds;
   },
 
@@ -1924,7 +1951,7 @@ _.extend(Android.prototype, {
 
   getAvdName: function () {
     var self = this;
-    return process.env.METEOR_AVD || "meteor";
+    return process.env.METEOR_AVD || DEFAULT_AVD_NAME;
   },
 
   hasTarget: function (findApi, findArch) {
@@ -2023,14 +2050,14 @@ _.extend(Android.prototype, {
 
     // XXX: Use emulator64-x86?  What difference does it make?
     var name = 'emulator';
-    var androidToolPath = path.join(androidSdk, 'tools', name);
+    var emulatorPath = path.join(androidSdk, 'tools', name);
 
     var args = ['-avd', avd];
 
     var runOptions = {};
     runOptions.detached = true;
-    runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidSdk });
-    var cmd = new processes.RunCommand(androidToolPath, args, runOptions);
+    runOptions.env = buildAndroidEnv();
+    var cmd = new processes.RunCommand(emulatorPath, args, runOptions);
     cmd.start();
   },
 
@@ -2041,9 +2068,18 @@ _.extend(Android.prototype, {
     var adbPath = path.join(androidSdk, 'platform-tools', "adb");
 
     var runOptions = options || {};
-    runOptions.env = _.extend({}, process.env, { 'ANDROID_SDK_HOME': androidSdk });
+    runOptions.env = buildAndroidEnv();
     var cmd = new processes.RunCommand(adbPath, args, runOptions);
     return cmd.run();
+  },
+
+  getAndroidSdkHome: function () {
+    var self = this;
+    if (self.useGlobalAdk()) {
+      return process.env.ANDROID_SDK_HOME || Host.getHomeDir();
+    } else {
+      return Android.getAndroidBundlePath();
+    }
   },
 
   createAvd: function (avd, options) {
@@ -2061,10 +2097,10 @@ _.extend(Android.prototype, {
       var androidBundlePath = self.getAndroidBundlePath();
       var avdPath;
       if (self.useGlobalAdk()) {
-        var androidSdk = self.findAndroidSdk();
-        avdPath = path.join(androidSdk, '.android', 'avd', 'meteor.avd');
+        var home = self.getHome();
+        avdPath = path.join(home, '.android', 'avd', avd + '.avd');
       } else {
-        avdPath = path.join(androidBundlePath, 'meteor_avd');
+        avdPath = path.join(androidBundlePath, avd + '_avd');
       }
 
       var args = ['create', 'avd',
@@ -2228,8 +2264,7 @@ _.extend(Android.prototype, {
         var runOptions = {};
         runOptions.env = _.extend( { "USE_GLOBAL_ADK": "" },
           { "METEOR_WAREHOUSE_DIR": tropo.root },
-          process.env,
-          options.env || {});
+          process.env);
 
         var progress = buildmessage.getCurrentProgressTracker();
 
@@ -2262,7 +2297,7 @@ _.extend(Android.prototype, {
       });
     } catch (err) {
       verboseLog('Failed to install android_bundle ', err.stack);
-      Console.warn("Failed to install android_bundle");
+      Console.warn("Failed to install android bundle");
       throw new main.ExitWithCode(2);
     }
   },
@@ -2378,7 +2413,7 @@ _.extend(Android.prototype, {
       } else {
         log && Console.info(Console.fail("Android SDK not found"));
 
-        log && Console.info("If you set USE_GLOBAL_ADK, you have to set ANDROID_SDK_HOME to point to the SDK");
+        log && Console.info("If you set USE_GLOBAL_ADK, the 'android' tool must be on your path");
 
         result.missing.push("android-global-sdk");
         result.acceptable = false;
@@ -2515,7 +2550,8 @@ _.extend(Android.prototype, {
       if (self.hasAvd(avdName)) {
         log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
       } else {
-        if (fixSilent) {
+        var isDefaultAvd = avdName === DEFAULT_AVD_NAME;
+        if (fixSilent && isDefaultAvd) {
           log && Console.info("Creating android virtual device (AVD): " + avdName);
 
           var avdOptions = {};
@@ -2524,6 +2560,10 @@ _.extend(Android.prototype, {
           log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) created"));
         } else {
           log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+
+          if (!isDefaultAvd) {
+            log && Console.info("(Because you specified a custom AVD, we don't create it automatically)");
+          }
 
           result.missing.push("android-avd");
           result.acceptable = false;
@@ -2736,6 +2776,7 @@ main.registerCommand({
   maxArgs: 1,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
+  cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
 
   var platform = options.args[0];
