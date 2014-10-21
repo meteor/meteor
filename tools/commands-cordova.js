@@ -1112,6 +1112,19 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
     // clear the logcat logs from the previous run
     // set a timeout for this command for 5s
+
+    // XXX: We need to set the target, otherwise we get this:
+    //    - waiting for device -
+    //    error: more than one device and emulator
+    //    - waiting for device -
+    //    error: more than one device and emulator
+    //    ...
+    // (The timeout saves us here currently)
+
+    // XXX: We should also switch to processes
+
+    // XXX: We should also dump adb.sh
+
     var future = new Future;
     execFileAsyncOrThrow(localAdb,
                          ['logcat', '-c'],
@@ -1132,6 +1145,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     }
     verboseLog('Done clearing Android logs.');
 
+    // XXX: We need to set the target, otherwise we get the above problem
     verboseLog('Tailing logs for android with `adb logcat -s CordovaLog`');
     execFileAsyncOrThrow(localAdb, ['logcat', '-s', 'CordovaLog'], {
       verbose: true,
