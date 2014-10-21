@@ -350,12 +350,16 @@ var longHelp = exports.longHelp = function (commandName) {
 // Exit and restart the program, with the same arguments, but using a
 // different version of the tool and/or forcing a particular release.
 //
-// - release: required. the version of the tool to run. must
-//   already be downloaded.
+// - release: required. the version of the tool to run.
+//
+// options:
 // - releaseOverride: optional. if provided, a release name to force
 //   us to use when restarting (this functions exactly like --release
 //   and will cause release.forced to be true).
-var springboard = function (rel, releaseOverride) {
+// - fromApp: this release was suggested because it is the app's
+//   release.  affects error messages.
+var springboard = function (rel, options) {
+  options = options || {};
   if (process.env.METEOR_DEBUG_SPRINGBOARD)
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
@@ -386,15 +390,23 @@ var springboard = function (rel, releaseOverride) {
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
-    Console.error(
-      "Could not springboard to release: " + rel.name +
-      ": could not download tool in " +
-      rel.getToolsPackageAtVersion());
+    if (options.fromApp) {
+      Console.error(
+        "Sorry, this project uses " + rel.getDisplayName() + ", which is not "
+        + "installed and could not be downloaded. Please check to make sure "
+        + "that you are online.");
+    } else {
+      Console.error(
+        "Sorry, " + rel.getDisplayName() + " is not installed and could not be "
+          + "downloaded. Please check to make sure that you are online.");
+    }
     process.exit(1);
   }
   if (messages.hasMessages()) {
+    // XXX I'm pretty sure that maybeDownloadPackageForArchitectures can no
+    //     longer create buildmessages
     Console.error(
-      "Could not springboard to release: " + rel.name + ".\n" +
+      "Could not springboard to release: " + rel.getDisplayName() + ".\n" +
         messages.formatMessages());
     process.exit(1);
   }
@@ -413,12 +425,12 @@ var springboard = function (rel, releaseOverride) {
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
 
-  if (releaseOverride !== undefined) {
+  if (_.has(options, 'releaseOverride')) {
     // We used to just append --release=<releaseOverride> to the arguments, and
     // though that's probably safe in practice, it makes us worry about things
     // like other --release options.  So now we use an environment
     // variable. #SpringboardEnvironmentVar
-    process.env['METEOR_SPRINGBOARD_RELEASE'] = releaseOverride;
+    process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
   }
 
   // Now exec; we're not coming back.
@@ -736,6 +748,7 @@ Fiber(function () {
   var releaseOverride = null;
   var releaseForced = false;
   var releaseExplicit = false;
+  var releaseFromApp = false;
   if (_.has(rawOptions, '--release')) {
     if (rawOptions['--release'].length > 1) {
       Console.error(
@@ -814,6 +827,7 @@ Fiber(function () {
       } else {
         // Use the project's desired release
         releaseName = appRelease;
+        releaseFromApp = true;
       }
     } else {
       // Run outside an app dir with no --release flag. Use the latest
@@ -966,7 +980,8 @@ Fiber(function () {
   // release is a checkout, because that doesn't make any sense.
   if (release.current && release.current.isProperRelease() &&
       release.current.getToolsPackageAtVersion() !== files.getToolsVersion()) {
-    springboard(release.current); // does not return!
+    springboard(release.current, { fromApp: releaseFromApp });
+    // Does not return!
   }
 
   // Check for the '--help' option.
@@ -1342,7 +1357,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // 'update' and 'create', which are both catalog.Refresh.OnceAtStart
       // commands, so we ought to have decent knowledge of the latest release.
       var latestRelease = release.load(release.latestKnown(e.track));
-      springboard(latestRelease, latestRelease.name);
+      springboard(latestRelease, { releaseOverride: latestRelease.name });
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {
       // Springboard to a specific release. This is only throw by
@@ -1350,7 +1365,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // have decent knowledge of the latest release.
       var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
       var nextRelease = release.load(relName);
-      springboard(nextRelease, relName);
+      springboard(nextRelease, { releaseOverride: relName });
       // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;
