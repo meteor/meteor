@@ -2091,6 +2091,10 @@ _.extend(Android.prototype, {
     return cmd.run();
   },
 
+  // ANDROID_SDK_HOME is the homedir for Android.
+  // If we're using a global adk, it is actually the user's home-dir
+  // (unless they themeslves repointed it)
+  // If we're using our own packaged ADK,
   getAndroidSdkHome: function () {
     var self = this;
     if (self.useGlobalAdk()) {
