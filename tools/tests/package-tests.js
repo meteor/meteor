@@ -212,6 +212,11 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("foobar!");
   run.match("restarted");
 
+  // Check that we are watching the versions file, as well as the packages file.
+  s.unlink('.meteor/versions');
+  run.waitSecs(10);
+  run.match("restarted");
+
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   s.cp('programs/empty/package2.js', 'programs/empty/package.js');
