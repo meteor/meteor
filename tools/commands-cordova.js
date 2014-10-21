@@ -1136,7 +1136,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     var future = new Future;
     execFileAsyncOrThrow(localAdb, ['logcat', '-c'], future.resolver());
     setTimeout(function () {
-      if (! future.isResolved) {
+      if (! future.isResolved()) {
         verboseLog('adb logcat -c timed out');
         future.throw(new Error("clearing logs of Android device timed out: adb logcat -c"));
       }
