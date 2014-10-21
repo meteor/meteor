@@ -44,115 +44,48 @@ function merge(into, from) {
   });
 }
 
-// Given an actual filesystem directory, build a mapping from absolute
-// package directories to lists of patterns to be discarded.
-NDp.buildDiscardChecker = function(rootDir) {
-  return new NpmDiscardChecker(rootDir, this.buildDiscardMap(rootDir));
-};
-
-NDp.buildDiscardMap = function(rootDir) {
-  var self = this;
-  var discardMap = Object.create(null);
-
-  if (path.basename(rootDir) === "node_modules") {
-    rootDir = path.dirname(rootDir);
+NDp.shouldDiscard = function shouldDiscard(candidatePath, isDirectory) {
+  if (typeof isDirectory === "undefined") {
+    isDirectory = fs.lstatSync(candidatePath).isDirectory();
   }
 
-  function populateDiscardMap(discards, relDir) {
-    var isArray = _.isArray(discards);
-    if (isArray ||
-        _.isString(discards) ||
-        _.isRegExp(discards)) {
+  for (var currentPath = candidatePath, parentPath;
+       (parentPath = path.dirname(currentPath)) !== currentPath;
+       currentPath = parentPath) {
+    if (path.basename(parentPath) === "node_modules") {
+      var packageName = path.basename(currentPath);
 
-      if (! isArray) {
-        discards = [discards];
+      if (_.has(this.discards, packageName)) {
+        var relPath = path.relative(currentPath, candidatePath);
+
+        if (isDirectory) {
+          relPath = path.join(relPath, path.sep);
+        }
+
+        return this.discards[packageName].some(function(pattern) {
+          return matches(pattern, relPath);
+        });
       }
 
-      var dir = path.join(rootDir, relDir);
-      var intoArray = _.has(discardMap, dir)
-        ? discardMap[dir]
-        : discardMap[dir] = [];
-
-      intoArray.push.apply(intoArray, discards);
+      // Stop at the first ancestor node_modules directory we find.
+      break;
     }
   }
 
-  // For convenience, the packages passed as top-level keys to Npm.strip
-  // do not actually have to be installed in the top level of the NPM
-  // package tree. This function finds any/all copies of top-level
-  // packages and populates the discard map starting from each copy.
-  function findTopLevelPackages(relDir) {
-    var files = readDir(path.join(rootDir, relDir, "node_modules"));
-    if (files) {
-      _.each(files, function(childPkgName) {
-        if (childPkgName.charAt(0) === ".") {
-          return;
-        }
-
-        var relChildPkgPath = path.join(relDir, "node_modules", childPkgName);
-
-        if (_.has(self.discards, childPkgName)) {
-          populateDiscardMap(self.discards[childPkgName], relChildPkgPath);
-        }
-
-        findTopLevelPackages(relChildPkgPath);
-      });
-    }
-  }
-
-  findTopLevelPackages(".");
-
-  return discardMap;
+  return false;
 };
-
-function NpmDiscardChecker(rootDir, discardMap) {
-  assert.ok(this instanceof NpmDiscardChecker);
-  assert.ok(_.isString(rootDir));
-  this.rootDir = rootDir;
-  this.discardMap = discardMap;
-}
-
-var NDCp = NpmDiscardChecker.prototype;
-
-NDCp.shouldDiscard = function(fullPath) {
-  var prefix = fullPath;
-  while (prefix !== this.rootDir) {
-    if (_.has(this.discardMap, prefix)) {
-      return this.discardMap[prefix].some(function(pattern) {
-        return matches(pattern, prefix, fullPath);
-      });
-    }
-    prefix = path.dirname(prefix);
-  }
-};
-
-// TODO Cache this.
-function readDir(dirPath) {
-  try {
-    return fs.readdirSync(dirPath);
-  } catch (err) {
-    return null;
-  }
-}
 
 // TODO Improve this. For example we don't currently support wildcard
 // string patterns (just use a RegExp if you need that flexibility).
-function matches(pattern, prefix, fullPath) {
-  var relPath = path.relative(prefix, fullPath);
-
+function matches(pattern, relPath) {
   if (_.isRegExp(pattern)) {
     return relPath.match(pattern);
   }
 
   assert.ok(_.isString(pattern));
 
-  if (pattern.charAt(pattern.length - 1) === path.sep &&
-      fs.lstatSync(fullPath).isDirectory()) {
-    relPath += path.sep;
-  }
-
   if (pattern.charAt(0) === path.sep) {
-    return relPath.indexOf(pattern.slice(1), relPath) === 0;
+    return relPath.indexOf(pattern.slice(1)) === 0;
   }
 
   return relPath.indexOf(pattern) !== -1;
