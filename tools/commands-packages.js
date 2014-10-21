@@ -1741,7 +1741,7 @@ var maybeUpdateRelease = function (options) {
       // that track, so we are done.
       var releaseToPrint = utils.displayRelease(appTrack, appVersion);
       Console.info(
-        "This project is already at Meteor " + releaseToPrint +
+        "This project is already at " + releaseToPrint +
           ", which is newer than the latest release.");
       return 0;
     }
