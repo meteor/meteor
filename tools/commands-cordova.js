@@ -79,6 +79,13 @@ cordova.buildTargets = function (localPath, targets, options) {
 
   verboseLog('Running build for platforms:', platforms);
   checkRequestedPlatforms(platforms);
+  platforms = _.filter(platforms, function (platform) {
+    if (! _.contains(availablePlatforms, platform)) {
+      Console.warn(platform + ': skipping platform not available on your system');
+      return false;
+    }
+    return true;
+  });
 
   _.each(platforms, function (platform) {
     requirePlatformReady(platform);
