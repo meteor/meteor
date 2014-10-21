@@ -89,7 +89,7 @@ $METEOR search backbone | grep "backbone" >> $OUTPUT
 $METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
 $METEOR list | grep "backbone" >> $OUTPUT
 grep backbone packages >> $OUTPUT # remember, we are already in .meteor
-$METEOR remove backbone 2>&1 | grep "Removed top-level dependency on backbone" >> $OUTPUT
+$METEOR remove backbone 2>&1 | grep "backbone: removed dependency" >> $OUTPUT
 ! $METEOR list 2>&1 | grep "backbone" >> $OUTPUT
 
 echo "... bundle"
