@@ -121,12 +121,10 @@ exports.unlinkSocketFile = function(appDir) {
   var socketFile = getSocketFile(appDir);
   try {
     fs.unlinkSync(socketFile);
-  } finally {
     // Replace the socket file with a regular file so that any connected
     // shell clients will fail to connect with the ENOTSOCK error.
     fs.writeFileSync(socketFile, "not a socket\n");
-    return; // Silence any exception from fs.unlinkSync.
-  }
+  } catch (ignored) {}
 };
 
 function getHistoryFile(appDir) {
