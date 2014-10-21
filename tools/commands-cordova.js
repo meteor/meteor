@@ -802,7 +802,8 @@ var buildCordova = function (localPath, platforms, options) {
 
     ensureCordovaPlatforms(localPath);
     ensureCordovaPlugins(localPath, _.extend({}, options, {
-      packagePlugins: getCordovaDependenciesFromStar(bundle.starManifest)
+      packagePlugins: cordova.getCordovaDependenciesFromStar(
+        bundle.starManifest)
     }));
 
     // XXX hack, copy files from app folder one level up
