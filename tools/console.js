@@ -409,6 +409,12 @@ _.extend(StatusPoller.prototype, {
     };
 
     var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
+
+    if (watching && watching.suppressDisplay) {
+      self._console._progressDisplay.depaint();
+      return;
+    }
+
     if (self._watching === watching) {
       // We need to do this to keep the spinner spinning
       // XXX: Should we _only_ do this when we're showing the spinner?
