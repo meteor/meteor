@@ -266,12 +266,15 @@ _.extend(ProgressDisplayFull.prototype, {
     self._render();
   },
 
-  updateProgress: function (fraction) {
+  updateProgress: function (fraction, startTime) {
     var self = this;
 
     self._fraction = fraction;
     if (fraction !== undefined) {
       self._progressBarRenderer.curr = Math.floor(fraction * self._progressBarRenderer.total);
+    }
+    if (startTime) {
+      self._progressBarRenderer.start = startTime;
     }
     self._render();
   },
@@ -390,19 +393,19 @@ _.extend(StatusPoller.prototype, {
       rootProgress.dump(process.stdout, {skipDone: true});
     }
 
-    var reportState = function (state) {
+    var reportState = function (state, startTime) {
       var progressDisplay = self._console._progressDisplay;
       // Do the % computation, if it is going to be used
       if (progressDisplay.updateProgress) {
         if (state.end === undefined || state.end == 0) {
-          progressDisplay.updateProgress(undefined);
+          progressDisplay.updateProgress(undefined, startTime);
         } else {
           var fraction = state.done ? 1.0 : (state.current / state.end);
 
           if (!isNaN(fraction) && fraction >= 0) {
-            progressDisplay.updateProgress(fraction);
+            progressDisplay.updateProgress(fraction, startTime);
           } else {
-            progressDisplay.updateProgress(0);
+            progressDisplay.updateProgress(0, startTime);
           }
         }
       }
@@ -418,7 +421,7 @@ _.extend(StatusPoller.prototype, {
     if (self._watching === watching) {
       // We need to do this to keep the spinner spinning
       // XXX: Should we _only_ do this when we're showing the spinner?
-      reportState(watching.getState());
+      reportState(watching.getState(), watching.startTime);
       return;
     }
 
@@ -437,7 +440,7 @@ _.extend(StatusPoller.prototype, {
           return;
         }
 
-        reportState(state);
+        reportState(state, watching.startTime);
       });
     }
   }

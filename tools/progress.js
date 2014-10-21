@@ -40,6 +40,8 @@ var Progress = function (options) {
 
   // Set this to true to stop displaying a progress bar/spinner.
   self.suppressDisplay = false;
+
+  self.startTime = +(new Date);
 };
 
 _.extend(Progress.prototype, {
