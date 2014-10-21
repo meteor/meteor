@@ -1,5 +1,6 @@
 <html {{htmlAttributes}}>
 <head>
+{{#if title}}<title>{{title}}</title>{{/if}}
 {{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{../bundledJsCssPrefix}}{{url}}">{{/each}}
 
 {{#if inlineScriptsAllowed}}

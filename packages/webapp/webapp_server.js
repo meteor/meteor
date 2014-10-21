@@ -187,6 +187,24 @@ WebApp.addHtmlAttributeHook = function (hook) {
   htmlAttributeHooks.push(hook);
 };
 
+// Title hooks: functions to be called to determine the page title to be
+// added to the '<head>' tag. Each function is passed a 'request' object
+// (see #BrowserIdentification) and should return a string. The last hook
+// returning non-empty string sets the title.
+var titleHooks = [];
+var getTitle = function (request) {
+  var titleContent = '';
+  _.each(titleHooks || [], function (hook) {
+    var title = hook(request);
+    if (title !== null && title !== undefined && title !== '')
+      titleContent = title;
+  });
+  return titleContent;
+};
+WebApp.addTitleHook = function (hook) {
+  titleHooks.push(hook);
+};
+
 // Serve app HTML for this URL?
 var appUrl = function (url) {
   if (url === '/favicon.ico' || url === '/robots.txt')
@@ -298,19 +316,22 @@ var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
 
   var htmlAttributes = getHtmlAttributes(request);
+  var title = getTitle(request);
 
   // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
+  // the HTML attributes (used by, eg, appcache), title, and whether
+  // inline scripts are allowed, so we can memoize based on that.
   var memHash = JSON.stringify({
     inlineScriptsAllowed: inlineScriptsAllowed,
     htmlAttributes: htmlAttributes,
+    title: title,
     arch: arch
   });
 
   if (! memoizedBoilerplate[memHash]) {
     memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-      htmlAttributes: htmlAttributes
+      htmlAttributes: htmlAttributes,
+      title: title
     });
   }
   return memoizedBoilerplate[memHash];
