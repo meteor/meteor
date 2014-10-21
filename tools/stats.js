@@ -11,6 +11,7 @@ var ServiceConnection = require("./service-connection.js");
 var release = require("./release.js");
 var buildmessage = require("./buildmessage.js");
 var httpHelpers = require("./http-helpers.js");
+var Console = require("./console.js").Console;
 
 // The name of the package that you add to your app to opt out of
 // sending stats.
@@ -134,10 +135,11 @@ var recordPackages = function (what, site) {
 
 var logErrorIfInCheckout = function (err) {
   if (files.inCheckout()) {
-    process.stderr.write("Failed to record package usage.\n");
-    process.stderr.write("(This error is hidden when you are not running Meteor from a checkout.)\n");
-    process.stderr.write(err.stack || err);
-    process.stderr.write("\n\n");
+    Console.stderr.write("Failed to record package usage.\n");
+    Console.stderr.write(
+      "(This error is hidden when you are not running Meteor from a checkout.)\n");
+    Console.stderr.write(err.stack || err);
+    Console.stderr.write("\n\n");
   }
 };
 
