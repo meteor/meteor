@@ -2097,7 +2097,7 @@ _.extend(Android.prototype, {
       var androidBundlePath = self.getAndroidBundlePath();
       var avdPath;
       if (self.useGlobalAdk()) {
-        var home = self.getHome();
+        var home = Host.getHomeDir();
         avdPath = path.join(home, '.android', 'avd', avd + '.avd');
       } else {
         avdPath = path.join(androidBundlePath, avd + '_avd');
