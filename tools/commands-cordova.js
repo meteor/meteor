@@ -1022,11 +1022,14 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
         if (err && platform === "android" && isDevice) {
           Console.stderr.write([
             "",
+            chalk.green("Could not start the app on your device. Is it plugged in?"),
             chalk.green("Instructions for running your app on an Android device:"),
             chalk.cyan("https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-Android-device"),
             ""
           ].join("\n"));
 
+          process.exit(2);
+        } else if (err) {
           throw err;
         }
       }
