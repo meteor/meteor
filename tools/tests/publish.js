@@ -135,8 +135,8 @@ selftest.define("publish-one-arch",
   run = s.run("publish", "--create");
   run.waitSecs(15);
   run.expectExit(0);
-  run.match("Done");
-  run.matchErr("WARNING");
+  run.matchErr(
+"This package contains binary code and must be built on multiple architectures.");
 
 });
 
