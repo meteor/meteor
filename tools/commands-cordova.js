@@ -1781,6 +1781,7 @@ _.extend(IOS.prototype, {
   killSimulator: function () {
     var execFileSync = require('./utils.js').execFileSync;
     execFileSync('killall', ['iOS Simulator']);
+    execFileSync('killall', ['iPhone Simulator']);
   }
 });
 
