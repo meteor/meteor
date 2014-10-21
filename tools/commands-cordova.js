@@ -793,6 +793,10 @@ var buildCordova = function (localPath, platforms, options) {
     try {
       var args = ['build'].concat(platforms);
 
+      if (verboseness) {
+        args = ['-v'].concat(args);
+      }
+
       // depending on the debug mode build the android part in different modes
       if (_.contains(project.getPlatforms(), 'android')) {
         var androidBuildPath = path.join(cordovaPath, 'platforms', 'android');
