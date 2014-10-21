@@ -1739,10 +1739,7 @@ var maybeUpdateRelease = function (options) {
     if (!releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
-      var releaseToPrint = appRelease;
-      if (appTrack === "METEOR") {
-        releaseToPrint = appVersion;
-      }
+      var releaseToPrint = utils.displayRelease(appTrack, appVersion);
       Console.info(
         "This project is already at Meteor " + releaseToPrint +
           ", which is newer than the latest release.");
