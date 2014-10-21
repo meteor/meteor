@@ -379,8 +379,15 @@ _.extend(AppRunner.prototype, {
     self.startFuture = new Future;
     // XXX I think it's correct to not try to use bindEnvironment here:
     //     the extra fiber should be independent of this one.
+    var currentProgress = buildmessage.getCurrentProgressTracker();
     self.fiber = Fiber(function () {
-      self._fiber();
+      // We pass in the `currentProgress` here so that we can suppress
+      // the spinner for the current job while waiting for file
+      // changes. This is relevant when you run an app that initially
+      // has errors; in this case, _fiber waits for file changes, and we
+      // don't want the spinner for the current job showing while we're
+      // waiting.
+      self._fiber(currentProgress);
     });
     self.fiber.run();
     self.startFuture.wait();
@@ -700,7 +707,7 @@ _.extend(AppRunner.prototype, {
     watchFuture.return();
   },
 
-  _fiber: function () {
+  _fiber: function (currentProgress) {
     var self = this;
 
     var crashCount = 0;
@@ -708,6 +715,8 @@ _.extend(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
+      currentProgress.suppressDisplay = false;
+
       var resetCrashCount = function () {
         crashTimer = setTimeout(function () {
           crashCount = 0;
@@ -745,9 +754,11 @@ _.extend(AppRunner.prototype, {
       else if (runResult.outcome === "bundle-fail") {
         runLog.log("=> Errors prevented startup:\n\n" +
                         runResult.bundleResult.errors.formatMessages());
-        if (self.watchForChanges)
+        if (self.watchForChanges) {
           runLog.log("=> Your application has errors. " +
                      "Waiting for file change.");
+          currentProgress.suppressDisplay = true;
+        }
       }
 
       else if (runResult.outcome === "changed")
@@ -766,9 +777,11 @@ _.extend(AppRunner.prototype, {
         if (crashCount < 3)
           continue;
 
-        if (self.watchForChanges)
+        if (self.watchForChanges) {
           runLog.log("=> Your application is crashing. " +
                      "Waiting for file change.");
+          currentProgress.suppressDisplay = true;
+        }
       }
 
       else {
