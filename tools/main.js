@@ -1293,11 +1293,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   if (command.requiresApp && release.current.isCheckout() &&
       appRelease && appRelease !== "none") {
+    var utils = require("./utils.js");
+    var appReleaseParts = appRelease.split("@");
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     Console.warn(
 "=> Running Meteor from a checkout -- overrides project version (" +
-        appRelease + ")");
+        utils.displayRelease(appReleaseParts[0], appReleaseParts[1]) + ")");
   }
 
   // Now that we're ready to start executing the command, if we are in
