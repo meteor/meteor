@@ -580,7 +580,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       var uploadInfo = exports.callPackageServer(conn,
         'createPackageVersion', uploadRec);
     } catch (err) {
-      Console.stderr.write("ERROR " + err.message + "\n");
+      Console.stderr.write("Error creating package version: " +
+                           (err.reason || err.message) + "\n");
       return 3;
     }
 
@@ -599,7 +600,8 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
                         { tarballHash: sourceBundleResult.tarballHash,
                           treeHash: sourceBundleResult.treeHash });
     } catch (err) {
-      Console.stderr.write("ERROR " + err.message + "\n");
+      Console.stderr.write("Error publishing package version: " +
+                           (err.reason || err.message) + "\n");
       return 3;
     }
 
