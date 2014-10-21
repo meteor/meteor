@@ -80,7 +80,7 @@ catalog.refreshOrWarn = function (options) {
 
     // XXX is throwing correct for SQLite errors too? probably.
 
-    Console.warn("Unable to refresh catalog (are you offline?)");
+    Console.warn("Unable to update package catalog (are you offline?)");
 
     // XXX: Make this Console.debug(err)
     if (Console.isDebugEnabled()) {
