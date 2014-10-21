@@ -17,7 +17,9 @@ var EXITING_MESSAGE = "Shell exiting...";
 exports.listen = function listen() {
   var socketFile = getSocketFile();
   fs.unlink(socketFile, function() {
-    net.createServer(onConnection).listen(socketFile);
+    net.createServer(onConnection)
+      .on("error", function(err){})
+      .listen(socketFile);
   });
 };
 
