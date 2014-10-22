@@ -1366,10 +1366,26 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     additionalConfiguration.SplashScreenDelay = 10000;
   }
 
+  // Defaults are Meteor meatball images located in tool's directory
+  var assetsPath = path.join(__dirname, 'cordova-assets');
+  var iconsPath = path.join(assetsPath, 'icons');
+  var launchscreensPath = path.join(assetsPath, 'launchscreens');
   var imagePaths = {
     icon: {},
     splash: {}
   };
+
+  var setIcon = function (size, name) {
+    imagePaths.icon[name] = path.join(iconsPath, size + '.png');
+  };
+  var setLaunch = function (size, name) {
+    imagePaths.splash[name] = path.join(launchscreensPath, size + '.png');
+  };
+
+  _.each(iconIosSizes, setIcon);
+  _.each(iconAndroidSizes, setIcon);
+  _.each(launchIosSizes, setLaunch);
+  _.each(launchAndroidSizes, setLaunch);
 
   /**
    * @namespace App
@@ -1578,7 +1594,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       var src = path.join('resources', fileName);
 
       // copy the file to the build folder with a standardized name
-      files.copyFile(path.join(project.rootDir, suppliedPath),
+      files.copyFile(path.resolve(project.rootDir, suppliedPath),
                      path.join(resourcesPath, fileName));
 
       // set it to the xml tree
