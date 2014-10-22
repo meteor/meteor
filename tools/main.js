@@ -745,6 +745,7 @@ Fiber(function () {
     }
     releaseOverride = rawOptions['--release'][0];
     releaseForced = true;
+    releaseExplicit = true;
     if (! releaseOverride) {
       Console.error(
 "The --release option needs a value.\n" +
@@ -754,21 +755,15 @@ Fiber(function () {
     delete rawOptions['--release'];
   }
 
-  // Let's keep track of whether this is an explicit release, due to different
-  // update behavior.
-  if (releaseOverride) {
-   releaseExplicit = true;
-  }
-
   if (_.has(process.env, 'METEOR_SPRINGBOARD_RELEASE')) {
     // See #SpringboardEnvironmentVar
-    // Note that this does *NOT* cause release.forced to be true.
-    // release.forced should only be set when the user actually
-    // ran with --release, not just because (eg) they ran
-    // 'meteor update' and we springboarded to the latest release.
-    // (It's important that 'meteor update' be able to tell these
-    // conditions apart even after the springboard!)
+    // Note that this causes release.forced to be true, but not
+    // release.explicit.  release.forced means "we're using
+    // some sort of externally specified release, not the app
+    // release"; release.explicit means "the end-user typed
+    // --release".
     releaseOverride = process.env['METEOR_SPRINGBOARD_RELEASE'];
+    releaseForced = true;
   }
 
   var releaseName, appRelease;
@@ -957,12 +952,6 @@ Fiber(function () {
         throw new Error("can't load latest release?");
       }
       process.exit(1);
-    }
-
-    // Let's keep track of whether this is an explicit release, due to different
-    // update behavior.
-    if (releaseOverride) {
-      releaseForced = true;
     }
 
     release.setCurrent(rel, releaseForced, releaseExplicit);
