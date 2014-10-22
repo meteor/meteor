@@ -689,7 +689,7 @@ selftest.define("update server package data unit test",
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("package with --name",
+selftest.define("package specifying a name",
     ['test-package-server', "checkout"], function () {
   var s = new Sandbox();
   var run;
@@ -699,7 +699,7 @@ selftest.define("package with --name",
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run("add", "accounts-base");
-  run.waitSecs(30);
+  run.waitSecs(40);
   run.match("accounts-base");
 
   run = s.run();
