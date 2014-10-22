@@ -59,7 +59,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   // Suppose you ask for a release that doesn't exist.
   s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
   run = s.run("--release", "weird");
-  run.readErr("weird: unknown release.\n");
+  run.readErr("Meteor weird: unknown release.\n");
   run.expectEnd();
   run.expectExit(1);
 
@@ -78,15 +78,15 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     s.write(".meteor/release", "strange");
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
     run = s.run();
-    run.matchErr("version strange of Meteor");
-    run.matchErr("valid Meteor release");
+    run.matchErr("uses Meteor strange");
+    run.matchErr("don't have it either");
     run.expectExit(1);
 
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
     run.matchErr("offline");
-    run.matchErr("version strange of Meteor");
+    run.matchErr("it uses Meteor strange");
     run.matchErr("don't have that version of Meteor installed");
     run.matchErr("update servers");
     run.expectExit(1);
@@ -201,7 +201,7 @@ selftest.define("checkout", ['checkout'], function () {
     s.write(".meteor/release", "something");
     run = s.run("list");
     run.readErr("=> Running Meteor from a checkout");
-    run.matchErr("project version (something)\n");
+    run.matchErr("project version (Meteor something)\n");
     run.expectExit(0);
   });
 });

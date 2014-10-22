@@ -402,6 +402,22 @@ exports.displayRelease = function (track, version, options) {
   return track + '@' + version;
 };
 
+exports.splitReleaseName = function (releaseName) {
+  var parts = releaseName.split('@');
+  var track, version;
+  if (parts.length === 1) {
+    var catalog = require('./catalog.js');
+    track = catalog.DEFAULT_TRACK;
+    version = parts[0];
+  } else {
+    track = parts[0];
+    // Do we forbid '@' sign in release versions? I sure hope so, but let's
+    // be careful.
+    version = parts.slice(1).join("@");
+  }
+  return [track, version];
+};
+
 // Calls cb with each subset of the array "total", with non-decreasing size,
 // until all subsets have been used or cb returns true. The array passed
 // to cb may be safely mutated or retained by cb.

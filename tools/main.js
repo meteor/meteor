@@ -942,25 +942,15 @@ Fiber(function () {
       // Let's do some processing here. If the user/release file specified a
       // track, we need to display that correctly, and if they didn't, we should
       // make it clear that we are talking about the default track.
-      var releases = releaseName.split('@');
-      var track;
-      var version;
-      if (releases.length === 1) {
-        track = catalog.DEFAULT_TRACK;
-        version = releases[0];
-      } else {
-        track = releases[0];
-        // Do we forbid '@' sign in release versions? I sure hope so, but let's
-        // be careful.
-        version = releases.slice(1).join("@");
-      }
       var utils = require('./utils.js');
-      var displayRelease = utils.displayRelease(track, version);
+      var trackAndVersion = utils.splitReleaseName(releaseName);
+      var displayRelease = utils.displayRelease(
+        trackAndVersion[0], trackAndVersion[1]);
       // Now, let's process this.
       if (releaseOverride) {
         Console.error(displayRelease + ": unknown release.");
       } else if (appDir) {
-        if (track !== catalog.DEFAULT_TRACK) {
+        if (trackAndVersion[0] !== catalog.DEFAULT_TRACK) {
           displayRelease = "Meteor release " + displayRelease;
         }
         if (catalog.refreshFailed) {
@@ -972,9 +962,9 @@ Fiber(function () {
 "release, or go online.");
         } else {
           Console.error(
-"This project says that it uses " + displayRelease + ", but you \n" +
-"don't have that version of Meteor installed and the Meteor update \n" +
-"servers don't have it either. Please edit the .meteor/release file in \n" +
+"This project says that it uses " + displayRelease + ", but you don't have\n" +
+"that version of Meteor installed and the Meteor update servers\n" +
+"don't have it either. Please edit the .meteor/release file in\n" +
 "the project and change it to a valid Meteor release.");
         }
       } else {
@@ -1331,7 +1321,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
   if (command.requiresApp && release.current.isCheckout() &&
       appRelease && appRelease !== "none") {
     var utils = require("./utils.js");
-    var appReleaseParts = appRelease.split("@");
+    var appReleaseParts = utils.splitReleaseName(appRelease);
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     Console.warn(
