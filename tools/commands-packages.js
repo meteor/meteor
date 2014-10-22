@@ -1239,33 +1239,53 @@ main.registerCommand({
     }
 
     var unknown = "< unknown >";
-    _.each(versionRecords, function (v) {
-      // Don't show versions that we shouldn't be showing.
-      if (!versionVisible(v)) {
-        return;
-      }
 
-      var versionDesc = Console.bold("Version " + v.version);
-      if (v.description)
-        versionDesc = versionDesc + "    " + v.description;
-      Console.info(versionDesc);
-      if (full.length > 1) {
+    if (full.length > 1) {
+      // Specific version with details; we don't expect more than one match
+      _.each(versionRecords, function (v) {
+        // Don't show versions that we shouldn't be showing.
+        if (!versionVisible(v)) {
+          return;
+        }
+
+        var versionDesc = Console.bold("Version " + v.version);
+        if (v.description)
+          versionDesc = versionDesc + "    " + v.description;
+        Console.info(versionDesc);
+
         if (v.buildArchitectures) {
           var buildArchitectures = v.buildArchitectures.split(' ');
           Console.info("      Architectures: ", formatAsList(buildArchitectures, { formatter: formatArchitecture }));
         }
         // XXX: else show "no architectures"?
-      }
-      if (v.packages && full.length > 1) {
-        Console.info("      tool: " + v.tool);
-        Console.info("      packages:");
+        if (v.packages) {
+          Console.info("      tool: " + v.tool);
+          Console.info("      packages:");
 
-        _.each(v.packages, function(pv, pn) {
-          Console.info("          " + pn + "@" + pv);
-        });
-      }
-    });
-    Console.info("\n");
+          _.each(v.packages, function(pv, pn) {
+            Console.info("          " + pn + "@" + pv);
+          });
+        }
+      });
+
+      Console.info("\n");
+    } else {
+      // Non-detailed list of versions
+
+      var rows = [];
+
+      _.each(versionRecords, function (v) {
+        // Don't show versions that we shouldn't be showing.
+        if (!versionVisible(v)) {
+          return;
+        }
+
+        var row = ["Version " + v.version, v.description];
+        rows.push(row);
+      });
+
+      utils.printTwoColumns(rows)
+    }
   }
 
   // Creating the maintainer string. We have anywhere between 1 and lots of
