@@ -392,13 +392,13 @@ var springboard = function (rel, options) {
     // to! That's bad. Let's exit.
     if (options.fromApp) {
       Console.error(
-        "Sorry, this project uses " + rel.getDisplayName() + ", which is not "
-        + "installed and could not be downloaded. Please check to make sure "
-        + "that you are online.");
+"Sorry, this project uses " + rel.getDisplayName() + ", which is not\n" +
+"installed and could not be downloaded. Please check to make sure that you\n" +
+"are online.");
     } else {
       Console.error(
-        "Sorry, " + rel.getDisplayName() + " is not installed and could not be "
-          + "downloaded. Please check to make sure that you are online.");
+"Sorry, " + rel.getDisplayName() + " is not installed and could not be\n" +
+"downloaded. Please check to make sure that you are online.");
     }
     process.exit(1);
   }
