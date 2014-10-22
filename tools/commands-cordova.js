@@ -991,12 +991,26 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
   if (platform === 'ios' && isDevice) {
     verboseLog('It is ios-device, just opening the Xcode project with `open` command');
 
-    execFileSyncOrThrow('sh',
-      ['-c', 'open ' + path.join(localPath, 'cordova-build',
-             'platforms', 'ios', '*.xcodeproj')]);
-
     // ios-deploy is super buggy, so we just open xcode and let the user
     // start the app themselves.
+    args = ['-c', 'open ' + path.join(localPath, 'cordova-build',
+      'platforms', 'ios', '*.xcodeproj')];
+
+    try {
+      execFileSyncOrThrow('sh', args);
+    } catch (err) {
+      Console.stderr.write([
+        "",
+        chalk.green("Could not open your project in Xcode."),
+        chalk.green("Try running again with the --verbose option."),
+        chalk.green("Instructions for running your app on an iOS device:"),
+        chalk.cyan("https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-iOS-device"),
+        ""
+      ].join("\n"));
+
+      process.exit(2);
+    }
+
     Console.stdout.write([
       "",
       chalk.green([
@@ -1026,15 +1040,37 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
           Console.stderr.write([
             "",
             chalk.green("Could not start the app on your device. Is it plugged in?"),
+            chalk.green("Try running again with the --verbose option."),
             chalk.green("Instructions for running your app on an Android device:"),
             chalk.cyan("https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-Android-device"),
             ""
           ].join("\n"));
-
-          process.exit(2);
-        } else if (err) {
-          throw err;
+        } else if (err && platform === "android") {
+          Console.stderr.write([
+            "",
+            chalk.green("Could not start the app in the Android emulator."),
+            chalk.green("Try running again with the --verbose option."),
+            ""
+          ].join("\n"));
+        } else if (err && platform === "ios") {
+          Console.stderr.write([
+            "",
+            chalk.green("Could not start the app in the iOS simulator."),
+            chalk.green("Try running again with the --verbose option."),
+            ""
+          ].join("\n"));
+        } else {
+          Console.stderr.write([
+            "",
+            chalk.green("Could not start your app."),
+            chalk.green("Try running again with the --verbose option."),
+            ""
+          ].join("\n"));
         }
+
+        // Don't throw an error or print the stack trace, but still exit the
+        // program because we have failed to do the expected thing
+        process.exit(2);
       }
     );
   }
