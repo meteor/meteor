@@ -459,7 +459,7 @@ var installPlugin = function (cordovaPath, name, version, conf) {
 
   _.each(conf || {}, function (value, variable) {
     additionalArgs.push('--variable');
-    additionalArgs.push(variable + '=' + JSON.stringify(value));
+    additionalArgs.push(variable + '=\'' + value + '\'');
   });
 
   var execRes = execFileSyncOrThrow(localCordova,
