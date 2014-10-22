@@ -96,8 +96,9 @@ _.extend(Progress.prototype, {
       var active = _.filter(candidates, function (s) {
         return !!s;
       });
-      if (active.length == 1) {
-        return active[0];
+      if (active.length) {
+        // pick one to display, somewhat arbitrarily
+        return active[active.length - 1];
       }
       // No single active task, return self
       return self;
