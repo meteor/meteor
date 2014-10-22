@@ -100,12 +100,10 @@ exports.hasScheme = function (str) {
 exports.printPackageList = function (items, options) {
   options = options || {};
 
-  var rows = [];
-  _.each(items, function (item) {
+  var rows = _.map(items, function (item) {
     var name = item.name;
     var description = item.description || 'No description';
-    var row = [ name, description];
-    rows.push(row);
+    return [name, description];
   });
 
   var alphaSort = function (row) {
