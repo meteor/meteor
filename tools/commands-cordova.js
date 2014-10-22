@@ -2334,7 +2334,7 @@ _.extend(Android.prototype, {
         self.installAcceleration();
       } else {
         log && Console.info(Console.fail("Android emulator acceleration is not installed"));
-        log && Console.info("    (The Android emulator will be very slow without acceleration)");
+        log && Console.info("  (The Android emulator will be very slow without acceleration)");
 
         result.missing.push("haxm");
 
@@ -2600,7 +2600,7 @@ main.registerCommand({
   }
 
   var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
-  if (!installed.acceptable) {
+  if (!_.isEmpty(installed.missing)) {
     if (Host.isLinux() && platform === "ios") {
       Console.warn(Console.fail("iOS support cannot be installed on Linux"));
       return 1;
@@ -2622,12 +2622,15 @@ main.registerCommand({
         url += "#" + anchor;
       }
       openUrl(url);
-      Console.info("Please follow the instructions here:\n " + Console.bold(url) + "\n");
+      Console.info("Please follow the instructions here:\n" + Console.bold(url) + "\n");
     } else {
-      Console.info("We don't have installation instructions for your platform")
+      Console.info("We don't have installation instructions for your platform");
     }
 
-    return 1;
+    if (installed.acceptable)
+      return 0;
+    else
+      return 1;
   }
 
   //var args = options.args || [];
