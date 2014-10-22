@@ -1038,7 +1038,7 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
             chalk.green("Try running again with the --verbose option."),
             ""
           ].join("\n"));
-        } else {
+        } else if (err) {
           Console.stderr.write([
             "",
             chalk.green("Could not start your app."),
@@ -1049,7 +1049,9 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
         // Don't throw an error or print the stack trace, but still exit the
         // program because we have failed to do the expected thing
-        process.exit(2);
+        if (err) {
+          process.exit(2);
+        }
       }
     );
   }
