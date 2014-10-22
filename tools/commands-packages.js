@@ -74,11 +74,8 @@ var refreshOfficialCatalogOrDie = function (options) {
 };
 
 var explainIfRefreshFailed = function () {
-  if (catalog.official.offline) {
-    Console.info("(But we're offline, so we didn't update the package catalog, so it might exist)");
-  } else if (catalog.refreshFailed) {
-    Console.info("(But the update of the package catalog failed, so it might exist)");
-  }
+  Console.info("Your package catalog may be out of date.\n" +
+    "Please connect to the internet and try again.");
 };
 
 // XXX: To formatters.js ?
