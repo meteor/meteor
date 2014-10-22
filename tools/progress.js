@@ -37,9 +37,6 @@ var Progress = function (options) {
   self._state = _.clone(self._selfState);
 
   self._isDone = false;
-
-  // Set this to true to stop displaying a progress bar/spinner.
-  self.suppressDisplay = false;
 };
 
 _.extend(Progress.prototype, {

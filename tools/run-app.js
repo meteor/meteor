@@ -376,15 +376,8 @@ _.extend(AppRunner.prototype, {
     self.startFuture = new Future;
     // XXX I think it's correct to not try to use bindEnvironment here:
     //     the extra fiber should be independent of this one.
-    var currentProgress = buildmessage.getCurrentProgressTracker();
     self.fiber = Fiber(function () {
-      // We pass in the `currentProgress` here so that we can suppress
-      // the spinner for the current job while waiting for file
-      // changes. This is relevant when you run an app that initially
-      // has errors; in this case, _fiber waits for file changes, and we
-      // don't want the spinner for the current job showing while we're
-      // waiting.
-      self._fiber(currentProgress);
+      self._fiber();
     });
     self.fiber.run();
     self.startFuture.wait();
@@ -419,6 +412,8 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (options) {
     var self = this;
     options = options || {};
+
+    Console.enableProgressDisplay(true);
 
     if (!options.firstRun) {
       // We need to reset our workspace for subsequent builds. Specifically, we
@@ -665,6 +660,8 @@ _.extend(AppRunner.prototype, {
       setupClientWatcher();
     }
 
+    Console.enableProgressDisplay(false);
+
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
     var ret = runFuture.wait();
@@ -729,7 +726,7 @@ _.extend(AppRunner.prototype, {
     watchFuture.return();
   },
 
-  _fiber: function (currentProgress) {
+  _fiber: function () {
     var self = this;
 
     var crashCount = 0;
@@ -737,7 +734,6 @@ _.extend(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
-      currentProgress.suppressDisplay = false;
 
       var resetCrashCount = function () {
         crashTimer = setTimeout(function () {
@@ -779,7 +775,7 @@ _.extend(AppRunner.prototype, {
         if (self.watchForChanges) {
           runLog.log("=> Your application has errors. " +
                      "Waiting for file change.");
-          currentProgress.suppressDisplay = true;
+          Console.enableProgressDisplay(false);
         }
       }
 
@@ -802,7 +798,7 @@ _.extend(AppRunner.prototype, {
         if (self.watchForChanges) {
           runLog.log("=> Your application is crashing. " +
                      "Waiting for file change.");
-          currentProgress.suppressDisplay = true;
+          Console.enableProgressDisplay(false);
         }
       }
 
@@ -832,6 +828,7 @@ _.extend(AppRunner.prototype, {
         if (self.exitFuture)
           break;
         runLog.log("=> Modified -- restarting.");
+        Console.enableProgressDisplay(true);
         continue;
       }
 
