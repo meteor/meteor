@@ -697,6 +697,8 @@ _.extend(AppRunner.prototype, {
     } finally {
       self.runFuture = null;
 
+      runLog.logTemporary("=> Server modified -- restarting...");
+
       self.proxy.setMode("hold");
       appProcess.stop();
 
