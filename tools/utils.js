@@ -97,17 +97,36 @@ exports.hasScheme = function (str) {
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
 // Input is an array of objects with keys 'name' and 'description'.
-exports.printPackageList = function (unsortedItems, options) {
+exports.printPackageList = function (items, options) {
   options = options || {};
 
-  var alphaSort = function (item) {
-    return item.name;
-  };
-  var items = _.sortBy(unsortedItems, alphaSort);
-  var longest = '';
+  var rows = [];
   _.each(items, function (item) {
-    if (item.name.length > longest.length)
-      longest = item.name;
+    var name = item.name;
+    var description = item.description || 'No description';
+    var row = [ name, description];
+    rows.push(row);
+  });
+
+  var alphaSort = function (row) {
+    return row[0];
+  };
+  rows = _.sortBy(rows, alphaSort);
+
+  return utils.printTwoColumns(rows, options);
+};
+
+// XXX: Move to e.g. formatters.js?
+// Prints a two column table in a nice format:
+//  The first column is printed entirely, the second only as space permits
+exports.printTwoColumns = function (rows, options) {
+  options = options || {};
+
+  var longest = '';
+  _.each(rows, function (row) {
+    var col0 = row[0] || '';
+    if (col0.length > longest.length)
+      longest = col0;
   });
 
   var pad = longest.replace(/./g, ' ');
@@ -121,10 +140,11 @@ exports.printPackageList = function (unsortedItems, options) {
   var Console = require("./console.js").Console;
 
   var out = '';
-  _.each(items, function (item) {
-    var name = Console.bold(item.name) + pad.substr(item.name.length);
-    var description = item.description || 'No description';
-    var line = name + "  " + description;
+  _.each(rows, function (row) {
+    var col0 = row[0] || '';
+    var col1 = row[1] || '';
+    var line = Console.bold(col0) + pad.substr(col0.length);
+    line += "  " + col1;
     if (line.length > width) {
       line = line.substr(0, width - 3) + '...';
     }
