@@ -647,6 +647,8 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
 });
 
 var buildCommand = function (options) {
+  Console.setPretty(true);
+
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
