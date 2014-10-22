@@ -318,7 +318,7 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
-  run.match("Removed top-level dependency on say-something.");
+  run.match("say-something: removed dependency");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "meteor-platform",
@@ -327,7 +327,7 @@ selftest.define("add packages to app", ["net"], function () {
   run = s.run("remove", "depends-on-plugin");
   run.match("removed contains-plugin");
   run.match("removed depends-on-plugin");
-  run.match("Removed top-level dependency on depends-on-plugin.");
+  run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
                 ["accounts-base",
