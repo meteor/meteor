@@ -30,6 +30,11 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
 }
 
+if (!process.env.METEOR_COLOR) {
+  chalk.enabled = false;
+}
+
+
 STATUSLINE_MAX_LENGTH = 60;
 STATUS_MAX_LENGTH = 40;
 
