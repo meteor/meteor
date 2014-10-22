@@ -482,6 +482,7 @@ var uninstallPlugin = function (cordovaPath, name, isFromTarballUrl) {
       { cwd: cordovaPath, env: buildCordovaEnv() });
 
     if (isFromTarballUrl) {
+      verboseLog('Removing plugin from the tarball plugins lock', name);
       // also remove from tarball-url-based plugins lock
       var lock = getTarballPluginsLock(cordovaPath);
       delete lock[name];
