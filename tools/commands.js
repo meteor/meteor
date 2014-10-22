@@ -115,7 +115,7 @@ main.registerCommand({
     return 1;
   }
 
-  console.log(release.current.getDisplayName());
+  Console.info(release.current.getDisplayName());
 });
 
 // Internal use only. For automated testing.
@@ -432,7 +432,7 @@ main.registerCommand({
         relString = rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
-        relString = release.current.getReleaseVersion();
+        relString = release.current.getDisplayName({noPrefix: true});
       }
 
       // If we are not in checkout, write the current release here.
