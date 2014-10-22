@@ -945,22 +945,44 @@ Fiber(function () {
 
     if (!rel) {
       // Nope, still have no idea about this release!
+
+      // Let's do some processing here. If the user/release file specified a
+      // track, we need to display that correctly, and if they didn't, we should
+      // make it clear that we are talking about the default track.
+      var releases = releaseName.split('@');
+      var track;
+      var version;
+      if (releases.length === 1) {
+        track = catalog.DEFAULT_TRACK;
+        version = releases[0];
+      } else {
+        track = releases[0];
+        // Do we forbid '@' sign in release versions? I sure hope so, but let's
+        // be careful.
+        version = releases.slice(1).join("@");
+      }
+      var utils = require('./utils.js');
+      var displayRelease = utils.displayRelease(track, version);
+      // Now, let's process this.
       if (releaseOverride) {
-        Console.error(releaseName + ": unknown release.");
+        Console.error(displayRelease + ": unknown release.");
       } else if (appDir) {
+        if (track !== catalog.DEFAULT_TRACK) {
+          displayRelease = "Meteor release " + displayRelease;
+        }
         if (catalog.refreshFailed) {
           Console.error(
-"Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
-"but you don't have that version of Meteor installed, and we were unable to\n" +
+"This project says that it uses " + displayRelease + ", but\n" +
+"you don't have that version of Meteor installed, and we were unable to\n" +
 "contact Meteor's update servers to find out about it. Please edit the\n" +
-".meteor/release file in the project and change it to a valid Meteor release,\n" +
-"or go online.");
+".meteor/release file in the project and change it to a valid Meteor\n" +
+"release, or go online.");
         } else {
           Console.error(
-"Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
-"but you don't have that version of Meteor installed and the Meteor update\n" +
-"servers don't have it either. Please edit the .meteor/release file in the\n" +
-"project and change it to a valid Meteor release.");
+"This project says that it uses " + displayRelease + ", but you \n" +
+"don't have that version of Meteor installed and the Meteor update \n" +
+"servers don't have it either. Please edit the .meteor/release file in \n" +
+"the project and change it to a valid Meteor release.");
         }
       } else {
         throw new Error("can't load latest release?");

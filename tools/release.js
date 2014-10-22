@@ -125,10 +125,11 @@ _.extend(Release.prototype, {
     return self._manifest;
   },
 
-  getDisplayName: function () {
+  getDisplayName: function (options) {
     var self = this;
     return utils.displayRelease(self.getReleaseTrack(),
-                                self.getReleaseVersion());
+                                self.getReleaseVersion(),
+                                options);
   }
 });
 

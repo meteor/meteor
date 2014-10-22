@@ -224,3 +224,38 @@ selftest.define("download release", ['net', 'slow'], function () {
   run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
   run.expectExit();
 });
+
+
+selftest.define("unknown release", [], function () {
+  var s = new Sandbox({
+    warehouse: {
+      v2: { recommended: true }
+    }
+  });
+ s.set("METEOR_OFFLINE_CATALOG", "t");
+  var run;
+
+  s.createApp('myapp', 'packageless');
+  s.cd('myapp');
+  run = s.run("--release", "bad");
+  run.matchErr("Meteor bad: unknown release");
+
+  // METEOR in the release file.
+  s.write('.meteor/release', "METEOR@0.9-bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor 0.9-bad, but");
+
+  // No METEOR in the release file.
+  s.write('.meteor/release', "0.9.x-bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor 0.9.x-bad, but");
+
+  // Non-standard track
+  s.write('.meteor/release', "FOO@bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor release FOO@bad, but");
+
+});

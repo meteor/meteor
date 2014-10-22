@@ -394,10 +394,13 @@ exports.startsWith = function(str, starts) {
     str.substring(0, starts.length) === starts;
 };
 
-exports.displayRelease = function (track, version) {
+// Options: noPrefix: do not display 'Meteor ' in front of the version number.
+exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
+  options = options || {};
+  var prefix = options.noPrefix ? "" : "Meteor ";
   if (track === catalog.DEFAULT_TRACK)
-    return "Meteor " + version;
+    return prefix + version;
   return track + '@' + version;
 };
 
