@@ -36,10 +36,10 @@ selftest.define("run", function () {
 
   // File change
   s.write("empty.js", "");
-  run.waitSecs(1);
+  run.waitSecs(2);
   run.match("restarted");
   s.write("empty.js", " ");
-  run.waitSecs(1);
+  run.waitSecs(2);
   run.match("restarted (x2)");
   // XXX want app to generate output so that we can see restart counter reset
 
