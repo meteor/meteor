@@ -390,18 +390,3 @@ Template.nav_section.helpers({
     return this.depth === n;
   }
 });
-
-Template.basicOrFullSelect.events({
-  "change .basic-or-full": function (event) {
-    Session.set("fullApi", event.target.value === "full");
-  }
-});
-
-Template.basicOrFullSelect.helpers({
-  isBasic: function () {
-    return ! Session.get("fullApi");
-  },
-  isFull: function () {
-    return Session.get("fullApi");
-  }
-});
