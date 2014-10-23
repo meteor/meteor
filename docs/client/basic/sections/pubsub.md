@@ -1,6 +1,6 @@
 {{#template name="basicPubsub"}}
 
-<h2 id="b-pubsub"><span>Publish and subscribe</span></h2>
+<h2 id="pubsub"><span>Publish and subscribe</span></h2>
 
 Meteor servers can publish sets of documents with `Meteor.publish` and clients
 can subscribe to those publications with `Meteor.subscribe`. Any data the
