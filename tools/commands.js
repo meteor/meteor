@@ -263,9 +263,12 @@ function doRunCommand (options) {
       var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
 
-      cordova.buildTargets(localPath, options.args,
-        _.extend({ appName: appName, debug: ! options.production },
-                 options, parsedMobileServer));
+      cordova.buildTargets(localPath, options.args, _.extend({
+        appName: appName,
+        debug: ! options.production,
+        skipIfNoSDK: false
+      }, options, parsedMobileServer));
+
       runners = runners.concat(
         cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
@@ -727,13 +730,13 @@ var buildCommand = function (options) {
     var cordovaSettings = {};
 
     try {
-      cordova.buildTargets(localPath, mobilePlatforms,
-                             _.extend({}, options, {
-                               host: parsedMobileServer.host,
-                               port: parsedMobileServer.port,
-                               protocol: parsedMobileServer.protocol,
-                               appName: appName
-                             }));
+      cordova.buildTargets(localPath, mobilePlatforms, _.extend({}, options, {
+        host: parsedMobileServer.host,
+        port: parsedMobileServer.port,
+        protocol: parsedMobileServer.protocol,
+        appName: appName,
+        skipIfNoSDK: true
+      }));
     } catch (err) {
       if (err instanceof main.ExitWithCode)
          throw err;
