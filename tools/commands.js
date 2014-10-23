@@ -730,7 +730,8 @@ var buildCommand = function (options) {
     var cordovaSettings = {};
 
     try {
-      cordova.buildTargets(localPath, mobilePlatforms, _.extend({}, options, {
+      mobilePlatforms =
+        cordova.buildTargets(localPath, mobilePlatforms, _.extend({}, options, {
         host: parsedMobileServer.host,
         port: parsedMobileServer.port,
         protocol: parsedMobileServer.protocol,
