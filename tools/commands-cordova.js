@@ -38,15 +38,7 @@ var cordovaWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor", "cordova");
 };
 
-var isValidPlatform = function (name) {
-  if (name.match(/ios/i) && process.platform !== 'darwin') {
-    throw new Error(name + ': not available on your system');
-  }
-
-  if (! _.contains(availablePlatforms, name)) {
-    throw new Error(name + ': no such platform');
-  }
-};
+var MESSAGE_IOS_ONLY_ON_MAC = "Currently, it is only possible to build iOS apps on an OS X system.";
 
 var splitN = function (s, split, n) {
   if (n <= 1) {
@@ -85,7 +77,7 @@ cordova.buildTargets = function (localPath, targets, options) {
 
     if (! inProject) {
       if (! supported) {
-        Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+        Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
       } else {
         Console.warn(platform + ": platform is not added to the project.");
         if (! hasSdk) {
@@ -110,7 +102,7 @@ cordova.buildTargets = function (localPath, targets, options) {
         Console.warn(platform + ": platform is not installed; please run: " +
                      Console.bold("meteor install-sdk " + platform));
       else
-        Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+        Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
 
       throw new main.ExitWithCode(2);
     }
@@ -2687,7 +2679,9 @@ main.registerCommand({
         throw new Error(platform + ": platform is already added");
       }
 
-      isValidPlatform(platform);
+      if (! _.contains(availablePlatforms, platform)) {
+        throw new Error(platform + ': no such platform');
+      }
     });
   } catch (err) {
     if (err.message) {
@@ -2696,6 +2690,15 @@ main.registerCommand({
     return 1;
   }
 
+  // Check if the platform isn't supported on our OS
+  _.each(platforms, function (platform) {
+    if (platform === "ios" && !Host.isMac()) {
+      Console.warn(MESSAGE_IOS_ONLY_ON_MAC);
+      throw new main.ExitWithCode(2);
+    }
+  });
+
+  // Check that the platform is installed
   _.each(platforms, function (platform) {
     requirePlatformReady(platform);
   });
@@ -2875,7 +2878,7 @@ main.registerCommand({
   var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
   if (!_.isEmpty(installed.missing)) {
     if (Host.isLinux() && platform === "ios") {
-      Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+      Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
       return 1;
     }
 
