@@ -2149,16 +2149,15 @@ main.registerCommand({
     // fail. Rejecting the entire command because a part of it is a no-op is
     // confusing.
     if (_.has(packages, constraint.name)) {
-      if (packages[constraint.name] === constraint.constraintString) {
-        if (constraint.constraintString) {
-          Console.info(
-            constraint.name + " with version constraint " +
-              constraint.constraintString + " has already been added.");
-        } else {
-          Console.info(
-            constraint.name +
-              " without a version constraint has already been added.");
-        }
+      if (!packages[constraint.name] && !constraint.constraintString) {
+        Console.info(
+          constraint.name +
+            " without a version constraint has already been added.");
+      }
+      else if (packages[constraint.name] === constraint.constraintString) {
+        Console.info(
+          constraint.name + " with version constraint " +
+            constraint.constraintString + " has already been added.");
       } else {
         if (packages[constraint.name]) {
           Console.info(
