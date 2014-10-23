@@ -54,6 +54,15 @@ var splitN = function (s, split, n) {
   return firstN;
 };
 
+var platformToHuman = function (platform) {
+  var platformToHumanMap = {
+    'ios': "iOS",
+    'android': "Android"
+  };
+
+  return platformToHumanMap[platform] || platform;
+};
+
 var cordova = exports;
 
 // --- the public interface ---
@@ -75,11 +84,14 @@ cordova.buildTargets = function (localPath, targets, options) {
     var hasSdk = checkPlatformRequirements(platform).acceptable;
     var supported = !Host.isLinux() || platform !== "ios";
 
+    var displayPlatform = platformToHuman(platform);
+
     if (! inProject) {
       if (! supported) {
         Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
       } else {
-        Console.warn(platform + ": platform is not added to the project.");
+        Console.warn("Please add the " + displayPlatform +
+                     " platform to your project first.");
         if (! hasSdk) {
           Console.info("First install the SDK by running: " +
                        Console.bold("meteor install-sdk " + platform));
@@ -93,13 +105,14 @@ cordova.buildTargets = function (localPath, targets, options) {
     }
     if (! hasSdk) {
       if (options.skipIfNoSDK) {
-        Console.warn(platform +
-                     ": platform is not installed; skipping build for it.");
+        Console.warn("The " + displayPlatform + " platform is not installed;" +
+                     "skipping build for it.");
         return false;
       }
 
       if (supported)
-        Console.warn(platform + ": platform is not installed; please run: " +
+        Console.warn("The " + displayPlatform + " platform is not installed;" +
+                     " please run: " +
                      Console.bold("meteor install-sdk " + platform));
       else
         Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
@@ -1267,7 +1280,7 @@ var requirePlatformReady = function (platform) {
   try {
     var installed = checkPlatformRequirements(platform);
     if (!installed.acceptable) {
-      Console.warn(platform + ": platform is not installed; please run: " + Console.bold("meteor install-sdk " + platform));
+      Console.warn("The " + platformToHuman(platform) + " platform is not installed; please run: " + Console.bold("meteor install-sdk " + platform));
       throw new main.ExitWithCode(2);
     }
   } catch (err) {
@@ -2705,7 +2718,10 @@ main.registerCommand({
 
   try {
     var agreed = _.every(platforms, function (platform) {
-      return checkAgreePlatformTerms(platform, "the " + platform + " platform");
+      var platformTitle = platformToHuman(platform);
+      platformTitle = "the " + platformTitle + " platform";
+
+      return checkAgreePlatformTerms(platform, platformTitle);
     });
     if (!agreed) {
       Console.warn("Could not add platform: you must agree to the terms");
