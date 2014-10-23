@@ -1,6 +1,6 @@
 {{#template name="basicTracker"}}
 
-<h2 id="b-tracker"><span>Tracker</span></h2>
+<h2 id="tracker"><span>Tracker</span></h2>
 
 Meteor has a simple dependency tracking system which allows it to
 automatically rerun templates and other computations whenever

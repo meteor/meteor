@@ -1,6 +1,6 @@
 {{#template name="basicCollections"}}
 
-<h2 id="b-collections"><span>Collections</span></h2>
+<h2 id="collections"><span>Collections</span></h2>
 
 Meteor stores data in *collections*. JavaScript objects stored in collections
 are called `documents`.  To get started, declare a collection with `new

@@ -1,6 +1,6 @@
 {{#template name="basicEnvironment"}}
 
-<h2 id="b-environment"><span>Environment</span></h2>
+<h2 id="environment"><span>Environment</span></h2>
 
 {{> autoApiBox "Meteor.isClient"}}
 {{> autoApiBox "Meteor.isServer"}}
