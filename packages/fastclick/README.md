@@ -16,3 +16,10 @@ This package is included by default on all Meteor Phonegap/Cordova apps and can
 be added as a direct dependency of your application if fastclick is desired on
 the mobile web app, too.
 
+In case you want to disable FastClick for certain elements, you can add the
+"needsclick" class as described in the [advanced section](https://github.com/ftlabs/fastclick#ignore-certain-elements-with-needsclick)
+of the FastClick documentation:
+
+```html
+<a class="needsclick">Ignored by FastClick</a>
+```
