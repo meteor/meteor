@@ -1701,7 +1701,7 @@ _.extend(Host.prototype, {
   }
 });
 
-// (Sneakily) mask Host to make it a singelton
+// (Sneakily) mask Host to make it a singleton
 var Host = new Host();
 
 var IOS = function () {
