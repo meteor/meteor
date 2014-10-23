@@ -318,7 +318,7 @@ _.extend(LayeredCatalog.prototype, {
       });
 
       var ret = buildmessage.enterJob({
-          title: "Figuring out the best package versions to use." },
+          title: "Selecting package versions" },
         function () {
           // Then, call the constraint solver, to get the valid transitive
           // subset of those versions to record for our solution. (We don't just
