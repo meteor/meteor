@@ -731,6 +731,26 @@ var buildCommand = function (options) {
   var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
 
+  if (! _.isEmpty(mobilePlatforms)) {
+    // XXX: Create helper function?  Maybe fs.resolve to follow symlinks?
+    var appDir = path.resolve(options.appDir);
+    if (appDir.substr(-1) !== path.sep) {
+      appDir += path.sep;
+    }
+    var outputDir = path.resolve(outputPath);
+    if (outputDir.substr(-1) !== path.sep) {
+      outputDir += path.sep;
+    }
+
+    if (outputDir.indexOf(appDir) == 0) {
+      Console.warn("");
+      Console.warn("Warning: The output directory is under your source tree.");
+      Console.warn("  This causes issues when building with mobile platforms.");
+      Console.warn("  Consider building into a different directory instead (" + Console.command("meteor build ../output") + ")");
+      Console.warn("");
+    }
+  }
+
   var bundlePath = options['directory'] ?
       (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
       path.join(buildDir, 'bundle');
