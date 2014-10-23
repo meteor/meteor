@@ -142,12 +142,12 @@ Template.autoApiBox.helpers({
     return signature;
   },
   link: function () {
-    if (nameToId[this.longname]) {
+    if (Session.get("fullApi") && nameToId[this.longname]) {
       return nameToId[this.longname];
     }
 
     // fallback
-    return this.longname.replace(".", "-");
+    return this.longname.replace(/[.#]/g, "-");
   },
   paramsNoOptions: function () {
     return _.reject(this.params, function (param) {

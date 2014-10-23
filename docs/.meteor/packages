@@ -15,4 +15,5 @@ simple:markdown-templating
 simple:highlight.js
 less
 chrismbeckett:fontawesome4
+iron:location
 

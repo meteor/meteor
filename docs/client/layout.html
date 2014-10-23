@@ -50,3 +50,10 @@
     <h1>Meteor 1.0 Docs</h1>
   </div>
 </template>
+
+<template name="basicOrFullSelect">
+  <select class="basic-or-full">
+    <option value="basic" selected="{{isBasic}}">Basic Docs</option>
+    <option value="full" selected="{{isFull}}">Full API</option>
+  </select>
+</template>

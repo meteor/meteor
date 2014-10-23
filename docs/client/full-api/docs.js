@@ -70,21 +70,8 @@ Meteor.startup(function () {
     });
   };
 
-  $('#main, #nav').delegate("a[href^='#']", 'click', function (evt) {
-    evt.preventDefault();
-    var sel = $(this).attr('href');
-    scrollToSection(sel);
-
-    mixpanel.track('docs_navigate_' + sel);
-  });
-
   // Make external links open in a new tab.
   $('a:not([href^="#"])').attr('target', '_blank');
-
-  // Hide menu by tapping on background
-  $('#main').on('click', function () {
-    hideMenu();
-  });
 });
 
 var hideMenu = function () {
