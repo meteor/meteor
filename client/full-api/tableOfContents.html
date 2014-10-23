@@ -1,5 +1,7 @@
 <template name="tableOfContents">
-  {{> nav}}
+  <div class="full-api-toc">
+    {{> nav}}
+  </div>
 </template>
 
 
@@ -37,4 +39,11 @@
   {{#if depthIs 6}}
     <h6>{{> UI.contentBlock}}</h6>
   {{/if}}
+</template>
+
+<template name="basicOrFullSelect">
+  <select class="basic-or-full">
+    <option value="basic" selected="{{isBasic}}">Basic Docs</option>
+    <option value="full" selected="{{isFull}}">Full API</option>
+  </select>
 </template>
