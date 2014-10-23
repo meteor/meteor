@@ -120,12 +120,12 @@ Template.basicTableOfContents.helpers({
     var self = this;
 
     if (self.id) {
-      return "#b-" + self.id;
+      return "#" + self.id;
     } else if (self.longname) {
-      return "#b-" + self.longname.replace(/[#.]/g, "-");
+      return "#" + self.longname.replace(/[#.]/g, "-");
     }
   },
   linkForSection: function () {
-    return "#b-" + this.id;
+    return "#" + this.id;
   }
 });
