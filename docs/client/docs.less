@@ -363,6 +363,7 @@ ol {
 }
 
 @nav-width: 270px;
+@top-bar-height: 50px;
 
 /* default to no sidebar */
 #nav {
@@ -377,9 +378,8 @@ ol {
 .main-content {
     position: absolute;
     width: 100%;
-    top: 0;
+    top: @top-bar-height;
     bottom: 0;
-    padding-top: 50px;
     z-index: 1;
     background: white;
     overflow-y: scroll;
@@ -423,7 +423,7 @@ pre {
     width: 100%;
     top: 0;
     left: 0;
-    height: 50px;
+    height: @top-bar-height;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     z-index: 2;
     margin-left: 0;
@@ -477,6 +477,7 @@ pre {
         right: 0;
         width: auto;
         border-left: 1px solid #ccc;
+        top: 0;
     }
     
     #nav {
