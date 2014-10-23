@@ -354,10 +354,14 @@ exports.run = function (appDir, options) {
     // like allowing this to work if the tools version didn't change,
     // or even springboarding if the tools version does change, but
     // this (which prevents weird errors) is a start.)
-    var to = result.releaseNeeded;
-    var from = release.current.name;
+    var utils = require('./utils.js');
+    var trackAndVersion = utils.splitReleaseName(result.releaseNeeded);
+    var to = utils.displayRelease(
+        trackAndVersion[0], trackAndVersion[1]);
+
+    var from = release.current.getDisplayName();
     process.stderr.write(
-"Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
+"Your app has been updated to " + to + " from " + from +
 ".\n" +
 "Restart meteor to use the new release.\n");
     return 254;
