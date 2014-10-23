@@ -27,6 +27,7 @@ selftest.define("create", function () {
   run.stop();
 
   run = s.run("create", "--list");
+  run.waitSecs(5);
   run.read('Available');
   run.match('leaderboard');
   run.expectExit(0);
