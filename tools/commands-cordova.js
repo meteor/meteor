@@ -388,11 +388,6 @@ var ensureCordovaPlatforms = function (localPath) {
   var platformsList = execFileSyncOrThrow(
     localCordova, ['platform', 'list'], { cwd: cordovaPath, env: buildCordovaEnv() });
 
-  // skip iOS platform if not on darwin
-  if (process.platform !== 'darwin') {
-   platforms = _.difference(platforms, ['ios']);
-  }
-
   verboseLog('The output of `cordova platforms list`:', platformsList.stdout);
 
   // eg. ['android 3.5.0', 'ios 3.5.0']
@@ -408,8 +403,10 @@ var ensureCordovaPlatforms = function (localPath) {
   });
 
   _.each(platforms, function (platform) {
-    if (! _.contains(installedPlatforms, platform) &&
-        _.contains(availablePlatforms, platform)) {
+    if (_.contains(installedPlatforms, platform))
+      return;
+    verboseLog('The platform is not in the Cordova project: ' + platform);
+    if (checkPlatformRequirements(platform).acceptable) {
       verboseLog('Adding a platform', platform);
       execFileSyncOrThrow(localCordova, ['platform', 'add', platform],
                           { cwd: cordovaPath, env: buildCordovaEnv() });
