@@ -1687,6 +1687,8 @@ var maybeUpdateRelease = function (options) {
     return 0;
   }
 
+  var appTrackAndVersion = utils.splitReleaseName(appRelease);
+
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
   // XXX error handling.
@@ -1704,8 +1706,8 @@ var maybeUpdateRelease = function (options) {
         "Cannot patch update unless a release is set.");
       return 1;
     }
-    var r = appRelease.split('@');
-    var record = catalog.official.getReleaseVersion(r[0], r[1]);
+    var record = catalog.official.getReleaseVersion(
+      appTrackAndVersion[0], appTrackAndVersion[1]);
     if (!record) {
       Console.error(
         "Cannot update to a patch release from an old release.");
@@ -1742,25 +1744,17 @@ var maybeUpdateRelease = function (options) {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    // XXX: Isn't the track the same as ours, since we springboarded?
-    var appTrack = appRelease.split('@')[0];
-    var appVersion =  appRelease.split('@')[1];
     var appReleaseInfo = catalog.official.getReleaseVersion(
-      appTrack, appVersion);
+      appTrackAndVersion[0], appTrackAndVersion[1]);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
 
-    // If on a 'none' app, try to update it to the head of the official release
-    // track METEOR@.
-    if (appTrack === 'none') {
-      appTrack = 'METEOR';
-    }
-
     releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      appTrack, appOrderKey);
+      appTrackAndVersion[0], appOrderKey);
     if (!releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
-      var releaseToPrint = utils.displayRelease(appTrack, appVersion);
+      var releaseToPrint = utils.displayRelease(
+        appTrackAndVersion[0], appTrackAndVersion[1]);
       Console.info(
 "This project is already at " + releaseToPrint + ", which is newer\n" +
 "than the latest release.");
@@ -1937,7 +1931,7 @@ main.registerCommand({
     // here). So, basically, that's the correct release for this to project to
     // have constraints against.
     var appRelease = project.getMeteorReleaseVersion();
-    var r = appRelease.split('@');
+    var r = utils.splitReleaseName(appRelease);
     var appRecord = catalog.official.getReleaseVersion(r[0], r[1]);
     if (appRecord) {
       releasePackages = appRecord.packages;
