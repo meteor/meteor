@@ -1,12 +1,12 @@
 {{#template name="basicTemplates"}}
 
-<h2 id="b-templates"><span>Templates</span></h2>
+<h2 id="templates"><span>Templates</span></h2>
 
 In Meteor, you define your views in _templates_. A template is a snippet of
 HTML that can also include special pieces of code to include data and change
 which parts of the page are displayed.
 
-<h3 class="api-title" id="b-defining-templates">Defining Templates in HTML</h3>
+<h3 class="api-title" id="defining-templates">Defining Templates in HTML</h3>
 
 Templates are defined in '.html' files that can be located anywhere in your
 Meteor project folder except the `server`, `public`, and `private` directories.

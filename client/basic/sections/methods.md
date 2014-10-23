@@ -1,5 +1,5 @@
 {{#template name="basicMethods"}}
-<h2 id="b-methods"><span>Methods</span></h2>
+<h2 id="methods"><span>Methods</span></h2>
 
 Methods are server functions that can be called from the client. They are
 useful in situations where you want to do something more complicated than
