@@ -261,11 +261,16 @@
   }
 
   label, .title {
-    display: inline;
     font-size: 80%;
     margin-top: 7px;
     margin-bottom: -2px;
   }
+
+  label {
+    // Bootstrap sets labels as 'display: none'. Undo that.
+    display: inline;
+  }
+
   input[type=text], input[type=email], input[type=password] {
     // Be pixel-accurate in IE 8+ regardless of our borders and
     // paddings, at the expense of IE 7.
