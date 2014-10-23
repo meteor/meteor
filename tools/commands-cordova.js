@@ -24,12 +24,7 @@ var DEFAULT_AVD_NAME = "meteor";
 
 // android is available on all supported architectures
 var availablePlatforms =
-  project.getDefaultPlatforms().concat(["android", "firefoxos"]);
-
-// ios is only available on OSX
-if (process.platform === 'darwin') {
-  availablePlatforms.push("ios");
-}
+  project.getDefaultPlatforms().concat(["android", "firefoxos", "ios"]);
 
 // Borrowed from tropohouse
 // The version in warehouse fails when run from a checkout.
@@ -76,21 +71,51 @@ var cordova = exports;
 //   - appName: the target path of the build
 //   - host
 //   - port
+//   - skipIfNoSDK: don't throw an error when SDK is not installed
 cordova.buildTargets = function (localPath, targets, options) {
   var platforms = targetsToPlatforms(targets);
 
   verboseLog('Running build for platforms:', platforms);
-  checkRequestedPlatforms(platforms);
-  platforms = _.filter(platforms, function (platform) {
-    if (! _.contains(availablePlatforms, platform)) {
-      Console.warn(platform + ': skipping platform not available on your system');
-      return false;
-    }
-    return true;
-  });
 
-  _.each(platforms, function (platform) {
-    requirePlatformReady(platform);
+  var cordovaPlatforms = project.getCordovaPlatforms();
+  platforms = _.filter(platforms, function (platform) {
+    var inProject = _.contains(cordovaPlatforms, platform);
+    var hasSdk = checkPlatformRequirements(platform).acceptable;
+    var supported = !Host.isLinux() || platform !== "ios";
+
+    if (! inProject) {
+      if (! supported) {
+        Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+      } else {
+        Console.warn(platform + ": platform is not added to the project.");
+        if (! hasSdk) {
+          Console.info("First install the SDK by running: " +
+                       Console.bold("meteor install-sdk " + platform));
+          Console.info("Then run: " +
+                       Console.bold("meteor add-platform " + platform));
+        } else {
+          Console.info("Run: " + Console.bold("meteor add-platform " + platform));
+        }
+      }
+      throw new main.ExitWithCode(2);
+    }
+    if (! hasSdk) {
+      if (options.skipIfNoSDK) {
+        Console.warn(platform +
+                     ": platform is not installed; skipping build for it.");
+        return false;
+      }
+
+      if (supported)
+        Console.warn(platform + ": platform is not installed; please run: " +
+                     Console.bold("meteor install-sdk " + platform));
+      else
+        Console.warn(Console.fail("iOS support cannot be installed on Linux"));
+
+      throw new main.ExitWithCode(2);
+    }
+
+    return true;
   });
 
   buildCordova(localPath, platforms, options);
@@ -417,27 +442,6 @@ var targetsToPlatforms = function (targets) {
   });
 
   return platforms;
-};
-
-// checks that every requested platform such as 'android' or 'ios' is already
-// added to the project
-var checkRequestedPlatforms = function (platforms) {
-  var cordovaPlatforms = project.getCordovaPlatforms();
-  _.each(platforms, function (platform) {
-    if (! _.contains(cordovaPlatforms, platform)) {
-      Console.warn("Platform is not added to the project: " + platform);
-
-      var installed = checkPlatformRequirements(platform);
-      if (!installed.acceptable) {
-        Console.info("First install the SDK by running: " + Console.bold("meteor install-sdk " + platform));
-        Console.info("Then run: " + Console.bold("meteor add-platform " + platform));
-      } else {
-        Console.info("Run: " + Console.bold("meteor add-platform " + platform));
-      }
-
-      throw new main.ExitWithCode(1);
-    }
-  });
 };
 
 
@@ -1270,7 +1274,7 @@ var requirePlatformReady = function (platform) {
   try {
     var installed = checkPlatformRequirements(platform);
     if (!installed.acceptable) {
-      Console.warn("Platform is not installed; please run: " + Console.bold("meteor install-sdk " + platform));
+      Console.warn(platform + ": platform is not installed; please run: " + Console.bold("meteor install-sdk " + platform));
       throw new main.ExitWithCode(2);
     }
   } catch (err) {
