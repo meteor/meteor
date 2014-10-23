@@ -119,6 +119,7 @@ cordova.buildTargets = function (localPath, targets, options) {
   });
 
   buildCordova(localPath, platforms, options);
+  return platforms;
 };
 
 cordova.buildPlatformRunners = function (localPath, platforms, options) {
