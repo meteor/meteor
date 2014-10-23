@@ -254,7 +254,7 @@ selftest.define("update during run", ["checkout"], function () {
   run.waitSecs(2);
   run.match('localhost:3000');
   s.write('.meteor/release', 'METEOR@v2');
-  run.matchErr('to Meteor METEOR@v2 from Meteor METEOR@v1');
+  run.matchErr('to Meteor v2 from Meteor v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
