@@ -1,15 +1,35 @@
-var ignoreWaypoints = false;
-var triggeredFromWaypoint = {};
+var ignoreWaypoints = true;
+var ignoreUrlChange = false;
+
+var deHash = function (hashString) {
+  return hashString.slice(1);
+};
+
+// need an actual function to only debounce inside the if statement
+var actuallyUpdateUrl = _.debounce(function (el) {
+  ignoreUrlChange = true;
+  window.location.replace("#/" + el.id);
+}, 1000);
+
+var updateUrlFromWaypoint = function (el) {
+  if (! ignoreWaypoints) {
+    actuallyUpdateUrl(el);
+  }
+};
 
 Meteor.startup(function () {
-  setTimeout(function () {
-    $('.main-content [id]').waypoint(function() {
-      if (! ignoreWaypoints) {
-        triggeredFromWaypoint["#" + this.id] = true;
-        window.location.replace("#" + this.id);
-      }
+  $('.main-content [id]').each(function (i, el) {
+    if (! $("#nav [href='#/" + el.id + "']").get(0)) {
+      // only add waypoints to things that have sidebar links
+      return;
+    }
+
+    $(el).waypoint(function() {
+      updateUrlFromWaypoint(this);
     }, { context: $('.main-content') });
-  }, 2000);
+  });
+
+  ignoreWaypoints = false;
 });
 
 Tracker.autorun(function () {
@@ -17,8 +37,8 @@ Tracker.autorun(function () {
   var current = Iron.Location.get();
 
   // If the URL changes from a waypoint, do nothing
-  if (triggeredFromWaypoint[current.hash]) {
-    triggeredFromWaypoint[current.hash] = false;
+  if (ignoreUrlChange) {
+    ignoreUrlChange = false;
     return;
   }
 
@@ -41,30 +61,33 @@ Tracker.autorun(function () {
   } else {
     if (current.hash) {
       // XXX COMPAT WITH old docs
-      window.location.replace("/full/");
+      window.location.replace("/full/#/" + deHash(current.hash));
     } else {
       window.location.replace("/basic/");
     }
   }
 
   if (current.hash) {
+    console.log("scrolling!");
     Tracker.afterFlush(function () {
       setTimeout(function () {
         var targetLocation;
 
-        if (current.hash === "#top") {
+        if (current.hash === "#/top") {
           targetLocation = 0;
         } else {
-          var foundElement = $(current.hash);
+          var selector = "#" + deHash(current.hash).slice(1);
+          console.log(selector);
+          var foundElement = $(selector);
           if (foundElement.get(0)) {
-            targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top - 10;
+            targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
           }
         }
 
         ignoreWaypoints = true;
         $(".main-content").animate({
             scrollTop: targetLocation
-        }, 1000, function () {
+        }, 500, function () {
           ignoreWaypoints = false;
         });
       }, 0);

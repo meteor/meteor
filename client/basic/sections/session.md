@@ -1,6 +1,6 @@
 {{#template name="basicSession"}}
 
-<h2 id="b-session"><span>Session</span></h2>
+<h2 id="session"><span>Session</span></h2>
 
 `Session` provides a global object on the client that you can use to
 store an arbitrary set of key-value pairs. Use it to store things like
