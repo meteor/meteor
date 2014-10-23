@@ -1956,23 +1956,17 @@ main.registerCommand({
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
-  var upgradePackages;
+  var upgradePackages = [];
   if (options.args.length === 0) {
-    upgradePackages = _.pluck(allPackages, 'name');
+    // We don't want to auto-upgrade weak dependencies (that we get from the
+    // release), even though there is not much harm in it.
+    upgradePackages = _.pluck(
+      _.reject(allPackages, function (packSpec) {
+        return _.has(packSpec, 'weak') && packSpec.weak;
+      }), 'name');
   } else {
     upgradePackages = options.args;
   }
-
-  // Check that every requested package exists
-  var unknownPackages = 0;
-  _.each(upgradePackages, function (packageName) {
-    if (! _.has(versions, packageName)) {
-      Console.error(packageName + ': package is not in the project');
-      unknownPackages++;
-    }
-  });
-  if (unknownPackages)
-    return 1;
 
   // Call the constraint solver. This should not fail, since we are not adding
   // any constraints that we didn't have before.
@@ -1990,6 +1984,18 @@ main.registerCommand({
                          + messages.formatMessages());
     return 1;
   }
+
+  // Check that every requested package is actually used by the project, and
+  // print an error if they are not. We don't check this on the original
+  // versions because it could be out of date to begin with (ex: if you edited
+  // the packages file) and we don't throw an error because, technically, it is
+  // not an error. You could have gotten here by requesting updates of
+  // transitive dependencies that are no longer there.
+  _.each(upgradePackages, function (packageName) {
+    if (! _.has(newVersions, packageName)) {
+      Console.error(packageName + ': package is not in the project');
+    }
+  });
 
   // Just for the sake of good messages, check to see if anything changed.
   if (_.isEqual(newVersions, versions)) {
