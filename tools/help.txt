@@ -49,9 +49,9 @@ Options:
                    server will be paused at startup, waiting for incoming
                    connections from debugger clients on the specified port.
   --mobile-server  Location where mobile builds connect to the Meteor server.
-                   Defaults to the host and port that the Meteor server
-                   binds to. Can include a URL scheme (for example,
-                   --mobile-server=https://example.com:443).
+                   Defaults to your local IP and the port that the Meteor
+                   server binds to. Can include a URL scheme (for
+                   example, --mobile-server=https://example.com:443).
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
   --settings       Set optional data for Meteor.settings on the server.
@@ -428,9 +428,10 @@ Options:
                     server will be paused before any tests run, waiting
                     for incoming connections from debugger clients.
   --mobile-server   If running tests in an emulator or on a mobile device,
-                    the location where mobile builds connect to the Meteor
-                    server. Defaults to the host and port that the Meteor
-                    server binds to. Can include a URL scheme (for example,
+                    the location where mobile builds connect to the
+                    Meteor server. Defaults to your local IP and the
+                    port that the Meteor server binds to. Can include a
+                    URL scheme (for example,
                     --mobile-server=https://example.com:443).
   --deploy          Optionally, specify a domain to deploy to, rather than
                     running locally.
