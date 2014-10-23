@@ -266,8 +266,9 @@ PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $O
 $METEOR -p $PORT --once 2>&1 | grep "unknown package: a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
-PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR build $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
 tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR build $TEST_TMPDIR/bundle >> $OUTPUT
+tar tvzf "$TEST_TMPDIR/bundle/$DIR.tar.gz" >>$OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
 
