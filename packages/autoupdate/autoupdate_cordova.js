@@ -24,6 +24,29 @@ Autoupdate.newClientAvailable = function () {
   });
 };
 
+var readFile = function(filePath, cb) {
+  var fail = function(err){
+    cb( new Error("Failed to read file: ", err), null);
+  }
+
+  window.resolveLocalFileSystemURL(filePath, function(fileEntry){
+    var mf_text = null;
+    function win(file) {
+      var fr = new FileReader();
+      fr.onloadend = function(evt){
+        cb(null, evt.target.result);
+      };
+
+      fr.onerror = fail;
+
+      fr.readAsText( file );
+    }
+
+    fileEntry.file( win, fail );
+  }, fail)
+};
+
+
 var writeFile = function (directoryPath, fileName, content, cb) {
   var fail = function (err) {
     cb(new Error("Failed to write file: ", err), null);
@@ -79,24 +102,54 @@ var localPathPrefix = null;
 var onNewVersion = function () {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + '__cordova';
-  HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
+
+  var localVersionManifest  = localPathPrefix + __meteor_runtime_config__.autoupdateVersionCordova + "/manifest.json" ;
+  readFile( localVersionManifest, function(err, res) {
+    var currentManifest;
+    if (res && res.length > 0){
+      try {
+        currentManifest = JSON.parse( res );
+      } catch(e){
+        log('Failed to parse ' + localVersionManifest);
+      }
+    }
+
+    HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
     if (err || ! res.data) {
       log('Failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
     }
 
     updating = true;
-    ensureLocalPathPrefix(_.bind(downloadNewVersion, null, res.data));
+    ensureLocalPathPrefix(_.bind(downloadNewVersion, null, res.data, currentManifest));
   });
+  });
+
+
+
 };
 
-var downloadNewVersion = function (program) {
+
+var downloadNewVersion = function (program, localProgram) {
   var urlPrefix = Meteor.absoluteUrl() + '__cordova';
   var manifest = _.clone(program.manifest);
   var version = program.version;
   var ft = new FileTransfer();
 
+  var localManifestMap;
+  var localVersionPrefix = [ localPathPrefix,
+                      __meteor_runtime_config__.autoupdateVersionCordova, "/" ].join("");
+
+  if (localProgram) {
+    // XXX: build a lookup map
+    localManifestMap = {};
+    _.each( localProgram.manifest, function(obj){
+      localManifestMap[obj.path]=obj;
+    });
+  }
+
   manifest.push({ url: '/index.html?' + Random.id() });
+
 
   var versionPrefix = localPathPrefix + version;
 
@@ -107,6 +160,12 @@ var downloadNewVersion = function (program) {
     var url = item.url;
     url = url.replace(/\?.+$/, '');
 
+    if (localManifestMap && (localItem=localManifestMap[item.path])){
+      if (localItem.hash == item.hash){
+        var src = localVersionPrefix +  url;
+        url = [ src, url ];
+      }
+    }
     queue.push(url);
   });
 
@@ -140,13 +199,24 @@ var downloadNewVersion = function (program) {
 
   var dowloadUrl = function (url) {
     console.log(DEBUG_TAG + "start dowloading " + url);
-    // Add a cache buster to ensure that we don't cache an old asset.
-    var uri = encodeURI(urlPrefix + url + '?' + Random.id());
+    var dst, uri;
+
+    if (url instanceof Array){
+      dst = url.pop();
+      dst = versionPrefix + encodeURI(dst);
+
+      uri = url = url.pop();
+
+    } else {
+      dst = versionPrefix + encodeURI(url);
+      // Add a cache buster to ensure that we don't cache an old asset.
+      uri = encodeURI(urlPrefix + url + '?' + Random.id());
+    }
 
     // Try to dowload the file a few times.
     var tries = 0;
     var tryDownload = function () {
-      ft.download(uri, versionPrefix + encodeURI(url), function (entry) {
+      ft.download(uri, dst, function (entry) {
         if (entry) {
           console.log(DEBUG_TAG + "done dowloading " + url);
           // start downloading next queued url
