@@ -1,13 +1,36 @@
+var ignoreWaypoints = false;
+var triggeredFromWaypoint = {};
+
+Meteor.startup(function () {
+  setTimeout(function () {
+    $('.main-content [id]').waypoint(function() {
+      if (! ignoreWaypoints) {
+        triggeredFromWaypoint["#" + this.id] = true;
+        window.location.replace("#" + this.id);
+      }
+    }, { context: $('.main-content') });
+  }, 2000);
+});
+
 Tracker.autorun(function () {
   // returns a "location" like object with all of the url parts
   var current = Iron.Location.get();
 
+  // If the URL changes from a waypoint, do nothing
+  if (triggeredFromWaypoint[current.hash]) {
+    triggeredFromWaypoint[current.hash] = false;
+    return;
+  }
+
+  // If the URL changes, close the sidebar
+  Session.set("sidebarOpen", false);
+
   // redirect routes with no trailing slash
   if (current.path === "/basic") {
-    Iron.Location.go("/basic/");
+    window.location.replace("/basic/");
     return;
   } else if (current.path === "/full") {
-    Iron.Location.go("/full/");
+    window.location.replace("/full/");
     return;
   }
 
@@ -18,9 +41,9 @@ Tracker.autorun(function () {
   } else {
     if (current.hash) {
       // XXX COMPAT WITH old docs
-      Iron.Location.go("/full/");
+      window.location.replace("/full/");
     } else {
-      Iron.Location.go("/basic/");
+      window.location.replace("/basic/");
     }
   }
 
@@ -34,13 +57,16 @@ Tracker.autorun(function () {
         } else {
           var foundElement = $(current.hash);
           if (foundElement.get(0)) {
-            targetLocation = $(".main-content").scrollTop() + foundElement.offset().top;
+            targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top - 10;
           }
         }
 
+        ignoreWaypoints = true;
         $(".main-content").animate({
             scrollTop: targetLocation
-        }, 1000);
+        }, 1000, function () {
+          ignoreWaypoints = false;
+        });
       }, 0);
     });
   }
