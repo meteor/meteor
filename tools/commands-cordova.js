@@ -1642,12 +1642,12 @@ var Host = function () {
 _.extend(Host.prototype, {
   isMac: function () {
     var self = this;
-    return self.getUname([ '-s' ]) == 'Darwin';
+    return process.platform === 'darwin';
   },
 
   isLinux: function () {
     var self = this;
-    return self.getUname([ '-s' ]) == 'Linux';
+    return process.platform === 'linux';
   },
 
   getName : function () {
