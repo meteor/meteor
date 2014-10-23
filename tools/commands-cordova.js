@@ -106,7 +106,7 @@ cordova.buildTargets = function (localPath, targets, options) {
     if (! hasSdk) {
       if (options.skipIfNoSDK) {
         Console.warn("The " + displayPlatform + " platform is not installed;" +
-                     "skipping build for it.");
+                     " skipping build for it.");
         return false;
       }
 
