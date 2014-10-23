@@ -74,7 +74,8 @@ _.extend(Progress.prototype, {
       return null;
     }
 
-    if (!self._state.done && (self._state.current != 0) && !isRoot) {
+    if (!self._state.done && (self._state.current != 0) && self._state.end &&
+        !isRoot) {
       // We are not done and we have interesting state to report
       return self;
     }
