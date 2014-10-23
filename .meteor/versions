@@ -8,6 +8,7 @@ blaze@2.0.2
 boilerplate-generator@1.0.1
 callback-hook@1.0.1
 check@1.0.2
+chrismbeckett:fontawesome4@4.2.2
 coffeescript@1.0.4
 ctl-helper@1.0.4
 ctl@1.0.2
@@ -45,7 +46,7 @@ retry@1.0.1
 routepolicy@1.0.2
 session@1.0.3
 showdown@1.0.2
-simple:highlight.js@1.0.2
+simple:highlight.js@1.0.5
 simple:markdown-templating@1.2.6
 spacebars-compiler@1.0.3
 spacebars@1.0.3
