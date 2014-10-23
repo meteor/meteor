@@ -1,0 +1,52 @@
+<head>
+  <title>Documentation - Meteor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="Description"
+  content="Meteor is an open-source JavaScript platform for building top-quality web apps in a fraction of the time, whether you're an expert developer or just getting started."/>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+  <div class="body {{openSidebar}}">
+    <div id="nav">
+      {{> sidebar}}
+    </div>
+    <div class="overlay close-sidebar"></div>
+    {{> topBar}}
+    <div class="main-content">
+      <div id="main">
+        {{#if fullApi}}
+          {{> fullApiContent}}
+        {{else}}
+          {{> basicContent}}
+        {{/if}}
+      </div>
+    </div>
+  </div>
+</body>
+
+<template name="sidebar">
+  <div id="nav-inner">
+    <h1>
+      <a href="#top">
+        Meteor 0.9.4
+      </a>
+    </h1>
+
+    {{> basicOrFullSelect}}
+
+    {{#if fullApi}}
+      {{> tableOfContents}}
+    {{else}}
+      {{> basicTableOfContents}}
+    {{/if}}
+  </div>
+</template>
+
+<template name="topBar">
+  <div class="top-bar">
+    <i class="open-sidebar fa fa-bars"></i>
+    <h1>Meteor 1.0 Docs</h1>
+  </div>
+</template>
