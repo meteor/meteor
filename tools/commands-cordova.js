@@ -720,6 +720,8 @@ var pluginsConfiguration = {};
 // Build a Cordova project, creating a Cordova project if necessary.
 var buildCordova = function (localPath, platforms, options) {
   verboseLog('Building the cordova build project');
+  if (_.isEmpty(platforms))
+    return;
 
   buildmessage.enterJob({ title: 'Building for mobile devices' }, function () {
     var bundlePath = path.join(localPath, 'build-cordova-temp');
