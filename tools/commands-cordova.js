@@ -803,7 +803,8 @@ var buildCordova = function (localPath, platforms, options) {
       }
 
       // depending on the debug mode build the android part in different modes
-      if (_.contains(project.getPlatforms(), 'android')) {
+      if (_.contains(project.getPlatforms(), 'android') &&
+          _.contains(platforms, 'android')) {
         var androidBuildPath = path.join(cordovaPath, 'platforms', 'android');
         var manifestPath = path.join(androidBuildPath, 'AndroidManifest.xml');
 
