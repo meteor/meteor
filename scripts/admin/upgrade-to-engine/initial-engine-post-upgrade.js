@@ -121,8 +121,24 @@ Fiber(function () {
       "by running the following command:\n" +
       "\n" +
       "  $ curl https://install.meteor.com/ | sh\n" +
-      "\n" +
-      "Removing your current installation.\n");
+      "\n");
+
+  if (package_stamp !== 'tar') {
+    console.warn(
+      "After installing the new version, if you try to run meteor within\n" +
+        "your current shell, you may get an error like:\n" +
+        "\n" +
+        "   /usr/bin/meteor: No such file or directory\n" +
+        "\n" +
+        "If so, just run the command:\n" +
+        "\n" +
+        "  $ hash -r\n" +
+        "\n" +
+        "or start a new shell.\n" +
+        "\n");
+  }
+
+  console.warn("Removing your current installation.\n");
 
   copyScriptToTmp();
 
