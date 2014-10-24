@@ -8,15 +8,15 @@ which parts of the page are displayed.
 
 <h3 class="api-title" id="defining-templates">Defining Templates in HTML</h3>
 
-Templates are defined in '.html' files that can be located anywhere in your
+Templates are defined in `.html` files that can be located anywhere in your
 Meteor project folder except the `server`, `public`, and `private` directories.
 
-Each HTML file can have any number of three types of top-level elements:
+Each `.html` file can contain any number of the following top-level elements:
 `<head>`, `<body>`, or `<template>`. Code in the `<head>` and `<body>` tags is
 appended to that section of the HTML page, and code inside `<template>` tags can
 be included using `{{dstache}}> templateName}}`, as shown in the example below.
-Templates can be included more than once - one of the main purposes of templates
-is to reduce view code duplication.
+Templates can be included more than once &mdash; one of the main purposes of
+templates is to avoid writing the same HTML multiple times by hand.
 
 ```
 <!-- add code to the <head> of the page -->
@@ -39,14 +39,21 @@ is to reduce view code duplication.
 The `{{dstache}} ... }}` syntax is part of a language called "Spacebars" that
 Meteor uses to add functionality to HTML. As shown above, it lets you include
 templates in other parts of your page. Using Spacebars, you can also display
-data passed in via _helpers_. Helpers can be static values or functions.
+data obtained from _helpers_. Helpers are written in JavaSript, and can be
+either simple values or functions.
+
+{{> autoApiBox "Template#helpers"}}
+
+Here's how you might define a helper called `name` for a template called
+`nametag` (in JavaScript):
 
 ```
-// In JavaScript, define a helper called "nametag" on our template
 Template.nametag.helpers({
   name: "Ben Bitdiddle"
 });
 ```
+
+And here is the `nametag` template itself (in HTML):
 
 ```
 <!-- In an HTML file, display the value of the helper -->
@@ -55,8 +62,8 @@ Template.nametag.helpers({
 </template>
 ```
 
-Spacebars also has a few other handy functions that can be used to make your
-views more dynamic.
+Spacebars also has a few other handy control structures that can be used
+to make your views more dynamic:
 
 - `{{dstache}}#each data}} ... {{dstache}}/each}}` - Iterate over the items in
 `data` and display the HTML inside the block for each one.
@@ -65,35 +72,40 @@ is `true`, display the first block; if it is false, display the second one.
 - `{{dstache}}#with data}} ... {{dstache}}/with}}` - Set the data context of
 the HTML inside, and display it.
 
-In addition to using helpers, Spacebars lets you display data by having a _data
-context_ inside every block. This means that you can use `{{dstache}}property}}`
-to reference a property on the object currently in the data context.
+Each nested `#each` or `#with` block has its own _data context_, which is
+an object whose properties can be used as helpers inside the block. For
+`#with` blocks, the data context is simply the value that appears after
+the `#with` and before the `}}` characters. For `#each` blocks, each
+element of the given array becomes the data context while the block is
+evaluated for that element.
+
+For instance, if the `people` helper has the following value
 
 ```
-// helper 'people' is:
-// [{name: "Bob"}, {name: "Frank"}, {name: "Alice"}]
+Template.welcomePage.helpers({
+  people: [{name: "Bob"}, {name: "Frank"}, {name: "Alice"}]
+});
+```
 
-<!-- show every person's name -->
+then you can display every person's name as a list of `<p>` tags:
+
+```
 {{dstache}}#each people}}
   <p>{{dstache}}name}}</p>
 {{dstache}}/each}}
+```
 
-<!-- or we can use the nametag template from above -->
+or use the "nametag" template from above instead of `<p>` tags:
+
+```
 {{dstache}}#each people}}
   <p>{{dstache}}> nametag}}</p>
 {{dstache}}/each}}
 ```
 
-You can find detailed documentation for Spacebars in the
-[README on GitHub](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
-
-{{> autoApiBox "Template#helpers"}}
-
-Each template has a local dictionary of helpers that it can use to inject data
-into the HTML. Call `Template.myTemplate.helpers()` to add to this dictionary,
-and use the data in your templates with `{{helperName}}`.
-
-For example, to show the logged in user's username:
+Remember that helpers can be functions as well as simple values. For
+example, to show the logged in user's username, you might define a
+function-valued helper called `username`:
 
 ```
 // in your JS file
@@ -104,6 +116,9 @@ Template.profilePage.helpers({
 });
 ```
 
+Now, each time use the `username` helper, the helper function will be
+called to determine the user's name:
+
 ```
 // in your HTML
 <template name="profilePage">
@@ -111,20 +126,26 @@ Template.profilePage.helpers({
 </template>
 ```
 
-The sections about `Session`, `Tracker`, `Collections`, and `Accounts` will talk
-more about how to add dynamic data to your templates.
-
-You can also register a helper to be available in all templates by using
+The helpers above have all been associated with specific templates, but
+you can also make a helper available in all templates by using
 [`Template.registerHelper`](#template_registerhelper).
+
+You can find detailed documentation for Spacebars in the
+[README on GitHub](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
+Later in this documentation, the sections about `Session`, `Tracker`,
+`Collections`, and `Accounts` will talk more about how to add dynamic data
+to your templates.
+
 
 {{> autoApiBox "Template#events"}}
 
-The event map passed into `Template.myTemplate.events` has event descriptors
-as its keys and functions as the values. Event handlers get two arguments:
-the event object and the template instance.
+The event map passed into `Template.myTemplate.events` has event
+descriptors as its keys and event handler functions as the values. Event
+handlers get two arguments: the event object and the template instance.
+
+To attach event handlers to the following template
 
 ```
-<!-- an example template -->
 <template name="example">
   <button class="my-button">My button</button>
   <form>
@@ -134,8 +155,9 @@ the event object and the template instance.
 </template>
 ```
 
+you might call `Template.example.events` as follows:
+
 ```
-// Adding events to a template
 Template.example.events({
   "click .my-button": function (event, template) {
     alert("My button was clicked!");
@@ -147,34 +169,38 @@ Template.example.events({
 });
 ```
 
-The first part of the key is the name of the event being captured. Pretty much
-any DOM event is supported. Some common ones are: `click`, `mousedown`,
-`mouseup`, `mouseenter`, `mouseleave`, `keydown`, `keyup`, `keypress`, `focus`,
-`blur`, and `change`.
+The first part of the key (before the first space) is the name of the
+event being captured. Pretty much any DOM event is supported. Some common
+ones are: `click`, `mousedown`, `mouseup`, `mouseenter`, `mouseleave`,
+`keydown`, `keyup`, `keypress`, `focus`, `blur`, and `change`.
 
-The second part is a selector that indicates which elements to listen to. This
-can be almost any selector
+The second part of the key (after the first space) is a selector that
+indicates which elements to listen to. This can be almost any selector
 [supported by JQuery](http://api.jquery.com/category/selectors/).
 
-Whenever the indicated event happens on the selected element, the function
-given in the event map will be called with the relevant DOM event and
-template instance. See the [Event Maps section](#eventmaps) for details.
+Whenever the indicated event happens on the selected element, the
+corresponding event handler function will be called with the relevant DOM
+event object and template instance. See the [Event Maps section](#eventmaps)
+for details.
 
 {{> autoApiBox "Template#rendered"}}
 
 The function assigned to this property is called once for every instance of
-Template.*myTemplate* when it is inserted into the document for the first time.
+*Template.myTemplate* when it is inserted into the document for the first time.
 
-The _rendered_ callback can be used to integrate external libraries that aren't
+This _rendered_ callback can be used to integrate external libraries that aren't
 familiar with Meteor's automatic view rendering, and need to be initialized
 every time HTML is inserted into the page. Use the
 [`created`](http://docs.meteor.com/#template_created) and
 [`destroyed`](http://docs.meteor.com/#template_destroyed) callbacks to perform
 initialization or clean-up on any objects.
 
+For example, to use the HighlightJS library to apply code highlighting to
+all `<pre>` elements inside the `codeSample` template, you might assign
+the following function to `Template.codeSample.rendered`:
+
+<!-- XXX Why is this not a function like Meteor.startup? -->
 ```
-// Apply code highlighting to <pre> elements inside when
-// the template is rendered (need to include HighlightJS)
 Template.codeSample.rendered = function () {
   hljs.highlightBlock(this.findAll('pre'));
 };
@@ -182,9 +208,10 @@ Template.codeSample.rendered = function () {
 
 In the callback function, `this` is bound to a [template
 instance](#template_inst) object that is unique to this inclusion of the
-template and remains across re-renderings. You can use functions like
-[`this.findAll`](#template_findAll) to get DOM nodes in this template's rendered
-HTML.
+template and remains across re-renderings. You can use methods like
+[`this.find`](#template_find) and
+[`this.findAll`](#template_findAll) to access DOM nodes in the template's
+rendered HTML.
 
 <h2 id="template_inst"><span>Template instances</span></h2>
 
@@ -195,12 +222,12 @@ that persist as the template is reactively updated.
 Template instance objects can be found in several places:
 
 1. The value of `this` in the `created`, `rendered`,
-and `destroyed` template callbacks
+   and `destroyed` template callbacks
 2. The second argument to event handlers
 3. As [`Template.instance()`](#template_instance) inside helpers
 
 You can assign additional properties of your choice to the template instance to
-keep track any state relevant to the template. For example, when using the
+keep track of any state relevant to the template. For example, when using the
 Google Maps API you could attach the `map` object to the current template
 instance to be able to refer to it in helpers and event handlers. Use the
 [`created`](#template_created) and [`destroyed`](#template_destroyed) callbacks
@@ -210,9 +237,11 @@ to perform initialization or clean-up.
 
 `template.findAll` returns an array of DOM elements matching `selector`. You can
 also use `template.$`, which works exactly like JQuery but only returns elements
-from this template.
+within `template`.
 
 {{> autoApiBox "Blaze.TemplateInstance#find"}}
+
+<!-- XXX Why is this not findOne? -->
 
 Get one DOM element matching `selector`, or `null` if there are no
 such elements. Like `findAll`, `find` only returns elements from inside the

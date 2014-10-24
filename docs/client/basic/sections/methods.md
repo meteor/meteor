@@ -10,9 +10,9 @@ Methods can return values and throw errors.
 
 {{> autoApiBox "Meteor.methods"}}
 
-Calling `methods` on the server defines functions that can be called remotely by
-clients. Here's an example of a method that checks its arguments and throws an
-error:
+Calling `Meteor.methods` on the server defines functions that can be
+called remotely by clients. Here's an example of a method that checks its
+arguments and throws an error:
 
 ```
 // On the server
@@ -38,18 +38,12 @@ Meteor.methods({
 });
 ```
 
+The [`check`](#check) function is a convenient way to enforce the expected
+[types and structure](#matchpatterns) of method arguments.
+
 Inside your method definition, `this` is bound to a method invocation object,
-which has a few useful properties:
-
-* `userId`: the id of the current user.
-* `unblock`: when called, allows the next method from this client to
-begin running. Useful if this method is doing something that takes a long time,
-like making an API call.
-* `isSimulation`: true if this code is inside a method stub.
-
-Since methods usually expect particular types as arguments,
-use [`check`](#check) to ensure your method arguments have
-the correct [types and structure](#matchpatterns).
+which has several useful properties, including `this.userId`, which
+identifies the currently logged-in user.
 
 ### Latency Compensation
 
