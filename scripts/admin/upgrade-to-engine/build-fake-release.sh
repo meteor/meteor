@@ -5,7 +5,7 @@
 
 # Must be greater than the latest non-engine version.
 # There are also fields in meteor.spec and debian/changelog to update.
-VERSION="0.9.8"
+VERSION="0.9.9"
 
 set -e
 set -u
