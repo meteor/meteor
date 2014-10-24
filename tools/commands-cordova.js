@@ -1191,7 +1191,12 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
     execFileAsyncOrThrow(localAdb,
                          ['logcat', '-c'],
                          { env: buildCordovaEnv() },
-                         future.resolver());
+                         function (err, code) {
+                           if (!future.isResolved()) {
+                             if (err) future['throw'](err);
+                             else future['return'](code);
+                           }
+                         });
     setTimeout(function () {
       if (! future.isResolved()) {
         verboseLog('adb logcat -c timed out');
