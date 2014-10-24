@@ -146,7 +146,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("removed");
 
   run = s.run("run", "android");
-  run.matchErr("not added to the project");
+  run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
