@@ -660,6 +660,17 @@ _.extend(Project.prototype, {
     return files.trimLine(lines[0]);
   },
 
+  // Like getMeteorReleaseVersion, but adds METEOR@ to the beginning if it's
+  // missing.
+  getNormalizedMeteorReleaseVersion: function () {
+    var self = this;
+    var raw = self.getMeteorReleaseVersion();
+    if (raw === null)
+      return null;
+    var parts = utils.splitReleaseName(raw);
+    return parts[0] + parts[1];
+  },
+
   // Returns the full filepath of the projects .meteor/release file.
   _meteorReleaseFilePath : function () {
     var self = this;

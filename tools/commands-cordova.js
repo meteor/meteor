@@ -293,7 +293,7 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     JSON.parse(fs.readFileSync(options.settings, 'utf8')) : {};
   var publicSettings = settings['public'];
 
-  var meteorRelease = project.getMeteorReleaseVersion();
+  var meteorRelease = project.getNormalizedMeteorReleaseVersion();
   var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
   var WebAppHashing = getLoadedPackages()['webapp-hashing'].WebAppHashing;
 

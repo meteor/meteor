@@ -311,7 +311,7 @@ function doRunCommand (options) {
   }
 
   if (release.forced) {
-    var appRelease = project.getMeteorReleaseVersion();
+    var appRelease = project.getNormalizedMeteorReleaseVersion();
     if (release.current.name !== appRelease) {
       console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
                   release.current.name, appRelease);

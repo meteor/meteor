@@ -490,7 +490,7 @@ _.extend(AppRunner.prototype, {
       }
       if (wrongRelease) {
         return { outcome: 'wrong-release',
-                 releaseNeeded: project.getMeteorReleaseVersion()
+                 releaseNeeded: project.getNormalizedMeteorReleaseVersion()
                };
       }
     }

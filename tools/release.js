@@ -172,13 +172,12 @@ release.usingRightReleaseForApp = function () {
   if (! files.usesWarehouse() || release.forced)
     return true;
 
-  var appRelease = project.getMeteorReleaseVersion();
+  var appRelease = project.getNormalizedMeteorReleaseVersion();
   if (appRelease === null) {
     // Really old app that has no release specified.
     appRelease = release.latestKnown();
   }
-  var parts = utils.splitReleaseName(appRelease);
-  return release.current.name === parts[0] + '@' + parts[1];
+  return release.current.name === appRelease;
 };
 
 // Return the name of the latest release that is downloaded and ready
