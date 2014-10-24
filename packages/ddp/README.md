@@ -4,4 +4,4 @@ DDP is the stateful websocket protocol that Meteor uses to communicate between t
 
 You can use it directly by calling [`DDP.connect`](http://docs.meteor.com/#ddp_connect) to connect to any DDP server.
 
-See the project page on DDP for more details. XXX link
+See the project page on DDP and the [DDP specification](DDP.md) for more details. XXX link
