@@ -2118,6 +2118,8 @@ _.extend(Android.prototype, {
     try {
       var options = {};
       options.env = buildAndroidEnv();
+      // We'll check the exit code ourselves
+      options.checkExitCode = false;
 
       var cmd = new processes.RunCommand(aaptPath, args, options);
 
