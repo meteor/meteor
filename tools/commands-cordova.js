@@ -2124,11 +2124,13 @@ _.extend(Android.prototype, {
       var execution = cmd.run();
 
       if (execution.exitCode !== 0) {
-        Console.warn("Unexpected exit code from aapt: " + execution.exitCode);
-        Console.warn("stdout: " + execution.stdout);
-        Console.warn("stderr: " + execution.stderr);
+        Console.debug("Unable to run aapt." +
+                      " This is expected if 32 bit libs not installed");
+        Console.debug("  exit code: " + execution.exitCode);
+        Console.debug("  stdout: " + execution.stdout);
+        Console.debug("  stderr: " + execution.stderr);
 
-        throw new Error("Error running aapt: exit code " + execution.exitCode);
+        return false;
       }
 
       // version is in stdout
