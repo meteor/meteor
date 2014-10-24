@@ -807,7 +807,7 @@ var buildCordova = function (localPath, platforms, options) {
       var args = ['build'].concat(platforms);
 
       if (verboseness) {
-        args = ['-v'].concat(args);
+        args = ['--verbose'].concat(args);
       }
 
       // depending on the debug mode build the android part in different modes
