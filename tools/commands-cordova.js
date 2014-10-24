@@ -2127,7 +2127,7 @@ _.extend(Android.prototype, {
 
       if (execution.exitCode !== 0) {
         Console.debug("Unable to run aapt." +
-                      " This is expected if 32 bit libs not installed");
+                      " (This is normal if 32 bit libraries are not found)");
         Console.debug("  exit code: " + execution.exitCode);
         Console.debug("  stdout: " + execution.stdout);
         Console.debug("  stderr: " + execution.stderr);
