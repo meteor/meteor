@@ -2117,6 +2117,43 @@ _.extend(Android.prototype, {
     return true;
   },
 
+  canRunAapt: function (buildToolsVersion) {
+    var self = this;
+
+    var androidSdkPath = self.findAndroidSdk();
+    var aaptPath = path.join(androidSdkPath,
+                             'build-tools',
+                             buildToolsVersion,
+                             'aapt');
+    var args = [ 'version' ];
+    try {
+      var options = {};
+      options.env = buildAndroidEnv();
+      // We'll check the exit code ourselves
+      options.checkExitCode = false;
+
+      var cmd = new processes.RunCommand(aaptPath, args, options);
+
+      var execution = cmd.run();
+
+      if (execution.exitCode !== 0) {
+        Console.debug("Unable to run aapt." +
+                      " (This is normal if 32 bit libraries are not found)");
+        Console.debug("  exit code: " + execution.exitCode);
+        Console.debug("  stdout: " + execution.stdout);
+        Console.debug("  stderr: " + execution.stderr);
+
+        return false;
+      }
+
+      // version is in stdout
+      return true;
+    } catch (err) {
+      Console.debug("Error while running aapt", err);
+      return false;
+    }
+  },
+
   isPlatformToolsInstalled: function () {
     var self = this;
 
@@ -2587,8 +2624,10 @@ _.extend(Android.prototype, {
         }
       }
 
+      var hasBuildToolsVersion;
       if (self.isBuildToolsInstalled('21.0.0')) {
         log && Console.info(Console.success("Found Android Build Tools"));
+        hasBuildToolsVersion = '21.0.0';
       } else {
         if (fixSilent) {
           log && Console.info("Installing Android Build Tools");
@@ -2596,10 +2635,22 @@ _.extend(Android.prototype, {
             return self.isBuildToolsInstalled('21.0.0');
           });
           log && Console.info(Console.success("Installed Android Build Tools"));
+          hasBuildToolsVersion = '21.0.0';
         } else {
           log && Console.info(Console.fail("Android Build Tools not found"));
 
           result.missing.push("android-build-tools");
+          result.acceptable = false;
+        }
+      }
+
+      if (hasBuildToolsVersion) {
+        // Check that we can actually run aapt - on 64 bit, we need 32 bit libs
+        // We need aapt to be installed to do this!
+        if (!self.canRunAapt(hasBuildToolsVersion)) {
+          log && Console.info(Console.fail("32-bit libraries not found"));
+
+          result.missing.push("libs32");
           result.acceptable = false;
         }
       }
