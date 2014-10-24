@@ -42,7 +42,7 @@ for m in $GOOD_MODULES; do
   mv ../$m .
 done
 cd ..
-../bin/npm install shell-quote@0.0.1  # no longer in dev bundle
+"$TOPDIR/dev_bundle/bin/npm" install shell-quote@0.0.1  # no longer in dev bundle
 popd
 
 # Copy post-upgrade script to where it is expected.
