@@ -2448,7 +2448,16 @@ _.extend(Android.prototype, {
   waitForEmulator: function () {
     var self = this;
 
-    var timeLimit = 240 * 1000;
+    // Five minute default
+    var timeLimit = 300 * 1000;
+
+    // Boost timeout if not running HAXM/KVM
+    if (!self.hasAcceleration()) {
+      Console.warn("Android emulator acceleration was not installed; the emulator will be very slow.");
+      Console.info("You can run '" + Console.command("meteor install-sdk android") + "' for help.")
+      timeLimit *= 4;
+    }
+
     var interval = 1000;
     for (var i = 0; i < timeLimit / interval; i++) {
       Console.debug("Waiting for emulator");
@@ -2458,7 +2467,17 @@ _.extend(Android.prototype, {
       }
       utils.sleepMs(interval);
     }
-    throw new Error("Emulator did not start in expected time");
+
+    // Emulator did not start... encourage HAXM/KVM
+    Console.error("The emulator did not start in the expected time.");
+    if (Host.isLinux()) {
+      Console.info("We highly recommend enabling KVM to speed up the emulator.");
+    } else {
+      Console.info("We highly recommend installing HAXM to speed up the emulator.");
+    }
+    Console.info("You can run '" + Console.command("meteor install-sdk android") + "' for help.")
+
+    throw new main.ExitWithCode(1);
   },
 
   isEmulatorRunning: function () {
