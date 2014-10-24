@@ -198,16 +198,18 @@ var downloadNewVersion = function (program, localProgram) {
   });
 
   var dowloadUrl = function (url) {
-    console.log(DEBUG_TAG + "start dowloading " + url);
-    var dst, uri;
+    var dst, uri, download;;
 
     if (url instanceof Array){
       dst = url.pop();
       dst = versionPrefix + encodeURI(dst);
-
+      download = false;
       uri = url = url.pop();
 
     } else {
+      download = true;
+      console.log(DEBUG_TAG + "start dowloading " + url);
+
       dst = versionPrefix + encodeURI(url);
       // Add a cache buster to ensure that we don't cache an old asset.
       uri = encodeURI(urlPrefix + url + '?' + Random.id());
@@ -218,7 +220,7 @@ var downloadNewVersion = function (program, localProgram) {
     var tryDownload = function () {
       ft.download(uri, dst, function (entry) {
         if (entry) {
-          console.log(DEBUG_TAG + "done dowloading " + url);
+          if (download) console.log(DEBUG_TAG + "done dowloading " + url);
           // start downloading next queued url
           if (queue.length)
             dowloadUrl(queue.shift());
