@@ -668,7 +668,7 @@ _.extend(Project.prototype, {
     if (raw === null)
       return null;
     var parts = utils.splitReleaseName(raw);
-    return parts[0] + parts[1];
+    return parts[0] + '@' + parts[1];
   },
 
   // Returns the full filepath of the projects .meteor/release file.
