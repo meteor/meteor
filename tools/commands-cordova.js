@@ -2611,17 +2611,10 @@ _.extend(Android.prototype, {
         }
       }
 
+      var hasBuildToolsVersion;
       if (self.isBuildToolsInstalled('21.0.0')) {
         log && Console.info(Console.success("Found Android Build Tools"));
-
-        // Check that we can actually run aapt - on 64 bit, we need 32 bit libs
-        // We need aapt to be installed to do this!
-        if (!self.canRunAapt('21.0.0')) {
-          log && Console.info(Console.fail("32-bit libraries not found"));
-
-          result.missing.push("libs32");
-          result.acceptable = false;
-        }
+        hasBuildToolsVersion = '21.0.0';
       } else {
         if (fixSilent) {
           log && Console.info("Installing Android Build Tools");
@@ -2629,10 +2622,22 @@ _.extend(Android.prototype, {
             return self.isBuildToolsInstalled('21.0.0');
           });
           log && Console.info(Console.success("Installed Android Build Tools"));
+          hasBuildToolsVersion = '21.0.0';
         } else {
           log && Console.info(Console.fail("Android Build Tools not found"));
 
           result.missing.push("android-build-tools");
+          result.acceptable = false;
+        }
+      }
+
+      if (hasBuildToolsVersion) {
+        // Check that we can actually run aapt - on 64 bit, we need 32 bit libs
+        // We need aapt to be installed to do this!
+        if (!self.canRunAapt(hasBuildToolsVersion)) {
+          log && Console.info(Console.fail("32-bit libraries not found"));
+
+          result.missing.push("libs32");
           result.acceptable = false;
         }
       }
