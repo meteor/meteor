@@ -1678,7 +1678,7 @@ var maybeUpdateRelease = function (options) {
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getMeteorReleaseVersion();
+  var appRelease = project.getNormalizedMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
     Console.info(
@@ -1930,7 +1930,7 @@ main.registerCommand({
     // arbitrary release overrides (ie, if we did that, we wouldn't be
     // here). So, basically, that's the correct release for this to project to
     // have constraints against.
-    var appRelease = project.getMeteorReleaseVersion();
+    var appRelease = project.getNormalizedMeteorReleaseVersion();
     var r = utils.splitReleaseName(appRelease);
     var appRecord = catalog.official.getReleaseVersion(r[0], r[1]);
     if (appRecord) {

@@ -772,14 +772,14 @@ Fiber(function () {
     releaseOverride = process.env['METEOR_SPRINGBOARD_RELEASE'];
   }
 
-  var releaseName, appRelease;
+  var releaseName, appReleaseUnnormalized;
   if (appDir) {
     // appRelease will be null if a super old project with no
     // .meteor/release or 'none' if created by a checkout
-    appRelease = project.project.getMeteorReleaseVersion();
+    appReleaseUnnormalized = project.project.getMeteorReleaseVersion();
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
-    if (appRelease === '') {
+    if (appReleaseUnnormalized === '') {
       Console.error(
 "Problem! This project has a .meteor/release file which is empty.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
@@ -787,7 +787,7 @@ Fiber(function () {
 "checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
 "and change it to a valid Meteor release or 'none'.");
       process.exit(1);
-    } else if (appRelease === null) {
+    } else if (appReleaseUnnormalized === null) {
       Console.error(
 "Problem! This project does not have a .meteor/release file.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
@@ -815,11 +815,11 @@ Fiber(function () {
       releaseName = releaseOverride;
     } else if (appDir) {
       // Running from an app directory. Use release specified by app.
-      if (appRelease === 'none') {
+      if (appReleaseUnnormalized === 'none') {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
         // Use the project's desired release
-        releaseName = appRelease;
+        releaseName = appReleaseUnnormalized;
         releaseFromApp = true;
       }
     } else {
@@ -1319,9 +1319,9 @@ commandName + ": You're not in a Meteor project directory.\n" +
   }
 
   if (command.requiresApp && release.current.isCheckout() &&
-      appRelease && appRelease !== "none") {
+      appReleaseUnnormalized && appReleaseUnnormalized !== "none") {
     var utils = require("./utils.js");
-    var appReleaseParts = utils.splitReleaseName(appRelease);
+    var appReleaseParts = utils.splitReleaseName(appReleaseUnnormalized);
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     Console.warn(
