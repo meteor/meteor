@@ -386,7 +386,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  Console.stdout.write('Deploying to http://' + site + '. Bundling...\n');
+  Console.stdout.write('Deploying to http://' + site + '.\n');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -426,8 +426,6 @@ var bundleAndDeploy = function (options) {
     Console.stdout.write(messages.formatMessages());
     return 1;
   }
-
-  Console.stdout.write('Uploading...\n');
 
   var result;
   buildmessage.enterJob({ title: "Uploading" }, function () {
