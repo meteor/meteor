@@ -111,18 +111,16 @@ var copyScriptToTmp = function () {
 Fiber(function () {
   console.warn(
     "\n" +
-      "Meteor has a brand new distribution system!\n" +
+      "Welcome back to Meteor!\n" +
       "\n" +
-      "In this new system, code-named Engine, packages are downloaded\n" +
-      "individually and on demand. But all of the packages in each official\n" +
-      "Meteor release are prefetched and cached so you can still use Meteor\n" +
-      "when you're on a plane or in a coffeeshop with no Wifi.\n" +
+      "It looks like you haven't used Meteor since at least April 2013, when\n" +
+      "we changed how Meteor releases are distributed. We're going to try\n" +
+      "to uninstall your old version and install the latest version.\n" +
       "\n" +
-      "Also, every Meteor project is now pinned to a specific Meteor release,\n" +
-      "so everyone on your team is always running the same code regardless of\n" +
-      "what they have installed on their laptop. Whenever you run 'meteor',\n" +
-      "Engine automatically fetches the needed release manifest, build tools,\n" +
-      "smart packages, and npm dependencies into your local warehouse.\n" +
+      "If for some reason this doesn't work, you can just do a clean install\n" +
+      "by running the following command:\n" +
+      "\n" +
+      "  $ curl https://install.meteor.com/ | sh\n" +
       "\n" +
       "Removing your current installation.\n");
 
