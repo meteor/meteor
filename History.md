@@ -39,6 +39,32 @@
 
 * Improve error message for limited ordered observe. #1643
 
+* Fix bug where Cordova clients connected to http://example.com instead
+  of https://example.com when https:// was specified in the
+  --mobile-server option. #2880
+
+* Use TLSv1 in the `spiderable` package, for compatiblity with servers
+  that have disabled SSLv3 in response to the POODLE bug.
+
+* Fix missing dependency on `random` in the `autoupdate` package. #2892
+
+* Fix bug where all CSS would be removed from connected clients if a
+  CSS-only change is made between local development server restarts or
+  when deploying with `meteor deploy`.
+
+* Increase height of the Google OAuth popup to the Google-recommended
+  value.
+
+* Fix the layout of the OAuth configuration dialog when used with
+  Bootstrap.
+
+* Fix stack traces when attempting to build or run iOS apps on Linux.
+
+* Print a warning when building an app with mobile platforms and
+  outputting the build into the source tree. Outputting a build into the
+  source tree can cause subsequent builds to fail because they will
+  treat the build output as source files.
+
 
 ## v0.9.4
 
