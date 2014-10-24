@@ -2106,6 +2106,39 @@ _.extend(Android.prototype, {
     return true;
   },
 
+  canRunAapt: function (buildToolsVersion) {
+    var self = this;
+
+    var androidSdkPath = self.findAndroidSdk();
+    var aaptPath = path.join(androidSdkPath,
+                             'build-tools',
+                             buildToolsVersion,
+                             'aapt');
+    var args = [ 'version' ];
+    try {
+      var options = {};
+      options.env = buildAndroidEnv();
+
+      var cmd = new processes.RunCommand(aaptPath, args, options);
+
+      var execution = cmd.run();
+
+      if (execution.exitCode !== 0) {
+        Console.warn("Unexpected exit code from aapt: " + execution.exitCode);
+        Console.warn("stdout: " + execution.stdout);
+        Console.warn("stderr: " + execution.stderr);
+
+        throw new Error("Error running aapt: exit code " + execution.exitCode);
+      }
+
+      // version is in stdout
+      return true;
+    } catch (err) {
+      Console.debug("Error while running aapt", err);
+      return false;
+    }
+  },
+
   isPlatformToolsInstalled: function () {
     var self = this;
 
@@ -2578,6 +2611,15 @@ _.extend(Android.prototype, {
 
       if (self.isBuildToolsInstalled('21.0.0')) {
         log && Console.info(Console.success("Found Android Build Tools"));
+
+        // Check that we can actually run aapt - on 64 bit, we need 32 bit libs
+        // We need aapt to be installed to do this!
+        if (!self.canRunAapt('21.0.0')) {
+          log && Console.info(Console.fail("32-bit libraries not found"));
+
+          result.missing.push("libs32");
+          result.acceptable = false;
+        }
       } else {
         if (fixSilent) {
           log && Console.info("Installing Android Build Tools");
