@@ -2575,6 +2575,26 @@ _.extend(Android.prototype, {
       }
     }
 
+    // (hasAcceleration can also be undefined)
+    var hasAcceleration = self.hasAcceleration();
+    if (hasAcceleration === false) {
+      if (fix) {
+        self.installAcceleration();
+      } else {
+        log && Console.info(Console.fail("Android emulator acceleration is not installed"));
+        log && Console.info("  (The Android emulator will be very slow without acceleration)");
+
+        result.missing.push("haxm");
+
+        // Not all systems can install the accelerator, so don't block
+        // XXX: Maybe we should block the emulator (only); it is unusable without it
+        //result.acceptable = false
+      }
+    } else if (hasAcceleration === true) {
+      // (can be undefined)
+      log && Console.info(Console.success("Android emulator acceleration is installed"));
+    }
+
     if (hasAndroid && hasJava) {
       if (self.isPlatformToolsInstalled()) {
         log && Console.info(Console.success("Found Android Platform tools"));
@@ -2690,26 +2710,6 @@ _.extend(Android.prototype, {
           result.acceptable = false;
         }
       }
-    }
-
-    // (hasAcceleration can also be undefined)
-    var hasAcceleration = self.hasAcceleration();
-    if (hasAcceleration === false) {
-      if (fix) {
-        self.installAcceleration();
-      } else {
-        log && Console.info(Console.fail("Android emulator acceleration is not installed"));
-        log && Console.info("  (The Android emulator will be very slow without acceleration)");
-
-        result.missing.push("haxm");
-
-        // Not all systems can install the accelerator, so don't block
-        // XXX: Maybe we should block the emulator (only); it is unusable without it
-        //result.acceptable = false
-      }
-    } else if (hasAcceleration === true) {
-      // (can be undefined)
-      log && Console.info(Console.success("Android emulator acceleration is installed"));
     }
 
     return result;
