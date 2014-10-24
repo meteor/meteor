@@ -177,7 +177,8 @@ release.usingRightReleaseForApp = function () {
     // Really old app that has no release specified.
     appRelease = release.latestKnown();
   }
-  return release.current.name === appRelease;
+  var parts = utils.splitReleaseName(appRelease);
+  return release.current.name === parts[0] + '@' + parts[1];
 };
 
 // Return the name of the latest release that is downloaded and ready
