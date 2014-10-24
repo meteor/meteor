@@ -1662,17 +1662,17 @@ var maybeUpdateRelease = function (options) {
       // help --release xyz'.
       Console.info(
         "Installed. Run 'meteor update' inside of a particular project\n" +
-          "directory to update that project to Meteor " +
-          release.current.name + ".");
+          "directory to update that project to " +
+          release.current.getDisplayName() + ".");
     } else {
       // We get here if the user ran 'meteor update' and we didn't
       // find a new version.
       Console.info(
-        "The latest version of Meteor, " + release.current.name +
+        "The latest version of Meteor, " + release.current.getReleaseVersion() +
           ", is already installed on this\n" +
           "computer. Run 'meteor update' inside of a particular project\n" +
-          "directory to update that project to Meteor " +
-          release.current.name);
+          "directory to update that project to " +
+          release.current.getDisplayName());
     }
     return 0;
   }

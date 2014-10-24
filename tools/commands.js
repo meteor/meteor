@@ -313,8 +313,11 @@ function doRunCommand (options) {
   if (release.forced) {
     var appRelease = project.getNormalizedMeteorReleaseVersion();
     if (release.current.name !== appRelease) {
-      console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
-                  release.current.name, appRelease);
+      var appReleaseParts = utils.splitReleaseName(appRelease);
+      console.log("=> Using %s as requested (overriding Meteor %s)",
+                  release.current.getDisplayName(),
+                  utils.displayRelease(appReleaseParts[0],
+                                       appReleaseParts[1]));
       console.log();
     }
   }
