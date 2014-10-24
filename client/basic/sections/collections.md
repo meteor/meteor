@@ -3,35 +3,37 @@
 <h2 id="collections"><span>Collections</span></h2>
 
 Meteor stores data in *collections*. JavaScript objects stored in collections
-are called `documents`.  To get started, declare a collection with `new
-Mongo.Collection`.
+are called `documents`.  To get started, declare a collection with
+`new Mongo.Collection`.
 
 {{> autoApiBox "Mongo.Collection"}}
 
-Calling this constructor creates a collection object which acts just like a
-MongoDB collection. If you pass a name when you create the collection, then you
-are declaring a persistent collection — one that is stored on the server and
-seen by all users.
+Calling the `Mongo.Collection` constructor creates a collection object
+which acts just like a MongoDB collection. If you pass a name when you
+create the collection, then you are declaring a persistent collection
+&mdash; one that is stored on the server and seen by all users.
 
-Since client code and server code can both access the same collection using the
-same API, it's usually best to declare persistent collections as global
-variables in a JavaScript file that's present on the client and the server.
+To allow both client code and server code to access the same collection
+using the same API, it's usually best to declare collections as global
+variables in a JavaScript file that's present on both client and server.
 
-Here's an example of declaring a collection:
+Here's an example of declaring two named, persistent collections as global
+variables:
 
 ```
-// In a JS file that's loaded on the client and server
+// In a JS file that's loaded on the client and the server
 Posts = new Mongo.Collection("posts");
 Comments = new Mongo.Collection("comments");
 ```
 
-If you pass null as the name, then you're creating a local collection. It's not
-synchronized anywhere; it's just a local collection of JavaScript objects that
-supports Mongo-style find, insert, update, and remove operations.
+If you pass `null` as the name, then you're creating a local
+collection. Local collections are not synchronized between the client and
+the server; they are just temporary collections of JavaScript objects that
+support Mongo-style `find`, `insert`, `update`, and `remove` operations.
 
-By default, Meteor automatically publishes every document in your collection to
-each connected client. To turn this behavior off, remove the autopublish
-package:
+By default, Meteor automatically publishes every document in your
+collection to each connected client. To disable this behavior, you must
+remove the `autopublish` package:
 
 ```
 $ meteor remove autopublish
@@ -45,24 +47,28 @@ Use `findOne` or `find` to retrieve documents from a collection.
 
 {{> autoApiBox "Mongo.Collection#findOne"}}
 
-This method lets you retrieve a specific document from your collection. It is
-simplest to call it with a document id:
+This method lets you retrieve a specific document from your
+collection. The `findOne` method is most commonly called with a specific
+document `_id`:
 
 ```
 var post = Posts.findOne(postId);
 ```
 
-You can also call `findOne` with a Mongo selector, which is an object that
-specifies a set of rules for the document you're looking for:
+However, you can also call `findOne` with a Mongo selector, which is an
+object that specifies a required set of attributes of the desired
+document. For example, this selector
 
 ```
-// this selector
 var post = Posts.findOne({
   createdBy: "12345",
   title: {$regex: /first/}
 });
+```
 
-// will match this document
+will match this document
+
+```
 {
   createdBy: "12345",
   title: "My first post!",
@@ -72,17 +78,20 @@ var post = Posts.findOne({
 
 You can read about MongoDB query operators such as `$regex`, `$lt` (less than),
 `$text` (text search), and more in the [MongoDB
-documentation](http://docs.mongodb.org/manual/reference/operator/query/). One
-interesting thing to note is that Mongo selectors also match items in arrays.
-For example:
+documentation](http://docs.mongodb.org/manual/reference/operator/query/).
+
+One useful behavior that might not be obvious is that Mongo selectors also
+match items in arrays. For example, this selector
 
 ```
-// this selector
 Post.findOne({
   tags: "meteor"
 });
+```
 
-// will match this document
+will match this document
+
+```
 {
   title: "I love Meteor",
   createdBy: "242135223",
@@ -91,18 +100,22 @@ Post.findOne({
 ```
 
 The `findOne` method is reactive just like [`Session.get`](#session_get),
-meaning if you use it inside a [template helper](#template_helpers) or a
-[`Tracker.autorun`](#tracker_autorun), it will automatically rerender
-the view or rerun the computation if the returned document changes. This also
-means that sometimes `findOne` will return `null` if the document is removed
-from the collection, so you should be prepared to accept that value.
+meaning that, if you use it inside a [template helper](#template_helpers)
+or a [`Tracker.autorun`](#tracker_autorun) callback, it will automatically
+rerender the view or rerun the computation if the returned document
+changes.
+
+Note that `findOne` will return `null` if it fails to find a matching
+document, which often happens after the document has been removed from the
+collection, so you should be prepared to handle `null` values.
 
 {{> autoApiBox "Mongo.Collection#find"}}
 
-The `find` method is similar to `findOne`, but instead of returning a single
-document it returns a MongoDB cursor. A cursor is a special object that refers
-to the documents that might be returned from a query. You can pass a cursor into
-a template helper anywhere you could pass an array:
+The `find` method is similar to `findOne`, but instead of returning a
+single document it returns a MongoDB *cursor*. A cursor is a special
+object that represents a list of documents that might be returned from a
+query. You can pass a cursor into a template helper anywhere you could
+pass an array:
 
 ```
 Template.blog.helpers({
@@ -124,8 +137,8 @@ Template.blog.helpers({
 </template>
 ```
 
-If you want to actually retrieve all of the documents from a cursor, call
-`.fetch()` like this:
+When you want to retrieve the current list of documents from a cursor,
+call the cursor's `.fetch()` method:
 
 ```
 // get an array of posts
@@ -154,8 +167,8 @@ Posts.insert({
 
 Every document in every `Mongo.Collection` has an `_id` field. It must be
 unique, and is automatically generated if you don't provide one. The `_id`
-field should be used to refer to a specific document, and can be used to
-retrieve that document using [`collection.findOne`](#findOne).
+field can be used to retrieve a specific document using
+[`collection.findOne`](#findOne).
 
 {{> autoApiBox "Mongo.Collection#update"}}
 
@@ -165,13 +178,14 @@ changes should be made to the matched documents. Watch out - unless you use
 an operator like `$set`, `update` will simply replace the entire matched
 document with the modifier.
 
+Here's an example of setting the `content` field on all posts whose titles
+contain the word "first":
+
 ```
-// Sets the content field on all posts
-// that have 'first' in the title
 Posts.update({
   title: {$regex: /first/}
 }, {
-  $set: { content: "Tomorrow will be a great day." }
+  $set: {content: "Tomorrow will be a great day."}
 });
 ```
 
@@ -179,40 +193,40 @@ You can read about all of the different operators that are supported in the
 [MongoDB documentation](http://docs.mongodb.org/manual/reference/operator/update/).
 
 There's one catch: when you call `update` on the client, you can only find
-documents by theid `_id` field. To use all of the possible selectors, you must
-call `update` in server code or from a [method](#meteor_methods).
+documents by their `_id` field. To use all of the possible selectors, you
+must call `update` in server code or from a [method](#meteor_methods).
 
 {{> autoApiBox "Mongo.Collection#remove"}}
 
-This method uses the same selectors as `find` and `update`, and removes any
-documents that match the selector from the database. Use `remove` carefully -
-there's no way to get that data back.
+This method uses the same selectors as `find` and `update`, and removes
+any documents that match the selector from the database. Use `remove`
+carefully &mdash; there's no way to get that data back.
 
-Just like with `update`, you can only remove documents by using their `_id`
-field unless `remove` is called in server code or from a
-[method](#meteor_methods).
-
+As with `update`, client code can only remove documents by `_id`, whereas
+server code and [methods](#meteor_methods) can remove documents using any
+selector.
 
 
 {{> autoApiBox "Mongo.Collection#allow"}}
 
 In newly created apps, Meteor allows almost any calls to `insert`, `update`, and
 `remove` from any client or server code. This is because apps started with
-`meteor create` include the `insecure` package by default to speed up
+`meteor create` include the `insecure` package by default to simplify
 development. Obviously, if any user could change the database whenever they
-wanted it would be bad for security, so we should remove `insecure` and specify
-some permissions rules.
+wanted it would be bad for security, so it is important to remove the
+`insecure` package and specify some permissions rules:
 
 ```
 $ meteor remove insecure
 ```
 
-Once we have removed this package, we can use the `allow` and `deny` methods to
-control who can perform which operations on the database. By default, all
-operations on the client are denied, so we need to add some `allow` rules.
-Keep in mind that server code and code inside [methods](#meteor_methods) is
-not affected by `allow` and `deny` - these rules only apply when `insert`,
-`update`, and `remove` are called from untrusted client code.
+Once you have removed the `insecure` package, use the `allow` and `deny`
+methods to control who can perform which operations on the database. By
+default, all operations on the client are denied, so we need to add some
+`allow` rules.  Keep in mind that server code and code inside
+[methods](#meteor_methods) are not affected by `allow` and `deny` &mdash;
+these rules only apply when `insert`, `update`, and `remove` are called
+from untrusted client code.
 
 For example, we might say that users can only create new posts if the
 `createdBy` field matches the ID of the current user, so that users can't
@@ -234,8 +248,9 @@ Posts.allow({
 });
 ```
 
-There are three possible callbacks, that get different arguments. The first
-argument is always the `_id` of the logged in user.
+The `allow` method accepts three possible callbacks: `insert`, `remove`,
+and `update`. The first argument to all three callbacks is the `_id` of
+the logged in user, and the remaining arguments are as follows:
 
 1. `insert(userId, document)`
 
@@ -259,9 +274,10 @@ argument is always the `_id` of the logged in user.
 
 {{> autoApiBox "Mongo.Collection#deny"}}
 
-Deny lets you override parts of your `allow` rules. While only one of your
-`allow` callbacks has to return true to allow a modification, _every one_ of
-your `deny` callbacks has to return false for the database change to happen.
+The `deny` method lets you selectively override your `allow` rules. While
+only one of your `allow` callbacks has to return true to allow a
+modification, _every one_ of your `deny` callbacks has to return false for
+the database change to happen.
 
 For example, if we wanted to override part of our `allow` rule above to exclude
 certain post titles:
