@@ -883,6 +883,18 @@ _.extend(CordovaRunner.prototype, {
     // android, not android-device
     if (self.platformName === 'android') {
       Android.waitForEmulator();
+
+      buildmessage.capture(function () {
+        var versions = project.getVersions({ dontRunConstraintSolver: true });
+        if (versions.oauth) {
+          Console.warn(
+"Warning: It looks like you are using OAuth login in your app.\n" +
+"Meteor's OAuth implementation does not currently work in the Android\n" +
+"emulator. To test OAuth login in the emulator, please deploy your app\n" +
+"with 'meteor deploy' and then run:\n" +
+"  meteor run android --mobile-server <your site name>.meteor.com\n");
+        }
+      });
     }
 
     if (self.platformName === 'ios') {
