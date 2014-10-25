@@ -114,18 +114,19 @@ var sections = [
   })
 ];
 
+var linkPrefix = "#/basic/";
 Template.basicTableOfContents.helpers({
   sections: sections,
   linkForItem: function () {
     var self = this;
 
     if (self.id) {
-      return "#" + self.id;
+      return linkPrefix + self.id;
     } else if (self.longname) {
-      return "#" + self.longname.replace(/[#.]/g, "-");
+      return linkPrefix + self.longname.replace(/[#.]/g, "-");
     }
   },
   linkForSection: function () {
-    return "#" + this.id;
+    return linkPrefix + this.id;
   }
 });
