@@ -46,51 +46,45 @@ Tracker.autorun(function () {
   Session.set("sidebarOpen", false);
 
   // redirect routes with no trailing slash
-  if (current.path === "/basic") {
-    window.location.replace("/basic/");
+  if (current.hash === "#/basic") {
+    window.location.replace("#/basic/");
     return;
-  } else if (current.path === "/full") {
-    window.location.replace("/full/");
+  } else if (current.hash === "#/full") {
+    window.location.replace("#/full/");
     return;
   }
 
-  if (current.path === "/basic/") {
+  if (current.hash.match(/^#\/basic\//)) {
     Session.set("fullApi", false);
-  } else if (current.path === "/full/") {
+  } else if (current.hash.match(/^#\/full\//)) {
     Session.set("fullApi", true);
   } else {
     if (current.hash) {
       // XXX COMPAT WITH old docs
-      window.location.replace("/full/#/" + deHash(current.hash));
+      window.location.replace("#/full/" + deHash(current.hash));
     } else {
-      window.location.replace("/basic/");
+      window.location.replace("#/basic/");
     }
   }
 
-  if (current.hash) {
-    console.log("scrolling!");
-    Tracker.afterFlush(function () {
-      setTimeout(function () {
-        var targetLocation;
+  console.log("scrolling!");
+  Tracker.afterFlush(function () {
+    setTimeout(function () {
+      var targetLocation;
 
-        if (current.hash === "#/top") {
-          targetLocation = 0;
-        } else {
-          var selector = "#" + deHash(current.hash).slice(1);
-          console.log(selector);
-          var foundElement = $(selector);
-          if (foundElement.get(0)) {
-            targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
-          }
-        }
+      var selector = '#' + current.hash.split('/')[2];
+      console.log(selector);
+      var foundElement = $(selector);
+      if (foundElement.get(0)) {
+        targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
+      }
 
-        ignoreWaypoints = true;
-        $(".main-content").animate({
-            scrollTop: targetLocation
-        }, 500, function () {
-          ignoreWaypoints = false;
-        });
-      }, 0);
-    });
-  }
+      ignoreWaypoints = true;
+      $(".main-content").animate({
+          scrollTop: targetLocation
+      }, 500, function () {
+        ignoreWaypoints = false;
+      });
+    }, 0);
+  });
 });

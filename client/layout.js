@@ -5,7 +5,8 @@ Template.registerHelper("fullApi", function () {
 Template.basicOrFullSelect.events({
   "change .basic-or-full": function (event) {
     Session.set("fullApi", event.target.value === "full");
-    Iron.Location.go(Session.equals("fullApi", true) ? "/full/" : "/basic/");
+    // XXX might not work in IE9?
+    window.location.replace(Session.equals("fullApi", true) ? "#/full/" : "#/basic/");
   }
 });
 
