@@ -1,5 +1,5 @@
 var ignoreUrlChange = false;
-var ignoreWaypoints = false;
+var ignoreWaypoints = true;
 
 var deHash = function (hashString) {
   return hashString.slice(1);
@@ -70,6 +70,7 @@ Tracker.autorun(function () {
     } else {
       window.location.replace("#/basic/");
     }
+    return;
   }
 
   Tracker.afterFlush(function () {
