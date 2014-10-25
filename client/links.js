@@ -79,7 +79,8 @@ Tracker.autorun(function () {
       var id = current.hash.split('/')[2];
 
       if (! id) {
-        id = "top";
+        // will scroll to the very top
+        id = "main";
       }
 
       var selector = '#' + id;
