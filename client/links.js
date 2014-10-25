@@ -1,5 +1,5 @@
-var ignoreWaypoints = true;
 var ignoreUrlChange = false;
+var ignoreWaypoints = false;
 
 var deHash = function (hashString) {
   return hashString.slice(1);
@@ -7,9 +7,10 @@ var deHash = function (hashString) {
 
 // need an actual function to only debounce inside the if statement
 var actuallyUpdateUrl = _.debounce(function (el) {
+  var docsType = Session.get("fullApi") ? "full" : "basic";
   ignoreUrlChange = true;
-  window.location.replace("#/" + el.id);
-}, 1000);
+  window.location.replace("#/" + docsType + "/" + el.id);
+}, 100);
 
 var updateUrlFromWaypoint = function (el) {
   if (! ignoreWaypoints) {
@@ -18,18 +19,22 @@ var updateUrlFromWaypoint = function (el) {
 };
 
 Meteor.startup(function () {
-  $('.main-content [id]').each(function (i, el) {
-    if (! $("#nav [href='#/" + el.id + "']").get(0)) {
-      // only add waypoints to things that have sidebar links
-      return;
-    }
+  Tracker.autorun(function () {
+    var docsType = Session.get("fullApi") ? "full" : "basic";
+    Tracker.afterFlush(function () {
+      $.waypoints('destroy');
+      $('.main-content [id]').each(function (i, el) {
+        if (! $("#nav [href='#/" + docsType + '/' + el.id + "']").get(0)) {
+          // only add waypoints to things that have sidebar links
+          return;
+        }
 
-    $(el).waypoint(function() {
-      updateUrlFromWaypoint(this);
-    }, { context: $('.main-content') });
+        $(el).waypoint(function() {
+          updateUrlFromWaypoint(this);
+        }, { context: $('.main-content') });
+      });
+    });
   });
-
-  ignoreWaypoints = false;
 });
 
 Tracker.autorun(function () {
@@ -67,13 +72,17 @@ Tracker.autorun(function () {
     }
   }
 
-  console.log("scrolling!");
   Tracker.afterFlush(function () {
     setTimeout(function () {
       var targetLocation;
 
-      var selector = '#' + current.hash.split('/')[2];
-      console.log(selector);
+      var id = current.hash.split('/')[2];
+
+      if (! id) {
+        id = "top";
+      }
+
+      var selector = '#' + id;
       var foundElement = $(selector);
       if (foundElement.get(0)) {
         targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
