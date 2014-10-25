@@ -141,7 +141,7 @@ Template.autoApiBox.helpers({
 
     return signature;
   },
-  link: function () {
+  id: function () {
     if (Session.get("fullApi") && nameToId[this.longname]) {
       return nameToId[this.longname];
     }
@@ -155,3 +155,10 @@ Template.autoApiBox.helpers({
     });
   }
 });
+
+Template.apiBoxTitle.helpers({
+  link: function () {
+    return '#/' + (Session.get("fullApi") ? 'full' : 'basic') + '/' + this.id;
+  }
+});
+
