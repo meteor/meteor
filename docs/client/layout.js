@@ -17,3 +17,11 @@ Template.basicOrFullSelect.helpers({
     return Session.get("fullApi");
   }
 });
+
+Template.sidebar.helpers({
+  topLink: function () {
+    var docsType = Session.get("fullApi") ? "full" : "basic";
+    return "#/" + docsType + "/";
+  }
+});
+
