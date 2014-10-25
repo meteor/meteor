@@ -156,7 +156,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     var url = buildRecord.build.url;
 
-    buildmessage.capture({title: "Downloading build"}, function () {
+    buildmessage.enterJob({title: "Downloading build"}, function () {
       // XXX: We use one progress for download & untar; this isn't ideal:
       // it relies on extractTarGz being fast and not reporting any progress.
       // Really, we should create two subtasks
