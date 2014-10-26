@@ -12,6 +12,7 @@ SpacebarsCompiler = {};
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
 // - `"ELSE"` - `{{else}}`
+// - `"ESCAPE"` - `{{|`, `{{{|`, `{{{{|` and so on
 //
 // Besides `type`, the mandatory properties of a TemplateTag are:
 //
@@ -53,6 +54,7 @@ var makeStacheTagStartRegex = function (r) {
 };
 
 var starts = {
+  ESCAPE: makeStacheTagStartRegex(/^[\{]{2,}\|/),
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -88,6 +90,7 @@ TemplateTag.parse = function (scannerOrString) {
       return null;
     var ret = result[0];
     scanner.pos += ret.length;
+    scanner.current = ret;
     return ret;
   };
 
@@ -230,9 +233,10 @@ TemplateTag.parse = function (scannerOrString) {
     error('Expected ' + what);
   };
 
-  // must do ELSE first; order of others doesn't matter
-
-  if (run(starts.ELSE)) type = 'ELSE';
+  // must do ESCAPE first, immediately followed by ELSE
+  // order of others doesn't matter
+  if (run(starts.ESCAPE)) type = 'ESCAPE';
+  else if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
@@ -263,6 +267,8 @@ TemplateTag.parse = function (scannerOrString) {
   } else if (type === 'ELSE') {
     if (! run(ends.DOUBLE))
       expected('`}}`');
+  } else if (type === 'ESCAPE') {
+    tag.value = scanner.current.slice(0, -1);
   } else {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
