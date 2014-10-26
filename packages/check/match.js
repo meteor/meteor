@@ -339,7 +339,8 @@ _.extend(ArgumentChecker.prototype, {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
-      if (value === self.args[i]) {
+      // Special check for NaN, need to use underscores method for number type checking
+      if (value === self.args[i] || (_.isNaN(value) && _.isNaN(self.args[i]))) {
         self.args.splice(i, 1);
         return true;
       }

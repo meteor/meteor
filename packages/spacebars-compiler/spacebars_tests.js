@@ -164,6 +164,9 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
   run('{{foo "="}}', {type: 'DOUBLE', path: ['foo'],
                         args: [['STRING', '=']]});
 
+  run('{{| asdf', { type: 'ESCAPE', value: '{{' });
+  run('{{{| asdf', { type: 'ESCAPE', value: '{{{' });
+  run('{{{{| asdf', { type: 'ESCAPE', value: '{{{{' });
 });
 
 
