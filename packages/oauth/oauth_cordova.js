@@ -6,7 +6,7 @@
 // @param url {String} url to show
 // @param callback {Function} Callback function to call on completion. Takes no
 //   arguments.
-// @param options {optional Object(width, height)} The dimensions of
+// @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
 OAuth.showPopup = function (url, callback, dimensions) {
 
