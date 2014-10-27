@@ -117,18 +117,20 @@ var sections = [
 ];
 
 var linkPrefix = "#/basic/";
+var linkFromIdLongname = function (id, longname) {
+  if (id) {
+    return linkPrefix + id;
+  } else if (longname) {
+    return linkPrefix + longname.replace(/[#.]/g, "-");
+  }
+};
 Template.basicTableOfContents.helpers({
   sections: sections,
   linkForItem: function () {
-    var self = this;
-
-    if (self.id) {
-      return linkPrefix + self.id;
-    } else if (self.longname) {
-      return linkPrefix + self.longname.replace(/[#.]/g, "-");
-    }
+    return linkFromIdLongname(this.id, this.longname);
   },
-  linkForSection: function () {
-    return linkPrefix + this.id;
+  maybeCurrent: function () {
+    return Session.get('urlHash') === linkFromIdLongname(this.id, this.longname)
+      ? 'current' : '';
   }
 });
