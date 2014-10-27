@@ -2,7 +2,7 @@
 
 # Packages
 
-Meteor is all about splitting functionality into modular packages. In addition
+All of Meteor's functionality is implemented in modular packages. In addition
 to the core packages documented above, there are many others that you can add to
 your app to enable useful functionality.
 
