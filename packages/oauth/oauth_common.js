@@ -15,8 +15,8 @@ OAuth._redirectUri = function (serviceName, config, params, absoluteUrlOptions) 
   var isAndroid = false;
   if (params) {
     params = _.clone(params);
-    isCordova = params.isCordova;
-    isAndroid = params.isAndroid;
+    isCordova = params.cordova;
+    isAndroid = params.android;
     delete params.cordova;
     delete params.android;
     if (_.isEmpty(params)) {
