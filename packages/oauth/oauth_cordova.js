@@ -14,7 +14,9 @@ OAuth.showPopup = function (url, callback, dimensions) {
   };
 
   var pageLoaded = function (event) {
-    if (event.url.indexOf(Meteor.absoluteUrl('_oauth')) === 0) {
+    if (event.url.indexOf(Meteor.absoluteUrl('_oauth')) === 0 &&
+        // Do not close the popup during the initial OAuth1 request.
+        event.url.indexOf("requestTokenAndRedirect=true") === -1) {
       var splitUrl = event.url.split("#");
       var hashFragment = splitUrl[1];
 

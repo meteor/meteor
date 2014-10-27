@@ -8,6 +8,32 @@ OAuth._redirectUri = function (serviceName, config, params, absoluteUrlOptions) 
   // code which had the "?close" argument.
   var query = config.loginStyle ? null : "close";
 
+  // Clone because we're going to mutate 'params'. The 'cordova' and
+  // 'android' parameters are only used for picking the host of the
+  // redirect URL, and not actually included in the redirect URL itself.
+  params = _.clone(params);
+
+  var rootUrl = params.cordova ?
+        process.env.MOBILE_ROOT_URL : process.env.ROOT_URL;
+
+  if (params.cordova && params.android) {
+    // Match the replace that we do in cordova boilerplate
+    // (boilerplate-generator package).
+    // XXX Maybe we should put this in a separate package or something
+    // that is used here and by boilerplate-generator? Or maybe
+    // `Meteor.absoluteUrl` should know how to do this?
+    rootUrl = rootUrl.replace(/localhost/i, '10.0.2.2');
+  }
+
+  delete params.cordova;
+  delete params.android;
+
+  absoluteUrlOptions = _.extend({}, absoluteUrlOptions, {
+    // For Cordova clients, redirect to the special Cordova root url
+    // (likely a local IP in development mode).
+    rootUrl: rootUrl
+  });
+
   return URL._constructUrl(
     Meteor.absoluteUrl('_oauth/' + serviceName, absoluteUrlOptions),
     query,
