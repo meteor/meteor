@@ -390,3 +390,4 @@ Template.nav_section.helpers({
     return this.depth === n;
   }
 });
+
