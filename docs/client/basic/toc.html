@@ -1,27 +1,30 @@
 <template name="basicTableOfContents">
   <div class="basic-toc {{layoutHidden 'basic'}}">
-    <section>
-      <h2><a href="#/basic/quickstart">Quick Start</a></h2>
-      <h2><a href="#/basic/sevenprinciples">Principles</a></h2>
-      <h2><a href="#/basic/learning-resources">Learning Resources</a></h2>
-      <h2>Command Line Tool</h2>
-      <h2>File Structure</h2>
-      <h2>Building Mobile Apps</h2>
-    </section>
-
     {{#each sections}}
       <section>
-        <h2><a href="{{linkForItem}}"
-            class="{{maybeCurrent}}">{{title}}
-        </a></h2>
-        <p class="subtitle">{{subtitle}}</p>
-        <ul>
-          {{#each items}}
-            <li>
-              <a href="{{linkForItem}}" class="{{maybeCurrent}}">{{{name}}}</a>
-            </li>
-          {{/each}}
-        </ul>
+        {{#each subsections}}
+          <h2><a href="{{linkForItem}}"
+              class="{{maybeCurrent}}">{{title}}
+          </a></h2>
+        {{/each}}
+        {{#if title}}
+          <h2><a href="{{linkForItem}}"
+              class="{{maybeCurrent}}">{{title}}
+          </a></h2>
+        {{/if}}
+        {{#if subtitle}}
+          <p class="subtitle">{{subtitle}}</p>
+        {{/if}}
+
+        {{#if items}}
+          <ul>
+            {{#each items}}
+              <li>
+                <a href="{{linkForItem}}" class="{{maybeCurrent}}">{{{name}}}</a>
+              </li>
+            {{/each}}
+          </ul>
+        {{/if}}
       </section>
     {{/each}}
   </div>
