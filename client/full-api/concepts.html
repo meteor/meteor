@@ -88,13 +88,13 @@ treated specially by Meteor:
     the client are automatically concatenated and minified when in production
     mode. In development mode, each file is sent individually for easier
     debugging.
-    
+
     HTML files in a Meteor application are treated quite a bit differently
     from a server-side framework.  Meteor scans all the HTML files in your
     directory for three top-level elements: `<head>`, `<body>`, and
     `<template>`.  The head and body sections are separately concatenated
     into a single head and body, which are transmitted to the client on
-    initial page load.       
+    initial page load.
 
 - **server**
 
@@ -103,7 +103,7 @@ treated specially by Meteor:
     never even receives the code. Any sensitive code that you don't want served
     to the client, such as code containing passwords or authentication
     mechanisms, should be kept in the `server` directory.
-    
+
     Meteor gathers all your JavaScript files, excluding anything under the
     `client`, `public`, and `private` subdirectories, and loads them into a
     Node.js server instance.  In Meteor, your server code runs in a single
@@ -189,7 +189,7 @@ order in which files are loaded, for example by using
 their contents and their load order with respect to other packages. However
 sometimes load order dependencies in your application are unavoidable.
 
-When not using special filenames and directories: 
+When not using special filenames and directories:
 
 - Files in subdirectories are loaded before files in parent directories, so that
 files in the deepest subdirectory are loaded first, and files in the root
@@ -299,7 +299,7 @@ server patches each client's cache.
 Today most Meteor apps use MongoDB as their database because it is the
 best supported, though support for other databases is coming in the
 future. The
-[`Mongo.Collection`](http://docs.meteor.com/#mongo_collection) class
+[`Mongo.Collection`](#mongo_collection) class
 is used to declare Mongo collections and to manipulate them. Thanks to
 `minimongo`, Meteor's client-side Mongo emulator, `Mongo.Collection`
 can be used from both client and server code.
