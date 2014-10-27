@@ -22,13 +22,9 @@ html-tools@1.0.2
 htmljs@1.0.2
 http@1.0.7
 id-map@1.0.1
-iron:core@1.0.0-pre4
-iron:location@1.0.0-pre4
-iron:url@1.0.0-pre4
 jquery-waypoints@1.0.1
 jquery@1.0.1
 json@1.0.1
-launch-screen@1.0.0
 less@1.0.10
 livedata@1.0.11
 logging@1.0.4
