@@ -1,3 +1,7 @@
+release = Meteor.release ? "0.9.4" : "(checkout)";
+
+Template.registerHelper("release", release);
+
 Template.registerHelper("fullApi", function () {
   return Session.get("fullApi");
 });
@@ -6,7 +10,7 @@ Template.basicOrFullSelect.events({
   "change .basic-or-full": function (event) {
     // XXX might not work in IE9?
     // Switch to the opposite docs type
-    navigate(!Session.get("fullApi") ? "#/full/" : "#/basic/");
+    navigate("#/" + event.target.value + "/");
   }
 });
 
