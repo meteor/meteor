@@ -66,7 +66,7 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
-  var progress = buildmessage.addChildTracker("Uploading");
+  // XXX: Reintroduce progress for upload
   try {
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation +
@@ -74,16 +74,13 @@ var deployRpc = function (options) {
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
       useAuthHeader: true,
-      encoding: 'utf8', // Hack, but good enough for the deploy server..
-      progress: progress
+      encoding: 'utf8' // Hack, but good enough for the deploy server..
     }));
   } catch (e) {
     return {
       statusCode: null,
       errorMessage: "Connection error (" + e.message + ")"
     };
-  } finally {
-    progress.reportProgressDone();
   }
 
   var response = result.response;
