@@ -32,10 +32,9 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
         + '&state=' + OAuth._stateParam(loginStyle, credentialToken);
 
   if (Meteor.isCordova) {
-    loginPath = loginPath + "&cordova=" + Meteor.isCordova;
+    loginPath = loginPath + "&cordova=true";
     if (/Android/i.test(navigator.userAgent)) {
-      loginPath = loginPath +
-        "&android=" + /Android/i.test(navigator.userAgent);
+      loginPath = loginPath + "&android=true";
     }
   }
 
