@@ -421,6 +421,29 @@ pre {
     margin: 10px 0;
 }
 
+#nav {
+    h1 {
+        margin-top: 1em;
+        font-size: 1.3em;
+
+        a {
+            text-decoration: none;
+            color: black;
+
+            &:hover {
+                background: none;
+                text-decoration: underline;
+            }
+        }
+    }
+
+    .logo {
+        width: 90%;
+        margin-bottom: 10px;
+    }
+}
+
+
 .top-bar {
     position: absolute;
     background: white;
@@ -444,6 +467,15 @@ pre {
         text-align: center;
         font-size: 25px;
         padding: 0;
+        margin-top: 8px;
+
+        .logo {
+            display: inline;
+            height: 1.1em;
+            vertical-align: baseline;
+            margin-bottom: 1px;
+            margin-right: 3px;
+        }
     }
 
     .open-sidebar {
