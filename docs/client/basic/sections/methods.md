@@ -72,10 +72,15 @@ This is how you call a method.
 
 ### On the client
 
-On the client you should pass a callback and the method will run asynchronously:
-it will return nothing and instead deliver its results to the callback function.
-The callback will be called with two arguments: `error` and `result`.
+Methods called on the client run asynchronously, so you need to pass a
+callback in order to observe the result of the call. The callback will be
+called with two arguments, `error` and `result`. The `error` argument will
+be `null` unless an exception was thrown. When an exception is thrown, the
+`error` argument is `instanceof Meteor.error` and the `result` argument is
+undefined.
 
+Here's an example of calling the `commentOnPost` method with arguments
+`comment` and `postId`:
 
 ```
 // Asynchronous call with a callback on the client
@@ -83,23 +88,24 @@ Meteor.call('commentOnPost', comment, postId, function (error, result) {
   if (error) {
     // handle error
   } else {
-    // all good!
+    // examine result
   }
 });
 ```
 
-Meteor tracks the database writes performed by methods and does not invoke the
-callback until all of the server's writes have been sent to the client.
+Meteor tracks the database updates performed as part of a method call, and
+waits to invoke the client-side callback until all of those updates have
+been sent to the client.
 
 ### On the server
 
-On the server, you don't have to pass a callback - the method invocation will
-block until the method is complete. It will return the return value of the
-method or throw an exception, just like if you had called the function directly.
+On the server, you don't have to pass a callback &mdash; the method call
+will simply block until the method is complete, returning a result or
+throwing an exception, just as if you called the function directly:
 
 ```
 // Synchronous call on the server with no callback
-var result = Meteor.call('foo', comment, postId);
+var result = Meteor.call('commentOnPost', comment, postId);
 ```
 
 {{/template}}
