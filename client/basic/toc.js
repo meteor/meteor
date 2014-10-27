@@ -99,7 +99,7 @@ var sections = [
   }),
   section("Packages", {
     id: "packages",
-    subtitle: "Add extra functionality to your app with 'meteor add'",
+    subtitle: "There are thousands of Meteor packages available",
     items: [
       item("Searching for packages", {id: "searchingforpackages"}),
       item("accounts-ui", {id: "accountsui"}),

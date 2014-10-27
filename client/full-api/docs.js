@@ -1,30 +1,7 @@
 Meteor.startup(function () {
-  // mixpanel tracking
-  mixpanel.track('docs');
-
   // Make external links open in a new tab.
+  // XXX doesn't work in multipage
   $('a:not([href^="#"])').attr('target', '_blank');
-});
-
-var hideMenu = function () {
-  $('#nav').removeClass('show');
-  $('#menu-ico').removeClass('hidden');
-};
-
-Template.registerHelper("fullApi", function () {
-  return Session.get("fullApi");
-});
-
-UI.registerHelper('dstache', function() {
-  return '{{';
-});
-
-UI.registerHelper('tstache', function() {
-  return '{{{';
-});
-
-UI.registerHelper('lt', function () {
-  return '<';
 });
 
 check_links = function() {
