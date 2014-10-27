@@ -12,6 +12,7 @@ var files = require('./files.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
+var Console = require('./console.js').Console;
 
 
 // Helper that tracks bytes written to a writable
@@ -236,6 +237,7 @@ _.extend(exports, {
 
     // request is the most heavy-weight of the tool's npm dependencies; don't
     // require it until we definitely need it.
+    Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
     var req = request(options, callback);
 
