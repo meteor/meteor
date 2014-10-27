@@ -3,15 +3,14 @@
 <h2 id="tracker"><span>Tracker</span></h2>
 
 Meteor has a simple dependency tracking system which allows it to
-automatically rerun templates and other computations whenever
+automatically rerun templates and other functions whenever
 [`Session`](#session) variables, database queries, and other data
 sources change.
 
 Unlike most other systems, you don't have to manually declare these dependencies
 &mdash; it "just works." The mechanism is simple and efficient. Once you've
-initialized a computation with `Tracker.autorun`, whenever you call a function
-that supports reactive updates, `Tracker` automatically records which data were
-accessed. Later, when those data change, the computation is rerun automatically.
+initialized a computation with `Tracker.autorun`, whenever you call a Meteor function that returns data, `Tracker` automatically records which data were
+accessed. Later, when this data changes, the computation is rerun automatically.
 This is how a template knows how to re-render whenever its [helper
 functions](#template_helpers) have new data to return.
 

@@ -11,8 +11,7 @@ application in JavaScript.
 - _Database Everywhere_. You can use the same methods to access your
 database from the client or the server.
 
-- _Latency Compensation_. On the client, Meteor does prefetching and model
-simulation to make it look like server method calls return instantly.
+- _Latency Compensation_. On the client, Meteor prefetches data and simulates models to make it look like server method calls return instantly.
 
 - _Full Stack Reactivity_. In Meteor, realtime is the default. All layers, from
 database to template, update themselves automatically when necessary.

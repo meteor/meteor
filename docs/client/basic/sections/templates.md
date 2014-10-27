@@ -2,9 +2,9 @@
 
 <h2 id="templates"><span>Templates</span></h2>
 
-In Meteor, you define your views in _templates_. A template is a snippet of
-HTML that can also include special pieces of code to include data and change
-which parts of the page are displayed.
+In Meteor, views are defined in _templates_. A template is a snippet of HTML
+that can include dynamic data. You can also interact with your templates from
+JavaScript code to insert data and listen to events.
 
 <h3 class="api-title" id="defining-templates">Defining Templates in HTML</h3>
 
@@ -36,7 +36,7 @@ templates is to avoid writing the same HTML multiple times by hand.
 </template>
 ```
 
-The `{{dstache}} ... }}` syntax is part of a language called "Spacebars" that
+The `{{dstache}} ... }}` syntax is part of a language called Spacebars that
 Meteor uses to add functionality to HTML. As shown above, it lets you include
 templates in other parts of your page. Using Spacebars, you can also display
 data obtained from _helpers_. Helpers are written in JavaScript, and can be
@@ -120,10 +120,32 @@ Now, each time you use the `username` helper, the helper function above
 will be called to determine the user's name:
 
 ```
-// in your HTML
+<!-- in your HTML -->
 <template name="profilePage">
-  <p>Profile page for {{username}}</p>
+  <p>Profile page for {{dstache}}username}}</p>
 </template>
+```
+
+Helpers can also take arguments. For example, here's a helper that pluralizes
+a word:
+
+```js
+Template.post.helpers({
+  commentCount: function (numComments) {
+    if (numComments === 1) {
+      return "1 comment";
+    } else {
+      return numComments + " comments";
+    }
+  }
+});
+```
+
+Pass in arguments by putting them inside the curly braces after the name of the
+helper:
+
+```html
+<p>There are {{dstache}}commentCount 3}} comments.</p>
 ```
 
 The helpers above have all been associated with specific templates, but
@@ -139,19 +161,22 @@ to your templates.
 
 {{> autoApiBox "Template#events"}}
 
-The event map passed into `Template.myTemplate.events` has event
-descriptors as its keys and event handler functions as the values. Event
-handlers get two arguments: the event object and the template instance.
+The event map passed into `Template.myTemplate.events` has event descriptors as
+its keys and event handler functions as the values. Event handlers get two
+arguments: the event object and the template instance. Event handlers can also
+access the data context of the target element in `this`.
 
 To attach event handlers to the following template
 
 ```
 <template name="example">
-  <button class="my-button">My button</button>
-  <form>
-    <input type="text" name="myInput" />
-    <input type="submit" value="Submit Form" />
-  </form>
+  {{#with myHelper}}
+    <button class="my-button">My button</button>
+    <form>
+      <input type="text" name="myInput" />
+      <input type="submit" value="Submit Form" />
+    </form>
+  {{/with}}
 </template>
 ```
 
@@ -164,7 +189,8 @@ Template.example.events({
   },
   "submit form": function (event, template) {
     var inputValue = event.target.myInput.value;
-    alert(inputValue);
+    var helperValue = this;
+    alert(inputValue, helperValue);
   }
 });
 ```
@@ -174,7 +200,7 @@ event being captured. Pretty much any DOM event is supported. Some common
 ones are: `click`, `mousedown`, `mouseup`, `mouseenter`, `mouseleave`,
 `keydown`, `keyup`, `keypress`, `focus`, `blur`, and `change`.
 
-The second part of the key (after the first space) is a selector that
+The second part of the key (after the first space) is a CSS selector that
 indicates which elements to listen to. This can be almost any selector
 [supported by JQuery](http://api.jquery.com/category/selectors/).
 
@@ -187,7 +213,7 @@ for details.
 {{> autoApiBox "Template#rendered"}}
 
 The function assigned to this property is called once for every instance of
-*Template.myTemplate* when it is inserted into the document for the first time.
+*Template.myTemplate* when it is inserted into the page for the first time.
 
 This _rendered_ callback can be used to integrate external libraries that aren't
 familiar with Meteor's automatic view rendering, and need to be initialized
@@ -217,8 +243,8 @@ rendered HTML.
 <h2 id="template_inst"><span>Template instances</span></h2>
 
 A template instance object represents a single inclusion of a template in the
-document.  It can be used to access the DOM and it can be assigned properties
-that persist as the template is reactively updated.
+document.  It can be used to access the HTML elements inside the template and it
+can be assigned properties that persist as the template is reactively updated.
 
 Template instance objects can be found in several places:
 
@@ -237,15 +263,14 @@ to perform initialization or clean-up.
 {{> autoApiBox "Blaze.TemplateInstance#findAll"}}
 
 `template.findAll` returns an array of DOM elements matching `selector`. You can
-also use `template.$`, which works exactly like JQuery but only returns elements
-within `template`.
+also use `template.$`, which works exactly like the JQuery `$` function but only
+returns elements within `template`.
 
 {{> autoApiBox "Blaze.TemplateInstance#find"}}
 
 <!-- XXX Why is this not findOne? -->
 
-Get one DOM element matching `selector`, or `null` if there are no
-such elements. Like `findAll`, `find` only returns elements from inside the
-template.
+`find` is just like `findAll` but only returns the first element found. Like
+`findAll`, `find` only returns elements from inside the template.
 
 {{/template}}
