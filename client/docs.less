@@ -580,3 +580,29 @@ pre {
     font-size: 0.9em;
     text-decoration: underline !important;
 }
+
+@media print {
+    body {
+        font-size: 10pt;
+    }
+
+    code, pre {
+        font-size: 8pt;
+    }
+
+    #nav {
+        display: none;
+    }
+
+    .main-content {
+        position: relative;
+        height: auto;
+        margin: 0;
+        left: 0;
+        top: 0;
+    }
+
+    .top-bar {
+        display: none;
+    }
+}
