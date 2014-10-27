@@ -30,7 +30,7 @@ Meteor.startup(function () {
       $.waypoints('destroy');
 
       setTimeout(function () {
-        $('.main-content [id]').each(function (i, el) {
+        $('.main-content :not(.hidden) [id]').each(function (i, el) {
           if (! $("#nav [href='#/" + docsType + '/' + el.id + "']").get(0)) {
             // only add waypoints to things that have sidebar links
             return;
