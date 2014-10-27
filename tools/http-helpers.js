@@ -131,6 +131,27 @@ _.extend(exports, {
       delete options.bodyStream;
     }
 
+    // Body stream length for progress
+    var bodyStreamLength = 0;
+    if (_.has(options, 'bodyStream')) {
+      bodyStreamLength = options.bodyStreamLength;
+      delete options.bodyStreamLength;
+    } else {
+      // Guess the body stream length as 1MB
+      // Hopefully if it's much bigger the caller will set it
+      // If it is much small, we will pleasantly surprise the user!
+      if (bodyStream) {
+        bodyStreamLength = 1024 * 1024;
+      }
+    }
+
+    // Response length for progress
+    var responseLength = 128 * 1024;
+    if (_.has(options, 'responseLength')) {
+      responseLength = options.responseLength;
+      delete options.responseLength;
+    }
+
     var progress = null;
     if (_.has(options, 'progress')) {
       progress = options.progress;
@@ -218,13 +239,6 @@ _.extend(exports, {
     var request = require('request');
     var req = request(options, callback);
 
-    var bodyStreamLength = 0;
-    if (bodyStream) {
-      // XXX Horrible hack... we need the correct length estimate
-      bodyStreamLength += 8000000;
-    }
-    // XXX A default non-zero resposne size; if much bigger we should provide an estimate
-    var responseLength = 128 * 1024;
 
     var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
 

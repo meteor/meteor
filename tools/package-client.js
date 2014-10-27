@@ -284,7 +284,8 @@ var uploadTarball = function (putUrl, tarball) {
         'content-type': 'application/octet-stream',
         'x-amz-acl': 'public-read'
       },
-      bodyStream: rs
+      bodyStream: rs,
+      bodyStreamLength: size
     });
   } finally {
     rs.close();
