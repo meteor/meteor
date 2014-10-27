@@ -11,7 +11,7 @@ are called `documents`.  To get started, declare a collection with
 Calling the `Mongo.Collection` constructor creates a collection object
 which acts just like a MongoDB collection. If you pass a name when you
 create the collection, then you are declaring a persistent collection
-&mdash; one that is stored on the server and seen by all users.
+&mdash; one that is stored on the server and can be published to clients.
 
 To allow both client code and server code to access the same collection
 using the same API, it's usually best to declare collections as global
@@ -105,9 +105,9 @@ or a [`Tracker.autorun`](#tracker_autorun) callback, it will automatically
 rerender the view or rerun the computation if the returned document
 changes.
 
-Note that `findOne` will return `null` if it fails to find a matching
-document, which often happens after the document has been removed from the
-collection, so you should be prepared to handle `null` values.
+Note that `findOne` will return `null` if it fails to find a matching document,
+which often happens if the document hasn't been loaded yet or has been removed
+from the collection, so you should be prepared to handle `null` values.
 
 {{> autoApiBox "Mongo.Collection#find"}}
 
