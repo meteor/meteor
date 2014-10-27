@@ -1,12 +1,13 @@
 {{#template name="basicPackages"}}
 
-# Packages
+<h2 id="packages"><span>Packages</span></h2>
 
 All of Meteor's functionality is implemented in modular packages. In addition
 to the core packages documented above, there are many others that you can add to
 your app to enable useful functionality.
 
-Add or remove packages with `meteor add` and `meteor remove`:
+From the command line, you can add and remove packages with `meteor add`
+and `meteor remove`:
 
 ```bash
 # add the less package
@@ -16,23 +17,26 @@ meteor add less
 meteor remove less
 ```
 
-Your app will restart itself automatically when you add or remove a package.
-Every app's package dependencies are tracked in `.meteor/packages`, so all of
-your collaborators will also get the package when they pull your source code.
+Your app will restart itself automatically when you add or remove a
+package.  An app's package dependencies are tracked in `.meteor/packages`,
+so your collaborators will be automatically updated to the same set of
+installed packages as you after they pull your source code, because they
+have the same `.meteor/packages` file as you.
 
-See which packages are used by your app with `meteor list`.
+You can see which packages are used by your app by running `meteor list`
+in the app's directory.
 
 ## Searching for packages
 
-Currently the best way to search for packages available on the official Meteor
-package server is [Atmosphere](https://atmospherejs.com/), the community package
-search website maintained by Percolate Studio. You can also search for packages
-directly using the `meteor search` command.
+Currently the best way to search for packages available from the official
+Meteor package server is [Atmosphere](https://atmospherejs.com/), the
+community package search website maintained by Percolate Studio. You can
+also search for packages directly using the `meteor search` command.
 
 Packages that have a `:` in the name, such as `mquandalle:jade`, are written and
 maintained by community members. The prefix before the colon is the name of the
 user or organization who created that package. Unprefixed packages are
-maintained by Meteor Development Group alongside the Meteor framework.
+maintained by Meteor Development Group as part of the Meteor framework.
 
 There are currently over 2000 packages available on Atmosphere. Below is a small
 selection of some of the most useful packages.
@@ -79,14 +83,16 @@ the same API. See the [http docs](#/full/http) to see how to use it.
 
 ## less
 
-Use the [LESS](http://lesscss.org/) CSS pre-processor in your app. With this
-package, `.less` files are automatically compiled into CSS. If you want to use
-`@import` to include other files and not have Meteor automatically compile them,
-use the `.import.less` extension.
+Add the [LESS](http://lesscss.org/) CSS preprocessor to your app to
+compile any files with a `.less` extension into standard CSS. If you want
+to use `@import` to include other files and not have Meteor automatically
+compile them, use the `.import.less` extension.
 
 ## markdown
 
-Include [Markdown](http://daringfireball.net/projects/markdown/syntax) code in your templates. It's as easy as using the `{{dstache}}# markdown}}` helper:
+Include [Markdown](http://daringfireball.net/projects/markdown/syntax)
+code in your templates. It's as easy as using the `{{dstache}}#
+markdown}}` helper:
 
 ```html
 <div class="my-div">
