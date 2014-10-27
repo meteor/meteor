@@ -38,7 +38,7 @@ OAuth.showPopup = function (url, callback, dimensions) {
 
       HTTP.get(newUrl, function (err, result) {
         if (err) {
-          Meteor._debug("Error retrieve OAuth secret in OAuth popup: " +
+          Meteor._debug("Error retrieving OAuth secret in OAuth popup: " +
                         JSON.stringify(err));
         } else if (result && result.statusCode === 200 && result.content) {
           callback(result.content);
