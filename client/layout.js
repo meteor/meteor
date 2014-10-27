@@ -1,3 +1,7 @@
+Template.registerHelper("layoutHidden", function (type) {
+  return (!!Session.get('fullApi')) ^ (type === 'full') ? 'hidden' : '';
+});
+
 Template.basicOrFullSelect.events({
   "change .basic-or-full": function (event) {
     // XXX might not work in IE9?
