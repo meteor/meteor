@@ -381,7 +381,7 @@ Template.nav.helpers({
   },
 
   maybe_current: function () {
-    return Session.equals("section", this.id) ? "current" : "";
+    return Iron.Location.get().hash.split('/')[2] === this.id;
   }
 });
 
