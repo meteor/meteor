@@ -29,6 +29,8 @@ Meteor.startup(function () {
     Tracker.afterFlush(function () {
       $.waypoints('destroy');
 
+      // XXX this timeout is a temporary hack to yield more before setting the
+      // waypoints.
       setTimeout(function () {
         $('.main-content :not(.hidden) [id]').each(function (i, el) {
           if (! $("#nav [href='#/" + docsType + '/' + el.id + "']").get(0)) {
@@ -89,7 +91,7 @@ Tracker.autorun(function () {
 
       if (! id) {
         // will scroll to the very top
-        id = "main";
+        id = "top";
       }
 
       // XXX this selector is tied to the structure of the document so tightly
