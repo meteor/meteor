@@ -19,6 +19,28 @@ var item = function (name, options) {
 };
 
 var sections = [
+  section("", {
+    subsections: [
+      section("Quick Start", {
+        id: "quickstart"
+      }),
+      section("Principles", {
+        id: "sevenprinciples"
+      }),
+      section("Learning Resources", {
+        id: "learning-resources"
+      }),
+      section("Command Line Tool", {
+        id: "cli-tools"
+      }),
+      section("File Structure", {
+        id: "file-structure"
+      }),
+      section("Building Mobile Apps", {
+        id: "building-mobile"
+      })
+    ]
+  }),
   section("Templates", {
     id: "templates",
     subtitle: "Create views that update automatically when data changes",
