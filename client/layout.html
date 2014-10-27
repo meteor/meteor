@@ -17,11 +17,12 @@
     <div class="main-content">
       <div id="main">
         <div id="top"></div>
-        {{#if fullApi}}
+        <div class="{{layoutHidden 'full'}}">
           {{> fullApiContent}}
-        {{else}}
+        </div>
+        <div class="{{layoutHidden 'basic'}}">
           {{> basicContent}}
-        {{/if}}
+        </div>
       </div>
     </div>
   </div>
@@ -38,18 +39,15 @@
 
     {{> basicOrFullSelect}}
 
-    {{#if fullApi}}
-      {{> tableOfContents}}
-    {{else}}
-      {{> basicTableOfContents}}
-    {{/if}}
+    {{> tableOfContents}}
+    {{> basicTableOfContents}}
   </div>
 </template>
 
 <template name="topBar">
   <div class="top-bar">
     <div class="open-sidebar">&#9776;</div>
-    <h1> 
+    <h1>
       <img src="/logo.png" class="logo" alt="Meteor" /> 1.0 Docs
     </h1>
   </div>
