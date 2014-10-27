@@ -24,8 +24,9 @@ OAuth._redirectUri = function (serviceName, config, params, absoluteUrlOptions) 
     }
   }
 
+  var rootUrl;
   if (Meteor.isServer && isCordova) {
-    var rootUrl = process.env.MOBILE_ROOT_URL ||
+    rootUrl = process.env.MOBILE_ROOT_URL ||
           __meteor_runtime_config__.ROOT_URL;
 
     if (isAndroid) {
@@ -36,7 +37,18 @@ OAuth._redirectUri = function (serviceName, config, params, absoluteUrlOptions) 
       // `Meteor.absoluteUrl` should know how to do this?
       rootUrl = rootUrl.replace(/localhost/i, '10.0.2.2');
     }
+  }
 
+  if (Meteor.isCordova) {
+    // Confusingly, we do the opposite replacement here. If we are on
+    // Android, and running in development mode, we want to make sure to
+    // specify the redirect URI that is registered with the Facebook
+    // app, not the rewritten 10.0.2.2 URL that we use to talk to the
+    // development server.
+    rootUrl = Meteor.absoluteUrl().replace(/10\.0\.2\.2/, "localhost");
+  }
+
+  if (rootUrl) {
     absoluteUrlOptions = _.extend({}, absoluteUrlOptions, {
       // For Cordova clients, redirect to the special Cordova root url
       // (likely a local IP in development mode).
