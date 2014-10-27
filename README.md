@@ -30,6 +30,9 @@ experience, using templating, transparent reactivity, and
 interoperability with existing libraries to create a gentle learning
 curve while enabling you to build world-class apps.
 
+Read more on the Blaze [project page](http://www.meteor.com/blaze).
+
+
 # Resources
 
 * [Templates API](http://docs.meteor.com/#templates_api)
