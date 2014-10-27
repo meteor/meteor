@@ -94,12 +94,12 @@ var sections = [
     items: [
       item("Meteor.isClient"),
       item("Meteor.isServer"),
-      item("meteor.startup")
+      item("Meteor.startup")
     ]
   }),
   section("Packages", {
     id: "packages",
-    subtitle: "There are thousands of Meteor packages available",
+    subtitle: "Choose from thousands of community packages",
     items: [
       item("Searching for packages", {id: "searchingforpackages"}),
       item("accounts-ui", {id: "accountsui"}),
