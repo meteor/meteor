@@ -28,16 +28,19 @@ Meteor.startup(function () {
     var docsType = Session.get("fullApi") ? "full" : "basic";
     Tracker.afterFlush(function () {
       $.waypoints('destroy');
-      $('.main-content [id]').each(function (i, el) {
-        if (! $("#nav [href='#/" + docsType + '/' + el.id + "']").get(0)) {
-          // only add waypoints to things that have sidebar links
-          return;
-        }
 
-        $(el).waypoint(function() {
-          updateUrlFromWaypoint(this);
-        }, { context: $('.main-content') });
-      });
+      setTimeout(function () {
+        $('.main-content [id]').each(function (i, el) {
+          if (! $("#nav [href='#/" + docsType + '/' + el.id + "']").get(0)) {
+            // only add waypoints to things that have sidebar links
+            return;
+          }
+
+          $(el).waypoint(function() {
+            updateUrlFromWaypoint(this);
+          }, { context: $('.main-content') });
+        });
+      }, 0);
     });
   });
 });
