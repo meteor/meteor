@@ -40,7 +40,7 @@ Meteor.startup(function () {
 
           $(el).waypoint(function() {
             updateUrlFromWaypoint(this);
-          }, { context: $('.main-content') });
+          }, { context: $('.main-content'), offset: 50 });
         });
       }, 0);
     });
@@ -86,7 +86,6 @@ Tracker.autorun(function () {
   Tracker.afterFlush(function () {
     setTimeout(function () {
       var targetLocation;
-
       var id = current.split('/')[2];
 
       if (! id) {
