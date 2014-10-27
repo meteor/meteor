@@ -2,47 +2,45 @@
 
 <h2 id="pubsub"><span>Publish and subscribe</span></h2>
 
-Meteor servers can publish sets of documents with `Meteor.publish` and clients
-can subscribe to those publications with `Meteor.subscribe`. Any data the
-client subscribes to will be available through `find` on client collections.
+Meteor servers can publish sets of documents with `Meteor.publish`, and
+clients can subscribe to those publications with `Meteor.subscribe`. Any
+documents the client subscribes to will be available through the `find`
+method of client collections.
 
-Every newly created Meteor app contains the `autopublish` function, which
-automatically publishes all of the data available on the server. To get more
-fine-grained control over what the client gets, remove `autopublish`:
+By default, every newly created Meteor app contains the `autopublish`
+package, which automatically publishes all available documents to every
+client. To exercise finer-grained control over what documents different
+clients receive, first remove `autopublish`:
 
 ```
 $ meteor remove autopublish
 ```
 
-Then, you can use `Meteor.publish` and `Meteor.subscribe` to control what
-data flows from the server to the client.
+Now you can use `Meteor.publish` and `Meteor.subscribe` to control what
+documents flow from the server to its clients.
 
 {{> autoApiBox "Meteor.publish"}}
 
-To publish data to clients, call `Meteor.publish` on the server with
-two parameters: the name of the record set, and a *publish function*
-that Meteor will call each time a client subscribes to this name.
+To publish data to clients, call `Meteor.publish` on the server with two
+arguments: the name of the record set, and a *publish function* that will
+be called each time a client subscribes to this record set.
 
-Publish functions can return the result of `collection.find`, in which case
-Meteor will publish that query's documents to each subscribed client. You can
-also return an array of queries, in which case Meteor will publish all of the
-relevant documents.
-
-Inside a publish function, `this.userId` is the current user's _id. When the
-logged in user changes, the publish function will automatically rerun with
-the new userId. This feature can be used for security and access control -
-use `this.userId` to make sure that users never get documents they shouldn't
-be seeing, like another user's private messages.
+Publish functions typically return the result of calling
+`collection.find(query)` on some `collection` with a `query` that narrows
+down the set of documents to publish from that collection:
 
 ```
-// On the server
-
 // Publish the logged in user's posts
 Meteor.publish("posts", function () {
   return Posts.find({ createdBy: this.userId });
 });
+```
 
-// Publish a post and its comments
+You can publish documents from multiple collections by returning an array
+of `collection.find` results:
+
+```
+// Publish a single post and its comments
 Meteor.publish("postAndComments", function (postId) {
   // Check argument
   check(postId, String);
@@ -54,17 +52,26 @@ Meteor.publish("postAndComments", function (postId) {
 });
 ```
 
+Inside the publish function, `this.userId` is the current logged-in user's
+`_id`, which can be useful for filtering collections so that certain
+documents are visible only to certain users. If the logged-in user changes
+for a particular client, the publish function will be automatically rerun
+with the new `userId`, so the new user will not have access to any
+documents that were meant only for the previous user.
+
 {{> autoApiBox "Meteor.subscribe"}}
 
-The client asks the server for data by using Meteor.subscribe. You can
-access any data you have subscribed to by using [`collection.find`](#find) on
-the client. Whenever data contained in a subsription is changed on the server,
-the changes are automatically pushed to the client.
+Clients call `Meteor.subscribe` to express interest in document
+collections published by the server. Clients can further filter these
+collections of documents by calling [`collection.find(query)`](#find).
+Whenever any data that was accessed by a publish function changes on the
+server, the publish function is automatically rerun and the updated
+document collections are pushed to the subscribed client.
 
 The `onReady` callback is called with no arguments when the server has sent all
 of the initial data for the subsription. The `onError` callback is called with a
 [`Meteor.Error`](#meteor_error) if the subscription fails or is terminated by
-the server.
+the server. <!-- XXX It would be better to have one Node-style callback -->
 
 `Meteor.subscribe` returns a subscription handle, which is an object with the
 following methods:
@@ -76,13 +83,13 @@ client to remove the subscription's data from the client's cache.
 {{/dtdd}}
 
 {{#dtdd "ready()"}}
-True if the server has [marked the subscription as ready](#publish_ready). A
-reactive data source.
+Returns true if the server has [marked the subscription as
+ready](#publish_ready). A reactive data source.
 {{/dtdd}}
 </dl>
 
 If you call `Meteor.subscribe` inside [`Tracker.autorun`](#tracker_autorun), the
-subscription will automatically be cancelled when the computation reruns,
+subscription will automatically be cancelled when the computation is stopped,
 meaning you don't have to to call `stop` on subscriptions made from inside
-`autorun`.
+`Tracker.autorun`.
 {{/template}}
