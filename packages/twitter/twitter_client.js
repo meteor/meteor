@@ -28,11 +28,18 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
 
   // url to app, enters "step 1" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
-  var loginUrl = Meteor.absoluteUrl(
-    '_oauth/twitter/?requestTokenAndRedirect=true'
-      + '&state=' + OAuth._stateParam(loginStyle, credentialToken)
-      + '&cordova=' + Meteor.isCordova
-      + '&android=' + /Android/i.test(navigator.userAgent));
+  var loginPath = '_oauth/twitter/?requestTokenAndRedirect=true'
+        + '&state=' + OAuth._stateParam(loginStyle, credentialToken);
+
+  if (Meteor.isCordova) {
+    loginPath = loginPath + "&cordova=" + Meteor.isCordova;
+    if (/Android/i.test(navigator.userAgent)) {
+      loginPath = loginPath +
+        "&android=" + /Android/i.test(navigator.userAgent);
+    }
+  }
+
+  var loginUrl = Meteor.absoluteUrl(loginPath);
 
   OAuth.launchLogin({
     loginService: "twitter",
