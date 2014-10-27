@@ -31,7 +31,7 @@ var sections = [
         id: "learning-resources"
       }),
       section("Command Line Tool", {
-        id: "cli-tools"
+        id: "command-line"
       }),
       section("File Structure", {
         id: "file-structure"
