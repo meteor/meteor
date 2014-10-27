@@ -39,7 +39,7 @@ templates is to avoid writing the same HTML multiple times by hand.
 The `{{dstache}} ... }}` syntax is part of a language called "Spacebars" that
 Meteor uses to add functionality to HTML. As shown above, it lets you include
 templates in other parts of your page. Using Spacebars, you can also display
-data obtained from _helpers_. Helpers are written in JavaSript, and can be
+data obtained from _helpers_. Helpers are written in JavaScript, and can be
 either simple values or functions.
 
 {{> autoApiBox "Template#helpers"}}
@@ -116,8 +116,8 @@ Template.profilePage.helpers({
 });
 ```
 
-Now, each time use the `username` helper, the helper function will be
-called to determine the user's name:
+Now, each time you use the `username` helper, the helper function above
+will be called to determine the user's name:
 
 ```
 // in your HTML
@@ -182,6 +182,7 @@ Whenever the indicated event happens on the selected element, the
 corresponding event handler function will be called with the relevant DOM
 event object and template instance. See the [Event Maps section](#eventmaps)
 for details.
+<!-- TODO Update the link to full docs for Event Maps -->
 
 {{> autoApiBox "Template#rendered"}}
 
