@@ -381,7 +381,7 @@ Template.nav.helpers({
   },
 
   maybe_current: function () {
-    return Iron.Location.get().hash.split('/')[2] === this.id;
+    return Session.get('urlHash').split('/')[2] === this.id;
   }
 });
 
