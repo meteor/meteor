@@ -10,7 +10,7 @@
 //   the popup. If not passed defaults to something sane.
 OAuth.showPopup = function (url, callback, dimensions) {
   var fail = function (err) {
-    Meteor._debug("Error from OAuth popup:", err);
+    Meteor._debug("Error from OAuth popup: " + JSON.stringify(err));
   };
 
   var pageLoaded = function (event) {
