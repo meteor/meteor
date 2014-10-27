@@ -1,5 +1,3 @@
-release = Meteor.release ? "0.9.4" : "(checkout)";
-
 Meteor.startup(function () {
   // mixpanel tracking
   mixpanel.track('docs');
