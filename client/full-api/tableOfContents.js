@@ -381,7 +381,7 @@ Template.nav.helpers({
   },
 
   maybe_current: function () {
-    return Session.get('urlHash').split('/')[2] === this.id;
+    return Session.get('urlHash').split('/')[2] === this.id ? 'current' : '';
   }
 });
 
