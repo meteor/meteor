@@ -9,8 +9,8 @@ Package.onUse(function (api) {
   api.use('routepolicy', 'server');
   api.use('underscore', 'server');
   api.use('autoupdate', 'server', {weak: true});
-  api.addFiles('appcache-client.js', 'client');
-  api.addFiles('appcache-server.js', 'server');
+  api.addFiles('appcache_client.js', 'client');
+  api.addFiles('appcache_server.js', 'server');
 });
 
 Package.onTest(function (api) {
@@ -19,6 +19,6 @@ Package.onTest(function (api) {
   api.use('http', 'client');
   api.use('underscore', 'client');
   api.use('webapp', 'server');
-  api.addFiles('appcache_tests-server.js', 'server');
-  api.addFiles('appcache_tests-client.js', 'client');
+  api.addFiles('appcache_tests_server.js', 'server');
+  api.addFiles('appcache_tests_client.js', 'client');
 });
