@@ -6,11 +6,50 @@
 // @param url {String} url to show
 // @param callback {Function} Callback function to call on completion. Takes no
 //   arguments.
-// @param dimensions {optional Object(width, height)} The dimensions of
+// @param options {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
 OAuth.showPopup = function (url, callback, dimensions) {
+
+  var popup;
+
+  var open = function (url) {
+    popup = window.open(url, '_blank', 'location=yes,hidden=yes');
+    popup.addEventListener('loadstop', pageLoaded);
+    popup.addEventListener('loaderror', fail);
+    popup.addEventListener('exit', onExit);
+    popup.show();
+  };
+
   var fail = function (err) {
-    Meteor._debug("Error from OAuth popup:", err);
+    if (err.type === "loaderror" && err.url &&
+        Package["oauth-debug-only"] &&
+        err.url.indexOf("http://localhost") === 0) {
+      var anchor = document.createElement("a");
+      anchor.href = err.url;
+      var urlPath = anchor.pathname;
+      if (urlPath.charAt(0) === "/") {
+        urlPath = urlPath.substring(1);
+      }
+      var urlSearch = anchor.search + "?";
+      urlSearch = urlSearch + "&only_credential_secret_for_test=1";
+
+      var newUrl = Meteor.absoluteUrl(urlPath + urlSearch);
+      popup.close();
+
+      HTTP.get(newUrl, function (err, result) {
+        if (err) {
+          Meteor._debug("Error retrieve OAuth secret in OAuth popup: " +
+                        JSON.stringify(err));
+        } else if (result && result.statusCode === 200 && result.content) {
+          callback(result.content);
+        } else {
+          Meteor._debug("Could not retrieve OAuth secret in OAuth popup: " +
+                        result.statusCode);
+        }
+      });
+    } else {
+      Meteor._debug("Error from OAuth popup: " + JSON.stringify(err));
+    }
   };
 
   var pageLoaded = function (event) {
@@ -47,10 +86,5 @@ OAuth.showPopup = function (url, callback, dimensions) {
     popup.removeEventListener('exit', onExit);
   };
 
-  var popup = window.open(url, '_blank', 'location=yes,hidden=yes');
-  popup.addEventListener('loadstop', pageLoaded);
-  popup.addEventListener('loaderror', fail);
-  popup.addEventListener('exit', onExit);
-  popup.show();
-
+  open(url);
 };

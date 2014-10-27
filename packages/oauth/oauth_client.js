@@ -115,7 +115,13 @@ OAuth.launchLogin = function (options) {
   if (options.loginStyle === 'popup') {
     OAuth.showPopup(
       options.loginUrl,
-      _.bind(options.credentialRequestCompleteCallback, null, options.credentialToken),
+      function (credentialSecret) {
+        if (Meteor.isCordova && credentialSecret) {
+          OAuth._handleCredentialSecret(options.credentialToken,
+                                        credentialSecret);
+        }
+        options.credentialRequestCompleteCallback(options.credentialToken);
+      },
       options.popupOptions);
   } else if (options.loginStyle === 'redirect') {
     OAuth.saveDataForRedirect(options.loginService, options.credentialToken);

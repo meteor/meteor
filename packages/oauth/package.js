@@ -14,6 +14,9 @@ Package.on_use(function (api) {
 
   api.use('oauth-encryption', 'server', {weak: true});
 
+  api.use("oauth-debug-only", "web.cordova");
+  api.use("http", "web.cordova");
+
   api.use('localstorage');
   api.use('url');
 

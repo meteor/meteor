@@ -259,7 +259,10 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
   // real name and serve the credential secret in JSON.
 
   if (query.only_credential_secret_for_test) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.writeHead(200, {
+      'Content-Type': 'text/html',
+      'access-control-allow-origin': 'http://meteor.local'
+    });
     res.end(credentialSecret, 'utf-8');
   } else {
     var details = {
