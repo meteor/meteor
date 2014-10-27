@@ -30,7 +30,7 @@ OAuth.showPopup = function (url, callback, dimensions) {
       if (urlPath.charAt(0) === "/") {
         urlPath = urlPath.substring(1);
       }
-      var urlSearch = anchor.search + "?";
+      var urlSearch = anchor.search || "?";
       urlSearch = urlSearch + "&only_credential_secret_for_test=1";
 
       var newUrl = Meteor.absoluteUrl(urlPath + urlSearch);
