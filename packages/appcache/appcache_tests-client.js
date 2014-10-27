@@ -110,13 +110,13 @@ appcacheTest('sections validity', function (test, manifest) {
 });
 
 
-// Verify that resources declared on the server with the `onlineOnly` parameter
-// are present in the network section of the manifest. The `appcache` package
-// also automatically add the manifest (`app.manifest`) add the star symbol to
-// this list and therefore we also check the presence of these two elements.
+// Verify that resources declared on the server with the `onlineOnly`
+// parameter are present in the network section of the manifest. The
+// `appcache` package also automatically adds the star symbol to this
+// list and therefore we also check the presence of these two
+// elements.
 appcacheTest('network section content', function (test, manifest) {
   var shouldBePresentInNetworkSection = [
-    "/app.manifest",
     "/online/",
     "/bigimage.jpg",
     "/largedata.json",
