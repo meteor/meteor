@@ -11,11 +11,15 @@
 
     {{#each sections}}
       <section>
-        <h2><a href="{{linkForSection}}">{{title}}</a></h2>
+        <h2><a href="{{linkForItem}}"
+            class="{{maybeCurrent}}">{{title}}
+        </a></h2>
         <p class="subtitle">{{subtitle}}</p>
         <ul>
           {{#each items}}
-            <li><a href="{{linkForItem}}">{{{name}}}</a></li>
+            <li>
+              <a href="{{linkForItem}}" class="{{maybeCurrent}}">{{{name}}}</a>
+            </li>
           {{/each}}
         </ul>
       </section>
