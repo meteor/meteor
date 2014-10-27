@@ -218,8 +218,8 @@ The function assigned to this property is called once for every instance of
 This _rendered_ callback can be used to integrate external libraries that aren't
 familiar with Meteor's automatic view rendering, and need to be initialized
 every time HTML is inserted into the page. Use the
-[`created`](http://docs.meteor.com/#template_created) and
-[`destroyed`](http://docs.meteor.com/#template_destroyed) callbacks to perform
+[`created`](#template_created) and
+[`destroyed`](#template_destroyed) callbacks to perform
 initialization or clean-up on any objects.
 
 For example, to use the HighlightJS library to apply code highlighting to
