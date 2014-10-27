@@ -101,15 +101,17 @@ var sections = [
     id: "packages",
     subtitle: "Add extra functionality to your app with 'meteor add'",
     items: [
-      item("Searching on Atmosphere", {id: "using-atmosphere"}),
-      item("accounts-ui"),
+      item("Searching for packages", {id: "searchingforpackages"}),
+      item("accounts-ui", {id: "accountsui"}),
       item("coffeescript"),
+      item("email"),
       item("jade"),
       item("jquery"),
       item("http"),
       item("less"),
       item("markdown"),
-      item("underscore")
+      item("underscore"),
+      item("spiderable")
     ]
   })
 ];
