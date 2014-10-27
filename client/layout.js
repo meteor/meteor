@@ -5,7 +5,8 @@ Template.registerHelper("fullApi", function () {
 Template.basicOrFullSelect.events({
   "change .basic-or-full": function (event) {
     // XXX might not work in IE9?
-    window.location.replace(Session.equals("fullApi", true) ? "#/full/" : "#/basic/");
+    // Switch to the opposite docs type
+    navigate(!Session.get("fullApi") ? "#/full/" : "#/basic/");
   }
 });
 

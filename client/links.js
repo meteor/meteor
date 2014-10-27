@@ -5,6 +5,11 @@ var deHash = function (hashString) {
   return hashString.slice(1);
 };
 
+Session.setDefault('urlHash', location.hash);
+$(window).on('hashchange', function () {
+  Session.set('urlHash', location.hash);
+});
+
 // need an actual function to only debounce inside the if statement
 var actuallyUpdateUrl = _.debounce(function (el) {
   var docsType = Session.get("fullApi") ? "full" : "basic";
@@ -39,7 +44,7 @@ Meteor.startup(function () {
 
 Tracker.autorun(function () {
   // returns a "location" like object with all of the url parts
-  var current = Iron.Location.get();
+  var current = Session.get('urlHash');
 
   // If the URL changes from a waypoint, do nothing
   if (ignoreUrlChange) {
@@ -51,24 +56,24 @@ Tracker.autorun(function () {
   Session.set("sidebarOpen", false);
 
   // redirect routes with no trailing slash
-  if (current.hash === "#/basic") {
-    window.location.replace("#/basic/");
+  if (current === "#/basic") {
+    navigate("#/basic/");
     return;
-  } else if (current.hash === "#/full") {
-    window.location.replace("#/full/");
+  } else if (current === "#/full") {
+    navigate("#/full/");
     return;
   }
 
-  if (current.hash.match(/^#\/basic\//)) {
+  if (current.match(/^#\/basic\//)) {
     Session.set("fullApi", false);
-  } else if (current.hash.match(/^#\/full\//)) {
+  } else if (current.match(/^#\/full\//)) {
     Session.set("fullApi", true);
   } else {
-    if (current.hash) {
+    if (current) {
       // XXX COMPAT WITH old docs
-      window.location.replace("#/full/" + deHash(current.hash));
+      navigate("#/full/" + deHash(current));
     } else {
-      window.location.replace("#/basic/");
+      navigate("#/basic/");
     }
     return;
   }
@@ -77,7 +82,7 @@ Tracker.autorun(function () {
     setTimeout(function () {
       var targetLocation;
 
-      var id = current.hash.split('/')[2];
+      var id = current.split('/')[2];
 
       if (! id) {
         // will scroll to the very top
