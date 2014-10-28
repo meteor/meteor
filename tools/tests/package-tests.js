@@ -25,7 +25,7 @@ var password = "testtest";
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
 //    version explicitly. This is for packages that we included at a specific
 //    version.
-var checkPackages = function(sand, packages) {
+var checkPackages = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/packages").split("\n");
   var i = 0;
   _.each(lines, function(line) {
@@ -41,7 +41,7 @@ var checkPackages = function(sand, packages) {
     i++;
   });
   selftest.expectEqual(packages.length, i);
-};
+});
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and check that it contains the packages that we are looking for. We don't
@@ -60,7 +60,7 @@ var checkPackages = function(sand, packages) {
 //    version explicitly. This is for packages that only exist for the purpose
 //    of this test (for example, packages local to this app), so we know exactly
 //    what version we expect.
-var checkVersions = function(sand, packages) {
+var checkVersions = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/versions").split("\n");
   var depend = {};
   _.each(lines, function(line) {
@@ -83,7 +83,7 @@ var checkVersions = function(sand, packages) {
     i++;
   });
   selftest.expectEqual(packages.length, i);
-};
+});
 
 // Takes in a remote catalog. Returns an object that can sort of immitate the
 // catalog. We don't bother to copy all of the information for memory/efficiency
@@ -212,6 +212,11 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("foobar!");
   run.match("restarted");
 
+  // Check that we are watching the versions file, as well as the packages file.
+  s.unlink('.meteor/versions');
+  run.waitSecs(10);
+  run.match("restarted");
+
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   s.cp('programs/empty/package2.js', 'programs/empty/package.js');
@@ -313,7 +318,7 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
-  run.match("Removed top-level dependency on say-something.");
+  run.match("say-something: removed dependency");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "meteor-platform",
@@ -322,7 +327,7 @@ selftest.define("add packages to app", ["net"], function () {
   run = s.run("remove", "depends-on-plugin");
   run.match("removed contains-plugin");
   run.match("removed depends-on-plugin");
-  run.match("Removed top-level dependency on depends-on-plugin.");
+  run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
                 ["accounts-base",
@@ -422,7 +427,7 @@ var cleanLocalCache = function () {
   }
 };
 
-var publishMostBasicPackage = function (s, fullPackageName) {
+var publishMostBasicPackage = selftest.markStack(function (s, fullPackageName) {
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
   run.expectExit(0);
@@ -434,9 +439,9 @@ var publishMostBasicPackage = function (s, fullPackageName) {
     run.expectExit(0);
     run.match("Done");
   });
-};
+});
 
-var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
+var publishReleaseInNewTrack = selftest.markStack(function (s, releaseTrack, tool, packages) {
   var relConf = {
     track: releaseTrack,
     version: "0.9",
@@ -450,11 +455,15 @@ var publishReleaseInNewTrack = function (s, releaseTrack, tool, packages) {
   run.waitSecs(15);
   run.match("Done");
   run.expectExit(0);
-};
+});
 
 // Add packages through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
 selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  function () {
+  selftest.fail("this test is broken and breaks other tests by deleting their catalog.");
+  return;
+
+
   var s = new Sandbox();
   var run;
 
@@ -549,7 +558,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
 
 // `packageName` should be a full package name (i.e. <username>:<package
 // name>), and the sandbox should be logged in as that username.
-var createAndPublishPackage = function (s, packageName) {
+var createAndPublishPackage = selftest.markStack(function (s, packageName) {
   var run = s.run("create", "--package", packageName);
   run.waitSecs(20);
   run.expectExit(0);
@@ -558,7 +567,7 @@ var createAndPublishPackage = function (s, packageName) {
     run.waitSecs(25);
     run.expectExit(0);
   });
-};
+});
 
 selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {
@@ -680,7 +689,7 @@ selftest.define("update server package data unit test",
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("package with --name",
+selftest.define("package specifying a name",
     ['test-package-server', "checkout"], function () {
   var s = new Sandbox();
   var run;
@@ -690,7 +699,7 @@ selftest.define("package with --name",
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run("add", "accounts-base");
-  run.waitSecs(15);
+  run.waitSecs(40);
   run.match("accounts-base");
 
   run = s.run();
@@ -698,9 +707,7 @@ selftest.define("package with --name",
   run.match("myapp");
   run.match("proxy");
   run.match("MongoDB.\n");
-  run.waitSecs(5);
-  run.read("=> Starting your app");
-  run.waitSecs(5);
+  run.waitSecs(10);
   run.match("running at");
   run.match("localhost");
 
@@ -863,4 +870,89 @@ selftest.define("packages with organizations",
 
   testUtils.login(s, "testtest", "testtest");
   changeVersionAndPublish(s, true /* expect authorization failure */);
+});
+
+selftest.define("add package with no builds", ["net", "test-package-server"], function () {
+  var s = new Sandbox();
+  testUtils.login(s, "test", "testtest");
+  var packageName = utils.randomToken();
+  var fullPackageName = "test:" + packageName;
+
+  // Create and publish a package with a binary dependency.
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+
+  s.cd(fullPackageName, function () {
+    // Add a binary dependency.
+    var packageJs = s.read("package.js");
+    // XXX HACK: prepend Npm.depends to the first 'api.addFiles'
+    packageJs = packageJs.replace(
+      "api.addFiles",
+      "Npm.depends({ bcrypt: '0.7.7' });\n  api.addFiles"
+    );
+
+    s.write("package.js", packageJs);
+
+    run = s.run("publish", "--create");
+    run.waitSecs(60);
+    run.expectExit(0);
+  });
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+
+  run = s.run("add", fullPackageName);
+  run.waitSecs(30);
+  run.matchErr("Package " + fullPackageName +
+               " has no compatible build");
+  run.expectExit(1);
+
+  testUtils.logout(s);
+});
+
+selftest.define("package skeleton creates correct versionsFrom", function () {
+  var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
+  var fullPackageName = "test:" + utils.randomToken();
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+
+  s.cd(fullPackageName);
+  var packageJs = s.read("package.js");
+  if (! packageJs.match(/api.versionsFrom\('v1'\);/)) {
+    selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
+                  packageJs);
+  }
+});
+
+selftest.define("show unknown version of package", ["net", "test-package-server"], function () {
+  var s = new Sandbox();
+  var fullPackageName = "test:" + utils.randomToken();
+
+  var run = s.run("create", "--package", fullPackageName);
+  run.waitSecs(15);
+  run.expectExit(0);
+
+  testUtils.login(s, "test", "testtest");
+
+  s.cd(fullPackageName, function () {
+    run = s.run("publish", "--create");
+    run.waitSecs(60);
+    run.expectExit(0);
+  });
+
+  run = s.run("show", fullPackageName);
+  run.waitSecs(15);
+  run.match("Version 1.0.0");
+  run.expectExit(0);
+
+  run = s.run("show", fullPackageName + "@2.0.0");
+  run.waitSecs(15);
+  run.matchErr("2.0.0: unknown version of " + fullPackageName);
+  run.expectExit(1);
+
+  testUtils.logout(s);
 });

@@ -143,40 +143,11 @@ _.extend(Runner.prototype, {
     }
 
     if (! self.stopped && self.mongoRunner) {
-      var spinner = ['-', '\\', '|', '/'];
-      // I looked at some Unicode indeterminate progress indicators, such as:
-      //
-      // spinner = "▁▃▄▅▆▇▆▅▄▃".split('');
-      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉".split('');
-      // spinner = "▏▎▍▌▋▊▉▊▋▌▍▎▏▁▃▄▅▆▇▆▅▄▃".split('');
-      // spinner = "▉▊▋▌▍▎▏▎▍▌▋▊▉▇▆▅▄▃▁▃▄▅▆▇".split('');
-      // spinner = "⠉⠒⠤⣀⠤⠒".split('');
-      //
-      // but none of them really seemed like an improvement. I think
-      // the case for using unicode would be stronger in a determinate
-      // progress indicator.
-      //
-      // There are also some four-frame options such as ◐◓◑◒ at
-      //   http://stackoverflow.com/a/2685827/157965
-      // but all of the ones I tried look terrible in the terminal.
-      if (! self.quiet) {
-        var animationFrame = 0;
-        var printUpdate = fiberHelpers.bindEnvironment(function () {
-          //runLog.logTemporary("=> Starting MongoDB... " +
-          //                    spinner[animationFrame]);
-          buildmessage.nudge();
-          animationFrame = (animationFrame + 1) % spinner.length;
-        });
-        printUpdate();
-        var mongoProgressTimer = setInterval(printUpdate, 200);
-      }
-
       buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
         self.mongoRunner.start();
       });
 
       if (! self.quiet) {
-        clearInterval(mongoProgressTimer);
         if (! self.stopped)
           runLog.log("=> Started MongoDB.");
       }
@@ -185,18 +156,18 @@ _.extend(Runner.prototype, {
     _.forEach(self.extraRunners, function (extraRunner) {
       if (! self.stopped) {
         var title = extraRunner.title;
-        if (! self.quiet)
-          runLog.logTemporary("=> Starting " + title + "...");
-        extraRunner.start();
+        buildmessage.enterJob({ title: "Starting " + title }, function () {
+          extraRunner.start();
+        });
         if (! self.quiet && ! self.stopped)
           runLog.log("=> Started " + title + ".");
       }
     });
 
     if (! self.stopped) {
-      if (! self.quiet)
-        runLog.logTemporary("=> Starting your app...");
-      self.appRunner.start();
+      buildmessage.enterJob({ title: "Starting your app" }, function () {
+        self.appRunner.start();
+      });
       if (! self.quiet && ! self.stopped)
         runLog.log("=> Started your app.");
     }
@@ -205,9 +176,9 @@ _.extend(Runner.prototype, {
       runLog.log("\n=> App running at: " + self.rootUrl);
 
     if (self.selenium && ! self.stopped) {
-      if (! self.quiet)
-        runLog.logTemporary("=> Starting Selenium...");
-      self.selenium.start();
+      buildmessage.enterJob({ title: "Starting Selenium" }, function () {
+        self.selenium.start();
+      });
       if (! self.quiet && ! self.stopped)
         runLog.log("=> Started Selenium.");
     }
@@ -325,6 +296,8 @@ exports.run = function (appDir, options) {
       if (once ||
           result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
+          result.outcome === "outdated-cordova-platforms" ||
+          result.outcome === "outdated-cordova-plugins" ||
           (result.outcome === "terminated" &&
            result.signal === undefined && result.code === undefined)) {
         // Allow run() to continue (and call runner.stop()) only once the
@@ -343,7 +316,6 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
-  Console.enableProgressBar(false);
   var result = fut.wait();
   runner.stop();
 
@@ -353,6 +325,20 @@ exports.run = function (appDir, options) {
 "satisfy the constraints of .meteor/versions and .meteor/packages. This could be\n" +
 "caused by conflicts in .meteor/versions, conflicts in .meteor/packages, and/or\n" +
 "inconsistent changes to the dependencies in local packages.");
+    return 254;
+  }
+
+  if (result.outcome === "outdated-cordova-plugins") {
+    process.stderr.write(
+"Your app's Cordova plugins have changed.\n" +
+"Restart meteor to use the new set of plugins.\n");
+    return 254;
+  }
+
+  if (result.outcome === "outdated-cordova-platforms") {
+    process.stderr.write(
+"Your app's platforms have changed.\n" +
+"Restart meteor to use the new set of platforms.\n");
     return 254;
   }
 
@@ -368,10 +354,14 @@ exports.run = function (appDir, options) {
     // like allowing this to work if the tools version didn't change,
     // or even springboarding if the tools version does change, but
     // this (which prevents weird errors) is a start.)
-    var to = result.releaseNeeded;
-    var from = release.current.name;
+    var utils = require('./utils.js');
+    var trackAndVersion = utils.splitReleaseName(result.releaseNeeded);
+    var to = utils.displayRelease(
+        trackAndVersion[0], trackAndVersion[1]);
+
+    var from = release.current.getDisplayName();
     process.stderr.write(
-"Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
+"Your app has been updated to " + to + " from " + from +
 ".\n" +
 "Restart meteor to use the new release.\n");
     return 254;

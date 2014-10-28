@@ -1,5 +1,109 @@
 ## v.NEXT
 
+## v1.0
+
+### New Features
+
+* Add the `meteor admin get-machine` command to make it easier to
+  publish packages with binary dependencies for all
+  architectures. `meteor publish` no longer publishes builds
+  automatically if your package has binary NPM dependencies.
+
+* New `localmarket` example, highlighting Meteor's support for mobile
+  app development.
+
+* Restyle the `leaderboard` example, and optimize it for both desktop
+  and mobile.
+
+### Performance
+
+* Reduce unnecessary syncs with the package server, speeding up many commands.
+
+* Speed up `meteor deploy` by not bundling unnecessary files and
+  programs.
+
+* To make Meteor easier to use on slow or unreliable network
+  connections, increase timeouts for DDP connections that the Meteor
+  tool uses to communicate with the package server. #2777, #2789.
+
+### Mobile App Support
+
+* Implemented reasonable default behavior for launch screens on mobile
+  apps.
+
+* Don't build for Android when only the iOS build is required, and
+  vice versa.
+
+* Fix bug that could cause mobile apps to stop being able to receive hot
+  code push updates.
+
+* Fix bug where Cordova clients connected to http://example.com instead
+  of https://example.com when https:// was specified in the
+  --mobile-server option. #2880
+
+* Fix stack traces when attempting to build or run iOS apps on Linux.
+
+* Print a warning when building an app with mobile platforms and
+  outputting the build into the source tree. Outputting a build into the
+  source tree can cause subsequent builds to fail because they will
+  treat the build output as source files.
+
+* Exit from `meteor run` when new Cordova plugins or platforms are
+  added, since we don't support hot code push for new plugins or
+  platforms.
+
+* Fix quoting of arguments to Cordova plugins.
+
+* The `accounts-twitter` package now works in Cordova apps in local
+  development. For workarounds for other login providers in local
+  development mode, see
+  https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.
+
+### Packaging
+
+* `meteor publish-for-arch` can publish packages built with different Meteor
+  releases.
+
+* Fix default `api.versionsFrom` field in packages created with `meteor
+  create --package`.
+
+* Fix bug where changes in an app's .meteor/versions file would not
+  cause the app to be rebuilt.
+
+### Other bug fixes and improvements
+
+* Use TLSv1 in the `spiderable` package, for compatibility with servers
+  that have disabled SSLv3 in response to the POODLE bug.
+
+* Work around the `meteor run` proxy occasionally running out of sockets.
+
+* Fix bug with regular expressions in minimongo. #2817
+
+* Add READMEs for several core packages.
+
+* Include protocols in URLs printed by `meteor deploy`.
+
+* Improve error message for limited ordered observe. #1643
+
+* Fix missing dependency on `random` in the `autoupdate` package. #2892
+
+* Fix bug where all CSS would be removed from connected clients if a
+  CSS-only change is made between local development server restarts or
+  when deploying with `meteor deploy`.
+
+* Increase height of the Google OAuth popup to the Google-recommended
+  value.
+
+* Fix the layout of the OAuth configuration dialog when used with
+  Bootstrap.
+
+* Allow build plugins to override the 'bare' option on added source
+  files. #2834
+
+Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle,
+Primigenus, svda, yauh, and zol.
+
+
 ## v0.9.4
 
 ### New Features
@@ -100,10 +204,15 @@
   is now `--mobile-server` in `meteor run` and `--server` in `meteor
   build`. `--server` is required for `meteor build` in apps with mobile
   platforms installed. `--mobile-server` defaults to an automatically
-  detected IP address on port 3000, and `--server` requires a hostname but defaults to port 80 if a port is not specified.
+  detected IP address on port 3000, and `--server` requires a hostname
+  but defaults to port 80 if a port is not specified.
 
 * Operations that take longer than a few seconds (e.g. downloading
   packages, installing the Android SDK, etc) now show a progress bar.
+
+* Complete support for using an HTTP proxy in the `meteor` command line
+  tool. Now all DDP connections can work through a proxy.  Use the standard
+  `http_proxy` environment variable to specify your proxy endpoint.  #2515
 
 
 ### Bug Fixes

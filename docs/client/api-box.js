@@ -1,12 +1,25 @@
-var apiData = function (longname) {
+var apiData = function (options) {
+  options = options || {};
+  if (typeof options === "string") {
+    options = {name: options};
+  }
+
   var root = DocsData;
 
-  _.each(longname.split("."), function (pathSegment) {
+  _.each(options.name.split("."), function (pathSegment) {
     root = root[pathSegment];
   });
 
   if (! root) {
-    console.log("API Data not found: " + longname);
+    console.log("API Data not found: " + options.name);
+  }
+
+  if (_.has(options, 'options')) {
+    root = _.clone(root);
+    var includedOptions = options.options.split(';');
+    root.options = _.filter(root.options, function (option) {
+      return _.contains(includedOptions, option.name);
+    });
   }
 
   return root;
@@ -141,13 +154,13 @@ Template.autoApiBox.helpers({
 
     return signature;
   },
-  link: function () {
-    if (nameToId[this.longname]) {
+  id: function () {
+    if (Session.get("fullApi") && nameToId[this.longname]) {
       return nameToId[this.longname];
     }
 
     // fallback
-    return this.longname.replace(".", "-");
+    return this.longname.replace(/[.#]/g, "-");
   },
   paramsNoOptions: function () {
     return _.reject(this.params, function (param) {
@@ -155,3 +168,16 @@ Template.autoApiBox.helpers({
     });
   }
 });
+
+Template.apiBoxTitle.helpers({
+  link: function () {
+    return '#/' + (Session.get("fullApi") ? 'full' : 'basic') + '/' + this.id;
+  }
+});
+
+Template.autoApiBox.rendered = function () {
+  this.$('pre code').each(function(i, block) {
+    hljs.highlightBlock(block);
+  });
+};
+

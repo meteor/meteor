@@ -112,6 +112,25 @@ _.extend(exports, {
     return addScheme(getAuthServiceHost()) + "/auth";
   },
 
+  // URL for the DDP interface to the meteor build farm, typically
+  // "https://build.meteor.com".
+  getBuildFarmUrl: function () {
+    if (process.env.METEOR_BUILD_FARM_URL)
+      return process.env.METEOR_BUILD_FARM_URL;
+    var host = config.getBuildFarmDomain();
+
+    return addScheme(host);
+  },
+
+  getBuildFarmDomain: function () {
+    if (process.env.METEOR_BUILD_FARM_URL) {
+      var parsed = url.parse(process.env.METEOR_BUILD_FARM_URL);
+      return parsed.host;
+    } else {
+      return getUniverse().replace(/^www\./, 'build.');
+    }
+  },
+
   // URL for the DDP interface to the package server, typically
   // "https://packages.meteor.com". (Really should be a ddp:// URL --
   // we'll get there soon enough.)
@@ -193,7 +212,7 @@ _.extend(exports, {
   getPackagesDirectoryName: function (serverUrl) {
     var self = this;
 
-    var prefix = config.getPackageServerFilePrefix();
+    var prefix = config.getPackageServerFilePrefix(serverUrl);
     if (prefix !== 'packages') {
       prefix = path.join('packages-from-server', prefix);
     }
@@ -203,7 +222,7 @@ _.extend(exports, {
 
   getLocalPackageCacheFilename: function (serverUrl) {
     var self = this;
-    var prefix = self.getPackageServerFilePrefix();
+    var prefix = self.getPackageServerFilePrefix(serverUrl);
 
     // Should look like 'packages.data.db' in the default case
     // (packages.data.json before 0.9.4).

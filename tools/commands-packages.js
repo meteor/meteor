@@ -34,7 +34,6 @@ DEFAULT_MAX_AGE = 15 * 60 * 1000;
 //  record : (a package or version record)
 //  release : true if it is a release instead of a package.
 var getReleaseOrPackageRecord = function(name) {
-  buildmessage.assertInCapture();
   // Too lazy to do string parsing.
   var rec = catalog.official.getPackage(name);
   var rel = false;
@@ -61,17 +60,71 @@ var doOrDie = exports.doOrDie = function (options, f) {
   });
   if (messages.hasMessages()) {
     Console.printMessages(messages);
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
   return ret;
-
 };
+
 var refreshOfficialCatalogOrDie = function (options) {
-  doOrDie({title: 'Refreshing package catalog'}, function () {
-    catalog.official.refresh(options);
-  });
+  if (!catalog.refreshOrWarn(options)) {
+    Console.error(
+      "This command requires an up-to-date package catalog. Exiting.");
+    throw new main.ExitWithCode(1);
+  }
 };
 
+var explainIfRefreshFailed = function () {
+  if (catalog.official.offline || catalog.refreshFailed) {
+    Console.info("Your package catalog may be out of date.\n" +
+      "Please connect to the internet and try again.");
+  }
+};
+
+// XXX: To formatters.js ?
+var formatAsList = function (list, options) {
+  options = options || {};
+  var formatter = options.formatter;
+  if (!list || !list.length) {
+    return "";
+  }
+  var out = "";
+  for (var i = 0; i < list.length; i++) {
+    if (i != 0) {
+      out += ", ";
+    }
+    var v = list[i];
+    if (formatter) {
+      v = formatter(v);
+    }
+    out += v;
+  }
+  return out;
+};
+
+var endsWith = function (s, suffix) {
+  return s.length >= suffix.length && s.substr(s.length - suffix.length) == suffix;
+};
+
+var removeIfEndsWith = function (s, suffix) {
+  if (!endsWith(s, suffix)) {
+    return s;
+  }
+  return s.substring(0, s.length - suffix.length);
+};
+
+var formatArchitecture = function (s) {
+  while (true) {
+    var original = s;
+
+    // Remove well-known suffixes
+    s = removeIfEndsWith(s, "+web.cordova");
+    s = removeIfEndsWith(s, "+web.browser");
+
+    if (original === s) {
+      return s;
+    }
+  }
+};
 
 // Internal use only. Makes sure that your Meteor install is totally good to go
 // (is "airplane safe"). Specifically, it:
@@ -90,12 +143,13 @@ var refreshOfficialCatalogOrDie = function (options) {
 // bug in the build tool... otherwise, packages should be rebuilt whenever
 // necessary!
 main.registerCommand({
-  name: '--get-ready'
+  name: '--get-ready',
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // It is not strictly needed, but it is thematically a good idea to refresh
   // the official catalog when we call get-ready, since it is an
   // internet-requiring action.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   var loadPackages = function (packagesToLoad, loader) {
     buildmessage.assertInCapture();
@@ -164,7 +218,8 @@ main.registerCommand({
     // accidentally put their personal packages in the top level namespace.
     'top-level': { type: Boolean }
   },
-  requiresPackage: true
+  requiresPackage: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
@@ -176,7 +231,7 @@ main.registerCommand({
   // Refresh the catalog, caching the remote package data on the server. We can
   // optimize the workflow by using this data to weed out obviously incorrect
   // submissions before they ever hit the wire.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -224,9 +279,7 @@ main.registerCommand({
   // Fail early if the package record exists, but we don't think that it does
   // and are passing in the --create flag!
   if (options.create) {
-    var packageInfo = doOrDie(function () {
-      return catalog.official.getPackage(packageName);
-    });
+    var packageInfo = catalog.official.getPackage(packageName);
     if (packageInfo) {
       Console.error(
         "Package already exists. To create a new version of an existing "+
@@ -254,6 +307,7 @@ main.registerCommand({
   };
 
   // We have initialized everything, so perform the publish oepration.
+  var binary = compileResult.isopack.platformSpecific();
   var ec;  // XXX maybe combine with messages?
   try {
     messages = buildmessage.capture({
@@ -262,7 +316,8 @@ main.registerCommand({
       ec = packageClient.publishPackage(
         packageSource, compileResult, conn, {
           new: options.create,
-          existingVersion: options['existing-version']
+          existingVersion: options['existing-version'],
+          doNotPublishBuild: binary && !options['existing-version']
         });
     });
   } catch (e) {
@@ -284,14 +339,32 @@ main.registerCommand({
     return ec;
 
   // Warn the user if their package is not good for all architectures.
-  var allArchs = compileResult.isopack.buildArchitectures().split('+');
-  if (_.any(allArchs, function (arch) {
-    return arch.match(/^os\./);
-  })) {
+  if (binary && options['existing-version']) {
+    // This is an undocumented command that you are not supposed to run! We
+    // assume that you know what you are doing, if you ran it, and are OK with
+    // overrwriting normal compatibilities.
+    Console.warn("\nWARNING: Your package contains binary code.");
+  } else if (binary) {
+    // Normal publish flow. Tell the user nicely.
     Console.warn(
-      "\nWARNING: Your package contains binary code and is only compatible with " +
-        archinfo.host() + " architecture.\n" +
-        "Please use publish-for-arch to publish new builds of the package.\n");
+"\nThis package contains binary code and must be built on multiple architectures.\n");
+
+    Console.info(
+"You can access Meteor provided build machines, pre-configured to support\n" +
+"older versions of MacOS and Linux, by running:\n");
+
+    _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
+      Console.info("  meteor admin get-machine", a);
+    });
+
+    Console.info("\nOn each machine, run:\n");
+
+    Console.info("  meteor",
+                 "publish-for-arch",
+                 packageSource.name + "@" + packageSource.version);
+
+    Console.info("\nFor more information on binary ABIs and consistent builds, see:");
+    Console.info("  https://github.com/meteor/meteor/wiki/Build-Machines\n");
   }
 
   // Refresh, so that we actually learn about the thing we just published.
@@ -304,7 +377,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
-  maxArgs: 1
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // argument processing
   var all = options.args[0].split('@');
@@ -317,7 +391,7 @@ main.registerCommand({
   var versionString = all[1];
 
   // Refresh the catalog, cacheing the remote package data on the server.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   var packageInfo = doOrDie(function () {
     return catalog.complete.getPackage(name);
@@ -330,9 +404,7 @@ main.registerCommand({
 
     return 1;
   }
-  var pkgVersion = doOrDie(function () {
-    return catalog.official.getVersion(name, versionString);
-  });
+  var pkgVersion = catalog.official.getVersion(name, versionString);
   if (! pkgVersion) {
     Console.error(
 "You can't call `meteor publish-for-arch` on version " + versionString + " of\n" +
@@ -548,11 +620,12 @@ main.registerCommand({
   options: {
     'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
-  Console.info("Resyncing with package server...");
-  refreshOfficialCatalogOrDie();
+  //Console.info("Resyncing with package server...");
+  //refreshOfficialCatalogOrDie();
 
   try {
     var conn = packageClient.loggedInPackagesConnection();
@@ -644,10 +717,7 @@ main.registerCommand({
   // authorized to publish before we do any complicated/long operations, and
   // before we publish its packages.
   if (!options['create-track']) {
-    var trackRecord;
-    doOrDie(function () {
-      trackRecord = catalog.official.getReleaseTrack(relConf.track);
-    });
+    var trackRecord = catalog.official.getReleaseTrack(relConf.track);
     if (!trackRecord) {
       Console.error('\n There is no release track named ' + relConf.track +
                            '. If you are creating a new track, use the --create-track flag.');
@@ -878,6 +948,7 @@ main.registerCommand({
 
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.
+    var unfinishedBuilds = {};
     for (var name in toPublish) {  // don't use _.each so we can return
       if (!_.has(toPublish, name))
         continue;
@@ -892,8 +963,11 @@ main.registerCommand({
         messages = buildmessage.capture({
           title: "Publishing package " + name
         }, function () {
+          var binary =  prebuilt.compileResult.isopack.platformSpecific();
+
           var opts = {
-            new: !catalog.official.getPackage(name)
+            new: !catalog.official.getPackage(name),
+            doNotPublishBuild: binary
           };
 
           // If we are creating a new package, dsPS will document this for us,
@@ -905,6 +979,10 @@ main.registerCommand({
             prebuilt.compileResult,
             conn,
             opts);
+
+          if (binary) {
+            unfinishedBuilds[name] = prebuilt.source.version;
+          }
         });
       } catch (e) {
           packageClient.handlePackageServerConnectionError(e);
@@ -997,8 +1075,8 @@ main.registerCommand({
           "Failed to push git tag. Please push git tag manually!");
         Console.error(
           "If you are publishing a non-prerelease version, then the readme will show up " +
-          "in atmosphere. To make sure that happens, after pushing the git tag, please run " +
-          " the following:");
+          "in atmosphere. To make sure that happens, after pushing the git tag, please " +
+          "run the following:");
         _.each(toPublish, function (pack, name) {
           Console.info("meteor admin set-latest-readme " + name + " --tag " + gitTag);
         });
@@ -1007,7 +1085,8 @@ main.registerCommand({
       }
       if (!fail) {
         _.each(toPublish, function (pack, name) {
-          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag + "/packages/" +
+          var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag +
+                "/packages/" +
                 name + "/README.md";
           var version = pack.compileResult.isopack.version;
           packageClient.callPackageServer(
@@ -1017,6 +1096,27 @@ main.registerCommand({
       }
     }
   }
+
+  // We need to warn the user that we didn't publish some of their
+  // packages. Unlike publish, this is advanced functionality, so the user
+  // should be familiar with the concept.
+  if (!_.isEmpty(unfinishedBuilds)) {
+    Console.warning(
+      "WARNING: Some packages contain binary dependencies.");
+    Console.warning("Builds have not been published for the following packages:");
+    _.each(unfinishedBuilds, function (version, name) {
+      Console.warning(name + "@" + version);
+    });
+    // Note: we don't actually enforce the proper build machine thing. You can't
+    // use publish-for-arch for meteor-tool, for example, you need to use
+    // publish --existing-version and to do it from checkout. Setting that up on
+    // a build machine for a one-off experimental release could be a pain. In
+    // that case, I guess, you can just run publish --existing-version:
+    // presumably you don't care about compatibility etc. If it is an official
+    // release, you ought to use a build machine though.
+    Console.warning(
+      "Please publish the builds separately, from a proper build machine.");
+  };
 
   return 0;
 });
@@ -1034,11 +1134,11 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     "show-old": {type: Boolean, required: false }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE, ignoreErrors: true })
 }, function (options) {
-
   // We should refresh the catalog in case there are new versions.
-  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
+  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
@@ -1047,28 +1147,25 @@ main.registerCommand({
 
   var full = options.args[0].split('@');
   var name = full[0];
-  var allRecord;
-  doOrDie({ title: 'Get release record' }, function () {
-    allRecord = getReleaseOrPackageRecord(name);
-  });
+  var allRecord = getReleaseOrPackageRecord(name);
 
   var record = allRecord.record;
   if (!record) {
     Console.error("Unknown package or release: " +  name);
+    explainIfRefreshFailed();
     return 1;
   }
 
   var versionRecords;
   var label;
+  var showName;
   if (!allRecord.isRelease) {
     label = "package";
+    showName = "Package " + Console.bold(allRecord.record.name);
     var getRelevantRecord = function (version) {
-      var versionRecord = doOrDie({ title: 'Get relevant record' }, function () {
-        return catalog.official.getVersion(name, version);
-      });
-      var myBuilds = _.pluck(doOrDie({ title: 'Get all builds' }, function () {
-        return catalog.official.getAllBuilds(name, version);
-      }), 'buildArchitectures');
+      var versionRecord = catalog.official.getVersion(name, version);
+      var myBuilds = _.pluck(catalog.official.getAllBuilds(name, version),
+                             'buildArchitectures');
       // Does this package only have a cross-platform build?
       if (myBuilds.length === 1) {
         var allArches = myBuilds[0].split('+');
@@ -1081,8 +1178,9 @@ main.registerCommand({
       // This package is only available for some architectures.
       // XXX show in a more human way?
       var myStringBuilds = myBuilds.join(' ');
-      return _.extend({ buildArchitectures: myStringBuilds },
-                      versionRecord);
+      return versionRecord ? _.extend({
+        buildArchitectures: myStringBuilds
+      }, versionRecord) : versionRecord;
     };
     // XXX should this skip pre-releases? No, it should.
     var versions = catalog.official.getSortedVersions(name);
@@ -1090,20 +1188,23 @@ main.registerCommand({
       versions = [full[1]];
     }
     versionRecords = _.map(versions, getRelevantRecord);
+    if (full.length > 1 && versionRecords.length == 1 && versionRecords[0]) {
+      showName += Console.bold("@" + versionRecords[0].version);
+    }
   } else {
     label = "release";
+    showName = "Release " + Console.bold(allRecord.record.name);
     if (full.length > 1) {
-      doOrDie(function () {
-        versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
-      });
+      versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
+      if (versionRecords.length == 1 && versionRecords[0]) {
+        showName += Console.bold("@" + versionRecords[0].version);
+      }
     } else {
       versionRecords =
         _.map(
           catalog.official.getSortedRecommendedReleaseVersions(name, "").reverse(),
           function (v) {
-            return doOrDie(function () {
-              return catalog.official.getReleaseVersion(name, v);
-            });
+            return catalog.official.getReleaseVersion(name, v);
           });
     }
   }
@@ -1118,34 +1219,62 @@ main.registerCommand({
     var lastVersion = versionRecords[versionRecords.length - 1];
     if (!lastVersion && full.length > 1) {
       Console.error(
-        "Unknown version of" + name + ":" + full[1]);
-      return 1;;
+        full[1] + ": unknown version of " + name);
+      return 1;
     }
+
+    if (showName) {
+      Console.info(showName + ":\n");
+    }
+
     var unknown = "< unknown >";
-    _.each(versionRecords, function (v) {
-      // Don't show versions that we shouldn't be showing.
-      if (!versionVisible(v)) {
-        return;
-      }
 
-      var versionDesc = "Version " + v.version;
-      if (v.description)
-        versionDesc = versionDesc + " : " + v.description;
-      Console.info(versionDesc + "");
-      if (v.buildArchitectures && full.length > 1)
-        Console.info("      Architectures: "
-                             + v.buildArchitectures);
-      if (v.packages && full.length > 1) {
-        Console.info("      tool: " + v.tool);
-        Console.info("      packages:");
+    if (full.length > 1) {
+      // Specific version with details; we don't expect more than one match
+      _.each(versionRecords, function (v) {
+        // Don't show versions that we shouldn't be showing.
+        if (!versionVisible(v)) {
+          return;
+        }
 
-        versionDesc = versionDesc + "\n      packages:\n";
-        _.each(v.packages, function(pv, pn) {
-          Console.info("          " + pn + ":" + pv);
-        });
-      }
-    });
-    Console.info("\n");
+        var versionDesc = Console.bold("Version " + v.version);
+        if (v.description)
+          versionDesc = versionDesc + "    " + v.description;
+        Console.info(versionDesc);
+
+        if (v.buildArchitectures) {
+          var buildArchitectures = v.buildArchitectures.split(' ');
+          Console.info("      Architectures: ", formatAsList(buildArchitectures, { formatter: formatArchitecture }));
+        }
+        // XXX: else show "no architectures"?
+        if (v.packages) {
+          Console.info("      tool: " + v.tool);
+          Console.info("      packages:");
+
+          _.each(v.packages, function(pv, pn) {
+            Console.info("          " + pn + "@" + pv);
+          });
+        }
+      });
+
+      Console.info("\n");
+    } else {
+      // Non-detailed list of versions
+
+      var rows = [];
+
+      _.each(versionRecords, function (v) {
+        // Don't show versions that we shouldn't be showing.
+        if (!versionVisible(v)) {
+          return;
+        }
+
+        var row = ["Version " + v.version, v.description];
+        rows.push(row);
+      });
+
+      utils.printTwoColumns(rows)
+    }
   }
 
   // Creating the maintainer string. We have anywhere between 1 and lots of
@@ -1168,37 +1297,33 @@ main.registerCommand({
     myMaintainerString +=  " and " +  myMaintainers[myTotal - 1];
   }
 
-  var metamessage = "";
-
   if (myMaintainerString) {
-    metamessage += "Maintained by " + myMaintainerString + ".";
+    Console.info("Maintained by:", myMaintainerString + ".");
   }
 
   if (lastVersion && lastVersion.git) {
     // No full stop, as it makes copying and pasting painful
-    metamessage += "\nYou can find the git repository at: " +
-        lastVersion.git;
+    Console.info("Git repository at:", Console.url(lastVersion.git));
   }
 
   if (record && record.homepage) {
     // No full stop, as it makes copying and pasting painful
-    metamessage = metamessage + "\nYou can find more information at "
-      + record.homepage;
+    Console.info("More information at:", Console.url(record.homepage));
   }
-  Console.info(metamessage);
 });
 
 main.registerCommand({
   name: 'refresh',
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 });
 
 main.registerCommand({
   name: 'search',
   pretty: true,
-  minArgs: 1,
+  minArgs: 0, // So we can provide specific help
   maxArgs: 1,
   options: {
     maintainer: {type: String, required: false },
@@ -1206,8 +1331,13 @@ main.registerCommand({
     "show-rcs": {type: Boolean, required: false},
     // Undocumented debug-only option for Velocity.
     "debug-only": {type: Boolean, required: false}
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE, ignoreErrors: true })
 }, function (options) {
+  if (options.args.length === 0) {
+    Console.info("To show all packages, do", Console.command("meteor search ."));
+    return 1;
+  }
 
   // Show all means don't do any filtering at all. So, don't do any filtering
   // for anything at all.
@@ -1218,21 +1348,19 @@ main.registerCommand({
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
   // refreshing" from "can't connect to catalog"
-  refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
+  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
 
-  var allPackages, allReleases;
-  doOrDie(function () {
-    allPackages = catalog.official.getAllPackageNames();
-    allReleases = catalog.official.getAllReleaseTracks();
-  });
+  var allPackages = catalog.official.getAllPackageNames();
+  var allReleases = catalog.official.getAllReleaseTracks();
   var matchingPackages = [];
   var matchingReleases = [];
 
   var selector;
+  var pattern = options.args[0];
 
   var search;
   try {
-    search = new RegExp(options.args[0]);
+    search = new RegExp(pattern);
   } catch (err) {
     Console.error(err + "");
     return 1;
@@ -1245,13 +1373,11 @@ main.registerCommand({
     if (!match || isRelease)
       return match;
     var vr;
-    doOrDie(function () {
-      if (!options["show-rcs"]) {
-        vr = catalog.official.getLatestMainlineVersion(name);
-      } else {
-        vr = catalog.official.getLatestVersion(name);
-      }
-    });
+    if (!options["show-rcs"]) {
+      vr = catalog.official.getLatestMainlineVersion(name);
+    } else {
+      vr = catalog.official.getLatestVersion(name);
+    }
     if (!vr) {
       return false;
     }
@@ -1279,14 +1405,12 @@ main.registerCommand({
     selector = function (name, isRelease) {
       var record;
       // XXX make sure search works while offline
-      doOrDie(function () {
-        if (isRelease) {
-          record = catalog.official.getReleaseTrack(name);
-        } else {
-          record = catalog.official.getPackage(name);
-        }
-      });
-     return filterBroken((name.match(search) &&
+      if (isRelease) {
+        record = catalog.official.getReleaseTrack(name);
+      } else {
+        record = catalog.official.getPackage(name);
+      }
+      return filterBroken((name.match(search) &&
         !!_.findWhere(record.maintainers, {username: username})),
         isRelease, name);
     };
@@ -1297,55 +1421,54 @@ main.registerCommand({
     };
   }
 
-  _.each(allPackages, function (pack) {
-    if (selector(pack, false)) {
-      var vr = doOrDie({ title: 'Get latest version'}, function () {
+
+  buildmessage.enterJob({ title: 'Searching packages' }, function () {
+    _.each(allPackages, function (pack) {
+      if (selector(pack, false)) {
+        var vr;
         if (!options['show-rcs']) {
-          return catalog.official.getLatestMainlineVersion(pack);
+          vr = catalog.official.getLatestMainlineVersion(pack);
+        } else {
+          vr = catalog.official.getLatestVersion(pack);
         }
-        return catalog.official.getLatestVersion(pack);
-      });
-      if (vr) {
-        matchingPackages.push(
-          { name: pack, description: vr.description});
+        if (vr) {
+          matchingPackages.push(
+            { name: pack, description: vr.description});
+        }
       }
-    }
-  });
-  _.each(allReleases, function (track) {
-    if (selector(track, true)) {
-      var vr = doOrDie(function () {
-        return catalog.official.getDefaultReleaseVersion(track);
-      });
-      if (vr) {
-        var vrlong = doOrDie(function () {
-          return catalog.official.getReleaseVersion(track, vr.version);
-        });
-        matchingReleases.push(
-          { name: track, description: vrlong.description});
+    });
+    _.each(allReleases, function (track) {
+      if (selector(track, true)) {
+        var vr = catalog.official.getDefaultReleaseVersion(track);
+        if (vr) {
+          var vrlong = catalog.official.getReleaseVersion(track, vr.version);
+          matchingReleases.push(
+            { name: track, description: vrlong.description});
+        }
       }
-    }
+    });
   });
 
   var output = false;
   if (!_.isEqual(matchingPackages, [])) {
     output = true;
     Console.info("Found the following packages:");
-    Console.info(utils.formatList(matchingPackages) + "");
+    utils.printPackageList(matchingPackages);
   }
 
   if (!_.isEqual(matchingReleases, [])) {
     output = true;
     Console.info("Found the following releases:");
-    Console.info(utils.formatList(matchingReleases) + "");
+    utils.printPackageList(matchingReleases);
   }
 
   if (!output) {
-    Console.error(
-      "Neither packages nor releases matching \'" +
-        search + "\' could be found.");
+    Console.error(pattern + ': no matching packages or releases found');
+
+    explainIfRefreshFailed();
   } else {
     Console.info(
-      "To get more information on a specific item, use meteor show.");
+      "To get more information on a specific item, use", Console.command("meteor show"));
   }
 });
 
@@ -1357,7 +1480,8 @@ main.registerCommand({
   name: 'list',
   requiresApp: true,
   options: {
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var items = [];
 
@@ -1425,7 +1549,7 @@ main.registerCommand({
     items.push({ name: 'cordova:' + name, description: version });
   });
 
-  Console.info(utils.formatList(items));
+  utils.printPackageList(items);
 
   if (newVersionsAvailable) {
     Console.info(
@@ -1481,9 +1605,8 @@ var maybeUpdateRelease = function (options) {
   // double-springboard.  (We might miss an super recently published release,
   // but that's probably OK.)
   if (! release.forced) {
-    var latestRelease = doOrDie(function () {
-      return release.latestDownloaded(releaseTrack);
-    });
+    var latestRelease = release.latestKnown(releaseTrack);
+
     // Are we on some track without ANY recommended releases at all,
     // and the user ran 'meteor update' without specifying a release? We
     // really can't do much here.
@@ -1529,23 +1652,23 @@ var maybeUpdateRelease = function (options) {
       // help --release xyz'.
       Console.info(
         "Installed. Run 'meteor update' inside of a particular project\n" +
-          "directory to update that project to Meteor " +
-          release.current.name + ".");
+          "directory to update that project to " +
+          release.current.getDisplayName() + ".");
     } else {
       // We get here if the user ran 'meteor update' and we didn't
       // find a new version.
       Console.info(
-        "The latest version of Meteor, " + release.current.name +
+        "The latest version of Meteor, " + release.current.getReleaseVersion() +
           ", is already installed on this\n" +
           "computer. Run 'meteor update' inside of a particular project\n" +
-          "directory to update that project to Meteor " +
-          release.current.name);
+          "directory to update that project to " +
+          release.current.getDisplayName());
     }
     return 0;
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getMeteorReleaseVersion();
+  var appRelease = project.getNormalizedMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
     Console.info(
@@ -1553,6 +1676,8 @@ var maybeUpdateRelease = function (options) {
         release.current.getDisplayName() + maybeTheLatestRelease + ".");
     return 0;
   }
+
+  var appTrackAndVersion = utils.splitReleaseName(appRelease);
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
@@ -1571,10 +1696,8 @@ var maybeUpdateRelease = function (options) {
         "Cannot patch update unless a release is set.");
       return 1;
     }
-    var r = appRelease.split('@');
-    var record = doOrDie(function () {
-      return catalog.official.getReleaseVersion(r[0], r[1]);
-    });
+    var record = catalog.official.getReleaseVersion(
+      appTrackAndVersion[0], appTrackAndVersion[1]);
     if (!record) {
       Console.error(
         "Cannot update to a patch release from an old release.");
@@ -1586,9 +1709,7 @@ var maybeUpdateRelease = function (options) {
         "You are at the latest patch version.");
       return 0;
     }
-    var patchRecord = doOrDie(function () {
-      return catalog.official.getReleaseVersion(r[0], updateTo);
-    });
+    var patchRecord = catalog.official.getReleaseVersion(r[0], updateTo);
     // It looks like you are not at the latest patch version,
     // technically. But, in practice, we cannot update you to the latest patch
     // version because something went wrong. For example, we can't find the
@@ -1608,35 +1729,25 @@ var maybeUpdateRelease = function (options) {
   } else if (release.explicit) {
     // You have explicitly specified a release, and we have springboarded to
     // it. So, we will use that release to update you to itself, if we can.
-    doOrDie(function () {
-      releaseVersionsToTry = [release.current.getReleaseVersion()];
-    });
+    releaseVersionsToTry = [release.current.getReleaseVersion()];
   } else {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    // XXX: Isn't the track the same as ours, since we springboarded?
-    var appTrack = appRelease.split('@')[0];
-    var appVersion =  appRelease.split('@')[1];
-    var appReleaseInfo = doOrDie(function () {
-      return catalog.official.getReleaseVersion(appTrack, appVersion);
-    });
+    var appReleaseInfo = catalog.official.getReleaseVersion(
+      appTrackAndVersion[0], appTrackAndVersion[1]);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
 
-    // If on a 'none' app, try to update it to the head of the official release
-    // track METEOR@.
-    if (appTrack === 'none') {
-      appTrack = 'METEOR';
-    }
-
     releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      appTrack, appOrderKey);
+      appTrackAndVersion[0], appOrderKey);
     if (!releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
+      var releaseToPrint = utils.displayRelease(
+        appTrackAndVersion[0], appTrackAndVersion[1]);
       Console.info(
-        "This project is already at Meteor " + appRelease +
-          ", which is newer than the latest release.");
+"This project is already at " + releaseToPrint + ", which is newer\n" +
+"than the latest release.");
       return 0;
     }
   }
@@ -1655,9 +1766,8 @@ var maybeUpdateRelease = function (options) {
   }
 
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
-    var releaseRecord = doOrDie(function () {
-      return catalog.official.getReleaseVersion(releaseTrack, versionToTry);
-    });
+    var releaseRecord = catalog.official.getReleaseVersion(
+      releaseTrack, versionToTry);
     if (!releaseRecord)
       throw Error("missing release record?");
     var constraints = doOrDie(function () {
@@ -1761,12 +1871,13 @@ main.registerCommand({
   // update' is how you fix apps that don't have a release.
   requiresRelease: false,
   minArgs: 0,
-  maxArgs: Infinity
+  maxArgs: Infinity,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   // Refresh the catalog, cacheing the remote package data on the server.
   // XXX should be able to update even without a refresh, esp to a specific
   //     server
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   // If you are specifying packaging individually, you probably don't want to
   // update the release.
@@ -1809,11 +1920,9 @@ main.registerCommand({
     // arbitrary release overrides (ie, if we did that, we wouldn't be
     // here). So, basically, that's the correct release for this to project to
     // have constraints against.
-    var appRelease = project.getMeteorReleaseVersion();
-    var r = appRelease.split('@');
-    var appRecord = doOrDie(function () {
-      return catalog.official.getReleaseVersion(r[0], r[1]);
-    });
+    var appRelease = project.getNormalizedMeteorReleaseVersion();
+    var r = utils.splitReleaseName(appRelease);
+    var appRecord = catalog.official.getReleaseVersion(r[0], r[1]);
     if (appRecord) {
       releasePackages = appRecord.packages;
     } else {
@@ -1837,9 +1946,14 @@ main.registerCommand({
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
-  var upgradePackages;
+  var upgradePackages = [];
   if (options.args.length === 0) {
-    upgradePackages = _.pluck(allPackages, 'name');
+    // We don't want to auto-upgrade weak dependencies (that we get from the
+    // release), even though there is not much harm in it.
+    upgradePackages = _.pluck(
+      _.reject(allPackages, function (packSpec) {
+        return _.has(packSpec, 'weak') && packSpec.weak;
+      }), 'name');
   } else {
     upgradePackages = options.args;
   }
@@ -1860,6 +1974,18 @@ main.registerCommand({
                          + messages.formatMessages());
     return 1;
   }
+
+  // Check that every requested package is actually used by the project, and
+  // print an error if they are not. We don't check this on the original
+  // versions because it could be out of date to begin with (ex: if you edited
+  // the packages file) and we don't throw an error because, technically, it is
+  // not an error. You could have gotten here by requesting updates of
+  // transitive dependencies that are no longer there.
+  _.each(upgradePackages, function (packageName) {
+    if (! _.has(newVersions, packageName)) {
+      Console.error(packageName + ': package is not in the project');
+    }
+  });
 
   // Just for the sake of good messages, check to see if anything changed.
   if (_.isEqual(newVersions, versions)) {
@@ -1904,7 +2030,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
 
   // Special case on reserved package namespaces, such as 'cordova'
@@ -1966,7 +2093,7 @@ main.registerCommand({
 
   // Refresh the catalog, cacheing the remote package data on the server.
   // XXX ensure this works while offline
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
 
   // Read in existing package dependencies.
   var packages = project.getConstraints();
@@ -1979,6 +2106,7 @@ main.registerCommand({
   });
   if (messages.hasMessages()) {
     Console.printMessages(messages);
+    explainIfRefreshFailed();
     return 1;
   }
 
@@ -2011,16 +2139,15 @@ main.registerCommand({
     // fail. Rejecting the entire command because a part of it is a no-op is
     // confusing.
     if (_.has(packages, constraint.name)) {
-      if (packages[constraint.name] === constraint.constraintString) {
-        if (constraint.constraintString) {
-          Console.info(
-            constraint.name + " with version constraint " +
-              constraint.constraintString + " has already been added.");
-        } else {
-          Console.info(
-            constraint.name +
-              " without a version constraint has already been added.");
-        }
+      if (!packages[constraint.name] && !constraint.constraintString) {
+        Console.info(
+          constraint.name +
+            " without a version constraint has already been added.");
+      }
+      else if (packages[constraint.name] === constraint.constraintString) {
+        Console.info(
+          constraint.name + " with version constraint " +
+            constraint.constraintString + " has already been added.");
       } else {
         if (packages[constraint.name]) {
           Console.info(
@@ -2074,6 +2201,8 @@ main.registerCommand({
   // different result than what they are going to get. We have already logged an
   // error, so we should exit.
   if ( failed ) {
+    explainIfRefreshFailed();
+
     return 1;
   }
 
@@ -2095,6 +2224,7 @@ main.registerCommand({
       if ( ! newVersions) {
         // XXX: Better error handling.
         Console.error("Cannot resolve package dependencies.");
+        explainIfRefreshFailed();
         return;
       }
 
@@ -2115,10 +2245,12 @@ main.registerCommand({
     Console.error(
       "Could not satisfy all the specified constraints:\n"
         + e + "");
+    explainIfRefreshFailed();
     return 1;
   }
   if (messages.hasMessages()) {
     Console.printMessages(messages);
+    explainIfRefreshFailed();
     return 1;
   }
 
@@ -2151,7 +2283,8 @@ main.registerCommand({
   name: 'remove',
   minArgs: 1,
   maxArgs: Infinity,
-  requiresApp: true
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   // Special case on reserved package namespaces, such as 'cordova'
   var filteredPackages = cordova.filterPackages(options.args);
@@ -2221,8 +2354,10 @@ main.registerCommand({
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
+  if (! _.isEmpty(packagesToRemove))
+    Console.info("");
   _.each(packagesToRemove, function (packageName) {
-    Console.info("Removed top-level dependency on " + packageName + ".");
+    Console.info(packageName + ": removed dependency");
   });
 
   return 0;
@@ -2234,7 +2369,7 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 // For admin commands, at least in preview0.90, we can be kind of lazy and not bother
-// to pre-check if the command will suceed client-side. That's because we both
+// to pre-check if the command will succeed client-side. That's because we both
 // don't expect them to be called often and don't expect them to be called by
 // inexperienced users, so waiting to get rejected by the server is OK.
 
@@ -2246,11 +2381,13 @@ main.registerCommand({
     add: { type: String, short: "a" },
     remove: { type: String, short: "r" },
     list: { type: Boolean }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
+
   var name = options.args[0];
 
   // Yay, checking that options are correct.
@@ -2266,10 +2403,7 @@ main.registerCommand({
   }
 
   // Now let's get down to business! Fetching the thing.
-  var fullRecord;
-  doOrDie(function () {
-    fullRecord = getReleaseOrPackageRecord(name);
-  });
+  var fullRecord = getReleaseOrPackageRecord(name);
   var record = fullRecord.record;
   if (!options.list) {
 
@@ -2310,9 +2444,7 @@ main.registerCommand({
     // Update the catalog so that we have this information, and find the record
     // again so that the message below is correct.
     refreshOfficialCatalogOrDie();
-    doOrDie(function () {
-      fullRecord = getReleaseOrPackageRecord(name);
-    });
+    fullRecord = getReleaseOrPackageRecord(name);
     record = fullRecord.record;
   }
 
@@ -2340,26 +2472,22 @@ main.registerCommand({
   name: 'admin make-bootstrap-tarballs',
   minArgs: 2,
   maxArgs: 2,
-  hidden: true
-}, function (options) {
-  var releaseNameAndVersion = options.args[0];
-  var outputDirectory = options.args[1];
+  hidden: true,
 
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
-  doOrDie(function () {
-    catalog.official.refresh();
-  });
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+}, function (options) {
+  var releaseNameAndVersion = options.args[0];
+  var outputDirectory = options.args[1];
 
   var parsed = utils.splitConstraint(releaseNameAndVersion);
   if (!parsed.constraint)
     throw new main.ShowUsage;
 
-  var release = doOrDie(function () {
-    return catalog.official.getReleaseVersion(
-      parsed.package, parsed.constraint);
-  });
+  var release = catalog.official.getReleaseVersion(
+    parsed.package, parsed.constraint);
   if (!release) {
     // XXX this could also mean package unknown.
     Console.error('Release unknown: ' + releaseNameAndVersion + '');
@@ -2369,10 +2497,8 @@ main.registerCommand({
   var toolPkg = release.tool && utils.splitConstraint(release.tool);
   if (! (toolPkg && toolPkg.constraint))
     throw new Error("bad tool in release: " + toolPkg);
-  var toolPkgBuilds = doOrDie(function () {
-    return catalog.official.getAllBuilds(
-      toolPkg.package, toolPkg.constraint);
-  });
+  var toolPkgBuilds = catalog.official.getAllBuilds(
+    toolPkg.package, toolPkg.constraint);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
     Console.error('Tool version unknown: ' + release.tool + '');
@@ -2433,9 +2559,10 @@ main.registerCommand({
   tmpCatalog.initialize({
     packageStorage: tmpDataFile
   });
-  var savedData = packageClient.updateServerPackageData(tmpCatalog, null);
-  if (!savedData) {
-    // will have already printed an error
+  try {
+    packageClient.updateServerPackageData(tmpCatalog, null);
+  } catch (err) {
+    packageClient.handlePackageServerConnectionError(err);
     return 2;
   }
 
@@ -2521,7 +2648,8 @@ main.registerCommand({
   name: 'admin set-banners',
   minArgs: 1,
   maxArgs: 1,
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   var bannersFile = options.args[0];
   try {
@@ -2568,11 +2696,12 @@ main.registerCommand({
   maxArgs: 1,
   options: {
     unrecommend: { type: Boolean, short: "u" }
-  }
+  },
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
   var release = options.args[0].split('@');
   var name = release[0];
   var version = release[1];
@@ -2582,10 +2711,7 @@ main.registerCommand({
   }
 
   // Now let's get down to business! Fetching the thing.
-  var record;
-  doOrDie(function () {
-      record = catalog.official.getReleaseTrack(name);
-  });
+  var record = catalog.official.getReleaseTrack(name);
   if (!record) {
     Console.error('\n There is no release track named ' + name);
     return 1;
@@ -2624,11 +2750,12 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin set-earliest-compatible-version',
   minArgs: 2,
-  maxArgs: 2
+  maxArgs: 2,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
   var package = options.args[0].split('@');
   var name = package[0];
   var version = package[1];
@@ -2639,9 +2766,7 @@ main.registerCommand({
   var ecv = options.args[1];
 
   // Now let's get down to business! Fetching the thing.
-  var record = doOrDie(function () {
-    return catalog.official.getPackage(name);
-  });
+  var record = catalog.official.getPackage(name);
   if (!record) {
     Console.error('\n There is no package named ' + name);
     return 1;
@@ -2676,18 +2801,17 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin change-homepage',
   minArgs: 2,
-  maxArgs: 2
+  maxArgs: 2,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We want the most recent information.
-  refreshOfficialCatalogOrDie();
+  //refreshOfficialCatalogOrDie();
   var name = options.args[0];
   var url = options.args[1];
 
   // Now let's get down to business! Fetching the thing.
-  var record = doOrDie(function () {
-    return catalog.official.getPackage(name);
-  });
+  var record = catalog.official.getPackage(name);
   if (!record) {
     Console.error('\n There is no package named ' + name);
     return 1;
@@ -2724,7 +2848,8 @@ main.registerCommand({
   options: {
     "success" : {type: Boolean, required: false}
   },
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   // We don't care about having the most recent information, but we do want the
@@ -2739,9 +2864,7 @@ main.registerCommand({
     versions = [nSplit[1]];
     name = nSplit[0];
   } else {
-    versions = doOrDie(function () {
-      return catalog.official.getSortedVersions(name);
-    });
+    versions = catalog.official.getSortedVersions(name);
   }
 
   try {
@@ -2783,7 +2906,8 @@ main.registerCommand({
     "commit" : {type: String, required: false},
     "tag" : {type: String, required: false}
   },
-  hidden: true
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
 
   if (options.commit && options.tag)
@@ -2793,9 +2917,7 @@ main.registerCommand({
 
   // We are going to start with getting the latest version of the package.
   var name = options.args[0];
-  var version = doOrDie(function () {
-    return catalog.official.getLatestMainlineVersion(name).version;
-  });
+  var version = catalog.official.getLatestMainlineVersion(name).version;
 
   var coords = options.tag || options.commit;
   var url = "https://raw.githubusercontent.com/meteor/meteor/" +

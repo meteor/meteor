@@ -108,19 +108,6 @@ var updateVersions = function (shouldReloadClientProgram) {
     }});
   }
 
-  if (! ClientVersions.findOne({_id: "version-refreshable"})) {
-    ClientVersions.insert({
-      _id: "version-refreshable",
-      version: Autoupdate.autoupdateVersionRefreshable,
-      assets: WebAppInternals.refreshableAssets
-    });
-  } else {
-    ClientVersions.update("version-refreshable", { $set: {
-      version: Autoupdate.autoupdateVersionRefreshable,
-      assets: WebAppInternals.refreshableAssets
-      }});
-  }
-
   if (! ClientVersions.findOne({_id: "version-cordova"})) {
     ClientVersions.insert({
       _id: "version-cordova",
@@ -132,6 +119,24 @@ var updateVersions = function (shouldReloadClientProgram) {
       version: Autoupdate.autoupdateVersionCordova
     }});
   }
+
+  // Use `onListening` here because we need to use
+  // `WebAppInternals.refreshableAssets`, which is only set after
+  // `WebApp.generateBoilerplate` is called by `main` in webapp.
+  WebApp.onListening(function () {
+    if (! ClientVersions.findOne({_id: "version-refreshable"})) {
+      ClientVersions.insert({
+        _id: "version-refreshable",
+        version: Autoupdate.autoupdateVersionRefreshable,
+        assets: WebAppInternals.refreshableAssets
+      });
+    } else {
+      ClientVersions.update("version-refreshable", { $set: {
+        version: Autoupdate.autoupdateVersionRefreshable,
+        assets: WebAppInternals.refreshableAssets
+      }});
+    }
+  });
 };
 
 Meteor.publish(

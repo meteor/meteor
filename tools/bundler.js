@@ -484,6 +484,10 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
+    // Add top-level Cordova dependencies, which override Cordova
+    // dependencies from packages.
+    self._addDirectCordovaDependencies();
+
     // Preprocess and concatenate CSS files for client targets.
     if (self instanceof ClientTarget) {
       self.mergeCss();
@@ -635,14 +639,11 @@ _.extend(Target.prototype, {
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
       _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
-        // XXX if the plugin dependency conflicts with an existing dependency,
-        // use the newer version
-        if (_.has(self.cordovaDependencies, name)) {
-          var existingVersion = self.cordovaDependencies[name];
-          version = packageVersionParser.
-            lessThan(existingVersion, version) ? version : existingVersion;
-        }
-        self.cordovaDependencies[name] = version;
+        self._addCordovaDependency(
+          name,
+          version,
+          false /* use newer version if another version has already been added */
+        );
       });
 
       var isApp = ! unibuild.pkg.name;
@@ -787,6 +788,38 @@ _.extend(Target.prototype, {
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
+  },
+
+  // Add a Cordova plugin dependency to the target. If the same plugin
+  // has already been added at a different version and `override` is
+  // false, use whichever version is newest. If `override` is true, then
+  // we always add the exact version specified, overriding any other
+  // version that has already been added.
+  _addCordovaDependency: function (name, version, override) {
+    var self = this;
+    if (override) {
+      self.cordovaDependencies[name] = version;
+    } else {
+      if (_.has(self.cordovaDependencies, name)) {
+        var existingVersion = self.cordovaDependencies[name];
+        self.cordovaDependencies[name] = packageVersionParser.
+          lessThan(existingVersion, version) ? version : existingVersion;
+      } else {
+        self.cordovaDependencies[name] = version;
+      }
+    }
+  },
+
+  // Add Cordova plugins that have been directly added to the project
+  // (i.e. are in .meteor/cordova-plugins).
+  // XXX The versions of these direct dependencies override any versions
+  // of the same plugins that packages are using.
+  _addDirectCordovaDependencies: function () {
+    var self = this;
+    _.each(project.project.getCordovaPlugins(), function (version, name) {
+      self._addCordovaDependency(
+        name, version, true /* override any existing version */);
+    });
   },
 
   // For each resource of the given type, make it cacheable by adding
@@ -1003,9 +1036,7 @@ _.extend(ClientTarget.prototype, {
     };
 
     // Other build phases might need this AST later
-    // For cordova, we do not want to rewrite relative paths in css.
-    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb,
-      self.arch === 'web.cordova');
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
 
     // Overwrite the CSS files list with the new concatenated file
     var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
@@ -2064,7 +2095,7 @@ exports.bundle = function (options) {
         buildmessage.error(
           "A program named ctl exists but no program has isControlProgram set");
         // recover by not making a control program
-      }  else {
+      } else if (options.requireControlProgram) {
         var target = makeServerTarget("ctl");
         targets["ctl"] = target;
         controlProgram = "ctl";
@@ -2132,7 +2163,7 @@ exports.bundle = function (options) {
 
     // If we omitted a target due to an error, we might not have a
     // controlProgram anymore.
-    if (! (controlProgram in targets))
+    if (controlProgram && ! (controlProgram in targets))
       controlProgram = undefined;
 
 

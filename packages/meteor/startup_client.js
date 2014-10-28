@@ -8,14 +8,28 @@ var ready = function() {
   if (awaitingEventsCount > 0)
     return;
 
-  // XXX hide the splash screen if such exists, only on mobile
-  if (Meteor.isCordova) {
-    navigator.splashscreen && navigator.splashscreen.hide();
-  }
-
   loaded = true;
-  while (queue.length)
-    (queue.shift())();
+  var runStartupCallbacks = function () {
+    if (Meteor.isCordova) {
+      if (! cordova.plugins || ! cordova.plugins.CordovaUpdate) {
+        // XXX This timeout should not be necessary.
+        // Cordova indicates that all the cordova plugins files have been loaded
+        // and plugins are ready to be used when the "deviceready" callback
+        // fires. Even though we wait for the "deviceready" event, plugins
+        // have been observed to still not be not ready (likely a Cordova bug).
+        // We check the availability of the Cordova-Update plugin (the only
+        // plugin that we always include for sure) and retry a bit later if it
+        // is nowhere to be found. Experiments have found that either all
+        // plugins are attached or none.
+        Meteor.setTimeout(runStartupCallbacks, 20);
+        return;
+      }
+    }
+
+    while (queue.length)
+      (queue.shift())();
+  };
+  runStartupCallbacks();
 };
 
 if (document.addEventListener) {

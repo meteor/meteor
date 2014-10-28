@@ -1,0 +1,69 @@
+.overlay.share {
+  .wrapper-camera {
+    .position(absolute, auto, 0, 0, 0, 100%);
+    text-align: center;
+
+    .btn-camera {
+      margin-bottom: .5rem;
+    }
+    .subtext-camera {
+      .font-s2;
+      color: @color-medium;
+      margin-bottom: .75rem;
+    }
+  }
+
+  .bg-image {
+    //.position(absolute, 3rem, 0, 0, 0, 100%, 50%);
+    position: relative;
+    margin-top: 3rem;
+    height: 50%;
+  }
+
+  .form-share {
+    .background-image(linear-gradient(top, rgba(255,255,255,.9), rgba(255,255,255,1) 10%, @color-empty 100%));
+    .position(absolute, auto, 0, 0, 0, 100%);
+    .transform(translate3d(0,0,0));// Gpu rendering
+    min-height: 50%;
+    padding-bottom: 3rem;
+
+    .form-group {
+      .display(flex);
+      .flex-wrap(wrap);
+
+      margin-bottom: 3rem;
+
+      .avatar,
+      .message-share {
+        .flex(1);
+      }
+      .message-share {
+        width: 100%;
+      }
+
+      .avatar {
+        height: 2.5rem;
+        width: 2.5rem;
+        max-width: 2.5rem;
+        float: left;
+        margin-left: 1rem;
+        margin-top: 1rem;
+      }
+
+      .message-share {
+        height: 12em;
+        resize: none;
+      }
+    }
+
+    .wrapper-checkbox {
+      .position(absolute, auto, auto, 3rem, auto, 100%, 3rem);
+      border-top: 1px solid @color-rare;
+      border-bottom: 1px solid @color-rare;
+
+      .checkbox { padding: 1rem; }
+    }
+  }
+
+  .btn-primary { .position(absolute, auto, 0, 0, 0, 100%); }
+}

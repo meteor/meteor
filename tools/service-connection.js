@@ -33,7 +33,12 @@ var ServiceConnection = function (Package, endpointUrl, options) {
     // We found that this was likely to time out with the DDP default of 10s,
     // especially if the CPU is churning on bundling (eg, for the stats
     // connection which we start in parallel with bundling).
-    connectTimeoutMs: 15000,
+    connectTimeoutMs: 30000,
+    // Disable client->server heartbeats for service connections.  Users with
+    // slow internet connections were seeing heartbeat timeouts because the
+    // heartbeats were buried behind large responses (eg
+    // https://github.com/meteor/meteor/issues/2777).
+    heartbeatInterval: 0,
     retry: false,
     onConnected: function () {
       self.connected = true;
@@ -63,10 +68,14 @@ var ServiceConnection = function (Package, endpointUrl, options) {
       // Otherwise, ignore this error. We're going to reconnect!
       return;
     }
+    // Are we waiting to connect or for the result of a method apply or a
+    // subscribeAndWait? If so, disconnecting is a problem.
     if (self.currentFuture) {
       var fut = self.currentFuture;
       self.currentFuture = null;
-      fut.throw(error || new Error("DDP disconnected"));
+      fut.throw(error ||
+                new Package.ddp.DDP.ConnectionError(
+                  "DDP disconnected while connection in progress"));
     } else if (error) {
       // We got some sort of error with nobody listening for it; handle it.
       // XXX probably have a better way to handle it than this

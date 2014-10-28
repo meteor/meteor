@@ -426,9 +426,6 @@ _.extend(Project.prototype, {
         var oldVersion;
         var newRec;
         var messages = buildmessage.capture(function () {
-          // XXX: Lack of rate limiting, means that this could refresh a lot and
-          // be slow. Hopefully, that will not be happening often, and be fixed
-          // with sql stuff using a better pattern.
           oldVersion = catalog.complete.getVersion(package, oldV);
           newRec =
             catalog.complete.getVersion(package, newV);
@@ -459,7 +456,7 @@ _.extend(Project.prototype, {
         Console.warn(
           "\nThe following packages have been updated to new versions that are not " +
             "backwards compatible:");
-        Console.warn(utils.formatList(incompatibleUpdates));
+        utils.printPackageList(incompatibleUpdates, { level: Console.LEVEL_WARN });
         Console.warn("\n");
       };
     }
@@ -661,6 +658,17 @@ _.extend(Project.prototype, {
     if (!lines.length)
       return '';
     return files.trimLine(lines[0]);
+  },
+
+  // Like getMeteorReleaseVersion, but adds METEOR@ to the beginning if it's
+  // missing.
+  getNormalizedMeteorReleaseVersion: function () {
+    var self = this;
+    var raw = self.getMeteorReleaseVersion();
+    if (raw === null)
+      return null;
+    var parts = utils.splitReleaseName(raw);
+    return parts[0] + '@' + parts[1];
   },
 
   // Returns the full filepath of the projects .meteor/release file.

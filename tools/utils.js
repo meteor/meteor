@@ -53,9 +53,7 @@ var parseUrl = function (str, defaults) {
 };
 
 var ipAddress = function () {
-  var uniload = require("./uniload.js");
-  var netroute = uniload.load({ packages: ["netroute"] }).
-        netroute.NpmModuleNetroute;
+  var netroute = require('netroute');
   var info = netroute.getInfo();
   var defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
   if (! defaultRoute) {
@@ -96,36 +94,64 @@ exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-// Returns a pretty list suitable for showing to the user. Input is an
-// array of objects with keys 'name' and 'description'.
-exports.formatList = function (unsortedItems) {
-  var alphaSort = function (item) {
-    return item.name;
+// XXX: Move to e.g. formatters.js?
+// Prints a package list in a nice format.
+// Input is an array of objects with keys 'name' and 'description'.
+exports.printPackageList = function (items, options) {
+  options = options || {};
+
+  var rows = _.map(items, function (item) {
+    var name = item.name;
+    var description = item.description || 'No description';
+    return [name, description];
+  });
+
+  var alphaSort = function (row) {
+    return row[0];
   };
-  var items = _.sortBy(unsortedItems, alphaSort);
+  rows = _.sortBy(rows, alphaSort);
+
+  return utils.printTwoColumns(rows, options);
+};
+
+// XXX: Move to e.g. formatters.js?
+// Prints a two column table in a nice format:
+//  The first column is printed entirely, the second only as space permits
+exports.printTwoColumns = function (rows, options) {
+  options = options || {};
+
   var longest = '';
-  _.each(items, function (item) {
-    if (item.name.length > longest.length)
-      longest = item.name;
+  _.each(rows, function (row) {
+    var col0 = row[0] || '';
+    if (col0.length > longest.length)
+      longest = col0;
   });
 
   var pad = longest.replace(/./g, ' ');
-  // it'd be nice to read the actual terminal width, but I tried
-  // several methods and none of them work (COLUMNS isn't set in
-  // node's environment; `tput cols` returns a constant 80). maybe
-  // node is doing something weird with ptys.
+
   var width = 80;
+  var stream = process.stdout;
+  if (stream && stream.isTTY && stream.columns) {
+    width = stream.columns;
+  }
+
+  var Console = require("./console.js").Console;
 
   var out = '';
-  _.each(items, function (item) {
-    var name = item.name + pad.substr(item.name.length);
-    var description = item.description || 'No description';
-    var line = name + "  " + description;
+  _.each(rows, function (row) {
+    var col0 = row[0] || '';
+    var col1 = row[1] || '';
+    var line = Console.bold(col0) + pad.substr(col0.length);
+    line += "  " + col1;
     if (line.length > width) {
       line = line.substr(0, width - 3) + '...';
     }
     out += line + "\n";
   });
+
+  // XXX: Naughty call to 'private' function
+  var level = options.level || Console.LEVEL_INFO;
+  Console._print(level, out);
 
   return out;
 };
@@ -366,11 +392,30 @@ exports.startsWith = function(str, starts) {
     str.substring(0, starts.length) === starts;
 };
 
-exports.displayRelease = function (track, version) {
+// Options: noPrefix: do not display 'Meteor ' in front of the version number.
+exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
+  options = options || {};
+  var prefix = options.noPrefix ? "" : "Meteor ";
   if (track === catalog.DEFAULT_TRACK)
-    return "Meteor " + version;
+    return prefix + version;
   return track + '@' + version;
+};
+
+exports.splitReleaseName = function (releaseName) {
+  var parts = releaseName.split('@');
+  var track, version;
+  if (parts.length === 1) {
+    var catalog = require('./catalog.js');
+    track = catalog.DEFAULT_TRACK;
+    version = parts[0];
+  } else {
+    track = parts[0];
+    // Do we forbid '@' sign in release versions? I sure hope so, but let's
+    // be careful.
+    version = parts.slice(1).join("@");
+  }
+  return [track, version];
 };
 
 // Calls cb with each subset of the array "total", with non-decreasing size,
@@ -505,167 +550,48 @@ exports.execFileAsync = function (file, args, opts) {
   return p;
 };
 
-// Patience: a way to make slow operations a little more bearable.
-//
-// It's frustrating when you write code that takes a while, either because it
-// uses a lot of CPU or because it uses a lot of network/IO. There are two
-// issues:
-//   - It would be nice to apologize/explain to users that an operation is
-//     taking a while... but not to spam them with the message when the
-//     operation is fast. This is true no matter which kind of slowness we
-///    have.
-//   - In Node, consuming lots of CPU without yielding is especially bad.
-//     Other IO/network tasks will stall, and you can't even kill the process!
-//
-// Patience is a class to help alleviate the pain of long waits.  When you're
-// going to run a long operation, create a Patience object; when it's done (make
-// sure to use try/finally!), stop() it.
-//
-// Within any code that may burn CPU for too long, call
-// `utils.Patience.nudge()`.  (This is a singleton method, not a method on your
-// particular patience.)  If there are any active Patience objects and it's been
-// a while since your last yield, your Fiber will sleep momentarily.  (So the
-// caller has to be OK with yielding --- it has to be in a Fiber and it can't be
-// anything that depends for correctness on not yielding!)
-//
-// In addition, for each Patience, you can specify a message (a string to print
-// or a function to call) and a timeout for when that gets called.  We use two
-// strategies to try to call it: a standard JavaScript timeout, and as a backup
-// in case we're getting CPU-starved, we also check during each nudge.  The
-// message will not be printed after the Patience is stopped, which prevents you
-// from apologizing to users about operations that don't end up being slow.
-exports.Patience = function (options) {
-  var self = this;
-
-  self._id = nextPatienceId++;
-  ACTIVE_PATIENCES[self._id] = self;
-
-  self._whenMessage = null;
-  self._message = null;
-  self._messageTimeout = null;
-
-  var now = +(new Date);
-
-  if (options.messageAfterMs) {
-    if (!options.message)
-      throw Error("missing message!");
-    if (typeof(options.message) !== 'string' &&
-        typeof(options.message) !== 'function') {
-      throw Error("message must be string or function");
-    }
-    self._message = "\n" + options.message;
-    self._whenMessage = now + options.messageAfterMs;
-    self._messageTimeout = setTimeout(function () {
-      self._messageTimeout = null;
-      self._printMessage();
-    }, options.messageAfterMs);
-  }
-
-  // If this is the first patience we made, the next yield time is
-  // YIELD_EVERY_MS from now.
-  if (_.size(ACTIVE_PATIENCES) === 1) {
-    nextYield = now + YIELD_EVERY_MS;
-  }
-};
-
-var nextYield = null;
-var YIELD_EVERY_MS = 150;
-var ACTIVE_PATIENCES = {};
-var nextPatienceId = 1;
-
-exports.Patience.nudge = function () {
-  // Is it time to yield?
-  if (!_.isEmpty(ACTIVE_PATIENCES) &&
-      +(new Date) >= nextYield) {
-    nextYield = +(new Date) + YIELD_EVERY_MS;
-    utils.sleepMs(1);
-  }
-
-  // save a copy, in case it gets updated
-  var patienceIds = _.keys(ACTIVE_PATIENCES);
-  _.each(patienceIds, function (id) {
-    if (_.has(ACTIVE_PATIENCES, id)) {
-      ACTIVE_PATIENCES[id]._maybePrintMessage();
-    }
-  });
-};
-
-_.extend(exports.Patience.prototype, {
-  stop: function () {
-    var self = this;
-    delete ACTIVE_PATIENCES[self._id];
-    if (_.isEmpty(ACTIVE_PATIENCES)) {
-      nextYield = null;
-    }
-    self._clearMessageTimeout();
-  },
-
-  _maybePrintMessage: function () {
-    var self = this;
-    var now = +(new Date);
-
-    // Is it time to print a message?
-    if (self._whenMessage && +(new Date) >= self._whenMessage) {
-      self._printMessage();
-    }
-  },
-
-  _printMessage: function () {
-    var self = this;
-    // Did the timeout just fire, but we already printed the message due to a
-    // nudge while CPU-bound? We're done. (This shouldn't happen since we clear
-    // the timeout, but just in case...)
-    if (self._message === null)
-      return;
-    self._clearMessageTimeout();
-    // Pull out message, in case it's a function and it yields.
-    var message = self._message;
-    self._message = null;
-    if (typeof (message) === 'function') {
-      message();
-    } else {
-      console.log(message);
-    }
-  },
-
-  _clearMessageTimeout: function () {
-    var self = this;
-    if (self._messageTimeout) {
-      clearTimeout(self._messageTimeout);
-      self._messageTimeout = null;
-    }
-    self._whenMessage = null;
-  }
-});
-
-
-// This is a stripped down version of Patience, that just regulates the frequency of calling yield.
-// It should behave similarly to calling yield on every iteration of a loop,
-// except that it won't actually yield if there hasn't been a long enough time interval
-//
-// options:
-//   interval: minimum interval of time between yield calls
-//             (more frequent calls are simply dropped)
-//
-// XXX: Have Patience use ThrottledYield
-exports.ThrottledYield = function (options) {
+exports.Throttled = function (options) {
   var self = this;
 
   options = _.extend({ interval: 150 }, options || {});
   self.interval = options.interval;
   var now = +(new Date);
 
-  // The next yield time is interval from now.
-  self.nextYield = now + self.interval;
+  self.next = now;
+};
+
+_.extend(exports.Throttled.prototype, {
+  isAllowed: function () {
+    var self = this;
+    var now = +(new Date);
+
+    if (now < self.next) {
+      return false;
+    }
+
+    self.next = now + self.interval;
+    return true;
+  }
+});
+
+
+// ThrottledYield just regulates the frequency of calling yield.
+// It should behave similarly to calling yield on every iteration of a loop,
+// except that it won't actually yield if there hasn't been a long enough time interval
+//
+// options:
+//   interval: minimum interval of time between yield calls
+//             (more frequent calls are simply dropped)
+exports.ThrottledYield = function (options) {
+  var self = this;
+
+  self._throttle = new exports.Throttled(options);
 };
 
 _.extend(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
-    var now = +(new Date);
-
-    if (now >= self.nextYield) {
-      self.nextYield = now + self.interval;
+    if (self._throttle.isAllowed()) {
       utils.sleepMs(1);
     }
   }

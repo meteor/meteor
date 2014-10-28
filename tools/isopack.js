@@ -318,6 +318,7 @@ _.extend(Isopack.prototype, {
     self.pluginWatchSet = options.pluginWatchSet;
     self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
     self.buildTimePluginDependencies = options.buildTimePluginDependencies;
+    self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
   },
@@ -364,6 +365,15 @@ _.extend(Isopack.prototype, {
   buildArchitectures: function () {
     var self = this;
     return self.architectures().join('+');
+  },
+
+  // Returns true if we think that this isopack is platform specific (contains
+  // binary builds)
+  platformSpecific: function () {
+    var self = this;
+    return _.any(self.architectures(), function (arch) {
+      return arch.match(/^os\./);
+    });
   },
 
   tarballName: function () {
@@ -968,7 +978,8 @@ _.extend(Isopack.prototype, {
         if (needToCopyNodeModules) {
           builder.copyDirectory({
             from: unibuild.nodeModulesPath,
-            to: nodeModulesPath
+            to: nodeModulesPath,
+            npmDiscards: self.npmDiscards
           });
         }
 

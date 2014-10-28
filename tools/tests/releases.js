@@ -59,16 +59,18 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   // Suppose you ask for a release that doesn't exist.
   s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
   run = s.run("--release", "weird");
-  run.readErr("weird: unknown release.\n");
+  run.readErr("Meteor weird: unknown release.\n");
   run.expectEnd();
   run.expectExit(1);
 
   // Suppose you're offline and you ask for a release you don't have
   // cached.
+  // XXX On the refreshpolicy branch, we removed some of the support
+  // code for this test. Make sure we get it to pass before merging.
   s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
   run = s.run("--release", "weird");
-  run.matchErr("Meteor weird");
-  run.matchErr("online");
+  run.matchErr("offline");
+  run.matchErr("weird: unknown release");
   run.expectExit(1);
 
   // Project asking for nonexistent release.
@@ -76,16 +78,17 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     s.write(".meteor/release", "strange");
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
     run = s.run();
-    run.matchErr("version strange of Meteor");
-    run.matchErr("valid Meteor release");
+    run.matchErr("uses Meteor strange");
+    run.matchErr("don't have it either");
     run.expectExit(1);
 
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
-    run.matchErr("Meteor strange");
-    run.matchErr("not installed");
-    run.matchErr("online");
+    run.matchErr("offline");
+    run.matchErr("it uses Meteor strange");
+    run.matchErr("don't have that version of Meteor installed");
+    run.matchErr("update servers");
     run.expectExit(1);
 
     // You create an app from a checkout, and then try to use it from an
@@ -198,7 +201,7 @@ selftest.define("checkout", ['checkout'], function () {
     s.write(".meteor/release", "something");
     run = s.run("list");
     run.readErr("=> Running Meteor from a checkout");
-    run.matchErr("project version (something)\n");
+    run.matchErr("project version (Meteor something)\n");
     run.expectExit(0);
   });
 });
@@ -220,4 +223,39 @@ selftest.define("download release", ['net', 'slow'], function () {
   run.waitSecs(1000);
   run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
   run.expectExit();
+});
+
+
+selftest.define("unknown release", [], function () {
+  var s = new Sandbox({
+    warehouse: {
+      v2: { recommended: true }
+    }
+  });
+ s.set("METEOR_OFFLINE_CATALOG", "t");
+  var run;
+
+  s.createApp('myapp', 'packageless');
+  s.cd('myapp');
+  run = s.run("--release", "bad");
+  run.matchErr("Meteor bad: unknown release");
+
+  // METEOR in the release file.
+  s.write('.meteor/release', "METEOR@0.9-bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor 0.9-bad, but");
+
+  // No METEOR in the release file.
+  s.write('.meteor/release', "0.9.x-bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor 0.9.x-bad, but");
+
+  // Non-standard track
+  s.write('.meteor/release', "FOO@bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor release FOO@bad, but");
+
 });

@@ -8,6 +8,7 @@ var utils = require('./utils.js');
 var watch = require('./watch.js');
 var buildmessage = require('./buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
+var NpmDiscards = require('./npm-discards.js');
 var Builder = require('./builder.js');
 var archinfo = require('./archinfo.js');
 var release = require('./release.js');
@@ -242,6 +243,10 @@ var PackageSource = function (catalog) {
   // Map from npm package name to the required version of the package
   // as a string.
   self.npmDependencies = {};
+
+  // Files to be stripped from the installed NPM dependency tree. See the
+  // Npm.strip comment below for further usage information.
+  self.npmDiscards = new NpmDiscards;
 
   // Absolute path to a directory on disk that serves as a cache for
   // the npm dependencies, so we don't have to fetch them on every
@@ -728,6 +733,28 @@ _.extend(PackageSource.prototype, {
         }
 
         npmDependencies = _npmDependencies;
+      },
+
+      // The `Npm.strip` method makes up for packages that have missing
+      // or incomplete .npmignore files by telling the bundler to strip out
+      // certain unnecessary files and/or directories during `meteor build`.
+      //
+      // The `discards` parameter should be an object whose keys are
+      // top-level package names and whose values are arrays of strings
+      // (or regular expressions) that match paths in that package's
+      // directory that should be stripped before installation. For
+      // example:
+      //
+      //   Npm.strip({
+      //     connect: [/*\.wmv$/],
+      //     useragent: ["tests/"]
+      //   });
+      //
+      // This means (1) "remove any files with the `.wmv` extension from
+      // the 'connect' package directory" and (2) "remove the 'tests'
+      // directory from the 'useragent' package directory."
+      strip: function(discards) {
+        self.npmDiscards.merge(discards);
       },
 
       require: function (name) {
@@ -1529,6 +1556,9 @@ _.extend(PackageSource.prototype, {
       // Watch control files for changes
       // XXX this read has a race with the actual reads that are used
       _.each([path.join(appDir, '.meteor', 'packages'),
+              path.join(appDir, '.meteor', 'versions'),
+              path.join(appDir, '.meteor', 'cordova-plugins'),
+              path.join(appDir, '.meteor', 'platforms'),
               path.join(appDir, '.meteor', 'release')], function (p) {
                 watch.readAndWatchFile(sourceArch.watchSet, p);
               });

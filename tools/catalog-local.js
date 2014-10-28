@@ -215,11 +215,6 @@ _.extend(LocalCatalog.prototype, {
     //     so in practice we don't really support "maybe-platform-specific"
     //     packages
 
-    // Even though getVersion already has its own _recordOrRefresh, we need this
-    // one, in case our local cache says "version exists but only for the wrong
-    // arch" and the right arch has been recently published.
-    // XXX should ensure at most one refresh
-    // PASCAL - check with Ekate that it is ok to not explicitely refresh again
     var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
     var solution = null;
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
@@ -265,13 +260,9 @@ _.extend(LocalCatalog.prototype, {
     return _.where(self.builds, { versionId: versionRecord._id });
   },
 
-  // Refresh the packages in the catalog.
+  // Refresh the packages in the catalog, by re-scanning local packages.
   //
   // options:
-  // - forceRefresh: even if there is a future in progress, refresh the catalog
-  //   anyway. When we are using hot code push, we may be restarting the app
-  //   because of a local package change that impacts that catalog. Don't wait
-  //   on the official catalog to refresh data.json, in this case.
   // - watchSet: if provided, any files read in reloading packages will be added
   //   to this set.
   refresh: function (options) {

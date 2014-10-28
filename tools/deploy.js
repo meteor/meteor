@@ -66,7 +66,7 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
-  var progress = buildmessage.addChildTracker("Uploading");
+  // XXX: Reintroduce progress for upload
   try {
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation +
@@ -74,16 +74,13 @@ var deployRpc = function (options) {
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
       useAuthHeader: true,
-      encoding: 'utf8', // Hack, but good enough for the deploy server..
-      progress: progress
+      encoding: 'utf8' // Hack, but good enough for the deploy server..
     }));
   } catch (e) {
     return {
       statusCode: null,
       errorMessage: "Connection error (" + e.message + ")"
     };
-  } finally {
-    progress.reportProgressDone();
   }
 
   var response = result.response;
@@ -386,7 +383,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  Console.stdout.write('Deploying to ' + site + '. Bundling...\n');
+  Console.stdout.write('Deploying to http://' + site + '.\n');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -427,8 +424,6 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  Console.stdout.write('Uploading...\n');
-
   var result;
   buildmessage.enterJob({ title: "Uploading" }, function () {
     result = authedRpc({
@@ -452,7 +447,7 @@ var bundleAndDeploy = function (options) {
   var deployedAt = require('url').parse(result.payload.url);
   var hostname = deployedAt.hostname;
 
-  Console.stdout.write('Now serving at ' + hostname + '\n');
+  Console.stdout.write('Now serving at http://' + hostname + '\n');
   files.rm_recursive(buildDir);
 
   if (! hostname.match(/meteor\.com$/)) {

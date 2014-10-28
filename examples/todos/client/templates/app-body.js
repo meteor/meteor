@@ -7,7 +7,7 @@ Session.setDefault(USER_MENU_KEY, false);
 var SHOW_CONNECTION_ISSUE_KEY = 'showConnectionIssue';
 Session.setDefault(SHOW_CONNECTION_ISSUE_KEY, false);
 
-var CONNECTION_ISSUE_TIMEOUT = 1000;
+var CONNECTION_ISSUE_TIMEOUT = 5000;
 
 Meteor.startup(function () {
   // set up a swipe left / right handler
@@ -21,9 +21,13 @@ Meteor.startup(function () {
     preventDefaultEvents: false
   });
 
-  // Don't show the connection error box unless we haven't connected within
-  // 1 second of app starting
+  // Only show the connection error box if it has been 5 seconds since
+  // the app started
   setTimeout(function () {
+    // Launch screen handle created in lib/router.js
+    dataReadyHold.release();
+
+    // Show the connection error box
     Session.set(SHOW_CONNECTION_ISSUE_KEY, true);
   }, CONNECTION_ISSUE_TIMEOUT);
 });
@@ -34,11 +38,13 @@ Template.appBody.rendered = function() {
       $(node)
         .hide()
         .insertBefore(next)
-        .fadeIn();
+        .fadeIn(function () {
+          listFadeInHold.release();
+        });
     },
     removeElement: function(node) {
       $(node).fadeOut(function() {
-        this.remove();
+        $(this).remove();
       });
     }
   };

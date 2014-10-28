@@ -14,6 +14,7 @@ var catalog = require('./catalog.js');
 var Isopack = require('./isopack.js').Isopack;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
+var Console = require('./console.js').Console;
 
 exports.Tropohouse = function (root, catalog) {
   var self = this;
@@ -155,20 +156,19 @@ _.extend(exports.Tropohouse.prototype, {
 
     var url = buildRecord.build.url;
 
-    var progress = buildmessage.addChildTracker("Downloading build");
-    try {
-      buildmessage.capture({}, function () {
-        var packageTarball = httpHelpers.getUrl({
-          url: url,
-          encoding: null,
-          progress: progress,
-          wait: false
-        });
-        files.extractTarGz(packageTarball, targetDirectory);
+    buildmessage.enterJob({title: "Downloading build"}, function () {
+      // XXX: We use one progress for download & untar; this isn't ideal:
+      // it relies on extractTarGz being fast and not reporting any progress.
+      // Really, we should create two subtasks
+      // (and, we should stream the download to the tar extractor)
+      var packageTarball = httpHelpers.getUrl({
+        url: url,
+        encoding: null,
+        progress: buildmessage.getCurrentProgressTracker(),
+        wait: false
       });
-    } finally {
-      progress.reportProgressDone();
-    }
+      files.extractTarGz(packageTarball, targetDirectory);
+    });
 
     return targetDirectory;
   },
@@ -321,12 +321,18 @@ _.extend(exports.Tropohouse.prototype, {
         });
         downloadedPackages[name] = version;
       } catch (err) {
-        if (!(err.noCompatibleBuildError))
+        if (err.noCompatibleBuildError) {
+          console.log(err.message);
+          // continue, which is weird, but we want to avoid a stack trace...
+          // the caller is supposed to check the size of the return value
+        } else if (err instanceof files.OfflineError) {
+          Console.printError(
+            err.error, "Could not download package " + name + "@" + version);
+          // continue, which is weird, but we want to avoid a stack trace...
+          // the caller is supposed to check the size of the return value
+        } else {
           throw err;
-        console.log(err.message);
-        // continue, which is weird, but we want to avoid a stack trace...
-        // the caller is supposed to check the size of the return value,
-        // although many callers do not.
+        }
       }
     });
     return downloadedPackages;

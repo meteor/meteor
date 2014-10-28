@@ -21,14 +21,14 @@ var Console = require('./console.js').Console;
 
 
 // XXX: Rationalize these flags.  Maybe use the logger?
-DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
+var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
 
-SYNCTOKEN_ID = "1";
+var SYNCTOKEN_ID = "1";
 
-METADATA_LAST_SYNC = "lastsync";
+var METADATA_LAST_SYNC = "lastsync";
 
-BUSY_RETRY_ATTEMPTS = 10;
-BUSY_RETRY_INTERVAL = 1000;
+var BUSY_RETRY_ATTEMPTS = 10;
+var BUSY_RETRY_INTERVAL = 1000;
 
 var Mutex = function () {
   var self = this;
@@ -140,15 +140,40 @@ var Db = function (dbFile, options) {
   self._autoPrepare = true;
   self._prepared = {};
 
-  self._db = self.open(dbFile);
-
   self._transactionMutex = new Mutex();
 
+  self._db = self._retry(function () {
+    return self.open(dbFile);
+  });
+
   // WAL mode copes much better with (multi-process) concurrency
-  self._execute('PRAGMA journal_mode=WAL');
+  self._retry(function () {
+    self._execute('PRAGMA journal_mode=WAL');
+  });
 };
 
 _.extend(Db.prototype, {
+
+  // TODO: Move to utils?
+  _retry: function (f, options) {
+    options = _.extend({ maxAttempts: 3, delay: 500}, options || {});
+
+    for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
+      try {
+        return f();
+      } catch (err) {
+        if (attempt < options.maxAttempts) {
+          Console.warn("Retrying after error", err);
+        } else {
+          throw err;
+        }
+      }
+
+      if (options.delay) {
+        utils.sleepMs(options.delay);
+      }
+    }
+  },
 
   // Runs functions serially, in a mutex
   _serialize: function (f) {
@@ -248,6 +273,8 @@ _.extend(Db.prototype, {
     var self = this;
 
     if ( !fs.existsSync(path.dirname(dbFile)) ) {
+      Console.debug("Creating database directory", dbFile);
+
       var folder = path.dirname(dbFile);
       if ( !files.mkdir_p(folder) )
         throw new Error("Could not create folder at " + folder);
@@ -496,7 +523,6 @@ var RemoteCatalog = function () {
   self.offline = null;
 
   self.db = null;
-  self._currentRefreshIsLoud = false;
 };
 
 _.extend(RemoteCatalog.prototype, {
@@ -516,7 +542,9 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getVersion: function (name, version) {
-    var result = this._queryAsJSON("SELECT content FROM versions WHERE packageName=? AND version=?", [name, version]);
+    var result = this._contentQuery(
+      "SELECT content FROM versions WHERE packageName=? AND version=?",
+      [name, version]);
     if(!result || result.length === 0) {
       return null;
     }
@@ -554,7 +582,8 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getPackage: function (name, options) {
-    var result = this._queryAsJSON("SELECT * FROM packages WHERE name=?", name);
+    var result = this._contentQuery(
+      "SELECT * FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     if (result.length !== 1) {
@@ -567,11 +596,16 @@ _.extend(RemoteCatalog.prototype, {
     if (!name) {
       throw new Error("No name provided");
     }
-    return this._queryAsJSON("SELECT content FROM versions WHERE packageName=?", name);
+    return this._contentQuery(
+      "SELECT content FROM versions WHERE packageName=?", name);
   },
 
   getAllBuilds: function (name, version) {
-    var result = this._queryAsJSON("SELECT * FROM builds WHERE builds.versionId = (SELECT _id FROM versions WHERE versions.packageName=? AND versions.version=?)", [name, version]);
+    var result = this._contentQuery(
+      "SELECT * FROM builds WHERE builds.versionId = " +
+        "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
+        "versions.version=?)",
+      [name, version]);
     if (!result || result.length === 0)
       return null;
     return result;
@@ -581,7 +615,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
 
     var solution = null;
-    var allBuilds = self.getAllBuilds(name, version);
+    var allBuilds = self.getAllBuilds(name, version) || [];
 
     utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
       // This build subset works if for all the arches we need, at least one
@@ -605,7 +639,8 @@ _.extend(RemoteCatalog.prototype, {
   // release track, or null if there is no such release track.
   getReleaseTrack: function (name) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseTracks WHERE name=?", name);
+    var result = self._contentQuery(
+      "SELECT content FROM releaseTracks WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     return result[0];
@@ -613,10 +648,22 @@ _.extend(RemoteCatalog.prototype, {
 
   getReleaseVersion: function (track, version) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=? AND version=?", [track, version]);
+    var result = self._contentQuery(
+      "SELECT content FROM releaseVersions WHERE track=? AND version=?",
+      [track, version]);
     if (!result || result.length === 0)
       return null;
     return result[0];
+  },
+
+  // Get a release version with a given tool
+  getReleaseWithTool: function (toolSpec) {
+    var self = this;
+    // XXX: In the future, we should consider adding tool as a column and
+    // implementing table upgrades
+    var allVersions = self._contentQuery(
+      "SELECT content FROM releaseVersions");
+    return _.findWhere(allVersions, { tool: toolSpec });
   },
 
   // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
@@ -633,11 +680,12 @@ _.extend(RemoteCatalog.prototype, {
   },
 
   getAllReleaseTracks: function () {
-    return _.pluck(this._queryWithRetry("SELECT name FROM releaseTracks"), 'name');
+    return _.pluck(this._columnsQuery("SELECT name FROM releaseTracks"),
+                   'name');
   },
 
   getAllPackageNames: function () {
-    return _.pluck(this._queryWithRetry("SELECT name FROM packages"), 'name');
+    return _.pluck(this._columnsQuery("SELECT name FROM packages"), 'name');
   },
 
   initialize: function (options) {
@@ -693,37 +741,37 @@ _.extend(RemoteCatalog.prototype, {
 
     Console.debug("In remote catalog refresh");
 
-    buildmessage.assertInCapture();
+    if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === 'offline') {
+      var e = new Error;
+      e.errorType = 'DDP.ConnectionError';
+      throw e;
+    }
+
     if (self.offline)
-      return;
+      return false;
 
     if (options.maxAge) {
       var lastSync = self.getMetadata(METADATA_LAST_SYNC);
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
-          Console.debug("Catalog is sufficiently up-to-date; not refreshing\n");
-          return;
+          Console.debug("Package catalog is sufficiently up-to-date; not updating\n");
+          return false;
         }
       }
     }
 
-    if (!options.silent) {
-      self._currentRefreshIsLoud = true;
-    }
-
     var updateResult = {};
-    buildmessage.enterJob({ title: 'Refreshing package metadata.' }, function () {
+    // XXX This buildmessage.enterJob only exists for showing progress.
+    buildmessage.enterJob({ title: 'Updating package catalog.' }, function () {
       updateResult = packageClient.updateServerPackageData(self);
     });
-    if (updateResult.connectionFailed) {
-      Console.warn("Warning: could not connect to package server\n");
-    }
+
     if (updateResult.resetData) {
       tropohouse.default.wipeAllPackages();
-      self.reset();
     }
 
+    return true;
   },
 
   // Given a release track, return all recommended versions for this track, sorted
@@ -731,7 +779,8 @@ _.extend(RemoteCatalog.prototype, {
   // exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
-    var result = self._queryAsJSON("SELECT content FROM releaseVersions WHERE track=?", track);
+    var result = self._contentQuery(
+      "SELECT content FROM releaseVersions WHERE track=?", track);
 
     var recommended = _.filter(result, function (v) {
       if (!v.recommended)
@@ -760,7 +809,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     var self = this;
-    var matchingBuilds = this._queryAsJSON(
+    var matchingBuilds = this._contentQuery(
       "SELECT content FROM builds WHERE versionId=?", versionRecord._id);
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
@@ -769,51 +818,23 @@ _.extend(RemoteCatalog.prototype, {
     return false;
   },
 
-  _queryWithRetry: function (query, params, options) {
+  // Executes a query, returning an array of each content column parsed as JSON
+  _contentQuery: function (query, params) {
     var self = this;
-    options = options || {};
-
-    var rows = self.db.runInTransaction(function (txn) {
-      return txn.query(query, params);
-    });
-    if (rows.length !== 0 || options.noRefresh)
-      return rows;
-
-    // XXX: This causes unnecessary refreshes
-
-    // XXX: It would be nice to Console.warn this, but that breaks some of our self-tests
-    Console.debug("Forcing refresh because of unexpected missing data");
-    Console.debug("No data was returned from query: ", query, params);
-    self.refresh();
-
-    options = _.clone(options);
-    options.noRefresh = true;
-
-    return self._queryWithRetry(query, params, options);
-  },
-
-
-  // Execute a query using the values as arguments of the query and return the result as JSON.
-  // This code assumes that the table being queried always have a column called "content"
-  _queryAsJSON: function (query, params, options) {
-    var self = this;
-    Console.debug("Executing query with _queryAsJSON: ", query, params);
-    var rows = self._queryWithRetry(query, params, options);
+    var rows = self._columnsQuery(query, params);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
   },
 
-  // Executes a query, parsing the content column as JSON
-  // No refreshes
-  _simpleQuery: function (query, params) {
+  // Executes a query, returning an array of maps from column name to data.
+  // No JSON parsing is performed.
+  _columnsQuery: function (query, params) {
     var self = this;
     var rows = self.db.runInTransaction(function (txn) {
       return txn.query(query, params);
     });
-    return _.map(rows, function(entity) {
-      return JSON.parse(entity.content);
-    });
+    return rows;
   },
 
   _insertReleaseVersions: function(releaseVersions) {
@@ -855,7 +876,8 @@ _.extend(RemoteCatalog.prototype, {
 
   getSyncToken: function() {
     var self = this;
-    var result = self._simpleQuery("SELECT content FROM syncToken WHERE _id=?", [ SYNCTOKEN_ID ]);
+    var result = self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
+                                    [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");
       return null;
