@@ -59,13 +59,6 @@ The client versions of [`insert`](#insert), [`update`](#update), and
 [`remove`](#remove), which are implemented as methods, use this feature to make
 client-side interactions with the database appear instant.
 
-{{> autoApiBox "Meteor.Error"}}
-
-If you want to return an error from a method, throw an exception.  Methods can
-throw any kind of exception, but `Meteor.Error` is the only kind of error that
-will be sent to the client. If a method function throws a different exception,
-the client gets `Meteor.Error(500, 'Internal server error')`.
-
 {{> autoApiBox "Meteor.call"}}
 
 This is how you call a method.
@@ -107,5 +100,12 @@ throwing an exception, just as if you called the function directly:
 // Synchronous call on the server with no callback
 var result = Meteor.call('commentOnPost', comment, postId);
 ```
+
+{{> autoApiBox "Meteor.Error"}}
+
+If you want to return an error from a method, throw an exception.  Methods can
+throw any kind of exception, but `Meteor.Error` is the only kind of error that
+will be sent to the client. If a method function throws a different exception,
+the client gets `Meteor.Error(500, 'Internal server error')`.
 
 {{/template}}
