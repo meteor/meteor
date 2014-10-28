@@ -1,0 +1,85 @@
+@menu-width: 45%;
+
+// iPhone6 for illustrative purposes only
+// Remove when deploying your app
+@media screen and (min-width: 376px) {
+  body {
+    overflow: hidden;
+
+    &:after {
+      .position(absolute, 50%, 50%, auto, auto, 432px, 882px);
+      .transform(translate3d(50%, -50%, 0));
+      background-image: url('img/app/chrome-iphone6-432x882@2x.jpg');
+      content: '';
+      display: block;
+      background-size: contain;
+      z-index: -1;
+    }
+
+    #container {
+      .position(absolute, 50%, 0, 0, 0, auto, 100%);
+      .transform(translate3d(0, -50%, 0));
+      max-width: 375px;
+      max-height: 667px;
+      margin: 0 auto;
+    }
+  }
+}
+// End of iPhone
+
+body {
+  background: @color-empty;
+}
+
+#container {
+  .position(absolute, 0, 0, 0, 0);
+
+  // Hide anything offscreen
+  overflow: hidden;
+}
+
+#menu {
+  .position(absolute, 0, 0, 0, 0);
+  right: 100% - @menu-width;
+}
+
+#content-container {
+  .position(absolute, 0, 0, 0, 0);
+  .transition(all 200ms ease-out);
+  .transform(translate3d(0, 0, 0));
+
+  // Toggle menu on mobile
+  .menu-open & {
+    .transform(translate3d(@menu-width, 0, 0));
+  }
+
+  > div.page {
+    .position(absolute, 0, 0, 0, 0);
+    overflow-x: hidden;
+  }
+}
+
+.content-scrollable {
+  .position(absolute, 0, 0, 0, 0);
+  background: @color-empty;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+// Transparent screen to prevent interactions on content when menu is open
+.content-overlay {
+  .position(absolute, 0, 0, 0, 0);
+  cursor: pointer;
+
+  .menu-open & {
+    .transform(translate3d(@menu-width, 0, 0));
+    z-index: 1;
+  }
+}
+
+.overlay {
+  .background-image(linear-gradient(top, rgba(232, 234, 241,.97), rgba(243,243,244, .97) 100%));
+  .position(absolute, 0, 0, 0, 0);;
+  z-index: 1;
+}
