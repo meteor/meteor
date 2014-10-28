@@ -895,7 +895,9 @@ _.extend(CordovaRunner.prototype, {
 "\n" +
 "WARNING: It looks like you are using OAuth2 login in your app.\n" +
 "         Meteor's OAuth2 implementation does not currently work with\n" +
-"         Cordova apps in local development mode. For workarounds, see\n" +
+"         mobile apps in local development mode, except in the iOS\n" +
+"         simulator. You can run the iOS simulator with 'meteor run ios'.\n" +
+"         For additional workarounds, see\n" +
 "         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
         }
       });
