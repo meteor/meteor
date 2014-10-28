@@ -563,7 +563,32 @@ main.registerCommand({
     project.appendFinishedUpgrader(upgrader);
   });
 
+  // XXX copied from main.js
+  // We need to re-initialize the complete catalog to know about the app we just
+  // created, because it might have local packages.
+  var localPackageDirs = [path.resolve(appPath, 'packages')];
+  if (process.env.PACKAGE_DIRS) {
+    // User can provide additional package directories to search in PACKAGE_DIRS
+    // (colon-separated).
+    localPackageDirs = localPackageDirs.concat(
+      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
+        return path.resolve(p);
+      }));
+  }
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
   var messages = buildmessage.capture({ title: "Updating dependencies" }, function () {
+    // XXX Hack. In the future we should just delay all use of catalog.complete
+    // until this point.
+    catalog.complete.initialize({
+      localPackageDirs: localPackageDirs
+    });
+
     // Run the constraint solver. Override the assumption that using '--release'
     // means we shouldn't update .meteor/versions.
     project._ensureDepsUpToDate({alwaysRecord: true});
