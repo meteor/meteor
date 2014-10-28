@@ -269,3 +269,15 @@ var capitalize = function(str){
   str = str == null ? '' : String(str);
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
+
+Template._configureLoginOnDesktopDialog.helpers({
+  visible: function () {
+    return loginButtonsSession.get('configureOnDesktopVisible');
+  }
+});
+
+Template._configureLoginOnDesktopDialog.events({
+  'click #configure-on-desktop-dismiss-button': function () {
+    loginButtonsSession.set('configureOnDesktopVisible', false);
+  }
+});

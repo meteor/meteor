@@ -4,6 +4,7 @@
   {{> _enrollAccountDialog}}
   {{> _justVerifiedEmailDialog}}
   {{> _configureLoginServiceDialog}}
+  {{> _configureLoginOnDesktopDialog}}
 
   <!-- if we're not showing a dropdown, we need some other place to show messages -->
   {{> _loginButtonsMessagesDialog}}
@@ -133,6 +134,17 @@
     <div class="accounts-dialog accounts-centered-dialog" id="login-buttons-message-dialog">
       {{> _loginButtonsMessages}}
       <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
+    </div>
+  {{/if}}
+</template>
+
+<template name="_configureLoginOnDesktopDialog">
+  {{#if visible}}
+    <div class="accounts-dialog accounts-centered-dialog" id="configure-on-desktop-dialog">
+      <p>
+        Please configure login on a desktop browser.
+      </p>
+      <div class="login-button" id="configure-on-desktop-dismiss-button">Dismiss</div>
     </div>
   {{/if}}
 </template>
