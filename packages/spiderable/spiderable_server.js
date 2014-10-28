@@ -26,6 +26,7 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
   // reassembling url without escaped fragment if exists
   var parsedUrl = urlParser.parse(requestUrl);
   var parsedQuery = querystring.parse(parsedUrl.query);
+  var escapedFragment = parsedQuery['_escaped_fragment_'];
   delete parsedQuery['_escaped_fragment_'];
 
   var parsedAbsoluteUrl = urlParser.parse(siteAbsoluteUrl);
@@ -41,6 +42,10 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
   parsedAbsoluteUrl.query = parsedQuery;
   // `url.format` will only use `query` if `search` is absent
   parsedAbsoluteUrl.search = null;
+
+  if (escapedFragment !== undefined && escapedFragment !== null && escapedFragment.length > 0) {
+    parsedAbsoluteUrl.hash = '!' + decodeURIComponent(escapedFragment);
+  }
 
   return urlParser.format(parsedAbsoluteUrl);
 };
