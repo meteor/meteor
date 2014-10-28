@@ -8,7 +8,7 @@ with just a few commands. We've put a lot of work into making the same packages
 and APIs work on desktop and mobile, so that you don't have to worry about a lot
 of the edge cases associated with mobile app development.
 
-### Instaling mobile SDKs
+### Installing mobile SDKs
 
 Install the development tools for Android or iOS with one command:
 
