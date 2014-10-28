@@ -83,6 +83,8 @@
 * Fix the layout of the OAuth configuration dialog when used with
   Bootstrap.
 
+Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle, Primigenus, svda, yauh, and zol.
+
 
 ## v0.9.4
 
