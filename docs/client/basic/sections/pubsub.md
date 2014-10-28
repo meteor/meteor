@@ -88,8 +88,10 @@ ready](#publish_ready). A reactive data source.
 {{/dtdd}}
 </dl>
 
-If you call `Meteor.subscribe` inside [`Tracker.autorun`](#tracker_autorun), the
-subscription will automatically be cancelled when the computation is stopped,
-meaning you don't have to to call `stop` on subscriptions made from inside
-`Tracker.autorun`.
+If you call `Meteor.subscribe` inside
+[`Tracker.autorun`](#tracker_autorun), the subscription will be cancelled
+automatically whenever the computation reruns (so that a new subscription
+can be created, if appropriate), meaning you don't have to to call `stop`
+on subscriptions made from inside `Tracker.autorun`.
+
 {{/template}}
