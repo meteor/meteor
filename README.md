@@ -128,6 +128,9 @@ The following are **permitted**:
 * Most characters in attribute values - `<img alt=x,y>`
 * Embedded SVG elements
 
+Note: Currently you have to close your Ps, LIs, and other tags for
+which the spec allows the end tag to be omitted in many cases
+
 ## Character References
 
 This package contains a lookup table for all known named character references in HTML, of which there are over 2,000, from `&Aacute;` (capital A, acute accent) to `&zwnj;` (zero-width non-joiner), as well as code for interpreting numeric character entities like `&#65;`.
