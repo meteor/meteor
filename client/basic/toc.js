@@ -34,7 +34,7 @@ var sections = [
         id: "command-line"
       }),
       section("File Structure", {
-        id: "file-structure"
+        id: "filestructure"
       }),
       section("Building Mobile Apps", {
         id: "building-mobile"
