@@ -1241,6 +1241,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
     // OK, now it's finally time to set up the complete catalog. Only after this
     // can we use the build system (other than via uniload).
 
+    // XXX This code is duplicated a bit inside the create command. Sorry.
+
     // Figure out the directories that we should search for local
     // packages (in addition to packages downloaded from the package
     // server)
