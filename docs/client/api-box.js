@@ -141,13 +141,13 @@ Template.autoApiBox.helpers({
 
     return signature;
   },
-  link: function () {
-    if (nameToId[this.longname]) {
+  id: function () {
+    if (Session.get("fullApi") && nameToId[this.longname]) {
       return nameToId[this.longname];
     }
 
     // fallback
-    return this.longname.replace(".", "-");
+    return this.longname.replace(/[.#]/g, "-");
   },
   paramsNoOptions: function () {
     return _.reject(this.params, function (param) {
@@ -155,3 +155,16 @@ Template.autoApiBox.helpers({
     });
   }
 });
+
+Template.apiBoxTitle.helpers({
+  link: function () {
+    return '#/' + (Session.get("fullApi") ? 'full' : 'basic') + '/' + this.id;
+  }
+});
+
+Template.autoApiBox.rendered = function () {
+  this.$('pre code').each(function(i, block) {
+    hljs.highlightBlock(block);
+  });
+};
+

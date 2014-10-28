@@ -32,76 +32,9 @@ invalidations to clients.
 Meteor is a work in progress, but we hope it shows the direction of
 our thinking.  We'd love to hear your feedback.
 
+{{> quickStart}}
 
-## Quick start!
-
-<!-- change colors on these. $ and command output in grey, rest in
-white -->
-
-The following works on all [supported
-platforms](https://github.com/meteor/meteor/wiki/Supported-Platforms).
-
-Install Meteor:
-
-```bash
-$ curl https://install.meteor.com | /bin/sh
-```
-
-Create a project:
-
-```bash
-$ meteor create myapp
-```
-
-Run it locally:
-
-```bash
-$ cd myapp
-$ meteor
-# Meteor server running on: http://localhost:3000/
-```
-
-Unleash it on the world (on a free server we provide):
-
-```bash
-$ meteor deploy myapp.meteor.com
-```
-
-<h2 id="sevenprinciples">Seven Principles of Meteor</h2>
-
-<!-- wire with [1,2,3] on it -->
-- _Data on the Wire_. Don't send HTML over the network. Send data and
-let the client decide how to render it.
-
-<!-- two people, one speech bubble coming out of both of their mouths,
-containing '{}' -->
-- _One Language._ Write both the client and the server parts of your
-interface in JavaScript.
-
-<!-- globe, with the same database icon in US and Russia -->
-- _Database Everywhere_. Use the same transparent API to access your
-database from the client or the server.
-
-<!-- clock with zero time elapsed. or clock on left with zero time
-elapsed, horizontal bold line to a clock with zero time elapsed, but a
-line at a 45 degree angle to a a clock in grey with 100 ms
-elapsed. like shades of relativity -->
-- _Latency Compensation_. On the client, use prefetching and model
-simulation to make it look like you have a zero-latency connection to
-the database.
-
-<!-- knee getting hit with hammer like in reflex test -->
-- _Full Stack Reactivity_. Make realtime the default. All layers, from
-database to template, should make an event-driven interface available.
-
-- _Embrace the Ecosystem_. Meteor is open source and integrates,
-rather than replaces, existing open source tools and frameworks.
-
-<!-- zen circle -->
-- _Simplicity Equals Productivity_. The best way to make something
-seem simple is to have it actually _be_ simple. Accomplish this through
-clean, classically beautiful APIs.
-
+{{> principles}}
 
 <h2 id="resources">Developer Resources</h2>
 
