@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Spacebars: Allow curly braces to be escaped, with special
+  sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
+
+
 ## v1.0
 
 ### New Features
