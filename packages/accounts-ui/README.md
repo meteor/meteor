@@ -25,4 +25,4 @@ and [`sendEnrollmentEmail`](http://docs.meteor.com/#accounts_sendenrollmentemail
 do not have to be manually placed in HTML: they are automatically activated
 when the URLs are loaded.
 
-See the Meteor Accounts project page for more info: XXX link
+See the Meteor Accounts [project page](https://www.meteor.com/accounts) for more info.

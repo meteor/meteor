@@ -4,4 +4,4 @@ This is the Meteor command-line tool. Most of the code for it is in the [tools d
 
 The Meteor tool also includes testing functionality and example apps for the Meteor framework.
 
-Read more about it on the project page: XXX link
+Read more about it on the [project page](https://www.meteor.com/tool)

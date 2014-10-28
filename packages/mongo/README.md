@@ -10,9 +10,8 @@ with MongoDB in Meteor:
 - DDP RPC end-points for updating the data from clients connected over the wire
 - Serialization and deserialization of updates to the DDP format
 
-To learn more about [Livequery], see the project page on
-[www.meteor.com][livequery].
+To learn more about [Livequery], see the [project page on
+www.meteor.com][livequery].
 
-XXX:
-[livequery]: https://www.meteor.com/projects/livequery
+[livequery]: https://www.meteor.com/livequery
 

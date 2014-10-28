@@ -14,4 +14,6 @@ ServiceConfiguration.configurations.insert({
 });
 ```
 
-Read more in the [Meteor docs](http://docs.meteor.com/#meteor_loginwithexternalservice) and the Meteor Accounts project page. XXX link
+Read more in the [Meteor
+docs](http://docs.meteor.com/#meteor_loginwithexternalservice) and the
+Meteor Accounts [project page](https://www.meteor.com/accounts).

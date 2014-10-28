@@ -12,4 +12,4 @@ Meteor's user account system. This package implements the basic functions necess
 
 There are also login services available in community packages.
 
-For more information, see the [Meteor docs](http://docs.meteor.com/#accounts_api) and the Meteor Accounts project page. XXX link
+For more information, see the [Meteor docs](http://docs.meteor.com/#accounts_api) and the Meteor Accounts [project page](https://www.meteor.com/accounts).
