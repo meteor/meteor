@@ -151,7 +151,7 @@ _.extend(CodeGen.prototype, {
           return BlazeTools.EmitCode(includeCode);
         }
       } else if (tag.type === 'ESCAPE') {
-        return HTML.Raw(tag.value);
+        return tag.value;
       } else {
         // Can't get here; TemplateTag validation should catch any
         // inappropriate tag types that might come out of the parser.
