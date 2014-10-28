@@ -2,11 +2,13 @@
 // flexie, rather than this
 
 Package.describe({
-  summary: "Easily create arbitrary multicolumn layouts",
-  version: "1.0.2"
+  name: "jquery-layout",
+  summary: "Deprecated package for JS layout",
+  version: "1.0.3"
 });
 
 Package.on_use(function (api) {
+  api.versionsFrom("1.0");
   api.use('jquery');
   api.add_files('jquery.layout.js', 'client');
 });
