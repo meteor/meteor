@@ -1,6 +1,6 @@
 {{#template name="basicAccounts"}}
 
-<h2 id="b-accounts"><span>Accounts</span></h2>
+<h2 id="accounts"><span>Accounts</span></h2>
 
 To get accounts functionality, add one or more of the following packages to
 your app with `meteor add`:
@@ -18,7 +18,7 @@ your app with `meteor add`:
   in with their accounts from other websites. These will automatically add
   buttons to the `loginButtons` dropdown.
 
-<h3 id="b-loginButtons" class="api-title">
+<h3 id="loginButtons" class="api-title">
   <a class="name selflink" href="#b-loginButtons">{{dstache}}> loginButtons}}</a>
   <span class="locus">Client</span>
 </h3>
