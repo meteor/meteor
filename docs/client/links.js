@@ -13,8 +13,12 @@ $(window).on('hashchange', function () {
 // need an actual function to only debounce inside the if statement
 var actuallyUpdateUrl = _.debounce(function (el) {
   var docsType = Session.get("fullApi") ? "full" : "basic";
-  ignoreUrlChange = true;
-  window.location.replace("#/" + docsType + "/" + el.id);
+  var newHash = "#/" + docsType + "/" + el.id;
+
+  if (window.location.hash !== newHash) {
+    ignoreUrlChange = true;
+    window.location.replace(newHash);
+  }
 }, 100);
 
 var updateUrlFromWaypoint = function (el) {
