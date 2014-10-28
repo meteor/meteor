@@ -10,3 +10,6 @@ used at runtime on the server or the client by using the
 The `spacebars` package, in contrast, contains the `Spacebars` symbol
 and the Spacebars runtime, which is shipped to the client as part of
 the app.
+
+Read more about Spacebars, Blaze, and Meteor templating on the Blaze
+[project page](https://www.meteor.com/blaze).
