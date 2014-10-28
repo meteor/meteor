@@ -192,6 +192,10 @@ Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle, Primigenus, s
 * Operations that take longer than a few seconds (e.g. downloading
   packages, installing the Android SDK, etc) now show a progress bar.
 
+* Complete support for using an HTTP proxy in the `meteor` command line
+  tool. Now all DDP connections can work through a proxy.  Use the standard
+  `http_proxy` environment variable to specify your proxy endpoint.  #2515
+
 
 ### Bug Fixes
 
