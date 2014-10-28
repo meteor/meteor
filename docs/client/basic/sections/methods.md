@@ -76,7 +76,7 @@ Methods called on the client run asynchronously, so you need to pass a
 callback in order to observe the result of the call. The callback will be
 called with two arguments, `error` and `result`. The `error` argument will
 be `null` unless an exception was thrown. When an exception is thrown, the
-`error` argument is `instanceof Meteor.error` and the `result` argument is
+`error` argument is a `Meteor.Error` instance and the `result` argument is
 undefined.
 
 Here's an example of calling the `commentOnPost` method with arguments
