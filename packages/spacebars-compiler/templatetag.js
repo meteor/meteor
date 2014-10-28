@@ -53,8 +53,11 @@ var makeStacheTagStartRegex = function (r) {
                     r.ignoreCase ? 'i' : '');
 };
 
+// "starts" regexes are used to see what type of template
+// tag the parser is looking at.  They must match a non-empty
+// result, but not the interesting part of the tag.
 var starts = {
-  ESCAPE: makeStacheTagStartRegex(/^[\{]{2,}\|/),
+  ESCAPE: /^\{\{(?=\{*\|)/,
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -90,7 +93,6 @@ TemplateTag.parse = function (scannerOrString) {
       return null;
     var ret = result[0];
     scanner.pos += ret.length;
-    scanner.current = ret;
     return ret;
   };
 
@@ -268,7 +270,8 @@ TemplateTag.parse = function (scannerOrString) {
     if (! run(ends.DOUBLE))
       expected('`}}`');
   } else if (type === 'ESCAPE') {
-    tag.value = scanner.current.slice(0, -1);
+    var result = run(/^\{*\|/);
+    tag.value = '{{' + result.slice(0, -1);
   } else {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
@@ -451,7 +454,7 @@ var validateTag = function (ttag, scanner) {
 
   var position = ttag.position || TEMPLATE_TAG_POSITION.ELEMENT;
   if (position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-    if (ttag.type === 'DOUBLE') {
+    if (ttag.type === 'DOUBLE' || ttag.type === 'ESCAPE') {
       return;
     } else if (ttag.type === 'BLOCKOPEN') {
       var path = ttag.path;
