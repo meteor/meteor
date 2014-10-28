@@ -883,15 +883,21 @@ _.extend(CordovaRunner.prototype, {
     // android, not android-device
     if (self.platformName === 'android') {
       Android.waitForEmulator();
+    }
 
+    // OAuth2 packages don't work so well with any mobile platform
+    // except the iOS simulator. Print a warning and direct users to the
+    // wiki page for help.
+    if (self.platformName !== "ios") {
       buildmessage.capture(function () {
         var versions = project.getVersions({ dontRunConstraintSolver: true });
-        if (versions.oauth) {
+        if (versions.oauth2) {
           Console.warn(
-"\nWarning: It looks like you are using OAuth login in your app.\n" +
-"Meteor's OAuth implementation does not currently work in the Android\n" +
-"emulator. For workarounds, please see\n" +
-"https://github.com/meteor/meteor/wiki/OAuth-in-the-Android-emulator.\n");
+"\n" +
+"WARNING: It looks like you are using OAuth2 login in your app.\n" +
+"         Meteor's OAuth2 implementation does not currently work with\n" +
+"         Cordova apps in local development mode. For workarounds, see\n" +
+"         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
         }
       });
     }
