@@ -44,7 +44,7 @@ Meteor.startup(function () {
 
           $(el).waypoint(function() {
             updateUrlFromWaypoint(this);
-          }, { context: $('.main-content'), offset: 50 });
+          }, { context: $('.main-content'), offset: -50 });
         });
       }, 0);
     });
