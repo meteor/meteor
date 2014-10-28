@@ -1,6 +1,4 @@
-<template name="pkg_stylus">
-{{#markdown}}
-## `stylus`
+# stylus
 
 [Stylus](http://learnboost.github.com/stylus/) is a CSS pre-processor with a simple syntax and expressive
 dynamic behavior. It allows for more compact stylesheets and
@@ -14,12 +12,7 @@ The `stylus` package also includes `nib` support. Add `@import 'nib'` to
 your `.styl` files to enable cross-browser mixins such as
 `linear-gradient` and `border-radius`.
 
-{{#note}}
 If you want to `@import` a file, give it the extension `.import.styl`
 to prevent Meteor from processing it independently.
-{{/note}}
 
 See <http://visionmedia.github.com/nib> for documentation of the nib extensions of Stylus.
-
-{{/markdown}}
-</template>
