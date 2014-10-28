@@ -272,6 +272,7 @@ the logged in user, and the remaining arguments are as follows:
     `document` is the document that is about to be removed from the database.
     Return `true` if the document should be removed, `false` otherwise.
 
+
 {{> autoApiBox name="Mongo.Collection#deny" options="insert, update, remove"}}
 
 The `deny` method lets you selectively override your `allow` rules. While
