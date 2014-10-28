@@ -6,7 +6,7 @@ Meteor stores data in *collections*. JavaScript objects stored in collections
 are called `documents`.  To get started, declare a collection with
 `new Mongo.Collection`.
 
-{{> autoApiBox "Mongo.Collection"}}
+{{> autoApiBox name="Mongo.Collection" options=""}}
 
 Calling the `Mongo.Collection` constructor creates a collection object
 which acts just like a MongoDB collection. If you pass a name when you
@@ -45,7 +45,7 @@ collection should be published to which clients.
 
 Use `findOne` or `find` to retrieve documents from a collection.
 
-{{> autoApiBox "Mongo.Collection#findOne"}}
+{{> autoApiBox name="Mongo.Collection#findOne" options="sort;skip;fields"}}
 
 This method lets you retrieve a specific document from your
 collection. The `findOne` method is most commonly called with a specific
@@ -109,7 +109,7 @@ Note that `findOne` will return `null` if it fails to find a matching document,
 which often happens if the document hasn't been loaded yet or has been removed
 from the collection, so you should be prepared to handle `null` values.
 
-{{> autoApiBox "Mongo.Collection#find"}}
+{{> autoApiBox name="Mongo.Collection#find" options="sort;skip;limit;fields"}}
 
 The `find` method is similar to `findOne`, but instead of returning a
 single document it returns a MongoDB *cursor*. A cursor is a special
@@ -207,7 +207,7 @@ server code and [methods](#meteor_methods) can remove documents using any
 selector.
 
 
-{{> autoApiBox "Mongo.Collection#allow"}}
+{{> autoApiBox name="Mongo.Collection#allow" options="insert, update, remove"}}
 
 In newly created apps, Meteor allows almost any calls to `insert`, `update`, and
 `remove` from any client or server code. This is because apps started with
@@ -272,7 +272,7 @@ the logged in user, and the remaining arguments are as follows:
     `document` is the document that is about to be removed from the database.
     Return `true` if the document should be removed, `false` otherwise.
 
-{{> autoApiBox "Mongo.Collection#deny"}}
+{{> autoApiBox name="Mongo.Collection#deny" options="insert, update, remove"}}
 
 The `deny` method lets you selectively override your `allow` rules. While
 only one of your `allow` callbacks has to return true to allow a
