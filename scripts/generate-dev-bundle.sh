@@ -76,7 +76,9 @@ cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/meteor.js and tools/server/server.js, and the text in
 # docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.8.24
+# THIS DEV BUNDLE IS ONLY CREATED FOR USE BY mother. WE DID NOT
+# UPDATE ANYTHING ELSE.
+git checkout v0.8.28
 
 ./configure --prefix="$DIR"
 make -j4
