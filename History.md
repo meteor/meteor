@@ -48,6 +48,17 @@
   source tree can cause subsequent builds to fail because they will
   treat the build output as source files.
 
+* Exit from `meteor run` when new Cordova plugins or platforms are
+  added, since we don't support hot code push for new plugins or
+  platforms.
+
+* Fix quoting of arguments to Cordova plugins.
+
+* The `accounts-twitter` package now works in Cordova apps in local
+  development. For workarounds for other login providers in local
+  development mode, see
+  https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.
+
 ### Packaging
 
 * `meteor publish-for-arch` can publish packages built with different Meteor
@@ -55,6 +66,9 @@
 
 * Fix default `api.versionsFrom` field in packages created with `meteor
   create --package`.
+
+* Fix bug where changes in an app's .meteor/versions file would not
+  cause the app to be rebuilt.
 
 ### Other bug fixes and improvements
 
@@ -83,7 +97,11 @@
 * Fix the layout of the OAuth configuration dialog when used with
   Bootstrap.
 
-Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle, Primigenus, svda, yauh, and zol.
+* Allow build plugins to override the 'bare' option on added source
+  files. #2834
+
+Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle,
+Primigenus, svda, yauh, and zol.
 
 
 ## v0.9.4
