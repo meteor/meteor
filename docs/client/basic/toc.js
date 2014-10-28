@@ -37,7 +37,7 @@ var sections = [
         id: "filestructure"
       }),
       section("Building Mobile Apps", {
-        id: "building-mobile"
+        id: "buildingmobileapps"
       })
     ]
   }),
