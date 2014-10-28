@@ -180,20 +180,28 @@ your application before use. The easiest way to do this is with the
 [`accounts-ui` package](#accountsui) which presents a step-by-step guide
 to configuring each service. However, the data can be also be entered
 manually in the `ServiceConfiguration.configurations` collection, which
-is exported by the `service-configuration` package. For example, after
-running `meteor add service-configuration` in your app:
+is exported by the `service-configuration` package.
 
-    // first, remove configuration entry in case service is already configured
-    ServiceConfiguration.configurations.remove({
-      service: "weibo"
-    });
-    ServiceConfiguration.configurations.insert({
-      service: "weibo",
-      clientId: "1292962797",
-      loginStyle: "popup",
-      secret: "75a730b58f5691de5522789070c319bc"
-    });
+First, add the service configuration package:
 
+```bash
+meteor add service-configuration
+```
+
+Then, in your app:
+
+```js
+// first, remove configuration entry in case service is already configured
+ServiceConfiguration.configurations.remove({
+  service: "weibo"
+});
+ServiceConfiguration.configurations.insert({
+  service: "weibo",
+  clientId: "1292962797",
+  loginStyle: "popup",
+  secret: "75a730b58f5691de5522789070c319bc"
+});
+```
 
 Each external service has its own login provider package and login function. For
 example, to support GitHub login, run `$ meteor add accounts-github` and use the

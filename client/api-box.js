@@ -1,12 +1,25 @@
-var apiData = function (longname) {
+var apiData = function (options) {
+  options = options || {};
+  if (typeof options === "string") {
+    options = {name: options};
+  }
+
   var root = DocsData;
 
-  _.each(longname.split("."), function (pathSegment) {
+  _.each(options.name.split("."), function (pathSegment) {
     root = root[pathSegment];
   });
 
   if (! root) {
-    console.log("API Data not found: " + longname);
+    console.log("API Data not found: " + options.name);
+  }
+
+  if (_.has(options, 'options')) {
+    root = _.clone(root);
+    var includedOptions = options.options.split(';');
+    root.options = _.filter(root.options, function (option) {
+      return _.contains(includedOptions, option.name);
+    });
   }
 
   return root;

@@ -52,8 +52,8 @@ connect to the app's database.
 
 Reset the current project to a fresh state. Removes all local data.
 
-If you use `meteor reset` often, but you have some initial data that you
-don't want to discard, consider using [`Meteor.startup`](#environment) to
+If you use `meteor reset` often, but you have some initial data that you don't
+want to discard, consider using [`Meteor.startup`](#/basic/Meteor-startup) to
 recreate that data the first time the server starts up:
 
 ```
