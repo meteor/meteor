@@ -194,13 +194,6 @@ rm -rf node_modules/esprima/test
 # https://github.com/williamwicks/node-eachline/pull/4
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
-# Install jsdoc
-# XXX Do we actually need this in the dev bundle? Can't we just make jsdoc.sh
-#     run 'npm install'?
-npm install jsdoc@3.3.0-alpha9
-rm -rf node_modules/jsdoc/node_modules/catharsis/node_modules/underscore-contrib
-rm -rf node_modules/jsdoc/node_modules/esprima/test
-
 # Cordova npm tool for mobile integration
 # XXX We install our own fork of cordova because we need a particular patch that
 # didn't land to cordova-android yet. As soon as it lands, we can switch back to
