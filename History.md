@@ -7,10 +7,10 @@
 * Add the `meteor admin get-machine` command to make it easier to
   publish packages with binary dependencies for all
   architectures. `meteor publish` no longer publishes builds
-  automatically.
+  automatically if your package has binary NPM dependencies.
 
-* New `localmarket` example, highlighting Meteor's support mobile app
-  development.
+* New `localmarket` example, highlighting Meteor's support for mobile
+  app development.
 
 * Restyle the `leaderboard` example, and optimize it for both desktop
   and mobile.
@@ -58,7 +58,7 @@
 
 ### Other bug fixes and improvements
 
-* Use TLSv1 in the `spiderable` package, for compatiblity with servers
+* Use TLSv1 in the `spiderable` package, for compatibility with servers
   that have disabled SSLv3 in response to the POODLE bug.
 
 * Work around the `meteor run` proxy occasionally running out of sockets.
