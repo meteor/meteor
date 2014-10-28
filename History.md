@@ -2,15 +2,31 @@
 
 ## v1.0
 
+### New Features
+
 * Add the `meteor admin get-machine` command to make it easier to
   publish packages with binary dependencies for all
   architectures. `meteor publish` no longer publishes builds
   automatically.
 
+* New `localmarket` example, highlighting Meteor's support mobile app
+  development.
+
+* Restyle the `leaderboard` example, and optimize it for both desktop
+  and mobile.
+
+### Performance
+
 * Reduce unnecessary syncs with the package server, speeding up many commands.
 
 * Speed up `meteor deploy` by not bundling unnecessary files and
   programs.
+
+* To make Meteor easier to use on slow or unreliable network
+  connections, increase timeouts for DDP connections that the Meteor
+  tool uses to communicate with the package server. #2777, #2789.
+
+### Mobile App Support
 
 * Implemented reasonable default behavior for launch screens on mobile
   apps.
@@ -18,22 +34,34 @@
 * Don't build for Android when only the iOS build is required, and
   vice versa.
 
-* Fix `meteor publish-for-arch` springboarding. XXX more detail?
-
-* Restyle the 'leaderboard' example, and optimize it for both desktop
-  and mobile.
-
 * Fix bug that could cause mobile apps to stop being able to receive hot
   code push updates.
+
+* Fix bug where Cordova clients connected to http://example.com instead
+  of https://example.com when https:// was specified in the
+  --mobile-server option. #2880
+
+* Fix stack traces when attempting to build or run iOS apps on Linux.
+
+* Print a warning when building an app with mobile platforms and
+  outputting the build into the source tree. Outputting a build into the
+  source tree can cause subsequent builds to fail because they will
+  treat the build output as source files.
+
+### Packaging
+
+* `meteor publish-for-arch` can publish packages built with different Meteor
+  releases.
 
 * Fix default `api.versionsFrom` field in packages created with `meteor
   create --package`.
 
-* Work around the `meteor run` proxy occasionally running out of sockets.
+### Other bug fixes and improvements
 
-* To make Meteor easier to use on slow or unreliable network
-  connections, increase timeouts for DDP connections that the Meteor
-  tool uses to communicate with the package server. #2777, #2789.
+* Use TLSv1 in the `spiderable` package, for compatiblity with servers
+  that have disabled SSLv3 in response to the POODLE bug.
+
+* Work around the `meteor run` proxy occasionally running out of sockets.
 
 * Fix bug with regular expressions in minimongo. #2817
 
@@ -42,13 +70,6 @@
 * Include protocols in URLs printed by `meteor deploy`.
 
 * Improve error message for limited ordered observe. #1643
-
-* Fix bug where Cordova clients connected to http://example.com instead
-  of https://example.com when https:// was specified in the
-  --mobile-server option. #2880
-
-* Use TLSv1 in the `spiderable` package, for compatiblity with servers
-  that have disabled SSLv3 in response to the POODLE bug.
 
 * Fix missing dependency on `random` in the `autoupdate` package. #2892
 
@@ -61,13 +82,6 @@
 
 * Fix the layout of the OAuth configuration dialog when used with
   Bootstrap.
-
-* Fix stack traces when attempting to build or run iOS apps on Linux.
-
-* Print a warning when building an app with mobile platforms and
-  outputting the build into the source tree. Outputting a build into the
-  source tree can cause subsequent builds to fail because they will
-  treat the build output as source files.
 
 
 ## v0.9.4
