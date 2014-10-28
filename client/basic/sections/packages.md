@@ -61,7 +61,7 @@ build system.
 Send emails from your app. See the [email section of the full API
 docs](#/full/email).
 
-## mquandalle:jade
+<h2 id="jade">mquandalle:jade</h2>
 
 Use the [Jade](http://jade-lang.com/) templating language in your app. After
 adding this package, any files with a `.jade` extension will be compiled into
