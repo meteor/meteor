@@ -92,6 +92,12 @@ _.extend(ProgressDisplayNone.prototype, {
 // Status message mode is where we see status messages but not the
 // fancy progress bar.  It's used when we detect a "pseudo-TTY"
 // of the type used by Emacs, and possibly SSH.
+//
+// XXX DELETE THIS MODE since the progress bar now uses "\r".
+// But first we have to throttle progress bar updates so that
+// Emacs doesn't get overwhelemd (we should throttle them anyway).
+// There's also a bug when using the progress bar in Emacs where
+// the cursor doesn't seem to return to column 0.
 var ProgressDisplayStatus = function (console) {
   var self = this;
 
@@ -778,6 +784,7 @@ _.extend(Console.prototype, {
       // It's important that we only enter status message mode
       // if self._pretty, so that we don't start displaying
       // status messages too soon.
+      // XXX See note where ProgressDisplayStatus is defined.
       newProgressDisplay = new ProgressDisplayStatus(self);
     } else {
       // Otherwise we can do the full progress bar
