@@ -44,7 +44,7 @@ Meteor.startup(function () {
 
           $(el).waypoint(function() {
             updateUrlFromWaypoint(this);
-          }, { context: $('.main-content'), offset: 50 });
+          }, { context: $('.main-content'), offset: -50 });
         });
       }, 0);
     });
@@ -89,25 +89,22 @@ Tracker.autorun(function () {
 
   Tracker.afterFlush(function () {
     setTimeout(function () {
-      var targetLocation;
       var id = current.split('/')[2];
 
-      if (! id) {
-        // will scroll to the very top
-        id = "top";
-      }
-
-      // XXX this selector is tied to the structure of the document so tightly
-      // because sometimes we have two elements with the same id.
-      // For example: "Quick start" section appears in both basic docs and full
-      // docs. Since we hide parts of DOM with CSS the user doesn't see both at
-      // the same time but they are still both in the DOM. New browsers allow us
-      // to query by id even if ids repeat themselves. We cannot change it
-      // easily because the markdown parser always produces an id for headings.
-      var selector = "#main>:not(.hidden) #" + id;
-      var foundElement = $(selector);
-      if (foundElement.get(0)) {
-        targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
+      var targetLocation = 0;
+      if (id) {
+        // XXX this selector is tied to the structure of the document so tightly
+        // because sometimes we have two elements with the same id.
+        // For example: "Quick start" section appears in both basic docs and full
+        // docs. Since we hide parts of DOM with CSS the user doesn't see both at
+        // the same time but they are still both in the DOM. New browsers allow us
+        // to query by id even if ids repeat themselves. We cannot change it
+        // easily because the markdown parser always produces an id for headings.
+        var selector = "#main>:not(.hidden) #" + id;
+        var foundElement = $(selector);
+        if (foundElement.get(0)) {
+          targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
+        }
       }
 
       ignoreWaypoints = true;
