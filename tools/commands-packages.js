@@ -346,16 +346,6 @@ main.registerCommand({
     Console.warn("\nWARNING: Your package contains binary code.");
   } else if (binary) {
     // Normal publish flow. Tell the user nicely.
-
-    // XXX this is only while we're in 1.0 RC period. Because of a
-    // springboarding bug in 0.9.4, you need to use --release on
-    // publish-for-arch. Also, you need --release to get the admin
-    // get-machine command until it is recommended.
-    var currentRelease = "";
-    if (!release.current.isCheckout()) {
-      currentRelease = " --release " + release.current.getReleaseVersion();
-    }
-
     Console.warn(
 "\nThis package contains binary code and must be built on multiple architectures.\n");
 
@@ -364,12 +354,12 @@ main.registerCommand({
 "older versions of MacOS and Linux, by running:\n");
 
     _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
-      Console.info("  meteor" + currentRelease + " admin get-machine", a);
+      Console.info("  meteor admin get-machine", a);
     });
 
     Console.info("\nOn each machine, run:\n");
 
-    Console.info("  meteor" + currentRelease,
+    Console.info("  meteor",
                  "publish-for-arch",
                  packageSource.name + "@" + packageSource.version);
 
