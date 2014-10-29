@@ -616,7 +616,7 @@ pre {
     z-index: 3;
     background: white;
 
-    overflow-y: scroll;
+    overflow: hidden;
 
     .close-search {
         float: right;
@@ -657,12 +657,21 @@ pre {
         }
     }
 
-    ol {
+    .search-results {
         margin: 40px;
+
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 170px;
+
+        overflow-y: scroll;
 
         li {
             font-size: 1.2em;
             margin-bottom: 0.5em;
+            margin-left: 2em;
 
             .name {
                 display: inline-block;
@@ -674,6 +683,10 @@ pre {
                 display: inline-block;
                 width: 60%;
                 vertical-align: top;
+            }
+
+            &.selected {
+                background: yellow;
             }
         }
     }
