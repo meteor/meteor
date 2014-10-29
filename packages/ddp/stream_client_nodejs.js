@@ -128,6 +128,24 @@ _.extend(LivedataTest.ClientStream.prototype, {
     var wsUrl = toWebsocketUrl(self.endpoint);
     var client = self.client = websocketDriver.client(wsUrl);
 
+    var parsedUrl = Npm.require('url').parse(wsUrl);
+    var stream;
+    var onConnect = function () {
+      client.start();
+    };
+    if (parsedUrl.protocol === 'wss:') {
+      stream = Npm.require('tls').connect(
+        parsedUrl.port || 443, parsedUrl.hostname, onConnect);
+    } else {
+      stream = Npm.require('net').createConnection(
+        parsedUrl.port || 80, parsedUrl.hostname);
+      stream.on('connect', onConnect);
+    }
+
+    _.each(self.headers, function (header, name) {
+      client.setHeader(name, header);
+    });
+
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
       function () {
@@ -135,22 +153,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
           new DDP.ConnectionError("DDP connection timed out"));
       },
       self.CONNECT_TIMEOUT);
-
-    var onConnect = function () {
-      client.start();
-    };
-    var stream = self._createSocket(wsUrl, onConnect);
-
-    if (!self.client) {
-      // We hit a connection timeout or other issue while yielding in
-      // _createSocket. Drop the connection.
-      stream.end();
-      return;
-    }
-
-    _.each(self.headers, function (header, name) {
-      client.setHeader(name, header);
-    });
 
     self.client.on('open', Meteor.bindEnvironment(function () {
       return self._onConnect(client);
@@ -207,19 +209,5 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     stream.pipe(self.client.io);
     self.client.io.pipe(stream);
-  },
-
-  _createSocket: function (wsUrl, onConnect) {
-    var parsedUrl = Npm.require('url').parse(wsUrl);
-
-    if (parsedUrl.protocol === 'wss:') {
-      return Npm.require('tls').connect(
-        parsedUrl.port || 443, parsedUrl.hostname, onConnect);
-    } else {
-      var stream = Npm.require('net').createConnection(
-        parsedUrl.port || 80, parsedUrl.hostname);
-      stream.on('connect', onConnect);
-      return stream;
-    }
   }
 });
