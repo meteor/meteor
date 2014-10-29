@@ -4,11 +4,7 @@ var apiData = function (options) {
     options = {name: options};
   }
 
-  var root = DocsData;
-
-  _.each(options.name.split("."), function (pathSegment) {
-    root = root[pathSegment];
-  });
+  var root = DocsData[options.name];
 
   if (! root) {
     console.log("API Data not found: " + options.name);
