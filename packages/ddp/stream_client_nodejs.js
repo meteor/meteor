@@ -36,7 +36,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
   send: function (data) {
     var self = this;
     if (self.currentStatus.connected) {
-      self.client.messages.write(data);
+      self.client.send(data);
     }
   },
 
@@ -118,33 +118,18 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // Since server-to-server DDP is still an experimental feature, we only
     // require the module if we actually create a server-to-server
     // connection.
-    var websocketDriver = Npm.require('websocket-driver');
+    var FayeWebSocket = Npm.require('faye-websocket');
 
     // We would like to specify 'ddp' as the subprotocol here. The npm module we
     // used to use as a client would fail the handshake if we ask for a
     // subprotocol and the server doesn't send one back (and sockjs doesn't).
     // Faye doesn't have that behavior; it's unclear from reading RFC 6455 if
     // Faye is erroneous or not.  So for now, we don't specify protocols.
-    var wsUrl = toWebsocketUrl(self.endpoint);
-    var client = self.client = websocketDriver.client(wsUrl);
-
-    var parsedUrl = Npm.require('url').parse(wsUrl);
-    var stream;
-    var onConnect = function () {
-      client.start();
-    };
-    if (parsedUrl.protocol === 'wss:') {
-      stream = Npm.require('tls').connect(
-        parsedUrl.port || 443, parsedUrl.hostname, onConnect);
-    } else {
-      stream = Npm.require('net').createConnection(
-        parsedUrl.port || 80, parsedUrl.hostname);
-      stream.on('connect', onConnect);
-    }
-
-    _.each(self.headers, function (header, name) {
-      client.setHeader(name, header);
-    });
+    var client = self.client = new FayeWebSocket.Client(
+      toWebsocketUrl(self.endpoint),
+      [/*no subprotocols*/],
+      {headers: self.headers}
+    );
 
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
@@ -167,47 +152,29 @@ _.extend(LivedataTest.ClientStream.prototype, {
       }, description));
     };
 
-    var finalize = Meteor.bindEnvironment(function () {
-      stream.end();
-      if (client === self.client) {
-        self._lostConnection();
-      }
-    }, "finalizing stream");
-
-    stream.on('end', finalize);
-    stream.on('close', finalize);
-    client.on('close', finalize);
-
-    var onError = function (message) {
+    clientOnIfCurrent('error', 'stream error callback', function (error) {
       if (!self.options._dontPrintErrors)
-        Meteor._debug("driver error", message);
+        Meteor._debug("stream error", error.message);
 
       // Faye's 'error' object is not a JS error (and among other things,
       // doesn't stringify well). Convert it to one.
-      self._lostConnection(new DDP.ConnectionError(message));
-    };
-
-    clientOnIfCurrent('error', 'driver error callback', function (error) {
-      onError(error.message);
+      self._lostConnection(new DDP.ConnectionError(error.message));
     });
 
-    stream.on('error', Meteor.bindEnvironment(function (error) {
-      if (client === self.client) {
-        onError('Network error: ' + wsUrl + ': ' + error.message);
-      }
-      stream.end();
-    }));
+
+    clientOnIfCurrent('close', 'stream close callback', function () {
+      self._lostConnection();
+    });
+
 
     clientOnIfCurrent('message', 'stream message callback', function (message) {
-      // Ignore binary frames, where data is a Buffer
+      // Ignore binary frames, where message.data is a Buffer
       if (typeof message.data !== "string")
         return;
+
       _.each(self.eventCallbacks.message, function (callback) {
         callback(message.data);
       });
     });
-
-    stream.pipe(self.client.io);
-    self.client.io.pipe(stream);
   }
 });
