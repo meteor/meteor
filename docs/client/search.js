@@ -13,7 +13,7 @@ Template.search.events({
 Template.search.helpers({
   searchResults: function () {
     if (Session.get("searchQuery")) {
-      return APICollection.find({longname: {$regex: Session.get("searchQuery")}});
+      return APICollection.find({longname: {$regex: Session.get("searchQuery"), $options: 'i'}});
     }
   },
   searchQuery: function () {
