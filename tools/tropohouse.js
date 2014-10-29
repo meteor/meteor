@@ -236,8 +236,12 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Have everything we need? Great.
     if (!archesToDownload.length) {
+      Console.debug("Local package version is up-to-date:", packageName + "@" + version);
       return;
     }
+
+    Console.debug("Downloading missing local versions of package",
+                  packageName + "@" + version, ":", archesToDownload);
 
     // Since we are downloading from the server (and we've already done the
     // local package check), we can use the official catalog here. (This is
@@ -311,7 +315,7 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};
-    buildmessage.forkJoin({ title: 'Downloading packages', parallel: true },
+    buildmessage.forkJoin({ title: 'Checking local package versions', parallel: true },
       versionMap, function (version, name) {
       try {
         self.maybeDownloadPackageForArchitectures({
