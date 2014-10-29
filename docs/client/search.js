@@ -1,6 +1,7 @@
 APICollection = new Meteor.Collection(null);
 
 _.each(DocsData, function (val) {
+  // XXX only insert things that are actually in the docs
   APICollection.insert(val);
 });
 
@@ -25,9 +26,39 @@ $(document).on("keypress", function (event) {
   }
 });
 
-var updateQuery = _.debounce(function () {
+var updateQuery = _.throttle(function () {
   Session.set("searchQuery", $(".search-query").val());
-}, 400);
+}, 200);
+
+var selectListItem = function ($newSelected) {
+  var currentSelected = $(".search-results .selected");
+  currentSelected.removeClass("selected");
+
+  if ($newSelected.length) {
+    $newSelected.addClass("selected");
+
+    // scroll to make sure everything is inside the viewport
+    var searchResults = template.$(".search-results");
+
+    // make sure it's inside the visible area
+    var viewportTop = searchResults.offset().top;
+    var viewportHeight = searchResults.height();
+    var elTop = $newSelected.offset().top;
+    var elHeight = $newSelected.height();
+
+    // check if bottom is below visible part
+    if (elTop + elHeight > viewportTop + viewportHeight) {
+      var amount = searchResults.scrollTop() +
+        (elTop + elHeight - (viewportTop + viewportHeight));
+      searchResults.scrollTop(amount);
+    }
+
+    // check if top is above visible section
+    if (elTop < viewportTop) {
+      searchResults.scrollTop(searchResults.scrollTop() + elTop - viewportTop);
+    }
+  }
+};
 
 Template.search.events({
   "keyup input": updateQuery,
@@ -35,17 +66,23 @@ Template.search.events({
     Session.set("searchOpen", false);
   },
   "keydown": function (event, template) {
+    var currentSelected = template.$(".search-results .selected");
+
     if (event.which === 13) {
       // enter pressed, go to the selected item
-      var currentSelected = template.$(".search-results .selected");
+      Session.set("searchQuery", $(".search-query").val());
 
-      if (currentSelected.length) {
+      Tracker.afterFlush(function () {
+        if (! currentSelected.length) {
+          currentSelected = template.$(".search-results li").first();
+        }
+
         var selectedName = Blaze.getView(currentSelected.get(0)).dataVar.get().longname;
         var id = nameToId[selectedName] || selectedName.replace(/[.#]/g, "-");
         var url = "#/full/" + id;
         window.location.replace(url);
         Session.set("searchOpen", false);
-      }
+      });
 
       // exit function
       return;
@@ -61,49 +98,21 @@ Template.search.events({
     }
 
     if (change !== 0) {
-      var currentSelected = template.$(".search-results .selected");
-
-      var newSelected;
+      var $newSelected;
 
       if (change === 1) {
         if (currentSelected.length) {
-          newSelected = currentSelected.next();
+          $newSelected = currentSelected.next();
         } else {
-          newSelected = template.$(".search-results li").first();
+          $newSelected = template.$(".search-results li").first();
         }
       } else {
         if (currentSelected.length) {
-          newSelected = currentSelected.prev();
+          $newSelected = currentSelected.prev();
         }
       }
 
-      currentSelected.removeClass("selected");
-
-      if (newSelected.length) {
-        newSelected.addClass("selected");
-
-
-        // scroll to make sure everything is inside the viewport
-        var searchResults = template.$(".search-results");
-
-        // make sure it's inside the visible area
-        var viewportTop = searchResults.offset().top;
-        var viewportHeight = searchResults.height();
-        var elTop = newSelected.offset().top;
-        var elHeight = newSelected.height();
-
-        // check if bottom is below visible part
-        if (elTop + elHeight > viewportTop + viewportHeight) {
-          var amount = searchResults.scrollTop() +
-            (elTop + elHeight - (viewportTop + viewportHeight));
-          searchResults.scrollTop(amount);
-        }
-
-        // check if top is above visible section
-        if (elTop < viewportTop) {
-          searchResults.scrollTop(searchResults.scrollTop() + elTop - viewportTop);
-        }
-      }
+      selectListItem($newSelected);
 
       return false;
     }
