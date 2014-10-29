@@ -166,12 +166,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
     };
 
     var finalize = Meteor.bindEnvironment(function () {
-      if (stream.unpipe) {
-        stream.unpipe(client.io);
-      }
-      stream.on('data', function () {
-        stream.destroy();
-      });
       stream.end();
       if (client === self.client) {
         self._lostConnection();
