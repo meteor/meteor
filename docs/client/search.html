@@ -1,16 +1,23 @@
 <template name="search">
-  <div class="search-box">
-    <h3>Search Documentation</h3>
-    <input type="text" value="{{searchQuery}}" />
-  </div>
-  <ol class="search-results">
-    {{#each searchResults}}
-      <li>
-        <span class="name">{{longname}}</span>
-        <span class="context">
-          {{#markdown}}{{summary}}{{/markdown}}
-        </span>
-      </li>
-    {{/each}}
-  </ol>
+  {{#if searchOpen}}
+    <div class="search-overlay">
+      <div class="search-box">
+        <a href="#" class="close-search"><span class="hotkey">[esc]</span> &times;</a>
+        <h3>Search Documentation</h3>
+        <input type="text" class="search-query" />
+      </div>
+      <ol class="search-results">
+        {{#each searchResults}}
+          <li>
+            <span class="name">{{longname}}</span>
+            <span class="context">
+              {{#markdown}}{{summary}}{{/markdown}}
+            </span>
+          </li>
+        {{else}}
+          No search results found.
+        {{/each}}
+      </ol>
+    </div>
+  {{/if}}
 </template>
