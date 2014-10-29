@@ -12,11 +12,8 @@ Package.describe({
 // will prevent a second copy of faye-websocket from being installed inside
 // sockjs.)
 Npm.depends({
-  // A fork fixing https://github.com/faye/websocket-driver-node/pull/8 (ie
-  // "open from inactive client" errors). Note that sockjs won't use this fork,
-  // but the bug only affects the websocket client, not the server.
-  "faye-websocket": "https://github.com/meteor/faye-websocket-node/tarball/ccc180998b1396093c24d0df7ebc1d199c276552",
-  sockjs: "0.3.9"
+  "faye-websocket": "0.8.1",
+  sockjs: "0.3.11"
 });
 
 Package.on_use(function (api) {
