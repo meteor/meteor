@@ -7,7 +7,9 @@
     {{#each searchResults}}
       <li>
         <span class="name">{{longname}}</span>
-        <span class="context">{{summary}}</span>
+        <span class="context">
+          {{#markdown}}{{summary}}{{/markdown}}
+        </span>
       </li>
     {{/each}}
   </ol>

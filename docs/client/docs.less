@@ -616,6 +616,8 @@ pre {
     z-index: 3;
     background: white;
 
+    overflow-y: scroll;
+
     .search-box {
         margin: 40px;
 
@@ -642,11 +644,18 @@ pre {
 
         li {
             font-size: 1.2em;
+            margin-bottom: 0.5em;
 
             .name {
                 display: inline-block;
-                width: 20%;
+                width: 30%;
                 font-weight: bold;
+            }
+
+            .context {
+                display: inline-block;
+                width: 60%;
+                vertical-align: top;
             }
         }
     }
