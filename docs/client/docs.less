@@ -606,3 +606,48 @@ pre {
         display: none;
     }
 }
+
+.search-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    background: white;
+
+    .search-box {
+        margin: 40px;
+
+        h3 {
+            font-size: 2em;
+        }
+
+        input {
+            font-size: 2em;
+            padding: 0.5em;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #777;
+            width: 80%;
+
+            &:focus {
+                outline: 0;
+            }
+        }
+    }
+
+    ol {
+        margin: 40px;
+
+        li {
+            font-size: 1.2em;
+
+            .name {
+                display: inline-block;
+                width: 20%;
+                font-weight: bold;
+            }
+        }
+    }
+}
