@@ -606,3 +606,93 @@ pre {
         display: none;
     }
 }
+
+.search-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    background: white;
+
+    overflow: hidden;
+
+    .close-search {
+        float: right;
+        font-size: 2em;
+
+        .hotkey {
+            font-size: 0.6em;
+            color: #777;
+            vertical-align: middle;
+        }
+
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: none;
+            background: none;
+        }
+    }
+
+    .search-box {
+        margin: 40px;
+
+        h3 {
+            font-size: 2em;
+        }
+
+        input {
+            font-size: 2em;
+            padding: 0.5em 0;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #777;
+            width: 80%;
+
+            &:focus {
+                outline: 0;
+            }
+        }
+    }
+
+    .search-results {
+        margin: 40px;
+
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 170px;
+
+        overflow-y: scroll;
+        list-style: none;
+
+        padding: 0;
+
+        li {
+            font-size: 1em;
+            margin-bottom: 0.5em;
+            padding: 10px;
+            white-space: nowrap;
+
+            p {
+                margin: 0;
+                display: inline;
+            }
+
+            strong {
+                font-weight: bold;
+            }
+
+            &.selected {
+                background: yellow;
+            }
+        }
+    }
+}
+
+.menu-icon {
+    height: 0.6em;
+}
