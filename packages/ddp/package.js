@@ -13,8 +13,7 @@ Package.describe({
 // sockjs.)
 Npm.depends({
   "websocket-driver": "0.3.6",
-  sockjs: "0.3.9",
-  "tunnel-agent": "0.4.0"
+  sockjs: "0.3.9"
 });
 
 Package.on_use(function (api) {

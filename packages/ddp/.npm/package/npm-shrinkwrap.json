@@ -11,9 +11,6 @@
         }
       }
     },
-    "tunnel-agent": {
-      "version": "0.4.0"
-    },
     "websocket-driver": {
       "version": "0.3.6"
     }
