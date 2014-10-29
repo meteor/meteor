@@ -349,11 +349,11 @@ _.extend(Project.prototype, {
     // written to disk.
     var messageLog = [];
     var failed = false;
-
+    var stdSpace = "   ";
     // Remove the versions that don't exist
     var removed = _.difference(_.keys(versions), _.keys(newVersions));
     _.each(removed, function(packageName) {
-      messageLog.push("  removed " + packageName + " from project");
+      messageLog.push(stdSpace + "removed " + packageName + " from project");
     });
 
     _.each(newVersions, function(version, packageName) {
@@ -383,16 +383,16 @@ _.extend(Project.prototype, {
       if (_.has(versions, packageName)) {
         if (packageVersionParser.lessThan(
           newVersions[packageName], versions[packageName])) {
-          messageLog.push("  downgraded " + packageName + " from version " +
+          messageLog.push(stdSpace + "downgraded " + packageName + " from version " +
                           versions[packageName] +
                           " to version " + newVersions[packageName]);
         } else {
-          messageLog.push("  upgraded " + packageName + " from version " +
+          messageLog.push(stdSpace + "upgraded " + packageName + " from version " +
                           versions[packageName] +
                           " to version " + newVersions[packageName]);
         }
       } else {
-        messageLog.push("  added " + packageName +
+        messageLog.push(stdSpace + "added " + packageName +
                         " at version " + newVersions[packageName]);
       };
     });
@@ -658,6 +658,17 @@ _.extend(Project.prototype, {
     if (!lines.length)
       return '';
     return files.trimLine(lines[0]);
+  },
+
+  // Like getMeteorReleaseVersion, but adds METEOR@ to the beginning if it's
+  // missing.
+  getNormalizedMeteorReleaseVersion: function () {
+    var self = this;
+    var raw = self.getMeteorReleaseVersion();
+    if (raw === null)
+      return null;
+    var parts = utils.splitReleaseName(raw);
+    return parts[0] + '@' + parts[1];
   },
 
   // Returns the full filepath of the projects .meteor/release file.

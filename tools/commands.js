@@ -115,7 +115,7 @@ main.registerCommand({
     return 1;
   }
 
-  console.log(release.current.getDisplayName());
+  Console.info(release.current.getDisplayName());
 });
 
 // Internal use only. For automated testing.
@@ -263,9 +263,12 @@ function doRunCommand (options) {
       var appName = path.basename(options.appDir);
       var localPath = path.join(options.appDir, '.meteor', 'local');
 
-      cordova.buildTargets(localPath, options.args,
-        _.extend({ appName: appName, debug: ! options.production },
-                 options, parsedMobileServer));
+      cordova.buildTargets(localPath, options.args, _.extend({
+        appName: appName,
+        debug: ! options.production,
+        skipIfNoSDK: false
+      }, options, parsedMobileServer));
+
       runners = runners.concat(
         cordova.buildPlatformRunners(localPath, options.args, options));
     } catch (err) {
@@ -308,10 +311,13 @@ function doRunCommand (options) {
   }
 
   if (release.forced) {
-    var appRelease = project.getMeteorReleaseVersion();
+    var appRelease = project.getNormalizedMeteorReleaseVersion();
     if (release.current.name !== appRelease) {
-      console.log("=> Using Meteor %s as requested (overriding Meteor %s)",
-                  release.current.name, appRelease);
+      var appReleaseParts = utils.splitReleaseName(appRelease);
+      console.log("=> Using %s as requested (overriding Meteor %s)",
+                  release.current.getDisplayName(),
+                  utils.displayRelease(appReleaseParts[0],
+                                       appReleaseParts[1]));
       console.log();
     }
   }
@@ -370,6 +376,24 @@ main.registerCommand(_.extend(
 ), function (options) {
   options['debug-port'] = options['debug-port'] || '5858';
   return doRunCommand(options);
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// shell
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'shell',
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  if (!options.appDir) {
+    Console.stderr.write(
+      "The 'meteor shell' command must be run in a Meteor app directory."
+    );
+  } else {
+    require('./server/shell.js').connect(options.appDir);
+    throw new main.WaitForExit;
+  }
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -432,7 +456,7 @@ main.registerCommand({
         relString = rel.version;
       } else {
         xn = xn.replace(/~cc~/g, "");
-        relString = release.current.getReleaseVersion();
+        relString = release.current.getDisplayName({noPrefix: true});
       }
 
       // If we are not in checkout, write the current release here.
@@ -557,7 +581,32 @@ main.registerCommand({
     project.appendFinishedUpgrader(upgrader);
   });
 
+  // XXX copied from main.js
+  // We need to re-initialize the complete catalog to know about the app we just
+  // created, because it might have local packages.
+  var localPackageDirs = [path.resolve(appPath, 'packages')];
+  if (process.env.PACKAGE_DIRS) {
+    // User can provide additional package directories to search in PACKAGE_DIRS
+    // (colon-separated).
+    localPackageDirs = localPackageDirs.concat(
+      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
+        return path.resolve(p);
+      }));
+  }
+  if (!files.usesWarehouse()) {
+    // Running from a checkout, so use the Meteor core packages from
+    // the checkout.
+    localPackageDirs.push(path.join(
+      files.getCurrentToolsDir(), 'packages'));
+  }
+
   var messages = buildmessage.capture({ title: "Updating dependencies" }, function () {
+    // XXX Hack. In the future we should just delay all use of catalog.complete
+    // until this point.
+    catalog.complete.initialize({
+      localPackageDirs: localPackageDirs
+    });
+
     // Run the constraint solver. Override the assumption that using '--release'
     // means we shouldn't update .meteor/versions.
     project._ensureDepsUpToDate({alwaysRecord: true});
@@ -647,6 +696,8 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
 });
 
 var buildCommand = function (options) {
+  Console.setPretty(true);
+
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -707,14 +758,17 @@ var buildCommand = function (options) {
     var cordovaSettings = {};
 
     try {
-      cordova.buildTargets(localPath, mobilePlatforms,
-                             _.extend({}, options, {
-                               host: parsedMobileServer.host,
-                               port: parsedMobileServer.port,
-                               protocol: parsedMobileServer.protocol,
-                               appName: appName
-                             }));
+      mobilePlatforms =
+        cordova.buildTargets(localPath, mobilePlatforms, _.extend({}, options, {
+        host: parsedMobileServer.host,
+        port: parsedMobileServer.port,
+        protocol: parsedMobileServer.protocol,
+        appName: appName,
+        skipIfNoSDK: true
+      }));
     } catch (err) {
+      if (err instanceof main.ExitWithCode)
+         throw err;
       Console.printError(err, "Error while building for mobile platforms");
       return 1;
     }
@@ -722,6 +776,26 @@ var buildCommand = function (options) {
 
   var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
+
+  if (! _.isEmpty(mobilePlatforms)) {
+    // XXX: Create helper function?  Maybe fs.resolve to follow symlinks?
+    var appDir = path.resolve(options.appDir);
+    if (appDir.substr(-1) !== path.sep) {
+      appDir += path.sep;
+    }
+    var outputDir = path.resolve(outputPath);
+    if (outputDir.substr(-1) !== path.sep) {
+      outputDir += path.sep;
+    }
+
+    if (outputDir.indexOf(appDir) == 0) {
+      Console.warn("");
+      Console.warn("Warning: The output directory is under your source tree.");
+      Console.warn("  This causes issues when building with mobile platforms.");
+      Console.warn("  Consider building into a different directory instead (" + Console.command("meteor build ../output") + ")");
+      Console.warn("");
+    }
+  }
 
   var bundlePath = options['directory'] ?
       (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
@@ -796,6 +870,7 @@ var buildCommand = function (options) {
     var platformPath = path.join(outputPath, platformName);
 
     if (platformName === 'ios') {
+      if (process.platform !== 'darwin') return;
       files.cp_r(buildPath, path.join(platformPath, 'project'));
       fs.writeFileSync(
         path.join(platformPath, 'README'),

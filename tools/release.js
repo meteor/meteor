@@ -125,10 +125,11 @@ _.extend(Release.prototype, {
     return self._manifest;
   },
 
-  getDisplayName: function () {
+  getDisplayName: function (options) {
     var self = this;
     return utils.displayRelease(self.getReleaseTrack(),
-                                self.getReleaseVersion());
+                                self.getReleaseVersion(),
+                                options);
   }
 });
 
@@ -171,7 +172,7 @@ release.usingRightReleaseForApp = function () {
   if (! files.usesWarehouse() || release.forced)
     return true;
 
-  var appRelease = project.getMeteorReleaseVersion();
+  var appRelease = project.getNormalizedMeteorReleaseVersion();
   if (appRelease === null) {
     // Really old app that has no release specified.
     appRelease = release.latestKnown();

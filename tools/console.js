@@ -30,6 +30,11 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
 }
 
+if (!process.env.METEOR_COLOR) {
+  chalk.enabled = false;
+}
+
+
 STATUSLINE_MAX_LENGTH = 60;
 STATUS_MAX_LENGTH = 40;
 
@@ -87,6 +92,12 @@ _.extend(ProgressDisplayNone.prototype, {
 // Status message mode is where we see status messages but not the
 // fancy progress bar.  It's used when we detect a "pseudo-TTY"
 // of the type used by Emacs, and possibly SSH.
+//
+// XXX DELETE THIS MODE since the progress bar now uses "\r".
+// But first we have to throttle progress bar updates so that
+// Emacs doesn't get overwhelemd (we should throttle them anyway).
+// There's also a bug when using the progress bar in Emacs where
+// the cursor doesn't seem to return to column 0.
 var ProgressDisplayStatus = function (console) {
   var self = this;
 
@@ -266,12 +277,15 @@ _.extend(ProgressDisplayFull.prototype, {
     self._render();
   },
 
-  updateProgress: function (fraction) {
+  updateProgress: function (fraction, startTime) {
     var self = this;
 
     self._fraction = fraction;
     if (fraction !== undefined) {
       self._progressBarRenderer.curr = Math.floor(fraction * self._progressBarRenderer.total);
+    }
+    if (startTime) {
+      self._progressBarRenderer.start = startTime;
     }
     self._render();
   },
@@ -292,7 +306,7 @@ _.extend(ProgressDisplayFull.prototype, {
 
     // The cursor appears in position 0; we indent it a little to avoid this
     // This also means it appears less important, which is good
-    var indentColumns = 4;
+    var indentColumns = 3;
 
     var streamColumns = this._stream.columns;
     var statusColumns;
@@ -390,29 +404,30 @@ _.extend(StatusPoller.prototype, {
       rootProgress.dump(process.stdout, {skipDone: true});
     }
 
-    var reportState = function (state) {
+    var reportState = function (state, startTime) {
       var progressDisplay = self._console._progressDisplay;
       // Do the % computation, if it is going to be used
       if (progressDisplay.updateProgress) {
         if (state.end === undefined || state.end == 0) {
-          progressDisplay.updateProgress(undefined);
+          progressDisplay.updateProgress(undefined, startTime);
         } else {
           var fraction = state.done ? 1.0 : (state.current / state.end);
 
           if (!isNaN(fraction) && fraction >= 0) {
-            progressDisplay.updateProgress(fraction);
+            progressDisplay.updateProgress(fraction, startTime);
           } else {
-            progressDisplay.updateProgress(0);
+            progressDisplay.updateProgress(0, startTime);
           }
         }
       }
     };
 
     var watching = (rootProgress ? rootProgress.getCurrentProgress() : null);
+
     if (self._watching === watching) {
       // We need to do this to keep the spinner spinning
       // XXX: Should we _only_ do this when we're showing the spinner?
-      reportState(watching.getState());
+      reportState(watching.getState(), watching.startTime);
       return;
     }
 
@@ -431,7 +446,7 @@ _.extend(StatusPoller.prototype, {
           return;
         }
 
-        reportState(state);
+        reportState(state, watching.startTime);
       });
     }
   }
@@ -769,6 +784,7 @@ _.extend(Console.prototype, {
       // It's important that we only enter status message mode
       // if self._pretty, so that we don't start displaying
       // status messages too soon.
+      // XXX See note where ProgressDisplayStatus is defined.
       newProgressDisplay = new ProgressDisplayStatus(self);
     } else {
       // Otherwise we can do the full progress bar

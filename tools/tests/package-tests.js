@@ -212,6 +212,11 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("foobar!");
   run.match("restarted");
 
+  // Check that we are watching the versions file, as well as the packages file.
+  s.unlink('.meteor/versions');
+  run.waitSecs(10);
+  run.match("restarted");
+
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
   s.cp('programs/empty/package2.js', 'programs/empty/package.js');
@@ -313,7 +318,7 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
-  run.match("Removed top-level dependency on say-something.");
+  run.match("say-something: removed dependency");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
                  "meteor-platform",
@@ -322,7 +327,7 @@ selftest.define("add packages to app", ["net"], function () {
   run = s.run("remove", "depends-on-plugin");
   run.match("removed contains-plugin");
   run.match("removed depends-on-plugin");
-  run.match("Removed top-level dependency on depends-on-plugin.");
+  run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
                 ["accounts-base",
@@ -684,7 +689,7 @@ selftest.define("update server package data unit test",
 
 // Add packages to an app. Change the contents of the packages and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("package with --name",
+selftest.define("package specifying a name",
     ['test-package-server', "checkout"], function () {
   var s = new Sandbox();
   var run;
@@ -694,7 +699,7 @@ selftest.define("package with --name",
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run("add", "accounts-base");
-  run.waitSecs(30);
+  run.waitSecs(40);
   run.match("accounts-base");
 
   run = s.run();

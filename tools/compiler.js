@@ -355,14 +355,22 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   allHandlers['js'] = function (compileStep) {
     // This is a hardcoded handler for *.js files. Since plugins
     // are written in JavaScript we have to start somewhere.
-    compileStep.addJavaScript({
+
+    var options = {
       data: compileStep.read().toString('utf8'),
       path: compileStep.inputPath,
-      sourcePath: compileStep.inputPath,
+      sourcePath: compileStep.inputPath
+    };
+
+    if (compileStep.fileOptions.hasOwnProperty("bare")) {
+      options.bare = compileStep.fileOptions.bare;
+    } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
       // XXX eventually get rid of backward-compatibility "raw" name
       // XXX COMPAT WITH 0.6.4
-      bare: compileStep.fileOptions.bare || compileStep.fileOptions.raw
-    });
+      options.bare = compileStep.fileOptions.raw;
+    }
+
+    compileStep.addJavaScript(options);
   };
 
   _.each(activePluginPackages, function (otherPkg) {
@@ -779,11 +787,19 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
         if (options.bare && ! archinfo.matches(inputSourceArch.arch, "web"))
           throw new Error("'bare' option may only be used for web targets");
+
+        // By default, use fileOptions for the `bare` option but also allow
+        // overriding it with the options
+        var bare = fileOptions.bare;
+        if (options.hasOwnProperty("bare")) {
+          bare = options.bare;
+        }
+
         js.push({
           source: options.data,
           sourcePath: options.sourcePath,
           servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
-          bare: !! fileOptions.bare,
+          bare: !! bare,
           sourceMap: options.sourceMap
         });
       },
@@ -1175,11 +1191,21 @@ compiler.checkUpToDate = function (
     return false;
   }
 
+  // Does this isopack contain the tool? We are very bad at watching for tool
+  // changes, since the tool encompasses so much stuff (ex: uniload packages)
+  // and doesn't have a control file (so it is hard to figure out if new files
+  // were added). Let's play it safe and never ever ever pretend that the tool
+  // is up to date.
+  if (packageSource.includeTool) {
+    return false;
+  }
+
   // Do we think we'd generate different contents than the tool that
   // built this package?
   if (isopk.builtBy !== compiler.BUILT_BY) {
     return false;
   }
+
 
   // Compute the isopack's direct and plugin dependencies to
   // `buildTimeDeps`, by comparing versions (including build

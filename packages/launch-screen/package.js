@@ -20,4 +20,3 @@ Package.onUse(function(api) {
 
   api.export('LaunchScreen');
 });
-

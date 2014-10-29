@@ -1,0 +1,38 @@
+<template name="fullApiContent">
+  {{> introduction }}
+  {{> concepts }}
+  {{> api }}
+  {{> packages }}
+  {{> commandline }}
+</template>
+
+<template name="dtdd">
+  {{! can be used with either one argument (which ends up in the data
+      context, or with both name and type }}
+
+  {{#if name}}
+    <dt><span class="name" id={{#if id}}{{id}}{{/if}}>{{{name}}}</span>
+      {{#if type}}<span class="type">{{type}}</span>{{/if}}
+    </dt>
+  {{else}}
+    <dt><span class="name">{{{.}}}</span></dt>
+  {{/if}}
+  <dd>{{#markdown}}{{> UI.contentBlock}}{{/markdown}}</dd>
+</template>
+
+<!-- this is used within {{#markdown}}. <div> must be unindented.
+     http://daringfireball.net/projects/markdown/syntax#html -->
+<template name="warning">
+<div class="warning">
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
+</div>
+</template>
+
+<!-- this is used within {{#markdown}}. <div> must be unindented.
+     http://daringfireball.net/projects/markdown/syntax#html -->
+<template name="note">
+<div class="note">
+  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
+</div>
+</template>
+

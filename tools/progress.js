@@ -37,6 +37,8 @@ var Progress = function (options) {
   self._state = _.clone(self._selfState);
 
   self._isDone = false;
+
+  self.startTime = +(new Date);
 };
 
 _.extend(Progress.prototype, {
@@ -74,7 +76,8 @@ _.extend(Progress.prototype, {
       return null;
     }
 
-    if (!self._state.done && (self._state.current != 0) && !isRoot) {
+    if (!self._state.done && (self._state.current != 0) && self._state.end &&
+        !isRoot) {
       // We are not done and we have interesting state to report
       return self;
     }
@@ -91,8 +94,9 @@ _.extend(Progress.prototype, {
       var active = _.filter(candidates, function (s) {
         return !!s;
       });
-      if (active.length == 1) {
-        return active[0];
+      if (active.length) {
+        // pick one to display, somewhat arbitrarily
+        return active[active.length - 1];
       }
       // No single active task, return self
       return self;

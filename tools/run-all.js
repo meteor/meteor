@@ -296,6 +296,8 @@ exports.run = function (appDir, options) {
       if (once ||
           result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
+          result.outcome === "outdated-cordova-platforms" ||
+          result.outcome === "outdated-cordova-plugins" ||
           (result.outcome === "terminated" &&
            result.signal === undefined && result.code === undefined)) {
         // Allow run() to continue (and call runner.stop()) only once the
@@ -314,7 +316,6 @@ exports.run = function (appDir, options) {
 
   var runner = new Runner(appDir, runOptions);
   runner.start();
-  Console.enableProgressDisplay(false);
   var result = fut.wait();
   runner.stop();
 
@@ -324,6 +325,20 @@ exports.run = function (appDir, options) {
 "satisfy the constraints of .meteor/versions and .meteor/packages. This could be\n" +
 "caused by conflicts in .meteor/versions, conflicts in .meteor/packages, and/or\n" +
 "inconsistent changes to the dependencies in local packages.");
+    return 254;
+  }
+
+  if (result.outcome === "outdated-cordova-plugins") {
+    process.stderr.write(
+"Your app's Cordova plugins have changed.\n" +
+"Restart meteor to use the new set of plugins.\n");
+    return 254;
+  }
+
+  if (result.outcome === "outdated-cordova-platforms") {
+    process.stderr.write(
+"Your app's platforms have changed.\n" +
+"Restart meteor to use the new set of platforms.\n");
     return 254;
   }
 
@@ -339,10 +354,14 @@ exports.run = function (appDir, options) {
     // like allowing this to work if the tools version didn't change,
     // or even springboarding if the tools version does change, but
     // this (which prevents weird errors) is a start.)
-    var to = result.releaseNeeded;
-    var from = release.current.name;
+    var utils = require('./utils.js');
+    var trackAndVersion = utils.splitReleaseName(result.releaseNeeded);
+    var to = utils.displayRelease(
+        trackAndVersion[0], trackAndVersion[1]);
+
+    var from = release.current.getDisplayName();
     process.stderr.write(
-"Your app has been updated to Meteor " + to + " from " + "Meteor " + from +
+"Your app has been updated to " + to + " from " + from +
 ".\n" +
 "Restart meteor to use the new release.\n");
     return 254;

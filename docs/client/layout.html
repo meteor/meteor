@@ -1,0 +1,61 @@
+<head>
+  <title>Documentation - Meteor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="Description"
+  content="Meteor is an open-source JavaScript platform for building top-quality web apps in a fraction of the time, whether you're an expert developer or just getting started."/>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+  <div class="body {{openSidebar}}">
+    <div id="nav">
+      {{> sidebar}}
+    </div>
+    <div class="overlay close-sidebar"></div>
+    {{> topBar}}
+    <div class="main-content">
+      <div id="main">
+        <div><div id="top"></div></div>
+        <div class="{{layoutHidden 'full'}}">
+          {{> fullApiContent}}
+        </div>
+        <div class="{{layoutHidden 'basic'}}">
+          {{> basicContent}}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+<template name="sidebar">
+  <div id="nav-inner">
+    <h1>
+      <a href="{{topLink}}">
+        <img src="/logo.png" class="logo" alt="Meteor" />
+        <div>{{release}} Documentation</div>
+      </a>
+    </h1>
+
+    {{> basicOrFullSelect}}
+
+    {{> tableOfContents}}
+    {{> basicTableOfContents}}
+  </div>
+</template>
+
+<template name="topBar">
+  <div class="top-bar">
+    <div class="open-sidebar">&#9776;</div>
+    <h1>
+      <img src="/logo.png" class="logo" alt="Meteor" /> 1.0 Docs
+    </h1>
+  </div>
+</template>
+
+<template name="basicOrFullSelect">
+  <select class="basic-or-full">
+    <option value="basic" selected="{{isBasic}}">Basic Docs</option>
+    <option value="full" selected="{{isFull}}">Full API</option>
+  </select>
+</template>

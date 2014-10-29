@@ -62,6 +62,6 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     loginUrl: loginUrl,
     credentialRequestCompleteCallback: credentialRequestCompleteCallback,
     credentialToken: credentialToken,
-    popupOptions: { height: 406 }
+    popupOptions: { height: 600 }
   });
 };

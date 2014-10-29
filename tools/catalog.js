@@ -34,6 +34,7 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
     if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
+      Console.error(catalog.refreshError);
       Console.error("This command requires an up-to-date package catalog.  Exiting.");
       // Avoid circular dependency.
       throw new (require('./main.js').ExitWithCode)(1);
@@ -79,14 +80,17 @@ catalog.refreshOrWarn = function (options) {
 
     // XXX is throwing correct for SQLite errors too? probably.
 
-    Console.warn("Unable to refresh catalog (are you offline?)\n");
+    Console.warn("Unable to update package catalog (are you offline?)");
 
     // XXX: Make this Console.debug(err)
     if (Console.isDebugEnabled()) {
       Console.printError(err);
     }
 
+    Console.warn();
+
     catalog.refreshFailed = true;
+    catalog.refreshError = err;
     return false;
   }
 };
@@ -314,7 +318,7 @@ _.extend(LayeredCatalog.prototype, {
       });
 
       var ret = buildmessage.enterJob({
-          title: "Figuring out the best package versions to use." },
+          title: "Selecting package versions" },
         function () {
           // Then, call the constraint solver, to get the valid transitive
           // subset of those versions to record for our solution. (We don't just

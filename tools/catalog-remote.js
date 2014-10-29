@@ -663,7 +663,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     // XXX: In the future, we should consider adding tool as a column and
     // implementing table upgrades
-    var allVersions = self._queryAsJSON(
+    var allVersions = self._contentQuery(
       "SELECT content FROM releaseVersions");
     return _.findWhere(allVersions, { tool: toolSpec });
   },

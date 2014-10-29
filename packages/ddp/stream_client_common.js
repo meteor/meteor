@@ -153,6 +153,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
 
     // if we're mid-connection, stop it.
     if (self.currentStatus.status === "connecting") {
+      // Pretend it's a clean close.
       self._lostConnection();
     }
 
@@ -193,8 +194,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
     self.statusChanged();
   },
 
-  // maybeError is only guaranteed to be set for the Node implementation, and
-  // not on a clean close.
+  // maybeError is set unless it's a clean protocol-level close.
   _lostConnection: function (maybeError) {
     var self = this;
 

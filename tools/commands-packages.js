@@ -74,10 +74,9 @@ var refreshOfficialCatalogOrDie = function (options) {
 };
 
 var explainIfRefreshFailed = function () {
-  if (catalog.official.offline) {
-    Console.info("(But we're offline, so we didn't update the package catalog, so it might exist)");
-  } else if (catalog.refreshFailed) {
-    Console.info("(But the update of the package catalog failed, so it might exist)");
+  if (catalog.official.offline || catalog.refreshFailed) {
+    Console.info("Your package catalog may be out of date.\n" +
+      "Please connect to the internet and try again.");
   }
 };
 
@@ -347,16 +346,6 @@ main.registerCommand({
     Console.warn("\nWARNING: Your package contains binary code.");
   } else if (binary) {
     // Normal publish flow. Tell the user nicely.
-
-    // XXX this is only while we're in 1.0 RC period. Because of a
-    // springboarding bug in 0.9.4, you need to use --release on
-    // publish-for-arch. Also, you need --release to get the admin
-    // get-machine command until it is recommended.
-    var currentRelease = "";
-    if (!release.current.isCheckout()) {
-      currentRelease = " --release " + release.current.getReleaseVersion();
-    }
-
     Console.warn(
 "\nThis package contains binary code and must be built on multiple architectures.\n");
 
@@ -365,12 +354,12 @@ main.registerCommand({
 "older versions of MacOS and Linux, by running:\n");
 
     _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
-      Console.info("  meteor" + currentRelease + " admin get-machine", a);
+      Console.info("  meteor admin get-machine", a);
     });
 
     Console.info("\nOn each machine, run:\n");
 
-    Console.info("  meteor" + currentRelease,
+    Console.info("  meteor",
                  "publish-for-arch",
                  packageSource.name + "@" + packageSource.version);
 
@@ -1172,7 +1161,7 @@ main.registerCommand({
   var showName;
   if (!allRecord.isRelease) {
     label = "package";
-    showName = "package " + Console.bold(allRecord.record.name);
+    showName = "Package " + Console.bold(allRecord.record.name);
     var getRelevantRecord = function (version) {
       var versionRecord = catalog.official.getVersion(name, version);
       var myBuilds = _.pluck(catalog.official.getAllBuilds(name, version),
@@ -1204,7 +1193,7 @@ main.registerCommand({
     }
   } else {
     label = "release";
-    showName = "release " + Console.bold(allRecord.record.name);
+    showName = "Release " + Console.bold(allRecord.record.name);
     if (full.length > 1) {
       versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
       if (versionRecords.length == 1 && versionRecords[0]) {
@@ -1235,37 +1224,57 @@ main.registerCommand({
     }
 
     if (showName) {
-      Console.info("Showing", showName, "\n");
+      Console.info(showName + ":\n");
     }
 
     var unknown = "< unknown >";
-    _.each(versionRecords, function (v) {
-      // Don't show versions that we shouldn't be showing.
-      if (!versionVisible(v)) {
-        return;
-      }
 
-      var versionDesc = Console.bold("Version " + v.version);
-      if (v.description)
-        versionDesc = versionDesc + " : " + v.description;
-      Console.info(versionDesc);
-      if (full.length > 1) {
+    if (full.length > 1) {
+      // Specific version with details; we don't expect more than one match
+      _.each(versionRecords, function (v) {
+        // Don't show versions that we shouldn't be showing.
+        if (!versionVisible(v)) {
+          return;
+        }
+
+        var versionDesc = Console.bold("Version " + v.version);
+        if (v.description)
+          versionDesc = versionDesc + "    " + v.description;
+        Console.info(versionDesc);
+
         if (v.buildArchitectures) {
           var buildArchitectures = v.buildArchitectures.split(' ');
           Console.info("      Architectures: ", formatAsList(buildArchitectures, { formatter: formatArchitecture }));
         }
         // XXX: else show "no architectures"?
-      }
-      if (v.packages && full.length > 1) {
-        Console.info("      tool: " + v.tool);
-        Console.info("      packages:");
+        if (v.packages) {
+          Console.info("      tool: " + v.tool);
+          Console.info("      packages:");
 
-        _.each(v.packages, function(pv, pn) {
-          Console.info("          " + pn + "@" + pv);
-        });
-      }
-    });
-    Console.info("\n");
+          _.each(v.packages, function(pv, pn) {
+            Console.info("          " + pn + "@" + pv);
+          });
+        }
+      });
+
+      Console.info("\n");
+    } else {
+      // Non-detailed list of versions
+
+      var rows = [];
+
+      _.each(versionRecords, function (v) {
+        // Don't show versions that we shouldn't be showing.
+        if (!versionVisible(v)) {
+          return;
+        }
+
+        var row = ["Version " + v.version, v.description];
+        rows.push(row);
+      });
+
+      utils.printTwoColumns(rows)
+    }
   }
 
   // Creating the maintainer string. We have anywhere between 1 and lots of
@@ -1289,17 +1298,17 @@ main.registerCommand({
   }
 
   if (myMaintainerString) {
-    Console.info("Maintained by " + myMaintainerString + ".");
+    Console.info("Maintained by:", myMaintainerString + ".");
   }
 
   if (lastVersion && lastVersion.git) {
     // No full stop, as it makes copying and pasting painful
-    Console.info("You can find the git repository at:", Console.url(lastVersion.git));
+    Console.info("Git repository at:", Console.url(lastVersion.git));
   }
 
   if (record && record.homepage) {
     // No full stop, as it makes copying and pasting painful
-    Console.info("You can find more information at:", Console.url(record.homepage));
+    Console.info("More information at:", Console.url(record.homepage));
   }
 });
 
@@ -1347,10 +1356,11 @@ main.registerCommand({
   var matchingReleases = [];
 
   var selector;
+  var pattern = options.args[0];
 
   var search;
   try {
-    search = new RegExp(options.args[0]);
+    search = new RegExp(pattern);
   } catch (err) {
     Console.error(err + "");
     return 1;
@@ -1411,29 +1421,32 @@ main.registerCommand({
     };
   }
 
-  _.each(allPackages, function (pack) {
-    if (selector(pack, false)) {
-      var vr;
-      if (!options['show-rcs']) {
-        vr = catalog.official.getLatestMainlineVersion(pack);
-      } else {
-        vr = catalog.official.getLatestVersion(pack);
+
+  buildmessage.enterJob({ title: 'Searching packages' }, function () {
+    _.each(allPackages, function (pack) {
+      if (selector(pack, false)) {
+        var vr;
+        if (!options['show-rcs']) {
+          vr = catalog.official.getLatestMainlineVersion(pack);
+        } else {
+          vr = catalog.official.getLatestVersion(pack);
+        }
+        if (vr) {
+          matchingPackages.push(
+            { name: pack, description: vr.description});
+        }
       }
-      if (vr) {
-        matchingPackages.push(
-          { name: pack, description: vr.description});
+    });
+    _.each(allReleases, function (track) {
+      if (selector(track, true)) {
+        var vr = catalog.official.getDefaultReleaseVersion(track);
+        if (vr) {
+          var vrlong = catalog.official.getReleaseVersion(track, vr.version);
+          matchingReleases.push(
+            { name: track, description: vrlong.description});
+        }
       }
-    }
-  });
-  _.each(allReleases, function (track) {
-    if (selector(track, true)) {
-      var vr = catalog.official.getDefaultReleaseVersion(track);
-      if (vr) {
-        var vrlong = catalog.official.getReleaseVersion(track, vr.version);
-        matchingReleases.push(
-          { name: track, description: vrlong.description});
-      }
-    }
+    });
   });
 
   var output = false;
@@ -1450,9 +1463,7 @@ main.registerCommand({
   }
 
   if (!output) {
-    Console.error(
-      "Neither packages nor releases matching \'" +
-        search + "\' could be found.");
+    Console.error(pattern + ': no matching packages or releases found');
 
     explainIfRefreshFailed();
   } else {
@@ -1641,23 +1652,23 @@ var maybeUpdateRelease = function (options) {
       // help --release xyz'.
       Console.info(
         "Installed. Run 'meteor update' inside of a particular project\n" +
-          "directory to update that project to Meteor " +
-          release.current.name + ".");
+          "directory to update that project to " +
+          release.current.getDisplayName() + ".");
     } else {
       // We get here if the user ran 'meteor update' and we didn't
       // find a new version.
       Console.info(
-        "The latest version of Meteor, " + release.current.name +
+        "The latest version of Meteor, " + release.current.getReleaseVersion() +
           ", is already installed on this\n" +
           "computer. Run 'meteor update' inside of a particular project\n" +
-          "directory to update that project to Meteor " +
-          release.current.name);
+          "directory to update that project to " +
+          release.current.getDisplayName());
     }
     return 0;
   }
 
   // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getMeteorReleaseVersion();
+  var appRelease = project.getNormalizedMeteorReleaseVersion();
   if (appRelease !== null && appRelease === release.current.name) {
     var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
     Console.info(
@@ -1665,6 +1676,8 @@ var maybeUpdateRelease = function (options) {
         release.current.getDisplayName() + maybeTheLatestRelease + ".");
     return 0;
   }
+
+  var appTrackAndVersion = utils.splitReleaseName(appRelease);
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
@@ -1683,8 +1696,8 @@ var maybeUpdateRelease = function (options) {
         "Cannot patch update unless a release is set.");
       return 1;
     }
-    var r = appRelease.split('@');
-    var record = catalog.official.getReleaseVersion(r[0], r[1]);
+    var record = catalog.official.getReleaseVersion(
+      appTrackAndVersion[0], appTrackAndVersion[1]);
     if (!record) {
       Console.error(
         "Cannot update to a patch release from an old release.");
@@ -1721,27 +1734,20 @@ var maybeUpdateRelease = function (options) {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    // XXX: Isn't the track the same as ours, since we springboarded?
-    var appTrack = appRelease.split('@')[0];
-    var appVersion =  appRelease.split('@')[1];
     var appReleaseInfo = catalog.official.getReleaseVersion(
-      appTrack, appVersion);
+      appTrackAndVersion[0], appTrackAndVersion[1]);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
 
-    // If on a 'none' app, try to update it to the head of the official release
-    // track METEOR@.
-    if (appTrack === 'none') {
-      appTrack = 'METEOR';
-    }
-
     releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      appTrack, appOrderKey);
+      appTrackAndVersion[0], appOrderKey);
     if (!releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
+      var releaseToPrint = utils.displayRelease(
+        appTrackAndVersion[0], appTrackAndVersion[1]);
       Console.info(
-        "This project is already at Meteor " + appRelease +
-          ", which is newer than the latest release.");
+"This project is already at " + releaseToPrint + ", which is newer\n" +
+"than the latest release.");
       return 0;
     }
   }
@@ -1914,8 +1920,8 @@ main.registerCommand({
     // arbitrary release overrides (ie, if we did that, we wouldn't be
     // here). So, basically, that's the correct release for this to project to
     // have constraints against.
-    var appRelease = project.getMeteorReleaseVersion();
-    var r = appRelease.split('@');
+    var appRelease = project.getNormalizedMeteorReleaseVersion();
+    var r = utils.splitReleaseName(appRelease);
     var appRecord = catalog.official.getReleaseVersion(r[0], r[1]);
     if (appRecord) {
       releasePackages = appRecord.packages;
@@ -1940,9 +1946,14 @@ main.registerCommand({
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
-  var upgradePackages;
+  var upgradePackages = [];
   if (options.args.length === 0) {
-    upgradePackages = _.pluck(allPackages, 'name');
+    // We don't want to auto-upgrade weak dependencies (that we get from the
+    // release), even though there is not much harm in it.
+    upgradePackages = _.pluck(
+      _.reject(allPackages, function (packSpec) {
+        return _.has(packSpec, 'weak') && packSpec.weak;
+      }), 'name');
   } else {
     upgradePackages = options.args;
   }
@@ -1963,6 +1974,18 @@ main.registerCommand({
                          + messages.formatMessages());
     return 1;
   }
+
+  // Check that every requested package is actually used by the project, and
+  // print an error if they are not. We don't check this on the original
+  // versions because it could be out of date to begin with (ex: if you edited
+  // the packages file) and we don't throw an error because, technically, it is
+  // not an error. You could have gotten here by requesting updates of
+  // transitive dependencies that are no longer there.
+  _.each(upgradePackages, function (packageName) {
+    if (! _.has(newVersions, packageName)) {
+      Console.error(packageName + ': package is not in the project');
+    }
+  });
 
   // Just for the sake of good messages, check to see if anything changed.
   if (_.isEqual(newVersions, versions)) {
@@ -2116,16 +2139,15 @@ main.registerCommand({
     // fail. Rejecting the entire command because a part of it is a no-op is
     // confusing.
     if (_.has(packages, constraint.name)) {
-      if (packages[constraint.name] === constraint.constraintString) {
-        if (constraint.constraintString) {
-          Console.info(
-            constraint.name + " with version constraint " +
-              constraint.constraintString + " has already been added.");
-        } else {
-          Console.info(
-            constraint.name +
-              " without a version constraint has already been added.");
-        }
+      if (!packages[constraint.name] && !constraint.constraintString) {
+        Console.info(
+          constraint.name +
+            " without a version constraint has already been added.");
+      }
+      else if (packages[constraint.name] === constraint.constraintString) {
+        Console.info(
+          constraint.name + " with version constraint " +
+            constraint.constraintString + " has already been added.");
       } else {
         if (packages[constraint.name]) {
           Console.info(
@@ -2332,8 +2354,10 @@ main.registerCommand({
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
+  if (! _.isEmpty(packagesToRemove))
+    Console.info("");
   _.each(packagesToRemove, function (packageName) {
-    Console.info("Removed top-level dependency on " + packageName + ".");
+    Console.info(packageName + ": removed dependency");
   });
 
   return 0;

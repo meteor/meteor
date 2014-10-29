@@ -1,6 +1,6 @@
 <template name="apiBoxTitle">
   <h3 id="{{id}}" class="api-title">
-    <a class="name selflink" href="#{{id}}">{{{name}}}</a>
+    <a class="name selflink" href="{{link}}">{{{name}}}</a>
     {{#if locus}}
       <span class="locus">{{locus}}</span>
     {{/if}}
@@ -10,7 +10,7 @@
 <template name="autoApiBox">
 {{#with apiData this}}
 <div class="api {{bare}} new-api-box">
-  {{> apiBoxTitle name=signature locus=locus id=link}}
+  {{> apiBoxTitle name=signature locus=locus id=id}}
 
   <div class="desc">
     {{#markdown}}{{summary}}{{/markdown}}
