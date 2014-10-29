@@ -21,8 +21,6 @@
 
 ### Performance
 
-* Reduce unnecessary syncs with the package server, speeding up many commands.
-
 * Reduce unnecessary syncs with the package server, which speeds up
   startup times for many commands.
 
