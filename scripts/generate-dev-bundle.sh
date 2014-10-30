@@ -188,7 +188,7 @@ rm -rf node_modules/sqlite3/deps
 npm install netroute@0.2.5
 
 # Clean up a big zip file it leaves behind.
-npm install phantomjs@1.8.1-1
+npm install phantomjs@1.9.12
 rm -rf node_modules/phantomjs/tmp
 
 # Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
