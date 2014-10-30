@@ -192,13 +192,6 @@ _.extend(LocalCatalog.prototype, {
     return self.getVersion(name, versions[0]);
   },
 
-  // Overridden by CompleteCatalog.
-  // XXX this is kinda sketchy, maybe callers should only call this
-  //     on the CompleteCatalog?
-  isLocalPackage: function () {
-    return false;
-  },
-
   // If this package has any builds at this version, return an array of builds
   // which cover all of the required arches, or null if it is impossible to
   // cover them all (or if the version does not exist).
