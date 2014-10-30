@@ -191,8 +191,7 @@ npm install netroute@0.2.5
 npm install phantomjs@1.9.12
 rm -rf node_modules/phantomjs/tmp
 
-# Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
-npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
+npm install http-proxy@1.6.0
 
 # Using the formerly-unreleased 1.1 branch. We can probably switch to a built
 # NPM version now. (For that matter, we ought to be able to get this from
