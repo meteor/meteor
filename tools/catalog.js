@@ -240,7 +240,6 @@ _.extend(LayeredCatalog.prototype, {
   // It does not include prereleases (with dashes in the version);
   getLatestMainlineVersion: function (name) {
     var self = this;
-    buildmessage.assertInCapture();
 
     var versions = self.getSortedVersions(name);
     versions.reverse();

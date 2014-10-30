@@ -156,7 +156,6 @@ _.extend(LocalCatalog.prototype, {
   getVersion: function (name, version) {
     var self = this;
     self._requireInitialized();
-    buildmessage.assertInCapture();
 
     var lookupVersion = function () {
       return _.has(self.versions, name) &&
