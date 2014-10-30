@@ -5,6 +5,7 @@
 
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
+  - source-map-support: 0.2.8 (from 0.2.5)
 
 
 ## v1.0
