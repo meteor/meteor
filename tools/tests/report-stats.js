@@ -90,7 +90,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       // package usage stats
       var usage = fetchPackageUsageForApp(identifier);
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
-                           _.sortBy(packageList(sandboxProject), "name"));
+                           _.sortBy(stats.packageList(sandboxProject), "name"));
 
       // Check that the direct dependency was recorded as such.
       _.each(usage.packages, function (package) {
@@ -115,7 +115,8 @@ selftest.define("report-stats", ["slow", "net"], function () {
       };
 
       expected.details.appId = identifier,
-      expected.details.packages = _.sortBy(packageList(sandboxProject), "name");
+      expected.details.packages = _.sortBy(
+        stats.packageList(sandboxProject), "name");
 
       // read our new session id; we should have one at this point
       sessionId = auth.getSessionId(config.getAccountsDomain(),
@@ -280,14 +281,3 @@ var getClientAddress = _.once(function () {
   var stats = testUtils.ddpConnect(testStatsServer);
   return stats.call("getClientAddress");
 });
-
-var packageList = function (proj) {
-  var ret;
-  var messages = buildmessage.capture(function () {
-    ret = stats.packageList(proj);
-  });
-  if (messages.hasMessages()) {
-    selftest.fail(messages.formatMessages());
-  }
-  return ret;
-};

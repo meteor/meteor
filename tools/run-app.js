@@ -498,14 +498,7 @@ _.extend(AppRunner.prototype, {
     // Bundle up the app
     var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
     if (self.recordPackageUsage) {
-      var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages("sdk.run");
-      });
-      if (statsMessages.hasMessages()) {
-        process.stdout.write("Error recording package list:\n" +
-                             statsMessages.formatMessages());
-        // ... but continue;
-      }
+      stats.recordPackages("sdk.run");
     }
 
     // Cache the server target because the server will not change inside

@@ -816,14 +816,7 @@ var buildCommand = function (options) {
     return 1;
   }
 
-  var statsMessages = buildmessage.capture(function () {
-    stats.recordPackages("sdk.bundle");
-  });
-  if (statsMessages.hasMessages()) {
-    Console.stdout.write("Error recording package list:\n" +
-                         statsMessages.formatMessages());
-    // ... but continue;
-  }
+  stats.recordPackages("sdk.bundle");
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({

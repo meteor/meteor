@@ -36,7 +36,6 @@ var optOutPackageName = "package-stats-opt-out";
 // that it is pointing to a root directory with an existing
 // .meteor/versions file.
 var packageList = function (_currentProjectForTest) {
-  buildmessage.assertInCapture();
   var directDeps = (_currentProjectForTest || project.project).getConstraints();
 
   var versions = (_currentProjectForTest || project.project).getVersions({
@@ -59,7 +58,6 @@ var packageList = function (_currentProjectForTest) {
 // If it's a deploy, 'site' should be the name of the site
 // ("foo.meteor.com") that we're deploying to.
 var recordPackages = function (what, site) {
-  buildmessage.assertInCapture();
   // Before doing anything, look at the app's dependencies to see if the
   // opt-out package is there; if present, we don't record any stats.
   var packages = packageList();

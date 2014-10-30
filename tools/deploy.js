@@ -406,14 +406,7 @@ var bundleAndDeploy = function (options) {
       messages.merge(bundleResult.errors);
 
     if (options.recordPackageUsage) {
-      var statsMessages = buildmessage.capture({ title: 'Reporting statistics' }, function () {
-        stats.recordPackages("sdk.deploy", site);
-      });
-      if (statsMessages.hasMessages()) {
-        Console.stdout.write("Error recording package list:\n" +
-                             statsMessages.formatMessages());
-        // ... but continue;
-      }
+      stats.recordPackages("sdk.deploy", site);
     }
 
   }
