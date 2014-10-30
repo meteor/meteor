@@ -7,7 +7,8 @@
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
   - semver: 4.1.0 (from 2.2.1)
-
+  - request: 2.47.0 (from 2.33.0)
+  
 ## v1.0
 
 ### New Features
