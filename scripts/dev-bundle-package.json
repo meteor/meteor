@@ -5,6 +5,6 @@
     "fibers": "1.0.1",
     "underscore": "1.5.2",
     "source-map-support": "0.2.8",
-    "semver": "2.2.1"
+    "semver": "4.1.0"
   }
 }
