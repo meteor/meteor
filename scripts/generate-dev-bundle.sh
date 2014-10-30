@@ -168,7 +168,7 @@ npm install request@2.47.0
 
 npm install fstream@1.0.2
 
-npm install tar@1.0.1
+npm install tar@1.0.2
 
 npm install kexec@0.2.0
 

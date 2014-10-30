@@ -8,7 +8,8 @@
   - source-map-support: 0.2.8 (from 0.2.5)
   - semver: 4.1.0 (from 2.2.1)
   - request: 2.47.0 (from 2.33.0)
-  
+  - tar: 1.0.2 (from 1.0.1)
+
 ## v1.0
 
 ### New Features
