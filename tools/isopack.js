@@ -763,9 +763,11 @@ _.extend(Isopack.prototype, {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
-    buildmessage.assertInCapture();
-    if (!options.catalog && !options.elideBuildInfo)
-      throw Error("catalog required to generate buildinfo.json");
+    if (!options.elideBuildInfo) {
+      buildmessage.assertInCapture();
+      if (!options.catalog)
+        throw Error("catalog required to generate buildinfo.json");
+    }
 
     var builder = new Builder({ outputPath: outputPath });
     try {
@@ -1063,7 +1065,6 @@ _.extend(Isopack.prototype, {
 
   _writeTool: function (builder) {
     var self = this;
-    buildmessage.assertInCapture();
 
     var pathsToCopy = files.runGitInCheckout(
       'ls-tree',
@@ -1100,21 +1101,35 @@ _.extend(Isopack.prototype, {
       ignore: bundler.ignoreFiles
     });
 
-    // We only want to load local packages.
+    // Build all the packages that we can load with uniload.  We only want to
+    // load local packages.
     var localPackageLoader = new packageLoader.PackageLoader({
       versions: null,
       catalog: catalog.uniload,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
-    bundler.iterateOverAllUsedIsopacks(
-      localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
-      function (isopk) {
-        // XXX assert that each name shows up once
-        isopk.saveToPath(path.join(unipath, isopk.name), {
-          // There's no mechanism to rebuild these packages.
-          elideBuildInfo: true
+
+    var messages = buildmessage.capture({
+      title: "Compiling packages for the tool"
+    }, function () {
+      bundler.iterateOverAllUsedIsopacks(
+        localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
+        function (isopk) {
+          // XXX assert that each name shows up once
+          isopk.saveToPath(path.join(unipath, isopk.name), {
+            // There's no mechanism to rebuild these packages.
+            elideBuildInfo: true
+          });
         });
-      });
+    });
+    // This is a build step ... but it's one that only happens in development,
+    // and similar to a uniload failure, it can just crash the app instead of
+    // being handled nicely.
+    if (messages.hasMessages()) {
+      process.stderr.write("Errors prevented tool build:\n");
+      process.stderr.write(messages.formatMessages());
+      throw new Error("tool build failed?");
+    }
 
     return [{
       name: 'meteor',
