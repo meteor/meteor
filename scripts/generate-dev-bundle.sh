@@ -164,7 +164,7 @@ mv ../$FIBERS_ARCH .
 # Now, install the rest of the npm modules, which are only used by the 'meteor'
 # tool (and not by the bundled app boot.js script).
 cd "${DIR}/lib"
-npm install request@2.33.0
+npm install request@2.47.0
 
 npm install fstream@1.0.2
 
