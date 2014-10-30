@@ -9,6 +9,7 @@
   - semver: 4.1.0 (from 2.2.1)
   - request: 2.47.0 (from 2.33.0)
   - tar: 1.0.2 (from 1.0.1)
+  - source-map: 0.1.40 (from 0.1.32)
 
 ## v1.0
 

@@ -172,7 +172,7 @@ npm install tar@1.0.2
 
 npm install kexec@0.2.0
 
-npm install source-map@0.1.32
+npm install source-map@0.1.40
 
 npm install browserstack-webdriver@2.41.1
 rm -rf node_modules/browserstack-webdriver/docs
