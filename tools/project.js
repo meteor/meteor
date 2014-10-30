@@ -774,7 +774,6 @@ _.extend(Project.prototype, {
   setVersions: function (newVersions, options) {
     var self = this;
     options = options || {};
-    buildmessage.assertInCapture();
 
     var downloaded = tropohouse.default.downloadMissingPackages(newVersions);
     var ret = {
@@ -839,7 +838,6 @@ _.extend(Project.prototype, {
   // disk and the operation has failed.
   addPackages : function (moreDeps, newVersions) {
     var self = this;
-    buildmessage.assertInCapture();
 
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to

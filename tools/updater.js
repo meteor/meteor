@@ -208,35 +208,30 @@ var updateMeteorToolSymlink = function () {
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
     try {
-      var messages = buildmessage.capture(function () {
+      buildmessage.enterJob({
+        title: "Downloading tool package " + latestRelease.tool
+      }, function () {
+        tropohouse.default.maybeDownloadPackageForArchitectures({
+          packageName: latestReleaseToolPackage,
+          version: latestReleaseToolVersion,
+          architectures: [archinfo.host()],
+          silent: true
+        });
+      });
+      _.each(latestRelease.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "Downloading tool package " + latestRelease.tool
+          title: "Downloading package " + pkgName + "@" + pkgVersion
         }, function () {
           tropohouse.default.maybeDownloadPackageForArchitectures({
-            packageName: latestReleaseToolPackage,
-            version: latestReleaseToolVersion,
+            packageName: pkgName,
+            version: pkgVersion,
             architectures: [archinfo.host()],
             silent: true
-          });
-        });
-        _.each(latestRelease.packages, function (pkgVersion, pkgName) {
-          buildmessage.enterJob({
-            title: "Downloading package " + pkgName + "@" + pkgVersion
-          }, function () {
-            tropohouse.default.maybeDownloadPackageForArchitectures({
-              packageName: pkgName,
-              version: pkgVersion,
-              architectures: [archinfo.host()],
-              silent: true
-            });
           });
         });
       });
     } catch (err) {
       return;  // since we are running in the background.
-    }
-    if (messages.hasMessages()) {
-      return;  // since we are running in the background
     }
 
     var toolIsopack = new isopack.Isopack;

@@ -182,7 +182,6 @@ _.extend(exports.Tropohouse.prototype, {
   // warehouse does.  actually, generally deal with error handling.
   maybeDownloadPackageForArchitectures: function (options) {
     var self = this;
-    buildmessage.assertInCapture();
     if (!options.packageName)
       throw Error("Missing required argument: packageName");
     if (!options.version)
@@ -311,7 +310,6 @@ _.extend(exports.Tropohouse.prototype, {
   // don't check it. Bleah.  Should rewrite this and all of its callers.
   downloadMissingPackages: function (versionMap, options) {
     var self = this;
-    buildmessage.assertInCapture();
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};

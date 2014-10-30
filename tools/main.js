@@ -374,7 +374,7 @@ var springboard = function (rel, options) {
     Console.setPretty(true);
     Console.enableProgressDisplay(true);
 
-    var messages = buildmessage.capture({
+    buildmessage.enterJob({
       title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
     }, function () {
       tropohouse.default.maybeDownloadPackageForArchitectures({
@@ -400,14 +400,6 @@ var springboard = function (rel, options) {
 "Sorry, " + rel.getDisplayName() + " is not installed and could not be\n" +
 "downloaded. Please check to make sure that you are online.");
     }
-    process.exit(1);
-  }
-  if (messages.hasMessages()) {
-    // XXX I'm pretty sure that maybeDownloadPackageForArchitectures can no
-    //     longer create buildmessages
-    Console.error(
-      "Could not springboard to release: " + rel.getDisplayName() + ".\n" +
-        messages.formatMessages());
     process.exit(1);
   }
 

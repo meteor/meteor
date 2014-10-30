@@ -1823,16 +1823,8 @@ var maybeUpdateRelease = function (options) {
   var upgradersToRun = upgraders.upgradersToRun();
 
   // Write the new versions to .meteor/packages and .meteor/versions.
-  var setV;
-  messages = buildmessage.capture(function () {
-    setV = project.setVersions(solutionPackageVersions,
-                               { alwaysRecord : true });
-  });
-  if (messages.hasMessages()) {
-    Console.error("Error while setting versions:\n" +
-                         messages.formatMessages());
-    return 1;
-  }
+  var setV = project.setVersions(solutionPackageVersions,
+                                 { alwaysRecord: true });
   project.showPackageChanges(previousVersions, solutionPackageVersions, {
     onDiskPackages: setV.downloaded
   });
@@ -1994,16 +1986,7 @@ main.registerCommand({
   }
 
   // Set our versions and download the new packages.
-  var setV;
-  messages = buildmessage.capture(function () {
-    setV = project.setVersions(newVersions, { alwaysRecord : true });
-  });
-  // XXX cleanup this madness of error handling
-  if (messages.hasMessages()) {
-    Console.error("Error while setting package versions:\n" +
-                         messages.formatMessages());
-    return 1;
-  }
+  var setV = project.setVersions(newVersions, { alwaysRecord: true });
 
   // Sometimes, we don't show changes -- for example, if you don't have a
   // versions file. However, I think that if you don't have a versions file, and
@@ -2206,7 +2189,7 @@ main.registerCommand({
     return 1;
   }
 
-  var downloaded, versions, newVersions;
+  var versions, newVersions;
 
   try {
     var messages = buildmessage.capture(function () {
@@ -2232,11 +2215,6 @@ main.registerCommand({
       // don't want to give a false sense of completeness until everything is
       // written to disk.
       var messageLog = [];
-
-      // Install the new versions. If all new versions were installed
-      // successfully, then change the .meteor/packages and .meteor/versions to
-      // match expected reality.
-      downloaded = project.addPackages(constraints, newVersions);
     });
   } catch (e) {
     if (!e.constraintSolverError)
@@ -2253,6 +2231,11 @@ main.registerCommand({
     explainIfRefreshFailed();
     return 1;
   }
+
+  // Install the new versions. If all new versions were installed successfully,
+  // then change the .meteor/packages and .meteor/versions to match expected
+  // reality.
+  var downloaded = project.addPackages(constraints, newVersions);
 
   var ret = project.showPackageChanges(versions, newVersions, {
     onDiskPackages: downloaded});
@@ -2585,33 +2568,28 @@ main.registerCommand({
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
       path.join(tmpdir, '.meteor'), catalog.official);
-    var messages = buildmessage.capture(function () {
+    buildmessage.enterJob({
+      title: "Downloading tool package " + toolPkg.package + "@" +
+        toolPkg.constraint
+    }, function () {
+      tmpTropo.maybeDownloadPackageForArchitectures({
+        packageName: toolPkg.package,
+        version: toolPkg.constraint,
+        architectures: [osArch]  // XXX 'web.browser' too?
+      });
+    });
+    _.each(release.packages, function (pkgVersion, pkgName) {
+      // XXX use forkJoin?
       buildmessage.enterJob({
-        title: "Downloading tool package " + toolPkg.package + "@" +
-          toolPkg.constraint
+        title: "Downloading package " + pkgName + "@" + pkgVersion
       }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures({
-          packageName: toolPkg.package,
-          version: toolPkg.constraint,
+          packageName: pkgName,
+          version: pkgVersion,
           architectures: [osArch]  // XXX 'web.browser' too?
         });
       });
-      _.each(release.packages, function (pkgVersion, pkgName) {
-        buildmessage.enterJob({
-          title: "Downloading package " + pkgName + "@" + pkgVersion
-        }, function () {
-          tmpTropo.maybeDownloadPackageForArchitectures({
-            packageName: pkgName,
-            version: pkgVersion,
-            architectures: [osArch]  // XXX 'web.browser' too?
-          });
-        });
-      });
     });
-    if (messages.hasMessages()) {
-      Console.error("\n" + messages.formatMessages());
-      return 1;
-    }
 
     // Install the sqlite DB file we synced earlier. We have previously
     // confirmed that the "-wal" file (which could contain extra log entries
