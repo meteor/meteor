@@ -228,7 +228,7 @@ rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/nod
 # particular version of openssl on the host system.
 
 cd "$DIR/build"
-OPENSSL="openssl-1.0.1g"
+OPENSSL="openssl-1.0.1j"
 OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
 wget $OPENSSL_URL || curl -O $OPENSSL_URL
 tar xzf $OPENSSL.tar.gz
