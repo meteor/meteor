@@ -38,7 +38,7 @@ var selectListItem = function ($newSelected) {
     $newSelected.addClass("selected");
 
     // scroll to make sure everything is inside the viewport
-    var searchResults = template.$(".search-results");
+    var searchResults = $(".search-results");
 
     // make sure it's inside the visible area
     var viewportTop = searchResults.offset().top;
@@ -102,17 +102,15 @@ Template.search.events({
 
       if (change === 1) {
         if (currentSelected.length) {
-          $newSelected = currentSelected.next();
+          selectListItem(currentSelected.next());
         } else {
-          $newSelected = template.$(".search-results li").first();
+          selectListItem(template.$(".search-results li").first());
         }
       } else {
         if (currentSelected.length) {
-          $newSelected = currentSelected.prev();
+          selectListItem(currentSelected.prev());
         }
       }
-
-      selectListItem($newSelected);
 
       return false;
     }

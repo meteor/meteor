@@ -645,7 +645,7 @@ pre {
 
         input {
             font-size: 2em;
-            padding: 0.5em;
+            padding: 0.5em 0;
             background: transparent;
             border: none;
             border-bottom: 2px solid #777;
@@ -667,11 +667,13 @@ pre {
         top: 170px;
 
         overflow-y: scroll;
+        list-style: none;
+
+        padding: 0;
 
         li {
             font-size: 1.2em;
             margin-bottom: 0.5em;
-            margin-left: 2em;
 
             .name {
                 display: inline-block;
@@ -683,9 +685,9 @@ pre {
                 display: inline-block;
                 width: 60%;
                 vertical-align: top;
-                white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                white-space: nowrap;
             }
 
             &.selected {

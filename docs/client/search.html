@@ -6,7 +6,7 @@
         <h3>Search Documentation</h3>
         <input type="text" class="search-query" />
       </div>
-      <ol class="search-results">
+      <ul class="search-results">
         {{#each searchResults}}
           <li>
             <span class="name">{{longname}}</span>
@@ -17,7 +17,7 @@
         {{else}}
           No search results found.
         {{/each}}
-      </ol>
+      </ul>
     </div>
   {{/if}}
 </template>
