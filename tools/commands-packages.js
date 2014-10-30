@@ -2094,14 +2094,21 @@ main.registerCommand({
   }
 
   _.each(constraints, function (constraint) {
+    var thisConstraintFailed = false;
+
     // Check that the package exists.
     doOrDie({title: 'Checking package: ' + constraint.name }, function () {
       if (! catalog.complete.getPackage(constraint.name)) {
         Console.error(constraint.name + ": no such package");
-        failed = true;
+        thisConstraintFailed = true;
         return;
       }
     });
+
+    if (thisConstraintFailed) {
+      failed = true;
+      return;
+    }
 
     // If the version was specified, check that the version exists.
     _.each(constraint.constraints, function (constr) {
@@ -2112,11 +2119,17 @@ main.registerCommand({
         if (! versionInfo) {
           Console.stderr.write(
             constraint.name + "@" + constr.version  + ": no such version\n");
-          failed = true;
+          thisConstraintFailed = true;
           return;
         }
       }
     });
+
+    if (thisConstraintFailed) {
+      failed = true;
+      return;
+    }
+
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function, but don't
     // fail. Rejecting the entire command because a part of it is a no-op is

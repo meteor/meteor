@@ -285,6 +285,13 @@ selftest.define("add packages to app", ["net"], function () {
   run.matchErr("no such version");
   run.expectExit(1);
 
+  // Adding a nonexistent package at a nonexistent version should print
+  // only one error message, not two. (We used to print "no such
+  // package" and "no such version".)
+  run = s.run("add", "not-a-real-package-and-never-will-be@1.0.0");
+  run.matchErr("no such package");
+  run.expectExit(1);
+  run.forbidAll("no such version");
 
   run = s.run("add", "accounts-base");
 
@@ -293,6 +300,15 @@ selftest.define("add packages to app", ["net"], function () {
 
   checkPackages(s,
                 ["meteor-platform", "accounts-base"]);
+
+  // Adding the nonexistent version now should still say "no such
+  // version". Regression test for
+  // https://github.com/meteor/meteor/issues/2898.
+  run = s.run("add", "accounts-base@0.123.123");
+  run.matchErr("no such version");
+  run.expectExit(1);
+  run.forbidAll("Currently using accounts-base");
+  run.forbidAll("will be changed to");
 
   run = s.run("--once");
 
