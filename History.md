@@ -10,6 +10,7 @@
   - request: 2.47.0 (from 2.33.0)
   - tar: 1.0.2 (from 1.0.1)
   - source-map: 0.1.40 (from 0.1.32)
+  - sqlite3: 3.0.2 (from 3.0.0)
 
 ## v1.0
 

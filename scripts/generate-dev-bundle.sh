@@ -182,7 +182,7 @@ npm install node-inspector@0.7.4
 
 npm install chalk@0.5.1
 
-npm install sqlite3@3.0.0
+npm install sqlite3@3.0.2
 rm -rf node_modules/sqlite3/deps
 
 npm install netroute@0.2.5
