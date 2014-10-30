@@ -200,20 +200,6 @@ _.extend(LayeredCatalog.prototype, {
     return this._returnFirst("getPackage", arguments, ACCEPT_NON_EMPTY);
   },
 
-  // Returns general (non-version-specific) information about a
-  // release track, or null if there is no such release track.
-  getReleaseTrack: function (name) {
-    return this.otherCatalog.getReleaseTrack(name);
-  },
-
-  getReleaseVersion: function (track, version) {
-    return this.otherCatalog.getReleaseVersion(track, version);
-  },
-
-  getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
-    return this.otherCatalog.getSortedRecommendedReleaseVersions(track, laterThanOrderKey);
-  },
-
   getSortedVersions: function (name) {
     return this._returnFirst("getSortedVersions", arguments, ACCEPT_NON_EMPTY);
   },
