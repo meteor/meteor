@@ -1926,12 +1926,12 @@ exports.bundle = function (options) {
   var starResult = null;
   var targets = {};
 
+  if (! release.usingRightReleaseForApp(appDir))
+    throw new Error("running wrong release for app?");
+
   var messages = buildmessage.capture({
     title: "Building the application"
   }, function () {
-    if (! release.usingRightReleaseForApp(appDir))
-      throw new Error("running wrong release for app?");
-
     var packageLoader = project.project.getPackageLoader();
     var downloaded = tropohouse.default.downloadMissingPackages(
       project.project.dependencies, { serverArch: serverArch });

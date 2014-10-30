@@ -478,16 +478,7 @@ _.extend(AppRunner.prototype, {
     // you are testing packages from an app and you 'meteor update'
     // that app.
     if (self.appDirForVersionCheck) {
-      var wrongRelease;
-      var rightReleaseMessages = buildmessage.capture(function () {
-        wrongRelease = ! release.usingRightReleaseForApp();
-      });
-      if (rightReleaseMessages.hasMessages()) {
-        return {
-          outcome: 'bundle-fail',
-          bundleResult: { errors: rightReleaseMessages }
-        };
-      }
+      var wrongRelease = ! release.usingRightReleaseForApp();
       if (wrongRelease) {
         return { outcome: 'wrong-release',
                  releaseNeeded: project.getNormalizedMeteorReleaseVersion()
