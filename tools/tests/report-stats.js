@@ -198,7 +198,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
       selftest.expectEqual(appPackages.who, testUtils.getUserId(s));
       selftest.expectEqual(_.sortBy(appPackages.details.packages, "name"),
-                           _.sortBy(packageList(sandboxProject), "name"));
+                           _.sortBy(stats.packageList(sandboxProject), "name"));
     }
   );
 });
