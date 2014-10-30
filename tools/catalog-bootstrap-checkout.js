@@ -1,8 +1,9 @@
 var _ = require('underscore');
-var buildmessage = require('./buildmessage.js');
 var util = require('util');
+var fs = require('fs');
+var buildmessage = require('./buildmessage.js');
 var LocalCatalog = require('./catalog-local.js').LocalCatalog;
-
+var tropohouse = require('./tropohouse.js');
 
 // BootstrapCatalogCheckout represents a catalog of the packages at bootstrap
 // when we are running in checkout mode.
