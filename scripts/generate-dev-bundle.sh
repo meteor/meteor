@@ -127,6 +127,13 @@ which npm
 # shrinkwrap file with it, too.  We do this in a separate place from
 # $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
 # confused by the pre-existing modules.
+#
+# Some notes on upgrading modules in this file (which can't contain comments,
+# sad):
+#  - Fibers 1.0.2 is out but introduces a bug that's been fixed on master
+#    but unreleased: https://github.com/laverdet/node-fibers/pull/189
+#    We will definitely need to upgrade in order to support Node 0.12 when
+#    it's out, though.
 mkdir "${DIR}/build/npm-install"
 cd "${DIR}/build/npm-install"
 cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
