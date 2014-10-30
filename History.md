@@ -3,6 +3,19 @@
 * Spacebars: Allow curly braces to be escaped, with special
   sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
 
+* Upgraded dependencies:
+  - node: 0.10.33 (from 0.10.29)
+  - source-map-support: 0.2.8 (from 0.2.5)
+  - semver: 4.1.0 (from 2.2.1)
+  - request: 2.47.0 (from 2.33.0)
+  - tar: 1.0.2 (from 1.0.1)
+  - source-map: 0.1.40 (from 0.1.32)
+  - sqlite3: 3.0.2 (from 3.0.0)
+  - phantomjs npm module: 1.9.12 (from 1.8.1-1)
+  - http-proxy: 1.6.0 (from a fork of 1.0.2)
+  - esprima: 1.2.2 (from an unreleased 1.1-era commit)
+  - openssl in mongo: 1.0.1j (from 1.0.1g)
+  - MongoDB: 2.4.12 (from 2.4.9)
 
 ## v1.0
 

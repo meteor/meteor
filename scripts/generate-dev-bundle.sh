@@ -101,8 +101,8 @@ git clone https://github.com/meteor/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/main.js and tools/server/boot.js, and the text in
-# docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.29-with-npm-5821
+# docs/client/full-api/concepts.html and the README in tools/bundler.js.
+git checkout v0.10.33-with-npm-5821
 
 ./configure --prefix="$DIR"
 make -j4
@@ -127,6 +127,16 @@ which npm
 # shrinkwrap file with it, too.  We do this in a separate place from
 # $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
 # confused by the pre-existing modules.
+#
+# Some notes on upgrading modules in this file (which can't contain comments,
+# sad):
+#  - Fibers 1.0.2 is out but introduces a bug that's been fixed on master
+#    but unreleased: https://github.com/laverdet/node-fibers/pull/189
+#    We will definitely need to upgrade in order to support Node 0.12 when
+#    it's out, though.
+#  - Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
+#    in the package too) because we should consider using lodash instead
+#    (and there are backwards-incompatible changes either way).
 mkdir "${DIR}/build/npm-install"
 cd "${DIR}/build/npm-install"
 cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
@@ -154,15 +164,15 @@ mv ../$FIBERS_ARCH .
 # Now, install the rest of the npm modules, which are only used by the 'meteor'
 # tool (and not by the bundled app boot.js script).
 cd "${DIR}/lib"
-npm install request@2.33.0
+npm install request@2.47.0
 
 npm install fstream@1.0.2
 
-npm install tar@1.0.1
+npm install tar@1.0.2
 
 npm install kexec@0.2.0
 
-npm install source-map@0.1.32
+npm install source-map@0.1.40
 
 npm install browserstack-webdriver@2.41.1
 rm -rf node_modules/browserstack-webdriver/docs
@@ -172,22 +182,20 @@ npm install node-inspector@0.7.4
 
 npm install chalk@0.5.1
 
-npm install sqlite3@3.0.0
+npm install sqlite3@3.0.2
 rm -rf node_modules/sqlite3/deps
 
 npm install netroute@0.2.5
 
 # Clean up a big zip file it leaves behind.
-npm install phantomjs@1.8.1-1
+npm install phantomjs@1.9.12
 rm -rf node_modules/phantomjs/tmp
 
-# Fork of 1.0.2 with https://github.com/nodejitsu/node-http-proxy/pull/592
-npm install https://github.com/meteor/node-http-proxy/tarball/99f757251b42aeb5d26535a7363c96804ee057f0
+npm install http-proxy@1.6.0
 
-# Using the formerly-unreleased 1.1 branch. We can probably switch to a built
-# NPM version now. (For that matter, we ought to be able to get this from
-# the copy in js-analyze rather than in the dev bundle.)
-npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
+# XXX We ought to be able to get this from the copy in js-analyze rather than in
+# the dev bundle.)
+npm install esprima@1.2.2
 rm -rf node_modules/esprima/test
 
 # 2.4.0 (more or less, the package.json change isn't committed) plus our PR
@@ -219,7 +227,7 @@ rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/nod
 # particular version of openssl on the host system.
 
 cd "$DIR/build"
-OPENSSL="openssl-1.0.1g"
+OPENSSL="openssl-1.0.1j"
 OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
 wget $OPENSSL_URL || curl -O $OPENSSL_URL
 tar xzf $OPENSSL.tar.gz
@@ -238,7 +246,7 @@ make install
 # click 'changelog' under the current version, then 'release notes' in
 # the upper right.
 cd "$DIR/build"
-MONGO_VERSION="2.4.9"
+MONGO_VERSION="2.4.12"
 
 # We use Meteor fork since we added some changes to the building script.
 # Our patches allow us to link most of the libraries statically.

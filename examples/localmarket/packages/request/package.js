@@ -3,7 +3,7 @@ Package.describe({
   version: '0.0.0'
 });
 
-Npm.depends({request: "2.33.0"});
+Npm.depends({request: "2.47.0"});
 
 Package.on_use(function (api) {
   api.add_files('request-server.js', 'server');
