@@ -3,6 +3,9 @@
 * Spacebars: Allow curly braces to be escaped, with special
   sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
 
+* Upgraded dependencies:
+  - node: 0.10.33 (from 0.10.29)
+
 
 ## v1.0
 

@@ -101,8 +101,8 @@ git clone https://github.com/meteor/node.git
 cd node
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/main.js and tools/server/boot.js, and the text in
-# docs/client/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.29-with-npm-5821
+# docs/client/full-api/concepts.html and the README in tools/bundler.js.
+git checkout v0.10.33-with-npm-5821
 
 ./configure --prefix="$DIR"
 make -j4

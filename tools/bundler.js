@@ -1794,7 +1794,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one external dependency:\n" +
-"Node.js 0.10.29 or newer. To run the application:\n" +
+"Node.js 0.10.33 or newer. To run the application:\n" +
 "\n" +
 "  $ (cd programs/server && npm install)\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
