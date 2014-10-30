@@ -134,6 +134,9 @@ which npm
 #    but unreleased: https://github.com/laverdet/node-fibers/pull/189
 #    We will definitely need to upgrade in order to support Node 0.12 when
 #    it's out, though.
+#  - Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
+#    in the package too) because we should consider using lodash instead
+#    (and there are backwards-incompatible changes either way).
 mkdir "${DIR}/build/npm-install"
 cd "${DIR}/build/npm-install"
 cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
