@@ -193,10 +193,9 @@ rm -rf node_modules/phantomjs/tmp
 
 npm install http-proxy@1.6.0
 
-# Using the formerly-unreleased 1.1 branch. We can probably switch to a built
-# NPM version now. (For that matter, we ought to be able to get this from
-# the copy in js-analyze rather than in the dev bundle.)
-npm install https://github.com/ariya/esprima/tarball/5044b87f94fb802d9609f1426c838874ec2007b3
+# XXX We ought to be able to get this from the copy in js-analyze rather than in
+# the dev bundle.)
+npm install esprima@1.2.2
 rm -rf node_modules/esprima/test
 
 # 2.4.0 (more or less, the package.json change isn't committed) plus our PR

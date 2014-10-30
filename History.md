@@ -13,6 +13,7 @@
   - sqlite3: 3.0.2 (from 3.0.0)
   - phantomjs npm module: 1.9.12 (from 1.8.1-1)
   - http-proxy: 1.6.0 (from a fork of 1.0.2)
+  - esprima: 1.2.2 (from an unreleased 1.1-era commit)
   - openssl in mongo: 1.0.1j (from 1.0.1g)
   - MongoDB: 2.4.12 (from 2.4.9)
 
