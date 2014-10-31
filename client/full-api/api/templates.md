@@ -172,10 +172,11 @@ Access is read-only and non-reactive.
 
 {{> autoApiBox "Blaze.TemplateInstance#autorun"}}
 
-You can use `this.autorun` from a [`onCreated`](#template_onCreated) or
+You can use `this.autorun` from an [`onCreated`](#template_onCreated) or
 [`onRendered`](#template_onRendered) callback to reactively update the DOM
-or the template instance.  The Computation is automatically stopped
-when the template is destroyed.
+or the template instance.  You can use `Template.currentData()` inside
+of this callback to access reactive data context of the template instance.
+The Computation is automatically stopped when the template is destroyed.
 
 Alias for `template.view.autorun`.
 
