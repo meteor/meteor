@@ -336,7 +336,7 @@ _.extend(CodeGen.prototype, {
     if (_.isString(content)) {
       return content.trim();
     }
-    else {
+    else if (_.isArray(content)) {
       var newContent = [];
       for (var i = 0; i < content.length; i++) {
         if (_.isString(content[i])) {
@@ -357,6 +357,9 @@ _.extend(CodeGen.prototype, {
       }
 
       return newContent;
+    }
+    else {
+      return content;
     }
   }
 
