@@ -191,42 +191,6 @@ _.extend(LocalCatalog.prototype, {
     return self.getVersion(name, versions[0]);
   },
 
-  // If this package has any builds at this version, return an array of builds
-  // which cover all of the required arches, or null if it is impossible to
-  // cover them all (or if the version does not exist).
-  getBuildsForArches: function (name, version, arches) {
-    var self = this;
-    self._requireInitialized();
-    buildmessage.assertInCapture();
-
-    var versionInfo = self.getVersion(name, version);
-    if (! versionInfo)
-      return null;
-
-    // XXX if we have a choice between os and os.mac, this returns a random one.
-    //     so in practice we don't really support "maybe-platform-specific"
-    //     packages
-
-    var allBuilds = _.where(self.builds, { versionId: versionInfo._id });
-    var solution = null;
-    utils.generateSubsetsOfIncreasingSize(allBuilds, function (buildSubset) {
-      // This build subset works if for all the arches we need, at least one
-      // build in the subset satisfies it. It is guaranteed to be minimal,
-      // because we look at subsets in increasing order of size.
-      var satisfied = _.all(arches, function (neededArch) {
-        return _.any(buildSubset, function (build) {
-          var buildArches = build.buildArchitectures.split('+');
-          return !!archinfo.mostSpecificMatch(neededArch, buildArches);
-        });
-      });
-      if (satisfied) {
-        solution = buildSubset;
-        return true;  // stop the iteration
-      }
-      return solution;  // might be null!
-    });
-  },
-
   // Unlike the previous, this looks for a build which *precisely* matches the
   // given buildArchitectures string. Also, it takes a versionRecord rather than
   // name/version.

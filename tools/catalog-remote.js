@@ -613,6 +613,10 @@ _.extend(RemoteCatalog.prototype, {
     return result;
   },
 
+  // If this package has any builds at this version, return an array of builds
+  // which cover all of the required arches, or null if it is impossible to
+  // cover them all (or if the version does not exist).
+  // Note that this method is specific to RemoteCatalog.
   getBuildsForArches: function (name, version, arches) {
     var self = this;
 

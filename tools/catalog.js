@@ -168,10 +168,6 @@ _.extend(LayeredCatalog.prototype, {
     return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
   },
 
-  getBuildsForArches: function (name, version, arches) {
-    return this._returnFirst("getBuildsForArches", arguments, ACCEPT_NON_EMPTY);
-  },
-
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
     return this._returnFirst("getBuildWithPreciseBuildArchitectures", arguments, ACCEPT_NON_EMPTY);
   },
