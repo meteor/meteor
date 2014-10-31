@@ -191,31 +191,6 @@ _.extend(LocalCatalog.prototype, {
     return self.getVersion(name, versions[0]);
   },
 
-  // Unlike the previous, this looks for a build which *precisely* matches the
-  // given buildArchitectures string. Also, it takes a versionRecord rather than
-  // name/version.
-  getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
-    var self = this;
-    buildmessage.assertInCapture();
-    self._requireInitialized();
-
-    return _.findWhere(self.builds,
-                       { versionId: versionRecord._id,
-                         buildArchitectures: buildArchitectures });
-  },
-
-  getAllBuilds: function (name, version) {
-    var self = this;
-    self._requireInitialized();
-    buildmessage.assertInCapture();
-
-    var versionRecord = self.getVersion(name, version);
-    if (!versionRecord)
-      return null;
-
-    return _.where(self.builds, { versionId: versionRecord._id });
-  },
-
   // Refresh the packages in the catalog, by re-scanning local packages.
   //
   // options:

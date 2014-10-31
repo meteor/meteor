@@ -143,11 +143,6 @@ _.extend(LayeredCatalog.prototype, {
     self.localCatalog.addLocalPackage(directory);
   },
 
-  getAllBuilds: function (name, version) {
-    var self = this;
-    return self._returnFirst("getAllBuilds", arguments, ACCEPT_NON_EMPTY);
-  },
-
   getLatestVersion: function (name) {
     var self = this;
     return self._returnFirst("getLatestVersion", arguments, ACCEPT_NON_EMPTY);
@@ -166,10 +161,6 @@ _.extend(LayeredCatalog.prototype, {
       return result;
     }
     return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
-  },
-
-  getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
-    return this._returnFirst("getBuildWithPreciseBuildArchitectures", arguments, ACCEPT_NON_EMPTY);
   },
 
   getForgottenECVs: function (packageName) {
