@@ -159,7 +159,8 @@ _.extend(Unibuild.prototype, {
       prelinkFiles: self.prelinkFiles,
       packageVariables: self.packageVariables,
       includeSourceMapInstructions: archinfo.matches(self.arch, "web"),
-      name: self.pkg.name || null
+      name: self.pkg.name || null,
+      assets: _.where(self.resources, { type: "asset" })
     });
 
     // Add each output as a resource

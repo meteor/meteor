@@ -543,6 +543,10 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 //
 // prelinkFiles: the 'files' output from prelink()
 //
+// assets: a list of assets (with 'path' and 'servePath'
+// properties). Packages will be able to get the serve path for an asset
+// by calling `Assets.getPath(<path>)`.
+//
 // Output is an array of final output files in the same format as the
 // 'inputFiles' argument to prelink().
 var link = function (options) {
@@ -560,7 +564,8 @@ var link = function (options) {
 
   var header = getHeader({
     imports: options.imports,
-    packageVariables: options.packageVariables
+    packageVariables: options.packageVariables,
+    assets: options.assets
   });
 
   var exported = _.pluck(_.filter(options.packageVariables, function (v) {
@@ -610,6 +615,22 @@ var link = function (options) {
 var getHeader = function (options) {
   var chunks = [];
   chunks.push("(function () {\n\n" );
+
+  chunks.push("/* Assets */\n");
+  chunks.push("var assets = {\n");
+  _.each(options.assets, function (asset, i) {
+    chunks.push("  '" + asset.path + "': '" + asset.servePath + "'" +
+                 (i < options.assets.length - 1 ? ",\n" : "\n"));
+  });
+  chunks.push("};\n\n");
+
+  // XXX why must this be global? making it local somehow interferes
+  // with the Assets symbols that uniloaded packages see??
+  chunks.push("Assets = typeof Assets === 'undefined' ? {} : Assets;\n");
+  chunks.push("Assets.getPath = function (filename) {\n");
+  chunks.push("  return assets[filename] || null;\n");
+  chunks.push("};\n");
+
   chunks.push(getImportCode(options.imports, "/* Imports */\n", false));
   if (!_.isEmpty(options.packageVariables)) {
     chunks.push("/* Package-scope variables */\n");
