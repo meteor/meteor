@@ -44,61 +44,14 @@ _.extend(BootstrapCatalogCheckout.prototype, {
         constraint.constraints[0].type !== 'any-reasonable') {
         throw Error("Surprising constraint: " + JSON.stringify(constraint));
       }
-      if (!_.has(self.versions, constraint.name)) {
+      if (!_.has(self.packages, constraint.name)) {
         throw Error("Trying to resolve unknown package: " + constraint.name);
       }
-      if (_.isEmpty(self.versions[constraint.name])) {
-        throw Error("Trying to resolve versionless package: " + constraint.name);
-      }
-      if (_.size(self.versions[constraint.name]) > 1) {
-        throw Error("Too many versions for package: " + constraint.name);
-      }
-      ret[constraint.name] = _.keys(self.versions[constraint.name])[0];
+      ret[constraint.name] =
+        self.packages[constraint.name].versionRecord.version;
     });
     return ret;
-  },
-
-
-  // Given a name and a version of a package, return a path on disk
-  // from which we can load it. If we don't have it on disk (we
-  // haven't downloaded it, or it just plain doesn't exist in the
-  // catalog) return null.
-  //
-  // Doesn't download packages. Downloading should be done at the time
-  // that .meteor/versions is updated.
-  //
-  // HACK: Version can be null if you are certain that the package is to be
-  // loaded from local packages. In the future, version should always be
-  // required and we should confirm that the version on disk is the version that
-  // we asked for. This is to support isopack loader not having a version
-  // manifest.
-  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
-    var self = this;
-    self._requireInitialized();
-    buildmessage.assertInCapture();
-    constraintSolverOpts =  constraintSolverOpts || {};
-
-    // Check local packages first.
-    if (_.has(self.packageSources, name)) {
-
-      // If we don't have a build of this package, we need to rebuild it.
-      self._build(name, {}, constraintSolverOpts);
-
-      // Return the path.
-      return self.packageSources[name].sourceRoot;
-    }
-
-    if (! version) {
-      throw new Error(name + " not a local package, and no version specified?");
-    }
-
-    var packageDir = tropohouse.default.packagePath(name, version);
-    if (fs.existsSync(packageDir)) {
-      return packageDir;
-    }
-     return null;
   }
-
 });
 
 exports.BootstrapCatalogCheckout = BootstrapCatalogCheckout;

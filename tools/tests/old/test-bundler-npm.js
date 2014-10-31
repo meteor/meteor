@@ -22,7 +22,7 @@ var setAppDir = function (appDir) {
 
   var checkoutPackageDir = path.join(
     files.getCurrentToolsDir(), 'packages');
-  var localPackageDirs = [tmpPackageDirContainer, checkoutPackageDir];
+  var localPackageSearchDirs = [tmpPackageDirContainer, checkoutPackageDir];
 
   if (files.usesWarehouse()) {
     throw Error("This old test doesn't support non-checkout");
@@ -30,10 +30,10 @@ var setAppDir = function (appDir) {
 
   doOrThrow(function () {
     catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
+      localPackageSearchDirs: [checkoutPackageDir]
     });
     catalog.complete.initialize({
-      localPackageDirs: localPackageDirs
+      localPackageSearchDirs: localPackageSearchDirs
     });
   });
 };

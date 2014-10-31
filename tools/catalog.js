@@ -174,9 +174,21 @@ _.extend(LayeredCatalog.prototype, {
     return forgottenECVs;
   },
 
+  // Doesn't download packages. Downloading should be done at the time
+  // that .meteor/versions is updated.
   getLoadPathForPackage: function (name, version, constraintSolverOpts) {
     var self = this;
-    return self.localCatalog.getLoadPathForPackage(name, version, constraintSolverOpts);
+    var loadPath = self.localCatalog.getLoadPathForPackage(
+      name, version, constraintSolverOpts);
+    if (loadPath)
+      return loadPath;
+
+    if (! version) {
+      throw new Error(name + " not a local package, and no version specified?");
+    }
+
+    return self.otherCatalog.getLoadPathForPackage(
+      name, version, constraintSolverOpts);
   },
 
   getLocalPackageNames: function () {

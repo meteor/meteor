@@ -685,7 +685,8 @@ Fiber(function () {
     // springboard).
     var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
       catalog.uniload.initialize({
-        localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
+        localPackageSearchDirs: [
+          path.join(files.getCurrentToolsDir(), 'packages')]
       });
     });
     if (messages.hasMessages()) {
@@ -1238,14 +1239,14 @@ commandName + ": You're not in a Meteor project directory.\n" +
     // Figure out the directories that we should search for local
     // packages (in addition to packages downloaded from the package
     // server)
-    var localPackageDirs = [];
+    var localPackageSearchDirs = [];
     if (appDir)
-      localPackageDirs.push(path.join(appDir, 'packages'));
+      localPackageSearchDirs.push(path.join(appDir, 'packages'));
 
     if (process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
       // PACKAGE_DIRS (colon-separated).
-      localPackageDirs = localPackageDirs.concat(
+      localPackageSearchDirs = localPackageSearchDirs.concat(
         _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
           return path.resolve(p);
         }));
@@ -1254,13 +1255,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
     if (!files.usesWarehouse()) {
       // Running from a checkout, so use the Meteor core packages from
       // the checkout.
-      localPackageDirs.push(path.join(
+      localPackageSearchDirs.push(path.join(
         files.getCurrentToolsDir(), 'packages'));
     }
 
     var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
       catalog.complete.initialize({
-        localPackageDirs: localPackageDirs
+        localPackageSearchDirs: localPackageSearchDirs
       });
     });
     if (messages.hasMessages()) {

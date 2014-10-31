@@ -806,7 +806,7 @@ main.registerCommand({
           var packageDir = path.resolve(path.join(localPackageDir, item));
           // Consider a directory to be a package source tree if it
           // contains 'package.js'. (We used to support isopacks in
-          // localPackageDirs, but no longer.)
+          // local package directories, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
             var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(

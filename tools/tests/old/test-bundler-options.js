@@ -30,10 +30,10 @@ var setAppDir = function (appDir) {
 
   doOrThrow(function () {
     catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
+      localPackageSearchDirs: [checkoutPackageDir]
     });
     catalog.complete.initialize({
-      localPackageDirs: [appPackageDir, checkoutPackageDir]
+      localPackageSearchDirs: [appPackageDir, checkoutPackageDir]
     });
   });
 };
