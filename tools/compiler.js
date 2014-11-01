@@ -717,7 +717,7 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
        * @instance
        * @memberOf CompileStep
        */
-      readAssetFromPackage: function (package, assetPath) {
+      readPackageAsset: function (package, assetPath) {
         var pkg = packageLoader.getPackage(package, { throwOnError: true });
         var unibuild = pkg.getUnibuildAtArch(inputSourceArch.arch);
         var asset =
