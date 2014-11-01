@@ -708,6 +708,24 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
       },
 
       /**
+       * @summary Read the asset from certain package on a given path, returns a
+       * buffer. The package should be a dependency of the build target. The
+       * asset should be included on the same arch as the compiled file.
+       * @param  {String} package Name of the requested package.
+       * @param  {String} assetPath Path to the asset relative to the requested
+       * package.
+       * @instance
+       * @memberOf CompileStep
+       */
+      readAssetFromPackage: function (package, assetPath) {
+        var pkg = packageLoader.getPackage(package, { throwOnError: true });
+        var unibuild = pkg.getUnibuildAtArch(inputSourceArch.arch);
+        var asset =
+          _.findWhere(unibuild.resources, { type: 'asset', path: assetPath });
+        return asset.data;
+      },
+
+      /**
        * @summary Works in web targets only. Add markup to the `head` or `body`
        * section of the document.
        * @param  {Object} options
