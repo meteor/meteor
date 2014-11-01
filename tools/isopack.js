@@ -276,6 +276,9 @@ var Isopack = function () {
   // plugins affected compilation.
   self.pluginWatchSet = new watch.WatchSet();
 
+  // The path this isopack was loaded from or written eventually to.
+  self.location = null;
+
   // -- Loaded plugin state --
 
   // True if plugins have been initialized (if _ensurePluginsInitialized has
@@ -322,6 +325,7 @@ _.extend(Isopack.prototype, {
     self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
+    self.location = options.location;
   },
 
   // Programmatically add a unibuild to this Isopack. Should only be
@@ -532,6 +536,7 @@ _.extend(Isopack.prototype, {
     // _loadUnibuildsFromPath, let's ensure we see a consistent isopack by
     // realpath'ing dir.
     dir = fs.realpathSync(dir);
+    self.location = dir;
 
     var mainJson;
 
@@ -719,6 +724,7 @@ _.extend(Isopack.prototype, {
                               resource.type)) {
           resources.push({
             type: resource.type,
+            file: resource.file,
             data: data,
             servePath: resource.servePath || undefined,
             path: resource.path || undefined
@@ -763,6 +769,8 @@ _.extend(Isopack.prototype, {
   saveToPath: function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
+    self.location = self.location || outputPath;
+
     options = options || {};
     if (!options.elideBuildInfo) {
       buildmessage.assertInCapture();
@@ -918,9 +926,10 @@ _.extend(Isopack.prototype, {
             }
             if (! (resource.data instanceof Buffer))
               throw new Error("Resource data must be a Buffer");
+            resource.file = path.join(unibuildDir, resource.type);
             unibuildJson.resources.push({
               type: resource.type,
-              file: path.join(unibuildDir, resource.type),
+              file: resource.file,
               length: resource.data.length,
               offset: offset[resource.type]
             });
@@ -941,11 +950,12 @@ _.extend(Isopack.prototype, {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
+          resource.file = builder.writeToGeneratedFilename(
+              path.join(unibuildDir, resource.servePath),
+              { data: resource.data });
           unibuildJson.resources.push({
             type: resource.type,
-            file: builder.writeToGeneratedFilename(
-              path.join(unibuildDir, resource.servePath),
-              { data: resource.data }),
+            file: resource.file,
             length: resource.data.length,
             offset: 0,
             servePath: resource.servePath || undefined,
