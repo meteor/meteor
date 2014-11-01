@@ -1,10 +1,22 @@
 var fs = Npm.require('fs');
 var path = Npm.require('path');
+var util = Npm.require('util');
 var less = Npm.require('less');
 var Future = Npm.require('fibers/future');
 
 Plugin.registerSourceHandler("less", {archMatching: 'web'}, function (compileStep) {
   var source = compileStep.read().toString('utf8');
+
+  // XXX Meteor's way to feed imports from other packages:
+  // replace `@import "@{meteor/<package>}/<path to file>"` with an actual path
+  // to the import to a package asset.
+  source = source.replace(
+    /@import(\s+)(["'])@\{meteor\/(.+)\}\/(.+)\2(\s*);/g,
+    function (match, ws, quote, package, importPath, ws2) {
+      var absPath = compileStep.getPackageAssetPath(package, importPath);
+      return util.format('@import%s%s%s%s%s;', ws, quote, absPath, quote, ws2);
+    });
+
   var options = {
     filename: compileStep.inputPath,
     // Use fs.readFileSync to process @imports. This is the bundler, so
