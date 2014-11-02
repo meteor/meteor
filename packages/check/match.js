@@ -8,7 +8,7 @@ var currentArgumentChecker = new Meteor.EnvironmentVariable;
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
  * If the value does not match the pattern, throw a `Match.Error`.
- * 
+ *
  * Particularly useful to assert that arguments to a function have the right
  * types and structure.
  * @locus Anywhere
@@ -37,6 +37,10 @@ check = function (value, pattern) {
   }
 };
 
+/**
+ * @namespace Match
+ * @summary The namespace for all Match types and methods.
+ */
 Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
@@ -76,7 +80,7 @@ Match = {
   // XXX maybe also implement a Match.match which returns more information about
   //     failures but without using exception handling or doing what check()
   //     does with _failIfArgumentsAreNotAllChecked and Meteor.Error conversion
-  
+
   /**
    * @summary Returns true if the value matches the pattern.
    * @locus Anywhere

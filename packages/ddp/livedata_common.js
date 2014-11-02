@@ -22,13 +22,14 @@ MethodInvocation = function (options) {
   // purposes). not currently true except in a client such as a browser,
   // since there's usually no point in running stubs unless you have a
   // zero-latency connection to the user.
-  
+
   /**
    * @summary Access inside a method invocation.  Boolean value, true if this invocation is a stub.
    * @locus Anywhere
    * @name  isSimulation
    * @memberOf MethodInvocation
    * @instance
+   * @type {Boolean}
    */
   this.isSimulation = options.isSimulation;
 
@@ -39,7 +40,7 @@ MethodInvocation = function (options) {
   this._calledUnblock = false;
 
   // current user id
-  
+
   /**
    * @summary The id of the user that made this method call, or `null` if no user was logged in.
    * @locus Anywhere
@@ -54,7 +55,7 @@ MethodInvocation = function (options) {
   this._setUserId = options.setUserId || function () {};
 
   // On the server, the connection this method call came in on.
-  
+
   /**
    * @summary Access inside a method invocation. The [connection](#meteor_onconnection) that this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call.
    * @locus Server

@@ -136,6 +136,7 @@ if (Meteor.isClient) {
 /**
  * @summary A [Mongo.Collection](#collections) containing user documents.
  * @locus Anywhere
+ * @type {Mongo.Collection}
  */
 Meteor.users = new Mongo.Collection("users", {
   _preventAutopublish: true,
