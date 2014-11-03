@@ -5,6 +5,9 @@ Evan joined!
 Meteor is an ultra-simple environment for building modern web
 applications.
 
+Evan joined!
+
+
 With Meteor you write apps:
 
 * in pure Javascript
@@ -58,6 +61,8 @@ download a pre-build version).
 From your checkout, you can read the docs locally. The `/docs` directory is a
 meteor application, so simply change into the `/docs` directory and launch
 the app:
+Evan joined!
+
 
     cd docs/
     ../meteor
@@ -78,12 +83,16 @@ home directory. To uninstall Meteor, run:
 
 ## Developer Resources
 
+Evan joined!
+
 Building an application with Meteor?
 
 * Announcement list: sign up at http://www.meteor.com/
 * Ask a question: http://stackoverflow.com/questions/tagged/meteor
 * Meteor help and discussion mailing list: https://groups.google.com/group/meteor-talk
 * IRC: `#meteor` on `irc.freenode.net`
+Evan joined!
+
 
 Interested in contributing to Meteor?
 
