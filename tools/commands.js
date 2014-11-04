@@ -1352,16 +1352,15 @@ main.registerCommand({
   _.extend(options, parsedUrl);
 
   var testPackages = null;
-
-  var localPackages = null;
   try {
     var packages = getPackagesForTest(options.args);
     if (typeof packages === "number")
       return packages;
     testPackages = packages.testPackages;
-    localPackages = packages.localPackages;
     options.localPackageNames = packages.localPackages;
   } catch (err) {
+    // XXX why is this try/catch rather than buildmessage? what issues are we
+    // expecting?
     Console.stderr.write('\n' + err.message);
     return 1;
   }
