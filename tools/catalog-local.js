@@ -388,12 +388,6 @@ _.extend(LocalCatalog.prototype, {
     return null;
   },
 
-  getLocalPackageNames: function () {
-    var self = this;
-    self._requireInitialized();
-    return _.keys(self.packages);
-  },
-
   // Rebuild all source packages in our search paths. If two packages
   // have the same name only the one that we would load will get
   // rebuilt.

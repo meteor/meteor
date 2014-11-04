@@ -1351,19 +1351,7 @@ main.registerCommand({
   // XXX not good to change the options this way
   _.extend(options, parsedUrl);
 
-  var testPackages = null;
-  try {
-    var packages = getPackagesForTest(options.args);
-    if (typeof packages === "number")
-      return packages;
-    testPackages = packages.testPackages;
-    options.localPackageNames = packages.localPackages;
-  } catch (err) {
-    // XXX why is this try/catch rather than buildmessage? what issues are we
-    // expecting?
-    Console.stderr.write('\n' + err.message);
-    return 1;
-  }
+  var testPackages = getPackagesForTest(options.args);
 
   // Make a temporary app dir (based on the test runner app). This will be
   // cleaned up on process exit. Using a temporary app dir means that we can
@@ -1437,36 +1425,10 @@ main.registerCommand({
   return runTestAppForPackages(testPackages, testRunnerAppDir, options);
 });
 
-var getLocalPackages = function () {
-  var ret = {};
-  buildmessage.assertInCapture();
-
-  var names = catalog.complete.getAllPackageNames();
-  _.each(names, function (name) {
-    if (catalog.complete.isLocalPackage(name)) {
-      ret[name] = catalog.complete.getLatestMainlineVersion(name);
-    }
-  });
-
-  return ret;
-};
-
 // Ensures that packages are prepared and built for testing
 var getPackagesForTest = function (packages) {
   var testPackages;
-  var localPackageNames = [];
   if (packages.length === 0) {
-    // Test all local packages if no package is specified.
-    // XXX should this use the new getLocalPackageNames?
-    var packageList = commandsPackages.doOrDie(function () {
-      return getLocalPackages();
-    });
-    if (! packageList) {
-      // Couldn't load the package list, probably because some package
-      // has a parse error. Bail out -- this kind of sucks; we would
-      // like to find a way to get reloading.
-      throw new Error("No packages to test");
-    }
     testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
@@ -1531,23 +1493,11 @@ var getPackagesForTest = function (packages) {
 
     if (messages.hasMessages()) {
       Console.stderr.write("\n" + messages.formatMessages());
-      return 1;
+      throw new main.ExitWithCode(1);
     }
   }
 
-  // Make a temporary app dir (based on the test runner app). This will be
-  // cleaned up on process exit. Using a temporary app dir means that we can
-  // run multiple "test-packages" commands in parallel without them stomping
-  // on each other.
-  //
-  // Note: testRunnerAppDir deliberately DOES NOT MATCH the app
-  // package search path baked into release.current.catalog: we are
-  // bundling the test runner app, but finding app packages from the
-  // current app (if any).
-  var testRunnerAppDir = files.mkdtemp('meteor-test-run');
-  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
-
-  return { testPackages: testPackages, localPackages: localPackageNames };
+  return testPackages;
 };
 
 var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
@@ -1626,10 +1576,6 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       extraRunners: options.extraRunners
     });
   }
-
-  _.each(options.localPackageNames || [], function (name) {
-    catalog.complete.removeLocalPackage(name);
-  });
 
   return ret;
 };
