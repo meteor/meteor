@@ -605,7 +605,7 @@ _.extend(LocalCatalog.prototype, {
             files.addToGitignore(sourcePath, '.build*');
             unip.saveToPath(buildDir, {
               buildOfPath: sourcePath,
-              catalog: self
+              catalog: self.containingCatalog
             });
           } catch (e) {
             // If we can't write to this directory, we don't get to cache our
