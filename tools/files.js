@@ -195,6 +195,7 @@ files.getUniloadDir = function () {
 // success or null on failure (in which case buildmessages will be
 // emitted).
 files.getSettings = function (filename, watchSet) {
+  buildmessage.assertInCapture();
   var absPath = path.resolve(filename);
   var buffer = watch.readAndWatchFile(watchSet, absPath);
   if (buffer === null) {

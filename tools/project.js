@@ -423,21 +423,8 @@ _.extend(Project.prototype, {
         }
         // If we can't find the old version, then maybe that was a local package and
         // now is not, and that is also not news.
-        var oldVersion;
-        var newRec;
-        var messages = buildmessage.capture(function () {
-          oldVersion = catalog.complete.getVersion(package, oldV);
-          newRec =
-            catalog.complete.getVersion(package, newV);
-        });
-        if (messages.hasMessages()) {
-          // It would be very weird for us to end up here! But it is
-          // theoretically possible. If it happens, we should probably not crash
-          // (since we have already done all the operations) and logging a
-          // confusing message will just be confusing, so ... recover by
-          // skipping, I guess.
-          return;
-        };
+        var oldVersion = catalog.complete.getVersion(package, oldV);
+        var newRec = catalog.complete.getVersion(package, newV);
 
         // The new version has to exist, or we wouldn't have chosen it.
         if (!oldVersion) {

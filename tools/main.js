@@ -704,21 +704,12 @@ Fiber(function () {
   }
 
 
-  // Initialize the server catalog. Among other things, this is where
-  // we get release information (used by springboarding).  This doesn't
-  // build anything (except maybe, if running from a checkout, packages
-  // that we need to uniload, which really ought to build) so it's OK
-  // to die on errors.
-  var messages = buildmessage.capture({ title: "Initializing server catalog" }, function () {
-    catalog.official.initialize({
-      offline: !!process.env.METEOR_OFFLINE_CATALOG
-    });
+  // Initialize the server catalog. Among other things, this is where we get
+  // release information (used by springboarding). We do not at this point talk
+  // to the server and refresh it.
+  catalog.official.initialize({
+    offline: !!process.env.METEOR_OFFLINE_CATALOG
   });
-  if (messages.hasMessages()) {
-    Console.error("=> Errors while initializing package catalog:\n");
-    Console.error(messages.formatMessages());
-    process.exit(1);
-  }
 
   // We do NOT initialize catalog.complete yet.  When we do that, we will build
   // all local packages, and for both performance and correctness reasons, we
@@ -1259,7 +1250,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
         files.getCurrentToolsDir(), 'packages'));
     }
 
-    var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
+    messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
       catalog.complete.initialize({
         localPackageSearchDirs: localPackageSearchDirs
       });

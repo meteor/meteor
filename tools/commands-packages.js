@@ -1753,15 +1753,7 @@ var maybeUpdateRelease = function (options) {
   var solutionReleaseRecord = null;
   var solutionPackageVersions = null;
   var directDependencies = project.getConstraints();
-  var previousVersions;
-  var messages = buildmessage.capture(function () {
-    previousVersions = project.getVersions({dontRunConstraintSolver: true});
-  });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    // We couldn't figure out our current versions, so updating is not going to work.
-    return 1;
-  }
+  var previousVersions = project.getVersions({dontRunConstraintSolver: true});
 
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.official.getReleaseVersion(
@@ -1923,15 +1915,11 @@ main.registerCommand({
   // Let's figure out what packages we are currently using. Don't run the
   // constraint solver yet, we don't care about reconciling them, just want to
   // know what they are for some internal constraint solver heuristics.
-  var versions, allPackages;
-  messages = buildmessage.capture(function () {
-    versions = project.getVersions({dontRunConstraintSolver: true});
+  var versions = project.getVersions({dontRunConstraintSolver: true});
+  var allPackages;
+  doOrDie(function () {
     allPackages = project.calculateCombinedConstraints(releasePackages);
   });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
 
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been

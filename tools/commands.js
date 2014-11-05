@@ -1506,25 +1506,19 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
   // compute them for us. This means that right now, we are testing all packages
   // as they work together.
   var tests = [];
-  var messages = buildmessage.capture(function () {
-    _.each(testPackages, function(name) {
-      var versionNames = catalog.complete.getSortedVersions(name);
-      if (versionNames.length !== 1)
-        throw Error("local package should have one version?");
-      var versionRecord = catalog.complete.getVersion(name, versionNames[0]);
-      if (versionRecord && versionRecord.testName) {
-        tests.push(versionRecord.testName);
-      }
-    });
+  _.each(testPackages, function(name) {
+    var versionNames = catalog.complete.getSortedVersions(name);
+    if (versionNames.length !== 1)
+      throw Error("local package should have one version?");
+    var versionRecord = catalog.complete.getVersion(name, versionNames[0]);
+    if (versionRecord && versionRecord.testName) {
+      tests.push(versionRecord.testName);
+    }
   });
-  if (messages.hasMessages()) {
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
   project.forceEditPackages(tests, 'add');
 
   // We don't strictly need to do this before we bundle, but can't hurt.
-  messages = buildmessage.capture({
+  var messages = buildmessage.capture({
     title: 'Getting packages ready'
   },function () {
     project._ensureDepsUpToDate();
@@ -1590,8 +1584,8 @@ main.registerCommand({
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  var messages;
   var count = 0;
+  var explicitPackages;
   // No packages specified. Rebuild everything.
   if (options.args.length === 0) {
     if (options.appDir) {
@@ -1603,19 +1597,18 @@ main.registerCommand({
       _.each(programsSubdirs, function (program) {
         // The implementation of this part of the function might change once we
         // change the control file format to explicitly specify packages and
-        // programs instead of just loading everything in the programs directory?
+        // programs instead of just loading everything in the programs
+        // directory?
         files.rm_recursive(path.join(programsDir, program, '.build.' + program));
       });
     }
-
-    messages = buildmessage.capture(function () {
-      count = catalog.complete.rebuildLocalPackages();
-    });
   } else {
-    messages = buildmessage.capture(function () {
-      count = catalog.complete.rebuildLocalPackages(options.args);
-    });
+    explicitPackages = options.args;
   }
+
+  var messages = buildmessage.capture(function () {
+      count = catalog.complete.rebuildLocalPackages(explicitPackages);
+  });
   if (count)
     console.log("Built " + count + " packages.");
   if (messages.hasMessages()) {
