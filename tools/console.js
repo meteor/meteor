@@ -209,8 +209,7 @@ _.extend(ProgressBarRenderer.prototype, {
     var percent = ratio * 100;
     var incomplete, complete, completeLength;
     var elapsed = new Date - self.start;
-    var eta = (percent == 100) ? 0
-          : elapsed *(self.total / (self.curr || 1) - 1);
+    var eta = (percent == 100) ? 0 : elapsed * (self.total / self.curr - 1);
 
     /* populate the bar template with percentages and timestamps */
     var str = self.fmt
