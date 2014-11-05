@@ -730,31 +730,22 @@ _.extend(Sandbox.prototype, {
     // should be OK.
     var oldOffline = catalog.official.offline;
     catalog.official.offline = true;
-    doOrThrow(function () {
-      catalog.complete.refreshOfficialCatalog();
-    });
+    catalog.complete.refreshOfficialCatalog();
     _.each(
       ['autopublish', 'meteor-platform', 'insecure'],
       function (name) {
-        var versionRec = doOrThrow(function () {
-          return catalog.official.getLatestMainlineVersion(name);
-        });
+        var versionRec = catalog.official.getLatestMainlineVersion(name);
         if (!versionRec) {
           catalog.official.offline = false;
-          doOrThrow(function () {
-            catalog.complete.refreshOfficialCatalog();
-          });
+          catalog.complete.refreshOfficialCatalog();
           catalog.official.offline = true;
-          versionRec = doOrThrow(function () {
-            return catalog.official.getLatestMainlineVersion(name);
-          });
+          versionRec = catalog.official.getLatestMainlineVersion(name);
           if (!versionRec) {
             throw new Error(" hack fails for " + name);
           }
         }
-        var buildRec = doOrThrow(function () {
-          return catalog.official.getAllBuilds(name, versionRec.version)[0];
-        });
+        var buildRec =
+              catalog.official.getAllBuilds(name, versionRec.version)[0];
 
         // Insert into packages.
         stubCatalog.collections.packages.push({

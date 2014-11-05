@@ -46,7 +46,7 @@ var getReleaseOrPackageRecord = function(name) {
   return { record: rec, isRelease: rel };
 };
 
-var doOrDie = exports.doOrDie = function (options, f) {
+var doOrDie = function (options, f) {
   if (_.isFunction(options)) {
     f = options;
     options = {};
@@ -393,9 +393,7 @@ main.registerCommand({
   // Refresh the catalog, cacheing the remote package data on the server.
   //refreshOfficialCatalogOrDie();
 
-  var packageInfo = doOrDie(function () {
-    return catalog.complete.getPackage(name);
-  });
+  var packageInfo = catalog.complete.getPackage(name);
   if (! packageInfo) {
     Console.error(
 "You can't call `meteor publish-for-arch` on package '" + name + "' without\n" +
@@ -2094,28 +2092,20 @@ main.registerCommand({
   }
 
   _.each(constraints, function (constraint) {
-    var thisConstraintFailed = false;
-
     // Check that the package exists.
-    doOrDie({title: 'Checking package: ' + constraint.name }, function () {
-      if (! catalog.complete.getPackage(constraint.name)) {
-        Console.error(constraint.name + ": no such package");
-        thisConstraintFailed = true;
-        return;
-      }
-    });
-
-    if (thisConstraintFailed) {
+    if (! catalog.complete.getPackage(constraint.name)) {
+      Console.error(constraint.name + ": no such package");
       failed = true;
       return;
     }
 
+    var thisConstraintFailed = false;
+
     // If the version was specified, check that the version exists.
     _.each(constraint.constraints, function (constr) {
       if (constr.version !== null) {
-        var versionInfo = doOrDie({ title: 'Fetching packages' }, function () {
-          return catalog.complete.getVersion(constraint.name, constr.version);
-        });
+        var versionInfo = catalog.complete.getVersion(
+          constraint.name, constr.version);
         if (! versionInfo) {
           Console.stderr.write(
             constraint.name + "@" + constr.version  + ": no such version\n");
@@ -2259,9 +2249,7 @@ main.registerCommand({
   Console.stdout.write("\n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
-    var versionRecord = doOrDie(function () {
-      return catalog.complete.getVersion(constraint.name, version);
-    });
+    var versionRecord = catalog.complete.getVersion(constraint.name, version);
     Console.stdout.write(constraint.name +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :

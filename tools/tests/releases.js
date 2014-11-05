@@ -21,7 +21,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
 
   var toolsPackage;
   selftest.doOrThrow(function() {
-      toolsPackage = selftest.getToolsPackage();
+    toolsPackage = selftest.getToolsPackage();
   });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;

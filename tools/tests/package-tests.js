@@ -98,25 +98,23 @@ var checkVersions = selftest.markStack(function(sand, packages) {
 //  getReleaseVersion (t, v) - given track & version, return the document record
 var DataStub = function (remoteCatalog) {
   var self = this;
-  selftest.doOrThrow(function () {
-    var packageNames = remoteCatalog.getAllPackageNames();
-    self.packages = {};
-    _.each(packageNames, function (p) {
-      var versions = remoteCatalog.getSortedVersions(p);
-      var record = remoteCatalog.getPackage(p);
-      self.packages[p] = { versions: versions, record: record };
+  var packageNames = remoteCatalog.getAllPackageNames();
+  self.packages = {};
+  _.each(packageNames, function (p) {
+    var versions = remoteCatalog.getSortedVersions(p);
+    var record = remoteCatalog.getPackage(p);
+    self.packages[p] = { versions: versions, record: record };
+  });
+  var releaseTracks = remoteCatalog.getAllReleaseTracks();
+  self.releases = {};
+  _.each(releaseTracks, function (t) {
+    var versions =
+          remoteCatalog.getSortedRecommendedReleaseVersions(t);
+    var records = {};
+    _.each(versions, function (v) {
+      records[v] = remoteCatalog.getReleaseVersion(t, v);
     });
-    var releaseTracks = remoteCatalog.getAllReleaseTracks();
-    self.releases = {};
-    _.each(releaseTracks, function (t) {
-      var versions =
-            remoteCatalog.getSortedRecommendedReleaseVersions(t);
-      var records = {};
-      _.each(versions, function (v) {
-        records[v] = remoteCatalog.getReleaseVersion(t, v);
-      });
-      self.releases[t] = { versions: versions, records: records };
-    });
+    self.releases[t] = { versions: versions, records: records };
   });
 };
 
@@ -673,32 +671,30 @@ selftest.define("update server package data unit test",
     useShortPages: true
   });
 
-  selftest.doOrThrow(function () {
-    var packages = oldStorage.getAllPackageNames();
-    _.each(packages, function (p) {
-      // We could be more pedantic about comparing all the records, but it
-      // is a significant effort, time-wise to do that.
-      selftest.expectEqual(
-        packageStorage.getPackage(p), oldStorage.getPackage(p));
-      selftest.expectEqual(
-        packageStorage.getSortedVersions(p),
-        oldStorage.getSortedVersions(p));
-    });
-    var releaseTracks = oldStorage.getAllReleaseTracks;
-    _.each(releaseTracks, function (t) {
-      _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
-             function (v) {
-               selftest.expectEqual(
-                 packageStorage.getReleaseVersion(t, v),
-                 oldStorage.getReleaseVersion(t, v));
-             });
-    });
+  var packages = oldStorage.getAllPackageNames();
+  _.each(packages, function (p) {
+    // We could be more pedantic about comparing all the records, but it
+    // is a significant effort, time-wise to do that.
+    selftest.expectEqual(
+      packageStorage.getPackage(p), oldStorage.getPackage(p));
+    selftest.expectEqual(
+      packageStorage.getSortedVersions(p),
+      oldStorage.getSortedVersions(p));
+  });
+  var releaseTracks = oldStorage.getAllReleaseTracks;
+  _.each(releaseTracks, function (t) {
+    _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
+           function (v) {
+             selftest.expectEqual(
+               packageStorage.getReleaseVersion(t, v),
+               oldStorage.getReleaseVersion(t, v));
+           });
+  });
 
-    // Check that our newly published packages appear in newData and on disk.
-    _.each(newPackageNames, function (name) {
-      var found = packageStorage.getPackage(name);
-      selftest.expectEqual(!! found, true);
-    });
+  // Check that our newly published packages appear in newData and on disk.
+  _.each(newPackageNames, function (name) {
+    var found = packageStorage.getPackage(name);
+    selftest.expectEqual(!! found, true);
   });
 });
 
