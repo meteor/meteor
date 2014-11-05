@@ -24,10 +24,10 @@ var chalk = require('chalk');
 var cleanup = require('./cleanup.js');
 var utils = require('./utils.js');
 
-PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
-FORCE_PRETTY=undefined;
+var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
+var FORCE_PRETTY=undefined;
 if (process.env.METEOR_PRETTY_OUTPUT) {
-  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
+  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
 }
 
 if (!process.env.METEOR_COLOR) {
@@ -35,18 +35,18 @@ if (!process.env.METEOR_COLOR) {
 }
 
 
-STATUSLINE_MAX_LENGTH = 60;
-STATUS_MAX_LENGTH = 40;
+var STATUSLINE_MAX_LENGTH = 60;  // XXX unused?
+var STATUS_MAX_LENGTH = 40;
 
-PROGRESS_MAX_WIDTH = 40;
-PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
-TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
+var PROGRESS_MAX_WIDTH = 40;
+var PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
+var TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
-STATUS_INTERVAL_MS = 500;
+var STATUS_INTERVAL_MS = 500;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
-FALLBACK_STATUS = '';
+var FALLBACK_STATUS = '';
 
 var spacesArray = new Array(200).join(' ');
 var spacesString = function (length) {
