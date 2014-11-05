@@ -41,8 +41,29 @@ Example:
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
 
-To create a helper that can be used in any template, use
-[`Template.registerHelper`](#template_registerhelper).
+The helper can be invoked with arguments, both single-value and key-value pair.
+The latter are called *keywords* and they must be at the end of the arguments list.
+
+    {{foo "some string" 42 var1 bar="baz"}}
+
+Single-value parameters are passed in `arguments`. The last element of `arguments`
+contains a `hash` field of the key-value pairs. Here is how a helper can access
+its arguments:
+
+    // implement logical "and" over an arbitrary number of arguments
+    Template.myTemplate.helpers({
+      'and': function (param1, param2) {
+        // if called as above, param1 would be "some string", and param2 would be 42
+        var args = Array.prototype.slice.call(arguments, 0, -1);  // exclude key:value args
+        var keywords = arguments[arguments.length - 1].hash;  // key:value arguments
+      
+        return _.every(args, function (arg) {
+          return !!arg;
+        });
+    }});
+
+Of course, this helper would be useful to more than one tamplate. To create a
+helper that can be used in any template, use [`Template.registerHelper`](#template_registerhelper).
 
 
 {{> autoApiBox "Template#rendered"}}
