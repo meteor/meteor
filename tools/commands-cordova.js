@@ -889,10 +889,9 @@ _.extend(CordovaRunner.prototype, {
     // except the iOS simulator. Print a warning and direct users to the
     // wiki page for help.
     if (self.platformName !== "ios") {
-      buildmessage.capture(function () {
-        var versions = project.getVersions({ dontRunConstraintSolver: true });
-        if (versions.oauth2) {
-          Console.warn(
+      var versions = project.getVersions({ dontRunConstraintSolver: true });
+      if (versions.oauth2) {
+        Console.warn(
 "\n" +
 "WARNING: It looks like you are using OAuth2 login in your app.\n" +
 "         Meteor's OAuth2 implementation does not currently work with\n" +
@@ -900,8 +899,7 @@ _.extend(CordovaRunner.prototype, {
 "         simulator. You can run the iOS simulator with 'meteor run ios'.\n" +
 "         For additional workarounds, see\n" +
 "         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
-        }
-      });
+      }
     }
 
     if (self.platformName === 'ios') {
