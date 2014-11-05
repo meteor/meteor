@@ -46,8 +46,6 @@ var getReleaseOrPackageRecord = function(name) {
   return { record: rec, isRelease: rel };
 };
 
-// Seriously, this dies if it can't refresh. Only call it if you're sure you're
-// OK that the command doesn't work while offline.
 var doOrDie = exports.doOrDie = function (options, f) {
   if (_.isFunction(options)) {
     f = options;
@@ -65,6 +63,8 @@ var doOrDie = exports.doOrDie = function (options, f) {
   return ret;
 };
 
+// Seriously, this dies if it can't refresh. Only call it if you're sure you're
+// OK that the command doesn't work while offline.
 var refreshOfficialCatalogOrDie = function (options) {
   if (!catalog.refreshOrWarn(options)) {
     Console.error(
