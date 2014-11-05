@@ -221,7 +221,7 @@ Blaze.TemplateInstance.prototype.$ = function (selector) {
  * @summary Find all elements matching `selector` in this template instance.
  * @locus Client
  * @param {String} selector The CSS selector to match, scoped to the template contents.
- * @returns {DOMNode[]}
+ * @returns {DOMElement[]}
  */
 Blaze.TemplateInstance.prototype.findAll = function (selector) {
   return Array.prototype.slice.call(this.$(selector));
@@ -231,7 +231,7 @@ Blaze.TemplateInstance.prototype.findAll = function (selector) {
  * @summary Find one element matching `selector` in this template instance.
  * @locus Client
  * @param {String} selector The CSS selector to match, scoped to the template contents.
- * @returns {DOMNode}
+ * @returns {DOMElement}
  */
 Blaze.TemplateInstance.prototype.find = function (selector) {
   var result = this.$(selector);
