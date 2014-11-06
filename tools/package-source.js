@@ -1749,6 +1749,42 @@ _.extend(PackageSource.prototype, {
     return ret;
   },
 
+  // Returns a list of package names which should be built before building this
+  // package.  This function is not a transitive closure --- it assumes that in
+  // addition to building these packages, you'll build their dependencies
+  // too. (That is mostly important for plugins, where you really do need the
+  // whole transitive closure of the plugin dependencies to build the plugin.)
+  // XXX We aren't actually doing this, though --- if a local package A has
+  //     a plugin which uses a pre-built package P which uses a local package B,
+  //     the LocalCatalog._build logic might not build B. We should fix this by
+  //     moving the _build logic out of LocalCatalog into something else.
+  getPackagesToBuildFirst: function () {
+    var self = this;
+    var packages = {};
+    var processUse = function (use) {
+      // We don't have to build weak or unordered deps first (eg they can't
+      // contribute to a plugin).
+      if (use.weak || use.unordered)
+        return;
+      packages[use.package] = true;
+    };
+
+    _.each(self.architectures, function (arch) {
+      // We need to iterate over both uses and implies, since implied packages
+      // also constitute dependencies.
+      _.each(arch.uses, _.partial(processUse, false));
+      _.each(arch.implies, _.partial(processUse, true));
+    });
+    _.each(self.pluginInfo, function (info) {
+      // info.use is currently just an array of strings, and there's
+      // no way to specify weak/unordered. Much like an app.
+      _.each(info.use, function (spec) {
+        var parsedSpec = utils.splitConstraint(spec);
+        packages[parsedSpec.package] = true;
+      });
+    });
+  },
+
   // Record the versions of the dependencies that we used to actually build the
   // package on disk and save them into the packageSource. Next time we build
   // the package, we will look at them for optimization & repeatable builds.
