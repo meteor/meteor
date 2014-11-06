@@ -15,8 +15,6 @@ var isopackets = require("./isopackets.js");
 // protocol selected, they use just one underlying TCP connection, and fail
 // fast.
 //
-// - Package: a Package object as returned from isopackets.load, containing
-//   the ddp packages
 // - endpointUrl: the url to connect to
 // - options:
 //   - headers: an object containing extra headers to use when opening the
@@ -24,8 +22,10 @@ var isopackets = require("./isopackets.js");
 //   - _dontPrintErrors: boolean
 //   ...and anything else you'd normally pass as options to DDP.connect
 //
-var ServiceConnection = function (Package, endpointUrl, options) {
+var ServiceConnection = function (endpointUrl, options) {
   var self = this;
+
+  var Package = isopackets.load('ddp');
 
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.

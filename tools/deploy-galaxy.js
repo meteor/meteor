@@ -14,11 +14,6 @@ var buildmessage = require('./buildmessage.js');
 var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
 
-// a bit of a hack
-var getPackage = function () {
-  return isopackets.load('ddp');
-};
-
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
 // an appropriate exit status for a command. Else rethrow error.
@@ -60,7 +55,6 @@ var handleError = function (error, galaxyName, messages) {
 // - service: the service to connect to within the Galaxy, such as
 //   'ultraworld' or 'log-reader'.
 var galaxyServiceConnection = function (galaxy, service) {
-  var Package = getPackage();
   var endpointUrl = galaxy + "/" + service;
   var parsedEndpoint = url.parse(endpointUrl);
   var authToken = auth.getSessionToken(parsedEndpoint.hostname);
@@ -71,7 +65,7 @@ var galaxyServiceConnection = function (galaxy, service) {
   if (! authToken)
     throw new Error("not logged in to galaxy?");
 
-  return new ServiceConnection(Package, endpointUrl, {
+  return new ServiceConnection(endpointUrl, {
     headers: {
       cookie: "GALAXY_AUTH=" + authToken
     }
@@ -239,7 +233,6 @@ exports.deploy = function (options) {
 
     var galaxy = exports.discoverGalaxy(options.app);
     conn = galaxyServiceConnection(galaxy, "ultraworld");
-    var Package = getPackage();
 
     var created = true;
     var appConfig = {};

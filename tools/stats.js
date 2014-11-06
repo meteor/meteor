@@ -4,7 +4,6 @@ var os = require("os");
 
 var config = require("./config.js");
 var files = require("./files.js");
-var isopackets = require("./isopackets.js");
 var project = require("./project.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
@@ -161,13 +160,10 @@ var getPackagesForAppIdInTest = function (currentProject) {
 };
 
 var connectToPackagesStatsServer = function () {
-  var Package = isopackets.load('ddp');
-  var conn = new ServiceConnection(
-    Package,
+  return new ServiceConnection(
     config.getPackageStatsServerUrl(),
     {_dontPrintErrors: true}
   );
-  return conn;
 };
 
 exports.recordPackages = recordPackages;

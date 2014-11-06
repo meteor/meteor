@@ -11,7 +11,6 @@ var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
-var isopackets = require("./isopackets.js");
 var Console = require('./console.js').Console;
 var packageVersionParser = require('./package-version-parser.js');
 var authClient = require('./auth-client.js');

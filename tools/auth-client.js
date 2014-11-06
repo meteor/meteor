@@ -2,22 +2,14 @@ var auth = require('./auth.js');
 var Console = require('./console.js').Console;
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('./http-helpers.js');
-var isopackets = require('./isopackets.js');
 
 exports.AlreadyPrintedMessageError = function () {};
-
-// Load the isopacket that we need to open a Meteor Developer Accounts DDP
-// connection.
-var getDDPPackages = function () {
-  return isopackets.load('ddp');
-};
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
 exports.openServiceConnection = function (serverUrl) {
   return new ServiceConnection(
-    getDDPPackages(),
     serverUrl,
     {headers: {"User-Agent": httpHelpers.getUserAgent()},
      _dontPrintErrors: true});

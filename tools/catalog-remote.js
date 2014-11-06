@@ -6,7 +6,6 @@ var auth = require('./auth.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
-var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
