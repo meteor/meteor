@@ -18,6 +18,7 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 var readline = require('readline');
+var util = require('util');
 var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
@@ -703,15 +704,7 @@ _.extend(Console.prototype, {
   },
 
   _format: function (logArguments) {
-    var self = this;
-
-    var message = '';
-    for (var i = 0; i < logArguments.length; i++) {
-      if (i != 0) message += ' ';
-      message += logArguments[i];
-    }
-
-    return message;
+    return util.format.apply(util, logArguments);
   },
 
   printError: function (err, info) {
