@@ -499,33 +499,24 @@ var forkJoin = function (options, iterable, fn) {
   options.forkJoin = true;
 
   enterJob(options, function () {
-    var job = currentJob.get();
-    var messageSet = currentMessageSet.get();
-    var progress = currentProgress.get();
-    var nestingLevel = currentNestingLevel.get();
-
     var parallel = (options.parallel !== undefined) ? options.parallel : true;
     if (parallel) {
+      var runOne = fiberHelpers.bindEnvironment(function (fut, fnArguments) {
+        try {
+          var result = enterJob({title: (options.title || '') + ' child'}, function () {
+            return fn.apply(null, fnArguments);
+          });
+          fut['return'](result);
+        } catch (e) {
+          fut['throw'](e);
+        }
+      });
+
       _.each(iterable, function (/*arguments*/) {
         var fut = new Future();
         var fnArguments = arguments;
         Fiber(function () {
-          currentNestingLevel.withValue(nestingLevel, function() {
-            currentProgress.withValue(progress, function () {
-              currentMessageSet.withValue(messageSet, function () {
-                currentJob.withValue(job, function () {
-                  try {
-                    var result = enterJob({title: (options.title || '') + ' child'}, function () {
-                      return fn.apply(null, fnArguments);
-                    });
-                    fut['return'](result);
-                  } catch (e) {
-                    fut['throw'](e);
-                  }
-                });
-              });
-            });
-          });
+          runOne(fut, fnArguments);
         }).run();
         futures.push(fut);
       });
