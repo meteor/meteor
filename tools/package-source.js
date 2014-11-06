@@ -281,8 +281,7 @@ var PackageSource = function (catalog) {
 
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
-  // built isopacks for all the packages in uniload.ROOT_PACKAGES as well as
-  // their transitive (strong) dependencies.
+  // built copies of all known isopackets.
   self.includeTool = false;
 
   // If this is true, then this package has no source files. (But the converse

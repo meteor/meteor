@@ -11,26 +11,6 @@ var compiler = require('./compiler.js');
 var config = require('./config.js');
 var watch = require('./watch.js');
 
-// These are the only packages that may be directly loaded via this package. Add
-// more to the list if you need to uniload more things! (You don't have to
-// include the dependencies of the packages you directly load in this list.)
-var ROOT_PACKAGES = [
-  'constraint-solver',
-  'dev-bundle-fetcher',
-  'ejson',
-  'js-analyze',
-  'ddp',
-  'logging',
-  'meteor',
-  'minifiers',
-  'minimongo',
-  'mongo',
-  'package-version-parser',
-  'boilerplate-generator',
-  'webapp-hashing',
-  'xmlbuilder'
-];
-
 // XXX document ISOPACKETS
 
 var ISOPACKETS = {
@@ -69,9 +49,10 @@ var loadIsopacket = function (isopacketName) {
     if (loadedIsopackets[isopacketName]) {
       return loadedIsopackets[isopacketName];
     }
+
     // This is the case where the isopacket is up to date on disk but not
     // loaded.
-    var isopacket = load({packages: ISOPACKETS[isopacketName]});
+    var isopacket = loadIsopacketFromDisk(isopacketName);
     loadedIsopackets[isopacketName] = isopacket;
     return isopacket;
   }
@@ -82,6 +63,10 @@ var loadIsopacket = function (isopacketName) {
   }
 
   throw Error("Unknown isopacket: " + isopacketName);
+};
+
+var isopacketPath = function (isopacketName) {
+  return path.join(config.getIsopacketRoot(), isopacketName);
 };
 
 var calledEnsure = false;
@@ -111,7 +96,7 @@ var ensureIsopacketsLoadable = function () {
 
   var messages = buildmessage.capture(function () {
     _.each(ISOPACKETS, function (packages, isopacketName) {
-      var isopacketRoot = path.join(config.getIsopacketRoot(), isopacketName);
+      var isopacketRoot = isopacketPath(isopacketName);
       var existingBuildinfo = files.readJSONOrNull(
         path.join(isopacketRoot, 'isopacket-buildinfo.json'));
       var needRebuild = !existingBuildinfo;
@@ -165,6 +150,8 @@ var ensureIsopacketsLoadable = function () {
   }
 };
 
+// XXX DEAL WITH COMMENT
+//
 // Load isopacks into the currently running node.js process. Use
 // this to use isopacks (such as the DDP client) from command-line
 // tools (such as 'meteor'). The requested packages will be loaded
@@ -202,84 +189,39 @@ var ensureIsopacketsLoadable = function () {
 //   var reverse = DDP.connect('reverse.meteor.com');
 //   console.log(reverse.call('reverse', 'hello world'));
 
-var cacheRelease = undefined;
-var cache = {}; // map from package names (joined with ',') to return value
+var loadIsopacketFromDisk = function (isopacketName) {
+  var image = bundler.readJsImage(
+    path.join(isopacketPath(isopacketName), 'program.json'));
 
-var load = function (options) {
-  options = options || {};
-
-  // Check the cache first
-  var cacheKey = (options.packages || []).join(',');
-
-  if (_.has(cache, cacheKey)) {
-    return cache[cacheKey];
-  }
-
-  var undeclaredPackages = _.difference(options.packages, ROOT_PACKAGES);
-  if (undeclaredPackages.length) {
-    throw new Error("attempt to uniload undeclared packages: " +
-                    JSON.stringify(undeclaredPackages));
-  }
-
-  // Set up a minimal server-like environment (omitting the parts that
-  // are specific to the HTTP server). Kind of a hack. I suspect this
-  // will get refactored before too long. Note that
-  // __meteor_bootstrap__.require is no longer provided.
+  // An incredibly minimalist version of the environment from
+  // tools/server/boot.js.  Kind of a hack.
   var env = {
     __meteor_bootstrap__: { startupHooks: [] },
-    __meteor_runtime_config__: { meteorRelease: "UNILOAD" }
+    __meteor_runtime_config__: { meteorRelease: "ISOPACKET" }
   };
 
   var ret;
   var messages = buildmessage.capture({
-    title: "Loading isopack"
+    title: "Loading isopacket `" + isopacketName + "`"
   }, function () {
-    // Load the code. The uniloader does not call the constraint solver, unless
-    // it is running from checkout, in which case it will use the constraint
-    // solver to build its packages in the catalog.
-    var loader = new packageLoader.PackageLoader({
-      versions: null,
-      catalog: catalog.uniload,
-      constraintSolverOpts: { ignoreProjectDeps: true }
-    });
-
-    // Build the bundler image.
-    //
-    // Passing in dependency versions doesn't really make any sense here. We
-    // don't know the previous dependencies of this package, and, anyway, if we
-    // are running from checkout, they are all +local, and if we are running
-    // from release it is a bunch of isopacks. So, we don't pass in
-    // dependency versions.
-    var image = bundler.buildJsImage({
-      name: "load",
-      packageLoader: loader,
-      use: options.packages || [],
-      catalog: catalog.uniload,
-      ignoreProjectDeps: true
-    }).image;
     ret = image.load(env);
-
-    // Run any user startup hooks.
-    while (env.__meteor_bootstrap__.startupHooks.length) {
-      var hook = env.__meteor_bootstrap__.startupHooks.shift();
-      hook();
-    }
-    // Setting this to null tells Meteor.startup to call hooks immediately.
-    env.__meteor_bootstrap__.startupHooks = null;
   });
 
+  // This is a build step ... but it's one that only happens in development, so
+  // it can just crash the app instead of being handled nicely.
   if (messages.hasMessages()) {
-    // XXX This error handling is not the best, but this should never
-    // happen in a built release. In the future, the command line
-    // tool will be a normal Meteor app and will be built ahead of
-    // time like any other app and this case will disappear.
-    process.stderr.write("Errors prevented isopack load:\n");
+    process.stderr.write("Errors prevented isopacket load:\n");
     process.stderr.write(messages.formatMessages());
-    throw new Error("isopack load failed?");
+    throw new Error("isopacket load failed?");
   }
 
-  // Save to cache
-  cache[cacheKey] = ret;
+  // Run any user startup hooks.
+  while (env.__meteor_bootstrap__.startupHooks.length) {
+    var hook = env.__meteor_bootstrap__.startupHooks.shift();
+    hook();
+  }
+  // Setting this to null tells Meteor.startup to call hooks immediately.
+  env.__meteor_bootstrap__.startupHooks = null;
 
   return ret;
 };
@@ -288,6 +230,5 @@ var uniload = exports;
 _.extend(exports, {
   loadIsopacket: loadIsopacket,
   ensureIsopacketsLoadable: ensureIsopacketsLoadable,
-  ROOT_PACKAGES: ROOT_PACKAGES,
   ISOPACKETS: ISOPACKETS
 });
