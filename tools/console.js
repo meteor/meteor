@@ -664,7 +664,7 @@ _.extend(Console.prototype, {
     if (!self._pretty) {
       return message;
     }
-    return chalk.green('\u2713 ' + message);
+    return chalk.green('\u2713 ' + message);  // CHECK MARK
   },
 
   fail: function (message) {
@@ -673,7 +673,7 @@ _.extend(Console.prototype, {
     if (!self._pretty) {
       return message;
     }
-    return chalk.red('\u2717 ' + message);
+    return chalk.red('\u2717 ' + message);  // BALLOT X
   },
 
   command: function (message) {
