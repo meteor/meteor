@@ -313,6 +313,11 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};
+    // XXX We intentionally didn't make this message "downloading packages"
+    // because users were confused if this message showed up when there wasn't
+    // actually any packages being downloaded. But since we use forkJoin here,
+    // the nested downloading jobs don't print, so now there's NEVER a
+    // downloading status message.
     buildmessage.forkJoin({ title: 'Checking local package versions', parallel: true },
       versionMap, function (version, name) {
       try {
