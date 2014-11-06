@@ -11,7 +11,7 @@ var project = require('../../project.js');
 var catalog = require('../../catalog.js');
 var buildmessage = require('../../buildmessage.js');
 var meteorNpm = require('../../meteor-npm.js');
-var uniload = require('../../uniload.js');
+var isopackets = require("../../isopackets.js");
 
 var lastTmpDir = null;
 var tmpDir = function () {
@@ -29,7 +29,7 @@ var setAppDir = function (appDir) {
     throw Error("This old test doesn't support non-checkout");
   }
 
-  uniload.ensureIsopacketsLoadable();
+  isopackets.ensureIsopacketsLoadable();
 
   doOrThrow(function () {
     catalog.complete.initialize({

@@ -3,16 +3,55 @@ var path = require('path');
 var bundler = require('./bundler.js');
 var Builder = require('./builder.js');
 var buildmessage = require('./buildmessage.js');
-var release = require('./release.js');
 var packageLoader = require("./package-loader.js");
 var files = require('./files.js');
-var catalog = require('./catalog.js');
 var compiler = require('./compiler.js');
 var config = require('./config.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 
 // XXX document ISOPACKETS
+
+// XXX DEAL WITH COMMENT
+//
+// Load isopacks into the currently running node.js process. Use
+// this to use isopacks (such as the DDP client) from command-line
+// tools (such as 'meteor'). The requested packages will be loaded
+// together will all of their dependencies, and each time you call
+// this function you load another, distinct copy of all of the
+// packages (except see note about caching below). The return value is
+// an object that maps package name to package exports (that is, it is
+// the Isopack object from inside the sandbox created for the newly
+// loaded packages).
+//
+// Caching: There is a simple cache. If you call this function with
+// exactly the same release and packages, we will attempt to return
+// the memoized return value from the previous load (rather than
+// creating a whole new copy of the packages in memory). The caching
+// logic is not particularly sophisticated. For example, the cache
+// will not be flushed if packages change on disk, even if it should
+// be, but using a different release name will flush the cache
+// completely.
+//
+// When run from a checkout, uniload only loads local (from the checkout)
+// packages: never packages from troposphere. When run from a release build,
+// uniload only loads pre-built isopacks that are distributed alongside the
+// tool: never local packages or packages from troposphere (so in this mode, it
+// never compiles the source of a real package).
+//
+// Options:
+// - packages: The packages to load, as an array of strings. Each
+//   string may be either "packagename" or "packagename.slice".
+//
+// Example usage:
+//   var DDP = require('./uniload.js').load({
+//     packages: ['ddp'],
+//     release: release.current.name
+//   }).ddp.DDP;
+//   var reverse = DDP.connect('reverse.meteor.com');
+//   console.log(reverse.call('reverse', 'hello world'));
+
+
 
 var ISOPACKETS = {
   // Note: when running from a checkout, js-analyze must always be the
@@ -44,7 +83,7 @@ var ISOPACKETS = {
 // of building other isopackets in ensureIsopacketsLoadable.
 var loadedIsopackets = {};
 
-var loadIsopacket = function (isopacketName) {
+var load = function (isopacketName) {
   if (_.has(loadedIsopackets, isopacketName)) {
     if (loadedIsopackets[isopacketName]) {
       return loadedIsopackets[isopacketName];
@@ -152,8 +191,8 @@ var ensureIsopacketsLoadable = function () {
   // This is a build step ... but it's one that only happens in development, so
   // it can just crash the app instead of being handled nicely.
   if (messages.hasMessages()) {
-    process.stderr.write("Errors prevented tool build:\n");
-    process.stderr.write(messages.formatMessages());
+    Console.error("Errors prevented isopacket build:");
+    Console.printMessages(messages);
     throw new Error("isopacket build failed?");
   }
 };
@@ -170,62 +209,23 @@ var newIsopacketBuildingCatalog = function () {
   var messages = buildmessage.capture(
     { title: "Scanning local core packages" },
     function () {
-      // When running from a checkout, uniload does use local packages, but
-      // *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
-      // packages.  One side effect of this: we really really expect them to all
-      // build, and we're fine with dying if they don't (there's no worries
-      // about needing to springboard).
+      // When running from a checkout, isopacket building does use local
+      // packages, but *ONLY THOSE FROM THE CHECKOUT*: not app packages or
+      // $PACKAGE_DIRS packages.  One side effect of this: we really really
+      // expect them to all build, and we're fine with dying if they don't
+      // (there's no worries about needing to springboard).
       isopacketCatalog.initialize({
         localPackageSearchDirs: [path.join(
           files.getCurrentToolsDir(), 'packages')]
       });
     });
   if (messages.hasMessages()) {
-    Console.error("=> Errors while scanning core packages:\n");
-    Console.error(messages.formatMessages());
+    Console.error("=> Errors while scanning core packages:");
+    Console.printMessages(messages);
     throw new Error("isopacket scan failed?");
   }
   return isopacketCatalog;
 };
-
-// XXX DEAL WITH COMMENT
-//
-// Load isopacks into the currently running node.js process. Use
-// this to use isopacks (such as the DDP client) from command-line
-// tools (such as 'meteor'). The requested packages will be loaded
-// together will all of their dependencies, and each time you call
-// this function you load another, distinct copy of all of the
-// packages (except see note about caching below). The return value is
-// an object that maps package name to package exports (that is, it is
-// the Isopack object from inside the sandbox created for the newly
-// loaded packages).
-//
-// Caching: There is a simple cache. If you call this function with
-// exactly the same release and packages, we will attempt to return
-// the memoized return value from the previous load (rather than
-// creating a whole new copy of the packages in memory). The caching
-// logic is not particularly sophisticated. For example, the cache
-// will not be flushed if packages change on disk, even if it should
-// be, but using a different release name will flush the cache
-// completely.
-//
-// When run from a checkout, uniload only loads local (from the checkout)
-// packages: never packages from troposphere. When run from a release build,
-// uniload only loads pre-built isopacks that are distributed alongside the
-// tool: never local packages or packages from troposphere (so in this mode, it
-// never compiles the source of a real package).
-//
-// Options:
-// - packages: The packages to load, as an array of strings. Each
-//   string may be either "packagename" or "packagename.slice".
-//
-// Example usage:
-//   var DDP = require('./uniload.js').load({
-//     packages: ['ddp'],
-//     release: release.current.name
-//   }).ddp.DDP;
-//   var reverse = DDP.connect('reverse.meteor.com');
-//   console.log(reverse.call('reverse', 'hello world'));
 
 var loadIsopacketFromDisk = function (isopacketName) {
   var image = bundler.readJsImage(
@@ -248,8 +248,8 @@ var loadIsopacketFromDisk = function (isopacketName) {
   // This is a build step ... but it's one that only happens in development, so
   // it can just crash the app instead of being handled nicely.
   if (messages.hasMessages()) {
-    process.stderr.write("Errors prevented isopacket load:\n");
-    process.stderr.write(messages.formatMessages());
+    Console.error("Errors prevented isopacket load:");
+    Console.printMessages(messages);
     throw new Error("isopacket load failed?");
   }
 
@@ -264,9 +264,9 @@ var loadIsopacketFromDisk = function (isopacketName) {
   return ret;
 };
 
-var uniload = exports;
+var isopackets = exports;
 _.extend(exports, {
-  loadIsopacket: loadIsopacket,
+  load: load,
   ensureIsopacketsLoadable: ensureIsopacketsLoadable,
   ISOPACKETS: ISOPACKETS,
   newIsopacketBuildingCatalog: newIsopacketBuildingCatalog

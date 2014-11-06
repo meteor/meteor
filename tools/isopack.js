@@ -11,7 +11,7 @@ var watch = require('./watch.js');
 var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
@@ -1101,9 +1101,9 @@ _.extend(Isopack.prototype, {
       ignore: bundler.ignoreFiles
     });
 
-    // Build all the packages that we can load with uniload.  We only want to
-    // load local packages.
-    var isopacketCatalog = uniload.newIsopacketBuildingCatalog();
+    // Build all of the isopackets now, so that no build step is required when
+    // you're actually running meteor from a release in order to load packages.
+    var isopacketCatalog = isopackets.newIsopacketBuildingCatalog();
     var localPackageLoader = new packageLoader.PackageLoader({
       versions: null,
       catalog: isopacketCatalog,
@@ -1111,7 +1111,7 @@ _.extend(Isopack.prototype, {
     });
 
     var messages = buildmessage.capture(function () {
-      _.each(uniload.ISOPACKETS, function (packages, isopacketName) {
+      _.each(isopackets.ISOPACKETS, function (packages, isopacketName) {
         buildmessage.enterJob({
           title: "Compiling " + isopacketName + " packages for the tool"
         }, function () {
@@ -1131,8 +1131,8 @@ _.extend(Isopack.prototype, {
     });
 
     // This is a build step ... but it's one that only happens in development,
-    // and similar to a uniload failure, it can just crash the app instead of
-    // being handled nicely.
+    // and similar to a isopacket load failure, it can just crash the app
+    // instead of being handled nicely.
     if (messages.hasMessages()) {
       process.stderr.write("Errors prevented tool build:\n");
       process.stderr.write(messages.formatMessages());

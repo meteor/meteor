@@ -251,7 +251,7 @@ _.extend(LayeredCatalog.prototype, {
   resolveConstraints: function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
-    // OK, since we are the complete catalog, the uniload catalog must be fully
+    // OK, since we are the complete catalog, isopackets must be fully
     // initialized, so it's safe to load a resolver if we didn't
     // already. (Putting this off until the first call to resolveConstraints
     // also helps with performance: no need to build this package and load the
@@ -378,10 +378,10 @@ _.extend(LayeredCatalog.prototype, {
 
   _buildResolver: function () {
     var self = this;
-    var uniload = require('./uniload.js');
+    var isopackets = require("./isopackets.js");
 
     var constraintSolverPackage =
-          uniload.loadIsopacket('constraint-solver')['constraint-solver'];
+          isopackets.load('constraint-solver')['constraint-solver'];
     var resolver =
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
         nudge: function () {

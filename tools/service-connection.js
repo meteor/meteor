@@ -1,6 +1,6 @@
 var Future = require("fibers/future");
 var _ = require("underscore");
-var uniload = require("./uniload.js");
+var isopackets = require("./isopackets.js");
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful
@@ -15,8 +15,8 @@ var uniload = require("./uniload.js");
 // protocol selected, they use just one underlying TCP connection, and fail
 // fast.
 //
-// - Package: a Package object as returned from uniload.load, containing
-//   the ddp and meteor packages
+// - Package: a Package object as returned from isopackets.load, containing
+//   the ddp packages
 // - endpointUrl: the url to connect to
 // - options:
 //   - headers: an object containing extra headers to use when opening the

@@ -5,7 +5,7 @@ var assert = require('assert');
 var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
-var uniload = require('../../uniload.js');
+var isopackets = require("../../isopackets.js");
 var release = require('../../release.js');
 var project = require('../../project.js');
 var catalog = require('../../catalog.js');
@@ -154,7 +154,7 @@ Fiber(function () {
   release._setCurrentForOldTest();
 
   try {
-    uniload.ensureIsopacketsLoadable();
+    isopackets.ensureIsopacketsLoadable();
     runTest();
   } catch (err) {
     console.log(err.stack);
