@@ -1087,7 +1087,7 @@ _.extend(Isopack.prototype, {
 
     var toolPath = 'meteor-tool-' + archinfo.host();
     builder = builder.enter(toolPath);
-    var unipath = builder.reserve('isopacks', {directory: true});
+    builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
@@ -1109,19 +1109,26 @@ _.extend(Isopack.prototype, {
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
-    var messages = buildmessage.capture({
-      title: "Compiling packages for the tool"
-    }, function () {
-      bundler.iterateOverAllUsedIsopacks(
-        localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
-        function (isopk) {
-          // XXX assert that each name shows up once
-          isopk.saveToPath(path.join(unipath, isopk.name), {
-            // There's no mechanism to rebuild these packages.
-            elideBuildInfo: true
-          });
+    var messages = buildmessage.capture(function () {
+      _.each(uniload.ISOPACKETS, function (packages, isopacketName) {
+        buildmessage.enterJob({
+          title: "Compiling " + isopacketName + " packages for the tool"
+        }, function () {
+          var image = bundler.buildJsImage({
+            name: "isopacket-" + isopacketName,
+            packageLoader: localPackageLoader,
+            use: packages,
+            catalog: catalog.uniload,
+            ignoreProjectDeps: true
+          }).image;
+
+          if (buildmessage.jobHasMessages())
+            return;
+          image.write(builder.enter(path.join('isopackets', isopacketName)));
         });
+      });
     });
+
     // This is a build step ... but it's one that only happens in development,
     // and similar to a uniload failure, it can just crash the app instead of
     // being handled nicely.
