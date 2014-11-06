@@ -26,7 +26,10 @@ HomeController = RouteController.extend({
   onBeforeAction: function() {
     Meteor.subscribe('latestActivity', function() {
       dataReadyHold.release();
-      clearTimeout(connErrorTimeout);
+      if(connErrorTimeout) {
+        clearTimeout(connErrorTimeout);
+        connErrorTimeout = null;
+      };
     });
   }
 });
