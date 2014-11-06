@@ -538,9 +538,7 @@ _.extend(LocalCatalog.prototype, {
     // Go through the build-time constraints. Make sure that they are built,
     // either because we have built them already, or because we are about to
     // build them.
-    var deps = compiler.getBuildOrderConstraints(
-      self.packages[name].packageSource,
-      constraintSolverOpts);
+    var deps = self.packages[name].packageSource.getPackagesToBuildFirst();
 
     _.each(deps, function (dep) {
       // We don't need to build non-local packages. It has been built. Return.
