@@ -1254,14 +1254,16 @@ _.extend(PackageSource.prototype, {
          * @param {String | String[]} meteorRelease Specification of a release: track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the default release track `METEOR`.
          */
         versionsFrom: function (releases) {
-          // Uniloaded packages really ought to be in the core release, by
+          // Packages in isopackets really ought to be in the core release, by
           // definition, so saying that they should use versions from another
           // release doesn't make sense. Moreover, if we're running from a
-          // checkout, we build packages for catalog.uniload before we
-          // initialize catalog.official, so we wouldn't actually be able to
-          // interpret the release name anyway.
-          if (self.catalog === catalog.uniload) {
-            buildmessage.error("uniloaded packages may not use versionsFrom");
+          // checkout, we build isopackets before we initialize catalog.official
+          // (since we may need the ddp isopacket to refresh catalog.official),
+          // so we wouldn't actually be able to interpret the release name
+          // anyway.
+          if (self.catalog.isopacketBuildingCatalog) {
+            buildmessage.error(
+              "packages in isopackets may not use versionsFrom");
             // recover by ignoring
             return;
           }

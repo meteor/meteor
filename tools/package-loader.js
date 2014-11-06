@@ -16,16 +16,9 @@ exports.PackageLoader = function (options) {
     throw Error("Must specify a catalog");
 
   self.versions = null;
-  // Ignore specified versions if we're doing this as part of uniload.
-  // The PackageLoader created in uniload.js will not specify a versions option,
-  // but other PackageLoaders (eg, created to build plugins in compiler.compile)
-  // might, but we should ignore that since uniload never loads versioned
-  // packages; it only loads precompiled packages (for built releases) or local
-  //packages (from checkout).
-  if (options.versions && options.catalog !== catalog.uniload)
+  if (options.versions)
     self.versions = options.versions;
 
-  self.uniloadDir = options.uniloadDir;
   self.constraintSolverOpts = options.constraintSolverOpts;
   self.catalog = options.catalog;
 };
@@ -110,9 +103,7 @@ _.extend(exports.PackageLoader.prototype, {
     // We can only download packages if we know what versions they are.
     if (!self.versions)
       return;
-    // We shouldn't ever download packages for uniload.
-    if (self.catalog === catalog.uniload)
-      return;
+
     tropohouse.default.downloadMissingPackages(self.versions, {
       serverArch: options.serverArch
     });

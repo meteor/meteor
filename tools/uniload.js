@@ -10,6 +10,7 @@ var catalog = require('./catalog.js');
 var compiler = require('./compiler.js');
 var config = require('./config.js');
 var watch = require('./watch.js');
+var Console = require('./console.js').Console;
 
 // XXX document ISOPACKETS
 
@@ -84,15 +85,12 @@ var ensureIsopacketsLoadable = function () {
     return;
   }
 
-  // Build all the packages that we can load with uniload.  We only want to
-  // load local packages.
-  var localPackageLoader = new packageLoader.PackageLoader({
-    versions: null,
-    // XXX get rid of catalog.uniload
-    catalog: catalog.uniload,
-    constraintSolverOpts: { ignoreProjectDeps: true }
-  });
+  // We make these two objects lazily later.
+  var isopacketCatalog = null;
+  var localPackageLoader = null;
 
+  // Look at each isopacket. Check to see if it's on disk and up to date. If
+  // not, build it.
   var messages = buildmessage.capture(function () {
     _.each(ISOPACKETS, function (packages, isopacketName) {
       var isopacketRoot = isopacketPath(isopacketName);
@@ -114,6 +112,17 @@ var ensureIsopacketsLoadable = function () {
         return;
       }
 
+      // We're going to need to build! Make a catalog and loader if we haven't
+      // yet.
+      if (!isopacketCatalog) {
+        isopacketCatalog = newIsopacketBuildingCatalog();
+        localPackageLoader = new packageLoader.PackageLoader({
+          versions: null,
+          catalog: isopacketCatalog,
+          constraintSolverOpts: { ignoreProjectDeps: true }
+        });
+      }
+
       buildmessage.enterJob({
         title: "Compiling " + isopacketName + " packages for the tool"
       }, function () {
@@ -121,7 +130,7 @@ var ensureIsopacketsLoadable = function () {
           name: "isopacket-" + isopacketName,
           packageLoader: localPackageLoader,
           use: packages,
-          catalog: catalog.uniload,
+          catalog: isopacketCatalog,
           ignoreProjectDeps: true
         });
 
@@ -147,6 +156,36 @@ var ensureIsopacketsLoadable = function () {
     process.stderr.write(messages.formatMessages());
     throw new Error("isopacket build failed?");
   }
+};
+
+var newIsopacketBuildingCatalog = function () {
+  if (!files.inCheckout())
+    throw Error("No need to build isopackets unless in checkout!");
+
+  // XXX once a lot more refactors are done, this should be able to just be a
+  // LocalCatalog. There's no reason that resolveConstraints should be called
+  // here!
+  var catalogBootstrapCheckout = require('./catalog-bootstrap-checkout.js');
+  var isopacketCatalog = new catalogBootstrapCheckout.BootstrapCatalogCheckout;
+  var messages = buildmessage.capture(
+    { title: "Scanning local core packages" },
+    function () {
+      // When running from a checkout, uniload does use local packages, but
+      // *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
+      // packages.  One side effect of this: we really really expect them to all
+      // build, and we're fine with dying if they don't (there's no worries
+      // about needing to springboard).
+      isopacketCatalog.initialize({
+        localPackageSearchDirs: [path.join(
+          files.getCurrentToolsDir(), 'packages')]
+      });
+    });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while scanning core packages:\n");
+    Console.error(messages.formatMessages());
+    throw new Error("isopacket scan failed?");
+  }
+  return isopacketCatalog;
 };
 
 // XXX DEAL WITH COMMENT
@@ -229,5 +268,6 @@ var uniload = exports;
 _.extend(exports, {
   loadIsopacket: loadIsopacket,
   ensureIsopacketsLoadable: ensureIsopacketsLoadable,
-  ISOPACKETS: ISOPACKETS
+  ISOPACKETS: ISOPACKETS,
+  newIsopacketBuildingCatalog: newIsopacketBuildingCatalog
 });

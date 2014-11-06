@@ -183,14 +183,6 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Returns a directory with pre-built isopacks for use by the tool, or 'null'
-// if in a checkout.
-files.getUniloadDir = function () {
-  if (files.inCheckout())
-    return null;
-  return path.join(files.getCurrentToolsDir(), 'isopacks');
-};
-
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).

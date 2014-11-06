@@ -10,7 +10,9 @@ var tropohouse = require('./tropohouse.js');
 // This catalog is typically never used directly by the user.
 // An instance of this catalog is created in catalog.js
 var BootstrapCatalogCheckout = function () {
+  var self = this;
   LocalCatalog.call(this);
+  self.isopacketBuildingCatalog = true;
 };
 
 util.inherits(BootstrapCatalogCheckout, LocalCatalog);

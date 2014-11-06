@@ -676,34 +676,6 @@ Fiber(function () {
     project.project.setRootDir(appDir);
   }
 
-  // XXX get rid of catalog.uniload eventually
-  if (files.inCheckout()) {
-    // When running from a checkout, uniload does use local packages, but *ONLY
-    // THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS packages.
-    // One side effect of this: we really really expect them to all build, and
-    // we're fine with dying if they don't (there's no worries about needing to
-    // springboard).
-    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
-      catalog.uniload.initialize({
-        localPackageSearchDirs: [
-          path.join(files.getCurrentToolsDir(), 'packages')]
-      });
-    });
-    if (messages.hasMessages()) {
-      Console.error("=> Errors while scanning core packages:\n");
-      Console.error(messages.formatMessages());
-      process.exit(1);
-    }
-  } else {
-    // This doesn't need to be in a buildmessage, because the
-    // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
-    // bunch of precompiled isopacks!
-    catalog.uniload.initialize({
-      // XXX if you delete this call, delete files.getUniloadDir too
-      uniloadDir: files.getUniloadDir()
-    });
-  }
-
   require('./uniload.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
