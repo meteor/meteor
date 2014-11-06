@@ -1141,21 +1141,15 @@ var getPluginProviders = function (versions, whichCatalog) {
 
 // Figure out what packages have to be compiled and available in the
 // catalog before 'packageSource' can be compiled. Returns an array of
-// objects with keys 'name', 'version' (the latter a version
-// string). Yes, it is possible that multiple versions of some other
-// package might be build-time dependencies (because of plugins).
+// package names.
 compiler.getBuildOrderConstraints = function (
     packageSource, constraintSolverOpts) {
   constraintSolverOpts = constraintSolverOpts || {};
   buildmessage.assertInCapture();
 
-  var versions = {}; // map from package name to version to true
-  var addVersion = function (version, name) {
-    if (name !== packageSource.name) {
-      if (! _.has(versions, name))
-        versions[name] = {};
-      versions[name][version] = true;
-    }
+  var packages = {}; // map from package name to version to true
+  var addPackage = function (version, name) {
+    packages[name] = true;
   };
 
   var buildTimeDeps = determineBuildTimeDependencies(
@@ -1165,19 +1159,14 @@ compiler.getBuildOrderConstraints = function (
   // contain plugins.
   _.each(getPluginProviders(buildTimeDeps.directDependencies,
                             packageSource.catalog),
-         addVersion);
+         addPackage);
+  // Plugin dependencies all need to be available, because they get statically
+  // linked into the plugin.
   _.each(buildTimeDeps.pluginDependencies, function (versions, pluginName) {
-    _.each(versions, addVersion);
+    _.each(versions, addPackage);
   });
 
-  var ret = [];
-  _.each(versions, function (versionArray, name) {
-    _.each(_.keys(versionArray), function (version) {
-      ret.push({ name: name, version: version });
-    });
-  });
-
-  return ret;
+  return _.keys(packages);
 };
 
 // Check to see if a particular build of a package is up to date (that
