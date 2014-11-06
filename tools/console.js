@@ -377,7 +377,7 @@ _.extend(StatusPoller.prototype, {
 
     self._pollFiber = Fiber(function () {
       while (!self._stop) {
-        sleep(100);
+        utils.sleepMs(100);
 
         self.statusPoll();
       }
@@ -496,16 +496,6 @@ var Console = function (options) {
   });
 };
 
-
-// This function returns a future which resolves after a timeout. This
-// demonstrates manually resolving futures.
-function sleep(ms) {
-  var future = new Future;
-  setTimeout(function() {
-    future.return();
-  }, ms);
-  return future.wait();
-};
 
 var LEVEL_CODE_ERROR = 4;
 var LEVEL_CODE_WARN = 3;
