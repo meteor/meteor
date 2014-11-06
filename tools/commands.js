@@ -111,7 +111,47 @@ main.registerCommand({
   }
 
   if (release.current.isCheckout()) {
-    Console.stderr.write("Unreleased (running from a checkout)\n");
+
+    var Future = require('fibers/future');
+    var child_process = require('child_process');
+
+    // invoke git command and get first line from output as result
+    // if process had no error
+    function gitStatus(cmd) {
+      var future = new Future;
+      var gitCommand = child_process.exec(
+        "LANG=C git " + cmd, function(error, stdout, stderr) {
+          if (error) {
+            future.return({
+              success: false
+            });
+          } else {
+            var stdout_arr = stdout.split('\n');
+            future.return({
+              success: true,
+              status: stdout_arr.length ? stdout_arr[0] : ""
+            });
+          }
+      });
+      return(future.wait());
+    }
+
+    // get git status if on branch
+    var gitResult = gitStatus("status -b --porcelain");
+
+    // test status if empty or not on branch
+    if (gitResult.success && ((gitResult.status == "") || (gitResult.status.search(/\(no branch\)/i) > 0))) {
+      // get git status for HEAD
+      gitResult = gitStatus("status");
+    }
+
+    // show version info and git status info if available
+    Console.stderr.write("Unreleased (running from a checkout)");
+    if (gitResult.success && gitResult.status) {
+      Console.stderr.write(" [" + gitResult.status + "]");
+    }
+    Console.stderr.write("\n");
+
     return 1;
   }
 
