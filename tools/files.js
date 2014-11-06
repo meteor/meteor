@@ -928,6 +928,19 @@ exports.getLinesOrEmpty = function (file) {
   }
 };
 
+// Returns null if the file does not exist, otherwise returns the parsed JSON in
+// the file. Throws on errors other than ENOENT (including JSON parse failure).
+exports.readJSONOrNull = function (file) {
+  try {
+    var raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return null;
+    throw e;
+  }
+  return JSON.parse(raw);
+};
+
 // Trims whitespace & other filler characters of a line in a project file.
 exports.trimLine = function (line) {
   var match = line.match(/^([^#]*)#/);

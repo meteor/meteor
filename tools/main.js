@@ -676,7 +676,7 @@ Fiber(function () {
     project.project.setRootDir(appDir);
   }
 
-  // XXX compare this to the previous block's usesWarehouse...
+  // XXX get rid of catalog.uniload eventually
   if (files.inCheckout()) {
     // When running from a checkout, uniload does use local packages, but *ONLY
     // THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS packages.
@@ -699,10 +699,12 @@ Fiber(function () {
     // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
     // bunch of precompiled isopacks!
     catalog.uniload.initialize({
+      // XXX if you delete this call, delete files.getUniloadDir too
       uniloadDir: files.getUniloadDir()
     });
   }
 
+  require('./uniload.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk

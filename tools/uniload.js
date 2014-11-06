@@ -1,10 +1,15 @@
 var _ = require('underscore');
+var path = require('path');
 var bundler = require('./bundler.js');
+var Builder = require('./builder.js');
 var buildmessage = require('./buildmessage.js');
 var release = require('./release.js');
 var packageLoader = require("./package-loader.js");
 var files = require('./files.js');
 var catalog = require('./catalog.js');
+var compiler = require('./compiler.js');
+var config = require('./config.js');
+var watch = require('./watch.js');
 
 // These are the only packages that may be directly loaded via this package. Add
 // more to the list if you need to uniload more things! (You don't have to
@@ -29,6 +34,10 @@ var ROOT_PACKAGES = [
 // XXX document ISOPACKETS
 
 var ISOPACKETS = {
+  // Note: when running from a checkout, js-analyze must always be the
+  // the first to be rebuilt, because it might need to be loaded as part
+  // of building other isopackets.
+  'js-analyze': ['js-analyze'],
   'ddp': ['ddp'],
   'mongo': ['mongo'],
   'ejson': ['ejson'],
@@ -38,25 +47,123 @@ var ISOPACKETS = {
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],
-  // Note: when running from a checkout, js-analyze must always be the
-  // the first to be rebuilt, because it might need to be loaded as part
-  // of building other isopackets.
-  'js-analyze': ['js-analyze'],
   'logging': ['logging']
 };
 
+// Caches isopackets in memory (each isopacket only needs to be loaded
+// once).  This is a map from isopacket name to either:
+//
+//  - The 'Package' dictionary, if the isopacket has already been loaded
+//    into memory
+//  - null, if the isopacket hasn't been loaded into memory but its on-disk
+//    instance is known to be ready
+//
+// The subtlety here is that when running from a checkout, we don't want to
+// accidentally load an isopacket before ensuring that it doesn't need to be
+// rebuilt. But we do want to be able to load the js-analyze isopacket as part
+// of building other isopackets in ensureIsopacketsLoadable.
 var loadedIsopackets = {};
 
 var loadIsopacket = function (isopacketName) {
-  if (_.has(loadedIsopackets, isopacketName))
-    return loadedIsopackets[isopacketName];
-  if (!_.has(ISOPACKETS, isopacketName))
-    throw Error("Unknown isopacket: " + isopacketName);
-  var isopacket = load({packages: ISOPACKETS[isopacketName]});
-  loadedIsopackets[isopacketName] = isopacket;
-  return isopacket;
+  if (_.has(loadedIsopackets, isopacketName)) {
+    if (loadedIsopackets[isopacketName]) {
+      return loadedIsopackets[isopacketName];
+    }
+    // This is the case where the isopacket is up to date on disk but not
+    // loaded.
+    var isopacket = load({packages: ISOPACKETS[isopacketName]});
+    loadedIsopackets[isopacketName] = isopacket;
+    return isopacket;
+  }
+
+  if (_.has(ISOPACKETS, isopacketName)) {
+    throw Error("Can't load isopacket before it has been verified: "
+                + isopacketName);
+  }
+
+  throw Error("Unknown isopacket: " + isopacketName);
 };
 
+var calledEnsure = false;
+var ensureIsopacketsLoadable = function () {
+  if (calledEnsure) {
+    throw Error("can't ensureIsopacketsLoadable twice!");
+  }
+  calledEnsure = true;
+
+  // If we're not running from checkout, then there's nothing to build and we
+  // can declare that all isopackets are loadable.
+  if (!files.inCheckout()) {
+    _.each(ISOPACKETS, function (packages, name) {
+      loadedIsopackets[name] = null;
+    });
+    return;
+  }
+
+  // Build all the packages that we can load with uniload.  We only want to
+  // load local packages.
+  var localPackageLoader = new packageLoader.PackageLoader({
+    versions: null,
+    // XXX get rid of catalog.uniload
+    catalog: catalog.uniload,
+    constraintSolverOpts: { ignoreProjectDeps: true }
+  });
+
+  var messages = buildmessage.capture(function () {
+    _.each(ISOPACKETS, function (packages, isopacketName) {
+      var isopacketRoot = path.join(config.getIsopacketRoot(), isopacketName);
+      var existingBuildinfo = files.readJSONOrNull(
+        path.join(isopacketRoot, 'isopacket-buildinfo.json'));
+      var needRebuild = !existingBuildinfo;
+      if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
+        needRebuild = true;
+      }
+      if (!needRebuild) {
+        var watchSet = watch.WatchSet.fromJSON(existingBuildinfo.watchSet);
+        if (!watch.isUpToDate(watchSet)) {
+          needRebuild = true;
+        }
+      }
+      if (!needRebuild) {
+        // Great, it's loadable without a rebuild.
+        loadedIsopackets[isopacketName] = null;
+        return;
+      }
+
+      buildmessage.enterJob({
+        title: "Compiling " + isopacketName + " packages for the tool"
+      }, function () {
+        var built = bundler.buildJsImage({
+          name: "isopacket-" + isopacketName,
+          packageLoader: localPackageLoader,
+          use: packages,
+          catalog: catalog.uniload,
+          ignoreProjectDeps: true
+        });
+
+        if (buildmessage.jobHasMessages())
+          return;
+        var builder = new Builder({outputPath: isopacketRoot});
+        builder.writeJson('isopacket-buildinfo.json', {
+          builtBy: compiler.BUILT_BY,
+          watchSet: built.watchSet.toJSON()
+        });
+        built.image.write(builder);
+        builder.complete();
+        // It's loadable now.
+        loadedIsopackets[isopacketName] = null;
+      });
+    });
+  });
+
+  // This is a build step ... but it's one that only happens in development, so
+  // it can just crash the app instead of being handled nicely.
+  if (messages.hasMessages()) {
+    process.stderr.write("Errors prevented tool build:\n");
+    process.stderr.write(messages.formatMessages());
+    throw new Error("isopacket build failed?");
+  }
+};
 
 // Load isopacks into the currently running node.js process. Use
 // this to use isopacks (such as the DDP client) from command-line
@@ -180,6 +287,7 @@ var load = function (options) {
 var uniload = exports;
 _.extend(exports, {
   loadIsopacket: loadIsopacket,
+  ensureIsopacketsLoadable: ensureIsopacketsLoadable,
   ROOT_PACKAGES: ROOT_PACKAGES,
   ISOPACKETS: ISOPACKETS
 });
