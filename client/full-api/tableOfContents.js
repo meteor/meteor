@@ -127,7 +127,7 @@ var toc = [
       "Accounts.onCreateUser",
       "Accounts.validateLoginAttempt",
       "Accounts.onLogin",
-      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"}
+      "Accounts.onLoginFailure"
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [
@@ -389,4 +389,3 @@ Template.nav_section.helpers({
     return this.depth === n;
   }
 });
-
