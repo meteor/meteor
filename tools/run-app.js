@@ -496,7 +496,7 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
     var bundleApp = function () {
-      if (! self.firstRun) {
+      if (! options.firstRun) {
         // Pick up changes to packages. (Soft refresh, so we still check to see
         // if they have changed.)
         catalog.complete.packageCache.refresh(true);
