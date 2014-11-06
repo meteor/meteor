@@ -301,6 +301,40 @@ _.extend(LayeredCatalog.prototype, {
       constr.push(utils.parseConstraint(name + "@=" + packageSource.version));
     });
 
+//console.log("Resolving constraints");
+
+var printed = {};
+//console.log(constr);
+/*
+_.each(constr, function (x) {
+  var printme = function (r) {
+    var depString = "";
+    _.each(r.dependencies, function (d, n) {
+      depString =
+        depString + "'" + n + "': '" + d.constraint + "', ";
+    });
+    console.log("[\"" + r.packageName + "\",",
+                "'" + r.version + "',",
+                "{" + depString + "}],");
+  };
+  var printAllVersions = function (y) {
+    if (printed[y]) return;
+    printed[y] = true;
+
+    _.each(self.getSortedVersions(y), function (v) {
+      var nv = self.getVersion(y, v);
+      printme(nv);
+      _.each(nv.dependencies, function (d, n) {
+        printAllVersions(n);
+      });
+    });
+
+  };
+  printAllVersions(x.name);
+});
+*/
+
+
     var ret = buildmessage.enterJob({
         title: "Selecting package versions" },
       function () {
@@ -308,7 +342,9 @@ _.extend(LayeredCatalog.prototype, {
         // subset of those versions to record for our solution. (We don't just
         // return the original version lock because we want to record the
         // correct transitive dependencies)
-        return self.resolver.resolve(deps, constr, resolverOpts);
+        var ret =  self.resolver.resolve(deps, constr, resolverOpts);
+        console.log("RET DONE");
+        return ret;
       });
     if (ret["usedRCs"]) {
       var expPackages = [];

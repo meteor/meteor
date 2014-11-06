@@ -217,6 +217,7 @@ ConstraintSolver.Resolver.prototype.resolve = function (
     if (currentState.success()) {
       return currentState.choices;
     }
+console.log(currentState.choices);
 
     var neighborsObj = self._stateNeighbors(currentState, resolutionPriority);
 
@@ -362,7 +363,6 @@ ConstraintSolver.Constraint = function (name, versionString) {
   if (versionString) {
     name = name + "@" + versionString;
   }
-
   // See comment in UnitVersion constructor. We want to strip out build IDs
   // because the code they represent is considered equivalent.
   _.extend(self, PackageVersion.parseConstraint(name, {
