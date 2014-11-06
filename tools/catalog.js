@@ -343,7 +343,7 @@ _.each(constr, function (x) {
         // return the original version lock because we want to record the
         // correct transitive dependencies)
         var ret =  self.resolver.resolve(deps, constr, resolverOpts);
-        console.log("RET DONE");
+//        console.log("RET DONE");
         return ret;
       });
     if (ret["usedRCs"]) {
