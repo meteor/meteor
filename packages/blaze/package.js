@@ -13,6 +13,8 @@ Package.on_use(function (api) {
   api.use('observe-sequence');
   api.use('reactive-var');
 
+  api.use('ddp', "client", {weak: true}); // to enable tracking subscriptions in created
+
   api.add_files([
     'preamble.js'
   ]);

@@ -23,6 +23,7 @@ var builtInTemplateMacros = {
   // `Template.elseBlock` is invoked.
   'contentBlock': 'view.templateContentBlock',
   'elseBlock': 'view.templateElseBlock',
+  'loading': 'view._loading',
 
   // Confusingly, this makes `{{> Template.dynamic}}` an alias
   // for `{{> __dynamic}}`, where "__dynamic" is the template that

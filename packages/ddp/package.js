@@ -40,6 +40,8 @@ Package.on_use(function (api) {
 
   api.use('callback-hook', 'server');
 
+  api.use("reactive-var");
+
   api.export('DDP');
   api.export('DDPServer', 'server');
 

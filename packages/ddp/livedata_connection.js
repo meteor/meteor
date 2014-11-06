@@ -423,6 +423,43 @@ _.extend(MethodInvoker.prototype, {
   }
 });
 
+/**
+ * Environment variable for tracking subscriptions made inside a function
+ * @type {Meteor}
+ */
+var subscriptionsMade = new Meteor.EnvironmentVariable();
+
+/**
+ * Get a single handle to all subscriptions made inside a function
+ * @return {Object} A single handle with ready() and stop() that works for all
+ * callbacks made inside the passed function
+ */
+DDP._subsInFunction = function (func) {
+  // this needs to be a ReactiveVar in case more subscriptions are made in a
+  // callback
+  var subs = new ReactiveVar([]);
+
+  subscriptionsMade.withValue(subs, func);
+
+  var handle = {
+    ready: function () {
+      return _.all(subs.get(), function (sub) {
+        return sub.ready();
+      });
+    },
+    stop: function () {
+      // XXX what happens here if a subscription is added later? this function
+      // should probably stop that subscription as soon as it is made if it was
+      // called previously?
+      _.each(subs.get(), function (sub) {
+        sub.stop();
+      });
+    }
+  };
+
+  return handle;
+};
+
 _.extend(Connection.prototype, {
   // 'name' is the name of the data on the wire that should go in the
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
@@ -585,6 +622,13 @@ _.extend(Connection.prototype, {
             handle.stop();
         });
       });
+    }
+
+    // This is so that we can track which subscriptions are made inside a func
+    // with _subsInFunction
+    var reactiveSubsList = subscriptionsMade.get();
+    if (reactiveSubsList) {
+      reactiveSubsList.set(reactiveSubsList.get().concat(handle));
     }
 
     return handle;

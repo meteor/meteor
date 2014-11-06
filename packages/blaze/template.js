@@ -123,7 +123,21 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    */
   if (self.created) {
     view.onViewCreated(function () {
-      self.created.call(view.templateInstance());
+      var template = view.templateInstance();
+      var boundCallback = _.bind(self.created, template);
+      var handle = DDP._subsInFunction(boundCallback);
+
+      var loading = function () {
+        return ! handle.ready();
+      };
+
+      if (! template.loading) {
+        template.loading = loading;
+      }
+      
+      // Allow people to override default loading function by adding one to
+      // the template instance inside created
+      view._loading = template.loading;
     });
   }
 
