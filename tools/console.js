@@ -507,15 +507,15 @@ function sleep(ms) {
   return future.wait();
 };
 
-LEVEL_CODE_ERROR = 4;
-LEVEL_CODE_WARN = 3;
-LEVEL_CODE_INFO = 2;
-LEVEL_CODE_DEBUG = 1;
+var LEVEL_CODE_ERROR = 4;
+var LEVEL_CODE_WARN = 3;
+var LEVEL_CODE_INFO = 2;
+var LEVEL_CODE_DEBUG = 1;
 
-LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
-LEVEL_WARN = { code: LEVEL_CODE_WARN };
-LEVEL_INFO = { code: LEVEL_CODE_INFO };
-LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
+var LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
+var LEVEL_WARN = { code: LEVEL_CODE_WARN };
+var LEVEL_INFO = { code: LEVEL_CODE_INFO };
+var LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 
 _.extend(Console.prototype, {
   LEVEL_ERROR: LEVEL_ERROR,
