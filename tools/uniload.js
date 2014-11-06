@@ -21,7 +21,6 @@ var ISOPACKETS = {
   'ddp': ['ddp'],
   'mongo': ['mongo'],
   'ejson': ['ejson'],
-  'ddp-and-mongo': ['ddp', 'mongo'],
   'minifiers': ['minifiers'],
   'dev-bundle-fetcher': ['dev-bundle-fetcher'],
   'constraint-solver': ['constraint-solver'],
