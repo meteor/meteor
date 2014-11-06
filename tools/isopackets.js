@@ -10,49 +10,35 @@ var config = require('./config.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 
-// XXX document ISOPACKETS
-
-// XXX DEAL WITH COMMENT
+// An isopacket is a predefined set of isopackages which the meteor command-line
+// tool can load into its process. This is how we use the DDP client and many
+// other packages inside the tool. The isopackets are listed below in the
+// ISOPACKETS constant.
 //
-// Load isopacks into the currently running node.js process. Use
-// this to use isopacks (such as the DDP client) from command-line
-// tools (such as 'meteor'). The requested packages will be loaded
-// together will all of their dependencies, and each time you call
-// this function you load another, distinct copy of all of the
-// packages (except see note about caching below). The return value is
-// an object that maps package name to package exports (that is, it is
-// the Isopack object from inside the sandbox created for the newly
-// loaded packages).
+// All packages that are in isopackets and all of their transitive dependencies
+// must be part of the core Meteor git checkout (not loaded from troposphere).
 //
-// Caching: There is a simple cache. If you call this function with
-// exactly the same release and packages, we will attempt to return
-// the memoized return value from the previous load (rather than
-// creating a whole new copy of the packages in memory). The caching
-// logic is not particularly sophisticated. For example, the cache
-// will not be flushed if packages change on disk, even if it should
-// be, but using a different release name will flush the cache
-// completely.
+// The requested packages will be loaded together will all of their
+// dependencies. If you request to load the same isopacket more than once, you
+// will efficiently get the same pre-loaded isopacket. On the other hand, two
+// different loaded isopackets contain distinct copies of all of their packages
+// copy of all of the packages. The return value is an object that maps package
+// name to package exports (that is, it is the Package object from inside the
+// sandbox created for the newly loaded packages).
 //
-// When run from a checkout, uniload only loads local (from the checkout)
-// packages: never packages from troposphere. When run from a release build,
-// uniload only loads pre-built isopacks that are distributed alongside the
-// tool: never local packages or packages from troposphere (so in this mode, it
-// never compiles the source of a real package).
+// For built releases, all of the isopackets are pre-compiled (as JsImages,
+// similar to a plugin or a server program) into the tool.
 //
-// Options:
-// - packages: The packages to load, as an array of strings. Each
-//   string may be either "packagename" or "packagename.slice".
+// When run from a checkout, all isopackets are re-compiled early in the startup
+// process if any of their sources have changed.
 //
 // Example usage:
-//   var DDP = require('./uniload.js').load({
-//     packages: ['ddp'],
-//     release: release.current.name
-//   }).ddp.DDP;
+//   var DDP = require('./isopackets.js').load('ddp').ddp.DDP;
 //   var reverse = DDP.connect('reverse.meteor.com');
-//   console.log(reverse.call('reverse', 'hello world'));
+//   Console.info(reverse.call('reverse', 'hello world'));
 
 
-
+// All of the defined isopackets.
 var ISOPACKETS = {
   // Note: when running from a checkout, js-analyze must always be the
   // the first to be rebuilt, because it might need to be loaded as part
@@ -83,6 +69,9 @@ var ISOPACKETS = {
 // of building other isopackets in ensureIsopacketsLoadable.
 var loadedIsopackets = {};
 
+// The main entry point: loads and returns an isopacket from cache or from
+// disk. Does not do a build step: ensureIsopacketsLoadable must be called
+// first!
 var load = function (isopacketName) {
   if (_.has(loadedIsopackets, isopacketName)) {
     if (loadedIsopackets[isopacketName]) {
@@ -108,6 +97,8 @@ var isopacketPath = function (isopacketName) {
   return path.join(config.getIsopacketRoot(), isopacketName);
 };
 
+// ensureIsopacketsLoadable is called at startup and ensures that all isopackets
+// exist on disk as up-to-date loadable programs.
 var calledEnsure = false;
 var ensureIsopacketsLoadable = function () {
   if (calledEnsure) {
@@ -197,6 +188,7 @@ var ensureIsopacketsLoadable = function () {
   }
 };
 
+// Returns a new all-local-packages catalog to be used for building isopackets.
 var newIsopacketBuildingCatalog = function () {
   if (!files.inCheckout())
     throw Error("No need to build isopackets unless in checkout!");
@@ -227,6 +219,8 @@ var newIsopacketBuildingCatalog = function () {
   return isopacketCatalog;
 };
 
+// Loads a built isopacket from disk. Always loads (the cache is in 'load', not
+// this function). Does not run a build process; it must already be built.
 var loadIsopacketFromDisk = function (isopacketName) {
   var image = bundler.readJsImage(
     path.join(isopacketPath(isopacketName), 'program.json'));
