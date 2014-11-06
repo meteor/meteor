@@ -16,7 +16,14 @@ exports.PackageLoader = function (options) {
     throw Error("Must specify a catalog");
 
   self.versions = null;
-  if (options.versions)
+  // Really, the only PackageLoader we should be using while building isopackets
+  // is the one we create right next to creating the isopacket building catalog
+  // (in isopackets.js or _writeTool). But since we haven't yet eliminated the
+  // constraint solver calls in compiler.js and their own PackageLoader,
+  // sometimes we might end up with another PackageLoader here. Pretend that it
+  // didn't tell us versions.
+  // XXX Delete this code once compiler no longer makes its own PackageLoaders.
+  if (options.versions && !options.catalog.isopacketBuildingCatalog)
     self.versions = options.versions;
 
   self.constraintSolverOpts = options.constraintSolverOpts;
