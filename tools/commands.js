@@ -112,7 +112,10 @@ main.registerCommand({
   }
 
   if (release.current.isCheckout()) {
-    Console.error("Unreleased (running from a checkout).");
+    var gitLog = files.runGitInCheckout(
+      'log',
+      '--format=%h%d', '-n 1').trim();
+    Console.error("Unreleased, running from a checkout at " + gitLog);
     return 1;
   }
 
