@@ -30,9 +30,6 @@ var setAppDir = function (appDir) {
     files.getCurrentToolsDir(), 'packages');
 
   doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageSearchDirs: [checkoutPackageDir]
-    });
     catalog.complete.initialize({
       localPackageSearchDirs: [appPackageDir, checkoutPackageDir]
     });
@@ -157,6 +154,7 @@ Fiber(function () {
   release._setCurrentForOldTest();
 
   try {
+    uniload.ensureIsopacketsLoadable();
     runTest();
   } catch (err) {
     console.log(err.stack);

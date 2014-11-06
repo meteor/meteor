@@ -8,8 +8,6 @@ var packageCache = require('./package-cache.js');
 var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
 var files = require('./files.js');
-var prebuiltBootstrap = require('./catalog-bootstrap-prebuilt.js');
-var checkoutBootstrap = require('./catalog-bootstrap-checkout.js');
 var project = require('./project.js');
 var utils = require('./utils.js');
 var config = require('./config.js');
@@ -401,13 +399,6 @@ _.extend(LayeredCatalog.prototype, {
 
 exports.DEFAULT_TRACK = remoteCatalog.DEFAULT_TRACK;
 exports.official = remoteCatalog.official;
-
-//Instantiate the various catalogs
-if (files.inCheckout()) {
-  exports.uniload = new checkoutBootstrap.BootstrapCatalogCheckout();
-} else {
-  exports.uniload = new prebuiltBootstrap.BootstrapCatalogPrebuilt();
-}
 
 // This is the catalog that's used to actually drive the constraint solver: it
 // contains local packages, and since local packages always beat server

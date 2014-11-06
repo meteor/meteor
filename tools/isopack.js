@@ -1103,9 +1103,10 @@ _.extend(Isopack.prototype, {
 
     // Build all the packages that we can load with uniload.  We only want to
     // load local packages.
+    var isopacketCatalog = uniload.newIsopacketBuildingCatalog();
     var localPackageLoader = new packageLoader.PackageLoader({
       versions: null,
-      catalog: catalog.uniload,
+      catalog: isopacketCatalog,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
 
@@ -1118,7 +1119,7 @@ _.extend(Isopack.prototype, {
             name: "isopacket-" + isopacketName,
             packageLoader: localPackageLoader,
             use: packages,
-            catalog: catalog.uniload,
+            catalog: isopacketCatalog,
             ignoreProjectDeps: true
           }).image;
 
