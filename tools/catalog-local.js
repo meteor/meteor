@@ -19,6 +19,7 @@ var VersionParser = require('./package-version-parser.js');
 // A default instance of this catalog is created in catalog.js
 var LocalCatalog = function (options) {
   var self = this;
+  options = options || {};
 
   // Package server data.  Maps package name to a {packageSource, packageRecord,
   // versionRecord, buildRecord} object.
@@ -27,7 +28,7 @@ var LocalCatalog = function (options) {
   // We use the initialization design pattern because it makes it easier to use
   // both of our catalogs as singletons.
   self.initialized = false;
-  self.containingCatalog = options ? options.containingCatalog : self;
+  self.containingCatalog = options.containingCatalog || self;
 
     // Local directories to search for package source trees
   self.localPackageSearchDirs = null;
@@ -44,8 +45,12 @@ var LocalCatalog = function (options) {
   // need to process.
   self.effectiveLocalPackageDirs = [];
 
-   // Each catalog needs its own package cache.
-  self.packageCache = new packageCache.PackageCache(self.containingCatalog);
+   // If this is a standalone catalog (eg BootstrapCatalogCheckout) it needs its
+   // own PackageCache, but if it's part of the complete catalog it should share
+   // a cache with its container.
+  self.packageCache = options.containingCatalog
+    ? options.containingCatalog.packageCache
+    : new packageCache.PackageCache(self);
 
   self.buildRequested = null;
 
