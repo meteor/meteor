@@ -120,14 +120,14 @@ files.addToGitignore = function (dirPath, entry) {
 };
 
 // Are we running Meteor from a git checkout?
-files.inCheckout = function () {
+files.inCheckout = _.once(function () {
   try {
     if (fs.existsSync(path.join(files.getCurrentToolsDir(), '.git')))
       return true;
   } catch (e) { console.log(e); }
 
   return false;
-};
+});
 
 // True if we are using a warehouse: either installed Meteor, or if
 // $METEOR_WAREHOUSE_DIR is set. Otherwise false (we're in a git checkout and
