@@ -221,6 +221,9 @@ var NodeModulesDirectory = function (options) {
   // The path (relative to the bundle root) where we would preferably
   // like the node_modules to be output (essentially cosmetic).
   self.preferredBundlePath = options.preferredBundlePath;
+
+  // Optionally, files to discard.
+  self.npmDiscards = options.npmDiscards;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -718,7 +721,8 @@ _.extend(Target.prototype, {
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: path.join(
-                    'npm', unibuild.pkg.name, 'node_modules')
+                    'npm', unibuild.pkg.name, 'node_modules'),
+                  npmDiscards: unibuild.pkg.npmDiscards
                 });
                 self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
               }
@@ -1378,7 +1382,8 @@ _.extend(JsImage.prototype, {
       var generatedDir = builder.generateFilename(dirname, {directory: true});
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: path.join(generatedDir, base)
+        preferredBundlePath: path.join(generatedDir, base),
+        npmDiscards: nmd.npmDiscards
       }));
     });
 
@@ -1470,7 +1475,8 @@ _.extend(JsImage.prototype, {
     _.each(nodeModulesDirectories, function (nmd) {
       builder.copyDirectory({
         from: nmd.sourcePath,
-        to: nmd.preferredBundlePath
+        to: nmd.preferredBundlePath,
+        npmDiscards: nmd.npmDiscards
       });
     });
 
@@ -1510,6 +1516,8 @@ JsImage.readFromDisk = function (controlFilePath) {
           new NodeModulesDirectory({
             sourcePath: node_modules,
             preferredBundlePath: item.node_modules
+            // No npmDiscards, because we should have already discarded things
+            // when writing the image to disk.
           });
       }
       nmd = ret.nodeModulesDirectories[node_modules];
