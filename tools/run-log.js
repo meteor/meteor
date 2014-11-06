@@ -19,9 +19,7 @@ var Console = require('./console.js').Console;
 
 
 var getLoggingPackage = function () {
-  var Log = uniload.load({
-    packages: ['logging']
-  }).logging.Log;
+  var Log = uniload.loadIsopacket('logging').logging.Log;
 
   // Since no other process will be listening to stdout and parsing it,
   // print directly in the same format as log messages from other apps

@@ -161,9 +161,7 @@ var getPackagesForAppIdInTest = function (currentProject) {
 };
 
 var connectToPackagesStatsServer = function () {
-  var Package = uniload.load({
-    packages: ["meteor", "ddp"]
-  });
+  var Package = uniload.loadIsopacket('ddp');
   var conn = new ServiceConnection(
     Package,
     config.getPackageStatsServerUrl(),

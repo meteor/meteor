@@ -382,9 +382,8 @@ _.extend(LayeredCatalog.prototype, {
     var self = this;
     var uniload = require('./uniload.js');
 
-    var constraintSolverPackage =  uniload.load({
-      packages: [ 'constraint-solver']
-    })['constraint-solver'];
+    var constraintSolverPackage =
+          uniload.loadIsopacket('constraint-solver')['constraint-solver'];
     var resolver =
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
         nudge: function () {

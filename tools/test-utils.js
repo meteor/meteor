@@ -189,9 +189,7 @@ exports.deployWithNewEmail = function (s, email, appName) {
 };
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: ['meteor', 'ddp']
-  });
+  return uniload.loadIsopacket('ddp');
 };
 
 var ddpConnect = function (url) {

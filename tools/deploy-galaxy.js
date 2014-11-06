@@ -16,9 +16,7 @@ var stats = require('./stats.js');
 
 // a bit of a hack
 var getPackage = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp' ]
-  });
+  return uniload.loadIsopacket('ddp');
 };
 
 // If 'error' is an exception that we know how to report in a
@@ -340,9 +338,7 @@ exports.logs = function (options) {
 
   try {
     var lastLogId = null;
-    var Log = uniload.load({
-      packages: [ 'logging' ]
-    }).logging.Log;
+    var Log = uniload.loadIsopacket('logging').logging.Log;
 
     // XXX we're cheating a bit here, relying on the server sending
     // the log messages in order

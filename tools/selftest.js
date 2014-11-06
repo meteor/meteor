@@ -17,7 +17,6 @@ var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
-var Package = uniload.load({ packages: ["ejson"] });
 var Console = require('./console.js').Console;
 
 var toolPackageName = "meteor-tool";
@@ -46,6 +45,7 @@ var fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 var expectEqual = markStack(function (actual, expected) {
+  var Package = uniload.loadIsopacket('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,

@@ -26,6 +26,38 @@ var ROOT_PACKAGES = [
   'xmlbuilder'
 ];
 
+// XXX document ISOPACKETS
+
+var ISOPACKETS = {
+  'ddp': ['ddp'],
+  'mongo': ['mongo'],
+  'ejson': ['ejson'],
+  'ddp-and-mongo': ['ddp', 'mongo'],
+  'minifiers': ['minifiers'],
+  'dev-bundle-fetcher': ['dev-bundle-fetcher'],
+  'constraint-solver': ['constraint-solver'],
+  'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
+                      'xmlbuilder'],
+  // Note: when running from a checkout, js-analyze must always be the
+  // the first to be rebuilt, because it might need to be loaded as part
+  // of building other isopackets.
+  'js-analyze': ['js-analyze'],
+  'logging': ['logging']
+};
+
+var loadedIsopackets = {};
+
+var loadIsopacket = function (isopacketName) {
+  if (_.has(loadedIsopackets, isopacketName))
+    return loadedIsopackets[isopacketName];
+  if (!_.has(ISOPACKETS, isopacketName))
+    throw Error("Unknown isopacket: " + isopacketName);
+  var isopacket = load({packages: ISOPACKETS[isopacketName]});
+  loadedIsopackets[isopacketName] = isopacket;
+  return isopacket;
+};
+
+
 // Load isopacks into the currently running node.js process. Use
 // this to use isopacks (such as the DDP client) from command-line
 // tools (such as 'meteor'). The requested packages will be loaded
@@ -147,6 +179,7 @@ var load = function (options) {
 
 var uniload = exports;
 _.extend(exports, {
-  load: load,
-  ROOT_PACKAGES: ROOT_PACKAGES
+  loadIsopacket: loadIsopacket,
+  ROOT_PACKAGES: ROOT_PACKAGES,
+  ISOPACKETS: ISOPACKETS
 });
