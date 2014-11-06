@@ -544,44 +544,30 @@ _.extend(LocalCatalog.prototype, {
 
     _.each(deps, function (dep) {
       // We don't need to build non-local packages. It has been built. Return.
-      if  (!self.isLocalPackage(dep.name)) {
+      if  (!self.isLocalPackage(dep)) {
         return;
-      }
-
-      // Make sure that the version we need for this dependency is actually the
-      // right local version. If it is not, then using the local build will not
-      // give us the right answer. This should never happen!... but we would
-      // rather fail than surprise someone with an incorrect build.
-      //
-      // The catalog doesn't understand buildID versions, so let's strip out the
-      // buildID.
-      var version = self._changeBuildIdToLocal(dep.version);
-      // This one is always already +local.
-      var packageVersion = self.packages[dep.name].versionRecord.version;
-      if (version !== packageVersion) {
-        throw new Error("unknown version for local package? " + name);
       }
 
       // We have the right package. Let's make sure that this is not a circular
       // dependency that we can't resolve.
-      if (_.has(onStack, dep.name)) {
+      if (_.has(onStack, dep)) {
         // Allow a circular dependency if the other thing is already
         // built and doesn't need to be rebuilt.
-        unip = self._maybeGetUpToDateBuild(dep.name, constraintSolverOpts);
+        unip = self._maybeGetUpToDateBuild(dep, constraintSolverOpts);
         if (unip) {
           return;
         } else {
           buildmessage.error("circular dependency between packages " +
-                             name + " and " + dep.name);
+                             name + " and " + dep);
           // recover by not enforcing one of the depedencies
           return;
         }
       }
 
       // Put this on the stack and send recursively into the builder.
-      onStack[dep.name] = true;
-      self._build(dep.name, onStack, constraintSolverOpts);
-      delete onStack[dep.name];
+      onStack[dep] = true;
+      self._build(dep, onStack, constraintSolverOpts);
+      delete onStack[dep];
     });
 
     // Now build this package if it needs building
