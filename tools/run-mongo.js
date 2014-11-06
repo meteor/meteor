@@ -370,9 +370,8 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      var mongoNpmModule = uniload.load({
-        packages: [ 'mongo' ]
-      })['mongo'].MongoInternals.NpmModule;
+      var mongoNpmModule =
+            uniload.loadIsopacket('mongo').mongo.MongoInternals.NpmModule;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(

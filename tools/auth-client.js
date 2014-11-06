@@ -12,9 +12,7 @@ exports.AlreadyPrintedMessageError = function () {};
 // meteor: base package and prerequsite for all others.
 // ddp: DDP client interface to make a connection to the package server.
 var getDDPPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp']
-  });
+  return uniload.loadIsopacket('ddp');
 };
 
 // Opens a DDP connection to a package server. Loads the packages needed for a

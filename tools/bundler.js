@@ -498,9 +498,7 @@ _.extend(Target.prototype, {
 
     // Minify, if requested
     if (options.minify) {
-      var minifiers = uniload.load({
-        packages: ['minifiers']
-      }).minifiers;
+      var minifiers = uniload.loadIsopacket('minifiers').minifiers;
       self.minifyJs(minifiers);
 
       // CSS is minified only for client targets.
@@ -1008,9 +1006,7 @@ _.extend(ClientTarget.prototype, {
   // allow them to appear in the middle of a file.
   mergeCss: function () {
     var self = this;
-    var minifiers = uniload.load({
-      packages: ['minifiers']
-    }).minifiers;
+    var minifiers = uniload.loadIsopacket('minifiers').minifiers;
     var CssTools = minifiers.CssTools;
 
     // Filenames passed to AST manipulator mapped to their original files
@@ -1691,9 +1687,8 @@ _.extend(ServerTarget.prototype, {
         path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
-    var script = uniload.load({
-      packages: ['dev-bundle-fetcher']
-    })["dev-bundle-fetcher"].DevBundleFetcher.script();
+    var Packages = uniload.loadIsopacket('dev-bundle-fetcher');
+    var script = Packages["dev-bundle-fetcher"].DevBundleFetcher.script();
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
     script = script.replace(/##IMAGE##/g, imageControlFile);

@@ -274,12 +274,10 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
-var getLoadedPackages = _.once(function () {
+var getLoadedPackages = function () {
   var uniload = require('./uniload.js');
-  return uniload.load({
-    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing', 'xmlbuilder' ]
-  });
-});
+  return uniload.loadIsopacket('cordova-support');
+};
 
 
 

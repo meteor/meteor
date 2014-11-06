@@ -17,9 +17,7 @@ var Console = require('./console.js').Console;
 var auth = exports;
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp', 'mongo' ]
-  });
+  return uniload.loadIsopacket('ddp-and-mongo');
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember

@@ -866,9 +866,7 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   // default unibuild is not allowed to depend on anything!)
   var jsAnalyze = null;
   if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
-    jsAnalyze = uniload.load({
-      packages: ["js-analyze"]
-    })["js-analyze"].JSAnalyze;
+    jsAnalyze = uniload.loadIsopacket('js-analyze')['js-analyze'].JSAnalyze;
   }
 
   var results = linker.prelink({
