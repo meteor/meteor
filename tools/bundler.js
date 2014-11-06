@@ -158,7 +158,7 @@ var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
-var uniload = require(path.join(__dirname, 'uniload.js'));
+var isopackets = require("./isopackets.js");
 var watch = require('./watch.js');
 var release = require('./release.js');
 var Fiber = require('fibers');
@@ -498,7 +498,7 @@ _.extend(Target.prototype, {
 
     // Minify, if requested
     if (options.minify) {
-      var minifiers = uniload.loadIsopacket('minifiers').minifiers;
+      var minifiers = isopackets.load('minifiers').minifiers;
       self.minifyJs(minifiers);
 
       // CSS is minified only for client targets.
@@ -1006,7 +1006,7 @@ _.extend(ClientTarget.prototype, {
   // allow them to appear in the middle of a file.
   mergeCss: function () {
     var self = this;
-    var minifiers = uniload.loadIsopacket('minifiers').minifiers;
+    var minifiers = isopackets.load('minifiers').minifiers;
     var CssTools = minifiers.CssTools;
 
     // Filenames passed to AST manipulator mapped to their original files
@@ -1687,7 +1687,7 @@ _.extend(ServerTarget.prototype, {
         path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
-    var Packages = uniload.loadIsopacket('dev-bundle-fetcher');
+    var Packages = isopackets.load('dev-bundle-fetcher');
     var script = Packages["dev-bundle-fetcher"].DevBundleFetcher.script();
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
@@ -1905,8 +1905,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  // bundler.bundle is never called by uniload, so it always uses
-  // the complete catalog.
+  // bundler.bundle is not called to make isopackets, so it always uses the
+  // complete catalog.
   var whichCatalog = catalog.complete;
 
   var outputPath = options.outputPath;

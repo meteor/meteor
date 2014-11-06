@@ -11,13 +11,13 @@ var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require('./isopackets.js');
 var Console = require('./console.js').Console;
 
 var auth = exports;
 
 var getLoadedPackages = function () {
-  return uniload.loadIsopacket('ddp');
+  return isopackets.load('ddp');
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember

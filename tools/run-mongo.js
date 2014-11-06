@@ -9,7 +9,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');
 
 var _ = require('underscore');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
@@ -371,7 +371,7 @@ var launchMongo = function (options) {
     try {
       // Load mongo so we'll be able to talk to it.
       var mongoNpmModule =
-            uniload.loadIsopacket('mongo').mongo.MongoInternals.NpmModule;
+            isopackets.load('mongo').mongo.MongoInternals.NpmModule;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(

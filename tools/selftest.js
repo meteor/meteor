@@ -9,7 +9,7 @@ var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
 var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var util = require('util');
@@ -45,7 +45,7 @@ var fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 var expectEqual = markStack(function (actual, expected) {
-  var Package = uniload.loadIsopacket('ejson');
+  var Package = isopackets.load('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,

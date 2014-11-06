@@ -2,17 +2,14 @@ var auth = require('./auth.js');
 var Console = require('./console.js').Console;
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('./http-helpers.js');
-var uniload = require('./uniload.js');
+var isopackets = require('./isopackets.js');
 
 exports.AlreadyPrintedMessageError = function () {};
 
-// Use uniload to load the packages that we need to open a meteor developer
-// accounts ddp connection.
-//
-// meteor: base package and prerequsite for all others.
-// ddp: DDP client interface to make a connection to the package server.
+// Load the isopacket that we need to open a Meteor Developer Accounts DDP
+// connection.
 var getDDPPackages = function () {
-  return uniload.loadIsopacket('ddp');
+  return isopackets.load('ddp');
 };
 
 // Opens a DDP connection to a package server. Loads the packages needed for a

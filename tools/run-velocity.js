@@ -1,5 +1,5 @@
 var Console = require('./console.js').Console;
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 
 var phantomjs = require('phantomjs');
 var child_process = require('child_process');
@@ -17,7 +17,7 @@ var _ = require('underscore');
 // 3. Open the app server with PhantomJS to run client side tests.
 // 4. Print the results and exit with the appropriate exit code.
 var runVelocity = function (url) {
-  var unipackages = uniload.loadIsopacket('ddp')
+  var unipackages = isopackets.load('ddp')
   var DDP = unipackages.ddp.DDP;
 
   // XXX maybe a startup message so users know the tests are running.

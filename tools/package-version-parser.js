@@ -1,7 +1,8 @@
 // This file is in tools/package-version-parser.js and is symlinked into
-// packages/package-version-parser/package-version-parser.js. It's part
-// of both the tool and the package!  We don't use uniload for it because
-// it needs to be used as part of initializing the uniload catalog.
+// packages/package-version-parser/package-version-parser.js. It's part of both
+// the tool and the package!  We don't use an isopacket for it because it used
+// to be required as part of building isopackets (though that may no longer be
+// true).
 var inTool = typeof Package === 'undefined';
 
 var PV;

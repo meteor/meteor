@@ -275,8 +275,8 @@ var execFileSyncOrThrow = function (file, args, opts) {
 };
 
 var getLoadedPackages = function () {
-  var uniload = require('./uniload.js');
-  return uniload.loadIsopacket('cordova-support');
+  var isopackets = require("./isopackets.js");
+  return isopackets.load('cordova-support');
 };
 
 

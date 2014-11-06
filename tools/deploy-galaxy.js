@@ -3,7 +3,7 @@ var files = require('./files.js');
 var config = require('./config.js');
 var path = require('path');
 var fs = require('fs');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var fiberHelpers = require('./fiber-helpers.js');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
@@ -16,7 +16,7 @@ var stats = require('./stats.js');
 
 // a bit of a hack
 var getPackage = function () {
-  return uniload.loadIsopacket('ddp');
+  return isopackets.load('ddp');
 };
 
 // If 'error' is an exception that we know how to report in a
@@ -338,7 +338,7 @@ exports.logs = function (options) {
 
   try {
     var lastLogId = null;
-    var Log = uniload.loadIsopacket('logging').logging.Log;
+    var Log = isopackets.load('logging').logging.Log;
 
     // XXX we're cheating a bit here, relying on the server sending
     // the log messages in order

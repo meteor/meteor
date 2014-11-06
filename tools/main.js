@@ -676,7 +676,7 @@ Fiber(function () {
     project.project.setRootDir(appDir);
   }
 
-  require('./uniload.js').ensureIsopacketsLoadable();
+  require('./isopackets.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
@@ -1197,7 +1197,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   if (!command.catalogRefresh.doesNotUsePackages) {
     // OK, now it's finally time to set up the complete catalog. Only after this
-    // can we use the build system (other than via uniload).
+    // can we use the build system (other than to make and load isopackets).
 
     // XXX This code is duplicated a bit inside the create command. Sorry.
 
