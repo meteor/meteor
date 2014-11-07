@@ -471,8 +471,6 @@ _.extend(LocalCatalog.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    var unip = null;
-
     if (_.has(self.buildRequested, name)) {
       return;
     }
@@ -495,15 +493,16 @@ _.extend(LocalCatalog.prototype, {
       if (_.has(onStack, dep)) {
         // Allow a circular dependency if the other thing is already
         // built and doesn't need to be rebuilt.
-        unip = self._maybeGetUpToDateBuild(dep, constraintSolverOpts);
-        if (unip) {
-          return;
-        } else {
-          buildmessage.error("circular dependency between packages " +
-                             name + " and " + dep);
-          // recover by not enforcing one of the depedencies
-          return;
-        }
+        // XXX #3006: We used to allow circular dependencies here if
+        //            it's built on disk already. But this is honestly
+        //            kind of weird... it implies you could get into
+        //            situations where you can do a build only if
+        //            it's currently partly built? Evaluate if this
+        //            needs to be restored.
+        buildmessage.error("circular dependency between packages " +
+                           name + " and " + dep);
+        // recover by not enforcing one of the depedencies
+        return;
       }
 
       // Put this on the stack and send recursively into the builder.
@@ -514,36 +513,21 @@ _.extend(LocalCatalog.prototype, {
 
     // Now build this package if it needs building
     var sourcePath = self.packages[name].packageSource.sourceRoot;
-    unip = self._maybeGetUpToDateBuild(name, constraintSolverOpts);
+    // XXX #3006 We used to check to see if we had a cached version on disk
+    //           here. Now we don't.
+    var unip;
+    // Didn't have a build or it wasn't up to date. Build it.
+    buildmessage.enterJob({
+      title: "Building package `" + name + "`",
+      rootPath: sourcePath
+    }, function () {
+      unip = compiler.compile(self.packages[name].packageSource, {
+        ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
+      }).isopack;
+      // XXX #3006: Here's a place where we used to cache the build (if
+      // !buildmessage.jobHasMessages).
+    });
 
-    if (! unip) {
-      // Didn't have a build or it wasn't up to date. Build it.
-      buildmessage.enterJob({
-        title: "Building package `" + name + "`",
-        rootPath: sourcePath
-      }, function () {
-        unip = compiler.compile(self.packages[name].packageSource, {
-          ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
-        }).isopack;
-        if (! buildmessage.jobHasMessages() &&
-            ! self.isopacketBuildingCatalog) {
-          // Save the build, for a fast load next time
-          try {
-            var buildDir = path.join(sourcePath, '.build.'+ name);
-            files.addToGitignore(sourcePath, '.build*');
-            unip.saveToPath(buildDir, {
-              buildOfPath: sourcePath,
-              catalog: self.containingCatalog
-            });
-          } catch (e) {
-            // If we can't write to this directory, we don't get to cache our
-            // output, but otherwise life is good.
-            if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
-              throw e;
-          }
-        }
-      });
-    }
     // And put a build record for it in the catalog. There is only one version
     // for this package!
     var versionId = self.packages[name].versionRecord._id;
@@ -571,38 +555,6 @@ _.extend(LocalCatalog.prototype, {
     if (version)
       return version.split("+")[0] + "+local";
     return version;
-  },
-
-  // Returns the latest isopack build if the package has already been
-  // compiled and built in the directory, and null otherwise.
-  _maybeGetUpToDateBuild: function (name, constraintSolverOpts) {
-    var self = this;
-    buildmessage.assertInCapture();
-
-    // When we build packages for isopackets, we're using different build
-    // settings (eg we're ignoring app packages) so they shouldn't share
-    // the same cache.
-    if (self.isopacketBuildingCatalog)
-      return null;
-
-    var sourcePath = self.packages[name].packageSource.sourceRoot;
-    var buildDir = path.join(sourcePath, '.build.' + name);
-    if (fs.existsSync(buildDir)) {
-      var unip = new isopack.Isopack;
-      try {
-        unip.initFromPath(name, buildDir, { buildOfPath: sourcePath });
-      } catch (e) {
-        if (!(e instanceof isopack.OldIsopackFormatError))
-          throw e;
-        // Ignore isopack-pre1 builds
-        return null;
-      }
-      if (compiler.checkUpToDate(
-          self.packages[name].packageSource, unip, constraintSolverOpts)) {
-        return unip;
-      }
-    }
-    return null;
   }
 });
 
