@@ -11,11 +11,16 @@ var isopack = require("./isopack.js");
 var PackageCache = function (whichCatalog) {
   var self = this;
 
-  // both map from package load path to:
+  // map from package load path to:
   // - pkg: cached Isopack object
   // - sourceDir: directory that contained its source code, or null
-  // - buildDir: directory from which the built package was loaded
-  self.softReloadCache = {};
+  // XXX #3006: There used to be the concept of a "soft refresh".
+  //     The idea being that "soft refresh" means "keep the Isopack object in
+  //     memory but check its watchsets/versions before the next time you use
+  //     it", whereas "hard refresh" means "always re-parse from disk".
+  //     This was probably a valid optimization; re-implement it later.
+  //     But there is no reason to re-implement it unless we can actually
+  //     skip the "re-parse from disk" step --- in 0.9.0 it still did reparse.
   self.loadedPackages = {};
 
   if (!whichCatalog)
@@ -25,26 +30,14 @@ var PackageCache = function (whichCatalog) {
 
 _.extend(PackageCache.prototype, {
   // Force reload of changed packages. See description at loadPackageAtPath().
-  //
-  // If soft is false, the default, the cache is totally flushed and
-  // all packages are reloaded unconditionally.
-  //
-  // If soft is true, then built packages without dependency info (such as those
-  // from the warehouse) aren't reloaded (there's no way to rebuild them, after
-  // all), and if we loaded a built package with dependency info, we won't
-  // reload it if the dependency info says that its source files are still up to
-  // date. The ideas is that assuming the user is "following the rules", this
-  // will correctly reload any changed packages while in most cases avoiding
-  // nearly all reloading.
-  refresh: function (soft) {
+  refresh: function () {
     var self = this;
+
+    // XXX #3006: "soft refresh" was once here
 
     if (self.catalog.isopacketBuildingCatalog)
       throw Error("refreshing the isopacket catalog? why?");
 
-    soft = soft || false;
-
-    self.softReloadCache = soft ? self.loadedPackages : {};
     self.loadedPackages = {};
   },
 
@@ -56,13 +49,11 @@ _.extend(PackageCache.prototype, {
   cachePackageAtPath : function (name, loadPath, isop) {
     var self = this;
     var key = name + "@" + loadPath;
-    var buildDir = path.join(loadPath, '.build.'+  name);
 
     self.loadedPackages[key] = {
-        pkg: isop,
-        sourceDir: loadPath,
-        buildDir: buildDir
-      };
+      pkg: isop,
+      sourceDir: loadPath
+    };
   },
 
   // Given a path to a package on disk, retrieve a Isopack
@@ -87,52 +78,11 @@ _.extend(PackageCache.prototype, {
        return self.loadedPackages[key].pkg;
     }
 
-    var isop;
-
-    // See if we can reuse a package that we have cached from before
-    // the last soft refresh.
-    // XXX XXX this is not very efficient. refactor
-    if (_.has(self.softReloadCache, key)) {
-      var entry = self.softReloadCache[key];
-
-      // Either we will decide that the cache is invalid, or we will "upgrade"
-      // this entry into loadedPackages. Either way, it's not needed in
-      // softReloadCache any more.
-      delete self.softReloadCache[key];
-
-      var isUpToDate;
-      if (isopack.isopackExistsAtPath(loadPath)) {
-        // We don't even have the source to this package, so it must
-        // be up to date.
-        isUpToDate = true;
-      } else {
-
-        buildmessage.enterJob({
-          title: "Initializing package `" + name + "`",
-          rootPath: loadPath
-        }, function () {
-          var packageSource = new PackageSource(self.catalog);
-          // We know exactly what package we want at this point, so let's make
-          // sure to pass in a name.
-          packageSource.initFromPackageDir(loadPath, {
-            name: name
-          });
-          isop = new isopack.Isopack();
-          isop.initFromPath(name, entry.buildDir);
-          isUpToDate = compiler.checkUpToDate(
-            packageSource, entry.pkg, {
-              ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
-            });
-        });
-      }
-      if (isUpToDate) {
-        // Cache it
-        self.loadedPackages[key] = entry;
-        return entry.pkg;
-      }
-    }
+    // XXX #3006: We used to look in the soft refresh cache here.
 
     // Load package from disk
+
+    var isop;
 
     // Does loadPath point directly at a isopack (rather than a
     // source tree?)
@@ -142,8 +92,7 @@ _.extend(PackageCache.prototype, {
       isop.initFromPath(name, loadPath);
       self.loadedPackages[key] = {
         pkg: isop,
-        sourceDir: null,
-        buildDir: loadPath
+        sourceDir: null
       };
       return isop;
     }
@@ -155,32 +104,12 @@ _.extend(PackageCache.prototype, {
       rootPath: loadPath
     }, function () {
       packageSource.initFromPackageDir(loadPath, {
-       name: name
+        name: name
       });
     });
     // Does it have an up-to-date build?
-    var buildDir = path.join(loadPath, '.build.'+  name);
-    if (! self.catalog.isopacketBuildingCatalog && fs.existsSync(buildDir)) {
-      isop = new isopack.Isopack();
-      var maybeUpToDate = true;
-      try {
-        isop.initFromPath(name, buildDir);
-      } catch (e) {
-        if (!(e instanceof isopack.OldIsopackFormatError))
-          throw e;
-        maybeUpToDate = false;
-      }
-      if (maybeUpToDate &&
-          compiler.checkUpToDate(
-            packageSource, isop,
-            { ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps })) {
-        self.loadedPackages[key] = { pkg: isop,
-                                     sourceDir: loadPath,
-                                     buildDir: buildDir
-                                   };
-        return isop;
-      }
-    }
+    // XXX #3006: We used to look for the .build.* directory here and
+    //            check to see if it is up to date.
 
     // Either we didn't have a build, or it was out of date, or the
     // caller wanted us to rebuild no matter what. Build the package.
@@ -197,31 +126,18 @@ _.extend(PackageCache.prototype, {
       // We don't do that anymore and at the moment, we rely on catalog to
       // initalize ahead of us and swoop in and build all of the local packages
       // informed by a topological sort
+      // XXX #3006: Make sure that the topological sort does still exist
+      //            somewhere!
       var isop = compiler.compile(packageSource, {
         ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
       }).isopack;
       self.loadedPackages[key] = {
         pkg: isop,
-        sourceDir: null,
-        buildDir: buildDir
+        sourceDir: null
       };
 
-      if (! buildmessage.jobHasMessages() &&
-          ! self.catalog.isopacketBuildingCatalog) {
-        // Save it, for a fast load next time
-        try {
-          files.addToGitignore(loadPath, '.build*');
-          isop.saveToPath(buildDir, {
-            buildOfPath: loadPath,
-            catalog: self.catalog
-          });
-        } catch (e) {
-          // If we can't write to this directory, we don't get to cache our
-          // output, but otherwise life is good.
-          if (!(e && (e.code === 'EACCES' || e.code === 'EPERM')))
-            throw e;
-        }
-      }
+      // XXX #3006: We used to save the package to the cache at this point (if
+      // !buildmessage.jobHasMessages).
       return isop;
     });
   }
