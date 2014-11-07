@@ -1582,37 +1582,19 @@ main.registerCommand({
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  var count = 0;
-  var explicitPackages;
-  // No packages specified. Rebuild everything.
-  if (options.args.length === 0) {
-    if (options.appDir) {
-      // The catalog doesn't know about other programs in your app. Let's blow
-      // away their .build directories if they have them, and not rebuild
-      // them. Sort of hacky, but eh.
-      var programsDir = project.getProgramsDirectory();
-      var programsSubdirs = project.getProgramsSubdirs();
-      _.each(programsSubdirs, function (program) {
-        // The implementation of this part of the function might change once we
-        // change the control file format to explicitly specify packages and
-        // programs instead of just loading everything in the programs
-        // directory?
-        files.rm_recursive(path.join(programsDir, program, '.build.' + program));
-      });
-    }
-  } else {
-    explicitPackages = options.args;
-  }
+  throw Error("XXX #3006 re-implement meteor rebuild");
 
-  var messages = buildmessage.capture(function () {
-      count = catalog.complete.rebuildLocalPackages(explicitPackages);
-  });
-  if (count)
-    console.log("Built " + count + " packages.");
-  if (messages.hasMessages()) {
-    Console.stderr.write("\n" + messages.formatMessages());
-    return 1;
-  }
+  // XXX #3006: meteor rebuild used to have to do stuff with the local catalog
+  // and so forth.  Now it will just delete directories in
+  // APP/.meteor/local/isopacks.
+  //
+  // old logic (roughly):
+  //   - if you don't specify any package names, rebuild all packages, and if
+  //     you're in an app, delete all the '.build.' directories in programs in
+  //     the app too
+  //   - if you do specify package names, just rebuild those
+  //   - Print "Build N packages."
+  // Also this should be moved to commands-packages.js
 });
 
 ///////////////////////////////////////////////////////////////////////////////

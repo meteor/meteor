@@ -68,11 +68,14 @@ var expectThrows = markStack(function (f) {
 
 var getToolsPackage = function () {
   buildmessage.assertInCapture();
-  // Rebuild the tool package --- necessary because we don't actually
-  // rebuild the tool in the cached version every time.
-  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
-    throw Error("didn't rebuild meteor-tool?");
-  }
+  // XXX #3006: we need to rebuild the tool package explicitly here (or be sure
+  // that self-test always does so anyway).
+  // Old code:
+  // // Rebuild the tool package --- necessary because we don't actually
+  // // rebuild the tool in the cached version every time.
+  // if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
+  //   throw Error("didn't rebuild meteor-tool?");
+  // }
   var loader = new packageLoader.PackageLoader({
     versions: null,
     catalog: catalog.complete
