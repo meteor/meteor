@@ -38,6 +38,10 @@ _.extend(PackageCache.prototype, {
   // nearly all reloading.
   refresh: function (soft) {
     var self = this;
+
+    if (self.catalog.isopacketBuildingCatalog)
+      throw Error("refreshing the isopacket catalog? why?");
+
     soft = soft || false;
 
     self.softReloadCache = soft ? self.loadedPackages : {};
@@ -156,7 +160,7 @@ _.extend(PackageCache.prototype, {
     });
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
-    if (fs.existsSync(buildDir)) {
+    if (!self.catalog.isopacketBuildingCatalog && fs.existsSync(buildDir)) {
       isop = new isopack.Isopack();
       var maybeUpToDate = true;
       try {
@@ -202,7 +206,8 @@ _.extend(PackageCache.prototype, {
         buildDir: buildDir
       };
 
-      if (! buildmessage.jobHasMessages()) {
+      if (! buildmessage.jobHasMessages() &&
+          ! self.catalog.isopacketBuildingCatalog) {
         // Save it, for a fast load next time
         try {
           files.addToGitignore(loadPath, '.build*');
