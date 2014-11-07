@@ -829,11 +829,15 @@ main.registerCommand({
 
                 // We are not very good with change detection on the meteor
                 // tool, so we should just make extra-special sure to rebuild it
-                // completely before publishing. Though we don't really need this.
+                // completely before publishing. Though we don't really need
+                // this.
                 if (packageSource.includeTool) {
                   // Remove the build directory.
-                  files.rm_recursive(
-                    path.join(packageSource.sourceRoot, '.build.' + item));
+                  // XXX #3006 Make sure to always rebuild the tool here. On the
+                  //           other hand, this might not be necessary if
+                  //           compiler.checkUpToDate always says that the tool
+                  //           is out of date, or if we're using an
+                  //           appropriately temporary cache directory.
                 }
 
                 // Now compile it! Once again, everything should compile, and if

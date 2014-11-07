@@ -225,7 +225,8 @@ var runTest = function () {
     // We also have to delete the .build directory or else we won't rebuild at
     // all.
     // XXX this seems wrong!
-    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
+    // XXX #3006 Make sure that test-package gets rebuilt:
+    //           files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
     assert(!fs.existsSync(path.join(nodeModulesDir)));
     reloadPackages();
 
@@ -273,7 +274,8 @@ var runTest = function () {
     // We also have to delete the .build directory or else we won't rebuild at
     // all.
     // XXX this seems wrong!
-    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
+    // XXX #3006 Make sure that test-package gets rebuilt:
+    //    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
     assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
     reloadPackages();

@@ -561,7 +561,7 @@ _.extend(Isopack.prototype, {
 
       if (mainJson.format !== "unipackage-pre2") {
         // We don't support pre-0.9.0 isopacks, but we do know enough to delete
-        // them if we find them in .build.* somehow (rather than crash).
+        // them if we find them in an isopack cache somehow (rather than crash).
         if (mainJson.format === "unipackage-pre1") {
           throw new exports.OldIsopackFormatError();
         }
