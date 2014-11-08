@@ -270,7 +270,7 @@ var determineBuildTimeDependencies = function (packageSource,
   // memorizing results makes the constraint solver more efficient.
   // (But we don't do this if we're building isopackets.)
   if (ret.packageDependencies &&
-      !packageSource.catalog.isopacketBuildingCatalog) {
+      ! packageSource.catalog.isopacketBuildingCatalog) {
     var constraintResults = {
       dependencies: ret.packageDependencies,
       pluginDependencies: ret.pluginDependencies

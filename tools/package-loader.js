@@ -23,7 +23,7 @@ exports.PackageLoader = function (options) {
   // sometimes we might end up with another PackageLoader here. Pretend that it
   // didn't tell us versions.
   // XXX Delete this code once compiler no longer makes its own PackageLoaders.
-  if (options.versions && !options.catalog.isopacketBuildingCatalog)
+  if (options.versions && ! options.catalog.isopacketBuildingCatalog)
     self.versions = options.versions;
 
   self.constraintSolverOpts = options.constraintSolverOpts;

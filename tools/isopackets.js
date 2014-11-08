@@ -109,7 +109,7 @@ var ensureIsopacketsLoadable = function () {
 
   // If we're not running from checkout, then there's nothing to build and we
   // can declare that all isopackets are loadable.
-  if (!files.inCheckout()) {
+  if (! files.inCheckout()) {
     _.each(ISOPACKETS, function (packages, name) {
       loadedIsopackets[name] = null;
     });
@@ -128,17 +128,17 @@ var ensureIsopacketsLoadable = function () {
       var isopacketRoot = isopacketPath(isopacketName);
       var existingBuildinfo = files.readJSONOrNull(
         path.join(isopacketRoot, 'isopacket-buildinfo.json'));
-      var needRebuild = !existingBuildinfo;
-      if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
+      var needRebuild = ! existingBuildinfo;
+      if (! needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
         needRebuild = true;
       }
-      if (!needRebuild) {
+      if (! needRebuild) {
         var watchSet = watch.WatchSet.fromJSON(existingBuildinfo.watchSet);
-        if (!watch.isUpToDate(watchSet)) {
+        if (! watch.isUpToDate(watchSet)) {
           needRebuild = true;
         }
       }
-      if (!needRebuild) {
+      if (! needRebuild) {
         // Great, it's loadable without a rebuild.
         loadedIsopackets[isopacketName] = null;
         return;
@@ -146,7 +146,7 @@ var ensureIsopacketsLoadable = function () {
 
       // We're going to need to build! Make a catalog and loader if we haven't
       // yet.
-      if (!isopacketCatalog) {
+      if (! isopacketCatalog) {
         isopacketCatalog = newIsopacketBuildingCatalog();
         localPackageLoader = new packageLoader.PackageLoader({
           versions: null,
@@ -192,7 +192,7 @@ var ensureIsopacketsLoadable = function () {
 
 // Returns a new all-local-packages catalog to be used for building isopackets.
 var newIsopacketBuildingCatalog = function () {
-  if (!files.inCheckout())
+  if (! files.inCheckout())
     throw Error("No need to build isopackets unless in checkout!");
 
   // XXX once a lot more refactors are done, this should be able to just be a
