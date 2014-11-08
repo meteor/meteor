@@ -160,7 +160,7 @@ _.extend(PackageCache.prototype, {
     });
     // Does it have an up-to-date build?
     var buildDir = path.join(loadPath, '.build.'+  name);
-    if (!self.catalog.isopacketBuildingCatalog && fs.existsSync(buildDir)) {
+    if (! self.catalog.isopacketBuildingCatalog && fs.existsSync(buildDir)) {
       isop = new isopack.Isopack();
       var maybeUpToDate = true;
       try {

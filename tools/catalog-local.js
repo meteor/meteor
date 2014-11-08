@@ -597,7 +597,8 @@ _.extend(LocalCatalog.prototype, {
         unip = compiler.compile(self.packages[name].packageSource, {
           ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
         }).isopack;
-        if (! buildmessage.jobHasMessages() && !self.isopacketBuildingCatalog) {
+        if (! buildmessage.jobHasMessages() &&
+            ! self.isopacketBuildingCatalog) {
           // Save the build, for a fast load next time
           try {
             var buildDir = path.join(sourcePath, '.build.'+ name);
