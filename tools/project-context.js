@@ -83,15 +83,15 @@ _.extend(exports.ProjectContext.prototype, {
 
     var depsAndConstraints = {deps: [], constraints: []};
 
-    self._addAppConstraints(depsAndConstraints, cat);
-    // XXX #3006 Add constraints on local packages
+    self._addAppConstraints(depsAndConstraints);
+    self._addLocalPackageConstraints(depsAndConstraints, cat.localCatalog);
     // XXX #3006 Add constraints from the release
     // XXX #3006 Add constraints from other programs
     // XXX #3006 Add a dependency on ctl
     return depsAndConstraints;
   },
 
-  _addAppConstraints: function (depsAndConstraints, cat) {
+  _addAppConstraints: function (depsAndConstraints) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -110,11 +110,27 @@ _.extend(exports.ProjectContext.prototype, {
         }
         if (!constraint)
           return;  // recover by ignoring
+
+        // Add a dependency ("this package must be used") and a constraint
+        // ("... at this version (maybe 'any reasonable')").
         depsAndConstraints.deps.push(constraint.name);
         depsAndConstraints.constraints.push(constraint);
       });
     });
   },
+
+  _addLocalPackageConstraints: function (depsAndConstraints, localCat) {
+    var self = this;
+    _.each(localCat.getAllPackageNames(), function (packageName) {
+      var versionRecord = localCat.getLatestVersion(packageName);
+      var constraint =
+            utils.parseConstraint(packageName + "@=" + versionRecord.version);
+      // Add a constraint ("this is the only version available") but no
+      // dependency (we don't automatically use all local packages!)
+      depsAndConstraints.constraints.push(constraint);
+    });
+  },
+
 
   // Returns the file path to the .meteor/packages file, containing the
   // constraints for this specific project.
