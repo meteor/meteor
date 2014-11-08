@@ -38,7 +38,8 @@ var Console = require('./console.js').Console;
 //   Console.info(reverse.call('reverse', 'hello world'));
 
 
-// All of the defined isopackets.
+// All of the defined isopackets. Whenever they are being built, they will be
+// built in the order listed here (which is mostly relevant for js-analyze).
 var ISOPACKETS = {
   // Note: when running from a checkout, js-analyze must always be the
   // the first to be rebuilt, because it might need to be loaded as part
@@ -120,7 +121,8 @@ var ensureIsopacketsLoadable = function () {
   var localPackageLoader = null;
 
   // Look at each isopacket. Check to see if it's on disk and up to date. If
-  // not, build it.
+  // not, build it. We rebuild them in the order listed in ISOPACKETS, which
+  // ensures that we deal with js-analyze first.
   var messages = buildmessage.capture(function () {
     _.each(ISOPACKETS, function (packages, isopacketName) {
       var isopacketRoot = isopacketPath(isopacketName);
