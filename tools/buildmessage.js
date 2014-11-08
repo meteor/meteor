@@ -281,6 +281,10 @@ var enterJob = function (options, f) {
     options = {};
   }
 
+  if (typeof options === "string") {
+    options = {title: options};
+  }
+
   var progress;
   {
     var parentProgress = currentProgress.get();

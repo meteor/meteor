@@ -5,7 +5,10 @@ var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog.js');
 var catalogLocal = require('./catalog-local.js');
 var catalogRemote = require('./catalog-remote.js');
+var Console = require('./console.js').Console;
 var files = require('./files.js');
+var isopackets = require('./isopackets.js');
+var packageMap = require('./package-map.js');
 var utils = require('./utils.js');
 
 exports.ProjectContext = function (appDir) {
@@ -32,7 +35,29 @@ _.extend(exports.ProjectContext.prototype, {
       return;
 
     var depsAndConstraints = self._getRootDepsAndConstraints(cat);
-    console.log("DAC", require('util').inspect(depsAndConstraints, {depth:4}));
+    var resolver = self._buildResolver(cat);
+
+    var solution;
+    buildmessage.enterJob("selecting package versions", function () {
+      // XXX #3006 set previousSolution
+      try {
+        var d = +(new Date);
+        solution = resolver.resolve(
+          depsAndConstraints.deps, depsAndConstraints.constraints);
+        console.log("TOOK", +(new Date) - d);
+      } catch (e) {
+        if (!e.constraintSolverError)
+          throw e;
+        buildmessage.error(e.message);
+      }
+    });
+
+    if (!solution)
+      return;  // error is already in buildmessage
+
+    // XXX #3006 Check solution.usedRCs and maybe print something about it
+
+    self.packageMap = new packageMap.PackageMap(solution.answer, cat);
   },
 
   _localPackageSearchDirs: function () {
@@ -129,6 +154,20 @@ _.extend(exports.ProjectContext.prototype, {
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
     });
+  },
+
+  _buildResolver: function (cat) {
+    var self = this;
+
+    var constraintSolverPackage =
+          isopackets.load('constraint-solver')['constraint-solver'];
+    var resolver =
+      new constraintSolverPackage.ConstraintSolver.PackagesResolver(cat, {
+        nudge: function () {
+          Console.nudge(true);
+        }
+      });
+    return resolver;
   },
 
 

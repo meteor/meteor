@@ -548,6 +548,13 @@ _.extend(LocalCatalog.prototype, {
     };
   },
 
+  getPackageSourceRoot: function (name) {
+    var self = this;
+    if (! _.has(self.packages, name))
+      return null;
+    return self.packages[name].packageSource.sourceRoot;
+  },
+
   // Given a version string that may or may not have a build ID, convert it into
   // the catalog's internal format for local versions -- [version
   // number]+local. (for example, 1.0.0+local).
