@@ -852,8 +852,6 @@ _.extend(PackageSource.prototype, {
         symbols: { Package: Package, Npm: Npm, Cordova: Cordova }
       });
     } catch (e) {
-      console.log(e.stack); // XXX should we keep this here -- or do we want broken
-                            // packages to fail silently?
       buildmessage.exception(e);
 
       // Could be a syntax error or an exception. Recover by

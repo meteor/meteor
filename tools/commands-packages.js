@@ -2869,3 +2869,28 @@ main.registerCommand({
 
   return 0;
 });
+
+
+// XXX #3006: This is just a temporary command to test new code.
+main.registerCommand({
+  name: 'prep',
+  maxArgs: 0,
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never(),
+  newfangledProject: true,
+  pretty: true,
+  requiresApp: true
+}, function (options) {
+  console.log("I AM IN AN APP", options.appDir);
+  var projectContextModule = require('./project-context.js');
+  var projectContext = new projectContextModule.ProjectContext(options.appDir);
+
+  var messages = buildmessage.capture(function () {
+    projectContext.resolveConstraints();
+  });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while initializing project:");
+    Console.printMessages(messages);
+    return 1;
+  }
+});

@@ -386,5 +386,6 @@ exports.official = remoteCatalog.official;
 // contains local packages, and since local packages always beat server
 // packages, it doesn't contain any information about the server version of
 // local packages.
+exports.LayeredCatalog = LayeredCatalog;
 exports.complete = new LayeredCatalog();
 exports.complete.setCatalogs(new localCatalog.LocalCatalog({containingCatalog : exports.complete}), remoteCatalog.official);

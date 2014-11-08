@@ -667,9 +667,6 @@ Fiber(function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = path.resolve(appDir);
-    // Set the project root directory. This doesn't do any dependency
-    // calculation -- we can't do that until the release is initialized.
-    project.project.setRootDir(appDir);
   }
 
   require('./isopackets.js').ensureIsopacketsLoadable();
@@ -737,7 +734,7 @@ Fiber(function () {
   if (appDir) {
     // appRelease will be null if a super old project with no
     // .meteor/release or 'none' if created by a checkout
-    appReleaseUnnormalized = project.project.getMeteorReleaseVersion();
+    appReleaseUnnormalized = project.project.getMeteorReleaseVersion(appDir);
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
     if (appReleaseUnnormalized === '') {
@@ -1168,8 +1165,15 @@ longHelp(commandName));
   if (typeof requiresApp === "function")
     requiresApp = requiresApp(options);
 
-  if (appDir)
+  if (appDir) {
     options.appDir = appDir;
+    // XXX #3006: Eventually everything should be newfangled!
+    if (! command.newfangledProject) {
+      // Set the project root directory. This doesn't do any dependency
+      // calculation -- we can't do that until we've scanned local packages.
+      project.project.setRootDir(appDir);
+    }
+  }
 
   if (requiresApp && ! options.appDir) {
     // This is where you end up if you type 'meteor' with no args,

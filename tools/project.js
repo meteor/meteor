@@ -16,6 +16,9 @@ var Console = require('./console.js').Console;
 
 var project = exports;
 
+// XXX #3006: Most of this file is being refactored into
+// project-context.js. Finish the job.
+
 // Given a set of lines, each of the form "foo@bar", return an object of form
 // {foo: "bar", bar: null}. If there is "bar", value of the corresponding key is
 // null.
@@ -634,9 +637,9 @@ _.extend(Project.prototype, {
   // This refers to the release that the project is pinned to, rather than
   // the release that we are actually running or anything like that, so it
   // lives in the project.
-  getMeteorReleaseVersion : function () {
+  getMeteorReleaseVersion : function (appDirOverride) {
     var self = this;
-    var releasePath = self._meteorReleaseFilePath();
+    var releasePath = self._meteorReleaseFilePath(appDirOverride);
     try {
       var lines = files.getLines(releasePath);
     } catch (e) {
@@ -660,9 +663,9 @@ _.extend(Project.prototype, {
   },
 
   // Returns the full filepath of the projects .meteor/release file.
-  _meteorReleaseFilePath : function () {
+  _meteorReleaseFilePath : function (appDirOverride) {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'release');
+    return path.join(appDirOverride || self.rootDir, '.meteor', 'release');
   },
 
   // Modifications
