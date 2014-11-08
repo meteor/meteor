@@ -161,8 +161,13 @@ _.extend(LayeredCatalog.prototype, {
     return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
   },
 
+  // Returns the map from version to earliestCompatibleVersion for all versions
+  // overridden by a local package. If there's no local package, returns an
+  // empty object.
   getForgottenECVs: function (packageName) {
     var self = this;
+    if (! self.localCatalog.getPackage(packageName))
+      return {};
     var versions = self.otherCatalog.getSortedVersions(packageName);
     var forgottenECVs = {};
     _.each(versions, function (v) {
