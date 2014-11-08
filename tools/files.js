@@ -183,14 +183,6 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Returns a directory with pre-built isopacks for use by the tool, or 'null'
-// if in a checkout.
-files.getUniloadDir = function () {
-  if (files.inCheckout())
-    return null;
-  return path.join(files.getCurrentToolsDir(), 'isopacks');
-};
-
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).
@@ -926,6 +918,19 @@ exports.getLinesOrEmpty = function (file) {
       return [];
     throw e;
   }
+};
+
+// Returns null if the file does not exist, otherwise returns the parsed JSON in
+// the file. Throws on errors other than ENOENT (including JSON parse failure).
+exports.readJSONOrNull = function (file) {
+  try {
+    var raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return null;
+    throw e;
+  }
+  return JSON.parse(raw);
 };
 
 // Trims whitespace & other filler characters of a line in a project file.

@@ -597,7 +597,8 @@ _.extend(LocalCatalog.prototype, {
         unip = compiler.compile(self.packages[name].packageSource, {
           ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
         }).isopack;
-        if (! buildmessage.jobHasMessages()) {
+        if (! buildmessage.jobHasMessages() &&
+            ! self.isopacketBuildingCatalog) {
           // Save the build, for a fast load next time
           try {
             var buildDir = path.join(sourcePath, '.build.'+ name);
@@ -649,6 +650,12 @@ _.extend(LocalCatalog.prototype, {
   _maybeGetUpToDateBuild: function (name, constraintSolverOpts) {
     var self = this;
     buildmessage.assertInCapture();
+
+    // When we build packages for isopackets, we're using different build
+    // settings (eg we're ignoring app packages) so they shouldn't share
+    // the same cache.
+    if (self.isopacketBuildingCatalog)
+      return null;
 
     var sourcePath = self.packages[name].packageSource.sourceRoot;
     var buildDir = path.join(sourcePath, '.build.' + name);

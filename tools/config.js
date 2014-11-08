@@ -236,6 +236,14 @@ _.extend(exports, {
                      self.getLocalPackageCacheFilename());
   },
 
+  getIsopacketRoot: function () {
+    if (files.inCheckout()) {
+      return path.join(files.getCurrentToolsDir(), '.meteor', 'isopackets');
+    } else {
+      return path.join(files.getCurrentToolsDir(), 'isopackets');
+    }
+  },
+
   getBannersShownFilename: function() {
     return path.join(tropohouse.default.root,
                      "package-metadata", "v1.1", "banners-shown.json");

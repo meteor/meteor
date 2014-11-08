@@ -8,8 +8,6 @@ var packageCache = require('./package-cache.js');
 var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
 var files = require('./files.js');
-var prebuiltBootstrap = require('./catalog-bootstrap-prebuilt.js');
-var checkoutBootstrap = require('./catalog-bootstrap-checkout.js');
 var project = require('./project.js');
 var utils = require('./utils.js');
 var config = require('./config.js');
@@ -253,7 +251,7 @@ _.extend(LayeredCatalog.prototype, {
   resolveConstraints: function (constraints, resolverOpts, opts) {
     var self = this;
     opts = opts || {};
-    // OK, since we are the complete catalog, the uniload catalog must be fully
+    // OK, since we are the complete catalog, isopackets must be fully
     // initialized, so it's safe to load a resolver if we didn't
     // already. (Putting this off until the first call to resolveConstraints
     // also helps with performance: no need to build this package and load the
@@ -380,11 +378,10 @@ _.extend(LayeredCatalog.prototype, {
 
   _buildResolver: function () {
     var self = this;
-    var uniload = require('./uniload.js');
+    var isopackets = require("./isopackets.js");
 
-    var constraintSolverPackage =  uniload.load({
-      packages: [ 'constraint-solver']
-    })['constraint-solver'];
+    var constraintSolverPackage =
+          isopackets.load('constraint-solver')['constraint-solver'];
     var resolver =
       new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
         nudge: function () {
@@ -402,13 +399,6 @@ _.extend(LayeredCatalog.prototype, {
 
 exports.DEFAULT_TRACK = remoteCatalog.DEFAULT_TRACK;
 exports.official = remoteCatalog.official;
-
-//Instantiate the various catalogs
-if (files.inCheckout()) {
-  exports.uniload = new checkoutBootstrap.BootstrapCatalogCheckout();
-} else {
-  exports.uniload = new prebuiltBootstrap.BootstrapCatalogPrebuilt();
-}
 
 // This is the catalog that's used to actually drive the constraint solver: it
 // contains local packages, and since local packages always beat server

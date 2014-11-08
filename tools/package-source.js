@@ -281,15 +281,15 @@ var PackageSource = function (catalog) {
 
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
-  // built isopacks for all the packages in uniload.ROOT_PACKAGES as well as
-  // their transitive (strong) dependencies.
+  // built copies of all known isopackets.
   self.includeTool = false;
 
   // If this is true, then this package has no source files. (But the converse
   // is not true: this is only set to true by one particular constructor.) This
   // is specifically so that a few pieces of code can detect the wrapper "load"
-  // package that uniload uses and not do extra work that doesn't make sense in
-  // the uniload context.
+  // package that isopacket building uses and not do extra work that doesn't
+  // make sense in the isopacket-building context.
+  // XXX This may no longer be necessary.
   self.noSources = false;
 
   // If this is true, the package source comes from the package server, and
@@ -1255,14 +1255,16 @@ _.extend(PackageSource.prototype, {
          * @param {String | String[]} meteorRelease Specification of a release: track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the default release track `METEOR`.
          */
         versionsFrom: function (releases) {
-          // Uniloaded packages really ought to be in the core release, by
+          // Packages in isopackets really ought to be in the core release, by
           // definition, so saying that they should use versions from another
           // release doesn't make sense. Moreover, if we're running from a
-          // checkout, we build packages for catalog.uniload before we
-          // initialize catalog.official, so we wouldn't actually be able to
-          // interpret the release name anyway.
-          if (self.catalog === catalog.uniload) {
-            buildmessage.error("uniloaded packages may not use versionsFrom");
+          // checkout, we build isopackets before we initialize catalog.official
+          // (since we may need the ddp isopacket to refresh catalog.official),
+          // so we wouldn't actually be able to interpret the release name
+          // anyway.
+          if (self.catalog.isopacketBuildingCatalog) {
+            buildmessage.error(
+              "packages in isopackets may not use versionsFrom");
             // recover by ignoring
             return;
           }
@@ -1827,8 +1829,9 @@ _.extend(PackageSource.prototype, {
       // versions file format and semantics. So, we don't need to and cannot
       // record dependencyVersions for those, and that's OK for now.
       //
-      // Uniload sets its sourceRoot to "/", which is a little strange. Uniload
-      // does not need to store dependency versions either.
+      // Uniload (the precursor to isopackets) used to set it sourceRoot to
+      // "/", which is a little strange. That's what we're working around here,
+      // though we can probably avoid this in the future.
       if (self.name && self.sourceRoot !== "/") {
         fs.writeFileSync(versionsFile, JSON.stringify(versions, null, 2), 'utf8');
       }
