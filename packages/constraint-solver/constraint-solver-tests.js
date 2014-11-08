@@ -482,7 +482,7 @@ testWithResolver(test, resolver, function(t) {
        "splendido:accounts-templates-semantic-ui": null,
        "u2622:persistent-session": null,
        "ctl": null },
-     {}, {_testing: true});
+     {}, {_testing: false}); // use real cost function!
 });
 
 });

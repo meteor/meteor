@@ -463,3 +463,24 @@ var ResolveContext = function () {
   self.topLevelPrereleases = {};
   self.useRCsOK = false;
 };
+
+var printDiff = function (o, n) {
+  _.each(o, function (oo, nn) { o[nn] = oo.toString(); });
+  _.each(n, function (oo, nn) { n[nn] = oo.toString(); });
+  var str = "";
+  _.each(o, function (obj, name) {
+    if (! _.has(n, name)) {
+      str += "- " + name + ': ' + obj + '\n';
+      return;
+    }
+    if (obj !== n[name]) {
+      str += "  " + name + ": " + obj + " -> " + n[name] + '\n';
+    }
+  });
+  _.each(n, function (obj, name) {
+    if (! _.has(o, name))
+      str += "+ " + name + ": " + obj + '\n';
+  });
+  return str;
+};
+
