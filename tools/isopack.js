@@ -1111,6 +1111,10 @@ _.extend(Isopack.prototype, {
     });
 
     var messages = buildmessage.capture(function () {
+      // We rebuild them in the order listed in ISOPACKETS. This is not strictly
+      // necessary here, since any isopackets loaded as part of the build
+      // process are going to be the current tool's isopackets, not the
+      // isopackets that we're writing out.
       _.each(isopackets.ISOPACKETS, function (packages, isopacketName) {
         buildmessage.enterJob({
           title: "Compiling " + isopacketName + " packages for the tool"
