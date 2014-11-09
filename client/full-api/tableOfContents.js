@@ -312,9 +312,11 @@ var toc = [
     "coffeescript",
     "jquery",
     "less",
+    "markdown",
     "oauth-encryption",
     "random",
     "showdown",
+    "stylus",
     "underscore",
     "webapp"
   ] ],
