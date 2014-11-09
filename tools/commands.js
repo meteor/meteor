@@ -117,7 +117,7 @@ main.registerCommand({
 
     // invoke git command and get first line from output as result
     // if process had no error
-    function gitStatus(cmd) {
+    function gitRun(cmd) {
       var future = new Future;
       var gitCommand = child_process.exec(
         "LANG=C git " + cmd, function(error, stdout, stderr) {
@@ -136,21 +136,19 @@ main.registerCommand({
       return(future.wait());
     }
 
-    // get git status if on branch
-    var gitResult = gitStatus("status -b --porcelain");
+    // get git-status and suppose to be on branch
+    var gitResult = gitRun("status -b --porcelain");
 
-    // test status if empty or not on branch
+    // test if git-status is empty or current HEAD not on branch
     if (gitResult.success && ((gitResult.status == "") || (gitResult.status.search(/\(no branch\)/i) > 0))) {
-      // get git status for HEAD
-      gitResult = gitStatus("status");
+      // get git-status again to read detailed info for HEAD
+      gitResult = gitRun("status");
     }
 
-    // show version info and git status info if available
-    Console.stderr.write("Unreleased (running from a checkout)");
-    if (gitResult.success && gitResult.status) {
-      Console.stderr.write(" [" + gitResult.status + "]");
-    }
-    Console.stderr.write("\n");
+    // extract git-status info and beautify text if on branch
+    var gitInfo = (gitResult.success && gitResult.status) ? " [" + gitResult.status.replace(/^## /, "BRANCH ") + "]" : "";
+
+    Console.stderr.write("Unreleased (running from a checkout)" + gitInfo + "\n");
 
     return 1;
   }
