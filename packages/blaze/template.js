@@ -258,6 +258,11 @@ Blaze.TemplateInstance.prototype.parent = function (height) {
     if (! view)
       return null;
 
+    // Body view has template field, but not templateInstance,
+    // which more or less signals that we reached the top.
+    if (! view.templateInstance)
+      return null;
+
     template = view.templateInstance();
   }
 
