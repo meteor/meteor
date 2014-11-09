@@ -312,10 +312,12 @@ var toc = [
     "fastclick",
     "jquery",
     "less",
+    "markdown",
     "oauth-encryption",
     "random",
     "stylus",
     "showdown",
+    "stylus",
     "underscore",
     "webapp"
   ] ],
