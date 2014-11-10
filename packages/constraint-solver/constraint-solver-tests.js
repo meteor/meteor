@@ -61,16 +61,16 @@ var defaultResolver = makeResolver([
   ["sparky-forms", "1.1.2", {"forms": "=1.0.1", "sparkle": "=2.1.1"}],
   ["sparky-forms", "1.0.0", {"awesome-dropdown": "=1.4.0"}],
   ["forms", "1.0.1", {"sparkle": "2.1.0", "jquery-widgets": "1.0.0"}],
-  ["sparkle", "2.1.0", "2.1.0", {"jquery": "1.8.2"}],
-  ["sparkle", "2.1.1", "2.1.0", {"jquery": "1.8.2"}],
+  ["sparkle", "2.1.0", {"jquery": "1.8.2"}],
+  ["sparkle", "2.1.1", {"jquery": "1.8.2"}],
   ["sparkle", "1.0.0"],
   ["awesome-dropdown", "1.4.0", {"dropdown": "=1.2.2"}],
   ["awesome-dropdown", "1.5.0", {"dropdown": "=1.2.2"}],
   ["dropdown", "1.2.2", {"jquery-widgets": "1.0.0"}],
   ["jquery-widgets", "1.0.0", {"jquery": "1.8.0", "sparkle": "2.1.1"}],
   ["jquery-widgets", "1.0.2", {"jquery": "1.8.0", "sparkle": "2.1.1"}],
-  ["jquery", "1.8.0", "1.8.0"],
-  ["jquery", "1.8.2", "1.8.0"]
+  ["jquery", "1.8.0"],
+  ["jquery", "1.8.2"]
 ]);
 
 var splitArgs = function (deps) {
