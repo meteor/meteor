@@ -430,8 +430,9 @@ _.extend(Project.prototype, {
         if (!oldVersion) {
           return;
         }
-        var oldECV = oldVersion.earliestCompatibleVersion;
-        if (oldECV !== newRec.earliestCompatibleVersion) {
+        var oldMajorVersion = packageVersionParser.majorVersion(oldV);
+        var newMajorVersion = packageVersionParser.majorVersion(newV);
+        if (oldMajorVersion !== newMajorVersion) {
           incompatibleUpdates.push({
             name: package,
             description: "(" + oldV + "->" + newV + ") " + newRec.description

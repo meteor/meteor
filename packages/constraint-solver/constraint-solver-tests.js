@@ -6,9 +6,6 @@ var makeResolver = function (data) {
   _.each(data, function (versionDescription) {
     var packageName = versionDescription.shift();
     var version = versionDescription.shift();
-    var ecv = (typeof versionDescription[0] === "string"
-               ? versionDescription.shift()
-               : PackageVersion.defaultECV(version));
     var deps = versionDescription.shift();
 
     if (!Packages.findOne({name: packageName})) {
@@ -27,8 +24,7 @@ var makeResolver = function (data) {
       };
     });
     Versions.insert({ packageName: packageName, version: version,
-                      earliestCompatibleVersion: ecv,
-                    dependencies: constructedDeps });
+                      dependencies: constructedDeps });
     Builds.insert({ packageName: packageName, version: version,
                     buildArchitectures: "os+web.cordova+web.browser" });
   });
@@ -630,17 +626,9 @@ function getCatalogStub (gems) {
         return pv.name === name && exactVersion(pv.number) === version;
       });
 
-      var ecv = function (version) {
-        // hard-coded, because lots of the constraints are > or >= which we
-        // don't support anymore.  But constant ECV means that "compatible-with"
-        // is interpreted as >=.
-        return "0.0.0";
-      };
-
       var packageVersion = {
         packageName: gem.name,
         version: gem.number,
-        earliestCompatibleVersion: ecv(gem.number),
         dependencies: {}
       };
 

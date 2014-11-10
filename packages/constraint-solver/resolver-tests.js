@@ -13,16 +13,15 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   //  \    \-> D => E
   //   \->  \-> F
   var resolver = new ConstraintSolver.Resolver();
-  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0", "1.0.0");
-  var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0", "1.0.0");
-  var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0", "1.0.0");
-  var D110 = new ConstraintSolver.UnitVersion("d", "1.1.0", "1.0.0");
-  var E100 = new ConstraintSolver.UnitVersion("e", "1.0.0", "1.0.0");
-  var F120 = new ConstraintSolver.UnitVersion("f", "1.2.0", "1.0.0");
-  // Ensure that the resolver knows that these versions exist and have ECV =
-  // 1.0.0.
-  var F100 = new ConstraintSolver.UnitVersion("f", "1.0.0", "1.0.0");
-  var F110 = new ConstraintSolver.UnitVersion("f", "1.1.0", "1.0.0");
+  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
+  var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0");
+  var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0");
+  var D110 = new ConstraintSolver.UnitVersion("d", "1.1.0");
+  var E100 = new ConstraintSolver.UnitVersion("e", "1.0.0");
+  var F120 = new ConstraintSolver.UnitVersion("f", "1.2.0");
+  // Ensure that the resolver knows that these versions exist.
+  var F100 = new ConstraintSolver.UnitVersion("f", "1.0.0");
+  var F110 = new ConstraintSolver.UnitVersion("f", "1.1.0");
 
   resolver.addUnitVersion(A100);
   resolver.addUnitVersion(B100);
@@ -61,12 +60,12 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
 
 Tinytest.add("constraint solver - resolver, cost function - pick latest", function (test) {
   var resolver = new ConstraintSolver.Resolver();
-  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0", "1.0.0");
-  var A110 = new ConstraintSolver.UnitVersion("a", "1.1.0", "1.0.0");
-  var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0", "1.0.0");
-  var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0", "1.0.0");
-  var C110 = new ConstraintSolver.UnitVersion("c", "1.1.0", "1.0.0");
-  var C120 = new ConstraintSolver.UnitVersion("c", "1.2.0", "1.0.0");
+  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
+  var A110 = new ConstraintSolver.UnitVersion("a", "1.1.0");
+  var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0");
+  var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0");
+  var C110 = new ConstraintSolver.UnitVersion("c", "1.1.0");
+  var C120 = new ConstraintSolver.UnitVersion("c", "1.2.0");
 
   resolver.addUnitVersion(A100);
   resolver.addUnitVersion(A110);
@@ -108,11 +107,11 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
 
 Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", function (test) {
   var resolver = new ConstraintSolver.Resolver();
-  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0", "1.0.0");
-  var A110 = new ConstraintSolver.UnitVersion("a", "1.1.0", "1.0.0");
-  var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0", "1.0.0");
-  var B110 = new ConstraintSolver.UnitVersion("b", "1.1.0", "1.0.0");
-  var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0", "1.0.0");
+  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
+  var A110 = new ConstraintSolver.UnitVersion("a", "1.1.0");
+  var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0");
+  var B110 = new ConstraintSolver.UnitVersion("b", "1.1.0");
+  var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0");
 
   resolver.addUnitVersion(A100);
   resolver.addUnitVersion(A110);
@@ -148,8 +147,8 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
 
 Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
   var resolver = new ConstraintSolver.Resolver();
-  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0", "1.0.0");
-  var A100rc1 = new ConstraintSolver.UnitVersion("a", "1.0.0-rc1", "1.0.0");
+  var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
+  var A100rc1 = new ConstraintSolver.UnitVersion("a", "1.0.0-rc1");
 
   resolver.addUnitVersion(A100rc1);
   resolver.addUnitVersion(A100);

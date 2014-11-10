@@ -234,7 +234,6 @@ var Isopack = function () {
   self.name = null;
   self.metadata = {};
   self.version = null;
-  self.earliestCompatibleVersion = null;
   self.isTest = false;
   self.debugOnly = false;
 
@@ -311,7 +310,6 @@ _.extend(Isopack.prototype, {
     self.name = options.name;
     self.metadata = options.metadata;
     self.version = options.version;
-    self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
     self.cordovaDependencies = options.cordovaDependencies;
@@ -637,7 +635,6 @@ _.extend(Isopack.prototype, {
         summary: mainJson.summary
       };
       self.version = mainJson.version;
-      self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
       self.isTest = mainJson.isTest;
       self.debugOnly = !!mainJson.debugOnly;
     }
@@ -775,7 +772,6 @@ _.extend(Isopack.prototype, {
         name: self.name,
         summary: self.metadata.summary,
         version: self.version,
-        earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
         builds: [],
         plugins: []
