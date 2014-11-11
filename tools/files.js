@@ -12,7 +12,7 @@ var _ = require('underscore');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
-var rimraf = require('rimraf');
+var rimraf = require('./rimraf');
 
 var utils = require('./utils.js');
 var cleanup = require('./cleanup.js');
@@ -252,7 +252,7 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  rimraf.sync(p);
+  rimraf.sync(p, { maxBusyTries: 10 });
 };
 
 // Makes all files in a tree read-only.

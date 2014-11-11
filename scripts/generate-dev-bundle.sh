@@ -202,9 +202,6 @@ rm -rf node_modules/esprima/test
 # https://github.com/williamwicks/node-eachline/pull/4
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 
-# Cross-platform rm -rf
-npm install rimraf@2.2.8
-
 # Cordova npm tool for mobile integration
 # XXX We install our own fork of cordova because we need a particular patch that
 # didn't land to cordova-android yet. As soon as it lands, we can switch back to
@@ -306,5 +303,8 @@ echo "${BUNDLE_VERSION}" > .bundle_version.txt
 rm -rf build
 
 tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
+
+echo DONE
+{PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 
 echo DONE

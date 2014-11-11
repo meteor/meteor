@@ -45,7 +45,6 @@ npm install http-proxy@1.6.0
 npm install esprima@1.2.2
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 # npm install "https://github.com/meteor/cordova-cli/tarball/0c9b3362c33502ef8f6dba514b87279b9e440543"
-npm install rimraf@2.2.8
 
 Set-Location $DIR
 
@@ -90,3 +89,4 @@ echo "0.3.62" | Out-File .bundle_version.txt -Encoding ascii
 Set-Location $DIR\..
 
 echo "Done building Dev Bundle!"
+ne building Dev Bundle!"
