@@ -222,6 +222,11 @@ var compileUnibuild = function (options) {
       if (unibuild.pkg.name === isopk.name)
         return;
       pluginProviderPackageNames[unibuild.pkg.name] = true;
+      // If other package is built from source, then we need to rebuild this
+      // package if any file in the other package that could define a plugin
+      // changes.
+      watchSet.merge(unibuild.pkg.pluginWatchSet);
+
       if (_.isEmpty(unibuild.pkg.plugins))
         return;
       activePluginPackages.push(unibuild.pkg);
