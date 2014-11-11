@@ -75,7 +75,7 @@ _.extend(RunLog.prototype, {
 
     if (self.temporaryMessageLength) {
       var spaces = new Array(self.temporaryMessageLength + 1).join(' ');
-      process.stdout.write(spaces + '\r');
+      process.stdout.write(spaces + CARRIAGE_RETURN);
       self.temporaryMessageLength = null;
     }
   },
@@ -131,7 +131,7 @@ _.extend(RunLog.prototype, {
     var self = this;
 
     self._clearSpecial();
-    process.stdout.write(msg + "\r");
+    process.stdout.write(msg + CARRIAGE_RETURN);
     self.temporaryMessageLength = msg.length;
   },
 
@@ -141,7 +141,7 @@ _.extend(RunLog.prototype, {
     if (self.consecutiveRestartMessages) {
       // replace old message in place. this assumes that the new restart message
       // is not shorter than the old one.
-      process.stdout.write("\r");
+      process.stdout.write(CARRIAGE_RETURN);
       self.messages.pop();
       self.consecutiveRestartMessages ++;
     } else {
@@ -168,7 +168,7 @@ _.extend(RunLog.prototype, {
     if (self.consecutiveClientRestartMessages) {
       // replace old message in place. this assumes that the new restart message
       // is not shorter than the old one.
-      process.stdout.write("\r");
+      process.stdout.write(CARRIAGE_RETURN);
       self.messages.pop();
       self.consecutiveClientRestartMessages ++;
     } else {

@@ -930,12 +930,12 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       var spinner = ['-', '\\', '|', '/'];
       lastLinePrinted = "Waiting for you to register on the web... " +
         spinner[animationFrame];
-      process.stderr.write(lastLinePrinted + "\r");
+      process.stderr.write(lastLinePrinted + CARRIAGE_RETURN);
       animationFrame = (animationFrame + 1) % spinner.length;
     }, 200);
     var stopSpinner = function () {
       process.stderr.write(new Array(lastLinePrinted.length + 1).join(' ') +
-                           "\r");
+                           CARRIAGE_RETURN);
       clearInterval(timer);
     };
 
