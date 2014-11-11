@@ -3,12 +3,13 @@ var path = require('path');
 var bundler = require('./bundler.js');
 var Builder = require('./builder.js');
 var buildmessage = require('./buildmessage.js');
-var packageLoader = require("./package-loader.js");
 var files = require('./files.js');
 var compiler = require('./compiler.js');
 var config = require('./config.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
+var isopackCacheModule = require('./isopack-cache.js');
+var packageMapModule = require('./package-map.js');
 
 // An isopacket is a predefined set of isopackages which the meteor command-line
 // tool can load into its process. This is how we use the DDP client and many
@@ -116,15 +117,20 @@ var ensureIsopacketsLoadable = function () {
     return;
   }
 
-  // We make these two objects lazily later.
+  // We make these objects lazily later.
   var isopacketCatalog = null;
-  var localPackageLoader = null;
+  var isopackCache = null;
+  var packageMap = null;
 
+  var failedPackageBuild = false;
   // Look at each isopacket. Check to see if it's on disk and up to date. If
   // not, build it. We rebuild them in the order listed in ISOPACKETS, which
   // ensures that we deal with js-analyze first.
   var messages = buildmessage.capture(function () {
     _.each(ISOPACKETS, function (packages, isopacketName) {
+      if (failedPackageBuild)
+        return;
+
       var isopacketRoot = isopacketPath(isopacketName);
       var existingBuildinfo = files.readJSONOrNull(
         path.join(isopacketRoot, 'isopacket-buildinfo.json'));
@@ -148,26 +154,37 @@ var ensureIsopacketsLoadable = function () {
       // yet.
       if (! isopacketCatalog) {
         isopacketCatalog = newIsopacketBuildingCatalog();
-        localPackageLoader = new packageLoader.PackageLoader({
-          versions: null,
-          catalog: isopacketCatalog,
-          constraintSolverOpts: { ignoreProjectDeps: true }
+        // Make an isopack cache that doesn't save isopacks to disk and has no
+        // access to versioned packages.
+        isopackCache = new isopackCacheModule.IsopackCache;
+        var versions = {};
+        _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
+          versions[packageName] =
+            isopacketCatalog.getLatestVersion(packageName).version;
         });
+        packageMap = new packageMapModule.PackageMap(
+          versions, isopacketCatalog);
       }
 
       buildmessage.enterJob({
-        title: "Compiling " + isopacketName + " packages for the tool"
+        title: "Bundling " + isopacketName + " packages for the tool"
       }, function () {
-        var built = bundler.buildJsImage({
-          name: "isopacket-" + isopacketName,
-          packageLoader: localPackageLoader,
-          use: packages,
-          catalog: isopacketCatalog,
-          ignoreProjectDeps: true
-        });
-
+        // Build the packages into the in-memory IsopackCache.
+        isopackCache.buildLocalPackages(packageMap, packages);
         if (buildmessage.jobHasMessages())
           return;
+
+        // Now bundle them into a program.
+        var built = bundler.buildJsImage({
+          name: "isopacket-" + isopacketName,
+          packageMap: packageMap,
+          isopackCache: isopackCache,
+          use: packages,
+          catalog: isopacketCatalog
+        });
+        if (buildmessage.jobHasMessages())
+          return;
+
         var builder = new Builder({outputPath: isopacketRoot});
         builder.writeJson('isopacket-buildinfo.json', {
           builtBy: compiler.BUILT_BY,
@@ -195,9 +212,9 @@ var newIsopacketBuildingCatalog = function () {
   if (! files.inCheckout())
     throw Error("No need to build isopackets unless in checkout!");
 
-  // XXX once a lot more refactors are done, this should be able to just be a
-  // LocalCatalog. There's no reason that resolveConstraints should be called
-  // here!
+  // XXX #3006 once a lot more refactors are done, this should be able to just
+  // be a LocalCatalog. There's no reason that resolveConstraints should be
+  // called here!
   var catalogBootstrapCheckout = require('./catalog-bootstrap-checkout.js');
   var isopacketCatalog = new catalogBootstrapCheckout.BootstrapCatalogCheckout;
   var messages = buildmessage.capture(

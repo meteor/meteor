@@ -182,6 +182,10 @@ _.extend(LayeredCatalog.prototype, {
     return this.localCatalog.getAllPackageNames();
   },
 
+  getPackageSource: function (packageName) {
+    return this.localCatalog.getPackageSource(packageName);
+  },
+
   getPackage: function (name) {
     return this._returnFirst("getPackage", arguments, ACCEPT_NON_EMPTY);
   },

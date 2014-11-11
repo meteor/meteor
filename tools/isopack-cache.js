@@ -11,21 +11,33 @@ var watch = require('./watch.js');
 
 exports.IsopackCache = function (options) {
   var self = this;
+  options = options || {};
+  // cacheDir may be null; in this case, we just don't ever save things to disk.
   self.cacheDir = options.cacheDir;
+  // tropohouse may be null; in this case, we can't load versioned packages.
+  // eg, for building isopackets.
   self.tropohouse = options.tropohouse;
   self.isopacks = {};
 
-  files.mkdir_p(self.cacheDir);
+  if (self.cacheDir)
+    files.mkdir_p(self.cacheDir);
 };
 
 _.extend(exports.IsopackCache.prototype, {
-  buildLocalPackages: function (packageMap) {
+  buildLocalPackages: function (packageMap, rootPackageNames) {
     var self = this;
     buildmessage.assertInCapture();
 
-    packageMap.eachPackage(function (name, packageInfo) {
-      self._ensurePackageBuilt(name, packageMap);
-    });
+    var onStack = {};
+    if (rootPackageNames) {
+      _.each(rootPackageNames, function (name) {
+        self._ensurePackageBuilt(name, packageMap, onStack);
+      });
+    } else {
+      packageMap.eachPackage(function (name, packageInfo) {
+        self._ensurePackageBuilt(name, packageMap, onStack);
+      });
+    }
   },
 
   // Returns the isopack (already loaded in memory) for a given name. It is an
@@ -40,7 +52,7 @@ _.extend(exports.IsopackCache.prototype, {
   },
 
   // XXX #3006 Don't infinite recurse on circular deps
-  _ensurePackageBuilt: function (name, packageMap) {
+  _ensurePackageBuilt: function (name, packageMap, onStack) {
     var self = this;
     buildmessage.assertInCapture();
     if (_.has(self.isopacks, name))
@@ -54,13 +66,25 @@ _.extend(exports.IsopackCache.prototype, {
       var packageNames =
             packageInfo.packageSource.getPackagesToBuildFirst(packageMap);
       _.each(packageNames, function (depName) {
-        self._ensurePackageBuilt(depName, packageMap);
+        if (_.has(onStack, depName)) {
+          buildmessage.error("circular dependency between packages " +
+                             name + " and " + depName);
+          // recover by not enforcing one of the dependencies
+          return;
+        }
+        onStack[depName] = true;
+        self._ensurePackageBuilt(depName, packageMap, onStack);
+        delete onStack[depName];
       });
 
       self._loadLocalPackage(name, packageInfo, packageMap);
     } else if (packageInfo.kind === 'versioned') {
       // We don't have to build this package, and we don't have to build its
       // dependencies either! Just load it from disk.
+
+      if (!self.tropohouse) {
+        throw Error("Can't load versioned packages without a tropohouse!");
+      }
 
       // Load the isopack from disk.
       buildmessage.enterJob(
@@ -82,7 +106,7 @@ _.extend(exports.IsopackCache.prototype, {
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
       // Do we have an up-to-date package on disk?
-      var isopackBuildInfoJson = files.readJSONOrNull(
+      var isopackBuildInfoJson = self.cacheDir && files.readJSONOrNull(
         self._isopackBuildInfoPath(name));
       var upToDate = self._checkUpToDate({
         isopackBuildInfoJson: isopackBuildInfoJson,
@@ -108,11 +132,13 @@ _.extend(exports.IsopackCache.prototype, {
 
       var pluginProviderPackageMap = packageMap.makeSubsetMap(
         compilerResult.pluginProviderPackageNames);
-      // Save to disk, for next time!
-      compilerResult.isopack.saveToPath(self._isopackDir(name), {
-        pluginProviderPackageMap: pluginProviderPackageMap,
-        includeIsopackBuildInfo: true
-      });
+      if (self.cacheDir) {
+        // Save to disk, for next time!
+        compilerResult.isopack.saveToPath(self._isopackDir(name), {
+          pluginProviderPackageMap: pluginProviderPackageMap,
+          includeIsopackBuildInfo: true
+        });
+      }
 
       self.isopacks[name] = compilerResult.isopack;
     });
@@ -122,7 +148,7 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     // If there isn't an isopack-buildinfo.json file, then we definitely aren't
     // up to date!
-    if (options.isopackBuildInfoJson === null)
+    if (! options.isopackBuildInfoJson)
       return false;
     // If any of the direct dependencies changed their version or location, we
     // aren't up to date.

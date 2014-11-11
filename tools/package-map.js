@@ -6,7 +6,7 @@ exports.PackageMap = function (versions, cat) {
   self.catalog = cat;
 
   _.each(versions, function (version, packageName) {
-    var packageSource = cat.localCatalog.getPackageSource(packageName);
+    var packageSource = cat.getPackageSource(packageName);
     if (packageSource) {
       self._map[packageName] =
         { kind: 'local', version: version, packageSource: packageSource };

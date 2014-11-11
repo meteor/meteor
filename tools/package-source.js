@@ -1767,11 +1767,14 @@ _.extend(PackageSource.prototype, {
         return;
       var packageInfo = packageMap.getInfo(use.package);
 
+      if (! packageInfo)
+        throw Error("Depending on unknown package " + use.package);
+
       // We don't have to build it first if we're not building it at all!
       if (packageInfo.kind !== 'local')
         return;
       var packageSource =
-            self.catalog.localCatalog.getPackageSource(use.package);
+            self.catalog.getPackageSource(use.package);
       if (! packageSource)
         throw Error("no source for local package " + use.package);
 

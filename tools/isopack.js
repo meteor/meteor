@@ -608,9 +608,9 @@ _.extend(Isopack.prototype, {
             watch.WatchSet.fromJSON(watchSetJSON);
         });
 
-      // Read pluginWatchSet and pluginProviderPackageDirs. (In the
-      // multi-sub-isopack case, these are guaranteed to be trivial (since we
-      // check that there's no isopackBuildInfoJson), so no need to merge.)
+      // Read pluginWatchSet. (In the multi-sub-isopack case, these are
+      // guaranteed to be trivial (since we check that there's no
+      // isopackBuildInfoJson), so no need to merge.)
       self.pluginWatchSet = watch.WatchSet.fromJSON(
         options.isopackBuildInfoJson.pluginDependencies);
     }
