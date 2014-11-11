@@ -12,6 +12,7 @@ var _ = require('underscore');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
+var rimraf = require('rimraf');
 
 var utils = require('./utils.js');
 var cleanup = require('./cleanup.js');
@@ -251,24 +252,7 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  try {
-    // the l in lstat is critical -- we want to remove symbolic
-    // links, not what they point to
-    var stat = fs.lstatSync(p);
-  } catch (e) {
-    if (e.code == "ENOENT")
-      return;
-    throw e;
-  }
-
-  if (stat.isDirectory()) {
-    _.each(fs.readdirSync(p), function (file) {
-      file = path.join(p, file);
-      files.rm_recursive(file);
-    });
-    fs.rmdirSync(p);
-  } else
-    fs.unlinkSync(p);
+  rimraf.sync(p);
 };
 
 // Makes all files in a tree read-only.
