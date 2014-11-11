@@ -54,6 +54,8 @@ exports.compile = function (packageSource, options) {
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
 
+  var pluginProviderPackageNames = {};
+
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
     buildmessage.enterJob({
@@ -76,10 +78,15 @@ exports.compile = function (packageSource, options) {
                                        'plugin', info.name)),
         catalog: packageSource.catalog
       });
+      if (buildmessage.jobHasMessages())
+        return;
 
       // Add the plugin's sources to our list.
       _.each(info.sources, function (source) {
         sources.push(source);
+      });
+      _.each(buildResult.usedPackageNames, function (packageName) {
+        pluginProviderPackageNames[packageName] = true;
       });
 
       // Add this plugin's dependencies to our "plugin dependency"
@@ -134,8 +141,6 @@ exports.compile = function (packageSource, options) {
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly
   });
-
-  var pluginProviderPackageNames = {};
 
   _.each(packageSource.architectures, function (unibuild) {
     var unibuildResult = compileUnibuild({

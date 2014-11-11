@@ -41,6 +41,7 @@ var Unibuild = function (isopack, options) {
   options = options || {};
   self.pkg = isopack;
 
+  self.name = options.name;
   self.arch = options.arch;
 
   self.uses = options.uses;
@@ -58,7 +59,7 @@ var Unibuild = function (isopack, options) {
   // to keep track of Unibuilds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
-  self.id = isopack.name + "." + self.pkg.name + "@" + self.arch + "#" +
+  self.id = self.pkg.name + "." + self.name + "@" + self.arch + "#" +
     (nextBuildId ++);
 
   // Prelink output.

@@ -438,6 +438,8 @@ var Target = function (options) {
   // Map from package name to package directory of all packages used.
   self.pluginProviderPackageDirs = {};
 
+  self.usedPackages = {};
+
   // node_modules directories that we need to copy into the target (or
   // otherwise make available at runtime). A map from an absolute path
   // on disk (NodeModulesDirectory.sourcePath) to a
@@ -569,12 +571,15 @@ _.extend(Target.prototype, {
       // What unibuilds will be used in the target? Built in Phase 1, read in
       // Phase 2.
       var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
-      var usedPackages = {};  // Map from package name to true;
+      self.usedPackages = {};  // Map from package name to true;
       var addToGetsUsed = function (unibuild) {
         if (_.has(usedUnibuilds, unibuild.id))
           return;
         usedUnibuilds[unibuild.id] = unibuild;
-        usedPackages[unibuild.pkg.name] = true;
+        if (unibuild.name === 'main') {
+          // Only track real packages, not plugin pseudo-packages.
+          self.usedPackages[unibuild.pkg.name] = true;
+        }
         // XXX #3006 combine
         if (isopackCache) {
           isopackCompiler.eachUsedUnibuild({
@@ -647,14 +652,14 @@ _.extend(Target.prototype, {
             arch: self.arch,
             isopackCache: isopackCache,
             skipUnordered: true,
-            acceptableWeakPackages: usedPackages,
+            acceptableWeakPackages: self.usedPackages,
             skipDebugOnly: !project.project.includeDebug
           }, processUnibuild);
         } else {
           compiler.eachUsedUnibuild(
             unibuild.uses, self.arch, packageLoader,
             { skipUnordered: true,
-              acceptableWeakPackages: usedPackages,
+              acceptableWeakPackages: self.usedPackages,
               skipDebugOnly: !project.project.includeDebug
             },
             processUnibuild);
@@ -2367,7 +2372,8 @@ exports.buildJsImage = function (options) {
   return {
     image: target.toJsImage(),
     watchSet: target.getWatchSet(),
-    pluginProviderPackageDirs: target.getPluginProviderPackageDirs()
+    pluginProviderPackageDirs: target.getPluginProviderPackageDirs(),
+    usedPackageNames: _.keys(target.usedPackages)
   };
 };
 
