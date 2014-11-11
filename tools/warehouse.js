@@ -71,7 +71,7 @@ _.extend(warehouse, {
     if (!files.usesWarehouse())
       throw new Error("There's no warehouse in a git checkout");
 
-    return path.join(process.env.HOME, '.meteor');
+    return path.join(files.getHomeDir(), '.meteor');
   },
 
   getToolsDir: function (version) {

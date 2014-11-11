@@ -290,7 +290,7 @@ _.extend(exports, {
   getSessionFilePath: function () {
     // METEOR_SESSION_FILE is for automated testing purposes only.
     return process.env.METEOR_SESSION_FILE ||
-      path.join(process.env.HOME, '.meteorsession');
+      path.join(files.getHomeDir(), '.meteorsession');
   },
 
   // Port to use when querying URLs for the deploy server that backs

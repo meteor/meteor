@@ -1584,7 +1584,7 @@ TestList.prototype.generateSkipReport = function () {
 };
 
 var getTestStateFilePath = function () {
-  return path.join(process.env.HOME, '.meteortest');
+  return path.join(files.getHomeDir(), '.meteortest');
 };
 
 var readTestState = function () {

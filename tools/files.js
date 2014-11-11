@@ -229,7 +229,9 @@ files.getSettings = function (filename, watchSet) {
 // user. Presently, the main thing it does is replace $HOME with ~.
 files.prettyPath = function (path) {
   path = fs.realpathSync(path);
-  var home = process.env.HOME;
+  var home = files.getHomeDir();
+
+  // XXX this doesn't work on Windows
   if (home && path.substr(0, home.length) === home)
     path = "~" + path.substr(home.length);
   return path;
@@ -974,3 +976,7 @@ _.extend(files.KeyValueFile.prototype, {
     }
   }
 });
+
+files.getHomeDir = function () {
+  return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+};
