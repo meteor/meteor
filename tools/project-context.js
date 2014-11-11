@@ -7,6 +7,7 @@ var catalogLocal = require('./catalog-local.js');
 var catalogRemote = require('./catalog-remote.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
+var isopackCache = require('./isopack-cache.js');
 var isopackets = require('./isopackets.js');
 var packageMap = require('./package-map.js');
 var utils = require('./utils.js');
@@ -20,7 +21,9 @@ exports.ProjectContext = function (options) {
 
   self.projectDir = options.projectDir;
   self.tropohouse = options.tropohouse;
+
   self.packageMap = null;
+  self.isopackCache = null;
 
   // XXX #3006: Things we're leaving off for now:
   //  - constraints, combinedConstraints
@@ -35,11 +38,19 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    self._resolveConstraints();
-    if (!self.packageMap)
-      return;  // error is already in buildmessage
+    buildmessage.enterJob('preparing project', function () {
+      self._resolveConstraints();
+      if (buildmessage.jobHasMessages())
+        return;
 
-    self._downloadMissingPackages();
+      self._downloadMissingPackages();
+      if (buildmessage.jobHasMessages())
+        return;
+
+      self._buildLocalPackages();
+      if (buildmessage.jobHasMessages())
+        return;
+    });
   },
 
   _resolveConstraints: function () {
@@ -194,6 +205,20 @@ _.extend(exports.ProjectContext.prototype, {
     // XXX #3006 This downloads archinfo.host packages. How about
     //     for deploy?
     self.tropohouse.downloadPackagesMissingFromMap(self.packageMap);
+  },
+
+  _buildLocalPackages: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    self.isopackCache = new isopackCache.IsopackCache({
+      cacheDir: path.join(self.projectDir, '.meteor', 'local', 'isopacks'),
+      tropohouse: self.tropohouse
+    });
+
+    buildmessage.enterJob('building local packages', function () {
+      self.isopackCache.buildLocalPackages(self.packageMap);
+    });
   },
 
   // Returns the file path to the .meteor/packages file, containing the

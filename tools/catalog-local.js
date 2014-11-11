@@ -548,11 +548,11 @@ _.extend(LocalCatalog.prototype, {
     };
   },
 
-  getPackageSourceRoot: function (name) {
+  getPackageSource: function (name) {
     var self = this;
     if (! _.has(self.packages, name))
       return null;
-    return self.packages[name].packageSource.sourceRoot;
+    return self.packages[name].packageSource;
   },
 
   // Given a version string that may or may not have a build ID, convert it into

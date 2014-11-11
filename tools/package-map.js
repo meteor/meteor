@@ -3,15 +3,16 @@ var _ = require('underscore');
 exports.PackageMap = function (versions, cat) {
   var self = this;
   self._map = {};
+  self.catalog = cat;
 
-  _.each(versions, function (version, name) {
-    var sourceRoot = cat.localCatalog.getPackageSourceRoot(name);
-    if (sourceRoot !== null) {
-      self._map[name] =
-        { kind: 'local', version: version, sourceRoot: sourceRoot };
+  _.each(versions, function (version, packageName) {
+    var packageSource = cat.localCatalog.getPackageSource(packageName);
+    if (packageSource) {
+      self._map[packageName] =
+        { kind: 'local', version: version, packageSource: packageSource };
     } else {
-      self._map[name] =
-        { kind: 'versioned', version: version, sourceRoot: null };
+      self._map[packageName] =
+        { kind: 'versioned', version: version, packageSource: null };
     }
   });
 };
@@ -19,8 +20,24 @@ exports.PackageMap = function (versions, cat) {
 _.extend(exports.PackageMap.prototype, {
   eachPackage: function (iterator) {
     var self = this;
-    _.each(self._map, function (info, name) {
-      iterator(name, _.pick(info, 'kind', 'version'));
+    _.each(self._map, function (info, packageName) {
+      iterator(packageName, _.clone(info));
     });
+  },
+  getInfo: function (packageName) {
+    var self = this;
+    if (_.has(self._map, packageName))
+      return self._map[packageName];
+    return null;
+  },
+  getVersionCatalogRecord: function (packageName) {
+    var self = this;
+    var info = self.getInfo(packageName);
+    if (! info)
+      throw Error("unknown version " + packageName);
+    var record = self.catalog.getVersion(packageName, info.version);
+    if (! record)
+      throw Error("no catalog entry for " + packageName + "@" + info.version);
+    return record;
   }
 });

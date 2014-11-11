@@ -14,6 +14,7 @@ var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
+var isopackCompiler = require('./isopack-compiler.js');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -1748,15 +1749,15 @@ _.extend(PackageSource.prototype, {
   },
 
   // Returns a list of package names which should be built before building this
-  // package.  This function is not a transitive closure --- it assumes that in
-  // addition to building these packages, you'll build their dependencies
-  // too. (That is mostly important for plugins, where you really do need the
-  // whole transitive closure of the plugin dependencies to build the plugin.)
-  // XXX We aren't actually doing this, though --- if a local package A has
-  //     a plugin which uses a pre-built package P which uses a local package B,
-  //     the LocalCatalog._build logic might not build B. We should fix this by
-  //     moving the _build logic out of LocalCatalog into something else.
-  getPackagesToBuildFirst: function () {
+  // package.
+  //
+  // Specifically, this is:
+  // - All packages on which we directly depend (in a non-weak, ordered fashion)
+  //   that are local packages containing plugins.  We need their plugins to
+  //   build us!  (Versioned packages are already built so we can ignore them.)
+  // - For each of our plugins, the entire transitive closure of their
+  //   dependencies.
+  getPackagesToBuildFirst: function (packageMap) {
     var self = this;
     var packages = {};
     var processUse = function (use) {
@@ -1764,23 +1765,45 @@ _.extend(PackageSource.prototype, {
       // contribute to a plugin).
       if (use.weak || use.unordered)
         return;
+      var packageInfo = packageMap.getInfo(use.package);
+
+      // We don't have to build it first if we're not building it at all!
+      if (packageInfo.kind !== 'local')
+        return;
+      var packageSource =
+            self.catalog.localCatalog.getPackageSource(use.package);
+      if (! packageSource)
+        throw Error("no source for local package " + use.package);
+
+      // We don't have to build it first if it has no plugins!
+      if (! packageSource.containsPlugins)
+        return;
       packages[use.package] = true;
     };
 
     _.each(self.architectures, function (arch) {
       // We need to iterate over both uses and implies, since implied packages
       // also constitute dependencies.
-      _.each(arch.uses, _.partial(processUse, false));
-      _.each(arch.implies, _.partial(processUse, true));
+      _.each(arch.uses, processUse);
+      _.each(arch.implies, processUse);
     });
+
+    var pluginRootPackages = {};
     _.each(self.pluginInfo, function (info) {
       // info.use is currently just an array of strings, and there's
       // no way to specify weak/unordered. Much like an app.
       _.each(info.use, function (spec) {
         var parsedSpec = utils.splitConstraint(spec);
-        packages[parsedSpec.package] = true;
+        pluginRootPackages[parsedSpec.package] = true;
       });
     });
+    // We get the transitive closure for archinfo.host(), since we always build
+    // plugins for the host architecture.
+    _.each(isopackCompiler.getTransitiveClosureOfPackages(
+      _.keys(pluginRootPackages), archinfo.host(), packageMap), function (p) {
+        packages[p] = true;
+      });
+    return _.keys(packages);
   },
 
   // Record the versions of the dependencies that we used to actually build the
