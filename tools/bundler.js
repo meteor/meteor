@@ -435,9 +435,7 @@ var Target = function (options) {
   // On-disk dependencies of this target.
   self.watchSet = new watch.WatchSet();
 
-  // Map from package name to package directory of all packages used.
-  self.pluginProviderPackageDirs = {};
-
+  // List of all package names used in this target.
   self.usedPackages = {};
 
   // node_modules directories that we need to copy into the target (or
@@ -809,8 +807,6 @@ _.extend(Target.prototype, {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
        self.watchSet.merge(unibuild.pkg.pluginWatchSet);
-      _.extend(self.pluginProviderPackageDirs,
-               unibuild.pkg.pluginProviderPackageDirs);
     });
   },
 
@@ -892,11 +888,6 @@ _.extend(Target.prototype, {
   getWatchSet: function () {
     var self = this;
     return self.watchSet;
-  },
-
-  getPluginProviderPackageDirs: function () {
-    var self = this;
-    return self.pluginProviderPackageDirs;
   },
 
   // Return the most inclusive architecture with which this target is
@@ -2372,7 +2363,6 @@ exports.buildJsImage = function (options) {
   return {
     image: target.toJsImage(),
     watchSet: target.getWatchSet(),
-    pluginProviderPackageDirs: target.getPluginProviderPackageDirs(),
     usedPackageNames: _.keys(target.usedPackages)
   };
 };
