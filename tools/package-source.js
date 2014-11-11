@@ -1936,6 +1936,30 @@ _.extend(PackageSource.prototype, {
       _.each(arch.implies, _.partial(processUse, true));
     });
 
+    _.each(self.pluginInfo, function (info) {
+      _.each(info.use, function (spec) {
+        var parsedSpec = utils.splitConstraint(spec);
+        if (!_.has(dependencies, parsedSpec.package)) {
+          dependencies[parsedSpec.package] = {
+            constraint: null,
+            references: []
+          };
+          allConstraints[parsedSpec.package] = [];
+        }
+        var d = dependencies[parsedSpec.package];
+
+        if (parsedSpec.constraint) {
+          allConstraints[parsedSpec.package].push(parsedSpec.constraints);
+          if (d.constraint === null) {
+            d.constraint = parsedSpec.constraint;
+          } else if (d.constraint !== parsedSpec.constraint) {
+            failed = true;
+          }
+        }
+        d.references.push({arch: 'os'});
+      });
+    });
+
     if (failed && options.logError) {
       _.each(allConstraints, function (constraints, name) {
         constraints = _.uniq(constraints);
