@@ -34,7 +34,7 @@ var cordovaWarehouseDir = function () {
     return process.env.METEOR_WAREHOUSE_DIR;
 
   var warehouseBase = files.inCheckout()
-    ? files.getCurrentToolsDir() : process.env.HOME;
+    ? files.getCurrentToolsDir() : files.getHomeDir();
   return files.pathJoin(warehouseBase, ".meteor", "cordova");
 };
 
@@ -1760,7 +1760,7 @@ _.extend(Host.prototype, {
   },
 
   getHomeDir: function () {
-    return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+    return files.getHomeDir();
   }
 });
 

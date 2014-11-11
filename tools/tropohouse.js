@@ -23,7 +23,7 @@ var defaultWarehouseDir = function () {
     return process.env.METEOR_WAREHOUSE_DIR;
 
   var warehouseBase = files.inCheckout()
-     ? files.getCurrentToolsDir() : process.env.HOME;
+     ? files.getCurrentToolsDir() : files.getHomeDir();
   // XXX This will be `.meteor` soon, once we've written the code to make the
   // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
   // tools to springboard to warehouse tools).
