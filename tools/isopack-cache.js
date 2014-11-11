@@ -5,6 +5,7 @@ var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog.js');
 var compiler = require('./compiler.js');
 var files = require('./files.js');
+var isopackCompiler = require('./isopack-compiler.js');
 var isopackModule = require('./isopack.js');
 
 exports.IsopackCache = function (options) {
@@ -27,6 +28,17 @@ _.extend(exports.IsopackCache.prototype, {
     console.log(self.isopacks)
   },
 
+  // Returns the isopack (already loaded in memory) for a given name. It is an
+  // error to call this if it's not already loaded! So it should only be called
+  // after buildLocalPackages has returned, or in the process of building a
+  // package whose dependencies have all already been built.
+  getIsopack: function (name) {
+    var self = this;
+    if (! _.has(self.isopacks, name))
+      throw Error("isopack " + name + " not yet built?");
+    return self.isopacks[name];
+  },
+
   // XXX #3006 Don't infinite recurse on circular deps
   _ensurePackageBuilt: function (name, packageMap) {
     var self = this;
@@ -35,7 +47,7 @@ _.extend(exports.IsopackCache.prototype, {
       return;
 
     var packageInfo = packageMap.getInfo(name);
-    if (!packageInfo)
+    if (! packageInfo)
       throw Error("Depend on unknown package " + name + "?");
 
     if (packageInfo.kind === 'local') {
@@ -59,12 +71,12 @@ _.extend(exports.IsopackCache.prototype, {
       // that's a problem for another day.)
       var versionRecord = packageMap.catalog.getVersion(
         name, packageInfo.version);
-      if (!versionRecord)
+      if (! versionRecord)
         throw Error("unknown mapped " + name + "@" + packageInfo.version + "!");
 
       _.each(versionRecord.dependencies, function (info, depName) {
         var hasRelevantDep = _.find(info.references, function (ref) {
-          return !ref.weak && !ref.unordered;
+          return ! ref.weak && ! ref.unordered;
         });
         if (hasRelevantDep) {
           self._ensurePackageBuilt(depName, packageMap);
@@ -90,10 +102,12 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
-      // var compilerResult = compiler.compile(packageInfo.packageSource, {
-      // });
+      var compilerResult = isopackCompiler.compile(packageInfo.packageSource, {
+        packageMap: packageMap,
+        isopackCache: self
+      });
       // XXX #3006 Save to disk!
-      self.isopacks[name] = true;
+      self.isopacks[name] = compilerResult.isopack;
     });
   },
 

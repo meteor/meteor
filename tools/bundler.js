@@ -167,6 +167,7 @@ var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
+var isopackCompiler = require('./isopack-compiler.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
@@ -415,7 +416,10 @@ var Target = function (options) {
   var self = this;
 
   // PackageLoader to use for resolving package dependenices.
+  // XXX #3006 Fully replace this with packageMap.
   self.packageLoader = options.packageLoader;
+  self.packageMap = options.packageMap;
+  self.isopackCache = options.isopackCache;
 
   // Something like "web.browser" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
@@ -530,103 +534,146 @@ _.extend(Target.prototype, {
     buildmessage.assertInCapture();
 
     var packageLoader = self.packageLoader;
+    var packageMap = self.packageMap;
+    var isopackCache = self.isopackCache;
 
-    // Find the roots
-    var rootUnibuilds = [];
-    _.each(options.packages, function (p) {
-      if (typeof p === "string") {
-        p = packageLoader.getPackage(p, { throwOnError: true });
-      }
-      if (p.debugOnly && !project.project.includeDebug) {
-        return;
-      }
-      rootUnibuilds.push(p.getUnibuildAtArch(self.arch));
-    });
+    buildmessage.enterJob("linking the program", function () {
+      // Find the roots
+      var rootUnibuilds = [];
+      _.each(options.packages, function (p) {
+        if (typeof p === "string") {
+          // XXX #3006 combine
+          if (isopackCache) {
+            p = isopackCache.getIsopack(p);
+          } else {
+            p = packageLoader.getPackage(p, { throwOnError: true });
+          }
+        }
+        if (p.debugOnly && !project.project.includeDebug) {
+          return;
+        }
+        var unibuild = p.getUnibuildAtArch(self.arch);
+        unibuild && rootUnibuilds.push(unibuild);
+      });
 
-    // PHASE 1: Which unibuilds will be used?
-    //
-    // Figure out which unibuilds are going to be used in the target, regardless of
-    // order. We ignore weak dependencies here, because they don't actually
-    // create a "must-use" constraint, just an ordering constraint.
-
-    // What unibuilds will be used in the target? Built in Phase 1, read in
-    // Phase 2.
-    var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
-    var usedPackages = {};  // Map from package name to true;
-    var addToGetsUsed = function (unibuild) {
-      if (_.has(usedUnibuilds, unibuild.id))
-        return;
-      usedUnibuilds[unibuild.id] = unibuild;
-      usedPackages[unibuild.pkg.name] = true;
-      compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader, {
-          skipDebugOnly: !project.project.includeDebug
-        }, addToGetsUsed);
-    };
-    _.each(rootUnibuilds, addToGetsUsed);
-
-    // PHASE 2: In what order should we load the unibuilds?
-    //
-    // Set self.unibuilds to be all of the roots, plus all of their non-weak
-    // dependencies, in the correct load order. "Load order" means that if X
-    // depends on (uses) Y, and that relationship is not marked as unordered, Y
-    // appears before X in the ordering. Raises an exception iff there is no
-    // such ordering (due to circular dependency).
-    //
-    // XXX The topological sort code here is duplicated in catalog.js.
-
-    // What unibuilds have not yet been added to self.unibuilds?
-    var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
-    // Unibuilds that we are in the process of adding; used to detect circular
-    // ordered dependencies.
-    var onStack = {};  // Map from unibuild.id to true.
-
-    // This helper recursively adds unibuild's ordered dependencies to self.unibuilds,
-    // then adds unibuild itself.
-    var add = function (unibuild) {
-      // If this has already been added, there's nothing to do.
-      if (!_.has(needed, unibuild.id))
+      if (buildmessage.jobHasMessages())
         return;
 
-      // Process each ordered dependency. (If we have an unordered dependency
-      // `u`, then there's no reason to add it *now*, and for all we know, `u`
-      // will depend on `unibuild` and need to be added after it. So we ignore
-      // those edge. Because we did follow those edges in Phase 1, any unordered
-      // unibuilds were at some point in `needed` and will not be left out).
+      // PHASE 1: Which unibuilds will be used?
       //
-      // eachUsedUnibuild does follow weak edges (ie, they affect the ordering),
-      // but only if they point to a package in usedPackages (ie, a package that
-      // SOMETHING uses strongly).
-      compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader,
-        { skipUnordered: true,
-          acceptableWeakPackages: usedPackages,
-          skipDebugOnly: !project.project.includeDebug
-        },
-        function (usedUnibuild) {
+      // Figure out which unibuilds are going to be used in the target,
+      // regardless of order. We ignore weak dependencies here, because they
+      // don't actually create a "must-use" constraint, just an ordering
+      // constraint.
+
+      // What unibuilds will be used in the target? Built in Phase 1, read in
+      // Phase 2.
+      var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
+      var usedPackages = {};  // Map from package name to true;
+      var addToGetsUsed = function (unibuild) {
+        if (_.has(usedUnibuilds, unibuild.id))
+          return;
+        usedUnibuilds[unibuild.id] = unibuild;
+        usedPackages[unibuild.pkg.name] = true;
+        // XXX #3006 combine
+        if (isopackCache) {
+          isopackCompiler.eachUsedUnibuild({
+            dependencies: unibuild.uses,
+            arch: self.arch,
+            isopackCache: isopackCache,
+            skipDebugOnly: !project.project.includeDebug
+          }, addToGetsUsed);
+        } else {
+          compiler.eachUsedUnibuild(
+            unibuild.uses, self.arch, packageLoader, {
+              skipDebugOnly: !project.project.includeDebug
+            }, addToGetsUsed);
+        }
+      };
+      _.each(rootUnibuilds, addToGetsUsed);
+
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // PHASE 2: In what order should we load the unibuilds?
+      //
+      // Set self.unibuilds to be all of the roots, plus all of their non-weak
+      // dependencies, in the correct load order. "Load order" means that if X
+      // depends on (uses) Y, and that relationship is not marked as unordered,
+      // Y appears before X in the ordering. Raises an exception iff there is no
+      // such ordering (due to circular dependency).
+      //
+      // XXX The topological sort code here is duplicated in catalog.js.
+
+      // What unibuilds have not yet been added to self.unibuilds?
+      var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
+      // Unibuilds that we are in the process of adding; used to detect circular
+      // ordered dependencies.
+      var onStack = {};  // Map from unibuild.id to true.
+
+      // This helper recursively adds unibuild's ordered dependencies to
+      // self.unibuilds, then adds unibuild itself.
+      var add = function (unibuild) {
+        // If this has already been added, there's nothing to do.
+        if (!_.has(needed, unibuild.id))
+          return;
+
+        // Process each ordered dependency. (If we have an unordered dependency
+        // `u`, then there's no reason to add it *now*, and for all we know, `u`
+        // will depend on `unibuild` and need to be added after it. So we ignore
+        // those edge. Because we did follow those edges in Phase 1, any
+        // unordered unibuilds were at some point in `needed` and will not be
+        // left out).
+        //
+        // eachUsedUnibuild does follow weak edges (ie, they affect the
+        // ordering), but only if they point to a package in usedPackages (ie, a
+        // package that SOMETHING uses strongly).
+        var processUnibuild = function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
-            buildmessage.error("circular dependency between packages " +
-                               unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
+            buildmessage.error(
+              "circular dependency between packages " +
+                unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
           }
           onStack[usedUnibuild.id] = true;
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
-        });
-      self.unibuilds.push(unibuild);
-      delete needed[unibuild.id];
-    };
+        };
+        // XXX #3006 combine
+        if (isopackCache) {
+          isopackCompiler.eachUsedUnibuild({
+            dependencies: unibuild.uses,
+            arch: self.arch,
+            isopackCache: isopackCache,
+            skipUnordered: true,
+            acceptableWeakPackages: usedPackages,
+            skipDebugOnly: !project.project.includeDebug
+          }, processUnibuild);
+        } else {
+          compiler.eachUsedUnibuild(
+            unibuild.uses, self.arch, packageLoader,
+            { skipUnordered: true,
+              acceptableWeakPackages: usedPackages,
+              skipDebugOnly: !project.project.includeDebug
+            },
+            processUnibuild);
+        }
+        self.unibuilds.push(unibuild);
+        delete needed[unibuild.id];
+      };
 
-    while (true) {
-      // Get an arbitrary unibuild from those that remain, or break if none remain.
-      var first = null;
-      for (first in needed) break;
-      if (! first)
-        break;
-      // Now add it, after its ordered dependencies.
-      add(needed[first]);
-    }
+      while (true) {
+        // Get an arbitrary unibuild from those that remain, or break if none
+        // remain.
+        var first = null;
+        for (first in needed) break;
+        if (! first)
+          break;
+        // Now add it, after its ordered dependencies.
+        add(needed[first]);
+      }
+    });
   },
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
@@ -650,7 +697,10 @@ _.extend(Target.prototype, {
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
-      var resources = unibuild.getResources(self.arch, self.packageLoader);
+      var resources = unibuild.getResources(self.arch, {
+        packageLoader: self.packageLoader,
+        isopackCache: self.isopackCache
+      });
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
@@ -2288,12 +2338,23 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var isopack = compiler.compile(packageSource, {
-    ignoreProjectDeps: options.ignoreProjectDeps
-  }).isopack;
+  var isopack;
+  // XXX #3006 Get rid of this conditional.
+  if (options.packageMap) {
+    isopack = isopackCompiler.compile(packageSource, {
+      packageMap: options.packageMap,
+      isopackCache: options.isopackCache
+    }).isopack;
+  } else {
+    isopack = compiler.compile(packageSource, {
+      ignoreProjectDeps: options.ignoreProjectDeps
+    }).isopack;
+  }
 
   var target = new JsImageTarget({
     packageLoader: options.packageLoader,
+    packageMap: options.packageMap,
+    isopackCache: options.isopackCache,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only

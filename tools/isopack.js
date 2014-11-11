@@ -12,6 +12,7 @@ var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
+var isopackCompiler = require('./isopack-compiler.js');
 var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
@@ -120,8 +121,10 @@ _.extend(Unibuild.prototype, {
   //
   // loader is the PackageLoader that should be used to resolve
   // the package's bundle-time dependencies.
-  getResources: function (bundleArch, loader) {
+  getResources: function (bundleArch, options) {
     var self = this;
+    var loader = options.packageLoader;
+    var isopackCache = options.isopackCache;
 
     if (! archinfo.matches(bundleArch, self.arch))
       throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
@@ -136,18 +139,32 @@ _.extend(Unibuild.prototype, {
     // a name shouldn't be affected by the non-local decision of whether or not
     // an unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
-    compiler.eachUsedUnibuild(
-      self.uses,
-      bundleArch, loader,
-      { skipUnordered: true, skipDebugOnly: true },
-      function (depUnibuild) {
-        _.each(depUnibuild.packageVariables, function (symbol) {
-          // Slightly hacky implementation of test-only exports.
-          if (symbol.export === true ||
-              (symbol.export === "tests" && self.pkg.isTest))
-            imports[symbol.name] = depUnibuild.pkg.name;
-        });
+
+    var addImportsForUnibuild = function (depUnibuild) {
+      _.each(depUnibuild.packageVariables, function (symbol) {
+        // Slightly hacky implementation of test-only exports.
+        if (symbol.export === true ||
+            (symbol.export === "tests" && self.pkg.isTest))
+          imports[symbol.name] = depUnibuild.pkg.name;
       });
+    };
+    // XXX #3006 combine)
+    if (isopackCache) {
+      isopackCompiler.eachUsedUnibuild({
+        dependencies: self.uses,
+        arch: bundleArch,
+        isopackCache: isopackCache,
+        skipUnordered: true,
+        skipDebugOnly: true
+      }, addImportsForUnibuild);
+    } else {
+      compiler.eachUsedUnibuild(
+        self.uses,
+        bundleArch, loader,
+        { skipUnordered: true, skipDebugOnly: true },
+        addImportsForUnibuild
+      );
+    }
 
     // Phase 2 link
     var isApp = ! self.pkg.name;
