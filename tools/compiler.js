@@ -1099,10 +1099,7 @@ compiler.compile = function (packageSource, options) {
                            packageSource.version + "because it already " +
                            "has a build identifier");
       } else {
-        isopk.addBuildIdentifierToVersion({
-          relativeTo: packageSource.sourceRoot,
-          catalog: packageSource.catalog
-        });
+        // XXX #3006 used to add build identifier to version here
       }
     });
   }
