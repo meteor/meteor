@@ -21,12 +21,12 @@ npm shrinkwrap
 rm -Recurse -Force "${DIR}\build\npm-install\node_modules\.bin"
 cp -R node_modules "${DIR}\lib\node_modules"
 
+rm -Recurse -Force "${DIR}\build"
+
 # XXX we need to copy the package.json etc
 # XXX delete extra fibers code
 
-cd ../..
-
-cd lib
+cd $DIR\lib
 
 # commented out ones don't work on Windows, we don't plan to support them in the first release
 echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
@@ -46,29 +46,34 @@ npm install esprima@1.2.2
 npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
 # npm install "https://github.com/meteor/cordova-cli/tarball/0c9b3362c33502ef8f6dba514b87279b9e440543"
 
-Set-Location ..
+Set-Location $DIR
 
-mkdir bin
-Set-Location bin
+mkdir $DIR\mongodb
+mkdir $DIR\mongodb\bin
 
 $webclient = New-Object System.Net.WebClient
 
 # download Mongo
 $mongo_name = "mongodb-win32-i386-2.6.5"
 $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
-$mongo_zip = "$DIR\bin\mongo.zip"
+$mongo_zip = "$DIR\mongodb\mongo.zip"
+
 $webclient.DownloadFile($mongo_link, $mongo_zip)
 
 $shell = new-object -com shell.application
 $zip = $shell.NameSpace($mongo_zip)
 foreach($item in $zip.items()) {
-  $shell.Namespace("$DIR\bin").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
+  $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
 }
-cp "$DIR\bin\$mongo_name\bin\mongod.exe" .
-cp "$DIR\bin\$mongo_name\bin\mongo.exe" .
+
+cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
+cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 
 rm -Recurse -Force $mongo_zip
-rm -Recurse -Force "$DIR\bin\$mongo_name"
+rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+
+mkdir bin
+Set-Location bin
 
 # download node
 $node_link = "http://nodejs.org/dist/v0.10.33/node.exe"
@@ -81,4 +86,6 @@ cp node_modules\npm\bin\npm.cmd .
 # mark the version
 echo "0.3.62" | Out-File .bundle_version.txt -Encoding ascii
 
-Set-Location ..
+Set-Location $DIR\..
+
+echo "Done building Dev Bundle!"
