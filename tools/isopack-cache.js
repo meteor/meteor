@@ -106,7 +106,16 @@ _.extend(exports.IsopackCache.prototype, {
         packageMap: packageMap,
         isopackCache: self
       });
-      // XXX #3006 Save to disk!
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // Save to disk, for next time!
+      compilerResult.isopack.saveToPath(self._isopackDir(name), {
+        buildOfPath: packageInfo.packageSource.sourceRoot,
+        // XXX #3006 replace with better build info
+        elideBuildInfo: true
+      });
+
       self.isopacks[name] = compilerResult.isopack;
     });
   },
