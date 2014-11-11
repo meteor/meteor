@@ -670,8 +670,7 @@ _.extend(Sandbox.prototype, {
       toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
         + toolPackage.buildArchitectures();
       toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                       toolPackageName, toolPackageDirectory),
-                             { elideBuildInfo: true });
+                                       toolPackageName, toolPackageDirectory));
     });
 
     fs.symlinkSync(toolPackageDirectory,

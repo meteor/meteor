@@ -309,10 +309,7 @@ _.extend(exports.Tropohouse.prototype, {
               + utils.randomToken() + '++' + isopack.buildArchitectures();
         var combinedDirectory = self.packagePath(
           packageName, newPackageLinkTarget);
-        isopack.saveToPath(combinedDirectory, {
-          // We got this from the server, so we can't rebuild it.
-          elideBuildInfo: true
-        });
+        isopack.saveToPath(combinedDirectory);
         files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
 
         // Clean up old version.

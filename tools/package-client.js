@@ -300,12 +300,7 @@ var bundleBuild = function (isopack) {
   var packageTarName = isopack.tarballName();
   var tarInputDir = path.join(tempDir, packageTarName);
 
-  isopack.saveToPath(tarInputDir, {
-    // Don't upload buildinfo.json. It's only of interest locally (for example,
-    // it contains a watchset with local paths).  (This also means we don't
-    // need to specify a catalog, yay.)
-    elideBuildInfo: true
-  });
+  isopack.saveToPath(tarInputDir);
 
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);

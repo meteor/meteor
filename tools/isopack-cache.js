@@ -91,7 +91,9 @@ _.extend(exports.IsopackCache.prototype, {
 
       if (upToDate) {
         var isopack = new isopackModule.Isopack;
-        isopack.initFromPath(name, self._isopackDir(name));
+        isopack.initFromPath(name, self._isopackDir(name), {
+          isopackBuildInfoJson: isopackBuildInfoJson
+        });
         self.isopacks[name] = isopack;
         return;
       }
@@ -109,8 +111,6 @@ _.extend(exports.IsopackCache.prototype, {
       // Save to disk, for next time!
       compilerResult.isopack.saveToPath(self._isopackDir(name), {
         pluginProviderPackageMap: pluginProviderPackageMap,
-        // XXX #3006 replace with better build info
-        elideBuildInfo: true,
         includeIsopackBuildInfo: true
       });
 
