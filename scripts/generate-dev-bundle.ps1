@@ -89,4 +89,4 @@ echo "0.3.62" | Out-File .bundle_version.txt -Encoding ascii
 Set-Location $DIR\..
 
 echo "Done building Dev Bundle!"
-ne building Dev Bundle!"
+
