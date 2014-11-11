@@ -58,29 +58,8 @@ _.extend(exports.IsopackCache.prototype, {
 
       self._buildOnePackage(name, packageInfo, packageMap);
     } else if (packageInfo.kind === 'versioned') {
-      // We need to ensure the dependencies of versioned packages are built
-      // too. Because otherwise imagine a local package A with a plugin which
-      // uses versioned package B which uses local package C. We do need to
-      // build C before A since it will be statically linked into the plugin.
-      //
-      // On the other hand, we don't have to ensure that the packages that our
-      // plugins depend on are built, because the plugin is precompiled. (In
-      // fact, our plugin may be precompiled with a version of a package that
-      // doesn't match packageMap, which can lead to lots of confusion, but
-      // that's a problem for another day.)
-      var versionRecord = packageMap.catalog.getVersion(
-        name, packageInfo.version);
-      if (! versionRecord)
-        throw Error("unknown mapped " + name + "@" + packageInfo.version + "!");
-
-      _.each(versionRecord.dependencies, function (info, depName) {
-        var hasRelevantDep = _.find(info.references, function (ref) {
-          return ! ref.weak && ! ref.unordered;
-        });
-        if (hasRelevantDep) {
-          self._ensurePackageBuilt(depName, packageMap);
-        }
-      });
+      // We don't have to build this package, and we don't have to build its
+      // dependencies either! Just load it from disk.
 
       // Load the isopack from disk.
       buildmessage.enterJob(
