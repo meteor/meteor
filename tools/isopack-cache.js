@@ -25,7 +25,6 @@ _.extend(exports.IsopackCache.prototype, {
     packageMap.eachPackage(function (name, packageInfo) {
       self._ensurePackageBuilt(name, packageMap);
     });
-    console.log(self.isopacks)
   },
 
   // Returns the isopack (already loaded in memory) for a given name. It is an
@@ -109,11 +108,15 @@ _.extend(exports.IsopackCache.prototype, {
       if (buildmessage.jobHasMessages())
         return;
 
+      var pluginProviderPackageMap = packageMap.makeSubsetMap(
+        compilerResult.pluginProviderPackageNames);
       // Save to disk, for next time!
       compilerResult.isopack.saveToPath(self._isopackDir(name), {
         buildOfPath: packageInfo.packageSource.sourceRoot,
+        pluginProviderPackageMap: pluginProviderPackageMap,
         // XXX #3006 replace with better build info
-        elideBuildInfo: true
+        elideBuildInfo: true,
+        includeIsopackBuildInfo: true
       });
 
       self.isopacks[name] = compilerResult.isopack;

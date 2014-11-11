@@ -39,5 +39,34 @@ _.extend(exports.PackageMap.prototype, {
     if (! record)
       throw Error("no catalog entry for " + packageName + "@" + info.version);
     return record;
+  },
+  makeSubsetMap: function (packageNames) {
+    var self = this;
+    var subsetVersions = {};
+    _.each(packageNames, function (packageName) {
+      var info = self.getInfo(packageName);
+      if (!info)
+        throw Error("not a subset: " + packageName);
+      subsetVersions[packageName] = info.version;
+    });
+    return new exports.PackageMap(subsetVersions, self.catalog);
+  },
+  toJSON: function () {
+    var self = this;
+    var ret = {};
+    _.each(self._map, function (info, packageName) {
+      if (info.kind === 'local') {
+        ret[packageName] = {
+          kind: 'local',
+          sourceRoot: info.packageSource.sourceRoot
+        };
+      } else {
+        ret[packageName] = {
+          kind: 'versioned',
+          version: info.version
+        };
+      }
+    });
+    return ret;
   }
 });

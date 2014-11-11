@@ -800,6 +800,8 @@ _.extend(Isopack.prototype, {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
 
+      // XXX #3006 Finish the transition from buildInfoJson to
+      // isopackBuildInfoJson.
       var buildInfoJson = null;
       if (!options.elideBuildInfo) {
         // Note: The contents of buildInfoJson (with the root directory of the
@@ -827,6 +829,22 @@ _.extend(Isopack.prototype, {
           buildTimePluginDependencies: buildTimePluginDeps
         };
       }
+      var isopackBuildInfoJson = null;
+      if (options.includeIsopackBuildInfo) {
+        isopackBuildInfoJson = {
+          builtBy: compiler.BUILT_BY,
+          buildOfPath: options.buildOfPath,
+          unibuildDependencies: {},
+          // pluginDependencies defines a WatchSet that any package that could
+          // use this package as a plugin needs to watch. So it always contains
+          // our package.js (because modifications to package.js could add a new
+          // plugin), as well as any files making up plugins in our package.
+          pluginDependencies: self.pluginWatchSet.toJSON(),
+          pluginProviderPackageMap: options.pluginProviderPackageMap.toJSON(),
+          // XXX #3006 make sure cordova dependencies work
+          cordovaDependencies: self.cordovaDependencies
+        };
+      }
 
       // XXX COMPAT WITH 0.9.3
       builder.reserve("unipackage.json");
@@ -835,6 +853,10 @@ _.extend(Isopack.prototype, {
       // Reserve this even if elideBuildInfo is set, to ensure nothing else
       // writes it somehow.
       builder.reserve("buildinfo.json");
+      // Reserve this even if includeIsopackBuildInfo is not set, to ensure
+      // nothing else writes it somehow.
+      builder.reserve("isopack-buildinfo.json");
+
       builder.reserve("head");
       builder.reserve("body");
 
@@ -879,6 +901,10 @@ _.extend(Isopack.prototype, {
         // too hard about how to encode pair (name, arch).
         if (buildInfoJson) {
           buildInfoJson.buildDependencies[unibuildJsonFile] =
+            unibuild.watchSet.toJSON();
+        }
+        if (isopackBuildInfoJson) {
+          isopackBuildInfoJson.unibuildDependencies[unibuildJsonFile] =
             unibuild.watchSet.toJSON();
         }
 
@@ -1066,6 +1092,9 @@ _.extend(Isopack.prototype, {
 
       if (buildInfoJson) {
         builder.writeJson("buildinfo.json", buildInfoJson);
+      }
+      if (isopackBuildInfoJson) {
+        builder.writeJson("isopack-buildinfo.json", isopackBuildInfoJson);
       }
       builder.complete();
     } catch (e) {

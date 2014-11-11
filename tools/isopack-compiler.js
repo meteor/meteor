@@ -135,22 +135,27 @@ exports.compile = function (packageSource, options) {
     debugOnly: packageSource.debugOnly
   });
 
+  var pluginProviderPackageNames = {};
+
   _.each(packageSource.architectures, function (unibuild) {
-    var unibuildSources = compileUnibuild({
+    var unibuildResult = compileUnibuild({
       isopack: isopk,
       sourceArch: unibuild,
       isopackCache: isopackCache,
       nodeModulesPath: nodeModulesPath,
       isPortable: isPortable
     });
-    sources.push.apply(sources, unibuildSources);
+    sources.push.apply(sources, unibuildResult.sources);
+    _.extend(pluginProviderPackageNames,
+             unibuildResult.pluginProviderPackageNames);
   });
 
   // XXX #3006: We used to add build IDs here. Do we still need that?
 
   return {
     sources: _.uniq(sources),
-    isopack: isopk
+    isopack: isopk,
+    pluginProviderPackageNames: _.keys(pluginProviderPackageNames)
   };
 };
 
@@ -172,6 +177,7 @@ var compileUnibuild = function (options) {
   var resources = [];
   var js = [];
   var sources = [];
+  var pluginProviderPackageNames = {};
   var watchSet = inputSourceArch.watchSet.clone();
 
   // *** Determine and load active plugins
@@ -215,6 +221,7 @@ var compileUnibuild = function (options) {
     }, function (unibuild) {
       if (unibuild.pkg.name === isopk.name)
         return;
+      pluginProviderPackageNames[unibuild.pkg.name] = true;
       if (_.isEmpty(unibuild.pkg.plugins))
         return;
       activePluginPackages.push(unibuild.pkg);
@@ -804,7 +811,10 @@ var compileUnibuild = function (options) {
     resources: resources
   });
 
-  return sources;
+  return {
+    sources: sources,
+    pluginProviderPackageNames: pluginProviderPackageNames
+  };
 };
 
 // Unlike getTransitiveClosureOfPackages, this one actually expects the packages
