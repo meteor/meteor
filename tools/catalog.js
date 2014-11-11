@@ -32,7 +32,7 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
     if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
-      Console.error(catalog.refreshError);
+      Console.printError(catalog.refreshError);
       Console.error("This command requires an up-to-date package catalog.  Exiting.");
       // Avoid circular dependency.
       throw new (require('./main.js').ExitWithCode)(1);
