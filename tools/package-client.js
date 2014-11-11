@@ -11,7 +11,6 @@ var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
-var uniload = require('./uniload.js');
 var Console = require('./console.js').Console;
 var packageVersionParser = require('./package-version-parser.js');
 var authClient = require('./auth-client.js');
@@ -581,7 +580,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       version: version,
       description: packageSource.metadata.summary,
       git: packageSource.metadata.git,
-      earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
       compilerVersion: compiler.BUILT_BY,
       containsPlugins: packageSource.containsPlugins(),
       debugOnly: packageSource.debugOnly,

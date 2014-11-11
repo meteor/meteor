@@ -3,7 +3,7 @@ var files = require('./files.js');
 var config = require('./config.js');
 var path = require('path');
 var fs = require('fs');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var fiberHelpers = require('./fiber-helpers.js');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
@@ -13,13 +13,6 @@ var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
 var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
-
-// a bit of a hack
-var getPackage = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp' ]
-  });
-};
 
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
@@ -62,7 +55,6 @@ var handleError = function (error, galaxyName, messages) {
 // - service: the service to connect to within the Galaxy, such as
 //   'ultraworld' or 'log-reader'.
 var galaxyServiceConnection = function (galaxy, service) {
-  var Package = getPackage();
   var endpointUrl = galaxy + "/" + service;
   var parsedEndpoint = url.parse(endpointUrl);
   var authToken = auth.getSessionToken(parsedEndpoint.hostname);
@@ -73,7 +65,7 @@ var galaxyServiceConnection = function (galaxy, service) {
   if (! authToken)
     throw new Error("not logged in to galaxy?");
 
-  return new ServiceConnection(Package, endpointUrl, {
+  return new ServiceConnection(endpointUrl, {
     headers: {
       cookie: "GALAXY_AUTH=" + authToken
     }
@@ -241,7 +233,6 @@ exports.deploy = function (options) {
 
     var galaxy = exports.discoverGalaxy(options.app);
     conn = galaxyServiceConnection(galaxy, "ultraworld");
-    var Package = getPackage();
 
     var created = true;
     var appConfig = {};
@@ -340,9 +331,7 @@ exports.logs = function (options) {
 
   try {
     var lastLogId = null;
-    var Log = uniload.load({
-      packages: [ 'logging' ]
-    }).logging.Log;
+    var Log = isopackets.load('logging').logging.Log;
 
     // XXX we're cheating a bit here, relying on the server sending
     // the log messages in order

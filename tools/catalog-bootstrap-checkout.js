@@ -10,7 +10,9 @@ var tropohouse = require('./tropohouse.js');
 // This catalog is typically never used directly by the user.
 // An instance of this catalog is created in catalog.js
 var BootstrapCatalogCheckout = function () {
+  var self = this;
   LocalCatalog.call(this);
+  self.isopacketBuildingCatalog = true;
 };
 
 util.inherits(BootstrapCatalogCheckout, LocalCatalog);
@@ -22,22 +24,23 @@ _.extend(BootstrapCatalogCheckout.prototype, {
     self._requireInitialized();
     buildmessage.assertInCapture();
 
-    // uniload should always ignore the project: it's essentially loading part
-    // of the tool, which shouldn't be affected by your app's dependencies.
+    // Building isopackets should always ignore the project: it's essentially
+    // loading part of the tool, which shouldn't be affected by your app's
+    // dependencies.
     if (!opts.ignoreProjectDeps)
-      throw Error("whoa, if for uniload, why not ignoring project?");
+      throw Error("whoa, if for isopackets, why not ignoring project?");
 
-    // OK, we're building something while uniload
+    // OK, we're building part of an isopacket.
     var ret = {};
     _.each(constraints, function (constraint) {
       if (_.has(constraint, 'version')) {
         if (constraint.version !== null) {
-          throw Error("Uniload specifying version? " + JSON.stringify(constraint));
+          throw Error("isopacket specifying version? " + JSON.stringify(constraint));
         }
         delete constraint.version;
       }
 
-      // Constraints for uniload should just be packages with no version
+      // Constraints for isopackets should just be packages with no version
       // constraint and one local version (since they should all be in core).
       if (!_.has(constraint, 'name') ||
         constraint.constraints.length > 1 ||

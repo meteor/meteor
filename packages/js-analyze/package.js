@@ -17,6 +17,10 @@ Npm.depends({
   escope: "1.0.0"
 });
 
+Npm.strip({
+  esprima: ["test/"]
+});
+
 // This package may not depend on ANY other Meteor packages, even in the test
 // slice. (Tests for this package are in the js-analyze-tests package.) This is
 // because it is used by the linker; the linker is smart enough not to try to

@@ -9,7 +9,7 @@ var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
 var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var util = require('util');
@@ -17,7 +17,6 @@ var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
-var Package = uniload.load({ packages: ["ejson"] });
 var Console = require('./console.js').Console;
 
 var toolPackageName = "meteor-tool";
@@ -46,6 +45,7 @@ var fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 var expectEqual = markStack(function (actual, expected) {
+  var Package = isopackets.load('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,
@@ -682,7 +682,6 @@ _.extend(Sandbox.prototype, {
     stubCatalog.collections.versions.push({
       packageName: toolPackageName,
       version: toolPackage.version,
-      earliestCompatibleVersion: toolPackage.version,
       containsPlugins: false,
       description: toolPackage.metadata.summary,
       dependencies: {},
@@ -758,7 +757,6 @@ _.extend(Sandbox.prototype, {
         stubCatalog.collections.versions.push({
           packageName: name,
           version: versionRec.version,
-          earliestCompatibleVersion: versionRec.earliestCompatibleVersion,
           containsPlugins: false,
           description: "warehouse test",
           dependencies: {},

@@ -2715,57 +2715,6 @@ main.registerCommand({
 
 
 main.registerCommand({
-  name: 'admin set-earliest-compatible-version',
-  minArgs: 2,
-  maxArgs: 2,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
-
-  // We want the most recent information.
-  //refreshOfficialCatalogOrDie();
-  var package = options.args[0].split('@');
-  var name = package[0];
-  var version = package[1];
-  if (!version) {
-    Console.error('\n Must specify release version (track@version)');
-    return 1;
-  }
-  var ecv = options.args[1];
-
-  // Now let's get down to business! Fetching the thing.
-  var record = catalog.official.getPackage(name);
-  if (!record) {
-    Console.error('\n There is no package named ' + name);
-    return 1;
-  }
-
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-
-  try {
-      Console.info(
-        "Setting earliest compatible version on "
-          + options.args[0] + " to " + ecv + "...");
-      var versionInfo = { name : name,
-                          version : version };
-      packageClient.callPackageServer(conn,
-          '_setEarliestCompatibleVersion', versionInfo, ecv);
-      Console.info("Done!");
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-  conn.close();
-  refreshOfficialCatalogOrDie();
-
-  return 0;
-});
-
-main.registerCommand({
   name: 'admin change-homepage',
   minArgs: 2,
   maxArgs: 2,
