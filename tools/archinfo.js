@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var files = require('./files.js');
+var os = require('os');
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -133,9 +134,9 @@ var host = function () {
       return result.replace(/\s*$/, ''); // trailing whitespace
     };
 
-    var uname = run('uname');
+    var platform = os.platform();
 
-    if (uname === "Darwin") {
+    if (platform === "darwin") {
       // Can't just test uname -m = x86_64, because Snow Leopard can
       // return other values.
       if (run('uname', '-p') !== "i386" ||
@@ -144,7 +145,7 @@ var host = function () {
       _host  = "os.osx.x86_64";
     }
 
-    else if (uname === "Linux") {
+    else if (platform === "linux") {
       var machine = run('uname', '-m');
       if (_.contains(["i386", "i686", "x86"], machine))
         _host = "os.linux.x86_32";
@@ -154,8 +155,16 @@ var host = function () {
         throw new Error("Unsupported architecture: " + machine);
     }
 
+    else if (platform === "win32") {
+      if (os.arch() === "ia32") {
+        _host = "os.windows.x86_32";
+      } 
+
+      // XXX what does 64 bit windows look like?
+    }
+
     else
-      throw new Error("Unsupported operating system: " + uname);
+      throw new Error("Unsupported operating system: " + platform);
   }
 
   return _host;
