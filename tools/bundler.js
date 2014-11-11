@@ -185,7 +185,8 @@ var rejectBadPath = function (p) {
 };
 
 var stripLeadingSlash = function (p) {
-  if (p.charAt(0) !== '/')
+  // Forward slash for unix, backslash for windows.
+  if (p.charAt(0) !== '/' && p.charAt(0) !== '\\')
     throw new Error("bad path: " + p);
   return p.slice(1);
 };
