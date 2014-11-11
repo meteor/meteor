@@ -127,8 +127,12 @@ _.extend(exports.IsopackCache.prototype, {
         packageMap: packageMap,
         isopackCache: self
       });
-      if (buildmessage.jobHasMessages())
+      if (buildmessage.jobHasMessages()) {
+        // recover by adding an empty package
+        self.isopacks[name] = new isopackModule.Isopack;
+        self.isopacks[name].initEmpty(name);
         return;
+      }
 
       var pluginProviderPackageMap = packageMap.makeSubsetMap(
         compilerResult.pluginProviderPackageNames);
