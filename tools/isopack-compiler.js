@@ -178,6 +178,9 @@ var compileUnibuild = function (options) {
   var js = [];
   var sources = [];
   var pluginProviderPackageNames = {};
+  // The current package always is a plugin provider. (This also means we no
+  // longer need a buildOfPath entry in buildinfo.json.)
+  pluginProviderPackageNames[isopk.name] = true;
   var watchSet = inputSourceArch.watchSet.clone();
 
   // *** Determine and load active plugins

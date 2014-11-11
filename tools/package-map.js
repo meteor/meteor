@@ -68,5 +68,22 @@ _.extend(exports.PackageMap.prototype, {
       }
     });
     return ret;
+  },
+  // Given some JSON as returned from toJSON, returns true if every package in
+  // the JSON has the same mapping as in this map.
+  isSupersetOfJSON: function (mapJSON) {
+    var self = this;
+    return _.all(mapJSON, function (jsonInfo, packageName) {
+      var thisInfo = self.getInfo(packageName);
+      if (! thisInfo)
+        return false;
+      if (jsonInfo.kind !== thisInfo.kind)
+        return false;
+      if (thisInfo.kind === 'local') {
+        return thisInfo.packageSource.sourceRoot === jsonInfo.sourceRoot;
+      } else {
+        return thisInfo.version === jsonInfo.version;
+      }
+    });
   }
 });

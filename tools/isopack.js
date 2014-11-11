@@ -833,7 +833,6 @@ _.extend(Isopack.prototype, {
       if (options.includeIsopackBuildInfo) {
         isopackBuildInfoJson = {
           builtBy: compiler.BUILT_BY,
-          buildOfPath: options.buildOfPath,
           unibuildDependencies: {},
           // pluginDependencies defines a WatchSet that any package that could
           // use this package as a plugin needs to watch. So it always contains

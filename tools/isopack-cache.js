@@ -7,6 +7,7 @@ var compiler = require('./compiler.js');
 var files = require('./files.js');
 var isopackCompiler = require('./isopack-compiler.js');
 var isopackModule = require('./isopack.js');
+var watch = require('./watch.js');
 
 exports.IsopackCache = function (options) {
   var self = this;
@@ -56,7 +57,7 @@ _.extend(exports.IsopackCache.prototype, {
         self._ensurePackageBuilt(depName, packageMap);
       });
 
-      self._buildOnePackage(name, packageInfo, packageMap);
+      self._loadLocalPackage(name, packageInfo, packageMap);
     } else if (packageInfo.kind === 'versioned') {
       // We don't have to build this package, and we don't have to build its
       // dependencies either! Just load it from disk.
@@ -76,10 +77,26 @@ _.extend(exports.IsopackCache.prototype, {
     }
   },
 
-  _buildOnePackage: function (name, packageInfo, packageMap) {
+  _loadLocalPackage: function (name, packageInfo, packageMap) {
     var self = this;
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
+      // Do we have an up-to-date package on disk?
+      var isopackBuildInfoJson = files.readJSONOrNull(
+        self._isopackBuildInfoPath(name));
+      var upToDate = self._checkUpToDate({
+        isopackBuildInfoJson: isopackBuildInfoJson,
+        packageMap: packageMap
+      });
+
+      if (upToDate) {
+        var isopack = new isopackModule.Isopack;
+        isopack.initFromPath(name, self._isopackDir(name));
+        self.isopacks[name] = isopack;
+        return;
+      }
+
+      // Nope! Compile it again.
       var compilerResult = isopackCompiler.compile(packageInfo.packageSource, {
         packageMap: packageMap,
         isopackCache: self
@@ -91,7 +108,6 @@ _.extend(exports.IsopackCache.prototype, {
         compilerResult.pluginProviderPackageNames);
       // Save to disk, for next time!
       compilerResult.isopack.saveToPath(self._isopackDir(name), {
-        buildOfPath: packageInfo.packageSource.sourceRoot,
         pluginProviderPackageMap: pluginProviderPackageMap,
         // XXX #3006 replace with better build info
         elideBuildInfo: true,
@@ -102,8 +118,36 @@ _.extend(exports.IsopackCache.prototype, {
     });
   },
 
+  _checkUpToDate: function (options) {
+    var self = this;
+    // If there isn't an isopack-buildinfo.json file, then we definitely aren't
+    // up to date!
+    if (options.isopackBuildInfoJson === null)
+      return false;
+    // If any of the direct dependencies changed their version or location, we
+    // aren't up to date.
+    if (!options.packageMap.isSupersetOfJSON(
+      options.isopackBuildInfoJson.pluginProviderPackageMap)) {
+      return false;
+    }
+    // Merge in the watchsets for all unibuilds and plugins in the package, then
+    // check it once.
+    var watchSet = watch.WatchSet.fromJSON(
+      options.isopackBuildInfoJson.pluginDependencies);
+
+    _.each(options.isopackBuildInfoJson.unibuildDependencies, function (deps) {
+      watchSet.merge(watch.WatchSet.fromJSON(deps));
+    });
+    return watch.isUpToDate(watchSet);
+  },
+
   _isopackDir: function (packageName) {
     var self = this;
     return path.join(self.cacheDir, packageName);
+  },
+
+  _isopackBuildInfoPath: function (packageName) {
+    var self = this;
+    return path.join(self.cacheDir, packageName, 'isopack-buildinfo.json');
   }
 });
