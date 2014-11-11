@@ -11,10 +11,15 @@ var isopackets = require('./isopackets.js');
 var packageMap = require('./package-map.js');
 var utils = require('./utils.js');
 
-exports.ProjectContext = function (appDir) {
+exports.ProjectContext = function (options) {
   var self = this;
+  if (!options.projectDir)
+    throw Error("missing projectDir!");
+  if (!options.tropohouse)
+    throw Error("missing tropohouse!");
 
-  self.rootDir = appDir;
+  self.projectDir = options.projectDir;
+  self.tropohouse = options.tropohouse;
   self.packageMap = null;
 
   // XXX #3006: Things we're leaving off for now:
@@ -26,7 +31,18 @@ exports.ProjectContext = function (appDir) {
 };
 
 _.extend(exports.ProjectContext.prototype, {
-  resolveConstraints: function () {
+  prepareProjectForBuild: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    self._resolveConstraints();
+    if (!self.packageMap)
+      return;  // error is already in buildmessage
+
+    self._downloadMissingPackages();
+  },
+
+  _resolveConstraints: function () {
     var self = this;
     buildmessage.assertInCapture();
     var cat = self._makeProjectCatalog();
@@ -62,7 +78,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   _localPackageSearchDirs: function () {
     var self = this;
-    var searchDirs = [path.join(self.rootDir, 'packages')];
+    var searchDirs = [path.join(self.projectDir, 'packages')];
 
     if (process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
@@ -121,7 +137,7 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob({ title: "reading packages file" }, function () {
-      var packagesFileLines = files.getLinesOrEmpty(self._getConstraintFile());
+      var packagesFileLines = files.getLinesOrEmpty(self._constraintFilename());
       _.each(packagesFileLines, function (line) {
         line = files.trimLine(line);
         if (line === '')
@@ -170,11 +186,20 @@ _.extend(exports.ProjectContext.prototype, {
     return resolver;
   },
 
+  _downloadMissingPackages: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+    if (!self.packageMap)
+      throw Error("which packages to download?");
+    // XXX #3006 This downloads archinfo.host packages. How about
+    //     for deploy?
+    self.tropohouse.downloadPackagesMissingFromMap(self.packageMap);
+  },
 
   // Returns the file path to the .meteor/packages file, containing the
   // constraints for this specific project.
-  _getConstraintFile : function () {
+  _constraintFilename : function () {
     var self = this;
-    return path.join(self.rootDir, '.meteor', 'packages');
+    return path.join(self.projectDir, '.meteor', 'packages');
   }
 });

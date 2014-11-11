@@ -2883,10 +2883,13 @@ main.registerCommand({
 }, function (options) {
   console.log("I AM IN AN APP", options.appDir);
   var projectContextModule = require('./project-context.js');
-  var projectContext = new projectContextModule.ProjectContext(options.appDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    tropohouse: tropohouse.default
+  });
 
   var messages = buildmessage.capture(function () {
-    projectContext.resolveConstraints();
+    projectContext.prepareProjectForBuild();
   });
   if (messages.hasMessages()) {
     Console.error("=> Errors while initializing project:");

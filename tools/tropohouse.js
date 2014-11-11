@@ -182,6 +182,11 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX more precise error handling in offline case. maybe throw instead like
   // warehouse does.  actually, generally deal with error handling.
+  //
+  // XXX This function is in transition.  If the returnDownloadCallback option
+  // is passed, then it returns null if no download is needed and returns a
+  // callback that does the download if a download is needed.  Otherwise it
+  // just downloads the package itself.
   maybeDownloadPackageForArchitectures: function (options) {
     var self = this;
     if (!options.packageName)
@@ -199,8 +204,11 @@ _.extend(exports.Tropohouse.prototype, {
     // already have it)
     // (In the special case of springboarding, we avoid using self.catalog
     // here because it is catalog.complete and is not yet initialized.)
+    // XXX #3006 we also trigger this case any time we're coming from
+    //     the downloadPackagesMissingFromMap case, but eventually this
+    //     line should just vanish
     if (!options.definitelyNotLocal && self.catalog.isLocalPackage(packageName))
-      return;
+      return null;
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
@@ -238,11 +246,9 @@ _.extend(exports.Tropohouse.prototype, {
     // Have everything we need? Great.
     if (!archesToDownload.length) {
       Console.debug("Local package version is up-to-date:", packageName + "@" + version);
-      return;
+      return null;
     }
 
-    Console.debug("Downloading missing local versions of package",
-                  packageName + "@" + version, ":", archesToDownload);
 
     // Since we are downloading from the server (and we've already done the
     // local package check), we can use the official catalog here. (This is
@@ -257,47 +263,68 @@ _.extend(exports.Tropohouse.prototype, {
       throw e;
     }
 
-    buildmessage.enterJob({
-      title: "  Installing " + packageName + "@" + version + "..."
-    }, function() {
-      var buildTempDirs = [];
-      // If there's already a package in the tropohouse, start with it.
-      if (packageLinkTarget) {
-        buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
-                                        packageLinkTarget));
-      }
-      // XXX how does concurrency work here?  we could just get errors if we try
-      // to rename over the other thing?  but that's the same as in warehouse?
-      _.each(buildsToDownload, function (build) {
-        buildTempDirs.push(self.downloadBuildToTempDir({packageName: packageName, version: version}, build));
-      });
+    var actuallyDownload = function (useBuildmessage) {
+      if (useBuildmessage)
+        buildmessage.assertInCapture();
 
-      // We need to turn our builds into a single isopack.
-      var isopack = new Isopack;
-      _.each(buildTempDirs, function (buildTempDir, i) {
-        isopack._loadUnibuildsFromPath(
-          packageName,
-          buildTempDir,
-          {firstIsopack: i === 0});
-      });
-      // Note: wipeAllPackages depends on this filename structure, as does the
-      // part above which readlinks.
-      var newPackageLinkTarget = '.' + version + '.'
-            + utils.randomToken() + '++' + isopack.buildArchitectures();
-      var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
-      isopack.saveToPath(combinedDirectory, {
-        // We got this from the server, so we can't rebuild it.
-        elideBuildInfo: true
-      });
-      files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+      Console.debug("Downloading missing local versions of package",
+                    packageName + "@" + version, ":", archesToDownload);
 
-      // Clean up old version.
-      if (packageLinkTarget) {
-        files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
-      }
-    });
+      buildmessage.enterJob({
+        title: "downloading " + packageName + "@" + version + "..."
+      }, function() {
+        var buildTempDirs = [];
+        // If there's already a package in the tropohouse, start with it.
+        if (packageLinkTarget) {
+          buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
+                                          packageLinkTarget));
+        }
+        // XXX how does concurrency work here?  we could just get errors if we
+        // try to rename over the other thing?  but that's the same as in
+        // warehouse?
+        _.each(buildsToDownload, function (build) {
+          try {
+            buildTempDirs.push(self.downloadBuildToTempDir(
+              { packageName: packageName, version: version }, build));
+          } catch (e) {
+            if (!useBuildmessage || !(e instanceof files.OfflineError))
+              throw e;
+            buildmessage.exception(e);
+          }
+        });
+        if (useBuildmessage && buildmessage.jobHasMessages())
+          return;
 
-    return;
+        // We need to turn our builds into a single isopack.
+        var isopack = new Isopack;
+        _.each(buildTempDirs, function (buildTempDir, i) {
+          isopack._loadUnibuildsFromPath(
+            packageName,
+            buildTempDir,
+            {firstIsopack: i === 0});
+        });
+        // Note: wipeAllPackages depends on this filename structure, as does the
+        // part above which readlinks.
+        var newPackageLinkTarget = '.' + version + '.'
+              + utils.randomToken() + '++' + isopack.buildArchitectures();
+        var combinedDirectory = self.packagePath(
+          packageName, newPackageLinkTarget);
+        isopack.saveToPath(combinedDirectory, {
+          // We got this from the server, so we can't rebuild it.
+          elideBuildInfo: true
+        });
+        files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+        // Clean up old version.
+        if (packageLinkTarget) {
+          files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
+        }
+      });
+    };
+
+    if (options.returnDownloadCallback)
+      return actuallyDownload;
+    actuallyDownload();
   },
 
 
@@ -310,6 +337,8 @@ _.extend(exports.Tropohouse.prototype, {
   // XXX This function's error handling capabilities are poor. It's supposed to
   // return a data structure that its callers check, but most of its callers
   // don't check it. Bleah.  Should rewrite this and all of its callers.
+  //
+  // XXX #3006 This is being replaced by downloadPackagesMissingFromMap
   downloadMissingPackages: function (versionMap, options) {
     var self = this;
     options = options || {};
@@ -345,6 +374,49 @@ _.extend(exports.Tropohouse.prototype, {
       }
     });
     return downloadedPackages;
+  },
+
+  // Takes in a PackageMap object. Downloads any versioned packages we don't
+  // already have.
+  //
+  // Reports errors via buildmessage.
+  downloadPackagesMissingFromMap: function (packageMap, options) {
+    var self = this;
+    buildmessage.assertInCapture();
+    options = options || {};
+    var serverArch = options.serverArch || archinfo.host();
+
+    var downloadCallbacks = {};
+    buildmessage.enterJob('checking package versions', function () {
+      packageMap.eachPackage(function (packageName, info) {
+        if (info.kind !== 'versioned')
+          return;
+        try {
+          var downloadCallback = self.maybeDownloadPackageForArchitectures({
+            returnDownloadCallback: true,
+            packageName: packageName,
+            version: info.version,
+            architectures: [serverArch],
+            // Don't let tropohouse talk to the catalog, since there's no point.
+            definitelyNotLocal: true
+          });
+        } catch (e) {
+          if (!e.noCompatibleBuildError)
+            throw e;
+          buildmessage.exception(e);
+          return;
+        }
+        if (downloadCallback)
+          downloadCallbacks[packageName] = downloadCallback;
+      });
+    });
+
+    buildmessage.forkJoin(
+      { title: 'downloading packages', parallel: true},
+      downloadCallbacks,
+      function (cb, packageName) {
+        cb(true);
+      });
   },
 
   latestMeteorSymlink: function () {

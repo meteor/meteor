@@ -15,3 +15,12 @@ exports.PackageMap = function (versions, cat) {
     }
   });
 };
+
+_.extend(exports.PackageMap.prototype, {
+  eachPackage: function (iterator) {
+    var self = this;
+    _.each(self._map, function (info, name) {
+      iterator(name, _.pick(info, 'kind', 'version'));
+    });
+  }
+});
