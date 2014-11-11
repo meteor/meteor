@@ -2881,7 +2881,6 @@ main.registerCommand({
   pretty: true,
   requiresApp: true
 }, function (options) {
-  console.log("I AM IN AN APP", options.appDir);
   var projectContextModule = require('./project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,

@@ -68,10 +68,8 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.enterJob("selecting package versions", function () {
       // XXX #3006 set previousSolution
       try {
-        var d = +(new Date);
         solution = resolver.resolve(
           depsAndConstraints.deps, depsAndConstraints.constraints);
-        console.log("TOOK", +(new Date) - d);
       } catch (e) {
         if (!e.constraintSolverError)
           throw e;
