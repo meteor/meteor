@@ -724,8 +724,6 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      self.cordovaDependencies = mainJson.cordovaDependencies || null;
-
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
         arch: unibuildMeta.arch,
@@ -735,10 +733,11 @@ _.extend(Isopack.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources,
-        cordovaDependencies: unibuildJson.cordovaDependencies
+        resources: resources
       }));
     });
+
+    self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
     _.each(mainJson.tools, function (toolMeta) {
       toolMeta.rootDir = dir;
@@ -808,8 +807,7 @@ _.extend(Isopack.prototype, {
           pluginProviderPackages: self.pluginProviderPackageDirs,
           source: options.buildOfPath || undefined,
           buildTimeDirectDependencies: buildTimeDirectDeps,
-          buildTimePluginDependencies: buildTimePluginDeps,
-          cordovaDependencies: self.cordovaDependencies
+          buildTimePluginDependencies: buildTimePluginDeps
         };
       }
 
