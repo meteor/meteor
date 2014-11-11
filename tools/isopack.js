@@ -1199,6 +1199,7 @@ _.extend(Isopack.prototype, {
   //  - catalog: required
   //
   // Returns the build id as a hex string.
+  // XXX #3006 I think this build identifier is no longer relevant?
   getBuildIdentifier: function (options) {
     var self = this;
     buildmessage.assertInCapture();
