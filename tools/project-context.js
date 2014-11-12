@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var path = require('path');
 
+var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog.js');
 var catalogLocal = require('./catalog-local.js');
@@ -13,6 +14,8 @@ var packageMap = require('./package-map.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
 
+// This class follows the standard protocol where names beginning with _ should
+// not be externally accessed.
 exports.ProjectContext = function (options) {
   var self = this;
   if (!options.projectDir)
@@ -23,6 +26,11 @@ exports.ProjectContext = function (options) {
   self.projectDir = options.projectDir;
   self.tropohouse = options.tropohouse;
 
+  self._serverArchitectures = options.serverArchitectures || [];
+  // We always need to download host versions of packages, at least for plugins.
+  self._serverArchitectures.push(archinfo.host());
+  self._serverArchitectures = _.uniq(self._serverArchitectures);
+
   // A WatchSet for all the files read by this class (eg .meteor/packages, etc).
   self.projectWatchSet = new watch.WatchSet;
 
@@ -31,7 +39,7 @@ exports.ProjectContext = function (options) {
   self.isopackCache = null;
 
   // XXX #3006: Things we're leaving off for now:
-  //  - constraints, combinedConstraints
+  //  - combinedConstraints
   //  - cordovaPlugins, platforms
   //  - appId
   //  - muted (???)
@@ -196,7 +204,9 @@ _.extend(exports.ProjectContext.prototype, {
       throw Error("which packages to download?");
     // XXX #3006 This downloads archinfo.host packages. How about
     //     for deploy?
-    self.tropohouse.downloadPackagesMissingFromMap(self.packageMap);
+    self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
+      serverArchitectures: self._serverArchitectures
+    });
   },
 
   _buildLocalPackages: function () {

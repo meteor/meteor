@@ -26,6 +26,7 @@ var cordova = require('./commands-cordova.js');
 var commandsPackages = require('./commands-packages.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
+var projectContextModule = require('./project-context.js');
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -685,8 +686,7 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // doesn't output a directory with all builds but rather only one tarball with
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
-main.registerCommand(_.extend({ name: 'bundle', hidden: true,
-                                prepareProjectContext: true
+main.registerCommand(_.extend({ name: 'bundle', hidden: true
                               }, buildCommands),
     function (options) {
 
@@ -718,6 +718,21 @@ var buildCommand = function (options) {
   var bundleArch = options.architecture || archinfo.host();
   // XXX #3006: We need to have downloaded packages for options.architecture AND
   // archinfo.host()!
+
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    tropohouse: tropohouse.default,
+    serverArchitectures: _.uniq([bundleArch, archinfo.host()])
+  });
+
+  var messages = buildmessage.capture(function () {
+    projectContext.prepareProjectForBuild();
+  });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while initializing project:");
+    Console.printMessages(messages);
+    return 1;
+  }
 
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,
@@ -808,7 +823,7 @@ var buildCommand = function (options) {
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
-    projectContext: options.projectContext,
+    projectContext: projectContext,
     includeDebug: !! options.debug,
     outputPath: bundlePath,
     buildOptions: {

@@ -1191,7 +1191,9 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  if (!command.catalogRefresh.doesNotUsePackages) {
+  // XXX #3006 this should go away, with catalog.complete.
+  if (! command.newfangledProject &&
+      ! command.catalogRefresh.doesNotUsePackages) {
     // OK, now it's finally time to set up the complete catalog. Only after this
     // can we use the build system (other than to make and load isopackets).
 

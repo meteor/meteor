@@ -381,7 +381,7 @@ _.extend(exports.Tropohouse.prototype, {
     var self = this;
     buildmessage.assertInCapture();
     options = options || {};
-    var serverArch = options.serverArch || archinfo.host();
+    var serverArchs = options.serverArchitectures || [archinfo.host()];
 
     var downloadCallbacks = {};
     buildmessage.enterJob('checking package versions', function () {
@@ -393,7 +393,7 @@ _.extend(exports.Tropohouse.prototype, {
             returnDownloadCallback: true,
             packageName: packageName,
             version: info.version,
-            architectures: [serverArch],
+            architectures: serverArchs,
             // Don't let tropohouse talk to the catalog, since there's no point.
             definitelyNotLocal: true
           });
