@@ -669,10 +669,10 @@ exports.mobileServerForRun = function (options) {
   };
 };
 
-exports.escapePackageName = function (packageName) {
+exports.escapePackageNameForPath = function (packageName) {
   return packageName.replace(":", "_");
 };
 
-exports.unescapePackageName = function (escapedPackageName) {
+exports.unescapePackageNameForPath = function (escapedPackageName) {
   return escapedPackageName.replace("_", ":");
 };
