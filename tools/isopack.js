@@ -1268,4 +1268,3 @@ exports.isopackExistsAtPath = function (thePath) {
     fs.existsSync(path.join(thePath, 'unipackage.json'));
 };
 
-exports.COLON_ESCAPE = "~";

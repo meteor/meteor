@@ -38,7 +38,7 @@ var Builder = function (options) {
 
   // Escape colons with tilde before writing to file system
   self.outputPath = path.join(path.dirname(options.outputPath),
-    path.basename(options.outputPath).replace(/:/g, isopack.COLON_ESCAPE));
+    path.basename(options.outputPath).replace(/:/g, files.COLON_ESCAPE));
 
   // Paths already written to. Map from canonicalized relPath (no
   // trailing slash) to true for a file, or false for a directory.
