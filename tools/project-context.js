@@ -211,13 +211,6 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.enterJob('building local packages', function () {
       self.isopackCache.buildLocalPackages(self.packageMap);
     });
-  },
-
-  // Returns the file path to the .meteor/packages file, containing the
-  // constraints for this specific project.
-  _constraintFilename : function () {
-    var self = this;
-    return 
   }
 });
 
