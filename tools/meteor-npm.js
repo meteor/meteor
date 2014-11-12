@@ -352,12 +352,9 @@ meteorNpm._execFileSync = function (file, args, opts) {
   var future = new Future;
 
   var child_process = require('child_process');
-  console.log("About to call NPM: " + file);
   child_process.execFile(file, args, opts, function (err, stdout, stderr) {
     if (meteorNpm._printNpmCalls)
       process.stdout.write(err ? 'failed\n' : 'done\n');
-
-    console.log("Inside callback");
 
     future.return({
       success: ! err,
