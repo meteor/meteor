@@ -83,6 +83,8 @@ echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install
 npm install npm
 cp node_modules\npm\bin\npm.cmd .
 
+Set-Location $DIR
+
 # mark the version
 echo "0.3.62" | Out-File .bundle_version.txt -Encoding ascii
 
