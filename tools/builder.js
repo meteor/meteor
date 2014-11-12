@@ -336,6 +336,8 @@ _.extend(Builder.prototype, {
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
                         " but it is is already a file");
+      } else if (process.platform === "win32") {
+        canSymlink = false;
       } else if (normOptionsTo in self.usedAsFile) {
         // It's already here and is a directory, maybe because of a call to
         // reserve with {directory: true}. If it's an empty directory, this is
