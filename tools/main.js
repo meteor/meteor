@@ -371,22 +371,18 @@ var springboard = function (rel, options) {
 
   // XXX split better
   try {
-    Console.setPretty(true);
-    Console.enableProgressDisplay(true);
-
-    buildmessage.enterJob({
-      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
-    }, function () {
-      tropohouse.default.maybeDownloadPackageForArchitectures({
-        packageName: toolsPkg,
-        version: toolsVersion,
-        architectures: [archinfo.host()],
-        definitelyNotLocal: true
+    Console.withProgressDisplayVisible(function () {
+      buildmessage.enterJob({
+        title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
+      }, function () {
+        tropohouse.default.maybeDownloadPackageForArchitectures({
+          packageName: toolsPkg,
+          version: toolsVersion,
+          architectures: [archinfo.host()],
+          definitelyNotLocal: true
+        });
       });
     });
-
-    Console.enableProgressDisplay(false);
-    Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
@@ -795,11 +791,9 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
         releaseName = release.latestKnown();
       }
       if (!releaseName) {
@@ -855,11 +849,9 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
 
         // Try to load the release even if the refresh failed, since it might
         // have failed on a later page than the one we needed.
@@ -1296,7 +1288,6 @@ commandName + ": You're not in a Meteor project directory.\n" +
     require('./profile-require.js').printReport();
 
   Console.setPretty(command.pretty);
-
   Console.enableProgressDisplay(true);
 
   // Run the command!

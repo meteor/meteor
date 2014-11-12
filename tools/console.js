@@ -516,10 +516,40 @@ _.extend(Console.prototype, {
 
   setPretty: function (pretty) {
     var self = this;
-    if (FORCE_PRETTY === undefined) {
-      self._pretty = pretty;
-    }
+    // If we're being forced, do nothing.
+    if (FORCE_PRETTY !== undefined)
+      return;
+    // If no change, do nothing.
+    if (self._pretty === pretty)
+      return;
+    self._pretty = pretty;
     self._updateProgressDisplay();
+  },
+
+  // Runs f with the progress display visible (ie, with progress display enabled
+  // and pretty). Resets both flags to their original values after f runs.
+  withProgressDisplayVisible: function (f) {
+    var self = this;
+    var originalPretty = self._pretty;
+    var originalProgressDisplayEnabled = self._progressDisplayEnabled;
+
+    // Turn both flags on.
+    self._pretty = self._progressDisplayEnabled = true;
+
+    // Update the screen if anything changed.
+    if (!originalPretty || !originalProgressDisplayEnabled)
+      self._updateProgressDisplay();
+
+    try {
+      return f();
+    } finally {
+      // Reset the flags.
+      self._pretty = originalPretty;
+      self._progressDisplayEnabled = originalProgressDisplayEnabled;
+      // Update the screen if anything changed.
+      if (!originalPretty || !originalProgressDisplayEnabled)
+        self._updateProgressDisplay();
+    }
   },
 
   setVerbose: function (verbose) {
@@ -744,6 +774,9 @@ _.extend(Console.prototype, {
     if (enabled === undefined) {
       enabled = true;
     }
+
+    if (self._progressDisplayEnabled === enabled)
+      return;
 
     self._progressDisplayEnabled = enabled;
     self._updateProgressDisplay();
