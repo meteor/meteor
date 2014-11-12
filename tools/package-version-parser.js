@@ -90,7 +90,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
   if (prerelease.length === 0)
     return 0;
 
-  return _.reduce(prerelease, function (memo, part, index) {
+  return __.reduce(prerelease, function (memo, part, index) {
     var digit;
     if (typeof part === 'number') {
       digit = part+1;
