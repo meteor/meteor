@@ -35,7 +35,9 @@ var Builder = function (options) {
   var self = this;
   options = options || {};
 
-  self.outputPath = options.outputPath;
+  // Escape colons with tilde before writing to file system
+  self.outputPath = path.join(path.dirname(options.outputPath),
+    path.basename(options.outputPath).replace(/:/g, "~"));
 
   // Paths already written to. Map from canonicalized relPath (no
   // trailing slash) to true for a file, or false for a directory.
