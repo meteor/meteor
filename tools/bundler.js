@@ -1708,10 +1708,8 @@ _.extend(ServerTarget.prototype, {
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
-      buildmessage.error("MDG does not publish dev_bundles for arch: " +
+      throw new Error("MDG does not publish dev_bundles for arch: " +
                          self.arch);
-      // Recover by bailing out and leaving a partially built target
-      return;
     }
 
     var devBundleVersion =
