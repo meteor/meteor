@@ -31,11 +31,11 @@ _.extend(exports.IsopackCache.prototype, {
     var onStack = {};
     if (rootPackageNames) {
       _.each(rootPackageNames, function (name) {
-        self._ensurePackageBuilt(name, packageMap, onStack);
+        self._ensurePackageLoaded(name, packageMap, onStack);
       });
     } else {
       packageMap.eachPackage(function (name, packageInfo) {
-        self._ensurePackageBuilt(name, packageMap, onStack);
+        self._ensurePackageLoaded(name, packageMap, onStack);
       });
     }
   },
@@ -52,7 +52,7 @@ _.extend(exports.IsopackCache.prototype, {
   },
 
   // XXX #3006 Don't infinite recurse on circular deps
-  _ensurePackageBuilt: function (name, packageMap, onStack) {
+  _ensurePackageLoaded: function (name, packageMap, onStack) {
     var self = this;
     buildmessage.assertInCapture();
     if (_.has(self.isopacks, name))
@@ -64,7 +64,7 @@ _.extend(exports.IsopackCache.prototype, {
 
     if (packageInfo.kind === 'local') {
       var packageNames =
-            packageInfo.packageSource.getPackagesToBuildFirst(packageMap);
+            packageInfo.packageSource.getPackagesToLoadFirst(packageMap);
       _.each(packageNames, function (depName) {
         if (_.has(onStack, depName)) {
           buildmessage.error("circular dependency between packages " +
@@ -73,7 +73,7 @@ _.extend(exports.IsopackCache.prototype, {
           return;
         }
         onStack[depName] = true;
-        self._ensurePackageBuilt(depName, packageMap, onStack);
+        self._ensurePackageLoaded(depName, packageMap, onStack);
         delete onStack[depName];
       });
 

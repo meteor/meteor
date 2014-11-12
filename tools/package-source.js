@@ -1756,16 +1756,15 @@ _.extend(PackageSource.prototype, {
     return ret;
   },
 
-  // Returns a list of package names which should be built before building this
-  // package.
+  // Returns a list of package names which should be loaded before building this
+  // package. This is all the packages that we directly depend on in a unibuild
+  // or from a plugin.
   //
-  // Specifically, this is:
-  // - All packages on which we directly depend (in a non-weak, ordered fashion)
-  //   that are local packages containing plugins.  We need their plugins to
-  //   build us!  (Versioned packages are already built so we can ignore them.)
-  // - For each of our plugins, the entire transitive closure of their
-  //   dependencies.
-  getPackagesToBuildFirst: function (packageMap) {
+  // (It's possible that we could do something slightly fancier where we only
+  // need to load those dependencies (including implied dependencies) which we
+  // know contain plugins first, plus the transitive closure of all the packages
+  // we depend on which contain a plugin. This seems good enough, though.)
+  getPackagesToLoadFirst: function (packageMap) {
     var self = this;
     var packages = {};
     var processUse = function (use) {
@@ -1777,43 +1776,26 @@ _.extend(PackageSource.prototype, {
 
       if (! packageInfo)
         throw Error("Depending on unknown package " + use.package);
-
-      // We don't have to build it first if we're not building it at all!
-      if (packageInfo.kind !== 'local')
-        return;
-      var packageSource =
-            self.catalog.getPackageSource(use.package);
-      if (! packageSource)
-        throw Error("no source for local package " + use.package);
-
-      // We don't have to build it first if it has no plugins!
-      if (! packageSource.containsPlugins)
-        return;
       packages[use.package] = true;
     };
 
     _.each(self.architectures, function (arch) {
       // We need to iterate over both uses and implies, since implied packages
-      // also constitute dependencies.
+      // also constitute dependencies. We don't have to include the dependencies
+      // of implied packages directly here, since their own
+      // getPackagesToLoadFirst will include those.
       _.each(arch.uses, processUse);
       _.each(arch.implies, processUse);
     });
 
-    var pluginRootPackages = {};
     _.each(self.pluginInfo, function (info) {
       // info.use is currently just an array of strings, and there's
       // no way to specify weak/unordered. Much like an app.
       _.each(info.use, function (spec) {
         var parsedSpec = utils.splitConstraint(spec);
-        pluginRootPackages[parsedSpec.package] = true;
+        packages[parsedSpec.package] = true;
       });
     });
-    // We get the transitive closure for archinfo.host(), since we always build
-    // plugins for the host architecture.
-    _.each(isopackCompiler.getTransitiveClosureOfPackages(
-      _.keys(pluginRootPackages), archinfo.host(), packageMap), function (p) {
-        packages[p] = true;
-      });
     return _.keys(packages);
   },
 

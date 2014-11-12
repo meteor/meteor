@@ -480,6 +480,7 @@ _.extend(LocalCatalog.prototype, {
     // Go through the build-time constraints. Make sure that they are built,
     // either because we have built them already, or because we are about to
     // build them.
+    // XXX #3006 this isn't a thing any more
     var deps = self.packages[name].packageSource.getPackagesToBuildFirst();
 
     _.each(deps, function (dep) {

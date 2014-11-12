@@ -15,6 +15,7 @@ var watch = require('./watch.js');
 // reachable from it for a given arch (ignoring weak dependencies).
 // Note that this function does NOT require the packages to be built:
 // it only requires access to the catalog.
+// XXX #3006 this might be dead now
 exports.getTransitiveClosureOfPackages = function (rootPackageNames,
                                                    arch, packageMap) {
   var usedPackages = {};  // Map from package name to true;
