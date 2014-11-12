@@ -7,6 +7,7 @@ var compiler = require('./compiler.js');
 var files = require('./files.js');
 var isopackCompiler = require('./isopack-compiler.js');
 var isopackModule = require('./isopack.js');
+var utils = require('./utils.js');
 var watch = require('./watch.js');
 
 exports.IsopackCache = function (options) {
@@ -173,11 +174,12 @@ _.extend(exports.IsopackCache.prototype, {
 
   _isopackDir: function (packageName) {
     var self = this;
-    return path.join(self.cacheDir, packageName);
+    return path.join(self.cacheDir,
+                     utils.escapePackageNameForPath(packageName));
   },
 
   _isopackBuildInfoPath: function (packageName) {
     var self = this;
-    return path.join(self.cacheDir, packageName, 'isopack-buildinfo.json');
+    return path.join(self._isopackDir(packageName), 'isopack-buildinfo.json');
   }
 });
