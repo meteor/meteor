@@ -1670,7 +1670,8 @@ _.extend(ServerTarget.prototype, {
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64'
+      'os.osx.x86_64': 'Darwin_x86_64',
+      'os.windows.x86_32': 'XXX' // XXX what will the dev bundle be??
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
