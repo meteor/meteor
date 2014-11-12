@@ -668,3 +668,11 @@ exports.mobileServerForRun = function (options) {
     protocol: "http://"
   };
 };
+
+exports.escapePackageName = function (packageName) {
+  return packageName.replace(":", "_");
+};
+
+exports.unescapePackageName = function (escapedPackageName) {
+  return escapedPackageName.replace("_", ":");
+};
