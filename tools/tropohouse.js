@@ -289,7 +289,7 @@ _.extend(exports.Tropohouse.prototype, {
           } catch (e) {
             if (!useBuildmessage || !(e instanceof files.OfflineError))
               throw e;
-            buildmessage.exception(e);
+            buildmessage.error(e.error.message);
           }
         });
         if (useBuildmessage && buildmessage.jobHasMessages())
