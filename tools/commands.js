@@ -672,6 +672,7 @@ var buildCommands = {
     "mobile-port": { type: String },
     verbose: { type: Boolean, short: "v" }
   },
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 
@@ -684,7 +685,9 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // doesn't output a directory with all builds but rather only one tarball with
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
-main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
+main.registerCommand(_.extend({ name: 'bundle', hidden: true,
+                                prepareProjectContext: true
+                              }, buildCommands),
     function (options) {
 
       Console.stderr.write(
@@ -696,8 +699,6 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true }, buildCommands),
 });
 
 var buildCommand = function (options) {
-  Console.setPretty(true);
-
   cordova.setVerboseness(options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
@@ -714,6 +715,9 @@ var buildCommand = function (options) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
+  var bundleArch = options.architecture || archinfo.host();
+  // XXX #3006: We need to have downloaded packages for options.architecture AND
+  // archinfo.host()!
 
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,
@@ -722,8 +726,8 @@ var buildCommand = function (options) {
     options.settings = options['mobile-settings'];
   }
 
-  var bundleArch =  options.architecture || archinfo.host();
-  var webArchs = project.getWebArchs();
+  // XXX #3006 Implement getWebArchs on projectContext.
+  var webArchs = [ "web.browser" ];
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
@@ -799,25 +803,13 @@ var buildCommand = function (options) {
       (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
       path.join(buildDir, 'bundle');
 
-  // Creating the package loader with which to bundle our app here, probably
-  // calculating the dependencies.
-  var loader;
-  var messages = buildmessage.capture(function () {
-    // By default, options.debug will be false, which means that we will bundle
-    // for production.
-    project.setDebug(options.debug);
-    loader = project.getPackageLoader();
-  });
-  if (messages.hasMessages()) {
-    Console.stderr.write("Errors prevented bundling your app:\n");
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
-  stats.recordPackages("sdk.bundle");
+  // XXX #3006 Make stats work again.
+  // stats.recordPackages("sdk.bundle");
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
+    projectContext: options.projectContext,
+    includeDebug: !! options.debug,
     outputPath: bundlePath,
     buildOptions: {
       minify: ! options.debug,

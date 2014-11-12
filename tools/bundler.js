@@ -463,6 +463,8 @@ var Target = function (options) {
   // METEOR_MINIFY_LEGACY is an undocumented safety-valve environment variable,
   //  in case people hit trouble
   self._minifyTogether = !!process.env.METEOR_MINIFY_LEGACY;
+
+  self.includeDebug = options.includeDebug;
 };
 
 _.extend(Target.prototype, {
@@ -493,7 +495,8 @@ _.extend(Target.prototype, {
 
     // Add top-level Cordova dependencies, which override Cordova
     // dependencies from packages.
-    self._addDirectCordovaDependencies();
+    // XXX #3006 Add this back in once platforms and such are in ProjectContext.
+    // self._addDirectCordovaDependencies();
 
     // Preprocess and concatenate CSS files for client targets.
     if (self instanceof ClientTarget) {
@@ -549,7 +552,7 @@ _.extend(Target.prototype, {
             p = packageLoader.getPackage(p, { throwOnError: true });
           }
         }
-        if (p.debugOnly && !project.project.includeDebug) {
+        if (p.debugOnly && ! self.includeDebug) {
           return;
         }
         var unibuild = p.getUnibuildAtArch(self.arch);
@@ -584,12 +587,12 @@ _.extend(Target.prototype, {
             dependencies: unibuild.uses,
             arch: self.arch,
             isopackCache: isopackCache,
-            skipDebugOnly: !project.project.includeDebug
+            skipDebugOnly: ! self.includeDebug
           }, addToGetsUsed);
         } else {
           compiler.eachUsedUnibuild(
             unibuild.uses, self.arch, packageLoader, {
-              skipDebugOnly: !project.project.includeDebug
+              skipDebugOnly: ! self.includeDebug
             }, addToGetsUsed);
         }
       };
@@ -651,14 +654,14 @@ _.extend(Target.prototype, {
             isopackCache: isopackCache,
             skipUnordered: true,
             acceptableWeakPackages: self.usedPackages,
-            skipDebugOnly: !project.project.includeDebug
+            skipDebugOnly: ! self.includeDebug
           }, processUnibuild);
         } else {
           compiler.eachUsedUnibuild(
             unibuild.uses, self.arch, packageLoader,
             { skipUnordered: true,
               acceptableWeakPackages: self.usedPackages,
-              skipDebugOnly: !project.project.includeDebug
+              skipDebugOnly: ! self.includeDebug
             },
             processUnibuild);
         }
@@ -1906,7 +1909,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * Builds a Meteor app.
  *
  * options are:
-
+ *
+ * XXX #3006: Update docs
  * - outputPath: Required. Path to the directory where the output (a
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
@@ -1951,15 +1955,14 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  // bundler.bundle is not called to make isopackets, so it always uses the
-  // complete catalog.
-  var whichCatalog = catalog.complete;
+  var projectContext = options.projectContext;
 
   var outputPath = options.outputPath;
   var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
+  var includeDebug = !! options.includeDebug;
 
-  var appDir = project.project.rootDir;
+  var appDir = projectContext.projectDir;
 
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs = buildOptions.webArchs || [ "web.browser" ];
@@ -1975,29 +1978,19 @@ exports.bundle = function (options) {
   var starResult = null;
   var targets = {};
 
-  if (! release.usingRightReleaseForApp(appDir))
-    throw new Error("running wrong release for app?");
+  // XXX #3006 reimplement usingRightReleaseForApp for projectContext
+  // if (! release.usingRightReleaseForApp(appDir))
+  //   throw new Error("running wrong release for app?");
 
   var messages = buildmessage.capture({
     title: "Building the application"
   }, function () {
-    var packageLoader = project.project.getPackageLoader();
-    var downloaded = tropohouse.default.downloadMissingPackages(
-      project.project.dependencies, { serverArch: serverArch });
-
-    if (_.keys(downloaded).length !==
-        _.keys(project.project.dependencies).length) {
-      buildmessage.error("Unable to download package builds for this architecture.");
-      // Recover by returning.
-      return;
-    }
-
-    var controlProgram = null;
-
     var makeClientTarget = function (app, webArch) {
       var client = new ClientTarget({
-        packageLoader: packageLoader,
-        arch: webArch
+        packageMap: projectContext.packageMap,
+        isopackCache: projectContext.isopackCache,
+        arch: webArch,
+        includeDebug: includeDebug
       });
 
       client.make({
@@ -2009,24 +2002,13 @@ exports.bundle = function (options) {
       return client;
     };
 
-    var makeBlankClientTarget = function () {
-      var client = new ClientTarget({
-        packageLoader: packageLoader,
-        arch: "web.browser"
-      });
-      client.make({
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
-
-      return client;
-    };
-
     var makeServerTarget = function (app, clientTargets) {
       var targetOptions = {
-        packageLoader: packageLoader,
+        packageMap: projectContext.packageMap,
+        isopackCache: projectContext.isopackCache,
         arch: serverArch,
-        releaseName: releaseName
+        releaseName: releaseName,
+        includeDebug: includeDebug
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;
@@ -2041,183 +2023,45 @@ exports.bundle = function (options) {
       return server;
     };
 
-    // Include default targets, unless there's a no-default-targets file in the
-    // top level of the app. (This is a very hacky interface which will
-    // change. Note, eg, that .meteor/packages is confusingly ignored in this
-    // case.)
+    // XXX #3006 We used to look for a no-default-targets file here.
+    //           Current Galaxy plans don't require this feature.
+    //           Check to make sure that's OK before merging.
 
-    var includeDefaultTargets = watch.readAndWatchFile(
-      serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
+    // Create a Isopack object that represents the app
+    var packageSource = new PackageSource(projectContext.packageMap.catalog);
+    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+    var app = isopackCompiler.compile(packageSource, {
+      packageMap: projectContext.packageMap,
+      isopackCache: projectContext.isopackCache
+    }).isopack;
 
-    if (includeDefaultTargets) {
-      // Create a Isopack object that represents the app
-      var packageSource = new PackageSource(whichCatalog);
-      packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource).isopack;
+    var clientTargets = [];
+    // Client
+    _.each(webArchs, function (arch) {
+      var client = makeClientTarget(app, arch);
+      clientTargets.push(client);
+      targets[arch] = client;
+    });
 
-      var clientTargets = [];
-      // Client
-      _.each(webArchs, function (arch) {
-        var client = makeClientTarget(app, arch);
-        clientTargets.push(client);
-        targets[arch] = client;
-      });
-
-      // Server
-      if (! options.hasCachedBundle) {
-        var server = makeServerTarget(app, clientTargets);
-        targets.server = server;
-      }
+    // Server
+    if (! options.hasCachedBundle) {
+      var server = makeServerTarget(app, clientTargets);
+      targets.server = server;
     }
 
-    // Pick up any additional targets in /programs
-    // Step 1: scan for targets and make a list. We will reload if you create a
-    // new subdir in 'programs', or create 'programs' itself.
-    var programs = [];
-    var programsDir = project.project.getProgramsDirectory();
-    var programsSubdirs = project.project.getProgramsSubdirs({
-      watchSet: serverWatchSet
-    });
+    // XXX #3006 We used to look for more targets in a 'programs' subdirectory
+    //           here.  Current Galaxy plans don't require this feature.
+    //           Check to make sure that's OK before merging.
 
-    _.each(programsSubdirs, function (item) {
-      // Remove trailing slash.
-      item = item.substr(0, item.length - 1);
-
-      if (_.has(targets, item)) {
-        buildmessage.error("duplicate programs named '" + item + "'");
-        // Recover by ignoring this program
-        return;
-      }
-      // Programs must (for now) contain a `package.js` file. If not, then
-      // perhaps the directory we are seeing is left over from another git
-      // branch or something and we should ignore it.  We don't actually parse
-      // the package.js file here, though (but we do restart if it is later
-      // added or changed).
-      if (watch.readAndWatchFile(
-        serverWatchSet, path.join(programsDir, item, 'package.js')) === null) {
-        return;
-      }
-
-      targets[item] = true;  // will be overwritten with actual target later
-
-      // Read attributes.json, if it exists
-      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
-      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
-      var attrsJsonContents = watch.readAndWatchFile(
-        serverWatchSet, attrsJsonAbsPath);
-
-      var attrsJson = {};
-      if (attrsJsonContents !== null) {
-        try {
-          attrsJson = JSON.parse(attrsJsonContents);
-        } catch (e) {
-          if (! (e instanceof SyntaxError))
-            throw e;
-          buildmessage.error(e.message, { file: attrsJsonRelPath });
-          // recover by ignoring attributes.json
-        }
-      }
-
-      var isControlProgram = !! attrsJson.isControlProgram;
-      if (isControlProgram) {
-        if (controlProgram !== null) {
-          buildmessage.error(
-              "there can be only one control program ('" + controlProgram +
-              "' is also marked as the control program)",
-            { file: attrsJsonRelPath });
-          // recover by ignoring that it wants to be the control
-          // program
-        } else {
-          controlProgram = item;
-        }
-      }
-
-      // Add to list
-      programs.push({
-        type: attrsJson.type || "server",
-        name: item,
-        path: path.join(programsDir, item),
-        client: attrsJson.client,
-        attrsJsonRelPath: attrsJsonRelPath
-      });
-    });
-
-    if (! controlProgram) {
-      if (_.has(targets, 'ctl')) {
-        buildmessage.error(
-          "A program named ctl exists but no program has isControlProgram set");
-        // recover by not making a control program
-      } else if (options.requireControlProgram) {
-        var target = makeServerTarget("ctl");
-        targets["ctl"] = target;
-        controlProgram = "ctl";
-      }
+    // Create a "control program". This is required for an old version of
+    // Galaxy.
+    // XXX #3006 Check to see if this is still required.
+    var controlProgram = null;
+    if (options.requireControlProgram) {
+      var target = makeServerTarget("ctl");
+      targets["ctl"] = target;
+      controlProgram = "ctl";
     }
-
-    // Step 2: sort the list so that client programs are built first (because
-    // when we build the servers we need to be able to reference the clients)
-    programs.sort(function (a, b) {
-      a = (a.type === "client") ? 0 : 1;
-      b = (b.type === "client") ? 0 : 1;
-      return a > b;
-    });
-
-    // Step 3: build the programs
-    var blankClientTarget = null;
-    _.each(programs, function (p) {
-      // Read this directory as a package and create a target from
-      // it
-      var pkg = whichCatalog.packageCache.loadPackageAtPath(p.name, p.path);
-      var target;
-      switch (p.type) {
-      case "server":
-        target = makeServerTarget(pkg);
-        break;
-      case "traditional":
-        var clientTarget;
-
-        if (! p.client) {
-          if (! blankClientTarget) {
-            clientTarget = blankClientTarget = targets._blank =
-              makeBlankClientTarget();
-          } else {
-            clientTarget = blankClientTarget;
-          }
-        } else {
-          clientTarget = targets[p.client];
-          if (! clientTarget) {
-            buildmessage.error("no such program '" + p.client + "'",
-                               { file: p.attrsJsonRelPath });
-            // recover by ignoring target
-            return;
-          }
-        }
-
-        // We don't check whether targets[p.client] is actually a
-        // ClientTarget. If you want to be clever, go ahead.
-
-        // XXX doesn't pass the cordova target, but right now Galaxy doesn't
-        // serve any Cordova supportted apps
-        target = makeServerTarget(pkg, [clientTarget]);
-        break;
-      case "client":
-        target = makeClientTarget(pkg, "web.browser");
-        break;
-      default:
-        buildmessage.error(
-          "type must be 'server', 'traditional', or 'client'",
-          { file: p.attrsJsonRelPath });
-        // recover by ignoring target
-        return;
-      };
-      targets[p.name] = target;
-    });
-
-    // If we omitted a target due to an error, we might not have a
-    // controlProgram anymore.
-    if (controlProgram && ! (controlProgram in targets))
-      controlProgram = undefined;
-
 
     // Hack to let servers find relative paths to clients. Should find
     // another solution eventually (probably some kind of mount

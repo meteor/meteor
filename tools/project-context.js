@@ -11,6 +11,7 @@ var isopackCache = require('./isopack-cache.js');
 var isopackets = require('./isopackets.js');
 var packageMap = require('./package-map.js');
 var utils = require('./utils.js');
+var watch = require('./watch.js');
 
 exports.ProjectContext = function (options) {
   var self = this;
@@ -22,6 +23,10 @@ exports.ProjectContext = function (options) {
   self.projectDir = options.projectDir;
   self.tropohouse = options.tropohouse;
 
+  // A WatchSet for all the files read by this class (eg .meteor/packages, etc).
+  self.projectWatchSet = new watch.WatchSet;
+
+  self.projectConstraintsFile = null;
   self.packageMap = null;
   self.isopackCache = null;
 
@@ -39,6 +44,13 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob('preparing project', function () {
+      self.projectConstraintsFile = new exports.ProjectConstraintsFile(
+        path.join(self.projectDir, '.meteor', 'packages'), {
+          watchSet: self.projectWatchSet
+        });
+      if (buildmessage.jobHasMessages())
+        return;
+
       self._resolveConstraints();
       if (buildmessage.jobHasMessages())
         return;
@@ -129,43 +141,25 @@ _.extend(exports.ProjectContext.prototype, {
 
   _getRootDepsAndConstraints: function (cat) {
     var self = this;
-    buildmessage.assertInCapture();
 
     var depsAndConstraints = {deps: [], constraints: []};
 
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints, cat.localCatalog);
     // XXX #3006 Add constraints from the release
-    // XXX #3006 Add constraints from other programs
+    // XXX #3006 Add constraints from other programs, if we reimplement that.
     // XXX #3006 Add a dependency on ctl
     return depsAndConstraints;
   },
 
   _addAppConstraints: function (depsAndConstraints) {
     var self = this;
-    buildmessage.assertInCapture();
 
-    buildmessage.enterJob({ title: "reading packages file" }, function () {
-      var packagesFileLines = files.getLinesOrEmpty(self._constraintFilename());
-      _.each(packagesFileLines, function (line) {
-        line = files.trimLine(line);
-        if (line === '')
-          return;
-        try {
-          var constraint = utils.parseConstraint(line);
-        } catch (e) {
-          if (!e.versionParserError)
-          throw e;
-          buildmessage.exception(e);
-        }
-        if (!constraint)
-          return;  // recover by ignoring
-
-        // Add a dependency ("this package must be used") and a constraint
-        // ("... at this version (maybe 'any reasonable')").
-        depsAndConstraints.deps.push(constraint.name);
-        depsAndConstraints.constraints.push(constraint);
-      });
+    self.projectConstraintsFile.eachConstraint(function (constraint) {
+      // Add a dependency ("this package must be used") and a constraint
+      // ("... at this version (maybe 'any reasonable')").
+      depsAndConstraints.deps.push(constraint.name);
+      depsAndConstraints.constraints.push(constraint);
     });
   },
 
@@ -223,6 +217,64 @@ _.extend(exports.ProjectContext.prototype, {
   // constraints for this specific project.
   _constraintFilename : function () {
     var self = this;
-    return path.join(self.projectDir, '.meteor', 'packages');
+    return 
+  }
+});
+
+
+exports.ProjectConstraintsFile = function (filename, options) {
+  var self = this;
+  options = options || {};
+  buildmessage.assertInCapture();
+
+  self.filename = filename;
+  // XXX #3006 Use a better data structure so that we can rewrite the file
+  // later. But for now this maps from package name to parsed constraint.
+  self._constraints = {};
+
+  self._readFile(options.watchSet);
+};
+
+_.extend(exports.ProjectConstraintsFile.prototype, {
+  _readFile: function (watchSet) {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    var contents = watch.readAndWatchFile(watchSet, self.filename);
+    // No .meteor/packages? That's OK, you just get no packages.
+    if (contents === null)
+      return;
+    var lines = files.splitBufferToLines(contents);
+    _.each(lines, function (line) {
+      line = files.trimLine(line);
+      if (line === '')
+        return;
+      try {
+        var constraint = utils.parseConstraint(line);
+      } catch (e) {
+        if (!e.versionParserError)
+          throw e;
+        buildmessage.exception(e);
+      }
+      if (!constraint)
+        return;  // recover by ignoring
+      if (_.has(self._constraints, constraint.name)) {
+        buildmessage.error("Package name appears twice: " + constraint.name, {
+          // XXX should this be relative?
+          file: self.filename
+        });
+        return;  // recover by ignoring
+      }
+      self._constraints[constraint.name] = constraint;
+    });
+  },
+
+  // Iterates over all constraints, in the format returned by
+  // utils.parseConstraint.
+  eachConstraint: function (iterator) {
+    var self = this;
+    _.each(self._constraints, function (constraint) {
+      iterator(constraint);
+    });
   }
 });

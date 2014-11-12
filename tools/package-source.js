@@ -1516,9 +1516,9 @@ _.extend(PackageSource.prototype, {
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
-  initFromAppDir: function (appDir, ignoreFiles) {
+  initFromAppDir: function (projectContext, ignoreFiles) {
     var self = this;
-    appDir = path.resolve(appDir);
+    var appDir = projectContext.projectDir;
     self.name = null;
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
@@ -1526,11 +1526,15 @@ _.extend(PackageSource.prototype, {
     // special files those are excluded from app's top-level sources
     var controlFiles = ['mobile-config.js'];
 
-    _.each(self.allArchs, function (arch) {
-      // Determine used packages
-      var project = require('./project.js').project;
-      var names = project.getConstraints();
+    // Determine used packages. Note that these are the same for all arches,
+    // because there's no way to specify otherwise in .meteor/packages.
+    var uses = [];
+    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+      uses.push({ package: constraint.name,
+                  constraint: constraint.constraintString });
+    });
 
+    _.each(self.allArchs, function (arch) {
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
 
@@ -1538,14 +1542,18 @@ _.extend(PackageSource.prototype, {
       var sourceArch = new SourceArch(self, {
         name: arch,
         arch: arch,
-        uses: _.map(names, utils.dealConstraint)
+        uses: uses
       });
       self.architectures.push(sourceArch);
 
+      // sourceArch's WatchSet should include all the project metadata files
+      // read by the ProjectContext.
+      sourceArch.watchSet.merge(projectContext.projectWatchSet);
+
       // Watch control files for changes
-      // XXX this read has a race with the actual reads that are used
-      _.each([path.join(appDir, '.meteor', 'packages'),
-              path.join(appDir, '.meteor', 'versions'),
+      // XXX this read has a race with the actual reads that are used.
+      //     these should all be in projectContext.projectWatchSet instead.
+      _.each([path.join(appDir, '.meteor', 'versions'),
               path.join(appDir, '.meteor', 'cordova-plugins'),
               path.join(appDir, '.meteor', 'platforms'),
               path.join(appDir, '.meteor', 'release')], function (p) {

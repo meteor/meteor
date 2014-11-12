@@ -893,8 +893,8 @@ files.readdirNoDots = function (path) {
 // processed individually. Throws if the file doesn't exist or if
 // anything else goes wrong.
 var getLines = function (file) {
-  var raw = fs.readFileSync(file, 'utf8');
-  var lines = raw.split(/\r*\n\r*/);
+  var buffer = fs.readFileSync(file);
+  var lines = exports.splitBufferToLines(buffer);
 
   // strip blank lines at the end
   while (lines.length) {
@@ -908,6 +908,10 @@ var getLines = function (file) {
 };
 
 exports.getLines = getLines;
+
+exports.splitBufferToLines = function (buffer) {
+  return buffer.toString('utf8').split(/\r*\n\r*/);
+};
 
 // Same as `getLines`, but returns [] if the file doesn't exist.
 exports.getLinesOrEmpty = function (file) {
