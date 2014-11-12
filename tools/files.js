@@ -436,6 +436,25 @@ files.cp_r = function (from, to, options) {
   });
 };
 
+// uses fs.rename but retries in case of EPERM on Windows or does cp & rm
+files.mv = function (from, to) {
+  var maxTries = 10;
+  var success = false;
+  while (! success && maxTries-- > 0) {
+    try {
+      fs.renameSync(from, to);
+      success = true;
+    } catch (err) {
+      if (err.code !== 'EPERM')
+        throw err;
+    }
+  }
+  if (! success) {
+    files.cp_r(from, to);
+    files.rm_recursive(from);
+  }
+};
+
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
@@ -561,8 +580,8 @@ files.extractTarGz = function (buffer, destPath) {
 
   var extractDir = path.join(tempDir, topLevelOfArchive[0]);
   makeTreeReadOnly(extractDir);
-  fs.renameSync(extractDir, destPath);
-  fs.rmdirSync(tempDir);
+  files.mv(extractDir, destPath);
+  files.rm_recursive(tempDir);
 };
 
 // Tar-gzips a directory, returning a stream that can then be piped as
