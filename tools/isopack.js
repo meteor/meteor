@@ -1267,3 +1267,5 @@ exports.isopackExistsAtPath = function (thePath) {
   return fs.existsSync(path.join(thePath, 'isopack.json')) ||
     fs.existsSync(path.join(thePath, 'unipackage.json'));
 };
+
+exports.COLON_ESCAPE = "~";

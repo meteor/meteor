@@ -252,7 +252,7 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  rimraf.sync(p, { maxBusyTries: 10 });
+  rimraf.sync(p, { maxBusyTries: 20 });
 };
 
 // Makes all files in a tree read-only.
