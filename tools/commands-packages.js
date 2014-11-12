@@ -2877,9 +2877,22 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never(),
-  prepareProjectContext: true,
+  newfangledProject: true,
   pretty: true,
   requiresApp: true
 }, function (options) {
-  console.log("I have a project context", options.projectContext.projectDir);
+  var projectContextModule = require('./project-context.js');
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    tropohouse: tropohouse.default
+  });
+
+  var messages = buildmessage.capture(function () {
+    projectContext.prepareProjectForBuild();
+  });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while initializing project:");
+    Console.printMessages(messages);
+    return 1;
+  }
 });
