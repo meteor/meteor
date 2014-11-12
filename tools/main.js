@@ -1165,17 +1165,7 @@ longHelp(commandName));
   if (typeof requiresApp === "function")
     requiresApp = requiresApp(options);
 
-  if (appDir) {
-    options.appDir = appDir;
-    // XXX #3006: Eventually everything should be newfangled!
-    if (! command.newfangledProject) {
-      // Set the project root directory. This doesn't do any dependency
-      // calculation -- we can't do that until we've scanned local packages.
-      project.project.setRootDir(appDir);
-    }
-  }
-
-  if (requiresApp && ! options.appDir) {
+  if (requiresApp && ! appDir) {
     // This is where you end up if you type 'meteor' with no args,
     // since you'll default to the 'run' command which requires an
     // app. Be welcoming to our new developers!
@@ -1191,7 +1181,37 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  if (!command.catalogRefresh.doesNotUsePackages) {
+  if (appDir) {
+    options.appDir = appDir;
+    if (command.prepareProjectContext) {
+      var projectContextModule = require('./project-context.js');
+      var projectContext = new projectContextModule.ProjectContext({
+        projectDir: options.appDir,
+        tropohouse: tropohouse.default
+      });
+
+      var messages = buildmessage.capture(function () {
+        Console.withProgressDisplayVisible(function () {
+          projectContext.prepareProjectForBuild();
+        });
+      });
+      if (messages.hasMessages()) {
+        Console.error("=> Errors while initializing project:");
+        Console.printMessages(messages);
+        process.exit(1);
+      }
+
+      options.projectContext = projectContext;
+    } else {
+      // Set the project root directory. This doesn't do any dependency
+      // calculation -- we can't do that until we've scanned local packages.
+      project.project.setRootDir(appDir);
+    }
+  }
+
+  // XXX #3006 this should go away, with catalog.complete
+  if (! command.prepareProjectContext &&
+      ! command.catalogRefresh.doesNotUsePackages) {
     // OK, now it's finally time to set up the complete catalog. Only after this
     // can we use the build system (other than to make and load isopackets).
 
