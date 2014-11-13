@@ -171,7 +171,8 @@ _.extend(exports.ProjectContext.prototype, {
     if (!solution)
       return;  // error is already in buildmessage
 
-    // XXX #3006 Check solution.usedRCs and maybe print something about it
+    // XXX #3006 Check solution.usedRCs and maybe print something about it. This
+    // code used to exist in catalog.js.
 
     self.packageMap = new packageMapModule.PackageMap(solution.answer, cat);
   },

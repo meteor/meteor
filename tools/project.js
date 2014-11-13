@@ -224,6 +224,7 @@ _.extend(Project.prototype, {
       // solution. It is useful to set ignoreProjectDeps, but not nessessary,
       // since self.viableDepSource is false.
       try {
+        // XXX #3006 no longer exists
         var newVersions = catalog.complete.resolveConstraints(
           self.combinedConstraints,
           { previousSolution: self.dependencies },

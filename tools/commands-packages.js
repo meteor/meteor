@@ -1774,6 +1774,7 @@ var maybeUpdateRelease = function (options) {
     });
     try {
       var messages = buildmessage.capture(function () {
+        // XXX #3006 no longer exists
         solutionPackageVersions = catalog.complete.resolveConstraints(
           constraints,
           { previousSolution: previousVersions },
@@ -1949,6 +1950,7 @@ main.registerCommand({
   // any constraints that we didn't have before.
   var newVersions;
   var messages = buildmessage.capture(function () {
+    // XXX #3006 no longer exists
     newVersions = catalog.complete.resolveConstraints(allPackages, {
       previousSolution: versions,
       upgrade: upgradePackages
@@ -2199,6 +2201,7 @@ main.registerCommand({
       versions = project.getVersions();
 
       // Call the constraint solver.
+      // XXX #3006 no longer exists
       newVersions = catalog.complete.resolveConstraints(
         allPackages,
         { previousSolution: versions },
