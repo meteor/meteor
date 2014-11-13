@@ -2,6 +2,7 @@
 /// exits.
 
 var _ = require('underscore');
+var Fiber = require('fibers');
 
 var cleanup = exports;
 _.extend(exports, {
@@ -22,10 +23,14 @@ var runHandlers = function () {
   });
 };
 
-process.on('exit', runHandlers);
+process.on('exit', function () {
+  Fiber(runHandlers).run();
+});
 _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
   process.once(sig, function () {
-    runHandlers();
-    process.kill(process.pid, sig);
+    Fiber(function () {
+      runHandlers();
+      process.kill(process.pid, sig);
+    }).run();
   });
 });
