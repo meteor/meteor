@@ -12,7 +12,9 @@ var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
+var isopackCacheModule = require('./isopack-cache.js');
 var isopackCompiler = require('./isopack-compiler.js');
+var packageMapModule = require('./package-map.js');
 var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
@@ -1039,12 +1041,19 @@ _.extend(Isopack.prototype, {
 
     // Build all of the isopackets now, so that no build step is required when
     // you're actually running meteor from a release in order to load packages.
+    // XXX This code is pretty similar to isopackets.ensureIsopacketsLoadable
+    //     and could be consolidated.
     var isopacketCatalog = isopackets.newIsopacketBuildingCatalog();
-    var localPackageLoader = new packageLoader.PackageLoader({
-      versions: null,
-      catalog: isopacketCatalog,
-      constraintSolverOpts: { ignoreProjectDeps: true }
+    // Make an isopack cache that doesn't save isopacks to disk and has no
+    // access to versioned packages.
+    var isopackCache = new isopackCacheModule.IsopackCache;
+    var versions = {};
+    _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
+      versions[packageName] =
+        isopacketCatalog.getLatestVersion(packageName).version;
     });
+    var packageMap = new packageMapModule.PackageMap(
+      versions, isopacketCatalog);
 
     var messages = buildmessage.capture(function () {
       // We rebuild them in the order listed in ISOPACKETS. This is not strictly
@@ -1055,21 +1064,24 @@ _.extend(Isopack.prototype, {
         buildmessage.enterJob({
           title: "Compiling " + isopacketName + " packages for the tool"
         }, function () {
-          var image = bundler.buildJsImage({
-            name: "isopacket-" + isopacketName,
-            packageLoader: localPackageLoader,
-            use: packages,
-            catalog: isopacketCatalog,
-            ignoreProjectDeps: true
-          }).image;
-
+          isopackCache.buildLocalPackages(packageMap, packages);
           if (buildmessage.jobHasMessages())
             return;
+
+          var image = bundler.buildJsImage({
+            name: "isopacket-" + isopacketName,
+            packageMap: packageMap,
+            isopackCache: isopackCache,
+            use: packages,
+            catalog: isopacketCatalog
+          }).image;
+          if (buildmessage.jobHasMessages())
+            return;
+
           image.write(builder.enter(path.join('isopackets', isopacketName)));
         });
       });
     });
-
     // This is a build step ... but it's one that only happens in development,
     // and similar to a isopacket load failure, it can just crash the app
     // instead of being handled nicely.
