@@ -448,7 +448,7 @@ _.extend(PackageSource.prototype, {
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
-    var packageJsHash = Builder.sha1(code);
+    var packageJsHash = watch.sha1(code);
 
     var releaseRecords = [];
     var hasTests = false;

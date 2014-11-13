@@ -293,7 +293,7 @@ _.extend(File.prototype, {
   hash: function () {
     var self = this;
     if (! self._hash)
-      self._hash = Builder.sha1(self.contents());
+      self._hash = watch.sha1(self.contents());
     return self._hash;
   },
 
@@ -1171,7 +1171,7 @@ _.extend(ClientTarget.prototype, {
           path: dataFile,
           where: 'internal',
           type: type,
-          hash: Builder.sha1(dataBuffer)
+          hash: watch.sha1(dataBuffer)
         });
       }
     });
@@ -1449,7 +1449,7 @@ _.extend(JsImage.prototype, {
 
         loadItem.assets = {};
         _.each(item.assets, function (data, relPath) {
-          var sha = Builder.sha1(data);
+          var sha = watch.sha1(data);
           if (_.has(assetFilesBySha, sha)) {
             loadItem.assets[relPath] = assetFilesBySha[sha];
           } else {

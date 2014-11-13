@@ -573,5 +573,6 @@ _.extend(exports, {
   isUpToDate: isUpToDate,
   readAndWatchDirectory: readAndWatchDirectory,
   readAndWatchFile: readAndWatchFile,
-  readAndWatchFileWithHash: readAndWatchFileWithHash
+  readAndWatchFileWithHash: readAndWatchFileWithHash,
+  sha1: sha1
 });
