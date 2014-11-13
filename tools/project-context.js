@@ -54,15 +54,7 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob('preparing project', function () {
-      self.projectConstraintsFile = new exports.ProjectConstraintsFile(
-        path.join(self.projectDir, '.meteor', 'packages'), {
-          watchSet: self.projectWatchSet
-        });
-      if (buildmessage.jobHasMessages())
-        return;
-
-      self.packageMapFile = new exports.PackageMapFile(
-        path.join(self.projectDir, '.meteor', 'versions'));
+      self._readProjectMetadata();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -79,6 +71,41 @@ _.extend(exports.ProjectContext.prototype, {
         return;
 
       self._savePackageMap();
+      if (buildmessage.jobHasMessages())
+        return;
+    });
+  },
+
+  getProjectLocalDirectory: function (subdirectory) {
+    var self = this;
+    return path.join(self.projectDir, '.meteor', 'local', subdirectory),
+  },
+
+  _readProjectMetadata: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    buildmessage.enterJob('reading project metadata', function () {
+      // Read .meteor/packages.
+      self.projectConstraintsFile = new exports.ProjectConstraintsFile(
+        path.join(self.projectDir, '.meteor', 'packages'), {
+          watchSet: self.projectWatchSet
+        });
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // Read .meteor/versions. We don't load it into self.projectWatchSet until
+      // we get to the _savePackageMap stage, since we may modify it.
+      self.packageMapFile = new exports.PackageMapFile(
+        path.join(self.projectDir, '.meteor', 'versions'));
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // Read .meteor/platforms, creating it if necessary.
+      self.platformList = new exports.PlatformList(
+        path.join(self.projectDir, '.meteor', 'platforms'), {
+          watchSet: self.projectWatchSet
+        });
       if (buildmessage.jobHasMessages())
         return;
     });
@@ -226,7 +253,7 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     self.isopackCache = new isopackCacheModule.IsopackCache({
-      cacheDir: path.join(self.projectDir, '.meteor', 'local', 'isopacks'),
+      cacheDir: self.getProjectLocalDirectory('isopacks'),
       tropohouse: self.tropohouse
     });
 
@@ -410,3 +437,72 @@ _.extend(exports.PackageMapFile.prototype, {
   }
 });
 
+
+
+// Represents .meteor/platforms. We take no effort to maintain comments or
+// spacing here.
+exports.PlatformList = function (filename, options) {
+  var self = this;
+  options = options || {};
+  buildmessage.assertInCapture();
+
+  self.filename = filename;
+  self._platforms = null;
+
+  self._readFile(options.watchSet);
+};
+
+// These platforms are always present and can be neither added or removed
+exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
+
+_.extend(exports.PlatformList.prototype, {
+  _readFile: function (watchSet) {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    var tempWatchSet = new watch.WatchSet;
+
+    var contents = watch.readAndWatchFile(tempWatchSet, self.filename);
+
+    var platforms = contents ? files.splitBufferToLines(contents) : [];
+    platforms = _.uniq(_.compact(_.map(platforms, files.trimLine)));
+    platforms.sort();
+
+    // Missing some of the default platforms (or the whole file)? Add them and
+    // try again.
+    if (_.difference(exports.PlatformList.DEFAULT_PLATFORMS,
+                     platforms).length) {
+      platforms = _.uniq(platforms.concat(
+        exports.PlatformList.DEFAULT_PLATFORMS));
+      platforms.sort();
+      self._platforms = platforms;
+      self.write();
+      self._platforms = null;
+      self._readFile(watchSet);
+      return;
+    }
+
+    self._platforms = platforms;
+    watchSet.merge(tempWatchSet);
+  },
+
+  write: function () {
+    var self = this;
+    files.writeFileAtomically(self.filename, self._platforms.join('\n') + '\n');
+  },
+
+  getCordovaPlatforms: function () {
+    var self = this;
+    return _.difference(self._platforms,
+                        exports.PlatformList.DEFAULT_PLATFORMS);
+  },
+
+  getWebArchs: function () {
+    var self = this;
+    var archs = [ "web.browser" ];
+    if (! _.isEmpty(self.getCordovaPlatforms())) {
+      archs.push("web.cordova");
+    }
+    return archs;
+  }
+});

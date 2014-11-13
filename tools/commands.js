@@ -674,6 +674,7 @@ var buildCommands = {
     verbose: { type: Boolean, short: "v" }
   },
   pretty: true,
+  newfangledProject: true,   // XXX #3006 remove this
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 
@@ -716,8 +717,6 @@ var buildCommand = function (options) {
     return 1;
   }
   var bundleArch = options.architecture || archinfo.host();
-  // XXX #3006: We need to have downloaded packages for options.architecture AND
-  // archinfo.host()!
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
@@ -741,14 +740,13 @@ var buildCommand = function (options) {
     options.settings = options['mobile-settings'];
   }
 
-  // XXX #3006 Implement getWebArchs on projectContext.
-  var webArchs = [ "web.browser" ];
+  var webArchs = projectContext.platformList.getWebArchs();
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
   var mobilePlatforms = [];
   if (! options._serverOnly) {
-    mobilePlatforms = project.getCordovaPlatforms();
+    mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
   var appName = path.basename(options.appDir);
 
