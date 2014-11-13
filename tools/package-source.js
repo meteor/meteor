@@ -1679,11 +1679,11 @@ _.extend(PackageSource.prototype, {
         // Now look for assets for this unibuild.
         var assetDir = archinfo.matches(arch, "web") ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
-          include: [new RegExp('^' + assetDir + '/$')]
+          include: [new RegExp('^' + assetDir + path.sep + '$')]
         });
 
         if (!_.isEmpty(assetDirs)) {
-          if (!_.isEqual(assetDirs, [assetDir + '/']))
+          if (!_.isEqual(assetDirs, [assetDir + path.sep]))
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
 
           while (!_.isEmpty(assetDirs)) {
@@ -1702,7 +1702,7 @@ _.extend(PackageSource.prototype, {
             });
 
             _.each(assetsAndSubdirs, function (item) {
-              if (item[item.length - 1] === '/') {
+              if (item[item.length - 1] === path.sep) {
                 // Recurse on this directory.
                 assetDirs.push(item);
               } else {

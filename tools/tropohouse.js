@@ -207,8 +207,9 @@ _.extend(exports.Tropohouse.prototype, {
     var packageLinkFile = self.packagePath(packageName, version);
     var downloadedArches = [];
     var packageLinkTarget = null;
+    
     try {
-      packageLinkTarget = fs.readlinkSync(packageLinkFile);
+      packageLinkTarget = fs.readlinkSync(files.escapePathForWindows(packageLinkFile));
     } catch (e) {
       // Complain about anything other than "we don't have it at all". This
       // includes "not a symlink": The main reason this would not be a symlink
@@ -219,6 +220,7 @@ _.extend(exports.Tropohouse.prototype, {
       if (e.code !== 'ENOENT')
         throw e;
     }
+
     if (packageLinkTarget) {
       // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
       // so this strips off the part before the '++'.
@@ -289,7 +291,12 @@ _.extend(exports.Tropohouse.prototype, {
         // We got this from the server, so we can't rebuild it.
         elideBuildInfo: true
       });
-      files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+      if (process.platform === "win32") {
+        files.renameDirAlmostAtomically(combinedDirectory, packageLinkFile);
+      } else {
+        files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+      }
 
       // Clean up old version.
       if (packageLinkTarget) {

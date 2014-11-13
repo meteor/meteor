@@ -690,7 +690,8 @@ _.extend(Isopack.prototype, {
         // throws instead of acting like POSIX read:
         // https://github.com/joyent/node/issues/5685
         if (resource.length > 0) {
-          var fd = fs.openSync(path.join(unibuildBasePath, resource.file), "r");
+          var fd = fs.openSync(path.join(unibuildBasePath,
+            files.escapePathForWindows(resource.file)), "r");
           try {
             var count = fs.readSync(
               fd, data, 0, resource.length, resource.offset);
@@ -709,7 +710,7 @@ _.extend(Isopack.prototype, {
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
             prelinkFile.sourceMap = fs.readFileSync(
-              path.join(unibuildBasePath, resource.sourceMap), 'utf8');
+              path.join(unibuildBasePath, files.escapePathForWindows(resource.sourceMap)), 'utf8');
           }
           prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "asset"],

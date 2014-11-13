@@ -552,8 +552,6 @@ files.extractTarGz = function (buffer, destPath) {
     .on('entry', function (e) {
       // Some bundles/packages will have colons in directory names
       e.path = files.escapePathForWindows(e.path);
-      if (e.path.slice(0, 3) === "iro")
-        console.log(e.path);
     })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
