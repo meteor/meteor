@@ -11,6 +11,7 @@ var files = require('./files.js');
 var isopackCacheModule = require('./isopack-cache.js');
 var isopackets = require('./isopackets.js');
 var packageMapModule = require('./package-map.js');
+var release = require('./release.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
 
@@ -35,6 +36,7 @@ exports.ProjectContext = function (options) {
   self.projectWatchSet = new watch.WatchSet;
 
   self.projectConstraintsFile = null;
+  self.packageMapFile = null;
   self.packageMap = null;
   self.isopackCache = null;
 
@@ -59,6 +61,11 @@ _.extend(exports.ProjectContext.prototype, {
       if (buildmessage.jobHasMessages())
         return;
 
+      self.packageMapFile = new exports.PackageMapFile(
+        path.join(self.projectDir, '.meteor', 'versions'));
+      if (buildmessage.jobHasMessages())
+        return;
+
       self._resolveConstraints();
       if (buildmessage.jobHasMessages())
         return;
@@ -68,6 +75,10 @@ _.extend(exports.ProjectContext.prototype, {
         return;
 
       self._buildLocalPackages();
+      if (buildmessage.jobHasMessages())
+        return;
+
+      self._savePackageMap();
       if (buildmessage.jobHasMessages())
         return;
     });
@@ -86,10 +97,11 @@ _.extend(exports.ProjectContext.prototype, {
 
     var solution;
     buildmessage.enterJob("selecting package versions", function () {
-      // XXX #3006 set previousSolution
       try {
         solution = resolver.resolve(
-          depsAndConstraints.deps, depsAndConstraints.constraints);
+          depsAndConstraints.deps, depsAndConstraints.constraints, {
+            previousSolution: self.packageMapFile.getCachedVersions()
+          });
       } catch (e) {
         if (!e.constraintSolverError)
           throw e;
@@ -221,10 +233,30 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.enterJob('building local packages', function () {
       self.isopackCache.buildLocalPackages(self.packageMap);
     });
+  },
+
+  _savePackageMap: function () {
+    var self = this;
+
+    // XXX #3006 support the alwaysRecord case (used for create and update with
+    // --release)
+
+    // If the user forced us to an explicit release, then maybe we shouldn't
+    // record versions (because they are based on a different release than the
+    // recorded .meteor/release), unless we are updating or creating, in which
+    // case, we should.
+    if (!release.explicit) {
+      self.packageMapFile.write(self.packageMap);
+    }
+
+    // Either way, we should remember the hash of the versions file we read or
+    // wrote.
+    self.projectWatchSet.merge(self.packageMapFile.watchSet);
   }
 });
 
 
+// Represents .meteor/packages.
 exports.ProjectConstraintsFile = function (filename, options) {
   var self = this;
   options = options || {};
@@ -281,3 +313,100 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     });
   }
 });
+
+
+
+// Represents .meteor/versions.
+exports.PackageMapFile = function (filename) {
+  var self = this;
+  buildmessage.assertInCapture();
+
+  self.filename = filename;
+  self.watchSet = new watch.WatchSet;
+  self._versions = {};
+
+  self._readFile();
+};
+
+_.extend(exports.PackageMapFile.prototype, {
+  _readFile: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
+    // No .meteor/versions? That's OK, you just get to start your calculation
+    // from scratch.
+    if (contents === null)
+      return;
+    var lines = files.splitBufferToLines(contents);
+    _.each(lines, function (line) {
+      line = files.trimLine(line);
+      if (line === '')
+        return;
+      try {
+        var constraint = utils.parseConstraint(line);
+      } catch (e) {
+        if (!e.versionParserError)
+          throw e;
+        buildmessage.exception(e);
+      }
+      if (!constraint)
+        return;  // recover by ignoring
+
+      // If a package appears multiple times in .meteor/versions, we just ignore
+      // the second one. This file is more meteor-controlled than
+      // .meteor/packages and people shouldn't be surprised to see it
+      // automatically fixed.
+      if (_.has(self._versions, constraint.name))
+        return;
+
+      // We expect this constraint to be "foo@1.2.3", not a lack of a constraint
+      // or something with "||" or "@=".
+      if (constraint.constraints.length !== 1 ||
+          constraint.constraints[0].type !== "compatible-with") {
+        buildmessage.error("Bad version: " + line, {
+          // XXX should this be relative?
+          file: self.filename
+        });
+        return;  // recover by ignoring
+      }
+
+      self._versions[constraint.name] = constraint.constraints[0].version;
+    });
+  },
+
+  // Note that this is really specific to wanting to know what versions are in
+  // the .meteor/versions file on disk, which is a slightly different question
+  // from "so, what versions should I be building with?"  Usually you want a
+  // PackageMap instead!
+  getCachedVersions: function () {
+    var self = this;
+    return _.clone(self._versions);
+  },
+
+  write: function (packageMap) {
+    var self = this;
+    var newVersions = packageMap.toVersionMap();
+
+    // Only write the file if some version changed. (We don't need to do no-op
+    // writes, even if they fix sorting in the file.)
+    if (_.isEqual(self._versions, newVersions))
+      return;
+
+    self._versions = newVersions;
+    var packageNames = _.keys(self._versions);
+    packageNames.sort();
+    var lines = [];
+    _.each(packageNames, function (packageName) {
+      lines.push(packageName + "@" + self._versions[packageName] + "\n");
+    });
+    var fileContents = new Buffer(lines.join(''));
+    files.writeFileAtomically(self.filename, fileContents);
+
+    // Replace our watchSet with one for the new contents of the file.
+    var hash = watch.sha1(fileContents);
+    self.watchSet = new watch.WatchSet;
+    self.watchSet.addFile(self.filename, hash);
+  }
+});
+
