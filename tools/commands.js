@@ -742,8 +742,6 @@ var buildCommand = function (options) {
 
   var webArchs = projectContext.platformList.getWebArchs();
 
-  var localPath = path.join(options.appDir, '.meteor', 'local');
-
   var mobilePlatforms = [];
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
@@ -779,7 +777,7 @@ var buildCommand = function (options) {
 
     try {
       mobilePlatforms =
-        cordova.buildTargets(localPath, mobilePlatforms, _.extend({}, options, {
+        cordova.buildTargets(projectContext, mobilePlatforms, _.extend({}, options, {
         host: parsedMobileServer.host,
         port: parsedMobileServer.port,
         protocol: parsedMobileServer.protocol,
@@ -794,7 +792,7 @@ var buildCommand = function (options) {
     }
   }
 
-  var buildDir = path.join(localPath, 'build_tar');
+  var buildDir = projectContext.getProjectLocalDirectory('build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
 
   // Unless we're just making a tarball, warn if people try to build inside the
@@ -861,8 +859,9 @@ var buildCommand = function (options) {
   // Copy over the Cordova builds AFTER we bundle so that they are not included
   // in the main bundle.
   !options._serverOnly && _.each(mobilePlatforms, function (platformName) {
-    var buildPath = path.join(localPath, 'cordova-build',
-                              'platforms', platformName);
+    var buildPath = path.join(
+      projectContext.getProjectLocalDirectory('cordova-build'),
+      'platforms', platformName);
     var platformPath = path.join(outputPath, platformName);
 
     if (platformName === 'ios') {

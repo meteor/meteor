@@ -7,6 +7,7 @@ var chalk = require('chalk');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
 var project = require('./project.js').project;
+var projectContextModule = require('./project-context.js');
 var Future = require('fibers/future');
 var utils = require('./utils.js');
 var archinfo = require('./archinfo.js');
@@ -15,16 +16,21 @@ var httpHelpers = require('./http-helpers.js');
 var Console = require('./console.js').Console;
 var processes = require('./processes.js');
 var catalog = require('./catalog.js');
+var release = require('./release.js');
+
+// XXX #3006 generally make sure that 'localPath' is gone
 
 // XXX hard-coded the use of default tropohouse
+// XXX #3006 use the tropohouse from projectContext
 var tropo = tropohouse.default;
-var webArchName = "web.cordova";
+var WEB_ARCH_NAME = "web.cordova";
 
 var DEFAULT_AVD_NAME = "meteor";
 
 // android is available on all supported architectures
 var availablePlatforms =
-  project.getDefaultPlatforms().concat(["android", "firefoxos", "ios"]);
+      projectContextModule.PlatformList.DEFAULT_PLATFORMS.concat(
+        ["android", "firefoxos", "ios"]);
 
 // Borrowed from tropohouse
 // The version in warehouse fails when run from a checkout.
@@ -73,12 +79,14 @@ var cordova = exports;
 //   - host
 //   - port
 //   - skipIfNoSDK: don't throw an error when SDK is not installed
-cordova.buildTargets = function (localPath, targets, options) {
+// XXX #3006 Ensure that all callers are updated to use projectContext
+// instead of localPath.
+cordova.buildTargets = function (projectContext, targets, options) {
   var platforms = targetsToPlatforms(targets);
 
   verboseLog('Running build for platforms:', platforms);
 
-  var cordovaPlatforms = project.getCordovaPlatforms();
+  var cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
   platforms = _.filter(platforms, function (platform) {
     var inProject = _.contains(cordovaPlatforms, platform);
     var hasSdk = checkPlatformRequirements(platform).acceptable;
@@ -123,7 +131,7 @@ cordova.buildTargets = function (localPath, targets, options) {
     return true;
   });
 
-  buildCordova(localPath, platforms, options);
+  buildCordova(projectContext, platforms, options);
   return platforms;
 };
 
@@ -137,7 +145,7 @@ cordova.buildPlatformRunners = function (localPath, platforms, options) {
 
 // Returns the cordovaDependencies of the Cordova arch from a star json.
 cordova.getCordovaDependenciesFromStar = function (star) {
-  var cordovaProgram = _.findWhere(star.programs, { arch: webArchName });
+  var cordovaProgram = _.findWhere(star.programs, { arch: WEB_ARCH_NAME });
   if (cordovaProgram) {
     return cordovaProgram.cordovaDependencies;
   } else {
@@ -283,7 +291,7 @@ var getLoadedPackages = function () {
 
 // --- Cordova routines ---
 
-var generateCordovaBoilerplate = function (clientDir, options) {
+var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
   var clientJsonPath = path.join(clientDir, 'program.json');
   var clientJson = JSON.parse(fs.readFileSync(clientJsonPath, 'utf8'));
   var manifest = clientJson.manifest;
@@ -291,7 +299,9 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     JSON.parse(fs.readFileSync(options.settings, 'utf8')) : {};
   var publicSettings = settings['public'];
 
-  var meteorRelease = project.getNormalizedMeteorReleaseVersion();
+  var meteorRelease =
+    release.current.isCheckout() ? "none" : release.current.name;
+
   var Boilerplate = getLoadedPackages()['boilerplate-generator'].Boilerplate;
   var WebAppHashing = getLoadedPackages()['webapp-hashing'].WebAppHashing;
 
@@ -318,13 +328,13 @@ var generateCordovaBoilerplate = function (clientDir, options) {
     autoupdateVersionCordova: version,
     cleanCache: options.clean,
     httpProxyPort: options.httpProxyPort,
-    appId: project.appId
+    appId: projectContext.appIdentifier
   };
 
   if (publicSettings)
     runtimeConfig.PUBLIC_SETTINGS = publicSettings;
 
-  var boilerplate = new Boilerplate(webArchName, manifest, {
+  var boilerplate = new Boilerplate(WEB_ARCH_NAME, manifest, {
     urlMapper: _.identity,
     pathMapper: function (p) { return path.join(clientDir, p); },
     baseDataExtension: {
@@ -336,19 +346,24 @@ var generateCordovaBoilerplate = function (clientDir, options) {
 
 // options
 //  - debug
-var getBundle = function (bundlePath, webArchs, options) {
+// XXX #3006 make sure all callers pass projectContext
+var getBundle = function (projectContext, bundlePath, options) {
   var bundler = require(path.join(__dirname, 'bundler.js'));
 
   var bundleResult = bundler.bundle({
+    projectContext: projectContext,
+    includeDebug: !! options.debug,
     outputPath: bundlePath,
     buildOptions: {
       minify: ! options.debug,
-      arch: archinfo.host(),
-      webArchs: webArchs
+      // XXX can we ask it not to create the server arch?
+      serverArch: archinfo.host(),
+      webArchs: [WEB_ARCH_NAME]
     }
   });
 
   if (bundleResult.errors) {
+    // XXX better error handling?
     throw new Error("Errors prevented bundling:\n" +
                     bundleResult.errors.formatMessages());
   }
@@ -357,9 +372,10 @@ var getBundle = function (bundlePath, webArchs, options) {
 };
 
 // Creates a Cordova project if necessary.
-var ensureCordovaProject = function (localPath, appName) {
+// XXX #3006 make sure all callers pass projectContext
+var ensureCordovaProject = function (projectContext, appName) {
   verboseLog('Ensuring the cordova build project');
-  var cordovaPath = path.join(localPath, 'cordova-build');
+  var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
   if (! fs.existsSync(cordovaPath)) {
     verboseLog('Cordova build project doesn\'t exist, creating one');
@@ -385,10 +401,11 @@ var ensureCordovaProject = function (localPath, appName) {
 
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
-var ensureCordovaPlatforms = function (localPath) {
+// XXX #3006 Ensure all callers are updated to take projectContext.
+var ensureCordovaPlatforms = function (projectContext) {
   verboseLog('Ensuring that platforms in cordova build project are in sync');
-  var cordovaPath = path.join(localPath, 'cordova-build');
-  var platforms = project.getCordovaPlatforms();
+  var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
+  var platforms = projectContext.platformList.getCordovaPlatforms();
   var platformsList = execFileSyncOrThrow(
     localCordova, ['platform', 'list'], { cwd: cordovaPath, env: buildCordovaEnv() });
 
@@ -571,7 +588,7 @@ var getInstalledPlugins = function (cordovaPath) {
 // Ensures that the Cordova plugins are synchronized with the app-level
 // plugins.
 
-var ensureCordovaPlugins = function (localPath, options) {
+var ensureCordovaPlugins = function (projectContext, options) {
   options = options || {};
   var plugins = options.packagePlugins;
 
@@ -582,13 +599,13 @@ var ensureCordovaPlugins = function (localPath, options) {
     // Bundle to gather the plugin dependencies from packages.
     // XXX slow - perhaps we should only do this lazily
     // XXX code copied from buildCordova
-    var bundlePath = path.join(localPath, 'build-tar');
-    var bundle = getBundle(bundlePath, [webArchName], options);
+    var bundlePath = projectContext.getProjectLocalDirectory('build-tar');
+    var bundle = getBundle(projectContext, bundlePath, options);
     plugins = cordova.getCordovaDependenciesFromStar(bundle.starManifest);
     files.rm_recursive(bundlePath);
   }
 
-  var cordovaPath = path.join(localPath, 'cordova-build');
+  var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
 
   var installedPlugins = getInstalledPlugins(cordovaPath);
 
@@ -636,7 +653,7 @@ var ensureCordovaPlugins = function (localPath, options) {
       // Cordova to fix the bug in their system, because it doesn't seem
       // like there's a way around this.
       files.rm_recursive(path.join(cordovaPath, 'platforms'));
-      ensureCordovaPlatforms(localPath);
+      ensureCordovaPlatforms(projectContext);
     };
 
     buildmessage.enterJob({ title: "Installing Cordova plugins..."}, function () {
@@ -679,6 +696,7 @@ var fetchCordovaPluginFromShaUrl =
 
   var downloadProcess = null;
 
+  // XXX why are we shelling out to curl instead of just using httpHelpers?
   if (whichCurl.success) {
     verboseLog('Downloading with curl');
     downloadProcess =
@@ -696,6 +714,8 @@ var fetchCordovaPluginFromShaUrl =
   verboseLog('Create a folder for the plugin', pluginPath);
   files.mkdir_p(pluginPath);
 
+  // XXX why are we shelling out to tar instead of just using
+  // files.extractTarGz?
   verboseLog('Untarring the tarball with plugin');
   var tarProcess = execFileSyncOrThrow('tar',
     ['xf', pluginTarballPath, '-C', pluginPath, '--strip-components=1']);
@@ -739,33 +759,36 @@ var localPluginsPathFromCordovaPath = function (cordovaPath) {
 var pluginsConfiguration = {};
 
 // Build a Cordova project, creating a Cordova project if necessary.
-var buildCordova = function (localPath, platforms, options) {
+var buildCordova = function (projectContext, platforms, options) {
   verboseLog('Building the cordova build project');
   if (_.isEmpty(platforms))
     return;
 
   buildmessage.enterJob({ title: 'Building for mobile devices' }, function () {
-    var bundlePath = path.join(localPath, 'build-cordova-temp');
+    var bundlePath =
+          projectContext.getProjectLocalDirectory('build-cordova-temp');
     var programPath = path.join(bundlePath, 'programs');
 
-    var cordovaPath = path.join(localPath, 'cordova-build');
+    var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
     var wwwPath = path.join(cordovaPath, 'www');
     var applicationPath = path.join(wwwPath, 'application');
-    var cordovaProgramPath = path.join(programPath, webArchName);
+    var cordovaProgramPath = path.join(programPath, WEB_ARCH_NAME);
     var cordovaProgramAppPath = path.join(cordovaProgramPath, 'app');
 
     verboseLog('Bundling the web.cordova program of the app');
-    var bundle = getBundle(bundlePath, [webArchName], options);
+    var bundle = getBundle(projectContext, bundlePath, options);
 
     // Make there is a project as all other operations depend on that
-    ensureCordovaProject(localPath, options.appName);
+    ensureCordovaProject(projectContext, options.appName);
 
     // Check and consume the control file
-    var controlFilePath = path.join(project.rootDir, 'mobile-config.js');
-    consumeControlFile(controlFilePath, cordovaPath);
+    var controlFilePath =
+          path.join(projectContext.projectDir, 'mobile-config.js');
+    consumeControlFile(
+      projectContext, controlFilePath, cordovaPath, options.appName);
 
-    ensureCordovaPlatforms(localPath);
-    ensureCordovaPlugins(localPath, _.extend({}, options, {
+    ensureCordovaPlatforms(projectContext);
+    ensureCordovaPlugins(projectContext, _.extend({}, options, {
       packagePlugins: cordova.getCordovaDependenciesFromStar(
         bundle.starManifest)
     }));
@@ -791,7 +814,8 @@ var buildCordova = function (localPath, platforms, options) {
     verboseLog('Writing index.html');
 
     // generate index.html
-    var indexHtml = generateCordovaBoilerplate(applicationPath, options);
+    var indexHtml = generateCordovaBoilerplate(
+      projectContext, applicationPath, options);
     fs.writeFileSync(path.join(applicationPath, 'index.html'), indexHtml, 'utf8');
 
     // write the cordova loader
@@ -807,7 +831,8 @@ var buildCordova = function (localPath, platforms, options) {
 
 
     // Cordova Build Override feature (c)
-    var buildOverridePath = path.join(project.rootDir, 'cordova-build-override');
+    var buildOverridePath =
+          path.join(projectContext.projectDir, 'cordova-build-override');
 
     if (fs.existsSync(buildOverridePath) &&
       fs.statSync(buildOverridePath).isDirectory()) {
@@ -826,7 +851,7 @@ var buildCordova = function (localPath, platforms, options) {
       }
 
       // depending on the debug mode build the android part in different modes
-      if (_.contains(project.getPlatforms(), 'android') &&
+      if (_.contains(projectContext.platformList.getPlatforms(), 'android') &&
           _.contains(platforms, 'android')) {
         var androidBuildPath = path.join(cordovaPath, 'platforms', 'android');
         var manifestPath = path.join(androidBuildPath, 'AndroidManifest.xml');
@@ -1379,7 +1404,8 @@ var launchAndroidSizes = {
 // Given the mobile control file converts it to the Phongep/Cordova project's
 // config.xml file and copies the necessary files (icons and launch screens) to
 // the correct build location. Replaces all the old resources.
-var consumeControlFile = function (controlFilePath, cordovaPath) {
+var consumeControlFile = function (projectContext, controlFilePath,
+                                   cordovaPath, appName) {
   verboseLog('Reading the mobile control file');
   // clean up the previous settings and resources
   files.rm_recursive(path.join(cordovaPath, 'resources'));
@@ -1392,9 +1418,9 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
   }
 
   var metadata = {
-    id: 'com.id' + project.getAppIdentifier(),
+    id: 'com.id' + projectContext.appIdentifier,
     version: '0.0.1',
-    name: path.basename(project.rootDir),
+    name: appName,
     description: 'New Meteor Mobile App',
     author: 'A Meteor Developer',
     email: 'n/a',
@@ -1407,7 +1433,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
     'DisallowOverscroll': true
   };
 
-  if (project.dependencies['launch-screen']) {
+  if (projectContext.packageMap.getInfo('launch-screen')) {
     additionalConfiguration.AutoHideSplashScreen = false;
     additionalConfiguration.SplashScreen = 'screen';
     additionalConfiguration.SplashScreenDelay = 10000;
@@ -1641,7 +1667,7 @@ var consumeControlFile = function (controlFilePath, cordovaPath) {
       var src = path.join('resources', fileName);
 
       // copy the file to the build folder with a standardized name
-      files.copyFile(path.resolve(project.rootDir, suppliedPath),
+      files.copyFile(path.resolve(projectContext.projectDir, suppliedPath),
                      path.join(resourcesPath, fileName));
 
       // set it to the xml tree

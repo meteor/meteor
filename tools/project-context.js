@@ -523,6 +523,11 @@ _.extend(exports.PlatformList.prototype, {
     files.writeFileAtomically(self.filename, self._platforms.join('\n') + '\n');
   },
 
+  getPlatforms: function () {
+    var self = this;
+    return _.clone(self._platforms);
+  },
+
   getCordovaPlatforms: function () {
     var self = this;
     return _.difference(self._platforms,
