@@ -464,6 +464,9 @@ _.extend(AppRunner.prototype, {
           }
         };
       }
+      // XXX #3006 this is gone. What it did was the pre-constraint-solver part,
+      // and made sure to preserve the in-memory packageMap as previousSolution
+      // in case you hadn't written it to disk.
       project.reload();
     }
 
