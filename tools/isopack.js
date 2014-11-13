@@ -13,6 +13,7 @@ var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
 var Future = require('fibers/future');
+var utils = require('./utils.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))

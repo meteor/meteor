@@ -219,11 +219,12 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   var name = isopack.name;
 
   var tempDir = files.mkdtemp('build-source-package-');
-  var packageTarName = name + '-' + isopack.version + '-source';
+  var packageTarName = utils.escapePackageNameForPath(name)
+    + '-' + isopack.version + '-source';
   var dirToTar = path.join(tempDir, 'source', packageTarName);
   var sourcePackageDir = path.join(
     dirToTar,
-    name
+    utils.escapePackageNameForPath(name)
   );
   if (! files.mkdir_p(sourcePackageDir)) {
     Console.stderr.write('Failed to create temporary source directory: ' +
@@ -297,7 +298,7 @@ var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
 
   var tempDir = files.mkdtemp('build-package-');
-  var packageTarName = isopack.tarballName();
+  var packageTarName = utils.escapePackageNameForPath(isopack.tarballName());
   var tarInputDir = path.join(tempDir, packageTarName);
 
   isopack.saveToPath(tarInputDir, {
