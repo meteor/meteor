@@ -576,19 +576,26 @@ main.registerCommand({
     projectDir: appPath,
     tropohouse: tropohouse.default
   });
-  // XXX #3006 write meteor release version!
-  // project.writeMeteorReleaseVersion(
-  //   release.current.isCheckout() ? "none" : release.current.name);
-  // XXX #3006 write upgraders!
-  // Any upgrader that is in this version of Meteor doesn't need to be run on
-  // this project.
-  // var upgraders = require('./upgraders.js');
-  // _.each(upgraders.allUpgraders(), function (upgrader) {
-  //   project.appendFinishedUpgrader(upgrader);
-  // });
 
   var messages = buildmessage.capture({ title: 'creating your project' }, function () {
-    // XXX #3006 ensure that this ALWAYS writes .meteor/version, even with
+    projectContext.readProjectMetadata();
+    if (buildmessage.jobHasMessages())
+      return;
+
+    projectContext.releaseFile.write(
+      release.current.isCheckout() ? "none" : release.current.name);
+    if (buildmessage.jobHasMessages())
+      return;
+
+    // XXX #3006 write upgraders!
+    // Any upgrader that is in this version of Meteor doesn't need to be run on
+    // this project.
+    // var upgraders = require('./upgraders.js');
+    // _.each(upgraders.allUpgraders(), function (upgrader) {
+    //   project.appendFinishedUpgrader(upgrader);
+    // });
+
+    // XXX #3006 ensure that this ALWAYS writes .meteor/versions, even with
     // '--release'.
     projectContext.prepareProjectForBuild();
   });

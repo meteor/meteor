@@ -49,7 +49,7 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob('preparing project', function () {
-      self._readProjectMetadata();
+      self.readProjectMetadata();
       if (buildmessage.jobHasMessages())
         return;
 
@@ -76,9 +76,15 @@ _.extend(exports.ProjectContext.prototype, {
     return path.join(self.projectDir, '.meteor', 'local', subdirectory);
   },
 
-  _readProjectMetadata: function () {
+  // You can call this manually if you want to do some work before resolving
+  // constraints, or you can let prepareProjectForBuild do it for you.
+  readProjectMetadata: function () {
     var self = this;
     buildmessage.assertInCapture();
+
+    // Has this been called already?
+    if (self.releaseFile)
+      return;
 
     buildmessage.enterJob('reading project metadata', function () {
       // Read .meteor/release.
@@ -562,7 +568,7 @@ exports.ReleaseFile = function (options) {
   var self = this;
 
   self.filename = path.join(options.projectDir, '.meteor', 'release');
-  self.watchSet = new watch.WatchSet;
+  self.watchSet = null;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
   self.unnormalizedReleaseName = null;
@@ -587,6 +593,8 @@ _.extend(exports.ReleaseFile.prototype, {
   _readFile: function () {
     var self = this;
 
+    // Start a new watchSet, in case we just overwrote this.
+    self.watchSet = new watch.WatchSet;
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
     // If file doesn't exist, leave unnormalizedReleaseName empty; fileMissing
     // will be true.
@@ -607,8 +615,9 @@ _.extend(exports.ReleaseFile.prototype, {
     self.displayReleaseName = utils.displayRelease(parts[0], parts[1]);
   },
 
-  write: function () {
+  write: function (releaseName) {
     var self = this;
-    // XXX #3006 fill out
+    files.writeFileAtomically(self.filename, releaseName + '\n');
+    self._readFile();
   }
 });
