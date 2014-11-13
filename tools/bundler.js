@@ -185,7 +185,8 @@ var rejectBadPath = function (p) {
 };
 
 var stripLeadingSlash = function (p) {
-  if (p.charAt(0) !== '/')
+  // Forward slash for unix, backslash for windows.
+  if (p.charAt(0) !== '/' && p.charAt(0) !== '\\')
     throw new Error("bad path: " + p);
   return p.slice(1);
 };
@@ -1653,8 +1654,9 @@ _.extend(ServerTarget.prototype, {
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
     if (options.includeNodeModulesSymlink) {
-      builder.write('node_modules', {
-        symlink: path.join(files.getDevBundle(), 'lib', 'node_modules')
+      builder.copyDirectory({
+        from: path.join(files.getDevBundle(), 'lib', 'node_modules'),
+        to: 'node_modules'
       });
     }
 
@@ -1672,14 +1674,13 @@ _.extend(ServerTarget.prototype, {
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64'
+      'os.osx.x86_64': 'Darwin_x86_64',
+      'os.windows.x86_32': 'XXX' // XXX what will the dev bundle be??
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
-      buildmessage.error("MDG does not publish dev_bundles for arch: " +
+      throw new Error("MDG does not publish dev_bundles for arch: " +
                          self.arch);
-      // Recover by bailing out and leaving a partially built target
-      return;
     }
 
     var devBundleVersion =

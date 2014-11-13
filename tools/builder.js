@@ -4,6 +4,7 @@ var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
 var fs = require('fs');
 var _ = require('underscore');
+var isopack = require('./isopack.js');
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
@@ -27,7 +28,9 @@ var Builder = function (options) {
   var self = this;
   options = options || {};
 
-  self.outputPath = options.outputPath;
+  // Escape colons with tilde before writing to file system
+  self.outputPath = path.join(path.dirname(options.outputPath),
+    path.basename(options.outputPath).replace(/:/g, files.COLON_ESCAPE));
 
   // Paths already written to. Map from canonicalized relPath (no
   // trailing slash) to true for a file, or false for a directory.
@@ -328,6 +331,8 @@ _.extend(Builder.prototype, {
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
                         " but it is is already a file");
+      } else if (process.platform === "win32") {
+        canSymlink = false;
       } else if (normOptionsTo in self.usedAsFile) {
         // It's already here and is a directory, maybe because of a call to
         // reserve with {directory: true}. If it's an empty directory, this is

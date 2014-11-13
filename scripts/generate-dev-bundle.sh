@@ -352,3 +352,6 @@ rm -rf build
 tar czf "${CHECKOUT_DIR}/dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
 
 echo DONE
+{PLATFORM}_${BUNDLE_VERSION}.tar.gz" .
+
+echo DONE

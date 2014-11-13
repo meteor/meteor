@@ -12,6 +12,7 @@ var _ = require('underscore');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
+var rimraf = require('./rimraf');
 
 var utils = require('./utils.js');
 var cleanup = require('./cleanup.js');
@@ -104,18 +105,18 @@ files.addToGitignore = function (dirPath, entry) {
   var filepath = path.join(dirPath, ".gitignore");
   if (fs.existsSync(filepath)) {
     var data = fs.readFileSync(filepath, 'utf8');
-    var lines = data.split(/\n/);
+    var lines = data.split(os.EOL);
     if (_.any(lines, function (x) { return x === entry; })) {
       // already there do nothing
     } else {
       // rewrite file w/ new entry.
-      if (data.substr(-1) !== "\n") data = data + "\n";
-      data = data + entry + "\n";
+      if (data.substr(-1) !== os.EOL) data = data + os.EOL;
+      data = data + entry + os.EOL;
       fs.writeFileSync(filepath, data, 'utf8');
     }
   } else {
     // doesn't exist, just write it.
-    fs.writeFileSync(filepath, entry + "\n", 'utf8');
+    fs.writeFileSync(filepath, entry + os.EOL, 'utf8');
   }
 };
 
@@ -222,7 +223,9 @@ files.getSettings = function (filename, watchSet) {
 // user. Presently, the main thing it does is replace $HOME with ~.
 files.prettyPath = function (path) {
   path = fs.realpathSync(path);
-  var home = process.env.HOME;
+  var home = files.getHomeDir();
+
+  // XXX this doesn't work on Windows
   if (home && path.substr(0, home.length) === home)
     path = "~" + path.substr(home.length);
   return path;
@@ -242,24 +245,7 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  try {
-    // the l in lstat is critical -- we want to remove symbolic
-    // links, not what they point to
-    var stat = fs.lstatSync(p);
-  } catch (e) {
-    if (e.code == "ENOENT")
-      return;
-    throw e;
-  }
-
-  if (stat.isDirectory()) {
-    _.each(fs.readdirSync(p), function (file) {
-      file = path.join(p, file);
-      files.rm_recursive(file);
-    });
-    fs.rmdirSync(p);
-  } else
-    fs.unlinkSync(p);
+  rimraf.sync(p, { maxBusyTries: 20 });
 };
 
 // Makes all files in a tree read-only.
@@ -443,6 +429,25 @@ files.cp_r = function (from, to, options) {
   });
 };
 
+// uses fs.rename but retries in case of EPERM on Windows or does cp & rm
+files.mv = function (from, to) {
+  var maxTries = 10;
+  var success = false;
+  while (! success && maxTries-- > 0) {
+    try {
+      fs.renameSync(from, to);
+      success = true;
+    } catch (err) {
+      if (err.code !== 'EPERM')
+        throw err;
+    }
+  }
+  if (! success) {
+    files.cp_r(from, to);
+    files.rm_recursive(from);
+  }
+};
+
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
@@ -542,6 +547,10 @@ files.extractTarGz = function (buffer, destPath) {
       future.isResolved() || future.throw(e);
     });
   var extractor = new tar.Extract({ path: tempDir })
+    .on('entry', function (e) {
+      // Some bundles/packages will have colons in directory names
+      e.path = e.path.replace(/:/g, files.COLON_ESCAPE);
+    })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
     })
@@ -564,8 +573,8 @@ files.extractTarGz = function (buffer, destPath) {
 
   var extractDir = path.join(tempDir, topLevelOfArchive[0]);
   makeTreeReadOnly(extractDir);
-  fs.renameSync(extractDir, destPath);
-  fs.rmdirSync(tempDir);
+  files.mv(extractDir, destPath);
+  files.rm_recursive(tempDir);
 };
 
 // Tar-gzips a directory, returning a stream that can then be piped as
@@ -980,3 +989,9 @@ _.extend(files.KeyValueFile.prototype, {
     }
   }
 });
+
+files.getHomeDir = function () {
+  return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+};
+
+files.COLON_ESCAPE = "~";

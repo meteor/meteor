@@ -1134,6 +1134,14 @@ _.extend(PackageSource.prototype, {
           // using for loop rather than underscore to help with useMyCaller
           for (var i = 0; i < names.length; ++i) {
             var name = names[i];
+
+            // XXX #win-tech-debt
+            // Hack: Alias certain packages that we need to replace
+            if (utils.startsWith(name, 'npm-bcrypt') ||
+                utils.startsWith(name, 'npm-node-aes-gcm')) {
+              name = 'windows:' + name;
+            }
+
             try {
               var parsed = utils.parseConstraint(name);
             } catch (e) {

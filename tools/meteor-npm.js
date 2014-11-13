@@ -6,13 +6,15 @@ var Future = require('fibers/future');
 
 var path = require('path');
 var fs = require('fs');
+var os = require('os');
+var _ = require('underscore');
+
 var cleanup = require(path.join(__dirname, 'cleanup.js'));
 var files = require(path.join(__dirname, 'files.js'));
 var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var utils = require('./utils.js');
 var runLog = require('./run-log.js');
-var _ = require('underscore');
 
 var meteorNpm = exports;
 
@@ -367,6 +369,18 @@ meteorNpm._execFileSync = function (file, args, opts) {
   return future.wait();
 };
 
+var runNpmCommand = function (args, opts) {
+  var npmPath;
+
+  if (os.platform() === "win32") {
+    npmPath = path.join(files.getDevBundle(), "bin", "npm.cmd");
+  } else {
+    npmPath = path.join(files.getDevBundle(), "bin", "npm");
+  }
+
+  return meteorNpm._execFileSync(npmPath, args, opts);
+}
+
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
   var packageJsonContents = JSON.stringify({
@@ -399,10 +413,7 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 //   }
 // }
 var getInstalledDependenciesTree = function (dir) {
-  var result =
-    meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["ls", "--json"],
-                            {cwd: dir});
+  var result = runNpmCommand(["ls", "--json"], {cwd: dir});
 
   if (result.success)
     return JSON.parse(result.stdout);
@@ -471,10 +482,7 @@ var installNpmModule = function (name, version, dir) {
   //
   // We now use a forked version of npm with our PR
   // https://github.com/npm/npm/pull/5137 to work around this.
-  var result =
-    meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["install", installArg],
-                            {cwd: dir});
+  var result = runNpmCommand(["install", installArg], {cwd: dir});
 
   if (! result.success) {
     var pkgNotFound = "404 '" + utils.quotemeta(name) +
@@ -505,9 +513,7 @@ var installFromShrinkwrap = function (dir) {
   ensureConnected();
 
   // `npm install`, which reads npm-shrinkwrap.json.
-  var result =
-    meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["install"], {cwd: dir});
+  var result = runNpmCommand(["install"], {cwd: dir});
 
   if (! result.success) {
     // XXX include this in the buildmessage.error instead
@@ -538,9 +544,7 @@ var shrinkwrap = function (dir) {
   //    (the `silent` flag isn't piped in to the call to npm.commands.ls)
   // 2. In various (non-deterministic?) cases we observed the
   //    npm-shrinkwrap.json file not being updated
-  var result =
-    meteorNpm._execFileSync(path.join(files.getDevBundle(), "bin", "npm"),
-                            ["shrinkwrap"], {cwd: dir});
+  var result = runNpmCommand(["shrinkwrap"], {cwd: dir});
 
   if (! result.success) {
     // XXX include this in the buildmessage.error instead
