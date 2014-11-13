@@ -864,14 +864,6 @@ _.extend(RemoteCatalog.prototype, {
     });
   },
 
-  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
-    var packageDir = tropohouse.default.packagePath(name, version);
-    if (fs.existsSync(packageDir)) {
-      return packageDir;
-    }
-    return null;
-  },
-
   getSyncToken: function() {
     var self = this;
     var result = self._contentQuery("SELECT content FROM syncToken WHERE _id=?",

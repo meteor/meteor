@@ -360,32 +360,6 @@ _.extend(LocalCatalog.prototype, {
       });
   },
 
-  // Given a name and a version of a package, return a path on disk
-  // from which we can load it. If we don't have it on disk return null.
-  //
-  // HACK: Version can be null if you are certain that the package is to be
-  // loaded from local packages. In the future, version should always be
-  // required and we should confirm that the version on disk is the version that
-  // we asked for. This is to support isopack loader not having a version
-  // manifest.
-  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
-    var self = this;
-    self._requireInitialized();
-    buildmessage.assertInCapture();
-    constraintSolverOpts = constraintSolverOpts || {};
-
-    // Check local packages first.
-    if (_.has(self.packages, name)) {
-      // If we don't have a build of this package, we need to rebuild it.
-      self._build(name, {}, constraintSolverOpts);
-
-      // Return the path.
-      return self.packages[name].packageSource.sourceRoot;
-    }
-
-    return null;
-  },
-
   // Register local package directories with a watchSet. We want to know if a
   // package is created or deleted, which includes both its top-level source
   // directory and its main package metadata file.
@@ -440,104 +414,6 @@ _.extend(LocalCatalog.prototype, {
     // think we'll actually be doing that so this should be fine.
     // #CallingRefreshEveryTimeLocalPackagesChange
     self.refresh();
-  },
-
-  // Recursively builds packages. Takes a package, builds its dependencies, then
-  // builds the package. Sends the built package to the package cache, to be
-  // pre-cached for future reference. Puts the build record in the built records
-  // collection.
-  //
-  // Takes in the following arguments:
-  //
-  // - name: name of the package
-  // - onStack: stack of packages to be built in this round. Since we are
-  //   building packages recursively, we want to pass the stack around to check
-  //   for circular dependencies.
-  //
-  // Why does this happen in the catalog and not, for example, the package
-  // cache? If we build in package cache, we need to send the record over to the
-  // catalog. If we build in catalog, we need to send the package over to
-  // package cache. It could go either way, but since a lot of the information
-  // that we use is in the catalog already, we build it here.
-  _build: function (name, onStack,  constraintSolverOpts) {
-    var self = this;
-    buildmessage.assertInCapture();
-
-    if (_.has(self.buildRequested, name)) {
-      return;
-    }
-
-    self.buildRequested[name] = true;
-
-    // Go through the build-time constraints. Make sure that they are built,
-    // either because we have built them already, or because we are about to
-    // build them.
-    // XXX #3006 this isn't a thing any more
-    var deps = self.packages[name].packageSource.getPackagesToBuildFirst();
-
-    _.each(deps, function (dep) {
-      // We don't need to build non-local packages. It has been built. Return.
-      if  (!self.isLocalPackage(dep)) {
-        return;
-      }
-
-      // We have the right package. Let's make sure that this is not a circular
-      // dependency that we can't resolve.
-      if (_.has(onStack, dep)) {
-        // Allow a circular dependency if the other thing is already
-        // built and doesn't need to be rebuilt.
-        // XXX #3006: We used to allow circular dependencies here if
-        //            it's built on disk already. But this is honestly
-        //            kind of weird... it implies you could get into
-        //            situations where you can do a build only if
-        //            it's currently partly built? Evaluate if this
-        //            needs to be restored.
-        buildmessage.error("circular dependency between packages " +
-                           name + " and " + dep);
-        // recover by not enforcing one of the depedencies
-        return;
-      }
-
-      // Put this on the stack and send recursively into the builder.
-      onStack[dep] = true;
-      self._build(dep, onStack, constraintSolverOpts);
-      delete onStack[dep];
-    });
-
-    // Now build this package if it needs building
-    var sourcePath = self.packages[name].packageSource.sourceRoot;
-    // XXX #3006 We used to check to see if we had a cached version on disk
-    //           here. Now we don't.
-    var unip;
-    // Didn't have a build or it wasn't up to date. Build it.
-    buildmessage.enterJob({
-      title: "Building package `" + name + "`",
-      rootPath: sourcePath
-    }, function () {
-      unip = compiler.compile(self.packages[name].packageSource, {
-        ignoreProjectDeps: constraintSolverOpts.ignoreProjectDeps
-      }).isopack;
-      // XXX #3006: Here's a place where we used to cache the build (if
-      // !buildmessage.jobHasMessages).
-    });
-
-    // And put a build record for it in the catalog. There is only one version
-    // for this package!
-    var versionId = self.packages[name].versionRecord._id;
-
-    // XXX why isn't this build just happening through the package cache
-    // directly?
-
-    // XXX I'm not convinced that anything actually uses this build record. We
-    // mostly care about build records for packages we need to download.
-    self.packages[name].buildRecord = {
-      buildArchitectures: unip.buildArchitectures(),
-      builtBy: null,
-      build: null, // this would be the URL and hash
-      versionId: versionId,
-      lastUpdated: null,
-      buildPublished: null
-    };
   },
 
   getPackageSource: function (name) {
