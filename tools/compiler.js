@@ -27,40 +27,6 @@ var compiler = exports;
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
 compiler.BUILT_BY = 'meteor/15';
 
-// Given an array of package names, returns an array of all package names
-// reachable from it for a given arch (ignoring weak dependencies).
-// Note that this function does NOT require the packages to be built:
-// it only requires access to the catalog.
-// XXX #3006 this might be dead now
-compiler.getTransitiveClosureOfPackages = function (rootPackageNames,
-                                                   arch, packageMap) {
-  var usedPackages = {};  // Map from package name to true;
-  var depArch = archinfo.withoutSpecificOs(arch);
-
-  var addToUsed = function (packageName) {
-    if (_.has(usedPackages, packageName))
-      return;
-    usedPackages[packageName] = true;
-
-    var versionRecord = packageMap.getVersionCatalogRecord(packageName);
-    // Look at every use and imply for this arch.
-    _.each(versionRecord.dependencies, function (dep, depName) {
-      _.each(dep.references, function (ref) {
-        // We only care about dependencies for our arch (which is normalized to
-        // not mention a specific OS).
-        if (ref.arch !== depArch)
-          return;
-        // We don't care about weak dependencies
-        if (ref.weak)
-          return;
-        addToUsed(depName);
-      });
-    });
-  };
-  _.each(rootPackageNames, addToUsed);
-  return _.keys(usedPackages);
-};
-
 compiler.compile = function (packageSource, options) {
   buildmessage.assertInCapture();
 
@@ -847,8 +813,9 @@ var compileUnibuild = function (options) {
   };
 };
 
-// Unlike getTransitiveClosureOfPackages, this one actually expects the packages
-// that we iterate over to be built.
+// Iterates over each in options.dependencies as well as unibuilds implied by
+// them. The packages in question need to already be built and in
+// options.isopackCache.
 compiler.eachUsedUnibuild = function (
   options, callback) {
   buildmessage.assertInCapture();
