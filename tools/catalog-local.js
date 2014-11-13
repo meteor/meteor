@@ -149,11 +149,6 @@ _.extend(LocalCatalog.prototype, {
     if (!_.has(self.packages, name))
       return null;
     var versionRecord = self.packages[name].versionRecord;
-    // The catalog doesn't understand buildID versions and doesn't know about
-    // them. Depending on when we build them, we can refer to local packages as
-    // 1.0.0+local or 1.0.0+[buildId]. Luckily, we know which packages are
-    // local, so just look those up by their local version instead.
-    version = self._changeBuildIdToLocal(version);
     if (versionRecord.version !== version)
       return null;
     return versionRecord;
@@ -278,41 +273,6 @@ _.extend(LocalCatalog.prototype, {
         if (_.has(self.packages, name))
           return;
 
-        // Accurate version numbers are of supreme importance, because we use
-        // version numbers (of build-time dependencies such as the coffeescript
-        // plugin), together with source file hashes and the notion of a
-        // repeatable build, to decide when a package build is out of date and
-        // trigger a rebuild of the package.
-        //
-        // The package we have just loaded may declare its version to be 1.2.3,
-        // but that doesn't mean it's really the official version 1.2.3 of the
-        // package. It only gets that version number officially when it's
-        // published to the package server. So what we'd like to do here is give
-        // it a version number like '1.2.3+<buildid>', where <buildid> is a hash
-        // of everything that's necessary to repeat the build exactly: all of
-        // the package's source files, all of the package's build-time
-        // dependencies, and the version of the Meteor build tool used to build
-        // it.
-        //
-        // Unfortunately we can't actually compute such a buildid yet since it
-        // depends on knowing the build-time dependencies of the package, which
-        // requires that we run the constraint solver, which can only be done
-        // once we've populated the catalog, which is what we're trying to do
-        // right now.
-        //
-        // So we have a workaround. For local packages we will fake the version
-        // in the catalog by setting the buildid to 'local', as in
-        // '1.2.3+local'. This is enough for the constraint solver to run, but
-        // any code that actually relies on accurate versions (for example, code
-        // that checks if a build is up to date) needs to be careful to get the
-        // versions not from the catalog but from the actual built Isopack
-        // objects, which will have accurate versions (with precise buildids)
-        // even for local packages.
-        var version = packageSource.version;
-        if (version.indexOf('+') !== -1)
-          throw new Error("version already has a buildid?");
-        version = version + "+local";
-
         self.packages[name] = {
           packageSource: packageSource,
           packageRecord: {
@@ -324,7 +284,7 @@ _.extend(LocalCatalog.prototype, {
             _id: "VID" + self.nextVersionId++,
             packageName: name,
             testName: packageSource.testName,
-            version: version,
+            version: packageSource.version,
             publishedBy: null,
             description: packageSource.metadata.summary,
             dependencies: packageSource.getDependencyMetadata(),
@@ -420,15 +380,6 @@ _.extend(LocalCatalog.prototype, {
     if (! _.has(self.packages, name))
       return null;
     return self.packages[name].packageSource;
-  },
-
-  // Given a version string that may or may not have a build ID, convert it into
-  // the catalog's internal format for local versions -- [version
-  // number]+local. (for example, 1.0.0+local).
-  _changeBuildIdToLocal: function (version) {
-    if (version)
-      return version.split("+")[0] + "+local";
-    return version;
   }
 });
 
