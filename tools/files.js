@@ -245,7 +245,9 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  rimraf.sync(p, { maxBusyTries: 20 });
+  var fut = new Future();
+  rimraf(p, fut.resolver());
+  fut.wait();
 };
 
 // Makes all files in a tree read-only.
@@ -549,7 +551,9 @@ files.extractTarGz = function (buffer, destPath) {
   var extractor = new tar.Extract({ path: tempDir })
     .on('entry', function (e) {
       // Some bundles/packages will have colons in directory names
-      e.path = utils.escapePackageNameForPath(e.path);
+      e.path = files.escapePathForWindows(e.path);
+      if (e.path.slice(0, 3) === "iro")
+        console.log(e.path);
     })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
@@ -992,4 +996,9 @@ _.extend(files.KeyValueFile.prototype, {
 
 files.getHomeDir = function () {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+};
+
+exports.escapePathForWindows = function (packageName) {
+  // XXX handle drive letters
+  return packageName.replace(/:/g, "_");
 };

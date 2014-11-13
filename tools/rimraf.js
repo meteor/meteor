@@ -8,7 +8,7 @@ var fs = require("fs")
 // for EMFILE handling
 var timeout = 0
 exports.EMFILE_MAX = 1000
-exports.BUSYTRIES_MAX = 3
+exports.BUSYTRIES_MAX = 20
 
 var isWindows = (process.platform === "win32")
 

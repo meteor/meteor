@@ -279,7 +279,8 @@ _.extend(Builder.prototype, {
     var self = this;
     options = options || {};
 
-    relPath = self._sanitize(relPath, options.directory);
+    relPath = utils.escapePackageNameForPath(
+      self._sanitize(relPath, options.directory));
     self.reserve(relPath, { directory: options.directory });
     return relPath;
   },
