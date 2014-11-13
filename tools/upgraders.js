@@ -83,7 +83,8 @@ var upgradersByName = {
     if (fs.existsSync(oldPlatformsPath)) {
       // App already has a platforms file, add "server" and "browser" to the top
       oldPlatforms = fs.readFileSync(oldPlatformsPath, {encoding: "utf-8"});
-      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"), files.trimLine));
+      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"),
+                                     files.trimSpaceAndComments));
 
       fs.unlinkSync(oldPlatformsPath);
     }

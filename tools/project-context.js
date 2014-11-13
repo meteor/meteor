@@ -38,15 +38,13 @@ exports.ProjectContext = function (options) {
   self.projectConstraintsFile = null;
   self.packageMapFile = null;
   self.platformList = null;
+  self.cordovaPluginsFile = null;
   self.appIdentifier = null;
   self.finishedUpgraders = null;
 
   // Initialized by _resolveConstraints.
   self.packageMap = null;
   self.isopackCache = null;
-
-  // XXX #3006: Things we're leaving off for now:
-  //  - cordovaPlugins
 };
 
 _.extend(exports.ProjectContext.prototype, {
@@ -114,6 +112,13 @@ _.extend(exports.ProjectContext.prototype, {
       if (buildmessage.jobHasMessages())
         return;
 
+      // Read .meteor/cordova-plugins.
+      self.cordovaPluginsFile = new exports.CordovaPluginsFile({
+        projectDir: self.projectDir
+      });
+      if (buildmessage.jobHasMessages())
+        return;
+
       // Read .meteor/platforms, creating it if necessary.
       self.platformList = new exports.PlatformList({
         projectDir: self.projectDir
@@ -144,7 +149,7 @@ _.extend(exports.ProjectContext.prototype, {
     var watchSet = new watch.WatchSet;
     _.each(
       [self.releaseFile, self.projectConstraintsFile, self.packageMapFile,
-       self.platformList],
+       self.platformList, self.cordovaPluginsFile],
       function (metadataFile) {
         watchSet.merge(metadataFile.watchSet);
       });
@@ -159,7 +164,7 @@ _.extend(exports.ProjectContext.prototype, {
     // put this in a WatchSet, since changing this doesn't affect the built app
     // much (and there's no real reason to update it anyway).
     var lines = files.getLinesOrEmpty(identifierFile);
-    var appId = _.find(_.map(lines, files.trimLine), _.identity);
+    var appId = _.find(_.map(lines, files.trimSpaceAndComments), _.identity);
 
     // If the file doesn't exist or has no non-empty lines, regenerate the
     // token.
@@ -382,7 +387,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       return;
     var lines = files.splitBufferToLines(contents);
     _.each(lines, function (line) {
-      line = files.trimLine(line);
+      line = files.trimSpaceAndComments(line);
       if (line === '')
         return;
       try {
@@ -441,7 +446,9 @@ _.extend(exports.PackageMapFile.prototype, {
       return;
     var lines = files.splitBufferToLines(contents);
     _.each(lines, function (line) {
-      line = files.trimLine(line);
+      // We don't allow comments here, since it's cruel to allow comments in a
+      // file when you're going to overwrite them anyway.
+      line = files.trimSpace(line);
       if (line === '')
         return;
       try {
@@ -537,7 +544,9 @@ _.extend(exports.PlatformList.prototype, {
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
 
     var platforms = contents ? files.splitBufferToLines(contents) : [];
-    platforms = _.uniq(_.compact(_.map(platforms, files.trimLine)));
+    // We don't allow comments here, since it's cruel to allow comments in a
+    // file when you're going to overwrite them anyway.
+    platforms = _.uniq(_.compact(_.map(platforms, files.trimSpace)));
     platforms.sort();
 
     // Missing some of the default platforms (or the whole file)? Add them and
@@ -586,6 +595,65 @@ _.extend(exports.PlatformList.prototype, {
 });
 
 
+// Represents .meteor/cordova-plugins.
+exports.CordovaPluginsFile = function (options) {
+  var self = this;
+  buildmessage.assertInCapture();
+
+  self.filename = path.join(options.projectDir, '.meteor', 'cordova-plugins');
+  self.watchSet = new watch.WatchSet;
+  // Map from plugin name to version.
+  self._plugins = {};
+
+  self._readFile();
+};
+
+_.extend(exports.CordovaPluginsFile.prototype, {
+  _readFile: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
+    // No file?  No plugins.
+    if (contents === null)
+      return;
+
+    var lines = files.splitBufferToLines(contents);
+    _.each(lines, function (line) {
+      line = files.trimSpaceAndComments(line);
+      if (line === '')
+        return;
+
+      // We just do a standard split here, not utils.parseConstraint, since
+      // cordova plugins don't necessary obey the same naming conventions as
+      // Meteor packages.
+      var parts = line.split('@');
+      if (parts.length !== 2) {
+        buildmessage.error("Cordova plugin must specify version: " + line, {
+          // XXX should this be relative?
+          file: self.filename
+        });
+        return;  // recover by ignoring
+      }
+      if (_.has(self._plugins, parts[0])) {
+        buildmessage.error("Plugin name appears twice: " + parts[0], {
+          // XXX should this be relative?
+          file: self.filename
+        });
+        return;  // recover by ignoring
+      }
+      self._plugins[parts[0]] = parts[1];
+    });
+  },
+
+  getPluginVersions: function () {
+    var self = this;
+    return _.clone(self._plugins);
+  }
+});
+
+
+
 // Represents .meteor/release.
 exports.ReleaseFile = function (options) {
   var self = this;
@@ -629,7 +697,7 @@ _.extend(exports.ReleaseFile.prototype, {
       return;
 
     var lines = _.compact(_.map(files.splitBufferToLines(contents),
-                                files.trimLine));
+                                files.trimSpaceAndComments));
     // noReleaseSpecified will be true.
     if (!lines.length) {
       self.unnormalizedReleaseName = '';

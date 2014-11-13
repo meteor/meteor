@@ -1552,13 +1552,6 @@ _.extend(PackageSource.prototype, {
       // read by the ProjectContext.
       sourceArch.watchSet.merge(projectWatchSet);
 
-      // Watch control files for changes
-      // XXX this read has a race with the actual reads that are used.
-      //     these should all be in projectContext.getProjectWatchSet instead.
-      _.each([path.join(appDir, '.meteor', 'cordova-plugins')], function (p) {
-                watch.readAndWatchFile(sourceArch.watchSet, p);
-              });
-
       // Determine source files
       sourceArch.getSourcesFunc = function (extensions, watchSet) {
         var sourceInclude = _.map(

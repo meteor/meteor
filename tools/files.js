@@ -938,12 +938,16 @@ exports.readJSONOrNull = function (file) {
 };
 
 // Trims whitespace & other filler characters of a line in a project file.
-exports.trimLine = function (line) {
+files.trimSpaceAndComments = function (line) {
   var match = line.match(/^([^#]*)#/);
   if (match)
     line = match[1];
-  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
-  return line;
+  return files.trimSpace(line);
+};
+
+// Trims leading and trailing whilespace in a project file.
+files.trimSpace = function (line) {
+  return line.replace(/^\s+|\s+$/g, '');
 };
 
 

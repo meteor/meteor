@@ -448,8 +448,12 @@ var Target = function (options) {
   // For client targets, these are served over HTTP.
   self.asset = [];
 
+  // The project's cordova plugins file (which lists plugins used directly by
+  // the project).
+  self.cordovaPluginsFile = options.cordovaPluginsFile;
+
   // A mapping from Cordova plugin name to Cordova plugin version number.
-  self.cordovaDependencies = {};
+  self.cordovaDependencies = self.cordovaPluginsFile ? {} : null;
 
   // For the todos sample app:
   // false: 99.6 KB / 316 KB
@@ -491,8 +495,7 @@ _.extend(Target.prototype, {
 
     // Add top-level Cordova dependencies, which override Cordova
     // dependencies from packages.
-    // XXX #3006 Add this back in once platforms and such are in ProjectContext.
-    // self._addDirectCordovaDependencies();
+    self._addDirectCordovaDependencies();
 
     // Preprocess and concatenate CSS files for client targets.
     if (self instanceof ClientTarget) {
@@ -660,13 +663,16 @@ _.extend(Target.prototype, {
 
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
-      _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
-        self._addCordovaDependency(
-          name,
-          version,
-          false /* use newer version if another version has already been added */
-        );
-      });
+      if (self.cordovaDependencies) {
+        _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+          self._addCordovaDependency(
+            name,
+            version,
+            // use newer version if another version has already been added
+            false
+          );
+        });
+      }
 
       var isApp = ! unibuild.pkg.name;
 
@@ -820,6 +826,9 @@ _.extend(Target.prototype, {
   // version that has already been added.
   _addCordovaDependency: function (name, version, override) {
     var self = this;
+    if (! self.cordovaDependencies)
+      return;
+
     if (override) {
       self.cordovaDependencies[name] = version;
     } else {
@@ -839,7 +848,10 @@ _.extend(Target.prototype, {
   // of the same plugins that packages are using.
   _addDirectCordovaDependencies: function () {
     var self = this;
-    _.each(project.project.getCordovaPlugins(), function (version, name) {
+    if (! self.cordovaDependencies)
+      return;
+
+    _.each(self.cordovaPluginsFile.getPluginVersions(), function (version, name) {
       self._addCordovaDependency(
         name, version, true /* override any existing version */);
     });
@@ -1746,7 +1758,7 @@ var writeTargetToPath = function (name, target, outputPath, options) {
     name: name,
     arch: target.mostCompatibleArch(),
     path: path.join('programs', name, relControlFilePath),
-    cordovaDependencies: target.cordovaDependencies
+    cordovaDependencies: target.cordovaDependencies || undefined
   };
 };
 
@@ -1955,6 +1967,8 @@ exports.bundle = function (options) {
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         arch: webArch,
+        cordovaPluginsFile: (webArch === 'web.cordova'
+                             ? projectContext.cordovaPluginsFile : null),
         includeDebug: includeDebug
       });
 
@@ -2110,7 +2124,6 @@ exports.bundle = function (options) {
 //   interpreted. please set it to something reasonable so that any error
 //   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
-// - cordovaDependencies: map from cordova plugin name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
 //
@@ -2139,7 +2152,6 @@ exports.buildJsImage = function (options) {
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
-    cordovaDependencies: options.cordovaDependencies,
     npmDir: options.npmDir,
     dependencyVersions: options.dependencyVersions,
     noVersionFile: true

@@ -216,7 +216,7 @@ var runWithFreshIdentifier = function (s, sandboxProject, expectStats) {
 var readProjectId = function (s) {
   var raw = s.read(".meteor/.id");
   var lines = raw.split(/\r*\n\r*/);
-  return _.find(_.map(lines, files.trimLine), _.identity);
+  return _.find(_.map(lines, files.trimSpaceAndComments), _.identity);
 };
 
 // Bundle the app in the current working directory.
