@@ -37,15 +37,15 @@ exports.ProjectContext = function (options) {
 
   self.projectConstraintsFile = null;
   self.packageMapFile = null;
+  self.platformList = null;
+  self.appIdentifier = null;
   self.packageMap = null;
   self.isopackCache = null;
 
   // XXX #3006: Things we're leaving off for now:
   //  - combinedConstraints
-  //  - cordovaPlugins, platforms
-  //  - appId
+  //  - cordovaPlugins
   //  - muted (???)
-  //  - includeDebug
 };
 
 _.extend(exports.ProjectContext.prototype, {
@@ -78,7 +78,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return path.join(self.projectDir, '.meteor', 'local', subdirectory),
+    return path.join(self.projectDir, '.meteor', 'local', subdirectory);
   },
 
   _readProjectMetadata: function () {
@@ -108,7 +108,39 @@ _.extend(exports.ProjectContext.prototype, {
         });
       if (buildmessage.jobHasMessages())
         return;
+
+      self._ensureAppIdentifier();
+      if (buildmessage.jobHasMessages())
+        return;
     });
+  },
+
+  _ensureAppIdentifier: function () {
+    var self = this;
+    var identifierFile = path.join(self.projectDir, '.meteor', '.id');
+
+    // Find the first non-empty line, ignoring comments. We intentionally don't
+    // put this in projectWatchSet, since changing this doesn't affect the built
+    // app much (and there's no real reason to update it anyway).
+    var lines = files.getLinesOrEmpty(identifierFile);
+    var appId = _.find(_.map(lines, files.trimLine), _.identity);
+
+    // If the file doesn't exist or has no non-empty lines, regenerate the
+    // token.
+    if (!appId) {
+      appId = utils.randomToken() + utils.randomToken() + utils.randomToken();
+
+      var comment = (
+"# This file contains a token that is unique to your project.\n" +
+"# Check it into your repository along with the rest of this directory.\n" +
+"# It can be used for purposes such as:\n" +
+"#   - ensuring you don't accidentally deploy one app on top of another\n" +
+"#   - providing package authors with aggregated statistics\n" +
+"\n");
+      files.writeFileAtomically(identifierFile, comment + appId + '\n');
+    }
+
+    self.appIdentifier = appId;
   },
 
   _resolveConstraints: function () {
