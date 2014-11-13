@@ -1826,6 +1826,7 @@ var maybeUpdateRelease = function (options) {
   // but if we actually do that, we can change this code to add the extra
   // springboard at that time.
   var upgraders = require('./upgraders.js');
+  // XXX #3006 this has a hidden project dependency
   var upgradersToRun = upgraders.upgradersToRun();
 
   // Write the new versions to .meteor/packages and .meteor/versions.

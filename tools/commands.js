@@ -587,13 +587,10 @@ main.registerCommand({
     if (buildmessage.jobHasMessages())
       return;
 
-    // XXX #3006 write upgraders!
     // Any upgrader that is in this version of Meteor doesn't need to be run on
     // this project.
-    // var upgraders = require('./upgraders.js');
-    // _.each(upgraders.allUpgraders(), function (upgrader) {
-    //   project.appendFinishedUpgrader(upgrader);
-    // });
+    var upgraders = require('./upgraders.js');
+    projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
 
     // XXX #3006 ensure that this ALWAYS writes .meteor/versions, even with
     // '--release'.

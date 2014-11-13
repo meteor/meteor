@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var fs = require('fs');
 var path = require('path');
 
 var archinfo = require('./archinfo.js');
@@ -32,10 +33,15 @@ exports.ProjectContext = function (options) {
   self._serverArchitectures.push(archinfo.host());
   self._serverArchitectures = _.uniq(self._serverArchitectures);
 
+  // Initialized by readProjectMetadata.
+  self.releaseFile = null;
   self.projectConstraintsFile = null;
   self.packageMapFile = null;
   self.platformList = null;
   self.appIdentifier = null;
+  self.finishedUpgraders = null;
+
+  // Initialized by _resolveConstraints.
   self.packageMap = null;
   self.isopackCache = null;
 
@@ -115,7 +121,16 @@ _.extend(exports.ProjectContext.prototype, {
       if (buildmessage.jobHasMessages())
         return;
 
+      // Read .meteor/.id, creating it if necessary.
       self._ensureAppIdentifier();
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // Set up an object that knows how to read and write
+      // .meteor/.finished-upgraders.
+      self.finishedUpgraders = new exports.FinishedUpgraders({
+        projectDir: self.projectDir
+      });
       if (buildmessage.jobHasMessages())
         return;
     });
@@ -619,5 +634,52 @@ _.extend(exports.ReleaseFile.prototype, {
     var self = this;
     files.writeFileAtomically(self.filename, releaseName + '\n');
     self._readFile();
+  }
+});
+
+
+// Represents .meteor/.finished-upgraders.
+// This is only used in a few places, so we don't cache its value in memory;
+// we just read it when we need it. There's also no need to add it to a
+// watchSet because we don't need to rebuild when it changes.
+exports.FinishedUpgraders = function (options) {
+  var self = this;
+
+  self.filename = path.join(
+    options.projectDir, '.meteor', '.finished-upgraders');
+};
+
+_.extend(exports.FinishedUpgraders.prototype, {
+  // XXX #3006 add a read method
+
+  appendUpgraders: function (upgraders) {
+    var self = this;
+
+    var current = null;
+    try {
+      current = fs.readFileSync(self.filename, 'utf8');
+    } catch (e) {
+      if (e.code !== 'ENOENT')
+        throw e;
+    }
+
+    var appendText = '';
+    if (current === null) {
+      // We're creating this file for the first time. Include a helpful comment.
+      appendText =
+"# This file contains information which helps Meteor properly upgrade your\n" +
+"# app when you run 'meteor update'. You should check it into version control\n" +
+"# with your project.\n" +
+"\n";
+    } else if (current.length && current[current.length - 1] !== '\n') {
+      // File has an unterminated last line. Let's terminate it.
+      appendText = '\n';
+    }
+
+    _.each(upgraders, function (upgrader) {
+      appendText += upgrader + '\n';
+    });
+
+    fs.appendFileSync(self.filename, appendText);
   }
 });
