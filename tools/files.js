@@ -651,7 +651,7 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
   }
 
   // Now rename the directory.
-  fs.renameSync(fromDir, toDir);
+  files.mv(fromDir, toDir);
 
   // ... and delete the old one.
   if (movedOldDir)
@@ -663,7 +663,7 @@ files.writeFileAtomically = function (filename, contents) {
     path.dirname(filename),
     '.' + path.basename(filename) + '.' + utils.randomToken());
   fs.writeFileSync(tmpFile, contents);
-  fs.renameSync(tmpFile, filename);
+  files.mv(tmpFile, filename);
 };
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
@@ -674,7 +674,7 @@ files.symlinkOverSync = function (linkText, file) {
     path.dirname(file),
     "." + path.basename(file) + ".tmp" + utils.randomToken());
   fs.symlinkSync(linkText, tmpSymlink);
-  fs.renameSync(tmpSymlink, file);
+  files.mv(tmpSymlink, file);
 };
 
 // Run a program synchronously and, assuming it returns success (0),
