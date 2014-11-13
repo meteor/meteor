@@ -9,7 +9,6 @@ var release = require('./release.js');
 var watch = require('./watch.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
-var packageLoader = require('./package-loader.js');
 var PackageSource = require('./package-source.js');
 var packageVersionParser = require('./package-version-parser.js');
 var Console = require('./console.js').Console;

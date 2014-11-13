@@ -8,7 +8,6 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
-var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
@@ -121,13 +120,11 @@ _.extend(Unibuild.prototype, {
   // is resolved at bundle time. (On the other hand, when it comes to
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
-  //
-  // loader is the PackageLoader that should be used to resolve
-  // the package's bundle-time dependencies.
   getResources: function (bundleArch, options) {
     var self = this;
-    var loader = options.packageLoader;
     var isopackCache = options.isopackCache;
+    if (! isopackCache)
+      throw Error("no isopackCache?");
 
     if (! archinfo.matches(bundleArch, self.arch))
       throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
@@ -151,23 +148,13 @@ _.extend(Unibuild.prototype, {
           imports[symbol.name] = depUnibuild.pkg.name;
       });
     };
-    // XXX #3006 combine)
-    if (isopackCache) {
-      isopackCompiler.eachUsedUnibuild({
-        dependencies: self.uses,
-        arch: bundleArch,
-        isopackCache: isopackCache,
-        skipUnordered: true,
-        skipDebugOnly: true
-      }, addImportsForUnibuild);
-    } else {
-      compiler.eachUsedUnibuild(
-        self.uses,
-        bundleArch, loader,
-        { skipUnordered: true, skipDebugOnly: true },
-        addImportsForUnibuild
-      );
-    }
+    isopackCompiler.eachUsedUnibuild({
+      dependencies: self.uses,
+      arch: bundleArch,
+      isopackCache: isopackCache,
+      skipUnordered: true,
+      skipDebugOnly: true
+    }, addImportsForUnibuild);
 
     // Phase 2 link
     var isApp = ! self.pkg.name;

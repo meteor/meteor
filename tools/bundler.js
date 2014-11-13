@@ -408,16 +408,13 @@ _.extend(File.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options:
-// - packageLoader: PackageLoader to use for resolving package dependencies
+// - packageMap and isopackCache: for resolving package dependencies
 // - arch: the architecture to build
 //
 // see subclasses for additional options
 var Target = function (options) {
   var self = this;
 
-  // PackageLoader to use for resolving package dependenices.
-  // XXX #3006 Fully replace this with packageMap.
-  self.packageLoader = options.packageLoader;
   self.packageMap = options.packageMap;
   self.isopackCache = options.isopackCache;
 
@@ -525,9 +522,6 @@ _.extend(Target.prototype, {
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
   //
-  // (Note: this is also called directly by
-  // bundler.iterateOverAllUsedIsopacks, kinda hackily.)
-  //
   // options include:
   // - packages: an array of packages (or, properly speaking, unibuilds)
   //   to include. Each element should either be a Isopack object or a
@@ -536,7 +530,6 @@ _.extend(Target.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    var packageLoader = self.packageLoader;
     var packageMap = self.packageMap;
     var isopackCache = self.isopackCache;
 
@@ -545,12 +538,7 @@ _.extend(Target.prototype, {
       var rootUnibuilds = [];
       _.each(options.packages, function (p) {
         if (typeof p === "string") {
-          // XXX #3006 combine
-          if (isopackCache) {
-            p = isopackCache.getIsopack(p);
-          } else {
-            p = packageLoader.getPackage(p, { throwOnError: true });
-          }
+          p = isopackCache.getIsopack(p);
         }
         if (p.debugOnly && ! self.includeDebug) {
           return;
@@ -581,20 +569,12 @@ _.extend(Target.prototype, {
           // Only track real packages, not plugin pseudo-packages.
           self.usedPackages[unibuild.pkg.name] = true;
         }
-        // XXX #3006 combine
-        if (isopackCache) {
-          isopackCompiler.eachUsedUnibuild({
-            dependencies: unibuild.uses,
-            arch: self.arch,
-            isopackCache: isopackCache,
-            skipDebugOnly: ! self.includeDebug
-          }, addToGetsUsed);
-        } else {
-          compiler.eachUsedUnibuild(
-            unibuild.uses, self.arch, packageLoader, {
-              skipDebugOnly: ! self.includeDebug
-            }, addToGetsUsed);
-        }
+        isopackCompiler.eachUsedUnibuild({
+          dependencies: unibuild.uses,
+          arch: self.arch,
+          isopackCache: isopackCache,
+          skipDebugOnly: ! self.includeDebug
+        }, addToGetsUsed);
       };
       _.each(rootUnibuilds, addToGetsUsed);
 
@@ -646,25 +626,14 @@ _.extend(Target.prototype, {
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
         };
-        // XXX #3006 combine
-        if (isopackCache) {
-          isopackCompiler.eachUsedUnibuild({
-            dependencies: unibuild.uses,
-            arch: self.arch,
-            isopackCache: isopackCache,
-            skipUnordered: true,
-            acceptableWeakPackages: self.usedPackages,
-            skipDebugOnly: ! self.includeDebug
-          }, processUnibuild);
-        } else {
-          compiler.eachUsedUnibuild(
-            unibuild.uses, self.arch, packageLoader,
-            { skipUnordered: true,
-              acceptableWeakPackages: self.usedPackages,
-              skipDebugOnly: ! self.includeDebug
-            },
-            processUnibuild);
-        }
+        isopackCompiler.eachUsedUnibuild({
+          dependencies: unibuild.uses,
+          arch: self.arch,
+          isopackCache: isopackCache,
+          skipUnordered: true,
+          acceptableWeakPackages: self.usedPackages,
+          skipDebugOnly: ! self.includeDebug
+        }, processUnibuild);
         self.unibuilds.push(unibuild);
         delete needed[unibuild.id];
       };
@@ -704,7 +673,6 @@ _.extend(Target.prototype, {
 
       // Emit the resources
       var resources = unibuild.getResources(self.arch, {
-        packageLoader: self.packageLoader,
         isopackCache: self.isopackCache
       });
 
@@ -1642,7 +1610,6 @@ var ServerTarget = function (options) {
 
   self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
-  self.packageLoader = options.packageLoader;
 
   if (! archinfo.matches(self.arch, "os"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -2131,8 +2098,10 @@ exports.bundle = function (options) {
 // letting exceptions escape?
 //
 // options:
-// - packageLoader: required. the PackageLoader for resolving
+// - packageMap: required. the PackageMap for resolving
 //   bundle-time dependencies
+// - isopackCache: required. IsopackCache with all dependent packages
+//   loaded
 // - name: required. a name for this image (cosmetic, but will appear
 //   in, eg, error messages) -- technically speaking, this is the name
 //   of the package created to contain the sources and package
@@ -2192,7 +2161,6 @@ exports.buildJsImage = function (options) {
   }
 
   var target = new JsImageTarget({
-    packageLoader: options.packageLoader,
     packageMap: options.packageMap,
     isopackCache: options.isopackCache,
     // This function does not yet support cross-compilation (neither does
@@ -2216,18 +2184,4 @@ exports.buildJsImage = function (options) {
 // file (eg, program.json).
 exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
-};
-
-// Given an array of isopack names, invokes the callback with each
-// corresponding Isopack object, plus all of their transitive dependencies,
-// with a topological sort.
-exports.iterateOverAllUsedIsopacks =
-  function (loader, arch, packageNames, callback) {
-  buildmessage.assertInCapture();
-  var target = new Target({packageLoader: loader,
-                           arch: arch});
-  target._determineLoadOrder({packages: packageNames});
-  _.each(target.unibuilds, function (unibuild) {
-    callback(unibuild.pkg);
-  });
 };

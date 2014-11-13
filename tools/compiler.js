@@ -5,7 +5,6 @@ var buildmessage = require('./buildmessage.js');
 var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var isopack = require('./isopack.js');
-var packageLoader = require('./package-loader.js');
 var isopackets = require("./isopackets.js");
 var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');

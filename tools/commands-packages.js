@@ -24,7 +24,6 @@ var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
-var packageLoader = require('./package-loader.js');
 var Console = require('./console.js').Console;
 
 // On some informational actions, we only refresh the package catalog if it is > 15 minutes old
@@ -142,6 +141,7 @@ var formatArchitecture = function (s) {
 // call meteor rebuild. That said, rebuild should only be necessary if there's a
 // bug in the build tool... otherwise, packages should be rebuilt whenever
 // necessary!
+// XXX #3006 Rewrite this to actually do something.
 main.registerCommand({
   name: '--get-ready',
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
