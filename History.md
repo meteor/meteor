@@ -7,7 +7,7 @@
   new built-in implementation instead of a custom implementation. #2515
 
 * Some packages are no longer released as part of the core release process:
-  jquery-history, jquery-layout
+  amplify, backbone, bootstrap, d3, jquery-history, and jquery-layout.
 
 * Rework how Meteor packages get loaded into the command-line tool
 
