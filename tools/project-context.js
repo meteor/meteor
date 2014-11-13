@@ -86,26 +86,35 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob('reading project metadata', function () {
+      // Read .meteor/release.
+      self.releaseFile = new exports.ReleaseFile({
+        projectDir: self.projectDir,
+        watchSet: self.projectWatchSet
+      });
+      if (buildmessage.jobHasMessages())
+        return;
+
       // Read .meteor/packages.
-      self.projectConstraintsFile = new exports.ProjectConstraintsFile(
-        path.join(self.projectDir, '.meteor', 'packages'), {
-          watchSet: self.projectWatchSet
-        });
+      self.projectConstraintsFile = new exports.ProjectConstraintsFile({
+        projectDir: self.projectDir,
+        watchSet: self.projectWatchSet
+      });
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/versions. We don't load it into self.projectWatchSet until
       // we get to the _savePackageMap stage, since we may modify it.
-      self.packageMapFile = new exports.PackageMapFile(
-        path.join(self.projectDir, '.meteor', 'versions'));
+      self.packageMapFile = new exports.PackageMapFile({
+        projectDir: self.projectDir
+      });
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/platforms, creating it if necessary.
-      self.platformList = new exports.PlatformList(
-        path.join(self.projectDir, '.meteor', 'platforms'), {
-          watchSet: self.projectWatchSet
-        });
+      self.platformList = new exports.PlatformList({
+        projectDir: self.projectDir,
+        watchSet: self.projectWatchSet
+      });
       if (buildmessage.jobHasMessages())
         return;
 
@@ -317,12 +326,11 @@ _.extend(exports.ProjectContext.prototype, {
 
 
 // Represents .meteor/packages.
-exports.ProjectConstraintsFile = function (filename, options) {
+exports.ProjectConstraintsFile = function (options) {
   var self = this;
-  options = options || {};
   buildmessage.assertInCapture();
 
-  self.filename = filename;
+  self.filename = path.join(options.projectDir, '.meteor', 'packages');
   // XXX #3006 Use a better data structure so that we can rewrite the file
   // later. But for now this maps from package name to parsed constraint.
   self._constraints = {};
@@ -377,11 +385,11 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
 
 
 // Represents .meteor/versions.
-exports.PackageMapFile = function (filename) {
+exports.PackageMapFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = filename;
+  self.filename = path.join(options.projectDir, '.meteor', 'versions');
   self.watchSet = new watch.WatchSet;
   self._versions = {};
 
@@ -474,12 +482,11 @@ _.extend(exports.PackageMapFile.prototype, {
 
 // Represents .meteor/platforms. We take no effort to maintain comments or
 // spacing here.
-exports.PlatformList = function (filename, options) {
+exports.PlatformList = function (options) {
   var self = this;
-  options = options || {};
   buildmessage.assertInCapture();
 
-  self.filename = filename;
+  self.filename = path.join(options.projectDir, '.meteor', 'platforms');
   self._platforms = null;
 
   self._readFile(options.watchSet);
@@ -542,5 +549,61 @@ _.extend(exports.PlatformList.prototype, {
       archs.push("web.cordova");
     }
     return archs;
+  }
+});
+
+
+// Represents .meteor/release.
+exports.ReleaseFile = function (options) {
+  var self = this;
+
+  self.filename = path.join(options.projectDir, '.meteor', 'release');
+  // The release name actually written in the file.  Null if no fill.  Empty if
+  // the file is empty.
+  self.unnormalizedReleaseName = null;
+  // The full release name (with METEOR@ if it's missing in
+  // unnormalizedReleaseName).
+  self.fullReleaseName = null;
+  // FOO@bar unless FOO === "METEOR" in which case "Meteor bar".
+  self.displayReleaseName = null;
+  self._readFile(options.watchSet);
+};
+
+_.extend(exports.ReleaseFile.prototype, {
+  fileMissing: function () {
+    var self = this;
+    return self.unnormalizedReleaseName === null;
+  },
+  noReleaseSpecified: function () {
+    var self = this;
+    return self.unnormalizedReleaseName === '';
+  },
+
+  _readFile: function (watchSet) {
+    var self = this;
+
+    var contents = watch.readAndWatchFile(watchSet, self.filename);
+    // If file doesn't exist, leave unnormalizedReleaseName empty; fileMissing
+    // will be true.
+    if (contents === null)
+      return;
+
+    var lines = _.compact(_.map(files.splitBufferToLines(contents),
+                                files.trimLine));
+    // noReleaseSpecified will be true.
+    if (!lines.length) {
+      self.unnormalizedReleaseName = '';
+      return;
+    }
+
+    self.unnormalizedReleaseName = lines[0];
+    var parts = utils.splitReleaseName(self.unnormalizedReleaseName);
+    self.fullReleaseName = parts[0] + '@' + parts[1];
+    self.displayReleaseName = utils.displayRelease(parts[0], parts[1]);
+  },
+
+  write: function () {
+    var self = this;
+    // XXX #3006 fill out
   }
 });

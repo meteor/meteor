@@ -479,6 +479,7 @@ _.extend(AppRunner.prototype, {
     // you are testing packages from an app and you 'meteor update'
     // that app.
     if (self.appDirForVersionCheck) {
+      // XXX #3006 this now uses ProjectContext
       var wrongRelease = ! release.usingRightReleaseForApp();
       if (wrongRelease) {
         return { outcome: 'wrong-release',

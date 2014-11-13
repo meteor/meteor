@@ -11,7 +11,7 @@ var path = require('path');
 var warehouse = require('./warehouse.js');
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
-var project = require('./project.js');
+var projectContextModule = require('./project-context.js');
 var fs = require('fs');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
@@ -725,14 +725,14 @@ Fiber(function () {
     releaseForced = true;
   }
 
-  var releaseName, appReleaseUnnormalized;
+  var releaseName, appReleaseFile;
   if (appDir) {
-    // appRelease will be null if a super old project with no
-    // .meteor/release or 'none' if created by a checkout
-    appReleaseUnnormalized = project.project.getMeteorReleaseVersion(appDir);
+    appReleaseFile = new projectContextModule.ReleaseFile({
+      projectDir: appDir
+    });
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
-    if (appReleaseUnnormalized === '') {
+    if (appReleaseFile.noReleaseSpecified()) {
       Console.error(
 "Problem! This project has a .meteor/release file which is empty.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
@@ -740,7 +740,7 @@ Fiber(function () {
 "checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
 "and change it to a valid Meteor release or 'none'.");
       process.exit(1);
-    } else if (appReleaseUnnormalized === null) {
+    } else if (appReleaseFile.fileMissing()) {
       Console.error(
 "Problem! This project does not have a .meteor/release file.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
@@ -768,11 +768,11 @@ Fiber(function () {
       releaseName = releaseOverride;
     } else if (appDir) {
       // Running from an app directory. Use release specified by app.
-      if (appReleaseUnnormalized === 'none') {
+      if (appReleaseFile.unnormalizedReleaseName === 'none') {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
         // Use the project's desired release
-        releaseName = appReleaseUnnormalized;
+        releaseName = appReleaseFile.unnormalizedReleaseName;
         releaseFromApp = true;
       }
     } else {
@@ -1214,14 +1214,12 @@ commandName + ": You're not in a Meteor project directory.\n" +
   }
 
   if (command.requiresApp && release.current.isCheckout() &&
-      appReleaseUnnormalized && appReleaseUnnormalized !== "none") {
-    var utils = require("./utils.js");
-    var appReleaseParts = utils.splitReleaseName(appReleaseUnnormalized);
+      appReleaseFile && appReleaseFile.unnormalizedReleaseName !== "none") {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     Console.warn(
 "=> Running Meteor from a checkout -- overrides project version (" +
-        utils.displayRelease(appReleaseParts[0], appReleaseParts[1]) + ")");
+        appReleaseFile.displayReleaseName + ")");
   }
 
   // Now that we're ready to start executing the command, if we are in

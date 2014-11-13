@@ -1944,9 +1944,8 @@ exports.bundle = function (options) {
   var starResult = null;
   var targets = {};
 
-  // XXX #3006 reimplement usingRightReleaseForApp for projectContext
-  // if (! release.usingRightReleaseForApp(appDir))
-  //   throw new Error("running wrong release for app?");
+  if (! release.usingRightReleaseForApp(projectContext))
+    throw new Error("running wrong release for app?");
 
   var messages = buildmessage.capture({
     title: "Building the application"
