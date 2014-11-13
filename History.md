@@ -6,6 +6,14 @@
 * Corporate HTTP proxy support is now implemented using our websocket library's
   new built-in implementation instead of a custom implementation. #2515
 
+* Some packages are no longer released as part of the core release process:
+  jquery-history, jquery-layout
+
+* Rework how Meteor packages get loaded into the command-line tool
+
+* Remove support for the undocumented earliestCompatibleVersion feature of the
+  package system.
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
