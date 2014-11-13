@@ -5,6 +5,7 @@ var NpmDiscards = require('./npm-discards.js');
 var fs = require('fs');
 var _ = require('underscore');
 var isopack = require('./isopack.js');
+var utils = require('./utils.js');
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
@@ -30,7 +31,7 @@ var Builder = function (options) {
 
   // Escape colons with tilde before writing to file system
   self.outputPath = path.join(path.dirname(options.outputPath),
-    path.basename(options.outputPath).replace(/:/g, files.COLON_ESCAPE));
+    utils.escapePackageNameForPath(path.basename(options.outputPath)));
 
   // Paths already written to. Map from canonicalized relPath (no
   // trailing slash) to true for a file, or false for a directory.

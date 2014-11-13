@@ -549,7 +549,7 @@ files.extractTarGz = function (buffer, destPath) {
   var extractor = new tar.Extract({ path: tempDir })
     .on('entry', function (e) {
       // Some bundles/packages will have colons in directory names
-      e.path = e.path.replace(/:/g, files.COLON_ESCAPE);
+      e.path = utils.escapePackageNameForPath(e.path);
     })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
@@ -993,5 +993,3 @@ _.extend(files.KeyValueFile.prototype, {
 files.getHomeDir = function () {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
 };
-
-files.COLON_ESCAPE = "~";

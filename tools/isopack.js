@@ -937,7 +937,7 @@ _.extend(Isopack.prototype, {
           unibuildJson.resources.push({
             type: resource.type,
             file: builder.writeToGeneratedFilename(
-              path.join(unibuildDir, resource.servePath),
+              path.join(unibuildDir, utils.escapePackageNameForPath(resource.servePath)),
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
@@ -952,7 +952,7 @@ _.extend(Isopack.prototype, {
           var resource = {
             type: 'prelink',
             file: builder.writeToGeneratedFilename(
-              path.join(unibuildDir, file.servePath),
+              path.join(unibuildDir, utils.escapePackageNameForPath(file.servePath)),
               { data: data }),
             length: data.length,
             offset: 0,
@@ -962,7 +962,7 @@ _.extend(Isopack.prototype, {
           if (file.sourceMap) {
             // Write the source map.
             resource.sourceMap = builder.writeToGeneratedFilename(
-              path.join(unibuildDir, file.servePath + '.map'),
+              path.join(unibuildDir, utils.escapePackageNameForPath(file.servePath) + '.map'),
               { data: new Buffer(file.sourceMap, 'utf8') }
             );
           }
