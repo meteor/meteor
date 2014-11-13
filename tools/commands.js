@@ -592,8 +592,6 @@ main.registerCommand({
     var upgraders = require('./upgraders.js');
     projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
 
-    // XXX #3006 ensure that this ALWAYS writes .meteor/versions, even with
-    // '--release'.
     projectContext.prepareProjectForBuild();
   });
   if (messages.hasMessages()) {

@@ -337,16 +337,21 @@ _.extend(exports.ProjectContext.prototype, {
   _savePackageMap: function () {
     var self = this;
 
-    // XXX #3006 support the alwaysRecord case (used for create and update with
-    // --release)
+    // XXX #3006 make sure that this conditional is correct for update too
 
-    // If the user forced us to an explicit release, then maybe we shouldn't
-    // record versions (because they are based on a different release than the
-    // recorded .meteor/release), unless we are updating or creating, in which
-    // case, we should.
-    if (!release.explicit) {
-      self.packageMapFile.write(self.packageMap);
+    // If we're running from a release but the app is unpinned, or vice versa,
+    // don't save the package map.
+    if (release.current.isCheckout() !== self.releaseFile.isCheckout())
+      return;
+
+    // If we're running from a release but it's not the same release as the app,
+    // don't save the package map.
+    if (! release.current.isCheckout() &&
+        release.current.name !== self.releaseFile.fullReleaseName) {
+      return;
     }
+
+    self.packageMapFile.write(self.packageMap);
   }
 });
 
@@ -360,7 +365,8 @@ exports.ProjectConstraintsFile = function (options) {
   self.watchSet = new watch.WatchSet;
   // XXX #3006 Use a better data structure so that we can rewrite the file
   // later. But for now this maps from package name to parsed constraint.
-  self._constraints = {};
+  self._constraints = null;
+  self._readFile();
 };
 
 _.extend(exports.ProjectConstraintsFile.prototype, {
@@ -368,7 +374,9 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
+    self._constraints = {};
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
+
     // No .meteor/packages? That's OK, you just get no packages.
     if (contents === null)
       return;
@@ -603,6 +611,10 @@ _.extend(exports.ReleaseFile.prototype, {
   noReleaseSpecified: function () {
     var self = this;
     return self.unnormalizedReleaseName === '';
+  },
+  isCheckout: function () {
+    var self = this;
+    return self.unnormalizedReleaseName === 'none';
   },
 
   _readFile: function () {

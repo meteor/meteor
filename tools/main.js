@@ -768,7 +768,7 @@ Fiber(function () {
       releaseName = releaseOverride;
     } else if (appDir) {
       // Running from an app directory. Use release specified by app.
-      if (appReleaseFile.unnormalizedReleaseName === 'none') {
+      if (appReleaseFile.isCheckout()) {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
         // Use the project's desired release
@@ -1214,7 +1214,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
   }
 
   if (command.requiresApp && release.current.isCheckout() &&
-      appReleaseFile && appReleaseFile.unnormalizedReleaseName !== "none") {
+      appReleaseFile && ! appReleaseFile.isCheckout()) {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     Console.warn(
