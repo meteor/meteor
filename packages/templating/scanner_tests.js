@@ -34,9 +34,11 @@ Tinytest.add("templating - html scanner", function (test) {
     // '"hello"' into '"Template.hello"'
     var viewName = templateName.slice(0, 1) + 'Template.' + templateName.slice(1);
 
-    return '\nTemplate.__checkName(' + templateName + ');\nTemplate[' + templateName +
-      '] = new Template(' + viewName +
-      ', (function() {\n  var view = this;\n  return ' + content + ';\n}));\n';
+    return '\nTemplate.__checkName(' + templateName + ');\n' +
+      'if (!Template.__maybeOverride(' + templateName +
+      ', (function() {\n  var view = this;\n  return ' + content + ';\n}))) {\n' +
+      'Template[' + templateName + '] = new Template(' + viewName +
+      ', (function() {\n  var view = this;\n  return ' + content + ';\n}));\n}\n';
   };
 
   var checkResults = function(results, expectJs, expectHead) {
