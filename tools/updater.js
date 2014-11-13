@@ -45,9 +45,8 @@ var checkForUpdate = function (showBanner) {
     // the first update cycle.
     firstCheck = false;
   } else {
-    // Silent is currently unused, but we keep it as a hint here...
     try {
-      catalog.complete.refreshOfficialCatalog({silent: true});
+      catalog.official.refresh();
     } catch (err) {
       Console.debug("Failed to refresh catalog, ignoring error", err);
       return;

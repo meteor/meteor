@@ -730,14 +730,14 @@ _.extend(Sandbox.prototype, {
     // should be OK.
     var oldOffline = catalog.official.offline;
     catalog.official.offline = true;
-    catalog.complete.refreshOfficialCatalog();
+    catalog.official.refresh();
     _.each(
       ['autopublish', 'meteor-platform', 'insecure'],
       function (name) {
         var versionRec = catalog.official.getLatestMainlineVersion(name);
         if (!versionRec) {
           catalog.official.offline = false;
-          catalog.complete.refreshOfficialCatalog();
+          catalog.official.refresh();
           catalog.official.offline = true;
           versionRec = catalog.official.getLatestMainlineVersion(name);
           if (!versionRec) {

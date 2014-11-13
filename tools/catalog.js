@@ -54,7 +54,7 @@ catalog.Refresh.Never = function (options) {
 // it only from main.js or command implementations).
 catalog.refreshOrWarn = function (options) {
   try {
-    catalog.complete.refreshOfficialCatalog(options);
+    catalog.official.refresh(options);
     catalog.refreshFailed = false;
     return true;
   } catch (err) {
@@ -220,18 +220,6 @@ _.extend(LayeredCatalog.prototype, {
     //// Note that otherCatalog can throw, if we fail to connect
     //// XXX: Order of refreshes?  Continue on error?
     //self.otherCatalog.refresh(options);
-    // XXX #3006 do we need to refresh some IsopackCache too?
-  },
-
-  // Refresh the official catalog referenced by this catalog.
-  refreshOfficialCatalog: function (options) {
-    var self = this;
-
-    //self.localCatalog.refresh(options);
-    // Note that otherCatalog can throw, if we fail to connect
-    // XXX: Order of refreshes?  Continue on error?
-    self.otherCatalog.refresh(options);
-
     // XXX #3006 do we need to refresh some IsopackCache too?
   },
 
