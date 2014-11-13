@@ -2887,7 +2887,6 @@ main.registerCommand({
   maxArgs: 0,
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never(),
-  newfangledProject: true,
   pretty: true,
   requiresApp: true
 }, function (options) {

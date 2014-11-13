@@ -674,7 +674,6 @@ var buildCommands = {
     verbose: { type: Boolean, short: "v" }
   },
   pretty: true,
-  newfangledProject: true,   // XXX #3006 remove this
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 };
 

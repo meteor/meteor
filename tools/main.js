@@ -1162,12 +1162,6 @@ longHelp(commandName));
 
   if (appDir) {
     options.appDir = appDir;
-    // XXX #3006: Eventually everything should be newfangled!
-    if (! command.newfangledProject) {
-      // Set the project root directory. This doesn't do any dependency
-      // calculation -- we can't do that until we've scanned local packages.
-      project.project.setRootDir(appDir);
-    }
   }
 
   if (requiresApp && ! options.appDir) {
