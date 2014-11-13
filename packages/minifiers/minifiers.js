@@ -121,6 +121,8 @@ CssTools = {
           // We don't rewrite urls starting with a protocol definition such as
           // http, https, or data.
           if (isRelative(resource.path) && resource.protocol === null) {
+            // path.join uses backslashes on Windows, so replace them to
+            // forward slashes
             absolutePath = path.join(basePath, resource.path)
               .replace(/\\/g, "/");
             newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
