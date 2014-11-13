@@ -515,13 +515,14 @@ main.registerCommand({
     return 0;
   };
 
-  var appPath;
+  var appPathAsEntered;
   if (options.args.length === 1)
-    appPath = options.args[0];
+    appPathAsEntered = options.args[0];
   else if (options.example)
-    appPath = options.example;
+    appPathAsEntered = options.example;
   else
     throw new main.ShowUsage;
+  var appPath = path.resolve(appPathAsEntered);
 
   if (fs.existsSync(appPath)) {
     Console.stderr.write(appPath + ": Already exists\n");
@@ -568,60 +569,37 @@ main.registerCommand({
   }
 
   // We are actually working with a new meteor project at this point, so
-  // reorient its path. We might do some things to it, but they should be
-  // invisible to the user, so mute non-error output.
-  project.setRootDir(path.resolve(appPath));
-  project.setMuted(true);
-  project.writeMeteorReleaseVersion(
-    release.current.isCheckout() ? "none" : release.current.name);
+  // set up its context.
+  // XXX #3006 Make sure that when we reimplement showPackageChanges, they
+  // don't show here.
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: appPath,
+    tropohouse: tropohouse.default
+  });
+  // XXX #3006 write meteor release version!
+  // project.writeMeteorReleaseVersion(
+  //   release.current.isCheckout() ? "none" : release.current.name);
+  // XXX #3006 write upgraders!
   // Any upgrader that is in this version of Meteor doesn't need to be run on
   // this project.
-  var upgraders = require('./upgraders.js');
-  _.each(upgraders.allUpgraders(), function (upgrader) {
-    project.appendFinishedUpgrader(upgrader);
+  // var upgraders = require('./upgraders.js');
+  // _.each(upgraders.allUpgraders(), function (upgrader) {
+  //   project.appendFinishedUpgrader(upgrader);
+  // });
+
+  var messages = buildmessage.capture({ title: 'creating your project' }, function () {
+    // XXX #3006 ensure that this ALWAYS writes .meteor/version, even with
+    // '--release'.
+    projectContext.prepareProjectForBuild();
   });
-
-  // XXX copied from main.js
-  // We need to re-initialize the complete catalog to know about the app we just
-  // created, because it might have local packages.
-  var localPackageSearchDirs = [path.resolve(appPath, 'packages')];
-  if (process.env.PACKAGE_DIRS) {
-    // User can provide additional package directories to search in PACKAGE_DIRS
-    // (colon-separated).
-    localPackageSearchDirs = localPackageSearchDirs.concat(
-      _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
-        return path.resolve(p);
-      }));
-  }
-  if (!files.usesWarehouse()) {
-    // Running from a checkout, so use the Meteor core packages from
-    // the checkout.
-    localPackageSearchDirs.push(path.join(
-      files.getCurrentToolsDir(), 'packages'));
-  }
-
-  var messages = buildmessage.capture({ title: "Updating dependencies" }, function () {
-    // XXX Hack. In the future we should just delay all use of catalog.complete
-    // until this point.
-    // XXX #3006 Do this better!
-    catalog.complete.initialize({
-      localPackageSearchDirs: localPackageSearchDirs
-    });
-
-    // Run the constraint solver. Override the assumption that using '--release'
-    // means we shouldn't update .meteor/versions.
-    project._ensureDepsUpToDate({alwaysRecord: true});
-  });
-
-
   if (messages.hasMessages()) {
-    Console.stderr.write(messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   }
 
   {
-    var message = appPath + ": created";
-    if (options.example && options.example !== appPath)
+    var message = appPathAsEntered + ": created";
+    if (options.example && options.example !== appPathAsEntered)
       message += (" (from '" + options.example + "' template)");
     message += ".\n";
     Console.info(message);
@@ -629,7 +607,7 @@ main.registerCommand({
 
   Console.stdout.write(
     "To run your new app:\n" +
-      "   cd " + appPath + "\n" +
+      "   cd " + appPathAsEntered + "\n" +
       "   meteor\n");
 });
 
