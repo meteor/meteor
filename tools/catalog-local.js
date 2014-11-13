@@ -11,7 +11,6 @@ var tropohouse = require('./tropohouse.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var catalog = require('./catalog.js');
-var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var VersionParser = require('./package-version-parser.js');
 
@@ -46,13 +45,6 @@ var LocalCatalog = function (options) {
   // time. This refers to the package by the specific package directory that we
   // need to process.
   self.effectiveLocalPackageDirs = [];
-
-   // If this is a standalone catalog (eg BootstrapCatalogCheckout) it needs its
-   // own PackageCache, but if it's part of the complete catalog it should share
-   // a cache with its container.
-  self.packageCache = options.containingCatalog
-    ? options.containingCatalog.packageCache
-    : new packageCache.PackageCache(self);
 
   self.buildRequested = null;
 
@@ -535,7 +527,6 @@ _.extend(LocalCatalog.prototype, {
 
     // XXX why isn't this build just happening through the package cache
     // directly?
-    self.packageCache.cachePackageAtPath(name, sourcePath, unip);
 
     // XXX I'm not convinced that anything actually uses this build record. We
     // mostly care about build records for packages we need to download.

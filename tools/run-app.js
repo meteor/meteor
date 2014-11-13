@@ -499,8 +499,8 @@ _.extend(AppRunner.prototype, {
       if (! options.firstRun) {
         // Pick up changes to packages. (Soft refresh, so we still check to see
         // if they have changed.)
-        // XXX #3006 re-implement "soft refresh".
-        catalog.complete.packageCache.refresh();
+        // XXX #3006 re-implement "soft refresh" by refreshing some cache or
+        // other.
       }
 
       var bundle = bundler.bundle({

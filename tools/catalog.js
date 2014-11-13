@@ -4,7 +4,6 @@ var _ = require('underscore');
 var util = require('util');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
-var packageCache = require('./package-cache.js');
 var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
 var files = require('./files.js');
@@ -118,10 +117,8 @@ var LayeredCatalog = function() {
   self.otherCatalog = null;
 
   // Constraint solver using this catalog.
+  // XXX #3006 Can we avoid saving this?
   self.resolver = null;
-
-  // Each complete catalog needs its own package cache.
-  self.packageCache = new packageCache.PackageCache(self);
 };
 
 _.extend(LayeredCatalog.prototype, {
@@ -344,7 +341,7 @@ _.extend(LayeredCatalog.prototype, {
     //// Note that otherCatalog can throw, if we fail to connect
     //// XXX: Order of refreshes?  Continue on error?
     //self.otherCatalog.refresh(options);
-    self.packageCache.refresh();
+    // XXX #3006 do we need to refresh some IsopackCache too?
     self.resolver = null;
   },
 
@@ -357,7 +354,8 @@ _.extend(LayeredCatalog.prototype, {
     // XXX: Order of refreshes?  Continue on error?
     self.otherCatalog.refresh(options);
 
-    self.packageCache.refresh();
+    // XXX #3006 do we need to refresh some IsopackCache too?
+
     self.resolver = null;
   },
 
