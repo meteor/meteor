@@ -248,6 +248,34 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
 };
 
 /**
+ * @summary Access parent template instance.
+ * @param {Integer} height The number of levels beyond the current template instance to look.
+ * @locus Client
+ */
+Blaze.TemplateInstance.prototype.parent = function (height) {
+  var template = this;
+
+  for (var i = 0; (i < height) && template; i++) {
+    var view = template.view.parentView;
+
+    while (view && ! view.template)
+      view = view.parentView;
+
+    if (! view)
+      return null;
+
+    // Body view has template field, but not templateInstance,
+    // which more or less signals that we reached the top.
+    if (! view.templateInstance)
+      return null;
+
+    template = view.templateInstance();
+  }
+
+  return template;
+};
+
+/**
  * @summary Specify template helpers available to this template.
  * @locus Client
  * @param {Object} helpers Dictionary of helper functions by name.
