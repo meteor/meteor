@@ -115,10 +115,6 @@ var LayeredCatalog = function() {
 
   self.localCatalog = null;
   self.otherCatalog = null;
-
-  // Constraint solver using this catalog.
-  // XXX #3006 Can we avoid saving this?
-  self.resolver = null;
 };
 
 _.extend(LayeredCatalog.prototype, {
@@ -225,7 +221,6 @@ _.extend(LayeredCatalog.prototype, {
     //// XXX: Order of refreshes?  Continue on error?
     //self.otherCatalog.refresh(options);
     // XXX #3006 do we need to refresh some IsopackCache too?
-    self.resolver = null;
   },
 
   // Refresh the official catalog referenced by this catalog.
@@ -238,24 +233,6 @@ _.extend(LayeredCatalog.prototype, {
     self.otherCatalog.refresh(options);
 
     // XXX #3006 do we need to refresh some IsopackCache too?
-
-    self.resolver = null;
-  },
-
-
-  _buildResolver: function () {
-    var self = this;
-    var isopackets = require("./isopackets.js");
-
-    var constraintSolverPackage =
-          isopackets.load('constraint-solver')['constraint-solver'];
-    var resolver =
-      new constraintSolverPackage.ConstraintSolver.PackagesResolver(self, {
-        nudge: function () {
-          Console.nudge(true);
-        }
-      });
-    return resolver;
   },
 
   watchLocalPackageDirs: function (watchSet) {
