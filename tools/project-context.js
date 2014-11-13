@@ -32,9 +32,6 @@ exports.ProjectContext = function (options) {
   self._serverArchitectures.push(archinfo.host());
   self._serverArchitectures = _.uniq(self._serverArchitectures);
 
-  // A WatchSet for all the files read by this class (eg .meteor/packages, etc).
-  self.projectWatchSet = new watch.WatchSet;
-
   self.projectConstraintsFile = null;
   self.packageMapFile = null;
   self.platformList = null;
@@ -43,9 +40,7 @@ exports.ProjectContext = function (options) {
   self.isopackCache = null;
 
   // XXX #3006: Things we're leaving off for now:
-  //  - combinedConstraints
   //  - cordovaPlugins
-  //  - muted (???)
 };
 
 _.extend(exports.ProjectContext.prototype, {
@@ -88,22 +83,19 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.enterJob('reading project metadata', function () {
       // Read .meteor/release.
       self.releaseFile = new exports.ReleaseFile({
-        projectDir: self.projectDir,
-        watchSet: self.projectWatchSet
+        projectDir: self.projectDir
       });
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/packages.
       self.projectConstraintsFile = new exports.ProjectConstraintsFile({
-        projectDir: self.projectDir,
-        watchSet: self.projectWatchSet
+        projectDir: self.projectDir
       });
       if (buildmessage.jobHasMessages())
         return;
 
-      // Read .meteor/versions. We don't load it into self.projectWatchSet until
-      // we get to the _savePackageMap stage, since we may modify it.
+      // Read .meteor/versions.
       self.packageMapFile = new exports.PackageMapFile({
         projectDir: self.projectDir
       });
@@ -112,8 +104,7 @@ _.extend(exports.ProjectContext.prototype, {
 
       // Read .meteor/platforms, creating it if necessary.
       self.platformList = new exports.PlatformList({
-        projectDir: self.projectDir,
-        watchSet: self.projectWatchSet
+        projectDir: self.projectDir
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -124,13 +115,28 @@ _.extend(exports.ProjectContext.prototype, {
     });
   },
 
+  getProjectWatchSet: function () {
+    // We don't cache a projectWatchSet on this object, since some of the
+    // metadata files can be written by us (eg .meteor/versions
+    // post-constraint-solve).
+    var self = this;
+    var watchSet = new watch.WatchSet;
+    _.each(
+      [self.releaseFile, self.projectConstraintsFile, self.packageMapFile,
+       self.platformList],
+      function (metadataFile) {
+        watchSet.merge(metadataFile.watchSet);
+      });
+    return watchSet;
+  },
+
   _ensureAppIdentifier: function () {
     var self = this;
     var identifierFile = path.join(self.projectDir, '.meteor', '.id');
 
     // Find the first non-empty line, ignoring comments. We intentionally don't
-    // put this in projectWatchSet, since changing this doesn't affect the built
-    // app much (and there's no real reason to update it anyway).
+    // put this in a WatchSet, since changing this doesn't affect the built app
+    // much (and there's no real reason to update it anyway).
     var lines = files.getLinesOrEmpty(identifierFile);
     var appId = _.find(_.map(lines, files.trimLine), _.identity);
 
@@ -182,6 +188,9 @@ _.extend(exports.ProjectContext.prototype, {
 
     // XXX #3006 Check solution.usedRCs and maybe print something about it. This
     // code used to exist in catalog.js.
+
+    // XXX #3006 For commands other than create and test-packages, show package
+    // changes. This code used to exist in project.js.
 
     self.packageMap = new packageMapModule.PackageMap(solution.answer, cat);
   },
@@ -317,10 +326,6 @@ _.extend(exports.ProjectContext.prototype, {
     if (!release.explicit) {
       self.packageMapFile.write(self.packageMap);
     }
-
-    // Either way, we should remember the hash of the versions file we read or
-    // wrote.
-    self.projectWatchSet.merge(self.packageMapFile.watchSet);
   }
 });
 
@@ -331,19 +336,18 @@ exports.ProjectConstraintsFile = function (options) {
   buildmessage.assertInCapture();
 
   self.filename = path.join(options.projectDir, '.meteor', 'packages');
+  self.watchSet = new watch.WatchSet;
   // XXX #3006 Use a better data structure so that we can rewrite the file
   // later. But for now this maps from package name to parsed constraint.
   self._constraints = {};
-
-  self._readFile(options.watchSet);
 };
 
 _.extend(exports.ProjectConstraintsFile.prototype, {
-  _readFile: function (watchSet) {
+  _readFile: function () {
     var self = this;
     buildmessage.assertInCapture();
 
-    var contents = watch.readAndWatchFile(watchSet, self.filename);
+    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
     // No .meteor/packages? That's OK, you just get no packages.
     if (contents === null)
       return;
@@ -487,22 +491,21 @@ exports.PlatformList = function (options) {
   buildmessage.assertInCapture();
 
   self.filename = path.join(options.projectDir, '.meteor', 'platforms');
+  self.watchSet = new watch.WatchSet;
   self._platforms = null;
 
-  self._readFile(options.watchSet);
+  self._readFile();
 };
 
 // These platforms are always present and can be neither added or removed
 exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
 
 _.extend(exports.PlatformList.prototype, {
-  _readFile: function (watchSet) {
+  _readFile: function () {
     var self = this;
     buildmessage.assertInCapture();
 
-    var tempWatchSet = new watch.WatchSet;
-
-    var contents = watch.readAndWatchFile(tempWatchSet, self.filename);
+    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
 
     var platforms = contents ? files.splitBufferToLines(contents) : [];
     platforms = _.uniq(_.compact(_.map(platforms, files.trimLine)));
@@ -518,12 +521,13 @@ _.extend(exports.PlatformList.prototype, {
       self._platforms = platforms;
       self.write();
       self._platforms = null;
-      self._readFile(watchSet);
+      // Reset and start over.
+      self.watchSet = new watch.WatchSet;
+      self._readFile();
       return;
     }
 
     self._platforms = platforms;
-    watchSet.merge(tempWatchSet);
   },
 
   write: function () {
@@ -558,6 +562,7 @@ exports.ReleaseFile = function (options) {
   var self = this;
 
   self.filename = path.join(options.projectDir, '.meteor', 'release');
+  self.watchSet = new watch.WatchSet;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
   self.unnormalizedReleaseName = null;
@@ -566,7 +571,7 @@ exports.ReleaseFile = function (options) {
   self.fullReleaseName = null;
   // FOO@bar unless FOO === "METEOR" in which case "Meteor bar".
   self.displayReleaseName = null;
-  self._readFile(options.watchSet);
+  self._readFile();
 };
 
 _.extend(exports.ReleaseFile.prototype, {
@@ -579,10 +584,10 @@ _.extend(exports.ReleaseFile.prototype, {
     return self.unnormalizedReleaseName === '';
   },
 
-  _readFile: function (watchSet) {
+  _readFile: function () {
     var self = this;
 
-    var contents = watch.readAndWatchFile(watchSet, self.filename);
+    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
     // If file doesn't exist, leave unnormalizedReleaseName empty; fileMissing
     // will be true.
     if (contents === null)
