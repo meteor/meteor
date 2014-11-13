@@ -603,6 +603,7 @@ main.registerCommand({
   var messages = buildmessage.capture({ title: "Updating dependencies" }, function () {
     // XXX Hack. In the future we should just delay all use of catalog.complete
     // until this point.
+    // XXX #3006 Do this better!
     catalog.complete.initialize({
       localPackageSearchDirs: localPackageSearchDirs
     });
@@ -1430,6 +1431,7 @@ main.registerCommand({
 var getPackagesForTest = function (packages) {
   var testPackages;
   if (packages.length === 0) {
+    // XXX #3006 no longer exists
     testPackages = catalog.complete.getLocalPackageNames();
   } else {
     var messages = buildmessage.capture(function () {
@@ -1447,6 +1449,7 @@ var getPackagesForTest = function (packages) {
             }
             // Check to see if this is a real package, and if it is a real
             // package, if it has tests.
+            // XXX #3006 no longer exists, and more in this functiona
             if (!catalog.complete.isLocalPackage(p)) {
               buildmessage.error(
                 "Not a known local package, cannot test: " + p );
@@ -1508,6 +1511,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
   // as they work together.
   var tests = [];
   _.each(testPackages, function(name) {
+    // XXX #3006 no longer exists, and more in this function
     var versionNames = catalog.complete.getSortedVersions(name);
     if (versionNames.length !== 1)
       throw Error("local package should have one version?");

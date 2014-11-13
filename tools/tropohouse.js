@@ -16,10 +16,9 @@ var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
 
-exports.Tropohouse = function (root, catalog) {
+exports.Tropohouse = function (root) {
   var self = this;
   self.root = root;
-  self.catalog = catalog;
 };
 
 // Return the directory containing our loaded collection of tools, releases and
@@ -38,11 +37,9 @@ var defaultWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor");
 };
 
-// The default tropohouse is on disk at defaultWarehouseDir() and knows not to
-// download local packages; you can make your own Tropohouse to override these
-// things.
-exports.default = new exports.Tropohouse(
-  defaultWarehouseDir(), catalog.complete);
+// The default tropohouse is on disk at defaultWarehouseDir(); you can make your
+// own Tropohouse to override these things.
+exports.default = new exports.Tropohouse(defaultWarehouseDir());
 
 _.extend(exports.Tropohouse.prototype, {
   // Returns the load path where one can expect to find the package, at a given
@@ -199,17 +196,6 @@ _.extend(exports.Tropohouse.prototype, {
     var packageName = options.packageName;
     var version = options.version;
 
-    // If this package isn't coming from the package server (loaded from a
-    // checkout, or from an app package directory), don't try to download it (we
-    // already have it)
-    // (In the special case of springboarding, we avoid using self.catalog
-    // here because it is catalog.complete and is not yet initialized.)
-    // XXX #3006 we also trigger this case any time we're coming from
-    //     the downloadPackagesMissingFromMap case, but eventually this
-    //     line should just vanish
-    if (!options.definitelyNotLocal && self.catalog.isLocalPackage(packageName))
-      return null;
-
     // Figure out what arches (if any) we have loaded for this package version
     // already.
     var packageLinkFile = self.packagePath(packageName, version);
@@ -325,54 +311,6 @@ _.extend(exports.Tropohouse.prototype, {
   },
 
 
-  // Go through a list of packages and makes sure we have enough builds of the
-  // package downloaded such that we can load a browser unibuild and a unibuild
-  // that will run on this system (or the requested architecture). Return the
-  // object with mapping packageName to version for the packages that we have
-  // successfully downloaded.
-  //
-  // XXX This function's error handling capabilities are poor. It's supposed to
-  // return a data structure that its callers check, but most of its callers
-  // don't check it. Bleah.  Should rewrite this and all of its callers.
-  //
-  // XXX #3006 This is being replaced by downloadPackagesMissingFromMap
-  downloadMissingPackages: function (versionMap, options) {
-    var self = this;
-    options = options || {};
-    var serverArch = options.serverArch || archinfo.host();
-    var downloadedPackages = {};
-    // XXX We intentionally didn't make this message "downloading packages"
-    // because users were confused if this message showed up when there wasn't
-    // actually any packages being downloaded. But since we use forkJoin here,
-    // the nested downloading jobs don't print, so now there's NEVER a
-    // downloading status message.
-    buildmessage.forkJoin({ title: 'Checking local package versions', parallel: true },
-      versionMap, function (version, name) {
-      try {
-        self.maybeDownloadPackageForArchitectures({
-          packageName: name,
-          version: version,
-          architectures: [serverArch]
-        });
-        downloadedPackages[name] = version;
-      } catch (err) {
-        if (err.noCompatibleBuildError) {
-          console.log(err.message);
-          // continue, which is weird, but we want to avoid a stack trace...
-          // the caller is supposed to check the size of the return value
-        } else if (err instanceof files.OfflineError) {
-          Console.printError(
-            err.error, "Could not download package " + name + "@" + version);
-          // continue, which is weird, but we want to avoid a stack trace...
-          // the caller is supposed to check the size of the return value
-        } else {
-          throw err;
-        }
-      }
-    });
-    return downloadedPackages;
-  },
-
   // Takes in a PackageMap object. Downloads any versioned packages we don't
   // already have.
   //
@@ -393,9 +331,7 @@ _.extend(exports.Tropohouse.prototype, {
             returnDownloadCallback: true,
             packageName: packageName,
             version: info.version,
-            architectures: serverArchs,
-            // Don't let tropohouse talk to the catalog, since there's no point.
-            definitelyNotLocal: true
+            architectures: serverArchs
           });
         } catch (e) {
           if (!e.noCompatibleBuildError)

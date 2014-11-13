@@ -275,7 +275,7 @@ var runTest = function () {
     // all.
     // XXX this seems wrong!
     // XXX #3006 Make sure that test-package gets rebuilt:
-    //    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
+    //      files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
     assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
 
     reloadPackages();

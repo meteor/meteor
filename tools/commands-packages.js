@@ -153,6 +153,7 @@ main.registerCommand({
 
   var loadPackages = function (packagesToLoad, loader) {
     buildmessage.assertInCapture();
+    // XXX #3006 no longer exists
     loader.downloadMissingPackages();
     _.each(packagesToLoad, function (name) {
       // Calling getPackage on the loader will return a isopack object, which
@@ -167,9 +168,9 @@ main.registerCommand({
   }, function () {
     // First, build all accessible *local* packages, whether or not this app
     // uses them.  Use the "all packages are local" loader.
-    loadPackages(catalog.complete.getLocalPackageNames(),
+    loadPackages(catalogcomplete.getLocalPackageNames(),
                  new packageLoader.PackageLoader({versions: null,
-                                                  catalog: catalog.complete}));
+                                                  catalog: catalogcomplete}));
 
     // In an app? Get the list of packages used by this app. Calling getVersions
     // on the project will ensureDepsUpToDate which will ensure that all builds
@@ -185,7 +186,7 @@ main.registerCommand({
       loadPackages(
         _.keys(releasePackages),
         new packageLoader.PackageLoader({versions: releasePackages,
-                                         catalog: catalog.complete}));
+                                         catalog: catalogcomplete}));
     }
   });
   if (messages.hasMessages()) {
@@ -253,7 +254,7 @@ main.registerCommand({
     { title: "Building the package" },
     function () {
 
-      packageSource = new PackageSource(catalog.complete);
+      packageSource = new PackageSource(catalogcomplete);
 
       // Anything published to the server must have a version.
       packageSource.initFromPackageDir(options.packageDir, {
@@ -265,6 +266,7 @@ main.registerCommand({
       var deps =
           compiler.determineBuildTimeDependencies(packageSource)
             .packageDependencies;
+      // XXX #3006 this no longer exists
       tropohouse.default.downloadMissingPackages(deps);
       // XXX #3006 this is an old call
       compileResult = compiler.compile(packageSource, { officialBuild: true });
@@ -394,7 +396,7 @@ main.registerCommand({
   // Refresh the catalog, cacheing the remote package data on the server.
   //refreshOfficialCatalogOrDie();
 
-  var packageInfo = catalog.complete.getPackage(name);
+  var packageInfo = catalogcomplete.getPackage(name);
   if (! packageInfo) {
     Console.error(
 "You can't call `meteor publish-for-arch` on package '" + name + "' without\n" +
@@ -441,7 +443,7 @@ main.registerCommand({
   var messages = buildmessage.capture({
     title: "Building package " + name
   }, function () {
-    var packageSource = new PackageSource(catalog.complete);
+    var packageSource = new PackageSource(catalogcomplete);
 
     // This package source, although it is initialized from a directory is
     // immutable. It should be built exactly as is. If we need to modify
@@ -571,6 +573,7 @@ main.registerCommand({
     // XXX #3006 this no longer exists
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
+    // XXX #3006 this no longer exists
     tropohouse.default.downloadMissingPackages(deps);
     // XXX #3006 this is an old call
     isopk = compiler.compile(packageSource, {
@@ -808,7 +811,7 @@ main.registerCommand({
           // contains 'package.js'. (We used to support isopacks in
           // local package directories, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-            var packageSource = new PackageSource(catalog.complete);
+            var packageSource = new PackageSource(catalogcomplete);
             buildmessage.enterJob(
               { title: "Building package " + item },
               function () {
@@ -849,6 +852,7 @@ main.registerCommand({
                 // XXX #3006 this no longer exists
                 var directDeps =
                       compiler.determineBuildTimeDependencies(packageSource).directDependencies;
+                // XXX #3006 this no longer exists
                 tropohouse.default.downloadMissingPackages(directDeps);
                 // XXX #3006 this is an old call
                 var compileResult = compiler.compile(packageSource,
@@ -1505,6 +1509,8 @@ main.registerCommand({
       version = versions[name];
 
       // Use complete catalog to get the local versions of local packages.
+      // XXX #3006 No more catalog.complete (see other uses in this command
+      // too)
       var versionInfo = catalog.complete.getVersion(name, version);
       if (!versionInfo) {
         buildmessage.error("Cannot process package list. Unknown: " + name +
@@ -2092,7 +2098,7 @@ main.registerCommand({
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    if (! catalog.complete.getPackage(constraint.name)) {
+    if (! catalogcomplete.getPackage(constraint.name)) {
       Console.error(constraint.name + ": no such package");
       failed = true;
       return;
@@ -2103,7 +2109,7 @@ main.registerCommand({
     // If the version was specified, check that the version exists.
     _.each(constraint.constraints, function (constr) {
       if (constr.version !== null) {
-        var versionInfo = catalog.complete.getVersion(
+        var versionInfo = catalogcomplete.getVersion(
           constraint.name, constr.version);
         if (! versionInfo) {
           Console.stderr.write(
@@ -2202,7 +2208,7 @@ main.registerCommand({
 
       // Call the constraint solver.
       // XXX #3006 no longer exists
-      newVersions = catalog.complete.resolveConstraints(
+      newVersions = catalogcomplete.resolveConstraints(
         allPackages,
         { previousSolution: versions },
         { ignoreProjectDeps: true });
@@ -2249,7 +2255,7 @@ main.registerCommand({
   Console.stdout.write("\n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
-    var versionRecord = catalog.complete.getVersion(constraint.name, version);
+    var versionRecord = catalogcomplete.getVersion(constraint.name, version);
     Console.stdout.write(constraint.name +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :
@@ -2452,6 +2458,7 @@ main.registerCommand({
 // admin make-bootstrap-tarballs
 ///////////////////////////////////////////////////////////////////////////////
 
+// XXX #3006 make sure this still works
 main.registerCommand({
   name: 'admin make-bootstrap-tarballs',
   minArgs: 2,
@@ -2563,12 +2570,8 @@ main.registerCommand({
 
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
-    // We're going to build and tar up a tropohouse in a temporary directory; we
-    // don't want to use any of our local packages, so we use catalog.official
-    // instead of catalog.
-    // XXX update to '.meteor' when we combine houses
-    var tmpTropo = new tropohouse.Tropohouse(
-      path.join(tmpdir, '.meteor'), catalog.official);
+    // We're going to build and tar up a tropohouse in a temporary directory.
+    var tmpTropo = new tropohouse.Tropohouse(path.join(tmpdir, '.meteor'));
     buildmessage.enterJob({
       title: "Downloading tool package " + toolPkg.package + "@" +
         toolPkg.constraint

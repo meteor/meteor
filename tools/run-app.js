@@ -445,6 +445,7 @@ _.extend(AppRunner.prototype, {
       var refreshWatchSet = new watch.WatchSet;
       var refreshMessages = buildmessage.capture(function () {
         try {
+          // XXX #3006 do this better
           catalog.complete.refreshLocalPackages({
             watchSet: refreshWatchSet
           });
@@ -578,6 +579,7 @@ _.extend(AppRunner.prototype, {
 
     // HACK: Also make sure we notice when somebody adds a package to
     // the app packages dir that may override a catalog package.
+    // XXX #3006 do this better
     catalog.complete.watchLocalPackageDirs(serverWatchSet);
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a

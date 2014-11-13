@@ -378,8 +378,7 @@ var springboard = function (rel, options) {
         tropohouse.default.maybeDownloadPackageForArchitectures({
           packageName: toolsPkg,
           version: toolsVersion,
-          architectures: [archinfo.host()],
-          definitelyNotLocal: true
+          architectures: [archinfo.host()]
         });
       });
     });
@@ -677,10 +676,6 @@ Fiber(function () {
   catalog.official.initialize({
     offline: !!process.env.METEOR_OFFLINE_CATALOG
   });
-
-  // We do NOT initialize catalog.complete yet.  When we do that, we will build
-  // all local packages, and for both performance and correctness reasons, we
-  // will wait until after the springboard check to do so.
 
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
@@ -1191,80 +1186,27 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  // XXX #3006 this should go away, with catalog.complete.
-  if (! command.newfangledProject &&
-      ! command.catalogRefresh.doesNotUsePackages) {
-    // OK, now it's finally time to set up the complete catalog. Only after this
-    // can we use the build system (other than to make and load isopackets).
+  // Same check for commands that can only be run from a package dir.
+  // You can't specify this on a Refresh.Never command.
+  var requiresPackage = command.requiresPackage;
+  if (typeof requiresPackage === "function") {
+    requiresPackage = requiresPackage(options);
+  }
 
-    // XXX This code is duplicated a bit inside the create command. Sorry.
-
-    // Figure out the directories that we should search for local
-    // packages (in addition to packages downloaded from the package
-    // server)
-    var localPackageSearchDirs = [];
-    if (appDir)
-      localPackageSearchDirs.push(path.join(appDir, 'packages'));
-
-    if (process.env.PACKAGE_DIRS) {
-      // User can provide additional package directories to search in
-      // PACKAGE_DIRS (colon-separated).
-      localPackageSearchDirs = localPackageSearchDirs.concat(
-        _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
-          return path.resolve(p);
-        }));
+  if (requiresPackage) {
+    var packageDir = files.findPackageDir();
+    if (packageDir)
+      packageDir = path.resolve(packageDir);
+    if (packageDir) {
+      options.packageDir = packageDir;
     }
 
-    if (!files.usesWarehouse()) {
-      // Running from a checkout, so use the Meteor core packages from
-      // the checkout.
-      localPackageSearchDirs.push(path.join(
-        files.getCurrentToolsDir(), 'packages'));
-    }
-
-    messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
-      catalog.complete.initialize({
-        localPackageSearchDirs: localPackageSearchDirs
-      });
-    });
-    if (messages.hasMessages()) {
-      Console.error("=> Errors while scanning packages:\n");
-      Console.error(messages.formatMessages());
+    if (! options.packageDir) {
+      Console.error(
+        commandName + ": You're not in a Meteor package directory.");
       process.exit(1);
     }
-
-    // Same check for commands that can only be run from a package dir.
-    // You can't specify this on a Refresh.Never command.
-    var requiresPackage = command.requiresPackage;
-    if (typeof requiresPackage === "function") {
-      requiresPackage = requiresPackage(options);
-    }
-
-    if (requiresPackage) {
-      var packageDir = files.findPackageDir();
-      if (packageDir)
-        packageDir = path.resolve(packageDir);
-      if (packageDir) {
-        options.packageDir = packageDir;
-      }
-
-      if (! options.packageDir) {
-        Console.error(
-          commandName + ": You're not in a Meteor package directory.");
-        process.exit(1);
-      }
-      // Commands that require you to be in a package directory add that package
-      // as a local package to the catalog. Other random commands don't (but if
-      // we see a reason for them to, we can change this rule).
-      messages = buildmessage.capture(function () {
-        catalog.complete.addLocalPackage(options.packageDir);
-      });
-      if (messages.hasMessages()) {
-        Console.error("=> Errors while scanning current package:\n");
-        Console.error(messages.formatMessages());
-        process.exit(1);
-      }
-    }
+    // XXX #3006 make sure that meteor publish adds self or whatever
   }
 
   if (command.requiresRelease && ! release.current) {
@@ -1358,3 +1300,4 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
 // XXX #3006: More things to clean up:
 //  - remaining references to PackageLoader
+//  - remaining references to catalog.complete

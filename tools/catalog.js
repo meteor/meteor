@@ -237,6 +237,3 @@ exports.official = remoteCatalog.official;
 // packages, it doesn't contain any information about the server version of
 // local packages.
 exports.LayeredCatalog = LayeredCatalog;
-// XXX #3006 get rid of catalog.complete
-exports.complete = new LayeredCatalog();
-exports.complete.setCatalogs(new localCatalog.LocalCatalog({containingCatalog : exports.complete}), remoteCatalog.official);

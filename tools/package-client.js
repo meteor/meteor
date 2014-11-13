@@ -457,6 +457,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   _.each(packageDeps, function(refs, label) {
     if (refs.constraint == null) {
       if (packageSource.isCore && files.inCheckout() &&
+          // XXX #3006 no longer exists (and more in this function)
           catalog.complete.isLocalPackage(label)) {
         // Core package is using or implying another core package,
         // without a version number.  We fill in the version number.
