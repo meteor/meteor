@@ -8,9 +8,9 @@ var catalogLocal = require('./catalog-local.js');
 var catalogRemote = require('./catalog-remote.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
-var isopackCache = require('./isopack-cache.js');
+var isopackCacheModule = require('./isopack-cache.js');
 var isopackets = require('./isopackets.js');
-var packageMap = require('./package-map.js');
+var packageMapModule = require('./package-map.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
 
@@ -102,7 +102,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     // XXX #3006 Check solution.usedRCs and maybe print something about it
 
-    self.packageMap = new packageMap.PackageMap(solution.answer, cat);
+    self.packageMap = new packageMapModule.PackageMap(solution.answer, cat);
   },
 
   _localPackageSearchDirs: function () {
@@ -213,7 +213,7 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    self.isopackCache = new isopackCache.IsopackCache({
+    self.isopackCache = new isopackCacheModule.IsopackCache({
       cacheDir: path.join(self.projectDir, '.meteor', 'local', 'isopacks'),
       tropohouse: self.tropohouse
     });
