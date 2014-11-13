@@ -23,7 +23,7 @@ var LocalCatalog = function (options) {
   options = options || {};
 
   // Package server data.  Maps package name to a {packageSource, packageRecord,
-  // versionRecord, buildRecord} object.
+  // versionRecord} object.
   self.packages = {};
 
   // We use the initialization design pattern because it makes it easier to use
@@ -334,8 +334,7 @@ _.extend(LocalCatalog.prototype, {
             isTest: packageSource.isTest,
             debugOnly: packageSource.debugOnly,
             containsPlugins: packageSource.containsPlugins()
-          },
-          buildRecord: null
+          }
         };
 
         // If this is NOT a test package AND it has tests (tests will be
