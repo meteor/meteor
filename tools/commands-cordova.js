@@ -352,13 +352,13 @@ var getBundle = function (projectContext, bundlePath, options) {
 
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
-    includeDebug: !! options.debug,
     outputPath: bundlePath,
     buildOptions: {
       minify: ! options.debug,
       // XXX can we ask it not to create the server arch?
       serverArch: archinfo.host(),
-      webArchs: [WEB_ARCH_NAME]
+      webArchs: [WEB_ARCH_NAME],
+      includeDebug: !! options.debug
     }
   });
 

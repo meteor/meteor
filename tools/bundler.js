@@ -1903,10 +1903,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
- *   - arch: the server architecture to target (defaults to archinfo.host())
- *   - serverArch: the server architecture to target
- *                   (defaults to archinfo.host())
- *   - webArchs: an array of web archs to target
+ *   - serverArch: the server architecture to target (defaults to
+ *     archinfo.host())
+ *   - includeDebug (whether to include packages marked debugOnly)
+ *   - webArchs: array of 'web.*' options to build (defaults to
+ *     projectContext.platformList.getWebArchs())
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
@@ -1938,12 +1939,12 @@ exports.bundle = function (options) {
   var outputPath = options.outputPath;
   var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
-  var includeDebug = !! options.includeDebug;
 
   var appDir = projectContext.projectDir;
 
   var serverArch = buildOptions.serverArch || archinfo.host();
-  var webArchs = buildOptions.webArchs || [ "web.browser" ];
+  var webArchs = buildOptions.webArchs ||
+        projectContext.platformList.getWebArchs();
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1969,7 +1970,7 @@ exports.bundle = function (options) {
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
-        includeDebug: includeDebug
+        includeDebug: buildOptions.includeDebug
       });
 
       client.make({
@@ -1987,7 +1988,7 @@ exports.bundle = function (options) {
         isopackCache: projectContext.isopackCache,
         arch: serverArch,
         releaseName: releaseName,
-        includeDebug: includeDebug
+        includeDebug: buildOptions.includeDebug
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;

@@ -220,12 +220,15 @@ files.getSettings = function (filename, watchSet) {
 
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
-files.prettyPath = function (path) {
-  path = fs.realpathSync(path);
+files.prettyPath = function (p) {
+  p = fs.realpathSync(p);
   var home = process.env.HOME;
-  if (home && path.substr(0, home.length) === home)
-    path = "~" + path.substr(home.length);
-  return path;
+  if (! home)
+    return p;
+  var relativeToHome = path.relative(home, p);
+  if (relativeToHome.substr(0, 3) === ('..' + path.sep))
+    return p;
+  return path.join('~', relativeToHome);
 };
 
 // Like statSync, but null if file not found

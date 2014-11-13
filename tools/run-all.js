@@ -16,13 +16,13 @@ var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
 
-// options: proxyPort, proxyHost, appPort, appHost, buildOptions,
-// settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
-// quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl, disableOplog,
-// appDirForVersionCheck
-var Runner = function (appDir, options) {
+// options: projectContext, proxyPort, proxyHost, appPort, appHost,
+// buildOptions, settingsFile, banner, program, onRunEnd, onFailure,
+// watchForChanges, quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl,
+// disableOplog, appDirForVersionCheck
+var Runner = function (options) {
   var self = this;
-  self.appDir = appDir;
+  self.projectContext = options.projectContext;
 
   if (! _.has(options, 'proxyPort'))
     throw new Error("no proxyPort?");
@@ -34,7 +34,8 @@ var Runner = function (appDir, options) {
 
   self.stopped = false;
   self.quiet = options.quiet;
-  self.banner = options.banner || files.prettyPath(self.appDir);
+  self.banner =
+    options.banner || files.prettyPath(self.projectContext.projectDir);
   if (options.rootUrl) {
     self.rootUrl = options.rootUrl;
   } else if (options.proxyHost) {
@@ -67,7 +68,7 @@ var Runner = function (appDir, options) {
     oplogUrl = options.disableOplog ? null : options.oplogUrl;
   } else {
     self.mongoRunner = new MongoRunner({
-      appDir: self.appDir,
+      appDir: self.projectContext.projectDir,
       port: mongoPort,
       onFailure: options.onFailure,
       // For testing mongod failover, run with 3 mongod if the env var is
@@ -81,8 +82,8 @@ var Runner = function (appDir, options) {
 
   self.updater = new Updater;
 
-  self.appRunner = new AppRunner(appDir, {
-    appDirForVersionCheck: options.appDirForVersionCheck,
+  self.appRunner = new AppRunner({
+    projectContext: self.projectContext,
     port: self.appPort,
     listenHost: options.appHost,
     mongoUrl: mongoUrl,
@@ -275,7 +276,7 @@ _.extend(Runner.prototype, {
 // - recordPackageUsage: (default true) if set to false, don't send
 //   information about packages used by this app to the package stats
 //   server.
-exports.run = function (appDir, options) {
+exports.run = function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
   delete runOptions.once;
@@ -314,7 +315,7 @@ exports.run = function (appDir, options) {
     quiet: once
   });
 
-  var runner = new Runner(appDir, runOptions);
+  var runner = new Runner(runOptions);
   runner.start();
   var result = fut.wait();
   runner.stop();
@@ -354,12 +355,8 @@ exports.run = function (appDir, options) {
     // like allowing this to work if the tools version didn't change,
     // or even springboarding if the tools version does change, but
     // this (which prevents weird errors) is a start.)
-    var utils = require('./utils.js');
-    var trackAndVersion = utils.splitReleaseName(result.releaseNeeded);
-    var to = utils.displayRelease(
-        trackAndVersion[0], trackAndVersion[1]);
-
     var from = release.current.getDisplayName();
+    var to = result.displayReleaseNeeded;
     process.stderr.write(
 "Your app has been updated to " + to + " from " + from +
 ".\n" +

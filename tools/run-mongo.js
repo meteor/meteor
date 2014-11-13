@@ -3,7 +3,6 @@ var path = require("path");
 
 var files = require('./files.js');
 var utils = require('./utils.js');
-var release = require('./release.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');

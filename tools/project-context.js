@@ -82,6 +82,9 @@ _.extend(exports.ProjectContext.prototype, {
 
   // You can call this manually if you want to do some work before resolving
   // constraints, or you can let prepareProjectForBuild do it for you.
+  //
+  // This should be pretty fast --- for example, we shouldn't worry about
+  // needing to wait for it to be done before we open the runner proxy.
   readProjectMetadata: function () {
     var self = this;
     buildmessage.assertInCapture();

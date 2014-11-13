@@ -166,7 +166,6 @@ var runCommandOptions = {
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
-    program: { type: String },
     test: {type: Boolean, default: false},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -188,22 +187,6 @@ main.registerCommand(_.extend(
 ), doRunCommand);
 
 function doRunCommand (options) {
-  // Calculate project versions. (XXX: Theoretically, we should not be doing it
-  // here. We should do it lazily, if the command calls for it. However, we do
-  // end up recalculating them for stats, for example, and, more importantly, we
-  // have noticed some issues if we just leave this in the air. We think that
-  // those issues are concurrency-related, or possibly some weird
-  // order-of-execution of interaction that we are failing to understand. This
-  // seems to fix it in a clear and understandable fashion.)
-  var messages = buildmessage.capture(function () {
-    project.getVersions();  // #StructuredProjectInitialization
-    project.setDebug(!options.production);
-  });
-  if (messages.hasMessages()) {
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
-
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
 
@@ -239,13 +222,11 @@ function doRunCommand (options) {
 
   options.httpProxyPort = options['http-proxy-port'];
 
-  // Always bundle for the browser by default.
-  var webArchs = project.getWebArchs();
-
   var runners = [];
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
+    // XXX #3006 Support Cordova run with arguments!
     // will asynchronously start mobile emulators/devices
     try {
       // --clean encapsulates the behavior of once
@@ -310,18 +291,32 @@ function doRunCommand (options) {
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
   }
 
-  if (release.forced) {
-    var appRelease = project.getNormalizedMeteorReleaseVersion();
-    if (release.current.name !== appRelease) {
-      var appReleaseParts = utils.splitReleaseName(appRelease);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    tropohouse: tropohouse.default
+  });
+
+  var messages = buildmessage.capture(function () {
+    // We're just reading metadata here --- we'll wait to do the full build
+    // preparation until after we've started listening on the proxy, etc.
+    projectContext.readProjectMetadata();
+  });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while initializing project:");
+    Console.printMessages(messages);
+    return 1;
+  }
+
+  if (release.explicit) {
+    if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
       console.log("=> Using %s as requested (overriding Meteor %s)",
                   release.current.getDisplayName(),
-                  utils.displayRelease(appReleaseParts[0],
-                                       appReleaseParts[1]));
+                  projectContext.releaseFile.displayReleaseName);
       console.log();
     }
   }
 
+  // XXX #3006 Does this actually need to be in the foreground?
   auth.tryRevokeOldTokens({timeout: 1000});
 
   if (options['raw-logs'])
@@ -344,7 +339,8 @@ function doRunCommand (options) {
   }
 
   var runAll = require('./run-all.js');
-  return runAll.run(options.appDir, {
+  return runAll.run({
+    projectContext: projectContext,
     proxyPort: parsedUrl.port,
     proxyHost: parsedUrl.host,
     httpProxyPort: options.httpProxyPort,
@@ -352,10 +348,9 @@ function doRunCommand (options) {
     appHost: appHost,
     debugPort: options['debug-port'],
     settingsFile: options.settings,
-    program: options.program || undefined,
     buildOptions: {
       minify: options.production,
-      webArchs: webArchs
+      includeDebug: ! options.production
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -799,7 +794,6 @@ var buildCommand = function (options) {
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
-    includeDebug: !! options.debug,
     outputPath: bundlePath,
     buildOptions: {
       minify: ! options.debug,
@@ -809,7 +803,7 @@ var buildCommand = function (options) {
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
       serverArch: bundleArch,
-      webArchs: webArchs
+      includeDebug: !! options.debug
     }
   });
   if (bundleResult.errors) {
@@ -1536,6 +1530,7 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       // if we're testing packages from an app, we still want to make
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
+      // XXX #3006 reimplement this
       appDirForVersionCheck: options.appDir,
       proxyPort: options.port,
       httpProxyPort: options.httpProxyPort,

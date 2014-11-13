@@ -321,7 +321,7 @@ _.extend(AppProcess.prototype, {
 //
 //   - 'wrong-release': the release that this app targets does not
 //     match the currently running version of Meteor (eg, the user
-//     typed 'meteor update' in another window). An 'releaseNeeded'
+//     typed 'meteor update' in another window). An 'displayReleaseNeeded'
 //     attribute will be present giving the app's release name.
 //
 //   - 'conflicting-versions': the constraint solver could not find a set of
@@ -337,10 +337,11 @@ _.extend(AppProcess.prototype, {
 //   value from bundler.bundle(), which contains such interesting things as the
 //   build errors and a watchset describing the server source files and client
 //   source files of the app.
-var AppRunner = function (appDir, options) {
+var AppRunner = function (options) {
   var self = this;
 
-  self.appDir = appDir;
+  // XXX #3006 HERE
+//  self.appDir = appDir;
   self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
   // note: run-all.js updates port directly
   self.port = options.port;
@@ -486,7 +487,8 @@ _.extend(AppRunner.prototype, {
       var wrongRelease = ! release.usingRightReleaseForApp();
       if (wrongRelease) {
         return { outcome: 'wrong-release',
-                 releaseNeeded: project.getNormalizedMeteorReleaseVersion()
+                 // XXX #3006 make sure this is the display release
+                 displayReleaseNeeded: project.getNormalizedMeteorReleaseVersion()
                };
       }
     }
