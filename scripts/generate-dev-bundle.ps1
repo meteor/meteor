@@ -54,7 +54,7 @@ mkdir $DIR\mongodb\bin
 $webclient = New-Object System.Net.WebClient
 
 # download Mongo
-$mongo_name = "mongodb-win32-i386-2.6.5"
+$mongo_name = "mongodb-win32-i386-2.4.12"
 $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
 $mongo_zip = "$DIR\mongodb\mongo.zip"
 
