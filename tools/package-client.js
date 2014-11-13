@@ -502,7 +502,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       var testName = packageSource.testName;
       if (testName) {
         var PackageSource = require('./package-source.js');
-        var compiler = require('./compiler.js');
 
         var testSource = new PackageSource(catalog.complete);
         // We need to pass in the name of the test package in order to
@@ -514,6 +513,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
         if (buildmessage.jobHasMessages())
           return; // already have errors, so skip the build
 
+        // XXX #3006 this is an old call
         var testIsopack = compiler.compile(testSource, { officialBuild: true });
         testFiles = testIsopack.sources;
       }

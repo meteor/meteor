@@ -18,7 +18,6 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var compiler = require('./compiler.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');

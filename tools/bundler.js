@@ -167,7 +167,6 @@ var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
-var isopackCompiler = require('./isopack-compiler.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
@@ -569,7 +568,7 @@ _.extend(Target.prototype, {
           // Only track real packages, not plugin pseudo-packages.
           self.usedPackages[unibuild.pkg.name] = true;
         }
-        isopackCompiler.eachUsedUnibuild({
+        compiler.eachUsedUnibuild({
           dependencies: unibuild.uses,
           arch: self.arch,
           isopackCache: isopackCache,
@@ -626,7 +625,7 @@ _.extend(Target.prototype, {
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
         };
-        isopackCompiler.eachUsedUnibuild({
+        compiler.eachUsedUnibuild({
           dependencies: unibuild.uses,
           arch: self.arch,
           isopackCache: isopackCache,
@@ -1997,7 +1996,7 @@ exports.bundle = function (options) {
     // Create a Isopack object that represents the app
     var packageSource = new PackageSource(projectContext.packageMap.catalog);
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
-    var app = isopackCompiler.compile(packageSource, {
+    var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache
     }).isopack;
@@ -2147,18 +2146,10 @@ exports.buildJsImage = function (options) {
     noVersionFile: true
   });
 
-  var isopack;
-  // XXX #3006 Get rid of this conditional.
-  if (options.packageMap) {
-    isopack = isopackCompiler.compile(packageSource, {
-      packageMap: options.packageMap,
-      isopackCache: options.isopackCache
-    }).isopack;
-  } else {
-    isopack = compiler.compile(packageSource, {
-      ignoreProjectDeps: options.ignoreProjectDeps
-    }).isopack;
-  }
+  var isopack = compiler.compile(packageSource, {
+    packageMap: options.packageMap,
+    isopackCache: options.isopackCache
+  }).isopack;
 
   var target = new JsImageTarget({
     packageMap: options.packageMap,

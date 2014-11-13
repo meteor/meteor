@@ -261,11 +261,12 @@ main.registerCommand({
       if (buildmessage.jobHasMessages())
         return; // already have errors, so skip the build
 
+      // XXX #3006 this no longer exists
       var deps =
           compiler.determineBuildTimeDependencies(packageSource)
             .packageDependencies;
       tropohouse.default.downloadMissingPackages(deps);
-
+      // XXX #3006 this is an old call
       compileResult = compiler.compile(packageSource, { officialBuild: true });
     });
 
@@ -567,10 +568,11 @@ main.registerCommand({
     //     an error like "Version lock for FOO should never change"!  Including
     //     if you've swapped between checkout and released tool.  We really
     //     should springboard here...
+    // XXX #3006 this no longer exists
     var deps =
           compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
     tropohouse.default.downloadMissingPackages(deps);
-
+    // XXX #3006 this is an old call
     isopk = compiler.compile(packageSource, {
       officialBuild: true
     }).isopack;
@@ -844,9 +846,11 @@ main.registerCommand({
                 // it doesn't we should fail. Hopefully, of course, we have
                 // tested our stuff before deciding to publish it to the package
                 // server, but we need to be careful.
+                // XXX #3006 this no longer exists
                 var directDeps =
                       compiler.determineBuildTimeDependencies(packageSource).directDependencies;
                 tropohouse.default.downloadMissingPackages(directDeps);
+                // XXX #3006 this is an old call
                 var compileResult = compiler.compile(packageSource,
                                                      { officialBuild: true });
                 if (buildmessage.jobHasMessages()) {

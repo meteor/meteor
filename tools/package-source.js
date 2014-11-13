@@ -14,7 +14,7 @@ var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
-var isopackCompiler = require('./isopack-compiler.js');
+var compiler = require('./compiler.js');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file

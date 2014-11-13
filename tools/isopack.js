@@ -12,7 +12,6 @@ var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
-var isopackCompiler = require('./isopack-compiler.js');
 var packageMapModule = require('./package-map.js');
 var Future = require('fibers/future');
 
@@ -148,7 +147,7 @@ _.extend(Unibuild.prototype, {
           imports[symbol.name] = depUnibuild.pkg.name;
       });
     };
-    isopackCompiler.eachUsedUnibuild({
+    compiler.eachUsedUnibuild({
       dependencies: self.uses,
       arch: bundleArch,
       isopackCache: isopackCache,

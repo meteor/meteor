@@ -5,7 +5,6 @@ var packageClient = require('./package-client.js');
 var watch = require('./watch.js');
 var archinfo = require('./archinfo.js');
 var isopack = require('./isopack.js');
-var compiler = require('./compiler.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var files = require('./files.js');

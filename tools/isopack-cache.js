@@ -5,7 +5,6 @@ var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog.js');
 var compiler = require('./compiler.js');
 var files = require('./files.js');
-var isopackCompiler = require('./isopack-compiler.js');
 var isopackModule = require('./isopack.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
@@ -124,7 +123,7 @@ _.extend(exports.IsopackCache.prototype, {
       }
 
       // Nope! Compile it again.
-      var compilerResult = isopackCompiler.compile(packageInfo.packageSource, {
+      var compilerResult = compiler.compile(packageInfo.packageSource, {
         packageMap: packageMap,
         isopackCache: self
       });
