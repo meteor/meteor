@@ -148,7 +148,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     _.each(['/websocket', '/websocket/'], function(path) {
       HTTP.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
         test.isNotNull(error);
-        test.equal('Can "Upgrade" only to "WebSocket".', result.content);
+        test.equal('Not a valid websocket request', result.content);
       }));
     });
 
