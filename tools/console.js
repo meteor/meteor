@@ -20,7 +20,6 @@ var Future = require('fibers/future');
 var readline = require('readline');
 var util = require('util');
 var buildmessage = require('./buildmessage.js');
-// XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
 var cleanup = require('./cleanup.js');
 var utils = require('./utils.js');
