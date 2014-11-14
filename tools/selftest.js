@@ -18,6 +18,7 @@ var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
 var Console = require('./console.js').Console;
+var os = require('os');
 
 var toolPackageName = "meteor-tool";
 
@@ -662,18 +663,28 @@ _.extend(Sandbox.prototype, {
     // build apps that contain core packages).
 
     var toolPackage, toolPackageDirectory;
+    var escapedPackageName = utils.escapePackageNameForPath(toolPackageName);
+
     doOrThrow(function () {
       toolPackage = getToolsPackage();
       toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
         + toolPackage.buildArchitectures();
-      toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                       toolPackageName, toolPackageDirectory),
-                             { elideBuildInfo: true });
+
+      var symlinkLocation = path.join(self.warehouse, packagesDirectoryName,
+        escapedPackageName, toolPackage.version);
+
+      if (process.platform === "win32") {
+        // We can't do the "atomic" symlink thing, so we just save to the right
+        // path immediately
+        toolPackage.saveToPath(symlinkLocation, { elideBuildInfo: true });
+      } else {
+        toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
+          escapedPackageName, toolPackageDirectory), { elideBuildInfo: true });
+
+        fs.symlinkSync(toolPackageDirectory, symlinkLocation);
+      }
     });
 
-    fs.symlinkSync(toolPackageDirectory,
-                   path.join(self.warehouse, packagesDirectoryName,
-                             toolPackageName, toolPackage.version));
     stubCatalog.collections.packages.push({
       name: toolPackageName,
       _id: utils.randomToken()
@@ -781,11 +792,26 @@ _.extend(Sandbox.prototype, {
       packageStorage: path.join(self.warehouse, 'package-metadata', 'v2.0.1', dataFile)});
     tmpCatalog.insertData(stubCatalog);
 
-    // And a cherry on top
-    fs.symlinkSync(path.join(packagesDirectoryName,
-                             toolPackageName, toolPackage.version,
-                             'meteor-tool-' + archinfo.host(), 'meteor'),
-                   path.join(self.warehouse, 'meteor'));
+    var toolDir = path.join(packagesDirectoryName, toolPackageName,
+        toolPackage.version, 'meteor-tool-' + archinfo.host());
+
+    if (process.platform === "win32") {
+      // Make a meteor batch script that points to current tool
+      var meteorBat = path.join(toolDir, 'meteor.bat');
+
+      var newScript = [
+        "@echo off",
+        meteorBat
+      ].join(os.EOL);
+
+      console.log("BAD PATH: " + path.join(self.warehouse, 'meteor.bat'));
+      fs.writeSync(path.join(self.warehouse, 'meteor.bat'), newScript,
+        {encoding: "ascii"});
+    } else {
+      // Symlink meteor tool
+      fs.symlinkSync(path.join(toolDir, 'meteor'),
+        path.join(self.warehouse, 'meteor'));
+    }
   }
 });
 
