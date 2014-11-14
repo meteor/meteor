@@ -287,7 +287,7 @@ _.extend(exports.Tropohouse.prototype, {
       var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
       isopack.saveToPath(combinedDirectory, {
         // We got this from the server, so we can't rebuild it.
-        elideBuildInfo: true
+        omitBuildInfo: true
       });
       files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
 
