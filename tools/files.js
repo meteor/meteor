@@ -586,6 +586,12 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
+  var fixDirsPerms = function (entry) {
+    // Make sure readable directories have execute permission
+    if (entry.props.type === "Directory")
+      entry.props.mode |= (entry.props.mode >>> 2) & 0111;
+    return true;
+  }
 
   // Use `dirPath` as the argument to `fstream.Reader` here instead of
   // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
@@ -612,7 +618,7 @@ files.createTarGzStream = function (dirPath, options) {
   // the first file inside it. This manifests as an EACCESS when
   // untarring if the first file inside the top-level directory is not
   // writeable.
-  return fstream.Reader(dirPath).pipe(
+  return fstream.Reader({ path: dirPath, filter: fixDirsPerms }).pipe(
     tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
 };
 
