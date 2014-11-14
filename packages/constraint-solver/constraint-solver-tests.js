@@ -649,7 +649,7 @@ function getCatalogStub (gems) {
         var constraints = dep[1];
 
         packageVersion.dependencies[name] = {
-          constraint: convertConstraints(constraints)[0], // XXX pick first one only
+          constraint: constraints,
           references: [{
             "arch": "web"
           }, {

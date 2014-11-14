@@ -19,7 +19,7 @@ Package.on_test(function (api) {
   api.use('constraint-solver', ['server']);
   api.use(['tinytest', 'minimongo', 'package-version-parser']);
   // data for big benchmarky tests
-  api.add_files('test-data.js', ['server']);
+  api.add_files('test-data.js', ['server', 'client']);
   api.add_files('constraint-solver-tests.js', ['server']);
   api.add_files('resolver-tests.js', ['server']);
   api.use('underscore');
