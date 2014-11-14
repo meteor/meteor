@@ -304,7 +304,7 @@ var bundleBuild = function (isopack) {
     // Don't upload buildinfo.json. It's only of interest locally (for example,
     // it contains a watchset with local paths).  (This also means we don't
     // need to specify a catalog, yay.)
-    omitBuildInfo: true
+    elideBuildInfo: true
   });
 
   var buildTarball = path.join(tempDir, packageTarName + '.tgz');

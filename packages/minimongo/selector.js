@@ -785,7 +785,7 @@ makeLookupFunction = function (key, options) {
     lookupRest = makeLookupFunction(parts.slice(1).join('.'));
   }
 
-  var omitUnnecessaryFields = function (retVal) {
+  var elideUnnecessaryFields = function (retVal) {
     if (!retVal.dontIterate)
       delete retVal.dontIterate;
     if (retVal.arrayIndices && !retVal.arrayIndices.length)
@@ -828,7 +828,7 @@ makeLookupFunction = function (key, options) {
     // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.
     // So in that case, we mark the return value as "don't iterate".
     if (!lookupRest) {
-      return [omitUnnecessaryFields({
+      return [elideUnnecessaryFields({
         value: firstLevel,
         dontIterate: isArray(doc) && isArray(firstLevel),
         arrayIndices: arrayIndices})];
@@ -843,7 +843,7 @@ makeLookupFunction = function (key, options) {
     if (!isIndexable(firstLevel)) {
       if (isArray(doc))
         return [];
-      return [omitUnnecessaryFields({value: undefined,
+      return [elideUnnecessaryFields({value: undefined,
                                       arrayIndices: arrayIndices})];
     }
 
