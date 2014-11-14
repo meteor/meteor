@@ -443,7 +443,7 @@ _.extend(Isopack.prototype, {
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
-      // 'options' can be elided. The only known option is 'isTemplate', which
+      // 'options' can be omitted. The only known option is 'isTemplate', which
       // is a bit of a hack meaning "in an app, these files should be loaded
       // before non-templates".
       //
@@ -766,12 +766,12 @@ _.extend(Isopack.prototype, {
   //   directory that was built to produce this package. Used as part
   //   of the dependency info to detect builds that were moved and
   //   then modified.
-  // - elideBuildInfo: If set, don't write a buildinfo.json file.
+  // - omitBuildInfo: If set, don't write a buildinfo.json file.
   saveToPath: function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
-    if (!options.elideBuildInfo) {
+    if (!options.omitBuildInfo) {
       buildmessage.assertInCapture();
       if (!options.catalog)
         throw Error("catalog required to generate buildinfo.json");
@@ -796,7 +796,7 @@ _.extend(Isopack.prototype, {
       }
 
       var buildInfoJson = null;
-      if (!options.elideBuildInfo) {
+      if (!options.omitBuildInfo) {
         // Note: The contents of buildInfoJson (with the root directory of the
         // Meteor checkout naively deleted) gets its SHA taken to determine the
         // built package's warehouse version. So it should not contain
@@ -827,7 +827,7 @@ _.extend(Isopack.prototype, {
       builder.reserve("unipackage.json");
 
       builder.reserve("isopack.json");
-      // Reserve this even if elideBuildInfo is set, to ensure nothing else
+      // Reserve this even if omitBuildInfo is set, to ensure nothing else
       // writes it somehow.
       builder.reserve("buildinfo.json");
       builder.reserve("head");

@@ -668,7 +668,7 @@ _.extend(Sandbox.prototype, {
         + toolPackage.buildArchitectures();
       toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
                                        toolPackageName, toolPackageDirectory),
-                             { elideBuildInfo: true });
+                             { omitBuildInfo: true });
     });
 
     fs.symlinkSync(toolPackageDirectory,
