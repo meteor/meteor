@@ -686,7 +686,7 @@ _.extend(Isopack.prototype, {
       var nodeModulesPath = null;
       if (unibuildJson.node_modules) {
         rejectBadPath(unibuildJson.node_modules);
-        nodeModulesPath = path.join(unibuildBasePath, unibuildJson.node_modules);
+        nodeModulesPath = makeForwardSlashes(path.join(unibuildBasePath, unibuildJson.node_modules));
       }
 
       var prelinkFiles = [];

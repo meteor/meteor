@@ -29,7 +29,7 @@ var Builder = function (options) {
   var self = this;
   options = options || {};
 
-  // Escape colons with tilde before writing to file system
+  // Escape colons in folder names and file names before writing them.
   self.outputPath = path.join(path.dirname(options.outputPath),
     utils.escapePackageNameForPath(path.basename(options.outputPath)));
 
