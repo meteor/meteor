@@ -136,7 +136,7 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
   FAIL("foo@1.0.0-rc|1.0.0");
 
   // This is the current implementation, but is arguably not great.
-  FAIL("foo@1.0.0 ");
+  FAIL("foo@1.0.0 "); // trailing space
 });
 
 Tinytest.add(

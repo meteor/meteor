@@ -1,4 +1,8 @@
 // Copied from archinfo.matches() in tools/
+//
+// archMatches("os", "os") => true
+// archMatches("web.cordova", "web") => true
+// archMatches("web.cordova", "web.cordova") => true
 var archMatches = function (arch, baseArch) {
   return arch.substr(0, baseArch.length) === baseArch &&
     (arch.length === baseArch.length ||
