@@ -1,3 +1,5 @@
+var runBenchmarks = !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
+
 var makeResolver = function (data) {
   var Packages = new LocalCollection;
   var Versions = new LocalCollection;
@@ -136,7 +138,10 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
   });
 });
 
-Tinytest.add("specific-issue-test", function (test) {
+// XXX This test is supposed to reproduce issue #2968 by taking
+// "forever" but it doesn't.  Fix it (by remaking it).
+
+/*runBenchmarks && Tinytest.add("issue 2968", function (test) {
 var resolver = makeResolver([
 ["iron:router", '0.9.0', {'meteor': null, 'reactive-dict': '1.0.0', 'deps': '1.0.0', 'underscore': '1.0.0', 'ejson': '1.0.0', 'webapp': '1.0.0', 'iron:layout': '0.3.0', 'cmather:iron-router': '0.8.2', 'jquery': '1.0.0', 'ui': '1.0.0', }],
 ["meteor", '1.1.3+local', {'underscore': null, }],
@@ -485,7 +490,7 @@ testWithResolver(test, resolver, function(t) {
      {}, {_testing: false}); // use real cost function!
 });
 
-});
+});*/
 
 Tinytest.add("constraint solver - non-exact direct dependency", function (test) {
   testWithResolver(test, defaultResolver, function (t) {
@@ -670,8 +675,6 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
     { _testing: true }).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
-
-var runBenchmarks = !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
 
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
   var r = new ConstraintSolver.PackagesResolver(getCatalogStub(sinatraGems));
