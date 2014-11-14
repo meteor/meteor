@@ -322,7 +322,8 @@ var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
 //    provided, this function will open one itself.
 var tryRevokeOldTokens = function (options) {
   options = _.extend({
-    timeout: 5000
+    // Windows needs a much longer timeout for some reason
+    timeout: process.platform === "win32" ? 30000 : 5000
   }, options || {});
 
   var warned = false;

@@ -421,11 +421,19 @@ var Sandbox = function (options) {
     });
   }
 
+  var meteorScript;
+
+  if (process.platform === "win32") {
+    meteorScript = "meteor.bat";
+  } else {
+    meteorScript = "meteor";
+  }
+
   // Figure out the 'meteor' to run
   if (self.warehouse)
-    self.execPath = path.join(self.warehouse, 'meteor');
+    self.execPath = path.join(self.warehouse, meteorScript);
   else
-    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
+    self.execPath = path.join(files.getCurrentToolsDir(), meteorScript);
 };
 
 _.extend(Sandbox.prototype, {
@@ -805,7 +813,7 @@ _.extend(Sandbox.prototype, {
       ].join(os.EOL);
 
       console.log("BAD PATH: " + path.join(self.warehouse, 'meteor.bat'));
-      fs.writeSync(path.join(self.warehouse, 'meteor.bat'), newScript,
+      fs.writeFileSync(path.join(self.warehouse, 'meteor.bat'), newScript,
         {encoding: "ascii"});
     } else {
       // Symlink meteor tool
