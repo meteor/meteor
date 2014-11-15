@@ -57,6 +57,7 @@ var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
 
 var reloadPackages = function () {
   doOrThrow(function () {
+    // XXX #3006 this doesn't exist
     catalog.complete.refreshLocalPackages();
   });
 };

@@ -53,6 +53,7 @@ _.extend(exports.ProjectContext.prototype, {
     self.finishedUpgraders = null;
 
     // Initialized by _resolveConstraints.
+    self.localCatalog = null;
     self.packageMap = null;
     self.isopackCache = null;
   },
@@ -153,6 +154,9 @@ _.extend(exports.ProjectContext.prototype, {
     });
   },
 
+  // This is a WatchSet that ends up being the WatchSet for the app's
+  // initFromAppDir PackageSource. Changes to this will cause the whole app to
+  // be rebuilt (client and server).
   getProjectWatchSet: function () {
     // We don't cache a projectWatchSet on this object, since some of the
     // metadata files can be written by us (eg .meteor/versions
@@ -165,9 +169,18 @@ _.extend(exports.ProjectContext.prototype, {
       function (metadataFile) {
         metadataFile && watchSet.merge(metadataFile.watchSet);
       });
+
+    if (self.localCatalog) {
+      watchSet.merge(self.localCatalog.packageLocationWatchSet);
+    }
+
     return watchSet;
   },
 
+  // This WatchSet encompasses everything that users can change to restart an
+  // app. We only watch this for failed bundles; for successful bundles, we have
+  // more precise server-specific and client-specific WatchSets that add up to
+  // this one.
   getProjectAndLocalPackagesWatchSet: function () {
     var self = this;
     var watchSet = self.getProjectWatchSet();
@@ -270,8 +283,10 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     var cat = new catalog.LayeredCatalog;
-    cat.setCatalogs(new catalogLocal.LocalCatalog({ containingCatalog: cat }),
-                    catalog.official);
+    self.localCatalog = new catalogLocal.LocalCatalog({
+      containingCatalog: cat
+    });
+    cat.setCatalogs(self.localCatalog, catalog.official);
 
     var searchDirs = self._localPackageSearchDirs();
     buildmessage.enterJob({ title: "scanning local packages" }, function () {

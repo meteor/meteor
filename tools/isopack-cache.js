@@ -2,7 +2,6 @@ var _ = require('underscore');
 var path = require('path');
 
 var buildmessage = require('./buildmessage.js');
-var catalog = require('./catalog.js');
 var compiler = require('./compiler.js');
 var files = require('./files.js');
 var isopackModule = require('./isopack.js');

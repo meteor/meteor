@@ -534,11 +534,6 @@ _.extend(AppRunner.prototype, {
         bundleResult.errors.merge(settingsMessages);
     }
 
-    // HACK: Also make sure we notice when somebody adds a package to
-    // the app packages dir that may override a catalog package.
-    // XXX #3006 do this better
-    //   catalog.complete.watchLocalPackageDirs(serverWatchSet);
-
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
     // future that can be used to stop() us once we start running.
     if (self.exitFuture)

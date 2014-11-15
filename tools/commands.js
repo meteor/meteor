@@ -1450,6 +1450,7 @@ var getPackagesForTest = function (packages) {
           // main package. This is not ideal (I hate how this mutates global
           // state) but it'll do for now.
           var packageDir = path.resolve(p);
+          // XXX #3006 rework addLocalPackage
           catalog.complete.addLocalPackage(packageDir);
 
           if (buildmessage.jobHasMessages()) {

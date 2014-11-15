@@ -208,24 +208,6 @@ _.extend(LayeredCatalog.prototype, {
     if (!latest)
       return null;
     return self.getVersion(name, latest);
-  },
-
-  // Refresh the catalogs referenced by this catalog.
-  // options:
-  // - watchSet: if provided, any files read in reloading packages will be added
-  //   to this set.
-  refreshLocalPackages: function (options) {
-    var self = this;
-    self.localCatalog.refresh(options);
-    //// Note that otherCatalog can throw, if we fail to connect
-    //// XXX: Order of refreshes?  Continue on error?
-    //self.otherCatalog.refresh(options);
-    // XXX #3006 do we need to refresh some IsopackCache too?
-  },
-
-  watchLocalPackageDirs: function (watchSet) {
-    var self = this;
-    self.localCatalog.watchLocalPackageDirs(watchSet);
   }
 });
 

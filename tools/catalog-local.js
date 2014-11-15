@@ -45,7 +45,13 @@ var LocalCatalog = function (options) {
   // need to process.
   self.effectiveLocalPackageDirs = [];
 
-  self.buildRequested = null;
+  // A WatchSet that detects when the set of packages and their locations
+  // changes. ie, the listings of 'packages' directories, and the contents of
+  // package.js files underneath.  It does NOT track the rest of the source of
+  // the packages: that wouldn't be helpful to the runner since it would be too
+  // coarse to tell if a change is client-only or not.  (But any change to the
+  // layout of where packages live counts as a non-client-only change.)
+  self.packageLocationWatchSet = new watch.WatchSet;
 
   self.nextVersionId = 1;
 };
@@ -74,29 +80,14 @@ _.extend(LocalCatalog.prototype, {
 
     options = options || {};
 
-    // At this point, effectiveLocalPackageDirs is just the local package
-    // directories, since we haven't had a chance to add any other local
-    // packages. Nonetheless, let's set those.
-    self.localPackageSearchDirs = [];
-    _.each(options.localPackageSearchDirs, function (dir) {
-      dir = path.resolve(dir);
-      if (utils.isDirectory(dir))
-        self.localPackageSearchDirs.push(dir);
-    });
+    self.localPackageSearchDirs = _.map(
+      options.localPackageSearchDirs, function (p) {
+        return path.resolve(p);
+      });
 
-    self.refresh();
-  },
-
-  // Set all the collections to their initial values, which are mostly
-  // blank. This does not set self.initialized -- do that manually in the child
-  // class when applicable.
-  reset: function () {
-    var self = this;
-
-    // Initialize everything to its default version.
-    self.packages = {};
-
-    self.buildRequested = {};
+    self._recomputeEffectiveLocalPackages();
+    self._loadLocalPackages();
+    self.initialized = true;
   },
 
   // Throw if the catalog's self.initialized value has not been set to true.
@@ -163,22 +154,6 @@ _.extend(LocalCatalog.prototype, {
     return self.packages[name].versionRecord;
   },
 
-  // Refresh the packages in the catalog, by re-scanning local packages.
-  //
-  // options:
-  // - watchSet: if provided, any files read in reloading packages will be added
-  //   to this set.
-  refresh: function (options) {
-    var self = this;
-    options = options || {};
-    buildmessage.assertInCapture();
-
-    self.reset();
-    self._recomputeEffectiveLocalPackages();
-    self._loadLocalPackages({ watchSet: options.watchSet });
-    self.initialized = true;
-  },
-
   // Compute self.effectiveLocalPackageDirs from self.localPackageSearchDirs and
   // self.explicitlyAddedLocalPackageDirs.
   _recomputeEffectiveLocalPackages: function () {
@@ -187,25 +162,35 @@ _.extend(LocalCatalog.prototype, {
       self.explicitlyAddedLocalPackageDirs);
 
     _.each(self.localPackageSearchDirs, function (searchDir) {
-      if (! utils.isDirectory(searchDir))
+      var possiblePackageDirs = watch.readAndWatchDirectory(
+        self.packageLocationWatchSet, {
+          absPath: searchDir,
+          include: [/\/$/]
+        });
+      // Not a directory? Ignore.
+      if (possiblePackageDirs === null)
         return;
-      var contents = fs.readdirSync(searchDir);
-      _.each(contents, function (item) {
-        var packageDir = path.join(searchDir, item);
-        if (! utils.isDirectory(packageDir))
-          return;
+
+      _.each(possiblePackageDirs, function (subdir) {
+        // readAndWatchDirectory adds a slash to the end of directory names to
+        // differentiate them from filenames. Remove it.
+        subdir = subdir.substr(0, subdir.length - 1);
+        var absPackageDir = path.join(searchDir, subdir);
 
         // Consider a directory to be a package source tree if it contains
         // 'package.js'. (We used to support isopacks in localPackageSearchDirs,
         // but no longer.)
-        if (fs.existsSync(path.join(packageDir, 'package.js'))) {
+        var packageJs = watch.readAndWatchFile(
+          self.packageLocationWatchSet,
+          path.join(absPackageDir, 'package.js'));
+        if (packageJs !== null) {
           // Let earlier package directories override later package
           // directories.
 
           // We don't know the name of the package, so we can't deal with
           // duplicates yet. We are going to have to rely on the fact that we
           // are putting these in in order, to be processed in order.
-          self.effectiveLocalPackageDirs.push(packageDir);
+          self.effectiveLocalPackageDirs.push(absPackageDir);
         }
       });
     });
@@ -247,20 +232,8 @@ _.extend(LocalCatalog.prototype, {
           opts["name"] = definiteName;
         }
         packageSource.initFromPackageDir(packageDir, opts);
-
-        if (options.watchSet) {
-          options.watchSet.merge(packageSource.pluginWatchSet);
-          _.each(packageSource.architectures, function (sourceArch) {
-            options.watchSet.merge(sourceArch.watchSet);
-          });
-        }
-
-        // Recover by ignoring, but not until after we've augmented the watchSet
-        // (since we want the watchSet to include files with problems that the
-        // user may fix!)
-        if (buildmessage.jobHasMessages()) {
-          return;
-        }
+        if (buildmessage.jobHasMessages())
+          return;  // recover by ignoring
 
         // Now that we have initialized the package from package.js, we know its
         // name.
@@ -318,29 +291,6 @@ _.extend(LocalCatalog.prototype, {
       });
   },
 
-  // Register local package directories with a watchSet. We want to know if a
-  // package is created or deleted, which includes both its top-level source
-  // directory and its main package metadata file.
-  //
-  // This will watch the local package directories that are in effect when the
-  // function is called.  (As set by the most recent call to
-  // setLocalPackageDirs.)
-  watchLocalPackageDirs: function (watchSet) {
-    var self = this;
-    self._requireInitialized();
-
-    _.each(self.localPackageSearchDirs, function (packageDir) {
-      var packages = watch.readAndWatchDirectory(watchSet, {
-        absPath: packageDir,
-        include: [/\/$/]
-      });
-      _.each(packages, function (p) {
-        watch.readAndWatchFile(watchSet,
-                               path.join(packageDir, p, 'package.js'));
-      });
-    });
-  },
-
   // True if `name` is a local package (is to be loaded via
   // localPackageSearchDirs or addLocalPackage rather than from the package
   // server)
@@ -359,6 +309,7 @@ _.extend(LocalCatalog.prototype, {
   // be overridden (it will be as if that package doesn't exist on the
   // package server at all). And for now, it's an error to call this
   // function twice with the same `name`.
+  // XXX #3006 rewrite this
   addLocalPackage: function (directory) {
     var self = this;
     buildmessage.assertInCapture();
