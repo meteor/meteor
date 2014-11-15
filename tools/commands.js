@@ -789,8 +789,10 @@ var buildCommand = function (options) {
       (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
       path.join(buildDir, 'bundle');
 
-  // XXX #3006 Make stats work again.
-  // stats.recordPackages("sdk.bundle");
+  stats.recordPackages({
+    what: "sdk.bundle",
+    projectContext: projectContext
+  });
 
   var bundler = require(path.join(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({

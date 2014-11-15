@@ -14,53 +14,36 @@ var Console = require("./console.js").Console;
 
 // The name of the package that you add to your app to opt out of
 // sending stats.
-var optOutPackageName = "package-stats-opt-out";
+var OPT_OUT_PACKAGE_NAME = "package-stats-opt-out";
 
 // Return a list of packages used by this app, both directly and
 // indirectly. Formatted as a list of objects with 'name', 'version'
 // and 'direct', which is how the `recordAppPackages` method on the
 // stats server expects to get this list.
-//
-// In tests, we want to use the same logic to calculate the list of
-// packages for an app created in a sandbox, but we don't want to run
-// the constraint solver, try to load local packages from the catalog,
-// etc. In particular, we don't want to have to repoint project.project
-// at whatever random app we just created in a sandbox and re-initialize
-// the catalog with its local packages (and then have to undo all that
-// after the test is over). So tests can pass a project.Project as an
-// argument, and we'll calculate the list of packages just by looking at
-// .meteor/packages and .meteor/versions, not by doing anything fancy
-// like running the constraint solver.
-// NOTE: This means that if you pass `_currentProjectForTest`, we assume
-// that it is pointing to a root directory with an existing
-// .meteor/versions file.
-var packageList = function (_currentProjectForTest) {
-  var directDeps = (_currentProjectForTest || project.project).getConstraints();
-
-  var versions = (_currentProjectForTest || project.project).getVersions({
-    dontRunConstraintSolver: true
+var packageList = function (projectContext) {
+  var versions = [];
+  projectContext.packageMap.eachPackage(function (name, info) {
+    versions.push({
+      name: name,
+      version: info.version,
+      direct: !! projectContext.projectConstraintsFile.getConstraint(name)
+    });
   });
-
-  return _.map(
-    versions,
-    function (version, name) {
-      return {
-        name: name,
-        version: version,
-        direct: _.has(directDeps, name)
-      };
-    }
-  );
+  return versions;
 };
 
-// 'what' should be one of "sdk.bundle", "sdk.deploy", "sdk.run".
-// If it's a deploy, 'site' should be the name of the site
-// ("foo.meteor.com") that we're deploying to.
-var recordPackages = function (what, site) {
+// Options:
+// - what: one of "sdk.bundle", "sdk.deploy", "sdk.run".
+// - projectContext: the ProjectContext. prepareProjectForBuild
+//   must have run successfully. We must extract all necessary data
+//   from this before yielding.
+// - site: If it's a deploy, the name of the site ("foo.meteor.com") that we're
+//   deploying to.
+var recordPackages = function (options) {
   // Before doing anything, look at the app's dependencies to see if the
   // opt-out package is there; if present, we don't record any stats.
-  var packages = packageList();
-  if (_.contains(_.pluck(packages, "name"), optOutPackageName)) {
+  var packages = packageList(options.projectContext);
+  if (_.findWhere(packages, { name: OPT_OUT_PACKAGE_NAME })) {
     // Print some output for the 'report-stats' self-test.
     if (process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
       process.stdout.write("PACKAGE STATS NOT SENT\n");
@@ -68,17 +51,21 @@ var recordPackages = function (what, site) {
     return;
   }
 
+  var appIdentifier = options.projectContext.appIdentifier;
+
   // We do this inside a new fiber to avoid blocking anything on talking
   // to the package stats server. If we can't connect, for example, we
   // don't care; we'll just miss out on recording these packages.
   // This also gives it its own buildmessage state.
+  // However, we do make sure to have already extracted the package list from
+  // projectContext, since it might mutate out from under us otherwise.
   Fiber(function () {
 
     var details = {
-      what: what,
+      what: options.what,
       userAgent: httpHelpers.getUserAgent(),
       sessionId: auth.getSessionId(config.getAccountsDomain()),
-      site: site
+      site: options.site
     };
 
     try {
@@ -105,7 +92,7 @@ var recordPackages = function (what, site) {
       }
 
       var result = conn.call("recordAppPackages",
-                             project.project.getAppIdentifier(),
+                             appIdentifier,
                              packages,
                              details);
 
@@ -142,6 +129,7 @@ var logErrorIfInCheckout = function (err) {
 
 // Used in a test (and can only be used against the testing packages
 // server) to fetch one package stats entry for a given application.
+// XXX #3006 haven't looked at this test yet
 var getPackagesForAppIdInTest = function (currentProject) {
   var conn = connectToPackagesStatsServer();
   var result;

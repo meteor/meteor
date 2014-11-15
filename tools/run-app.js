@@ -394,10 +394,6 @@ _.extend(AppRunner.prototype, {
 
     // Bundle up the app
     var bundlePath = self.projectContext.getProjectLocalDirectory('build');
-    // XXX #3006 fix stats
-    // if (self.recordPackageUsage) {
-    //   stats.recordPackages("sdk.run");
-    // }
 
     // Cache the server target because the server will not change inside
     // a single invocation of _runOnce().
@@ -450,6 +446,13 @@ _.extend(AppRunner.prototype, {
             watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
           }
         };
+      }
+
+      if (self.recordPackageUsage) {
+        stats.recordPackages({
+          what: "sdk.run",
+          projectContext: self.projectContext
+        });
       }
 
       var bundleResult = bundler.bundle({

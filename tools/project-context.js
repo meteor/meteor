@@ -451,6 +451,15 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     _.each(self._constraints, function (constraint) {
       iterator(constraint);
     });
+  },
+
+  // Returns the constraint in the format returned by utils.parseConstraint, or
+  // null.
+  getConstraint: function (name) {
+    var self = this;
+    if (_.has(self._constraints, name))
+      return self._constraints[name];
+    return null;
   }
 });
 
