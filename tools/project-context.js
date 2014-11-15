@@ -159,6 +159,13 @@ _.extend(exports.ProjectContext.prototype, {
     return watchSet;
   },
 
+  getProjectAndLocalPackagesWatchSet: function () {
+    var self = this;
+    var watchSet = self.getProjectWatchSet();
+    watchSet.merge(self.isopackCache.allLoadedLocalPackagesWatchSet);
+    return watchSet;
+  },
+
   _ensureAppIdentifier: function () {
     var self = this;
     var identifierFile = path.join(self.projectDir, '.meteor', '.id');

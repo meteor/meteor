@@ -1908,6 +1908,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   - includeDebug (whether to include packages marked debugOnly)
  *   - webArchs: array of 'web.*' options to build (defaults to
  *     projectContext.platformList.getWebArchs())
+ *   - serverArch: XXX #3006
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.

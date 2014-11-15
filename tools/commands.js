@@ -226,7 +226,8 @@ function doRunCommand (options) {
 
   // If additional args were specified, then also start a mobile build.
   if (options.args.length) {
-    // XXX #3006 Support Cordova run with arguments!
+    // XXX #3006 Support Cordova run with arguments! Also figure out how
+    //           to move this until after starting proxy.
     // will asynchronously start mobile emulators/devices
     try {
       // --clean encapsulates the behavior of once
@@ -1530,8 +1531,9 @@ var runTestAppForPackages = function (testPackages, testRunnerAppDir, options) {
       // if we're testing packages from an app, we still want to make
       // sure the user doesn't 'meteor update' in the app, requiring
       // a switch to a different release
-      // XXX #3006 reimplement this
-      appDirForVersionCheck: options.appDir,
+      // XXX #3006 instead of appDirForVersionCheck we should just
+      //           use a ProjectContext whose local packages come
+      //           from somewhere else
       proxyPort: options.port,
       httpProxyPort: options.httpProxyPort,
       debugPort: options['debug-port'],
