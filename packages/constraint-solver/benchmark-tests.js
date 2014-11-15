@@ -5,9 +5,11 @@
 
 var runBenchmarks = !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
 
+var railsCatalog = getCatalogStub(railsGems);
+var sinatraCatalog = getCatalogStub(sinatraGems);
 
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
-  var r = new ConstraintSolver.PackagesResolver(getCatalogStub(sinatraGems));
+  var r = new ConstraintSolver.PackagesResolver(sinatraCatalog);
 
   var args = splitArgs({
     'capistrano': '2.14.2',
@@ -25,14 +27,6 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra",
   r.resolve(args.dependencies, args.constraints);
 });
 
-// Add a few versions that are referenced by other versions but don't exist. We
-// now require referenced versions to exist.
-railsGems.push({name: "bcrypt", number: "3.0.0", dependencies: []});
-railsGems.push({name: "mime-types", number: "1.16.0", dependencies: []});
-railsGems.push({"name":"pyu-ruby-sasl","number":"0.3.1","platform":"ruby","dependencies":[]});
-railsGems.push({"name":"backports","number":"3.0.0","platform":"ruby","dependencies":[]});
-railsGems.push({"name":"diff-lcs","number":"1.1.0","platform":"ruby","dependencies":[]});
-var railsCatalog = getCatalogStub(railsGems);
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {
   var r = new ConstraintSolver.PackagesResolver(railsCatalog);
 
@@ -297,12 +291,6 @@ function getCatalogStub (gems) {
       return _.chain(gems)
         .filter(function (pv) { return pv.name === name; })
         .pluck('number')
-        .map(function (version) {
-          var nv = exactVersion(version);
-          if (nv.length < version.length && version.split(".").length === 2)
-            return version;
-          return nv;
-        })
         .filter(function (v) {
           return PackageVersion.getValidServerVersion(v);
         })
@@ -312,7 +300,7 @@ function getCatalogStub (gems) {
     },
     getVersion: function (name, version) {
       var gem = _.find(gems, function (pv) {
-        return pv.name === name && exactVersion(pv.number) === version;
+        return pv.name === name && pv.number === version;
       });
 
       var packageVersion = {
@@ -323,10 +311,10 @@ function getCatalogStub (gems) {
 
       _.each(gem.dependencies, function (dep) {
         var name = dep[0];
-        var constraints = dep[1];
+        var constraint = dep[1];
 
         packageVersion.dependencies[name] = {
-          constraint: convertConstraints(constraints)[0], // XXX pick first one only
+          constraint: constraint,
           references: [{
             "arch": "web"
           }, {
@@ -337,50 +325,6 @@ function getCatalogStub (gems) {
       return packageVersion;
     }
   };
-}
-
-// Naively converts ruby-gems style constraints string to either exact
-// constraint or a regular constraint.
-function convertConstraints (inp) {
-  var out = inp.split(",").map(function (s) {
-    return s.trim();
-  })
-  // remove the constraints we don't support
-  .filter(function (s) {
-    return !/</g.test(s) && !/!=/.test(s);
-  })
-  // convert 1.2.3.beta2 => 1.2.3
-  // and 0.2 => 0.2.0
-  .map(function (s) {
-    var x = s.split(" ");
-    return [x[0], exactVersion(x[1])].join(" ");
-  })
-  // convert '= 1.2.3' => '=1.2.3'
-  // '~>1.2.3' => '1.2.3'
-  // '>=1.2.3' => '1.2.3'
-  .map(function (s) {
-    if (s.indexOf(">= 0") === 0)
-      return "";
-    var x = s.split(' ');
-    if (x[0] === '~>' || x[0] === '>' || x[0] === '>=')
-      x[0] = '';
-    else if (x[0] === '=')
-      x[0] = '=';
-    else
-      throw new Error('unknown operator: ' + x[0]);
-    return x.join("");
-  });
-
-  return out;
-}
-
-function exactVersion (s) {
-  s = s.match(/\d+(\.\d+(\.\d+)?)?/)[0];
-  if (s.split('.').length < 3)
-    s += ".0";
-  if (s.split('.').length < 3)
-    s += ".0";
-  return s;
 }
 
 // XXX This test is supposed to reproduce issue #2968 by taking
