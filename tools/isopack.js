@@ -225,16 +225,6 @@ var convertIsopackFormat = function (data, versionFrom, versionTo) {
   }
 };
 
-var makeForwardSlashes = function (oldPath) {
-  if (! oldPath) return oldPath;
-  // On Windows the OS path separator is back-slash ('\'), on Unix it is
-  // forward slash ('/'). In the isopack and unibuild formats keep the paths
-  // in the Unix style.
-  if (process.platform === 'win32')
-    return oldPath.replace(/\\/g, '/');
-  return oldPath;
-};
-
 var currentFormat = "isopack-1";
 
 // XXX document
@@ -686,7 +676,7 @@ _.extend(Isopack.prototype, {
       var nodeModulesPath = null;
       if (unibuildJson.node_modules) {
         rejectBadPath(unibuildJson.node_modules);
-        nodeModulesPath = makeForwardSlashes(path.join(unibuildBasePath, unibuildJson.node_modules));
+        nodeModulesPath = utils.makeForwardSlashes(path.join(unibuildBasePath, unibuildJson.node_modules));
       }
 
       var prelinkFiles = [];
@@ -925,7 +915,7 @@ _.extend(Isopack.prototype, {
               throw new Error("Resource data must be a Buffer");
             unibuildJson.resources.push({
               type: resource.type,
-              file: makeForwardSlashes(path.join(unibuildDir, resource.type)),
+              file: utils.makeForwardSlashes(path.join(unibuildDir, resource.type)),
               length: resource.data.length,
               offset: offset[resource.type]
             });
@@ -948,12 +938,12 @@ _.extend(Isopack.prototype, {
 
           unibuildJson.resources.push({
             type: resource.type,
-            file: makeForwardSlashes(builder.writeToGeneratedFilename(
+            file: utils.makeForwardSlashes(builder.writeToGeneratedFilename(
               path.join(unibuildDir, utils.escapePackageNameForPath(resource.servePath)),
               { data: resource.data })),
             length: resource.data.length,
             offset: 0,
-            servePath: makeForwardSlashes(resource.servePath || undefined),
+            servePath: utils.makeForwardSlashes(resource.servePath || undefined),
             path: resource.path || undefined
           });
         });
@@ -963,17 +953,17 @@ _.extend(Isopack.prototype, {
           var data = new Buffer(file.source, 'utf8');
           var resource = {
             type: 'prelink',
-            file: makeForwardSlashes(builder.writeToGeneratedFilename(
+            file: utils.makeForwardSlashes(builder.writeToGeneratedFilename(
               path.join(unibuildDir, utils.escapePackageNameForPath(file.servePath)),
               { data: data })),
             length: data.length,
             offset: 0,
-            servePath: makeForwardSlashes(file.servePath || undefined)
+            servePath: utils.makeForwardSlashes(file.servePath || undefined)
           };
 
           if (file.sourceMap) {
             // Write the source map.
-            resource.sourceMap = makeForwardSlashes(builder.writeToGeneratedFilename(
+            resource.sourceMap = utils.makeForwardSlashes(builder.writeToGeneratedFilename(
               path.join(unibuildDir, utils.escapePackageNameForPath(file.servePath) + '.map'),
               { data: new Buffer(file.sourceMap, 'utf8') }
             ));
@@ -1005,7 +995,7 @@ _.extend(Isopack.prototype, {
           mainJson.plugins.push({
             name: name,
             arch: plugin.arch,
-            path: makeForwardSlashes(path.join(pluginDir, relPath))
+            path: utils.makeForwardSlashes(path.join(pluginDir, relPath))
           });
         });
       });

@@ -676,3 +676,31 @@ exports.escapePackageNameForPath = function (packageName) {
 exports.unescapePackageNameForPath = function (escapedPackageName) {
   return escapedPackageName.replace("_", ":");
 };
+
+exports.makeForwardSlashes = function (oldPath) {
+  if (! oldPath) return oldPath;
+  // On Windows the OS path separator is back-slash ('\'), on Unix it is
+  // forward slash ('/'). In the isopack and unibuild formats keep the paths
+  // in the Unix style.
+  if (process.platform === 'win32')
+    return oldPath.replace(/\\/g, '/');
+  return oldPath;
+};
+
+// Blindly converts all backslashes to slashes in the object
+exports.recursivelyMakeForwardSlashes = function (obj) {
+  if (! obj) return obj;
+  if (_.isArray(obj))
+    return _.map(obj, exports.recursivelyMakeForwardSlashes);
+  if (_.isObject(obj)) {
+    var c = {};
+    _.each(obj, function (item, key) {
+      key = exports.recursivelyMakeForwardSlashes(key);
+      c[key] = exports.recursivelyMakeForwardSlashes(item);
+    });
+    return c;
+  }
+  if (_.isString(obj))
+    return exports.makeForwardSlashes(obj);
+  return obj;
+};

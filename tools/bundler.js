@@ -170,6 +170,7 @@ var compiler = require('./compiler.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
+var utils = require('./utils.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1377,9 +1378,10 @@ _.extend(JsImage.prototype, {
       var dirname = path.dirname(nmd.preferredBundlePath);
       var base = path.basename(nmd.preferredBundlePath);
       var generatedDir = builder.generateFilename(dirname, {directory: true});
+      var bundlePath = path.join(generatedDir, base);
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: path.join(generatedDir, base),
+        preferredBundlePath: bundlePath,
         npmDiscards: nmd.npmDiscards
       }));
     });
@@ -1481,7 +1483,7 @@ _.extend(JsImage.prototype, {
     builder.writeJson('program.json', {
       format: "javascript-image-pre1",
       arch: self.arch,
-      load: load
+      load: utils.recursivelyMakeForwardSlashes(load)
     });
     return "program.json";
   }
@@ -1506,6 +1508,9 @@ JsImage.readFromDisk = function (controlFilePath) {
 
     var nmd = undefined;
     if (item.node_modules) {
+      // #win-tech-debt for some reason the read JSON file has escaped paths
+      // for files and source maps but not for node_modules
+      item.node_modules = utils.escapePackageNameForPath(item.node_modules);
       rejectBadPath(item.node_modules);
       var node_modules = path.join(dir, item.node_modules);
       if (! (node_modules in ret.nodeModulesDirectories)) {
