@@ -1,0 +1,7 @@
+{
+    "track": "velocity:METEOR",
+    "version": "1.0",
+    "recommended": false,
+    "official": false,
+    "description": "Extends Meteor with testing functionality"
+}
