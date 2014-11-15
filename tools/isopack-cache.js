@@ -126,22 +126,18 @@ _.extend(exports.IsopackCache.prototype, {
           packageMap: packageMap,
           isopackCache: self
         });
-        if (buildmessage.jobHasMessages()) {
-          // recover by adding an empty package
-          isopack = new isopackModule.Isopack;
-          isopack.initEmpty(name);
-          return;
-        } else {
-          isopack = compilerResult.isopack;
+        // Accept the compiler's result, even if there were errors (since it at
+        // least will have a useful WatchSet and will allow us to keep going and
+        // compile other packages that depend on this one).
+        isopack = compilerResult.isopack;
+        if (self.cacheDir && ! buildmessage.jobHasMessages()) {
+          // Save to disk, for next time!
           var pluginProviderPackageMap = packageMap.makeSubsetMap(
             compilerResult.pluginProviderPackageNames);
-          if (self.cacheDir) {
-            // Save to disk, for next time!
-            isopack.saveToPath(self._isopackDir(name), {
-              pluginProviderPackageMap: pluginProviderPackageMap,
-              includeIsopackBuildInfo: true
-            });
-          }
+          isopack.saveToPath(self._isopackDir(name), {
+            pluginProviderPackageMap: pluginProviderPackageMap,
+            includeIsopackBuildInfo: true
+          });
         }
       }
 
