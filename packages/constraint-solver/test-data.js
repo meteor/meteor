@@ -1,6 +1,10 @@
 // This file contains data for tests in benchmark-tests.js.
 
-// It defines `railsGems` and `sinatraGems`.
+// It defines the variables `railsGems` and `sinatraGems`.
+
+// The data has been heavily adapted and is not semantically
+// equivalent to its original source.  It's just a big dataset to
+// throw at the solver that is sort of organic and semi-realistic.
 
 railsGems = [
   {"name":"rack-cache","number":"1.2.0","dependencies":[]},
