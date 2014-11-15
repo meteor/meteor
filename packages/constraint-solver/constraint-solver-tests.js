@@ -640,7 +640,7 @@ function getCatalogStub (gems) {
       var packageVersion = {
         packageName: gem.name,
         version: gem.number,
-        earliestCompatibleVersion: ecv(gem.number),
+        earliestCompatibleVersion: PackageVersion.defaultECV(gem.number),
         dependencies: {}
       };
 
