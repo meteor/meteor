@@ -1,3 +1,7 @@
+// This file contains data for tests in benchmark-tests.js.
+
+// It defines `railsGems` and `sinatraGems`.
+
 railsGems = [
   {"name":"rack-cache","number":"1.2.0","dependencies":[]},
   {"name":"htmlentities","number":"4.0.0","dependencies":[]},
@@ -6679,7 +6683,8 @@ railsGems = [
   {"name":"xpath","number":"0.1.1","dependencies":[["nokogiri","1.3.0"]]},
   {"name":"xpath","number":"0.1.4","dependencies":[["nokogiri","1.3.0"]]},
   {"name":"xpath","number":"1.0.0","dependencies":[["nokogiri","1.3.0"]]},
-  {"name":"xpath","number":"2.0.0","dependencies":[["nokogiri","1.3.0"]]}];
+  {"name":"xpath","number":"2.0.0","dependencies":[["nokogiri","1.3.0"]]}
+];
 
 sinatraGems = [
   {"name":"launchy","number":"2.4.2","dependencies":[]},
