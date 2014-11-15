@@ -308,3 +308,14 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
     { _testing: true }).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
+
+Tinytest.add("constraint solver - build IDs", function (test) {
+  // build IDs in suffixes like "+local" don't show up in output
+  testWithResolver(test, makeResolver([
+    ["foo", "1.0.1+local"]
+  ]), function (t) {
+    t({ "foo": "1.0.0" }, {
+      "foo": "1.0.1"
+    }, { _testing: false });
+  });
+});
