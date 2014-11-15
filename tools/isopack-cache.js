@@ -18,6 +18,7 @@ exports.IsopackCache = function (options) {
   // eg, for building isopackets.
   self.tropohouse = options.tropohouse;
   self.isopacks = {};
+  self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
 
   if (self.cacheDir)
     files.mkdir_p(self.cacheDir);
@@ -113,38 +114,39 @@ _.extend(exports.IsopackCache.prototype, {
         packageMap: packageMap
       });
 
+      var isopack;
       if (upToDate) {
-        var isopack = new isopackModule.Isopack;
+        isopack = new isopackModule.Isopack;
         isopack.initFromPath(name, self._isopackDir(name), {
           isopackBuildInfoJson: isopackBuildInfoJson
         });
-        self.isopacks[name] = isopack;
-        return;
-      }
-
-      // Nope! Compile it again.
-      var compilerResult = compiler.compile(packageInfo.packageSource, {
-        packageMap: packageMap,
-        isopackCache: self
-      });
-      if (buildmessage.jobHasMessages()) {
-        // recover by adding an empty package
-        self.isopacks[name] = new isopackModule.Isopack;
-        self.isopacks[name].initEmpty(name);
-        return;
-      }
-
-      var pluginProviderPackageMap = packageMap.makeSubsetMap(
-        compilerResult.pluginProviderPackageNames);
-      if (self.cacheDir) {
-        // Save to disk, for next time!
-        compilerResult.isopack.saveToPath(self._isopackDir(name), {
-          pluginProviderPackageMap: pluginProviderPackageMap,
-          includeIsopackBuildInfo: true
+      } else {
+        // Nope! Compile it again.
+        var compilerResult = compiler.compile(packageInfo.packageSource, {
+          packageMap: packageMap,
+          isopackCache: self
         });
+        if (buildmessage.jobHasMessages()) {
+          // recover by adding an empty package
+          isopack = new isopackModule.Isopack;
+          isopack.initEmpty(name);
+          return;
+        } else {
+          isopack = compilerResult.isopack;
+          var pluginProviderPackageMap = packageMap.makeSubsetMap(
+            compilerResult.pluginProviderPackageNames);
+          if (self.cacheDir) {
+            // Save to disk, for next time!
+            isopack.saveToPath(self._isopackDir(name), {
+              pluginProviderPackageMap: pluginProviderPackageMap,
+              includeIsopackBuildInfo: true
+            });
+          }
+        }
       }
 
-      self.isopacks[name] = compilerResult.isopack;
+      self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
+      self.isopacks[name] = isopack;
     });
   },
 

@@ -1082,6 +1082,15 @@ _.extend(Isopack.prototype, {
       arch: archinfo.host(),
       path: toolPath
     }];
+  },
+
+  getMergedWatchSet: function () {
+    var self = this;
+    var watchSet = self.pluginWatchSet.clone();
+    _.each(self.unibuilds, function (unibuild) {
+      watchSet.merge(unibuild.watchSet);
+    });
+    return watchSet;
   }
 });
 
