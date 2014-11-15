@@ -284,7 +284,7 @@ _.extend(AppProcess.prototype, {
 //
 // - Other options: appDirForVersionCheck (defaults to appDir), port,
 //   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
-//   proxy, recordPackageUsage
+//   proxy, recordPackageUsage, includeTests
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -348,6 +348,7 @@ var AppRunner = function (appDir, options) {
   self.noRestartBanner = options.noRestartBanner;
   self.recordPackageUsage =
     options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
+  self.includeTests = options.includeTests;
 
   // Keep track of the app's Cordova plugins and platforms. If the set
   // of plugins or platforms changes from one run to the next, we just
@@ -510,7 +511,8 @@ _.extend(AppRunner.prototype, {
         outputPath: bundlePath,
         includeNodeModulesSymlink: true,
         buildOptions: self.buildOptions,
-        hasCachedBundle: !! cachedServerWatchSet
+        hasCachedBundle: !! cachedServerWatchSet,
+        includeTests: self.includeTests
       });
 
       // Keep the server watch set from the initial bundle, because subsequent

@@ -1526,8 +1526,12 @@ _.extend(PackageSource.prototype, {
     }
   },
 
-  // Initialize a package from an application directory (has .meteor/packages).
-  initFromAppDir: function (appDir, ignoreFiles) {
+  /*
+   * Initialize a package from an application directory (has .meteor/packages).
+   *
+   * options are: ignoreFiles, includeTests
+   */
+  initFromAppDir: function (appDir, options) {
     var self = this;
     appDir = path.resolve(appDir);
     self.name = null;
@@ -1571,7 +1575,7 @@ _.extend(PackageSource.prototype, {
             return new RegExp('\\.' + utils.quotemeta(ext) + '$');
           }
         );
-        var sourceExclude = [/^\./].concat(ignoreFiles);
+        var sourceExclude = [/^\./].concat(options.ignoreFiles);
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
         // sourceRoot-relative directories.
@@ -1624,12 +1628,16 @@ _.extend(PackageSource.prototype, {
 
         // Read top-level subdirectories. Ignore subdirectories that have
         // special handling.
+        var excludedTopLevelSubdirectories = [/^packages\/$/, /^programs\/$/,
+                                              /^public\/$/, /^private\/$/,
+                                              /^cordova-build-override\/$/,
+                                              otherUnibuildRegExp].concat(sourceExclude)
+        if (!options.includeTests) {
+          excludedTopLevelSubdirectories.push(/^tests\/$/);
+        }
         var sourceDirectories = readAndWatchDirectory('', {
           include: [/\/$/],
-          exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
-                    /^public\/$/, /^private\/$/,
-                    /^cordova-build-override\/$/,
-                    otherUnibuildRegExp].concat(sourceExclude)
+          exclude: excludedTopLevelSubdirectories
         });
         checkForInfiniteRecursion('');
 
@@ -1650,9 +1658,13 @@ _.extend(PackageSource.prototype, {
 
           // Find sub-sourceDirectories. Note that we DON'T need to ignore the
           // directory names that are only special at the top level.
+          var excludedSubSourceDirectories = [otherUnibuildRegExp].concat(sourceExclude);
+          if (!options.includeTests) {
+            excludedSubSourceDirectories.push(/^tests\/$/);
+          }
           Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(sourceExclude)
+            exclude: checkForInfiniteRecursion
           }));
         }
 
@@ -1700,7 +1712,7 @@ _.extend(PackageSource.prototype, {
             var assetsAndSubdirs = readAndWatchDirectory(dir, {
               include: [/.?/],
               // we DO look under dot directories here
-              exclude: ignoreFiles
+              exclude: options.ignoreFiles
             });
 
             _.each(assetsAndSubdirs, function (item) {

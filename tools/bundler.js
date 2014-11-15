@@ -1877,6 +1877,9 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
  *
+ * - includeTests: true if the files in the /tests directory should be included.
+ *   This allows running integration tests with Velocity.
+ *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -2000,7 +2003,10 @@ exports.bundle = function (options) {
     if (includeDefaultTargets) {
       // Create a Isopack object that represents the app
       var packageSource = new PackageSource(whichCatalog);
-      packageSource.initFromAppDir(appDir, exports.ignoreFiles);
+      packageSource.initFromAppDir(appDir, {
+        ignoreFiles: exports.ignoreFiles,
+        includeTests: options.includeTests
+      });
       var app = compiler.compile(packageSource).isopack;
 
       var clientTargets = [];

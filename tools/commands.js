@@ -168,6 +168,7 @@ var runCommandOptions = {
     settings: { type: String },
     program: { type: String },
     test: {type: Boolean, default: false},
+    'include-tests': {type: Boolean, default: false},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -362,7 +363,8 @@ function doRunCommand (options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: mobileServer,
     once: options.once,
-    extraRunners: runners
+    extraRunners: runners,
+    includeTests: options['include-tests']
   });
 }
 

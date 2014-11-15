@@ -19,7 +19,7 @@ var Updater = require('./run-updater.js').Updater;
 // options: proxyPort, proxyHost, appPort, appHost, buildOptions,
 // settingsFile, banner, program, onRunEnd, onFailure, watchForChanges,
 // quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl, disableOplog,
-// appDirForVersionCheck
+// appDirForVersionCheck, includeTests
 var Runner = function (appDir, options) {
   var self = this;
   self.appDir = appDir;
@@ -97,7 +97,8 @@ var Runner = function (appDir, options) {
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
     noRestartBanner: self.quiet,
-    recordPackageUsage: options.recordPackageUsage
+    recordPackageUsage: options.recordPackageUsage,
+    includeTests: options.includeTests
   });
 
   self.selenium = null;
