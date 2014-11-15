@@ -133,8 +133,8 @@ _.extend(AppProcess.prototype, {
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
     require("./cleanup.js").onExit(function() {
-      // XXX #3006 update
-      // require("./server/shell.js").unlinkSocketFile(self.appDir);
+      require("./server/shell.js").unlinkSocketFile(
+        self.projectContext.projectDir);
     });
   },
 
