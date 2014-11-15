@@ -1664,7 +1664,7 @@ _.extend(PackageSource.prototype, {
           }
           Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: checkForInfiniteRecursion
+            exclude: excludedSubSourceDirectories
           }));
         }
 
