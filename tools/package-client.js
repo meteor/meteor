@@ -580,7 +580,6 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
       version: version,
       description: packageSource.metadata.summary,
       git: packageSource.metadata.git,
-      earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
       compilerVersion: compiler.BUILT_BY,
       containsPlugins: packageSource.containsPlugins(),
       debugOnly: packageSource.debugOnly,

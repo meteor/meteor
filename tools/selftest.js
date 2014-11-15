@@ -682,7 +682,6 @@ _.extend(Sandbox.prototype, {
     stubCatalog.collections.versions.push({
       packageName: toolPackageName,
       version: toolPackage.version,
-      earliestCompatibleVersion: toolPackage.version,
       containsPlugins: false,
       description: toolPackage.metadata.summary,
       dependencies: {},
@@ -758,7 +757,6 @@ _.extend(Sandbox.prototype, {
         stubCatalog.collections.versions.push({
           packageName: name,
           version: versionRec.version,
-          earliestCompatibleVersion: versionRec.earliestCompatibleVersion,
           containsPlugins: false,
           description: "warehouse test",
           dependencies: {},

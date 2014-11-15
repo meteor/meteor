@@ -223,10 +223,6 @@ var PackageSource = function (catalog) {
   // with names have versions? certainly the reverse is true
   self.version = null;
 
-  // The earliest version for which this package is supposed to be a
-  // compatible replacement. Set if and only if version is set.
-  self.earliestCompatibleVersion = null;
-
   // Available architectures of this package. Array of SourceArch.
   self.architectures = [];
 
@@ -452,7 +448,7 @@ _.extend(PackageSource.prototype, {
 
     var packageJsPath = path.join(self.sourceRoot, 'package.js');
     var code = fs.readFileSync(packageJsPath);
-    var packageJsHash = Builder.sha1(code);
+    var packageJsHash = watch.sha1(code);
 
     var releaseRecords = [];
     var hasTests = false;
@@ -476,7 +472,6 @@ _.extend(PackageSource.prototype, {
       // Set package metadata. Options:
       // - summary: for 'meteor list' & package server
       // - version: package version string
-      // - earliestCompatibleVersion: version string
       // There used to be a third option documented here,
       // 'environments', but it was never implemented and no package
       // ever used it.
@@ -510,8 +505,6 @@ _.extend(PackageSource.prototype, {
             // XXX validate that version parses -- and that it doesn't
             // contain a +!
             self.version = value;
-          } else if (key === "earliestCompatibleVersion") {
-            self.earliestCompatibleVersion = value;
           } else if (key === "name" && !self.isTest) {
             if (!self.name) {
               self.name = value;
@@ -968,11 +961,6 @@ _.extend(PackageSource.prototype, {
         // Recover by pretending there was no version (see above).
         self.version = null;
       }
-    }
-
-    if (self.version !== null && ! self.earliestCompatibleVersion) {
-      self.earliestCompatibleVersion =
-        packageVersionParser.defaultECV(self.version);
     }
 
     // source files used

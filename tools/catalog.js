@@ -32,7 +32,7 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
     if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
-      Console.error(catalog.refreshError);
+      Console.printError(catalog.refreshError);
       Console.error("This command requires an up-to-date package catalog.  Exiting.");
       // Avoid circular dependency.
       throw new (require('./main.js').ExitWithCode)(1);
@@ -159,22 +159,6 @@ _.extend(LayeredCatalog.prototype, {
       return result;
     }
     return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
-  },
-
-  // Returns the map from version to earliestCompatibleVersion for all versions
-  // overridden by a local package. If there's no local package, returns an
-  // empty object.
-  getForgottenECVs: function (packageName) {
-    var self = this;
-    if (! self.localCatalog.getPackage(packageName))
-      return {};
-    var versions = self.otherCatalog.getSortedVersions(packageName);
-    var forgottenECVs = {};
-    _.each(versions, function (v) {
-      var vr = self.otherCatalog.getVersion(packageName, v);
-      forgottenECVs[v] = vr.earliestCompatibleVersion;
-    });
-    return forgottenECVs;
   },
 
   // Doesn't download packages. Downloading should be done at the time

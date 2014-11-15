@@ -234,7 +234,6 @@ var Isopack = function () {
   self.name = null;
   self.metadata = {};
   self.version = null;
-  self.earliestCompatibleVersion = null;
   self.isTest = false;
   self.debugOnly = false;
 
@@ -311,7 +310,6 @@ _.extend(Isopack.prototype, {
     self.name = options.name;
     self.metadata = options.metadata;
     self.version = options.version;
-    self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
     self.cordovaDependencies = options.cordovaDependencies;
@@ -637,7 +635,6 @@ _.extend(Isopack.prototype, {
         summary: mainJson.summary
       };
       self.version = mainJson.version;
-      self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
       self.isTest = mainJson.isTest;
       self.debugOnly = !!mainJson.debugOnly;
     }
@@ -727,8 +724,6 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      self.cordovaDependencies = mainJson.cordovaDependencies || null;
-
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
         arch: unibuildMeta.arch,
@@ -738,10 +733,11 @@ _.extend(Isopack.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources,
-        cordovaDependencies: unibuildJson.cordovaDependencies
+        resources: resources
       }));
     });
+
+    self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
     _.each(mainJson.tools, function (toolMeta) {
       toolMeta.rootDir = dir;
@@ -775,7 +771,6 @@ _.extend(Isopack.prototype, {
         name: self.name,
         summary: self.metadata.summary,
         version: self.version,
-        earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
         builds: [],
         plugins: []
@@ -812,8 +807,7 @@ _.extend(Isopack.prototype, {
           pluginProviderPackages: self.pluginProviderPackageDirs,
           source: options.buildOfPath || undefined,
           buildTimeDirectDependencies: buildTimeDirectDeps,
-          buildTimePluginDependencies: buildTimePluginDeps,
-          cordovaDependencies: self.cordovaDependencies
+          buildTimePluginDependencies: buildTimePluginDeps
         };
       }
 

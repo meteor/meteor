@@ -1,4 +1,8 @@
 // Copied from archinfo.matches() in tools/
+//
+// archMatches("os", "os") => true
+// archMatches("web.cordova", "web") => true
+// archMatches("web.cordova", "web.cordova") => true
 var archMatches = function (arch, baseArch) {
   return arch.substr(0, baseArch.length) === baseArch &&
     (arch.length === baseArch.length ||
@@ -73,8 +77,7 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
     _.each(allArchs, function (arch) {
       var unitName = packageName + "#" + arch;
-      unibuilds[unitName] = new ConstraintSolver.UnitVersion(
-        unitName, version, versionDef.earliestCompatibleVersion);
+      unibuilds[unitName] = new ConstraintSolver.UnitVersion(unitName, version);
       self.resolver.addUnitVersion(unibuilds[unitName]);
     });
 
@@ -122,19 +125,6 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
       });
     });
   });
-
-  // We need to be aware of the earliestCompatibleVersion values for any
-  // packages that are overridden by local packages, in order to evaluate
-  // 'compatible-with' constraints that name that version.
-  // (Some of the test fixtures don't bother to implement this method.)
-  if (self.catalog.getForgottenECVs) {
-    _.each(self.catalog.getForgottenECVs(packageName), function (ecv, version) {
-      _.each(allArchs, function (arch) {
-        var unitName = packageName + '#' + arch;
-        self.resolver.addExtraECV(unitName, version, ecv);
-      });
-    });
-  }
 };
 
 // dependencies - an array of string names of packages (not slices)
@@ -394,8 +384,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             PackageVersion.versionMagnitude(uv.version) -
             PackageVersion.versionMagnitude(prev.version);
 
-          var isCompatible =
-                prev.earliestCompatibleVersion === uv.earliestCompatibleVersion;
+          var isCompatible = prev.majorVersion === uv.majorVersion;
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -468,7 +457,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           var earliestMatching = mori.first(alternatives);
 
           var isCompatible =
-                prev.earliestCompatibleVersion === earliestMatching.earliestCompatibleVersion;
+                prev.majorVersion === earliestMatching.majorVersion;
           if (! isCompatible) {
             cost[VMAJOR]++;
             return;

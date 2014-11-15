@@ -1057,7 +1057,6 @@ compiler.compile = function (packageSource, options) {
     name: packageSource.name,
     metadata: packageSource.metadata,
     version: packageSource.version,
-    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     isTest: packageSource.isTest,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,

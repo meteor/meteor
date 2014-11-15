@@ -90,7 +90,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
   if (prerelease.length === 0)
     return 0;
 
-  return _.reduce(prerelease, function (memo, part, index) {
+  return __.reduce(prerelease, function (memo, part, index) {
     var digit;
     if (typeof part === 'number') {
       digit = part+1;
@@ -124,16 +124,18 @@ PV.lessThan = function (versionOne, versionTwo) {
   return PV.compare(versionOne, versionTwo) < 0;
 };
 
-// Given a string version, computes its default ECV (not counting any overrides).
+// Given a string version, returns its major version (the first section of the
+// semver), as an integer. Two versions are compatible if they have the same
+// version number.
 //
 // versionString: valid meteor version string.
-PV.defaultECV = function (versionString) {
+PV.majorVersion = function (versionString) {
   var version = extractSemverPart(versionString).semver;
   var parsed = semver.parse(version);
   if (! parsed)
-     throwVersionParserError("not a valid version: " + version);
-  return parsed.major + ".0.0";
-}
+    throwVersionParserError("not a valid version: " + version);
+  return parsed.major;
+};
 
 // Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
 // v2 is greater.

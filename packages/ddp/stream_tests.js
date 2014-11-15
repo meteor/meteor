@@ -148,7 +148,7 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
     _.each(['/websocket', '/websocket/'], function(path) {
       HTTP.get(Meteor._relativeToSiteRootUrl(path), expect(function(error, result) {
         test.isNotNull(error);
-        test.equal('Can "Upgrade" only to "WebSocket".', result.content);
+        test.equal('Not a valid websocket request', result.content);
       }));
     });
 
@@ -164,12 +164,12 @@ testAsyncMulti("stream - /websocket is a websocket endpoint", [
       test.equal(pageContent, result.content);
     });
 
-    HTTP.get(Meteor._relativeToSiteRootUrl('/'), expect(function(error, result) {
+    HTTP.get(Meteor.absoluteUrl('/'), expect(function(error, result) {
       test.isNull(error);
       pageContent = result.content;
 
       _.each(['/websockets', '/websockets/'], function(path) {
-        HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
+        HTTP.get(Meteor.absoluteUrl(path), wrappedCallback);
       });
     }));
   }

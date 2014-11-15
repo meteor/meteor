@@ -127,7 +127,7 @@ ConstraintSolver.ConstraintsList.prototype.toString = function (options) {
     strs.push(c.toString({removeUnibuild: options.removeUnibuild}));
   });
 
-  strs.sort();
+  strs = _.uniq(strs);
 
   return "<constraints list: " + strs.join(", ") + ">";
 };

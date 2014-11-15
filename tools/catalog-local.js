@@ -332,7 +332,6 @@ _.extend(LocalCatalog.prototype, {
             testName: packageSource.testName,
             version: version,
             publishedBy: null,
-            earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
             description: packageSource.metadata.summary,
             dependencies: packageSource.getDependencyMetadata(),
             source: null,
