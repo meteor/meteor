@@ -385,6 +385,7 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (options) {
     var self = this;
     options = options || {};
+    var firstRun = options.firstRun;
 
     Console.enableProgressDisplay(true);
 
@@ -402,9 +403,7 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
     var bundleApp = function () {
-      // XXX #3006 options.firstRun is probably wrong here because we also
-      // want to do reloady things when we rebuild just the CSS
-      if (!options.firstRun) {
+      if (! firstRun) {
         self.projectContext.reset();
         var messages = buildmessage.capture(function () {
           self.projectContext.readProjectMetadata();
@@ -485,6 +484,7 @@ _.extend(AppRunner.prototype, {
     if (bundleResultOrRunResult.runResult)
       return bundleResultOrRunResult.runResult;
     bundleResult = bundleResultOrRunResult.bundleResult;
+    firstRun = false;
 
     var plugins = cordova.getCordovaDependenciesFromStar(
       bundleResult.starManifest);
