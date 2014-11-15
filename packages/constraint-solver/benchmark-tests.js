@@ -281,12 +281,6 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
 // Given a set of gems definitions returns a Catalog-like object
 function getCatalogStub (gems) {
   return {
-    getAllPackageNames: function () {
-      return _.uniq(_.pluck(gems, 'name'));
-    },
-    getPackage: function (name) {
-      return !!_.findWhere(gems, {name: name});
-    },
     getSortedVersions: function (name) {
       return _.chain(gems)
         .filter(function (pv) { return pv.name === name; })

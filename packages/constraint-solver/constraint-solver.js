@@ -11,11 +11,20 @@ var archMatches = function (arch, baseArch) {
 
 ConstraintSolver = {};
 
-// catalog is a catalog.Catalog object. We have to pass this in because
-// we're in a package and can't require('release.js'). If this code
-// moves to the tool, or if all of the tool code moves to a star, we
-// should get cat from release.current.catalog rather than passing it
-// in.
+// `catalog` has the following methods:
+//
+// * getSortedVersions(packageName) -> [String]
+// * getVersion(packageName, version) -> {
+//     packageName, version, dependencies }
+//
+// Where `dependencies` is a map from packageName to
+// an object of the form `{ constraint: String,
+// references: [{arch: String, optional "weak": true}] }`.
+//
+// TODO: Abstract away the catalog by pulling out the code that
+// interfaces with it.  We shouldn't have to stub the catalog in
+// tests or conform to its format anywhere in order to, say,
+// run the solver with a real cost function.
 ConstraintSolver.PackagesResolver = function (catalog, options) {
   var self = this;
 

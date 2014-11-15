@@ -1,17 +1,11 @@
 
 var makeResolver = function (data) {
-  var Packages = new LocalCollection;
   var Versions = new LocalCollection;
-  var Builds = new LocalCollection;
 
   _.each(data, function (versionDescription) {
     var packageName = versionDescription.shift();
     var version = versionDescription.shift();
     var deps = versionDescription.shift();
-
-    if (!Packages.findOne({name: packageName})) {
-      Packages.insert({name: packageName});
-    }
 
     var constructedDeps = {};
     _.each(deps, function (constraint, name) {
@@ -26,30 +20,19 @@ var makeResolver = function (data) {
     });
     Versions.insert({ packageName: packageName, version: version,
                       dependencies: constructedDeps });
-    Builds.insert({ packageName: packageName, version: version,
-                    buildArchitectures: "os+web.cordova+web.browser" });
   });
 
   var catalogStub = {
-    packages: Packages,
-    versions: Versions,
-    builds: Builds,
-    getAllPackageNames: function () {
-      return _.pluck(Packages.find().fetch(), 'name');
-    },
-    getPackage: function (name) {
-      return this.packages.findOne({ name: name });
-    },
     getSortedVersions: function (name) {
       return _.pluck(
-        this.versions.find({
+        Versions.find({
           packageName: name
         }, { fields: { version: 1 } }).fetch(),
         'version'
       ).sort(PackageVersion.compare);
     },
     getVersion: function (name, version) {
-      return this.versions.findOne({
+      return Versions.findOne({
         packageName: name,
         version: version
       });
