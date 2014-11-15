@@ -567,7 +567,7 @@ _.extend(Target.prototype, {
         if (_.has(usedUnibuilds, unibuild.id))
           return;
         usedUnibuilds[unibuild.id] = unibuild;
-        if (unibuild.name === 'main') {
+        if (unibuild.kind === 'main') {
           // Only track real packages, not plugin pseudo-packages.
           self.usedPackages[unibuild.pkg.name] = true;
         }
@@ -2148,7 +2148,7 @@ exports.buildJsImage = function (options) {
   var packageSource = new PackageSource(options.catalog);
 
   packageSource.initFromOptions(options.name, {
-    archName: "plugin",
+    kind: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],

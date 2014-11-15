@@ -25,7 +25,7 @@ var rejectBadPath = function (p) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
-// - name [required]
+// - kind [required] (main/plugin/app)
 // - arch [required]
 // - uses
 // - implies
@@ -41,7 +41,7 @@ var Unibuild = function (isopack, options) {
   options = options || {};
   self.pkg = isopack;
 
-  self.name = options.name;
+  self.kind = options.kind;
   self.arch = options.arch;
 
   self.uses = options.uses;
@@ -59,7 +59,7 @@ var Unibuild = function (isopack, options) {
   // to keep track of Unibuilds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
-  self.id = self.pkg.name + "." + self.name + "@" + self.arch + "#" +
+  self.id = self.pkg.name + "." + self.kind + "@" + self.arch + "#" +
     (nextBuildId ++);
 
   // Prelink output.
@@ -677,7 +677,9 @@ _.extend(Isopack.prototype, {
       });
 
       self.unibuilds.push(new Unibuild(self, {
-        name: unibuildMeta.name,
+        // At some point we stopped writing 'kind's to the metadata file, so
+        // default to main.
+        kind: unibuildMeta.kind || 'main',
         arch: unibuildMeta.arch,
         uses: unibuildJson.uses,
         implies: unibuildJson.implies,
@@ -784,6 +786,7 @@ _.extend(Isopack.prototype, {
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
         mainJson.builds.push({
+          kind: unibuild.kind,
           arch: unibuild.arch,
           path: unibuildJsonFile
         });

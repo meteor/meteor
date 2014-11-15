@@ -99,7 +99,7 @@ var mapWhereToArch = function (where) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
-// - name [required]
+// - kind [required]
 // - arch [required]
 // - uses
 // - implies
@@ -114,9 +114,9 @@ var SourceArch = function (pkg, options) {
   options = options || {};
   self.pkg = pkg;
 
-  // Name for this sourceArchitecture. At the moment, there are really two
-  // options -- main and plugin. We use these in linking
-  self.archName = options.name;
+  // Kind of this sourceArchitecture. At the moment, there are really three
+  // options -- package, plugin, and app. We use these in linking.
+  self.kind = options.kind;
 
   // The architecture (fully or partially qualified) that can use this
   // unibuild.
@@ -374,7 +374,7 @@ _.extend(PackageSource.prototype, {
     });
 
     var sourceArch = new SourceArch(self, {
-      name: options.archName,
+      kind: options.kind,
       arch: "os",
       uses: _.map(options.use, utils.splitConstraint),
       getSourcesFunc: function () { return sources; },
@@ -1466,7 +1466,7 @@ _.extend(PackageSource.prototype, {
       watchSet.addFile(packageJsPath, packageJsHash);
 
       self.architectures.push(new SourceArch(self, {
-        name: "main",
+        kind: "main",
         arch: arch,
         uses: uses[arch],
         implies: implies[arch],
@@ -1542,7 +1542,7 @@ _.extend(PackageSource.prototype, {
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {
-        name: arch,
+        kind: 'app',
         arch: arch,
         uses: uses
       });

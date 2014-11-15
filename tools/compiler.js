@@ -756,7 +756,7 @@ var compileUnibuild = function (options) {
     // XXX: If we change this, we can get rid of source arch names!
     combinedServePath: isApp ? null :
       "/packages/" + inputSourceArch.pkg.name +
-      (inputSourceArch.archName === "main" ? "" : (":" + inputSourceArch.archName)) + ".js",
+      (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) + ".js",
     name: inputSourceArch.pkg.name || null,
     declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
     jsAnalyze: jsAnalyze
@@ -796,7 +796,7 @@ var compileUnibuild = function (options) {
 
   // *** Output unibuild object
   isopk.addUnibuild({
-    name: inputSourceArch.archName,
+    kind: inputSourceArch.kind,
     arch: arch,
     uses: inputSourceArch.uses,
     implies: inputSourceArch.implies,
