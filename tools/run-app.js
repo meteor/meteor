@@ -402,8 +402,16 @@ _.extend(AppRunner.prototype, {
     // Cache the server target because the server will not change inside
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
+
     var bundleApp = function () {
       if (! firstRun) {
+        // If this isn't the first time we've run, we need to reset the project
+        // context since everything we have cached may have changed.
+        // XXX #3006 We can try to be a little less conservative here:
+        // - Keep around some in-memory Isopack objects and validate them
+        //   by their buildinfo (we used to call this Soft Refresh).
+        // - Don't re-build the whole local catalog if we know which ones
+        //   have changed.
         self.projectContext.reset();
         var messages = buildmessage.capture(function () {
           self.projectContext.readProjectMetadata();
