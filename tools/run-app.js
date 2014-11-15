@@ -388,64 +388,8 @@ _.extend(AppRunner.prototype, {
 
     Console.enableProgressDisplay(true);
 
-    if (!options.firstRun) {
-      console.log("XXX #3006 RESET THE WORLD")
-      // XXX #3006 why is there a separate firstRun part below?
-      process.exit(123)
-      // We need to reset our workspace for subsequent builds. Specifically, we
-      // need to tell the catalog to reload local package sources (since their
-      // dependencies may have changed), and then we should recompute the
-      // project constraints.
-      //
-      // XXX This is almost certainly both overly conservative and not
-      // conservative enough. On the one hand,
-      // catalog.complete.refreshLocalPackages is a slow operation and it's
-      // likely that the existing buildinfo/watcher code with some extensions
-      // can detect relevant changes more precisely. On the other hand, we DON'T
-      // use this blunt hammer when only the client code has changed, which
-      // might not be good enough.  We need to take a thorough pass over all the
-      // package build/metadata caching mechanisms and come up with a unified
-      // system that flushes caches only when actually necessary.
-      var refreshWatchSet = new watch.WatchSet;
-      var refreshMessages = buildmessage.capture(function () {
-        try {
-          // XXX #3006 do this better
-          catalog.complete.refreshLocalPackages({
-            watchSet: refreshWatchSet
-          });
-        } catch (err) {
-          // XXX: Should we throw here?
-          // XXX: Should we remove this entirely?
-          Console.debug("Ignoring error updating package catalog", err);
-        }
-      });
-      if (refreshMessages.hasMessages()) {
-        return {
-          outcome: 'bundle-fail',
-          // XXX #3006 I changed this format
-          bundleResult: {
-            errors: refreshMessages,
-            serverWatchSet: refreshWatchSet
-          }
-        };
-      }
-      // XXX #3006 this is gone. What it did was the pre-constraint-solver part,
-      // and made sure to preserve the in-memory packageMap as previousSolution
-      // in case you hadn't written it to disk.
-      project.reload();
-    }
-
     runLog.clearLog();
     self.proxy.setMode("hold");
-
-    // Check to make sure we're running the right version of Meteor.
-    var wrongRelease = ! release.usingRightReleaseForApp(self.projectContext);
-    if (wrongRelease) {
-      return {
-        outcome: 'wrong-release',
-        displayReleaseNeeded: self.projectContext.releaseFile.displayReleaseName
-      };
-    }
 
     // Bundle up the app
     var bundlePath = self.projectContext.getProjectLocalDirectory('build');
@@ -458,11 +402,12 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
     var bundleApp = function () {
-      if (options.firstRun) {
-        // XXX #3006 options.firstRun is probably wrong here because we also
-        // want to do reloady things when we rebuild just the CSS
+      // XXX #3006 options.firstRun is probably wrong here because we also
+      // want to do reloady things when we rebuild just the CSS
+      if (!options.firstRun) {
+        self.projectContext.reset();
         var messages = buildmessage.capture(function () {
-          self.projectContext.prepareProjectForBuild();
+          self.projectContext.readProjectMetadata();
         });
         if (messages.hasMessages()) {
           return {
@@ -473,11 +418,31 @@ _.extend(AppRunner.prototype, {
             }
           };
         }
-      } else {
-        // Pick up changes to packages. (Soft refresh, so we still check to see
-        // if they have changed.)
-        // XXX #3006 re-implement "soft refresh" by refreshing some cache or
-        // other.
+      }
+
+      // Check to make sure we're running the right version of Meteor.
+      var wrongRelease = ! release.usingRightReleaseForApp(self.projectContext);
+      if (wrongRelease) {
+        return {
+          runResult: {
+            outcome: 'wrong-release',
+            displayReleaseNeeded:
+              self.projectContext.releaseFile.displayReleaseName
+          }
+        };
+      }
+
+      messages = buildmessage.capture(function () {
+        self.projectContext.prepareProjectForBuild();
+      });
+      if (messages.hasMessages()) {
+        return {
+          runResult: {
+            outcome: 'bundle-fail',
+            errors: messages,
+            watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
+          }
+        };
       }
 
       var bundleResult = bundler.bundle({

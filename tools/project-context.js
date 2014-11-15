@@ -25,29 +25,38 @@ exports.ProjectContext = function (options) {
   if (!options.tropohouse)
     throw Error("missing tropohouse!");
 
-  self.projectDir = options.projectDir;
-  self.tropohouse = options.tropohouse;
-
-  self._serverArchitectures = options.serverArchitectures || [];
-  // We always need to download host versions of packages, at least for plugins.
-  self._serverArchitectures.push(archinfo.host());
-  self._serverArchitectures = _.uniq(self._serverArchitectures);
-
-  // Initialized by readProjectMetadata.
-  self.releaseFile = null;
-  self.projectConstraintsFile = null;
-  self.packageMapFile = null;
-  self.platformList = null;
-  self.cordovaPluginsFile = null;
-  self.appIdentifier = null;
-  self.finishedUpgraders = null;
-
-  // Initialized by _resolveConstraints.
-  self.packageMap = null;
-  self.isopackCache = null;
+  self.originalOptions = options;
+  self.reset();
 };
 
 _.extend(exports.ProjectContext.prototype, {
+  reset: function () {
+    var self = this;
+    var options = self.originalOptions;
+
+    self.projectDir = options.projectDir;
+    self.tropohouse = options.tropohouse;
+
+    self._serverArchitectures = options.serverArchitectures || [];
+    // We always need to download host versions of packages, at least for
+    // plugins.
+    self._serverArchitectures.push(archinfo.host());
+    self._serverArchitectures = _.uniq(self._serverArchitectures);
+
+    // Initialized by readProjectMetadata.
+    self.releaseFile = null;
+    self.projectConstraintsFile = null;
+    self.packageMapFile = null;
+    self.platformList = null;
+    self.cordovaPluginsFile = null;
+    self.appIdentifier = null;
+    self.finishedUpgraders = null;
+
+    // Initialized by _resolveConstraints.
+    self.packageMap = null;
+    self.isopackCache = null;
+  },
+
   prepareProjectForBuild: function () {
     var self = this;
     buildmessage.assertInCapture();
@@ -154,7 +163,7 @@ _.extend(exports.ProjectContext.prototype, {
       [self.releaseFile, self.projectConstraintsFile, self.packageMapFile,
        self.platformList, self.cordovaPluginsFile],
       function (metadataFile) {
-        watchSet.merge(metadataFile.watchSet);
+        metadataFile && watchSet.merge(metadataFile.watchSet);
       });
     return watchSet;
   },
