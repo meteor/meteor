@@ -438,7 +438,7 @@ var ensureCordovaPlatforms = function (projectContext) {
   return true;
 };
 
-var targetsToPlatforms = function (targets) {
+var targetsToPlatforms = cordova.targetsToPlatforms = function (targets) {
   targets = _.uniq(targets);
 
   var platforms = [];

@@ -260,8 +260,10 @@ function doRunCommand (options) {
       }
 
       cordova.verboseLog('Will compile mobile builds');
-
       // Run the constraint solver and build local packages.
+      // XXX This code should be part of the main runner loop so that we can
+      //     wait on a fix, just like in the non-Cordova case!  (That would also
+      //     move the build after the proxy listen.)
       main.captureAndExit("=> Errors while initializing project:", function () {
         projectContext.prepareProjectForBuild();
       });
@@ -1290,6 +1292,9 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
+  cordova.setVerboseness(options.verbose);
+  Console.setVerbose(options.verbose);
+
   try {
     var parsedUrl = utils.parseUrl(options.port);
   } catch (err) {
@@ -1364,35 +1369,36 @@ main.registerCommand({
   // disk, so projectContext.reset won't make us forget anything.
 
   var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
-  var mobilePlatforms = [];
-
+  var mobileTargets = [];
   _.each(mobileOptions, function (option) {
     if (options[option])
-      mobilePlatforms.push(option);
+      mobileTargets.push(option);
   });
 
-  if (! _.isEmpty(mobilePlatforms)) {
+  if (! _.isEmpty(mobileTargets)) {
     var runners = [];
-    // XXX #3006 make sure this works
     // For this release; we won't force-enable the httpProxy
     if (false) { //!options.httpProxyPort) {
       console.log('Forcing http proxy on port 3002 for mobile');
       options.httpProxyPort = '3002';
     }
 
-    var localPath = path.join(testRunnerAppDir, '.meteor', 'local');
+    var platforms = cordova.targetsToPlatforms(mobileTargets);
+    projectContext.platformList.write(platforms);
 
-    var platforms =
-      _.map(mobilePlatforms, function (t) { return t.replace(/-device$/, ''); });
-
-    platforms = _.uniq(platforms);
-
-    project.addCordovaPlatforms(platforms);
+    // Run the constraint solver and build local packages.
+    // XXX This code should be part of the main runner loop so that we can
+    //     wait on a fix, just like in the non-Cordova case!  (That would also
+    //     move the build after the proxy listen.)
+    main.captureAndExit("=> Errors while initializing project:", function () {
+      projectContext.prepareProjectForBuild();
+    });
 
     try {
-      cordova.buildTargets(localPath, mobilePlatforms,
+      var appName = path.basename(projectContext.projectDir);
+      cordova.buildTargets(projectContext, mobileTargets,
         _.extend({}, options, {
-          appName: path.basename(testRunnerAppDir),
+          appName: appName,
           debug: ! options.production,
           // Default to localhost for mobile builds.
           host: parsedMobileServer.host,
@@ -1400,10 +1406,14 @@ main.registerCommand({
           port: parsedMobileServer.port
         }));
       runners = runners.concat(cordova.buildPlatformRunners(
-        localPath, mobilePlatforms, options));
+        projectContext, mobileTargets, options));
     } catch (err) {
-      Console.stderr.write(err.message + '\n');
-      return 1;
+      if (err instanceof main.ExitWithCode) {
+        throw err;
+      } else {
+        Console.printError(err, 'Error while testing for mobile platforms');
+        return 1;
+      }
     }
     options.extraRunners = runners;
   }
