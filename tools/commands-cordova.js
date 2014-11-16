@@ -17,10 +17,7 @@ var processes = require('./processes.js');
 var catalog = require('./catalog.js');
 var release = require('./release.js');
 
-// XXX #3006 generally make sure that 'localPath' is gone
-
 // XXX hard-coded the use of default tropohouse
-// XXX #3006 use the tropohouse from projectContext
 var tropo = tropohouse.default;
 var WEB_ARCH_NAME = "web.cordova";
 
@@ -78,8 +75,6 @@ var cordova = exports;
 //   - host
 //   - port
 //   - skipIfNoSDK: don't throw an error when SDK is not installed
-// XXX #3006 Ensure that all callers are updated to use projectContext
-// instead of localPath.
 cordova.buildTargets = function (projectContext, targets, options) {
   var platforms = targetsToPlatforms(targets);
 
@@ -345,7 +340,6 @@ var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
 
 // options
 //  - debug
-// XXX #3006 make sure all callers pass projectContext
 var getBundle = function (projectContext, bundlePath, options) {
   var bundler = require(path.join(__dirname, 'bundler.js'));
 
@@ -371,7 +365,6 @@ var getBundle = function (projectContext, bundlePath, options) {
 };
 
 // Creates a Cordova project if necessary.
-// XXX #3006 make sure all callers pass projectContext
 var ensureCordovaProject = function (projectContext, appName) {
   verboseLog('Ensuring the cordova build project');
   var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
@@ -401,7 +394,6 @@ var ensureCordovaProject = function (projectContext, appName) {
 
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
-// XXX #3006 Ensure all callers are updated to take projectContext.
 var ensureCordovaPlatforms = function (projectContext) {
   verboseLog('Ensuring that platforms in cordova build project are in sync');
   var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
