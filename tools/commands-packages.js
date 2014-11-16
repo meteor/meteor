@@ -2893,16 +2893,10 @@ main.registerCommand({
 }, function (options) {
   var projectContextModule = require('./project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir,
-    tropohouse: tropohouse.default
+    projectDir: options.appDir
   });
 
-  var messages = buildmessage.capture(function () {
+  main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
-  if (messages.hasMessages()) {
-    Console.error("=> Errors while initializing project:");
-    Console.printMessages(messages);
-    return 1;
-  }
 });

@@ -223,20 +223,14 @@ function doRunCommand (options) {
   options.httpProxyPort = options['http-proxy-port'];
 
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir,
-    tropohouse: tropohouse.default
+    projectDir: options.appDir
   });
 
-  var messages = buildmessage.capture(function () {
+  main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we'll wait to do the full build
     // preparation until after we've started listening on the proxy, etc.
     projectContext.readProjectMetadata();
   });
-  if (messages.hasMessages()) {
-    Console.error("=> Errors while initializing project:");
-    Console.printMessages(messages);
-    return 1;
-  }
 
   if (release.explicit) {
     if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
@@ -268,17 +262,9 @@ function doRunCommand (options) {
       cordova.verboseLog('Will compile mobile builds');
 
       // Run the constraint solver and build local packages.
-      messages = buildmessage.capture(function () {
+      main.captureAndExit("=> Errors while initializing project:", function () {
         projectContext.prepareProjectForBuild();
       });
-      if (messages.hasMessages()) {
-        // XXX This code should be part of the main runner loop so that we can
-        // wait on a fix, just like in the non-Cordova case!  (That would also
-        // move the build after the proxy listen.)
-        Console.error("=> Errors while initializing project:");
-        Console.printMessages(messages);
-        return 1;
-      }
 
       var appName = path.basename(projectContext.projectDir);
       cordova.buildTargets(projectContext, options.args, _.extend({
@@ -580,11 +566,10 @@ main.registerCommand({
   // XXX #3006 Make sure that when we reimplement showPackageChanges, they
   // don't show here.
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: appPath,
-    tropohouse: tropohouse.default
+    projectDir: appPath
   });
 
-  var messages = buildmessage.capture({ title: 'creating your project' }, function () {
+  main.captureAndExit("=> Errors while creating your project", function () {
     projectContext.readProjectMetadata();
     if (buildmessage.jobHasMessages())
       return;
@@ -601,10 +586,6 @@ main.registerCommand({
 
     projectContext.prepareProjectForBuild();
   });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
 
   {
     var message = appPathAsEntered + ": created";
@@ -706,18 +687,12 @@ var buildCommand = function (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    tropohouse: tropohouse.default,
     serverArchitectures: _.uniq([bundleArch, archinfo.host()])
   });
 
-  var messages = buildmessage.capture(function () {
+  main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
-  if (messages.hasMessages()) {
-    Console.error("=> Errors while initializing project:");
-    Console.printMessages(messages);
-    return 1;
-  }
 
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,

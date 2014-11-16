@@ -2897,34 +2897,45 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  var platforms = options.args;
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    // We're just reading metadata here; we don't need to resolve constraints.
+    projectContext.readProjectMetadata();
+  });
 
-  _.each(platforms, function (platform) {
+  var platforms = projectContext.platformList.getPlatforms();
+  var changed = false;
+  _.each(options.args, function (platform) {
     // explain why we can't remove server or browser platforms
-    if (_.contains(project.getDefaultPlatforms(), platform)) {
+    if (_.contains(projectContextModule.PlatformList.DEFAULT_PLATFORMS,
+                   platform)) {
       Console.stdout.write(platform + ": cannot remove platform " +
                            "in this version of Meteor\n");
       return;
     }
 
-    if (_.contains(project.getPlatforms(), platform)) {
+    if (_.contains(platforms, platform)) {
       Console.stdout.write(platform + ": removed platform\n");
+      platforms = _.without(platforms, platform);
+      changed = true;
       return;
     }
 
     Console.stdout.write(platform + ": platform is not in this project\n");
   });
-  project.removeCordovaPlatforms(platforms);
+
+  if (! changed) {
+    return;
+  }
+  projectContext.platformList.write(platforms);
 
   if (platforms.length) {
-    var localPath = path.join(options.appDir, '.meteor', 'local');
-    files.mkdir_p(localPath);
-
-    var appName = path.basename(options.appDir);
-    ensureCordovaProject(localPath, appName);
-    ensureCordovaPlatforms(localPath);
+    var appName = path.basename(projectContext.projectDir);
+    ensureCordovaProject(projectContext, appName);
+    ensureCordovaPlatforms(projectContext);
   }
-
 });
 
 main.registerCommand({
@@ -2934,14 +2945,13 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir,
-    tropohouse: tropohouse.default
+    projectDir: options.appDir
   });
-
-  var messages = buildmessage.capture(function () {
+  main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here; we don't need to resolve constraints.
     projectContext.readProjectMetadata();
   });
+
   var platforms = projectContext.platformList.getPlatforms();
 
   Console.stdout.write(platforms.join("\n"));

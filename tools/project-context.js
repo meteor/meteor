@@ -13,6 +13,7 @@ var isopackCacheModule = require('./isopack-cache.js');
 var isopackets = require('./isopackets.js');
 var packageMapModule = require('./package-map.js');
 var release = require('./release.js');
+var tropohouse = require('./tropohouse.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
 
@@ -22,8 +23,6 @@ exports.ProjectContext = function (options) {
   var self = this;
   if (!options.projectDir)
     throw Error("missing projectDir!");
-  if (!options.tropohouse)
-    throw Error("missing tropohouse!");
 
   self.originalOptions = options;
   self.reset();
@@ -35,7 +34,7 @@ _.extend(exports.ProjectContext.prototype, {
     var options = self.originalOptions;
 
     self.projectDir = options.projectDir;
-    self.tropohouse = options.tropohouse;
+    self.tropohouse = options.tropohouse || tropohouse.default;
 
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
@@ -572,10 +571,9 @@ _.extend(exports.PackageMapFile.prototype, {
 // spacing here.
 exports.PlatformList = function (options) {
   var self = this;
-  buildmessage.assertInCapture();
 
   self.filename = path.join(options.projectDir, '.meteor', 'platforms');
-  self.watchSet = new watch.WatchSet;
+  self.watchSet = null;
   self._platforms = null;
 
   self._readFile();
@@ -587,8 +585,9 @@ exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
 _.extend(exports.PlatformList.prototype, {
   _readFile: function () {
     var self = this;
-    buildmessage.assertInCapture();
 
+    // Reset the WatchSet.
+    self.watchSet = new watch.WatchSet;
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
 
     var platforms = contents ? files.splitBufferToLines(contents) : [];
@@ -604,21 +603,22 @@ _.extend(exports.PlatformList.prototype, {
       platforms = _.uniq(platforms.concat(
         exports.PlatformList.DEFAULT_PLATFORMS));
       platforms.sort();
-      self._platforms = platforms;
-      self.write();
-      self._platforms = null;
-      // Reset and start over.
-      self.watchSet = new watch.WatchSet;
-      self._readFile();
+      // Write the platforms to disk, which automatically calls this function
+      // recursively and re-reads them.
+      self.write(platforms);
       return;
     }
 
     self._platforms = platforms;
   },
 
-  write: function () {
+  // Replaces the current platform file with the given list and resets this
+  // object (and its WatchSet) to track the new value.
+  write: function (platforms) {
     var self = this;
-    files.writeFileAtomically(self.filename, self._platforms.join('\n') + '\n');
+    self._platforms = null;
+    files.writeFileAtomically(self.filename, platforms.join('\n') + '\n');
+    self._readFile();
   },
 
   getPlatforms: function () {

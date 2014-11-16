@@ -243,6 +243,20 @@ main.registerCommand = function (options, func) {
   target[nameParts[0]] = new Command(options);
 };
 
+main.captureAndExit = function (header, title, f) {
+  var messages;
+  if (f) {
+    messages = buildmessage.capture({ title: title }, f);
+  } else {
+    messages = buildmessage.capture(title);  // title is really f
+  }
+  if (messages.hasMessages()) {
+    Console.error(header);
+    Console.printMessages(messages);
+    throw new main.ExitWithCode(1);
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Load all the commands
 ///////////////////////////////////////////////////////////////////////////////
