@@ -53,6 +53,13 @@ _.extend(exports.ProjectContext.prototype, {
     self._serverArchitectures.push(archinfo.host());
     self._serverArchitectures = _.uniq(self._serverArchitectures);
 
+    // test-packages overrides this to load local packages from your real app
+    // instead of from test-runner-app.
+    self._projectDirForLocalPackages = options.projectDirForLocalPackages ||
+      options.projectDir;
+    self._explicitlyAddedLocalPackageDirs =
+      options.explicitlyAddedLocalPackageDirs;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -285,7 +292,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   _localPackageSearchDirs: function () {
     var self = this;
-    var searchDirs = [path.join(self.projectDir, 'packages')];
+    var searchDirs = [path.join(self._projectDirForLocalPackages, 'packages')];
 
     if (process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
@@ -320,7 +327,10 @@ _.extend(exports.ProjectContext.prototype, {
 
     var searchDirs = self._localPackageSearchDirs();
     buildmessage.enterJob({ title: "scanning local packages" }, function () {
-      self.projectCatalog.initialize({ localPackageSearchDirs: searchDirs });
+      self.projectCatalog.initialize({
+        localPackageSearchDirs: searchDirs,
+        explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
+      });
       if (buildmessage.jobHasMessages()) {
         self.projectCatalog = null;
         self.localCatalog = null;
@@ -438,15 +448,15 @@ exports.ProjectConstraintsFile = function (options) {
   buildmessage.assertInCapture();
 
   self.filename = path.join(options.projectDir, '.meteor', 'packages');
-  self.watchSet = new watch.WatchSet;
-  // Maps from package name to parsed constraint.
-  self._constraints = null;
+  self.watchSet = null;
   // List of each line in the file; object with keys:
   // - leadingSpace (string of spaces before the constraint)
   // - constraint (as returned by utils.parseConstraint)
   // - trailingSpaceAndComment (string of spaces/comments after the constraint)
   // This allows us to rewrite the file preserving comments.
   self._constraintLines = null;
+  // Maps from package name to entry in _constraintLines.
+  self._constraintMap = null;
   self._readFile();
 };
 
@@ -455,7 +465,8 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    self._constraints = {};
+    self.watchSet = new watch.WatchSet;
+    self._constraintMap = {};
     self._constraintLines = [];
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
 
@@ -495,7 +506,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       }
       if (! lineRecord.constraint)
         return;  // recover by ignoring
-      if (_.has(self._constraints, lineRecord.constraint.name)) {
+      if (_.has(self._constraintMap, lineRecord.constraint.name)) {
         buildmessage.error(
           "Package name appears twice: " + lineRecord.constraint.name, {
             // XXX should this be relative?
@@ -503,16 +514,41 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
           });
         return;  // recover by ignoring
       }
-      self._constraints[lineRecord.constraint.name] = lineRecord.constraint;
+      self._constraintMap[lineRecord.constraint.name] = lineRecord;
     });
+  },
+
+  _write: function () {
+    var self = this;
+    var lines = _.map(self._constraintLines, function (lineRecord) {
+      var lineParts = [lineRecord.leadingSpace];
+      if (lineRecord.constraint) {
+        lineParts.push(lineRecord.constraint.name);
+        if (lineRecord.constraint.constraintString) {
+          lineParts.push('@', lineRecord.constraint.constraintString);
+        }
+      }
+      lineParts.push(lineRecord.trailingSpaceAndComment);
+      return lineParts.join('');
+    });
+    files.writeFileAtomically(self.filename, lines.join('\n') + '\n');
+    var messages = buildmessage.capture(
+      { title: 're-reading .meteor/packages' },
+      function () {
+        self._readFile();
+      });
+    // We shouldn't choke on something we just wrote!
+    if (messages.hasMessages())
+      throw Error("wrote bad .meteor/packages: " + messages.formatMessages());
   },
 
   // Iterates over all constraints, in the format returned by
   // utils.parseConstraint.
   eachConstraint: function (iterator) {
     var self = this;
-    _.each(self._constraints, function (constraint) {
-      iterator(constraint);
+    _.each(self._constraintLines, function (lineRecord) {
+      if (lineRecord.constraint)
+        iterator(lineRecord.constraint);
     });
   },
 
@@ -520,9 +556,37 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   // null.
   getConstraint: function (name) {
     var self = this;
-    if (_.has(self._constraints, name))
-      return self._constraints[name];
+    if (_.has(self._constraintMap, name))
+      return self._constraintMap[name].constraint;
     return null;
+  },
+
+  addConstraints: function (constraintsToAdd) {
+    var self = this;
+    var changed = false;
+    _.each(constraintsToAdd, function (constraintToAdd) {
+      var lineRecord;
+      if (! _.has(self._constraintMap, constraintToAdd.name)) {
+        lineRecord = {
+          leadingSpace: '',
+          constraint: constraintToAdd,
+          trailingSpaceAndComment: ''
+        };
+        self._constraintLines.push(lineRecord);
+        self._constraintMap[constraintToAdd.name] = lineRecord;
+        changed = true;
+        return;
+      }
+      lineRecord = self._constraintMap[constraintToAdd.name];
+      if (_.isEqual(constraintToAdd, lineRecord.constraint))
+        return;  // nothing changed
+      lineRecord.constraint = constraintToAdd;
+      changed = true;
+    });
+
+    if (! changed)
+      return;
+    self._write();
   }
 });
 

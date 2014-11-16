@@ -25,17 +25,15 @@ var LocalCatalog = function (options) {
   // versionRecord} object.
   self.packages = {};
 
-  // We use the initialization design pattern because it makes it easier to use
-  // both of our catalogs as singletons.
   self.initialized = false;
   self.containingCatalog = options.containingCatalog || self;
 
     // Local directories to search for package source trees
   self.localPackageSearchDirs = null;
 
-  // Packagedirs specified by addLocalPackage: added explicitly through a
-  // directory. We mainly use this to allow the user to run test-packages
-  // against a package in a specific directory.
+  // Package source trees added explicitly through a directory (not through a
+  // parent search directory). We mainly use this to allow the user to run
+  // test-packages against a package in a specific directory.
   self.explicitlyAddedLocalPackageDirs = [];
 
   // All packages found either by localPackageSearchDirs or
@@ -74,6 +72,9 @@ _.extend(LocalCatalog.prototype, {
   //    then we will ignore all versions of 'foo' that we find through the
   //    package server. Directories that don't exist (or paths that aren't
   //    directories) will be silently ignored.
+  //  - explicitlyAddedLocalPackageDirs: an array of paths which THEMSELVES
+  //    are package source trees.  Takes precedence over packages found
+  //    via localPackageSearchDirs.
   initialize: function (options) {
     var self = this;
     buildmessage.assertInCapture();
@@ -84,8 +85,12 @@ _.extend(LocalCatalog.prototype, {
       options.localPackageSearchDirs, function (p) {
         return path.resolve(p);
       });
+    self.explicitlyAddedLocalPackageDirs = _.map(
+      options.explicitlyAddedLocalPackageDirs, function (p) {
+        return path.resolve(p);
+      });
 
-    self._recomputeEffectiveLocalPackages();
+    self._computeEffectiveLocalPackages();
     self._loadLocalPackages();
     self.initialized = true;
   },
@@ -154,44 +159,70 @@ _.extend(LocalCatalog.prototype, {
     return self.packages[name].versionRecord;
   },
 
+  getVersionBySourceRoot: function (sourceRoot) {
+    var self = this;
+    var package = _.find(self.packages, function (p) {
+      return p.packageSource.sourceRoot === sourceRoot;
+    });
+    if (! package)
+      return null;
+    return package.versionRecord;
+  },
+
   // Compute self.effectiveLocalPackageDirs from self.localPackageSearchDirs and
   // self.explicitlyAddedLocalPackageDirs.
-  _recomputeEffectiveLocalPackages: function () {
+  _computeEffectiveLocalPackages: function () {
     var self = this;
-    self.effectiveLocalPackageDirs = _.clone(
-      self.explicitlyAddedLocalPackageDirs);
+    buildmessage.assertInCapture();
 
-    _.each(self.localPackageSearchDirs, function (searchDir) {
-      var possiblePackageDirs = watch.readAndWatchDirectory(
-        self.packageLocationWatchSet, {
-          absPath: searchDir,
-          include: [/\/$/]
-        });
-      // Not a directory? Ignore.
-      if (possiblePackageDirs === null)
-        return;
+    self.effectiveLocalPackageDirs = [];
 
-      _.each(possiblePackageDirs, function (subdir) {
-        // readAndWatchDirectory adds a slash to the end of directory names to
-        // differentiate them from filenames. Remove it.
-        subdir = subdir.substr(0, subdir.length - 1);
-        var absPackageDir = path.join(searchDir, subdir);
-
-        // Consider a directory to be a package source tree if it contains
-        // 'package.js'. (We used to support isopacks in localPackageSearchDirs,
-        // but no longer.)
+    buildmessage.enterJob("looking for packages", function () {
+      _.each(self.explicitlyAddedLocalPackageDirs, function (explicitDir) {
         var packageJs = watch.readAndWatchFile(
-          self.packageLocationWatchSet,
-          path.join(absPackageDir, 'package.js'));
-        if (packageJs !== null) {
-          // Let earlier package directories override later package
-          // directories.
-
-          // We don't know the name of the package, so we can't deal with
-          // duplicates yet. We are going to have to rely on the fact that we
-          // are putting these in in order, to be processed in order.
-          self.effectiveLocalPackageDirs.push(absPackageDir);
+          self.packageLocationWatchSet, path.join(explicitDir, 'package.js'));
+        // We asked specifically for this directory, but it has no package!
+        if (packageJs === null) {
+          buildmessage.error("package has no package.js file", {
+            file: explicitDir
+          });
+          return;  // recover by ignoring
         }
+        self.effectiveLocalPackageDirs.push(explicitDir);
+      });
+
+      _.each(self.localPackageSearchDirs, function (searchDir) {
+        var possiblePackageDirs = watch.readAndWatchDirectory(
+          self.packageLocationWatchSet, {
+            absPath: searchDir,
+            include: [/\/$/]
+          });
+        // Not a directory? Ignore.
+        if (possiblePackageDirs === null)
+          return;
+
+        _.each(possiblePackageDirs, function (subdir) {
+          // readAndWatchDirectory adds a slash to the end of directory names to
+          // differentiate them from filenames. Remove it.
+          subdir = subdir.substr(0, subdir.length - 1);
+          var absPackageDir = path.join(searchDir, subdir);
+
+          // Consider a directory to be a package source tree if it contains
+          // 'package.js'. (We used to support isopacks in
+          // localPackageSearchDirs, but no longer.)
+          var packageJs = watch.readAndWatchFile(
+            self.packageLocationWatchSet,
+            path.join(absPackageDir, 'package.js'));
+          if (packageJs !== null) {
+            // Let earlier package directories override later package
+            // directories.
+
+            // We don't know the name of the package, so we can't deal with
+            // duplicates yet. We are going to have to rely on the fact that we
+            // are putting these in in order, to be processed in order.
+            self.effectiveLocalPackageDirs.push(absPackageDir);
+          }
+        });
       });
     });
   },
@@ -289,30 +320,6 @@ _.extend(LocalCatalog.prototype, {
       function (dir) {
         initSourceFromDir(dir);
       });
-  },
-
-  // Add a local package to the catalog. `name` is the name to use for
-  // the package and `directory` is the directory that contains the
-  // source tree for the package.
-  //
-  // If a package named `name` exists on the package server, it will
-  // be overridden (it will be as if that package doesn't exist on the
-  // package server at all). And for now, it's an error to call this
-  // function twice with the same `name`.
-  // XXX #3006 rewrite this
-  addLocalPackage: function (directory) {
-    var self = this;
-    buildmessage.assertInCapture();
-    self._requireInitialized();
-
-    var resolvedPath = path.resolve(directory);
-    self.explicitlyAddedLocalPackageDirs.push(resolvedPath);
-
-    // If we were making lots of calls to addLocalPackage, we would
-    // want to coalesce the calls to refresh somehow, but I don't
-    // think we'll actually be doing that so this should be fine.
-    // #CallingRefreshEveryTimeLocalPackagesChange
-    self.refresh();
   },
 
   getPackageSource: function (name) {

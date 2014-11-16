@@ -129,11 +129,6 @@ _.extend(LayeredCatalog.prototype, {
     self.otherCatalog = remote;
   },
 
-  addLocalPackage: function (directory) {
-    var self = this;
-    self.localCatalog.addLocalPackage(directory);
-  },
-
   getLatestVersion: function (name) {
     var self = this;
     return self._returnFirst("getLatestVersion", arguments, ACCEPT_NON_EMPTY);
