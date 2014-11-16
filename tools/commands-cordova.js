@@ -2932,8 +2932,17 @@ main.registerCommand({
   requiresApp: true,
   pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
-}, function () {
-  var platforms = project.getPlatforms();
+}, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    tropohouse: tropohouse.default
+  });
+
+  var messages = buildmessage.capture(function () {
+    // We're just reading metadata here; we don't need to resolve constraints.
+    projectContext.readProjectMetadata();
+  });
+  var platforms = projectContext.platformList.getPlatforms();
 
   Console.stdout.write(platforms.join("\n"));
 });
