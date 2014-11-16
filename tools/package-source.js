@@ -1139,7 +1139,7 @@ _.extend(PackageSource.prototype, {
             // Hack: Alias certain packages that we need to replace
             if (utils.startsWith(name, 'npm-bcrypt') ||
                 utils.startsWith(name, 'npm-node-aes-gcm')) {
-              name = 'windows:' + name;
+              name = 'junk:' + name;
             }
 
             try {

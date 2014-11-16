@@ -111,7 +111,7 @@ _.extend(exports.Tropohouse.prototype, {
       }
     }
 
-    _.each(packagesEscaped, function (packageEscaped) {
+    _.each(escapedPackages, function (packageEscaped) {
       var packageDir = path.join(packageRootDir, packageEscaped);
       try {
         var versions = fs.readdirSync(packageDir);

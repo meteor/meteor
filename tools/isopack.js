@@ -558,6 +558,9 @@ _.extend(Isopack.prototype, {
 
         mainJson = convertIsopackFormat(mainJson,
           "unipackage-pre2", currentFormat);
+      } else {
+        throw new Error("Could not find package definition file at: " +
+          unipackageJsonPath);
       }
 
       if (mainJson.format !== "unipackage-pre2") {

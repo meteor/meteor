@@ -422,14 +422,14 @@ main.registerCommand({
     url: pkgVersion.source.url,
     encoding: null
   });
-  var sourcePath = files.mkdtemp(name + '-' +
+  var sourcePath = files.mkdtemp(utils.escapePackageNameForPath(name) + '-' +
                                  versionString + '-source-');
   // XXX check tarballHash!
   files.extractTarGz(sourceTarball, sourcePath);
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
-  var packageDir = path.join(sourcePath, name);
+  var packageDir = path.join(sourcePath, utils.escapePackageNameForPath(name));
 
   if (! fs.existsSync(packageDir)) {
     Console.error('Malformed source tarball');
