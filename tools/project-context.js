@@ -62,6 +62,11 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
+    // Has this already been called? Just return.  (eg, this happens during the
+    // first build in AppRunner if Cordova already did a build.)
+    if (self.packageMap && self.isopackCache)
+      return;
+
     buildmessage.enterJob('preparing project', function () {
       self.readProjectMetadata();
       if (buildmessage.jobHasMessages())

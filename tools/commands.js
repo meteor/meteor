@@ -222,12 +222,36 @@ function doRunCommand (options) {
 
   options.httpProxyPort = options['http-proxy-port'];
 
-  var runners = [];
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    tropohouse: tropohouse.default
+  });
 
+  var messages = buildmessage.capture(function () {
+    // We're just reading metadata here --- we'll wait to do the full build
+    // preparation until after we've started listening on the proxy, etc.
+    projectContext.readProjectMetadata();
+  });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while initializing project:");
+    Console.printMessages(messages);
+    return 1;
+  }
+
+  if (release.explicit) {
+    if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
+      console.log("=> Using %s as requested (overriding Meteor %s)",
+                  release.current.getDisplayName(),
+                  projectContext.releaseFile.displayReleaseName);
+      console.log();
+    }
+  }
+
+  var runners = [];
   // If additional args were specified, then also start a mobile build.
+  // XXX We should defer this work until after the proxy is listening!
+  //     eg, move it into a CordovaBuildRunner or something.
   if (options.args.length) {
-    // XXX #3006 Support Cordova run with arguments! Also figure out how
-    //           to move this until after starting proxy.
     // will asynchronously start mobile emulators/devices
     try {
       // --clean encapsulates the behavior of once
@@ -242,17 +266,29 @@ function doRunCommand (options) {
       }
 
       cordova.verboseLog('Will compile mobile builds');
-      var appName = path.basename(options.appDir);
-      var localPath = path.join(options.appDir, '.meteor', 'local');
 
-      cordova.buildTargets(localPath, options.args, _.extend({
+      // Run the constraint solver and build local packages.
+      messages = buildmessage.capture(function () {
+        projectContext.prepareProjectForBuild();
+      });
+      if (messages.hasMessages()) {
+        // XXX This code should be part of the main runner loop so that we can
+        // wait on a fix, just like in the non-Cordova case!  (That would also
+        // move the build after the proxy listen.)
+        Console.error("=> Errors while initializing project:");
+        Console.printMessages(messages);
+        return 1;
+      }
+
+      var appName = path.basename(projectContext.projectDir);
+      cordova.buildTargets(projectContext, options.args, _.extend({
         appName: appName,
         debug: ! options.production,
         skipIfNoSDK: false
       }, options, parsedMobileServer));
 
       runners = runners.concat(
-        cordova.buildPlatformRunners(localPath, options.args, options));
+        cordova.buildPlatformRunners(projectContext, options.args, options));
     } catch (err) {
       if (err instanceof main.ExitWithCode) {
         throw err;
@@ -290,31 +326,6 @@ function doRunCommand (options) {
     // It's legit to specify `--app-port host:` and still let the port be
     // randomized.
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
-  }
-
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir,
-    tropohouse: tropohouse.default
-  });
-
-  var messages = buildmessage.capture(function () {
-    // We're just reading metadata here --- we'll wait to do the full build
-    // preparation until after we've started listening on the proxy, etc.
-    projectContext.readProjectMetadata();
-  });
-  if (messages.hasMessages()) {
-    Console.error("=> Errors while initializing project:");
-    Console.printMessages(messages);
-    return 1;
-  }
-
-  if (release.explicit) {
-    if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
-      console.log("=> Using %s as requested (overriding Meteor %s)",
-                  release.current.getDisplayName(),
-                  projectContext.releaseFile.displayReleaseName);
-      console.log();
-    }
   }
 
   // XXX #3006 Does this actually need to be in the foreground?
@@ -715,8 +726,6 @@ var buildCommand = function (options) {
     options.settings = options['mobile-settings'];
   }
 
-  var webArchs = projectContext.platformList.getWebArchs();
-
   var mobilePlatforms = [];
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
@@ -753,11 +762,11 @@ var buildCommand = function (options) {
     try {
       mobilePlatforms =
         cordova.buildTargets(projectContext, mobilePlatforms, _.extend({}, options, {
-        host: parsedMobileServer.host,
-        port: parsedMobileServer.port,
-        protocol: parsedMobileServer.protocol,
-        appName: appName,
-        skipIfNoSDK: true
+          host: parsedMobileServer.host,
+          port: parsedMobileServer.port,
+          protocol: parsedMobileServer.protocol,
+          appName: appName,
+          skipIfNoSDK: true
       }));
     } catch (err) {
       if (err instanceof main.ExitWithCode)

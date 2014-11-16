@@ -6,7 +6,6 @@ var util = require('util');
 var chalk = require('chalk');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
-var project = require('./project.js').project;
 var projectContextModule = require('./project-context.js');
 var Future = require('fibers/future');
 var utils = require('./utils.js');
@@ -135,10 +134,10 @@ cordova.buildTargets = function (projectContext, targets, options) {
   return platforms;
 };
 
-cordova.buildPlatformRunners = function (localPath, platforms, options) {
+cordova.buildPlatformRunners = function (projectContext, platforms, options) {
   var runners = [];
   _.each(platforms, function (platformName) {
-    runners.push(new CordovaRunner(localPath, platformName, options));
+    runners.push(new CordovaRunner(projectContext, platformName, options));
   });
   return runners;
 };
@@ -906,14 +905,31 @@ var platformDisplayName = function (name) {
 };
 
 // This is a runner, that we pass to Runner (run-all.js)
-var CordovaRunner = function (localPath, platformName, options) {
+var CordovaRunner = function (projectContext, platformName, options) {
   var self = this;
 
-  self.localPath = localPath;
+  self.projectContext = projectContext;
   self.platformName = platformName;
   self.options = options;
 
   self.title = 'app on ' + platformDisplayName(platformName);
+
+
+  // OAuth2 packages don't work so well with any mobile platform except the iOS
+  // simulator. Print a warning and direct users to the wiki page for help. (We
+  // do this now instead of in start() so we don't have to worry about
+  // projectContext being asynchronously reset.)
+  if (self.platformName !== "ios" &&
+      self.projectContext.packageMap.getInfo('oauth2')) {
+    Console.warn(
+"\n" +
+"WARNING: It looks like you are using OAuth2 login in your app.\n" +
+"         Meteor's OAuth2 implementation does not currently work with\n" +
+"         mobile apps in local development mode, except in the iOS\n" +
+"         simulator. You can run the iOS simulator with 'meteor run ios'.\n" +
+"         For additional workarounds, see\n" +
+"         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
+  }
 };
 
 _.extend(CordovaRunner.prototype, {
@@ -925,23 +941,6 @@ _.extend(CordovaRunner.prototype, {
       Android.waitForEmulator();
     }
 
-    // OAuth2 packages don't work so well with any mobile platform
-    // except the iOS simulator. Print a warning and direct users to the
-    // wiki page for help.
-    if (self.platformName !== "ios") {
-      var versions = project.getVersions({ dontRunConstraintSolver: true });
-      if (versions.oauth2) {
-        Console.warn(
-"\n" +
-"WARNING: It looks like you are using OAuth2 login in your app.\n" +
-"         Meteor's OAuth2 implementation does not currently work with\n" +
-"         mobile apps in local development mode, except in the iOS\n" +
-"         simulator. You can run the iOS simulator with 'meteor run ios'.\n" +
-"         For additional workarounds, see\n" +
-"         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
-      }
-    }
-
     if (self.platformName === 'ios') {
       // Kill the running simulator before starting one to avoid a black-screen
       // bug that happens when you deploy an app to emulator while it is running
@@ -950,7 +949,7 @@ _.extend(CordovaRunner.prototype, {
     }
 
     try {
-      execCordovaOnPlatform(self.localPath,
+      execCordovaOnPlatform(self.projectContext,
                             self.platformName,
                             self.options);
     } catch (err) {
@@ -1016,10 +1015,10 @@ var buildCordovaEnv = function () {
 // platformName is of the form ios/ios-device/android/android-device
 // options:
 //    - verbose: print all logs
-var execCordovaOnPlatform = function (localPath, platformName, options) {
+var execCordovaOnPlatform = function (projectContext, platformName, options) {
   verboseLog('Execing cordova for platform', platformName);
 
-  var cordovaPath = path.join(localPath, 'cordova-build');
+  var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
 
   // XXX error if an invalid platform
   var platform = platformName.split('-')[0];
@@ -1040,8 +1039,10 @@ var execCordovaOnPlatform = function (localPath, platformName, options) {
 
     // ios-deploy is super buggy, so we just open xcode and let the user
     // start the app themselves.
-    args = ['-c', 'open ' + path.join(localPath, 'cordova-build',
-      'platforms', 'ios', '*.xcodeproj')];
+    // XXX this is buggy if your app directory is under something with a space,
+    // because the cordovaPath part is not quoted for sh!
+    args = ['-c', 'open ' +
+            path.join(cordovaPath, 'platforms', 'ios', '*.xcodeproj')];
 
     try {
       execFileSyncOrThrow('sh', args);
