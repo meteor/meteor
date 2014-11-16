@@ -50,6 +50,7 @@ var upgradersByName = {
 "       visiting atmospherejs.com.\n");
      }
      // How to do package-specific notices:
+     // XXX #3006 update this
 //     if (_.has(project.project.getConstraints(), 'accounts-ui')) {
 //       console.log(
 // "\n" +

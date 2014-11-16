@@ -439,9 +439,14 @@ exports.ProjectConstraintsFile = function (options) {
 
   self.filename = path.join(options.projectDir, '.meteor', 'packages');
   self.watchSet = new watch.WatchSet;
-  // XXX #3006 Use a better data structure so that we can rewrite the file
-  // later. But for now this maps from package name to parsed constraint.
+  // Maps from package name to parsed constraint.
   self._constraints = null;
+  // List of each line in the file; object with keys:
+  // - leadingSpace (string of spaces before the constraint)
+  // - constraint (as returned by utils.parseConstraint)
+  // - trailingSpaceAndComment (string of spaces/comments after the constraint)
+  // This allows us to rewrite the file preserving comments.
+  self._constraintLines = null;
   self._readFile();
 };
 
@@ -451,6 +456,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     buildmessage.assertInCapture();
 
     self._constraints = {};
+    self._constraintLines = [];
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
 
     // No .meteor/packages? That's OK, you just get no packages.
@@ -458,26 +464,46 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       return;
     var lines = files.splitBufferToLines(contents);
     _.each(lines, function (line) {
-      line = files.trimSpaceAndComments(line);
+      var lineRecord =
+            { leadingSpace: '', constraint: null, trailingSpaceAndComment: '' };
+      self._constraintLines.push(lineRecord);
+      // Strip comment.
+      var match = line.match(/^([^#]*)(#.*)$/);
+      if (match) {
+        line = match[1];
+        lineRecord.trailingSpaceAndComment = match[2];
+      }
+      // Strip trailing space.
+      match = line.match(/^((?:.*\S)?)(\s*)$/);
+      line = match[1];
+      lineRecord.trailingSpaceAndComment =
+        match[2] + lineRecord.trailingSpaceAndComment;
+      // Strip leading space.
+      match = line.match(/^(\s*)((?:\S.*)?)$/);
+      lineRecord.leadingSpace = match[1];
+      line = match[2];
+
+      // No constraint? Leave lineRecord.constraint null and continue.
       if (line === '')
         return;
       try {
-        var constraint = utils.parseConstraint(line);
+        lineRecord.constraint = utils.parseConstraint(line);
       } catch (e) {
-        if (!e.versionParserError)
+        if (! e.versionParserError)
           throw e;
         buildmessage.exception(e);
       }
-      if (!constraint)
+      if (! lineRecord.constraint)
         return;  // recover by ignoring
-      if (_.has(self._constraints, constraint.name)) {
-        buildmessage.error("Package name appears twice: " + constraint.name, {
-          // XXX should this be relative?
-          file: self.filename
-        });
+      if (_.has(self._constraints, lineRecord.constraint.name)) {
+        buildmessage.error(
+          "Package name appears twice: " + lineRecord.constraint.name, {
+            // XXX should this be relative?
+            file: self.filename
+          });
         return;  // recover by ignoring
       }
-      self._constraints[constraint.name] = constraint;
+      self._constraints[lineRecord.constraint.name] = lineRecord.constraint;
     });
   },
 
