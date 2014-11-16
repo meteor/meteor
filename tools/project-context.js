@@ -600,11 +600,9 @@ _.extend(exports.PlatformList.prototype, {
     // try again.
     if (_.difference(exports.PlatformList.DEFAULT_PLATFORMS,
                      platforms).length) {
-      platforms = _.uniq(platforms.concat(
-        exports.PlatformList.DEFAULT_PLATFORMS));
-      platforms.sort();
-      // Write the platforms to disk, which automatically calls this function
-      // recursively and re-reads them.
+      // Write the platforms to disk (automatically adding DEFAULT_PLATFORMS and
+      // sorting), which automatically calls this function recursively to
+      // re-reads them.
       self.write(platforms);
       return;
     }
@@ -617,6 +615,9 @@ _.extend(exports.PlatformList.prototype, {
   write: function (platforms) {
     var self = this;
     self._platforms = null;
+    platforms = _.uniq(
+      platforms.concat(exports.PlatformList.DEFAULT_PLATFORMS));
+    platforms.sort();
     files.writeFileAtomically(self.filename, platforms.join('\n') + '\n');
     self._readFile();
   },

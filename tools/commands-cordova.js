@@ -27,7 +27,7 @@ var WEB_ARCH_NAME = "web.cordova";
 var DEFAULT_AVD_NAME = "meteor";
 
 // android is available on all supported architectures
-var availablePlatforms =
+var AVAILABLE_PLATFORMS =
       projectContextModule.PlatformList.DEFAULT_PLATFORMS.concat(
         ["android", "firefoxos", "ios"]);
 
@@ -378,6 +378,7 @@ var ensureCordovaProject = function (projectContext, appName) {
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
   if (! fs.existsSync(cordovaPath)) {
     verboseLog('Cordova build project doesn\'t exist, creating one');
+    files.mkdir_p(path.dirname(cordovaPath));
     try {
       var creation = execFileSyncOrThrow(localCordova,
         ['create', path.basename(cordovaPath), 'com.meteor.' + appName, appName.replace(/\s/g, '')],
@@ -435,7 +436,7 @@ var ensureCordovaPlatforms = function (projectContext) {
 
   _.each(installedPlatforms, function (platform) {
     if (! _.contains(platforms, platform) &&
-        _.contains(availablePlatforms, platform)) {
+        _.contains(AVAILABLE_PLATFORMS, platform)) {
       verboseLog('Removing a platform', platform);
       execFileSyncOrThrow(localCordova, ['platform', 'rm', platform],
                           { cwd: cordovaPath, env: buildCordovaEnv() });
@@ -1300,7 +1301,7 @@ var checkAgreePlatformTerms = function (platform, name) {
 
     // most likely we don't have a net connection
     Console.warn("Unable to download license terms for " + name + ".\n" +
-    "Please make sure you are online.\n")
+                 "Please make sure you are online.\n");
     throw new main.ExitWithCode(2);
   }
 
@@ -2820,35 +2821,32 @@ main.registerCommand({
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
 
-  var platforms = options.args;
-  var currentPlatforms = project.getPlatforms();
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    // We're just reading metadata here; we don't need to resolve constraints.
+    projectContext.readProjectMetadata();
+  });
 
-  try {
+  var platforms = options.args;
+  var currentPlatforms = projectContext.platformList.getPlatforms();
+
+  main.captureAndExit("", "adding platforms", function () {
     _.each(platforms, function (platform) {
       if (_.contains(currentPlatforms, platform)) {
-        throw new Error(platform + ": platform is already added");
-      }
-
-      if (! _.contains(availablePlatforms, platform)) {
-        throw new Error(platform + ': no such platform');
+        buildmessage.error(platform + ": platform is already added");
+      } else if (! _.contains(AVAILABLE_PLATFORMS, platform)) {
+        buildmessage.error(platform + ': no such platform');
+      } else if (platform === "ios" && !Host.isMac()) {
+        buildmessage.error(MESSAGE_IOS_ONLY_ON_MAC);
       }
     });
-  } catch (err) {
-    if (err.message) {
-      Console.warn(err.message);
-    }
-    return 1;
-  }
-
-  // Check if the platform isn't supported on our OS
-  _.each(platforms, function (platform) {
-    if (platform === "ios" && !Host.isMac()) {
-      Console.warn(MESSAGE_IOS_ONLY_ON_MAC);
-      throw new main.ExitWithCode(2);
-    }
   });
 
   // Check that the platform is installed
+  // XXX Switch this to buildmessage; it's a perfect match since you might want
+  // to get one error from each platform!
   _.each(platforms, function (platform) {
     requirePlatformReady(platform);
   });
@@ -2872,16 +2870,11 @@ main.registerCommand({
   }
 
   buildmessage.enterJob({ title: 'Adding platforms' }, function () {
-    project.addCordovaPlatforms(platforms);
+    projectContext.platformList.write(currentPlatforms.concat(platforms));
 
-    if (platforms.length) {
-      var localPath = path.join(options.appDir, '.meteor', 'local');
-      files.mkdir_p(localPath);
-
-      var appName = path.basename(options.appDir);
-      ensureCordovaProject(localPath, appName);
-      ensureCordovaPlatforms(localPath);
-    }
+    var appName = path.basename(projectContext.projectDir);
+    ensureCordovaProject(projectContext, appName);
+    ensureCordovaPlatforms(projectContext);
   });
 
   _.each(platforms, function (platform) {
@@ -2931,11 +2924,9 @@ main.registerCommand({
   }
   projectContext.platformList.write(platforms);
 
-  if (platforms.length) {
-    var appName = path.basename(projectContext.projectDir);
-    ensureCordovaProject(projectContext, appName);
-    ensureCordovaPlatforms(projectContext);
-  }
+  var appName = path.basename(projectContext.projectDir);
+  ensureCordovaProject(projectContext, appName);
+  ensureCordovaPlatforms(projectContext);
 });
 
 main.registerCommand({
