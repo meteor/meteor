@@ -28,6 +28,17 @@ exports.ProjectContext = function (options) {
   self.reset();
 };
 
+// The value is the name of the method to call to continue.
+var STAGE = {
+  INITIAL: '_readProjectMetadata',
+  READ_PROJECT_METADATA: '_initializeCatalog',
+  INITIALIZE_CATALOG: '_resolveConstraints',
+  RESOLVE_CONSTRAINTS: '_downloadMissingPackages',
+  DOWNLOAD_MISSING_PACKAGES: '_buildLocalPackages',
+  BUILD_LOCAL_PACKAGES: '_savePackageMap',
+  SAVE_PACKAGE_MAP: 'DONE'
+};
+
 _.extend(exports.ProjectContext.prototype, {
   reset: function () {
     var self = this;
@@ -51,41 +62,59 @@ _.extend(exports.ProjectContext.prototype, {
     self.appIdentifier = null;
     self.finishedUpgraders = null;
 
-    // Initialized by _resolveConstraints.
+    // Initialized by initializeCatalog.
+    self.projectCatalog = null;
     self.localCatalog = null;
+
+    // Initialized by _resolveConstraints.
     self.packageMap = null;
     self.isopackCache = null;
+
+    self._completedStage = STAGE.INITIAL;
   },
 
+  readProjectMetadata: function () {
+    this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
+  },
+  initializeCatalog: function () {
+    this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
+  },
+  resolveConstraints: function () {
+    this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
+  },
+  downloadMissingPackages: function () {
+    this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
+  },
+  buildLocalPackages: function () {
+    this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
+  },
+  savePackageMap: function () {
+    this._completeStagesThrough(STAGE.SAVE_PACKAGE_MAP);
+  },
   prepareProjectForBuild: function () {
+    // This is the same as savePackageMap, but if we insert stages after that
+    // one it will continue to mean "fully finished".
+    this._completeStagesThrough(STAGE.SAVE_PACKAGE_MAP);
+  },
+
+  _completeStagesThrough: function (targetStage) {
     var self = this;
     buildmessage.assertInCapture();
 
-    // Has this already been called? Just return.  (eg, this happens during the
-    // first build in AppRunner if Cordova already did a build.)
-    if (self.packageMap && self.isopackCache)
-      return;
-
     buildmessage.enterJob('preparing project', function () {
-      self.readProjectMetadata();
-      if (buildmessage.jobHasMessages())
-        return;
+      while (self._completedStage !== targetStage) {
+        // This error gets thrown if you request to go to a stage that's earlier
+        // than where you started. Note that the error will be mildly confusing
+        // because the key of STAGE does not match the value.
+        if (self.completedStage === STAGE.SAVE_PACKAGE_MAP)
+          throw Error("can't find requested stage " + targetStage);
 
-      self._resolveConstraints();
-      if (buildmessage.jobHasMessages())
-        return;
-
-      self._downloadMissingPackages();
-      if (buildmessage.jobHasMessages())
-        return;
-
-      self._buildLocalPackages();
-      if (buildmessage.jobHasMessages())
-        return;
-
-      self._savePackageMap();
-      if (buildmessage.jobHasMessages())
-        return;
+        // The actual value of STAGE.FOO is the name of the method that takes
+        // you to the next step after FOO.
+        self[self._completedStage]();
+        if (buildmessage.jobHasMessages())
+          return;
+      }
     });
   },
 
@@ -99,13 +128,9 @@ _.extend(exports.ProjectContext.prototype, {
   //
   // This should be pretty fast --- for example, we shouldn't worry about
   // needing to wait for it to be done before we open the runner proxy.
-  readProjectMetadata: function () {
+  _readProjectMetadata: function () {
     var self = this;
     buildmessage.assertInCapture();
-
-    // Has this been called already?
-    if (self.releaseFile)
-      return;
 
     buildmessage.enterJob('reading project metadata', function () {
       // Read .meteor/release.
@@ -156,6 +181,8 @@ _.extend(exports.ProjectContext.prototype, {
       if (buildmessage.jobHasMessages())
         return;
     });
+
+    self._completedStage = STAGE.READ_PROJECT_METADATA;
   },
 
   // This is a WatchSet that ends up being the WatchSet for the app's
@@ -223,13 +250,9 @@ _.extend(exports.ProjectContext.prototype, {
   _resolveConstraints: function () {
     var self = this;
     buildmessage.assertInCapture();
-    var cat = self._makeProjectCatalog();
-    // Did we already report an error via buildmessage?
-    if (! cat)
-      return;
 
-    var depsAndConstraints = self._getRootDepsAndConstraints(cat);
-    var resolver = self._buildResolver(cat);
+    var depsAndConstraints = self._getRootDepsAndConstraints();
+    var resolver = self._buildResolver();
 
     var solution;
     buildmessage.enterJob("selecting package versions", function () {
@@ -254,7 +277,10 @@ _.extend(exports.ProjectContext.prototype, {
     // XXX #3006 For commands other than create and test-packages, show package
     // changes. This code used to exist in project.js.
 
-    self.packageMap = new packageMapModule.PackageMap(solution.answer, cat);
+    self.packageMap = new packageMapModule.PackageMap(
+      solution.answer, self.projectCatalog);
+
+    self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
   },
 
   _localPackageSearchDirs: function () {
@@ -282,32 +308,35 @@ _.extend(exports.ProjectContext.prototype, {
   // but does not compile the packages.
   //
   // Must be run in a buildmessage context. On build error, returns null.
-  _makeProjectCatalog: function () {
+  _initializeCatalog: function () {
     var self = this;
     buildmessage.assertInCapture();
 
-    var cat = new catalog.LayeredCatalog;
+    self.projectCatalog = new catalog.LayeredCatalog;
     self.localCatalog = new catalogLocal.LocalCatalog({
-      containingCatalog: cat
+      containingCatalog: self.projectCatalog
     });
-    cat.setCatalogs(self.localCatalog, catalog.official);
+    self.projectCatalog.setCatalogs(self.localCatalog, catalog.official);
 
     var searchDirs = self._localPackageSearchDirs();
     buildmessage.enterJob({ title: "scanning local packages" }, function () {
-      cat.initialize({ localPackageSearchDirs: searchDirs });
-      if (buildmessage.jobHasMessages())
-        cat = null;
+      self.projectCatalog.initialize({ localPackageSearchDirs: searchDirs });
+      if (buildmessage.jobHasMessages()) {
+        self.projectCatalog = null;
+        self.localCatalog = null;
+      }
     });
-    return cat;
+
+    self._completedStage = STAGE.INITIALIZE_CATALOG;
   },
 
-  _getRootDepsAndConstraints: function (cat) {
+  _getRootDepsAndConstraints: function () {
     var self = this;
 
     var depsAndConstraints = {deps: [], constraints: []};
 
     self._addAppConstraints(depsAndConstraints);
-    self._addLocalPackageConstraints(depsAndConstraints, cat.localCatalog);
+    self._addLocalPackageConstraints(depsAndConstraints);
     // XXX #3006 Add constraints from the release
     // XXX #3006 Add constraints from other programs, if we reimplement that.
     // XXX #3006 Add a dependency on ctl
@@ -325,10 +354,10 @@ _.extend(exports.ProjectContext.prototype, {
     });
   },
 
-  _addLocalPackageConstraints: function (depsAndConstraints, localCat) {
+  _addLocalPackageConstraints: function (depsAndConstraints) {
     var self = this;
-    _.each(localCat.getAllPackageNames(), function (packageName) {
-      var versionRecord = localCat.getLatestVersion(packageName);
+    _.each(self.localCatalog.getAllPackageNames(), function (packageName) {
+      var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint =
             utils.parseConstraint(packageName + "@=" + versionRecord.version);
       // Add a constraint ("this is the only version available") but no
@@ -337,13 +366,14 @@ _.extend(exports.ProjectContext.prototype, {
     });
   },
 
-  _buildResolver: function (cat) {
+  _buildResolver: function () {
     var self = this;
 
     var constraintSolverPackage =
           isopackets.load('constraint-solver')['constraint-solver'];
     var resolver =
-      new constraintSolverPackage.ConstraintSolver.PackagesResolver(cat, {
+          new constraintSolverPackage.ConstraintSolver.PackagesResolver(
+            self.projectCatalog, {
         nudge: function () {
           Console.nudge(true);
         }
@@ -361,6 +391,7 @@ _.extend(exports.ProjectContext.prototype, {
     self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
       serverArchitectures: self._serverArchitectures
     });
+    self._completedStage = STAGE.DOWNLOAD_MISSING_PACKAGES;
   },
 
   _buildLocalPackages: function () {
@@ -375,6 +406,7 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.enterJob('building local packages', function () {
       self.isopackCache.buildLocalPackages(self.packageMap);
     });
+    self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   },
 
   _savePackageMap: function () {
@@ -395,6 +427,7 @@ _.extend(exports.ProjectContext.prototype, {
     }
 
     self.packageMapFile.write(self.packageMap);
+    self._completedStage = STAGE.SAVE_PACKAGE_MAP;
   }
 });
 
