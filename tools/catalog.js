@@ -7,7 +7,6 @@ var tropohouse = require('./tropohouse.js');
 var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
 var files = require('./files.js');
-var project = require('./project.js');
 var utils = require('./utils.js');
 var config = require('./config.js');
 var packageClient = require('./package-client.js');

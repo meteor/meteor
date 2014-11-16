@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var path = require('path');
 var files = require('./files.js');
-var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');

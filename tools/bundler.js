@@ -157,7 +157,6 @@ var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var _ = require('underscore');
-var project = require(path.join(__dirname, 'project.js'));
 var isopackets = require("./isopackets.js");
 var watch = require('./watch.js');
 var release = require('./release.js');

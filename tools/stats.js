@@ -4,7 +4,6 @@ var os = require("os");
 
 var config = require("./config.js");
 var files = require("./files.js");
-var project = require("./project.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
 var release = require("./release.js");

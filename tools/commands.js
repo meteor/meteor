@@ -5,7 +5,6 @@ var fs = require('fs');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
 var authClient = require('./auth-client.js');
@@ -609,6 +608,7 @@ main.registerCommand({
 
 // For testing upgraders during development.
 // XXX move under admin?
+// XXX #3006 Once we've fixed the upgrader call in update, fix this.
 main.registerCommand({
   name: 'run-upgrader',
   hidden: true,

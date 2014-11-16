@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var fs = require('fs');
 var path = require('path');
-var project = require('./project.js');
 var files = require('./files.js');
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
@@ -27,6 +26,7 @@ var maybePrintNoticeHeader = function () {
 var upgradersByName = {
    "notices-for-0.9.0": function () {
      maybePrintNoticeHeader();
+     // XXX #3006 needs updating
      if (fs.existsSync(path.join(project.project.rootDir, 'smart.json'))) {
        // Meteorite apps:
        console.log(
@@ -72,6 +72,7 @@ var upgradersByName = {
   // In 0.9.4, the platforms file contains "server" and "browser" as platforms,
   // and before it only had "ios" and/or "android"
   "0.9.4-platform-file": function () {
+    // XXX #3006 needs updating
     var oldPlatformsPath =
       path.join(project.project.rootDir, ".meteor", "cordova-platforms");
 
@@ -116,6 +117,7 @@ exports.runUpgrader = function (upgraderName) {
 
 exports.upgradersToRun = function () {
   var ret = [];
+  // XXX #3006 needs updating
   var finishedUpgraders = project.project.getFinishedUpgraders();
   // This relies on the fact that Node guarantees object iteration ordering.
   _.each(upgradersByName, function (func, name) {

@@ -6,7 +6,6 @@ var Fiber = require('fibers');
 var fiberHelpers = require('./fiber-helpers.js');
 var files = require('./files.js');
 var watch = require('./watch.js');
-var project = require('./project.js').project;
 var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
