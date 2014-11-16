@@ -291,16 +291,6 @@ _.extend(LocalCatalog.prototype, {
       });
   },
 
-  // True if `name` is a local package (is to be loaded via
-  // localPackageSearchDirs or addLocalPackage rather than from the package
-  // server)
-  isLocalPackage: function (name) {
-    var self = this;
-    self._requireInitialized();
-
-    return _.has(self.packages, name);
-  },
-
   // Add a local package to the catalog. `name` is the name to use for
   // the package and `directory` is the directory that contains the
   // source tree for the package.

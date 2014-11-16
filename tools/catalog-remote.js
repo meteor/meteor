@@ -811,10 +811,6 @@ _.extend(RemoteCatalog.prototype, {
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 
-  isLocalPackage: function() {
-    return false;
-  },
-
   // Executes a query, returning an array of each content column parsed as JSON
   _contentQuery: function (query, params) {
     var self = this;

@@ -186,10 +186,6 @@ _.extend(LayeredCatalog.prototype, {
     this.localCatalog.initialize(options);
   },
 
-  isLocalPackage: function (name) {
-    return this.localCatalog.isLocalPackage(name);
-  },
-
   reset: function () {
     this.localCatalog.reset();
   },
