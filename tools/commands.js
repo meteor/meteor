@@ -168,7 +168,7 @@ var runCommandOptions = {
     settings: { type: String },
     program: { type: String },
     test: {type: Boolean, default: false},
-    'include-tests': {type: Boolean, default: false},
+    'include-tests': {type: String},
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally

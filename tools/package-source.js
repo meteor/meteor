@@ -1656,16 +1656,43 @@ _.extend(PackageSource.prototype, {
             exclude: sourceExclude
           }));
 
-          // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-          // directory names that are only special at the top level.
-          var excludedSubSourceDirectories = [otherUnibuildRegExp].concat(sourceExclude);
-          if (!options.includeTests) {
-            excludedSubSourceDirectories.push(/^tests\/$/);
+          // Inputs that should return true:
+          // tests/...
+          // .../tests/...
+          var isTestsSubdirectory = function (dir) {
+            return /^tests\//.test(dir) || /\/tests\//.test(dir)
           }
-          Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
-            include: [/\/$/],
-            exclude: excludedSubSourceDirectories
-          }));
+
+          // Inputs that should return true:
+          // tests/jasmine
+          // tests/jasmine/...
+          // .../tests/jasmine
+          // .../tests/jasmine/...
+          var isIncludedTestsDirectory = function (dir) {
+            return new RegExp('^tests/' + options.includeTests + '$').test(dir) ||
+                   new RegExp('^tests/' + options.includeTests + '/').test(dir) ||
+                   new RegExp('/tests/' + options.includeTests + '$').test(dir) ||
+                   new RegExp('/tests/' + options.includeTests + '/').test(dir);
+          }
+
+          var shouldWatchSubdirectories = function (dir) {
+            return !options.includeTests ||
+                   !isTestsSubdirectory(dir) ||
+                   isIncludedTestsDirectory(dir);
+          }
+
+          if (shouldWatchSubdirectories(dir)) {
+            // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+            // directory names that are only special at the top level.
+            var excludedSubSourceDirectories = [otherUnibuildRegExp].concat(sourceExclude);
+            if (!options.includeTests) {
+              excludedSubSourceDirectories.push(/^tests\/$/);
+            }
+            Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
+              include: [/\/$/],
+              exclude: excludedSubSourceDirectories
+            }));
+          }
         }
 
         // We've found all the source files. Sort them!
