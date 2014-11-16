@@ -640,10 +640,10 @@ server.
 
 >>> rebuild
 Rebuild local packages.
-Usage: meteor rebuild [<package name>]
+Usage: meteor rebuild [<package name>...]
 
-Rebuild a specified local packages. Deletes the package's build directory
-and rebuilds the package from scratch. Please specify the package by name.
+Rebuild specified local packages. Deletes the package's build directory
+and rebuilds the package from scratch. Packages are specified by name.
 
 If you pass no arguments, this will rebuild all local packages.
 That includes packages found through the

@@ -1522,21 +1522,19 @@ main.registerCommand({
   name: 'rebuild',
   maxArgs: Infinity,
   hidden: true,
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  throw Error("XXX #3006 re-implement meteor rebuild");
+  var projectContextModule = require('./project-context.js');
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    forceRebuildPackages: options.args.length ? options.args : true
+  });
 
-  // XXX #3006: meteor rebuild used to have to do stuff with the local catalog
-  // and so forth.  Now it will just delete directories in
-  // APP/.meteor/local/isopacks.
-  //
-  // old logic (roughly):
-  //   - if you don't specify any package names, rebuild all packages, and if
-  //     you're in an app, delete all the '.build.' directories in programs in
-  //     the app too
-  //   - if you do specify package names, just rebuild those
-  //   - Print "Build N packages."
-  // Also this should be moved to commands-packages.js
+  main.captureAndExit("=> Errors while rebuilding packages:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+  Console.info("Packages rebuilt.");
 });
 
 ///////////////////////////////////////////////////////////////////////////////

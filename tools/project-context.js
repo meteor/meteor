@@ -60,6 +60,10 @@ _.extend(exports.ProjectContext.prototype, {
     self._explicitlyAddedLocalPackageDirs =
       options.explicitlyAddedLocalPackageDirs;
 
+    // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
+    // package names.
+    self._forceRebuildPackages = options.forceRebuildPackages;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -75,6 +79,8 @@ _.extend(exports.ProjectContext.prototype, {
 
     // Initialized by _resolveConstraints.
     self.packageMap = null;
+
+    // Initialized by _buildLocalPackages.
     self.isopackCache = null;
 
     self._completedStage = STAGE.INITIAL;
@@ -412,6 +418,12 @@ _.extend(exports.ProjectContext.prototype, {
       cacheDir: self.getProjectLocalDirectory('isopacks'),
       tropohouse: self.tropohouse
     });
+
+    if (self._forceRebuildPackages) {
+      self.isopackCache.wipeCachedPackages(
+        self._forceRebuildPackages === true
+          ? null : self._forceRebuildPackages);
+    }
 
     buildmessage.enterJob('building local packages', function () {
       self.isopackCache.buildLocalPackages(self.packageMap);

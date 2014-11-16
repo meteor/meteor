@@ -18,15 +18,15 @@ exports.IsopackCache = function (options) {
   self.tropohouse = options.tropohouse;
   self.isopacks = {};
   self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
-
-  if (self.cacheDir)
-    files.mkdir_p(self.cacheDir);
 };
 
 _.extend(exports.IsopackCache.prototype, {
   buildLocalPackages: function (packageMap, rootPackageNames) {
     var self = this;
     buildmessage.assertInCapture();
+
+    if (self.cacheDir)
+      files.mkdir_p(self.cacheDir);
 
     var onStack = {};
     if (rootPackageNames) {
@@ -37,6 +37,22 @@ _.extend(exports.IsopackCache.prototype, {
       packageMap.eachPackage(function (name, packageInfo) {
         self._ensurePackageLoaded(name, packageMap, onStack);
       });
+    }
+  },
+
+  wipeCachedPackages: function (packages) {
+    var self = this;
+    // If we're not saving things to disk, there's nothing to wipe!
+    if (! self.cacheDir)
+      return;
+    if (packages) {
+      // Wipe specific packages.
+      _.each(packages, function (packageName) {
+        files.rm_recursive(self._isopackDir(packageName));
+      });
+    } else {
+      // Wipe all packages.
+      files.rm_recursive(self.cacheDir);
     }
   },
 
