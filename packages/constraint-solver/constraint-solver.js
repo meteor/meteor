@@ -95,14 +95,22 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
       _.each(dep.references, function (ref) {
         _.each(allArchs, function (arch) {
-          if (archMatches(arch, ref.arch)) {
+          // Dependencies of the unibuilds in "version" produce edges of the
+          // form p#os->q#os, p#web.browser->q#web.browser, etc.
+          //
+          // Dependencies of plugins that are part of "version" produce edges of
+          // the form p#os->q#os, p#web.browser->q#os, etc.  ie, even if you're
+          // just pulling in the web.browser piece of p, you have to build its
+          // plugins for the host architecture.
+          if (ref.arch === "plugin" || archMatches(arch, ref.arch)) {
             var unitName = packageName + "#" + arch;
             var unitVersion = unibuilds[unitName];
 
             if (! unitVersion)
               throw new Error("A non-standard arch " + arch + " for package " + packageName);
 
-            var targetUnitName = depName + "#" + arch;
+            var targetUnitName = depName + "#" +
+                  (ref.arch === "plugin" ? "os" : arch);
 
             // Add the dependency if needed
             if (! ref.weak)
