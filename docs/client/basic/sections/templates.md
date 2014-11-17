@@ -99,7 +99,7 @@ or use the "nametag" template from above instead of `<p>` tags:
 
 ```
 {{dstache}}#each people}}
-  <p>{{dstache}}> nametag}}</p>
+  {{dstache}}> nametag}}
 {{dstache}}/each}}
 ```
 
@@ -133,9 +133,9 @@ a word:
 Template.post.helpers({
   commentCount: function (numComments) {
     if (numComments === 1) {
-      return "1 comment";
+      return "There is 1 comment.";
     } else {
-      return numComments + " comments";
+      return "There are " + numComments + " comments.";
     }
   }
 });
@@ -145,7 +145,7 @@ Pass in arguments by putting them inside the curly braces after the name of the
 helper:
 
 ```html
-<p>There are {{dstache}}commentCount 3}} comments.</p>
+<p>{{dstache}}commentCount 3}}</p>
 ```
 
 The helpers above have all been associated with specific templates, but
