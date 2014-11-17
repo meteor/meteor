@@ -1319,6 +1319,12 @@ main.registerCommand({
     options['test-app-path'] || files.mkdtemp('meteor-test-run');
   files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
 
+  // Download packages for our architecture, and for the deploy server's
+  // architecture if we're deploying.
+  var serverArchitectures = [archinfo.host()];
+  if (options.deploy && DEPLOY_ARCH !== archinfo.host())
+    serverArchitectures.push(DEPLOY_ARCH);
+
   // XXX Because every run uses a new app with its own IsopackCache directory,
   //     this always does a clean build of all packages. Maybe we can speed up
   //     repeated test-packages calls with some sort of shared or semi-shared
@@ -1328,7 +1334,8 @@ main.registerCommand({
     // If we're currently in an app, we still want to use the real app's
     // packages subdirectory, not the test runner app's empty one.
     projectDirForLocalPackages: options.appDir,
-    explicitlyAddedLocalPackageDirs: packagesByPath
+    explicitlyAddedLocalPackageDirs: packagesByPath,
+    serverArchitectures: serverArchitectures
   });
 
   main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1468,10 +1475,14 @@ var runTestAppForPackages = function (projectContext, options) {
   };
 
   if (options.deploy) {
-    // XXX #3006 when doing deploy, don't forget about this!
+    // Run the constraint solver and build local packages.
+    main.captureAndExit("=> Errors while initializing project:", function () {
+      projectContext.prepareProjectForBuild();
+    });
+
     buildOptions.serverArch = DEPLOY_ARCH;
     return deploy.bundleAndDeploy({
-      appDir: testRunnerAppDir,
+      projectContext: projectContext,
       site: options.deploy,
       settingsFile: options.settings,
       buildOptions: buildOptions,
