@@ -416,7 +416,8 @@ var bundleAndDeploy = function (options) {
   if (options.recordPackageUsage) {
     stats.recordPackages({
       what: "sdk.deploy",
-      projectContext: options.projectContext
+      projectContext: options.projectContext,
+      site: site
     });
   }
 
