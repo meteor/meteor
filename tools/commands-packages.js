@@ -24,6 +24,7 @@ var stats = require('./stats.js');
 var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
+var projectContextModule = require('./project-context.js');
 
 // On some informational actions, we only refresh the package catalog if it is > 15 minutes old
 var DEFAULT_MAX_AGE_MS = 15 * 60 * 1000;
@@ -2200,83 +2201,83 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    // We're just reading metadata here --- we're not going to resolve
+    // constraints until after we've made our changes.
+    projectContext.readProjectMetadata();
+  });
+
   // Special case on reserved package namespaces, such as 'cordova'
   var filteredPackages = cordova.filterPackages(options.args);
-  var cordovaPlugins = filteredPackages.plugins;
+  var pluginsToRemove = filteredPackages.plugins;
+
+  var exitCode = 0;
 
   // Update the plugins list
-  var removedPlugins = project.removeCordovaPlugins(cordovaPlugins);
-  var notRemoved = _.difference(cordovaPlugins, removedPlugins);
-
-  _.each(removedPlugins, function (plugin) {
-    Console.info("removed cordova plugin " + plugin);
-  });
-
-  _.each(notRemoved, function (plugin) {
-    Console.error(plugin + " is not in this project.");
-  });
+  if (pluginsToRemove.length) {
+    var plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+    var changed = false;
+    _.each(pluginsToRemove, function (pluginName) {
+      if (_.has(plugins, pluginName)) {
+        delete plugins[pluginName];
+        Console.info("removed cordova plugin " + pluginName);
+        changed = true;
+      } else {
+        Console.error("cordova plugin " + pluginName +
+                      " is not in this project.");
+        exitCode = 1;
+      }
+    });
+    changed && projectContext.cordovaPluginsFile.write(plugins);
+  }
 
   var args = filteredPackages.rest;
 
   if (_.isEmpty(args))
-    return 0;
-
-  // As user may expect this to update the catalog, but we con't actually need
-  // to, and it takes frustratingly long.
-  // refreshOfficialCatalogOrDie();
-
-  // Read in existing package dependencies.
-  var packages = project.getConstraints();
+    return exitCode;
 
   // For each package name specified, check if we already have it and warn the
   // user. Because removing each package is a completely atomic operation that
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
   var packagesToRemove = [];
-  _.each(args, function (packageName) {
-    if (/@/.test(packageName)) {
-      Console.error(packageName + ": do not specify version constraints.");
-    } else if (! _.has(packages, packageName)) {
+  _.each(args, function (package) {
+    if (/@/.test(package)) {
+      Console.error(package + ": do not specify version constraints.");
+      exitCode = 1;
+    } else if (! projectContext.projectConstraintsFile.getConstraint(package)) {
       // Check that we are using the package. We don't check if the package
       // exists. You should be able to remove non-existent packages.
-      Console.error(packageName  + " is not in this project.");
+      Console.error(package  + " is not in this project.");
+      exitCode = 1;
     } else {
-      packagesToRemove.push(packageName);
+      packagesToRemove.push(package);
     }
   });
-
-  var messages = buildmessage.capture(function () {
-    // Get the contents of our versions file, we will want them in order to
-    // remove to the user what we removed. Note that we are actually just getting
-    // getting the versions file, not running the constraint solver.
-    var versions = project.dependencies;
-
-    // Remove the packages from the project! There is really no way for this to
-    // fail, unless something has gone horribly wrong, so we don't need to check
-    // for it.
-    project.removePackages(packagesToRemove);
-
-    // Retrieve the new dependency versions that we have chosen for this project
-    // and do some pretty output reporting.
-    var newVersions = project.getVersions();
-  });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
+  if (! packagesToRemove.length)
+    return exitCode;
+  projectContext.projectConstraintsFile.removePackages(packagesToRemove);
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
-  if (! _.isEmpty(packagesToRemove))
-    Console.info("");
   _.each(packagesToRemove, function (packageName) {
     Console.info(packageName + ": removed dependency");
   });
 
-  return 0;
+  // Run the constraint solver, rebuild local packages, etc.
+  main.captureAndExit("=> Errors after removing packages", function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return exitCode;
 });
 
 

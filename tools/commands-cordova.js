@@ -149,7 +149,7 @@ cordova.getCordovaDependenciesFromStar = function (star) {
 
 // packages - list of strings
 cordova.filterPackages = function (packages) {
-// We hard-code the 'cordova' and 'platform' namespaces
+// We hard-code the 'cordova' namespace
   var ret = {
     rest: [],
     plugins: []

@@ -484,6 +484,10 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     if (contents === null)
       return;
     var lines = files.splitBufferToLines(contents);
+    // Don't keep a record for the space at the end of the file.
+    if (lines.length && _.last(lines) === '')
+      lines.pop();
+
     _.each(lines, function (line) {
       var lineRecord =
             { leadingSpace: '', constraint: null, trailingSpaceAndComment: '' };
@@ -538,10 +542,10 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
           lineParts.push('@', lineRecord.constraint.constraintString);
         }
       }
-      lineParts.push(lineRecord.trailingSpaceAndComment);
+      lineParts.push(lineRecord.trailingSpaceAndComment, '\n');
       return lineParts.join('');
     });
-    files.writeFileAtomically(self.filename, lines.join('\n') + '\n');
+    files.writeFileAtomically(self.filename, lines.join(''));
     var messages = buildmessage.capture(
       { title: 're-reading .meteor/packages' },
       function () {
@@ -596,6 +600,22 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
 
     if (! changed)
       return;
+    self._write();
+  },
+
+  // The packages in packagesToRemove are expected to actually be in the file;
+  // if you want to provide different output for packages in the file vs not,
+  // you should have already done that.
+  removePackages: function (packagesToRemove) {
+    var self = this;
+    self._constraintLines = _.filter(
+      self._constraintLines, function (lineRecord) {
+        return ! (lineRecord.constraint &&
+                  _.contains(packagesToRemove, lineRecord.constraint.name));
+      });
+    _.each(packagesToRemove, function (p) {
+      delete self._constraintMap[p];
+    });
     self._write();
   }
 });
@@ -783,9 +803,9 @@ exports.CordovaPluginsFile = function (options) {
   buildmessage.assertInCapture();
 
   self.filename = path.join(options.projectDir, '.meteor', 'cordova-plugins');
-  self.watchSet = new watch.WatchSet;
+  self.watchSet = null;
   // Map from plugin name to version.
-  self._plugins = {};
+  self._plugins = null;
 
   self._readFile();
 };
@@ -795,6 +815,8 @@ _.extend(exports.CordovaPluginsFile.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
+    self.watchSet = new watch.WatchSet;
+    self._plugins = {};
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
     // No file?  No plugins.
     if (contents === null)
@@ -831,6 +853,24 @@ _.extend(exports.CordovaPluginsFile.prototype, {
   getPluginVersions: function () {
     var self = this;
     return _.clone(self._plugins);
+  },
+
+  write: function (plugins) {
+    var self = this;
+    var pluginNames = _.keys(plugins);
+    pluginNames.sort();
+    var lines = _.map(pluginNames, function (pluginName) {
+      return pluginName + '@' + plugins[pluginName] + '\n';
+    });
+    files.writeFileAtomically(self.filename, lines.join(''));
+    var messages = buildmessage.capture(
+      { title: 're-reading .meteor/cordova-plugins' },
+      function () {
+        self._readFile();
+      });
+    // We shouldn't choke on something we just wrote!
+    if (messages.hasMessages())
+      throw Error("wrote bad .meteor/packages: " + messages.formatMessages());
   }
 });
 
