@@ -1946,40 +1946,46 @@ main.registerCommand({
   pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    // We're just reading metadata here --- we're not going to resolve
+    // constraints until after we've made our changes.
+    projectContext.readProjectMetadata();
+  });
 
-  // Special case on reserved package namespaces, such as 'cordova'
-  var cordovaPlugins;
-  try {
-    var filteredPackages = cordova.filterPackages(options.args);
-    cordovaPlugins = filteredPackages.plugins;
+  var exitCode = 0;
 
-    _.each(cordovaPlugins, function (plugin) {
-      cordova.checkIsValidPlugin(plugin);
+  var filteredPackages = cordova.filterPackages(options.args);
+  var pluginsToAdd = filteredPackages.plugins;
+
+  if (pluginsToAdd.length) {
+    var plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+    var changed = false;
+    _.each(pluginsToAdd, function (pluginSpec) {
+      var parts = pluginSpec.split('@');
+      if (parts.length !== 2) {
+        Console.error(
+          pluginSpec + ': exact version or tarball url is required');
+        exitCode = 1;
+      } else if (! utils.isExactVersion(parts[1])) {
+        Console.error(
+          "Must declare exact version of dependency: " + pluginSpec);
+        exitCode = 1;
+      } else {
+        plugins[parts[0]] = parts[1];
+        changed = true;
+      }
     });
-  } catch (err) {
-    Console.error(err.message + '');
-    return 1;
+    changed && projectContext.cordovaPluginsFile.write(plugins);
   }
-
-  var oldPlugins = project.getCordovaPlugins();
-
-  var pluginsDict = {};
-  _.each(cordovaPlugins, function (s) {
-    var splt = s.split('@');
-    if (splt.length !== 2)
-      throw new Error(s + ': exact version or tarball url is required');
-    pluginsDict[splt[0]] = splt[1];
-  });
-  project.addCordovaPlugins(pluginsDict);
-
-  _.each(cordovaPlugins, function (plugin) {
-    Console.info("added cordova plugin " + plugin);
-  });
 
   var args = filteredPackages.rest;
 
   if (_.isEmpty(args))
-    return 0;
+    return exitCode;
+  return 123
 
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
@@ -2207,7 +2213,6 @@ main.registerCommand({
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir
   });
-
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
@@ -2225,7 +2230,10 @@ main.registerCommand({
     var plugins = projectContext.cordovaPluginsFile.getPluginVersions();
     var changed = false;
     _.each(pluginsToRemove, function (pluginName) {
-      if (_.has(plugins, pluginName)) {
+      if (/@/.test(pluginName)) {
+        Console.error(pluginName + ": do not specify version constraints.");
+        exitCode = 1;
+      } else if (_.has(plugins, pluginName)) {
         delete plugins[pluginName];
         Console.info("removed cordova plugin " + pluginName);
         changed = true;

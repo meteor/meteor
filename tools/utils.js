@@ -468,7 +468,7 @@ exports.isUrlWithSha = function (x) {
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
-// This is talking about NPM versions specifically, not Meteor versions.
+// This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
@@ -476,12 +476,16 @@ exports.ensureOnlyExactVersions = function (dependencies) {
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+    if (! exports.isExactVersion(version)) {
       throw new Error(
-        "Must declare exact version of dependency: " +
-          name + '@' + version);
+        "Must declare exact version of dependency: " + name + '@' + version);
+    }
   });
 };
+exports.isExactVersion = function (version) {
+  return semver.valid(version) || exports.isUrlWithSha(version);
+};
+
 
 exports.execFileSync = function (file, args, opts) {
   var future = new Future;
