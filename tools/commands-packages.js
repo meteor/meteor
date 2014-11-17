@@ -5,7 +5,6 @@ var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
-var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
@@ -27,7 +26,7 @@ var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 
 // On some informational actions, we only refresh the package catalog if it is > 15 minutes old
-DEFAULT_MAX_AGE = 15 * 60 * 1000;
+var DEFAULT_MAX_AGE_MS = 15 * 60 * 1000;
 
 // Returns an object with keys:
 //  record : (a package or version record)
@@ -43,23 +42,6 @@ var getReleaseOrPackageRecord = function(name) {
       rel = true;
   }
   return { record: rec, isRelease: rel };
-};
-
-var doOrDie = function (options, f) {
-  if (_.isFunction(options)) {
-    f = options;
-    options = {};
-  }
-  options = options || {};
-  var ret;
-  var messages = buildmessage.capture(options, function () {
-    ret = f();
-  });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    throw new main.ExitWithCode(1);
-  }
-  return ret;
 };
 
 // Seriously, this dies if it can't refresh. Only call it if you're sure you're
@@ -82,26 +64,13 @@ var explainIfRefreshFailed = function () {
 // XXX: To formatters.js ?
 var formatAsList = function (list, options) {
   options = options || {};
-  var formatter = options.formatter;
-  if (!list || !list.length) {
-    return "";
-  }
-  var out = "";
-  for (var i = 0; i < list.length; i++) {
-    if (i != 0) {
-      out += ", ";
-    }
-    var v = list[i];
-    if (formatter) {
-      v = formatter(v);
-    }
-    out += v;
-  }
-  return out;
+  var formatter = options.formatter || _.identity;
+  return _.map(list, formatter).join(", ");
 };
 
 var endsWith = function (s, suffix) {
-  return s.length >= suffix.length && s.substr(s.length - suffix.length) == suffix;
+  return s.length >= suffix.length &&
+    s.substr(s.length - suffix.length) === suffix;
 };
 
 var removeIfEndsWith = function (s, suffix) {
@@ -141,60 +110,15 @@ var formatArchitecture = function (s) {
 // call meteor rebuild. That said, rebuild should only be necessary if there's a
 // bug in the build tool... otherwise, packages should be rebuilt whenever
 // necessary!
-// XXX #3006 Rewrite this to actually do something.
 main.registerCommand({
   name: '--get-ready',
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
-  // It is not strictly needed, but it is thematically a good idea to refresh
-  // the official catalog when we call get-ready, since it is an
-  // internet-requiring action.
-  //refreshOfficialCatalogOrDie();
-
-  var loadPackages = function (packagesToLoad, loader) {
-    buildmessage.assertInCapture();
-    // XXX #3006 no longer exists
-    loader.downloadMissingPackages();
-    _.each(packagesToLoad, function (name) {
-      // Calling getPackage on the loader will return a isopack object, which
-      // means that the package will be compiled/downloaded. That we throw the
-      // package variable away afterwards is immaterial.
-      loader.getPackage(name);
-    });
-  };
-
-  var messages = buildmessage.capture({
-    title: 'Getting packages ready'
-  }, function () {
-    // First, build all accessible *local* packages, whether or not this app
-    // uses them.  Use the "all packages are local" loader.
-    loadPackages(catalogcomplete.getLocalPackageNames(),
-                 new packageLoader.PackageLoader({versions: null,
-                                                  catalog: catalogcomplete}));
-
-    // In an app? Get the list of packages used by this app. Calling getVersions
-    // on the project will ensureDepsUpToDate which will ensure that all builds
-    // of everything we need from versions have been downloaded. (Calling
-    // buildPackages may be redundant, but can't hurt.)
-    if (options.appDir) {
-      loadPackages(_.keys(project.getVersions()), project.getPackageLoader());
-    }
-
-    // Using a release? Get all the packages in the release.
-    if (release.current.isProperRelease()) {
-      var releasePackages = release.current.getPackages();
-      loadPackages(
-        _.keys(releasePackages),
-        new packageLoader.PackageLoader({versions: releasePackages,
-                                         catalog: catalogcomplete}));
-    }
-  });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  };
-
-  Console.info("You are ready!");
+  // XXX #3006 This command has done something confusing ever since 0.9.0.
+  //           And what it does changes with isopack-cache. Reimplement it
+  //           (perhaps after merging isopack-cache).
+  Console.error("meteor --get-ready not currently implemented");
+  // Don't make scripts fail, though.
   return 0;
 });
 
@@ -1145,10 +1069,10 @@ main.registerCommand({
   options: {
     "show-old": {type: Boolean, required: false }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE, ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
 }, function (options) {
   // We should refresh the catalog in case there are new versions.
-  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
+  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE_MS });
 
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
@@ -1327,7 +1251,8 @@ main.registerCommand({
   pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
-  //refreshOfficialCatalogOrDie();
+  // We already did it!
+  return 0;
 });
 
 main.registerCommand({
@@ -1342,7 +1267,7 @@ main.registerCommand({
     // Undocumented debug-only option for Velocity.
     "debug-only": {type: Boolean, required: false}
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE, ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
 }, function (options) {
   if (options.args.length === 0) {
     Console.info("To show all packages, do", Console.command("meteor search ."));
@@ -1358,7 +1283,7 @@ main.registerCommand({
   // XXX this is dumb, we should be able to search even if we can't
   // refresh. let's make sure to differentiate "horrible parse error while
   // refreshing" from "can't connect to catalog"
-  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE });
+  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE_MS });
 
   var allPackages = catalog.official.getAllPackageNames();
   var allReleases = catalog.official.getAllReleaseTracks();
@@ -2375,10 +2300,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
-
-  // We want the most recent information.
-  //refreshOfficialCatalogOrDie();
-
   var name = options.args[0];
 
   // Yay, checking that options are correct.
