@@ -15,8 +15,10 @@ var packageCache = require('./package-cache.js');
 var PackageSource = require('./package-source.js');
 var VersionParser = require('./package-version-parser.js');
 
-// LocalCatalog represents the packages located into an application folder
-// A default instance of this catalog is created in catalog.js
+// LocalCatalog represents packages located in the application's
+// package directory, other package directories specified via an
+// environment variable, and core packages in the repo if meteor is
+// being run from a git checkout.
 var LocalCatalog = function (options) {
   var self = this;
   options = options || {};
