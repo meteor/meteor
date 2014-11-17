@@ -29,8 +29,14 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
         "&response_type=code&" +
         "client_id=" + config.clientId;
 
-  if (options && options.userEmail)
-    loginUrl += '&user_email=' + encodeURIComponent(options.userEmail);
+
+  /**
+   * @deprecated in 1.0.0
+   */
+  if (options.userEmail && !options.loginHint) options.loginHint = options.userEmail;
+
+  if (options && options.loginHint)
+    loginUrl += '&user_email=' + encodeURIComponent(options.loginHint);
 
   loginUrl += "&redirect_uri=" + OAuth._redirectUri('meteor-developer', config);
 
