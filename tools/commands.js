@@ -1084,8 +1084,8 @@ main.registerCommand({
   if (useGalaxy) {
     deployGalaxy = require('./deploy-galaxy.js');
     deployResult = deployGalaxy.deploy({
+      projectContext: projectContext,
       app: site,
-      appDir: options.appDir,
       settingsFile: options.settings,
       starball: starball,
       buildOptions: buildOptions,
