@@ -212,9 +212,6 @@ var newIsopacketBuildingCatalog = function () {
   if (! files.inCheckout())
     throw Error("No need to build isopackets unless in checkout!");
 
-  // XXX #3006 once a lot more refactors are done, this should be able to just
-  // be a LocalCatalog. There's no reason that resolveConstraints should be
-  // called here!
   var catalogLocal = require('./catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
   isopacketCatalog.isopacketBuildingCatalog = true;

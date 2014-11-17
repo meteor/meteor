@@ -138,8 +138,6 @@ compiler.compile = function (packageSource, options) {
              unibuildResult.pluginProviderPackageNames);
   });
 
-  // XXX #3006: We used to add build IDs here. Do we still need that?
-
   return {
     sources: _.uniq(sources),
     isopack: isopk,

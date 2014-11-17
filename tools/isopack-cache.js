@@ -67,7 +67,6 @@ _.extend(exports.IsopackCache.prototype, {
     return self.isopacks[name];
   },
 
-  // XXX #3006 Don't infinite recurse on circular deps
   _ensurePackageLoaded: function (name, packageMap, onStack) {
     var self = this;
     buildmessage.assertInCapture();

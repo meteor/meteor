@@ -402,8 +402,6 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
     if (!self.packageMap)
       throw Error("which packages to download?");
-    // XXX #3006 This downloads archinfo.host packages. How about
-    //     for deploy?
     self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
       serverArchitectures: self._serverArchitectures
     });
