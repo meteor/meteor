@@ -1023,27 +1023,6 @@ main.registerCommand({
     }
   }
 
-  // We are actually going to end up compiling an app at this point, so figure
-  // out its versions. . (XXX: Theoretically, we should not be doing it here. We
-  // should do it lazily, if the command calls for it. However, we do end up
-  // recalculating them for stats, for example, and, more importantly, we have
-  // noticed some issues if we just leave this in the air. We think that those
-  // issues are concurrency-related, or possibly some weird order-of-execution
-  // of interaction that we are failing to understand. This seems to fix it in a
-  // clear and understandable fashion.)
-  var messages = buildmessage.capture({ title: "Resolving versions" },
-    function () {
-    project.getVersions();  // #StructuredProjectInitialization
-  });
-  if (messages.hasMessages()) {
-    Console.stderr.write(messages.formatMessages());
-    return 1;
-  }
-  // Set the debug bit if we are bundling in debug mode. By default,
-  // options.debug will be false, which means that we will bundle for
-  // production.
-  project.setDebug(options.debug);
-
   if (options.password) {
     if (useGalaxy) {
       Console.stderr.write("Galaxy does not support --password.\n");
@@ -1086,12 +1065,19 @@ main.registerCommand({
     buildArch = archinfo.host();
   }
 
-  var webArchs = project.getWebArchs();
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    serverArchitectures: _.uniq([buildArch, archinfo.host()])
+  });
+
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
 
   var buildOptions = {
     minify: ! options.debug,
-    serverArch: buildArch,
-    webArchs: webArchs
+    includeDebug: options.debug,
+    serverArch: buildArch
   };
 
   var deployResult;
@@ -1107,7 +1093,7 @@ main.registerCommand({
     });
   } else {
     deployResult = deploy.bundleAndDeploy({
-      appDir: options.appDir,
+      projectContext: projectContext,
       site: site,
       settingsFile: options.settings,
       buildOptions: buildOptions
