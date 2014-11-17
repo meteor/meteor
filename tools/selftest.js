@@ -803,23 +803,11 @@ _.extend(Sandbox.prototype, {
     var toolDir = path.join(packagesDirectoryName, toolPackageName,
         toolPackage.version, 'meteor-tool-' + archinfo.host());
 
-    if (process.platform === "win32") {
-      // Make a meteor batch script that points to current tool
-      var meteorBat = path.join(toolDir, 'meteor.bat');
+    var meteorScriptName =
+      process.platform === "win32" ? "meteor.bat" : "meteor";
 
-      var newScript = [
-        "@echo off",
-        meteorBat
-      ].join(os.EOL);
-
-      console.log("BAD PATH: " + path.join(self.warehouse, 'meteor.bat'));
-      fs.writeFileSync(path.join(self.warehouse, 'meteor.bat'), newScript,
-        {encoding: "ascii"});
-    } else {
-      // Symlink meteor tool
-      fs.symlinkSync(path.join(toolDir, 'meteor'),
-        path.join(self.warehouse, 'meteor'));
-    }
+    files.linkToExecutable(path.join(toolDir, meteorScriptName),
+      path.join(self.warehouse, meteorScriptName));
   }
 });
 

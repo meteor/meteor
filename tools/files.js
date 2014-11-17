@@ -1006,3 +1006,54 @@ exports.escapePathForWindows = function (packageName) {
   // XXX handle drive letters
   return packageName.replace(/:/g, "_");
 };
+
+// Make a symlink to an executable where supported, on Windows write a .bat
+// script that runs the executable
+
+/**
+ * Make a link to an executable file. On Windows, makes a .bat script that runs
+ * the target file, otherwise makes a symlink.
+ *
+ * The result should be that if you execute the link file, the target will be
+ * executed.
+ * @param  {String} target The file that should be linked to
+ * @param  {String} linkLocation The location of the link file
+ */
+files.linkToExecutable = function (target, linkLocation) {
+  if (process.platform === "win32") {
+    // Make a meteor batch script that points to current tool
+
+    // add .bat extension to link file if not present
+    if (linkLocation.indexOf(".bat") !== (linkLocation.length - 4)) {
+      linkLocation = linkLocation + ".bat";
+    }
+
+    // script that calls the target passed in
+    var newScript = [
+      "@echo off",
+      target
+    ].join(os.EOL);
+
+    fs.writeFileSync(linkLocation, newScript, {encoding: "ascii"});
+  } else {
+    // Symlink meteor tool
+    fs.symlinkSync(target, linkLocation);
+  }
+};
+
+// Read which path a link generated with the linkToExecutable is pointing to
+files.readLinkToExecutable = function (linkFilePath) {
+  if (process.platform === "win32") {
+    // Return the second line of the script, which is the path that would be
+    // executed
+
+    // add .bat extension to link file if not present
+    if (linkFilePath.indexOf(".bat") !== (linkFilePath.length - 4)) {
+      linkFilePath = linkFilePath + ".bat";
+    }
+
+    return fs.readFileSync(linkFilePath).split(os.EOL)[1];
+  } else {
+    return fs.readlinkSync(linkFilePath);
+  }
+};

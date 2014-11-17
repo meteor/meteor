@@ -357,12 +357,12 @@ _.extend(exports.Tropohouse.prototype, {
   latestMeteorSymlink: function () {
     var self = this;
     var linkPath = path.join(self.root, 'meteor');
-    return fs.readlinkSync(linkPath);
+    return files.readLinkToExecutable(linkPath);
   },
 
   replaceLatestMeteorSymlink: function (linkText) {
     var self = this;
     var linkPath = path.join(self.root, 'meteor');
-    files.symlinkOverSync(linkText, linkPath);
+    files.linkToExecutable(linkText, linkPath);
   }
 });
