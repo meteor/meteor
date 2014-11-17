@@ -9,7 +9,7 @@ _.each(packageNames, function (name) {
   // name = "packages/" + name + "/package.js";
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 
-  match = content.match(/version:\s*['"](\d+\.\d+\.\d)['"]/);
+  match = content.match(/version:\s*['"](\d+\.\d+\.\d+)['"]/);
   if (match) {
     var versionNumber = match[1];
     var s = versionNumber.split(".");
