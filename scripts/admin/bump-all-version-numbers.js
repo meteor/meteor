@@ -7,15 +7,13 @@ var packageNames = _.rest(process.argv, 2);
 
 _.each(packageNames, function (name) {
   // name = "packages/" + name + "/package.js";
-
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 
-  match = content.match(/\d+\.\d+\.\d+-rc\.\d+/);
+  match = content.match(/version:\s*['"](\d+\.\d+\.\d)['"]/);
   if (match) {
-    var versionNumber = match[0];
+    var versionNumber = match[1];
     var s = versionNumber.split(".");
-    s[2] = s[2].split("-")[0];
-    s = s.slice(0, 3);
+    s[2] = s[2] + "-win.0";
     var incremented = s.join(".");
 
     content = content.replace(versionNumber, incremented);
