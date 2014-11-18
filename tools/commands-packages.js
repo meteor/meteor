@@ -2006,8 +2006,6 @@ main.registerCommand({
         // that the answer is "yes". We get similar behavior from just running
         // the constraint solver now.
 
-        // XXX #3006 test that we get a good error
-
         var current = projectContext.projectConstraintsFile.getConstraint(
           constraint.name);
 
