@@ -25,6 +25,7 @@ var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
+var packageVersionParser = require('./package-version-parser.js');
 
 // On some informational actions, we only refresh the package catalog if it is > 15 minutes old
 var DEFAULT_MAX_AGE_MS = 15 * 60 * 1000;
@@ -1415,86 +1416,96 @@ main.registerCommand({
 main.registerCommand({
   name: 'list',
   requiresApp: true,
+  pretty: true,
   options: {
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+
   var items = [];
-
   var newVersionsAvailable = false;
+  var anyBuiltLocally = false;
 
-  var messages = buildmessage.capture(function () {
-    // Packages that are used by this app
-    var packages = project.getConstraints();
-    // Versions of the packages. We need this to get the right description for
-    // the user, in case it changed between versions.
-    var versions = project.getVersions();
+  // Iterate over packages that are used directly by this app (not indirect
+  // dependencies).
+  projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+    var packageName = constraint.name;
+    var mapInfo = projectContext.packageMap.getInfo(packageName);
+    if (! mapInfo)
+      throw Error("no version for used package " + packageName);
+    var versionRecord = projectContext.projectCatalog.getVersion(
+      packageName, mapInfo.version);
+    if (! versionRecord) {
+      throw Error("no version record for " + packageName + "@" +
+                  mapInfo.version);
+    }
 
-    _.each(packages, function (version, name) {
-      // Show the version we actually use, not the version we constrain on!
-      version = versions[name];
-
-      // Use complete catalog to get the local versions of local packages.
-      // XXX #3006 No more catalog.complete (see other uses in this command
-      // too)
-      var versionInfo = catalog.complete.getVersion(name, version);
-      if (!versionInfo) {
-        buildmessage.error("Cannot process package list. Unknown: " + name +
-                           " at version " + version + "\n");
-        return;
-      }
-
-      var versionAddendum = "" ;
+    var versionAddendum = " ";
+    if (mapInfo.kind === 'local') {
+      versionAddendum = "+";
+      anyBuiltLocally = true;
+    } else if (mapInfo.kind === 'versioned') {
+      // Check to see if there are later versions available.
       // If we are not using an rc for this package, then we are not going to
       // update to an rc. But if we are using a pre-release version, then we
       // care about other pre-release versions, and might want to update to a
       // newer one.
       var latest;
-      if (!/-/.test(version)) {
-          latest = catalog.complete.getLatestMainlineVersion(name, version);
+      if (/-/.test(mapInfo.version)) {
+        latest = catalog.official.getLatestVersion(packageName);
       } else {
-          latest = catalog.complete.getLatestVersion(name, version);
+        latest = catalog.official.getLatestMainlineVersion(packageName);
       }
-      var packageVersionParser = require('./package-version-parser.js');
-      if (latest &&
-          version !== latest.version &&
+      if (! latest) {
+        // Shouldn't happen: we've chosen a published version of this package,
+        // so there has to be at least one in our database!
+        throw Error("no latest record for package where we have a version? " +
+                    packageName);
+      }
+      if (mapInfo.version !== latest.version &&
           // If we're currently running a prerelease, "latest" may be older than
           // what we're at, so don't tell us we're outdated!
-          packageVersionParser.lessThan(version, latest.version) &&
-          !catalog.complete.isLocalPackage(name)) {
+          packageVersionParser.lessThan(mapInfo.version, latest.version)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
-      } else {
-        versionAddendum = " ";
       }
-
-      var description = version + versionAddendum +
-            (versionInfo.description ?
-             (" " + versionInfo.description) : "");
-      items.push({ name: name, description: description });
-
-    });
+    } else {
+      throw Error("unknown kind " + mapInfo.kind);
+    }
+    var description = mapInfo.version + versionAddendum;
+    if (versionRecord.description) {
+      description += " " + versionRecord.description;
+    }
+    items.push({ name: packageName, description: description });
   });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
 
   // Append extra information about special packages such as Cordova plugins
   // to the list.
-  var plugins = project.getCordovaPlugins();
-  _.each(plugins, function (version, name) {
-    items.push({ name: 'cordova:' + name, description: version });
-  });
+  _.each(
+    projectContext.cordovaPluginsFile.getPluginVersions(),
+    function (version, name) {
+      items.push({ name: 'cordova:' + name, description: version });
+    }
+  );
 
   utils.printPackageList(items);
 
   if (newVersionsAvailable) {
-    Console.info(
-"\n * New versions of these packages are available! Run 'meteor update' to try\n" +
-" to update those packages to their latest versions. If your packages cannot be\n" +
-" updated further, try typing meteor add <package>@<newVersion> to see more\n" +
-" information.");
+    Console.info("\n" +
+"* New versions of these packages are available! Run 'meteor update' to try\n" +
+"  to update those packages to their latest versions. If your packages cannot be\n" +
+"  updated further, try typing meteor add <package>@<newVersion> to see more\n" +
+"  information.");
+  }
+  if (anyBuiltLocally) {
+    Console.info("\n" +
+"+ These packages are built locally from source.");
   }
   return 0;
 });
@@ -2821,7 +2832,6 @@ main.registerCommand({
   pretty: true,
   requiresApp: true
 }, function (options) {
-  var projectContextModule = require('./project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir
   });
