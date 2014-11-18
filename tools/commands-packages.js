@@ -1707,7 +1707,8 @@ var maybeUpdateRelease = function (options) {
         "You are at the latest patch version.");
       return 0;
     }
-    var patchRecord = catalog.official.getReleaseVersion(r[0], updateTo);
+    var patchRecord = catalog.official.getReleaseVersion(
+      appTrackAndVersion[0], updateTo);
     // It looks like you are not at the latest patch version,
     // technically. But, in practice, we cannot update you to the latest patch
     // version because something went wrong. For example, we can't find the
