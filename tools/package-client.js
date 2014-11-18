@@ -297,7 +297,16 @@ exports.uploadTarball = uploadTarball;
 var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
 
-  var tempDir = files.mkdtemp('build-package-');
+  var tempDir;
+  if (isopack.includeTool) {
+    // The paths are going to be too long to use the normal temp directory
+    tempDir = "C:\\t";
+    files.rm_recursive(tempDir);
+    fs.mkdirSync(tempDir);
+  } else {
+    tempDir = files.mkdtemp("build-package-");
+  }
+
   var packageTarName = utils.escapePackageNameForPath(isopack.tarballName());
   var tarInputDir = path.join(tempDir, packageTarName);
 
