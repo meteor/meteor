@@ -208,29 +208,41 @@ _.extend(exports.Tropohouse.prototype, {
     var downloadedArches = [];
     var packageLinkTarget = null;
     
-    try {
-      packageLinkTarget = fs.readlinkSync(files.escapePathForWindows(packageLinkFile));
-    } catch (e) {
-      // Complain about anything other than "we don't have it at all". This
-      // includes "not a symlink": The main reason this would not be a symlink
-      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
-      // warehouse package not a tropohouse package). But the versions should
-      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-      // versions should be semver-like.
-      if (e.code !== 'ENOENT')
-        throw e;
-    }
+    // Huge special case here for Windows because the whole symlinking thing
+    // doesn't work, so we just read isopack.json
+    if (process.platform === "win32") {
+      // XXX HACK HACK should refactor into isopack.js to read all of the
+      // package formats, might be OK for preview? not sure
+      var isopackJsonPath = path.join(packageLinkFile, "isopack.json");
+      if (fs.existsSync(isopackJsonPath)) {
+        var isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
+        downloadedArches = _.pluck(isopackJson["isopack-1"].builds, "arch");
+      }
+    } else {
+      try {
+        packageLinkTarget = fs.readlinkSync(files.escapePathForWindows(packageLinkFile));
+      } catch (e) {
+        // Complain about anything other than "we don't have it at all". This
+        // includes "not a symlink": The main reason this would not be a symlink
+        // is if it's a directory containing a pre-0.9.0 package (ie, this is a
+        // warehouse package not a tropohouse package). But the versions should
+        // not overlap: warehouse versions are truncated SHAs whereas tropohouse
+        // versions should be semver-like.
+        if (e.code !== 'ENOENT')
+          throw e;
+      }
 
-    if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
-      // so this strips off the part before the '++'.
-      // XXX maybe we should just read the isopack.json instead of
-      //     depending on the symlink?
-      var archPart = packageLinkTarget.split('++')[1];
-      if (!archPart)
-        throw Error("unexpected symlink target for " + packageName + "@" +
-                    version + ": " + packageLinkTarget);
-      downloadedArches = archPart.split('+');
+      if (packageLinkTarget) {
+        // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
+        // so this strips off the part before the '++'.
+        // XXX maybe we should just read the isopack.json instead of
+        //     depending on the symlink?
+        var archPart = packageLinkTarget.split('++')[1];
+        if (!archPart)
+          throw Error("unexpected symlink target for " + packageName + "@" +
+                      version + ": " + packageLinkTarget);
+        downloadedArches = archPart.split('+');
+      }
     }
 
     var archesToDownload = _.filter(options.architectures, function (requiredArch) {
