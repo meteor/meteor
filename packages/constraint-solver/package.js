@@ -12,7 +12,8 @@ Package.on_use(function (api) {
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random'], 'server');
   api.add_files(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
-                 'resolver-state.js', 'priority-queue.js'], ['server']);
+                 'resolver-state.js', 'priority-queue.js',
+                 'package-graph.js'], ['server']);
 });
 
 Package.on_test(function (api) {
@@ -23,5 +24,6 @@ Package.on_test(function (api) {
   api.add_files('constraint-solver-tests.js', ['server']);
   api.add_files('benchmark-tests.js', ['server']);
   api.add_files('resolver-tests.js', ['server']);
+  api.add_files('package-graph-tests.js', ['server']);
   api.use('underscore');
 });
