@@ -71,54 +71,6 @@ umask 022
 mkdir build
 cd build
 
-TEMP_PREFIX="$DIR/build/prefix"
-mkdir -p $TEMP_PREFIX
-
-# Add $DIR/bin and $TEMP_PREFIX/bin to $PATH so that we can use tools
-# installed earlier when building later tools (namely, autoconf and
-# automake for watchman, and node and npm for the various NPM packages we
-# install below).
-export PATH="$DIR/bin:$PATH"
-PATH="$TEMP_PREFIX/bin:$PATH"
-
-# Build reliable versions of m4, autoconf, and automake for watchman and
-# potentially other projects.
-
-M4_VERSION="1.4.17"
-curl "http://ftp.gnu.org/gnu/m4/m4-$M4_VERSION.tar.gz" | gzip -d | tar x
-pushd "m4-$M4_VERSION"
-./configure --prefix="$TEMP_PREFIX"
-make install
-popd
-
-AUTOCONF_VERSION="2.69"
-curl "http://ftp.gnu.org/gnu/autoconf/autoconf-$AUTOCONF_VERSION.tar.gz" | gzip -d | tar x
-pushd "autoconf-$AUTOCONF_VERSION"
-./configure --prefix="$TEMP_PREFIX"
-make install
-popd
-
-AUTOMAKE_VERSION="1.14"
-curl "http://ftp.gnu.org/gnu/automake/automake-$AUTOMAKE_VERSION.tar.gz" | gzip -d | tar x
-pushd "automake-$AUTOMAKE_VERSION"
-./configure --prefix="$TEMP_PREFIX"
-make install
-popd
-
-WATCHMAN_VERSION="3.0.0"
-curl "https://codeload.github.com/facebook/watchman/tar.gz/v$WATCHMAN_VERSION" | gzip -d | tar x
-pushd "watchman-$WATCHMAN_VERSION"
-./autogen.sh
-./configure --prefix="$DIR" --without-pcre
-make install
-strip "$DIR/bin/watchman"
-popd
-
-# Clean up some unnecessary megabytes of docs.
-rm -rf "$DIR/share/doc" "$DIR/share/man"
-
-which watchman
-
 # ios-sim is used to run iPhone simulator from the command-line. Doesn't make
 # sense to build it for linux.
 if [ "$OS" == "osx" ]; then
@@ -157,6 +109,9 @@ make -j4
 make install PORTABLE=1
 # PORTABLE=1 is a node hack to make npm look relative to itself instead
 # of hard coding the PREFIX.
+
+# export path so we use our new node for later builds
+export PATH="$DIR/bin:$PATH"
 
 which node
 
@@ -224,8 +179,6 @@ rm -rf node_modules/browserstack-webdriver/docs
 rm -rf node_modules/browserstack-webdriver/lib/test
 
 npm install node-inspector@0.7.4
-
-npm install sane@1.0.0-rc1
 
 npm install chalk@0.5.1
 
