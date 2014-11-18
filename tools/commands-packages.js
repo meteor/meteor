@@ -1073,9 +1073,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
 }, function (options) {
-  // We should refresh the catalog in case there are new versions.
-  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE_MS });
-
   // We only show compatible versions unless we know otherwise.
   var versionVisible = function (record) {
     return options['show-old'] || !record.unmigrated;
@@ -1209,7 +1206,7 @@ main.registerCommand({
         rows.push(row);
       });
 
-      utils.printTwoColumns(rows)
+      utils.printTwoColumns(rows);
     }
   }
 
@@ -1273,10 +1270,7 @@ main.registerCommand({
     options["show-old"] = true;
   }
 
-  // XXX this is dumb, we should be able to search even if we can't
-  // refresh. let's make sure to differentiate "horrible parse error while
-  // refreshing" from "can't connect to catalog"
-  //refreshOfficialCatalogOrDie({ maxAge: DEFAULT_MAX_AGE_MS });
+  // XXX We should push the queries into SQLite!
 
   var allPackages = catalog.official.getAllPackageNames();
   var allReleases = catalog.official.getAllReleaseTracks();
