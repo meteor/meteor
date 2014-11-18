@@ -2,7 +2,7 @@
 
 <h2 id="packagejs"><span>Package.js</span></h2>
 
-{{#markdown}} A package is a directory containing a package.js file, which
+{{#markdown}} A package is a directory containing a `package.js` file, which
 contains roughly three major sections: a basic description, a package
 definition, and a test definition. By default, the directory name is the name of
 the package.
@@ -19,7 +19,7 @@ rest of this section will explain the specific API commands in greater detail.
       version: "1.0.0",
       // Optional.  Default is package directory name.
       name: "username:package-name",
-      // Optional github URL to your source repository.
+      // Optional Git URL to your source repository.
       git: "https://github.com/something/something.git",
     });
 
