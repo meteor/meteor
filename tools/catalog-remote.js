@@ -564,7 +564,8 @@ _.extend(RemoteCatalog.prototype, {
 
   getSortedVersions: function (name) {
     var self = this;
-    var match = this._getPackageVersions(name);
+    var match = this._columnsQuery(
+      "SELECT version FROM versions WHERE packageName=?", name);
     if (match === null)
       return [];
     return _.pluck(match, 'version').sort(VersionParser.compare);
@@ -591,14 +592,6 @@ _.extend(RemoteCatalog.prototype, {
       throw new Error("Found multiple packages matching name: " + name);
     }
     return result[0];
-  },
-
-  _getPackageVersions: function (name) {
-    if (!name) {
-      throw new Error("No name provided");
-    }
-    return this._contentQuery(
-      "SELECT content FROM versions WHERE packageName=?", name);
   },
 
   getAllBuilds: function (name, version) {
