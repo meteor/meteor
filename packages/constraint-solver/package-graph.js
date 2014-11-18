@@ -20,7 +20,8 @@ PackageGraph = function (data) {
 ConstraintSolver.PackageGraph = PackageGraph;
 
 PackageGraph.prototype._checkRep = function () {
-  var data = this.data;
+  var self = this;
+  var data = self.data;
 
   check(data, Object);
 
@@ -34,11 +35,7 @@ PackageGraph.prototype._checkRep = function () {
       if (package2.indexOf('@') >= 0) {
         throw new Error('package name "' + package2 + '" can\'t have an @');
       }
-      check(dep, { constraint: Match.Optional(String),
-                   depArchs: Match.Optional([String]) });
-      if (! (dep.constraint || dep.depArchs)) {
-        throw new Error("Must have one of 'constraint' or 'depArchs'");
-      }
+      self._checkDependency(dep);
     });
   });
 
@@ -46,16 +43,56 @@ PackageGraph.prototype._checkRep = function () {
   // are strings of the right form (by parsing them), but we don't.
 };
 
+PackageGraph.prototype._checkDependency = function (dep) {
+  check(dep, { constraint: Match.Optional(String),
+               depArchs: Match.Optional([String]) });
+  if (! (dep.constraint || dep.depArchs)) {
+    throw new Error("Must have one of 'constraint' or 'depArchs'");
+  }
+};
+
+var packageAtVersion = function (package, version) {
+  return package + '@' + version;
+};
+
 // Add a package@version to the universe of package version.  Idempotent.
 // Returns true if the version if new.
 PackageGraph.prototype.addPackageVersion = function (package, version) {
   var data = this.data;
-  var key = (package + '@' + version);
+  var key = packageAtVersion(package, version);
   if (! data[key]) {
     data[key] = {};
     return true;
   }
   return false;
+};
+
+// If there is already a dependency for (package@version, package2), this one
+// must match it exactly, or an error will be thrown.  Returns true if the
+// dependency is new.
+PackageGraph.prototype.addDependency = function (package, version, package2, dep) {
+  var self = this;
+  var data = self.data;
+  var key = packageAtVersion(package, version);
+  if (! data[key]) {
+    data[key] = {};
+  }
+  var dependencies = data[key];
+
+  self._checkDependency(dep);
+
+  if (_.has(dependencies, package2)) {
+    if (! _.isEqual(dependencies[package2], dep)) {
+      throw new Error("Can't add a different dependency record for " +
+                      package + "@" + version + "->" + package2 + "; OLD: " +
+                      JSON.stringify(dependencies[package2]) + ", NEW: " +
+                      JSON.stringify(dep));
+    }
+    return false;
+  } else {
+    dependencies[package2] = dep;
+    return true;
+  }
 };
 
 // Returns the PackageGraph's underlying data, without copying it.
