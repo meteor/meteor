@@ -534,7 +534,7 @@ _.extend(PackageSource.prototype, {
        * @summary Define package dependencies and expose package methods.
        * @locus package.js
        * @memberOf Package
-       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       * @param {Function} func A function that takes in the package control `api` object, which keeps track of dependencies and exports.
        */
       onUse: function (f) {
         if (!self.isTest) {
@@ -559,7 +559,7 @@ _.extend(PackageSource.prototype, {
        * @summary Define dependencies and expose package methods for unit tests.
        * @locus package.js
        * @memberOf Package
-       * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
+       * @param {Function} func A function that takes in the package control `api` object, which keeps track of dependencies and exports.
        */
       onTest: function (f) {
         // If we are not initializing the test package, then we are initializing
