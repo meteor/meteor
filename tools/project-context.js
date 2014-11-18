@@ -17,8 +17,23 @@ var tropohouse = require('./tropohouse.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
 
-// This class follows the standard protocol where names beginning with _ should
-// not be externally accessed.
+// The ProjectContext represents all the context associated with an app:
+// metadata files in the `.meteor` directory, the choice of package versions
+// used by it, etc.  Any time you want to work with an app, create a
+// ProjectContext and call prepareProjectForBuild on it (in a buildmessage
+// context).
+//
+// Note that this should only be used by parts of the code that truly require a
+// full project to exist; you won't find any reference to ProjectContext in
+// compiler.js or isopack.js, which work on individual files (though they will
+// get references to some of the objects which can be stored in a ProjectContext
+// such as PackageMap and IsopackCache).  Parts of the code that should deal
+// with ProjectContext include command implementations, the parts of bundler.js
+// that deal with creating a full project, PackageSource.initFromAppDir, stats
+// reporting, etc.
+//
+// Classes in this file follow the standard protocol where names beginning with
+// _ should not be externally accessed.
 exports.ProjectContext = function (options) {
   var self = this;
   if (!options.projectDir)
