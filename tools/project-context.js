@@ -518,15 +518,13 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       // No constraint? Leave lineRecord.constraint null and continue.
       if (line === '')
         return;
-      try {
-        lineRecord.constraint = utils.parseConstraint(line);
-      } catch (e) {
-        if (! e.versionParserError)
-          throw e;
-        buildmessage.exception(e);
-      }
+      lineRecord.constraint = utils.parseConstraint(line, {
+        useBuildmessage: true,
+        buildmessageFile: self.filename
+      });
       if (! lineRecord.constraint)
         return;  // recover by ignoring
+
       if (_.has(self._constraintMap, lineRecord.constraint.name)) {
         buildmessage.error(
           "Package name appears twice: " + lineRecord.constraint.name, {
@@ -666,13 +664,10 @@ _.extend(exports.PackageMapFile.prototype, {
       line = files.trimSpace(line);
       if (line === '')
         return;
-      try {
-        var constraint = utils.parseConstraint(line);
-      } catch (e) {
-        if (!e.versionParserError)
-          throw e;
-        buildmessage.exception(e);
-      }
+      var constraint = utils.parseConstraint(line, {
+        useBuildmessage: true,
+        buildmessageFile: self.filename
+      });
       if (!constraint)
         return;  // recover by ignoring
 

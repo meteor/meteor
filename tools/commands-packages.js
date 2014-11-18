@@ -1996,217 +1996,112 @@ main.registerCommand({
 
   if (_.isEmpty(args))
     return exitCode;
-  return 123
 
+  // Messages that we should print if we make any changes, but that don't count
+  // as errors.
+  var infoMessages = [];
+  var constraintsToAdd = [];
   // For every package name specified, add it to our list of package
   // constraints. Don't run the constraint solver until you have added all of
   // them -- add should be an atomic operation regardless of the package
-  // order. Even though the package file should specify versions of its inputs,
-  // we don't specify these constraints until we get them back from the
-  // constraint solver.
-  //
-  // In the interests of failing fast, we do this check before refreshing the
-  // catalog, touching the project, etc, since these parsings are purely
-  // syntactic.
-  var constraints = _.map(options.args, function (packageReq) {
-    try {
-      return utils.parseConstraint(packageReq);
-    } catch (e) {
-      if (!e.versionParserError)
-        throw e;
-      console.log("Error: " + e.message);
-      throw new main.ExitWithCode(1);
-    }
-  });
-
-  var failed = false;
-
-  // Refresh the catalog, cacheing the remote package data on the server.
-  // XXX ensure this works while offline
-  //refreshOfficialCatalogOrDie();
-
-  // Read in existing package dependencies.
-  var packages = project.getConstraints();
-
-  var allPackages;
-  var messages = buildmessage.capture({ title: 'Combining constraints' }, function () {
-    // Combine into one object mapping package name to list of constraints, to
-    // pass in to the constraint solver.
-    allPackages = project.getCurrentCombinedConstraints();
-  });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    explainIfRefreshFailed();
-    return 1;
-  }
-
-  _.each(constraints, function (constraint) {
-    // Check that the package exists.
-    if (! catalogcomplete.getPackage(constraint.name)) {
-      Console.error(constraint.name + ": no such package");
-      failed = true;
-      return;
-    }
-
-    var thisConstraintFailed = false;
-
-    // If the version was specified, check that the version exists.
-    _.each(constraint.constraints, function (constr) {
-      if (constr.version !== null) {
-        var versionInfo = catalogcomplete.getVersion(
-          constraint.name, constr.version);
-        if (! versionInfo) {
-          Console.stderr.write(
-            constraint.name + "@" + constr.version  + ": no such version\n");
-          thisConstraintFailed = true;
+  // order.
+  var messages = buildmessage.capture(function () {
+    _.each(args, function (packageReq) {
+      buildmessage.enterJob("adding package " + packageReq, function () {
+        var constraint = utils.parseConstraint(packageReq, {
+          useBuildmessage: true
+        });
+        if (buildmessage.jobHasMessages())
           return;
-        }
-      }
-    });
 
-    if (thisConstraintFailed) {
-      failed = true;
-      return;
-    }
+        // We used to check that packages exist and that that if versions were
+        // specified, that they exist. This was especially important when
+        // earliestCompatibleVersion existed, because whether @1.2.3 matched
+        // 1.4.6 depended on the ECV of those two versions; now we just know
+        // that the answer is "yes". We get similar behavior from just running
+        // the constraint solver now.
 
-    // Check that the constraint is new. If we are already using the package at
-    // the same constraint in the app, return from this function, but don't
-    // fail. Rejecting the entire command because a part of it is a no-op is
-    // confusing.
-    if (_.has(packages, constraint.name)) {
-      if (!packages[constraint.name] && !constraint.constraintString) {
-        Console.info(
-          constraint.name +
-            " without a version constraint has already been added.");
-      }
-      else if (packages[constraint.name] === constraint.constraintString) {
-        Console.info(
-          constraint.name + " with version constraint " +
-            constraint.constraintString + " has already been added.");
-      } else {
-        if (packages[constraint.name]) {
-          Console.info(
-            "Currently using " + constraint.name +
-              " with version constraint " + packages[constraint.name]
-              + ".");
+        // XXX #3006 test that we get a good error
+
+        var current = projectContext.projectConstraintsFile.getConstraint(
+          constraint.name);
+
+        // Check that the constraint is new. If we are already using the package
+        // at the same constraint in the app, we will log an info message later
+        // (if there are no other errors), but don't fail. Rejecting the entire
+        // command because a part of it is a no-op is confusing.
+        if (! current) {
+          constraintsToAdd.push(constraint);
+        } else if (! current.constraintString &&
+                   ! constraint.constraintString) {
+          infoMessages.push(
+            constraint.name +
+              " without a version constraint has already been added.");
+        } else if (current.constraintString === constraint.constraintString) {
+          infoMessages.push(
+            constraint.name + " with version constraint " +
+              constraint.constraintString + " has already been added.");
         } else {
-          Console.info("Currently using "+  constraint.name +
-                               " without any version constraint.");
-        }
-        if (constraint.constraintString) {
-          Console.info("The version constraint will be changed to " +
-                               constraint.constraintString + ".");
-        } else {
-          Console.info("The version constraint will be removed.");
-        }
-        // Now remove the old constraint from what we're going to calculate
-        // with. (XXX: This is hacky.)
-        var removed = false;
-        var oldC = "";
-        if (packages[constraint.name]) {
-          oldC = "@" + packages[constraint.name];
-        }
-        var oldConstraint = utils.parseConstraint(
-          constraint.name + oldC);
-
-        for (var i = 0; i < allPackages.length; ++i) {
-          if (_.isEqual(oldConstraint, allPackages[i])) {
-            removed = true;
-            allPackages.splice(i, 1);
-            break;
+          // We are changing an existing constraint.
+          if (current.constraintString) {
+            infoMessages.push(
+              "Currently using " + constraint.name +
+                " with version constraint " + current.constraintString + ".");
+          } else {
+            infoMessages.push(
+              "Currently using " +  constraint.name +
+                " without any version constraint.");
           }
+          if (constraint.constraintString) {
+            infoMessages.push("The version constraint will be changed to " +
+                              constraint.constraintString + ".");
+          } else {
+            infoMessages.push("The version constraint will be removed.");
+          }
+          constraintsToAdd.push(constraint);
         }
-        if (!removed) {
-          throw Error("Couldn't find constraint to remove: " +
-                      JSON.stringify(constraint.constraintString));
-        }
-      }
-    }
-
-    // Add the package to our direct dependency constraints that we get
-    // from .meteor/packages.
-    packages[constraint.name] = constraint.constraintString;
-
-    // Also, add it to all of our combined dependencies.
-    allPackages.push(constraint);
-
-  });
-
-  // If the user asked for invalid packages, then the user probably expects a
-  // different result than what they are going to get. We have already logged an
-  // error, so we should exit.
-  if ( failed ) {
-    explainIfRefreshFailed();
-
-    return 1;
-  }
-
-  var versions, newVersions;
-
-  try {
-    var messages = buildmessage.capture(function () {
-      // Get the contents of our versions file. We need to pass them to the
-      // constraint solver, because our contract with the user says that we will
-      // never downgrade a dependency.
-      versions = project.getVersions();
-
-      // Call the constraint solver.
-      // XXX #3006 no longer exists
-      newVersions = catalogcomplete.resolveConstraints(
-        allPackages,
-        { previousSolution: versions },
-        { ignoreProjectDeps: true });
-
-      if ( ! newVersions) {
-        // XXX: Better error handling.
-        Console.error("Cannot resolve package dependencies.");
-        explainIfRefreshFailed();
-        return;
-      }
-
-      // Don't tell the user what all the operations were until we finish -- we
-      // don't want to give a false sense of completeness until everything is
-      // written to disk.
-      var messageLog = [];
+      });
     });
-  } catch (e) {
-    if (!e.constraintSolverError)
-      throw e;
-    // XXX this is too many forms of error handling!
-    Console.error(
-      "Could not satisfy all the specified constraints:\n"
-        + e + "");
-    explainIfRefreshFailed();
-    return 1;
-  }
+  });
   if (messages.hasMessages()) {
+    Console.error("=> Errors while parsing arguments:");
     Console.printMessages(messages);
-    explainIfRefreshFailed();
+    explainIfRefreshFailed();  // this is why we're not using captureAndExit
     return 1;
   }
 
-  // Install the new versions. If all new versions were installed successfully,
-  // then change the .meteor/packages and .meteor/versions to match expected
-  // reality.
-  var downloaded = project.addPackages(constraints, newVersions);
+  projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
-  var ret = project.showPackageChanges(versions, newVersions, {
-    onDiskPackages: downloaded});
-  if (ret !== 0) return ret;
+  // Run the constraint solver, download packages, etc.
+  messages = buildmessage.capture(function () {
+    projectContext.prepareProjectForBuild();
+  });
+  if (messages.hasMessages()) {
+    Console.error("=> Errors while adding packages:");
+    Console.printMessages(messages);
+    explainIfRefreshFailed();  // this is why we're not using captureAndExit
+    return 1;
+  }
 
-  // Show the user the messageLog of the packages that they installed.
-  // (XXX: this will be rewritten pending geoff's feedback on packaging UX)
-  Console.stdout.write("\n");
-  _.each(constraints, function (constraint) {
-    var version = newVersions[constraint.name];
-    var versionRecord = catalogcomplete.getVersion(constraint.name, version);
-    Console.stdout.write(constraint.name +
-                         (versionRecord.description ?
-                          (": " + versionRecord.description) :
-                          ""));
+  // XXX #3006 showPackageChanges!
+
+  _.each(infoMessages, function (message) {
+    Console.info(message);
   });
 
-  return 0;
+
+  // Show descriptions of directly added packages.
+  Console.stdout.write("\n");
+  _.each(constraintsToAdd, function (constraint) {
+    var version = projectContext.packageMap.getInfo(constraint.name).version;
+    var versionRecord = projectContext.projectCatalog.getVersion(
+      constraint.name, version);
+    Console.stdout.write(
+      constraint.name +
+        (versionRecord.description ? (": " + versionRecord.description) : ""));
+  });
+
+  return exitCode;
 });
 
 

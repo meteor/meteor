@@ -2,6 +2,7 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
@@ -236,8 +237,19 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
+// Like packageVersionParser.parseConstraint, but if called in a buildmessage
+// context uses buildmessage to raise errors.
+exports.parseConstraint = function (constraintString, options) {
+  try {
+    return packageVersionParser.parseConstraint(constraintString, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
+  }
+};
 exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
-exports.parseConstraint = packageVersionParser.parseConstraint;
 exports.validatePackageName = packageVersionParser.validatePackageName;
 
 // XXX should unify this with utils.parseConstraint
