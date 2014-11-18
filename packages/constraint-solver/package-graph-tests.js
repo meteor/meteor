@@ -7,7 +7,7 @@ Tinytest.add("constraint-solver - PackageGraph - rep", function (test) {
     return G;
   };
 
-  makeGraph({
+  var G = makeGraph({
     'foo@1.0.0': {
       bar: { constraint: '0.7.0',
              depArchs: ['os', 'web'] }
@@ -24,6 +24,11 @@ Tinytest.add("constraint-solver - PackageGraph - rep", function (test) {
     'bar@0.7.9': {},
     'bar@0.7.10': {}
   });
+  test.equal(G.getPackageVersions("foo").sort(),
+             ["1.0.0", "1.0.1", "2.0.0"]);
+  test.equal(G.getPackageVersions("bar").sort(),
+             ["0.7.10", "0.7.8", "0.7.9"]);
+  test.equal(G.getPackages().sort(), ["bar", "foo"]);
 
   // these don't throw any errors
   makeGraph();
@@ -54,6 +59,10 @@ Tinytest.add("constraint-solver - PackageGraph - rep", function (test) {
   test.throws(function () {
     // bad dependency (can't have '@' in package2)
     makeGraph({ 'foo@1.0.0': { 'bar@2.0.0': { depArchs: ['os'] } } });
+  });
+  test.throws(function () {
+    // bad dependency (can't have empty array for depArchs)
+    makeGraph({ 'foo@1.0.0': { 'bar': { depArchs: [] } } });
   });
 });
 
