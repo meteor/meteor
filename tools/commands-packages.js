@@ -2595,7 +2595,7 @@ main.registerCommand({
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
-    fs.symlinkSync(
+    files.linkToExecutable(
       path.join(
         tmpTropo.packagePath(toolPkg.package, toolPkg.constraint, true),
         toolRecord.path,

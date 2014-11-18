@@ -1031,7 +1031,7 @@ files.linkToExecutable = function (target, linkLocation) {
     // script that calls the target passed in
     var newScript = [
       "@echo off",
-      target
+      "%~dp0\\" + target + ".bat" // XXX hack assuming we are linking to bat
     ].join(os.EOL);
 
     fs.writeFileSync(linkLocation, newScript, {encoding: "ascii"});
