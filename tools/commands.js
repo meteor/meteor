@@ -1353,8 +1353,11 @@ main.registerCommand({
   var constraintsToAdd = _.map(packagesToAdd, function (p) {
     return utils.parseConstraint(p);
   });
-  // Add the packages to .meteor/packages.  (We haven't yet resolved
-  // constraints, so this will affect constraint resolution.)
+  // Add the packages to our in-memory representation of .meteor/packages.  (We
+  // haven't yet resolved constraints, so this will affect constraint
+  // resolution.)  This will get written to disk once we prepareProjectForBuild,
+  // either in the Cordova code below, right before deploying below, or in the
+  // app runner.
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
   // The rest of the projectContext preparation process will happen inside the

@@ -2282,18 +2282,21 @@ main.registerCommand({
   });
   if (! packagesToRemove.length)
     return exitCode;
+
+  // Remove the packages from the in-memory representation of .meteor/packages.
   projectContext.projectConstraintsFile.removePackages(packagesToRemove);
+
+  // Run the constraint solver, rebuild local packages, etc. This will write
+  // our changes to .meteor/packages if it succeeds.
+  main.captureAndExit("=> Errors after removing packages", function () {
+    projectContext.prepareProjectForBuild();
+  });
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
   // which is why there are these two tiers of error messages.
   _.each(packagesToRemove, function (packageName) {
     Console.info(packageName + ": removed dependency");
-  });
-
-  // Run the constraint solver, rebuild local packages, etc.
-  main.captureAndExit("=> Errors after removing packages", function () {
-    projectContext.prepareProjectForBuild();
   });
 
   return exitCode;

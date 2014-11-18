@@ -35,8 +35,8 @@ var STAGE = {
   INITIALIZE_CATALOG: '_resolveConstraints',
   RESOLVE_CONSTRAINTS: '_downloadMissingPackages',
   DOWNLOAD_MISSING_PACKAGES: '_buildLocalPackages',
-  BUILD_LOCAL_PACKAGES: '_savePackageMap',
-  SAVE_PACKAGE_MAP: 'DONE'
+  BUILD_LOCAL_PACKAGES: '_saveChangedMetadata',
+  SAVE_CHANGED_METADATA: 'DONE'
 };
 
 _.extend(exports.ProjectContext.prototype, {
@@ -101,13 +101,13 @@ _.extend(exports.ProjectContext.prototype, {
   buildLocalPackages: function () {
     this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
   },
-  savePackageMap: function () {
-    this._completeStagesThrough(STAGE.SAVE_PACKAGE_MAP);
+  saveChangedMetadata: function () {
+    this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
   },
   prepareProjectForBuild: function () {
-    // This is the same as savePackageMap, but if we insert stages after that
-    // one it will continue to mean "fully finished".
-    this._completeStagesThrough(STAGE.SAVE_PACKAGE_MAP);
+    // This is the same as saveChangedMetadata, but if we insert stages after
+    // that one it will continue to mean "fully finished".
+    this.saveChangedMetadata();
   },
 
   _completeStagesThrough: function (targetStage) {
@@ -119,7 +119,7 @@ _.extend(exports.ProjectContext.prototype, {
         // This error gets thrown if you request to go to a stage that's earlier
         // than where you started. Note that the error will be mildly confusing
         // because the key of STAGE does not match the value.
-        if (self.completedStage === STAGE.SAVE_PACKAGE_MAP)
+        if (self.completedStage === STAGE.SAVE_CHANGED_METADATA)
           throw Error("can't find requested stage " + targetStage);
 
         // The actual value of STAGE.FOO is the name of the method that takes
@@ -429,8 +429,11 @@ _.extend(exports.ProjectContext.prototype, {
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   },
 
-  _savePackageMap: function () {
+  _saveChangedMetadata: function () {
     var self = this;
+
+    // Save any changes to .meteor/packages.
+    self.projectConstraintsFile.writeIfModified();
 
     // XXX #3006 make sure that this conditional is correct for update too
 
@@ -447,7 +450,7 @@ _.extend(exports.ProjectContext.prototype, {
     }
 
     self.packageMapFile.write(self.packageMap);
-    self._completedStage = STAGE.SAVE_PACKAGE_MAP;
+    self._completedStage = STAGE.SAVE_CHANGED_METADATA;
   }
 });
 
@@ -459,6 +462,9 @@ exports.ProjectConstraintsFile = function (options) {
 
   self.filename = path.join(options.projectDir, '.meteor', 'packages');
   self.watchSet = null;
+
+  // Have we modified the in-memory representation since reading from disk?
+  self._modified = null;
   // List of each line in the file; object with keys:
   // - leadingSpace (string of spaces before the constraint)
   // - constraint (as returned by utils.parseConstraint)
@@ -476,6 +482,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     buildmessage.assertInCapture();
 
     self.watchSet = new watch.WatchSet;
+    self._modified = false;
     self._constraintMap = {};
     self._constraintLines = [];
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
@@ -532,6 +539,11 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     });
   },
 
+  writeIfModified: function () {
+    var self = this;
+    self._modified && self._write();
+  },
+
   _write: function () {
     var self = this;
     var lines = _.map(self._constraintLines, function (lineRecord) {
@@ -575,9 +587,13 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     return null;
   },
 
+  // Adds constraints, an array of objects as returned from
+  // utils.parseConstraint.
+  // Does not write to disk immediately; changes are written to disk by
+  // writeIfModified() which is called in the _saveChangedMetadata step
+  // of project preparation.
   addConstraints: function (constraintsToAdd) {
     var self = this;
-    var changed = false;
     _.each(constraintsToAdd, function (constraintToAdd) {
       var lineRecord;
       if (! _.has(self._constraintMap, constraintToAdd.name)) {
@@ -588,24 +604,23 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
         };
         self._constraintLines.push(lineRecord);
         self._constraintMap[constraintToAdd.name] = lineRecord;
-        changed = true;
+        self._modified = true;
         return;
       }
       lineRecord = self._constraintMap[constraintToAdd.name];
       if (_.isEqual(constraintToAdd, lineRecord.constraint))
         return;  // nothing changed
       lineRecord.constraint = constraintToAdd;
-      changed = true;
+      self._modified = true;
     });
-
-    if (! changed)
-      return;
-    self._write();
   },
 
   // The packages in packagesToRemove are expected to actually be in the file;
   // if you want to provide different output for packages in the file vs not,
   // you should have already done that.
+  // Does not write to disk immediately; changes are written to disk by
+  // writeIfModified() which is called in the _saveChangedMetadata step
+  // of project preparation.
   removePackages: function (packagesToRemove) {
     var self = this;
     self._constraintLines = _.filter(
@@ -616,7 +631,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     _.each(packagesToRemove, function (p) {
       delete self._constraintMap[p];
     });
-    self._write();
+    self._modified = true;
   }
 });
 
