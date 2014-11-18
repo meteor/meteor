@@ -126,74 +126,76 @@ var ensureIsopacketsLoadable = function () {
   // Look at each isopacket. Check to see if it's on disk and up to date. If
   // not, build it. We rebuild them in the order listed in ISOPACKETS, which
   // ensures that we deal with js-analyze first.
-  var messages = buildmessage.capture(function () {
-    _.each(ISOPACKETS, function (packages, isopacketName) {
-      if (failedPackageBuild)
-        return;
+  var messages = Console.withProgressDisplayVisible(function () {
+    return buildmessage.capture(function () {
+      _.each(ISOPACKETS, function (packages, isopacketName) {
+        if (failedPackageBuild)
+          return;
 
-      var isopacketRoot = isopacketPath(isopacketName);
-      var existingBuildinfo = files.readJSONOrNull(
-        path.join(isopacketRoot, 'isopacket-buildinfo.json'));
-      var needRebuild = ! existingBuildinfo;
-      if (! needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
-        needRebuild = true;
-      }
-      if (! needRebuild) {
-        var watchSet = watch.WatchSet.fromJSON(existingBuildinfo.watchSet);
-        if (! watch.isUpToDate(watchSet)) {
+        var isopacketRoot = isopacketPath(isopacketName);
+        var existingBuildinfo = files.readJSONOrNull(
+          path.join(isopacketRoot, 'isopacket-buildinfo.json'));
+        var needRebuild = ! existingBuildinfo;
+        if (! needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
         }
-      }
-      if (! needRebuild) {
-        // Great, it's loadable without a rebuild.
-        loadedIsopackets[isopacketName] = null;
-        return;
-      }
-
-      // We're going to need to build! Make a catalog and loader if we haven't
-      // yet.
-      if (! isopacketCatalog) {
-        isopacketCatalog = newIsopacketBuildingCatalog();
-        // Make an isopack cache that doesn't save isopacks to disk and has no
-        // access to versioned packages.
-        isopackCache = new isopackCacheModule.IsopackCache;
-        var versions = {};
-        _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
-          versions[packageName] =
-            isopacketCatalog.getLatestVersion(packageName).version;
-        });
-        packageMap = new packageMapModule.PackageMap(
-          versions, isopacketCatalog);
-      }
-
-      buildmessage.enterJob({
-        title: "Bundling " + isopacketName + " packages for the tool"
-      }, function () {
-        // Build the packages into the in-memory IsopackCache.
-        isopackCache.buildLocalPackages(packageMap, packages);
-        if (buildmessage.jobHasMessages())
+        if (! needRebuild) {
+          var watchSet = watch.WatchSet.fromJSON(existingBuildinfo.watchSet);
+          if (! watch.isUpToDate(watchSet)) {
+            needRebuild = true;
+          }
+        }
+        if (! needRebuild) {
+          // Great, it's loadable without a rebuild.
+          loadedIsopackets[isopacketName] = null;
           return;
+        }
 
-        // Now bundle them into a program.
-        var built = bundler.buildJsImage({
-          name: "isopacket-" + isopacketName,
-          packageMap: packageMap,
-          isopackCache: isopackCache,
-          use: packages,
-          catalog: isopacketCatalog
-        });
-        if (buildmessage.jobHasMessages())
-          return;
+        // We're going to need to build! Make a catalog and loader if we haven't
+        // yet.
+        if (! isopacketCatalog) {
+          isopacketCatalog = newIsopacketBuildingCatalog();
+          // Make an isopack cache that doesn't save isopacks to disk and has no
+          // access to versioned packages.
+          isopackCache = new isopackCacheModule.IsopackCache;
+          var versions = {};
+          _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
+            versions[packageName] =
+              isopacketCatalog.getLatestVersion(packageName).version;
+          });
+          packageMap = new packageMapModule.PackageMap(
+            versions, isopacketCatalog);
+        }
 
-        var builder = new Builder({outputPath: isopacketRoot});
-        builder.writeJson('isopacket-buildinfo.json', {
-          builtBy: compiler.BUILT_BY,
-          watchSet: built.watchSet.toJSON()
+        buildmessage.enterJob({
+          title: "Bundling " + isopacketName + " packages for the tool"
+        }, function () {
+          // Build the packages into the in-memory IsopackCache.
+          isopackCache.buildLocalPackages(packageMap, packages);
+          if (buildmessage.jobHasMessages())
+            return;
+
+          // Now bundle them into a program.
+          var built = bundler.buildJsImage({
+            name: "isopacket-" + isopacketName,
+            packageMap: packageMap,
+            isopackCache: isopackCache,
+            use: packages,
+            catalog: isopacketCatalog
+          });
+          if (buildmessage.jobHasMessages())
+            return;
+
+          var builder = new Builder({outputPath: isopacketRoot});
+          builder.writeJson('isopacket-buildinfo.json', {
+            builtBy: compiler.BUILT_BY,
+            watchSet: built.watchSet.toJSON()
+          });
+          built.image.write(builder);
+          builder.complete();
+          // It's loadable now.
+          loadedIsopackets[isopacketName] = null;
         });
-        built.image.write(builder);
-        builder.complete();
-        // It's loadable now.
-        loadedIsopackets[isopacketName] = null;
       });
     });
   });
