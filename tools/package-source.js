@@ -94,6 +94,13 @@ var mapWhereToArch = function (where) {
   }
 };
 
+var splitConstraint = function (c) {
+  // XXX print error better (w/ buildmessage?)?
+  var parsed = utils.parseConstraint(c);
+  return { package: parsed.name,
+           constraint: parsed.constraintString || null };
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // SourceArch
 ///////////////////////////////////////////////////////////////////////////////
@@ -376,7 +383,7 @@ _.extend(PackageSource.prototype, {
     var sourceArch = new SourceArch(self, {
       kind: options.kind,
       arch: "os",
-      uses: _.map(options.use, utils.splitConstraint),
+      uses: _.map(options.use, splitConstraint),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
@@ -1784,7 +1791,7 @@ _.extend(PackageSource.prototype, {
       // info.use is currently just an array of strings, and there's
       // no way to specify weak/unordered. Much like an app.
       _.each(info.use, function (spec) {
-        var parsedSpec = utils.splitConstraint(spec);
+        var parsedSpec = splitConstraint(spec);
         packages[parsedSpec.package] = true;
       });
     });
@@ -1980,7 +1987,7 @@ _.extend(PackageSource.prototype, {
 
     _.each(self.pluginInfo, function (info) {
       _.each(info.use, function (spec) {
-        var parsedSpec = utils.splitConstraint(spec);
+        var parsedSpec = splitConstraint(spec);
         if (!_.has(dependencies, parsedSpec.package)) {
           dependencies[parsedSpec.package] = {
             constraint: null,

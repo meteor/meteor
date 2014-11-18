@@ -2310,23 +2310,26 @@ main.registerCommand({
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
 
-  var parsed = utils.splitConstraint(releaseNameAndVersion);
-  if (!parsed.constraint)
-    throw new main.ShowUsage;
+  var trackAndVersion = utils.releaseName(releaseNameAndVersion);
+  var releaseTrack = trackAndVersion[0];
+  var releaseVersion = trackAndVersion[1];
 
   var release = catalog.official.getReleaseVersion(
-    parsed.package, parsed.constraint);
+    releaseTrack, releaseVersion);
   if (!release) {
     // XXX this could also mean package unknown.
     Console.error('Release unknown: ' + releaseNameAndVersion + '');
     return 1;
   }
 
-  var toolPkg = release.tool && utils.splitConstraint(release.tool);
-  if (! (toolPkg && toolPkg.constraint))
-    throw new Error("bad tool in release: " + toolPkg);
+  var toolConstraint = release.tool && utils.parseConstraint(release.tool);
+  if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
+    throw new Error("bad tool in release: " + release.tool);
+  var toolPackage = toolConstraint.name;
+  var toolVersion = toolConstraint.constraints[0].version;
+
   var toolPkgBuilds = catalog.official.getAllBuilds(
-    toolPkg.package, toolPkg.constraint);
+    toolPkgBuilds, toolVersion);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
     Console.error('Tool version unknown: ' + release.tool + '');
@@ -2398,7 +2401,7 @@ main.registerCommand({
   // so we should ensure that once it is downloaded, it knows it is recommended
   // rather than having a little identity crisis and thinking that a past
   // release is the latest recommended until it manages to sync.
-  tmpCatalog.forceRecommendRelease(parsed.package, parsed.constraint);
+  tmpCatalog.forceRecommendRelease(releaseTrack, releaseVersion);
   tmpCatalog.closePermanently();
   if (fs.existsSync(tmpDataFile + '-wal')) {
     throw Error("Write-ahead log still exists for " + tmpDataFile
@@ -2410,12 +2413,12 @@ main.registerCommand({
     // We're going to build and tar up a tropohouse in a temporary directory.
     var tmpTropo = new tropohouse.Tropohouse(path.join(tmpdir, '.meteor'));
     buildmessage.enterJob({
-      title: "Downloading tool package " + toolPkg.package + "@" +
-        toolPkg.constraint
+      title: "Downloading tool package " + toolPackage + "@" +
+        toolVersion
     }, function () {
       tmpTropo.maybeDownloadPackageForArchitectures({
-        packageName: toolPkg.package,
-        version: toolPkg.constraint,
+        packageName: toolPackage,
+        version: toolVersion,
         architectures: [osArch]  // XXX 'web.browser' too?
       });
     });
@@ -2441,15 +2444,15 @@ main.registerCommand({
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.
     var toolIsopackPath =
-          tmpTropo.packagePath(toolPkg.package, toolPkg.constraint);
+          tmpTropo.packagePath(toolPackage, toolVersion);
     var toolIsopack = new isopack.Isopack;
-    toolIsopack.initFromPath(toolPkg.package, toolIsopackPath);
+    toolIsopack.initFromPath(toolPackage, toolIsopackPath);
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
     fs.symlinkSync(
       path.join(
-        tmpTropo.packagePath(toolPkg.package, toolPkg.constraint, true),
+        tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
         'meteor'),
       path.join(tmpTropo.root, 'meteor'));

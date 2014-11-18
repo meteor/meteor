@@ -252,16 +252,10 @@ exports.parseConstraint = function (constraintString, options) {
 exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
 exports.validatePackageName = packageVersionParser.validatePackageName;
 
-// XXX should unify this with utils.parseConstraint
-exports.splitConstraint = function (constraint) {
-  var m = constraint.split("@");
-  var ret = { package: m[0] };
-  if (m.length > 1) {
-    ret.constraint = m[1];
-  } else {
-    ret.constraint = null;
-  }
-  return ret;
+// Returns true if the parsed constraint was just a@b with no `=` or `||`.
+exports.isSimpleConstraint = function (parsedConstraint) {
+  return parsedConstraint.constraints.length === 1 &&
+    parsedConstraint.constraints[0].type === "compatible-with";
 };
 
 

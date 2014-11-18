@@ -680,8 +680,7 @@ _.extend(exports.PackageMapFile.prototype, {
 
       // We expect this constraint to be "foo@1.2.3", not a lack of a constraint
       // or something with "||" or "@=".
-      if (constraint.constraints.length !== 1 ||
-          constraint.constraints[0].type !== "compatible-with") {
+      if (! utils.isSimpleConstraint(constraint)) {
         buildmessage.error("Bad version: " + line, {
           // XXX should this be relative?
           file: self.filename
