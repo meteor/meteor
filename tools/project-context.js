@@ -914,6 +914,9 @@ exports.ReleaseFile = function (options) {
   self.fullReleaseName = null;
   // FOO@bar unless FOO === "METEOR" in which case "Meteor bar".
   self.displayReleaseName = null;
+  // Just the track.
+  self.releaseTrack = null;
+  self.releaseVersion = null;
   self._readFile();
 };
 
@@ -929,6 +932,11 @@ _.extend(exports.ReleaseFile.prototype, {
   isCheckout: function () {
     var self = this;
     return self.unnormalizedReleaseName === 'none';
+  },
+  normalReleaseSpecified: function () {
+    var self = this;
+    return ! (self.fileMissing() || self.noReleaseSpecified()
+              || self.isCheckout());
   },
 
   _readFile: function () {
@@ -954,6 +962,8 @@ _.extend(exports.ReleaseFile.prototype, {
     var parts = utils.splitReleaseName(self.unnormalizedReleaseName);
     self.fullReleaseName = parts[0] + '@' + parts[1];
     self.displayReleaseName = utils.displayRelease(parts[0], parts[1]);
+    self.releaseTrack = parts[0];
+    self.releaseVersion = parts[1];
   },
 
   write: function (releaseName) {

@@ -1601,17 +1601,28 @@ var maybeUpdateRelease = function (options) {
     return 0;
   }
 
-  // Otherwise, we have to upgrade the app too, if the release changed.
-  var appRelease = project.getNormalizedMeteorReleaseVersion();
-  if (appRelease !== null && appRelease === release.current.name) {
-    var maybeTheLatestRelease = release.forced ? "" : ", the latest release";
+  // Otherwise, we have to upgrade the app too, if the release changed.  Read in
+  // the project metadata files.  (Don't resolve constraints yet --- if the
+  // current constraints don't resolve but we can update to a place where they
+  // do, that's great!)
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.readProjectMetadata();
+  });
+
+  if (projectContext.releaseFile.fullReleaseName === release.current.name) {
+    // release.explicit here means that the user actually typed `--release FOO`,
+    // so they weren't trying to go to the latest release. (This is different
+    // from release.forced, which might be set due to the
+    // SpringboardToLatestRelease above.)
+    var maybeTheLatestRelease = release.explicit ? "" : ", the latest release";
     Console.info(
       "This project is already at " +
         release.current.getDisplayName() + maybeTheLatestRelease + ".");
     return 0;
   }
-
-  var appTrackAndVersion = utils.splitReleaseName(appRelease);
 
   // XXX did we have to change some package versions? we should probably
   //     mention that fact.
@@ -1625,13 +1636,14 @@ var maybeUpdateRelease = function (options) {
     // Can't make a patch update if you are not running from a current
     // release. In fact, you are doing something wrong, so we should tell you
     // to stop.
-    if (appRelease == null) {
+    if (! projectContext.releaseFile.normalReleaseSpecified()) {
       Console.error(
         "Cannot patch update unless a release is set.");
       return 1;
     }
     var record = catalog.official.getReleaseVersion(
-      appTrackAndVersion[0], appTrackAndVersion[1]);
+      projectContext.releaseFile.releaseTrack,
+      projectContext.releaseFile.releaseVersion);
     if (!record) {
       Console.error(
         "Cannot update to a patch release from an old release.");
@@ -1644,7 +1656,7 @@ var maybeUpdateRelease = function (options) {
       return 0;
     }
     var patchRecord = catalog.official.getReleaseVersion(
-      appTrackAndVersion[0], updateTo);
+      projectContext.releaseFile.releaseTrack, updateTo);
     // It looks like you are not at the latest patch version,
     // technically. But, in practice, we cannot update you to the latest patch
     // version because something went wrong. For example, we can't find the
@@ -1670,22 +1682,24 @@ var maybeUpdateRelease = function (options) {
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
     var appReleaseInfo = catalog.official.getReleaseVersion(
-      appTrackAndVersion[0], appTrackAndVersion[1]);
+      projectContext.releaseFile.releaseTrack,
+      projectContext.releaseFile.releaseVersion);
     var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
 
     releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      appTrackAndVersion[0], appOrderKey);
-    if (!releaseVersionsToTry.length) {
+      projectContext.releaseFile.releaseTrack, appOrderKey);
+    if (! releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
-      var releaseToPrint = utils.displayRelease(
-        appTrackAndVersion[0], appTrackAndVersion[1]);
       Console.info(
-"This project is already at " + releaseToPrint + ", which is newer\n" +
+"This project is already at " + projectContext.releaseFile.displayReleaseName +
+", which is newer\n" +
 "than the latest release.");
       return 0;
     }
   }
+
+  // XXX NOW
 
   var solutionReleaseRecord = null;
   var solutionPackageVersions = null;
@@ -1781,7 +1795,7 @@ var maybeUpdateRelease = function (options) {
   return 0;
 };
 
-
+// XXX #3006 All improvements to 'update' need to be thoroughly QA'd.
 main.registerCommand({
   name: 'update',
   options: {
