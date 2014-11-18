@@ -1249,15 +1249,6 @@ main.registerCommand({
 });
 
 main.registerCommand({
-  name: 'refresh',
-  pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
-  // We already did it!
-  return 0;
-});
-
-main.registerCommand({
   name: 'search',
   pretty: true,
   minArgs: 0, // So we can provide specific help
@@ -2195,6 +2186,20 @@ main.registerCommand({
   });
 
   return exitCode;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// refresh
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'refresh',
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+}, function (options) {
+  // We already did it!
+  return 0;
 });
 
 
