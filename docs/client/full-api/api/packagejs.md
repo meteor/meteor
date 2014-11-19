@@ -13,13 +13,13 @@ rest of this section will explain the specific API commands in greater detail.
 
     /* Information about this package */
     Package.describe({
-      // Short two-sentence summary.
+      // Short two-sentence summary. Mandatory.
       summary: "What this does",
-      // Version number.
+      // Version number. Mandatory.
       version: "1.0.0",
-      // Optional.  Default is package directory name.
+      // Prevents forks from being easily published with the same name. Defaults to the package directory name.
       name: "username:package-name",
-      // Optional Git URL to your source repository.
+      // Git URL to your source repository. If present, Atmosphere displays the README.md.
       git: "https://github.com/something/something.git",
     });
 
