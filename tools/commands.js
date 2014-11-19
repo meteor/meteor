@@ -1249,6 +1249,11 @@ main.registerCommand({
     'selenium': { type: Boolean },
     'selenium-browser': { type: String },
 
+    // Undocumented.  Usually we just show a banner saying 'Tests' instead of
+    // the ugly path to the temporary test directory, but if you actually want
+    // to see it you can ask for it.
+    'show-test-app-path': { type: Boolean },
+
     // hard-coded options with all known Cordova platforms
     ios: { type: Boolean },
     'ios-device': { type: Boolean },
@@ -1295,8 +1300,7 @@ main.registerCommand({
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
   var testRunnerAppDir =
-    options['test-app-path'] || files.mkdtemp('meteor-test-run');
-  files.cp_r(path.join(__dirname, 'test-runner-app'), testRunnerAppDir);
+        options['test-app-path'] || files.mkdtemp('meteor-test-run');
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
@@ -1327,8 +1331,8 @@ main.registerCommand({
     release.current.isCheckout() ? "none" : release.current.name);
 
   var packagesToAdd = getTestPackageNames(projectContext, options.args);
-  // Use the driver package as well.
-  packagesToAdd.push(options['driver-package']);
+  // Use the driver package and meteor-platform as well.
+  packagesToAdd.unshift('meteor-platform', options['driver-package']);
   var constraintsToAdd = _.map(packagesToAdd, function (p) {
     return utils.parseConstraint(p);
   });
@@ -1479,7 +1483,7 @@ var runTestAppForPackages = function (projectContext, options) {
       debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,
-      banner: "Tests",
+      banner: options['show-test-app-path'] ? null : "Tests",
       buildOptions: buildOptions,
       rootUrl: process.env.ROOT_URL,
       mongoUrl: process.env.MONGO_URL,

@@ -187,6 +187,11 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob('reading project metadata', function () {
+      // Ensure this is actually a project directory.
+      self._ensureProjectDir();
+      if (buildmessage.jobHasMessages())
+        return;
+
       // Read .meteor/release.
       self.releaseFile = new exports.ReleaseFile({
         projectDir: self.projectDir
@@ -237,6 +242,24 @@ _.extend(exports.ProjectContext.prototype, {
     });
 
     self._completedStage = STAGE.READ_PROJECT_METADATA;
+  },
+
+  _ensureProjectDir: function () {
+    var self = this;
+    files.mkdir_p(path.join(self.projectDir, '.meteor'));
+
+    // This file existing is what makes a project directory a project directory,
+    // so let's make sure it exists!
+    var constraintFilePath = path.join(self.projectDir, '.meteor', 'packages');
+    if (! fs.existsSync(constraintFilePath)) {
+      files.writeFileAtomically(constraintFilePath, '');
+    }
+
+    // Let's also make sure we have a minimal gitignore.
+    var gitignorePath = path.join(self.projectDir, '.meteor', '.gitignore');
+    if (! fs.existsSync(gitignorePath)) {
+      files.writeFileAtomically(gitignorePath, 'local\n');
+    }
   },
 
   // This is a WatchSet that ends up being the WatchSet for the app's
@@ -311,7 +334,7 @@ _.extend(exports.ProjectContext.prototype, {
     var solution;
     buildmessage.enterJob("selecting package versions", function () {
       var resolveOptions = {
-        previousSolution: self.packageMapFile.getCachedVersions(),
+        previousSolution: self.packageMapFile.getCachedVersions()
       };
       if (self._upgradePackageNames)
         resolveOptions.upgrade = self._upgradePackageNames;
@@ -539,9 +562,12 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     self._constraintLines = [];
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
 
-    // No .meteor/packages? That's OK, you just get no packages.
+    // No .meteor/packages? This isn't a very good project directory. In fact,
+    // that's the definition of a project directory! (And that should have been
+    // fixed by _ensureProjectDir!)
     if (contents === null)
-      return;
+      throw Error("packages file missing: " + self.filename);
+
     var lines = files.splitBufferToLines(contents);
     // Don't keep a record for the space at the end of the file.
     if (lines.length && _.last(lines) === '')
