@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.0.4-win.0"
+  version: "1.0.4-win.1"
 });
 
 Package.on_use(function(api) {
-  api.use('npm-bcrypt@=0.7.7', 'server');
+  api.use('npm-bcrypt@=0.7.8-win.0', 'server');
 
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.

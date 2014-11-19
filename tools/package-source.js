@@ -1135,13 +1135,6 @@ _.extend(PackageSource.prototype, {
           for (var i = 0; i < names.length; ++i) {
             var name = names[i];
 
-            // XXX #win-tech-debt
-            // Hack: Alias certain packages that we need to replace
-            if (utils.startsWith(name, 'npm-bcrypt') ||
-                utils.startsWith(name, 'npm-node-aes-gcm')) {
-              name = 'junk:' + name;
-            }
-
             try {
               var parsed = utils.parseConstraint(name);
             } catch (e) {

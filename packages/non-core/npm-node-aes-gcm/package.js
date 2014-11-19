@@ -1,7 +1,7 @@
 Package.describe({
   summary: "Wrapper around the node-aes-gcm npm package",
-  version: '0.1.3',
-  name: "junk:npm-node-aes-gcm"
+  version: '0.1.3-win.0',
+  name: "npm-node-aes-gcm"
 });
 
 Npm.depends({
