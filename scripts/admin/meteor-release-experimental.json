@@ -1,6 +1,6 @@
 {
  "track": "WINDOWS-PREVIEW",
- "version": "0.0.6",
+ "version": "0.0.7",
  "recommended": false,
  "official": false,
  "description": "First preview of Windows, probably won't work."
