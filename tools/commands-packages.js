@@ -1776,7 +1776,6 @@ var maybeUpdateRelease = function (options) {
 
   // We are done, and we should pass the release that we upgraded to, to the
   // user.
-  // XXX NOW
   return 0;
 };
 
@@ -1792,13 +1791,9 @@ main.registerCommand({
   requiresRelease: false,
   minArgs: 0,
   maxArgs: Infinity,
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  // Refresh the catalog, cacheing the remote package data on the server.
-  // XXX should be able to update even without a refresh, esp to a specific
-  //     server
-  //refreshOfficialCatalogOrDie();
-
   // If you are specifying packaging individually, you probably don't want to
   // update the release.
   if (options.args.length > 0) {
@@ -1829,104 +1824,70 @@ main.registerCommand({
     return 0;
   }
 
-  // For calculating constraints, we need to take into account the project's
-  // release. This might not be the release that we are actually running --
-  // because we might have springboarded to the latest release, but been unable
-  // to update to it.
-  var releasePackages = {};
-  if (release.current.isProperRelease()) {
-    // We are not running from checkout, and we are in an app directory, and we
-    // are running 'update', which is the one command that doesn't allow
-    // arbitrary release overrides (ie, if we did that, we wouldn't be
-    // here). So, basically, that's the correct release for this to project to
-    // have constraints against.
-    var appRelease = project.getNormalizedMeteorReleaseVersion();
-    var r = utils.splitReleaseName(appRelease);
-    var appRecord = catalog.official.getReleaseVersion(r[0], r[1]);
-    if (appRecord) {
-      releasePackages = appRecord.packages;
-    } else {
-      releasePackages = {};
-    }
-  }
-
-  // Let's figure out what packages we are currently using. Don't run the
-  // constraint solver yet, we don't care about reconciling them, just want to
-  // know what they are for some internal constraint solver heuristics.
-  var versions = project.getVersions({dontRunConstraintSolver: true});
-  var allPackages;
-  doOrDie(function () {
-    allPackages = project.calculateCombinedConstraints(releasePackages);
+  // Start a new project context and read in the project's release and other
+  // metadata. (We also want to make sure that we write the package map when
+  // we're done even if we're not on the matching release!)
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    alwaysWritePackageMap: true
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.readProjectMetadata();
   });
 
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
-  var upgradePackages = [];
+  var upgradePackageNames = [];
   if (options.args.length === 0) {
-    // We don't want to auto-upgrade weak dependencies (that we get from the
-    // release), even though there is not much harm in it.
-    upgradePackages = _.pluck(
-      _.reject(allPackages, function (packSpec) {
-        return _.has(packSpec, 'weak') && packSpec.weak;
-      }), 'name');
-  } else {
-    upgradePackages = options.args;
-  }
-
-  // Call the constraint solver. This should not fail, since we are not adding
-  // any constraints that we didn't have before.
-  var newVersions;
-  var messages = buildmessage.capture(function () {
-    // XXX #3006 no longer exists
-    newVersions = catalog.complete.resolveConstraints(allPackages, {
-      previousSolution: versions,
-      upgrade: upgradePackages
-    }, {
-      ignoreProjectDeps: true
+    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+      upgradePackageNames.push(constraint.name);
     });
-  });
-  if (messages.hasMessages()) {
-    Console.error("Error resolving constraints for packages:\n"
-                         + messages.formatMessages());
-    return 1;
+  } else {
+    upgradePackageNames = options.args;
   }
-
-  // Check that every requested package is actually used by the project, and
-  // print an error if they are not. We don't check this on the original
-  // versions because it could be out of date to begin with (ex: if you edited
-  // the packages file) and we don't throw an error because, technically, it is
-  // not an error. You could have gotten here by requesting updates of
-  // transitive dependencies that are no longer there.
-  _.each(upgradePackages, function (packageName) {
-    if (! _.has(newVersions, packageName)) {
-      Console.error(packageName + ': package is not in the project');
+  // We want to use the project's release for constraints even if we are
+  // currently running a newer release (eg if we ran 'meteor update --patch' and
+  // updated to an older patch release).  (If the project has release 'none'
+  // because this is just 'updating packages', this can be null.)
+  var releaseRecordForConstraints = null;
+  if (projectContext.releaseFile.normalReleaseSpecified()) {
+    releaseRecordForConstraints = catalog.official.getReleaseVersion(
+      projectContext.releaseFile.releaseTrack,
+      projectContext.releaseFile.releaseVersion);
+    if (! releaseRecordForConstraints) {
+      throw Error("unknown release " +
+                  projectContext.releaseFile.displayReleaseName);
     }
+  }
+
+  projectContext.reset({
+    releaseForConstraints: releaseRecordForConstraints,
+    upgradePackageNames: upgradePackageNames
+  });
+  main.captureAndExit("=> Errors while upgrading packages:", function () {
+    projectContext.prepareProjectForBuild();
   });
 
-  // Just for the sake of good messages, check to see if anything changed.
-  if (_.isEqual(newVersions, versions)) {
-    Console.info("Your packages are at their latest compatible versions.");
-    return 0;
-  }
+  // XXX #3006 show package changes, including this "not in the project" message
+  // and "latest compatible versions" message.
+  // // Check that every requested package is actually used by the project, and
+  // // print an error if they are not. We don't check this on the original
+  // // versions because it could be out of date to begin with (ex: if you edited
+  // // the packages file) and we don't throw an error because, technically, it is
+  // // not an error. You could have gotten here by requesting updates of
+  // // transitive dependencies that are no longer there.
+  // _.each(upgradePackages, function (packageName) {
+  //   if (! _.has(newVersions, packageName)) {
+  //     Console.error(packageName + ': package is not in the project');
+  //   }
+  // });
 
-  // Set our versions and download the new packages.
-  var setV = project.setVersions(newVersions, { alwaysRecord: true });
-
-  // Sometimes, we don't show changes -- for example, if you don't have a
-  // versions file. However, I think that if you don't have a versions file, and
-  // you are running update, it is OK to show you a bunch of output (and
-  // confusing not to).
-  var showExitCode = project.showPackageChanges(
-    versions, newVersions,
-    { onDiskPackages: setV.downloaded,
-      alwaysShow: true });
-
-  if (!setV.success) {
-    Console.error("Could not install all the requested packages.");
-    return 1;
-  }
-  return showExitCode;
+  // // Just for the sake of good messages, check to see if anything changed.
+  // if (_.isEqual(newVersions, versions)) {
+  //   Console.info("Your packages are at their latest compatible versions.");
+  //   return 0;
+  // }
 });
 
 ///////////////////////////////////////////////////////////////////////////////

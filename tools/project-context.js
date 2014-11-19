@@ -86,6 +86,10 @@ _.extend(exports.ProjectContext.prototype, {
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
+    // Set by 'meteor update' to specify which packages may be updated. Array of
+    // package names.
+    self._upgradePackageNames = options.upgradePackageNames;
+
     // If explicitly specified as null, use no release for constraints.
     // If specified non-null, should be a release version catalog record.
     // If not specified, defaults to release.current.
@@ -306,11 +310,16 @@ _.extend(exports.ProjectContext.prototype, {
 
     var solution;
     buildmessage.enterJob("selecting package versions", function () {
+      var resolveOptions = {
+        previousSolution: self.packageMapFile.getCachedVersions(),
+      };
+      if (self._upgradePackageNames)
+        resolveOptions.upgrade = self._upgradePackageNames;
+
       try {
         solution = resolver.resolve(
-          depsAndConstraints.deps, depsAndConstraints.constraints, {
-            previousSolution: self.packageMapFile.getCachedVersions()
-          });
+          depsAndConstraints.deps, depsAndConstraints.constraints,
+          resolveOptions);
       } catch (e) {
         if (!e.constraintSolverError)
           throw e;
