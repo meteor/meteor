@@ -550,7 +550,7 @@ To define templates, create a file in your project with the `.html`
 extension. In the file, make a `<template>` tag and give it a
 `name` attribute. Put the template contents inside the tag. Meteor
 will precompile the template, ship it down to the client, and make it
-available as on the global `Template` object.
+available as the `name` property on the global `Template` object.
 
 When your app is loaded, it automatically renders the special template called
 `<body>`, which is written using the `<body>` element instead of a
@@ -805,7 +805,7 @@ debugger, you've got two options:
   don't use the `email` package directly.
 
 When declaring functions, keep in mind that `function x () {}` is just
-shorthard for `var x = function () {}` in JavaScript. Consider these
+shorthand for `var x = function () {}` in JavaScript. Consider these
 examples:
 
     // This is the same as 'var x = function () ...'. So x() is
@@ -885,7 +885,7 @@ HTTP port for the application to listen on, and the MongoDB endpoint.
 $ cd my_directory
 $ (cd programs/server && npm install)
 $ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
-```g
+```
 
 Some packages might require other environment variables. For example,
 the `email` package requires a `MAIL_URL` environment variable.
@@ -899,17 +899,17 @@ the `email` package requires a `MAIL_URL` environment variable.
 
   <h2 id="writingpackages">Writing packages</h2>
 
-Writing Meteor packages is easy. To initialize a meteor package, run
+Writing Meteor packages is easy. To initialize a Meteor package, run
 `meteor create --package username:packagename`, where `username` is your Meteor
 Developer username. This will create a package from scratch and prefill the
-directory with a package.js control file and some javascript. By default, Meteor
+directory with a [`package.js`](#packagejs) control file and some JavaScript. By default, Meteor
 will take the package name from the name of the directory that contains the
-package.js file.
+`package.js` file.
 
 Meteor promises repeatable builds for both packages and applications. This means
 that, if you built your package on a machine, then checked the code into a
 repository and checked it out elsewhere, you should get the same result. In your
-package directory, you will find an automatically generated versions.json
+package directory, you will find an automatically generated `versions.json`
 file. This file specifies the versions of all packages used to build your
 package and is part of the source. Check it into version control to ensure
 repeatable builds across machines.
@@ -917,12 +917,12 @@ repeatable builds across machines.
 {{#note}}
 
 Sometimes, packages do not just stand on their own, but function in the context
-of an app (specifically, packages in the packages directory of an app). In that
+of an app (specifically, packages in the `packages` directory of an app). In that
 case, the app's context will take precedence. Rather than using the
-versions.json file as a guide, we will build the package with the same
+`versions.json` file as a guide, we will build the package with the same
 dependencies as used by the app (we think that, in practice, it would be
 confusing to find your local packages built with different versions of
-things). However, we will still write the new versions.json file.
+things). However, we will still write the new `versions.json` file.
 
 {{/note}}
 
@@ -930,7 +930,7 @@ Meteor uses extended semver versioning for its packages: that means that the ver
 number has three parts separated by dots: major version, minor version and patch version
 (for example: 1.2.3) with an optional pre-release version. You can read more about it on
 [semver.org](http://www.semver.org).
-Additionally, because some meteor packages wrap external libraries,
+Additionally, because some Meteor packages wrap external libraries,
 Meteor supports the convention of using `_` to denote a wrap number.
 
 You can read more about [`package.js`](#packagejs) files in the API
@@ -941,7 +941,7 @@ there are two common ways to test a package:
 
 * Integration tests (putting a package directly into an application, and writing
 tests against the application) is the most common way to test a package. After
-creating your package, add it to your app's /packages directory and run `meteor
+creating your package, add it to your app's `/packages` directory and run `meteor
 add`. This will add your package to your app as a local package. You can then
 test and run your app as usual. Meteor will detect and respond to changes to
 your local package, just as it does to your app files.
