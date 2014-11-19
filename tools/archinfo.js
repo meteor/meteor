@@ -158,9 +158,11 @@ var host = function () {
     else if (platform === "win32") {
       if (os.arch() === "ia32") {
         _host = "os.windows.x86_32";
-      } 
-
-      // XXX what does 64 bit windows look like?
+      } else if (os.arch() === "x64") {
+        _host = "os.windows.x86_64";
+      } else {
+        throw new Error("Unsupported architecture: " + os.arch());
+      }
     }
 
     else
