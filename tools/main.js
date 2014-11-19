@@ -778,6 +778,8 @@ Fiber(function () {
     }
 
     releaseOverride = release.name;
+    releaseExplicit = true;
+    releaseForced = true;
     // XXX end hack for Windows springboarding
 
     // Running from an install
