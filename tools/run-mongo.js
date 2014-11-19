@@ -84,6 +84,65 @@ var findMongoPids = function (appDir, port) {
 };
 
 
+if (process.platform === 'win32') {
+  var child_process = require('child_process');
+  // Windows doesn't have a ps equivalent that (reliably) includes the command
+  // line, so approximate using the combined output of tasklist and netstat.
+  findMongoPids = function (app_dir, port) {
+    var fut = new Future;
+
+    child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
+      function (error, stdout, stderr) {
+        if (error) {
+          fut['throw'](new Error("Couldn't run tasklist: " + JSON.stringify(error)));
+          return;
+        } else {
+          // Find the pids of all mongod processes
+          var mongo_pids = [];
+          _.each(stdout.split('\n'), function (line) {
+            var m = line.match(/^mongod.exe\s+(\d+) /);
+            if (m) {
+              mongo_pids[m[1]] = true;
+            }
+          });
+
+          // Now get the corresponding port numbers
+          child_process.exec('netstat -ano', function (error, stdout, stderr) {
+            if (error) {
+              fut['throw'](new Error("Couldn't run netstat -ano: " + JSON.stringify(error)));
+              return;
+            } else {
+              var pids = [];
+              _.each(stdout.split('\n'), function (line) {
+                var m = line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/);
+                if (m) {
+                  var found_pid =  parseInt(m[2]);
+                  var found_port = parseInt(m[1]);
+
+                  // We can't check the path app_dir so assume it always matches
+                  if (mongo_pids[found_pid] && (!port || port === found_port)) {
+                    // Note that if the mongo rest interface is enabled the
+                    // initial port + 1000 is also likely to be open.
+                    // So remove the pid so we only match it once.
+                    delete mongo_pids[found_pid];
+                    pids.push({
+                      pid: found_pid,
+                      port: found_port,
+                      app_dir: null});
+                  }
+                }
+              });
+
+              fut['return'](pids);
+            }
+          });
+        }
+      });
+
+    return fut.wait();
+  };
+}
+
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
 var findMongoPort = function (appDir) {
