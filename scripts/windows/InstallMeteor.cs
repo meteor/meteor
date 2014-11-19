@@ -28,7 +28,7 @@ namespace LaunchMeteor
     class Program
     {
         // private const string BOOTSTRAP_FILE = "meteor-bootstrap-Windows_i686.tar.gz"; // pre-0.9.x
-        private const string BOOTSTRAP_FILE = "meteor-bootstrap-os.windows.x86_32-0.0.7.tar.gz";
+        private const string BOOTSTRAP_FILE = "meteor-bootstrap-os.windows.x86_32-0.0.8.tar.gz";
         private const string BOOTSTRAP_URL = "https://warehouse.meteor.com/windows/bootstrap/" + BOOTSTRAP_FILE;
 
         private const string METEOR_WAREHOUSE_DIR = "METEOR_WAREHOUSE_DIR";
@@ -434,7 +434,6 @@ namespace LaunchMeteor
     {
         public const int FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
         public const int FILE_ATTRIBUTE_READONLY = 0x1;
-
         public const int ERROR_PATH_NOT_FOUND = 3;
         public const int ERROR_ALREADY_EXISTS = 183; 
 
