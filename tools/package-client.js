@@ -367,7 +367,7 @@ exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 
 // Handle an error thrown on trying to connect to the package server.
 exports.handlePackageServerConnectionError = function (error) {
-  authClient.handlerConnectionError(error, "package server");
+  authClient.handleConnectionError(error, "package server");
 };
 
 // Publish the package information into the server catalog. Create new records

@@ -21,7 +21,7 @@ exports.openServiceConnection = function (serverUrl) {
 //
 // err: error
 // label: name of the service that we are trying to use (ex: "package server")
-exports.handlerConnectionError = function (error, label) {
+exports.handleConnectionError = function (error, label) {
   if (error instanceof exports.AlreadyPrintedMessageError) {
     // do nothing
   } else if (error.errorType === 'Meteor.Error') {

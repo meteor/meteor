@@ -1857,7 +1857,7 @@ main.registerCommand({
       config.getBuildFarmDomain(),
       "build-farm");
   } catch (err) {
-    authClient.handlerConnectionError(err, "get-machines server");
+    authClient.handleConnectionError(err, "get-machines server");
     return 1;
   }
 
@@ -1871,7 +1871,7 @@ main.registerCommand({
     // hostKey: RSA key to compare for safety.
     var ret = conn.call('createBuildServer', arch, minutes);
   } catch (err) {
-    authClient.handlerConnectionError(err, "build farm");
+    authClient.handleConnectionError(err, "build farm");
     return 1;
   }
   conn.close();
