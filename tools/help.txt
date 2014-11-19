@@ -146,9 +146,9 @@ Options:
   --release  Update to a specific release of meteor.
 
 
->>> run-upgrader
+>>> admin run-upgrader
 Execute a specific upgrader by name. Intended for testing.
-Usage: meteor run-upgrader <upgrader>
+Usage: meteor admin run-upgrader <upgrader>
 
 Runs a specific upgrader on the current app. This is for testing
 internal functionality of Meteor.

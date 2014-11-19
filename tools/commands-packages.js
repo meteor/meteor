@@ -1606,7 +1606,8 @@ var maybeUpdateRelease = function (options) {
   // current constraints don't resolve but we can update to a place where they
   // do, that's great!)
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    alwaysWritePackageMap: true
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
@@ -1699,99 +1700,83 @@ var maybeUpdateRelease = function (options) {
     }
   }
 
-  // XXX NOW
-
   var solutionReleaseRecord = null;
-  var solutionPackageVersions = null;
-  var directDependencies = project.getConstraints();
-  var previousVersions = project.getVersions({dontRunConstraintSolver: true});
-
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.official.getReleaseVersion(
       releaseTrack, versionToTry);
     if (!releaseRecord)
       throw Error("missing release record?");
-    var constraints = doOrDie(function () {
-      return project.calculateCombinedConstraints(releaseRecord.packages);
+
+    // Reset the project context and pretend we're using the potential release.
+    projectContext.reset({ releaseForConstraints: releaseRecord });
+    var messages = buildmessage.capture(function () {
+      projectContext.resolveConstraints();
     });
-    try {
-      var messages = buildmessage.capture(function () {
-        // XXX #3006 no longer exists
-        solutionPackageVersions = catalog.complete.resolveConstraints(
-          constraints,
-          { previousSolution: previousVersions },
-          { ignoreProjectDeps: true });
-      });
-      if (messages.hasMessages()) {
-        if (process.env.METEOR_UPDATE_DEBUG) {
-          Console.error(
-            "Update to release " + releaseTrack + "@" + versionToTry +
-              " is impossible:\n" + messages.formatMessages());
-        }
-        return false;
-      }
-    } catch (e) {
-      if (process.env.METEOR_UPDATE_DEBUG) {
-        Console.error(
-          "Update to release " + releaseTrack +
-            "@" + versionToTry + " impossible: " + e.message );
-      }
+    if (messages.hasMessages()) {
+      // Nope, this release didn't work.
+      Console.debug(
+        "Update to release", releaseTrack + "@" + versionToTry,
+        "is impossible:\n" + messages.formatMessages());
       return false;
     }
+
+    // Yay, it worked!
     solutionReleaseRecord = releaseRecord;
     return true;
   });
 
-  if (!solutionReleaseVersion) {
+  var newerAvailable = false;
+  if (! solutionReleaseVersion) {
     Console.info(
       "This project is at the latest release which is compatible with your\n" +
         "current package constraints.");
     return 0;
-  } else  if (solutionReleaseVersion !== releaseVersionsToTry[0]) {
-    Console.info(
-      "(Newer releases are available but are not compatible with your\n" +
-        "current package constraints.)");
+  } else if (solutionReleaseVersion !== releaseVersionsToTry[0]) {
+    newerAvailable = true;
   }
 
   var solutionReleaseName = releaseTrack + '@' + solutionReleaseVersion;
 
   // We could at this point springboard to solutionRelease (which is no newer
-  // than the release we are currently running), but there's no super-clear advantage
-  // to this yet. The main reason might be if we decide to delete some
+  // than the release we are currently running), but there's no super-clear
+  // advantage to this yet. The main reason might be if we decide to delete some
   // backward-compatibility code which knows how to deal with an older release,
   // but if we actually do that, we can change this code to add the extra
   // springboard at that time.
   var upgraders = require('./upgraders.js');
-  // XXX #3006 this has a hidden project dependency
   var upgradersToRun = upgraders.upgradersToRun();
 
-  // Write the new versions to .meteor/packages and .meteor/versions.
-  var setV = project.setVersions(solutionPackageVersions,
-                                 { alwaysRecord: true });
-  project.showPackageChanges(previousVersions, solutionPackageVersions, {
-    onDiskPackages: setV.downloaded
+  // Download and build packages and write the new versions to .meteor/versions.
+  // XXX #3006 If we're about to try to upgrade packages, do we really want to
+  //           download and build packages here? Note that if we change this,
+  //           that changes the upgraders interface.
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
   });
-  if (!setV.success) {
-    Console.error("Could not install all the requested packages.");
-    return 1;
-  }
+  // Write the new release to .meteor/release.
+  projectContext.releaseFile.write(solutionReleaseName);
 
-  // Write the release to .meteor/release.
-  project.writeMeteorReleaseVersion(solutionReleaseName);
+  // XXX #3006 show package changes
 
   Console.info(path.basename(options.appDir) + ": updated to " +
-                       utils.displayRelease(releaseTrack, solutionReleaseVersion) +
-                       ".");
+               projectContext.releaseFile.displayReleaseName + ".");
+  if (newerAvailable) {
+    Console.info(
+      "(Newer releases are available but are not compatible with your\n" +
+        "current package constraints.)");
+  }
 
   // Now run the upgraders.
   // XXX should we also run upgraders on other random commands, in case there
   // was a crash after changing .meteor/release but before running them?
   _.each(upgradersToRun, function (upgrader) {
-    upgraders.runUpgrader(upgrader);
-    project.appendFinishedUpgrader(upgrader);
+    upgraders.runUpgrader(projectContext, upgrader);
+    projectContext.finishedUpgraders.appendUpgraders([upgrader]);
   });
 
-  // We are done, and we should pass the release that we upgraded to, to the user.
+  // We are done, and we should pass the release that we upgraded to, to the
+  // user.
+  // XXX NOW
   return 0;
 };
 
@@ -1942,6 +1927,37 @@ main.registerCommand({
     return 1;
   }
   return showExitCode;
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// admin run-upgrader
+///////////////////////////////////////////////////////////////////////////////
+
+// For testing upgraders during development.
+// XXX move under admin?
+// XXX #3006 Once we've fixed the upgrader call in update, fix this.
+main.registerCommand({
+  name: 'admin run-upgrader',
+  hidden: true,
+  minArgs: 1,
+  maxArgs: 1,
+  requiresApp: true,
+  pretty: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  var upgrader = options.args[0];
+
+  var upgraders = require("./upgraders.js");
+  console.log("%s: running upgrader %s.",
+              path.basename(options.appDir), upgrader);
+  upgraders.runUpgrader(projectContext, upgrader);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

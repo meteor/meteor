@@ -6,12 +6,14 @@ var files = require('./files.js');
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
 //
-// You can test upgraders by running "meteor run-upgrader myupgradername".
+// You can test upgraders by running "meteor admin run-upgrader myupgradername".
 //
 // Upgraders are run automatically by "meteor update". It looks at the
 // .meteor/.finished-upgraders file in the app and runs every upgrader listed
 // here that is not in that file; then it appends their names to that file.
 // Upgraders are run in the order they are listed in upgradersByName below.
+//
+// Upgraders receive a projectContext that has been fully prepared for build.
 
 var printedNoticeHeaderThisProcess = false;
 var maybePrintNoticeHeader = function () {
@@ -24,10 +26,9 @@ var maybePrintNoticeHeader = function () {
 };
 
 var upgradersByName = {
-   "notices-for-0.9.0": function () {
+   "notices-for-0.9.0": function (projectContext) {
      maybePrintNoticeHeader();
-     // XXX #3006 needs updating
-     if (fs.existsSync(path.join(project.project.rootDir, 'smart.json'))) {
+     if (fs.existsSync(path.join(projectContext.projectDir, 'smart.json'))) {
        // Meteorite apps:
        console.log(
 "0.9.0: Welcome to the new Meteor package system! You can now add any Meteor\n" +
@@ -50,12 +51,19 @@ var upgradersByName = {
 "       visiting atmospherejs.com.\n");
      }
      // How to do package-specific notices:
-     // XXX #3006 update this
-//     if (_.has(project.project.getConstraints(), 'accounts-ui')) {
-//       console.log(
-// "\n" +
-// "       Accounts UI has totally changed, yo.");
-//     }
+     // (a) A notice that occurs if a package is used indirectly or directly.
+     //     if (projectContext.packageMap.getInfo('accounts-ui')) {
+     //       console.log(
+     // "\n" +
+     // "       Accounts UI has totally changed, yo.");
+     //     }
+     //
+     // (b) A notice that occurs if a package is used directly.
+     //     if (projectContext.projectConstraintsFile.getConstraint('accounts-ui')) {
+     //       console.log(
+     // "\n" +
+     // "       Accounts UI has totally changed, yo.");
+     //     }
     console.log();
   },
 
@@ -70,30 +78,26 @@ var upgradersByName = {
   },
 
   // In 0.9.4, the platforms file contains "server" and "browser" as platforms,
-  // and before it only had "ios" and/or "android"
-  "0.9.4-platform-file": function () {
-    // XXX #3006 needs updating
+  // and before it only had "ios" and/or "android". We auto-fix that in
+  // PlatformList anyway, but we also need to pull platforms from the old
+  // cordova-platforms filename.
+  "0.9.4-platform-file": function (projectContext) {
     var oldPlatformsPath =
-      path.join(project.project.rootDir, ".meteor", "cordova-platforms");
+          path.join(projectContext.projectDir, ".meteor", "cordova-platforms");
 
-    var newPlatformsPath =
-      path.join(project.project.rootDir, ".meteor", "platforms");
-
-    var platforms = ["server", "browser"];
-    var oldPlatforms = [];
-
-    if (fs.existsSync(oldPlatformsPath)) {
-      // App already has a platforms file, add "server" and "browser" to the top
-      oldPlatforms = fs.readFileSync(oldPlatformsPath, {encoding: "utf-8"});
-      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"),
-                                     files.trimSpaceAndComments));
-
-      fs.unlinkSync(oldPlatformsPath);
+    try {
+      var oldPlatformsFile = fs.readFileSync(oldPlatformsPath);
+    } catch (e) {
+      // If the file doesn't exist, there's no transition to do.
+      if (e && e.code === 'ENOENT')
+        return;
+      throw e;
     }
-
-    platforms = _.union(platforms, oldPlatforms);
-
-    fs.writeFileSync(newPlatformsPath, platforms.join("\n") + "\n", "utf-8");
+    var oldPlatforms = _.compact(_.map(
+      files.splitBufferToLines(oldPlatformsFile), files.trimSpaceAndComments));
+    // This method will automatically add "server" and "browser" and sort, etc.
+    projectContext.platformList.write(oldPlatforms);
+    fs.unlinkSync(oldPlatformsPath);
   }
 
   ////////////
@@ -106,22 +110,21 @@ var upgradersByName = {
   ////////////
 };
 
-exports.runUpgrader = function (upgraderName) {
+exports.runUpgrader = function (projectContext, upgraderName) {
   // This should only be called from the hidden run-upgrader command or by
   // "meteor update" with an upgrader from one of our releases, so it's OK if
   // error handling is just an exception.
   if (! _.has(upgradersByName, upgraderName))
     throw new Error("Unknown upgrader: " + upgraderName);
-  upgradersByName[upgraderName]();
+  upgradersByName[upgraderName](projectContext);
 };
 
-exports.upgradersToRun = function () {
+exports.upgradersToRun = function (projectContext) {
   var ret = [];
-  // XXX #3006 needs updating
-  var finishedUpgraders = project.project.getFinishedUpgraders();
+  var finishedUpgraders = projectContext.finishedUpgraders.readUpgraders();
   // This relies on the fact that Node guarantees object iteration ordering.
   _.each(upgradersByName, function (func, name) {
-    if (!_.contains(finishedUpgraders, name)) {
+    if (! _.contains(finishedUpgraders, name)) {
       ret.push(name);
     }
   });

@@ -567,7 +567,9 @@ main.registerCommand({
   // XXX #3006 Make sure that when we reimplement showPackageChanges, they
   // don't show here.
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: appPath
+    projectDir: appPath,
+    // Write .meteor/versions even if --release is specified.
+    alwaysWritePackageMap: true
   });
 
   main.captureAndExit("=> Errors while creating your project", function () {
@@ -600,29 +602,6 @@ main.registerCommand({
     "To run your new app:\n" +
       "   cd " + appPathAsEntered + "\n" +
       "   meteor\n");
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// run-upgrader
-///////////////////////////////////////////////////////////////////////////////
-
-// For testing upgraders during development.
-// XXX move under admin?
-// XXX #3006 Once we've fixed the upgrader call in update, fix this.
-main.registerCommand({
-  name: 'run-upgrader',
-  hidden: true,
-  minArgs: 1,
-  maxArgs: 1,
-  requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  var upgrader = options.args[0];
-
-  var upgraders = require("./upgraders.js");
-  console.log("%s: running upgrader %s.",
-              path.basename(options.appDir), upgrader);
-  upgraders.runUpgrader(upgrader);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

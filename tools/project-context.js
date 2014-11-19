@@ -55,9 +55,11 @@ var STAGE = {
 };
 
 _.extend(exports.ProjectContext.prototype, {
-  reset: function () {
+  reset: function (moreOptions) {
     var self = this;
-    var options = self.originalOptions;
+    // Allow overriding some options until the next call to reset; used by
+    // 'meteor update' code to try various values of releaseForConstraints.
+    var options = _.extend({}, self.originalOptions, moreOptions);
 
     self.projectDir = options.projectDir;
     self.tropohouse = options.tropohouse || tropohouse.default;
@@ -78,6 +80,26 @@ _.extend(exports.ProjectContext.prototype, {
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.
     self._forceRebuildPackages = options.forceRebuildPackages;
+
+    // Set by 'meteor create' and 'meteor update' to ensure that
+    // .meteor/versions is always written even if release.current does not match
+    // the project's release.
+    self._alwaysWritePackageMap = options.alwaysWritePackageMap;
+
+    // If explicitly specified as null, use no release for constraints.
+    // If specified non-null, should be a release version catalog record.
+    // If not specified, defaults to release.current.
+    //
+    // Note that NONE of these cases are "use the release from
+    // self.releaseFile"; after all, if you are explicitly running `meteor
+    // --release foo` it will override what is found in .meteor/releases.
+    if (_.has(options, 'releaseForConstraints')) {
+      self._releaseForConstraints = options.releaseForConstraints || null;
+    } else if (release.current.isCheckout()) {
+      self._releaseForConstraints = null;
+    } else {
+      self._releaseForConstraints = release.current.getCatalogReleaseData();
+    }
 
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
@@ -368,7 +390,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
-    // XXX #3006 Add constraints from the release
+    self._addReleaseConstraints(depsAndConstraints);
     // XXX #3006 Add constraints from other programs, if we reimplement that.
     // XXX #3006 Add a dependency on ctl
     return depsAndConstraints;
@@ -391,6 +413,18 @@ _.extend(exports.ProjectContext.prototype, {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint =
             utils.parseConstraint(packageName + "@=" + versionRecord.version);
+      // Add a constraint ("this is the only version available") but no
+      // dependency (we don't automatically use all local packages!)
+      depsAndConstraints.constraints.push(constraint);
+    });
+  },
+
+  _addReleaseConstraints: function (depsAndConstraints) {
+    var self = this;
+    if (! self._releaseForConstraints)
+      return;
+    _.each(self._releaseForConstraints.packages, function (version, packageName) {
+      var constraint = utils.parseConstraint(packageName + "@=" + version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
@@ -450,21 +484,15 @@ _.extend(exports.ProjectContext.prototype, {
     // Save any changes to .meteor/packages.
     self.projectConstraintsFile.writeIfModified();
 
-    // XXX #3006 make sure that this conditional is correct for update too
-
-    // If we're running from a release but the app is unpinned, or vice versa,
-    // don't save the package map.
-    if (release.current.isCheckout() !== self.releaseFile.isCheckout())
-      return;
-
-    // If we're running from a release but it's not the same release as the app,
-    // don't save the package map.
-    if (! release.current.isCheckout() &&
-        release.current.name !== self.releaseFile.fullReleaseName) {
-      return;
+    // Write .meteor/versions if the command always wants to (create/update),
+    // or if the release of the app matches the release of the process.
+    if (self._alwaysWritePackageMap ||
+        (release.current.isCheckout() && self.releaseFile.isCheckout()) ||
+        (! release.current.isCheckout() &&
+         release.current.name === self.releaseFile.fullReleaseName)) {
+      self.packageMapFile.write(self.packageMap);
     }
 
-    self.packageMapFile.write(self.packageMap);
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
   }
 });
@@ -986,7 +1014,19 @@ exports.FinishedUpgraders = function (options) {
 };
 
 _.extend(exports.FinishedUpgraders.prototype, {
-  // XXX #3006 add a read method
+  readUpgraders: function () {
+    var self = this;
+    var upgraders = [];
+    var contents = fs.readFileSync(self.filename, 'utf8');
+    var lines = files.splitBufferToLines(contents);
+    _.each(lines, function (line) {
+      line = files.trimSpaceAndComments(line);
+      if (line === '')
+        return;
+      upgraders.push(line);
+    });
+    return upgraders;
+  },
 
   appendUpgraders: function (upgraders) {
     var self = this;
