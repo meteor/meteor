@@ -806,7 +806,7 @@ _.extend(Sandbox.prototype, {
     var meteorScriptName =
       process.platform === "win32" ? "meteor.bat" : "meteor";
 
-    files.linkToExecutable(path.join(toolDir, meteorScriptName),
+    files.linkToMeteorTool(path.join(toolDir, meteorScriptName),
       path.join(self.warehouse, meteorScriptName));
   }
 });

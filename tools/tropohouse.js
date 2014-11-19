@@ -375,6 +375,6 @@ _.extend(exports.Tropohouse.prototype, {
   replaceLatestMeteorSymlink: function (linkText) {
     var self = this;
     var linkPath = path.join(self.root, 'meteor');
-    files.linkToExecutable(linkText, linkPath);
+    files.linkToMeteorTool(linkText, linkPath);
   }
 });

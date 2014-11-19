@@ -1019,7 +1019,7 @@ exports.escapePathForWindows = function (packageName) {
  * @param  {String} target The file that should be linked to
  * @param  {String} linkLocation The location of the link file
  */
-files.linkToExecutable = function (target, linkLocation) {
+files.linkToMeteorTool = function (target, linkLocation, argsList) {
   if (process.platform === "win32") {
     // Make a meteor batch script that points to current tool
 
@@ -1028,10 +1028,17 @@ files.linkToExecutable = function (target, linkLocation) {
       linkLocation = linkLocation + ".bat";
     }
 
+    var args = "";
+    // Let the link pass arguments to the target script, used for "--release"
+    if (_.isArray(argsList)) {
+      args = argsList.join(" ");
+    }
+
     // script that calls the target passed in
     var newScript = [
       "@echo off",
-      "%~dp0\\" + target + ".bat %*" // XXX hack assuming we are linking to bat
+      // XXX hack assuming we are linking to bat
+      "%~dp0\\" + target + ".bat " + args + " %*"
     ].join(os.EOL);
 
     fs.writeFileSync(linkLocation, newScript, {encoding: "ascii"});
@@ -1041,8 +1048,8 @@ files.linkToExecutable = function (target, linkLocation) {
   }
 };
 
-// Read which path a link generated with the linkToExecutable is pointing to
-files.readLinkToExecutable = function (linkFilePath) {
+// Read which path a link generated with the linkToMeteorTool is pointing to
+files.readLinkToMeteorTool = function (linkFilePath) {
   if (process.platform === "win32") {
     // Return the second line of the script, which is the path that would be
     // executed
@@ -1052,7 +1059,8 @@ files.readLinkToExecutable = function (linkFilePath) {
       linkFilePath = linkFilePath + ".bat";
     }
 
-    return fs.readFileSync(linkFilePath).split(os.EOL)[1];
+    // XXX this is hacky, but undoes the operations in linkToMeteorTool
+    return fs.readFileSync(linkFilePath).split(os.EOL)[1].split(" ")[0];
   } else {
     return fs.readlinkSync(linkFilePath);
   }

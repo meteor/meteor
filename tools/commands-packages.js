@@ -2595,12 +2595,13 @@ main.registerCommand({
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
-    files.linkToExecutable(
+    files.linkToMeteorTool(
       path.join(
         tmpTropo.packagePath(toolPkg.package, toolPkg.constraint, true),
         toolRecord.path,
         'meteor'),
-      path.join(tmpTropo.root, 'meteor'));
+      path.join(tmpTropo.root, 'meteor'),
+      ["--release", releaseNameAndVersion]);
 
     files.createTarball(
       tmpTropo.root,
