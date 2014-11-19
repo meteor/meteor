@@ -434,8 +434,11 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   // *** Process each source file
   var addAsset = function (contents, relPath, hash) {
     // XXX hack
-    if (! inputSourceArch.pkg.name)
-      relPath = relPath.replace(/^(private|public)\//, '');
+    if (! inputSourceArch.pkg.name) {
+      // XXX directories end with a backslash on windows, need to handle
+      // this slashes issue better eventually
+      relPath = relPath.replace(new RegExp("^(private|public)[/\\\\]"), '');
+    }
 
     resources.push({
       type: "asset",

@@ -1679,7 +1679,9 @@ _.extend(PackageSource.prototype, {
         // Now look for assets for this unibuild.
         var assetDir = archinfo.matches(arch, "web") ? "public" : "private";
         var assetDirs = readAndWatchDirectory('', {
-          include: [new RegExp('^' + assetDir + path.sep + '$')]
+          // XXX Don't use path.sep because this function always uses forward
+          // slashes in this option (but the return values have backslashes...)
+          include: [new RegExp('^' + assetDir + '/$')]
         });
 
         if (!_.isEmpty(assetDirs)) {
