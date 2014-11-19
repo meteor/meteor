@@ -711,7 +711,11 @@ _.extend(AppRunner.prototype, {
 
         // Notify the server that new client assets have been added to the
         // build.
-        appProcess.proc.kill('SIGUSR2');
+        if (process.platform === "win32") {
+          appProcess.proc.kill();
+        } else {
+          appProcess.proc.kill('SIGUSR2');
+        }
 
         // Establish a watcher on the new files.
         setupClientWatcher();
