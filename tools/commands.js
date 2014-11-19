@@ -575,9 +575,7 @@ main.registerCommand({
     if (buildmessage.jobHasMessages())
       return;
 
-    // Overwrite .meteor/release.  (Will not be written to disk until the end of
-    // prepareProjectForBuild.)
-    projectContext.releaseFile.setRelease(
+    projectContext.releaseFile.write(
       release.current.isCheckout() ? "none" : release.current.name);
     if (buildmessage.jobHasMessages())
       return;
@@ -1345,9 +1343,8 @@ main.registerCommand({
     projectContext.initializeCatalog();
   });
 
-  // Overwrite .meteor/release.  (Will not be written to disk until the end of
-  // prepareProjectForBuild.)
-  projectContext.releaseFile.setRelease(
+  // Overwrite .meteor/release.
+  projectContext.releaseFile.write(
     release.current.isCheckout() ? "none" : release.current.name);
 
   var packagesToAdd = getTestPackageNames(projectContext, options.args);

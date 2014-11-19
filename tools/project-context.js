@@ -368,7 +368,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
-    self._addReleaseConstraints(depsAndConstraints);
+    // XXX #3006 Add constraints from the release
     // XXX #3006 Add constraints from other programs, if we reimplement that.
     // XXX #3006 Add a dependency on ctl
     return depsAndConstraints;
@@ -387,19 +387,6 @@ _.extend(exports.ProjectContext.prototype, {
 
   _addLocalPackageConstraints: function (depsAndConstraints) {
     var self = this;
-    _.each(self.localCatalog.getAllPackageNames(), function (packageName) {
-      var versionRecord = self.localCatalog.getLatestVersion(packageName);
-      var constraint =
-            utils.parseConstraint(packageName + "@=" + versionRecord.version);
-      // Add a constraint ("this is the only version available") but no
-      // dependency (we don't automatically use all local packages!)
-      depsAndConstraints.constraints.push(constraint);
-    });
-  },
-
-  _addReleaseConstraints: function (depsAndConstraints) {
-    var self = this;
-
     _.each(self.localCatalog.getAllPackageNames(), function (packageName) {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
       var constraint =
@@ -459,9 +446,6 @@ _.extend(exports.ProjectContext.prototype, {
 
   _saveChangedMetadata: function () {
     var self = this;
-
-    // Save any changes to .meteor/release.
-    self.releaseFile.writeIfModified();
 
     // Save any changes to .meteor/packages.
     self.projectConstraintsFile.writeIfModified();
@@ -921,30 +905,22 @@ exports.ReleaseFile = function (options) {
   var self = this;
 
   self.filename = path.join(options.projectDir, '.meteor', 'release');
-  self._reset();
+  self.watchSet = null;
+  // The release name actually written in the file.  Null if no fill.  Empty if
+  // the file is empty.
+  self.unnormalizedReleaseName = null;
+  // The full release name (with METEOR@ if it's missing in
+  // unnormalizedReleaseName).
+  self.fullReleaseName = null;
+  // FOO@bar unless FOO === "METEOR" in which case "Meteor bar".
+  self.displayReleaseName = null;
+  // Just the track.
+  self.releaseTrack = null;
+  self.releaseVersion = null;
   self._readFile();
 };
 
 _.extend(exports.ReleaseFile.prototype, {
-  _reset: function () {
-    var self = this;
-    self.watchSet = null;
-    self._modified = false;
-
-    // The release name actually written in the file.  Null if no fill.  Empty
-    // if the file is empty.
-    self.unnormalizedReleaseName = null;
-    // The full release name (with METEOR@ if it's missing in
-    // unnormalizedReleaseName).
-    self.fullReleaseName = null;
-    // FOO@bar unless FOO === "METEOR" in which case "Meteor bar".
-    self.displayReleaseName = null;
-    // Just the track.
-    self.releaseTrack = null;
-    // Just the version.
-    self.releaseVersion = null;
-  },
-
   fileMissing: function () {
     var self = this;
     return self.unnormalizedReleaseName === null;
@@ -963,16 +939,9 @@ _.extend(exports.ReleaseFile.prototype, {
               || self.isCheckout());
   },
 
-  getReleaseCatalogRecord: function () {
-    var self = this;
-    return catalog.official.getReleaseVersion(
-      self.releaseTrack, self.releaseVersion);
-  },
-
   _readFile: function () {
     var self = this;
 
-    self._reset();
     // Start a new watchSet, in case we just overwrote this.
     self.watchSet = new watch.WatchSet;
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
@@ -984,17 +953,12 @@ _.extend(exports.ReleaseFile.prototype, {
     var lines = _.compact(_.map(files.splitBufferToLines(contents),
                                 files.trimSpaceAndComments));
     // noReleaseSpecified will be true.
-    if (! lines.length) {
+    if (!lines.length) {
       self.unnormalizedReleaseName = '';
       return;
     }
 
-    self._setRelease(lines[0]);
-  },
-
-  _setRelease: function (releaseName) {
-    var self = this;
-    self.unnormalizedReleaseName = releaseName;
+    self.unnormalizedReleaseName = lines[0];
     var parts = utils.splitReleaseName(self.unnormalizedReleaseName);
     self.fullReleaseName = parts[0] + '@' + parts[1];
     self.displayReleaseName = utils.displayRelease(parts[0], parts[1]);
@@ -1002,24 +966,9 @@ _.extend(exports.ReleaseFile.prototype, {
     self.releaseVersion = parts[1];
   },
 
-  // Sets the release string (in any format that we can parse) in-memory; will
-  // be written by writeIfModified which is called by the saveChangedMetadata
-  // stage of project preparation.
-  setRelease: function (releaseName) {
+  write: function (releaseName) {
     var self = this;
-    self._setRelease(releaseName);
-    self._modified = true;
-  },
-
-  writeIfModified: function () {
-    var self = this;
-    self._modified && self._write();
-  },
-
-  _write: function (releaseName) {
-    var self = this;
-    files.writeFileAtomically(self.filename,
-                              self.unnormalizedReleaseName + '\n');
+    files.writeFileAtomically(self.filename, releaseName + '\n');
     self._readFile();
   }
 });
