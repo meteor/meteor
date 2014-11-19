@@ -28,7 +28,7 @@ namespace LaunchMeteor
     class Program
     {
         // private const string BOOTSTRAP_FILE = "meteor-bootstrap-Windows_i686.tar.gz"; // pre-0.9.x
-        private const string BOOTSTRAP_FILE = "meteor-bootstrap-os.windows.x86_32-0.0.6.tar.gz";
+        private const string BOOTSTRAP_FILE = "meteor-bootstrap-os.windows.x86_32-0.0.7.tar.gz";
         private const string BOOTSTRAP_URL = "https://warehouse.meteor.com/windows/bootstrap/" + BOOTSTRAP_FILE;
 
         private const string METEOR_WAREHOUSE_DIR = "METEOR_WAREHOUSE_DIR";
@@ -237,10 +237,10 @@ namespace LaunchMeteor
         {
             for (int attempt = 1; Directory.Exists(path) && attempt <= 5; attempt++)
             {
-                if (attempt == 1)
-                    Console.WriteLine("Deleting directory: {0}", path);
-                else
-                    Console.WriteLine("Deleting directory: {0} attempt {1}", path, attempt);
+                //if (attempt == 1)
+                //    Console.WriteLine("Deleting directory: {0}", path);
+                //else
+                //    Console.WriteLine("Deleting directory: {0} attempt {1}", path, attempt);
                 try { RecursiveDeleteDirectory(path); } catch {}
                 if (Directory.Exists(path))
                     Thread.Sleep(1000);
@@ -407,7 +407,10 @@ namespace LaunchMeteor
                     }
                     else
                     {
-                        if (!NativeMethods.DeleteFile(@"\\?\" + Path.Combine(path, name)))
+                        var filePath = @"\\?\" + Path.Combine(path, name);
+                        // Make sure we can still delete if the file is read-only
+                        NativeMethods.SetFileAttributes(filePath, ((int)findData.dwFileAttributes) & ~NativeMethods.FILE_ATTRIBUTE_READONLY);
+                        if (!NativeMethods.DeleteFile(filePath))
                         {
                             int error = Marshal.GetLastWin32Error();
                             throw new System.ComponentModel.Win32Exception(error);
@@ -430,6 +433,7 @@ namespace LaunchMeteor
     internal static class NativeMethods
     {
         public const int FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
+        public const int FILE_ATTRIBUTE_READONLY = 0x1;
 
         public const int ERROR_PATH_NOT_FOUND = 3;
         public const int ERROR_ALREADY_EXISTS = 183; 
@@ -465,6 +469,12 @@ namespace LaunchMeteor
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool FindClose(IntPtr hFindFile);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        internal static extern int GetFileAttributes(string lpFileName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        internal static extern bool SetFileAttributes(string lpFileName, int dwFileAttributes);
     }
 
     [StructLayout(LayoutKind.Sequential)]
