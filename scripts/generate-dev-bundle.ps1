@@ -86,7 +86,7 @@ cp node_modules\npm\bin\npm.cmd .
 Set-Location $DIR
 
 # mark the version
-echo "0.3.62" | Out-File .bundle_version.txt -Encoding ascii
+echo "0.4.0" | Out-File .bundle_version.txt -Encoding ascii
 
 Set-Location $DIR\..
 
