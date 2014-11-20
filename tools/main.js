@@ -371,22 +371,18 @@ var springboard = function (rel, options) {
 
   // XXX split better
   try {
-    Console.setPretty(true);
-    Console.enableProgressDisplay(true);
-
-    buildmessage.enterJob({
-      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
-    }, function () {
-      tropohouse.default.maybeDownloadPackageForArchitectures({
-        packageName: toolsPkg,
-        version: toolsVersion,
-        architectures: [archinfo.host()],
-        definitelyNotLocal: true
+    Console.withProgressDisplayVisible(function () {
+      buildmessage.enterJob({
+        title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
+      }, function () {
+        tropohouse.default.maybeDownloadPackageForArchitectures({
+          packageName: toolsPkg,
+          version: toolsVersion,
+          architectures: [archinfo.host()],
+          definitelyNotLocal: true
+        });
       });
     });
-
-    Console.enableProgressDisplay(false);
-    Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
@@ -676,33 +672,7 @@ Fiber(function () {
     project.project.setRootDir(appDir);
   }
 
-  // XXX compare this to the previous block's usesWarehouse...
-  if (files.inCheckout()) {
-    // When running from a checkout, uniload does use local packages, but *ONLY
-    // THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS packages.
-    // One side effect of this: we really really expect them to all build, and
-    // we're fine with dying if they don't (there's no worries about needing to
-    // springboard).
-    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
-      catalog.uniload.initialize({
-        localPackageSearchDirs: [
-          path.join(files.getCurrentToolsDir(), 'packages')]
-      });
-    });
-    if (messages.hasMessages()) {
-      Console.error("=> Errors while scanning core packages:\n");
-      Console.error(messages.formatMessages());
-      process.exit(1);
-    }
-  } else {
-    // This doesn't need to be in a buildmessage, because the
-    // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
-    // bunch of precompiled isopacks!
-    catalog.uniload.initialize({
-      uniloadDir: files.getUniloadDir()
-    });
-  }
-
+  require('./isopackets.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
@@ -821,11 +791,9 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
         releaseName = release.latestKnown();
       }
       if (!releaseName) {
@@ -881,11 +849,9 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
 
         // Try to load the release even if the refresh failed, since it might
         // have failed on a later page than the one we needed.
@@ -1223,7 +1189,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   if (!command.catalogRefresh.doesNotUsePackages) {
     // OK, now it's finally time to set up the complete catalog. Only after this
-    // can we use the build system (other than via uniload).
+    // can we use the build system (other than to make and load isopackets).
 
     // XXX This code is duplicated a bit inside the create command. Sorry.
 
@@ -1322,7 +1288,6 @@ commandName + ": You're not in a Meteor project directory.\n" +
     require('./profile-require.js').printReport();
 
   Console.setPretty(command.pretty);
-
   Console.enableProgressDisplay(true);
 
   // Run the command!

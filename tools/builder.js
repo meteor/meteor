@@ -1,17 +1,9 @@
 var path = require('path');
-var files = require(path.join(__dirname, 'files.js'));
 var watch = require('./watch.js');
 var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
 var fs = require('fs');
 var _ = require('underscore');
-
-var sha1 = function (contents) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha1');
-  hash.update(contents);
-  return hash.digest('hex');
-};
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
@@ -498,8 +490,5 @@ _.extend(Builder.prototype, {
     return self.watchSet;
   }
 });
-
-// static convenience method
-Builder.sha1 = sha1;
 
 module.exports = Builder;

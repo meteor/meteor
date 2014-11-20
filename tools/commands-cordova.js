@@ -274,12 +274,10 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
-  return uniload.load({
-    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing', 'xmlbuilder' ]
-  });
-});
+var getLoadedPackages = function () {
+  var isopackets = require("./isopackets.js");
+  return isopackets.load('cordova-support');
+};
 
 
 
@@ -706,6 +704,23 @@ var fetchCordovaPluginFromShaUrl =
                     tarProcess.stderr);
   verboseLog('Untarring succeeded, removing the tarball');
   files.rm_recursive(pluginTarballPath);
+
+  var actualPluginName = '';
+  try {
+    var xmlPath = path.join(pluginPath, 'plugin.xml');
+    var xmlContent = fs.readFileSync(xmlPath, 'utf8');
+
+    actualPluginName = xmlContent.match(/<plugin[^>]+>/)[0].match(/\sid="([^"]+)"/)[1];
+  } catch (err) {
+    throw new Error(
+      pluginName + ': Failed to parse the plugin from tarball');
+  }
+
+  if (actualPluginName !== pluginName)
+    throw new Error(pluginName +
+                    ': The plugin from tarball has a different name - ' +
+                    actualPluginName);
+
   return pluginPath;
 };
 

@@ -180,6 +180,8 @@ rm -rf node_modules/browserstack-webdriver/lib/test
 
 npm install node-inspector@0.7.4
 
+npm install pathwatcher@2.3.2
+
 npm install chalk@0.5.1
 
 npm install sqlite3@3.0.2

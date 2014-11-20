@@ -383,7 +383,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  Console.stdout.write('Deploying to http://' + site + '.\n');
+  Console.stdout.write('Deploying to ' + site + '.\n');
 
   var settings = null;
   var messages = buildmessage.capture({

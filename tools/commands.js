@@ -727,7 +727,10 @@ var buildCommand = function (options) {
 
   var localPath = path.join(options.appDir, '.meteor', 'local');
 
-  var mobilePlatforms = project.getCordovaPlatforms();
+  var mobilePlatforms = [];
+  if (! options._serverOnly) {
+    mobilePlatforms = project.getCordovaPlatforms();
+  }
   var appName = path.basename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
@@ -777,27 +780,22 @@ var buildCommand = function (options) {
   var buildDir = path.join(localPath, 'build_tar');
   var outputPath = path.resolve(options.args[0]); // get absolute path
 
-  if (! _.isEmpty(mobilePlatforms)) {
-    // XXX: Create helper function?  Maybe fs.resolve to follow symlinks?
-    var appDir = path.resolve(options.appDir);
-    if (appDir.substr(-1) !== path.sep) {
-      appDir += path.sep;
-    }
-    var outputDir = path.resolve(outputPath);
-    if (outputDir.substr(-1) !== path.sep) {
-      outputDir += path.sep;
-    }
-
-    if (outputDir.indexOf(appDir) == 0) {
+  // Unless we're just making a tarball, warn if people try to build inside the
+  // app directory.
+  if (options.directory || ! _.isEmpty(mobilePlatforms)) {
+    var relative = path.relative(options.appDir, outputPath);
+    // We would like the output path to be outside the app directory, which
+    // means the first step to getting there is going up a level.
+    if (relative.substr(0, 3) !== ('..' + path.sep)) {
       Console.warn("");
       Console.warn("Warning: The output directory is under your source tree.");
-      Console.warn("  This causes issues when building with mobile platforms.");
+      Console.warn("  Your generated files may get interpreted as source code!");
       Console.warn("  Consider building into a different directory instead (" + Console.command("meteor build ../output") + ")");
       Console.warn("");
     }
   }
 
-  var bundlePath = options['directory'] ?
+  var bundlePath = options.directory ?
       (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
       path.join(buildDir, 'bundle');
 
@@ -841,7 +839,7 @@ var buildCommand = function (options) {
   if (! options._serverOnly)
     files.mkdir_p(outputPath);
 
-  if (! options['directory']) {
+  if (! options.directory) {
     try {
       var outputTar = options._serverOnly ? outputPath :
         path.join(outputPath, appName + '.tar.gz');

@@ -158,7 +158,7 @@ var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var _ = require('underscore');
 var project = require(path.join(__dirname, 'project.js'));
-var uniload = require(path.join(__dirname, 'uniload.js'));
+var isopackets = require("./isopackets.js");
 var watch = require('./watch.js');
 var release = require('./release.js');
 var Fiber = require('fibers');
@@ -221,6 +221,9 @@ var NodeModulesDirectory = function (options) {
   // The path (relative to the bundle root) where we would preferably
   // like the node_modules to be output (essentially cosmetic).
   self.preferredBundlePath = options.preferredBundlePath;
+
+  // Optionally, files to discard.
+  self.npmDiscards = options.npmDiscards;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -290,7 +293,7 @@ _.extend(File.prototype, {
   hash: function () {
     var self = this;
     if (! self._hash)
-      self._hash = Builder.sha1(self.contents());
+      self._hash = watch.sha1(self.contents());
     return self._hash;
   },
 
@@ -495,9 +498,7 @@ _.extend(Target.prototype, {
 
     // Minify, if requested
     if (options.minify) {
-      var minifiers = uniload.load({
-        packages: ['minifiers']
-      }).minifiers;
+      var minifiers = isopackets.load('minifiers').minifiers;
       self.minifyJs(minifiers);
 
       // CSS is minified only for client targets.
@@ -718,7 +719,8 @@ _.extend(Target.prototype, {
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: path.join(
-                    'npm', unibuild.pkg.name, 'node_modules')
+                    'npm', unibuild.pkg.name, 'node_modules'),
+                  npmDiscards: unibuild.pkg.npmDiscards
                 });
                 self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
               }
@@ -1004,9 +1006,7 @@ _.extend(ClientTarget.prototype, {
   // allow them to appear in the middle of a file.
   mergeCss: function () {
     var self = this;
-    var minifiers = uniload.load({
-      packages: ['minifiers']
-    }).minifiers;
+    var minifiers = isopackets.load('minifiers').minifiers;
     var CssTools = minifiers.CssTools;
 
     // Filenames passed to AST manipulator mapped to their original files
@@ -1171,7 +1171,7 @@ _.extend(ClientTarget.prototype, {
           path: dataFile,
           where: 'internal',
           type: type,
-          hash: Builder.sha1(dataBuffer)
+          hash: watch.sha1(dataBuffer)
         });
       }
     });
@@ -1378,7 +1378,8 @@ _.extend(JsImage.prototype, {
       var generatedDir = builder.generateFilename(dirname, {directory: true});
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: path.join(generatedDir, base)
+        preferredBundlePath: path.join(generatedDir, base),
+        npmDiscards: nmd.npmDiscards
       }));
     });
 
@@ -1448,7 +1449,7 @@ _.extend(JsImage.prototype, {
 
         loadItem.assets = {};
         _.each(item.assets, function (data, relPath) {
-          var sha = Builder.sha1(data);
+          var sha = watch.sha1(data);
           if (_.has(assetFilesBySha, sha)) {
             loadItem.assets[relPath] = assetFilesBySha[sha];
           } else {
@@ -1470,7 +1471,8 @@ _.extend(JsImage.prototype, {
     _.each(nodeModulesDirectories, function (nmd) {
       builder.copyDirectory({
         from: nmd.sourcePath,
-        to: nmd.preferredBundlePath
+        to: nmd.preferredBundlePath,
+        npmDiscards: nmd.npmDiscards
       });
     });
 
@@ -1510,6 +1512,8 @@ JsImage.readFromDisk = function (controlFilePath) {
           new NodeModulesDirectory({
             sourcePath: node_modules,
             preferredBundlePath: item.node_modules
+            // No npmDiscards, because we should have already discarded things
+            // when writing the image to disk.
           });
       }
       nmd = ret.nodeModulesDirectories[node_modules];
@@ -1683,9 +1687,8 @@ _.extend(ServerTarget.prototype, {
         path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
-    var script = uniload.load({
-      packages: ['dev-bundle-fetcher']
-    })["dev-bundle-fetcher"].DevBundleFetcher.script();
+    var Packages = isopackets.load('dev-bundle-fetcher');
+    var script = Packages["dev-bundle-fetcher"].DevBundleFetcher.script();
     script = script.replace(/##PLATFORM##/g, platform);
     script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
     script = script.replace(/##IMAGE##/g, imageControlFile);
@@ -1902,8 +1905,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  // bundler.bundle is never called by uniload, so it always uses
-  // the complete catalog.
+  // bundler.bundle is not called to make isopackets, so it always uses the
+  // complete catalog.
   var whichCatalog = catalog.complete;
 
   var outputPath = options.outputPath;
