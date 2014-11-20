@@ -46,7 +46,7 @@ var Unibuild = function (isopack, options) {
   self.implies = options.implies || [];
 
   // This WatchSet will end up having the watch items from the
-  // SourceArch (such as package.js or .meteor/packages), plus all of
+  // SourceArch (such as meteor-package.js or .meteor/packages), plus all of
   // the actual source files for the unibuild (including items that we
   // looked at to find the source files, such as directories we
   // scanned).
@@ -268,7 +268,7 @@ var Isopack = function () {
   // XXX this is likely to change once we have build versions
   //
   // A WatchSet for the full transitive dependencies for all plugins in this
-  // package, as well as this package's package.js. If any of these dependencies
+  // package, as well as this package's meteor-package.js. If any of these dependencies
   // change, our plugins need to be rebuilt... but also, any package that
   // directly uses this package needs to be rebuilt in case the change to
   // plugins affected compilation.

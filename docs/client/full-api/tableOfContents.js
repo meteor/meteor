@@ -278,7 +278,7 @@ var toc = [
       {name: "Assets.getBinary", id: "assets_getBinary"}
     ],
 
-    {name: "package.js", id: "packagejs"}, [
+    {name: "meteor-package.js", id: "meteorpackagejs"}, [
       {name: "Package.describe", id: "packagedescription"},
       {name: "Package.onUse", id: "packagedefinition"}, [
         {name: "api.versionsFrom", id: "pack_versions"},

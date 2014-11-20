@@ -210,15 +210,17 @@ _.extend(LocalCatalog.prototype, {
           return;
 
         // Consider a directory to be a package source tree if it contains
-        // 'package.js'. (We used to support isopacks in localPackageSearchDirs,
+        // 'meteor-package.js', with a backward compatibility fallback to 'package.js'.
+        // (We used to support isopacks in localPackageSearchDirs,
         // but no longer.)
-        if (fs.existsSync(path.join(packageDir, 'package.js'))) {
+        if (fs.existsSync(path.join(packageDir, 'meteor-package.js'))
+          || fs.existsSync(path.join(packageDir, 'package.js'))) {  // TODO deprecate
           // Let earlier package directories override later package
           // directories.
 
           // We don't know the name of the package, so we can't deal with
           // duplicates yet. We are going to have to rely on the fact that we
-          // are putting these in in order, to be processed in order.
+          // are putting these in order, to be processed in order.
           self.effectiveLocalPackageDirs.push(packageDir);
         }
       });
@@ -276,8 +278,8 @@ _.extend(LocalCatalog.prototype, {
           return;
         }
 
-        // Now that we have initialized the package from package.js, we know its
-        // name.
+        // Now that we have initialized the package from meteor-package.js, we
+        // know its name.
         var name = packageSource.name;
 
         // We should only have one package dir for each name; in this case, we
@@ -468,8 +470,13 @@ _.extend(LocalCatalog.prototype, {
         include: [/\/$/]
       });
       _.each(packages, function (p) {
-        watch.readAndWatchFile(watchSet,
-                               path.join(packageDir, p, 'package.js'));
+        // Watch the package metadata file. TODO deprecate package.js
+        if (fs.existsSync(path.join(packageDir, p, 'meteor-package.js')))
+          watch.readAndWatchFile(watchSet,
+                                 path.join(packageDir, p, 'meteor-package.js'));
+        else
+          watch.readAndWatchFile(watchSet,
+                                 path.join(packageDir, p, 'package.js'));
       });
     });
   },

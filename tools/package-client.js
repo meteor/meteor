@@ -231,7 +231,10 @@ var bundleSource = function (isopack, includeSources, packageDir) {
     return null;
   }
 
-  includeSources.push('package.js');
+  if (fs.existsSync(path.join(packageDir, 'meteor-package.js')))
+    includeSources.push('meteor-package.js');
+  else
+    includeSources.push('package.js');  // TODO deprecate
   if (fs.existsSync(path.join(packageDir, '.npm/package/npm-shrinkwrap.json'))) {
     includeSources.push('.npm/package/npm-shrinkwrap.json');
   }
@@ -424,7 +427,7 @@ exports.publishPackage = function (packageSource, compileResult, conn, options) 
   // to be wrong)
   if (!packageSource.metadata.summary) {
     Console.stderr.write("Please describe what your package does. \n");
-    Console.stderr.write("Set a summary in Package.describe in package.js. \n");
+    Console.stderr.write("Set a summary in Package.describe in meteor-package.js. \n");
     return 1;
   }
 

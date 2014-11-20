@@ -7,7 +7,7 @@ var fs = require('fs');
 var path = require('path');
 
 // Copy the contents of one file to another.  In these series of tests, we often
-// want to switch contents of package.js files. It is more legible to copy in
+// want to switch contents of meteor-package.js files. It is more legible to copy in
 // the backup file rather than trying to write into it manually.
 //
 // XXX: Surely there is a function for this in fs?
@@ -16,7 +16,7 @@ var copyFile = function(from, to, sand) {
   var contents = sand.read(from);
   if (!contents) {
     throw new Error("File " + from + " does not exist.");
-  };
+  }
   sand.write(to, contents);
 };
 
@@ -120,11 +120,11 @@ selftest.define("change cordova plugins", function () {
   run.match("restarted");
 
   // Change something in the plugin.
-  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
+  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/meteor-package.js');
   run.waitSecs(2);
   run.match("restarted");
 
-  s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
+  s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/meteor-package.js');
   run.waitSecs(2);
   run.match("exact version");
 });

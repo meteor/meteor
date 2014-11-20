@@ -109,9 +109,9 @@ _.extend(warehouse, {
 
   packageExistsInWarehouse: function (name, version) {
     // A package exists if its directory exists. (We used to look for a
-    // particular file name ("package.js") inside the directory, but since we
-    // always install packages by untarring to a temporary directory and
-    // renaming atomically, we shouldn't worry about partial packages.)
+    // particular file name ('meteor-package.js') inside the directory, but
+    // since we always install packages by untarring to a temporary directory
+    // and renaming atomically, we shouldn't worry about partial packages.)
     return fs.existsSync(
       path.join(warehouse.getWarehouseDir(), 'packages', name, version));
   },

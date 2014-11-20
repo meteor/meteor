@@ -688,11 +688,10 @@ _.extend(Target.prototype, {
         if (_.contains(["js", "css"], resource.type)) {
           if (resource.type === "css" && ! isWeb)
             // XXX might be nice to throw an error here, but then we'd
-            // have to make it so that package.js ignores css files
+            // have to make it so that meteor-package.js ignores CSS files
             // that appear in the server directories in an app tree
 
-            // XXX XXX can't we easily do that in the css handler in
-            // meteor.js?
+            // XXX XXX can't we easily do that in the CSS handler?
             return;
 
           var f = new File({ info: 'resource ' + resource.servePath, data: resource.data, cacheable: false});

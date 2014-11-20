@@ -116,7 +116,7 @@ Fiber(function () {
           // XXX better message
           throw new Error(
             "Can't find npm module '" + name +
-              "'. Did you forget to call 'Npm.depends' in package.js " +
+              "'. Did you forget to call 'Npm.depends' in meteor-package.js " +
               "within the '" + packageName + "' package?");
           }
       }

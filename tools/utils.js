@@ -479,7 +479,7 @@ exports.isUrlWithSha = function (x) {
 // It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
-    // We want a given version of a smart package (package.js +
+    // We want a given version of a smart package (meteor-package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.

@@ -6,7 +6,7 @@ var _ = require("../../packages/underscore/underscore.js")._;
 var packageNames = _.rest(process.argv, 2);
 
 _.each(packageNames, function (name) {
-  // name = "packages/" + name + "/package.js";
+  // name = "packages/" + name + "/meteor-package.js";
 
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 

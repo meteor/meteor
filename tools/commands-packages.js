@@ -519,7 +519,7 @@ main.registerCommand({
         // versions of Meteor will just try to spingboard anyway.
         //
         // This is kind of a transitional hack. Going forward, there are several
-        // ways to fix this -- we could introduct some sort of local records (so
+        // ways to fix this -- we could introduce some sort of local records (so
         // we could create a temporary release record and run meteor from
         // there), or we can teach meteor to just run from a tool, instead of a
         // release. I like the latter better from a conceptual standpoint (why
@@ -575,7 +575,7 @@ main.registerCommand({
       officialBuild: true
     }).isopack;
     if (buildmessage.jobHasMessages())
-      return;
+      return;  // XXX this is the last statement of the function anyway
   });
 
   if (messages.hasMessages()) {
@@ -803,9 +803,11 @@ main.registerCommand({
           // in a release.
           var packageDir = path.resolve(path.join(localPackageDir, item));
           // Consider a directory to be a package source tree if it
-          // contains 'package.js'. (We used to support isopacks in
+          // contains 'meteor-package.js'. (We used to support isopacks in
           // local package directories, but no longer.)
-          if (fs.existsSync(path.join(packageDir, 'package.js'))) {
+          if (fs.existsSync(path.join(packageDir, 'meteor-package.js'))
+            || fs.existsSync(path.join(packageDir, 'package.js'))  // TODO deprecate
+          ) {
             var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
               { title: "Building package " + item },
@@ -897,9 +899,9 @@ main.registerCommand({
                           oldVersion,
                           compileResult.isopack.buildArchitectures());
 
-                  // If the version number mentioned in package.js exists, but
-                  // there's no build of this architecture, then either the old
-                  // version was only semi-published, or you've added some
+                  // If the version number mentioned in meteor-package.js exists,
+                  // but there's no build of this architecture, then either the
+                  // old version was only semi-published, or you've added some
                   // platform-specific dependencies but haven't bumped the
                   // version number yet; either way, you should probably bump
                   // the version number.
@@ -924,7 +926,7 @@ main.registerCommand({
                     // has changed -- maybe our source files, or a buildId of
                     // one of our build-time dependencies. There might be a
                     // false positive here (for example, we added some comments
-                    // to a package.js file somewhere), but, for now, we would
+                    // to a meteor-package.js file somewhere), but, for now, we would
                     // rather err on the side of catching this issue and forcing
                     // a more thorough check.
                     buildmessage.error("Something changed in package " + item

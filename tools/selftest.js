@@ -558,14 +558,14 @@ _.extend(Sandbox.prototype, {
   },
 
   // Copy the contents of one file to another.  In these series of tests, we often
-  // want to switch contents of package.js files. It is more legible to copy in
-  // the backup file rather than trying to write into it manually.
+  // want to switch contents of meteor-package.js files. It is more legible to
+  // copy in the backup file rather than trying to write into it manually.
   cp: function(from, to) {
     var self = this;
     var contents = self.read(from);
     if (!contents) {
       throw new Error("File " + from + " does not exist.");
-    };
+    }
     self.write(to, contents);
   },
 

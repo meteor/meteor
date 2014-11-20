@@ -65,7 +65,7 @@ var updateTestPackage = function (npmDependencies) {
   if (!fs.existsSync(testPackageDir))
     fs.mkdirSync(testPackageDir);
 
-  fs.writeFileSync(path.join(testPackageDir, 'package.js'),
+  fs.writeFileSync(path.join(testPackageDir, 'meteor-package.js'),
                    "Package.describe({version: '1.0.0'});\n"
                    + "\n"
                    + "Npm.depends(" + JSON.stringify(npmDependencies) + ");"
