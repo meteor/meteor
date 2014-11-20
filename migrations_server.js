@@ -102,7 +102,7 @@ Migrations._migrateTo = function(version, rerun) {
     console.log('Rerunning version ' + version);
     setLocked(true);
     migrate('up', version);
-    setLocked(true);
+    setLocked(false);
     console.log('Finished migrating.');
     return;
   }
