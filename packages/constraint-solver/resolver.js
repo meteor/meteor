@@ -273,7 +273,7 @@ ConstraintSolver.UnitVersion = function (name, unitVersion) {
   self.version = PackageVersion.removeBuildID(unitVersion);
   self.dependencies = [];
   self.constraints = new ConstraintSolver.ConstraintsList();
-  // a string in a form of "1.2.0"
+  // integer like 1 or 2
   self.majorVersion = PackageVersion.majorVersion(unitVersion);
 };
 
