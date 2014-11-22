@@ -307,6 +307,33 @@ _.extend(Isopack.prototype, {
     self.unibuilds.push(new Unibuild(self, options));
   },
 
+  getSourceFilesUnderSourceRoot: function (sourceRoot) {
+    var self = this;
+    var sourceFiles = {};
+    var anySourceFiles = false;
+    var addSourceFilesFromWatchSet = function (watchSet) {
+      _.each(watchSet.files, function (hash, filename) {
+        anySourceFiles = true;
+        var relativePath = path.relative(sourceRoot, filename);
+        // We only want files that are actually under sourceRoot.
+        if (relativePath.substr(0, 3) === '..' + path.sep)
+          return;
+        sourceFiles[relativePath] = true;
+      });
+    };
+    addSourceFilesFromWatchSet(self.pluginWatchSet);
+    _.each(self.unibuilds, function (u) {
+      addSourceFilesFromWatchSet(u.watchSet);
+    });
+
+    // Were we actually built from source or loaded from an IsopackCache? If so
+    // then there should be at least one source file in some WatchSet. If not,
+    // return null.
+    if (! anySourceFiles)
+      return null;
+    return _.keys(sourceFiles);
+  },
+
   // An sorted array of all the architectures included in this package.
   architectures: function () {
     var self = this;

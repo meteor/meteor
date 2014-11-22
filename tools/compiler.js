@@ -33,7 +33,6 @@ compiler.compile = function (packageSource, options) {
   var packageMap = options.packageMap;
   var isopackCache = options.isopackCache;
 
-  var sources = [];
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
 
@@ -64,10 +63,6 @@ compiler.compile = function (packageSource, options) {
       if (buildmessage.jobHasMessages())
         return;
 
-      // Add the plugin's sources to our list.
-      _.each(info.sources, function (source) {
-        sources.push(source);
-      });
       _.each(buildResult.usedPackageNames, function (packageName) {
         pluginProviderPackageNames[packageName] = true;
       });
@@ -133,13 +128,11 @@ compiler.compile = function (packageSource, options) {
       nodeModulesPath: nodeModulesPath,
       isPortable: isPortable
     });
-    sources.push.apply(sources, unibuildResult.sources);
     _.extend(pluginProviderPackageNames,
              unibuildResult.pluginProviderPackageNames);
   });
 
   return {
-    sources: _.uniq(sources),
     isopack: isopk,
     pluginProviderPackageNames: _.keys(pluginProviderPackageNames)
   };
@@ -162,7 +155,6 @@ var compileUnibuild = function (options) {
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
   var js = [];
-  var sources = [];
   var pluginProviderPackageNames = {};
   // The current package always is a plugin provider. (This also means we no
   // longer need a buildOfPath entry in buildinfo.json.)
@@ -323,8 +315,6 @@ var compileUnibuild = function (options) {
     var filename = path.basename(relPath);
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
-
-    sources.push(relPath);
 
     if (contents === null) {
       buildmessage.error("File not found: " + source.relPath);
@@ -806,7 +796,6 @@ var compileUnibuild = function (options) {
   });
 
   return {
-    sources: sources,
     pluginProviderPackageNames: pluginProviderPackageNames
   };
 };

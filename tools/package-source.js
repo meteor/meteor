@@ -230,6 +230,7 @@ var PackageSource = function (catalog) {
   // XXX when we have names, maybe we want to say that all packages
   // with names have versions? certainly the reverse is true
   self.version = null;
+  self.versionExplicitlyProvided = false;
 
   // Available architectures of this package. Array of SourceArch.
   self.architectures = [];
@@ -513,6 +514,7 @@ _.extend(PackageSource.prototype, {
             // XXX validate that version parses -- and that it doesn't
             // contain a +!
             self.version = value;
+            self.versionExplicitlyProvided = true;
           } else if (key === "name" && !self.isTest) {
             if (!self.name) {
               self.name = value;
@@ -910,6 +912,7 @@ _.extend(PackageSource.prototype, {
       // recover by ignoring
     }
 
+    // XXX #3006 are there any call sites that don't set requireVersion?
     if (self.version === null && options.requireVersion) {
       if (options.defaultVersion) {
         self.version = options.defaultVersion;

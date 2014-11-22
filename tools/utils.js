@@ -250,7 +250,16 @@ exports.parseConstraint = function (constraintString, options) {
   }
 };
 exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
-exports.validatePackageName = packageVersionParser.validatePackageName;
+exports.validatePackageName = function (name, options) {
+  try {
+    return packageVersionParser.validatePackageName(name, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
+  }
+};
 
 // Returns true if the parsed constraint was just a@b with no `=` or `||`.
 exports.isSimpleConstraint = function (parsedConstraint) {

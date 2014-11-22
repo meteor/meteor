@@ -86,6 +86,11 @@ _.extend(exports.ProjectContext.prototype, {
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
+    // Set by 'meteor publish' to ensure that .meteor/packages is not written
+    // even though they may do an in-memory mutation of the constraints.
+    self._neverWriteProjectConstraintsFile =
+      options.neverWriteProjectConstraintsFile;
+
     // Set by 'meteor update' to specify which packages may be updated. Array of
     // package names.
     self._upgradePackageNames = options.upgradePackageNames;
@@ -514,7 +519,8 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
 
     // Save any changes to .meteor/packages.
-    self.projectConstraintsFile.writeIfModified();
+    if (! self._neverWriteProjectConstraintsFile)
+      self.projectConstraintsFile.writeIfModified();
 
     // Write .meteor/versions if the command always wants to (create/update),
     // or if the release of the app matches the release of the process.

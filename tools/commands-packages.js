@@ -146,6 +146,8 @@ main.registerCommand({
     'top-level': { type: Boolean }
   },
   requiresPackage: true,
+  // We optimize the workflow by using up-to-date package data to weed out
+  // obviously incorrect submissions before they ever hit the wire.
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   if (options.create && options['existing-version']) {
@@ -155,11 +157,23 @@ main.registerCommand({
     return 1;
   }
 
-  // Refresh the catalog, caching the remote package data on the server. We can
-  // optimize the workflow by using this data to weed out obviously incorrect
-  // submissions before they ever hit the wire.
-  //refreshOfficialCatalogOrDie();
+  // XXX #3006 Implement publishing packages that aren't in apps.
+  if (! options.appDir) {
+    throw Error("publishing packages outside of an app not ready");
+  }
 
+  // Initialize the project and build all local packages.
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    neverWriteProjectConstraintsFile: true
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    // Just get up to initializing the catalog. We're going to 
+    projectContext.initializeCatalog();
+  });
+
+
+  // Connect to the package server and log in.
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -173,37 +187,32 @@ main.registerCommand({
 
   Console.info('Reading package...');
 
-  // XXX Prettify error messages
-
-  var packageSource, compileResult;
-  var messages = buildmessage.capture(
-    { title: "Building the package" },
-    function () {
-
-      packageSource = new PackageSource(catalogcomplete);
-
-      // Anything published to the server must have a version.
-      packageSource.initFromPackageDir(options.packageDir, {
-        requireVersion: true });
-      if (buildmessage.jobHasMessages())
-        return; // already have errors, so skip the build
-
-      // XXX #3006 this no longer exists
-      var deps =
-          compiler.determineBuildTimeDependencies(packageSource)
-            .packageDependencies;
-      // XXX #3006 this no longer exists
-      tropohouse.default.downloadMissingPackages(deps);
-      // XXX #3006 this is an old call
-      compileResult = compiler.compile(packageSource, { officialBuild: true });
-    });
-
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
+  var localVersionRecord = projectContext.localCatalog.getVersionBySourceRoot(
+    options.packageDir);
+  if (! localVersionRecord) {
+    // OK, we're inside a package (ie, a directory with a package.js) and we're
+    // inside an app (ie, a directory with a file named .meteor/packages) but
+    // the package is not on the app's search path (ie, it's probably not
+    // directly inside the app's packages directory).  That's kind of
+    // weird. Let's not allow this.
+    Console.error(
+      "The package you are in appears to be inside a Meteor app but is not " +
+        "in its packages directory. You may only publish packages that are " +
+        "entirely outside of a project or that are loaded by the project " +
+        "that they are inside.");
     return 1;
   }
+  var packageName = localVersionRecord.packageName;
+  var packageSource = projectContext.localCatalog.getPackageSource(packageName);
+  if (! packageSource)
+    throw Error("no PackageSource for " + packageName);
 
-  var packageName = packageSource.name;
+  // Anything published to the server must explicitly set a version.
+  if (! packageSource.versionExplicitlyProvided) {
+    Console.error("A version must be specified for the package. Set it with " +
+                  "Package.describe.");
+    return 1;
+  }
 
   // Fail early if the package record exists, but we don't think that it does
   // and are passing in the --create flag!
@@ -233,39 +242,53 @@ main.registerCommand({
       }
       return 2;
     }
-  };
+  }
 
-  // We have initialized everything, so perform the publish oepration.
-  var binary = compileResult.isopack.platformSpecific();
-  var ec;  // XXX maybe combine with messages?
-  try {
-    messages = buildmessage.capture({
-      title: "Publishing the package"
-    }, function () {
-      ec = packageClient.publishPackage(
-        packageSource, compileResult, conn, {
+  // Make sure that both the package and its test (if any) are actually built.
+  _.each([packageName, packageSource.testName], function (name) {
+    if (! name)  // for testName
+      return;
+    // If we're already using this package, that's OK; no need to override.
+    if (projectContext.projectConstraintsFile.getConstraint(name))
+      return;
+    projectContext.projectConstraintsFile.addConstraints(
+      [utils.parseConstraint(name)]);
+  });
+
+  // Now resolve constraints and build packages.
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  var isopack = projectContext.isopackCache.getIsopack(packageName);
+  if (! isopack) {
+    // This shouldn't happen; we already threw a different error if the package
+    // wasn't even in the local catalog, and we explicitly added this package to
+    // the project's constraints file, so it should have been built.
+    throw Error("package not built even though added to constraints?");
+  }
+
+  // We have initialized everything, so perform the publish operation.
+  var binary = isopack.platformSpecific();
+  main.captureAndExit(
+    "=> Errors while publishing the package:",
+    "publishing the package",
+    function () {
+      // XXX #3006 clean up this ridiculous API
+      packageClient.publishPackage(
+        packageSource, conn, projectContext.localCatalog, isopack, projectContext.isopackCache, {
           new: options.create,
           existingVersion: options['existing-version'],
           doNotPublishBuild: binary && !options['existing-version']
         });
     });
-  } catch (e) {
-    packageClient.handlePackageServerConnectionError(e);
-    return 1;
-  }
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return ec || 1;
-  }
+
+  Console.info('Published ' + packageName + '@' + localVersionRecord.version +
+               '.');
 
   // We are only publishing one package, so we should close the connection, and
   // then exit with the previous error code.
   conn.close();
-
-  // If the publishPackage failed, exit now (no need to spend time trying to
-  // refresh).
-  if (ec)
-    return ec;
 
   // Warn the user if their package is not good for all architectures.
   if (binary && options['existing-version']) {
@@ -299,7 +322,7 @@ main.registerCommand({
   // Refresh, so that we actually learn about the thing we just published.
   refreshOfficialCatalogOrDie();
 
-  return ec;
+  return 0;
 });
 
 
