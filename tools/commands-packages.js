@@ -159,6 +159,8 @@ main.registerCommand({
 
   var projectContext;
   if (! options.appDir) {
+    // We're not in an app? OK, make a temporary app directory, and make sure
+    // that the current package directory is found by its local catalog.
     var tempProjectDir = files.mkdtemp('meteor-package-build');
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,  // won't have a packages dir, that's OK
@@ -1922,8 +1924,6 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 // For testing upgraders during development.
-// XXX move under admin?
-// XXX #3006 Once we've fixed the upgrader call in update, fix this.
 main.registerCommand({
   name: 'admin run-upgrader',
   hidden: true,
