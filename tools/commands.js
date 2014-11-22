@@ -233,7 +233,7 @@ function doRunCommand (options) {
 
   if (release.explicit) {
     if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
-      console.log("=> Using %s as requested (overriding Meteor %s)",
+      console.log("=> Using %s as requested (overriding %s)",
                   release.current.getDisplayName(),
                   projectContext.releaseFile.displayReleaseName);
       console.log();
