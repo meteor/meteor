@@ -30,16 +30,6 @@ _.extend(exports.PackageMap.prototype, {
       return self._map[packageName];
     return null;
   },
-  getVersionCatalogRecord: function (packageName) {
-    var self = this;
-    var info = self.getInfo(packageName);
-    if (! info)
-      throw Error("unknown version " + packageName);
-    var record = self.catalog.getVersion(packageName, info.version);
-    if (! record)
-      throw Error("no catalog entry for " + packageName + "@" + info.version);
-    return record;
-  },
   makeSubsetMap: function (packageNames) {
     var self = this;
     var subsetVersions = {};
