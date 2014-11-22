@@ -15,6 +15,7 @@ var Console = require('./console.js').Console;
 var packageVersionParser = require('./package-version-parser.js');
 var authClient = require('./auth-client.js');
 var catalog = require('./catalog.js');
+var projectContextModule = require('./project-context.js');
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -221,7 +222,8 @@ exports.loggedInPackagesConnection = function () {
 // XXX this is missing a few things. In retrospect a better approach here might
 //     be to actually make "save source somewhere else" or perhaps "add source
 //     to tarball" be part of the package build itself...
-var bundleSource = function (isopack, includeSources, packageDir) {
+var bundleSource = function (isopack, includeSources, packageDir,
+                             pluginProviderPackageMap) {
   buildmessage.assertInJob();
 
   var name = isopack.name;
@@ -245,6 +247,15 @@ var bundleSource = function (isopack, includeSources, packageDir) {
     files.copyFile(path.join(packageDir, f),
                    path.join(sourcePackageDir, f));
   });
+
+  var packageMapFilename = path.join(sourcePackageDir, '.versions');
+  if (fs.existsSync(packageMapFilename))
+    throw Error(".versions file already exists? " + packageMapFilename);
+
+  var packageMapFile = new projectContextModule.PackageMapFile({
+    filename: packageMapFilename
+  });
+  packageMapFile.write(pluginProviderPackageMap);
 
   // We put this inside the temp dir because mkdtemp makes sure that the
   // temp dir gets cleaned up on process exit, so we don't have to worry
@@ -505,13 +516,17 @@ exports.publishPackage = function (options) {
     sourceFiles = _.union(sourceFiles, testSourceFiles);
   }
 
-  // XXX #3006 include a versions lock file too (we used to do this by actually
-  // writing a versions.json to disk), and a release tag
+  // Find the PackageMap of packages that are build time dependencies of this
+  // package.
+  var pluginProviderPackageMap =
+        projectContext.isopackCache.getPluginProviderPackageMap(name);
+  if (! pluginProviderPackageMap)
+    throw Error("missing pluginProviderPackageMap for " + name);
 
   var sourceBundleResult;
   buildmessage.enterJob("bundling source", function () {
     sourceBundleResult = bundleSource(
-      isopack, sourceFiles, packageSource.sourceRoot);
+      isopack, sourceFiles, packageSource.sourceRoot, pluginProviderPackageMap);
   });
   if (buildmessage.jobHasMessages())
     return;

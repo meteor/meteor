@@ -725,7 +725,8 @@ exports.PackageMapFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = path.join(options.projectDir, '.meteor', 'versions');
+  self.filename = options.filename ||
+    path.join(options.projectDir, '.meteor', 'versions');
   self.watchSet = new watch.WatchSet;
   self._versions = {};
 
@@ -735,13 +736,14 @@ exports.PackageMapFile = function (options) {
 _.extend(exports.PackageMapFile.prototype, {
   _readFile: function () {
     var self = this;
-    buildmessage.assertInCapture();
 
     var contents = watch.readAndWatchFile(self.watchSet, self.filename);
     // No .meteor/versions? That's OK, you just get to start your calculation
     // from scratch.
     if (contents === null)
       return;
+
+    buildmessage.assertInCapture();
     var lines = files.splitBufferToLines(contents);
     _.each(lines, function (line) {
       // We don't allow comments here, since it's cruel to allow comments in a
