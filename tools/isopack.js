@@ -227,9 +227,10 @@ var Isopack = function () {
   self.cordovaDependencies = {};
 
   // -- Information for up-to-date checks --
-
-  // If true, force the checkUpToDate to return false for this isopack.
-  self.forceNotUpToDate = false;
+  // Data in this section is only set if the Isopack was directly created by
+  // compiler.compile or read from a package compiled by IsopackCache (with its
+  // isopack-buildinfo.json file). They are not set for Isopacks read from
+  // the tropohouse.
 
   // The versions that we used at build time for each of our direct
   // dependencies. Map from package name to version string.
