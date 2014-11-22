@@ -1956,7 +1956,7 @@ _.extend(PackageSource.prototype, {
             failed = true;
           }
         }
-        d.references.push({arch: 'os'});
+        d.references.push({arch: 'plugin'});
       });
     });
 
