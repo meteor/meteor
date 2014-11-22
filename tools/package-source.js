@@ -184,9 +184,6 @@ var SourceArch = function (pkg, options) {
   // but only control files such as package.js and .meteor/packages,
   // since the rest are not determined until compile time.
   self.watchSet = options.watchSet || new watch.WatchSet;
-
-  // See the field of the same name in PackageSource.
-  self.noSources = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -289,14 +286,6 @@ var PackageSource = function (catalog) {
   // built copies of all known isopackets.
   self.includeTool = false;
 
-  // If this is true, then this package has no source files. (But the converse
-  // is not true: this is only set to true by one particular constructor.) This
-  // is specifically so that a few pieces of code can detect the wrapper "load"
-  // package that isopacket building uses and not do extra work that doesn't
-  // make sense in the isopacket-building context.
-  // XXX This may no longer be necessary.
-  self.noSources = false;
-
   // If this is true, the package source comes from the package server, and
   // should be treated as immutable. The only reason that we have it is so we
   // can build it, and we should expect to use exactly the same inputs
@@ -388,11 +377,6 @@ _.extend(PackageSource.prototype, {
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
-
-    if (!sources.length) {
-      self.noSources = true;
-      sourceArch.noSources = true;
-    }
 
     self.architectures.push(sourceArch);
 

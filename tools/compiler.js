@@ -181,38 +181,30 @@ var compileUnibuild = function (options) {
   // skip unordered dependencies, because it's not going to work to
   // have circular build-time dependencies.
   //
-  // Note that we avoid even calling containsPlugins if we know there are no
-  // sources; specifically, this avoids calling containsPlugins in the
-  // isopacket-building case because in that case we might not know how to check
-  // to see if a package has plugins.  (It's possible that this check is no
-  // longer necessary.)
-  //
   // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
   // templating from standard-app-packages).
   //
   // We pass archinfo.host here, not self.arch, because it may be more specific,
   // and because plugins always have to run on the host architecture.
-  if (!inputSourceArch.noSources) {
-    // XXX we could do this just using the catalog too?
-    compiler.eachUsedUnibuild({
-      dependencies: inputSourceArch.uses,
-      arch: archinfo.host(),
-      isopackCache: isopackCache,
-      skipUnordered: true
-    }, function (unibuild) {
-      if (unibuild.pkg.name === isopk.name)
-        return;
-      pluginProviderPackageNames[unibuild.pkg.name] = true;
-      // If other package is built from source, then we need to rebuild this
-      // package if any file in the other package that could define a plugin
-      // changes.
-      watchSet.merge(unibuild.pkg.pluginWatchSet);
+  compiler.eachUsedUnibuild({
+    dependencies: inputSourceArch.uses,
+    arch: archinfo.host(),
+    isopackCache: isopackCache,
+    skipUnordered: true
+    // implicitly skip weak deps by not specifying acceptableWeakPackages option
+  }, function (unibuild) {
+    if (unibuild.pkg.name === isopk.name)
+      return;
+    pluginProviderPackageNames[unibuild.pkg.name] = true;
+    // If other package is built from source, then we need to rebuild this
+    // package if any file in the other package that could define a plugin
+    // changes.
+    watchSet.merge(unibuild.pkg.pluginWatchSet);
 
-      if (_.isEmpty(unibuild.pkg.plugins))
-        return;
-      activePluginPackages.push(unibuild.pkg);
-    });
-  }
+    if (_.isEmpty(unibuild.pkg.plugins))
+      return;
+    activePluginPackages.push(unibuild.pkg);
+  });
 
   activePluginPackages = _.uniq(activePluginPackages);
 
