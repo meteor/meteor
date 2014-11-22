@@ -2,7 +2,6 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var catalog = require('../catalog.js');
-var packageLoader = require("../package-loader.js");
 
 // XXX: Why is this an internet using test? Because our warehouse is a
 // hackhackhack. If we clean up the hackhackhackhack, then this does not need
