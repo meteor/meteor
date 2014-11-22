@@ -156,7 +156,7 @@ Tinytest.add("constraint solver - no results", function (test) {
         && error.message.match(/bad-2@1\.0\.0/)
         // We shouldn't get shown indirect itself in a pathway: that would just
         // be an artifact of there being a path that passes through another
-        // unibuild.  (Note: we might change our mind and decide that all these
+        // package.  (Note: we might change our mind and decide that all these
         // lines should end in the relevant constraint, which would probably be
         // nice! But in that case, we should test that no line ends with TWO
         // mentions of indirect.)

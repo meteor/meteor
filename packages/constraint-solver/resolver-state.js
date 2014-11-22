@@ -42,9 +42,9 @@ _.extend(ResolverState.prototype, {
       self.error = util.format(
         "conflict: constraint %s is not satisfied by %s.\n" +
         "Constraints on %s come from:\n%s",
-        constraint.toString({removeUnibuild: true}),
+        constraint.toString(),
         chosen.version,
-        removeUnibuild(constraint.name),
+        constraint.name,
         self._shownPathwaysForConstraintsIndented(constraint.name));
       return self;
     }
@@ -60,7 +60,7 @@ _.extend(ResolverState.prototype, {
         self.error = util.format(
           "conflict: constraints on %s cannot all be satisfied.\n" +
             "Constraints come from:\n%s",
-          removeUnibuild(constraint.name),
+          constraint.name,
           self._shownPathwaysForConstraintsIndented(constraint.name));
       } else if (mori.count(newAlternatives) === 1) {
         // There's only one choice, so we can immediately choose it.
@@ -83,7 +83,7 @@ _.extend(ResolverState.prototype, {
     self = self._clone();
 
     if (!_.has(self._resolver.unitsVersions, unitName)) {
-      self.error = "unknown package: " + removeUnibuild(unitName);
+      self.error = "unknown package: " + unitName;
       return self;
     }
 
@@ -99,7 +99,7 @@ _.extend(ResolverState.prototype, {
       self.error = util.format(
         "conflict: constraints on %s cannot be satisfied.\n" +
           "Constraints come from:\n%s",
-        removeUnibuild(unitName),
+        unitName,
         self._shownPathwaysForConstraintsIndented(unitName));
       return self;
     } else if (mori.count(alternatives) === 1) {
@@ -211,15 +211,6 @@ var filter = function (v, pred) {
   return mori.into(mori.vector(), mori.filter(pred, v));
 };
 
-// Users are mostly confused by seeing "package#web.browser" instead of just
-// "package". Remove it for error messages.
-removeUnibuild = function (unitName) {
-  // For debugging constraint solver issues.
-  if (process.env.METEOR_SHOW_UNIBUILDS)
-    return unitName;
-  return unitName.split('#')[0];
-};
-
 // XXX from Underscore.String (http://epeli.github.com/underscore.string/)
 // XXX how many copies of this do we have in Meteor?
 var startsWith = function(str, starts) {
@@ -229,18 +220,13 @@ var startsWith = function(str, starts) {
 
 var showPathway = function (pathway, dropIfFinal) {
   var pathUnits = mori.into_array(mori.map(function (uv) {
-    return uv.toString({removeUnibuild: true});
+    return uv.toString();
   }, mori.reverse(pathway)));
 
-  var dropPrefix = removeUnibuild(dropIfFinal) + '@';
+  var dropPrefix = dropIfFinal + '@';
   while (pathUnits.length && startsWith(_.last(pathUnits), dropPrefix)) {
     pathUnits.pop();
   }
 
-  // This is a bit of a hack: we're using _.uniq in "it's sorted" mode, whose
-  // implementation is "drop adjacent duplicates". This is what we want (we're
-  // trying to avoid seeing "foo -> foo" which represents "foo#os ->
-  // foo#web.browser") even though it's not actually sorted.
-  pathUnits = _.uniq(pathUnits, true);
   return pathUnits.join(' -> ');
 };
