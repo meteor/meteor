@@ -270,6 +270,8 @@ ConstraintSolver.UnitVersion = function (name, unitVersion) {
   self.name = name;
   // Things with different build IDs should represent the same code, so ignore
   // them. (Notably: depending on @=1.3.1 should allow 1.3.1+local!)
+  // XXX we no longer automatically add build IDs to things as part of our build
+  // process, but this still reflects semver semantics.
   self.version = PackageVersion.removeBuildID(unitVersion);
   self.dependencies = [];
   self.constraints = new ConstraintSolver.ConstraintsList();
@@ -300,11 +302,9 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     self.constraints = self.constraints.push(constraint);
   },
 
-  toString: function (options) {
+  toString: function () {
     var self = this;
-    options = options || {};
-    var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
-    return name + "@" + self.version;
+    return self.name + "@" + self.version;
   }
 });
 
@@ -332,9 +332,7 @@ ConstraintSolver.Constraint = function (name, versionString) {
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
   var self = this;
-  options = options || {};
-  var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
-  return name + "@" + self.constraintString;
+  return self.name + "@" + self.constraintString;
 };
 
 

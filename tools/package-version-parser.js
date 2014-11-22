@@ -243,7 +243,7 @@ PV.parseConstraint = function (constraintString, options) {
   var splitted = constraintString.split('@');
 
   var name = splitted[0];
-  var versionString = splitted[1];
+  var versionString = splitted[1] || '';
 
   if (splitted.length > 2) {
     // throw error complaining about @

@@ -1,14 +1,3 @@
-// Copied from archinfo.matches() in tools/
-//
-// archMatches("os", "os") => true
-// archMatches("web.cordova", "web") => true
-// archMatches("web.cordova", "web.cordova") => true
-var archMatches = function (arch, baseArch) {
-  return arch.substr(0, baseArch.length) === baseArch &&
-    (arch.length === baseArch.length ||
-     arch.substr(baseArch.length, 1) === ".");
-};
-
 ConstraintSolver = {};
 
 // `catalog` has the following methods:
@@ -71,67 +60,40 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
     packageName) {
   var self = this;
 
-  // XXX in theory there might be different archs but in practice they are
-  // always "os", "web.browser" and "web.cordova". Fix this once we
-  // actually have different archs used.
-  var allArchs = ["os", "web.browser", "web.cordova"];
-
   // We rely on sortedness in the constraint solver, since one of the cost
   // functions wants to be able to quickly find the earliest or latest version.
   var sortedVersions = self.catalog.getSortedVersions(packageName);
   _.each(sortedVersions, function (version) {
     var versionDef = self.catalog.getVersion(packageName, version);
 
-    var unibuilds = {};
-
-    _.each(allArchs, function (arch) {
-      var unitName = packageName + "#" + arch;
-      unibuilds[unitName] = new ConstraintSolver.UnitVersion(unitName, version);
-      self.resolver.addUnitVersion(unibuilds[unitName]);
-    });
+    var unitVersion = new ConstraintSolver.UnitVersion(packageName, version);
+    self.resolver.addUnitVersion(unitVersion);
 
     _.each(versionDef.dependencies, function (dep, depName) {
       self._ensurePackageInfoLoaded(depName);
 
-      _.each(dep.references, function (ref) {
-        _.each(allArchs, function (arch) {
-          if (archMatches(arch, ref.arch)) {
-            var unitName = packageName + "#" + arch;
-            var unitVersion = unibuilds[unitName];
+      // "dep" contains a list of references, which describes which unibuilds of
+      // this unitVersion depend on depName, as well as a constraint, which
+      // constraints the versions it depends on.
 
-            if (! unitVersion)
-              throw new Error("A non-standard arch " + arch + " for package " + packageName);
-
-            var targetUnitName = depName + "#" + arch;
-
-            // Add the dependency if needed
-            if (! ref.weak)
-              unitVersion.addDependency(targetUnitName);
-
-            // Add a constraint if such exists
-            if (dep.constraint && dep.constraint !== "none") {
-              var constraint =
-                self.resolver.getConstraint(targetUnitName, dep.constraint);
-              unitVersion.addConstraint(constraint);
-            }
-          }
-        });
+      // The package->package dependency is weak if ALL of the underlying
+      // unibuild->unibuild dependencies are weak.  ie,
+      //     api.use('dep', 'server', { weak: true });
+      //     api.use('dep', 'client');
+      // is not weak at the package->package level.
+      var createsDependency = _.any(dep.references, function (ref) {
+        return !ref.weak;
       });
-    });
 
-    // Every unibuild implies that if it is picked, other unibuilds are
-    // constrained to the same version.
-    _.each(unibuilds, function (unibuild, unibuildName) {
-      _.each(unibuilds, function (other, otherUnibuildName) {
-        if (unibuild === other)
-          return;
+      // Add the dependency if needed.
+      if (createsDependency)
+        unitVersion.addDependency(depName);
 
-        // Constraint is the exact same version of a unibuild
-        var constraintStr = "=" + version;
-        var constraint =
-          self.resolver.getConstraint(otherUnibuildName, constraintStr);
-        unibuild.addConstraint(constraint);
-      });
+      // Add a constraint if needed.
+      if (dep.constraint && dep.constraint !== "none") {
+        var constraint = self.resolver.getConstraint(depName, dep.constraint);
+        unitVersion.addConstraint(constraint);
+      }
     });
   });
 };
@@ -182,33 +144,26 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     self._ensurePackageInfoLoaded(packageName);
   });
 
-  // XXX glasser and ekate added this filter to strip some undefineds that
-  // were causing crashes, but maybe the real answer is that there shouldn't
-  // have been undefineds?
   if (options.previousSolution) {
-    options.previousSolution =
-      _.filter(_.flatten(
-        _.map(options.previousSolution, function (version, packageName) {
-      return _.map(self._unibuildsForPackage(packageName), function (unitName) {
-        return self.resolver._unitsVersionsMap[unitName + "@" + version];
-      });
-    })), _.identity);
+    // Replace previousSolution map with a list of the UnitVersions that we know
+    // about that were mentioned.  (_.compact drops unknown UnitVersions.)
+    options.previousSolution = _.compact(
+      _.map(options.previousSolution, function (version, packageName) {
+        return self.resolver.getUnitVersion(packageName, version);
+      }));
   }
 
-  // split every package name to one or more archs belonging to that package
-  // (["foobar"] => ["foobar#os", "foobar#web.browser", ...])
-  // XXX for now just hardcode in all of the known architectures
-  var upgradeUnibuilds = {};
+  // Convert options.upgrade to a map for O(1) access.
+  // XXX we should probably just change the API so it's passed in this way
+  var upgradePackages = {};
   _.each(options.upgrade, function (packageName) {
-    _.each(self._unibuildsForPackage(packageName), function (unibuildName) {
-      upgradeUnibuilds[unibuildName] = true;
-    });
+    upgradePackages[packageName] = true;
   });
-  options.upgrade = upgradeUnibuilds;
+  options.upgrade = upgradePackages;
 
-  var dc = self._splitDepsToConstraints(dependencies, constraints);
+  constraints = self._makeConstraintObjects(constraints);
 
-  options.rootDependencies = dc.dependencies;
+  options.rootDependencies = dependencies;
   var resolverOptions = self._getResolverOptions(options);
   var res = null;
   // If a previous solution existed, try resolving with additional (weak)
@@ -226,7 +181,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // guide which things are encouraged to be upgraded vs stay the same in the
   // heuristic.)
   if (!_.isEmpty(options.previousSolution) && _.isEmpty(options.upgrade)) {
-    var constraintsWithPreviousSolutionLock = _.clone(dc.constraints);
+    var constraintsWithPreviousSolutionLock = _.clone(constraints);
     _.each(options.previousSolution, function (uv) {
       constraintsWithPreviousSolutionLock.push(
         self.resolver.getConstraint(uv.name, '=' + uv.version));
@@ -235,7 +190,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
       // Try running the resolver. If it fails to resolve, that's OK, we'll keep
       // working.
       res = self.resolver.resolve(
-        dc.dependencies, constraintsWithPreviousSolutionLock, resolverOptions);
+        dependencies, constraintsWithPreviousSolutionLock, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
         throw e;
@@ -246,8 +201,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // without locking in the previous solution as strict equality.
   if (!res) {
     try {
-      res = self.resolver.resolve(
-        dc.dependencies, dc.constraints, resolverOptions);
+      res = self.resolver.resolve(dependencies, constraints, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
         throw e;
@@ -259,8 +213,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // constraints?
   if (!res) {
     resolverOptions["useRCs"] = true;
-    res = self.resolver.resolve(
-      dc.dependencies, dc.constraints, resolverOptions);
+    res = self.resolver.resolve(dependencies, constraints, resolverOptions);
   }
   var ret = { answer:  resolverResultToPackageMap(res) };
   if (resolverOptions.useRCs)
@@ -268,84 +221,24 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   return ret;
 };
 
-var removeUnibuild = function (unitName) {
-  return unitName.split('#')[0];
-};
-
 var resolverResultToPackageMap = function (choices) {
   var packageMap = {};
   mori.each(choices, function (nameAndUv) {
     var name = mori.first(nameAndUv);
     var uv = mori.last(nameAndUv);
-    // Since we don't yet define the interface for a an app to depend only on
-    // certain unibuilds of the packages (like only web unibuilds) and we know
-    // that each unibuild weakly depends on other sibling unibuilds of the same
-    // version, we can safely output the whole package for each unibuild in the
-    // result.
-    packageMap[removeUnibuild(name)] = uv.version;
+    packageMap[name] = uv.version;
   });
   return packageMap;
 };
 
 
-// takes dependencies and constraints and rewrites the names from "foo" to
-// "foo#os" and "foo#web.browser" and "foo#web.cordova"
-// XXX right now creates a dependency for every unibuild it can find
-ConstraintSolver.PackagesResolver.prototype._splitDepsToConstraints =
-  function (inputDeps, inputConstraints) {
+ConstraintSolver.PackagesResolver.prototype._makeConstraintObjects = function (
+    inputConstraints) {
   var self = this;
-  var dependencies = [];
-  var constraints = [];
-
-  _.each(inputDeps, function (packageName) {
-    _.each(self._unibuildsForPackage(packageName), function (unibuildName) {
-      dependencies.push(unibuildName);
-    });
+  return _.map(inputConstraints, function (constraint) {
+    return self.resolver.getConstraint(
+      constraint.name, constraint.constraintString);
   });
-
-  _.each(inputConstraints, function (constraint) {
-    _.each(self._unibuildsForPackage(constraint.name), function (unibuildName) {
-      //XXX: This is kind of dumb -- we make this up, so we can reparse it
-      //later. Todo: clean this up a bit.
-      if (!constraint.constraintString) {
-        var constraintArray = [];
-        _.each(constraint.constraints, function (c) {
-          if (c.type == "exact") {
-            constraintArray.push("+" + c.version);
-          } else if (c.version) {
-            constraintArray.push(c.version)
-          }
-         });
-        if (!_.isEmpty(constraintArray)) {
-         constraint.constraintString =
-           _.reduce(constraintArray,
-            function(x, y) {
-              return x + " || " + y;
-           });
-         } else {
-           constraint.constraintString = "";
-         }
-        }
-      constraints.push(
-        self.resolver.getConstraint(unibuildName, constraint.constraintString));
-    });
-  });
-
- return { dependencies: dependencies, constraints: constraints };
-};
-
-ConstraintSolver.PackagesResolver.prototype._unibuildsForPackage =
-  function (packageName) {
-  var self = this;
-  var unibuildPrefix = packageName + "#";
-  var unibuilds = [];
-  // XXX hardcode all common architectures assuming that every package has the
-  // same set of architectures.
-  _.each(["os", "web.browser", "web.cordova"], function (arch) {
-    unibuilds.push(unibuildPrefix + arch);
-  });
-
-  return unibuilds;
 };
 
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
