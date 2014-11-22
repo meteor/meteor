@@ -1259,7 +1259,7 @@ _.extend(JsImage.prototype, {
       };
 
       if (!assets || !_.has(assets, assetPath)) {
-        _.callback(new Error("Unknown asset: " + assetPath));
+        _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var buffer = assets[assetPath];
         var result = encoding ? buffer.toString(encoding) : buffer;
