@@ -157,21 +157,26 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX #3006 Implement publishing packages that aren't in apps.
+  var projectContext;
   if (! options.appDir) {
-    throw Error("publishing packages outside of an app not ready");
+    var tempProjectDir = files.mkdtemp('meteor-package-build');
+    projectContext = new projectContextModule.ProjectContext({
+      projectDir: tempProjectDir,  // won't have a packages dir, that's OK
+      explicitlyAddedLocalPackageDirs: [options.packageDir]
+    });
+  } else {
+    // XXX #3006 doc this a bit.
+    projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir,
+      neverWriteProjectConstraintsFile: true
+    });
   }
 
-  // Initialize the project and build all local packages.
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir,
-    neverWriteProjectConstraintsFile: true
-  });
   main.captureAndExit("=> Errors while initializing project:", function () {
-    // Just get up to initializing the catalog. We're going to 
+    // Just get up to initializing the catalog. We're going to mutate the
+    // constraints file a bit before we prepare the build.
     projectContext.initializeCatalog();
   });
-
 
   // Connect to the package server and log in.
   try {
@@ -184,8 +189,6 @@ main.registerCommand({
     Console.error('No connection: Publish failed.');
     return 1;
   }
-
-  Console.info('Reading package...');
 
   var localVersionRecord = projectContext.localCatalog.getVersionBySourceRoot(
     options.packageDir);
