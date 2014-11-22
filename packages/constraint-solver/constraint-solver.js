@@ -81,13 +81,12 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
       //     api.use('dep', 'server', { weak: true });
       //     api.use('dep', 'client');
       // is not weak at the package->package level.
-
-      var isWeak = _.all(dep.references, function (ref) {
-        return ref.weak;
+      var createsDependency = _.any(dep.references, function (ref) {
+        return !ref.weak;
       });
 
       // Add the dependency if needed.
-      if (! isWeak)
+      if (createsDependency)
         unitVersion.addDependency(depName);
 
       // Add a constraint if needed.
