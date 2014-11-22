@@ -274,16 +274,17 @@ main.registerCommand({
   // We have initialized everything, so perform the publish operation.
   var binary = isopack.platformSpecific();
   main.captureAndExit(
-    "=> Errors while publishing the package:",
+    "=> Errors while publishing:",
     "publishing the package",
     function () {
-      // XXX #3006 clean up this ridiculous API
-      packageClient.publishPackage(
-        packageSource, conn, projectContext.localCatalog, isopack, projectContext.isopackCache, {
-          new: options.create,
-          existingVersion: options['existing-version'],
-          doNotPublishBuild: binary && !options['existing-version']
-        });
+      packageClient.publishPackage({
+        projectContext: projectContext,
+        packageSource: packageSource,
+        connection: conn,
+        new: options.create,
+        existingVersion: options['existing-version'],
+        doNotPublishBuild: binary && !options['existing-version']
+      });
     });
 
   Console.info('Published ' + packageName + '@' + localVersionRecord.version +

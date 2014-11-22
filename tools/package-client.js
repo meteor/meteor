@@ -391,16 +391,18 @@ exports.handlePackageServerConnectionError = function (error) {
 //      doNotPublishBuild: do not publish the build of this package.
 //
 // Return true on success and an error code otherwise.
-exports.publishPackage = function (packageSource, conn, localCatalog, isopack, isopackCache, options) {
+// XXX #3006 redo docs
+exports.publishPackage = function (options) {
   buildmessage.assertInJob();
-
-  options = options || {};
-
-  if (options.new && options.existingVersion)
-    throw Error("is it new or does it exist?!?");
+  var packageSource = options.packageSource;
+  var conn = options.connection;
+  var projectContext = options.projectContext;
 
   var name = packageSource.name;
   var version = packageSource.version;
+
+  if (options.new && options.existingVersion)
+    throw Error("is it new or does it exist?!?");
 
   // Check that the package name is valid.
   utils.validatePackageName(name, { useBuildmessage: true });
@@ -451,12 +453,13 @@ exports.publishPackage = function (packageSource, conn, localCatalog, isopack, i
   _.each(packageDeps, function(refs, label) {
     if (refs.constraint == null) {
       if (packageSource.isCore && files.inCheckout() &&
-          localCatalog.getPackage(label)) {
+          projectContext.localCatalog.getPackage(label)) {
         // Core package is using or implying another core package,
         // without a version number.  We fill in the version number.
         // (Well, we're assuming that the other package is core and
         // not some other sort of local package.)
-        var versionString = localCatalog.getLatestVersion(label).version;
+        var versionString =
+              projectContext.localCatalog.getLatestVersion(label).version;
         // modify the constraint on this dep that will be sent to troposphere
         refs.constraint = versionString;
       } else if (label === "meteor") {
@@ -479,6 +482,10 @@ exports.publishPackage = function (packageSource, conn, localCatalog, isopack, i
   if (buildmessage.jobHasMessages())
     return;
 
+  var isopack = projectContext.isopackCache.getIsopack(name);
+  if (! isopack)
+    throw Error("no isopack " + name);
+
   var sourceFiles = isopack.getSourceFilesUnderSourceRoot(
     packageSource.sourceRoot);
   if (! sourceFiles)
@@ -487,7 +494,8 @@ exports.publishPackage = function (packageSource, conn, localCatalog, isopack, i
   // We need to have built the test package to get all of its sources, even
   // though we're not publishing a BUILD for the test package.
   if (packageSource.testName) {
-    var testIsopack = isopackCache.getIsopack(packageSource.testName);
+    var testIsopack = projectContext.isopackCache.getIsopack(
+      packageSource.testName);
     if (! testIsopack)
       throw Error("no testIsopack " + packageSource.testName);
     var testSourceFiles = testIsopack.getSourceFilesUnderSourceRoot(
