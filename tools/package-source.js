@@ -1887,6 +1887,7 @@ _.extend(PackageSource.prototype, {
   // Returns the filepath to the file containing the version lock for this
   // package, or null if we don't think that this package should have
   // a versions file.
+  // XXX #3006 drop all this stuff
   versionsFilePath: function () {
     var self = this;
     // If we are running from checkout and looking at a core package,
