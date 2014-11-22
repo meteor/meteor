@@ -498,7 +498,7 @@ exports.publishPackage = function (packageSource, conn, localCatalog, isopack, i
   }
 
   // XXX #3006 include a versions lock file too (we used to do this by actually
-  // writing a versions.json to disk)
+  // writing a versions.json to disk), and a release tag
 
   var sourceBundleResult;
   buildmessage.enterJob("bundling source", function () {
