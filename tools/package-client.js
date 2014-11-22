@@ -565,6 +565,7 @@ exports.publishPackage = function (options) {
         compilerVersion: compiler.BUILT_BY,
         containsPlugins: packageSource.containsPlugins(),
         debugOnly: packageSource.debugOnly,
+        releaseName: release.current.name,
         dependencies: packageDeps
       };
       uploadInfo = callPackageServerBM(conn, 'createPackageVersion', uploadRec);
