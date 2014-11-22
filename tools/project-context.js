@@ -499,6 +499,7 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     self.isopackCache = new isopackCacheModule.IsopackCache({
+      packageMap: self.packageMap,
       cacheDir: self.getProjectLocalDirectory('isopacks'),
       tropohouse: self.tropohouse
     });
@@ -510,7 +511,7 @@ _.extend(exports.ProjectContext.prototype, {
     }
 
     buildmessage.enterJob('building local packages', function () {
-      self.isopackCache.buildLocalPackages(self.packageMap);
+      self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   },

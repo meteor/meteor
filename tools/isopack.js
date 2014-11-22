@@ -1061,9 +1061,6 @@ _.extend(Isopack.prototype, {
     // XXX This code is pretty similar to isopackets.ensureIsopacketsLoadable
     //     and could be consolidated.
     var isopacketCatalog = isopackets.newIsopacketBuildingCatalog();
-    // Make an isopack cache that doesn't save isopacks to disk and has no
-    // access to versioned packages.
-    var isopackCache = new isopackCacheModule.IsopackCache;
     var versions = {};
     _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
       versions[packageName] =
@@ -1071,6 +1068,11 @@ _.extend(Isopack.prototype, {
     });
     var packageMap = new packageMapModule.PackageMap(
       versions, isopacketCatalog);
+    // Make an isopack cache that doesn't save isopacks to disk and has no
+    // access to versioned packages.
+    var isopackCache = new isopackCacheModule.IsopackCache({
+      packageMap: packageMap
+    });
 
     var messages = buildmessage.capture(function () {
       // We rebuild them in the order listed in ISOPACKETS. This is not strictly
@@ -1081,7 +1083,7 @@ _.extend(Isopack.prototype, {
         buildmessage.enterJob({
           title: "Compiling " + isopacketName + " packages for the tool"
         }, function () {
-          isopackCache.buildLocalPackages(packageMap, packages);
+          isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages())
             return;
 

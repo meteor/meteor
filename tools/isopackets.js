@@ -155,9 +155,6 @@ var ensureIsopacketsLoadable = function () {
         // yet.
         if (! isopacketCatalog) {
           isopacketCatalog = newIsopacketBuildingCatalog();
-          // Make an isopack cache that doesn't save isopacks to disk and has no
-          // access to versioned packages.
-          isopackCache = new isopackCacheModule.IsopackCache;
           var versions = {};
           _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
             versions[packageName] =
@@ -165,13 +162,18 @@ var ensureIsopacketsLoadable = function () {
           });
           packageMap = new packageMapModule.PackageMap(
             versions, isopacketCatalog);
+          // Make an isopack cache that doesn't save isopacks to disk and has no
+          // access to versioned packages.
+          isopackCache = new isopackCacheModule.IsopackCache({
+            packageMap: packageMap
+          });
         }
 
         buildmessage.enterJob({
           title: "Bundling " + isopacketName + " packages for the tool"
         }, function () {
           // Build the packages into the in-memory IsopackCache.
-          isopackCache.buildLocalPackages(packageMap, packages);
+          isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages())
             return;
 
