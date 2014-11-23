@@ -325,8 +325,7 @@ ConstraintSolver.Constraint = function (name, versionString) {
   // See comment in UnitVersion constructor. We want to strip out build IDs
   // because the code they represent is considered equivalent.
   _.extend(self, PackageVersion.parseConstraint(name, {
-    removeBuildIDs: true,
-    archesOK: true
+    removeBuildIDs: true
   }));
 };
 

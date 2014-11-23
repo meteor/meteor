@@ -250,16 +250,7 @@ PV.parseConstraint = function (constraintString, options) {
     PV.validatePackageName('a@');
   }
 
-  if (options.archesOK) {
-    var newNames = name.split('#');
-    if (newNames.length > 2) {
-      // It is invalid and should register as such. This will throw.
-      PV.validatePackageName(name);
-    }
-    PV.validatePackageName(newNames[0]);
-  } else {
-    PV.validatePackageName(name);
-  }
+  PV.validatePackageName(name);
 
   if (splitted.length === 2 && !versionString) {
     throwVersionParserError(
