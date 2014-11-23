@@ -103,13 +103,26 @@ _.extend(LocalCatalog.prototype, {
       throw new Error("catalog not initialized yet?");
   },
 
-  // Return an array with the names of all of the packages that we
-  // know about, in no particular order.
-  getAllPackageNames: function () {
+  // Return an array with the names of all of the packages that we know about,
+  // in no particular order.
+  getAllPackageNames: function (options) {
     var self = this;
     self._requireInitialized();
 
     return _.keys(self.packages);
+  },
+
+  // Return an array with the names of all of the non-test packages that we know
+  // about, in no particular order.
+  getAllNonTestPackageNames: function (options) {
+    var self = this;
+    self._requireInitialized();
+
+    var ret = [];
+    _.each(self.packages, function (record, name) {
+      record.versionRecord.isTest || ret.push(name);
+    });
+    return ret;
   },
 
   // Returns general (non-version-specific) information about a

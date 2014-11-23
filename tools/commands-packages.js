@@ -633,17 +633,6 @@ main.registerCommand({
       return 1;
     };
 
-    // We are going to disable publishing a release from checkout and an appDir,
-    // just to be extra safe about local packages. There is never a good reason
-    // why you would do that, and maybe you are confused about what you are
-    // trying to do.
-    if (options.appDir) {
-      Console.error("Trying to publish from checkout while in an application " +
-                           "directory is a bad idea." +
-                           " Please try again from somewhere else.");
-      return 1;
-    }
-
     // You should not use a release configuration with packages&tool *and* a
     // from checkout option, at least for now. That's potentially confusing
     // (which ones did you mean to use) and makes it likely that you did one of
@@ -656,239 +645,154 @@ main.registerCommand({
       return 1;
     }
 
-    // Now, let's collect all the packages in our meteor/packages directory. We
-    // are going to be extra-careful to publish only those packages, and not
-    // just all local packages -- we might be running this from an app
-    // directory, though we really shouldn't be, or, if we ever restructure the
-    // way that we store packages in the meteor directory, we should be sure to
-    // reevaluate what this command actually does.
-    var localPackageDir = path.join(files.getCurrentToolsDir(), "packages");
-    var contents = fs.readdirSync(localPackageDir);
-    var myPackages = {};
-    var toPublish = {};
-    var canBuild = true;
-    var messages = buildmessage.capture(
-      {title: "Rebuilding local packages"},
-      function () {
-        Console.info("Rebuilding local packages...");
-        _.each(contents, function (item) {
-          // We expect the meteor/packages directory to only contain a lot of
-          // directories, each of which is a package. This may one day be false,
-          // in which case, this function will fail. That's an extra layer of
-          // safety -- this is a very specific command that does a very specific
-          // thing, and if we ever change how we store packages in checkout, we
-          // should reconsider if, for example, we want to publish all of them
-          // in a release.
-          var packageDir = path.resolve(path.join(localPackageDir, item));
-          // Consider a directory to be a package source tree if it
-          // contains 'package.js'. (We used to support isopacks in
-          // local package directories, but no longer.)
-          if (fs.existsSync(path.join(packageDir, 'package.js'))) {
-            var packageSource = new PackageSource(catalogcomplete);
-            buildmessage.enterJob(
-              { title: "Building package " + item },
-              function () {
-                Console.info("  checking consistency of " + item + " ");
+    // Set up a temporary project context and build everything.
+    var tempProjectDir = files.mkdtemp('meteor-release-build');
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: tempProjectDir,  // won't have a packages dir, that's OK
+      // seriously, we only want checkout packages
+      ignorePackageDirsEnvVar: true
+    });
 
-                // Initialize the package source. Core packages have the same
-                // name as their corresponding directories, because otherwise we
-                // would have a lot of difficulties trying to keep them
-                // organized.
-                // (XXX: this is a flimsy excuse, ekate, just fix the code)
-                packageSource.initFromPackageDir(packageDir,  {
-                  requireVersion: true,
-                  name: item });
+    // Read metadata and initialize catalog.
+    main.captureAndExit("=> Errors while building for release:", function () {
+      projectContext.initializeCatalog();
+    });
 
-                if (buildmessage.jobHasMessages()) {
-                  Console.warn("\n ...Error reading package:" + item);
-                  canBuild = false;
-                  return;
-                };
+    // Ensure that all packages are built.
+    var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
+    projectContext.projectConstraintsFile.addConstraints(
+      _.map(allPackages, function (p) {
+        return utils.parseConstraint(p);
+      })
+    );
 
-                // We are not very good with change detection on the meteor
-                // tool, so we should just make extra-special sure to rebuild it
-                // completely before publishing. Though we don't really need
-                // this.
-                if (packageSource.includeTool) {
-                  // Remove the build directory.
-                  // XXX #3006 Make sure to always rebuild the tool here. On the
-                  //           other hand, this might not be necessary if
-                  //           compiler.checkUpToDate always says that the tool
-                  //           is out of date, or if we're using an
-                  //           appropriately temporary cache directory.
-                }
+    // Build!
+    main.captureAndExit("=> Errors while building for release:", function () {
+      projectContext.prepareProjectForBuild();
+    });
 
-                // Now compile it! Once again, everything should compile, and if
-                // it doesn't we should fail. Hopefully, of course, we have
-                // tested our stuff before deciding to publish it to the package
-                // server, but we need to be careful.
-                // XXX #3006 this no longer exists
-                var directDeps =
-                      compiler.determineBuildTimeDependencies(packageSource).directDependencies;
-                // XXX #3006 this no longer exists
-                tropohouse.default.downloadMissingPackages(directDeps);
-                // XXX #3006 this is an old call
-                var compileResult = compiler.compile(packageSource,
-                                                     { officialBuild: true });
-                if (buildmessage.jobHasMessages()) {
-                  Console.warn("\n ... Error compiling isopack: " + item );
-                  canBuild = false;
-                  return;
-                };
+    relConf.packages = {};
+    var toPublish = [];
 
-                // Let's get the server version that this local package is
-                // overwriting. If such a version exists, we will need to make sure
-                // that the contents are the same.
-                var oldVersion = catalog.official.getVersion
-                (item, packageSource.version);
+    main.captureAndExit("=> Errors in release packages:", function () {
+      _.each(allPackages, function (packageName) {
+        buildmessage.enterJob("checking consistency of " + packageName, function () {
+          var packageSource = projectContext.localCatalog.getPackageSource(
+            packageName);
+          if (! packageSource)
+            throw Error("no PackageSource for built package " + packageName);
 
-                // Include this package in our release.
-                myPackages[item] = packageSource.version;
+          if (! packageSource.versionExplicitlyProvided) {
+            buildmessage.error(
+              "A version must be specified for the package. Set it with " +
+                "Package.describe.");
+            return;
+          }
 
-                // If there is no old version, then we need to publish this package.
-                if (!oldVersion) {
-                  // We are going to check if we are publishing an official
-                  // release. If this is an experimental or pre-release, then we
-                  // are not ready to commit to these package semver versions
-                  // either. Any packages that we should publish as part of this
-                  // release should have a -(something) at the end.
-                  var newVersion = packageSource.version;
-                  if (!relConf.official && newVersion.split("-").length < 2) {
-                    buildmessage.error("It looks like you are building an "+
-                                       " experimental or pre-release. Any packages " +
-                                       "we publish here should have an identifier " +
-                                       "at the end (ex: 1.0.0-dev). If this is an " +
-                                       "official release, please set official to true " +
-                                       "in the release configuration file.");
-                    Console.warn("NOT OK unofficial");
-                    return;
-                  }
-                  toPublish[item] = {source: packageSource,
-                                     compileResult: compileResult};
-                  Console.info("new package or version");
-                  return;
-                } else {
-                  // If we can't build some of our packages, then we care about
-                  // that far more than we care about hash conflicts (and fixing
-                  // the errors will change the hashes as well). Don't even
-                  // bother checking until that happens.
-                  if (!canBuild) {
-                    Console.info("hash comparison skipped");
-                    return;
-                  }
+          // Let's get the server version that this local package is
+          // overwriting. If such a version exists, we will need to make sure
+          // that the contents are the same.
+          var oldVersionRecord = catalog.official.getVersion(
+            packageName, packageSource.version);
 
-                  var existingBuild =
-                        catalog.official.getBuildWithPreciseBuildArchitectures(
-                          oldVersion,
-                          compileResult.isopack.buildArchitectures());
+          // Include this package in our release.
+          relConf.packages[packageName] = packageSource.version;
 
-                  // If the version number mentioned in package.js exists, but
-                  // there's no build of this architecture, then either the old
-                  // version was only semi-published, or you've added some
-                  // platform-specific dependencies but haven't bumped the
-                  // version number yet; either way, you should probably bump
-                  // the version number.
-                  var somethingChanged = !existingBuild;
+          // If there is no old version, then we need to publish this package.
+          if (! oldVersionRecord) {
+            // We are going to check if we are publishing an official
+            // release. If this is an experimental or pre-release, then we are
+            // not ready to commit to these package semver versions either. Any
+            // packages that we should publish as part of this release should
+            // have a -(something) at the end.
+            var newVersion = packageSource.version;
+            if (! relConf.official && newVersion.split("-").length < 2) {
+              buildmessage.error(
+                "It looks like you are building an experimental release or " +
+                  "pre-release. Any packages we publish here should have an " +
+                  "pre-release identifier at the end (eg, 1.0.0-dev). If " +
+                  "this is an official release, please set official to true " +
+                  "in the release configuration file.");
+              return;
+            }
+            toPublish.push(packageName);
+            Console.info("Will publish new version for " + packageName);
+            return;
+          } else {
+            var isopk = projectContext.isopackCache.getIsopack(packageName);
+            if (! isopk)
+              throw Error("no isopack for " + packageName);
 
-                  if (!somethingChanged) {
-                    // Save the isopack, just to get its hash.
-                    // XXX this is redundant with the bundle build step that
-                    // publishPackage will do later
-                    var bundleBuildResult = packageClient.bundleBuild(
-                      compileResult.isopack);
-                    if (bundleBuildResult.treeHash !==
-                        existingBuild.build.treeHash) {
-                      somethingChanged = true;
-                    }
-                  }
+            var existingBuild =
+                  catalog.official.getBuildWithPreciseBuildArchitectures(
+                    oldVersionRecord, isopk.buildArchitectures());
 
-                  if (somethingChanged) {
-                    item = item + "@" + compileResult.isopack.version;
-                    // The build ID of the old server record is not the same as
-                    // the buildID that we have on disk. This means something
-                    // has changed -- maybe our source files, or a buildId of
-                    // one of our build-time dependencies. There might be a
-                    // false positive here (for example, we added some comments
-                    // to a package.js file somewhere), but, for now, we would
-                    // rather err on the side of catching this issue and forcing
-                    // a more thorough check.
-                    buildmessage.error("Something changed in package " + item
-                                       + ". Please upgrade version number.");
-                    Console.error("  NOT OK");
-                  } else {
-                    Console.info("   ok");
-                  }
-                }
-              });
+            // If the version number mentioned in package.js exists, but there's
+            // no build of this architecture, then either the old version was
+            // only semi-published, or you've added some platform-specific
+            // dependencies but haven't bumped the version number yet; either
+            // way, you should probably bump the version number.
+            var somethingChanged = ! existingBuild;
+
+            if (!somethingChanged) {
+              // Save the isopack, just to get its hash.
+              var bundleBuildResult = packageClient.bundleBuild(isopk);
+              if (bundleBuildResult.treeHash !== existingBuild.build.treeHash) {
+                somethingChanged = true;
+              }
+            }
+
+            if (somethingChanged) {
+              buildmessage.error(
+                "Something changed in package " + packageName + "@" +
+                  isopk.version + ". Please upgrade its version number.");
+            }
           }
         });
       });
-
-    if (messages.hasMessages()) {
-      Console.printMessages(messages);
-      return 1;
-    };
+    });
 
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.
     var unfinishedBuilds = {};
-    for (var name in toPublish) {  // don't use _.each so we can return
-      if (!_.has(toPublish, name))
-        continue;
-      var prebuilt = toPublish[name];
+    _.each(toPublish, function (packageName) {
+      main.captureAndExit(
+        "=> Errors while publishing:",
+        "Publishing package " + packageName,
+        function () {
+          var isopk = projectContext.isopackCache.getIsopack(packageName);
+          if (! isopk)
+            throw Error("no isopack for " + packageName);
+          var packageSource = projectContext.localCatalog.getPackageSource(
+            packageName);
+          if (! packageSource)
+            throw Error("no PackageSource for built package " + packageName);
 
-      Console.info("Publishing package: " + name);
-
-      // XXX merge with messages? having THREE kinds of error handling here is
-      // um something.
-      var pubEC;
-      try {
-        messages = buildmessage.capture({
-          title: "Publishing package " + name
-        }, function () {
-          var binary =  prebuilt.compileResult.isopack.platformSpecific();
-
-          var opts = {
-            new: !catalog.official.getPackage(name),
+          var binary = isopk.platformSpecific();
+          packageClient.publishPackage({
+            projectContext: projectContext,
+            packageSource: packageSource,
+            connection: conn,
+            new: ! catalog.official.getPackage(packageName),
             doNotPublishBuild: binary
-          };
+          });
+          if (buildmessage.jobHasMessages())
+            return;
 
-          // If we are creating a new package, dsPS will document this for us,
-          // so we don't need to do this here. Though, in the future, once we
-          // are done bootstrapping package servers, we should consider having
-          // some extra checks around this.
-          pubEC = packageClient.publishPackage(
-            prebuilt.source,
-            prebuilt.compileResult,
-            conn,
-            opts);
+          Console.info(
+            'Published ' + packageName + '@' + packageSource.version + '.');
 
           if (binary) {
-            unfinishedBuilds[name] = prebuilt.source.version;
+            unfinishedBuilds[packageName] = packageSource.version;
           }
         });
-      } catch (e) {
-          packageClient.handlePackageServerConnectionError(e);
-          return 1;
-      }
-      if (messages.hasMessages()) {
-        Console.printMessages(messages);
-        return pubEC || 1;
-      }
-
-      // If we fail to publish, just exit outright, something has gone wrong.
-      if (pubEC > 0) {
-        Console.error("Failed to publish: " + name);
-        return pubEC;
-      }
-    }
+    });
 
     // Set the remaining release information. For now, when we publish from
-    // checkout, we always set the meteor tool as the tool. We don't include the
+    // checkout, we always set 'meteor-tool' as the tool. We don't include the
     // tool in the packages list.
-    relConf.tool="meteor-tool@" + myPackages["meteor-tool"];
-    delete myPackages["meteor-tool"];
-    relConf.packages=myPackages;
+    relConf.tool="meteor-tool@" + relConf.packages["meteor-tool"];
+    delete relConf.packages["meteor-tool"];
   }
 
   main.captureAndExit(
@@ -960,19 +864,23 @@ main.registerCommand({
         Console.error(
           "If you are publishing a non-prerelease version, then the readme will show up " +
           "in atmosphere. To make sure that happens, after pushing the git tag, please " +
-          "run the following:");
-        _.each(toPublish, function (pack, name) {
+            "run the following:");
+        _.each(toPublish, function (name) {
           Console.info("meteor admin set-latest-readme " + name + " --tag " + gitTag);
         });
         Console.error("If you are publishing an experimental version, don't worry about it.");
         fail = true;
       }
-      if (!fail) {
-        _.each(toPublish, function (pack, name) {
+      if (! fail) {
+        _.each(toPublish, function (name) {
+          var isopk = projectContext.isopackCache.getIsopack(name);
+          if (! isopk)
+            throw Error("no isopack for " + name);
+
           var url = "https://raw.githubusercontent.com/meteor/meteor/" + gitTag +
                 "/packages/" +
                 name + "/README.md";
-          var version = pack.compileResult.isopack.version;
+          var version = isopk.version;
           packageClient.callPackageServer(
             conn, '_changeReadmeURL', name,  version, url);
           Console.info("Setting the readme of", name + "@" + version, "to", url);

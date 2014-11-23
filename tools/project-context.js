@@ -89,6 +89,10 @@ _.extend(exports.ProjectContext.prototype, {
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
+    // Set in a few cases where we really want to only get packages from
+    // checkout.
+    self._ignorePackageDirsEnvVar = options.ignorePackageDirsEnvVar;
+
     // Set by 'meteor publish' to ensure that .meteor/packages is not written
     // even though they may do an in-memory mutation of the constraints.
     self._neverWriteProjectConstraintsFile =
@@ -377,7 +381,7 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     var searchDirs = [path.join(self._projectDirForLocalPackages, 'packages')];
 
-    if (process.env.PACKAGE_DIRS) {
+    if (! self._ignorePackageDirsEnvVar && process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
       // PACKAGE_DIRS (colon-separated).
       _.each(process.env.PACKAGE_DIRS.split(':'), function (p) {
