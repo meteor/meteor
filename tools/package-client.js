@@ -383,9 +383,6 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
   });
   if (buildmessage.jobHasMessages())
     return;
-
-  // XXX #3006 this used to have a "published" message; make sure that
-  // ends up in all callers
 };
 
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;

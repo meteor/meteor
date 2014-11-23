@@ -489,6 +489,8 @@ main.registerCommand({
     }
   );
 
+  Console.info('Published ' + name + '@' + versionString + '.');
+
   refreshOfficialCatalogOrDie();
   return 0;
 });
@@ -658,10 +660,12 @@ main.registerCommand({
       projectContext.initializeCatalog();
     });
 
-    // Ensure that all packages are built.
+    // Ensure that all packages and their tests are built. (We need to build
+    // tests so that we can include their sources in source tarballs.)
+    var allPackagesWithTests = projectContext.localCatalog.getAllPackageNames();
     var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
     projectContext.projectConstraintsFile.addConstraints(
-      _.map(allPackages, function (p) {
+      _.map(allPackagesWithTests, function (p) {
         return utils.parseConstraint(p);
       })
     );
@@ -837,6 +841,7 @@ main.registerCommand({
   // Learn about it.
   refreshOfficialCatalogOrDie();
   Console.info("Done creating " + relConf.track  + "@" + relConf.version + "!");
+  Console.info();
 
   if (options['from-checkout']) {
     // XXX maybe should discourage publishing if git status says we're dirty?
@@ -892,6 +897,7 @@ main.registerCommand({
     // packages. Unlike publish, this is advanced functionality, so the user
     // should be familiar with the concept.
     if (! _.isEmpty(unfinishedBuilds)) {
+      Console.warning();
       Console.warning(
         "WARNING: Some packages contain binary dependencies.");
       Console.warning("Builds have not been published for the following packages:");

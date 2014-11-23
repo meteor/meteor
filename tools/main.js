@@ -1214,7 +1214,6 @@ commandName + ": You're not in a Meteor project directory.\n" +
         commandName + ": You're not in a Meteor package directory.");
       process.exit(1);
     }
-    // XXX #3006 make sure that meteor publish adds self or whatever
   }
 
   if (command.requiresRelease && ! release.current) {
