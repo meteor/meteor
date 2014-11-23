@@ -164,10 +164,16 @@ main.registerCommand({
     var tempProjectDir = files.mkdtemp('meteor-package-build');
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,  // won't have a packages dir, that's OK
-      explicitlyAddedLocalPackageDirs: [options.packageDir]
+      explicitlyAddedLocalPackageDirs: [options.packageDir],
+      packageMapFilename: path.join(options.packageDir, '.versions'),
+      // We always want to write our '.versions' package map, overriding a
+      // comparison against the value of a release file that doesn't exist.
+      alwaysWritePackageMap: true
     });
   } else {
-    // XXX #3006 doc this a bit.
+    // We're in an app; let the app be our context, but make sure we don't
+    // overwrite .meteor/packages when we add some temporary constraints (which
+    // ensure that we can actually build the package and its tests).
     projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir,
       neverWriteProjectConstraintsFile: true

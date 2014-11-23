@@ -64,6 +64,9 @@ _.extend(exports.ProjectContext.prototype, {
     self.projectDir = options.projectDir;
     self.tropohouse = options.tropohouse || tropohouse.default;
 
+    self._packageMapFilename = options.packageMapFilename ||
+      path.join(self.projectDir, '.meteor', 'versions');
+
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
     // plugins.
@@ -213,7 +216,7 @@ _.extend(exports.ProjectContext.prototype, {
 
       // Read .meteor/versions.
       self.packageMapFile = new exports.PackageMapFile({
-        projectDir: self.projectDir
+        filename: self._packageMapFilename
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -725,8 +728,7 @@ exports.PackageMapFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = options.filename ||
-    path.join(options.projectDir, '.meteor', 'versions');
+  self.filename = options.filename;
   self.watchSet = new watch.WatchSet;
   self._versions = {};
 

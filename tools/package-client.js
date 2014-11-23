@@ -251,10 +251,17 @@ var bundleSource = function (isopack, includeSources, packageDir,
                    path.join(sourcePackageDir, f));
   });
 
+  // Write a package map to `.versions` inside the source tarball.  Note that
+  // this differs in two ways from the `.versions` file that is maintained
+  // inside standalone packages by 'meteor publish':
+  //  (a) It only contains the direct, directly implied, and linked-into-plugin
+  //      dependencies of the package, not all transitive dependencies.
+  //  (b) It is ALWAYS put into the source tarball, even if the package came
+  //      from inside an app, whereas the package-source-tree .versions file
+  //      is only used for standalone packages
   var packageMapFilename = path.join(sourcePackageDir, '.versions');
   if (fs.existsSync(packageMapFilename))
     throw Error(".versions file already exists? " + packageMapFilename);
-
   var packageMapFile = new projectContextModule.PackageMapFile({
     filename: packageMapFilename
   });
