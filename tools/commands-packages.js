@@ -332,10 +332,12 @@ main.registerCommand({
 });
 
 
+// XXX #3006 QA publish-for-arch when run from a release.
 main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
   maxArgs: 1,
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // argument processing
@@ -348,10 +350,7 @@ main.registerCommand({
   var name = all[0];
   var versionString = all[1];
 
-  // Refresh the catalog, cacheing the remote package data on the server.
-  //refreshOfficialCatalogOrDie();
-
-  var packageInfo = catalogcomplete.getPackage(name);
+  var packageInfo = catalog.official.getPackage(name);
   if (! packageInfo) {
     Console.error(
 "You can't call `meteor publish-for-arch` on package '" + name + "' without\n" +
@@ -360,6 +359,7 @@ main.registerCommand({
 
     return 1;
   }
+
   var pkgVersion = catalog.official.getVersion(name, versionString);
   if (! pkgVersion) {
     Console.error(
@@ -376,172 +376,96 @@ main.registerCommand({
     return 1;
   }
 
-  var sourceTarball = httpHelpers.getUrl({
-    url: pkgVersion.source.url,
-    encoding: null
+  // No releaseName (not even null): this predates the isopack-cache
+  // refactorings. Let's just springboard to Meteor 1.0 and let it deal with any
+  // further springboarding based on reading a nested json file.
+  if (! _.has(pkgVersion, 'releaseName')) {
+    if (files.inCheckout()) {
+      process.stderr.write(
+        "This package was published from an old version of meteor," +
+          "but you are running from checkout!\nConsider running " +
+          "`meteor --release 1.0`, so we can springboard correctly.\n");
+      process.stderr.exit(1);
+    }
+    throw new main.SpringboardToSpecificRelease("METEOR@1.0");
+  }
+
+  if (pkgVersion.releaseName === null) {
+    if (! files.inCheckout()) {
+      process.stderr.write(
+        "This package was published from a checkout of meteor! The tool cannot replicate\n" +
+          "that environment and will not even try. Please check out meteor at the \n" +
+          "corresponding git commit and try again.\n");
+      process.exit(1);
+    }
+  } else if (files.inCheckout()) {
+    process.stderr.write(
+      "This package was published from a built version of meteor," +
+        "but you are running from checkout!\nConsider running from a " +
+        "proper Meteor release with `meteor --release " +
+        pkgVersion.releaseName + "` so we can springboard correctly.\n");
+    process.stderr.exit(1);
+  } else if (pkgVersion.releaseName !== release.current.name) {
+    // We are in a built release, and so is the package, but it's a different
+    // one. Springboard!
+    throw new main.SpringboardToSpecificRelease(pkgVersion.releaseName);
+  }
+
+  // OK, either we're running from a checkout and so was the published package,
+  // or we're running from the same release as the published package.
+
+  // Download the source to the package.
+  var sourceTarball = buildmessage.enterJob("downloading package source", function () {
+    return httpHelpers.getUrl({
+      url: pkgVersion.source.url,
+      encoding: null
+    });
   });
-  var sourcePath = files.mkdtemp(name + '-' +
-                                 versionString + '-source-');
+
+  var sourcePath = files.mkdtemp(name + '-' + versionString + '-source-');
   // XXX check tarballHash!
   files.extractTarGz(sourceTarball, sourcePath);
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
   var packageDir = path.join(sourcePath, name);
-
   if (! fs.existsSync(packageDir)) {
     Console.error('Malformed source tarball');
     return 1;
   }
 
-  var isopk;
-  var messages = buildmessage.capture({
-    title: "Building package " + name
-  }, function () {
-    var packageSource = new PackageSource(catalogcomplete);
+  var tempProjectDir = files.mkdtemp('meteor-package-arch-build');
+  // Copy over a version lock file from the source tarball.
+  var versionsFile = path.join(packageDir, '.versions');
+  if (! fs.existsSync(versionsFile)) {
+    process.stderr.write(
+      "This package has no valid version lock file: are you trying to use publish-for-arch on\n" +
+        "a core package? Publish-for-arch cannot guarantee safety. Please use\n" +
+        "publish --existing-version instead.\n");
+    process.exit(1);
+  }
+  files.copyFile(path.join(packageDir, '.versions'),
+                 path.join(tempProjectDir, '.meteor', 'versions'));
 
-    // This package source, although it is initialized from a directory is
-    // immutable. It should be built exactly as is. If we need to modify
-    // anything, such as the version lock file, something has gone terribly
-    // wrong and we should throw. Additionally, we know exactly which package
-    // we are trying to publish-for-arch, so let's pass in the name.
-    packageSource.initFromPackageDir(packageDir,  {
-      requireVersion: true,
-      immutable: true,
-      name: name
-    });
-    if (buildmessage.jobHasMessages())
-      return;
-
-    var versionLock = packageSource.dependencyVersions;
-    //If we don't have a valid version lock file, that's weird! Maybe we are a
-    //core package, which don't have version files. Anyway, we should not use
-    //publish-for-arch in this case.
-    if (!versionLock || !versionLock.toolVersion) {
-      process.stderr.write(
-"This package has no valid version lock file: are you trying to use publish-for-arch on\n" +
-"a core package? Publish-for-arch cannot guarantee safety. Please use\n" +
-"publish --existing-version instead.\n");
-      process.exit(1);
-    }
-
-    // Let's separate out the tool, if we can. If we can't, thats super bad, but
-    // hopefully will not happen.
-    var oldTool = versionLock.toolVersion.split('@');
-    if (oldTool.length !== 2) {
-      process.stderr.write(
-"The version lock file on this package specifies an invalid meteor tool. That's weird.\n" +
-"Publish-for-arch cannot guarantee safety with a corrupted version lock file! You can use\n" +
-"publish --existing-version to try to get around this?\n");
-      process.exit(1);
-    }
-
-    var toolPackage = oldTool[0];
-    var toolVersion = oldTool[1];
-    if (toolVersion === "CHECKOUT" &&
-        !files.inCheckout()) {
-      process.stderr.write(
-"This package was published from a checkout of meteor! The tool cannot replicate\n" +
-"that environment and will not even try. Please checkout meteor at the \n" +
-"corresponding git commit and try again.\n");
-      process.exit(1);
-    }
-
-    if (toolVersion !== "CHECKOUT") {
-      if (files.inCheckout()) {
-        // The code running here, is probably not what you think it is. You
-        // might think that you are running from checkout, but we are going to
-        // springboard into a built release that is not running the code that
-        // you just wrote. That's super confusing, so we are not going to do
-        // that. If you ever find yourself doing this... well, you are running
-        // from checkout, so you can figure it out.
-        process.stderr.write(
-          "This package was published from a built version of meteor," +
-            "but you are running from checkout!\nConsider running from a " +
-            "proper Meteor release, so we can springboard correctly.\n");
-        process.stderr.exit(1);
-      }
-      var currentToolPackage = release.current.getToolsPackage();
-      var currentToolVersion = release.current.getToolsVersion();
-      if (currentToolPackage !== toolPackage ||
-          currentToolVersion !== toolVersion) {
-        // XXX: OK. Here is the story.
-        //
-        // Meteor does not have a concept of not running from release. That is,
-        // it runs from a release, or from checkout, not from a stand-alone
-        // tool. We don't record the release that we publish with in
-        // publish-for-arch, because that doesn't make sense. However, we can't
-        // just springboard to a tool, because, for now, in 0.9.3, we really
-        // want this to work on packages published pre-0.9.3. Just putting in
-        // springboarding to tool code is not going to work, because older
-        // versions of Meteor will just try to spingboard anyway.
-        //
-        // This is kind of a transitional hack. Going forward, there are several
-        // ways to fix this -- we could introduct some sort of local records (so
-        // we could create a temporary release record and run meteor from
-        // there), or we can teach meteor to just run from a tool, instead of a
-        // release. I like the latter better from a conceptual standpoint (why
-        // should we run from a release only?) but it doesn't have a lot of use
-        // cases. Alternatively, we can learn to simulate a release for older
-        // versions, and not for newer versions, or something. This will be
-        // worth thinking about when we have more information on how the system
-        // is set up and used.
-        //
-        // Now, a proof of correctness -- this relies on several things:
-        //
-        // 1. We only use the tool in order to publish. Other release
-        // information is irrelevant. (If that's ever false, we should write the
-        // release instead of the tool and save us the trouble)
-        //
-        // 2. Springboarding to a specific release will run the tool from that
-        // release, and not end up springboarding us to a different
-        // release. Even if there are patches for this release (or whatever), we
-        // are going to run the tool version of the release that we select here.
-        //
-        // 3. The only way to run a tool currently is from a release --
-        // otherwise, we wouldn't need this explanation. (There is no way to
-        // remove a release from existence.) Ergo, there must be a release that
-        // contains a given tool, that we first used to publish this package.
-        //
-        // From 1 & 2, we get the idea that any release with the valid tool
-        // version will do. From 3, we know that such a release exists.
-        //
-        // XXX Once again, this is a hack. Various things could happen to change
-        // the above-mentioned points. When they do happen, in the not-so-near
-        // future, we will have more information on how to actually solve this
-        // problem.
-        var sufficientlyReasonableReleaseVersion =
-          catalog.official.getReleaseWithTool(versionLock.toolVersion);
-        throw new
-          main.SpringboardToSpecificRelease(sufficientlyReasonableReleaseVersion);
-      }
-    }
-
-    // Now compile it! Once again, everything should compile, and if
-    // it doesn't we should fail. Hopefully, of course, we have
-    // tested our stuff before deciding to publish it to the package
-    // server, but we need to be careful.
-    // XXX If you're not using a matching version of the tool, this will give
-    //     an error like "Version lock for FOO should never change"!  Including
-    //     if you've swapped between checkout and released tool.  We really
-    //     should springboard here...
-    // XXX #3006 this no longer exists
-    var deps =
-          compiler.determineBuildTimeDependencies(packageSource).packageDependencies;
-    // XXX #3006 this no longer exists
-    tropohouse.default.downloadMissingPackages(deps);
-    // XXX #3006 this is an old call
-    isopk = compiler.compile(packageSource, {
-      officialBuild: true
-    }).isopack;
-    if (buildmessage.jobHasMessages())
-      return;
+  // Set up the project.
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: tempProjectDir,
+    explicitlyAddedLocalPackageDirs: [packageDir]
+  });
+  // Just get up to initializing the catalog. We're going to mutate the
+  // constraints file a bit before we prepare the build.
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.initializeCatalog();
+  });
+  projectContext.projectConstraintsFile.addConstraints(
+    [utils.parseConstraint(name + "@=" + versionString)]);
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
   });
 
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
+  var isopk = projectContext.isopackCache.getIsopack(name);
+  if (! isopk)
+    throw Error("didn't build isopack for " + name);
 
   var conn;
   try {
@@ -551,21 +475,13 @@ main.registerCommand({
     return 1;
   }
 
-  try {
-    messages = buildmessage.capture({
-      title: "Publishing package " + name
-    }, function () {
+  main.captureAndExit(
+    "=> Errors while publishing build:",
+    "publishing package " + name,
+    function () {
       packageClient.createAndPublishBuiltPackage(conn, isopk);
-    });
-  } catch (e) {
-    packageClient.handlePackageServerConnectionError(e);
-    return 1;
-  }
-
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
+    }
+  );
 
   refreshOfficialCatalogOrDie();
   return 0;

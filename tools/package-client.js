@@ -231,6 +231,9 @@ var bundleSource = function (isopack, includeSources, packageDir,
   var tempDir = files.mkdtemp('build-source-package-');
   var packageTarName = name + '-' + isopack.version + '-source';
   var dirToTar = path.join(tempDir, 'source', packageTarName);
+  // XXX name probably needs to be escaped for windows?
+  // XXX note that publish-for-arch thinks it knows how this tarball is laid
+  //     out, which is a bit of a shame
   var sourcePackageDir = path.join(dirToTar, name);
   if (! files.mkdir_p(sourcePackageDir)) {
     buildmessage.error('Failed to create temporary source directory: ' +

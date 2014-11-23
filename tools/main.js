@@ -117,9 +117,9 @@ function SpringboardToLatestRelease(track) {
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the given Meteor release.
 main.SpringboardToSpecificRelease =
-function SpringboardToSpecificRelease(releaseRecord, msg) {
+function SpringboardToSpecificRelease(fullReleaseName, msg) {
   assert.ok(this instanceof SpringboardToSpecificRelease);
-  this.releaseRecord = releaseRecord;
+  this.fullReleaseName = fullReleaseName;
   this.msg = msg;
 };
 
@@ -1280,9 +1280,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // Springboard to a specific release. This is only throw by
       // publish-for-arch, which is catalog.Refresh.OnceAtStart, so we ought to
       // have decent knowledge of the latest release.
-      var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
-      var nextRelease = release.load(relName);
-      springboard(nextRelease, { releaseOverride: relName });
+      var nextRelease = release.load(e.fullReleaseName);
+      springboard(nextRelease, { releaseOverride: e.fullReleaseName });
       // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;

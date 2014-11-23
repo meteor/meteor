@@ -653,16 +653,6 @@ _.extend(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  // Get a release version with a given tool
-  getReleaseWithTool: function (toolSpec) {
-    var self = this;
-    // XXX: In the future, we should consider adding tool as a column and
-    // implementing table upgrades
-    var allVersions = self._contentQuery(
-      "SELECT content FROM releaseVersions");
-    return _.findWhere(allVersions, { tool: toolSpec });
-  },
-
   // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
   // specially constructed for bootstrap tarballs.
   forceRecommendRelease: function (track, version) {
