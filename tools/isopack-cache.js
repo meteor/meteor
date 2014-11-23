@@ -85,6 +85,18 @@ _.extend(exports.IsopackCache.prototype, {
     if (_.has(self._isopacks, name))
       return;
 
+    var ensureLoaded = function (depName) {
+      if (_.has(onStack, depName)) {
+        buildmessage.error("circular dependency between packages " +
+                           name + " and " + depName);
+        // recover by not enforcing one of the dependencies
+        return;
+      }
+      onStack[depName] = true;
+      self._ensurePackageLoaded(depName, onStack);
+      delete onStack[depName];
+    };
+
     var packageInfo = self._packageMap.getInfo(name);
     if (! packageInfo)
       throw Error("Depend on unknown package " + name + "?");
@@ -93,15 +105,7 @@ _.extend(exports.IsopackCache.prototype, {
       var packageNames =
             packageInfo.packageSource.getPackagesToLoadFirst(self._packageMap);
       _.each(packageNames, function (depName) {
-        if (_.has(onStack, depName)) {
-          buildmessage.error("circular dependency between packages " +
-                             name + " and " + depName);
-          // recover by not enforcing one of the dependencies
-          return;
-        }
-        onStack[depName] = true;
-        self._ensurePackageLoaded(depName, onStack);
-        delete onStack[depName];
+        ensureLoaded(depName);
       });
 
       self._loadLocalPackage(name, packageInfo);
@@ -113,6 +117,7 @@ _.extend(exports.IsopackCache.prototype, {
         throw Error("Can't load versioned packages without a tropohouse!");
       }
 
+      var packagesToLoad;
       // Load the isopack from disk.
       buildmessage.enterJob(
         "loading package " + name + "@" + packageInfo.version,
@@ -125,7 +130,17 @@ _.extend(exports.IsopackCache.prototype, {
             isopack: isopack,
             pluginProviderPackageMap: null
           };
+          if (buildmessage.jobHasMessages())
+            return;
+          packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
         });
+
+      // Also load its dependencies. This is so that if this package is being
+      // built as part of a plugin, all the transitive dependencies of the
+      // plugin are loaded.
+      _.each(packagesToLoad, function (packageToLoad) {
+        ensureLoaded(packageToLoad);
+      });
     } else {
       throw Error("unknown packageInfo kind?");
     }

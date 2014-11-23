@@ -1124,6 +1124,23 @@ _.extend(Isopack.prototype, {
       watchSet.merge(unibuild.watchSet);
     });
     return watchSet;
+  },
+
+  // Similar to PackageSource.getPackagesToLoadFirst.
+  getStrongOrderedUsedAndImpliedPackages: function () {
+    var self = this;
+    var packages = {};
+    var processUse = function (use) {
+      if (use.weak || use.unordered)
+        return;
+      packages[use.package] = true;
+    };
+
+    _.each(self.unibuilds, function (unibuild) {
+      _.each(unibuild.uses, processUse);
+      _.each(unibuild.implies, processUse);
+    });
+    return _.keys(packages);
   }
 });
 
