@@ -40,7 +40,7 @@ exports.callPackageServer = function (conn) {
   return conn.call.apply(conn, args);
 };
 
-var callPackageServerBM = function () {
+var callPackageServerBM = exports.callPackageServerBM = function () {
   buildmessage.assertInJob();
   try {
     return exports.callPackageServer.apply(null, arguments);

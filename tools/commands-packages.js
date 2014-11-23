@@ -501,12 +501,9 @@ main.registerCommand({
     'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
   },
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
-  // Refresh the catalog, cacheing the remote package data on the server.
-  //Console.info("Resyncing with package server...");
-  //refreshOfficialCatalogOrDie();
-
   try {
     var conn = packageClient.loggedInPackagesConnection();
   } catch (err) {
@@ -528,94 +525,93 @@ main.registerCommand({
   }
 
   // Fill in the order key and any other generated release.json fields.
-  Console.info("Double-checking release schema .");
+  main.captureAndExit(
+    "=> Errors in release schema:",
+    "double-checking release schema",
+    function () {
+      // Check that the schema is valid -- release.json contains all the
+      // required fields, does not contain contradicting information, etc.
+      // XXX Check for unknown keys?
+      if (! _.has(relConf, 'track')) {
+        buildmessage.error(
+          "Configuration file must specify release track. (track).");
+      }
+      if (! _.has(relConf, 'version')) {
+        buildmessage.error(
+          "Configuration file must specify release version. (version).");
+      }
+      if (! _.has(relConf, 'description')) {
+        buildmessage.error(
+          "Configuration file must contain a description (description).");
+      } else if (relConf.description.length > 100) {
+        buildmessage.error("Description must be under 100 characters.");
+      }
+      if (! options['from-checkout']) {
+        if (! _.has(relConf, 'tool')) {
+          buildmessage.error(
+            "Configuration file must specify a tool version (tool) unless in " +
+              "--from-checkout mode.");
+        }
+        if (! _.has(relConf, 'packages')) {
+          buildmessage.error(
+            "Configuration file must specify package versions (packages) " +
+              "unless in --from-checkout mode.");
+        }
+      }
 
-  // Check that the schema is valid -- release.json contains all the required
-  // fields, does not contain contradicting information, etc. Output all
-  // messages, so the user can fix all errors at once.
-  // XXX: Check for unknown keys.
-  var badSchema = false;
-  var bad = function (message) {
-    if (!badSchema)
-      Console.error("");
-    Console.error(message);
-    badSchema = true;
-  };
-  if (!_.has(relConf, 'track')) {
-    bad("Configuration file must specify release track. (track).");
-  }
-  if (!_.has(relConf, 'version')) {
-    bad("Configuration file must specify release version. (version).");
-  }
-  if (!_.has(relConf, 'description')) {
-    bad("Configuration file must contain a description (description).");
-  } else if (relConf['description'].length > 100) {
-    bad("Description must be under 100 characters.");
-  }
-  if (!options['from-checkout']) {
-    if (!_.has(relConf, 'tool')) {
-      bad("Configuration file must specify a tool version (tool) unless in --from-checkout mode.");
-    }
-    if (!_.has(relConf, 'packages')) {
-      bad("Configuration file must specify package versions (packages) unless in --from-checkout mode.");
-    }
-  }
+      // If you didn't specify an orderKey and it's compatible with our
+      // conventional orderKey generation algorithm, use the algorithm. If you
+      // explicitly specify orderKey: null, don't include one.
+      if (! _.has(relConf, 'orderKey')) {
+        relConf.orderKey = utils.defaultOrderKeyForReleaseVersion(
+          relConf.version);
+      }
+      // This covers both the case of "explicitly specified {orderKey: null}"
+      // and "defaultOrderKeyForReleaseVersion returned null".
+      if (relConf.orderKey === null) {
+        delete relConf.orderKey;
+      }
 
-  // If you didn't specify an orderKey and it's compatible with our conventional
-  // orderKey generation algorithm, use the algorithm. If you explicitly specify
-  // orderKey: null, don't include one.
-  if (!_.has(relConf, 'orderKey')) {
-    relConf.orderKey = utils.defaultOrderKeyForReleaseVersion(relConf.version);
-  }
-  // This covers both the case of "explicitly specified {orderKey: null}" and
-  // "defaultOrderKeyForReleaseVersion returned null".
-  if (relConf.orderKey === null) {
-    delete relConf.orderKey;
-  }
-
-  if (!_.has(relConf, 'orderKey') && relConf['recommended']) {
-    bad("Recommended releases must have order keys.");
-  }
-  // On the main release track, we can't name the release anything beginning
-  // with 0.8 and below, because those are taken for pre-troposphere releases.
-  if ((relConf.track === catalog.DEFAULT_TRACK)) {
-    var start = relConf.version.slice(0,4);
-    if (start === "0.8." || start === "0.7." ||
-        start === "0.6." || start === "0.5.") {
-      bad(
-        "It looks like you are trying to publish a pre-package-server meteor release.\n" +
-          "Doing this through the package server is going to cause a lot of confusion.\n" +
-          "Please use the old release process.");
+      if (! _.has(relConf, 'orderKey') && relConf.recommended) {
+        buildmessage.error("Recommended releases must have order keys.");
+      }
+      // On the main release track, we can't name the release anything beginning
+      // with 0.8 and below, because those are taken for pre-troposphere
+      // releases.
+      if ((relConf.track === catalog.DEFAULT_TRACK)) {
+        var start = relConf.version.slice(0,4);
+        if (start === "0.8." || start === "0.7." ||
+            start === "0.6." || start === "0.5.") {
+          buildmessage.error(
+            "It looks like you are trying to publish a pre-package-server meteor release.\n" +
+              "Doing this through the package server is going to cause a lot of confusion.\n" +
+              "Please use the old release process.");
+        }
+      }
     }
-  }
-  if (badSchema) {
-    return 1;
-  }
-  Console.info(".");
+  );
 
   // Let's check if this is a known release track/ a track to which we are
   // authorized to publish before we do any complicated/long operations, and
   // before we publish its packages.
-  if (!options['create-track']) {
+  if (! options['create-track']) {
     var trackRecord = catalog.official.getReleaseTrack(relConf.track);
     if (!trackRecord) {
-      Console.error('\n There is no release track named ' + relConf.track +
-                           '. If you are creating a new track, use the --create-track flag.');
+      Console.error(
+        'There is no release track named ' + relConf.track +
+          '. If you are creating a new track, use the --create-track flag.');
       return 1;
     }
 
-    // We are going to call the server to check if we are authorized, so that when
-    // we implement things like organizations, we are not handicapped by the
-    // user's meteor version.
+    // Check with the server to see if we're organized (we can't due this
+    // locally due to organizations).
     if (!packageClient.amIAuthorized(relConf.track,conn,  true)) {
-      Console.error('\n You are not an authorized maintainer of ' + relConf.track + ".");
+      Console.error('You are not an authorized maintainer of ' +
+                    relConf.track + ".");
       Console.error('Only authorized maintainers may publish new versions.');
       return 1;
-    };
+    }
   }
-
-  // XXX: Messages that start with . :-(
-  Console.info(". OK!");
 
   // This is sort of a hidden option to just take your entire meteor checkout
   // and make a release out of it. That's what we do now (that's what releases
@@ -895,47 +891,48 @@ main.registerCommand({
     relConf.packages=myPackages;
   }
 
-  // Create the new track, if we have been told to.
-  if (options['create-track']) {
-    Console.info("Creating a new release track...");
-    try {
-      var track = conn.call('createReleaseTrack',
-                            { name: relConf.track } );
-    } catch (e) {
-      packageClient.handlePackageServerConnectionError(e);
-      return 1;
+  main.captureAndExit(
+    "=> Errors while publishing release:",
+    "publishing release",
+    function () {
+      // Create the new track, if we have been told to.
+      if (options['create-track']) {
+        // XXX maybe this job title should be left on the screen too?  some sort
+        // of enterJob/progress option that lets you do that?
+        buildmessage.enterJob("creating a new release track", function () {
+          packageClient.callPackageServerBM(
+            conn, 'createReleaseTrack', { name: relConf.track } );
+        });
+        if (buildmessage.jobHasMessages())
+          return;
+      }
+
+      buildmessage.enterJob("creating a new release version", function () {
+        var record = {
+          track: relConf.track,
+          version: relConf.version,
+          orderKey: relConf.orderKey,
+          description: relConf.description,
+          recommended: !!relConf.recommended,
+          tool: relConf.tool,
+          packages: relConf.packages
+        };
+
+        var uploadInfo;
+        if (relConf.patchFrom) {
+          uploadInfo = packageClient.callPackageServerBM(
+            conn, 'createPatchReleaseVersion', record, relConf.patchFrom);
+        } else {
+          uploadInfo = packageClient.callPackageServerBM(
+            conn, 'createReleaseVersion', record);
+        }
+      });
     }
-  }
+  );
 
-  Console.info("Creating a new release version...");
-  var record = {
-    track: relConf.track,
-    version: relConf.version,
-    orderKey: relConf.orderKey,
-    description: relConf.description,
-    recommended: !!relConf.recommended,
-    tool: relConf.tool,
-    packages: relConf.packages
-  };
-
-  var uploadInfo;
-  try {
-    if (!relConf.patchFrom) {
-      uploadInfo = packageClient.callPackageServer(
-        conn, 'createReleaseVersion', record);
-    } else {
-      uploadInfo = packageClient.callPackageServer(
-        conn, 'createPatchReleaseVersion', record, relConf.patchFrom);
-    }
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-
-  // Get it back.
+  // Learn about it.
   refreshOfficialCatalogOrDie();
-  Console.info("Done creating " + relConf.track  + "@" +
-                       relConf.version + "!");
+  Console.info("Done creating " + relConf.track  + "@" + relConf.version + "!");
 
   if (options['from-checkout']) {
     // XXX maybe should discourage publishing if git status says we're dirty?
@@ -982,28 +979,29 @@ main.registerCommand({
         });
       }
     }
-  }
 
-  // We need to warn the user that we didn't publish some of their
-  // packages. Unlike publish, this is advanced functionality, so the user
-  // should be familiar with the concept.
-  if (!_.isEmpty(unfinishedBuilds)) {
-    Console.warning(
-      "WARNING: Some packages contain binary dependencies.");
-    Console.warning("Builds have not been published for the following packages:");
-    _.each(unfinishedBuilds, function (version, name) {
-      Console.warning(name + "@" + version);
-    });
-    // Note: we don't actually enforce the proper build machine thing. You can't
-    // use publish-for-arch for meteor-tool, for example, you need to use
-    // publish --existing-version and to do it from checkout. Setting that up on
-    // a build machine for a one-off experimental release could be a pain. In
-    // that case, I guess, you can just run publish --existing-version:
-    // presumably you don't care about compatibility etc. If it is an official
-    // release, you ought to use a build machine though.
-    Console.warning(
-      "Please publish the builds separately, from a proper build machine.");
-  };
+    // We need to warn the user that we didn't publish some of their
+    // packages. Unlike publish, this is advanced functionality, so the user
+    // should be familiar with the concept.
+    if (! _.isEmpty(unfinishedBuilds)) {
+      Console.warning(
+        "WARNING: Some packages contain binary dependencies.");
+      Console.warning("Builds have not been published for the following packages:");
+      _.each(unfinishedBuilds, function (version, name) {
+        Console.warning(name + "@" + version);
+      });
+      // Note: we don't actually enforce the proper build machine thing. You
+      // can't use publish-for-arch for meteor-tool, for example, you need to
+      // use publish --existing-version and to do it from checkout. Setting that
+      // up on a build machine for a one-off experimental release could be a
+      // pain. In that case, I guess, you can just run publish
+      // --existing-version: presumably you don't care about compatibility
+      // etc. If it is an official release, you ought to use a build machine
+      // though.
+      Console.warning(
+        "Please publish the builds separately, from a proper build machine.");
+    }
+  }
 
   return 0;
 });
