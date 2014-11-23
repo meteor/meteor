@@ -2153,9 +2153,7 @@ exports.buildJsImage = function (options) {
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
-    npmDir: options.npmDir,
-    dependencyVersions: options.dependencyVersions,
-    noVersionFile: true
+    npmDir: options.npmDir
   });
 
   var isopack = compiler.compile(packageSource, {

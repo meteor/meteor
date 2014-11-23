@@ -909,7 +909,7 @@ package.js file.
 Meteor promises repeatable builds for both packages and applications. This means
 that, if you built your package on a machine, then checked the code into a
 repository and checked it out elsewhere, you should get the same result. In your
-package directory, you will find an automatically generated versions.json
+package directory, you will find an automatically generated `.versions`
 file. This file specifies the versions of all packages used to build your
 package and is part of the source. Check it into version control to ensure
 repeatable builds across machines.
@@ -919,10 +919,10 @@ repeatable builds across machines.
 Sometimes, packages do not just stand on their own, but function in the context
 of an app (specifically, packages in the packages directory of an app). In that
 case, the app's context will take precedence. Rather than using the
-versions.json file as a guide, we will build the package with the same
+`.versions` file as a guide, we will build the package with the same
 dependencies as used by the app (we think that, in practice, it would be
 confusing to find your local packages built with different versions of
-things). However, we will still write the new versions.json file.
+things).
 
 {{/note}}
 
