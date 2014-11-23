@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.1.1'
+  version: '1.1.2-ipc.0'
 });
 
 Package.on_use(function (api) {
