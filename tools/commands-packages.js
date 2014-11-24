@@ -1607,7 +1607,7 @@ var maybeUpdateRelease = function (options) {
   // but if we actually do that, we can change this code to add the extra
   // springboard at that time.
   var upgraders = require('./upgraders.js');
-  var upgradersToRun = upgraders.upgradersToRun();
+  var upgradersToRun = upgraders.upgradersToRun(projectContext);
 
   // Download and build packages and write the new versions to .meteor/versions.
   // XXX #3006 If we're about to try to upgrade packages, do we really want to

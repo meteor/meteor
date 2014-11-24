@@ -423,9 +423,13 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    var stats = fs.statSync(fullFrom);
+    var stats = options.preserveSymlinks
+          ? fs.lstatSync(fullFrom) : fs.statSync(fullFrom);
     if (stats.isDirectory()) {
       files.cp_r(fullFrom, fullTo, options);
+    } else if (stats.isSymbolicLink()) {
+      var linkText = fs.readlinkSync(fullFrom);
+      fs.symlinkSync(linkText, fullTo);
     } else {
       var absFullFrom = path.resolve(fullFrom);
 

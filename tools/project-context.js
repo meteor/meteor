@@ -1068,8 +1068,7 @@ _.extend(exports.FinishedUpgraders.prototype, {
   readUpgraders: function () {
     var self = this;
     var upgraders = [];
-    var contents = fs.readFileSync(self.filename, 'utf8');
-    var lines = files.splitBufferToLines(contents);
+    var lines = files.getLinesOrEmpty(self.filename);
     _.each(lines, function (line) {
       line = files.trimSpaceAndComments(line);
       if (line === '')

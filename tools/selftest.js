@@ -717,7 +717,8 @@ _.extend(Sandbox.prototype, {
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
     files.cp_r(path.join(builtPackageTropohouseDir, 'packages'),
-               path.join(self.warehouse, packagesDirectoryName));
+               path.join(self.warehouse, packagesDirectoryName),
+               { preserveSymlinks: true });
 
     var stubCatalog = {
       syncToken: {},

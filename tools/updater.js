@@ -88,9 +88,10 @@ var maybeShowBanners = function () {
   var banner = releaseData.banner;
   if (banner) {
     var bannersShown = {};
+
+    var bannerFilename = config.getBannersShownFilename();
     try {
-      bannersShown = JSON.parse(
-        fs.readFileSync(config.getBannersShownFilename()));
+      bannersShown = JSON.parse(fs.readFileSync(bannerFilename));
     } catch (e) {
       // ... ignore
     }
@@ -115,9 +116,9 @@ var maybeShowBanners = function () {
       runLog.log(banner.text);
       runLog.log("");
       bannersShown[release.current.name] = new Date;
-      // XXX ick slightly racy
-      fs.writeFileSync(config.getBannersShownFilename(),
-                       JSON.stringify(bannersShown, null, 2));
+      // XXX ick slightly racy. we should just add this to sqlite!
+      files.mkdir_p(path.dirname(bannerFilename));
+      fs.writeFileSync(bannerFilename, JSON.stringify(bannersShown, null, 2));
       return;
     }
   }

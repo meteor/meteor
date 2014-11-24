@@ -245,9 +245,10 @@ _.extend(exports, {
     }
   },
 
+  // XXX this should just be moved into an extra table in sqlite
   getBannersShownFilename: function() {
     return path.join(tropohouse.default.root,
-                     "package-metadata", "v1.1", "banners-shown.json");
+                     "package-metadata", "v2.0.1", "banners-shown.json");
   },
 
   // Return the domain name of the current Meteor Accounts server in

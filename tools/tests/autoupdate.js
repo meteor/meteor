@@ -8,12 +8,10 @@ var buildmessage = require("../buildmessage.js");
 var Sandbox = selftest.Sandbox;
 
 var getCatalog = function (sandbox) {
- var dataFile = path.join(sandbox.warehouse,
-                          'package-metadata', 'v2.0.1',
-                          config.getLocalPackageCacheFilename());
- var catalog = new catalogRemote.RemoteCatalog();
- catalog.initialize( {packageStorage: dataFile});
- return catalog;
+  var dataFile = config.getPackageStorage({ root: sandbox.warehouse });
+  var catalog = new catalogRemote.RemoteCatalog();
+  catalog.initialize( {packageStorage: dataFile});
+  return catalog;
 };
 
 var setBanner = function (sandbox, version, banner) {
@@ -147,8 +145,8 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     run = s.run("update");
     run.read("myapp: updated to Meteor v3.");
-    run.match("Your packages are at their latest compatible versions.\n");
-    run.expectEnd();
+    // XXX #3006 re-add package change messages
+    // run.match("Your packages are at their latest compatible versions.\n");
     run.expectExit(0);
 
     run = s.run("--version");
