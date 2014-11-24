@@ -33,6 +33,10 @@ Blaze.Template = function (viewName, renderFunction) {
 
   this.__helpers = new HelperMap;
   this.__eventMaps = [];
+
+  this.__createdCallbacks = [];
+  this.__renderedCallbacks = [];
+  this.__destroyedCallbacks = [];
 };
 var Template = Blaze.Template;
 
@@ -55,6 +59,38 @@ HelperMap.prototype.has = function (name) {
 Blaze.isTemplate = function (t) {
   return (t instanceof Blaze.Template);
 };
+
+/**
+ * @name  onCreated
+ * @instance
+ * @memberOf Template
+ * @summary Add a callback when an instance of a template is created.
+ * @param {Function} callback A function to be added as a callback.
+ * @locus Client
+ */
+/**
+ * @name  onRendered
+ * @instance
+ * @memberOf Template
+ * @summary Add a callback when an instance of a template is rendered.
+ * @param {Function} callback A function to be added as a callback.
+ * @locus Client
+ */
+/**
+ * @name  onDestroyed
+ * @instance
+ * @memberOf Template
+ * @summary Add a callback when an instance of a template is destroyed.
+ * @param {Function} callback A function to be added as a callback.
+ * @locus Client
+ */
+var templateEvents = ['created', 'rendered', 'destroyed'];
+_.each(templateEvents, function (event) {
+  var methodName = 'on' + event.charAt(0).toUpperCase() + event.slice(1);
+  Template.prototype[methodName] = function (cb) {
+    this['__' + event + 'Callbacks'].push(cb);
+  };
+});
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
   var self = this;
@@ -121,12 +157,6 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @summary Provide a callback when an instance of a template is created.
    * @locus Client
    */
-  if (self.created) {
-    view.onViewCreated(function () {
-      self.created.call(view.templateInstance());
-    });
-  }
-
   /**
    * @name  rendered
    * @instance
@@ -134,12 +164,6 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @summary Provide a callback when an instance of a template is rendered.
    * @locus Client
    */
-  if (self.rendered) {
-    view.onViewReady(function () {
-      self.rendered.call(view.templateInstance());
-    });
-  }
-
   /**
    * @name  destroyed
    * @instance
@@ -147,11 +171,23 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @summary Provide a callback when an instance of a template is destroyed.
    * @locus Client
    */
-  if (self.destroyed) {
-    view.onViewDestroyed(function () {
-      self.destroyed.call(view.templateInstance());
+  var viewEvents = ['created', 'ready', 'destroyed'];
+  _.each(templateEvents, function (event, indx) {
+    var viewEvent = viewEvents[indx];
+    var viewMethod = 'onView' +
+      viewEvent.charAt(0).toUpperCase() + viewEvent.slice(1);
+
+    if (self[event]) {
+      view[viewMethod](function () {
+        self[event].call(view.templateInstance());
+      });
+    }
+    _.each(self['__' + event + 'Callbacks'], function (cb) {
+      view[viewMethod](function () {
+        cb.call(view.templateInstance());
+      });
     });
-  }
+  });
 
   return view;
 };
