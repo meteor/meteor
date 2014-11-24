@@ -628,8 +628,8 @@ _.extend(AppRunner.prototype, {
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = bundleApp();
-        if (bundleResult.runResult)
-          return bundleResult.runResult;
+        if (bundleResultOrRunResult.runResult)
+          return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
 
         var oldFuture = self.runFuture = new Future;
