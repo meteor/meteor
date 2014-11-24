@@ -1,8 +1,8 @@
 var util = Npm.require('util');
 
-ResolverState = function (resolver, resolveContext) {
+ResolverState = function (catalogCache, resolveContext) {
   var self = this;
-  self._resolver = resolver;
+  self._catalogCache = catalogCache;
   self._resolveContext = resolveContext;
   // The versions we've already chosen.
   // unitName -> UnitVersion
@@ -37,7 +37,7 @@ _.extend(ResolverState.prototype, {
 
     var chosen = mori.get(self.choices, constraint.name);
     if (chosen &&
-        !constraint.isSatisfied(chosen, self._resolver, self._resolveContext)) {
+        !constraint.isSatisfied(chosen, self._resolveContext)) {
       // This constraint conflicts with a choice we've already made!
       self.error = util.format(
         "conflict: constraint %s is not satisfied by %s.\n" +
@@ -54,7 +54,7 @@ _.extend(ResolverState.prototype, {
       // Note: filter preserves order, which is important.
       var newAlternatives = filter(alternatives, function (unitVersion) {
         return constraint.isSatisfied(
-          unitVersion, self._resolver, self._resolveContext);
+          unitVersion, self._resolveContext);
       });
       if (mori.is_empty(newAlternatives)) {
         self.error = util.format(
@@ -82,14 +82,14 @@ _.extend(ResolverState.prototype, {
 
     self = self._clone();
 
-    if (!_.has(self._resolver.unitsVersions, unitName)) {
+    if (!_.has(self._catalogCache.unitsVersions, unitName)) {
       self.error = "unknown package: " + unitName;
       return self;
     }
 
     // Note: relying on sortedness of unitsVersions so that alternatives is
     // sorted too (the estimation function uses this).
-    var alternatives = filter(self._resolver.unitsVersions[unitName], function (uv) {
+    var alternatives = filter(self._catalogCache.unitsVersions[unitName], function (uv) {
       return self.isSatisfied(uv);
       // XXX hang on to list of violated constraints and use it in error
       // message
@@ -169,7 +169,7 @@ _.extend(ResolverState.prototype, {
   },
   isSatisfied: function (uv) {
     var self = this;
-    return self.constraints.isSatisfied(uv, self._resolver, self._resolveContext);
+    return self.constraints.isSatisfied(uv, self._resolveContext);
   },
   somePathwayForUnitName: function (unitName) {
     var self = this;
@@ -180,7 +180,7 @@ _.extend(ResolverState.prototype, {
   },
   _clone: function () {
     var self = this;
-    var clone = new ResolverState(self._resolver, self._resolveContext);
+    var clone = new ResolverState(self._catalogCache, self._resolveContext);
     _.each(['choices', '_dependencies', 'constraints', 'error', '_unitPathways'], function (field) {
       clone[field] = self[field];
     });

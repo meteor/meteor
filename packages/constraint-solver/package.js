@@ -12,6 +12,7 @@ Package.on_use(function (api) {
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random'], 'server');
   api.add_files(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
+                 'catalog-cache.js',
                  'resolver-state.js', 'priority-queue.js'], ['server']);
 });
 

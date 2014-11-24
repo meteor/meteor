@@ -17,14 +17,11 @@ ConstraintSolver = {};
 ConstraintSolver.PackagesResolver = function (catalog, options) {
   var self = this;
 
-  options = options || {};
+  self.options = options || {};
 
   self.catalog = catalog;
 
-  // The main resolver
-  self.resolver = new ConstraintSolver.Resolver({
-    nudge: options.nudge
-  });
+  self.catalogCache = new ConstraintSolver.CatalogCache();
 
   self._packageInfoLoadQueue = [];
   self._packagesEverEnqueued = {};
@@ -67,7 +64,7 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
     var versionDef = self.catalog.getVersion(packageName, version);
 
     var unitVersion = new ConstraintSolver.UnitVersion(packageName, version);
-    self.resolver.addUnitVersion(unitVersion);
+    self.catalogCache.addUnitVersion(unitVersion);
 
     _.each(versionDef.dependencies, function (dep, depName) {
       self._ensurePackageInfoLoaded(depName);
@@ -91,7 +88,7 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
       // Add a constraint if needed.
       if (dep.constraint && dep.constraint !== "none") {
-        var constraint = self.resolver.getConstraint(depName, dep.constraint);
+        var constraint = self.catalogCache.getConstraint(depName, dep.constraint);
         unitVersion.addConstraint(constraint);
       }
     });
@@ -112,6 +109,13 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 ConstraintSolver.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
+
+  var resolver = new ConstraintSolver.Resolver(
+    self.catalogCache,
+    {
+      nudge: self.options.nudge
+    });
+
   // clone because we mutate options
   options = _.extend({
     _testing: false,
@@ -149,7 +153,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     // about that were mentioned.  (_.compact drops unknown UnitVersions.)
     options.previousSolution = _.compact(
       _.map(options.previousSolution, function (version, packageName) {
-        return self.resolver.getUnitVersion(packageName, version);
+        return self.catalogCache.getUnitVersion(packageName, version);
       }));
   }
 
@@ -184,12 +188,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     var constraintsWithPreviousSolutionLock = _.clone(constraints);
     _.each(options.previousSolution, function (uv) {
       constraintsWithPreviousSolutionLock.push(
-        self.resolver.getConstraint(uv.name, '=' + uv.version));
+        self.catalogCache.getConstraint(uv.name, '=' + uv.version));
     });
     try {
       // Try running the resolver. If it fails to resolve, that's OK, we'll keep
       // working.
-      res = self.resolver.resolve(
+      res = resolver.resolve(
         dependencies, constraintsWithPreviousSolutionLock, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
@@ -201,7 +205,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // without locking in the previous solution as strict equality.
   if (!res) {
     try {
-      res = self.resolver.resolve(dependencies, constraints, resolverOptions);
+      res = resolver.resolve(dependencies, constraints, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
         throw e;
@@ -213,7 +217,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // constraints?
   if (!res) {
     resolverOptions["useRCs"] = true;
-    res = self.resolver.resolve(dependencies, constraints, resolverOptions);
+    res = resolver.resolve(dependencies, constraints, resolverOptions);
   }
   var ret = { answer:  resolverResultToPackageMap(res) };
   if (resolverOptions.useRCs)
@@ -236,7 +240,7 @@ ConstraintSolver.PackagesResolver.prototype._makeConstraintObjects = function (
     inputConstraints) {
   var self = this;
   return _.map(inputConstraints, function (constraint) {
-    return self.resolver.getConstraint(
+    return self.catalogCache.getConstraint(
       constraint.name, constraint.constraintString);
   });
 };
@@ -311,7 +315,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            PackageVersion.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
+            PackageVersion.versionMagnitude(_.last(self.catalogCache.unitsVersions[uv.name]).version) -
             PackageVersion.versionMagnitude(uv.version);
 
           if (isRootDep[uv.name]) {
@@ -375,12 +379,12 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
           cost[MAJOR] += versionsDistance;
         } else {
-          var versions = self.resolver.unitsVersions[dep];
+          var versions = self.catalogCache.unitsVersions[dep];
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
             PackageVersion.versionMagnitude(
-              _.last(self.resolver.unitsVersions[dep]).version) -
+              _.last(self.catalogCache.unitsVersions[dep]).version) -
             PackageVersion.versionMagnitude(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;

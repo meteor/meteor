@@ -12,7 +12,8 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   // A => B => C
   //  \    \-> D => E
   //   \->  \-> F
-  var resolver = new ConstraintSolver.Resolver();
+  var cache = new ConstraintSolver.CatalogCache();
+  var resolver = new ConstraintSolver.Resolver(cache);
   var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
   var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0");
   var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0");
@@ -23,28 +24,28 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
   var F100 = new ConstraintSolver.UnitVersion("f", "1.0.0");
   var F110 = new ConstraintSolver.UnitVersion("f", "1.1.0");
 
-  resolver.addUnitVersion(A100);
-  resolver.addUnitVersion(B100);
-  resolver.addUnitVersion(C100);
-  resolver.addUnitVersion(D110);
-  resolver.addUnitVersion(E100);
-  resolver.addUnitVersion(F100);
-  resolver.addUnitVersion(F110);
-  resolver.addUnitVersion(F120);
+  cache.addUnitVersion(A100);
+  cache.addUnitVersion(B100);
+  cache.addUnitVersion(C100);
+  cache.addUnitVersion(D110);
+  cache.addUnitVersion(E100);
+  cache.addUnitVersion(F100);
+  cache.addUnitVersion(F110);
+  cache.addUnitVersion(F120);
 
   A100.addDependency("b");
-  A100.addConstraint(resolver.getConstraint("b", "=1.0.0"));
+  A100.addConstraint(cache.getConstraint("b", "=1.0.0"));
   B100.addDependency("c");
-  B100.addConstraint(resolver.getConstraint("c", "=1.0.0"));
+  B100.addConstraint(cache.getConstraint("c", "=1.0.0"));
   // a dependency w/o a constraint, still should pick it
   B100.addDependency("d");
   D110.addDependency("e");
-  D110.addConstraint(resolver.getConstraint("e", "=1.0.0"));
+  D110.addConstraint(cache.getConstraint("e", "=1.0.0"));
   B100.addDependency("f");
   // a non-exact constraint
-  B100.addConstraint(resolver.getConstraint("f", "1.0.0"));
+  B100.addConstraint(cache.getConstraint("f", "1.0.0"));
   A100.addDependency("f");
-  A100.addConstraint(resolver.getConstraint("f", "1.1.0"));
+  A100.addConstraint(cache.getConstraint("f", "1.1.0"));
 
   var solution = resolver.resolve(["a"], [], {
     // Prefer later F when possible.
@@ -59,7 +60,8 @@ Tinytest.add("constraint solver - resolver, get exact deps", function (test) {
 });
 
 Tinytest.add("constraint solver - resolver, cost function - pick latest", function (test) {
-  var resolver = new ConstraintSolver.Resolver();
+  var cache = new ConstraintSolver.CatalogCache();
+  var resolver = new ConstraintSolver.Resolver(cache);
   var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
   var A110 = new ConstraintSolver.UnitVersion("a", "1.1.0");
   var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0");
@@ -67,19 +69,19 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
   var C110 = new ConstraintSolver.UnitVersion("c", "1.1.0");
   var C120 = new ConstraintSolver.UnitVersion("c", "1.2.0");
 
-  resolver.addUnitVersion(A100);
-  resolver.addUnitVersion(A110);
-  resolver.addUnitVersion(B100);
-  resolver.addUnitVersion(C100);
-  resolver.addUnitVersion(C110);
-  resolver.addUnitVersion(C120);
+  cache.addUnitVersion(A100);
+  cache.addUnitVersion(A110);
+  cache.addUnitVersion(B100);
+  cache.addUnitVersion(C100);
+  cache.addUnitVersion(C110);
+  cache.addUnitVersion(C120);
 
   A100.addDependency("c");
   A110.addDependency("c");
   B100.addDependency("a");
-  B100.addConstraint(resolver.getConstraint("a", "=1.0.0"));
+  B100.addConstraint(cache.getConstraint("a", "=1.0.0"));
   B100.addDependency("c");
-  B100.addConstraint(resolver.getConstraint("c", "1.1.0"));
+  B100.addConstraint(cache.getConstraint("c", "1.1.0"));
 
   // Run looking for a conservative solution for A
   var AOnlySolution = resolver.resolve(["a"], [], {
@@ -106,23 +108,24 @@ Tinytest.add("constraint solver - resolver, cost function - pick latest", functi
 });
 
 Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", function (test) {
-  var resolver = new ConstraintSolver.Resolver();
+  var cache = new ConstraintSolver.CatalogCache();
+  var resolver = new ConstraintSolver.Resolver(cache);
   var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
   var A110 = new ConstraintSolver.UnitVersion("a", "1.1.0");
   var B100 = new ConstraintSolver.UnitVersion("b", "1.0.0");
   var B110 = new ConstraintSolver.UnitVersion("b", "1.1.0");
   var C100 = new ConstraintSolver.UnitVersion("c", "1.0.0");
 
-  resolver.addUnitVersion(A100);
-  resolver.addUnitVersion(A110);
-  resolver.addUnitVersion(B100);
-  resolver.addUnitVersion(B110);
-  resolver.addUnitVersion(C100);
+  cache.addUnitVersion(A100);
+  cache.addUnitVersion(A110);
+  cache.addUnitVersion(B100);
+  cache.addUnitVersion(B110);
+  cache.addUnitVersion(C100);
 
   A100.addDependency("b");
-  A100.addConstraint(resolver.getConstraint("b", "1.1.0"));
+  A100.addConstraint(cache.getConstraint("b", "1.1.0"));
   A110.addDependency("c");
-  A110.addConstraint(resolver.getConstraint("c", "1.0.0"));
+  A110.addConstraint(cache.getConstraint("c", "1.0.0"));
 
   // We had one dependency on B and the previous run of resolver told us to us
   // B@1.0.0. Now we are adding the package A in a conservative manner. The
@@ -146,14 +149,15 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
 });
 
 Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
-  var resolver = new ConstraintSolver.Resolver();
+  var cache = new ConstraintSolver.CatalogCache();
+  var resolver = new ConstraintSolver.Resolver(cache);
   var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
   var A100rc1 = new ConstraintSolver.UnitVersion("a", "1.0.0-rc1");
 
-  resolver.addUnitVersion(A100rc1);
-  resolver.addUnitVersion(A100);
-  var basicConstraint = resolver.getConstraint("a", "");
-  var rcConstraint = resolver.getConstraint("a", "1.0.0-rc1");
+  cache.addUnitVersion(A100rc1);
+  cache.addUnitVersion(A100);
+  var basicConstraint = cache.getConstraint("a", "");
+  var rcConstraint = cache.getConstraint("a", "1.0.0-rc1");
 
   // Make the non-rc one more costly. But we still shouldn't choose it unless it
   // was specified in an initial constraint!

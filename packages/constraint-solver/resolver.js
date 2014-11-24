@@ -13,67 +13,15 @@ BREAK = {};  // used by our 'each' functions
 // - every unit version was added exactly once
 // - if two unit versions are the same, their refs point at the same object
 // - if two constraints are the same, their refs point at the same object
-ConstraintSolver.Resolver = function (options) {
+ConstraintSolver.Resolver = function (catalogCache, options) {
   var self = this;
+
+  self._catalogCache = catalogCache;
+
   options = options || {};
 
   self._nudge = options.nudge;
 
-  // Maps unit name string to a sorted array of version definitions
-  self.unitsVersions = {};
-  // Maps name@version string to a unit version
-  self._unitsVersionsMap = {};
-
-  // Refs to all constraints. Mapping String -> instance
-  self._constraints = {};
-};
-
-ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
-  var self = this;
-
-  check(unitVersion, ConstraintSolver.UnitVersion);
-
-  if (_.has(self._unitsVersionsMap, unitVersion.toString())) {
-    throw Error("duplicate uv " + unitVersion.toString() + "?");
-  }
-
-  if (! _.has(self.unitsVersions, unitVersion.name)) {
-    self.unitsVersions[unitVersion.name] = [];
-  } else {
-    var latest = _.last(self.unitsVersions[unitVersion.name]).version;
-    if (!PackageVersion.lessThan(latest, unitVersion.version)) {
-      throw Error("adding uv out of order: " + latest + " vs "
-                  + unitVersion.version);
-    }
-  }
-
-  self.unitsVersions[unitVersion.name].push(unitVersion);
-  self._unitsVersionsMap[unitVersion.toString()] = unitVersion;
-};
-
-
-
-ConstraintSolver.Resolver.prototype.getUnitVersion = function (unitName, version) {
-  var self = this;
-  return self._unitsVersionsMap[unitName + "@" + version];
-};
-
-// name - String - "someUnit"
-// versionConstraint - String - "=1.2.3" or "2.1.0"
-ConstraintSolver.Resolver.prototype.getConstraint =
-  function (name, versionConstraint) {
-  var self = this;
-
-  check(name, String);
-  check(versionConstraint, String);
-
-  var idString = JSON.stringify([name, versionConstraint]);
-
-  if (_.has(self._constraints, idString))
-    return self._constraints[idString];
-
-  return self._constraints[idString] =
-    new ConstraintSolver.Constraint(name, versionConstraint);
 };
 
 // options: Object:
@@ -108,7 +56,7 @@ ConstraintSolver.Resolver.prototype.resolve = function (
   // XXX this could go on ResolveContext
   var resolutionPriority = {};
 
-  var startState = new ResolverState(self, resolveContext);
+  var startState = new ResolverState(self._catalogCache, resolveContext);
 
   if (options.useRCs) {
     resolveContext.useRCsOK = true;
@@ -343,7 +291,7 @@ ConstraintSolver.Constraint.prototype.toString = function (options) {
 
 
 ConstraintSolver.Constraint.prototype.isSatisfied = function (
-  candidateUV, resolver, resolveContext) {
+  candidateUV, resolveContext) {
   var self = this;
   check(candidateUV, ConstraintSolver.UnitVersion);
 
@@ -403,6 +351,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
       throw Error("Unknown constraint type: " + type);
     }
   });
+
 };
 
 // An object that records the general context of a resolve call. It can be
