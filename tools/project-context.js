@@ -304,7 +304,12 @@ _.extend(exports.ProjectContext.prototype, {
   getProjectAndLocalPackagesWatchSet: function () {
     var self = this;
     var watchSet = self.getProjectWatchSet();
-    watchSet.merge(self.isopackCache.allLoadedLocalPackagesWatchSet);
+
+    // Include the loaded local packages (ie, the non-metadata files) but only
+    // if we've actually gotten to the buildLocalPackages step.
+    if (self.isopackCache) {
+      watchSet.merge(self.isopackCache.allLoadedLocalPackagesWatchSet);
+    }
     return watchSet;
   },
 
@@ -418,10 +423,6 @@ _.extend(exports.ProjectContext.prototype, {
         localPackageSearchDirs: searchDirs,
         explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
       });
-      if (buildmessage.jobHasMessages()) {
-        self.projectCatalog = null;
-        self.localCatalog = null;
-      }
     });
 
     self._completedStage = STAGE.INITIALIZE_CATALOG;

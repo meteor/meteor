@@ -124,9 +124,15 @@ selftest.define("change cordova plugins", function () {
   run.waitSecs(2);
   run.match("restarted");
 
+  // Introduce an error.
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
   run.match("exact version");
+
+  // Fix the error.
+  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
+  run.waitSecs(2);
+  run.match("restarted");
 });
 
 
@@ -243,14 +249,14 @@ selftest.define("remove cordova plugins", function () {
   run = s.run("remove", "cordova:blahblah");
   run.matchErr("not in this project");
   run.forbidAll("removed");
-  run.expectExit(0);
+  run.expectExit(1);
 
   run = s.run("remove", "cordova:blahblah",
               "cordova:org.apache.cordova.camera");
   run.waitSecs(5);
   run.matchErr("not in this project");
   run.match("removed");
-  run.expectExit(0);
+  run.expectExit(1);
   checkUserPlugins(s, []);
 });
 
