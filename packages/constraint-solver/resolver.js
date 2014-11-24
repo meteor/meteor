@@ -345,57 +345,53 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
                 candidateUV.name);
   }
 
+  var prereleaseNeedingLicense = false;
+
+  // We try not to allow "pre-release" versions (versions with a '-')
+  // unless they are explicitly mentioned.  If the `useRCsOK` flag is
+  // set, all pre-release versions are allowed.  Pre-release versions
+  // mentioned explicitly in top-level constraints are always allowed.
+  // Otherwise, if `candidateUV` is a pre-release, it needs to be
+  // "licensed" by being mentioned by name in this constraint or
+  // matched by an inexact constraint whose version also has a '-'.
+  if ((! resolveContext.useRCsOK) && /-/.test(candidateUV.version)) {
+    var isTopLevelPrerelease = (
+      _.has(resolveContext.topLevelPrereleases, self.name) &&
+        _.has(resolveContext.topLevelPrereleases[self.name],
+              candidateUV.version));
+    if (! isTopLevelPrerelease) {
+      prereleaseNeedingLicense = true;
+    }
+  }
+
   return _.some(self.constraints, function (currConstraint) {
-     if (currConstraint.type === "any-reasonable") {
-      // Non-prerelease versions are always reasonable, and if we are OK with
-      // using RCs all the time, then they are reasonable too.
-      if (!/-/.test(candidateUV.version) ||
-          resolveContext.useRCsOK)
-        return true;
-
-      // Is it a pre-release version that was explicitly mentioned at the top
-      // level?
-      if (_.has(resolveContext.topLevelPrereleases, self.name) &&
-          _.has(resolveContext.topLevelPrereleases[self.name],
-                candidateUV.version)) {
-        return true;
-      }
-
-      // Otherwise, not this pre-release!
-      return false;
-    }
-
-    if (currConstraint.type === "exactly") {
-      return currConstraint.version === candidateUV.version;
-    }
-
-    if (currConstraint.type !== "compatible-with") {
-      throw Error("Unknown constraint type: " + currConstraint.type);
-    }
-
-    // If you're not asking for a pre-release (and you are not in pre-releases-OK
-    // mode), you'll only get it if it was a top level explicit mention (eg, in
-    // the release).
-    if (!/-/.test(currConstraint.version) &&
-        /-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
-      if (!_.has(resolveContext.topLevelPrereleases, self.name) ||
-          !_.has(resolveContext.topLevelPrereleases[self.name],
-                 candidateUV.version)) {
+    if (currConstraint.type === "any-reasonable") {
+      return ! prereleaseNeedingLicense;
+    } else if (currConstraint.type === "exactly") {
+      return (currConstraint.version === candidateUV.version);
+    } else if (currConstraint.type === 'compatible-with') {
+      if (prereleaseNeedingLicense && ! /-/.test(currConstraint.version)) {
         return false;
       }
+
+      // If the candidate version is less than the version named in the
+      // constraint, we are not satisfied.
+      if (PackageVersion.lessThan(candidateUV.version, currConstraint.version)) {
+        return false;
+      }
+
+      // To be compatible, the two versions must have the same major version
+      // number.
+      if (candidateUV.majorVersion !==
+          PackageVersion.majorVersion(currConstraint.version)) {
+        return false;
+      }
+
+      return true;
+    } else {
+      throw Error("Unknown constraint type: " + currConstraint.type);
     }
-
-    // If the candidate version is less than the version named in the constraint,
-    // we are not satisfied.
-    if (PackageVersion.lessThan(candidateUV.version, currConstraint.version))
-      return false;
-
-    // To be compatible, the two versions must have the same major version
-    // number.
-    return candidateUV.majorVersion ===
-      PackageVersion.majorVersion(currConstraint.version);
   });
-
 };
 
 // An object that records the general context of a resolve call. It can be
