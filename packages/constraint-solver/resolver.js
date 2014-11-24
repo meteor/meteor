@@ -378,8 +378,6 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
     // the release).
     if (!/-/.test(currConstraint.version) &&
         /-/.test(candidateUV.version) && !resolveContext.useRCsOK) {
-      if (currConstraint.version === candidateUV.version)
-        return true;
       if (!_.has(resolveContext.topLevelPrereleases, self.name) ||
           !_.has(resolveContext.topLevelPrereleases[self.name],
                  candidateUV.version)) {
