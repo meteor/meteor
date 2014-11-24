@@ -51,7 +51,7 @@ var LocalCatalog = function (options) {
   // layout of where packages live counts as a non-client-only change.)
   self.packageLocationWatchSet = new watch.WatchSet;
 
-  self.nextVersionId = 1;
+  self._nextId = 1;
 };
 
 _.extend(LocalCatalog.prototype, {
@@ -292,12 +292,13 @@ _.extend(LocalCatalog.prototype, {
         self.packages[name] = {
           packageSource: packageSource,
           packageRecord: {
+            _id: "PID" + self._nextId++,
             name: name,
             maintainers: null,
             lastUpdated: null
           },
           versionRecord: {
-            _id: "VID" + self.nextVersionId++,
+            _id: "VID" + self._nextId++,
             packageName: name,
             testName: packageSource.testName,
             version: packageSource.version,

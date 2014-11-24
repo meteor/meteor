@@ -229,11 +229,12 @@ _.extend(exports, {
     return prefix + ".data.db";
   },
 
-  getPackageStorage: function (tropo) {
+  getPackageStorage: function (options) {
     var self = this;
-    tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v2.0.1",
-                     self.getLocalPackageCacheFilename());
+    options = options || {};
+    var root = options.root || tropohouse.default.root;
+    return path.join(root, "package-metadata", "v2.0.1",
+                     self.getLocalPackageCacheFilename(options.serverUrl));
   },
 
   getIsopacketRoot: function () {

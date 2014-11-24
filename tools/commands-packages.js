@@ -2291,7 +2291,9 @@ main.registerCommand({
     // confirmed that the "-wal" file (which could contain extra log entries
     // that haven't been flushed to the main file yet) doesn't exist, so we
     // don't have to copy it.
-    files.copyFile(tmpDataFile, config.getPackageStorage(tmpTropo));
+    files.copyFile(tmpDataFile, config.getPackageStorage({
+      root: tmpTropo.root
+    }));
 
     // Create the top-level 'meteor' symlink, which links to the latest tool's
     // meteor shell script.

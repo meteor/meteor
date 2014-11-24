@@ -637,8 +637,10 @@ selftest.define("update server package data unit test",
   var rC = require('../catalog-remote.js');
   var config = require('../config.js');
   var packageStorage = new rC.RemoteCatalog();
-  var packageStorageFile =
-    config.getPackageStorage({root: packageStorageFileDir});
+  var packageStorageFile = config.getPackageStorage({
+    root: packageStorageFileDir,
+    serverUrl: s.env.METEOR_PACKAGE_SERVER_URL
+  });
   packageStorage.initialize({
     packageStorage : packageStorageFile,
     // Don't let this catalog refresh: we do that manually, and in any case the

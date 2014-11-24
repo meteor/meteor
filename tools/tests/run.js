@@ -163,20 +163,6 @@ selftest.define("run --once", function () {
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
 
-  // running a different program
-  run = s.run("--once", "--program", "other");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(8);
-  run.match("other program\n");
-  run.expectExit(44);
-
-  // bad program name
-  run = s.run("--once", "--program", "xyzzy");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
-  run.match("'xyzzy' not found");
-  run.expectExit(254);
-
   // Try it with a real Mongo. Make sure that it actually starts one.
   s = new Sandbox;
   s.createApp("onceapp", "once");
@@ -243,15 +229,11 @@ selftest.define("update during run", ["checkout"], function () {
   s.createApp("myapp", "packageless");
   s.cd("myapp");
 
-  // This makes packages not depend on meteor (specifically, makes our empty
-  // control program not depend on meteor).
-  s.set("NO_METEOR_PACKAGE", "t");
-
   // If the app version changes, we exit with an error message.
   s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('localhost:3000');
   s.write('.meteor/release', 'METEOR@v2');
   run.matchErr('to Meteor v2 from Meteor v1');
