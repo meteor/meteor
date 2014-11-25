@@ -1301,7 +1301,3 @@ commandName + ": You're not in a Meteor project directory.\n" +
     throw new Error("command returned non-number?");
   process.exit(ret);
 }).run();
-
-// XXX #3006: More things to clean up:
-//  - remaining references to PackageLoader
-//  - remaining references to catalog.complete
