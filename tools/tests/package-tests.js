@@ -311,7 +311,7 @@ selftest.define("add packages to app", ["net"], function () {
                 ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
-  // run.match(" added");  // XXX #3006 show package changes
+  // run.match(" added");  // XXX #3006 show package changes #ShowPackageChanges
   run.match("depends-on-plugin");
   run.expectExit(0);
 
@@ -332,8 +332,8 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
-  // run.match("removed contains-plugin");  // XXX #3006 show package changes
-  // run.match("removed depends-on-plugin");  // XXX #3006 show package changes
+  // run.match("removed contains-plugin");  // XXX #3006 show package changes #ShowPackageChanges
+  // run.match("removed depends-on-plugin");  // XXX #3006 show package changes #ShowPackageChanges
   run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
@@ -383,7 +383,7 @@ selftest.define("add packages client archs", function (options) {
     s.set("METEOR_OFFLINE_CATALOG", "t");
 
     var outerRun = s.run("add", "say-something-client-targets");
-    // outerRun.match("added");  // XXX #3006 re-add package changes
+    // outerRun.match("added");  // XXX #3006 re-add package changes #ShowPackageChanges
     outerRun.expectExit(0);
     checkPackages(s,
                   ["meteor-platform", "say-something-client-targets"]);

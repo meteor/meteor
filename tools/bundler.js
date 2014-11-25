@@ -2003,10 +2003,6 @@ exports.bundle = function (options) {
       return server;
     };
 
-    // XXX #3006 We used to look for a no-default-targets file here.
-    //           Current Galaxy plans don't require this feature.
-    //           Check to make sure that's OK before merging.
-
     // Create a Isopack object that represents the app
     var packageSource = new PackageSource(projectContext.packageMap.catalog);
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
@@ -2028,10 +2024,6 @@ exports.bundle = function (options) {
       var server = makeServerTarget(app, clientTargets);
       targets.server = server;
     }
-
-    // XXX #3006 We used to look for more targets in a 'programs' subdirectory
-    //           here.  Current Galaxy plans don't require this feature.
-    //           Check to make sure that's OK before merging.
 
     // Create a "control program". This is required for an old version of
     // Galaxy.

@@ -338,7 +338,6 @@ main.registerCommand({
 });
 
 
-// XXX #3006 QA publish-for-arch when run from a release.
 main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
@@ -1619,7 +1618,7 @@ var maybeUpdateRelease = function (options) {
   // Write the new release to .meteor/release.
   projectContext.releaseFile.write(solutionReleaseName);
 
-  // XXX #3006 show package changes
+  // XXX #3006 #ShowPackageChanges
 
   Console.info(path.basename(options.appDir) + ": updated to " +
                projectContext.releaseFile.displayReleaseName + ".");
@@ -1733,7 +1732,7 @@ main.registerCommand({
   });
 
   // XXX #3006 show package changes, including this "not in the project" message
-  // and "latest compatible versions" message.
+  // and "latest compatible versions" message. #ShowPackageChanges
   // // Check that every requested package is actually used by the project, and
   // // print an error if they are not. We don't check this on the original
   // // versions because it could be out of date to begin with (ex: if you edited
@@ -1949,7 +1948,7 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX #3006 showPackageChanges!
+  // XXX #3006 #ShowPackageChanges
 
   _.each(infoMessages, function (message) {
     Console.info(message);

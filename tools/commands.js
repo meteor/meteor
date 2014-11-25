@@ -566,7 +566,7 @@ main.registerCommand({
   // We are actually working with a new meteor project at this point, so
   // set up its context.
   // XXX #3006 Make sure that when we reimplement showPackageChanges, they
-  // don't show here.
+  // don't show here.  #ShowPackageChanges
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: appPath,
     // Write .meteor/versions even if --release is specified.
