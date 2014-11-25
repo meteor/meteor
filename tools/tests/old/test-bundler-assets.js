@@ -7,7 +7,6 @@ var files = require('../../files.js');
 var bundler = require('../../bundler.js');
 var isopackets = require("../../isopackets.js");
 var release = require('../../release.js');
-var project = require('../../project.js');
 var catalog = require('../../catalog.js');
 var buildmessage = require('../../buildmessage.js');
 var projectContextModule = require('../../project-context.js');
@@ -131,7 +130,7 @@ var runTest = function () {
     var fut = new Future();
     // use a non-default port so we don't fail if someone is running an app now
     var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
-      cwd: path.join(__dirname, "app-with-private"),
+      cwd: projectContext.projectDir,
       stdio: 'inherit'
     });
     proc.on("exit", function (code) {
