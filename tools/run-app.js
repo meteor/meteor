@@ -496,18 +496,6 @@ _.extend(AppRunner.prototype, {
     bundleResult = bundleResultOrRunResult.bundleResult;
     firstRun = false;
 
-    var plugins = cordova.getCordovaDependenciesFromStar(
-      bundleResult.starManifest);
-
-    if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
-      return {
-        outcome: 'outdated-cordova-plugins'
-      };
-    }
-    // XXX #3006 This is racy --- we should get this from the pre-runner build,
-    // not from the first runner build.
-    self.cordovaPlugins = plugins;
-
     var platforms = self.projectContext.platformList.getCordovaPlatforms();
     platforms.sort();
     if (self.cordovaPlatforms &&
@@ -519,6 +507,18 @@ _.extend(AppRunner.prototype, {
     // XXX #3006 This is racy --- we should get this from the pre-runner build,
     // not from the first runner build.
     self.cordovaPlatforms = platforms;
+
+    var plugins = cordova.getCordovaDependenciesFromStar(
+      bundleResult.starManifest);
+
+    if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
+      return {
+        outcome: 'outdated-cordova-plugins'
+      };
+    }
+    // XXX #3006 This is racy --- we should get this from the pre-runner build,
+    // not from the first runner build.
+    self.cordovaPlugins = plugins;
 
     var serverWatchSet = bundleResult.serverWatchSet;
 
