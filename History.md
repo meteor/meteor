@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Rename package.js to meteor-package.js to avoid conflicts.
+
 * Spacebars: Allow curly braces to be escaped, with special
   sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
 

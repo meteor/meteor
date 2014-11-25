@@ -598,9 +598,9 @@ Publish a new version of a package to the package server.
 Usage: meteor publish [--create]
 
 Publishes a new version of a local package to the package server. Must be run
-from the directory containing the package. Reads the package.js file for version
-information, builds the package and sends both the package source and the built
-version of the package to the package server.
+from the directory containing the package. Reads the meteor-package.js file for
+version information, builds the package and sends both the package source and the
+built version of the package to the package server.
 
 This will only create one build of the package. If your package has multiple
 builds for different OS architectures, it will create a build for this machine's

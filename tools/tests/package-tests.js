@@ -204,7 +204,7 @@ selftest.define("change packages during hot code push", [], function () {
   // package2.js contains an onUse call that tells it to use accounts-base (a
   // core package that is not already included in the app)
   s.cp('packages/contains-plugin/package2.js',
-         'packages/contains-plugin/package.js');
+         'packages/contains-plugin/meteor-package.js');
   run.waitSecs(2);
   run.match("edit");
   run.match("foobar!");
@@ -217,7 +217,7 @@ selftest.define("change packages during hot code push", [], function () {
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
-  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
+  s.cp('programs/empty/package2.js', 'programs/empty/meteor-package.js');
 
   run.waitSecs(2);
   run.match("restarted");
@@ -247,16 +247,16 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("running at");
   run.match("localhost");
 
-  // How about breaking and fixing a package.js?
+  // How about breaking and fixing a meteor-package.js?
   s.cd("packages/shout-something", function () {
-    var packageJs = s.read("package.js");
-    s.write("package.js", "]");
+    var packageJs = s.read("meteor-package.js");
+    s.write("meteor-package.js", "]");
     run.waitSecs(3);
     run.match("=> Errors prevented startup");
-    run.match("package.js:1:1: Unexpected token ]");
+    run.match("meteor-package.js:1:1: Unexpected token ]");
     run.match("Waiting for file change");
 
-    s.write("package.js", packageJs);
+    s.write("meteor-package.js", packageJs);
     run.waitSecs(3);
     run.match("restarting");
     run.match("restarted");
@@ -352,7 +352,7 @@ selftest.define("add packages to app", ["net"], function () {
 
   // Add packages to sub-programs of an app. Make sure that the correct change
   // is propagated to its versions file.
-  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
+  s.cp('programs/empty/package2.js', 'programs/empty/meteor-package.js');
 
   // Don't add the file to packages.
   run = s.run("list");
@@ -504,11 +504,11 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   var newPack = username + ":" + packageName + "-b";
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
-    var packOpen = s.read("package.js");
+    var packOpen = s.read("meteor-package.js");
     packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
       "api.versionsFrom(\"" + releaseTrack + "@0.9\");\n" +
       "api.use(\"" + fullPackageName + "\"); });";
-    s.write("package.js", packOpen);
+    s.write("meteor-package.js", packOpen);
   });
 
   // Clear the local data cache by deleting the data.json file that we are
@@ -600,11 +600,11 @@ selftest.define("release track defaults to METEOR",
   var newPack = fullPackageName;
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
-    var packOpen = s.read("package.js");
+    var packOpen = s.read("meteor-package.js");
     packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
       "api.versionsFrom(\"" + releaseVersion + "\");\n" +
       "api.use(\"" + fullPackageName + "\"); });";
-    s.write("package.js", packOpen);
+    s.write("meteor-package.js", packOpen);
   });
 
   // Try to publish the package. The error message should demonstrate
@@ -797,7 +797,7 @@ selftest.define("talk to package server with expired or no accounts token",
 // command to fail because the currently logged-in user is not an
 // authorized maintainer of the package.
 var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
-  var packageJs = s.read("package.js");
+  var packageJs = s.read("meteor-package.js");
   // XXX Hack
   var versionMatch = packageJs.match(/version: \'(\d\.\d\.\d)\'/);
   if (! versionMatch) {
@@ -807,7 +807,7 @@ var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   var versionParts = version.split(".");
   versionParts[0] = parseInt(versionParts[0]) + 1;
   packageJs = packageJs.replace(version, versionParts.join("."));
-  s.write("package.js", packageJs);
+  s.write("meteor-package.js", packageJs);
 
   var run = s.run("publish");
   run.waitSecs(60);
@@ -898,14 +898,14 @@ selftest.define("add package with no builds", ["net", "test-package-server"], fu
 
   s.cd(fullPackageName, function () {
     // Add a binary dependency.
-    var packageJs = s.read("package.js");
+    var packageJs = s.read("meteor-package.js");
     // XXX HACK: prepend Npm.depends to the first 'api.addFiles'
     packageJs = packageJs.replace(
       "api.addFiles",
       "Npm.depends({ bcrypt: '0.7.7' });\n  api.addFiles"
     );
 
-    s.write("package.js", packageJs);
+    s.write("meteor-package.js", packageJs);
 
     run = s.run("publish", "--create");
     run.waitSecs(60);
@@ -933,9 +933,9 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
   run.expectExit(0);
 
   s.cd(fullPackageName);
-  var packageJs = s.read("package.js");
+  var packageJs = s.read("meteor-package.js");
   if (! packageJs.match(/api.versionsFrom\('v1'\);/)) {
-    selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
+    selftest.fail("meteor-package.js missing correct 'api.versionsFrom':\n" +
                   packageJs);
   }
 });

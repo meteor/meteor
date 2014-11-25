@@ -24,11 +24,11 @@ selftest.define("publish-and-search",
   var noPack = fullPackageName + "2";
   s.createPackage(noPack, "package-of-two-versions");
   s.cd(noPack, function() {
-    var packOpen = s.read("package.js");
+    var packOpen = s.read("meteor-package.js");
     packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
       "api.versionsFrom(\"THIS-RELEASE-DOES-NOT-EXIST@0.9\");\n" +
       " });";
-    s.write("package.js", packOpen);
+    s.write("meteor-package.js", packOpen);
     run = s.run("publish", "--create");
     run.waitSecs(20);
     run.matchErr("Unknown release");
@@ -43,10 +43,10 @@ selftest.define("publish-and-search",
   s.cd(fullPackageName);
 
   // set a github URL in the package
-  var packageJsContents = s.read("package.js");
+  var packageJsContents = s.read("meteor-package.js");
   var newPackageJsContents = packageJsContents.replace(
       /git: \'.*\'/, "git: \'" + githubUrl + "\'");
-  s.write("package.js", newPackageJsContents);
+  s.write("meteor-package.js", newPackageJsContents);
 
   run = s.run("publish");
   run.waitSecs(15);
@@ -79,7 +79,7 @@ selftest.define("publish-and-search",
 
   s.createPackage(fullPackageName, "package-of-two-versions");
   s.cd(fullPackageName, function() {
-    s.write("package.js", minPack);
+    s.write("meteor-package.js", minPack);
     // If we manage to publish without the --create flag, that's probably an
     // indicator that we are reading the directory instead of the override, or,
     // in any case, that we can't rely on the rest of this test working.
@@ -181,7 +181,7 @@ selftest.define("list-with-a-new-version",
   });
 
   // Change the package to increment version and publish the new package.
-  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
+  s.cp(fullPackageName+'/package2.js', fullPackageName+'/meteor-package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -234,7 +234,7 @@ selftest.define("list-with-a-new-version",
   });
 
   // Now publish an 1.0.4-rc4.
-  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
+  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/meteor-package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -310,7 +310,7 @@ selftest.define("do-not-update-to-rcs",
   });
 
   // Change the package to increment version and publish the new package.
-  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
+  s.cp(fullPackageName+'/package2.js', fullPackageName+'/meteor-package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -319,7 +319,7 @@ selftest.define("do-not-update-to-rcs",
   });
 
   // Now publish an 1.0.4-rc.3.
-  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
+  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/meteor-package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -382,7 +382,7 @@ selftest.define("do-not-update-to-rcs",
   });
 
   // Now publish an 1.0.4-rc.4.
-  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/package.js');
+  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/meteor-package.js');
   s.cd(fullPackageName, function () {
     run = s.run("publish");
     run.waitSecs(15);
@@ -429,7 +429,7 @@ selftest.define("package-depends-on-either-version",
 
   // Then, we publish fullPackageNameDep at 2.0.
   s.cd(fullPackageNameDep, function() {
-    s.cp("package3.js", "package.js");
+    s.cp("package3.js", "meteor-package.js");
     run = s.run("publish");
     run.waitSecs(20);
     run.match("Done");
@@ -440,12 +440,12 @@ selftest.define("package-depends-on-either-version",
   var fullPackageAnother = username + ":" + another;
   s.createPackage(fullPackageAnother, "package-of-two-versions");
   s.cd(fullPackageAnother, function() {
-    var packOpen = s.read("package.js");
+    var packOpen = s.read("meteor-package.js");
    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
       "api.use(\"" + fullPackageNameDep +
       "@1.0.0 || 2.0.0\");\n" +
       " });";
-    s.write("package.js", packOpen);
+    s.write("meteor-package.js", packOpen);
     run = s.run("publish", "--create");
     run.waitSecs(20);
     run.match("Done");

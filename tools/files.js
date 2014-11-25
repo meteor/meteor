@@ -88,7 +88,8 @@ files.findAppDir = function (filepath) {
 files.findPackageDir = function (filepath) {
   var isPackageDir = function (filepath) {
     try {
-      return fs.statSync(path.join(filepath, 'package.js')).isFile();
+      return fs.statSync(path.join(filepath, 'meteor-package.js')).isFile() ||
+        fs.statSync(path.join(filepath, 'package.js')).isFile();  // TODO deprecate
     } catch (e) {
       return false;
     }

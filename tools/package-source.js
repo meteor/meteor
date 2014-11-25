@@ -173,7 +173,7 @@ var SourceArch = function (pkg, options) {
   // Files and directories that we want to monitor for changes in
   // development mode, as a watch.WatchSet. In the latest refactoring
   // of the code, this does not include source files or directories,
-  // but only control files such as package.js and .meteor/packages,
+  // but only control files such as meteor-package.js and .meteor/packages,
   // since the rest are not determined until compile time.
   self.watchSet = options.watchSet || new watch.WatchSet;
 
@@ -232,7 +232,7 @@ var PackageSource = function (catalog) {
   self.pluginInfo = {};
 
   // Analogous to watchSet in SourceArch but for plugins. At this
-  // stage will typically contain just 'package.js'.
+  // stage will typically contain just 'meteor-package.js'.
   self.pluginWatchSet = new watch.WatchSet;
 
   // npm packages used by this package (on os.* architectures only).
@@ -262,8 +262,8 @@ var PackageSource = function (catalog) {
   self.dependencyVersions = {dependencies: {}, pluginDependencies: {}};
 
   // If this package has a corresponding test package (for example,
-  // underscore-test), defined in the same package.js file, store its value
-  // here.
+  // underscore-test), defined in the same meteor-package.js file, store its
+  // value here.
   self.testName = null;
 
   // Test packages are dealt with differently in the linker (and not published
@@ -291,8 +291,8 @@ var PackageSource = function (catalog) {
   // If this is true, the package source comes from the package server, and
   // should be treated as immutable. The only reason that we have it is so we
   // can build it, and we should expect to use exactly the same inputs
-  // (package.js and version lock file) as we did when it was created. If we
-  // ever need to modify it, we should throw instead.
+  // (meteor-package.js and version lock file) as we did when it was created.
+  // If we ever need to modify it, we should throw instead.
   self.immutable = false;
 
   // Is this a core package? Core packages don't record version files, because
@@ -306,7 +306,7 @@ var PackageSource = function (catalog) {
   // Alternatively, we can also specify noVersionFile directly. Useful for not
   // recording version files for js images of plugins, since those go into the
   // overall package versions file (if one exists). In the future, we can make
-  // this option transparent to the user in package.js.
+  // this option transparent to the user in meteor-package.js.
   self.noVersionFile = false;
 
   // The list of archs that we can target. Doesn't include 'web' because
@@ -396,10 +396,10 @@ _.extend(PackageSource.prototype, {
     self.noVersionFile = options.noVersionFile;
   },
 
-  // Initialize a PackageSource from a package.js-style package directory. Uses
-  // the name field provided and the name/test fields in the package.js file to
-  // figre out if this is a test package (load from on_test) or a use package
-  // (load from on_use).
+  // Initialize a PackageSource from a meteor-package.js-style package directory.
+  // Uses the name field provided and the name/test fields in the
+  // meteor-package.js file to figure out if this is a test package (load from
+  // onTest) or a use package (load from onUse).
   //
   // name: name of the package.
   // dir: location of directory on disk.
@@ -420,8 +420,8 @@ _.extend(PackageSource.prototype, {
     options = options || {};
 
     // If we know what package we are initializing, we pass in a
-    // name. Otherwise, we are intializing the base package specified by 'name:'
-    // field in Package.Describe. In that case, it is clearly not a test
+    // name. Otherwise, we are initializing the base package specified by the
+    // 'name:' field in Package.describe. In that case, it is clearly not a test
     // package. (Though we could be initializing a specific package without it
     // being a test, for a variety of reasons).
     if (options.name) {
@@ -446,27 +446,27 @@ _.extend(PackageSource.prototype, {
     var npmDependencies = null;
     var cordovaDependencies = null;
 
-    var packageJsPath = path.join(self.sourceRoot, 'package.js');
+    var packageJsPath = path.join(self.sourceRoot, 'meteor-package.js');
     var code = fs.readFileSync(packageJsPath);
     var packageJsHash = watch.sha1(code);
 
     var releaseRecords = [];
     var hasTests = false;
 
-    // Any package that depends on us needs to be rebuilt if our package.js file
-    // changes, because a change to package.js might add or remove a plugin,
-    // which could change a file from being handled by extension vs treated as
-    // an asset.
+    // Any package that depends on us needs to be rebuilt if our meteor-package.js
+    // file changes, because a change to meteor-package.js might add or remove a
+    // plugin, which could change a file from being handled by extension vs.
+    // treated as an asset.
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
-    // == 'Package' object visible in package.js ==
+    // == 'Package' object visible in meteor-package.js ==
 
     /**
      * @global
      * @name  Package
-     * @summary The Package object in package.js
+     * @summary The Package object in meteor-package.js
      * @namespace
-     * @locus package.js
+     * @locus meteor-package.js
      */
     var Package = {
       // Set package metadata. Options:
@@ -478,7 +478,7 @@ _.extend(PackageSource.prototype, {
 
       /**
        * @summary Provide basic package information.
-       * @locus package.js
+       * @locus meteor-package.js
        * @memberOf Package
        * @param {Object} options
        * @param {String} options.summary A concise 1-2 sentence description of
@@ -525,7 +525,7 @@ _.extend(PackageSource.prototype, {
 
       /**
        * @summary Define package dependencies and expose package methods.
-       * @locus package.js
+       * @locus meteor-package.js
        * @memberOf Package
        * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
        */
@@ -550,7 +550,7 @@ _.extend(PackageSource.prototype, {
 
       /**
        * @summary Define dependencies and expose package methods for unit tests.
-       * @locus package.js
+       * @locus meteor-package.js
        * @memberOf Package
        * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
        */
@@ -619,7 +619,7 @@ _.extend(PackageSource.prototype, {
        * are NPM package names, and the keys are the version numbers of
        * required NPM packages, just like in [Npm.depends](#Npm-depends).
        * @memberOf Package
-       * @locus package.js
+       * @locus meteor-package.js
        */
       registerBuildPlugin: function (options) {
         // Tests don't have plugins; plugins initialized in the control file
@@ -673,12 +673,12 @@ _.extend(PackageSource.prototype, {
       }
     };
 
-    // == 'Npm' object visible in package.js ==
+    // == 'Npm' object visible in meteor-package.js ==
 
     /**
      * @namespace Npm
      * @global
-     * @summary The Npm object in package.js and package source files.
+     * @summary The Npm object in meteor-package.js and package source files.
      */
     var Npm = {
       /**
@@ -691,7 +691,7 @@ _.extend(PackageSource.prototype, {
        * ```js
        * Npm.depends({moment: "2.8.3"});
        * ```
-       * @locus package.js
+       * @locus meteor-package.js
        * @memberOf  Npm
        */
       depends: function (_npmDependencies) {
@@ -770,12 +770,12 @@ _.extend(PackageSource.prototype, {
       }
     };
 
-    // == 'Cordova' object visible in package.js ==
+    // == 'Cordova' object visible in meteor-package.js ==
 
     /**
      * @namespace Cordova
      * @global
-     * @summary The Cordova object in package.js.
+     * @summary The Cordova object in meteor-package.js.
      */
     var Cordova = {
       /**
@@ -808,7 +808,7 @@ _.extend(PackageSource.prototype, {
        * });
        * ```
        *
-       * @locus package.js
+       * @locus meteor-package.js
        * @memberOf  Cordova
        */
       depends: function (_cordovaDependencies) {
@@ -843,12 +843,12 @@ _.extend(PackageSource.prototype, {
         }
 
         cordovaDependencies = _cordovaDependencies;
-      },
+      }
     };
 
     try {
       files.runJavaScript(code.toString('utf8'), {
-        filename: 'package.js',
+        filename: 'meteor-package.js',
         symbols: { Package: Package, Npm: Npm, Cordova: Cordova }
       });
     } catch (e) {
@@ -857,7 +857,7 @@ _.extend(PackageSource.prototype, {
       buildmessage.exception(e);
 
       // Could be a syntax error or an exception. Recover by
-      // continuing as if package.js is empty. (Pressing on with
+      // continuing as if meteor-package.js is empty. (Pressing on with
       // whatever handlers were registered before the exception turns
       // out to feel pretty disconcerting -- definitely violates the
       // principle of least surprise.) Leave the metadata if we have
@@ -1076,7 +1076,7 @@ _.extend(PackageSource.prototype, {
          * @memberOf PackageAPI
          * @instance
          * @summary Depend on package `packagename`.
-         * @locus package.js
+         * @locus meteor-package.js
          * @param {String|String[]} packageNames Packages being depended on.
          * Package names may be suffixed with an @version tag.
          *
@@ -1162,7 +1162,7 @@ _.extend(PackageSource.prototype, {
         /**
          * @memberOf PackageAPI
          * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
-         * @locus package.js
+         * @locus meteor-package.js
          * @instance
          * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
          */
@@ -1213,7 +1213,7 @@ _.extend(PackageSource.prototype, {
          * @memberOf PackageAPI
          * @instance
          * @summary Specify the source code for your package.
-         * @locus package.js
+         * @locus meteor-package.js
          * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
          * @param {String} [architecture] If you only want to export the file on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the file is used with.
          */
@@ -1239,7 +1239,7 @@ _.extend(PackageSource.prototype, {
          * @memberOf PackageAPI
          * @instance
          * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorRelease`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you can write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you later write `api.use('jquery')`, it will be equivalent to `api.use('jquery@1.0.0')`. You may specify an array of multiple releases, in which case the default value for constraints will be the "or" of the versions from each release: `api.versionsFrom(['METEOR@0.9.0', 'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as `api.use('jquery@1.0.0 || 2.0.0')`.
-         * @locus package.js
+         * @locus meteor-package.js
          * @param {String | String[]} meteorRelease Specification of a release: track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the default release track `METEOR`.
          */
         versionsFrom: function (releases) {
@@ -1296,7 +1296,7 @@ _.extend(PackageSource.prototype, {
          * @memberOf PackageAPI
          * @instance
          * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
-         * @locus package.js
+         * @locus meteor-package.js
          * @param {String} exportedObject Name of the object.
          * @param {String} [architecture] If you only want to export the object on the server (or the client), you can pass in the second argument (e.g., 'server' or 'client') to specify what architecture the export is used with.
          */

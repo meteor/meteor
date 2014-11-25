@@ -1,13 +1,13 @@
 {{#template name="apiPackagejs"}}
 
-<h2 id="packagejs"><span>Package.js</span></h2>
+<h2 id="meteorpackagejs"><span>meteor-package.js</span></h2>
 
-{{#markdown}} A package is a directory containing a package.js file, which
+{{#markdown}} A package is a directory containing a `meteor-package.js` file, which
 contains roughly three major sections: a basic description, a package
 definition, and a test definition. By default, the directory name is the name of
 the package.
 
-The `package.js` file below is an example of how to use the packaging API. The
+The `meteor-package.js` file below is an example of how to use the packaging API. The
 rest of this section will explain the specific API commands in greater detail.
 
 
@@ -99,8 +99,8 @@ the package that you have just created. For example, if your package is the
 package.
 
 If you used `meteor create` to set up your package, Meteor will create the
-required scaffolding in `package.js`, and you'll only need to add unit test code
-in the `_test.js` file that was created.
+required scaffolding in `meteor-package.js`, and you'll only need to add unit test
+code in the `_test.js` file that was created.
 {{/markdown}}
 
 {{> autoApiBox "Package.onTest"}}
@@ -110,7 +110,7 @@ in the `_test.js` file that was created.
 
 {{#markdown}}
 Meteor packages can include NPM packages and Cordova plugins by using
-`Npm.depends` and `Cordova.depends` in the `package.js` file.
+`Npm.depends` and `Cordova.depends` in the `meteor-package.js` file.
 {{/markdown}}
 
 {{> autoApiBox "Npm.depends"}}

@@ -256,11 +256,11 @@ of features. You can also publish the packages and use them in multiple apps
 with `meteor add`.
 
 ```bash
-packages/apples/package.js     # files, dependencies, exports for apple feature
-packages/apples/<anything>.js  # file loading is controlled by package.js
+packages/apples/meteor-package.js   # files, dependencies, exports for apple feature
+packages/apples/<anything>.js       # file loading is controlled by meteor-package.js
 
-packages/oranges/package.js    # files, dependencies, exports for orange feature
-packages/oranges/<anything>.js # file loading is controlled by package.js
+packages/oranges/meteor-package.js  # files, dependencies, exports for orange feature
+packages/oranges/<anything>.js      # file loading is controlled by meteor-package.js
 ```
 
 {{/markdown}}
@@ -899,12 +899,12 @@ the `email` package requires a `MAIL_URL` environment variable.
 
   <h2 id="writingpackages">Writing packages</h2>
 
-Writing Meteor packages is easy. To initialize a meteor package, run
+Writing Meteor packages is easy. To initialize a Meteor package, run
 `meteor create --package username:packagename`, where `username` is your Meteor
 Developer username. This will create a package from scratch and prefill the
-directory with a package.js control file and some javascript. By default, Meteor
-will take the package name from the name of the directory that contains the
-package.js file.
+directory with a [`meteor-package.js`](#meteorpackagejs) control file and some
+JavaScript. By default, Meteor will take the package name from the name of the
+directory that contains the `meteor-package.js` file.
 
 Meteor promises repeatable builds for both packages and applications. This means
 that, if you built your package on a machine, then checked the code into a
@@ -933,7 +933,7 @@ number has three parts separated by dots: major version, minor version and patch
 Additionally, because some meteor packages wrap external libraries,
 Meteor supports the convention of using `_` to denote a wrap number.
 
-You can read more about [`package.js`](#packagejs) files in the API
+You can read more about [`meteor-package.js`](#meteorpackagejs) files in the API
 section.
 
 A word on testing: since testing is an important part of the development process,
@@ -947,8 +947,8 @@ test and run your app as usual. Meteor will detect and respond to changes to
 your local package, just as it does to your app files.
 
 * Unit tests are run with the command [`meteor test-packages
-package-name`](#meteortestpackages). As described in the [`package.js`](#packagejs)
-section, you can use the `package.js` file to specify where your unit tests are
+package-name`](#meteortestpackages). As described in the [`meteor-package.js`](#meteorpackagejs)
+section, you can use the `meteor-package.js` file to specify where your unit tests are
 located. If you have a repository that contains only the package source, you can
 test your package by specifying the path to the package directory (which must
 contain a slash), such as `meteor test-packages ./`.
