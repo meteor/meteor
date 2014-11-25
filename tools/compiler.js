@@ -355,40 +355,43 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   activePluginPackages = _.uniq(activePluginPackages);
 
   // *** Assemble the list of source file handlers from the plugins
-  var allHandlers = {};
+  var allHandlersWithPkgs = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   sourceExtensions['js'] = false;
-  allHandlers['js'] = function (compileStep) {
-    // This is a hardcoded handler for *.js files. Since plugins
-    // are written in JavaScript we have to start somewhere.
+  allHandlersWithPkgs['js'] = {
+    pkg: { /* native handler */ },
+    handler: function (compileStep) {
+      // This is a hardcoded handler for *.js files. Since plugins
+      // are written in JavaScript we have to start somewhere.
 
-    var options = {
-      data: compileStep.read().toString('utf8'),
-      path: compileStep.inputPath,
-      sourcePath: compileStep.inputPath
-    };
+      var options = {
+        data: compileStep.read().toString('utf8'),
+        path: compileStep.inputPath,
+        sourcePath: compileStep.inputPath
+      };
 
-    if (compileStep.fileOptions.hasOwnProperty("bare")) {
-      options.bare = compileStep.fileOptions.bare;
-    } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
-      // XXX eventually get rid of backward-compatibility "raw" name
-      // XXX COMPAT WITH 0.6.4
-      options.bare = compileStep.fileOptions.raw;
+      if (compileStep.fileOptions.hasOwnProperty("bare")) {
+        options.bare = compileStep.fileOptions.bare;
+      } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
+        // XXX eventually get rid of backward-compatibility "raw" name
+        // XXX COMPAT WITH 0.6.4
+        options.bare = compileStep.fileOptions.raw;
+      }
+
+      compileStep.addJavaScript(options);
     }
-
-    compileStep.addJavaScript(options);
   };
 
   _.each(activePluginPackages, function (otherPkg) {
     _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
       // XXX comparing function text here seems wrong.
-      if (_.has(allHandlers, ext) &&
-          allHandlers[ext].toString() !== sourceHandler.handler.toString()) {
+      if (_.has(allHandlersWithPkgs, ext) &&
+          allHandlersWithPkgs[ext].handler.toString() !== sourceHandler.handler.toString()) {
         buildmessage.error(
           "conflict: two packages included in " +
             (inputSourceArch.pkg.name || "the app") + ", " +
-            (allHandlers[ext].pkg.name || "the app") + " and " +
+            (allHandlersWithPkgs[ext].pkg.name || "the app") + " and " +
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
         // Recover by just going with the first handler we saw
@@ -400,9 +403,17 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
           !archinfo.matches(inputSourceArch.arch, sourceHandler.archMatching)) {
         return;
       }
-      allHandlers[ext] = sourceHandler.handler;
+      allHandlersWithPkgs[ext] = {
+        pkg: otherPkg,
+        handler: sourceHandler.handler
+      };
       sourceExtensions[ext] = !!sourceHandler.isTemplate;
     });
+  });
+
+  var allHandlers = {};
+  _.each(_.keys(allHandlersWithPkgs), function (key) {
+    allHandlers[key] = allHandlersWithPkgs[key].handler;
   });
 
   // *** Determine source files
