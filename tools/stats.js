@@ -117,7 +117,7 @@ var recordPackages = function (options) {
 };
 
 var logErrorIfInCheckout = function (err) {
-  if (files.inCheckout()) {
+  if (files.inCheckout() || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
     Console.stderr.write("Failed to record package usage.\n");
     Console.stderr.write(
       "(This error is hidden when you are not running Meteor from a checkout.)\n");
@@ -128,14 +128,13 @@ var logErrorIfInCheckout = function (err) {
 
 // Used in a test (and can only be used against the testing packages
 // server) to fetch one package stats entry for a given application.
-// XXX #3006 haven't looked at this test yet
-var getPackagesForAppIdInTest = function (currentProject) {
+var getPackagesForAppIdInTest = function (projectContext) {
   var conn = connectToPackagesStatsServer();
   var result;
   try {
     result = conn.call(
       "getPackagesForAppId",
-      currentProject.getAppIdentifier());
+      projectContext.appIdentifier);
     if (result && result.details) {
       result.details.packages = _.sortBy(result.details.packages, "name");
     }
