@@ -1552,7 +1552,12 @@ _.extend(PackageSource.prototype, {
         // special handling.
         var sourceDirectories = readAndWatchDirectory('', {
           include: [/\/$/],
-          exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
+          exclude: [/^packages\/$/, /^tests\/$/,
+                    // XXX We no longer actually have special handling
+                    //     for the programs subdirectory, but let's not
+                    //     suddenly start treating it as part of the main
+                    //     app program.
+                    /^programs\/$/,
                     /^public\/$/, /^private\/$/,
                     /^cordova-build-override\/$/,
                     otherUnibuildRegExp].concat(sourceExclude)

@@ -215,13 +215,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(10);
   run.match("restarted");
 
-  // Add packages to sub-programs of an app. Make sure that the correct change
-  // is propagated to its versions file.
-  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
-
-  run.waitSecs(2);
-  run.match("restarted");
-
   // Switch back to say-something for a moment.
   s.write(".meteor/packages", "meteor-platform \n say-something");
   run.waitSecs(3);
@@ -349,21 +342,6 @@ selftest.define("add packages to app", ["net"], function () {
   run = s.run("list");
   run.match("accounts-base");
   run.match("meteor-platform");
-
-  // Add packages to sub-programs of an app. Make sure that the correct change
-  // is propagated to its versions file.
-  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
-
-  // Don't add the file to packages.
-  run = s.run("list");
-  run.match("accounts-base");
-  run.match("meteor-platform");
-
-  // Do add the file to versions.
-  checkVersions(s,
-                ["accounts-base",  "depends-on-plugin",
-                 "meteor-platform",
-                 "contains-plugin"]);
 
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
