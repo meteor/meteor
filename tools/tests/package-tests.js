@@ -866,44 +866,19 @@ selftest.define("packages with organizations",
   changeVersionAndPublish(s, true /* expect authorization failure */);
 });
 
-selftest.define("add package with no builds", ["net", "test-package-server"], function () {
+selftest.define("add package with no builds", ["net"], function () {
   var s = new Sandbox();
-  testUtils.login(s, "test", "testtest");
-  var packageName = utils.randomToken();
-  var fullPackageName = "test:" + packageName;
+  // This depends on glasser:binary-package-with-no-builds@1.0.0 existing with
+  // no published builds.
 
-  // Create and publish a package with a binary dependency.
-
-  var run = s.run("create", "--package", fullPackageName);
-  run.waitSecs(15);
-  run.expectExit(0);
-
-  s.cd(fullPackageName, function () {
-    // Add a binary dependency.
-    var packageJs = s.read("package.js");
-    // XXX HACK: prepend Npm.depends to the first 'api.addFiles'
-    packageJs = packageJs.replace(
-      "api.addFiles",
-      "Npm.depends({ bcrypt: '0.7.7' });\n  api.addFiles"
-    );
-
-    s.write("package.js", packageJs);
-
-    run = s.run("publish", "--create");
-    run.waitSecs(60);
-    run.expectExit(0);
-  });
-
-  s.createApp("myapp", "package-tests");
+  s.createApp("myapp", "empty");
   s.cd("myapp");
 
-  run = s.run("add", fullPackageName);
-  run.waitSecs(30);
-  run.matchErr("Package " + fullPackageName +
-               " has no compatible build");
+  var run = s.run("add", "glasser:binary-package-with-no-builds");
+  run.waitSecs(10);
+  run.matchErr("No compatible build found for " +
+               "glasser:binary-package-with-no-builds@1.0.0");
   run.expectExit(1);
-
-  testUtils.logout(s);
 });
 
 selftest.define("package skeleton creates correct versionsFrom", function () {

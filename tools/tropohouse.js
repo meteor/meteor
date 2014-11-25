@@ -336,7 +336,7 @@ _.extend(exports.Tropohouse.prototype, {
         } catch (e) {
           if (!e.noCompatibleBuildError)
             throw e;
-          buildmessage.exception(e);
+          buildmessage.error(e.message);
           return;
         }
         if (downloadCallback)
