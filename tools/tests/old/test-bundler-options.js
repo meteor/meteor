@@ -11,21 +11,15 @@ var buildmessage = require('../../buildmessage.js');
 var isopackets = require("../../isopackets.js");
 var projectContextModule = require('../../project-context.js');
 
-// an empty app. notably this app has no .meteor/release file.
-var emptyAppDir = path.join(__dirname, 'empty-app');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var makeProjectContext = function (appDir) {
-  if (! files.inCheckout()) {
-    throw Error("This old test doesn't support non-checkout");
-  }
-
-  var projectDir = files.mkdtemp("my-app");
-  files.cp_r(emptyAppDir, projectDir);
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-options");
+  files.cp_r(path.join(__dirname, appName), projectDir);
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
@@ -58,7 +52,8 @@ var runTest = function () {
       "utf8")).manifest;
   };
 
-  var projectContext = makeProjectContext(emptyAppDir);
+  // an empty app. notably this app has no .meteor/release file.
+  var projectContext = makeProjectContext('empty-app');
 
   console.log("basic version");
   assert.doesNotThrow(function () {
@@ -153,8 +148,11 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
 
+  release.setCurrent(release.load(null));
   isopackets.ensureIsopacketsLoadable();
 
   try {
