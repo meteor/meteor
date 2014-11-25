@@ -922,31 +922,12 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
   }
 });
 
-selftest.define("show unknown version of package", ["net", "test-package-server"], function () {
+selftest.define("show unknown version of package", function () {
   var s = new Sandbox();
-  var fullPackageName = "test:" + utils.randomToken();
 
-  var run = s.run("create", "--package", fullPackageName);
-  run.waitSecs(15);
-  run.expectExit(0);
-
-  testUtils.login(s, "test", "testtest");
-
-  s.cd(fullPackageName, function () {
-    run = s.run("publish", "--create");
-    run.waitSecs(60);
-    run.expectExit(0);
-  });
-
-  run = s.run("show", fullPackageName);
-  run.waitSecs(15);
-  run.match("Version 1.0.0");
-  run.expectExit(0);
-
-  run = s.run("show", fullPackageName + "@2.0.0");
-  run.waitSecs(15);
-  run.matchErr("2.0.0: unknown version of " + fullPackageName);
+  // This version doesn't exist and is unlikely to exist.
+  var run = s.run("show", "meteor-platform@0.123.456");
+  run.waitSecs(5);
+  run.matchErr("0.123.456: unknown version of meteor-platform");
   run.expectExit(1);
-
-  testUtils.logout(s);
 });
