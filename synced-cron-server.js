@@ -68,18 +68,33 @@ SyncedCron.add = function(entry) {
 }
 
 // Start processing added jobs
-SyncedCron.start = function() {
+SyncedCron.start = function(name) {
   var self = this;
 
   Meteor.startup(function() {
-    // Schedule each job with later.js
-    _.each(self._entries, function(entry, name) {
-      var schedule = entry.schedule(Later.parse);
-      entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
-
-      log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
-        + Later.schedule(schedule).next(1));
-    });
+    if (name) {
+      var entry = self._entries[name];
+      if (entry) {
+        var schedule = entry.schedule(Later.parse);
+        entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
+  
+        log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
+          + Later.schedule(schedule).next(1)); 
+      }
+      else {
+        log.warn('SyncedCron: couldn\'t find a job with name: ' + name);
+      }
+    }
+    else {
+      // Schedule each job with later.js
+      _.each(self._entries, function(entry, name) {
+        var schedule = entry.schedule(Later.parse);
+        entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
+  
+        log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
+          + Later.schedule(schedule).next(1));
+      });
+    }
   });
 }
 
