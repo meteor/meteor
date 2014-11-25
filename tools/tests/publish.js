@@ -50,8 +50,8 @@ selftest.define("publish-and-search",
 
   run = s.run("publish");
   run.waitSecs(15);
+  run.matchErr("There is no package named"); // need to pass --create
   run.expectExit(1);
-  run.matchErr("Publish failed"); // need to pass --create
 
   run = s.run("publish", "--create");
   run.waitSecs(15);
@@ -306,7 +306,7 @@ selftest.define("do-not-update-to-rcs",
     run = s.run("publish", "--create");
     run.waitSecs(120);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Change the package to increment version and publish the new package.
