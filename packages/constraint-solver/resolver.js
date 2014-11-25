@@ -316,17 +316,24 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 //    new PackageVersion.Constraint("packageA", "=2.1.0")
 // or:
 //    new PackageVersion.Constraint("pacakgeA@=2.1.0")
-ConstraintSolver.Constraint = function (name, versionString) {
+ConstraintSolver.Constraint = function (name, constraintString) {
   var self = this;
-  if (versionString) {
-    name = name + "@" + versionString;
+  if (constraintString) {
+    name = name + "@" + constraintString;
   }
 
   // See comment in UnitVersion constructor. We want to strip out build IDs
   // because the code they represent is considered equivalent.
-  _.extend(self, PackageVersion.parseConstraint(name, {
+  var parsed = PackageVersion.parseConstraint(name, {
     removeBuildIDs: true
-  }));
+  });
+
+  self.name = parsed.name;
+  self.constraintString = parsed.constraintString;
+  // The results of parsing are a disjunction (`||`) of simple
+  // constraints like `1.0.0` or `=1.0.1`, which have been parsed into
+  // objects with a `type` and `version` property.
+  self.disjunction = parsed.constraints;
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
@@ -364,32 +371,36 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
     }
   }
 
-  return _.some(self.constraints, function (currConstraint) {
-    if (currConstraint.type === "any-reasonable") {
+  return _.some(self.disjunction, function (simpleConstraint) {
+    var type = simpleConstraint.type;
+
+    if (type === "any-reasonable") {
       return ! prereleaseNeedingLicense;
-    } else if (currConstraint.type === "exactly") {
-      return (currConstraint.version === candidateUV.version);
-    } else if (currConstraint.type === 'compatible-with') {
-      if (prereleaseNeedingLicense && ! /-/.test(currConstraint.version)) {
+    } else if (type === "exactly") {
+      var version = simpleConstraint.version;
+      return (version === candidateUV.version);
+    } else if (type === 'compatible-with') {
+      var version = simpleConstraint.version;
+
+      if (prereleaseNeedingLicense && ! /-/.test(version)) {
         return false;
       }
 
       // If the candidate version is less than the version named in the
       // constraint, we are not satisfied.
-      if (PackageVersion.lessThan(candidateUV.version, currConstraint.version)) {
+      if (PackageVersion.lessThan(candidateUV.version, version)) {
         return false;
       }
 
       // To be compatible, the two versions must have the same major version
       // number.
-      if (candidateUV.majorVersion !==
-          PackageVersion.majorVersion(currConstraint.version)) {
+      if (candidateUV.majorVersion !== PackageVersion.majorVersion(version)) {
         return false;
       }
 
       return true;
     } else {
-      throw Error("Unknown constraint type: " + currConstraint.type);
+      throw Error("Unknown constraint type: " + type);
     }
   });
 };
