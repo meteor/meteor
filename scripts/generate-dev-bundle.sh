@@ -180,7 +180,17 @@ rm -rf node_modules/browserstack-webdriver/lib/test
 
 npm install node-inspector@0.7.4
 
-npm install pathwatcher@2.3.3
+# TODO(ben) Switch back to NPM once this branch is merged upstream.
+pushd node_modules
+git clone --branch dev_bundle --depth 1 \
+    https://github.com/meteor/node-pathwatcher.git pathwatcher
+pushd pathwatcher
+rm -rf .git
+npm install .
+npm test
+rm -rf node_modules/{grunt,grunt-contrib-coffee,grunt-cli,grunt-shell,grunt-atomdoc,jasmine-tagged,rimraf,node-cpplint,grunt-coffeelint,temp}
+popd
+popd
 
 npm install chalk@0.5.1
 
