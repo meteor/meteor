@@ -92,8 +92,16 @@ var doOrThrow = function (f) {
 // do for now. We build the packages during the first test that needs them.
 var builtPackageTropohouseDir = null;
 var tropohouseLocalCatalog = null;
-var tropohousePackageMap = null;
 var tropohouseIsopackCache = null;
+
+// Let's build a minimal set of packages that's enough to get self-test
+// working.  (And that doesn't need us to download any Atmosphere packages.)
+var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
+  // We need the tool in order to run from the fake warehouse at all.
+  "meteor-tool",
+  // We need the packages in the skeleton app in order to test 'meteor create'.
+  "meteor-platform", "autopublish", "insecure"
+];
 
 var setUpBuiltPackageTropohouse = function () {
   if (builtPackageTropohouseDir)
@@ -107,24 +115,23 @@ var setUpBuiltPackageTropohouse = function () {
   tropohouseLocalCatalog = newSelfTestCatalog();
   var versions = {};
   _.each(
-    // Let's build a minimal set of packages that's enough to get self-test
-    // working.  (And that doesn't need us to download any Atmosphere packages.)
-    ["meteor-tool", "meteor", "underscore"],
+    tropohouseLocalCatalog.getAllNonTestPackageNames(),
     function (packageName) {
       versions[packageName] =
         tropohouseLocalCatalog.getLatestVersion(packageName).version;
   });
-  tropohousePackageMap = new packageMapModule.PackageMap(
+  var packageMap = new packageMapModule.PackageMap(
     versions, tropohouseLocalCatalog);
   // Make an isopack cache that doesn't automatically save isopacks to disk and
   // has no access to versioned packages.
   tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
-    packageMap: tropohousePackageMap
+    packageMap: packageMap
   });
   doOrThrow(function () {
     buildmessage.enterJob("building self-test packages", function () {
       // Build the packages into the in-memory IsopackCache.
-      tropohouseIsopackCache.buildLocalPackages();
+      tropohouseIsopackCache.buildLocalPackages(
+        ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
     });
   });
 
@@ -133,8 +140,7 @@ var setUpBuiltPackageTropohouse = function () {
   // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
   // though some tests will want them to be under
   // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
-  tropohousePackageMap.eachPackage(function (name, info) {
-    var isopack = tropohouseIsopackCache.getIsopack(name);
+  tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
     // XXX we should stop relying on symlinks and just parse isopack.json (we
     // need to do this for Windows anyway).
     var directPath = '.' + isopack.version + '.XXX++' +
@@ -735,7 +741,7 @@ _.extend(Sandbox.prototype, {
     var packageVersions = {};
     var toolPackageVersion = null;
 
-    tropohousePackageMap.eachPackage(function (packageName, info) {
+    tropohouseIsopackCache.eachBuiltIsopack(function (packageName, isopack) {
       var packageRec = tropohouseLocalCatalog.getPackage(packageName);
       if (! packageRec)
         throw Error("no package record for " + packageName);
@@ -745,10 +751,6 @@ _.extend(Sandbox.prototype, {
       if (! versionRec)
         throw Error("no version record for " + packageName);
       stubCatalog.collections.versions.push(versionRec);
-
-      var isopack = tropohouseIsopackCache.getIsopack(packageName);
-      if (! isopack)
-        throw Error("no isopack for " + packageName);
 
       stubCatalog.collections.builds.push({
         architecture: isopack.buildArchitectures(),

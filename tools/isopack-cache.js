@@ -72,6 +72,13 @@ _.extend(exports.IsopackCache.prototype, {
     return self._isopacks[name].isopack;
   },
 
+  eachBuiltIsopack: function (iterator) {
+    var self = this;
+    _.each(self._isopacks, function (info, packageName) {
+      iterator(packageName, info.isopack);
+    });
+  },
+
   getPluginProviderPackageMap: function (name) {
     var self = this;
     if (! _.has(self._isopacks, name))
