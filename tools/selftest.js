@@ -234,7 +234,6 @@ _.extend(Matcher.prototype, {
     var self = this;
     self.ended = true;
     self._tryMatch();
-    self.buf = '';
   },
 
   matchEmpty: function () {
@@ -292,10 +291,12 @@ _.extend(Matcher.prototype, {
     }
 
     if (self.ended) {
+      var failure = new TestFailure('no-match', { run: self.run,
+                                                  pattern: self.matchPattern });
       self.matchFuture = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['throw'](new TestFailure('no-match', { run: self.run }));
+      f['throw'](failure);
       return;
     }
   }
@@ -1684,6 +1685,7 @@ var runTests = function (options) {
       Console.stderr.write("  => " + failure.reason + " at " +
                            relpath + ":" + frames[0].line + "\n");
       if (failure.reason === 'no-match') {
+        Console.stderr.write("  => Pattern: " + failure.details.pattern + "\n");
       }
       if (failure.reason === "wrong-exit-code") {
         var s = function (status) {
