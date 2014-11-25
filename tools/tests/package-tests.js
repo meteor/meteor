@@ -427,7 +427,7 @@ var publishMostBasicPackage = selftest.markStack(function (s, fullPackageName) {
 
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(60);
+    run.waitSecs(120);
     run.expectExit(0);
     run.match("Published");
   });
@@ -792,20 +792,18 @@ var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   s.write("package.js", packageJs);
 
   var run = s.run("publish");
-  run.waitSecs(60);
+  run.waitSecs(120);
   if (expectAuthorizationFailure) {
     run.matchErr("not an authorized maintainer");
-    // XXX Why is this 3? Other unauthorized errors (e.g. maintainers
-    // --add when you are not a maintainer) exit 1
-    run.expectExit(3);
+    run.expectExit(1);
   } else {
-    run.match("Done");
+    run.match("Published");
     run.expectExit(0);
   }
 };
 
 selftest.define("packages with organizations",
-    ["net", "test-package-server"], function () {
+    ["net", "test-package-server", "slow"], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
