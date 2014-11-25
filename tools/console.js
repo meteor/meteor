@@ -762,7 +762,7 @@ _.extend(Console.prototype, {
     var self = this;
 
     if (messages.hasMessages()) {
-      self._print(null, "\n" + messages.formatMessages());
+      self._print(LEVEL_ERROR, "\n" + messages.formatMessages());
     }
   },
 

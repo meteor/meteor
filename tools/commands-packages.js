@@ -1800,7 +1800,7 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
     // constraints until after we've made our changes.
-    projectContext.readProjectMetadata();
+    projectContext.initializeCatalog();
   });
 
   var exitCode = 0;
@@ -1847,6 +1847,36 @@ main.registerCommand({
       buildmessage.enterJob("adding package " + packageReq, function () {
         var constraint = utils.parseConstraint(packageReq, {
           useBuildmessage: true
+        });
+        if (buildmessage.jobHasMessages())
+          return;
+
+        var packageRecord = projectContext.projectCatalog.getPackage(
+          constraint.name);
+        if (! packageRecord) {
+          buildmessage.error("no such package");
+          return;
+        }
+
+        _.each(constraint.constraints, function (subConstraint) {
+          if (subConstraint.version === null)
+            return;
+          // Figure out if this version exists either in the official catalog or
+          // the local catalog. (This isn't the same as using the combined
+          // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
+          // package is 1.1.0 as long as 1.0.0 exists.)
+          var versionRecord = projectContext.localCatalog.getVersion(
+            constraint.name, subConstraint.version);
+          if (! versionRecord) {
+            // XXX #2846 here's an example of something that might require a
+            // refresh
+            versionRecord = catalog.official.getVersion(
+              constraint.name, subConstraint.version);
+          }
+          if (! versionRecord) {
+            buildmessage.error("no such version " + constraint.name + "@" +
+                               subConstraint.version);
+          }
         });
         if (buildmessage.jobHasMessages())
           return;

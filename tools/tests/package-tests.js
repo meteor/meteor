@@ -270,7 +270,7 @@ selftest.define("add packages to app", ["net"], function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  // This is a legit version, but accounts-base started with 1.0.0 and is
+  // This has legit version syntax, but accounts-base started with 1.0.0 and is
   // unlikely to backtrack.
   run = s.run("add", "accounts-base@0.123.123");
   run.matchErr("no such version");
@@ -311,7 +311,7 @@ selftest.define("add packages to app", ["net"], function () {
                 ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
-  run.match(" added");
+  // run.match(" added");  // XXX #3006 show package changes
   run.match("depends-on-plugin");
   run.expectExit(0);
 
@@ -332,8 +332,8 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
-  run.match("removed contains-plugin");
-  run.match("removed depends-on-plugin");
+  // run.match("removed contains-plugin");  // XXX #3006 show package changes
+  // run.match("removed depends-on-plugin");  // XXX #3006 show package changes
   run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
@@ -383,7 +383,7 @@ selftest.define("add packages client archs", function (options) {
     s.set("METEOR_OFFLINE_CATALOG", "t");
 
     var outerRun = s.run("add", "say-something-client-targets");
-    outerRun.match("added");
+    // outerRun.match("added");  // XXX #3006 re-add package changes
     outerRun.expectExit(0);
     checkPackages(s,
                   ["meteor-platform", "say-something-client-targets"]);
@@ -429,7 +429,7 @@ var publishMostBasicPackage = selftest.markStack(function (s, fullPackageName) {
     run = s.run("publish", "--create");
     run.waitSecs(60);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 });
 
@@ -719,7 +719,9 @@ selftest.define("package specifying a name",
   // What about test-packages?
   s.cd('packages');
   s.cd('ac-fake');
-  run = s.run('test-packages', './');
+  // note: use test-in-console because test-in-browser depends on bootstrap
+  // and we don't need an atmosphere dependency.
+  run = s.run('test-packages', './', '--driver-package=test-in-console');
   run.waitSecs(15);
   run.match("overriding accounts-base!");
   run.stop();

@@ -447,7 +447,8 @@ main.registerCommand({
       if (release.current.isCheckout()) {
         xn = xn.replace(/~cc~/g, "//");
         var rel = catalog.official.getDefaultReleaseVersion();
-        relString = rel.version;
+        // the no-release case should never happen except in tests.
+        relString = rel ? rel.version : "no-release";
       } else {
         xn = xn.replace(/~cc~/g, "");
         relString = release.current.getDisplayName({noPrefix: true});
