@@ -695,8 +695,12 @@ _.extend(Sandbox.prototype, {
     if (self.warehouse) {
       // Tell it where the warehouse lives.
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
-      // Don't ever try to refresh the stub catalog we made.
-      env.METEOR_OFFLINE_CATALOG = "t";
+
+      if (! _.contains(runningTest.tags, 'test-package-server')) {
+        // Don't ever try to refresh the stub catalog we made.
+        // (It's OK to refresh a catalog for the test package server though.)
+        env.METEOR_OFFLINE_CATALOG = "t";
+      }
     }
 
     // By default (ie, with no mock warehouse and no --release arg) we should be
