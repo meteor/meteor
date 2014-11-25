@@ -2193,7 +2193,7 @@ main.registerCommand({
   var releaseNameAndVersion = options.args[0];
   var outputDirectory = options.args[1];
 
-  var trackAndVersion = utils.releaseName(releaseNameAndVersion);
+  var trackAndVersion = utils.splitReleaseName(releaseNameAndVersion);
   var releaseTrack = trackAndVersion[0];
   var releaseVersion = trackAndVersion[1];
 
