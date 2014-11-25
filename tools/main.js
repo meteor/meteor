@@ -371,22 +371,18 @@ var springboard = function (rel, options) {
 
   // XXX split better
   try {
-    Console.setPretty(true);
-    Console.enableProgressDisplay(true);
-
-    var messages = buildmessage.capture({
-      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
-    }, function () {
-      tropohouse.default.maybeDownloadPackageForArchitectures({
-        packageName: toolsPkg,
-        version: toolsVersion,
-        architectures: [archinfo.host()],
-        definitelyNotLocal: true
+    Console.withProgressDisplayVisible(function () {
+      buildmessage.enterJob({
+        title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
+      }, function () {
+        tropohouse.default.maybeDownloadPackageForArchitectures({
+          packageName: toolsPkg,
+          version: toolsVersion,
+          architectures: [archinfo.host()],
+          definitelyNotLocal: true
+        });
       });
     });
-
-    Console.enableProgressDisplay(false);
-    Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
@@ -400,14 +396,6 @@ var springboard = function (rel, options) {
 "Sorry, " + rel.getDisplayName() + " is not installed and could not be\n" +
 "downloaded. Please check to make sure that you are online.");
     }
-    process.exit(1);
-  }
-  if (messages.hasMessages()) {
-    // XXX I'm pretty sure that maybeDownloadPackageForArchitectures can no
-    //     longer create buildmessages
-    Console.error(
-      "Could not springboard to release: " + rel.getDisplayName() + ".\n" +
-        messages.formatMessages());
     process.exit(1);
   }
 
@@ -475,7 +463,7 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.29';
+  var MIN_NODE_VERSION = 'v0.10.33';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
@@ -684,48 +672,14 @@ Fiber(function () {
     project.project.setRootDir(appDir);
   }
 
-  // XXX compare this to the previous block's usesWarehouse...
-  if (files.inCheckout()) {
-    // When running from a checkout, uniload does use local packages, but *ONLY
-    // THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS packages.
-    // One side effect of this: we really really expect them to all build, and
-    // we're fine with dying if they don't (there's no worries about needing to
-    // springboard).
-    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
-      catalog.uniload.initialize({
-        localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
-      });
-    });
-    if (messages.hasMessages()) {
-      Console.error("=> Errors while scanning core packages:\n");
-      Console.error(messages.formatMessages());
-      process.exit(1);
-    }
-  } else {
-    // This doesn't need to be in a buildmessage, because the
-    // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
-    // bunch of precompiled isopacks!
-    catalog.uniload.initialize({
-      uniloadDir: files.getUniloadDir()
-    });
-  }
+  require('./isopackets.js').ensureIsopacketsLoadable();
 
-
-  // Initialize the server catalog. Among other things, this is where
-  // we get release information (used by springboarding).  This doesn't
-  // build anything (except maybe, if running from a checkout, packages
-  // that we need to uniload, which really ought to build) so it's OK
-  // to die on errors.
-  var messages = buildmessage.capture({ title: "Initializing server catalog" }, function () {
-    catalog.official.initialize({
-      offline: !!process.env.METEOR_OFFLINE_CATALOG
-    });
+  // Initialize the server catalog. Among other things, this is where we get
+  // release information (used by springboarding). We do not at this point talk
+  // to the server and refresh it.
+  catalog.official.initialize({
+    offline: !!process.env.METEOR_OFFLINE_CATALOG
   });
-  if (messages.hasMessages()) {
-    Console.error("=> Errors while initializing package catalog:\n");
-    Console.error(messages.formatMessages());
-    process.exit(1);
-  }
 
   // We do NOT initialize catalog.complete yet.  When we do that, we will build
   // all local packages, and for both performance and correctness reasons, we
@@ -837,11 +791,9 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
         releaseName = release.latestKnown();
       }
       if (!releaseName) {
@@ -897,11 +849,9 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
 
         // Try to load the release even if the refresh failed, since it might
         // have failed on a later page than the one we needed.
@@ -1239,19 +1189,21 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
   if (!command.catalogRefresh.doesNotUsePackages) {
     // OK, now it's finally time to set up the complete catalog. Only after this
-    // can we use the build system (other than via uniload).
+    // can we use the build system (other than to make and load isopackets).
+
+    // XXX This code is duplicated a bit inside the create command. Sorry.
 
     // Figure out the directories that we should search for local
     // packages (in addition to packages downloaded from the package
     // server)
-    var localPackageDirs = [];
+    var localPackageSearchDirs = [];
     if (appDir)
-      localPackageDirs.push(path.join(appDir, 'packages'));
+      localPackageSearchDirs.push(path.join(appDir, 'packages'));
 
     if (process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
       // PACKAGE_DIRS (colon-separated).
-      localPackageDirs = localPackageDirs.concat(
+      localPackageSearchDirs = localPackageSearchDirs.concat(
         _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
           return path.resolve(p);
         }));
@@ -1260,13 +1212,13 @@ commandName + ": You're not in a Meteor project directory.\n" +
     if (!files.usesWarehouse()) {
       // Running from a checkout, so use the Meteor core packages from
       // the checkout.
-      localPackageDirs.push(path.join(
+      localPackageSearchDirs.push(path.join(
         files.getCurrentToolsDir(), 'packages'));
     }
 
-    var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
+    messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
       catalog.complete.initialize({
-        localPackageDirs: localPackageDirs
+        localPackageSearchDirs: localPackageSearchDirs
       });
     });
     if (messages.hasMessages()) {
@@ -1336,7 +1288,6 @@ commandName + ": You're not in a Meteor project directory.\n" +
     require('./profile-require.js').printReport();
 
   Console.setPretty(command.pretty);
-
   Console.enableProgressDisplay(true);
 
   // Run the command!

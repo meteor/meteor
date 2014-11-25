@@ -262,6 +262,7 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Mongo.Cursor}
    */
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
@@ -286,6 +287,7 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Object}
    */
   findOne: function (/* selector, options */) {
     var self = this;

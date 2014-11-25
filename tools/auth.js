@@ -11,15 +11,13 @@ var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require('./isopackets.js');
 var Console = require('./console.js').Console;
 
 var auth = exports;
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp', 'mongo' ]
-  });
+  return isopackets.load('ddp');
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember
@@ -1050,17 +1048,24 @@ exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var Package = getLoadedPackages();
-  var serviceConfigurations = new Package.mongo.Mongo.Collection(
-    'meteor_accounts_loginServiceConfiguration',
-    { connection: conn.connection }
-  );
-  var serviceConfigurationsSub = conn.
-        subscribeAndWait('meteor.loginServiceConfiguration');
+  var accountsConfiguration = null;
 
-  var accountsConfiguration = serviceConfigurations.findOne({
-    service: 'meteor-developer'
+  // We avoid the overhead of creating a 'ddp-and-mongo' isopacket (or
+  // always loading mongo whenever we load ddp) by just using the low-level
+  // DDP client API here.
+  conn.connection.registerStore('meteor_accounts_loginServiceConfiguration', {
+    update: function (msg) {
+      if (msg.msg === 'added' && msg.fields &&
+          msg.fields.service === 'meteor-developer') {
+        // Note that this doesn't include the _id (which we'd have to parse),
+        // but that's OK.
+        accountsConfiguration = msg.fields;
+      }
+    }
   });
 
+  var serviceConfigurationsSub = conn.subscribeAndWait(
+    'meteor.loginServiceConfiguration');
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
     throw new Error('no-accounts-configuration');
   }

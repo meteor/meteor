@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'semver': '3.0.1'
+  'semver': '4.1.0'
 });
 
 Package.on_use(function (api) {

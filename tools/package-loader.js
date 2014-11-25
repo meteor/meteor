@@ -16,16 +16,16 @@ exports.PackageLoader = function (options) {
     throw Error("Must specify a catalog");
 
   self.versions = null;
-  // Ignore specified versions if we're doing this as part of uniload.
-  // The PackageLoader created in uniload.js will not specify a versions option,
-  // but other PackageLoaders (eg, created to build plugins in compiler.compile)
-  // might, but we should ignore that since uniload never loads versioned
-  // packages; it only loads precompiled packages (for built releases) or local
-  //packages (from checkout).
-  if (options.versions && options.catalog !== catalog.uniload)
+  // Really, the only PackageLoader we should be using while building isopackets
+  // is the one we create right next to creating the isopacket building catalog
+  // (in isopackets.js or _writeTool). But since we haven't yet eliminated the
+  // constraint solver calls in compiler.js and their own PackageLoader,
+  // sometimes we might end up with another PackageLoader here. Pretend that it
+  // didn't tell us versions.
+  // XXX Delete this code once compiler no longer makes its own PackageLoaders.
+  if (options.versions && ! options.catalog.isopacketBuildingCatalog)
     self.versions = options.versions;
 
-  self.uniloadDir = options.uniloadDir;
   self.constraintSolverOpts = options.constraintSolverOpts;
   self.catalog = options.catalog;
 };
@@ -110,9 +110,7 @@ _.extend(exports.PackageLoader.prototype, {
     // We can only download packages if we know what versions they are.
     if (!self.versions)
       return;
-    // We shouldn't ever download packages for uniload.
-    if (self.catalog === catalog.uniload)
-      return;
+
     tropohouse.default.downloadMissingPackages(self.versions, {
       serverArch: options.serverArch
     });

@@ -47,14 +47,6 @@ It's completely normal for `getTemplateTag` to invoke `HTMLTools.parseFragment` 
 
 At the moment, template tags must begin with `{`.  The parser does not try calling `getTemplateTag` for every character of an HTML document, only at token boundaries, and it knows to always end a token at `{`.
 
-**XXX Better error message for `<div {{k}}={{v}}>`.**
-
-**XXX Do something with `<input type=checkbox {{#if foo}}checked{{/if}}>`**
-
-**XXX Why both IN_ATTRIBUTE and IN_RCDATA?**
-
-**XXX Fix Markdown**
-
 #### textMode
 
 The `textMode` option, if present, causes the parser to parse text (such as the contents of a `<textarea>` tag or part of an attribute) instead of HTML.  In a text mode, for example, the input `"<"` is not a parse error (because a bare `<` is allowed in a textarea or attribute).
@@ -69,8 +61,6 @@ The value of `textMode` must be one of:
 `shouldStop: function (scanner) { ... }` - A function that the parser invokes between tokens to check whether it should stop parsing.  The function should return a boolean value.
 
 The `shouldStop` function provides a way to put a "wall" in the input stream for the purpose of parsing HTML content embedded in a template tag.  For example, take the template `{{#if happy}}yay{{/if}}`.  The scanner will be advanced to the start of the word `yay` before `parseFragment` is called to parse the contents of the tag.  (Note that the caller happens to be the `getTemplateTag` function of an enclosing `parseFragment`.)  When parsing from `yay`, the `shouldStop` function is used to end the fragment at `{{/if}}`, which, like `{{/blah}}` or `{{else}}`, couldn't possibly be actual content that belongs in the fragment.  Even if HTML tags are not closed, as in the malformed template `{{#if foo}}<div>{{else}}`, the fragment stops at the `{{else}}`, and the error is an unclosed `<div>` (before the parser notices the unclosed `{{#if}}`).
-
-**XXX This option doesn't seem very elegant, or at least the way it's passed around internally isn't.**
 
 ## HTMLTools.Scanner class
 
@@ -138,7 +128,8 @@ The following are **permitted**:
 * Most characters in attribute values - `<img alt=x,y>`
 * Embedded SVG elements
 
-**XXX Currently you have to close your Ps, LIs, and other tags for which the spec allows the end tag to be omitted in many cases**
+Note: Currently you have to close your Ps, LIs, and other tags for
+which the spec allows the end tag to be omitted in many cases
 
 ## Character References
 

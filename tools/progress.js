@@ -180,8 +180,6 @@ _.extend(Progress.prototype, {
   _updateTotalState: function () {
     var self = this;
 
-    var state = _.clone(self._selfState);
-
     var allChildrenDone = true;
     var state = _.clone(self._selfState);
     _.each(self._allTasks, function (child) {

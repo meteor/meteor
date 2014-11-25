@@ -1,0 +1,43 @@
+#menu {
+  .background-image(
+    linear-gradient(top, rgba(85,134,223,.1), rgba(0,0,0,0) 100%),
+    url('img/app/bg-menu-640x1136.jpg')
+  );
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  a {
+    box-shadow: rgba(129,206,200,.1) 0 1px 0 0;
+    color: rgba(255,255,255,.4);
+    display: block;
+    height: 20%;
+    position: relative;
+    text-align: center;
+
+    &:hover,
+    &:active,
+    &.active {
+      color: @color-empty;
+    }
+
+    .wrapper-menu-item {
+      .font-s2;
+      .type-bold;
+      .position(absolute, 50%, auto, auto, 50%);
+      .transform(translate3d(-50%, -50% ,0));
+      display: block;
+    }
+
+    [class^="icon-"],
+    [class*=" icon-"] {
+      .font-m1;
+      display: block;
+      margin-bottom: 5%;
+    }
+
+    .title-menu {
+      .title-caps;
+      display: block;
+    }
+  }
+}

@@ -46,9 +46,7 @@ var getReleaseOrPackageRecord = function(name) {
   return { record: rec, isRelease: rel };
 };
 
-// Seriously, this dies if it can't refresh. Only call it if you're sure you're
-// OK that the command doesn't work while offline.
-var doOrDie = exports.doOrDie = function (options, f) {
+var doOrDie = function (options, f) {
   if (_.isFunction(options)) {
     f = options;
     options = {};
@@ -65,6 +63,8 @@ var doOrDie = exports.doOrDie = function (options, f) {
   return ret;
 };
 
+// Seriously, this dies if it can't refresh. Only call it if you're sure you're
+// OK that the command doesn't work while offline.
 var refreshOfficialCatalogOrDie = function (options) {
   if (!catalog.refreshOrWarn(options)) {
     Console.error(
@@ -346,16 +346,6 @@ main.registerCommand({
     Console.warn("\nWARNING: Your package contains binary code.");
   } else if (binary) {
     // Normal publish flow. Tell the user nicely.
-
-    // XXX this is only while we're in 1.0 RC period. Because of a
-    // springboarding bug in 0.9.4, you need to use --release on
-    // publish-for-arch. Also, you need --release to get the admin
-    // get-machine command until it is recommended.
-    var currentRelease = "";
-    if (!release.current.isCheckout()) {
-      currentRelease = " --release " + release.current.getReleaseVersion();
-    }
-
     Console.warn(
 "\nThis package contains binary code and must be built on multiple architectures.\n");
 
@@ -364,12 +354,12 @@ main.registerCommand({
 "older versions of MacOS and Linux, by running:\n");
 
     _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"], function (a) {
-      Console.info("  meteor" + currentRelease + " admin get-machine", a);
+      Console.info("  meteor admin get-machine", a);
     });
 
     Console.info("\nOn each machine, run:\n");
 
-    Console.info("  meteor" + currentRelease,
+    Console.info("  meteor",
                  "publish-for-arch",
                  packageSource.name + "@" + packageSource.version);
 
@@ -403,9 +393,7 @@ main.registerCommand({
   // Refresh the catalog, cacheing the remote package data on the server.
   //refreshOfficialCatalogOrDie();
 
-  var packageInfo = doOrDie(function () {
-    return catalog.complete.getPackage(name);
-  });
+  var packageInfo = catalog.complete.getPackage(name);
   if (! packageInfo) {
     Console.error(
 "You can't call `meteor publish-for-arch` on package '" + name + "' without\n" +
@@ -816,7 +804,7 @@ main.registerCommand({
           var packageDir = path.resolve(path.join(localPackageDir, item));
           // Consider a directory to be a package source tree if it
           // contains 'package.js'. (We used to support isopacks in
-          // localPackageDirs, but no longer.)
+          // local package directories, but no longer.)
           if (fs.existsSync(path.join(packageDir, 'package.js'))) {
             var packageSource = new PackageSource(catalog.complete);
             buildmessage.enterJob(
@@ -1719,7 +1707,8 @@ var maybeUpdateRelease = function (options) {
         "You are at the latest patch version.");
       return 0;
     }
-    var patchRecord = catalog.official.getReleaseVersion(r[0], updateTo);
+    var patchRecord = catalog.official.getReleaseVersion(
+      appTrackAndVersion[0], updateTo);
     // It looks like you are not at the latest patch version,
     // technically. But, in practice, we cannot update you to the latest patch
     // version because something went wrong. For example, we can't find the
@@ -1765,15 +1754,7 @@ var maybeUpdateRelease = function (options) {
   var solutionReleaseRecord = null;
   var solutionPackageVersions = null;
   var directDependencies = project.getConstraints();
-  var previousVersions;
-  var messages = buildmessage.capture(function () {
-    previousVersions = project.getVersions({dontRunConstraintSolver: true});
-  });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    // We couldn't figure out our current versions, so updating is not going to work.
-    return 1;
-  }
+  var previousVersions = project.getVersions({dontRunConstraintSolver: true});
 
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.official.getReleaseVersion(
@@ -1833,16 +1814,8 @@ var maybeUpdateRelease = function (options) {
   var upgradersToRun = upgraders.upgradersToRun();
 
   // Write the new versions to .meteor/packages and .meteor/versions.
-  var setV;
-  messages = buildmessage.capture(function () {
-    setV = project.setVersions(solutionPackageVersions,
-                               { alwaysRecord : true });
-  });
-  if (messages.hasMessages()) {
-    Console.error("Error while setting versions:\n" +
-                         messages.formatMessages());
-    return 1;
-  }
+  var setV = project.setVersions(solutionPackageVersions,
+                                 { alwaysRecord: true });
   project.showPackageChanges(previousVersions, solutionPackageVersions, {
     onDiskPackages: setV.downloaded
   });
@@ -1943,15 +1916,11 @@ main.registerCommand({
   // Let's figure out what packages we are currently using. Don't run the
   // constraint solver yet, we don't care about reconciling them, just want to
   // know what they are for some internal constraint solver heuristics.
-  var versions, allPackages;
-  messages = buildmessage.capture(function () {
-    versions = project.getVersions({dontRunConstraintSolver: true});
+  var versions = project.getVersions({dontRunConstraintSolver: true});
+  var allPackages;
+  doOrDie(function () {
     allPackages = project.calculateCombinedConstraints(releasePackages);
   });
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  }
 
   // If no packages have been specified, then we will send in a request to
   // update all direct dependencies. If a specific list of packages has been
@@ -2004,16 +1973,7 @@ main.registerCommand({
   }
 
   // Set our versions and download the new packages.
-  var setV;
-  messages = buildmessage.capture(function () {
-    setV = project.setVersions(newVersions, { alwaysRecord : true });
-  });
-  // XXX cleanup this madness of error handling
-  if (messages.hasMessages()) {
-    Console.error("Error while setting package versions:\n" +
-                         messages.formatMessages());
-    return 1;
-  }
+  var setV = project.setVersions(newVersions, { alwaysRecord: true });
 
   // Sometimes, we don't show changes -- for example, if you don't have a
   // versions file. However, I think that if you don't have a versions file, and
@@ -2122,28 +2082,33 @@ main.registerCommand({
 
   _.each(constraints, function (constraint) {
     // Check that the package exists.
-    doOrDie({title: 'Checking package: ' + constraint.name }, function () {
-      if (! catalog.complete.getPackage(constraint.name)) {
-        Console.error(constraint.name + ": no such package");
-        failed = true;
-        return;
-      }
-    });
+    if (! catalog.complete.getPackage(constraint.name)) {
+      Console.error(constraint.name + ": no such package");
+      failed = true;
+      return;
+    }
+
+    var thisConstraintFailed = false;
 
     // If the version was specified, check that the version exists.
     _.each(constraint.constraints, function (constr) {
       if (constr.version !== null) {
-        var versionInfo = doOrDie({ title: 'Fetching packages' }, function () {
-          return catalog.complete.getVersion(constraint.name, constr.version);
-        });
+        var versionInfo = catalog.complete.getVersion(
+          constraint.name, constr.version);
         if (! versionInfo) {
           Console.stderr.write(
             constraint.name + "@" + constr.version  + ": no such version\n");
-          failed = true;
+          thisConstraintFailed = true;
           return;
         }
       }
     });
+
+    if (thisConstraintFailed) {
+      failed = true;
+      return;
+    }
+
     // Check that the constraint is new. If we are already using the package at
     // the same constraint in the app, return from this function, but don't
     // fail. Rejecting the entire command because a part of it is a no-op is
@@ -2216,7 +2181,7 @@ main.registerCommand({
     return 1;
   }
 
-  var downloaded, versions, newVersions;
+  var versions, newVersions;
 
   try {
     var messages = buildmessage.capture(function () {
@@ -2242,11 +2207,6 @@ main.registerCommand({
       // don't want to give a false sense of completeness until everything is
       // written to disk.
       var messageLog = [];
-
-      // Install the new versions. If all new versions were installed
-      // successfully, then change the .meteor/packages and .meteor/versions to
-      // match expected reality.
-      downloaded = project.addPackages(constraints, newVersions);
     });
   } catch (e) {
     if (!e.constraintSolverError)
@@ -2264,6 +2224,11 @@ main.registerCommand({
     return 1;
   }
 
+  // Install the new versions. If all new versions were installed successfully,
+  // then change the .meteor/packages and .meteor/versions to match expected
+  // reality.
+  var downloaded = project.addPackages(constraints, newVersions);
+
   var ret = project.showPackageChanges(versions, newVersions, {
     onDiskPackages: downloaded});
   if (ret !== 0) return ret;
@@ -2273,9 +2238,7 @@ main.registerCommand({
   Console.stdout.write("\n");
   _.each(constraints, function (constraint) {
     var version = newVersions[constraint.name];
-    var versionRecord = doOrDie(function () {
-      return catalog.complete.getVersion(constraint.name, version);
-    });
+    var versionRecord = catalog.complete.getVersion(constraint.name, version);
     Console.stdout.write(constraint.name +
                          (versionRecord.description ?
                           (": " + versionRecord.description) :
@@ -2595,33 +2558,28 @@ main.registerCommand({
     // XXX update to '.meteor' when we combine houses
     var tmpTropo = new tropohouse.Tropohouse(
       path.join(tmpdir, '.meteor'), catalog.official);
-    var messages = buildmessage.capture(function () {
+    buildmessage.enterJob({
+      title: "Downloading tool package " + toolPkg.package + "@" +
+        toolPkg.constraint
+    }, function () {
+      tmpTropo.maybeDownloadPackageForArchitectures({
+        packageName: toolPkg.package,
+        version: toolPkg.constraint,
+        architectures: [osArch]  // XXX 'web.browser' too?
+      });
+    });
+    _.each(release.packages, function (pkgVersion, pkgName) {
+      // XXX use forkJoin?
       buildmessage.enterJob({
-        title: "Downloading tool package " + toolPkg.package + "@" +
-          toolPkg.constraint
+        title: "Downloading package " + pkgName + "@" + pkgVersion
       }, function () {
         tmpTropo.maybeDownloadPackageForArchitectures({
-          packageName: toolPkg.package,
-          version: toolPkg.constraint,
+          packageName: pkgName,
+          version: pkgVersion,
           architectures: [osArch]  // XXX 'web.browser' too?
         });
       });
-      _.each(release.packages, function (pkgVersion, pkgName) {
-        buildmessage.enterJob({
-          title: "Downloading package " + pkgName + "@" + pkgVersion
-        }, function () {
-          tmpTropo.maybeDownloadPackageForArchitectures({
-            packageName: pkgName,
-            version: pkgVersion,
-            architectures: [osArch]  // XXX 'web.browser' too?
-          });
-        });
-      });
     });
-    if (messages.hasMessages()) {
-      Console.error("\n" + messages.formatMessages());
-      return 1;
-    }
 
     // Install the sqlite DB file we synced earlier. We have previously
     // confirmed that the "-wal" file (which could contain extra log entries
@@ -2756,57 +2714,6 @@ main.registerCommand({
   return 0;
 });
 
-
-main.registerCommand({
-  name: 'admin set-earliest-compatible-version',
-  minArgs: 2,
-  maxArgs: 2,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
-}, function (options) {
-
-  // We want the most recent information.
-  //refreshOfficialCatalogOrDie();
-  var package = options.args[0].split('@');
-  var name = package[0];
-  var version = package[1];
-  if (!version) {
-    Console.error('\n Must specify release version (track@version)');
-    return 1;
-  }
-  var ecv = options.args[1];
-
-  // Now let's get down to business! Fetching the thing.
-  var record = catalog.official.getPackage(name);
-  if (!record) {
-    Console.error('\n There is no package named ' + name);
-    return 1;
-  }
-
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-
-  try {
-      Console.info(
-        "Setting earliest compatible version on "
-          + options.args[0] + " to " + ecv + "...");
-      var versionInfo = { name : name,
-                          version : version };
-      packageClient.callPackageServer(conn,
-          '_setEarliestCompatibleVersion', versionInfo, ecv);
-      Console.info("Done!");
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-  conn.close();
-  refreshOfficialCatalogOrDie();
-
-  return 0;
-});
 
 main.registerCommand({
   name: 'admin change-homepage',

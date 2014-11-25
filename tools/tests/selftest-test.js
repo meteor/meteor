@@ -13,7 +13,7 @@ selftest.define("selftest-from-warehouse", ['checkout'], function () {
 
   var toolsPackage;
   selftest.doOrThrow(function() {
-      toolsPackage = selftest.getToolsPackage();
+    toolsPackage = selftest.getToolsPackage();
   });
   var toolsVersion = toolsPackage.name + '@' +
         toolsPackage.version;

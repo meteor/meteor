@@ -98,25 +98,23 @@ var checkVersions = selftest.markStack(function(sand, packages) {
 //  getReleaseVersion (t, v) - given track & version, return the document record
 var DataStub = function (remoteCatalog) {
   var self = this;
-  selftest.doOrThrow(function () {
-    var packageNames = remoteCatalog.getAllPackageNames();
-    self.packages = {};
-    _.each(packageNames, function (p) {
-      var versions = remoteCatalog.getSortedVersions(p);
-      var record = remoteCatalog.getPackage(p);
-      self.packages[p] = { versions: versions, record: record };
+  var packageNames = remoteCatalog.getAllPackageNames();
+  self.packages = {};
+  _.each(packageNames, function (p) {
+    var versions = remoteCatalog.getSortedVersions(p);
+    var record = remoteCatalog.getPackage(p);
+    self.packages[p] = { versions: versions, record: record };
+  });
+  var releaseTracks = remoteCatalog.getAllReleaseTracks();
+  self.releases = {};
+  _.each(releaseTracks, function (t) {
+    var versions =
+          remoteCatalog.getSortedRecommendedReleaseVersions(t);
+    var records = {};
+    _.each(versions, function (v) {
+      records[v] = remoteCatalog.getReleaseVersion(t, v);
     });
-    var releaseTracks = remoteCatalog.getAllReleaseTracks();
-    self.releases = {};
-    _.each(releaseTracks, function (t) {
-      var versions =
-            remoteCatalog.getSortedRecommendedReleaseVersions(t);
-      var records = {};
-      _.each(versions, function (v) {
-        records[v] = remoteCatalog.getReleaseVersion(t, v);
-      });
-      self.releases[t] = { versions: versions, records: records };
-    });
+    self.releases[t] = { versions: versions, records: records };
   });
 };
 
@@ -285,6 +283,13 @@ selftest.define("add packages to app", ["net"], function () {
   run.matchErr("no such version");
   run.expectExit(1);
 
+  // Adding a nonexistent package at a nonexistent version should print
+  // only one error message, not two. (We used to print "no such
+  // package" and "no such version".)
+  run = s.run("add", "not-a-real-package-and-never-will-be@1.0.0");
+  run.matchErr("no such package");
+  run.expectExit(1);
+  run.forbidAll("no such version");
 
   run = s.run("add", "accounts-base");
 
@@ -293,6 +298,15 @@ selftest.define("add packages to app", ["net"], function () {
 
   checkPackages(s,
                 ["meteor-platform", "accounts-base"]);
+
+  // Adding the nonexistent version now should still say "no such
+  // version". Regression test for
+  // https://github.com/meteor/meteor/issues/2898.
+  run = s.run("add", "accounts-base@0.123.123");
+  run.matchErr("no such version");
+  run.expectExit(1);
+  run.forbidAll("Currently using accounts-base");
+  run.forbidAll("will be changed to");
 
   run = s.run("--once");
 
@@ -657,32 +671,30 @@ selftest.define("update server package data unit test",
     useShortPages: true
   });
 
-  selftest.doOrThrow(function () {
-    var packages = oldStorage.getAllPackageNames();
-    _.each(packages, function (p) {
-      // We could be more pedantic about comparing all the records, but it
-      // is a significant effort, time-wise to do that.
-      selftest.expectEqual(
-        packageStorage.getPackage(p), oldStorage.getPackage(p));
-      selftest.expectEqual(
-        packageStorage.getSortedVersions(p),
-        oldStorage.getSortedVersions(p));
-    });
-    var releaseTracks = oldStorage.getAllReleaseTracks;
-    _.each(releaseTracks, function (t) {
-      _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
-             function (v) {
-               selftest.expectEqual(
-                 packageStorage.getReleaseVersion(t, v),
-                 oldStorage.getReleaseVersion(t, v));
-             });
-    });
+  var packages = oldStorage.getAllPackageNames();
+  _.each(packages, function (p) {
+    // We could be more pedantic about comparing all the records, but it
+    // is a significant effort, time-wise to do that.
+    selftest.expectEqual(
+      packageStorage.getPackage(p), oldStorage.getPackage(p));
+    selftest.expectEqual(
+      packageStorage.getSortedVersions(p),
+      oldStorage.getSortedVersions(p));
+  });
+  var releaseTracks = oldStorage.getAllReleaseTracks;
+  _.each(releaseTracks, function (t) {
+    _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
+           function (v) {
+             selftest.expectEqual(
+               packageStorage.getReleaseVersion(t, v),
+               oldStorage.getReleaseVersion(t, v));
+           });
+  });
 
-    // Check that our newly published packages appear in newData and on disk.
-    _.each(newPackageNames, function (name) {
-      var found = packageStorage.getPackage(name);
-      selftest.expectEqual(!! found, true);
-    });
+  // Check that our newly published packages appear in newData and on disk.
+  _.each(newPackageNames, function (name) {
+    var found = packageStorage.getPackage(name);
+    selftest.expectEqual(!! found, true);
   });
 });
 

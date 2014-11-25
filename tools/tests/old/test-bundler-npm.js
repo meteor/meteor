@@ -11,6 +11,7 @@ var project = require('../../project.js');
 var catalog = require('../../catalog.js');
 var buildmessage = require('../../buildmessage.js');
 var meteorNpm = require('../../meteor-npm.js');
+var isopackets = require("../../isopackets.js");
 
 var lastTmpDir = null;
 var tmpDir = function () {
@@ -22,18 +23,17 @@ var setAppDir = function (appDir) {
 
   var checkoutPackageDir = path.join(
     files.getCurrentToolsDir(), 'packages');
-  var localPackageDirs = [tmpPackageDirContainer, checkoutPackageDir];
+  var localPackageSearchDirs = [tmpPackageDirContainer, checkoutPackageDir];
 
   if (files.usesWarehouse()) {
     throw Error("This old test doesn't support non-checkout");
   }
 
+  isopackets.ensureIsopacketsLoadable();
+
   doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
-    });
     catalog.complete.initialize({
-      localPackageDirs: localPackageDirs
+      localPackageSearchDirs: localPackageSearchDirs
     });
   });
 };

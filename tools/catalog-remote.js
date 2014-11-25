@@ -6,11 +6,10 @@ var auth = require('./auth.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
-var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var tropohouse = require('./tropohouse.js');
 var config = require('./config.js');
 var packageClient = require('./package-client.js');
@@ -565,7 +564,8 @@ _.extend(RemoteCatalog.prototype, {
 
   getSortedVersions: function (name) {
     var self = this;
-    var match = this._getPackageVersions(name);
+    var match = this._columnsQuery(
+      "SELECT version FROM versions WHERE packageName=?", name);
     if (match === null)
       return [];
     return _.pluck(match, 'version').sort(VersionParser.compare);
@@ -594,14 +594,6 @@ _.extend(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  _getPackageVersions: function (name) {
-    if (!name) {
-      throw new Error("No name provided");
-    }
-    return this._contentQuery(
-      "SELECT content FROM versions WHERE packageName=?", name);
-  },
-
   getAllBuilds: function (name, version) {
     var result = this._contentQuery(
       "SELECT * FROM builds WHERE builds.versionId = " +
@@ -613,6 +605,10 @@ _.extend(RemoteCatalog.prototype, {
     return result;
   },
 
+  // If this package has any builds at this version, return an array of builds
+  // which cover all of the required arches, or null if it is impossible to
+  // cover them all (or if the version does not exist).
+  // Note that this method is specific to RemoteCatalog.
   getBuildsForArches: function (name, version, arches) {
     var self = this;
 

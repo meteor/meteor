@@ -274,12 +274,10 @@ var execFileSyncOrThrow = function (file, args, opts) {
   return childProcess;
 };
 
-var getLoadedPackages = _.once(function () {
-  var uniload = require('./uniload.js');
-  return uniload.load({
-    packages: [ 'boilerplate-generator', 'logging', 'webapp-hashing', 'xmlbuilder' ]
-  });
-});
+var getLoadedPackages = function () {
+  var isopackets = require("./isopackets.js");
+  return isopackets.load('cordova-support');
+};
 
 
 
@@ -706,6 +704,23 @@ var fetchCordovaPluginFromShaUrl =
                     tarProcess.stderr);
   verboseLog('Untarring succeeded, removing the tarball');
   files.rm_recursive(pluginTarballPath);
+
+  var actualPluginName = '';
+  try {
+    var xmlPath = path.join(pluginPath, 'plugin.xml');
+    var xmlContent = fs.readFileSync(xmlPath, 'utf8');
+
+    actualPluginName = xmlContent.match(/<plugin[^>]+>/)[0].match(/\sid="([^"]+)"/)[1];
+  } catch (err) {
+    throw new Error(
+      pluginName + ': Failed to parse the plugin from tarball');
+  }
+
+  if (actualPluginName !== pluginName)
+    throw new Error(pluginName +
+                    ': The plugin from tarball has a different name - ' +
+                    actualPluginName);
+
   return pluginPath;
 };
 
@@ -883,17 +898,23 @@ _.extend(CordovaRunner.prototype, {
     // android, not android-device
     if (self.platformName === 'android') {
       Android.waitForEmulator();
+    }
 
-      buildmessage.capture(function () {
-        var versions = project.getVersions({ dontRunConstraintSolver: true });
-        if (versions.oauth) {
-          Console.warn(
-"\nWarning: It looks like you are using OAuth login in your app.\n" +
-"Meteor's OAuth implementation does not currently work in the Android\n" +
-"emulator. For workarounds, please see\n" +
-"https://github.com/meteor/meteor/wiki/OAuth-in-the-Android-emulator.\n");
-        }
-      });
+    // OAuth2 packages don't work so well with any mobile platform
+    // except the iOS simulator. Print a warning and direct users to the
+    // wiki page for help.
+    if (self.platformName !== "ios") {
+      var versions = project.getVersions({ dontRunConstraintSolver: true });
+      if (versions.oauth2) {
+        Console.warn(
+"\n" +
+"WARNING: It looks like you are using OAuth2 login in your app.\n" +
+"         Meteor's OAuth2 implementation does not currently work with\n" +
+"         mobile apps in local development mode, except in the iOS\n" +
+"         simulator. You can run the iOS simulator with 'meteor run ios'.\n" +
+"         For additional workarounds, see\n" +
+"         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
+      }
     }
 
     if (self.platformName === 'ios') {

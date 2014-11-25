@@ -1,0 +1,35 @@
+// Welcome message
+.wrapper-welcome {
+  .position(absolute, 1.25em, auto, auto, 0, 25%);
+  padding: 0 1.25rem;
+  z-index: -1;
+
+
+  // Show & hide message on web/desktop
+  display: none;
+  @media screen and (min-width: 60em) { display: block; }
+
+  .title-welcome {
+    .font-s3;
+    .type-black;
+    .title-caps;
+    color: @color-primary;
+    margin-bottom: .5em;
+    text-indent: 0;
+  }
+
+  .description-welcome {
+    .font-s2;
+    color: @color-well;
+
+    & + .description-welcome { margin-top: .5rem; }
+
+    a {
+      .type-bold;
+      color: @color-medium-well;
+
+      &:hover { color: darken(@color-well, 10%); }
+      &:active { color: @color-well; }
+    }
+  }
+}

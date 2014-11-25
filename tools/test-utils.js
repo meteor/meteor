@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var release = require('./release.js');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var utils = require('./utils.js');
 var auth = require('./auth.js');
@@ -189,9 +189,7 @@ exports.deployWithNewEmail = function (s, email, appName) {
 };
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: ['meteor', 'ddp']
-  });
+  return isopackets.load('ddp');
 };
 
 var ddpConnect = function (url) {

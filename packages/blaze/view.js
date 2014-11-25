@@ -394,6 +394,7 @@ Blaze._isContentEqual = function (a, b) {
 /**
  * @summary The View corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
  * @locus Client
+ * @type {Blaze.View}
  */
 Blaze.currentView = null;
 

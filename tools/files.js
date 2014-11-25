@@ -120,14 +120,14 @@ files.addToGitignore = function (dirPath, entry) {
 };
 
 // Are we running Meteor from a git checkout?
-files.inCheckout = function () {
+files.inCheckout = _.once(function () {
   try {
     if (fs.existsSync(path.join(files.getCurrentToolsDir(), '.git')))
       return true;
   } catch (e) { console.log(e); }
 
   return false;
-};
+});
 
 // True if we are using a warehouse: either installed Meteor, or if
 // $METEOR_WAREHOUSE_DIR is set. Otherwise false (we're in a git checkout and
@@ -183,18 +183,11 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Returns a directory with pre-built isopacks for use by the tool, or 'null'
-// if in a checkout.
-files.getUniloadDir = function () {
-  if (files.inCheckout())
-    return null;
-  return path.join(files.getCurrentToolsDir(), 'isopacks');
-};
-
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).
 files.getSettings = function (filename, watchSet) {
+  buildmessage.assertInCapture();
   var absPath = path.resolve(filename);
   var buffer = watch.readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
@@ -925,6 +918,19 @@ exports.getLinesOrEmpty = function (file) {
       return [];
     throw e;
   }
+};
+
+// Returns null if the file does not exist, otherwise returns the parsed JSON in
+// the file. Throws on errors other than ENOENT (including JSON parse failure).
+exports.readJSONOrNull = function (file) {
+  try {
+    var raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return null;
+    throw e;
+  }
+  return JSON.parse(raw);
 };
 
 // Trims whitespace & other filler characters of a line in a project file.

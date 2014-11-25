@@ -26,16 +26,6 @@ ConstraintSolver.Resolver = function (options) {
 
   // Refs to all constraints. Mapping String -> instance
   self._constraints = {};
-
-  // Let's say that we that package P is available from source at version X.Y.Z.
-  // Then that's the only version that can actually be chosen by the resolver,
-  // and so it's the only version included as a UnitVersion.  But let's say
-  // another unit depends on it with a 'compatible-with' dependency "@A.B.C". We
-  // need to be able to figure out the earliestCompatibleVersion of A.B.C, even
-  // though A.B.C is not a valid (selectable) UnitVersion. We store them here.
-  //
-  // Maps String unitName -> String version -> String earliestCompatibleVersion
-  self._extraECVs = {};
 };
 
 ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
@@ -84,36 +74,6 @@ ConstraintSolver.Resolver.prototype.getConstraint =
 
   return self._constraints[idString] =
     new ConstraintSolver.Constraint(name, versionConstraint);
-};
-
-ConstraintSolver.Resolver.prototype.addExtraECV = function (
-    unitName, version, earliestCompatibleVersion) {
-  var self = this;
-  check(unitName, String);
-  check(version, String);
-  check(earliestCompatibleVersion, String);
-
-  if (!_.has(self._extraECVs, unitName)) {
-    self._extraECVs[unitName] = {};
-  }
-  self._extraECVs[unitName][version] = earliestCompatibleVersion;
-};
-
-ConstraintSolver.Resolver.prototype.getEarliestCompatibleVersion = function (
-    unitName, version) {
-  var self = this;
-
-  var uv = self.getUnitVersion(unitName, version);
-  if (uv) {
-    return uv.earliestCompatibleVersion;
-  }
-  if (!_.has(self._extraECVs, unitName)) {
-    return null;
-  }
-  if (!_.has(self._extraECVs[unitName], version)) {
-    return null;
-  }
-  return self._extraECVs[unitName][version];
 };
 
 // options: Object:
@@ -300,22 +260,23 @@ ConstraintSolver.Resolver.prototype._stateNeighbors = function (
 // UnitVersion
 ////////////////////////////////////////////////////////////////////////////////
 
-ConstraintSolver.UnitVersion = function (name, unitVersion, ecv) {
+ConstraintSolver.UnitVersion = function (name, unitVersion) {
   var self = this;
 
   check(name, String);
   check(unitVersion, String);
-  check(ecv, String);
   check(self, ConstraintSolver.UnitVersion);
 
   self.name = name;
   // Things with different build IDs should represent the same code, so ignore
   // them. (Notably: depending on @=1.3.1 should allow 1.3.1+local!)
+  // XXX we no longer automatically add build IDs to things as part of our build
+  // process, but this still reflects semver semantics.
   self.version = PackageVersion.removeBuildID(unitVersion);
   self.dependencies = [];
   self.constraints = new ConstraintSolver.ConstraintsList();
-  // a string in a form of "1.2.0"
-  self.earliestCompatibleVersion = ecv;
+  // integer like 1 or 2
+  self.majorVersion = PackageVersion.majorVersion(unitVersion);
 };
 
 _.extend(ConstraintSolver.UnitVersion.prototype, {
@@ -341,11 +302,9 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
     self.constraints = self.constraints.push(constraint);
   },
 
-  toString: function (options) {
+  toString: function () {
     var self = this;
-    options = options || {};
-    var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
-    return name + "@" + self.version;
+    return self.name + "@" + self.version;
   }
 });
 
@@ -366,17 +325,13 @@ ConstraintSolver.Constraint = function (name, versionString) {
   // See comment in UnitVersion constructor. We want to strip out build IDs
   // because the code they represent is considered equivalent.
   _.extend(self, PackageVersion.parseConstraint(name, {
-    removeBuildIDs: true,
-    archesOK: true
+    removeBuildIDs: true
   }));
-
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
   var self = this;
-  options = options || {};
-  var name = options.removeUnibuild ? removeUnibuild(self.name) : self.name;
-  return name + "@" + self.constraintString;
+  return self.name + "@" + self.constraintString;
 };
 
 
@@ -437,19 +392,10 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
     if (PackageVersion.lessThan(candidateUV.version, currConstraint.version))
       return false;
 
-    var myECV = resolver.getEarliestCompatibleVersion(
-      self.name, currConstraint.version);
-    // If the constraint is "@1.2.3" and 1.2.3 doesn't exist, then nothing can
-    // match. This is because we don't know the ECV (compatibility class) of
-    // 1.2.3!
-    if (!myECV)
-      return false;
-
-    // To be compatible, the two versions must have the same
-    // earliestCompatibleVersion. If the earliestCompatibleVersions haven't been
-    // overridden from their default, this means that the two versions have the
-    // same major version number.
-    return myECV === candidateUV.earliestCompatibleVersion;
+    // To be compatible, the two versions must have the same major version
+    // number.
+    return candidateUV.majorVersion ===
+      PackageVersion.majorVersion(currConstraint.version);
   });
 
 };

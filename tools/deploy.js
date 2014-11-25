@@ -383,7 +383,7 @@ var bundleAndDeploy = function (options) {
   var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  Console.stdout.write('Deploying to http://' + site + '.\n');
+  Console.stdout.write('Deploying to ' + site + '.\n');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -406,14 +406,7 @@ var bundleAndDeploy = function (options) {
       messages.merge(bundleResult.errors);
 
     if (options.recordPackageUsage) {
-      var statsMessages = buildmessage.capture({ title: 'Reporting statistics' }, function () {
-        stats.recordPackages("sdk.deploy", site);
-      });
-      if (statsMessages.hasMessages()) {
-        Console.stdout.write("Error recording package list:\n" +
-                             statsMessages.formatMessages());
-        // ... but continue;
-      }
+      stats.recordPackages("sdk.deploy", site);
     }
 
   }

@@ -178,6 +178,7 @@ Blaze.TemplateInstance = function (view) {
    * @instance
    * @summary The [View](#blaze_view) object for this invocation of the template.
    * @locus Client
+   * @type {Blaze.View}
    */
   this.view = view;
   this.data = null;
@@ -188,6 +189,7 @@ Blaze.TemplateInstance = function (view) {
    * @instance
    * @summary The first top-level DOM node in this template instance.
    * @locus Client
+   * @type {DOMNode}
    */
   this.firstNode = null;
 
@@ -197,6 +199,7 @@ Blaze.TemplateInstance = function (view) {
    * @instance
    * @summary The last top-level DOM node in this template instance.
    * @locus Client
+   * @type {DOMNode}
    */
   this.lastNode = null;
 };
@@ -205,6 +208,7 @@ Blaze.TemplateInstance = function (view) {
  * @summary Find all elements matching `selector` in this template instance, and return them as a JQuery object.
  * @locus Client
  * @param {String} selector The CSS selector to match, scoped to the template contents.
+ * @returns {DOMNode[]}
  */
 Blaze.TemplateInstance.prototype.$ = function (selector) {
   var view = this.view;
@@ -217,6 +221,7 @@ Blaze.TemplateInstance.prototype.$ = function (selector) {
  * @summary Find all elements matching `selector` in this template instance.
  * @locus Client
  * @param {String} selector The CSS selector to match, scoped to the template contents.
+ * @returns {DOMElement[]}
  */
 Blaze.TemplateInstance.prototype.findAll = function (selector) {
   return Array.prototype.slice.call(this.$(selector));
@@ -226,6 +231,7 @@ Blaze.TemplateInstance.prototype.findAll = function (selector) {
  * @summary Find one element matching `selector` in this template instance.
  * @locus Client
  * @param {String} selector The CSS selector to match, scoped to the template contents.
+ * @returns {DOMElement}
  */
 Blaze.TemplateInstance.prototype.find = function (selector) {
   var result = this.$(selector);
@@ -283,6 +289,7 @@ Template.prototype.events = function (eventMap) {
  * @memberOf Template
  * @summary The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
  * @locus Client
+ * @returns Blaze.TemplateInstance
  */
 Template.instance = function () {
   var view = Blaze.currentView;

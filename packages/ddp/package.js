@@ -1,20 +1,19 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.0.10'
+  version: '1.0.11'
 });
 
-// We use Faye's 'websocket-driver' for connections in server-to-server DDP,
-// mostly because it's the same library used as a server in sockjs, and it's
-// easiest to deal with a single websocket implementation.  (Plus, its
-// maintainer is easy to work with on pull requests.)
+// We use 'faye-websocket' for connections in server-to-server DDP, mostly
+// because it's the same library used as a server in sockjs, and it's easiest to
+// deal with a single websocket implementation.  (Plus, its maintainer is easy
+// to work with on pull requests.)
 //
-// (By listing websocket-driver first, it's more likely that npm deduplication
-// will prevent a second copy of websocket-driver from being installed inside
+// (By listing faye-websocket first, it's more likely that npm deduplication
+// will prevent a second copy of faye-websocket from being installed inside
 // sockjs.)
 Npm.depends({
-  "websocket-driver": "0.3.6",
-  sockjs: "0.3.9",
-  "tunnel-agent": "0.4.0"
+  "faye-websocket": "0.8.1",
+  sockjs: "0.3.11"
 });
 
 Package.on_use(function (api) {

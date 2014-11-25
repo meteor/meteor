@@ -423,28 +423,16 @@ _.extend(Project.prototype, {
         }
         // If we can't find the old version, then maybe that was a local package and
         // now is not, and that is also not news.
-        var oldVersion;
-        var newRec;
-        var messages = buildmessage.capture(function () {
-          oldVersion = catalog.complete.getVersion(package, oldV);
-          newRec =
-            catalog.complete.getVersion(package, newV);
-        });
-        if (messages.hasMessages()) {
-          // It would be very weird for us to end up here! But it is
-          // theoretically possible. If it happens, we should probably not crash
-          // (since we have already done all the operations) and logging a
-          // confusing message will just be confusing, so ... recover by
-          // skipping, I guess.
-          return;
-        };
+        var oldVersion = catalog.complete.getVersion(package, oldV);
+        var newRec = catalog.complete.getVersion(package, newV);
 
         // The new version has to exist, or we wouldn't have chosen it.
         if (!oldVersion) {
           return;
         }
-        var oldECV = oldVersion.earliestCompatibleVersion;
-        if (oldECV !== newRec.earliestCompatibleVersion) {
+        var oldMajorVersion = packageVersionParser.majorVersion(oldV);
+        var newMajorVersion = packageVersionParser.majorVersion(newV);
+        if (oldMajorVersion !== newMajorVersion) {
           incompatibleUpdates.push({
             name: package,
             description: "(" + oldV + "->" + newV + ") " + newRec.description
@@ -774,7 +762,6 @@ _.extend(Project.prototype, {
   setVersions: function (newVersions, options) {
     var self = this;
     options = options || {};
-    buildmessage.assertInCapture();
 
     var downloaded = tropohouse.default.downloadMissingPackages(newVersions);
     var ret = {
@@ -839,7 +826,6 @@ _.extend(Project.prototype, {
   // disk and the operation has failed.
   addPackages : function (moreDeps, newVersions) {
     var self = this;
-    buildmessage.assertInCapture();
 
     // First, we need to make sure that we have downloaded all the packages that
     // we are going to use. So, go through the versions and call tropohouse to

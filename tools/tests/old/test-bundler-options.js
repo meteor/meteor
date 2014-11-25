@@ -9,6 +9,7 @@ var catalog = require('../../catalog.js');
 var project = require('../../project.js');
 var compiler = require('../../compiler.js');
 var buildmessage = require('../../buildmessage.js');
+var isopackets = require("../../isopackets.js");
 
 // an empty app. notably this app has no .meteor/release file.
 var emptyAppDir = path.join(__dirname, 'empty-app');
@@ -28,12 +29,11 @@ var setAppDir = function (appDir) {
   var checkoutPackageDir = path.join(
     files.getCurrentToolsDir(), 'packages');
 
+  isopackets.ensureIsopacketsLoadable();
+
   doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
-    });
     catalog.complete.initialize({
-      localPackageDirs: [appPackageDir, checkoutPackageDir]
+      localPackageSearchDirs: [appPackageDir, checkoutPackageDir]
     });
   });
 };

@@ -90,7 +90,6 @@ _.extend(Release.prototype, {
   // meteor-tool package in checkout.
   getCurrentToolsVersion: function () {
     var self = this;
-    buildmessage.assertInCapture();
 
     if (release.current.name) {
       return self._manifest.tool;
@@ -165,7 +164,6 @@ release.explicit = null;
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
 release.usingRightReleaseForApp = function () {
-  buildmessage.assertInCapture();
   if (release.current === null)
     throw new Error("no release?");
 

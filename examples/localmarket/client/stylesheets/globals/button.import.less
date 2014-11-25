@@ -1,0 +1,110 @@
+[class^="btn-"],
+[class*=" btn-"] {
+  // Sizing
+  .font-s2;
+  line-height: 22px !important; //override line-height always so we can use em's to size.
+  padding: 1.2em 1.25em .95em; // 48px tall
+
+  // Style
+  .type-black;
+  .title-caps;
+  .transition( all 200ms ease-in );
+  color: @color-empty;
+  display: inline-block;
+  position: relative;
+  text-align: center;
+  text-decoration: none !important; //prevents global link styles from applying
+  vertical-align: middle;
+  white-space: nowrap;
+
+  &[class*="small"] {
+    padding: .7em 1.25em .50em; // 36px tall
+  }
+
+  &[class*="primary"] {
+    background-color: @color-primary;
+    color: @color-empty;
+
+    &:hover { background-color: darken(@color-primary, 5%); }
+    &:active { box-shadow: rgba(0,0,0,.3) 0 1px 3px 0 inset; }
+  }
+
+  &[class*="secondary"] {
+    background: @color-tertiary;
+    color: rgba(255,255,255,.4);
+
+    &:hover { background-color: darken(@color-tertiary, 5%); }
+    &:active { box-shadow: rgba(0,0,0,.3) 0 1px 3px 0 inset; }
+
+    &.active,
+    &.no-state:first-child {
+      background: @color-secondary;
+      color: @color-empty;
+
+      &:hover{ background-color: darken(@color-secondary, 5%); }
+      &:active{ box-shadow: rgba(0,0,0,.3) 0 1px 3px 0 inset; }
+    }
+
+    &.no-state { color: @color-empty; }
+  }
+
+  &[class*="tertiary"] {
+    background: @color-raw;
+    color: @color-primary;
+
+    &:hover { background-color: @color-raw; }
+  }
+
+  &[class*="twitter"] {
+    background-color: @color-twitter;
+    color: @color-empty;
+
+    &:hover { background-color: darken(@color-twitter, 10%); }
+    &:active { box-shadow: rgba(0,0,0,.3) 0 1px 3px 0 inset; }
+  }
+
+  &[class*="camera"] {
+    border-radius: 10em;
+    box-shadow: @color-primary 0 0 0px 2px inset;
+    font-size: 20px; //reset
+    height: 4rem;
+    letter-spacing: 0; //reset
+    padding: 0; //reset
+    text-indent: 0; //reset
+    width: 4rem;
+
+    .icon-camera {
+      @dimension-camera: 3.5rem;
+      .position(absolute, 50%, 50%, auto, auto, @dimension-camera, @dimension-camera );
+      .transform(translate3d(50%, -50%,0));
+      background-color: @color-primary;
+      border-radius: 10em;
+      color: @color-empty;
+      display: inline-block;
+      line-height: @dimension-camera;
+    }
+
+    &:hover {
+      box-shadow: darken(@color-primary, 3%) 0 0 0px 2px inset;
+      .icon-camera { background-color: darken(@color-primary, 3%); }
+    }
+
+    &:active {
+      box-shadow: darken(@color-primary, 3%) 0 0 0px 2px inset;
+      .icon-camera { background-color: darken(@color-primary, 3%); }
+    }
+  }
+
+  &[disabled] { opacity: .5; }
+}
+
+.btns-group {
+  .display(flex);
+  .flex-wrap(wrap);
+  width: 100%;
+
+  [class*="btn-"] {
+    .ellipsized;
+    .flex(1);
+  }
+}

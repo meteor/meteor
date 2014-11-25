@@ -18,16 +18,17 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 var readline = require('readline');
+var util = require('util');
 var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
 var cleanup = require('./cleanup.js');
 var utils = require('./utils.js');
 
-PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
-FORCE_PRETTY=undefined;
+var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
+var FORCE_PRETTY=undefined;
 if (process.env.METEOR_PRETTY_OUTPUT) {
-  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0'
+  FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
 }
 
 if (!process.env.METEOR_COLOR) {
@@ -35,18 +36,18 @@ if (!process.env.METEOR_COLOR) {
 }
 
 
-STATUSLINE_MAX_LENGTH = 60;
-STATUS_MAX_LENGTH = 40;
+var STATUSLINE_MAX_LENGTH = 60;  // XXX unused?
+var STATUS_MAX_LENGTH = 40;
 
-PROGRESS_MAX_WIDTH = 40;
-PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
-TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
+var PROGRESS_MAX_WIDTH = 40;
+var PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
+var TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
-STATUS_INTERVAL_MS = 500;
+var STATUS_INTERVAL_MS = 500;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
-FALLBACK_STATUS = '';
+var FALLBACK_STATUS = '';
 
 var spacesArray = new Array(200).join(' ');
 var spacesString = function (length) {
@@ -92,6 +93,12 @@ _.extend(ProgressDisplayNone.prototype, {
 // Status message mode is where we see status messages but not the
 // fancy progress bar.  It's used when we detect a "pseudo-TTY"
 // of the type used by Emacs, and possibly SSH.
+//
+// XXX DELETE THIS MODE since the progress bar now uses "\r".
+// But first we have to throttle progress bar updates so that
+// Emacs doesn't get overwhelemd (we should throttle them anyway).
+// There's also a bug when using the progress bar in Emacs where
+// the cursor doesn't seem to return to column 0.
 var ProgressDisplayStatus = function (console) {
   var self = this;
 
@@ -371,7 +378,7 @@ _.extend(StatusPoller.prototype, {
 
     self._pollFiber = Fiber(function () {
       while (!self._stop) {
-        sleep(100);
+        utils.sleepMs(100);
 
         self.statusPoll();
       }
@@ -491,25 +498,15 @@ var Console = function (options) {
 };
 
 
-// This function returns a future which resolves after a timeout. This
-// demonstrates manually resolving futures.
-function sleep(ms) {
-  var future = new Future;
-  setTimeout(function() {
-    future.return();
-  }, ms);
-  return future.wait();
-};
+var LEVEL_CODE_ERROR = 4;
+var LEVEL_CODE_WARN = 3;
+var LEVEL_CODE_INFO = 2;
+var LEVEL_CODE_DEBUG = 1;
 
-LEVEL_CODE_ERROR = 4;
-LEVEL_CODE_WARN = 3;
-LEVEL_CODE_INFO = 2;
-LEVEL_CODE_DEBUG = 1;
-
-LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
-LEVEL_WARN = { code: LEVEL_CODE_WARN };
-LEVEL_INFO = { code: LEVEL_CODE_INFO };
-LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
+var LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
+var LEVEL_WARN = { code: LEVEL_CODE_WARN };
+var LEVEL_INFO = { code: LEVEL_CODE_INFO };
+var LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
 
 _.extend(Console.prototype, {
   LEVEL_ERROR: LEVEL_ERROR,
@@ -519,10 +516,40 @@ _.extend(Console.prototype, {
 
   setPretty: function (pretty) {
     var self = this;
-    if (FORCE_PRETTY === undefined) {
-      self._pretty = pretty;
-    }
+    // If we're being forced, do nothing.
+    if (FORCE_PRETTY !== undefined)
+      return;
+    // If no change, do nothing.
+    if (self._pretty === pretty)
+      return;
+    self._pretty = pretty;
     self._updateProgressDisplay();
+  },
+
+  // Runs f with the progress display visible (ie, with progress display enabled
+  // and pretty). Resets both flags to their original values after f runs.
+  withProgressDisplayVisible: function (f) {
+    var self = this;
+    var originalPretty = self._pretty;
+    var originalProgressDisplayEnabled = self._progressDisplayEnabled;
+
+    // Turn both flags on.
+    self._pretty = self._progressDisplayEnabled = true;
+
+    // Update the screen if anything changed.
+    if (!originalPretty || !originalProgressDisplayEnabled)
+      self._updateProgressDisplay();
+
+    try {
+      return f();
+    } finally {
+      // Reset the flags.
+      self._pretty = originalPretty;
+      self._progressDisplayEnabled = originalProgressDisplayEnabled;
+      // Update the screen if anything changed.
+      if (!originalPretty || !originalProgressDisplayEnabled)
+        self._updateProgressDisplay();
+    }
   },
 
   setVerbose: function (verbose) {
@@ -668,7 +695,7 @@ _.extend(Console.prototype, {
     if (!self._pretty) {
       return message;
     }
-    return chalk.green('\u2713 ' + message);
+    return chalk.green('\u2713 ' + message);  // CHECK MARK
   },
 
   fail: function (message) {
@@ -677,7 +704,7 @@ _.extend(Console.prototype, {
     if (!self._pretty) {
       return message;
     }
-    return chalk.red('\u2717 ' + message);
+    return chalk.red('\u2717 ' + message);  // BALLOT X
   },
 
   command: function (message) {
@@ -707,15 +734,7 @@ _.extend(Console.prototype, {
   },
 
   _format: function (logArguments) {
-    var self = this;
-
-    var message = '';
-    for (var i = 0; i < logArguments.length; i++) {
-      if (i != 0) message += ' ';
-      message += logArguments[i];
-    }
-
-    return message;
+    return util.format.apply(util, logArguments);
   },
 
   printError: function (err, info) {
@@ -756,6 +775,9 @@ _.extend(Console.prototype, {
       enabled = true;
     }
 
+    if (self._progressDisplayEnabled === enabled)
+      return;
+
     self._progressDisplayEnabled = enabled;
     self._updateProgressDisplay();
   },
@@ -778,6 +800,7 @@ _.extend(Console.prototype, {
       // It's important that we only enter status message mode
       // if self._pretty, so that we don't start displaying
       // status messages too soon.
+      // XXX See note where ProgressDisplayStatus is defined.
       newProgressDisplay = new ProgressDisplayStatus(self);
     } else {
       // Otherwise we can do the full progress bar

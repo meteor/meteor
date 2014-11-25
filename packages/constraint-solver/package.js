@@ -21,6 +21,7 @@ Package.on_test(function (api) {
   // data for big benchmarky tests
   api.add_files('test-data.js', ['server']);
   api.add_files('constraint-solver-tests.js', ['server']);
+  api.add_files('benchmark-tests.js', ['server']);
   api.add_files('resolver-tests.js', ['server']);
   api.use('underscore');
 });

@@ -57,7 +57,8 @@ _.extend(exports.Tropohouse.prototype, {
     }
 
     var relativePath = path.join(config.getPackagesDirectoryName(),
-                                 packageName, version);
+                                 utils.escapePackageNameForPath(packageName),
+                                 version);
     return relative ? relativePath : path.join(self.root, relativePath);
   },
 
@@ -70,7 +71,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     var packageRootDir = path.join(self.root, packagesDirectoryName);
     try {
-      var packages = fs.readdirSync(packageRootDir);
+      var escapedPackages = fs.readdirSync(packageRootDir);
     } catch (e) {
       // No packages at all? We're done.
       if (e.code === 'ENOENT')
@@ -80,9 +81,9 @@ _.extend(exports.Tropohouse.prototype, {
 
     // We want to be careful not to break the 'meteor' symlink inside the
     // tropohouse. Hopefully nobody deleted/modified that package!
-    var latestToolPackage = null;
+    var latestToolPackageEscaped = null;
     var latestToolVersion = null;
-    var currentToolPackage = null;
+    var currentToolPackageEscaped = null;
     var currentToolVersion = null;
     // Warning: we can't examine release.current here, because we might be
     // currently processing release.load!
@@ -91,7 +92,8 @@ _.extend(exports.Tropohouse.prototype, {
       // /home/user/.meteor/packages/meteor-tool/.1.0.17.ut200e++os.osx.x86_64+web.browser+web.cordova/meteor-tool-os.osx.x86_64
       var toolsDir = files.getCurrentToolsDir();
       // eg, 'meteor-tool'
-      currentToolPackage = path.basename(path.dirname(path.dirname(toolsDir)));
+      currentToolPackageEscaped =
+        path.basename(path.dirname(path.dirname(toolsDir)));
       // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova'
       var toolVersionDir = path.basename(path.dirname(toolsDir));
       var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
@@ -104,13 +106,13 @@ _.extend(exports.Tropohouse.prototype, {
                            packagesDirectoryName + path.sep)) {
         var rest = latestMeteorSymlink.substr(packagesDirectoryName.length + path.sep.length);
         var pieces = rest.split(path.sep);
-        latestToolPackage = pieces[0];
+        latestToolPackageEscaped = pieces[0];
         latestToolVersion = pieces[1];
       }
     }
 
-    _.each(packages, function (package) {
-      var packageDir = path.join(packageRootDir, package);
+    _.each(escapedPackages, function (packageEscaped) {
+      var packageDir = path.join(packageRootDir, packageEscaped);
       try {
         var versions = fs.readdirSync(packageDir);
       } catch (e) {
@@ -119,7 +121,7 @@ _.extend(exports.Tropohouse.prototype, {
           return;
         throw e;
       }
-      _.each(fs.readdirSync(packageDir), function (version) {
+      _.each(versions, function (version) {
         // Is this a pre-0.9.0 "warehouse" version with a hash name?
         if (/^[a-f0-9]{3,}$/.test(version))
           return;
@@ -127,7 +129,7 @@ _.extend(exports.Tropohouse.prototype, {
         // Skip the currently-latest tool (ie, don't break top-level meteor
         // symlink). This includes both the symlink with its name and the thing
         // it points to.
-        if (package === latestToolPackage &&
+        if (packageEscaped === latestToolPackageEscaped &&
             (version === latestToolVersion ||
              utils.startsWith(version, '.' + latestToolVersion + '.'))) {
           return;
@@ -135,7 +137,7 @@ _.extend(exports.Tropohouse.prototype, {
 
         // Skip the currently-executing tool (ie, don't break the current
         // operation).
-        if (package === currentToolPackage &&
+        if (packageEscaped === currentToolPackageEscaped &&
             (version === currentToolVersion ||
              utils.startsWith(version, '.' + currentToolVersion + '.'))) {
           return;
@@ -182,7 +184,6 @@ _.extend(exports.Tropohouse.prototype, {
   // warehouse does.  actually, generally deal with error handling.
   maybeDownloadPackageForArchitectures: function (options) {
     var self = this;
-    buildmessage.assertInCapture();
     if (!options.packageName)
       throw Error("Missing required argument: packageName");
     if (!options.version)
@@ -236,8 +237,12 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Have everything we need? Great.
     if (!archesToDownload.length) {
+      Console.debug("Local package version is up-to-date:", packageName + "@" + version);
       return;
     }
+
+    Console.debug("Downloading missing local versions of package",
+                  packageName + "@" + version, ":", archesToDownload);
 
     // Since we are downloading from the server (and we've already done the
     // local package check), we can use the official catalog here. (This is
@@ -307,11 +312,15 @@ _.extend(exports.Tropohouse.prototype, {
   // don't check it. Bleah.  Should rewrite this and all of its callers.
   downloadMissingPackages: function (versionMap, options) {
     var self = this;
-    buildmessage.assertInCapture();
     options = options || {};
     var serverArch = options.serverArch || archinfo.host();
     var downloadedPackages = {};
-    buildmessage.forkJoin({ title: 'Downloading packages', parallel: true },
+    // XXX We intentionally didn't make this message "downloading packages"
+    // because users were confused if this message showed up when there wasn't
+    // actually any packages being downloaded. But since we use forkJoin here,
+    // the nested downloading jobs don't print, so now there's NEVER a
+    // downloading status message.
+    buildmessage.forkJoin({ title: 'Checking local package versions', parallel: true },
       versionMap, function (version, name) {
       try {
         self.maybeDownloadPackageForArchitectures({

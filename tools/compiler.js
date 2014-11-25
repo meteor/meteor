@@ -6,7 +6,7 @@ var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var linker = require('./linker.js');
 var isopack = require('./isopack.js');
 var packageLoader = require('./package-loader.js');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var bundler = require('./bundler.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
@@ -45,11 +45,14 @@ compiler.BUILT_BY = 'meteor/14';
 //    that are on one of these packages (it's an object mapping
 //    package name -> true). Otherwise skip all weak dependencies.
 //
-// (Why does we need to list acceptable weak packages here rather than just
-// implement a skipWeak flag and allow the caller to filter the ones they care
-// about? Well, we want to avoid even calling packageLoader.getUnibuild on
-// dependencies that aren't going to get included, because in the uniload case,
-// the weak dependency might not even be there at all.)
+// XXX Why do we need to list acceptable weak packages here rather than just
+//     implement a skipWeak flag and allow the caller to filter the ones they
+//     care about? Well, we used to want to avoid even calling
+//     packageLoader.getUnibuild on dependencies that aren't going to get
+//     included, because in the old prebuilt uniload case, the weak dependency
+//     might not even be there at all. This is no longer relevant, because now
+//     we build and distribute isopackets, and all core packages are available
+//     at that point in time.
 //
 // packageLoader is the PackageLoader that should be used to resolve
 // the dependencies.
@@ -139,10 +142,12 @@ var determineBuildTimeDependencies = function (packageSource,
 
   // There are some special cases where we know that the package has no source
   // files, which means it can't have any interesting build-time
-  // dependencies. Specifically, the top-level wrapper package used by uniload
-  // (via bundler.buildJsImage) works this way. This early return avoid calling
-  // the constraint solver for uniload, which makes sense because it's supposed
-  // to only look at the prebuilt packages.
+  // dependencies. Specifically, the top-level wrapper package used to create
+  // isopackets (via bundler.buildJsImage) works this way. This early return
+  // avoids calling the constraint solver when building isopackets, which makes
+  // sense because it's supposed to only look at the prebuilt packages.
+  // XXX We should get rid of noSources when we get rid of the constraint solver
+  //     call in determineBuildTimeDependencies.
   if (packageSource.noSources)
     return ret;
 
@@ -263,8 +268,9 @@ var determineBuildTimeDependencies = function (packageSource,
   // Every time we run the constraint solver, we record the results. This has
   // two benefits -- first, it faciliatates repeatable builds, second,
   // memorizing results makes the constraint solver more efficient.
-  // (But we don't do this during uniload.)
-  if (ret.packageDependencies && packageSource.catalog === catalog.complete) {
+  // (But we don't do this if we're building isopackets.)
+  if (ret.packageDependencies &&
+      ! packageSource.catalog.isopacketBuildingCatalog) {
     var constraintResults = {
       dependencies: ret.packageDependencies,
       pluginDependencies: ret.pluginDependencies
@@ -324,9 +330,10 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   // have circular build-time dependencies.
   //
   // Note that we avoid even calling containsPlugins if we know there are no
-  // sources; specifically, this avoids calling containsPlugins in the uniload
-  // case because uniload doesn't know how to check to see if a package has
-  // plugins.
+  // sources; specifically, this avoids calling containsPlugins in the
+  // isopacket-building case because in that case we might not know how to check
+  // to see if a package has plugins.  (It's possible that this check is no
+  // longer necessary.)
   //
   // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
   // templating from standard-app-packages).
@@ -866,9 +873,7 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
   // default unibuild is not allowed to depend on anything!)
   var jsAnalyze = null;
   if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
-    jsAnalyze = uniload.load({
-      packages: ["js-analyze"]
-    })["js-analyze"].JSAnalyze;
+    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
   }
 
   var results = linker.prelink({
@@ -1052,7 +1057,6 @@ compiler.compile = function (packageSource, options) {
     name: packageSource.name,
     metadata: packageSource.metadata,
     version: packageSource.version,
-    earliestCompatibleVersion: packageSource.earliestCompatibleVersion,
     isTest: packageSource.isTest,
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
@@ -1192,10 +1196,10 @@ compiler.checkUpToDate = function (
   }
 
   // Does this isopack contain the tool? We are very bad at watching for tool
-  // changes, since the tool encompasses so much stuff (ex: uniload packages)
-  // and doesn't have a control file (so it is hard to figure out if new files
-  // were added). Let's play it safe and never ever ever pretend that the tool
-  // is up to date.
+  // changes, since the tool encompasses so much stuff (e.g., isopackets) and
+  // doesn't have a control file (so it is hard to figure out if new files were
+  // added). Let's play it safe and never ever ever pretend that the tool is up
+  // to date.
   if (packageSource.includeTool) {
     return false;
   }

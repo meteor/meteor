@@ -11,7 +11,7 @@ var watch = require('./watch.js');
 var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
@@ -234,7 +234,6 @@ var Isopack = function () {
   self.name = null;
   self.metadata = {};
   self.version = null;
-  self.earliestCompatibleVersion = null;
   self.isTest = false;
   self.debugOnly = false;
 
@@ -311,7 +310,6 @@ _.extend(Isopack.prototype, {
     self.name = options.name;
     self.metadata = options.metadata;
     self.version = options.version;
-    self.earliestCompatibleVersion = options.earliestCompatibleVersion;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
     self.cordovaDependencies = options.cordovaDependencies;
@@ -637,7 +635,6 @@ _.extend(Isopack.prototype, {
         summary: mainJson.summary
       };
       self.version = mainJson.version;
-      self.earliestCompatibleVersion = mainJson.earliestCompatibleVersion;
       self.isTest = mainJson.isTest;
       self.debugOnly = !!mainJson.debugOnly;
     }
@@ -727,8 +724,6 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      self.cordovaDependencies = mainJson.cordovaDependencies || null;
-
       self.unibuilds.push(new Unibuild(self, {
         name: unibuildMeta.name,
         arch: unibuildMeta.arch,
@@ -738,10 +733,11 @@ _.extend(Isopack.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources,
-        cordovaDependencies: unibuildJson.cordovaDependencies
+        resources: resources
       }));
     });
+
+    self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
     _.each(mainJson.tools, function (toolMeta) {
       toolMeta.rootDir = dir;
@@ -763,9 +759,11 @@ _.extend(Isopack.prototype, {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
-    buildmessage.assertInCapture();
-    if (!options.catalog && !options.elideBuildInfo)
-      throw Error("catalog required to generate buildinfo.json");
+    if (!options.elideBuildInfo) {
+      buildmessage.assertInCapture();
+      if (!options.catalog)
+        throw Error("catalog required to generate buildinfo.json");
+    }
 
     var builder = new Builder({ outputPath: outputPath });
     try {
@@ -773,7 +771,6 @@ _.extend(Isopack.prototype, {
         name: self.name,
         summary: self.metadata.summary,
         version: self.version,
-        earliestCompatibleVersion: self.earliestCompatibleVersion,
         isTest: self.isTest,
         builds: [],
         plugins: []
@@ -810,8 +807,7 @@ _.extend(Isopack.prototype, {
           pluginProviderPackages: self.pluginProviderPackageDirs,
           source: options.buildOfPath || undefined,
           buildTimeDirectDependencies: buildTimeDirectDeps,
-          buildTimePluginDependencies: buildTimePluginDeps,
-          cordovaDependencies: self.cordovaDependencies
+          buildTimePluginDependencies: buildTimePluginDeps
         };
       }
 
@@ -1063,7 +1059,6 @@ _.extend(Isopack.prototype, {
 
   _writeTool: function (builder) {
     var self = this;
-    buildmessage.assertInCapture();
 
     var pathsToCopy = files.runGitInCheckout(
       'ls-tree',
@@ -1086,7 +1081,7 @@ _.extend(Isopack.prototype, {
 
     var toolPath = 'meteor-tool-' + archinfo.host();
     builder = builder.enter(toolPath);
-    var unipath = builder.reserve('isopacks', {directory: true});
+    builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
@@ -1100,21 +1095,47 @@ _.extend(Isopack.prototype, {
       ignore: bundler.ignoreFiles
     });
 
-    // We only want to load local packages.
+    // Build all of the isopackets now, so that no build step is required when
+    // you're actually running meteor from a release in order to load packages.
+    var isopacketCatalog = isopackets.newIsopacketBuildingCatalog();
     var localPackageLoader = new packageLoader.PackageLoader({
       versions: null,
-      catalog: catalog.uniload,
+      catalog: isopacketCatalog,
       constraintSolverOpts: { ignoreProjectDeps: true }
     });
-    bundler.iterateOverAllUsedIsopacks(
-      localPackageLoader, archinfo.host(), uniload.ROOT_PACKAGES,
-      function (isopk) {
-        // XXX assert that each name shows up once
-        isopk.saveToPath(path.join(unipath, isopk.name), {
-          // There's no mechanism to rebuild these packages.
-          elideBuildInfo: true
+
+    var messages = buildmessage.capture(function () {
+      // We rebuild them in the order listed in ISOPACKETS. This is not strictly
+      // necessary here, since any isopackets loaded as part of the build
+      // process are going to be the current tool's isopackets, not the
+      // isopackets that we're writing out.
+      _.each(isopackets.ISOPACKETS, function (packages, isopacketName) {
+        buildmessage.enterJob({
+          title: "Compiling " + isopacketName + " packages for the tool"
+        }, function () {
+          var image = bundler.buildJsImage({
+            name: "isopacket-" + isopacketName,
+            packageLoader: localPackageLoader,
+            use: packages,
+            catalog: isopacketCatalog,
+            ignoreProjectDeps: true
+          }).image;
+
+          if (buildmessage.jobHasMessages())
+            return;
+          image.write(builder.enter(path.join('isopackets', isopacketName)));
         });
       });
+    });
+
+    // This is a build step ... but it's one that only happens in development,
+    // and similar to a isopacket load failure, it can just crash the app
+    // instead of being handled nicely.
+    if (messages.hasMessages()) {
+      process.stderr.write("Errors prevented tool build:\n");
+      process.stderr.write(messages.formatMessages());
+      throw new Error("tool build failed?");
+    }
 
     return [{
       name: 'meteor',
