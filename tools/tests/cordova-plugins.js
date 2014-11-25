@@ -156,6 +156,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
+  run.waitSecs(2);
   run.match("Do you agree");
   run.write("Y\n");
   run.waitSecs(90); // Huge download
@@ -164,9 +165,11 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
   run.waitSecs(5);
   run.match("added cordova plugin org.apache.cordova.camera");
+  run.expectExit(0);
 
   run = s.run("add", "cordova:org.apache.cordova.file");
-  run.matchErr("Must declare exact version");
+  run.matchErr("exact version or tarball url");
+  run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
   // build time.
@@ -181,7 +184,9 @@ selftest.define("add cordova plugins", ["slow"], function () {
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
-  run.match("added");
+  // run.match("added");  // XXX #3006 show package changes
+  run.match("contains a cordova plugin");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 

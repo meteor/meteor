@@ -1824,6 +1824,7 @@ main.registerCommand({
       } else {
         plugins[parts[0]] = parts[1];
         changed = true;
+        Console.info("added cordova plugin " + parts[0]);
       }
     });
     changed && projectContext.cordovaPluginsFile.write(plugins);
