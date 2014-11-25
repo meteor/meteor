@@ -158,7 +158,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
@@ -275,7 +275,7 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   var platformRun = s.run("add-platform", "android");
   platformRun.match("Do you agree");
   platformRun.write("Y\n");
-  platformRun.extraTime = 90; // Huge download
+  platformRun.waitSecs(90); // Huge download
   platformRun.match("added platform");
 
   run.waitSecs(60);
@@ -336,7 +336,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow"], function (
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run();
@@ -477,7 +477,7 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow"],
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   // Add a direct dependency: it should appear in star.json after we
