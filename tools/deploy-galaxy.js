@@ -194,16 +194,22 @@ exports.deploy = function (options) {
 
     if (! options.starball && ! messages.hasMessages()) {
       process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-      stats.recordPackages("sdk.deploy", options.app);
       var bundleResult = bundler.bundle({
+        projectContext: options.projectContext,
         outputPath: bundlePath,
         buildOptions: options.buildOptions,
         requireControlProgram: true
       });
 
       if (bundleResult.errors) {
-        messages.merge(bundleResult.errors);
+        messages = bundleResult.errors;
       } else {
+        stats.recordPackages({
+          what: "sdk.deploy",
+          projectContext: options.projectContext,
+          site: options.app
+        });
+
         // S3 (which is what's likely on the other end our upload)
         // requires a content-length header for HTTP PUT uploads. That
         // means that we have to actually tgz up the bundle before we

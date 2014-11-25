@@ -157,7 +157,6 @@ var archinfo = require(path.join(__dirname, 'archinfo.js'));
 var buildmessage = require('./buildmessage.js');
 var fs = require('fs');
 var _ = require('underscore');
-var project = require(path.join(__dirname, 'project.js'));
 var isopackets = require("./isopackets.js");
 var watch = require('./watch.js');
 var release = require('./release.js');
@@ -407,15 +406,15 @@ _.extend(File.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options:
-// - packageLoader: PackageLoader to use for resolving package dependencies
+// - packageMap and isopackCache: for resolving package dependencies
 // - arch: the architecture to build
 //
 // see subclasses for additional options
 var Target = function (options) {
   var self = this;
 
-  // PackageLoader to use for resolving package dependenices.
-  self.packageLoader = options.packageLoader;
+  self.packageMap = options.packageMap;
+  self.isopackCache = options.isopackCache;
 
   // Something like "web.browser" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
@@ -431,8 +430,8 @@ var Target = function (options) {
   // On-disk dependencies of this target.
   self.watchSet = new watch.WatchSet();
 
-  // Map from package name to package directory of all packages used.
-  self.pluginProviderPackageDirs = {};
+  // List of all package names used in this target.
+  self.usedPackages = {};
 
   // node_modules directories that we need to copy into the target (or
   // otherwise make available at runtime). A map from an absolute path
@@ -448,8 +447,12 @@ var Target = function (options) {
   // For client targets, these are served over HTTP.
   self.asset = [];
 
+  // The project's cordova plugins file (which lists plugins used directly by
+  // the project).
+  self.cordovaPluginsFile = options.cordovaPluginsFile;
+
   // A mapping from Cordova plugin name to Cordova plugin version number.
-  self.cordovaDependencies = {};
+  self.cordovaDependencies = self.cordovaPluginsFile ? {} : null;
 
   // For the todos sample app:
   // false: 99.6 KB / 316 KB
@@ -459,6 +462,8 @@ var Target = function (options) {
   // METEOR_MINIFY_LEGACY is an undocumented safety-valve environment variable,
   //  in case people hit trouble
   self._minifyTogether = !!process.env.METEOR_MINIFY_LEGACY;
+
+  self.includeDebug = options.includeDebug;
 };
 
 _.extend(Target.prototype, {
@@ -518,9 +523,6 @@ _.extend(Target.prototype, {
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
   //
-  // (Note: this is also called directly by
-  // bundler.iterateOverAllUsedIsopacks, kinda hackily.)
-  //
   // options include:
   // - packages: an array of packages (or, properly speaking, unibuilds)
   //   to include. Each element should either be a Isopack object or a
@@ -529,104 +531,125 @@ _.extend(Target.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    var packageLoader = self.packageLoader;
+    var packageMap = self.packageMap;
+    var isopackCache = self.isopackCache;
 
-    // Find the roots
-    var rootUnibuilds = [];
-    _.each(options.packages, function (p) {
-      if (typeof p === "string") {
-        p = packageLoader.getPackage(p, { throwOnError: true });
-      }
-      if (p.debugOnly && !project.project.includeDebug) {
-        return;
-      }
-      rootUnibuilds.push(p.getUnibuildAtArch(self.arch));
-    });
+    buildmessage.enterJob("linking the program", function () {
+      // Find the roots
+      var rootUnibuilds = [];
+      _.each(options.packages, function (p) {
+        if (typeof p === "string") {
+          p = isopackCache.getIsopack(p);
+        }
+        if (p.debugOnly && ! self.includeDebug) {
+          return;
+        }
+        var unibuild = p.getUnibuildAtArch(self.arch);
+        unibuild && rootUnibuilds.push(unibuild);
+      });
 
-    // PHASE 1: Which unibuilds will be used?
-    //
-    // Figure out which unibuilds are going to be used in the target, regardless of
-    // order. We ignore weak dependencies here, because they don't actually
-    // create a "must-use" constraint, just an ordering constraint.
-
-    // What unibuilds will be used in the target? Built in Phase 1, read in
-    // Phase 2.
-    var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
-    var usedPackages = {};  // Map from package name to true;
-    var addToGetsUsed = function (unibuild) {
-      if (_.has(usedUnibuilds, unibuild.id))
-        return;
-      usedUnibuilds[unibuild.id] = unibuild;
-      usedPackages[unibuild.pkg.name] = true;
-      compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader, {
-          skipDebugOnly: !project.project.includeDebug
-        }, addToGetsUsed);
-    };
-    _.each(rootUnibuilds, addToGetsUsed);
-
-    // PHASE 2: In what order should we load the unibuilds?
-    //
-    // Set self.unibuilds to be all of the roots, plus all of their non-weak
-    // dependencies, in the correct load order. "Load order" means that if X
-    // depends on (uses) Y, and that relationship is not marked as unordered, Y
-    // appears before X in the ordering. Raises an exception iff there is no
-    // such ordering (due to circular dependency).
-    //
-    // XXX The topological sort code here is duplicated in catalog.js.
-
-    // What unibuilds have not yet been added to self.unibuilds?
-    var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
-    // Unibuilds that we are in the process of adding; used to detect circular
-    // ordered dependencies.
-    var onStack = {};  // Map from unibuild.id to true.
-
-    // This helper recursively adds unibuild's ordered dependencies to self.unibuilds,
-    // then adds unibuild itself.
-    var add = function (unibuild) {
-      // If this has already been added, there's nothing to do.
-      if (!_.has(needed, unibuild.id))
+      if (buildmessage.jobHasMessages())
         return;
 
-      // Process each ordered dependency. (If we have an unordered dependency
-      // `u`, then there's no reason to add it *now*, and for all we know, `u`
-      // will depend on `unibuild` and need to be added after it. So we ignore
-      // those edge. Because we did follow those edges in Phase 1, any unordered
-      // unibuilds were at some point in `needed` and will not be left out).
+      // PHASE 1: Which unibuilds will be used?
       //
-      // eachUsedUnibuild does follow weak edges (ie, they affect the ordering),
-      // but only if they point to a package in usedPackages (ie, a package that
-      // SOMETHING uses strongly).
-      compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader,
-        { skipUnordered: true,
-          acceptableWeakPackages: usedPackages,
-          skipDebugOnly: !project.project.includeDebug
-        },
-        function (usedUnibuild) {
+      // Figure out which unibuilds are going to be used in the target,
+      // regardless of order. We ignore weak dependencies here, because they
+      // don't actually create a "must-use" constraint, just an ordering
+      // constraint.
+
+      // What unibuilds will be used in the target? Built in Phase 1, read in
+      // Phase 2.
+      var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
+      self.usedPackages = {};  // Map from package name to true;
+      var addToGetsUsed = function (unibuild) {
+        if (_.has(usedUnibuilds, unibuild.id))
+          return;
+        usedUnibuilds[unibuild.id] = unibuild;
+        if (unibuild.kind === 'main') {
+          // Only track real packages, not plugin pseudo-packages.
+          self.usedPackages[unibuild.pkg.name] = true;
+        }
+        compiler.eachUsedUnibuild({
+          dependencies: unibuild.uses,
+          arch: self.arch,
+          isopackCache: isopackCache,
+          skipDebugOnly: ! self.includeDebug
+        }, addToGetsUsed);
+      };
+      _.each(rootUnibuilds, addToGetsUsed);
+
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // PHASE 2: In what order should we load the unibuilds?
+      //
+      // Set self.unibuilds to be all of the roots, plus all of their non-weak
+      // dependencies, in the correct load order. "Load order" means that if X
+      // depends on (uses) Y, and that relationship is not marked as unordered,
+      // Y appears before X in the ordering. Raises an exception iff there is no
+      // such ordering (due to circular dependency).
+      //
+      // XXX The topological sort code here is duplicated in catalog.js.
+
+      // What unibuilds have not yet been added to self.unibuilds?
+      var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
+      // Unibuilds that we are in the process of adding; used to detect circular
+      // ordered dependencies.
+      var onStack = {};  // Map from unibuild.id to true.
+
+      // This helper recursively adds unibuild's ordered dependencies to
+      // self.unibuilds, then adds unibuild itself.
+      var add = function (unibuild) {
+        // If this has already been added, there's nothing to do.
+        if (!_.has(needed, unibuild.id))
+          return;
+
+        // Process each ordered dependency. (If we have an unordered dependency
+        // `u`, then there's no reason to add it *now*, and for all we know, `u`
+        // will depend on `unibuild` and need to be added after it. So we ignore
+        // those edge. Because we did follow those edges in Phase 1, any
+        // unordered unibuilds were at some point in `needed` and will not be
+        // left out).
+        //
+        // eachUsedUnibuild does follow weak edges (ie, they affect the
+        // ordering), but only if they point to a package in usedPackages (ie, a
+        // package that SOMETHING uses strongly).
+        var processUnibuild = function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
-            buildmessage.error("circular dependency between packages " +
-                               unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
+            buildmessage.error(
+              "circular dependency between packages " +
+                unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
           }
           onStack[usedUnibuild.id] = true;
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
-        });
-      self.unibuilds.push(unibuild);
-      delete needed[unibuild.id];
-    };
+        };
+        compiler.eachUsedUnibuild({
+          dependencies: unibuild.uses,
+          arch: self.arch,
+          isopackCache: isopackCache,
+          skipUnordered: true,
+          acceptableWeakPackages: self.usedPackages,
+          skipDebugOnly: ! self.includeDebug
+        }, processUnibuild);
+        self.unibuilds.push(unibuild);
+        delete needed[unibuild.id];
+      };
 
-    while (true) {
-      // Get an arbitrary unibuild from those that remain, or break if none remain.
-      var first = null;
-      for (first in needed) break;
-      if (! first)
-        break;
-      // Now add it, after its ordered dependencies.
-      add(needed[first]);
-    }
+      while (true) {
+        // Get an arbitrary unibuild from those that remain, or break if none
+        // remain.
+        var first = null;
+        for (first in needed) break;
+        if (! first)
+          break;
+        // Now add it, after its ordered dependencies.
+        add(needed[first]);
+      }
+    });
   },
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
@@ -639,18 +662,23 @@ _.extend(Target.prototype, {
 
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
-      _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
-        self._addCordovaDependency(
-          name,
-          version,
-          false /* use newer version if another version has already been added */
-        );
-      });
+      if (self.cordovaDependencies) {
+        _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+          self._addCordovaDependency(
+            name,
+            version,
+            // use newer version if another version has already been added
+            false
+          );
+        });
+      }
 
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
-      var resources = unibuild.getResources(self.arch, self.packageLoader);
+      var resources = unibuild.getResources(self.arch, {
+        isopackCache: self.isopackCache
+      });
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
@@ -754,8 +782,6 @@ _.extend(Target.prototype, {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
        self.watchSet.merge(unibuild.pkg.pluginWatchSet);
-      _.extend(self.pluginProviderPackageDirs,
-               unibuild.pkg.pluginProviderPackageDirs);
     });
   },
 
@@ -799,6 +825,9 @@ _.extend(Target.prototype, {
   // version that has already been added.
   _addCordovaDependency: function (name, version, override) {
     var self = this;
+    if (! self.cordovaDependencies)
+      return;
+
     if (override) {
       self.cordovaDependencies[name] = version;
     } else {
@@ -818,7 +847,10 @@ _.extend(Target.prototype, {
   // of the same plugins that packages are using.
   _addDirectCordovaDependencies: function () {
     var self = this;
-    _.each(project.project.getCordovaPlugins(), function (version, name) {
+    if (! self.cordovaDependencies)
+      return;
+
+    _.each(self.cordovaPluginsFile.getPluginVersions(), function (version, name) {
       self._addCordovaDependency(
         name, version, true /* override any existing version */);
     });
@@ -837,11 +869,6 @@ _.extend(Target.prototype, {
   getWatchSet: function () {
     var self = this;
     return self.watchSet;
-  },
-
-  getPluginProviderPackageDirs: function () {
-    var self = this;
-    return self.pluginProviderPackageDirs;
   },
 
   // Return the most inclusive architecture with which this target is
@@ -1593,7 +1620,6 @@ var ServerTarget = function (options) {
 
   self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
-  self.packageLoader = options.packageLoader;
 
   if (! archinfo.matches(self.arch, "os"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1731,7 +1757,7 @@ var writeTargetToPath = function (name, target, outputPath, options) {
     name: name,
     arch: target.mostCompatibleArch(),
     path: path.join('programs', name, relControlFilePath),
-    cordovaDependencies: target.cordovaDependencies
+    cordovaDependencies: target.cordovaDependencies || undefined
   };
 };
 
@@ -1860,7 +1886,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * Builds a Meteor app.
  *
  * options are:
-
+ *
+ * XXX #3006: Update docs
  * - outputPath: Required. Path to the directory where the output (a
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
@@ -1875,10 +1902,12 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
- *   - arch: the server architecture to target (defaults to archinfo.host())
- *   - serverArch: the server architecture to target
- *                   (defaults to archinfo.host())
- *   - webArchs: an array of web archs to target
+ *   - serverArch: the server architecture to target (defaults to
+ *     archinfo.host())
+ *   - includeDebug (whether to include packages marked debugOnly)
+ *   - webArchs: array of 'web.*' options to build (defaults to
+ *     projectContext.platformList.getWebArchs())
+ *   - serverArch: XXX #3006
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
@@ -1905,18 +1934,17 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  // bundler.bundle is not called to make isopackets, so it always uses the
-  // complete catalog.
-  var whichCatalog = catalog.complete;
+  var projectContext = options.projectContext;
 
   var outputPath = options.outputPath;
   var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
   var buildOptions = options.buildOptions || {};
 
-  var appDir = project.project.rootDir;
+  var appDir = projectContext.projectDir;
 
   var serverArch = buildOptions.serverArch || archinfo.host();
-  var webArchs = buildOptions.webArchs || [ "web.browser" ];
+  var webArchs = buildOptions.webArchs ||
+        projectContext.platformList.getWebArchs();
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1929,29 +1957,20 @@ exports.bundle = function (options) {
   var starResult = null;
   var targets = {};
 
-  if (! release.usingRightReleaseForApp(appDir))
+  if (! release.usingRightReleaseForApp(projectContext))
     throw new Error("running wrong release for app?");
 
   var messages = buildmessage.capture({
     title: "Building the application"
   }, function () {
-    var packageLoader = project.project.getPackageLoader();
-    var downloaded = tropohouse.default.downloadMissingPackages(
-      project.project.dependencies, { serverArch: serverArch });
-
-    if (_.keys(downloaded).length !==
-        _.keys(project.project.dependencies).length) {
-      buildmessage.error("Unable to download package builds for this architecture.");
-      // Recover by returning.
-      return;
-    }
-
-    var controlProgram = null;
-
     var makeClientTarget = function (app, webArch) {
       var client = new ClientTarget({
-        packageLoader: packageLoader,
-        arch: webArch
+        packageMap: projectContext.packageMap,
+        isopackCache: projectContext.isopackCache,
+        arch: webArch,
+        cordovaPluginsFile: (webArch === 'web.cordova'
+                             ? projectContext.cordovaPluginsFile : null),
+        includeDebug: buildOptions.includeDebug
       });
 
       client.make({
@@ -1963,24 +1982,13 @@ exports.bundle = function (options) {
       return client;
     };
 
-    var makeBlankClientTarget = function () {
-      var client = new ClientTarget({
-        packageLoader: packageLoader,
-        arch: "web.browser"
-      });
-      client.make({
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
-
-      return client;
-    };
-
     var makeServerTarget = function (app, clientTargets) {
       var targetOptions = {
-        packageLoader: packageLoader,
+        packageMap: projectContext.packageMap,
+        isopackCache: projectContext.isopackCache,
         arch: serverArch,
-        releaseName: releaseName
+        releaseName: releaseName,
+        includeDebug: buildOptions.includeDebug
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;
@@ -1995,183 +2003,37 @@ exports.bundle = function (options) {
       return server;
     };
 
-    // Include default targets, unless there's a no-default-targets file in the
-    // top level of the app. (This is a very hacky interface which will
-    // change. Note, eg, that .meteor/packages is confusingly ignored in this
-    // case.)
+    // Create a Isopack object that represents the app
+    var packageSource = new PackageSource(projectContext.packageMap.catalog);
+    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+    var app = compiler.compile(packageSource, {
+      packageMap: projectContext.packageMap,
+      isopackCache: projectContext.isopackCache
+    }).isopack;
 
-    var includeDefaultTargets = watch.readAndWatchFile(
-      serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
+    var clientTargets = [];
+    // Client
+    _.each(webArchs, function (arch) {
+      var client = makeClientTarget(app, arch);
+      clientTargets.push(client);
+      targets[arch] = client;
+    });
 
-    if (includeDefaultTargets) {
-      // Create a Isopack object that represents the app
-      var packageSource = new PackageSource(whichCatalog);
-      packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource).isopack;
-
-      var clientTargets = [];
-      // Client
-      _.each(webArchs, function (arch) {
-        var client = makeClientTarget(app, arch);
-        clientTargets.push(client);
-        targets[arch] = client;
-      });
-
-      // Server
-      if (! options.hasCachedBundle) {
-        var server = makeServerTarget(app, clientTargets);
-        targets.server = server;
-      }
+    // Server
+    if (! options.hasCachedBundle) {
+      var server = makeServerTarget(app, clientTargets);
+      targets.server = server;
     }
 
-    // Pick up any additional targets in /programs
-    // Step 1: scan for targets and make a list. We will reload if you create a
-    // new subdir in 'programs', or create 'programs' itself.
-    var programs = [];
-    var programsDir = project.project.getProgramsDirectory();
-    var programsSubdirs = project.project.getProgramsSubdirs({
-      watchSet: serverWatchSet
-    });
-
-    _.each(programsSubdirs, function (item) {
-      // Remove trailing slash.
-      item = item.substr(0, item.length - 1);
-
-      if (_.has(targets, item)) {
-        buildmessage.error("duplicate programs named '" + item + "'");
-        // Recover by ignoring this program
-        return;
-      }
-      // Programs must (for now) contain a `package.js` file. If not, then
-      // perhaps the directory we are seeing is left over from another git
-      // branch or something and we should ignore it.  We don't actually parse
-      // the package.js file here, though (but we do restart if it is later
-      // added or changed).
-      if (watch.readAndWatchFile(
-        serverWatchSet, path.join(programsDir, item, 'package.js')) === null) {
-        return;
-      }
-
-      targets[item] = true;  // will be overwritten with actual target later
-
-      // Read attributes.json, if it exists
-      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
-      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
-      var attrsJsonContents = watch.readAndWatchFile(
-        serverWatchSet, attrsJsonAbsPath);
-
-      var attrsJson = {};
-      if (attrsJsonContents !== null) {
-        try {
-          attrsJson = JSON.parse(attrsJsonContents);
-        } catch (e) {
-          if (! (e instanceof SyntaxError))
-            throw e;
-          buildmessage.error(e.message, { file: attrsJsonRelPath });
-          // recover by ignoring attributes.json
-        }
-      }
-
-      var isControlProgram = !! attrsJson.isControlProgram;
-      if (isControlProgram) {
-        if (controlProgram !== null) {
-          buildmessage.error(
-              "there can be only one control program ('" + controlProgram +
-              "' is also marked as the control program)",
-            { file: attrsJsonRelPath });
-          // recover by ignoring that it wants to be the control
-          // program
-        } else {
-          controlProgram = item;
-        }
-      }
-
-      // Add to list
-      programs.push({
-        type: attrsJson.type || "server",
-        name: item,
-        path: path.join(programsDir, item),
-        client: attrsJson.client,
-        attrsJsonRelPath: attrsJsonRelPath
-      });
-    });
-
-    if (! controlProgram) {
-      if (_.has(targets, 'ctl')) {
-        buildmessage.error(
-          "A program named ctl exists but no program has isControlProgram set");
-        // recover by not making a control program
-      } else if (options.requireControlProgram) {
-        var target = makeServerTarget("ctl");
-        targets["ctl"] = target;
-        controlProgram = "ctl";
-      }
+    // Create a "control program". This is required for an old version of
+    // Galaxy.
+    // XXX #3006 Check to see if this is still required.
+    var controlProgram = null;
+    if (options.requireControlProgram) {
+      var target = makeServerTarget("ctl");
+      targets["ctl"] = target;
+      controlProgram = "ctl";
     }
-
-    // Step 2: sort the list so that client programs are built first (because
-    // when we build the servers we need to be able to reference the clients)
-    programs.sort(function (a, b) {
-      a = (a.type === "client") ? 0 : 1;
-      b = (b.type === "client") ? 0 : 1;
-      return a > b;
-    });
-
-    // Step 3: build the programs
-    var blankClientTarget = null;
-    _.each(programs, function (p) {
-      // Read this directory as a package and create a target from
-      // it
-      var pkg = whichCatalog.packageCache.loadPackageAtPath(p.name, p.path);
-      var target;
-      switch (p.type) {
-      case "server":
-        target = makeServerTarget(pkg);
-        break;
-      case "traditional":
-        var clientTarget;
-
-        if (! p.client) {
-          if (! blankClientTarget) {
-            clientTarget = blankClientTarget = targets._blank =
-              makeBlankClientTarget();
-          } else {
-            clientTarget = blankClientTarget;
-          }
-        } else {
-          clientTarget = targets[p.client];
-          if (! clientTarget) {
-            buildmessage.error("no such program '" + p.client + "'",
-                               { file: p.attrsJsonRelPath });
-            // recover by ignoring target
-            return;
-          }
-        }
-
-        // We don't check whether targets[p.client] is actually a
-        // ClientTarget. If you want to be clever, go ahead.
-
-        // XXX doesn't pass the cordova target, but right now Galaxy doesn't
-        // serve any Cordova supportted apps
-        target = makeServerTarget(pkg, [clientTarget]);
-        break;
-      case "client":
-        target = makeClientTarget(pkg, "web.browser");
-        break;
-      default:
-        buildmessage.error(
-          "type must be 'server', 'traditional', or 'client'",
-          { file: p.attrsJsonRelPath });
-        // recover by ignoring target
-        return;
-      };
-      targets[p.name] = target;
-    });
-
-    // If we omitted a target due to an error, we might not have a
-    // controlProgram anymore.
-    if (controlProgram && ! (controlProgram in targets))
-      controlProgram = undefined;
-
 
     // Hack to let servers find relative paths to clients. Should find
     // another solution eventually (probably some kind of mount
@@ -2241,8 +2103,10 @@ exports.bundle = function (options) {
 // letting exceptions escape?
 //
 // options:
-// - packageLoader: required. the PackageLoader for resolving
+// - packageMap: required. the PackageMap for resolving
 //   bundle-time dependencies
+// - isopackCache: required. IsopackCache with all dependent packages
+//   loaded
 // - name: required. a name for this image (cosmetic, but will appear
 //   in, eg, error messages) -- technically speaking, this is the name
 //   of the package created to contain the sources and package
@@ -2253,7 +2117,6 @@ exports.bundle = function (options) {
 //   interpreted. please set it to something reasonable so that any error
 //   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
-// - cordovaDependencies: map from cordova plugin name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
 //
@@ -2276,24 +2139,23 @@ exports.buildJsImage = function (options) {
   var packageSource = new PackageSource(options.catalog);
 
   packageSource.initFromOptions(options.name, {
-    archName: "plugin",
+    kind: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],
     serveRoot: path.sep,
     npmDependencies: options.npmDependencies,
-    cordovaDependencies: options.cordovaDependencies,
-    npmDir: options.npmDir,
-    dependencyVersions: options.dependencyVersions,
-    noVersionFile: true
+    npmDir: options.npmDir
   });
 
   var isopack = compiler.compile(packageSource, {
-    ignoreProjectDeps: options.ignoreProjectDeps
+    packageMap: options.packageMap,
+    isopackCache: options.isopackCache
   }).isopack;
 
   var target = new JsImageTarget({
-    packageLoader: options.packageLoader,
+    packageMap: options.packageMap,
+    isopackCache: options.isopackCache,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only
@@ -2306,7 +2168,7 @@ exports.buildJsImage = function (options) {
   return {
     image: target.toJsImage(),
     watchSet: target.getWatchSet(),
-    pluginProviderPackageDirs: target.getPluginProviderPackageDirs()
+    usedPackageNames: _.keys(target.usedPackages)
   };
 };
 
@@ -2315,18 +2177,4 @@ exports.buildJsImage = function (options) {
 // file (eg, program.json).
 exports.readJsImage = function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
-};
-
-// Given an array of isopack names, invokes the callback with each
-// corresponding Isopack object, plus all of their transitive dependencies,
-// with a topological sort.
-exports.iterateOverAllUsedIsopacks =
-  function (loader, arch, packageNames, callback) {
-  buildmessage.assertInCapture();
-  var target = new Target({packageLoader: loader,
-                           arch: arch});
-  target._determineLoadOrder({packages: packageNames});
-  _.each(target.unibuilds, function (unibuild) {
-    callback(unibuild.pkg);
-  });
 };

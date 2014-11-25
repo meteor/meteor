@@ -45,9 +45,8 @@ var checkForUpdate = function (showBanner) {
     // the first update cycle.
     firstCheck = false;
   } else {
-    // Silent is currently unused, but we keep it as a hint here...
     try {
-      catalog.complete.refreshOfficialCatalog({silent: true});
+      catalog.official.refresh();
     } catch (err) {
       Console.debug("Failed to refresh catalog, ignoring error", err);
       return;
@@ -89,9 +88,10 @@ var maybeShowBanners = function () {
   var banner = releaseData.banner;
   if (banner) {
     var bannersShown = {};
+
+    var bannerFilename = config.getBannersShownFilename();
     try {
-      bannersShown = JSON.parse(
-        fs.readFileSync(config.getBannersShownFilename()));
+      bannersShown = JSON.parse(fs.readFileSync(bannerFilename));
     } catch (e) {
       // ... ignore
     }
@@ -116,9 +116,9 @@ var maybeShowBanners = function () {
       runLog.log(banner.text);
       runLog.log("");
       bannersShown[release.current.name] = new Date;
-      // XXX ick slightly racy
-      fs.writeFileSync(config.getBannersShownFilename(),
-                       JSON.stringify(bannersShown, null, 2));
+      // XXX ick slightly racy. we should just add this to sqlite!
+      files.mkdir_p(path.dirname(bannerFilename));
+      fs.writeFileSync(bannerFilename, JSON.stringify(bannersShown, null, 2));
       return;
     }
   }
@@ -196,6 +196,7 @@ var updateMeteorToolSymlink = function () {
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
     try {
+      // XXX #3006 how does this work with respect to progress bars?
       buildmessage.enterJob({
         title: "Downloading tool package " + latestRelease.tool
       }, function () {

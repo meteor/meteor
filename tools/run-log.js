@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var isopackets = require("./isopackets.js");
-var release = require('./release.js');
 var Console = require('./console.js').Console;
 
 // runLog is primarily used by the parts of the tool which run apps locally. It

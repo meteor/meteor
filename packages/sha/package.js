@@ -1,6 +1,6 @@
 Package.describe({
   summary: "SHA256 implementation",
-  version: "1.0.1"
+  version: "1.0.2-ipc.0"
 });
 
 Package.on_use(function (api) {

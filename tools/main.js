@@ -11,7 +11,7 @@ var path = require('path');
 var warehouse = require('./warehouse.js');
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
-var project = require('./project.js');
+var projectContextModule = require('./project-context.js');
 var fs = require('fs');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
@@ -117,9 +117,9 @@ function SpringboardToLatestRelease(track) {
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the given Meteor release.
 main.SpringboardToSpecificRelease =
-function SpringboardToSpecificRelease(releaseRecord, msg) {
+function SpringboardToSpecificRelease(fullReleaseName, msg) {
   assert.ok(this instanceof SpringboardToSpecificRelease);
-  this.releaseRecord = releaseRecord;
+  this.fullReleaseName = fullReleaseName;
   this.msg = msg;
 };
 
@@ -241,6 +241,20 @@ main.registerCommand = function (options, func) {
   }
 
   target[nameParts[0]] = new Command(options);
+};
+
+main.captureAndExit = function (header, title, f) {
+  var messages;
+  if (f) {
+    messages = buildmessage.capture({ title: title }, f);
+  } else {
+    messages = buildmessage.capture(title);  // title is really f
+  }
+  if (messages.hasMessages()) {
+    Console.error(header);
+    Console.printMessages(messages);
+    throw new main.ExitWithCode(1);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -378,8 +392,7 @@ var springboard = function (rel, options) {
         tropohouse.default.maybeDownloadPackageForArchitectures({
           packageName: toolsPkg,
           version: toolsVersion,
-          architectures: [archinfo.host()],
-          definitelyNotLocal: true
+          architectures: [archinfo.host()]
         });
       });
     });
@@ -667,9 +680,6 @@ Fiber(function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = path.resolve(appDir);
-    // Set the project root directory. This doesn't do any dependency
-    // calculation -- we can't do that until the release is initialized.
-    project.project.setRootDir(appDir);
   }
 
   require('./isopackets.js').ensureIsopacketsLoadable();
@@ -680,10 +690,6 @@ Fiber(function () {
   catalog.official.initialize({
     offline: !!process.env.METEOR_OFFLINE_CATALOG
   });
-
-  // We do NOT initialize catalog.complete yet.  When we do that, we will build
-  // all local packages, and for both performance and correctness reasons, we
-  // will wait until after the springboard check to do so.
 
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
@@ -733,14 +739,14 @@ Fiber(function () {
     releaseForced = true;
   }
 
-  var releaseName, appReleaseUnnormalized;
+  var releaseName, appReleaseFile;
   if (appDir) {
-    // appRelease will be null if a super old project with no
-    // .meteor/release or 'none' if created by a checkout
-    appReleaseUnnormalized = project.project.getMeteorReleaseVersion();
+    appReleaseFile = new projectContextModule.ReleaseFile({
+      projectDir: appDir
+    });
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
-    if (appReleaseUnnormalized === '') {
+    if (appReleaseFile.noReleaseSpecified()) {
       Console.error(
 "Problem! This project has a .meteor/release file which is empty.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
@@ -748,7 +754,7 @@ Fiber(function () {
 "checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
 "and change it to a valid Meteor release or 'none'.");
       process.exit(1);
-    } else if (appReleaseUnnormalized === null) {
+    } else if (appReleaseFile.fileMissing()) {
       Console.error(
 "Problem! This project does not have a .meteor/release file.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
@@ -776,11 +782,11 @@ Fiber(function () {
       releaseName = releaseOverride;
     } else if (appDir) {
       // Running from an app directory. Use release specified by app.
-      if (appReleaseUnnormalized === 'none') {
+      if (appReleaseFile.isCheckout()) {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
         // Use the project's desired release
-        releaseName = appReleaseUnnormalized;
+        releaseName = appReleaseFile.unnormalizedReleaseName;
         releaseFromApp = true;
       }
     } else {
@@ -1168,8 +1174,9 @@ longHelp(commandName));
   if (typeof requiresApp === "function")
     requiresApp = requiresApp(options);
 
-  if (appDir)
+  if (appDir) {
     options.appDir = appDir;
+  }
 
   if (requiresApp && ! options.appDir) {
     // This is where you end up if you type 'meteor' with no args,
@@ -1187,77 +1194,25 @@ commandName + ": You're not in a Meteor project directory.\n" +
     process.exit(1);
   }
 
-  if (!command.catalogRefresh.doesNotUsePackages) {
-    // OK, now it's finally time to set up the complete catalog. Only after this
-    // can we use the build system (other than to make and load isopackets).
+  // Same check for commands that can only be run from a package dir.
+  // You can't specify this on a Refresh.Never command.
+  var requiresPackage = command.requiresPackage;
+  if (typeof requiresPackage === "function") {
+    requiresPackage = requiresPackage(options);
+  }
 
-    // XXX This code is duplicated a bit inside the create command. Sorry.
-
-    // Figure out the directories that we should search for local
-    // packages (in addition to packages downloaded from the package
-    // server)
-    var localPackageSearchDirs = [];
-    if (appDir)
-      localPackageSearchDirs.push(path.join(appDir, 'packages'));
-
-    if (process.env.PACKAGE_DIRS) {
-      // User can provide additional package directories to search in
-      // PACKAGE_DIRS (colon-separated).
-      localPackageSearchDirs = localPackageSearchDirs.concat(
-        _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
-          return path.resolve(p);
-        }));
+  if (requiresPackage) {
+    var packageDir = files.findPackageDir();
+    if (packageDir)
+      packageDir = path.resolve(packageDir);
+    if (packageDir) {
+      options.packageDir = packageDir;
     }
 
-    if (!files.usesWarehouse()) {
-      // Running from a checkout, so use the Meteor core packages from
-      // the checkout.
-      localPackageSearchDirs.push(path.join(
-        files.getCurrentToolsDir(), 'packages'));
-    }
-
-    messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
-      catalog.complete.initialize({
-        localPackageSearchDirs: localPackageSearchDirs
-      });
-    });
-    if (messages.hasMessages()) {
-      Console.error("=> Errors while scanning packages:\n");
-      Console.error(messages.formatMessages());
+    if (! options.packageDir) {
+      Console.error(
+        commandName + ": You're not in a Meteor package directory.");
       process.exit(1);
-    }
-
-    // Same check for commands that can only be run from a package dir.
-    // You can't specify this on a Refresh.Never command.
-    var requiresPackage = command.requiresPackage;
-    if (typeof requiresPackage === "function") {
-      requiresPackage = requiresPackage(options);
-    }
-
-    if (requiresPackage) {
-      var packageDir = files.findPackageDir();
-      if (packageDir)
-        packageDir = path.resolve(packageDir);
-      if (packageDir) {
-        options.packageDir = packageDir;
-      }
-
-      if (! options.packageDir) {
-        Console.error(
-          commandName + ": You're not in a Meteor package directory.");
-        process.exit(1);
-      }
-      // Commands that require you to be in a package directory add that package
-      // as a local package to the catalog. Other random commands don't (but if
-      // we see a reason for them to, we can change this rule).
-      messages = buildmessage.capture(function () {
-        catalog.complete.addLocalPackage(options.packageDir);
-      });
-      if (messages.hasMessages()) {
-        Console.error("=> Errors while scanning current package:\n");
-        Console.error(messages.formatMessages());
-        process.exit(1);
-      }
     }
   }
 
@@ -1272,14 +1227,12 @@ commandName + ": You're not in a Meteor project directory.\n" +
   }
 
   if (command.requiresApp && release.current.isCheckout() &&
-      appReleaseUnnormalized && appReleaseUnnormalized !== "none") {
-    var utils = require("./utils.js");
-    var appReleaseParts = utils.splitReleaseName(appReleaseUnnormalized);
+      appReleaseFile && ! appReleaseFile.isCheckout()) {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
     Console.warn(
 "=> Running Meteor from a checkout -- overrides project version (" +
-        utils.displayRelease(appReleaseParts[0], appReleaseParts[1]) + ")");
+        appReleaseFile.displayReleaseName + ")");
   }
 
   // Now that we're ready to start executing the command, if we are in
@@ -1326,9 +1279,8 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // Springboard to a specific release. This is only throw by
       // publish-for-arch, which is catalog.Refresh.OnceAtStart, so we ought to
       // have decent knowledge of the latest release.
-      var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
-      var nextRelease = release.load(relName);
-      springboard(nextRelease, { releaseOverride: relName });
+      var nextRelease = release.load(e.fullReleaseName);
+      springboard(nextRelease, { releaseOverride: e.fullReleaseName });
       // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;

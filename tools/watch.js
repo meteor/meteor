@@ -65,6 +65,9 @@ var WatchSet = function () {
   // Map from the absolute path to a file, to a sha1 hash, or null if the file
   // should not exist. A Watcher created from this set fires when the file
   // changes from that sha, or is deleted (if non-null) or created (if null).
+  //
+  // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
+  // existing (it's not just an internal implementation detail of watch.js).
   self.files = {};
 
   // Array of object with keys:

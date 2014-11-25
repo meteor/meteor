@@ -8,7 +8,6 @@ var release = require('./release.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var compiler = require('./compiler.js');
 var isopackets = require("./isopackets.js");
 var tropohouse = require('./tropohouse.js');
 var config = require('./config.js');
@@ -654,16 +653,6 @@ _.extend(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  // Get a release version with a given tool
-  getReleaseWithTool: function (toolSpec) {
-    var self = this;
-    // XXX: In the future, we should consider adding tool as a column and
-    // implementing table upgrades
-    var allVersions = self._contentQuery(
-      "SELECT content FROM releaseVersions");
-    return _.findWhere(allVersions, { tool: toolSpec });
-  },
-
   // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
   // specially constructed for bootstrap tarballs.
   forceRecommendRelease: function (track, version) {
@@ -812,10 +801,6 @@ _.extend(RemoteCatalog.prototype, {
     return _.findWhere(matchingBuilds, { buildArchitectures: buildArchitectures });
   },
 
-  isLocalPackage: function() {
-    return false;
-  },
-
   // Executes a query, returning an array of each content column parsed as JSON
   _contentQuery: function (query, params) {
     var self = this;
@@ -862,14 +847,6 @@ _.extend(RemoteCatalog.prototype, {
         self._setMetadata(txn, METADATA_LAST_SYNC, lastSync);
       }
     });
-  },
-
-  getLoadPathForPackage: function (name, version, constraintSolverOpts) {
-    var packageDir = tropohouse.default.packagePath(name, version);
-    if (fs.existsSync(packageDir)) {
-      return packageDir;
-    }
-    return null;
   },
 
   getSyncToken: function() {

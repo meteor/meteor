@@ -6,7 +6,6 @@ var Fiber = require('fibers');
 var fiberHelpers = require('./fiber-helpers.js');
 var files = require('./files.js');
 var watch = require('./watch.js');
-var project = require('./project.js').project;
 var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
@@ -48,12 +47,12 @@ var getNodeOptionsFromEnvironment = function () {
 // resulted in the process dying. stop() is idempotent.
 //
 // Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl
-// Optional options: onExit, onListen, program, nodeOptions, settings
+// Optional options: onExit, onListen, nodeOptions, settings
 
 var AppProcess = function (options) {
   var self = this;
 
-  self.appDir = options.appDir;
+  self.projectContext = options.projectContext;
   self.bundlePath = options.bundlePath;
   self.port = options.port;
   self.listenHost = options.listenHost;
@@ -64,7 +63,6 @@ var AppProcess = function (options) {
 
   self.onExit = options.onExit;
   self.onListen = options.onListen;
-  self.program = options.program || null;
   self.nodeOptions = options.nodeOptions || [];
   self.debugPort = options.debugPort;
   self.settings = options.settings;
@@ -83,13 +81,6 @@ _.extend(AppProcess.prototype, {
 
     // Start the app!
     self.proc = self._spawn();
-
-    if (self.proc === null) {
-      runLog.log("Program '" + self.program + "' not found.");
-
-      self._maybeCallOnExit();
-      return;
-    }
 
     // Send stdout and stderr to the runLog
     var eachline = require('eachline');
@@ -141,7 +132,8 @@ _.extend(AppProcess.prototype, {
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
     require("./cleanup.js").onExit(function() {
-      require("./server/shell.js").unlinkSocketFile(self.appDir);
+      require("./server/shell.js").unlinkSocketFile(
+        self.projectContext.projectDir);
     });
   },
 
@@ -194,7 +186,7 @@ _.extend(AppProcess.prototype, {
     } else {
       delete env.BIND_IP;
     }
-    env.APP_ID = project.appId;
+    env.APP_ID = self.projectContext.appIdentifier;
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
@@ -208,58 +200,28 @@ _.extend(AppProcess.prototype, {
     return env;
   },
 
-  // Spawn the server process and return the handle from
-  // child_process.spawn, or return null if the requested program
-  // wasn't found in the bundle.
+  // Spawn the server process and return the handle from child_process.spawn.
   _spawn: function () {
     var self = this;
 
     var child_process = require('child_process');
 
-    if (! self.program) {
-      // Old-style bundle
-      var opts = _.clone(self.nodeOptions);
+    var opts = _.clone(self.nodeOptions);
 
-      if (self.debugPort) {
-        require("./inspector.js").start(self.debugPort);
-        opts.push("--debug-brk=" + self.debugPort);
-      }
-
-      opts.push(
-        path.join(self.bundlePath, 'main.js'),
-        '--parent-pid',
-        process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
-      );
-
-      return child_process.spawn(process.execPath, opts, {
-        env: self._computeEnvironment()
-      });
-    } else {
-      // Star. Read the metadata to find the path to the program to run.
-      var starJson = JSON.parse(
-        fs.readFileSync(path.join(self.bundlePath, 'star.json'), 'utf8'));
-
-      var archinfo = require('./archinfo.js');
-      var programPath = null;
-      _.each(starJson.programs, function (p) {
-        // XXX should actually use archinfo.mostSpecificMatch instead of
-        // taking the first match
-        if (p.name !== self.program)
-          return;
-        if (! archinfo.matches(archinfo.host(), p.arch))
-          return; // can't run here
-        programPath = path.join(self.bundlePath, p.path);
-      });
-
-      if (! programPath)
-        return null;
-
-      return child_process.spawn(programPath, [], {
-        env: _.extend(self._computeEnvironment(), {
-          DATA_DIR: files.mkdtemp()
-        })
-      });
+    if (self.debugPort) {
+      require("./inspector.js").start(self.debugPort);
+      opts.push("--debug-brk=" + self.debugPort);
     }
+
+    opts.push(
+      path.join(self.bundlePath, 'main.js'),
+      '--parent-pid',
+      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
+    );
+
+    return child_process.spawn(process.execPath, opts, {
+      env: self._computeEnvironment()
+    });
   }
 });
 
@@ -294,9 +256,8 @@ _.extend(AppProcess.prototype, {
 //   printed after each restart of the app once it is ready to listen
 //   for connections.
 //
-// - Other options: appDirForVersionCheck (defaults to appDir), port,
-//   mongoUrl, oplogUrl, buildOptions, rootUrl, settingsFile, program,
-//   proxy, recordPackageUsage
+// - Other options: port, mongoUrl, oplogUrl, buildOptions, rootUrl,
+//   settingsFile, program, proxy, recordPackageUsage
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -321,7 +282,7 @@ _.extend(AppProcess.prototype, {
 //
 //   - 'wrong-release': the release that this app targets does not
 //     match the currently running version of Meteor (eg, the user
-//     typed 'meteor update' in another window). An 'releaseNeeded'
+//     typed 'meteor update' in another window). An 'displayReleaseNeeded'
 //     attribute will be present giving the app's release name.
 //
 //   - 'conflicting-versions': the constraint solver could not find a set of
@@ -332,16 +293,16 @@ _.extend(AppProcess.prototype, {
 //
 //   - 'stopped': stop() was called while a run was in progress.
 //
-// - bundleResult: for runs in which bundling happened (all except
-//   'wrong-release', 'conflicting-versions' and possibly 'stopped'), the return
-//   value from bundler.bundle(), which contains such interesting things as the
-//   build errors and a watchset describing the server source files and client
-//   source files of the app.
-var AppRunner = function (appDir, options) {
+// - errors: for 'bundle-fail', the buildmessage messages object corresponding
+//      to the error
+//
+// - watchSet: for runs in which there's a reason to wait for file changes
+//      ('bundle-fail' and 'terminated'), the WatchSet to wait on.
+var AppRunner = function (options) {
   var self = this;
 
-  self.appDir = appDir;
-  self.appDirForVersionCheck = options.appDirForVersionCheck || self.appDir;
+  self.projectContext = options.projectContext;
+
   // note: run-all.js updates port directly
   self.port = options.port;
   self.listenHost = options.listenHost;
@@ -351,7 +312,6 @@ var AppRunner = function (appDir, options) {
   self.rootUrl = options.rootUrl;
   self.mobileServerUrl = options.mobileServerUrl;
   self.settingsFile = options.settingsFile;
-  self.program = options.program;
   self.debugPort = options.debugPort;
   self.proxy = options.proxy;
   self.watchForChanges =
@@ -424,85 +384,78 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (options) {
     var self = this;
     options = options || {};
+    var firstRun = options.firstRun;
 
     Console.enableProgressDisplay(true);
-
-    if (!options.firstRun) {
-      // We need to reset our workspace for subsequent builds. Specifically, we
-      // need to tell the catalog to reload local package sources (since their
-      // dependencies may have changed), and then we should recompute the
-      // project constraints.
-      //
-      // XXX This is almost certainly both overly conservative and not
-      // conservative enough. On the one hand,
-      // catalog.complete.refreshLocalPackages is a slow operation and it's
-      // likely that the existing buildinfo/watcher code with some extensions
-      // can detect relevant changes more precisely. On the other hand, we DON'T
-      // use this blunt hammer when only the client code has changed, which
-      // might not be good enough.  We need to take a thorough pass over all the
-      // package build/metadata caching mechanisms and come up with a unified
-      // system that flushes caches only when actually necessary.
-      var refreshWatchSet = new watch.WatchSet;
-      var refreshMessages = buildmessage.capture(function () {
-        try {
-          catalog.complete.refreshLocalPackages({
-            watchSet: refreshWatchSet
-          });
-        } catch (err) {
-          // XXX: Should we throw here?
-          // XXX: Should we remove this entirely?
-          Console.debug("Ignoring error updating package catalog", err);
-        }
-      });
-      if (refreshMessages.hasMessages()) {
-        return {
-          outcome: 'bundle-fail',
-          bundleResult: {
-            errors: refreshMessages,
-            serverWatchSet: refreshWatchSet
-          }
-        };
-      }
-      project.reload();
-    }
 
     runLog.clearLog();
     self.proxy.setMode("hold");
 
-    // Check to make sure we're running the right version of Meteor.
-    //
-    // We let you override appDir and use a different directory for
-    // this check for the benefit of 'meteor test-packages', which
-    // generates a test harness app on the fly (and sets it release to
-    // release.current), but we still want to detect the mismatch if
-    // you are testing packages from an app and you 'meteor update'
-    // that app.
-    if (self.appDirForVersionCheck) {
-      var wrongRelease = ! release.usingRightReleaseForApp();
-      if (wrongRelease) {
-        return { outcome: 'wrong-release',
-                 releaseNeeded: project.getNormalizedMeteorReleaseVersion()
-               };
-      }
-    }
-
     // Bundle up the app
-    var bundlePath = path.join(self.appDir, '.meteor', 'local', 'build');
-    if (self.recordPackageUsage) {
-      stats.recordPackages("sdk.run");
-    }
+    var bundlePath = self.projectContext.getProjectLocalDirectory('build');
 
     // Cache the server target because the server will not change inside
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
+
     var bundleApp = function () {
-      if (! options.firstRun) {
-        // Pick up changes to packages. (Soft refresh, so we still check to see
-        // if they have changed.)
-        catalog.complete.packageCache.refresh(true);
+      if (! firstRun) {
+        // If this isn't the first time we've run, we need to reset the project
+        // context since everything we have cached may have changed.
+        // XXX #3006 We can try to be a little less conservative here:
+        // - Keep around some in-memory Isopack objects and validate them
+        //   by their buildinfo (we used to call this Soft Refresh).
+        // - Don't re-build the whole local catalog if we know which ones
+        //   have changed.
+        self.projectContext.reset();
+        var messages = buildmessage.capture(function () {
+          self.projectContext.readProjectMetadata();
+        });
+        if (messages.hasMessages()) {
+          return {
+            runResult: {
+              outcome: 'bundle-fail',
+              errors: messages,
+              watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
+            }
+          };
+        }
       }
 
-      var bundle = bundler.bundle({
+      // Check to make sure we're running the right version of Meteor.
+      var wrongRelease = ! release.usingRightReleaseForApp(self.projectContext);
+      if (wrongRelease) {
+        return {
+          runResult: {
+            outcome: 'wrong-release',
+            displayReleaseNeeded:
+              self.projectContext.releaseFile.displayReleaseName
+          }
+        };
+      }
+
+      messages = buildmessage.capture(function () {
+        self.projectContext.prepareProjectForBuild();
+      });
+      if (messages.hasMessages()) {
+        return {
+          runResult: {
+            outcome: 'bundle-fail',
+            errors: messages,
+            watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
+          }
+        };
+      }
+
+      if (self.recordPackageUsage) {
+        stats.recordPackages({
+          what: "sdk.run",
+          projectContext: self.projectContext
+        });
+      }
+
+      var bundleResult = bundler.bundle({
+        projectContext: self.projectContext,
         outputPath: bundlePath,
         includeNodeModulesSymlink: true,
         buildOptions: self.buildOptions,
@@ -512,44 +465,60 @@ _.extend(AppRunner.prototype, {
       // Keep the server watch set from the initial bundle, because subsequent
       // bundles will not contain a server target.
       if (cachedServerWatchSet) {
-        bundle.serverWatchSet = cachedServerWatchSet;
+        bundleResult.serverWatchSet = cachedServerWatchSet;
       } else {
-        cachedServerWatchSet = bundle.serverWatchSet;
+        cachedServerWatchSet = bundleResult.serverWatchSet;
       }
 
-      return bundle;
+      if (bundleResult.errors) {
+        return {
+          runResult: {
+            outcome: 'bundle-fail',
+            errors: bundleResult.errors,
+            watchSet: combinedWatchSetForBundleResult(bundleResult)
+          }
+        };
+      } else {
+        return { bundleResult: bundleResult };
+      }
     };
 
-    var bundleResult = bundleApp();
+    var combinedWatchSetForBundleResult = function (br) {
+      var watchSet = br.serverWatchSet.clone();
+      watchSet.merge(br.clientWatchSet);
+      return watchSet;
+    };
 
-    if (bundleResult.errors) {
+    var bundleResult;
+    var bundleResultOrRunResult = bundleApp();
+    if (bundleResultOrRunResult.runResult)
+      return bundleResultOrRunResult.runResult;
+    bundleResult = bundleResultOrRunResult.bundleResult;
+    firstRun = false;
+
+    var platforms = self.projectContext.platformList.getCordovaPlatforms();
+    platforms.sort();
+    if (self.cordovaPlatforms &&
+        ! _.isEqual(self.cordovaPlatforms, platforms)) {
       return {
-        outcome: 'bundle-fail',
-        bundleResult: bundleResult
+        outcome: 'outdated-cordova-platforms'
       };
     }
+    // XXX #3006 This is racy --- we should get this from the pre-runner build,
+    // not from the first runner build.
+    self.cordovaPlatforms = platforms;
 
     var plugins = cordova.getCordovaDependenciesFromStar(
       bundleResult.starManifest);
 
     if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
       return {
-        outcome: 'outdated-cordova-plugins',
-        bundleResult: bundleResult
+        outcome: 'outdated-cordova-plugins'
       };
     }
+    // XXX #3006 This is racy --- we should get this from the pre-runner build,
+    // not from the first runner build.
     self.cordovaPlugins = plugins;
-
-    var platforms = project.getCordovaPlatforms();
-    platforms.sort();
-    if (self.cordovaPlatforms &&
-        ! _.isEqual(self.cordovaPlatforms, platforms)) {
-      return {
-        outcome: 'outdated-cordova-platforms',
-        bundleResult: bundleResult
-      };
-    }
-    self.cordovaPlatforms = platforms;
 
     var serverWatchSet = bundleResult.serverWatchSet;
 
@@ -575,14 +544,10 @@ _.extend(AppRunner.prototype, {
         bundleResult.errors.merge(settingsMessages);
     }
 
-    // HACK: Also make sure we notice when somebody adds a package to
-    // the app packages dir that may override a catalog package.
-    catalog.complete.watchLocalPackageDirs(serverWatchSet);
-
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
     // future that can be used to stop() us once we start running.
     if (self.exitFuture)
-      return { outcome: 'stopped', bundleResult: bundleResult };
+      return { outcome: 'stopped' };
     if (self.runFuture)
       throw new Error("already have future?");
     var runFuture = self.runFuture = new Future;
@@ -590,7 +555,7 @@ _.extend(AppRunner.prototype, {
     // Run the program
     options.beforeRun && options.beforeRun();
     var appProcess = new AppProcess({
-      appDir: self.appDir,
+      projectContext: self.projectContext,
       bundlePath: bundlePath,
       port: self.port,
       listenHost: self.listenHost,
@@ -603,10 +568,9 @@ _.extend(AppRunner.prototype, {
           outcome: 'terminated',
           code: code,
           signal: signal,
-          bundleResult: bundleResult
+          watchSet: combinedWatchSetForBundleResult(bundleResult)
         });
       },
-      program: self.program,
       debugPort: self.debugPort,
       onListen: function () {
         self.proxy.setMode("proxy");
@@ -631,8 +595,7 @@ _.extend(AppRunner.prototype, {
         watchSet: serverWatchSet,
         onChange: function () {
           self._runFutureReturn({
-            outcome: 'changed',
-            bundleResult: bundleResult
+            outcome: 'changed'
           });
         }
       });
@@ -646,10 +609,7 @@ _.extend(AppRunner.prototype, {
           var outcome = watch.isUpToDate(serverWatchSet)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
-          self._runFutureReturn({
-            outcome: outcome,
-            bundleResult: bundleResult
-          });
+          self._runFutureReturn({ outcome: outcome });
          }
       });
     };
@@ -667,17 +627,15 @@ _.extend(AppRunner.prototype, {
       while (ret.outcome === 'changed-refreshable') {
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
-        bundleResult = bundleApp();
-        if (bundleResult.errors) {
-          return {
-            outcome: 'bundle-fail',
-            bundleResult: bundleResult
-          };
-        }
+        bundleResultOrRunResult = bundleApp();
+        if (bundleResultOrRunResult.runResult)
+          return bundleResultOrRunResult.runResult;
+        bundleResult = bundleResultOrRunResult.bundleResult;
 
         var oldFuture = self.runFuture = new Future;
 
-        // Notify the server that new client assets have been added to the build.
+        // Notify the server that new client assets have been added to the
+        // build.
         appProcess.proc.kill('SIGUSR2');
 
         // Establish a watcher on the new files.
@@ -768,7 +726,7 @@ _.extend(AppRunner.prototype, {
 
       else if (runResult.outcome === "bundle-fail") {
         runLog.log("=> Errors prevented startup:\n\n" +
-                        runResult.bundleResult.errors.formatMessages());
+                        runResult.errors.formatMessages());
         if (self.watchForChanges) {
           runLog.log("=> Your application has errors. " +
                      "Waiting for file change.");
@@ -806,13 +764,10 @@ _.extend(AppRunner.prototype, {
       if (self.watchForChanges) {
         self.watchFuture = new Future;
 
-        var watchSet = new watch.WatchSet();
-        if (runResult.bundleResult.serverWatchSet)
-          watchSet.merge(runResult.bundleResult.serverWatchSet);
-        if (runResult.bundleResult.clientWatchSet)
-          watchSet.merge(runResult.bundleResult.clientWatchSet);
+        if (!runResult.watchSet)
+          throw Error("watching for changes with no watchSet?");
         var watcher = new watch.Watcher({
-          watchSet: watchSet,
+          watchSet: runResult.watchSet,
           onChange: function () {
             self._watchFutureReturn();
           }

@@ -324,7 +324,7 @@ site + " is too long.\n" +
 // messages. Return a command exit code.
 //
 // Options:
-// - appDir: root directory of app to bundle up
+// - projectContext: the ProjectContext for the app
 // - site: site to deploy as
 // - settingsFile: file from which to read deploy settings (undefined
 //   to leave unchanged from previous deploy of the app, if any)
@@ -380,7 +380,7 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
+  var buildDir = options.projectContext.getProjectLocalDirectory('build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
   Console.stdout.write('Deploying to ' + site + '.\n');
@@ -398,17 +398,13 @@ var bundleAndDeploy = function (options) {
     var bundler = require('./bundler.js');
 
     var bundleResult = bundler.bundle({
+      projectContext: options.projectContext,
       outputPath: bundlePath,
       buildOptions: options.buildOptions
     });
 
     if (bundleResult.errors)
-      messages.merge(bundleResult.errors);
-
-    if (options.recordPackageUsage) {
-      stats.recordPackages("sdk.deploy", site);
-    }
-
+      messages = bundleResult.errors;
   }
 
   if (messages.hasMessages()) {
@@ -417,9 +413,16 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  var result;
-  buildmessage.enterJob({ title: "Uploading" }, function () {
-    result = authedRpc({
+  if (options.recordPackageUsage) {
+    stats.recordPackages({
+      what: "sdk.deploy",
+      projectContext: options.projectContext,
+      site: site
+    });
+  }
+
+  var result = buildmessage.enterJob({ title: "Uploading" }, function () {
+    return authedRpc({
       method: 'POST',
       operation: 'deploy',
       site: site,
@@ -456,7 +459,7 @@ var bundleAndDeploy = function (options) {
             Console.stdout.write('-------------\n');
           }
         });
-        }
+      }
     });
   }
 

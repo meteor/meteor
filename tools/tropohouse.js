@@ -16,10 +16,9 @@ var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
 
-exports.Tropohouse = function (root, catalog) {
+exports.Tropohouse = function (root) {
   var self = this;
   self.root = root;
-  self.catalog = catalog;
 };
 
 // Return the directory containing our loaded collection of tools, releases and
@@ -38,11 +37,9 @@ var defaultWarehouseDir = function () {
   return path.join(warehouseBase, ".meteor");
 };
 
-// The default tropohouse is on disk at defaultWarehouseDir() and knows not to
-// download local packages; you can make your own Tropohouse to override these
-// things.
-exports.default = new exports.Tropohouse(
-  defaultWarehouseDir(), catalog.complete);
+// The default tropohouse is on disk at defaultWarehouseDir(); you can make your
+// own Tropohouse to override these things.
+exports.default = new exports.Tropohouse(defaultWarehouseDir());
 
 _.extend(exports.Tropohouse.prototype, {
   // Returns the load path where one can expect to find the package, at a given
@@ -182,6 +179,11 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX more precise error handling in offline case. maybe throw instead like
   // warehouse does.  actually, generally deal with error handling.
+  //
+  // XXX This function is in transition.  If the returnDownloadCallback option
+  // is passed, then it returns null if no download is needed and returns a
+  // callback that does the download if a download is needed.  Otherwise it
+  // just downloads the package itself.
   maybeDownloadPackageForArchitectures: function (options) {
     var self = this;
     if (!options.packageName)
@@ -193,14 +195,6 @@ _.extend(exports.Tropohouse.prototype, {
 
     var packageName = options.packageName;
     var version = options.version;
-
-    // If this package isn't coming from the package server (loaded from a
-    // checkout, or from an app package directory), don't try to download it (we
-    // already have it)
-    // (In the special case of springboarding, we avoid using self.catalog
-    // here because it is catalog.complete and is not yet initialized.)
-    if (!options.definitelyNotLocal && self.catalog.isLocalPackage(packageName))
-      return;
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
@@ -238,11 +232,9 @@ _.extend(exports.Tropohouse.prototype, {
     // Have everything we need? Great.
     if (!archesToDownload.length) {
       Console.debug("Local package version is up-to-date:", packageName + "@" + version);
-      return;
+      return null;
     }
 
-    Console.debug("Downloading missing local versions of package",
-                  packageName + "@" + version, ":", archesToDownload);
 
     // Since we are downloading from the server (and we've already done the
     // local package check), we can use the official catalog here. (This is
@@ -257,94 +249,107 @@ _.extend(exports.Tropohouse.prototype, {
       throw e;
     }
 
-    buildmessage.enterJob({
-      title: "  Installing " + packageName + "@" + version + "..."
-    }, function() {
-      var buildTempDirs = [];
-      // If there's already a package in the tropohouse, start with it.
-      if (packageLinkTarget) {
-        buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
-                                        packageLinkTarget));
-      }
-      // XXX how does concurrency work here?  we could just get errors if we try
-      // to rename over the other thing?  but that's the same as in warehouse?
-      _.each(buildsToDownload, function (build) {
-        buildTempDirs.push(self.downloadBuildToTempDir({packageName: packageName, version: version}, build));
-      });
+    var actuallyDownload = function (useBuildmessage) {
+      if (useBuildmessage)
+        buildmessage.assertInCapture();
 
-      // We need to turn our builds into a single isopack.
-      var isopack = new Isopack;
-      _.each(buildTempDirs, function (buildTempDir, i) {
-        isopack._loadUnibuildsFromPath(
-          packageName,
-          buildTempDir,
-          {firstIsopack: i === 0});
-      });
-      // Note: wipeAllPackages depends on this filename structure, as does the
-      // part above which readlinks.
-      var newPackageLinkTarget = '.' + version + '.'
-            + utils.randomToken() + '++' + isopack.buildArchitectures();
-      var combinedDirectory = self.packagePath(packageName, newPackageLinkTarget);
-      isopack.saveToPath(combinedDirectory, {
-        // We got this from the server, so we can't rebuild it.
-        elideBuildInfo: true
-      });
-      files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+      Console.debug("Downloading missing local versions of package",
+                    packageName + "@" + version, ":", archesToDownload);
 
-      // Clean up old version.
-      if (packageLinkTarget) {
-        files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
-      }
-    });
+      buildmessage.enterJob({
+        title: "downloading " + packageName + "@" + version + "..."
+      }, function() {
+        var buildTempDirs = [];
+        // If there's already a package in the tropohouse, start with it.
+        if (packageLinkTarget) {
+          buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
+                                          packageLinkTarget));
+        }
+        // XXX how does concurrency work here?  we could just get errors if we
+        // try to rename over the other thing?  but that's the same as in
+        // warehouse?
+        _.each(buildsToDownload, function (build) {
+          try {
+            buildTempDirs.push(self.downloadBuildToTempDir(
+              { packageName: packageName, version: version }, build));
+          } catch (e) {
+            if (!useBuildmessage || !(e instanceof files.OfflineError))
+              throw e;
+            buildmessage.error(e.error.message);
+          }
+        });
+        if (useBuildmessage && buildmessage.jobHasMessages())
+          return;
 
-    return;
+        // We need to turn our builds into a single isopack.
+        var isopack = new Isopack;
+        _.each(buildTempDirs, function (buildTempDir, i) {
+          isopack._loadUnibuildsFromPath(
+            packageName,
+            buildTempDir,
+            {firstIsopack: i === 0});
+        });
+        // Note: wipeAllPackages depends on this filename structure, as does the
+        // part above which readlinks.
+        var newPackageLinkTarget = '.' + version + '.'
+              + utils.randomToken() + '++' + isopack.buildArchitectures();
+        var combinedDirectory = self.packagePath(
+          packageName, newPackageLinkTarget);
+        isopack.saveToPath(combinedDirectory);
+        files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+        // Clean up old version.
+        if (packageLinkTarget) {
+          files.rm_recursive(self.packagePath(packageName, packageLinkTarget));
+        }
+      });
+    };
+
+    if (options.returnDownloadCallback)
+      return actuallyDownload;
+    actuallyDownload();
   },
 
 
-  // Go through a list of packages and makes sure we have enough builds of the
-  // package downloaded such that we can load a browser unibuild and a unibuild
-  // that will run on this system (or the requested architecture). Return the
-  // object with mapping packageName to version for the packages that we have
-  // successfully downloaded.
+  // Takes in a PackageMap object. Downloads any versioned packages we don't
+  // already have.
   //
-  // XXX This function's error handling capabilities are poor. It's supposed to
-  // return a data structure that its callers check, but most of its callers
-  // don't check it. Bleah.  Should rewrite this and all of its callers.
-  downloadMissingPackages: function (versionMap, options) {
+  // Reports errors via buildmessage.
+  downloadPackagesMissingFromMap: function (packageMap, options) {
     var self = this;
+    buildmessage.assertInCapture();
     options = options || {};
-    var serverArch = options.serverArch || archinfo.host();
-    var downloadedPackages = {};
-    // XXX We intentionally didn't make this message "downloading packages"
-    // because users were confused if this message showed up when there wasn't
-    // actually any packages being downloaded. But since we use forkJoin here,
-    // the nested downloading jobs don't print, so now there's NEVER a
-    // downloading status message.
-    buildmessage.forkJoin({ title: 'Checking local package versions', parallel: true },
-      versionMap, function (version, name) {
-      try {
-        self.maybeDownloadPackageForArchitectures({
-          packageName: name,
-          version: version,
-          architectures: [serverArch]
-        });
-        downloadedPackages[name] = version;
-      } catch (err) {
-        if (err.noCompatibleBuildError) {
-          console.log(err.message);
-          // continue, which is weird, but we want to avoid a stack trace...
-          // the caller is supposed to check the size of the return value
-        } else if (err instanceof files.OfflineError) {
-          Console.printError(
-            err.error, "Could not download package " + name + "@" + version);
-          // continue, which is weird, but we want to avoid a stack trace...
-          // the caller is supposed to check the size of the return value
-        } else {
-          throw err;
+    var serverArchs = options.serverArchitectures || [archinfo.host()];
+
+    var downloadCallbacks = {};
+    buildmessage.enterJob('checking package versions', function () {
+      packageMap.eachPackage(function (packageName, info) {
+        if (info.kind !== 'versioned')
+          return;
+        try {
+          var downloadCallback = self.maybeDownloadPackageForArchitectures({
+            returnDownloadCallback: true,
+            packageName: packageName,
+            version: info.version,
+            architectures: serverArchs
+          });
+        } catch (e) {
+          if (!e.noCompatibleBuildError)
+            throw e;
+          buildmessage.error(e.message);
+          return;
         }
-      }
+        if (downloadCallback)
+          downloadCallbacks[packageName] = downloadCallback;
+      });
     });
-    return downloadedPackages;
+
+    buildmessage.forkJoin(
+      { title: 'downloading packages', parallel: true},
+      downloadCallbacks,
+      function (cb, packageName) {
+        cb(true);
+      });
   },
 
   latestMeteorSymlink: function () {

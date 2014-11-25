@@ -14,6 +14,7 @@ var archinfo = require('./archinfo.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
+var compiler = require('./compiler.js');
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -93,12 +94,19 @@ var mapWhereToArch = function (where) {
   }
 };
 
+var splitConstraint = function (c) {
+  // XXX print error better (w/ buildmessage?)?
+  var parsed = utils.parseConstraint(c);
+  return { package: parsed.name,
+           constraint: parsed.constraintString || null };
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // SourceArch
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
-// - name [required]
+// - kind [required]
 // - arch [required]
 // - uses
 // - implies
@@ -113,9 +121,9 @@ var SourceArch = function (pkg, options) {
   options = options || {};
   self.pkg = pkg;
 
-  // Name for this sourceArchitecture. At the moment, there are really two
-  // options -- main and plugin. We use these in linking
-  self.archName = options.name;
+  // Kind of this sourceArchitecture. At the moment, there are really three
+  // options -- package, plugin, and app. We use these in linking.
+  self.kind = options.kind;
 
   // The architecture (fully or partially qualified) that can use this
   // unibuild.
@@ -176,9 +184,6 @@ var SourceArch = function (pkg, options) {
   // but only control files such as package.js and .meteor/packages,
   // since the rest are not determined until compile time.
   self.watchSet = options.watchSet || new watch.WatchSet;
-
-  // See the field of the same name in PackageSource.
-  self.noSources = false;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -222,6 +227,7 @@ var PackageSource = function (catalog) {
   // XXX when we have names, maybe we want to say that all packages
   // with names have versions? certainly the reverse is true
   self.version = null;
+  self.versionExplicitlyProvided = false;
 
   // Available architectures of this package. Array of SourceArch.
   self.architectures = [];
@@ -255,12 +261,6 @@ var PackageSource = function (catalog) {
   // as a string.
   self.cordovaDependencies = {};
 
-  // Dependency versions that we used last time that we built this package. If
-  // the constraint solver thinks that they are still a valid set of
-  // dependencies, we will use them again to build this package. This makes
-  // building packages slightly more efficient and ensures repeatable builds.
-  self.dependencyVersions = {dependencies: {}, pluginDependencies: {}};
-
   // If this package has a corresponding test package (for example,
   // underscore-test), defined in the same package.js file, store its value
   // here.
@@ -280,21 +280,6 @@ var PackageSource = function (catalog) {
   // built copies of all known isopackets.
   self.includeTool = false;
 
-  // If this is true, then this package has no source files. (But the converse
-  // is not true: this is only set to true by one particular constructor.) This
-  // is specifically so that a few pieces of code can detect the wrapper "load"
-  // package that isopacket building uses and not do extra work that doesn't
-  // make sense in the isopacket-building context.
-  // XXX This may no longer be necessary.
-  self.noSources = false;
-
-  // If this is true, the package source comes from the package server, and
-  // should be treated as immutable. The only reason that we have it is so we
-  // can build it, and we should expect to use exactly the same inputs
-  // (package.js and version lock file) as we did when it was created. If we
-  // ever need to modify it, we should throw instead.
-  self.immutable = false;
-
   // Is this a core package? Core packages don't record version files, because
   // core packages are only ever run from checkout. For the preview release,
   // core packages do not need to specify their versions at publication (since
@@ -302,12 +287,6 @@ var PackageSource = function (catalog) {
   // specify the correct restrictions at 0.90.
   // XXX: 0.90 package versions.
   self.isCore = false;
-
-  // Alternatively, we can also specify noVersionFile directly. Useful for not
-  // recording version files for js images of plugins, since those go into the
-  // overall package versions file (if one exists). In the future, we can make
-  // this option transparent to the user in package.js.
-  self.noVersionFile = false;
 
   // The list of archs that we can target. Doesn't include 'web' because
   // it is expanded into 'web.*'.
@@ -346,7 +325,6 @@ _.extend(PackageSource.prototype, {
   // - npmDependencies
   // - cordovaDependencies
   // - npmDir
-  // - dependencyVersions
   initFromOptions: function (name, options) {
     var self = this;
     self.name = name;
@@ -373,27 +351,17 @@ _.extend(PackageSource.prototype, {
     });
 
     var sourceArch = new SourceArch(self, {
-      name: options.archName,
+      kind: options.kind,
       arch: "os",
-      uses: _.map(options.use, utils.splitConstraint),
+      uses: _.map(options.use, splitConstraint),
       getSourcesFunc: function () { return sources; },
       nodeModulesPath: nodeModulesPath
     });
-
-    if (!sources.length) {
-      self.noSources = true;
-      sourceArch.noSources = true;
-    }
 
     self.architectures.push(sourceArch);
 
     if (! self._checkCrossUnibuildVersionConstraints())
       throw new Error("only one unibuild, so how can consistency check fail?");
-
-    self.dependencyVersions = options.dependencyVersions ||
-        {dependencies: {}, pluginDependencies: {}};
-
-    self.noVersionFile = options.noVersionFile;
   },
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
@@ -409,9 +377,6 @@ _.extend(PackageSource.prototype, {
   //    example, a program)
   //   -defaultVersion: The default version if none is specified. Only assigned
   //    if the version is required.
-  //   -immutable: This package source is immutable. Do not write anything,
-  //    including version files. Instead, its only purpose is to be used as
-  //    guideline for a repeatable build.
   //   -name: override the name of this package with a different name.
   initFromPackageDir: function (dir, options) {
     var self = this;
@@ -505,6 +470,7 @@ _.extend(PackageSource.prototype, {
             // XXX validate that version parses -- and that it doesn't
             // contain a +!
             self.version = value;
+            self.versionExplicitlyProvided = true;
           } else if (key === "name" && !self.isTest) {
             if (!self.name) {
               self.name = value;
@@ -852,8 +818,6 @@ _.extend(PackageSource.prototype, {
         symbols: { Package: Package, Npm: Npm, Cordova: Cordova }
       });
     } catch (e) {
-      console.log(e.stack); // XXX should we keep this here -- or do we want broken
-                            // packages to fail silently?
       buildmessage.exception(e);
 
       // Could be a syntax error or an exception. Recover by
@@ -904,6 +868,7 @@ _.extend(PackageSource.prototype, {
       // recover by ignoring
     }
 
+    // XXX #3006 are there any call sites that don't set requireVersion?
     if (self.version === null && options.requireVersion) {
       if (options.defaultVersion) {
         self.version = options.defaultVersion;
@@ -1444,6 +1409,7 @@ _.extend(PackageSource.prototype, {
       // which needs to be loaded by the linker).
       // XXX add a better API for js-analyze to declare itself here
       if (self.name !== "meteor" && self.name !== "js-analyze" &&
+          // XXX #3006 is this still needed?
           !process.env.NO_METEOR_PACKAGE) {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
@@ -1467,7 +1433,7 @@ _.extend(PackageSource.prototype, {
       watchSet.addFile(packageJsPath, packageJsHash);
 
       self.architectures.push(new SourceArch(self, {
-        name: "main",
+        kind: "main",
         arch: arch,
         uses: uses[arch],
         implies: implies[arch],
@@ -1476,36 +1442,6 @@ _.extend(PackageSource.prototype, {
         watchSet: watchSet
       }));
     });
-
-    // If we have built this before, read the versions that we ended up using.
-    var versionsFile = self.versionsFilePath();
-    if (versionsFile && fs.existsSync(versionsFile)) {
-      try {
-        var data = fs.readFileSync(versionsFile, 'utf8');
-        var dependencyData = JSON.parse(data);
-        self.dependencyVersions = {
-          "pluginDependencies": _.object(dependencyData.pluginDependencies),
-          "dependencies": _.object(dependencyData.dependencies),
-          "toolVersion": dependencyData.toolVersion
-          };
-      } catch (err) {
-        // We 'recover' by not reading the dependency versions. Log a line about
-        // it in case it is unexpected. We don't buildmessage because it doesn't
-        // really interrupt our workflow, but the user might want to know about
-        // it anyway. We shouldn't get here unless, for example, the user tried
-        // to manually edit the json file incorrectly, or there is some bizarre
-        // ondisk corruption.
-        console.log("Could not read versions file for " + self.name +
-                    ". Recomputing dependency versions from scratch.");
-      }
-    };
-
-    // If immutable is set, then we should make a note to never mutate this
-    // packageSource. We should never change its dependency versions, for
-    // example.
-    if (options.immutable) {
-      self.immutable = true;
-    };
 
     // Serve root of the package.
     self.serveRoot = path.join(path.sep, 'packages', self.name);
@@ -1517,9 +1453,9 @@ _.extend(PackageSource.prototype, {
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
-  initFromAppDir: function (appDir, ignoreFiles) {
+  initFromAppDir: function (projectContext, ignoreFiles) {
     var self = this;
-    appDir = path.resolve(appDir);
+    var appDir = projectContext.projectDir;
     self.name = null;
     self.sourceRoot = appDir;
     self.serveRoot = path.sep;
@@ -1527,31 +1463,31 @@ _.extend(PackageSource.prototype, {
     // special files those are excluded from app's top-level sources
     var controlFiles = ['mobile-config.js'];
 
-    _.each(self.allArchs, function (arch) {
-      // Determine used packages
-      var project = require('./project.js').project;
-      var names = project.getConstraints();
+    // Determine used packages. Note that these are the same for all arches,
+    // because there's no way to specify otherwise in .meteor/packages.
+    var uses = [];
+    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+      uses.push({ package: constraint.name,
+                  constraint: constraint.constraintString });
+    });
 
+    var projectWatchSet = projectContext.getProjectWatchSet();
+
+    _.each(self.allArchs, function (arch) {
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
 
       // Create unibuild
       var sourceArch = new SourceArch(self, {
-        name: arch,
+        kind: 'app',
         arch: arch,
-        uses: _.map(names, utils.dealConstraint)
+        uses: uses
       });
       self.architectures.push(sourceArch);
 
-      // Watch control files for changes
-      // XXX this read has a race with the actual reads that are used
-      _.each([path.join(appDir, '.meteor', 'packages'),
-              path.join(appDir, '.meteor', 'versions'),
-              path.join(appDir, '.meteor', 'cordova-plugins'),
-              path.join(appDir, '.meteor', 'platforms'),
-              path.join(appDir, '.meteor', 'release')], function (p) {
-                watch.readAndWatchFile(sourceArch.watchSet, p);
-              });
+      // sourceArch's WatchSet should include all the project metadata files
+      // read by the ProjectContext.
+      sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
       sourceArch.getSourcesFunc = function (extensions, watchSet) {
@@ -1616,7 +1552,12 @@ _.extend(PackageSource.prototype, {
         // special handling.
         var sourceDirectories = readAndWatchDirectory('', {
           include: [/\/$/],
-          exclude: [/^packages\/$/, /^programs\/$/, /^tests\/$/,
+          exclude: [/^packages\/$/, /^tests\/$/,
+                    // XXX We no longer actually have special handling
+                    //     for the programs subdirectory, but let's not
+                    //     suddenly start treating it as part of the main
+                    //     app program.
+                    /^programs\/$/,
                     /^public\/$/, /^private\/$/,
                     /^cordova-build-override\/$/,
                     otherUnibuildRegExp].concat(sourceExclude)
@@ -1749,121 +1690,47 @@ _.extend(PackageSource.prototype, {
     return ret;
   },
 
-  // Record the versions of the dependencies that we used to actually build the
-  // package on disk and save them into the packageSource. Next time we build
-  // the package, we will look at them for optimization & repeatable builds.
+  // Returns a list of package names which should be loaded before building this
+  // package. This is all the packages that we directly depend on in a unibuild
+  // or from a plugin.
   //
-  // constraints:
-  // - dependencies: results of running the constraint solver on the dependency
-  //   metadata of this package
-  // - pluginDependenciess: results of running the constraint solver on the
-  //   plugin dependency data for this package.
-  // currentTool: string of the tool version that we are using
-  //  (ex: meteor-tool@1.0.0)
-  recordDependencyVersions: function (constraints, currentTool) {
+  // (It's possible that we could do something slightly fancier where we only
+  // need to load those dependencies (including implied dependencies) which we
+  // know contain plugins first, plus the transitive closure of all the packages
+  // we depend on which contain a plugin. This seems good enough, though.)
+  getPackagesToLoadFirst: function (packageMap) {
     var self = this;
-    var versions = _.extend(constraints, {"toolVersion": currentTool });
+    var packages = {};
+    var processUse = function (use) {
+      // We don't have to build weak or unordered deps first (eg they can't
+      // contribute to a plugin).
+      if (use.weak || use.unordered)
+        return;
+      var packageInfo = packageMap.getInfo(use.package);
 
-    // If we don't have a versions file path (because, probably, we are not
-    // supposed to record one for this package), then we clearly cannot record
-    // on.
-    var versionsFile = self.versionsFilePath();
-    if (!versionsFile) {
-      return;
-    }
-
-    // If nothing has changed, don't bother rewriting the versions file.
-    if (_.isEqual(self.dependencyVersions, versions)) return;
-
-    // If something has changed, and this is an immutable package source, then
-    // we have done something terribly, terribly wrong. Throw.
-    if (self.immutable) {
-      throw new Error(
-        "Version lock for " + self.name + " should never change. Recorded as "
-          + JSON.stringify(self.dependencyVersions) + ", calculated as "
-          + JSON.stringify(versions));
+      if (! packageInfo)
+        throw Error("Depending on unknown package " + use.package);
+      packages[use.package] = true;
     };
 
-    // In case we need to rebuild from this package Source, it will be
-    // convenient to keep the results on hand and not reread from disk.
-    self.dependencyVersions = _.clone(versions);
+    _.each(self.architectures, function (arch) {
+      // We need to iterate over both uses and implies, since implied packages
+      // also constitute dependencies. We don't have to include the dependencies
+      // of implied packages directly here, since their own
+      // getPackagesToLoadFirst will include those.
+      _.each(arch.uses, processUse);
+      _.each(arch.implies, processUse);
+    });
 
-    // There is always a possibility that we might want to change the format of
-    // this file, so let's keep track of what it is.
-    versions["format"] = "1.0";
-
-    // When we write versions to disk, we want to alphabetize by package name,
-    // both for readability and also for consistency (so two packages built with
-    // the same versions have the exact same versions file).
-    //
-    // This takes in an object mapping key to value and returns an array of
-    // <key, value> pairs, alphabetized by key.
-    var alphabetize = function (object) {
-      return _.sortBy(_.pairs(object),
-        function (pair) {
-           return pair[0];
-        });
-    };
-
-    // Both plugins and direct dependencies are objectsmapping package name to
-    // version number. When we write them on disk, we will convert them to
-    // arrays of <packageName, version> and alphabetized by packageName.
-    versions["dependencies"] = alphabetize(versions["dependencies"]);
-    versions["pluginDependencies"]
-      = alphabetize(versions["pluginDependencies"]);
-
-    try {
-      // Currently, unnamed packages are apps, and apps have a different
-      // versions file format and semantics. So, we don't need to and cannot
-      // record dependencyVersions for those, and that's OK for now.
-      //
-      // Uniload (the precursor to isopackets) used to set it sourceRoot to
-      // "/", which is a little strange. That's what we're working around here,
-      // though we can probably avoid this in the future.
-      if (self.name && self.sourceRoot !== "/") {
-        fs.writeFileSync(versionsFile, JSON.stringify(versions, null, 2), 'utf8');
-      }
-    } catch (e) {
-      // We 'recover' by not saving the dependency versions. Log a line about it
-      // in case it is unexpected. We don't buildmessage because it doesn't
-      // really interrupt our workflow, but the user might want to know about it
-      // anyway.
-      console.log("Could not write versions file for ", self.name);
-    }
- },
-
-  // Returns the filepath to the file containing the version lock for this
-  // package, or null if we don't think that this package should have
-  // a versions file.
-  versionsFilePath: function () {
-    var self = this;
-    // If we are running from checkout and looking at a core package,
-    // don't record its versions. We know what its versions are, and having
-    // those extra version lock files is kind of annoying.
-    //
-    // (This is a medium-term hack. We can build something more modular if
-    //  there is any demand for it)
-    // See #PackageVersionFilesHack
-    if (self.isCore) {
-      return null;
-    }
-
-    // If we have specified to not record a version file for this package,
-    // don't. Currently used to avoid recording version files for separately
-    // compiled plugins.
-    if (self.noVersionFile) {
-      return null;
-    }
-
-    // Lastly, we don't record versions files for test packages because we don't
-    // see any particularly good reason to do it, and it is confusing to the
-    // users.
-    if (self.isTest) {
-      return null;
-    }
-
-    // All right, fine, return a path to the versions file.
-    return path.join(self.sourceRoot, "versions.json");
+    _.each(self.pluginInfo, function (info) {
+      // info.use is currently just an array of strings, and there's
+      // no way to specify weak/unordered. Much like an app.
+      _.each(info.use, function (spec) {
+        var parsedSpec = splitConstraint(spec);
+        packages[parsedSpec.package] = true;
+      });
+    });
+    return _.keys(packages);
   },
 
   // If dependencies aren't consistent across unibuilds, return false and
@@ -1938,7 +1805,7 @@ _.extend(PackageSource.prototype, {
 
     _.each(self.pluginInfo, function (info) {
       _.each(info.use, function (spec) {
-        var parsedSpec = utils.splitConstraint(spec);
+        var parsedSpec = splitConstraint(spec);
         if (!_.has(dependencies, parsedSpec.package)) {
           dependencies[parsedSpec.package] = {
             constraint: null,

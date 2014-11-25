@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var path = require('path');
 var files = require('./files.js');
-var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
@@ -163,19 +162,14 @@ release.explicit = null;
 // True if release.current is the release we'd use if we wanted to run the app
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
-release.usingRightReleaseForApp = function () {
+release.usingRightReleaseForApp = function (projectContext) {
   if (release.current === null)
     throw new Error("no release?");
 
   if (! files.usesWarehouse() || release.forced)
     return true;
 
-  var appRelease = project.getNormalizedMeteorReleaseVersion();
-  if (appRelease === null) {
-    // Really old app that has no release specified.
-    appRelease = release.latestKnown();
-  }
-  return release.current.name === appRelease;
+  return release.current.name === projectContext.releaseFile.fullReleaseName;
 };
 
 // Return the name of the latest release that is downloaded and ready

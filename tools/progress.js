@@ -11,7 +11,6 @@
 
 var _ = require('underscore');
 var Future = require('fibers/future');
-var consolejs = require('./console.js');
 
 var Progress = function (options) {
   var self = this;
@@ -149,7 +148,7 @@ _.extend(Progress.prototype, {
     self._updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    consolejs.Console.nudge(false);
+    require('./console.js').Console.nudge(false);
 
     self._notifyState();
   },

@@ -8,10 +8,11 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
-var packageLoader = require('./package-loader.js');
 var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
+var isopackCacheModule = require('./isopack-cache.js');
+var packageMapModule = require('./package-map.js');
 var Future = require('fibers/future');
 
 var rejectBadPath = function (p) {
@@ -24,7 +25,7 @@ var rejectBadPath = function (p) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // Options:
-// - name [required]
+// - kind [required] (main/plugin/app)
 // - arch [required]
 // - uses
 // - implies
@@ -40,6 +41,7 @@ var Unibuild = function (isopack, options) {
   options = options || {};
   self.pkg = isopack;
 
+  self.kind = options.kind;
   self.arch = options.arch;
 
   self.uses = options.uses;
@@ -57,7 +59,7 @@ var Unibuild = function (isopack, options) {
   // to keep track of Unibuilds in a map; it's used by bundler
   // and compiler. We put some human readable info in here too to make
   // debugging easier.
-  self.id = isopack.name + "." + self.pkg.name + "@" + self.arch + "#" +
+  self.id = self.pkg.name + "." + self.kind + "@" + self.arch + "#" +
     (nextBuildId ++);
 
   // Prelink output.
@@ -117,11 +119,11 @@ _.extend(Unibuild.prototype, {
   // is resolved at bundle time. (On the other hand, when it comes to
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
-  //
-  // loader is the PackageLoader that should be used to resolve
-  // the package's bundle-time dependencies.
-  getResources: function (bundleArch, loader) {
+  getResources: function (bundleArch, options) {
     var self = this;
+    var isopackCache = options.isopackCache;
+    if (! isopackCache)
+      throw Error("no isopackCache?");
 
     if (! archinfo.matches(bundleArch, self.arch))
       throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
@@ -136,18 +138,22 @@ _.extend(Unibuild.prototype, {
     // a name shouldn't be affected by the non-local decision of whether or not
     // an unrelated package in the target depends on something).
     var imports = {}; // map from symbol to supplying package name
-    compiler.eachUsedUnibuild(
-      self.uses,
-      bundleArch, loader,
-      { skipUnordered: true, skipDebugOnly: true },
-      function (depUnibuild) {
-        _.each(depUnibuild.packageVariables, function (symbol) {
-          // Slightly hacky implementation of test-only exports.
-          if (symbol.export === true ||
-              (symbol.export === "tests" && self.pkg.isTest))
-            imports[symbol.name] = depUnibuild.pkg.name;
-        });
+
+    var addImportsForUnibuild = function (depUnibuild) {
+      _.each(depUnibuild.packageVariables, function (symbol) {
+        // Slightly hacky implementation of test-only exports.
+        if (symbol.export === true ||
+            (symbol.export === "tests" && self.pkg.isTest))
+          imports[symbol.name] = depUnibuild.pkg.name;
       });
+    };
+    compiler.eachUsedUnibuild({
+      dependencies: self.uses,
+      arch: bundleArch,
+      isopackCache: isopackCache,
+      skipUnordered: true,
+      skipDebugOnly: true
+    }, addImportsForUnibuild);
 
     // Phase 2 link
     var isApp = ! self.pkg.name;
@@ -179,31 +185,6 @@ _.extend(Unibuild.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 // Isopack
 ///////////////////////////////////////////////////////////////////////////////
-
-// Helper function. Takes an object mapping package name to version, and
-// ensures that all the versions have real build ids (by loading them
-// through a PackageLoader) rather than +local build ids (which is what
-// they could have if we just read them out of the catalog).
-//
-// If the optional `filter` function is provided, then we will only load
-// packages for which `filter(packageName, version)` returns truthy.
-var getLoadedPackageVersions = function (versions, catalog, filter) {
-  buildmessage.assertInCapture();
-
-  var result = {};
-
-  var loader = new packageLoader.PackageLoader({
-    versions: versions,
-    catalog: catalog
-  });
-  _.each(versions, function (version, packageName) {
-    if (! filter || filter(packageName, version)) {
-      var isopack = loader.getPackage(packageName);
-      result[packageName] = isopack.version;
-    }
-  });
-  return result;
-};
 
 var convertIsopackFormat = function (data, versionFrom, versionTo) {
   var convertedData = _.clone(data);
@@ -246,13 +227,10 @@ var Isopack = function () {
   self.cordovaDependencies = {};
 
   // -- Information for up-to-date checks --
-
-  // Version number of the tool that built this isopack
-  // (compiler.BUILT_BY) or null if unknown
-  self.builtBy = null;
-
-  // If true, force the checkUpToDate to return false for this isopack.
-  self.forceNotUpToDate = false;
+  // Data in this section is only set if the Isopack was directly created by
+  // compiler.compile or read from a package compiled by IsopackCache (with its
+  // isopack-buildinfo.json file). They are not set for Isopacks read from
+  // the tropohouse.
 
   // The versions that we used at build time for each of our direct
   // dependencies. Map from package name to version string.
@@ -328,6 +306,33 @@ _.extend(Isopack.prototype, {
   addUnibuild: function (options) {
     var self = this;
     self.unibuilds.push(new Unibuild(self, options));
+  },
+
+  getSourceFilesUnderSourceRoot: function (sourceRoot) {
+    var self = this;
+    var sourceFiles = {};
+    var anySourceFiles = false;
+    var addSourceFilesFromWatchSet = function (watchSet) {
+      _.each(watchSet.files, function (hash, filename) {
+        anySourceFiles = true;
+        var relativePath = path.relative(sourceRoot, filename);
+        // We only want files that are actually under sourceRoot.
+        if (relativePath.substr(0, 3) === '..' + path.sep)
+          return;
+        sourceFiles[relativePath] = true;
+      });
+    };
+    addSourceFilesFromWatchSet(self.pluginWatchSet);
+    _.each(self.unibuilds, function (u) {
+      addSourceFilesFromWatchSet(u.watchSet);
+    });
+
+    // Were we actually built from source or loaded from an IsopackCache? If so
+    // then there should be at least one source file in some WatchSet. If not,
+    // return null.
+    if (! anySourceFiles)
+      return null;
+    return _.keys(sourceFiles);
   },
 
   // An sorted array of all the architectures included in this package.
@@ -506,12 +511,8 @@ _.extend(Isopack.prototype, {
   // Load a Isopack on disk.
   //
   // options:
-  // - buildOfPath: If present, the source directory (as an absolute
-  //   path on local disk) of which we think this isopack is a
-  //   build. If it's not (it was copied from somewhere else), we
-  //   consider it not up to date (in the sense of checkUpToDate) so
-  //   that we can rebuild it and correct the absolute paths in the
-  //   dependency information.
+  // - isopackBuildInfoJson: parsed isopack-buildinfo.json object,
+  //   if loading from an IsopackCache.
   initFromPath: function (name, dir, options) {
     var self = this;
     options = _.clone(options || {});
@@ -561,7 +562,7 @@ _.extend(Isopack.prototype, {
 
       if (mainJson.format !== "unipackage-pre2") {
         // We don't support pre-0.9.0 isopacks, but we do know enough to delete
-        // them if we find them in .build.* somehow (rather than crash).
+        // them if we find them in an isopack cache somehow (rather than crash).
         if (mainJson.format === "unipackage-pre1") {
           throw new exports.OldIsopackFormatError();
         }
@@ -580,52 +581,31 @@ _.extend(Isopack.prototype, {
                       mainJson.name);
     }
 
-    var buildInfoPath = path.join(dir, 'buildinfo.json');
-    var buildInfoJson = fs.existsSync(buildInfoPath) &&
-      JSON.parse(fs.readFileSync(buildInfoPath));
-    if (buildInfoJson) {
-      if (!options.firstIsopack) {
-        throw Error("can't merge isopacks with buildinfo");
-      }
-    } else {
-      buildInfoJson = {};
-    }
-
-    // XXX should comprehensively sanitize (eg, typecheck) everything
-    // read from json files
-
-    // Read basic buildinfo.json info
-
-    self.builtBy = buildInfoJson.builtBy || null;
-    self.buildTimeDirectDependencies =
-      buildInfoJson.buildTimeDirectDependencies || null;
-    self.buildTimePluginDependencies =
-      buildInfoJson.buildTimePluginDependencies || null;
-
-    if (options.buildOfPath &&
-        (buildInfoJson.source !== options.buildOfPath)) {
-      // This catches the case where you copy a source tree that had a
-      // .build directory and then modify a file. Without this check
-      // you won't see a rebuild (even if you stop and restart
-      // meteor), at least not until you modify the *original* copies
-      // of the source files, because that is still where all of the
-      // dependency info points.
-      self.forceNotUpToDate = true;
-    }
-
-    // Read the watch sets for each unibuild
+    // If we're loading from an IsopackCache, we need to load the WatchSets
+    // which will be used by the bundler. (pluginProviderPackageMap and builtBy
+    // are only used by IsopackCache._checkUpToDate.)
     var unibuildWatchSets = {};
-    _.each(buildInfoJson.buildDependencies, function (watchSetJSON, unibuildTag) {
-      unibuildWatchSets[unibuildTag] = watch.WatchSet.fromJSON(watchSetJSON);
-    });
+    if (options.isopackBuildInfoJson) {
+      if (! options.firstIsopack)
+        throw Error("can't merge isopacks with buildinfo");
 
-    // Read pluginWatchSet and pluginProviderPackageDirs. (In the
-    // multi-sub-isopack case, these are guaranteed to be trivial
-    // (since we check that there's no buildinfo.json), so no need to
-    // merge.)
-    self.pluginWatchSet = watch.WatchSet.fromJSON(
-      buildInfoJson.pluginDependencies);
-    self.pluginProviderPackageDirs = buildInfoJson.pluginProviderPackages || {};
+      // XXX should comprehensively sanitize (eg, typecheck) everything
+      // read from json files
+
+      // Read the watch sets for each unibuild
+      _.each(
+        options.isopackBuildInfoJson.unibuildDependencies,
+        function (watchSetJSON, unibuildTag) {
+          unibuildWatchSets[unibuildTag] =
+            watch.WatchSet.fromJSON(watchSetJSON);
+        });
+
+      // Read pluginWatchSet. (In the multi-sub-isopack case, these are
+      // guaranteed to be trivial (since we check that there's no
+      // isopackBuildInfoJson), so no need to merge.)
+      self.pluginWatchSet = watch.WatchSet.fromJSON(
+        options.isopackBuildInfoJson.pluginDependencies);
+    }
 
     // If we are loading multiple isopacks, only take this stuff from the
     // first one.
@@ -725,7 +705,9 @@ _.extend(Isopack.prototype, {
       });
 
       self.unibuilds.push(new Unibuild(self, {
-        name: unibuildMeta.name,
+        // At some point we stopped writing 'kind's to the metadata file, so
+        // default to main.
+        kind: unibuildMeta.kind || 'main',
         arch: unibuildMeta.arch,
         uses: unibuildJson.uses,
         implies: unibuildJson.implies,
@@ -750,20 +732,11 @@ _.extend(Isopack.prototype, {
 
   // options:
   //
-  // - buildOfPath: Optional. The absolute path on local disk of the
-  //   directory that was built to produce this package. Used as part
-  //   of the dependency info to detect builds that were moved and
-  //   then modified.
-  // - elideBuildInfo: If set, don't write a buildinfo.json file.
+  // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
   saveToPath: function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
-    if (!options.elideBuildInfo) {
-      buildmessage.assertInCapture();
-      if (!options.catalog)
-        throw Error("catalog required to generate buildinfo.json");
-    }
 
     var builder = new Builder({ outputPath: outputPath });
     try {
@@ -783,31 +756,17 @@ _.extend(Isopack.prototype, {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
 
-      var buildInfoJson = null;
-      if (!options.elideBuildInfo) {
-        // Note: The contents of buildInfoJson (with the root directory of the
-        // Meteor checkout naively deleted) gets its SHA taken to determine the
-        // built package's warehouse version. So it should not contain
-        // platform-dependent data and should contain all sources of change to
-        // the isopack's output.  See
-        // scripts/admin/build-package-tarballs.sh.
-        // XXX this script is no longer relevant; we use "build IDs" now instead
-        var buildTimeDirectDeps = getLoadedPackageVersions(
-          self.buildTimeDirectDependencies, options.catalog);
-        var buildTimePluginDeps = {};
-        _.each(self.buildTimePluginDependencies, function (versions, pluginName) {
-          buildTimePluginDeps[pluginName] = getLoadedPackageVersions(
-            versions, options.catalog);
-        });
-
-        buildInfoJson = {
+      var isopackBuildInfoJson = null;
+      if (options.includeIsopackBuildInfo) {
+        isopackBuildInfoJson = {
           builtBy: compiler.BUILT_BY,
-          buildDependencies: { },
+          unibuildDependencies: {},
+          // pluginDependencies defines a WatchSet that any package that could
+          // use this package as a plugin needs to watch. So it always contains
+          // our package.js (because modifications to package.js could add a new
+          // plugin), as well as any files making up plugins in our package.
           pluginDependencies: self.pluginWatchSet.toJSON(),
-          pluginProviderPackages: self.pluginProviderPackageDirs,
-          source: options.buildOfPath || undefined,
-          buildTimeDirectDependencies: buildTimeDirectDeps,
-          buildTimePluginDependencies: buildTimePluginDeps
+          pluginProviderPackageMap: options.pluginProviderPackageMap.toJSON()
         };
       }
 
@@ -815,9 +774,10 @@ _.extend(Isopack.prototype, {
       builder.reserve("unipackage.json");
 
       builder.reserve("isopack.json");
-      // Reserve this even if elideBuildInfo is set, to ensure nothing else
-      // writes it somehow.
-      builder.reserve("buildinfo.json");
+      // Reserve this even if includeIsopackBuildInfo is not set, to ensure
+      // nothing else writes it somehow.
+      builder.reserve("isopack-buildinfo.json");
+
       builder.reserve("head");
       builder.reserve("body");
 
@@ -854,14 +814,15 @@ _.extend(Isopack.prototype, {
         var unibuildJsonFile =
           builder.generateFilename(baseUnibuildName + ".json");
         mainJson.builds.push({
+          kind: unibuild.kind,
           arch: unibuild.arch,
           path: unibuildJsonFile
         });
 
         // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
-        if (buildInfoJson) {
-          buildInfoJson.buildDependencies[unibuildJsonFile] =
+        if (isopackBuildInfoJson) {
+          isopackBuildInfoJson.unibuildDependencies[unibuildJsonFile] =
             unibuild.watchSet.toJSON();
         }
 
@@ -1047,8 +1008,8 @@ _.extend(Isopack.prototype, {
       // }
       builder.writeJson("isopack.json", isopackJson);
 
-      if (buildInfoJson) {
-        builder.writeJson("buildinfo.json", buildInfoJson);
+      if (isopackBuildInfoJson) {
+        builder.writeJson("isopack-buildinfo.json", isopackBuildInfoJson);
       }
       builder.complete();
     } catch (e) {
@@ -1097,11 +1058,20 @@ _.extend(Isopack.prototype, {
 
     // Build all of the isopackets now, so that no build step is required when
     // you're actually running meteor from a release in order to load packages.
+    // XXX This code is pretty similar to isopackets.ensureIsopacketsLoadable
+    //     and could be consolidated.
     var isopacketCatalog = isopackets.newIsopacketBuildingCatalog();
-    var localPackageLoader = new packageLoader.PackageLoader({
-      versions: null,
-      catalog: isopacketCatalog,
-      constraintSolverOpts: { ignoreProjectDeps: true }
+    var versions = {};
+    _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
+      versions[packageName] =
+        isopacketCatalog.getLatestVersion(packageName).version;
+    });
+    var packageMap = new packageMapModule.PackageMap(
+      versions, isopacketCatalog);
+    // Make an isopack cache that doesn't save isopacks to disk and has no
+    // access to versioned packages.
+    var isopackCache = new isopackCacheModule.IsopackCache({
+      packageMap: packageMap
     });
 
     var messages = buildmessage.capture(function () {
@@ -1113,21 +1083,24 @@ _.extend(Isopack.prototype, {
         buildmessage.enterJob({
           title: "Compiling " + isopacketName + " packages for the tool"
         }, function () {
-          var image = bundler.buildJsImage({
-            name: "isopacket-" + isopacketName,
-            packageLoader: localPackageLoader,
-            use: packages,
-            catalog: isopacketCatalog,
-            ignoreProjectDeps: true
-          }).image;
-
+          isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages())
             return;
+
+          var image = bundler.buildJsImage({
+            name: "isopacket-" + isopacketName,
+            packageMap: packageMap,
+            isopackCache: isopackCache,
+            use: packages,
+            catalog: isopacketCatalog
+          }).image;
+          if (buildmessage.jobHasMessages())
+            return;
+
           image.write(builder.enter(path.join('isopackets', isopacketName)));
         });
       });
     });
-
     // This is a build step ... but it's one that only happens in development,
     // and similar to a isopacket load failure, it can just crash the app
     // instead of being handled nicely.
@@ -1144,118 +1117,30 @@ _.extend(Isopack.prototype, {
     }];
   },
 
-  // Computes a hash of the versions of all the package's dependencies
-  // (direct and plugin dependencies) and the unibuilds' and plugins' watch
-  // sets. Options are:
-  //  - relativeTo: if provided, the watch set file paths are
-  //    relativized to this path. If not provided, we use absolute
-  //    paths.
-  //  - catalog: required
-  //
-  // Returns the build id as a hex string.
-  getBuildIdentifier: function (options) {
+  getMergedWatchSet: function () {
     var self = this;
-    buildmessage.assertInCapture();
-    if (!options.catalog)
-      throw Error("required to specify the catalog");
-
-    // Gather all the direct dependencies (that provide plugins) and
-    // plugin dependencies' versions and organize them into arrays. We
-    // use arrays to avoid relying on the order of stringified object
-    // keys.
-    var pluginProviders = [];
-    var pluginProviderVersions = getLoadedPackageVersions(
-      self.buildTimeDirectDependencies, options.catalog,
-      function (packageName, version) { // filter
-        if (packageName !== self.name) {
-          var catalogVersion = options.catalog.getVersion(packageName, version);
-          // XXX This could throw if we call it on a freshly-built
-          // isopack (as opposed to one read from disk that has real
-          // build ids for build-time deps instead of +local) before
-          // catalog initialization has finished. See XXX at the top of
-          // `getPluginProviders` in compiler.js.
-          if (! catalogVersion) {
-            throw new Error("No catalog version for" + packageName +
-                            "version" + version + "?");
-          }
-          return catalogVersion.containsPlugins;
-        } else {
-          return false;
-        }
-      }
-    );
-
-    _.each(pluginProviderVersions, function (version, packageName) {
-      pluginProviders.push([packageName, version]);
-    });
-    _.sortBy(pluginProviders, "0");
-
-
-    var pluginDeps = [];
-    // Mild hack documentation: versions for a pluginName can be null if this is
-    // a preconstraint-solver build. (That, elsewhere, indicates to us that we
-    // should only use local packages to build it -- and neatly avoids having to
-    // resolve its dependencies) So, we need to check for that.
-    // #UnbuiltConstraintSolverMustUseLocalPackages
-    _.each(
-      self.buildTimePluginDependencies,
-      function (versions, pluginName) {
-        versions = versions ?_.clone(versions): {};
-        var singlePluginDeps = [];
-        delete versions[self.name];
-        _.each(
-          getLoadedPackageVersions(versions, options.catalog),
-          function (version, packageName) {
-            if (packageName !== self.name) {
-              singlePluginDeps.push([packageName, version]);
-            }
-          }
-        );
-        singlePluginDeps = _.sortBy(singlePluginDeps, "0");
-        pluginDeps.push([pluginName, singlePluginDeps]);
-      }
-    );
-    pluginDeps = _.sortBy(pluginDeps, "0");
-
-    // Now that we have versions for all our dependencies, canonicalize
-    // the unibuilds' and plugins' watch sets.
-    var watchFiles = [];
-    var watchSet = new watch.WatchSet();
-    watchSet.merge(self.pluginWatchSet);
+    var watchSet = self.pluginWatchSet.clone();
     _.each(self.unibuilds, function (unibuild) {
       watchSet.merge(unibuild.watchSet);
     });
-    _.each(watchSet.files, function (hash, fileAbsPath) {
-      var watchFilePath = fileAbsPath;
-      if (options.relativeTo) {
-        watchFilePath = path.relative(options.relativeTo, fileAbsPath);
-      }
-      watchFiles.push([watchFilePath, hash]);
-    });
-    watchFiles = _.sortBy(watchFiles, "0");
-
-    // Stick all our info into one big array, stringify it, and hash it.
-    var buildIdInfo = [
-      self.builtBy,
-      pluginProviders,
-      pluginDeps,
-      watchFiles
-    ];
-    var crypto = require('crypto');
-    var hasher = crypto.createHash('sha1');
-    hasher.update(JSON.stringify(buildIdInfo));
-    return hasher.digest('hex');
+    return watchSet;
   },
 
-  // Adds the build identifier to the isopack's `version` field. The
-  // caller is responsible for checking whether the existing version has
-  // a build identifier already. Options are the same as
-  // `getBuildIdentifier`.
-  addBuildIdentifierToVersion: function (options) {
+  // Similar to PackageSource.getPackagesToLoadFirst.
+  getStrongOrderedUsedAndImpliedPackages: function () {
     var self = this;
-    buildmessage.assertInCapture();
-    self.version = self.version + "+" +
-      self.getBuildIdentifier(options);
+    var packages = {};
+    var processUse = function (use) {
+      if (use.weak || use.unordered)
+        return;
+      packages[use.package] = true;
+    };
+
+    _.each(self.unibuilds, function (unibuild) {
+      _.each(unibuild.uses, processUse);
+      _.each(unibuild.implies, processUse);
+    });
+    return _.keys(packages);
   }
 });
 

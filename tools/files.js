@@ -220,12 +220,15 @@ files.getSettings = function (filename, watchSet) {
 
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
-files.prettyPath = function (path) {
-  path = fs.realpathSync(path);
+files.prettyPath = function (p) {
+  p = fs.realpathSync(p);
   var home = process.env.HOME;
-  if (home && path.substr(0, home.length) === home)
-    path = "~" + path.substr(home.length);
-  return path;
+  if (! home)
+    return p;
+  var relativeToHome = path.relative(home, p);
+  if (relativeToHome.substr(0, 3) === ('..' + path.sep))
+    return p;
+  return path.join('~', relativeToHome);
 };
 
 // Like statSync, but null if file not found
@@ -420,9 +423,13 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    var stats = fs.statSync(fullFrom);
+    var stats = options.preserveSymlinks
+          ? fs.lstatSync(fullFrom) : fs.statSync(fullFrom);
     if (stats.isDirectory()) {
       files.cp_r(fullFrom, fullTo, options);
+    } else if (stats.isSymbolicLink()) {
+      var linkText = fs.readlinkSync(fullFrom);
+      fs.symlinkSync(linkText, fullTo);
     } else {
       var absFullFrom = path.resolve(fullFrom);
 
@@ -893,8 +900,8 @@ files.readdirNoDots = function (path) {
 // processed individually. Throws if the file doesn't exist or if
 // anything else goes wrong.
 var getLines = function (file) {
-  var raw = fs.readFileSync(file, 'utf8');
-  var lines = raw.split(/\r*\n\r*/);
+  var buffer = fs.readFileSync(file);
+  var lines = exports.splitBufferToLines(buffer);
 
   // strip blank lines at the end
   while (lines.length) {
@@ -908,6 +915,10 @@ var getLines = function (file) {
 };
 
 exports.getLines = getLines;
+
+exports.splitBufferToLines = function (buffer) {
+  return buffer.toString('utf8').split(/\r*\n\r*/);
+};
 
 // Same as `getLines`, but returns [] if the file doesn't exist.
 exports.getLinesOrEmpty = function (file) {
@@ -934,12 +945,16 @@ exports.readJSONOrNull = function (file) {
 };
 
 // Trims whitespace & other filler characters of a line in a project file.
-exports.trimLine = function (line) {
+files.trimSpaceAndComments = function (line) {
   var match = line.match(/^([^#]*)#/);
   if (match)
     line = match[1];
-  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
-  return line;
+  return files.trimSpace(line);
+};
+
+// Trims leading and trailing whilespace in a project file.
+files.trimSpace = function (line) {
+  return line.replace(/^\s+|\s+$/g, '');
 };
 
 

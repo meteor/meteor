@@ -2,6 +2,7 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
@@ -236,28 +237,35 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
-exports.parseConstraint = packageVersionParser.parseConstraint;
-exports.validatePackageName = packageVersionParser.validatePackageName;
-
-// XXX should unify this with utils.parseConstraint
-exports.splitConstraint = function (constraint) {
-  var m = constraint.split("@");
-  var ret = { package: m[0] };
-  if (m.length > 1) {
-    ret.constraint = m[1];
-  } else {
-    ret.constraint = null;
+// Like packageVersionParser.parseConstraint, but if called in a buildmessage
+// context uses buildmessage to raise errors.
+exports.parseConstraint = function (constraintString, options) {
+  try {
+    return packageVersionParser.parseConstraint(constraintString, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
   }
-  return ret;
+};
+exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+exports.validatePackageName = function (name, options) {
+  try {
+    return packageVersionParser.validatePackageName(name, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
+  }
 };
 
-
-// XXX should unify this with utils.parseConstraint
-exports.dealConstraint = function (constraint, pkg) {
-  return { package: pkg, constraint: constraint};
+// Returns true if the parsed constraint was just a@b with no `=` or `||`.
+exports.isSimpleConstraint = function (parsedConstraint) {
+  return parsedConstraint.constraints.length === 1 &&
+    parsedConstraint.constraints[0].type === "compatible-with";
 };
-
 
 
 // Check for invalid package names. Currently package names can only contain
@@ -475,7 +483,7 @@ exports.isUrlWithSha = function (x) {
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
-// This is talking about NPM versions specifically, not Meteor versions.
+// This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
@@ -483,12 +491,16 @@ exports.ensureOnlyExactVersions = function (dependencies) {
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+    if (! exports.isExactVersion(version)) {
       throw new Error(
-        "Must declare exact version of dependency: " +
-          name + '@' + version);
+        "Must declare exact version of dependency: " + name + '@' + version);
+    }
   });
 };
+exports.isExactVersion = function (version) {
+  return semver.valid(version) || exports.isUrlWithSha(version);
+};
+
 
 exports.execFileSync = function (file, args, opts) {
   var future = new Future;
