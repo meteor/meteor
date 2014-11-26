@@ -6,7 +6,7 @@ var TestEntry = {
   name: 'Test Job',
   schedule: function(parser) {
     return parser.cron('15 10 * * ? *'); // not required
-  }, 
+  },
   job: function() {
     return 'ran';
   }
@@ -77,7 +77,7 @@ Tinytest.add('SyncedCron.nextScheduledAtDate works', function(test) {
 
   var date = SyncedCron.nextScheduledAtDate(entry2.name);
   var correctDate = Later.schedule(entry2.schedule(Later.parse)).next(1);
-  
+
   test.equal(date, correctDate);
 });
 
@@ -96,9 +96,9 @@ Tinytest.add('SyncedCron.stop works', function(test) {
     }
   });
   SyncedCron.add(entry2);
-  
+
   SyncedCron.start();
-  
+
   test.equal(_.keys(SyncedCron._entries).length, 2);
 
   SyncedCron.stop();
