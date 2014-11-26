@@ -2,6 +2,10 @@ mori = Npm.require('mori');
 
 BREAK = {};  // used by our 'each' functions
 
+isPrereleaseVersion = function (version) {
+  return /-/.test(version);
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Resolver
 ////////////////////////////////////////////////////////////////////////////////
@@ -117,26 +121,13 @@ ConstraintSolver.Resolver.prototype.resolve = function (
   _.each(constraints, function (constraint) {
     startState = startState.addConstraint(constraint, mori.list());
 
-    // Keep track of any top-level constraints that mention a pre-release.
-    // These will be the only pre-release versions that count as "reasonable"
-    // for "any-reasonable" (ie, unconstrained) constraints.
-    //
-    // Why only top-level mentions, and not mentions we find while walking the
-    // graph? The constraint solver assumes that adding a constraint to the
-    // resolver state can't make previously impossible choices now possible.  If
-    // pre-releases mentioned anywhere worked, then applying the constraints
-    // "any reasonable" followed by "1.2.3-rc1" would result in "1.2.3-rc1"
-    // ruled first impossible and then possible again. That's no good, so we
-    // have to fix the meaning based on something at the start.  (We could try
-    // to apply our prerelease-avoidance tactics solely in the cost functions,
-    // but then it becomes a much less strict rule.)
-    if (constraint.version && /-/.test(constraint.version)) {
-      if (!_.has(resolveContext.topLevelPrereleases, constraint.name)) {
-        resolveContext.topLevelPrereleases[constraint.name] = {};
+    // Allow prereleases mentioned in top-level constraints, even when
+    // "useRCs" is false.
+    _.each(constraint.disjunction, function (x) {
+      if (x.version && isPrereleaseVersion(x.version)) {
+        resolveContext.prereleaseWhitelist[constraint.name + "@" + x.version] = true;
       }
-      resolveContext.topLevelPrereleases[constraint.name][constraint.version]
-        = true;
-    }
+    });
   });
 
   _.each(dependencies, function (unitName) {
@@ -342,8 +333,7 @@ ConstraintSolver.Constraint.prototype.toString = function (options) {
 };
 
 
-ConstraintSolver.Constraint.prototype.isSatisfied = function (
-  candidateUV, resolver, resolveContext) {
+ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV) {
   var self = this;
   check(candidateUV, ConstraintSolver.UnitVersion);
 
@@ -352,39 +342,15 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
                 candidateUV.name);
   }
 
-  var prereleaseNeedingLicense = false;
-
-  // We try not to allow "pre-release" versions (versions with a '-')
-  // unless they are explicitly mentioned.  If the `useRCsOK` flag is
-  // set, all pre-release versions are allowed.  Pre-release versions
-  // mentioned explicitly in top-level constraints are always allowed.
-  // Otherwise, if `candidateUV` is a pre-release, it needs to be
-  // "licensed" by being mentioned by name in this constraint or
-  // matched by an inexact constraint whose version also has a '-'.
-  if ((! resolveContext.useRCsOK) && /-/.test(candidateUV.version)) {
-    var isTopLevelPrerelease = (
-      _.has(resolveContext.topLevelPrereleases, self.name) &&
-        _.has(resolveContext.topLevelPrereleases[self.name],
-              candidateUV.version));
-    if (! isTopLevelPrerelease) {
-      prereleaseNeedingLicense = true;
-    }
-  }
-
   return _.some(self.disjunction, function (simpleConstraint) {
     var type = simpleConstraint.type;
 
     if (type === "any-reasonable") {
-      return ! prereleaseNeedingLicense;
+      return true;
     } else if (type === "exactly") {
-      var version = simpleConstraint.version;
-      return (version === candidateUV.version);
+      return (simpleConstraint.version === candidateUV.version);
     } else if (type === 'compatible-with') {
       var version = simpleConstraint.version;
-
-      if (prereleaseNeedingLicense && ! /-/.test(version)) {
-        return false;
-      }
 
       // If the candidate version is less than the version named in the
       // constraint, we are not satisfied.
@@ -410,7 +376,20 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
 // for every ResolverState in a given call.
 var ResolveContext = function () {
   var self = this;
-  // unitName -> version string -> true
-  self.topLevelPrereleases = {};
   self.useRCsOK = false;
+  self.prereleaseWhitelist = {}; // "name@version" -> true
+};
+
+ResolveContext.prototype.isVersionOK = function (name, version) {
+  var self = this;
+
+  if (self.useRCsOK || ! isPrereleaseVersion(version)) {
+    return true;
+  }
+
+  if (self.prereleaseWhitelist[name + "@" + version]) {
+    return true;
+  }
+
+  return false;
 };

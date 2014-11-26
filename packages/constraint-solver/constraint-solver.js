@@ -130,6 +130,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   check(options, {
     _testing: Match.Optional(Boolean),
+    _testCostFunction: Match.Optional(String),
     upgrade: [String],
     previousSolution: Match.Optional(Object)
   });
@@ -248,11 +249,22 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   var resolverOptions = {};
 
   if (options._testing) {
-    resolverOptions.costFunction = function (state) {
-      return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-        return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
-      }, state.choices));
-    };
+    var costFunc = (options._testCostFunction || 'earlierBetter');
+    if (costFunc === 'earlierBetter') {
+      resolverOptions.costFunction = function (state) {
+        return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+          return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
+        }, state.choices));
+      };
+    } else if (costFunc === 'laterBetter') {
+      resolverOptions.costFunction = function (state) {
+        return - mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
+          return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
+        }, state.choices));
+      };
+    } else {
+      throw new Error("Unknown _testCostFunction: " + costFunc);
+    }
   } else {
     // Poorman's enum
     var VMAJOR = 0, MAJOR = 1, MEDIUM = 2, MINOR = 3;

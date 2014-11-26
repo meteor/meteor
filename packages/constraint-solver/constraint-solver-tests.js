@@ -87,7 +87,13 @@ var testWithResolver = function (test, resolver, f) {
     var constraints = splitArgs(deps).constraints;
 
     var resolvedDeps = resolver.resolve(dependencies, constraints, options);
-    test.equal(resolvedDeps, { answer: expected });
+    var expectedObj = { answer: expected };
+    if (_.has(expected, "$usedRCs")) {
+      expectedObj.usedRCs = expected.$usedRCs;
+      expectedObj.answer = _.clone(expectedObj.answer);
+      delete expectedObj.answer.$usedRCs;
+    }
+    test.equal(resolvedDeps, expectedObj);
   };
 
   var FAIL = function (deps, regexp) {
@@ -318,4 +324,70 @@ Tinytest.add("constraint solver - build IDs", function (test) {
       "foo": "1.0.1"
     }, { _testing: false });
   });
+});
+
+
+Tinytest.add("constraint solver - non-top-level pre-releases", function (test) {
+  // When A depends on B but with no constraints, we still should
+  // try to exclude pre-releases.
+
+  // This shouldn't use the prerelease
+  testWithResolver(test, makeResolver([
+    ["aaa", "1.0.0", {bbb: null}],
+    ["bbb", "2.1.0-pre.1"],
+    ["bbb", "2.2.0"],
+    ["bbb", "2.3.0-pre.1"]
+  ]), function (t, FAIL) {
+    t({ "aaa": "1.0.0" },
+      { "aaa": "1.0.0",
+        "bbb": "2.2.0" },
+      { _testing: true });
+  });
+
+  // If the constraints aren't satisfiable without using pre-releases,
+  // the solver is run a second time allowing all pre-releases.
+  testWithResolver(test, makeResolver([
+    ["aaa", "1.0.0", {bbb: null}],
+    ["bbb", "2.1.0-pre.1"]
+  ]), function (t, FAIL) {
+    t({ "aaa": "1.0.0" },
+      { "aaa": "1.0.0",
+        "bbb": "2.1.0-pre.1",
+        $usedRCs: true },
+      { _testing: true });
+  });
+
+  /*
+  // Mentioning a pre-release at the top level makes it fair game
+  testWithResolver(test, makeResolver([
+    ["aaa", "1.0.0", {bbb: null}],
+    ["bbb", "2.1.0-pre.1"],
+    ["bbb", "2.2.0"],
+    ["bbb", "2.3.0-pre.1"]
+  ]), function (t, FAIL) {
+    t({ "aaa": "1.0.0",
+        "bbb": "2.1.0-pre.1" },
+      { "aaa": "1.0.0",
+        "bbb": "2.1.0-pre.1" },
+      { _testing: true });
+  });
+
+  // Mentioning a pre-release doesn't mean we'll get it.  However,
+  // asking for it at the top-level means we'll have to get an
+  // equal-or-greater version.  Changing the cost function causes
+  // us to get a newer version than we asked for.
+  testWithResolver(test, makeResolver([
+    ["aaa", "1.0.0", {bbb: null}],
+    ["bbb", "2.1.0-pre.1"],
+    ["bbb", "2.2.0"],
+    ["bbb", "2.3.0-pre.1"]
+  ]), function (t, FAIL) {
+    t({ "aaa": "1.0.0",
+        "bbb": "2.1.0-pre.1" },
+      { "aaa": "1.0.0",
+        "bbb": "2.3.0-pre.1" },
+      { _testing: true,
+        _testCostFunction: 'laterBetter' });
+  });
+   */
 });

@@ -36,8 +36,7 @@ _.extend(ResolverState.prototype, {
     self._addPathway(constraint.name, pathway);
 
     var chosen = mori.get(self.choices, constraint.name);
-    if (chosen &&
-        !constraint.isSatisfied(chosen, self._resolver, self._resolveContext)) {
+    if (chosen && !constraint.isSatisfied(chosen)) {
       // This constraint conflicts with a choice we've already made!
       self.error = util.format(
         "conflict: constraint %s is not satisfied by %s.\n" +
@@ -53,8 +52,7 @@ _.extend(ResolverState.prototype, {
     if (alternatives) {
       // Note: filter preserves order, which is important.
       var newAlternatives = filter(alternatives, function (unitVersion) {
-        return constraint.isSatisfied(
-          unitVersion, self._resolver, self._resolveContext);
+        return constraint.isSatisfied(unitVersion);
       });
       if (mori.is_empty(newAlternatives)) {
         self.error = util.format(
@@ -169,7 +167,10 @@ _.extend(ResolverState.prototype, {
   },
   isSatisfied: function (uv) {
     var self = this;
-    return self.constraints.isSatisfied(uv, self._resolver, self._resolveContext);
+    if (! self._resolveContext.isVersionOK(uv.name, uv.version)) {
+      return false;
+    }
+    return self.constraints.isSatisfied(uv);
   },
   somePathwayForUnitName: function (unitName) {
     var self = this;
