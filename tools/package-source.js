@@ -1816,7 +1816,7 @@ _.extend(PackageSource.prototype, {
         var d = dependencies[parsedSpec.package];
 
         if (parsedSpec.constraint) {
-          allConstraints[parsedSpec.package].push(parsedSpec.constraints);
+          allConstraints[parsedSpec.package].push(parsedSpec.constraint);
           if (d.constraint === null) {
             d.constraint = parsedSpec.constraint;
           } else if (d.constraint !== parsedSpec.constraint) {
