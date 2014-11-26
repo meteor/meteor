@@ -79,45 +79,42 @@ which npm
 # First, we install the modules that are dependencies of tools/server/boot.js:
 # the modules that users of 'meteor bundle' will also have to install. We save a
 # shrinkwrap file with it, too.  We do this in a separate place from
-# $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
-# confused by the pre-existing modules.
-#
-# Some notes on upgrading modules in this file (which can't contain comments,
-# sad):
-#  - Fibers 1.0.2 is out but introduces a bug that's been fixed on master
-#    but unreleased: https://github.com/laverdet/node-fibers/pull/189
-#    We will definitely need to upgrade in order to support Node 0.12 when
-#    it's out, though.
-#  - Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
-#    in the package too) because we should consider using lodash instead
-#    (and there are backwards-incompatible changes either way).
+# $DIR/server-lib/node_modules originally, because otherwise 'npm shrinkwrap'
+# will get confused by the pre-existing modules.
 mkdir "${DIR}/build/npm-install"
 cd "${DIR}/build/npm-install"
-cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
+node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" >package.json
 npm install
 npm shrinkwrap
 
+mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
-cp -R node_modules/* "${DIR}/lib/node_modules/"
+cp -R node_modules/* "${DIR}/server-lib/node_modules/"
+
 mkdir "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
-# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
-# thinking that the packages need to depend on both 32- and 64-bit versions of
-# libstd++. Remove all the ones other than our architecture. (Expression based
-# on build.js in fibers source.)
-# XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
-#     will it let you skip the "npm install fibers" step for running bundles?
-cd "$DIR/lib/node_modules/fibers/bin"
-FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
-mv $FIBERS_ARCH ..
-rm -rf *
-mv ../$FIBERS_ARCH .
+# bloats our dev bundle. Remove all the ones other than our
+# architecture. (Expression based on build.js in fibers source.)
+shrink_fibers () {
+    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+    mv $FIBERS_ARCH ..
+    rm -rf *
+    mv ../$FIBERS_ARCH .
+}
+
+cd "$DIR/server-lib/node_modules/fibers/bin"
+shrink_fibers
 
 # Now, install the rest of the npm modules, which are only used by the 'meteor'
 # tool (and not by the bundled app boot.js script).
 cd "${DIR}/lib"
+npm install fibers@1.0.1
+npm install underscore@1.5.2
+npm install source-map-support@0.2.8
+npm install semver@4.1.0
+
 npm install request@2.47.0
 
 npm install fstream@1.0.2
@@ -187,6 +184,9 @@ rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/nod
 rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/module-deps/node_modules/detective/node_modules/esprima-fb/test
 rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/syntax-error/node_modules/esprima-fb/test
 rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/umd/node_modules/ruglify/test
+
+cd "$DIR/server-lib/node_modules/fibers/bin"
+shrink_fibers
 
 # Download BrowserStackLocal binary.
 BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
