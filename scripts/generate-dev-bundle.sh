@@ -130,7 +130,7 @@ pushd pathwatcher
 rm -rf .git
 npm install .
 npm test
-rm -rf node_modules/{grunt,grunt-contrib-coffee,grunt-cli,grunt-shell,grunt-atomdoc,jasmine-tagged,rimraf,node-cpplint,grunt-coffeelint,temp}
+rm -rf node_modules/{grunt,grunt-contrib-coffee,grunt-cli,grunt-shell,grunt-atomdoc,jasmine-tagged,node-cpplint,grunt-coffeelint,temp}
 popd
 popd
 
