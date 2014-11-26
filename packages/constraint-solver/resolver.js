@@ -123,7 +123,7 @@ ConstraintSolver.Resolver.prototype.resolve = function (
 
     // Allow prereleases mentioned in top-level constraints, even when
     // "useRCs" is false.
-    _.each(constraint.disjunction, function (x) {
+    _.each(constraint.alternatives, function (x) {
       if (x.version && isPrereleaseVersion(x.version)) {
         resolveContext.prereleaseWhitelist[constraint.name + "@" + x.version] = true;
       }
@@ -321,10 +321,11 @@ ConstraintSolver.Constraint = function (name, constraintString) {
 
   self.name = parsed.name;
   self.constraintString = parsed.constraintString;
-  // The results of parsing are a disjunction (`||`) of simple
-  // constraints like `1.0.0` or `=1.0.1`, which have been parsed into
-  // objects with a `type` and `version` property.
-  self.disjunction = parsed.constraints;
+  // The results of parsing are a disjunction (`||`) of alternatives,
+  // where the alternatives are simple constraints like `1.0.0` or
+  // `=1.0.1`, which have been parsed into objects with a `type` and
+  // `version` property.
+  self.alternatives = parsed.constraints;
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
@@ -342,7 +343,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV) {
                 candidateUV.name);
   }
 
-  return _.some(self.disjunction, function (simpleConstraint) {
+  return _.some(self.alternatives, function (simpleConstraint) {
     var type = simpleConstraint.type;
 
     if (type === "any-reasonable") {
