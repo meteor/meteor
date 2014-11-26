@@ -133,7 +133,7 @@ popd
 popd
 
 # Clean up some bulky stuff.
-pushd node_modules
+cd node_modules
 
 # Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
 # don't exist, because that might mean it moved somewhere else and we should
