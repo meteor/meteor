@@ -781,7 +781,7 @@ _.extend(exports.PackageMapFile.prototype, {
         return;  // recover by ignoring
       }
 
-      self._versions[constraint.name] = constraint.constraints[0].version;
+      self._versions[constraint.name] = constraint.alternatives[0].version;
     });
   },
 

@@ -263,8 +263,8 @@ exports.validatePackageName = function (name, options) {
 
 // Returns true if the parsed constraint was just a@b with no `=` or `||`.
 exports.isSimpleConstraint = function (parsedConstraint) {
-  return parsedConstraint.constraints.length === 1 &&
-    parsedConstraint.constraints[0].type === "compatible-with";
+  return parsedConstraint.alternatives.length === 1 &&
+    parsedConstraint.alternatives[0].type === "compatible-with";
 };
 
 

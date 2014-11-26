@@ -319,7 +319,7 @@ ConstraintSolver.Constraint = function (name, constraintString) {
   // where the alternatives are simple constraints like `1.0.0` or
   // `=1.0.1`, which have been parsed into objects with a `type` and
   // `version` property.
-  self.alternatives = parsed.constraints;
+  self.alternatives = parsed.alternatives;
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {

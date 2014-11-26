@@ -123,7 +123,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   check(constraints, [{
     name: String,
     constraintString: Match.Optional(Match.OneOf(String, undefined)),
-    constraints: [{
+    alternatives: [{
       version: Match.OneOf(String, null),
       type: String }]
   }]);
@@ -137,15 +137,15 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   // Get rid of "any-reasonable" constraints, which are no-ops
   constraints = _.compact(_.map(constraints, function (c) {
-    if (_.any(c.constraints,
+    if (_.any(c.alternatives,
               function (x) { return x.type === 'any-reasonable'; })) {
-      var newDisjunction = _.filter(c.constraints, function (x) {
+      var newAlternatives = _.filter(c.alternatives, function (x) {
         return x.type !== 'any-reasonable';
       });
-      if (! newDisjunction.length) {
+      if (! newAlternatives.length) {
         return null;
       } else {
-        return _.extend({}, c, { constraints: newDisjunction });
+        return _.extend({}, c, { alternatives: newAlternatives });
       }
     } else {
       return c;

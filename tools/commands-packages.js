@@ -1858,7 +1858,7 @@ main.registerCommand({
           return;
         }
 
-        _.each(constraint.constraints, function (subConstraint) {
+        _.each(constraint.alternatives, function (subConstraint) {
           if (subConstraint.version === null)
             return;
           // Figure out if this version exists either in the official catalog or
@@ -2208,7 +2208,7 @@ main.registerCommand({
   if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
     throw new Error("bad tool in release: " + release.tool);
   var toolPackage = toolConstraint.name;
-  var toolVersion = toolConstraint.constraints[0].version;
+  var toolVersion = toolConstraint.alternatives[0].version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
     toolPkgBuilds, toolVersion);

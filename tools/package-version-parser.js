@@ -260,16 +260,16 @@ PV.parseConstraint = function (constraintString) {
   // If we did not specify a version string, then our only constraint is
   // any-reasonable, so we are going to return that.
   if (!versionString) {
-    constraint.constraints =
+    constraint.alternatives =
       [ { version: null, type: "any-reasonable" } ];
     return constraint;
   }
 
   // Let's parse out the versionString.
   var versionConstraints = versionString.split(/ *\|\| */);
-  constraint.constraints = [];
+  constraint.alternatives = [];
   __.each(versionConstraints, function (versionCon) {
-    constraint.constraints.push(
+    constraint.alternatives.push(
       PV.parseVersionConstraint(versionCon));
   });
 

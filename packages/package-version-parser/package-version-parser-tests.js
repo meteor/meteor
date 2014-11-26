@@ -17,9 +17,9 @@ var FAIL = function (versionString) {
 Tinytest.add("Smart Package version string parsing - old format", function (test) {
   currentTest = test;
 
-  t("foo", { name: "foo", constraints: [{
+  t("foo", { name: "foo", alternatives: [{
         version: null, type: "any-reasonable" } ]});
-  t("foo-1234", { name: "foo-1234", constraints: [{
+  t("foo-1234", { name: "foo-1234", alternatives: [{
         version: null, type: "any-reasonable" } ]});
   FAIL("my_awesome_InconsitentPackage123");
 });
@@ -27,11 +27,11 @@ Tinytest.add("Smart Package version string parsing - old format", function (test
 Tinytest.add("Smart Package version string parsing - compatible version, compatible-with", function (test) {
   currentTest = test;
 
-  t("foo@1.2.3", { name: "foo", constraints: [{
+  t("foo@1.2.3", { name: "foo", alternatives: [{
         version: "1.2.3", type: "compatible-with" } ]});
-  t("foo-1233@1.2.3", { name: "foo-1233", constraints: [{
+  t("foo-1233@1.2.3", { name: "foo-1233", alternatives: [{
         version: "1.2.3", type: "compatible-with" } ]});
-  t("foo-bar@3.2.1", { name: "foo-bar", constraints: [{
+  t("foo-bar@3.2.1", { name: "foo-bar", alternatives: [{
         version: "3.2.1", type: "compatible-with" } ]});
   FAIL("42@0.2.0");
   FAIL("foo@1.2.3.4");
@@ -49,26 +49,26 @@ Tinytest.add("Smart Package version string parsing - compatible version, compati
   FAIL("foo-1233@1.2.3_");
   FAIL("foo-1233@1.2.3_0123");
 
-  t("foo@1.2.3_1", { name: "foo", constraints: [{
+  t("foo@1.2.3_1", { name: "foo", alternatives: [{
        version: "1.2.3_1", type: "compatible-with" } ]});
-  t("foo-bar@3.2.1-rc0_123", { name: "foo-bar", constraints: [{
+  t("foo-bar@3.2.1-rc0_123", { name: "foo-bar", alternatives: [{
        version: "3.2.1-rc0_123", type: "compatible-with" } ]});
-  t("foo-1233@1.2.3_5+1234", { name: "foo-1233", constraints: [{
+  t("foo-1233@1.2.3_5+1234", { name: "foo-1233", alternatives: [{
        version: "1.2.3_5+1234", type: "compatible-with" } ]});
-  t("foo", { name: "foo", constraints: [{
+  t("foo", { name: "foo", alternatives: [{
        version: null, type: "any-reasonable" } ]});
 });
 
 Tinytest.add("Smart Package version string parsing - compatible version, exactly", function (test) {
   currentTest = test;
 
-  t("foo@=1.2.3", { name: "foo", constraints: [
+  t("foo@=1.2.3", { name: "foo", alternatives: [
          { version: "1.2.3", type: "exactly" } ]});
-  t("foo-bar@=3.2.1", { name: "foo-bar", constraints: [{
+  t("foo-bar@=3.2.1", { name: "foo-bar", alternatives: [{
       version: "3.2.1", type: "exactly" } ]});
-  t("foo@=1.2.3_1", { name: "foo", constraints: [{
+  t("foo@=1.2.3_1", { name: "foo", alternatives: [{
        version: "1.2.3_1", type: "exactly" } ]});
-  t("foo-bar@=3.2.1_34", { name: "foo-bar", constraints: [{
+  t("foo-bar@=3.2.1_34", { name: "foo-bar", alternatives: [{
        version: "3.2.1_34", type: "exactly" } ]});
 
   FAIL("42@=0.2.0");
@@ -101,31 +101,31 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
   currentTest = test;
 
   t("foo@1.0.0 || 2.0.0 || 3.0.0 || =4.0.0-rc1",
-    { name: "foo", constraints:
+    { name: "foo", alternatives:
       [{ version: "1.0.0", type: "compatible-with"},
        { version: "2.0.0", type: "compatible-with"},
        { version: "3.0.0", type: "compatible-with"},
        { version: "4.0.0-rc1", type: "exactly"}]
    });
   t("foo@1.0.0|| 2.0.0||3.0.0    ||     =4.0.0-rc1",
-    { name: "foo", constraints:
+    { name: "foo", alternatives:
       [{ version: "1.0.0", type: "compatible-with"},
        { version: "2.0.0", type: "compatible-with"},
        { version: "3.0.0", type: "compatible-with"},
        { version: "4.0.0-rc1", type: "exactly"}]
    });
   t("foo-bar@=3.2.1 || 1.0.0",
-    { name: "foo-bar", constraints:
+    { name: "foo-bar", alternatives:
       [{ version: "3.2.1", type: "exactly"},
        { version: "1.0.0", type: "compatible-with"}]
    });
   t("foo@=1.2.3_1 || 1.2.4",
-    { name: "foo", constraints:
+    { name: "foo", alternatives:
       [{ version: "1.2.3_1", type: "exactly"},
        { version: "1.2.4", type: "compatible-with"}]
    });
   t("foo-bar@=3.2.1_34 || =3.2.1-rc1",
-    { name: "foo-bar", constraints:
+    { name: "foo-bar", alternatives:
       [{ version: "3.2.1_34", type: "exactly"},
        { version: "3.2.1-rc1", type: "exactly"}]
     });
