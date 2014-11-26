@@ -178,6 +178,7 @@ SyncedCron._entryWrapper = function(entry) {
 SyncedCron._reset = function() {
   this._entries = {};
   this._collection.remove({});
+  this.running = false;
 }
 
 // ---------------------------------------------------------------------------

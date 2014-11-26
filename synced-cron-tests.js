@@ -106,3 +106,28 @@ Tinytest.add('SyncedCron.stop works', function(test) {
   test.equal(_.keys(SyncedCron._entries).length, 0);
 });
 
+// Tests SyncedCron.remove in the process
+Tinytest.add('SyncedCron.add starts by it self when running', function(test) {
+  SyncedCron._reset();
+
+  test.equal(SyncedCron._collection.find().count(), 0);
+  test.equal(SyncedCron.running, false);
+  Log._intercept(2);
+
+  SyncedCron.start();
+
+  test.equal(SyncedCron.running, true);
+
+  // addd 1 entries
+  SyncedCron.add(TestEntry);
+
+  test.equal(_.keys(SyncedCron._entries).length, 1);
+
+  SyncedCron.stop();
+
+  var intercepted = Log._intercepted();
+  test.equal(intercepted.length, 2);
+
+  test.equal(SyncedCron.running, false);
+  test.equal(_.keys(SyncedCron._entries).length, 0);
+});
