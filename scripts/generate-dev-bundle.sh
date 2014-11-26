@@ -124,7 +124,7 @@ npm install node-inspector@0.7.4
 
 # TODO(ben) Switch back to NPM once this branch is merged upstream.
 pushd node_modules
-git clone --branch dev_bundle --depth 1 \
+git clone --branch unref-g_async --depth 1 \
     https://github.com/meteor/node-pathwatcher.git pathwatcher
 pushd pathwatcher
 rm -rf .git
