@@ -120,17 +120,7 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
-# TODO(ben) Switch back to NPM once this branch is merged upstream.
-pushd node_modules
-git clone --branch dev_bundle --depth 1 \
-    https://github.com/meteor/node-pathwatcher.git pathwatcher
-pushd pathwatcher
-rm -rf .git
-npm install .
-npm test
-rm -rf node_modules/{grunt,grunt-contrib-coffee,grunt-cli,grunt-shell,grunt-atomdoc,jasmine-tagged,node-cpplint,grunt-coffeelint,temp}
-popd
-popd
+npm install pathwatcher@2.3.5
 
 # Clean up some bulky stuff.
 cd node_modules
