@@ -49,7 +49,7 @@ Meteor.startup(function() {
 var log = {
   info: function(message) {
     if (SyncedCron.options.log)
-      console.log(message);
+      Log.info({message: message, omitCallerDetails: true});
   }
 }
 
