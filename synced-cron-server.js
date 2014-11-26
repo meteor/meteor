@@ -10,10 +10,10 @@ SyncedCron = {
     collectionName: 'cronHistory',
 
     //Default to using localTime
-    utc: false, 
+    utc: false,
 
     //TTL in seconds for history records in collection to expire
-    //NOTE: Unset to remove expiry but ensure you remove the index from 
+    //NOTE: Unset to remove expiry but ensure you remove the index from
     //mongo by hand
     collectionTTL: 172800
   }
@@ -25,7 +25,7 @@ Meteor.startup(function() {
   var options = SyncedCron.options;
 
   // Don't allow TTL less than 5 minutes so we don't break synchronization
-  var minTTL = 300; 
+  var minTTL = 300;
 
   // Use UTC or localtime for evaluating schedules
   if (options.utc)
@@ -36,7 +36,7 @@ Meteor.startup(function() {
   // collection holding the job history records
   SyncedCron._collection = new Mongo.Collection(options.collectionName);
   SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
-  
+
   if (options.collectionTTL) {
     if (options.collectionTTL > minTTL)
       SyncedCron._collection._ensureIndex({startedAt: 1 },
@@ -105,7 +105,7 @@ SyncedCron.nextScheduledAtDate = function(jobName) {
 // Remove and stop the entry referenced by jobName
 SyncedCron.remove = function(jobName) {
   var entry = this._entries[jobName];
-  
+
   if (entry) {
     if (entry._timer)
       entry._timer.clear();
@@ -147,14 +147,14 @@ SyncedCron._entryWrapper = function(entry) {
         return;
       }
 
-      throw e; 
+      throw e;
     };
 
     // run and record the job
     try {
       log.info('SyncedCron: Starting "' + entry.name + '".');
       var output = entry.job(intendedAt); // <- Run the actual job
-  
+
       log.info('SyncedCron: Finished "' + entry.name + '".');
       self._collection.update({_id: jobHistory._id}, {
         $set: {
