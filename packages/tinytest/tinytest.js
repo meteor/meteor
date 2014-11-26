@@ -153,23 +153,23 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "assert_equal", message: message,
                  expected: JSON.stringify(expected), actual: JSON.stringify(actual), not: !!not});
     } else
-      this.ok();
+      this.ok({message: message});
   },
 
   notEqual: function (actual, expected, message) {
     this.equal(actual, expected, message, true);
   },
 
-  instanceOf: function (obj, klass) {
+  instanceOf: function (obj, klass, message) {
     if (obj instanceof klass)
-      this.ok();
+      this.ok({message: message});
     else
       this.fail({type: "instanceOf"}); // XXX what other data?
   },
 
   matches: function (actual, regexp, message) {
     if (regexp.test(actual))
-      this.ok();
+      this.ok({message: message});
     else
       this.fail({type: "matches", message: message,
                  actual: actual, regexp: regexp.toString()});
@@ -232,7 +232,7 @@ _.extend(TestCaseResults.prototype, {
 
   isTrue: function (v, msg) {
     if (v)
-      this.ok();
+      this.ok({message: msg});
     else
       this.fail({type: "true", message: msg});
   },
@@ -241,12 +241,12 @@ _.extend(TestCaseResults.prototype, {
     if (v)
       this.fail({type: "true", message: msg});
     else
-      this.ok();
+      this.ok({message: msg});
   },
 
   isNull: function (v, msg) {
     if (v === null)
-      this.ok();
+      this.ok({message: msg});
     else
       this.fail({type: "null", message: msg});
   },
@@ -255,19 +255,19 @@ _.extend(TestCaseResults.prototype, {
     if (v === null)
       this.fail({type: "true", message: msg});
     else
-      this.ok();
+      this.ok({message: msg});
   },
 
   isUndefined: function (v, msg) {
     if (v === undefined)
-      this.ok();
+      this.ok({message: msg});
     else
       this.fail({type: "undefined", message: msg});
   },
 
   isNaN: function (v, msg) {
     if (isNaN(v))
-      this.ok();
+      this.ok({message: msg});
     else
       this.fail({type: "NaN", message: msg});
   },
@@ -294,7 +294,7 @@ _.extend(TestCaseResults.prototype, {
   // XXX should change to lengthOf to match vowsjs
   length: function (obj, expected_length, msg) {
     if (obj.length === expected_length)
-      this.ok();
+      this.ok({message: msg});
     else
       this.fail({type: "length", expected: expected_length,
                  actual: obj.length, message: msg});
@@ -310,7 +310,7 @@ _.extend(TestCaseResults.prototype, {
                  expected: expected,
                  actual: actual});
     } else {
-      this.ok();
+      this.ok({message: message});
     }
   }
 
