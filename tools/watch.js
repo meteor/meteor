@@ -289,15 +289,15 @@ var Watcher = function (options) {
   self.stopped = false;
   self.justCheckOnce = !!options._justCheckOnce;
 
-  self.fileWatches = []; // array of paths
-
-  // We track all of the currently active timers so that we can cancel
-  // them at stop() time. This stops the process from hanging at
-  // shutdown until all of the timers have fired. An alternate
-  // approach would be to use the unref() timer handle method present
-  // in modern node.
-  var nextTimerId = 1;
-  self.timers = {}; // map from arbitrary number (nextTimerId) to timer handle
+  self.watches = {
+    // <absolute path of watched file or directory>: {
+    //   // Null until pathwatcher.watch succeeds in watching the file.
+    //   watcher: <object returned by pathwatcher.watch> | null,
+    //   // Undefined until we stat the file for the first time, then null
+    //   // if the file is observed to be missing.
+    //   lastStat: <object returned by fs.statSync> | null | undefined
+    // }
+  };
 
   // Were we given an inconsistent WatchSet? Fire now and be done with it.
   if (self.watchSet.alwaysFire) {
@@ -387,53 +387,199 @@ _.extend(Watcher.prototype, {
       if (self.justCheckOnce)
         return;
 
-      // Intentionally not using fs.watch since it doesn't play well with
-      // vim (https://github.com/joyent/node/issues/3172)
-      // Note that we poll very frequently (500 ms)
-      fs.watchFile(absPath, {interval: 500}, function () {
-        // Fire only if the contents of the file actually changed (eg,
-        // maybe just its atime changed)
-        self._fireIfFileChanged(absPath);
-      });
-      self.fileWatches.push(absPath);
+      self._watchFileOrDirectory(absPath);
     });
+  },
 
-    if (self.stopped || self.justCheckOnce)
+  _watchFileOrDirectory: function (absPath) {
+    var self = this;
+
+    if (! _.has(self.watches, absPath)) {
+      self.watches[absPath] = {
+        watcher: null,
+        // Initially undefined (instead of null) to indicate we have never
+        // called fs.stat on this file before.
+        lastStat: undefined
+      };
+    }
+
+    var entry = self.watches[absPath];
+    if (entry.watcher) {
+      // Already watching this path.
       return;
+    }
 
-    // One second later, check the files again, because fs.watchFile
-    // is actually implemented by polling the file's mtime, and some
-    // filesystems (OSX HFS+) only keep mtimes to a resolution of one
-    // second. This handles the case where we check the hash and set
-    // up the watch, but then the file change before the clock rolls
-    // over to the next second, and fs.watchFile doesn't notice and
-    // doesn't call us back. #WorkAroundLowPrecisionMtimes
-    var timerId = self.nextTimerId++;
-    self.timers[timerId] = setTimeout(function () {
-      delete self.timers[timerId];
-      _.each(self.watchSet.files, function (hash, absPath) {
-        self._fireIfFileChanged(absPath);
-      });
-    }, 1000);
+    var onWatchEvent = self._makeWatchEventCallback(absPath);
+
+    try {
+      // In principle, all this logic for watching files should continue
+      // to work perfectly well if we substitute fs.watch for
+      // pathwatcher.watch, but that will probably have to wait until we
+      // upgrade Node to v0.11.x, so that fs.watch is more reliable.
+      entry.watcher = require('pathwatcher').watch(absPath, onWatchEvent);
+
+    } catch (err) {
+      if (err.code === "ENOENT" || // For fs.watch.
+          (err instanceof TypeError && // For pathwatcher.watch.
+           err.message === "Unable to watch path")) {
+        var parentDir = path.dirname(absPath);
+        if (parentDir !== absPath) {
+          self._watchFileOrDirectory(parentDir);
+        }
+      } else {
+        throw err;
+      }
+    }
+
+    if (entry.watcher) {
+      // If we successfully created the watcher, invoke the callback
+      // immediately, so that we examine this file at least once.
+      onWatchEvent();
+    }
+  },
+
+  _makeWatchEventCallback: function (absPath) {
+    var self = this;
+
+    // Sometimes we receive a rapid succession of change events, perhaps
+    // because several files were modified at once (e.g. by git reset
+    // --hard), or a file was deleted and then recreated by an editor like
+    // Vim. Because detecting changes can be costly, and because we care
+    // most about the settled state of the file system, we use the
+    // funcUtils.coalesce helper to delay calls to the callback by 100ms,
+    // canceling any additional calls if they happen within that window of
+    // time, so that a rapid succession of calls will tend to trigger only
+    // one inspection of the file system.
+    return require('./func-utils.js').coalesce(100, function onWatchEvent() {
+      if (self.stopped) {
+        return;
+      }
+
+      // This helper method will call self._fire() if the old and new stat
+      // objects have different types (missing, file, or directory), so we
+      // can assume they have the same type for the rest of this method.
+      var stat = self._updateStatForWatch(absPath);
+      if (self.stopped) {
+        return;
+      }
+
+      if (stat === null || stat.isFile()) {
+        if (_.has(self.watchSet.files, absPath)) {
+          self._fireIfFileChanged(absPath);
+        }
+
+      } else if (stat.isDirectory()) {
+        try {
+          var files = readdirSyncOrYield(absPath, true);
+        } catch (err) {
+          if (err.code === "ENOENT" ||
+              err.code === "ENOTDIR") {
+            // The directory was removed or changed type since we called
+            // self._updateStatForWatch, so we fire unconditionally.
+            self._fire();
+            return;
+          }
+          throw err;
+        }
+
+        _.each(files, function(file) {
+          var fullPath = path.join(absPath, file);
+
+          // Recursively watch new files, if we ever previously tried to
+          // watch them. Recall that when we attempt to watch a
+          // non-existent file, we actually watch the closest enclosing
+          // directory that exists, so once the file (and/or any
+          // intermediate directories) are created, we begin watching
+          // those directories in response to change events fired for
+          // directories we're already watching.
+          if (_.has(self.watches, fullPath)) {
+            self._watchFileOrDirectory(fullPath);
+          }
+        });
+
+        // If self.watchSet.directories contains any entries for the
+        // directory we are examining, call self._fireIfDirectoryChanged.
+        _.some(self.watchSet.directories, function(info) {
+          return self.stopped ||
+            (absPath === info.absPath &&
+             self._fireIfDirectoryChanged(info, true));
+        });
+      }
+    });
+  },
+
+  _updateStatForWatch: function(absPath) {
+    var self = this;
+    var entry = self.watches[absPath];
+    var lastStat = entry.lastStat;
+
+    try {
+      var stat = statSyncOrYield(absPath, true);
+    } catch (err) {
+      stat = null;
+      if (err.code !== "ENOENT") {
+        throw err;
+      }
+    }
+
+    // Note: these defaults do *not* mean mustExist or mustNotBeAFile.
+    var mustNotExist = false;
+    var mustBeAFile = false;
+    var wsFiles = self.watchSet.files;
+    if (_.has(wsFiles, absPath)) {
+      mustNotExist = wsFiles[absPath] === null;
+      mustBeAFile = _.isString(wsFiles[absPath]);
+    }
+
+    if (stat && lastStat === undefined) {
+      // We have not checked for this file before, so our expectations are
+      // somewhat relaxed (namely, we don't care about lastStat), but
+      // self._fire() might still need to be called if self.watchSet.files
+      // has conflicting expectations.
+      if (stat.isFile()) {
+        if (mustNotExist) {
+          self._fire();
+        }
+      } else if (stat.isDirectory()) {
+        if (mustNotExist || mustBeAFile) {
+          self._fire();
+        }
+      } else {
+        // Neither a file nor a directory, so treat as non-existent.
+        stat = null;
+        if (mustBeAFile) {
+          self._fire();
+        }
+      }
+
+      // We have not checked for this file before, so just record the new
+      // stat object.
+      entry.lastStat = stat;
+
+    } else if (stat && stat.isFile()) {
+      entry.lastStat = stat;
+      if (! lastStat || ! lastStat.isFile()) {
+        self._fire();
+      }
+
+    } else if (stat && stat.isDirectory()) {
+      entry.lastStat = stat;
+      if (! lastStat || ! lastStat.isDirectory()) {
+        self._fire();
+      }
+
+    } else {
+      entry.lastStat = stat = null;
+      if (lastStat) {
+        self._fire();
+      }
+    }
+
+    return stat;
   },
 
   _checkDirectories: function (yielding) {
     var self = this;
-
-    // fs.watchFile doesn't work for directories (as tested on ubuntu)
-    // and fs.watch has serious issues on MacOS (at least in node 0.10)
-    // https://github.com/meteor/meteor/issues/1483
-    // https://groups.google.com/forum/#!topic/meteor-talk/Zy1XxEcxe8o
-    // https://github.com/joyent/node/issues/5463
-    // https://github.com/joyent/libuv/commit/38df93cf
-    //
-    // Instead, just check periodically with setTimeout.  (We use setTimeout to
-    // ensure that there is a 500 ms pause between the *end* of one poll cycle
-    // and the *beginning* of another instead of using setInterval which still
-    // can lead to permanent 100% CPU usage.) When node has a stable directory
-    // watching API that is more efficient than just polling, look at the
-    // history for this file around release 0.6.5 for a version that uses
-    // fs.watch.
 
     if (self.stopped)
       return;
@@ -446,13 +592,10 @@ _.extend(Watcher.prototype, {
       // directory has already changed.
       if (self._fireIfDirectoryChanged(info, yielding))
         return;
-    });
 
-    if (!self.stopped && !self.justCheckOnce) {
-      setTimeout(fiberHelpers.inBareFiber(function () {
-        self._checkDirectories(true);
-      }), 500);
-    }
+      if (! self.justCheckOnce)
+        self._watchFileOrDirectory(info.absPath);
+    });
   },
 
   _fire: function () {
@@ -469,17 +612,14 @@ _.extend(Watcher.prototype, {
     var self = this;
     self.stopped = true;
 
-    // Clean up timers
-    _.each(self.timers, function (timer, id) {
-      clearTimeout(timer);
-    });
-    self.timers = {};
-
     // Clean up file watches
-    _.each(self.fileWatches, function (absPath) {
-      fs.unwatchFile(absPath);
+    _.each(self.watches, function (entry) {
+      if (entry.watcher) {
+        entry.watcher.close();
+        entry.watcher = null;
+      }
     });
-    self.fileWatches = [];
+    self.watches = {};
   }
 });
 
