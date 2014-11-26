@@ -120,8 +120,6 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
-npm install pathwatcher@2.3.5
-
 # Clean up some bulky stuff.
 cd node_modules
 
