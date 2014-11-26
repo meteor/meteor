@@ -44,13 +44,25 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 NODE_BUILD_NUMBER=8
 NODE_VERSION=0.10.33
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-curl "http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}" | gzip -d | tar x
+if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
+    gzip -d <"${CHECKOUT_DIR}/${NODE_TGZ}" | tar x
+else
+    NODE_URL="http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}"
+    curl "${NODE_URL}" | gzip -d | tar x
+fi
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
 MONGO_BUILD_NUMBER=3
 MONGO_VERSION=2.4.12
 MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
-curl "http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}" | gzip -d | tar x
+if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
+    gzip -d <"${CHECKOUT_DIR}/${MONGO_TGZ}" | tar x
+else
+    MONGO_URL="http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
+    echo "Downloading Mongo from ${MONGO_URL}"
+    curl "${MONGO_URL}" | gzip -d | tar x
+fi
 
 cd "$DIR/build"
 
@@ -67,60 +79,46 @@ which npm
 # First, we install the modules that are dependencies of tools/server/boot.js:
 # the modules that users of 'meteor bundle' will also have to install. We save a
 # shrinkwrap file with it, too.  We do this in a separate place from
-# $DIR/lib/node_modules originally, because otherwise 'npm shrinkwrap' will get
-# confused by the pre-existing modules.
-#
-# Some notes on upgrading modules in this file (which can't contain comments,
-# sad):
-#  - Fibers 1.0.2 is out but introduces a bug that's been fixed on master
-#    but unreleased: https://github.com/laverdet/node-fibers/pull/189
-#    We will definitely need to upgrade in order to support Node 0.12 when
-#    it's out, though.
-#  - Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
-#    in the package too) because we should consider using lodash instead
-#    (and there are backwards-incompatible changes either way).
-mkdir "${DIR}/build/npm-install"
-cd "${DIR}/build/npm-install"
-cp "${CHECKOUT_DIR}/scripts/dev-bundle-package.json" package.json
+# $DIR/server-lib/node_modules originally, because otherwise 'npm shrinkwrap'
+# will get confused by the pre-existing modules.
+mkdir "${DIR}/build/npm-server-install"
+cd "${DIR}/build/npm-server-install"
+node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" >package.json
 npm install
 npm shrinkwrap
 
+mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
-cp -R node_modules/* "${DIR}/lib/node_modules/"
+cp -R node_modules/* "${DIR}/server-lib/node_modules/"
+
 mkdir "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
-# bloats our dev bundle, and confuses dpkg-buildpackage and rpmbuild into
-# thinking that the packages need to depend on both 32- and 64-bit versions of
-# libstd++. Remove all the ones other than our architecture. (Expression based
-# on build.js in fibers source.)
-# XXX We haven't used dpkg-buildpackge or rpmbuild in ages. If we remove this,
-#     will it let you skip the "npm install fibers" step for running bundles?
-cd "$DIR/lib/node_modules/fibers/bin"
-FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
-mv $FIBERS_ARCH ..
-rm -rf *
-mv ../$FIBERS_ARCH .
+# bloats our dev bundle. Remove all the ones other than our
+# architecture. (Expression based on build.js in fibers source.)
+shrink_fibers () {
+    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-v8-" + /[0-9]+\.[0-9]+/.exec(process.versions.v8)[0]')
+    mv $FIBERS_ARCH ..
+    rm -rf *
+    mv ../$FIBERS_ARCH .
+}
 
-# Now, install the rest of the npm modules, which are only used by the 'meteor'
-# tool (and not by the bundled app boot.js script).
+cd "$DIR/server-lib/node_modules/fibers/bin"
+shrink_fibers
+
+# Now, install the npm modules which are the dependencies of the command-line
+# tool.
+mkdir "${DIR}/build/npm-tool-install"
+cd "${DIR}/build/npm-tool-install"
+node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
+npm install
+# Refactor node modules to top level and remove unnecessary duplicates.
+npm dedupe
+cp -R node_modules/* "${DIR}/lib/node_modules/"
+
+
 cd "${DIR}/lib"
-npm install request@2.47.0
-
-npm install fstream@1.0.2
-
-npm install tar@1.0.2
-
-npm install kexec@0.2.0
-
-npm install source-map@0.1.40
-
-npm install browserstack-webdriver@2.41.1
-rm -rf node_modules/browserstack-webdriver/docs
-rm -rf node_modules/browserstack-webdriver/lib/test
-
-npm install node-inspector@0.7.4
 
 # TODO(ben) Switch back to NPM once this branch is merged upstream.
 pushd node_modules
@@ -134,47 +132,43 @@ rm -rf node_modules/{grunt,grunt-contrib-coffee,grunt-cli,grunt-shell,grunt-atom
 popd
 popd
 
-npm install chalk@0.5.1
+# Clean up some bulky stuff.
+cd node_modules
 
-npm install sqlite3@3.0.2
-rm -rf node_modules/sqlite3/deps
+# Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
+# don't exist, because that might mean it moved somewhere else and we should
+# update the delete line.
+delete () {
+    if [ ! -e "$1" ]; then
+        echo "Missing (moved?): $1"
+        exit 1
+    fi
+    rm -rf "$1"
+}
 
-npm install netroute@0.2.5
+delete browserstack-webdriver/docs
+delete browserstack-webdriver/lib/test
 
-# Clean up a big zip file it leaves behind.
-npm install phantomjs@1.9.12
-rm -rf node_modules/phantomjs/tmp
+delete sqlite3/deps
 
-npm install http-proxy@1.6.0
+# dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
+find . -path '*/esprima/test' | xargs rm -rf
+find . -path '*/esprima-fb/test' | xargs rm -rf
 
-# XXX We ought to be able to get this from the copy in js-analyze rather than in
-# the dev bundle.)
-npm install esprima@1.2.2
-rm -rf node_modules/esprima/test
+# dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
+find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
 
-# 2.4.0 (more or less, the package.json change isn't committed) plus our PR
-# https://github.com/williamwicks/node-eachline/pull/4
-npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
+# Not sure why dedupe doesn't lift these to the top.
+pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
+delete browserify-zlib/node_modules/pako/benchmark
+delete browserify-zlib/node_modules/pako/test
+delete buffer/perf
+delete crypto-browserify/test
+delete umd/node_modules/ruglify/test
+popd
 
-# Cordova npm tool for mobile integration
-# XXX We install our own fork of cordova because we need a particular patch that
-# didn't land to cordova-android yet. As soon as it lands, we can switch back to
-# upstream.
-# https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
-#npm install cordova@3.5.0-0.2.6
-npm install "https://github.com/meteor/cordova-cli/tarball/0c9b3362c33502ef8f6dba514b87279b9e440543"
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/browser-pack/node_modules/JSONStream/test/fixtures
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/browserify-zlib/node_modules/pako/benchmark
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/browserify-zlib/node_modules/pako/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/buffer/perf
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/crypto-browserify/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/derequire/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/derequire/node_modules/esrefactor/node_modules/esprima/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/insert-module-globals/node_modules/lexical-scope/node_modules/astw/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/module-deps/node_modules/detective/node_modules/escodegen/node_modules/esprima/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/module-deps/node_modules/detective/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/syntax-error/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/umd/node_modules/ruglify/test
+cd "$DIR/lib/node_modules/fibers/bin"
+shrink_fibers
 
 # Download BrowserStackLocal binary.
 BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"

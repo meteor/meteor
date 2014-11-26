@@ -1680,7 +1680,7 @@ _.extend(ServerTarget.prototype, {
     // rebuild).
     if (options.includeNodeModulesSymlink) {
       builder.write('node_modules', {
-        symlink: path.join(files.getDevBundle(), 'lib', 'node_modules')
+        symlink: path.join(files.getDevBundle(), 'server-lib', 'node_modules')
       });
     }
 
