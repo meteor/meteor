@@ -19,7 +19,7 @@ var packageMapModule = require('./package-map.js');
 // All packages that are in isopackets and all of their transitive dependencies
 // must be part of the core Meteor git checkout (not loaded from troposphere).
 //
-// The requested packages will be loaded together will all of their
+// The requested packages will be loaded together with all of their
 // dependencies. If you request to load the same isopacket more than once, you
 // will efficiently get the same pre-loaded isopacket. On the other hand, two
 // different loaded isopackets contain distinct copies of all of their packages
