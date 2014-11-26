@@ -120,6 +120,8 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
+# TODO Move this into dev-bundle-tool-package.js when it can be safely
+# installed that way (i.e. without build nan/runas build errors).
 npm install pathwatcher@2.3.5
 
 # Clean up some bulky stuff.
