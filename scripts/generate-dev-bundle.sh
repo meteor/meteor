@@ -36,28 +36,27 @@ if [ "$OS" == "osx" ]; then
     cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
 fi
 
+cd "$DIR"
+
+S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
+
+# Update these values after building the dev-bundle-node Jenkins project.
+NODE_BUILD_NUMBER=8
+NODE_VERSION=0.10.33
+NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
+curl "http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}" | gzip -d | tar x
+
+# Update these values after building the dev-bundle-mongo Jenkins project.
+MONGO_BUILD_NUMBER=3
+MONGO_VERSION=2.4.12
+MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
+curl "http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}" | gzip -d | tar x
 
 cd "$DIR/build"
 
-# For now, use our fork with https://github.com/npm/npm/pull/5821/files
-git clone https://github.com/meteor/node.git
-cd node
-# When upgrading node versions, also update the values of MIN_NODE_VERSION at
-# the top of tools/main.js and tools/server/boot.js, and the text in
-# docs/client/full-api/concepts.html and the README in tools/bundler.js.
-git checkout v0.10.33-with-npm-5821
-
-./configure --prefix="$DIR"
-make -j4
-make install PORTABLE=1
-# PORTABLE=1 is a node hack to make npm look relative to itself instead
-# of hard coding the PREFIX.
-
 # export path so we use our new node for later builds
 export PATH="$DIR/bin:$PATH"
-
 which node
-
 which npm
 
 # When adding new node modules (or any software) to the dev bundle,
@@ -176,71 +175,6 @@ rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/nod
 rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/module-deps/node_modules/detective/node_modules/esprima-fb/test
 rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/syntax-error/node_modules/esprima-fb/test
 rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/umd/node_modules/ruglify/test
-
-# Checkout and build mongodb.
-# We want to build a binary that includes SSL support but does not depend on a
-# particular version of openssl on the host system.
-
-cd "$DIR/build"
-OPENSSL="openssl-1.0.1j"
-OPENSSL_URL="http://www.openssl.org/source/$OPENSSL.tar.gz"
-wget $OPENSSL_URL || curl -O $OPENSSL_URL
-tar xzf $OPENSSL.tar.gz
-
-cd $OPENSSL
-if [ "$UNAME" == "Linux" ]; then
-    ./config --prefix="$DIR/build/openssl-out" no-shared
-else
-    # This configuration line is taken from Homebrew formula:
-    # https://github.com/mxcl/homebrew/blob/master/Library/Formula/openssl.rb
-    ./Configure no-shared zlib-dynamic --prefix="$DIR/build/openssl-out" darwin64-x86_64-cc enable-ec_nistp_64_gcc_128
-fi
-make install
-
-# To see the mongo changelog, go to http://www.mongodb.org/downloads,
-# click 'changelog' under the current version, then 'release notes' in
-# the upper right.
-cd "$DIR/build"
-MONGO_VERSION="2.4.12"
-
-# We use Meteor fork since we added some changes to the building script.
-# Our patches allow us to link most of the libraries statically.
-git clone git://github.com/meteor/mongo.git
-cd mongo
-git checkout ssl-r$MONGO_VERSION
-
-# Compile
-
-MONGO_FLAGS="--ssl --release -j4 "
-MONGO_FLAGS+="--cpppath=$DIR/build/openssl-out/include --libpath=$DIR/build/openssl-out/lib "
-
-if [ "$OS" == "osx" ]; then
-    # NOTE: '--64' option breaks the compilation, even it is on by default on x64 mac: https://jira.mongodb.org/browse/SERVER-5575
-    MONGO_FLAGS+="--openssl=$DIR/build/openssl-out/lib "
-    /usr/local/bin/scons $MONGO_FLAGS mongo mongod
-elif [ "$OS" == "linux" ]; then
-    MONGO_FLAGS+="--no-glibc-check --prefix=./ "
-    if [ "$ARCH" == "x86_64" ]; then
-      MONGO_FLAGS+="--64"
-    fi
-    scons $MONGO_FLAGS mongo mongod
-else
-    echo "We don't know how to compile mongo for this platform"
-    exit 1
-fi
-
-# Copy binaries
-mkdir -p "$DIR/mongodb/bin"
-cp mongo "$DIR/mongodb/bin/"
-cp mongod "$DIR/mongodb/bin/"
-
-# Copy mongodb distribution information
-find ./distsrc -maxdepth 1 -type f -exec cp '{}' ../mongodb \;
-
-cd "$DIR"
-stripBinary bin/node
-stripBinary mongodb/bin/mongo
-stripBinary mongodb/bin/mongod
 
 # Download BrowserStackLocal binary.
 BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
