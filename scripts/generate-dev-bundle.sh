@@ -81,8 +81,8 @@ which npm
 # shrinkwrap file with it, too.  We do this in a separate place from
 # $DIR/server-lib/node_modules originally, because otherwise 'npm shrinkwrap'
 # will get confused by the pre-existing modules.
-mkdir "${DIR}/build/npm-install"
-cd "${DIR}/build/npm-install"
+mkdir "${DIR}/build/npm-server-install"
+cd "${DIR}/build/npm-server-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" >package.json
 npm install
 npm shrinkwrap
@@ -107,29 +107,18 @@ shrink_fibers () {
 cd "$DIR/server-lib/node_modules/fibers/bin"
 shrink_fibers
 
-# Now, install the rest of the npm modules, which are only used by the 'meteor'
-# tool (and not by the bundled app boot.js script).
+# Now, install the npm modules which are the dependencies of the command-line
+# tool.
+mkdir "${DIR}/build/npm-tool-install"
+cd "${DIR}/build/npm-tool-install"
+node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
+npm install
+# Refactor node modules to top level and remove unnecessary duplicates.
+npm dedupe
+cp -R node_modules/* "${DIR}/lib/node_modules/"
+
+
 cd "${DIR}/lib"
-npm install fibers@1.0.1
-npm install underscore@1.5.2
-npm install source-map-support@0.2.8
-npm install semver@4.1.0
-
-npm install request@2.47.0
-
-npm install fstream@1.0.2
-
-npm install tar@1.0.2
-
-npm install kexec@0.2.0
-
-npm install source-map@0.1.40
-
-npm install browserstack-webdriver@2.41.1
-rm -rf node_modules/browserstack-webdriver/docs
-rm -rf node_modules/browserstack-webdriver/lib/test
-
-npm install node-inspector@0.7.4
 
 # TODO(ben) Switch back to NPM once this branch is merged upstream.
 pushd node_modules
@@ -143,49 +132,42 @@ rm -rf node_modules/{grunt,grunt-contrib-coffee,grunt-cli,grunt-shell,grunt-atom
 popd
 popd
 
-npm install chalk@0.5.1
+# Clean up some bulky stuff.
+pushd node_modules
 
-npm install sqlite3@3.0.2
-rm -rf node_modules/sqlite3/deps
+# Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
+# don't exist, because that might mean it moved somewhere else and we should
+# update the delete line.
+delete () {
+    if [ ! -e "$1" ]; then
+        echo "Missing (moved?): $1"
+        exit 1
+    fi
+    rm -rf "$1"
+}
 
-npm install netroute@0.2.5
+delete browserstack-webdriver/docs
+delete browserstack-webdriver/lib/test
 
-# Clean up a big zip file it leaves behind.
-npm install phantomjs@1.9.12
-rm -rf node_modules/phantomjs/tmp
+delete sqlite3/deps
 
-npm install http-proxy@1.6.0
+# dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
+find . -path '*/esprima/test' | xargs rm -rf
+find . -path '*/esprima-fb/test' | xargs rm -rf
 
-# XXX We ought to be able to get this from the copy in js-analyze rather than in
-# the dev bundle.)
-npm install esprima@1.2.2
-rm -rf node_modules/esprima/test
+# dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
+find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
 
-# 2.4.0 (more or less, the package.json change isn't committed) plus our PR
-# https://github.com/williamwicks/node-eachline/pull/4
-npm install https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da
+# Not sure why dedupe doesn't lift these to the top.
+pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
+delete browserify-zlib/node_modules/pako/benchmark
+delete browserify-zlib/node_modules/pako/test
+delete buffer/perf
+delete crypto-browserify/test
+delete umd/node_modules/ruglify/test
+popd
 
-# Cordova npm tool for mobile integration
-# XXX We install our own fork of cordova because we need a particular patch that
-# didn't land to cordova-android yet. As soon as it lands, we can switch back to
-# upstream.
-# https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
-#npm install cordova@3.5.0-0.2.6
-npm install "https://github.com/meteor/cordova-cli/tarball/0c9b3362c33502ef8f6dba514b87279b9e440543"
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/browser-pack/node_modules/JSONStream/test/fixtures
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/browserify-zlib/node_modules/pako/benchmark
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/browserify-zlib/node_modules/pako/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/buffer/perf
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/crypto-browserify/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/derequire/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/derequire/node_modules/esrefactor/node_modules/esprima/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/insert-module-globals/node_modules/lexical-scope/node_modules/astw/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/module-deps/node_modules/detective/node_modules/escodegen/node_modules/esprima/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/module-deps/node_modules/detective/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/syntax-error/node_modules/esprima-fb/test
-rm -rf node_modules/cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules/umd/node_modules/ruglify/test
-
-cd "$DIR/server-lib/node_modules/fibers/bin"
+cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
 
 # Download BrowserStackLocal binary.
