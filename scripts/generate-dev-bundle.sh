@@ -44,13 +44,25 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 NODE_BUILD_NUMBER=8
 NODE_VERSION=0.10.33
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-curl "http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}" | gzip -d | tar x
+if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
+    gzip -d <"${CHECKOUT_DIR}/${NODE_TGZ}" | tar x
+else
+    NODE_URL="http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}"
+    curl "${NODE_URL}" | gzip -d | tar x
+fi
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
 MONGO_BUILD_NUMBER=3
 MONGO_VERSION=2.4.12
 MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
-curl "http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}" | gzip -d | tar x
+if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
+    gzip -d <"${CHECKOUT_DIR}/${MONGO_TGZ}" | tar x
+else
+    MONGO_URL="http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
+    echo "Downloading Mongo from ${MONGO_URL}"
+    curl "${MONGO_URL}" | gzip -d | tar x
+fi
 
 cd "$DIR/build"
 
