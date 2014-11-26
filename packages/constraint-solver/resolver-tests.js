@@ -152,8 +152,6 @@ Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
 
   resolver.addUnitVersion(A100rc1);
   resolver.addUnitVersion(A100);
-  var basicConstraint = resolver.getConstraint("a", "");
-  var rcConstraint = resolver.getConstraint("a", "1.0.0-rc1");
 
   // Make the non-rc one more costly. But we still shouldn't choose it unless it
   // was specified in an initial constraint!
@@ -169,9 +167,10 @@ Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
   };
 
   var solution = resolver.resolve(
-    ["a"], [basicConstraint], {costFunction: proRcCostFunction });
+    ["a"], [], {costFunction: proRcCostFunction });
   resultEquals(test, solution, [A100]);
 
+  var rcConstraint = resolver.getConstraint("a", "1.0.0-rc1");
   solution = resolver.resolve(
     ["a"], [rcConstraint], {costFunction: proRcCostFunction });
   resultEquals(test, solution, [A100rc1]);

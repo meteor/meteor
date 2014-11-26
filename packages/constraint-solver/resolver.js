@@ -346,9 +346,7 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV) {
   return _.some(self.alternatives, function (simpleConstraint) {
     var type = simpleConstraint.type;
 
-    if (type === "any-reasonable") {
-      return true;
-    } else if (type === "exactly") {
+    if (type === "exactly") {
       return (simpleConstraint.version === candidateUV.version);
     } else if (type === 'compatible-with') {
       var version = simpleConstraint.version;
@@ -367,7 +365,8 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV) {
 
       return true;
     } else {
-      throw Error("Unknown constraint type: " + type);
+      // in particular, "any-reasonable" is not allowed!
+      throw Error("Bad constraint type: " + type);
     }
   });
 };

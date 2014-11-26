@@ -135,6 +135,23 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     previousSolution: Match.Optional(Object)
   });
 
+  // Get rid of "any-reasonable" constraints, which are no-ops
+  constraints = _.compact(_.map(constraints, function (c) {
+    if (_.any(c.constraints,
+              function (x) { return x.type === 'any-reasonable'; })) {
+      var newDisjunction = _.filter(c.constraints, function (x) {
+        return x.type !== 'any-reasonable';
+      });
+      if (! newDisjunction.length) {
+        return null;
+      } else {
+        return _.extend({}, c, { constraints: newDisjunction });
+      }
+    } else {
+      return c;
+    }
+  }));
+
   _.each(dependencies, function (packageName) {
     self._ensurePackageInfoLoaded(packageName);
   });
