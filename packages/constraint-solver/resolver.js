@@ -259,11 +259,7 @@ ConstraintSolver.UnitVersion = function (name, unitVersion) {
   check(self, ConstraintSolver.UnitVersion);
 
   self.name = name;
-  // Things with different build IDs should represent the same code, so ignore
-  // them. (Notably: depending on @=1.3.1 should allow 1.3.1+local!)
-  // XXX we no longer automatically add build IDs to things as part of our build
-  // process, but this still reflects semver semantics.
-  self.version = PackageVersion.removeBuildID(unitVersion);
+  self.version = unitVersion;
   self.dependencies = [];
   self.constraints = new ConstraintSolver.ConstraintsList();
   // integer like 1 or 2
@@ -315,9 +311,7 @@ ConstraintSolver.Constraint = function (name, constraintString) {
 
   // See comment in UnitVersion constructor. We want to strip out build IDs
   // because the code they represent is considered equivalent.
-  var parsed = PackageVersion.parseConstraint(name, {
-    removeBuildIDs: true
-  });
+  var parsed = PackageVersion.parseConstraint(name);
 
   self.name = parsed.name;
   self.constraintString = parsed.constraintString;
