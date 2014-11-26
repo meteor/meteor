@@ -1,6 +1,7 @@
 // A package for running jobs synchronized across multiple processes
 SyncedCron = {
   _entries: {},
+  running: false,
   options: {
     //Log job run details to console
     log: true,
@@ -65,43 +66,38 @@ SyncedCron.add = function(entry) {
 
   // check
   this._entries[entry.name] = entry;
+
+  // If cron is already running, start directly.
+  if (this.running) {
+    var schedule = entry.schedule(Later.parse);
+    entry._timer = this._laterSetInterval(this._entryWrapper(entry), schedule);
+
+    log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
+      + Later.schedule(schedule).next(1));
+  }
 }
 
 // Start processing added jobs
-SyncedCron.start = function(name) {
+SyncedCron.start = function() {
   var self = this;
 
   Meteor.startup(function() {
-    if (name) {
-      var entry = self._entries[name];
-      if (entry) {
-        var schedule = entry.schedule(Later.parse);
-        entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
-  
-        log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
-          + Later.schedule(schedule).next(1)); 
-      }
-      else {
-        log.warn('SyncedCron: couldn\'t find a job with name: ' + name);
-      }
-    }
-    else {
-      // Schedule each job with later.js
-      _.each(self._entries, function(entry, name) {
-        var schedule = entry.schedule(Later.parse);
-        entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
-  
-        log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
-          + Later.schedule(schedule).next(1));
-      });
-    }
+    // Schedule each job with later.js
+    _.each(self._entries, function(entry, name) {
+      var schedule = entry.schedule(Later.parse);
+      entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
+
+      log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
+        + Later.schedule(schedule).next(1));
+    });
+    self.running = true;
   });
 }
 
 // Return the next scheduled date of the first matching entry or undefined
 SyncedCron.nextScheduledAtDate = function(jobName) {
   var entry = this._entries[jobName];
-  
+
   if (entry)
     return Later.schedule(entry.schedule(Later.parse)).next(1);
 }
@@ -124,6 +120,7 @@ SyncedCron.stop = function() {
   _.each(this._entries, function(entry, name) {
     SyncedCron.remove(name);
   });
+  this.running = false;
 }
 
 // The meat of our logic. Checks if the specified has already run. If not,
