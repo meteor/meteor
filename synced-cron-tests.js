@@ -6,7 +6,7 @@ var TestEntry = {
   name: 'Test Job',
   schedule: function(parser) {
     return parser.cron('15 10 * * ? *'); // not required
-  }, 
+  },
   job: function() {
     return 'ran';
   }
@@ -77,7 +77,7 @@ Tinytest.add('SyncedCron.nextScheduledAtDate works', function(test) {
 
   var date = SyncedCron.nextScheduledAtDate(entry2.name);
   var correctDate = Later.schedule(entry2.schedule(Later.parse)).next(1);
-  
+
   test.equal(date, correctDate);
 });
 
@@ -96,9 +96,9 @@ Tinytest.add('SyncedCron.stop works', function(test) {
     }
   });
   SyncedCron.add(entry2);
-  
+
   SyncedCron.start();
-  
+
   test.equal(_.keys(SyncedCron._entries).length, 2);
 
   SyncedCron.stop();
@@ -106,3 +106,28 @@ Tinytest.add('SyncedCron.stop works', function(test) {
   test.equal(_.keys(SyncedCron._entries).length, 0);
 });
 
+// Tests SyncedCron.remove in the process
+Tinytest.add('SyncedCron.add starts by it self when running', function(test) {
+  SyncedCron._reset();
+
+  test.equal(SyncedCron._collection.find().count(), 0);
+  test.equal(SyncedCron.running, false);
+  Log._intercept(2);
+
+  SyncedCron.start();
+
+  test.equal(SyncedCron.running, true);
+
+  // addd 1 entries
+  SyncedCron.add(TestEntry);
+
+  test.equal(_.keys(SyncedCron._entries).length, 1);
+
+  SyncedCron.stop();
+
+  var intercepted = Log._intercepted();
+  test.equal(intercepted.length, 2);
+
+  test.equal(SyncedCron.running, false);
+  test.equal(_.keys(SyncedCron._entries).length, 0);
+});

@@ -1,6 +1,7 @@
 // A package for running jobs synchronized across multiple processes
 SyncedCron = {
   _entries: {},
+  running: false,
   options: {
     //Log job run details to console
     log: true,
@@ -9,10 +10,10 @@ SyncedCron = {
     collectionName: 'cronHistory',
 
     //Default to using localTime
-    utc: false, 
+    utc: false,
 
     //TTL in seconds for history records in collection to expire
-    //NOTE: Unset to remove expiry but ensure you remove the index from 
+    //NOTE: Unset to remove expiry but ensure you remove the index from
     //mongo by hand
     collectionTTL: 172800
   }
@@ -24,7 +25,7 @@ Meteor.startup(function() {
   var options = SyncedCron.options;
 
   // Don't allow TTL less than 5 minutes so we don't break synchronization
-  var minTTL = 300; 
+  var minTTL = 300;
 
   // Use UTC or localtime for evaluating schedules
   if (options.utc)
@@ -35,7 +36,7 @@ Meteor.startup(function() {
   // collection holding the job history records
   SyncedCron._collection = new Mongo.Collection(options.collectionName);
   SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
-  
+
   if (options.collectionTTL) {
     if (options.collectionTTL > minTTL)
       SyncedCron._collection._ensureIndex({startedAt: 1 },
@@ -48,7 +49,7 @@ Meteor.startup(function() {
 var log = {
   info: function(message) {
     if (SyncedCron.options.log)
-      console.log(message);
+      Log.info({message: message});
   }
 }
 
@@ -65,6 +66,15 @@ SyncedCron.add = function(entry) {
 
   // check
   this._entries[entry.name] = entry;
+
+  // If cron is already running, start directly.
+  if (this.running) {
+    var schedule = entry.schedule(Later.parse);
+    entry._timer = this._laterSetInterval(this._entryWrapper(entry), schedule);
+
+    log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
+      + Later.schedule(schedule).next(1));
+  }
 }
 
 // Start processing added jobs
@@ -77,16 +87,17 @@ SyncedCron.start = function() {
       var schedule = entry.schedule(Later.parse);
       entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
 
-      log.info('SyncedCron: scheduled "' + entry.name + '" next run @' 
+      log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
         + Later.schedule(schedule).next(1));
     });
+    self.running = true;
   });
 }
 
 // Return the next scheduled date of the first matching entry or undefined
 SyncedCron.nextScheduledAtDate = function(jobName) {
   var entry = this._entries[jobName];
-  
+
   if (entry)
     return Later.schedule(entry.schedule(Later.parse)).next(1);
 }
@@ -94,7 +105,7 @@ SyncedCron.nextScheduledAtDate = function(jobName) {
 // Remove and stop the entry referenced by jobName
 SyncedCron.remove = function(jobName) {
   var entry = this._entries[jobName];
-  
+
   if (entry) {
     if (entry._timer)
       entry._timer.clear();
@@ -109,6 +120,7 @@ SyncedCron.stop = function() {
   _.each(this._entries, function(entry, name) {
     SyncedCron.remove(name);
   });
+  this.running = false;
 }
 
 // The meat of our logic. Checks if the specified has already run. If not,
@@ -135,14 +147,14 @@ SyncedCron._entryWrapper = function(entry) {
         return;
       }
 
-      throw e; 
+      throw e;
     };
 
     // run and record the job
     try {
       log.info('SyncedCron: Starting "' + entry.name + '".');
       var output = entry.job(intendedAt); // <- Run the actual job
-  
+
       log.info('SyncedCron: Finished "' + entry.name + '".');
       self._collection.update({_id: jobHistory._id}, {
         $set: {
@@ -166,6 +178,7 @@ SyncedCron._entryWrapper = function(entry) {
 SyncedCron._reset = function() {
   this._entries = {};
   this._collection.remove({});
+  this.running = false;
 }
 
 // ---------------------------------------------------------------------------
