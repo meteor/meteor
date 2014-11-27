@@ -53,6 +53,15 @@ var log = {
   }
 }
 
+var scheduleEntry = function(entry) {
+  var schedule = entry.schedule(Later.parse);
+  entry._timer = 
+    SyncedCron._laterSetInterval(SyncedCron._entryWrapper(entry), schedule);
+
+  log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
+    + Later.schedule(schedule).next(1));
+}
+
 // add a scheduled job
 // SyncedCron.add({
 //   name: String, //*required* unique name of the job
@@ -69,11 +78,7 @@ SyncedCron.add = function(entry) {
 
   // If cron is already running, start directly.
   if (this.running) {
-    var schedule = entry.schedule(Later.parse);
-    entry._timer = this._laterSetInterval(this._entryWrapper(entry), schedule);
-
-    log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
-      + Later.schedule(schedule).next(1));
+    scheduleEntry(entry);
   }
 }
 
@@ -83,12 +88,8 @@ SyncedCron.start = function() {
 
   Meteor.startup(function() {
     // Schedule each job with later.js
-    _.each(self._entries, function(entry, name) {
-      var schedule = entry.schedule(Later.parse);
-      entry._timer = self._laterSetInterval(self._entryWrapper(entry), schedule);
-
-      log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
-        + Later.schedule(schedule).next(1));
+    _.each(self._entries, function(entry) {
+      scheduleEntry(entry);
     });
     self.running = true;
   });
