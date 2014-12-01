@@ -2654,23 +2654,3 @@ main.registerCommand({
 
   return 0;
 });
-
-
-// XXX #3006: This is just a temporary command to test new code.
-main.registerCommand({
-  name: 'prep',
-  maxArgs: 0,
-  hidden: true,
-  catalogRefresh: new catalog.Refresh.Never(),
-  pretty: true,
-  requiresApp: true
-}, function (options) {
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
-  });
-
-  main.captureAndExit("=> Errors while initializing project:", function () {
-    projectContext.prepareProjectForBuild();
-  });
-  projectContext.packageMapDelta.displayOnConsole();
-});
