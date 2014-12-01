@@ -63,7 +63,7 @@ ConstraintSolver.ConstraintsList.prototype.push = function (c) {
   // of constraints that we support).
   if (c.type !== 'any-reasonable') {
     var minimal = mori.get(newList.minimalVersion, c.name);
-    if (!minimal || PackageVersion.lessThan(c.version, minimal)) {
+    if (!minimal || PVP.lessThan(c.version, minimal)) {
       newList.minimalVersion = mori.assoc(
         newList.minimalVersion, c.name, c.version);
     }

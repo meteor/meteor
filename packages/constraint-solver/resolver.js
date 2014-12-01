@@ -45,7 +45,7 @@ ConstraintSolver.Resolver.prototype.addUnitVersion = function (unitVersion) {
     self.unitsVersions[unitVersion.name] = [];
   } else {
     var latest = _.last(self.unitsVersions[unitVersion.name]).version;
-    if (!PackageVersion.lessThan(latest, unitVersion.version)) {
+    if (!PVP.lessThan(latest, unitVersion.version)) {
       throw Error("adding uv out of order: " + latest + " vs "
                   + unitVersion.version);
     }
@@ -263,7 +263,7 @@ ConstraintSolver.UnitVersion = function (name, unitVersion) {
   self.dependencies = [];
   self.constraints = new ConstraintSolver.ConstraintsList();
   // integer like 1 or 2
-  self.majorVersion = PackageVersion.majorVersion(unitVersion);
+  self.majorVersion = PVP.majorVersion(unitVersion);
 };
 
 _.extend(ConstraintSolver.UnitVersion.prototype, {
@@ -300,9 +300,9 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 ////////////////////////////////////////////////////////////////////////////////
 
 // Can be called either:
-//    new PackageVersion.Constraint("packageA", "=2.1.0")
+//    new ConstraintSolver.Constraint("packageA", "=2.1.0")
 // or:
-//    new PackageVersion.Constraint("pacakgeA@=2.1.0")
+//    new ConstraintSolver.Constraint("pacakgeA@=2.1.0")
 ConstraintSolver.Constraint = function (name, constraintString) {
   var self = this;
   if (constraintString) {
@@ -311,7 +311,7 @@ ConstraintSolver.Constraint = function (name, constraintString) {
 
   // See comment in UnitVersion constructor. We want to strip out build IDs
   // because the code they represent is considered equivalent.
-  var parsed = PackageVersion.parseConstraint(name);
+  var parsed = PVP.parseConstraint(name);
 
   self.name = parsed.name;
   self.constraintString = parsed.constraintString;
@@ -347,13 +347,13 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (candidateUV) {
 
       // If the candidate version is less than the version named in the
       // constraint, we are not satisfied.
-      if (PackageVersion.lessThan(candidateUV.version, version)) {
+      if (PVP.lessThan(candidateUV.version, version)) {
         return false;
       }
 
       // To be compatible, the two versions must have the same major version
       // number.
-      if (candidateUV.majorVersion !== PackageVersion.majorVersion(version)) {
+      if (candidateUV.majorVersion !== PVP.majorVersion(version)) {
         return false;
       }
 

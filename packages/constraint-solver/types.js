@@ -1,3 +1,8 @@
+ConstraintSolver = {};
+PVP = Package['package-version-parser'].PackageVersion;
+
+// A VersionConstraint wraps a string of the form "1.0.0" or
+// "=1.9.1 || 2.0.0".
 ConstraintSolver.VersionConstraint = function (constraintString) {
   this.constraintString = constraintString;
 };
@@ -11,6 +16,8 @@ ConstraintSolver.VersionConstraint.fromString = function (str) {
   return new VersionConstraint(str);
 };
 
+// A Dependency represents a dependency on package `package` with
+// VersionConstraint of `constraint`.
 ConstraintSolver.Dependency = function (package, constraint, flags) {
   check(package, String);
   if (constraint) {
@@ -37,6 +44,8 @@ ConstraintSolver.Dependency = function (package, constraint, flags) {
 };
 Dependency = ConstraintSolver.Dependency;
 
+// The string form of a Dependency is `?foo@1.0.0` for a weak
+// reference to package "foo" with VersionConstraint "1.0.0".
 ConstraintSolver.Dependency.prototype.toString = function () {
   var ret = this.package;
   if (this.constraint) {
@@ -78,6 +87,7 @@ ConstraintSolver.Dependency.fromString = function (str) {
   }
 };
 
+// A PackageVersion names a (package, version) pair.
 ConstraintSolver.PackageVersion = function (package, version) {
   check(package, String);
   check(version, String);
@@ -87,6 +97,10 @@ ConstraintSolver.PackageVersion = function (package, version) {
 };
 PackageVersion = ConstraintSolver.PackageVersion;
 
+// The string form is "foo 1.0.1" for package "foo", version "1.0.1".
+// (Using a space instead of an `@` as separator reduces visual
+// confusion between PackageVersions and Dependencies when looking at
+// string dumps.)
 ConstraintSolver.PackageVersion.prototype.toString = function () {
   return this.package + " " + this.version;
 };
@@ -100,15 +114,67 @@ ConstraintSolver.PackageVersion.fromString = function (str) {
   }
 };
 
+// Stores the known Dependencies for each PackageVersion.  Dependencies
+// are kept in a map by their `package`, and there can only be one
+// Dependency object for a given target package.
 ConstraintSolver.CatalogCache = function () {
   // PackageVersion -> "package2" -> Dependency
   this.packageVersionToDeps = {};
 };
 CatalogCache = ConstraintSolver.CatalogCache;
 
+// Check whether the CatalogCache has an entry for a PackageVersion
+// (passed as a package and a version).
+ConstraintSolver.CatalogCache.prototype.hasPackageVersion =
+  function (package, version) {
+    var key = (new PackageVersion(package, version)).toString();
+    return _.has(this.packageVersionToDeps, key);
+  };
+
+// Add an entry for a PackageVersion, consisting of a list of Dependencies.
+// The PackageVersion is passed as a package and a version.  The list of
+// Dependencies is an array that must not have any duplicate package names.
 ConstraintSolver.CatalogCache.prototype.addPackageVersion =
   function (package, version, dependencies) {
-    var pv = new PackageVersion(package, version);
+    var self = this;
 
-    // XXX
+    check(dependencies, [Dependency]);
+
+    var key = (new PackageVersion(package, version)).toString();
+    if (_.has(self.packageVersionToDeps, key)) {
+      throw new Error("Already have an entry for " + key);
+    }
+    var depsByPackage = {};
+    self.packageVersionToDeps[key] = depsByPackage;
+
+    _.each(dependencies, function (dep) {
+      if (_.has(depsByPackage, dep.package)) {
+        throw new Error("Can't have two dependencies on " + dep.package +
+                        " in " + key);
+      }
+      depsByPackage[dep.package] = dep;
+    });
   };
+
+ConstraintSolver.CatalogCache.prototype.toJSONable = function () {
+  var self = this;
+  var data = {};
+  _.each(self.packageVersionToDeps, function (depsByPackage, key) {
+    data[key] = _.map(depsByPackage, function (dep) {
+      return dep.toString();
+    });
+  });
+  return { data: data };
+};
+
+ConstraintSolver.CatalogCache.fromJSONable = function (obj) {
+  check(obj, { data: Object });
+
+  var cache = new CatalogCache();
+  _.each(obj.data, function (depsArray, packageVersion) {
+    var pv = PackageVersion.fromString(packageVersion);
+    cache.addPackageVersion(pv.package, pv.version,
+                            _.map(depsArray, Dependency.fromString));
+  });
+  return cache;
+};

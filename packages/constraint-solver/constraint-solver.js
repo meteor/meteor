@@ -1,5 +1,3 @@
-ConstraintSolver = {};
-
 // `catalog` has the following methods:
 //
 // * getSortedVersions(packageName) -> [String]
@@ -100,7 +98,7 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
 // dependencies - an array of string names of packages (not slices)
 // constraints - an array of objects:
-//  (almost, but not quite, what PackageVersion.parseConstraint returns)
+//  (almost, but not quite, what PVP.parseConstraint returns)
 //  - packageName - string name
 //  - version - string constraint
 //  - type - constraint type
@@ -270,13 +268,13 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
     if (costFunc === 'earlierBetter') {
       resolverOptions.costFunction = function (state) {
         return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-          return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
+          return PVP.versionMagnitude(mori.last(nameAndUv).version);
         }, state.choices));
       };
     } else if (costFunc === 'laterBetter') {
       resolverOptions.costFunction = function (state) {
         return - mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-          return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
+          return PVP.versionMagnitude(mori.last(nameAndUv).version);
         }, state.choices));
       };
     } else {
@@ -312,8 +310,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           // The package was present in the previous solution
           var prev = prevSolMapping[uv.name];
           var versionsDistance =
-            PackageVersion.versionMagnitude(uv.version) -
-            PackageVersion.versionMagnitude(prev.version);
+            PVP.versionMagnitude(uv.version) -
+            PVP.versionMagnitude(prev.version);
 
           var isCompatible = prev.majorVersion === uv.majorVersion;
 
@@ -340,8 +338,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            PackageVersion.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
-            PackageVersion.versionMagnitude(uv.version);
+            PVP.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
+            PVP.versionMagnitude(uv.version);
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -354,7 +352,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             // How far is our choice from the most conservative version that
             // also matches our constraints?
             var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
-            cost[MINOR] += PackageVersion.versionMagnitude(uv.version) - PackageVersion.versionMagnitude(minimal);
+            cost[MINOR] += PVP.versionMagnitude(uv.version) - PVP.versionMagnitude(minimal);
             options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }
@@ -395,8 +393,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
 
           var versionsDistance =
-            PackageVersion.versionMagnitude(earliestMatching.version) -
-            PackageVersion.versionMagnitude(prev.version);
+            PVP.versionMagnitude(earliestMatching.version) -
+            PVP.versionMagnitude(prev.version);
           if (versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
@@ -408,9 +406,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
-            PackageVersion.versionMagnitude(
+            PVP.versionMagnitude(
               _.last(self.resolver.unitsVersions[dep]).version) -
-            PackageVersion.versionMagnitude(latestMatching.version);
+            PVP.versionMagnitude(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;
         }
