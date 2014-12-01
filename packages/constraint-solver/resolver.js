@@ -94,10 +94,11 @@ ConstraintSolver.Resolver.prototype.resolve = function (
     },
     combineCostFunction: function (cost, anotherCost) {
       return cost + anotherCost;
-    }
+    },
+    anticipatedPrereleases: {}
   }, options);
 
-  var resolveContext = new ResolveContext;
+  var resolveContext = new ResolveContext(options.anticipatedPrereleases);
 
   // Mapping that assigns every package an integer priority. We compute this
   // dynamically and in the process of resolution we try to resolve packages
@@ -110,33 +111,8 @@ ConstraintSolver.Resolver.prototype.resolve = function (
 
   var startState = new ResolverState(self, resolveContext);
 
-  if (options.useRCs) {
-    resolveContext.useRCsOK = true;
-  }
-
   _.each(constraints, function (constraint) {
     startState = startState.addConstraint(constraint, mori.list());
-
-    // Keep track of any top-level constraints that mention a pre-release.
-    // These will be the only pre-release versions that count as "reasonable"
-    // for "any-reasonable" (ie, unconstrained) constraints.
-    //
-    // Why only top-level mentions, and not mentions we find while walking the
-    // graph? The constraint solver assumes that adding a constraint to the
-    // resolver state can't make previously impossible choices now possible.  If
-    // pre-releases mentioned anywhere worked, then applying the constraints
-    // "any reasonable" followed by "1.2.3-rc1" would result in "1.2.3-rc1"
-    // ruled first impossible and then possible again. That's no good, so we
-    // have to fix the meaning based on something at the start.  (We could try
-    // to apply our prerelease-avoidance tactics solely in the cost functions,
-    // but then it becomes a much less strict rule.)
-    if (constraint.version && /-/.test(constraint.version)) {
-      if (!_.has(resolveContext.topLevelPrereleases, constraint.name)) {
-        resolveContext.topLevelPrereleases[constraint.name] = {};
-      }
-      resolveContext.topLevelPrereleases[constraint.name][constraint.version]
-        = true;
-    }
   });
 
   _.each(dependencies, function (unitName) {
@@ -354,19 +330,35 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
 
   var prereleaseNeedingLicense = false;
 
-  // We try not to allow "pre-release" versions (versions with a '-')
-  // unless they are explicitly mentioned.  If the `useRCsOK` flag is
-  // set, all pre-release versions are allowed.  Pre-release versions
-  // mentioned explicitly in top-level constraints are always allowed.
-  // Otherwise, if `candidateUV` is a pre-release, it needs to be
-  // "licensed" by being mentioned by name in this constraint or
-  // matched by an inexact constraint whose version also has a '-'.
-  if ((! resolveContext.useRCsOK) && /-/.test(candidateUV.version)) {
-    var isTopLevelPrerelease = (
-      _.has(resolveContext.topLevelPrereleases, self.name) &&
-        _.has(resolveContext.topLevelPrereleases[self.name],
+  // We try not to allow "pre-release" versions (versions with a '-') unless
+  // they are explicitly mentioned.  If the `anticipatedPrereleases` option is
+  // `true` set, all pre-release versions are allowed.  Otherwise,
+  // anticipatedPrereleases lists pre-release versions that are always allow
+  // (this corresponds to pre-release versions mentioned explicitly in
+  // *top-level* constraints).
+  //
+  // Otherwise, if `candidateUV` is a pre-release, it needs to be "licensed" by
+  // being mentioned by name in *this* constraint or matched by an inexact
+  // constraint whose version also has a '-'.
+  //
+  // Note that a constraint "@2.0.0" can never match a version "2.0.1-rc.1"
+  // unless anticipatedPrereleases allows it, even if another constraint found
+  // in the graph (but not at the top level) explicitly mentions "2.0.1-rc.1".
+  // Why? The constraint solver assumes that adding a constraint to the resolver
+  // state can't make previously impossible choices now possible.  If
+  // pre-releases mentioned anywhere worked, then applying the constraint
+  // "@2.0.0" followed by "@=2.0.1-rc.1" would result in "2.0.1-rc.1" ruled
+  // first impossible and then possible again. That will break this algorith, so
+  // we have to fix the meaning based on something known at the start of the
+  // search.  (We could try to apply our prerelease-avoidance tactics solely in
+  // the cost functions, but then it becomes a much less strict rule.)
+  if (resolveContext.anticipatedPrereleases !== true
+      && /-/.test(candidateUV.version)) {
+    var isAnticipatedPrerelease = (
+      _.has(resolveContext.anticipatedPrereleases, self.name) &&
+        _.has(resolveContext.anticipatedPrereleases[self.name],
               candidateUV.version));
-    if (! isTopLevelPrerelease) {
+    if (! isAnticipatedPrerelease) {
       prereleaseNeedingLicense = true;
     }
   }
@@ -408,9 +400,9 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
 // An object that records the general context of a resolve call. It can be
 // different for different resolve calls on the same Resolver, but is the same
 // for every ResolverState in a given call.
-var ResolveContext = function () {
+var ResolveContext = function (anticipatedPrereleases) {
   var self = this;
-  // unitName -> version string -> true
-  self.topLevelPrereleases = {};
-  self.useRCsOK = false;
+  // EITHER: "true", in which case all prereleases are anticipated, or a map
+  //         unitName -> version string -> true
+  self.anticipatedPrereleases = anticipatedPrereleases;
 };

@@ -346,12 +346,16 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     var depsAndConstraints = self._getRootDepsAndConstraints();
+    var cachedVersions = self.packageMapFile.getCachedVersions();
+    var anticipatedPrereleases = self._getAnticipatedPrereleases(
+      depsAndConstraints.constraints, cachedVersions);
     var resolver = self._buildResolver();
 
     var solution;
     buildmessage.enterJob("selecting package versions", function () {
       var resolveOptions = {
-        previousSolution: self.packageMapFile.getCachedVersions()
+        previousSolution: cachedVersions,
+        anticipatedPrereleases: anticipatedPrereleases
       };
       if (self._upgradePackageNames)
         resolveOptions.upgrade = self._upgradePackageNames;
@@ -370,8 +374,8 @@ _.extend(exports.ProjectContext.prototype, {
     if (!solution)
       return;  // error is already in buildmessage
 
-    // XXX #3006 Check solution.usedRCs and maybe print something about it. This
-    // code used to exist in catalog.js.
+    // XXX #3006 Check solution.neededToUseUnanticipatedPrereleases and maybe
+    // print something about it. This code used to exist in catalog.js.
 
     // XXX #3006 For commands other than create and test-packages, show package
     // changes. This code used to exist in project.js.   #ShowPackageChanges
@@ -473,6 +477,37 @@ _.extend(exports.ProjectContext.prototype, {
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
     });
+  },
+
+  _getAnticipatedPrereleases: function (rootConstraints, cachedVersions) {
+    var self = this;
+
+    var anticipatedPrereleases = {};
+    var add = function (packageName, version) {
+      if (! /-/.test(version)) {
+        return;
+      }
+      if (! _.has(anticipatedPrereleases, packageName)) {
+        anticipatedPrereleases[packageName] = {};
+      }
+      anticipatedPrereleases[packageName][version] = true;
+    };
+
+    // Pre-release versions that are root constraints (in .meteor/packages, in
+    // the release, or the version of a local package) are anticipated.
+    _.each(rootConstraints, function (constraintObject) {
+      _.each(constraintObject.constraints, function (alternative) {
+        var version = alternative.version;
+        version && add(constraintObject.name, version);
+      });
+    });
+
+    // Pre-release versions we decided to use in the past are anticipated.
+    _.each(cachedVersions, function (version, packageName) {
+      add(packageName, version);
+    });
+
+    return anticipatedPrereleases;
   },
 
   _buildResolver: function () {
@@ -787,8 +822,9 @@ _.extend(exports.PackageMapFile.prototype, {
 
   // Note that this is really specific to wanting to know what versions are in
   // the .meteor/versions file on disk, which is a slightly different question
-  // from "so, what versions should I be building with?"  Usually you want a
-  // PackageMap instead!
+  // from "so, what versions should I be building with?"  Usually you want the
+  // PackageMap produced by resolving constraints instead! Returns a map from
+  // package name to version.
   getCachedVersions: function () {
     var self = this;
     return _.clone(self._versions);

@@ -147,13 +147,15 @@ Tinytest.add("constraint solver - resolver, cost function - avoid upgrades", fun
 
 Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
   var resolver = new ConstraintSolver.Resolver();
+  var A100rc1 = new ConstraintSolver.UnitVersion("a", "1.0.0-rc.1");
+  var A100rc2 = new ConstraintSolver.UnitVersion("a", "1.0.0-rc.2");
   var A100 = new ConstraintSolver.UnitVersion("a", "1.0.0");
-  var A100rc1 = new ConstraintSolver.UnitVersion("a", "1.0.0-rc1");
 
   resolver.addUnitVersion(A100rc1);
+  resolver.addUnitVersion(A100rc2);
   resolver.addUnitVersion(A100);
   var basicConstraint = resolver.getConstraint("a", "");
-  var rcConstraint = resolver.getConstraint("a", "1.0.0-rc1");
+  var rc1Constraint = resolver.getConstraint("a", "1.0.0-rc.1");
 
   // Make the non-rc one more costly. But we still shouldn't choose it unless it
   // was specified in an initial constraint!
@@ -162,19 +164,49 @@ Tinytest.add("constraint solver - resolver, don't pick rcs", function (test) {
       var name = mori.first(nameAndUv);
       var uv = mori.last(nameAndUv);
       // Make the non-rc one more costly. But we still shouldn't choose it!
-      if (uv.version === "1.0.0")
-        return 100;
-      return 0;
+      switch (uv.version) {
+      case "1.0.0": return 100;
+      case "1.0.0-rc.1": return 50;
+      case "1.0.0-rc.2": return 0;
+      }
+      throw Error("unknown version " + uv.version);
     }, state.choices));
   };
 
-  var solution = resolver.resolve(
-    ["a"], [basicConstraint], {costFunction: proRcCostFunction });
+  // No RCs are mentioned in a constraint or known as anticipated.
+  var solution = resolver.resolve(["a"], [basicConstraint], {
+    costFunction: proRcCostFunction
+  });
   resultEquals(test, solution, [A100]);
 
-  solution = resolver.resolve(
-    ["a"], [rcConstraint], {costFunction: proRcCostFunction });
+  // All RCs are anticipated, so we choose the cheapest one (rc.2).
+  solution = resolver.resolve(["a"], [basicConstraint], {
+    costFunction: proRcCostFunction,
+    anticipatedPrereleases: true
+  });
+  resultEquals(test, solution, [A100rc2]);
+
+  // Only RC1 is anticipated, and it is cheaper than 1.0.0, so we choose it.
+  solution = resolver.resolve(["a"], [basicConstraint], {
+    costFunction: proRcCostFunction,
+    anticipatedPrereleases: {a: {"1.0.0-rc.1": true}}
+  });
   resultEquals(test, solution, [A100rc1]);
+
+  // No RCs are anticipated but the constraint mentions a prerelease so we allow
+  // any prerelease (specifically, the cheapest).
+  solution = resolver.resolve(["a"], [rc1Constraint], {
+    costFunction: proRcCostFunction
+  });
+  resultEquals(test, solution, [A100rc2]);
+
+  // All RCs are anticipated so we choose the cheapest, not the one mentioned
+  // explicitly in the constraint.
+  solution = resolver.resolve(["a"], [rc1Constraint], {
+    costFunction: proRcCostFunction,
+    anticipatedPrereleases: true
+  });
+  resultEquals(test, solution, [A100rc2]);
 });
 
 function semver2number (semverStr) {

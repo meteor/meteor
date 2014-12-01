@@ -87,7 +87,7 @@ var testWithResolver = function (test, resolver, f) {
     var constraints = splitArgs(deps).constraints;
 
     var resolvedDeps = resolver.resolve(dependencies, constraints, options);
-    test.equal(resolvedDeps, { answer: expected });
+    test.equal(resolvedDeps.answer, expected);
   };
 
   var FAIL = function (deps, regexp) {

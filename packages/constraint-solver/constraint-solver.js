@@ -106,16 +106,21 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 //  - type - constraint type
 // options:
 //  - upgrade - list of dependencies for which upgrade is prioritized higher
-//  than keeping the old version
+//    than keeping the old version
 //  - previousSolution - mapping from package name to a version that was used in
-//  the previous constraint solver run
+//    the previous constraint solver run
+//  - anticipatedPrereleases: mapping from package name to version to true;
+//    included versions are the only pre-releases that are allowed to match
+//    constraints that don't specifically name them during the "try not to
+//    use unanticipated pre-releases" pass
 ConstraintSolver.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
   // clone because we mutate options
   options = _.extend({
     _testing: false,
-    upgrade: []
+    upgrade: [],
+    anticipatedPrereleases: {}
   }, options || {});
 
   check(dependencies, [String]);
@@ -131,7 +136,9 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   check(options, {
     _testing: Match.Optional(Boolean),
     upgrade: [String],
-    previousSolution: Match.Optional(Object)
+    previousSolution: Match.Optional(Object),
+    anticipatedPrereleases: Match.Optional(
+      Match.ObjectWithValues(Match.ObjectWithValues(Boolean)))
   });
 
   _.each(dependencies, function (packageName) {
@@ -166,6 +173,8 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   options.rootDependencies = dependencies;
   var resolverOptions = self._getResolverOptions(options);
   var res = null;
+  var neededToUseUnanticipatedPrereleases = false;
+
   // If a previous solution existed, try resolving with additional (weak)
   // equality constraints on all the versions from the previous solution (except
   // those we've explicitly been asked to update). If it's possible to solve the
@@ -208,17 +217,19 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     }
   }
 
-  // As a last-ditch effort, let's take a look at all the prerelease
-  // versions. Is it possible that a pre-release version will satisfy our
-  // constraints?
+  // As a last-ditch effort, let's allow ANY pre-release version found in the
+  // catalog, not only those that are asked for at some level.
   if (!res) {
-    resolverOptions["useRCs"] = true;
+    resolverOptions.anticipatedPrereleases = true;
+    neededToUseUnanticipatedPrereleases = true;
+    // Unlike the previous calls, this one throws a constraintSolverError on
+    // failure.
     res = self.resolver.resolve(dependencies, constraints, resolverOptions);
   }
-  var ret = { answer:  resolverResultToPackageMap(res) };
-  if (resolverOptions.useRCs)
-    ret.usedRCs = true;
-  return ret;
+  return {
+    answer:  resolverResultToPackageMap(res),
+    neededToUseUnanticipatedPrereleases: neededToUseUnanticipatedPrereleases
+  };
 };
 
 var resolverResultToPackageMap = function (choices) {
@@ -245,7 +256,9 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   function (options) {
   var self = this;
 
-  var resolverOptions = {};
+  var resolverOptions = {
+    anticipatedPrereleases: options.anticipatedPrereleases
+  };
 
   if (options._testing) {
     resolverOptions.costFunction = function (state) {
