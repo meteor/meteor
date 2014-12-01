@@ -561,16 +561,35 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
-  createApp: function (to, template) {
+  createApp: function (to, template, options) {
     var self = this;
+    options = options || {};
     files.cp_r(path.join(__dirname, 'tests', 'apps', template),
                path.join(self.cwd, to),
                { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
-    if (!self.warehouse && release.current.isProperRelease()) {
+    if (options.release) {
+      self.write(path.join(to, '.meteor/release'), options.release);
+    } else if (!self.warehouse && release.current.isProperRelease()) {
       self.write(path.join(to, '.meteor/release'), release.current.name);
     }
+
+    if (options.dontPrepareApp)
+      return;
+
+    // Prepare the app (ie, build or download packages). We give this a nice
+    // long timeout, which allows the next command to not need a bloated
+    // timeout. (meteor create does this anyway.)
+    self.cd(to, function () {
+      var run = self.run("--prepare-app");
+      // XXX Can we cache the output of running this once somewhere, so that
+      // multiple calls to createApp with the same template get the same cache?
+      // This is a little tricky because isopack-buildinfo.json uses absolute
+      // paths.
+      run.waitSecs(20);
+      run.expectExit(0);
+    });
   },
 
   // Same as createApp, but with a package.

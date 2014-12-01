@@ -226,11 +226,10 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "packageless");
+  s.createApp("myapp", "packageless", { release: 'METEOR@v1' });
   s.cd("myapp");
 
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(10);

@@ -220,7 +220,7 @@ selftest.define("unknown release", [], function () {
  s.set("METEOR_OFFLINE_CATALOG", "t");
   var run;
 
-  s.createApp('myapp', 'packageless');
+  s.createApp('myapp', 'packageless', { dontPrepareApp: true });
   s.cd('myapp');
   run = s.run("--release", "bad");
   run.matchErr("Meteor bad: unknown release");

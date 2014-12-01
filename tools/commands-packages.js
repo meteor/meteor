@@ -158,6 +158,25 @@ main.registerCommand({
 });
 
 
+// Internal use only. A simpler version of --get-ready which doesn't try to also
+// build/download local and release packages that aren't currently used. Just
+// builds and downloads packages used by the current app.
+main.registerCommand({
+  name: '--prepare-app',
+  pretty: true,
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+}, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+  projectContext.packageMapDelta.displayOnConsole();
+});
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // publish a package
 ///////////////////////////////////////////////////////////////////////////////

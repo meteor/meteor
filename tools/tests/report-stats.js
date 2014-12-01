@@ -47,11 +47,10 @@ selftest.define("report-stats", ["slow", "net"], function () {
 
       var run;
 
-      s.createApp("foo", "package-stats-tests");
+      s.createApp("foo", "package-stats-tests", {
+        release: useFakeRelease ? 'METEOR@v1' : undefined
+      });
       s.cd("foo");
-      if (useFakeRelease) {
-        s.write('.meteor/release', 'METEOR@v1');
-      }
 
       var projectContext = new projectContextModule.ProjectContext({
         projectDir: s.cwd
