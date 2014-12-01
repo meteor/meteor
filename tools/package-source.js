@@ -372,11 +372,6 @@ _.extend(PackageSource.prototype, {
   // name: name of the package.
   // dir: location of directory on disk.
   // options:
-  //   -requireVersion: This is a package that is going in a catalog or being
-  //    published to the server. It must have a version. (as opposed to, for
-  //    example, a program)
-  //   -defaultVersion: The default version if none is specified. Only assigned
-  //    if the version is required.
   //   -name: override the name of this package with a different name.
   initFromPackageDir: function (dir, options) {
     var self = this;
@@ -393,6 +388,11 @@ _.extend(PackageSource.prototype, {
       self.isTest = isTestName(options.name);
       self.name = options.name;
     }
+
+    // Give the package a default version. We do not set
+    // versionExplicitlyProvided unless the package configuration file actually
+    // sets a version.
+    self.version = "0.0.0";
 
     self.sourceRoot = dir;
 
@@ -467,10 +467,38 @@ _.extend(PackageSource.prototype, {
               key === "git") {
             self.metadata[key] = value;
           } else if (key === "version") {
-            // XXX validate that version parses -- and that it doesn't
-            // contain a +!
-            self.version = value;
-            self.versionExplicitlyProvided = true;
+            if (typeof(value) !== "string") {
+              buildmessage.error("The package version (specified with "
+                                 + "Package.describe) must be a string.");
+              // Recover by pretending that version was not set.
+            } else {
+              var goodVersion = true;
+              try {
+                var parsedVersion = packageVersionParser.getValidServerVersion(
+                  value);
+              } catch (e) {
+                if (!e.versionParserError)
+                  throw e;
+                buildmessage.error(
+                  "The package version " + self.version + " (specified with Package.describe) "
+                    + "is not a valid Meteor package version.\n"
+                    + "Valid package versions are semver (see http://semver.org/), "
+                    + "optionally followed by '_' and an integer greater or equal to 1.");
+                goodVersion = false;
+              }
+              // Recover by pretending that the version was not set.
+            }
+            if (goodVersion && parsedVersion !== value) {
+              buildmessage.error(
+                "The package version (specified with Package.describe) may not "
+                  + "contain a plus-separated build ID.");
+              // Recover by pretending that the version was not set.
+              goodVersion = false;
+            }
+            if (goodVersion) {
+              self.version = value;
+              self.versionExplicitlyProvided = true;
+            }
           } else if (key === "name" && !self.isTest) {
             if (!self.name) {
               self.name = value;
@@ -866,66 +894,6 @@ _.extend(PackageSource.prototype, {
       buildmessage.error(
         "can't register build plugins in debugOnly packages");
       // recover by ignoring
-    }
-
-    // XXX #3006 are there any call sites that don't set requireVersion?
-    if (self.version === null && options.requireVersion) {
-      if (options.defaultVersion) {
-        self.version = options.defaultVersion;
-      } else if (! buildmessage.jobHasMessages()) {
-        // Only write the error if there have been no errors so
-        // far. (Otherwise if there is a parse error we'll always get
-        // this message, because we won't have been able to run any
-        // code.)
-        buildmessage.error("A version must be specified for the package. " +
-                           "Set it with Package.describe.");
-      }
-      // Recover by leaving the version unset. This is sort of
-      // unfortunate (it means that whereever we work with Package
-      // objects, we need to consider the possibility that their
-      // version is not set) but short of failing the build we have no
-      // alternative. Using a dummy version like "1.0.0" would cause
-      // endless confusion and a fake version like "unknown" wouldn't
-      // parse correctly. Anyway, apps don't have versions, so it's
-      // not like we didn't already have to think about this case.
-    }
-
-    if (self.version !== null && typeof(self.version) !== "string") {
-      if (!buildmessage.jobHasMessages()) {
-        buildmessage.error("The package version (specified with "
-                           + "Package.describe) must be a string.");
-      }
-      // Recover by pretending there was no version (see above).
-      self.version = null;
-    }
-
-    if (self.version !== null) {
-      var parsedVersion;
-      try {
-        parsedVersion =
-          packageVersionParser.getValidServerVersion(self.version);
-      } catch (e) {
-        if (!e.versionParserError)
-          throw e;
-        if (!buildmessage.jobHasMessages()) {
-          buildmessage.error(
-            "The package version " + self.version + " (specified with Package.describe) "
-            + "is not a valid Meteor package version.\n"
-            + "Valid package versions are semver (see http://semver.org/), "
-            + "optionally followed by '_' and an integer greater or equal to 1.");
-        }
-        // Recover by pretending there was no version (see above).
-        self.version = null;
-      }
-      if (parsedVersion && parsedVersion !== self.version) {
-        if (!buildmessage.jobHasMessages()) {
-          buildmessage.error(
-            "The package version (specified with Package.describe) may not "
-            + "contain a plus-separated build ID.");
-        }
-        // Recover by pretending there was no version (see above).
-        self.version = null;
-      }
     }
 
     // source files used

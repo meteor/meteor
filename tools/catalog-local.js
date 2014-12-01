@@ -261,21 +261,14 @@ _.extend(LocalCatalog.prototype, {
         title: "reading package from `" + packageDir + "`",
         rootPath: packageDir
       }, function () {
-        // All packages in the catalog must have versions. Though, for local
-        // packages without version, we can be kind and set it to
-        // 0.0.0. Anything requiring any version above that will not be
-        // compatible, which is fine.
-        var opts = {
-          requireVersion: true,
-          defaultVersion: "0.0.0"
-        };
+        var packageSourceOptions = {};
         // If we specified a name, then we know what we want to get and should
         // pass that into the options. Otherwise, we will use the 'name'
         // attribute from package-source.js.
         if (definiteName) {
-          opts["name"] = definiteName;
+          packageSourceOptions.name = definiteName;
         }
-        packageSource.initFromPackageDir(packageDir, opts);
+        packageSource.initFromPackageDir(packageDir, packageSourceOptions);
         if (buildmessage.jobHasMessages())
           return;  // recover by ignoring
 
