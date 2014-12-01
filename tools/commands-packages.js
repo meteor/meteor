@@ -98,8 +98,12 @@ var formatArchitecture = function (s) {
 
 // Internal use only. Makes sure that your Meteor install is totally good to go
 // (is "airplane safe"). Specifically, it:
-//    - Builds all local packages (including their npm dependencies)
-//    - Ensures that all packages in your current release are downloaded
+//    - Builds all local packages, even those you're not using in your current
+//      app. (If you're not in an app, it still does this even though there is
+//      no persistent IsopackCache, because this still causes npm dependencies
+//      to be downloaded.)
+//    - Ensures that all packages in your current release are downloaded, even
+//      those you're not using in your current app.
 //    - Ensures that all packages used by your app (if any) are downloaded
 // (It also ensures you have the dev bundle downloaded, just like every command
 // in a checkout.)
@@ -108,19 +112,48 @@ var formatArchitecture = function (s) {
 // command, then getting on an airplane.
 //
 // This does NOT guarantee a *re*build of all local packages (though it will
-// download any new dependencies). If you want to rebuild all local packages,
-// call meteor rebuild. That said, rebuild should only be necessary if there's a
-// bug in the build tool... otherwise, packages should be rebuilt whenever
-// necessary!
+// download any new dependencies): we still trust the buildinfo files in your
+// app's IsopackCache. If you want to rebuild all local packages that are used
+// in your app, call meteor rebuild. That said, rebuild should only be necessary
+// if there's a bug in the build tool... otherwise, packages should be rebuilt
+// whenever necessary!
 main.registerCommand({
   name: '--get-ready',
+  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
-  // XXX #3006 This command has done something confusing ever since 0.9.0.
-  //           And what it does changes with isopack-cache. Reimplement it
-  //           (perhaps after merging isopack-cache).
-  Console.error("meteor --get-ready not currently implemented");
-  // Don't make scripts fail, though.
+  // If we're in an app, make sure that we can build the current app. Otherwise
+  // just make sure that we can build some fake app.
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir || files.mkdtemp('meteor-get-ready')
+  });
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.initializeCatalog();
+  });
+
+  // Add every local package (including tests) and every release package to this
+  // project. (Hopefully they can all be built at once!)
+  var addPackages = function (packageNames) {
+    projectContext.projectConstraintsFile.addConstraints(
+      _.map(packageNames, function (p) {
+        return utils.parseConstraint(p);
+      })
+    );
+  };
+  addPackages(projectContext.localCatalog.getAllPackageNames());
+  if (release.current.isProperRelease()) {
+    addPackages(_.keys(release.current.getPackages()));
+  }
+
+  // Now finish building and downloading.
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+  // We don't display package changes because they'd include all these packages
+  // not actually in the app!
+  // XXX Maybe we should do a first pass that only builds packages actually in
+  // the app and does display the PackageMapDelta?
+
   return 0;
 });
 
