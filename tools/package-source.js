@@ -190,13 +190,8 @@ var SourceArch = function (pkg, options) {
 // PackageSource
 ///////////////////////////////////////////////////////////////////////////////
 
-var PackageSource = function (catalog) {
+var PackageSource = function () {
   var self = this;
-
-  // Which catalog this PackageSource works with.
-  if (!catalog)
-    throw Error("Must provide catalog");
-  self.catalog = catalog;
 
   // The name of the package, or null for an app pseudo-package or
   // collection. The package's exports will reside in Package.<name>.
@@ -372,12 +367,15 @@ _.extend(PackageSource.prototype, {
   // name: name of the package.
   // dir: location of directory on disk.
   // options:
-  //   -name: override the name of this package with a different name.
+  // - name: override the name of this package with a different name.
+  // - buildingIsopackets: true if this is being scanned in the process
+  //   of building isopackets
   initFromPackageDir: function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
     options = options || {};
+    var initFromPackageDirOptions = options;
 
     // If we know what package we are initializing, we pass in a
     // name. Otherwise, we are intializing the base package specified by 'name:'
@@ -1183,7 +1181,7 @@ _.extend(PackageSource.prototype, {
           // (since we may need the ddp isopacket to refresh catalog.official),
           // so we wouldn't actually be able to interpret the release name
           // anyway.
-          if (self.catalog.isopacketBuildingCatalog) {
+          if (initFromPackageDirOptions.buildingIsopackets) {
             buildmessage.error(
               "packages in isopackets may not use versionsFrom");
             // recover by ignoring

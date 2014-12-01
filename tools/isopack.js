@@ -1091,8 +1091,7 @@ _.extend(Isopack.prototype, {
             name: "isopacket-" + isopacketName,
             packageMap: packageMap,
             isopackCache: isopackCache,
-            use: packages,
-            catalog: isopacketCatalog
+            use: packages
           }).image;
           if (buildmessage.jobHasMessages())
             return;

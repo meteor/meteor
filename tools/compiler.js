@@ -57,8 +57,7 @@ compiler.compile = function (packageSource, options) {
         // rest of the package, so they need their own separate npm
         // shrinkwrap and cache state.
         npmDir: path.resolve(path.join(packageSource.sourceRoot, '.npm',
-                                       'plugin', info.name)),
-        catalog: packageSource.catalog
+                                       'plugin', info.name))
       });
       if (buildmessage.jobHasMessages())
         return;

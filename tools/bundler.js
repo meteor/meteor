@@ -167,7 +167,6 @@ var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var tropohouse = require('./tropohouse.js');
-var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
@@ -2004,7 +2003,7 @@ exports.bundle = function (options) {
     };
 
     // Create a Isopack object that represents the app
-    var packageSource = new PackageSource(projectContext.packageMap.catalog);
+    var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
@@ -2133,10 +2132,8 @@ exports.buildJsImage = function (options) {
     throw new Error("Must indicate .npm directory to use");
   if (! options.name)
     throw new Error("Must provide a name");
-  if (! options.catalog)
-    throw new Error("Must provide a catalog");
 
-  var packageSource = new PackageSource(options.catalog);
+  var packageSource = new PackageSource;
 
   packageSource.initFromOptions(options.name, {
     kind: "plugin",

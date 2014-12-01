@@ -182,8 +182,7 @@ var ensureIsopacketsLoadable = function () {
             name: "isopacket-" + isopacketName,
             packageMap: packageMap,
             isopackCache: isopackCache,
-            use: packages,
-            catalog: isopacketCatalog
+            use: packages
           });
           if (buildmessage.jobHasMessages())
             return;
@@ -218,7 +217,6 @@ var newIsopacketBuildingCatalog = function () {
 
   var catalogLocal = require('./catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
-  isopacketCatalog.isopacketBuildingCatalog = true;
   var messages = buildmessage.capture(
     { title: "Scanning local core packages" },
     function () {
@@ -229,7 +227,8 @@ var newIsopacketBuildingCatalog = function () {
       // (there's no worries about needing to springboard).
       isopacketCatalog.initialize({
         localPackageSearchDirs: [path.join(
-          files.getCurrentToolsDir(), 'packages')]
+          files.getCurrentToolsDir(), 'packages')],
+        buildingIsopackets: true
       });
     });
   if (messages.hasMessages()) {
