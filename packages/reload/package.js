@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.1.1-win.0'
+  version: '1.1.2-win.0'
 });
 
 Package.on_use(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Interaction with the configuration sources for your apps",
-  version: '1.0.3-win.0'
+  version: '1.0.4-win.0'
 });
 
 Package.on_use(function (api) {

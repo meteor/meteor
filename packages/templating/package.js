@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.9-win.0'
+  version: '1.0.10-win.0'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Wrapper around the bcrypt npm package",
-  version: '0.7.8-win.0',
+  version: '0.7.9-win.0',
   name: "npm-bcrypt"
 });
 

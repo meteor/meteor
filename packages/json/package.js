@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Provides JSON.stringify and JSON.parse for older browsers",
-  version: '1.0.1-win.0'
+  version: '1.0.2-win.0'
 });
 
 // We need to figure out how to serve this file only to browsers that don't have
