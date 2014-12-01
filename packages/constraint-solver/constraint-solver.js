@@ -1,26 +1,21 @@
-// `catalog` has the following methods:
-//
-// * getSortedVersions(packageName) -> [String]
-// * getVersion(packageName, version) -> {
-//     packageName, version, dependencies }
-//
-// Where `dependencies` is a map from packageName to
-// an object of the form `{ constraint: String,
-// references: [{arch: String, optional "weak": true}] }`.
-//
-// TODO: Abstract away the catalog by pulling out the code that
-// interfaces with it.  We shouldn't have to stub the catalog in
-// tests or conform to its format anywhere in order to, say,
-// run the solver with a real cost function.
+
+// PackagesResolver is the main exported class used to run the
+// constraint solver from the tool.
+
 ConstraintSolver.PackagesResolver = function (catalog, options) {
   var self = this;
 
   options = options || {};
   self._options = _.clone(options);
 
-  self.catalog = catalog;
-  self.catalogCache = new CatalogCache();
-  self.catalogLoader = new CatalogLoader(catalog, self.catalogCache);
+  if (catalog instanceof CatalogCache) {
+    // passed a CatalogCache instead of a Catalog, for unit tests
+    self.catalogCache = catalog;
+    self.catalogLoader = null;
+  } else {
+    self.catalogCache = new CatalogCache();
+    self.catalogLoader = new CatalogLoader(catalog, self.catalogCache);
+  }
 };
 
 // dependencies - an array of string names of packages (not slices)
@@ -82,19 +77,30 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     }
   }));
 
-  var packagesToLoad = {}; // package -> true
+  if (self.catalogLoader) {
+    var packagesToLoad = {}; // package -> true
 
-  _.each(dependencies, function (packageName) {
-    packagesToLoad[packageName] = true;
-  });
-  _.each(constraints, function (constraint) {
-    packagesToLoad[constraint.name] = true;
-  });
-  _.each(options.previousSolution, function (version, packageName) {
-    packagesToLoad[packageName] = true;
-  });
+    _.each(dependencies, function (packageName) {
+      packagesToLoad[packageName] = true;
+    });
+    _.each(constraints, function (constraint) {
+      packagesToLoad[constraint.name] = true;
+    });
+    _.each(options.previousSolution, function (version, packageName) {
+      packagesToLoad[packageName] = true;
+    });
 
-  self.catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
+    self.catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
+  }
+
+  /*console.log(JSON.stringify({
+    dependencies: dependencies,
+    constraints: constraints,
+    upgrade: options.upgrade,
+    previousSolution: options.previousSolution,
+    catalogCache: self.catalogCache.toJSONable()
+  }).replace(
+      /[\]}],/g, '$&\n  '));*/
 
   self.catalogCache.eachPackageVersion(function (pv, depsMap) {
     var uv = new ConstraintSolver.UnitVersion(pv.package, pv.version);

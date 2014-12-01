@@ -23,6 +23,16 @@ ConstraintSolver.CatalogLoader = function (fromCatalog, toCatalogCache) {
 };
 CatalogLoader = ConstraintSolver.CatalogLoader;
 
+// Note that `catalog` has the following methods that we rely on:
+//
+// * getSortedVersions(packageName) -> [String]
+// * getVersion(packageName, version) -> {
+//     packageName, version, dependencies }
+//
+// Where `dependencies` is a map from packageName to
+// an object of the form `{ constraint: String,
+// references: [{arch: String, optional "weak": true}] }`.
+
 CatalogLoader.prototype._getSortedVersions = function (package) {
   var self = this;
   if (! _.has(self._versionListCache, package)) {
