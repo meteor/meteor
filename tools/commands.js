@@ -432,9 +432,14 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
-    var packageDir = options.appDir
-          ? path.resolve(options.appDir, 'packages', packageName)
-          : path.resolve(packageName);
+    var escapedPackageName = utils.escapePackageNameForPath(packageName);
+    var packageDir;
+    if (options.appDir) {
+      packageDir = path.resolve(options.appDir, 'packages', escapedPackageName);
+    } else {
+      packageDir = path.resolve(escapedPackageName);
+    }
+
     var inYourApp = options.appDir ? " in your app" : "";
 
     if (fs.existsSync(packageDir)) {
