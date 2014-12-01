@@ -1150,10 +1150,3 @@ exports.OldIsopackFormatError = function () {
   // that isn't definitely loading something from the tropohouse).
   this.toString = function () { return "old isopack format!" };
 };
-
-exports.isopackExistsAtPath = function (thePath) {
-  // XXX COMPAT WITH 0.9.3
-  // Remove unipackage.json when no longer supported
-  return fs.existsSync(path.join(thePath, 'isopack.json')) ||
-    fs.existsSync(path.join(thePath, 'unipackage.json'));
-};

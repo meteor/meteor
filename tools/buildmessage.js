@@ -13,6 +13,9 @@ var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 // several jobs. Each job has an (absolute) path associated with
 // it. Filenames in messages within a job are to be interpreted
 // relative to that path.
+//
+// Jobs are used both for error handling (via buildmessage.capture) and to set
+// the progress bar title (via progress.js).
 var Job = function (options) {
   var self = this;
   self.messages = [];

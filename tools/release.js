@@ -258,16 +258,6 @@ release.setCurrent = function (releaseObject, forced, explicit) {
   release.explicit = !! explicit;
 };
 
-// XXX hack
-release._setCurrentForOldTest = function () {
-  if (process.env.METEOR_SPRINGBOARD_RELEASE) {
-    release.setCurrent(release.load(process.env.METEOR_SPRINGBOARD_RELEASE),
-                       true);
-  } else {
-    release.setCurrent(release.load(null));
-  }
-};
-
 // An exception meaning that you asked for a release that doesn't exist in the
 // new packaging world.  (It may still exist in the pre-0.9.0 packaging world.)
 release.NoSuchReleaseError = function () {

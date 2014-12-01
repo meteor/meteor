@@ -396,19 +396,19 @@ exports.handlePackageServerConnectionError = function (error) {
 // for the package (if needed), the version and the build; upload source and
 // isopack.
 //
-// packageSource: the packageSource for this package.
-// compileResult: the compiled isopack and various source files.
-// conn: the open, logged-in connection over which we should talk to the package
-//       server. DO NOT CLOSE this connection here.
 // options:
-//      new: this package is new, we should call createPackage to create a new
-//           package record.
-//      existingVersion: we expect the version to exist already, and for us
-//           to merely be providing a new build of the same source
-//      doNotPublishBuild: do not publish the build of this package.
+// - packageSource: the packageSource for this package.
+// - connection: the open, logged-in connection over which we should talk to the
+//   package server. DO NOT CLOSE this connection here.
+// - projectContext: the (probably temporary) ProjectContext to use. Must have\
+//   already built local packages
+// - new: this package is new, we should call createPackage to create a new
+//   package record.
+// - existingVersion: we expect the version to exist already, and for us
+//   to merely be providing a new build of the same source
+// - doNotPublishBuild: do not publish the build of this package.
 //
 // Return true on success and an error code otherwise.
-// XXX #3006 redo docs
 exports.publishPackage = function (options) {
   buildmessage.assertInJob();
   var packageSource = options.packageSource;

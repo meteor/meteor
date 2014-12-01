@@ -2,6 +2,15 @@ var _ = require('underscore');
 var packageVersionParser = require('./package-version-parser.js');
 var utils = require('./utils.js');
 
+// PackageMap: Represents the choices of package versions being used for a
+// project. It knows all the packages that are used (direct and indirect
+// dependencies), their versions, whether they are local or versioned packages,
+// and the PackageSource object for any local packages.  Prefer using this
+// function over arbitrary JSON representations when possible.  (A related class
+// is projectContextModule.PackageMapFile which specifically represents the
+// .meteor/packages file on disk.)
+//
+// It has a corresponding JSON format (used, eg, inside buildinfo files).
 exports.PackageMap = function (versions, cat) {
   var self = this;
   self._map = {};
