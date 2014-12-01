@@ -48,10 +48,6 @@ selftest.define("autoupdate", ['checkout'], function () {
   // manages to run. So stop mongo from starting so that it goes faster.
   s.set("MONGO_URL", "whatever");
 
-  // This makes packages not depend on meteor (specifically, makes our empty
-  // control program not depend on meteor).
-  s.set("NO_METEOR_PACKAGE", "t");
-
   s.createApp('myapp', 'packageless');
   s.cd('myapp', function () {
     setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
