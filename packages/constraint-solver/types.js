@@ -121,7 +121,10 @@ ConstraintSolver.PackageVersion.fromString = function (str) {
 // Dependency object for a given target package.
 ConstraintSolver.CatalogCache = function () {
   // PackageVersion -> "package2" -> Dependency
-  this.packageVersionToDeps = {};
+  this._packageVersionToDeps = {};
+  // A derived map for efficiency:
+  // package -> [version...]
+  this._packageVersionsByPackage = {};
 };
 CatalogCache = ConstraintSolver.CatalogCache;
 
@@ -130,7 +133,7 @@ CatalogCache = ConstraintSolver.CatalogCache;
 ConstraintSolver.CatalogCache.prototype.hasPackageVersion =
   function (package, version) {
     var key = (new PackageVersion(package, version)).toString();
-    return _.has(this.packageVersionToDeps, key);
+    return _.has(this._packageVersionToDeps, key);
   };
 
 // Add an entry for a PackageVersion, consisting of a list of Dependencies.
@@ -143,11 +146,15 @@ ConstraintSolver.CatalogCache.prototype.addPackageVersion =
     check(dependencies, [Dependency]);
 
     var key = (new PackageVersion(package, version)).toString();
-    if (_.has(self.packageVersionToDeps, key)) {
+    if (_.has(self._packageVersionToDeps, key)) {
       throw new Error("Already have an entry for " + key);
     }
     var depsByPackage = {};
-    self.packageVersionToDeps[key] = depsByPackage;
+    self._packageVersionToDeps[key] = depsByPackage;
+    if (! self._packageVersionsByPackage[package]) {
+      self._packageVersionsByPackage[package] = [];
+    }
+    self._packageVersionsByPackage[package].push(version);
 
     _.each(dependencies, function (dep) {
       if (_.has(depsByPackage, dep.package)) {
@@ -158,10 +165,28 @@ ConstraintSolver.CatalogCache.prototype.addPackageVersion =
     });
   };
 
+// Returns the dependencies of the PackageVersion (package, version),
+// stored in a map by their package name (i.e. the value is a Dependency
+// `dep`, the key is `dep.package`).
+ConstraintSolver.CatalogCache.prototype.getDependencyMap = function (package, version) {
+  var self = this;
+  var key = (new PackageVersion(package, version)).toString();
+  if (! _.has(self._packageVersionToDeps, key)) {
+    throw new Error("No entry for " + key);
+  }
+  var depsByPackage = self._packageVersionToDeps[key];
+  return depsByPackage;
+};
+
+// returns an array of version strings or an empty array if there are none
+ConstraintSolver.CatalogCache.prototype.getPackageVersions = function (package) {
+  return this._packageVersionsByPackage[package] || [];
+};
+
 ConstraintSolver.CatalogCache.prototype.toJSONable = function () {
   var self = this;
   var data = {};
-  _.each(self.packageVersionToDeps, function (depsByPackage, key) {
+  _.each(self._packageVersionToDeps, function (depsByPackage, key) {
     data[key] = _.map(depsByPackage, function (dep) {
       return dep.toString();
     });
@@ -186,9 +211,9 @@ ConstraintSolver.CatalogCache.fromJSONable = function (obj) {
 // iteration is stopped.
 ConstraintSolver.CatalogCache.prototype.eachPackageVersion = function (iter) {
   var self = this;
-  for (var key in self.packageVersionToDeps) {
+  for (var key in self._packageVersionToDeps) {
     var stop = iter(PackageVersion.fromString(key),
-                    self.packageVersionToDeps[key]);
+                    self._packageVersionToDeps[key]);
     if (stop) {
       break;
     }

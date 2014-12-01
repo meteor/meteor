@@ -44,6 +44,21 @@ Tinytest.add("constraint solver - types - CatalogCache", function (test) {
     return true; // stop
   });
   test.equal(count, 1);
+
+  var foos = [];
+  _.each(cache.getPackageVersions('foo'), function (v) {
+    var depMap = cache.getDependencyMap('foo', v);
+    foos.push([v, _.map(depMap, String)]);
+  });
+  test.equal(foos,
+             [['1.0.0', ['bar@=2.0.0']],
+              ['1.0.1', ['bar@=2.0.0 || =2.0.1', 'bzzz',
+                         '?weakly1@1.0.0', '?weakly2']]]);
+
+  test.throws(function () {
+    // package version doesn't exist
+    cache.getDependencyMap('foo', '7.0.0');
+  });
 });
 
 Tinytest.add("constraint solver - types - Dependency", function (test) {
