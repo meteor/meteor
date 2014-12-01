@@ -270,6 +270,7 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
 
   var isopack = projectContext.isopackCache.getIsopack(packageName);
   if (! isopack) {
@@ -466,6 +467,9 @@ main.registerCommand({
     [utils.parseConstraint(name + "@=" + versionString)]);
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
+  });
+  projectContext.packageMapDelta.displayOnConsole({
+    title: "Some package versions changed since this package was published!"
   });
 
   var isopk = projectContext.isopackCache.getIsopack(name);
@@ -673,6 +677,8 @@ main.registerCommand({
     main.captureAndExit("=> Errors while building for release:", function () {
       projectContext.prepareProjectForBuild();
     });
+    // No need to display the PackageMapDelta here, since it would include all
+    // of the packages!
 
     relConf.packages = {};
     var toPublish = [];
@@ -1274,6 +1280,9 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+  // No need to display the PackageMapDelta here, since we're about to list all
+  // of the packages anyway!
+
 
   var items = [];
   var newVersionsAvailable = false;
@@ -1617,8 +1626,10 @@ var maybeUpdateRelease = function (options) {
   });
   // Write the new release to .meteor/release.
   projectContext.releaseFile.write(solutionReleaseName);
-
-  // XXX #3006 #ShowPackageChanges
+  projectContext.packageMapDelta.displayOnConsole({
+    title: ("Changes to your project's package version selections from " +
+            "updating the release:")
+  });
 
   Console.info(path.basename(options.appDir) + ": updated to " +
                projectContext.releaseFile.displayReleaseName + ".");
@@ -1723,33 +1734,40 @@ main.registerCommand({
     }
   }
 
+  // Try to resolve constraints, allowing the given packages to be upgraded.
   projectContext.reset({
     releaseForConstraints: releaseRecordForConstraints,
     upgradePackageNames: upgradePackageNames
   });
-  main.captureAndExit("=> Errors while upgrading packages:", function () {
-    projectContext.prepareProjectForBuild();
-  });
+  main.captureAndExit(
+    "=> Errors while upgrading packages:", "upgrading packages", function () {
+      projectContext.resolveConstraints();
+      if (buildmessage.jobHasMessages())
+        return;
 
-  // XXX #3006 show package changes, including this "not in the project" message
-  // and "latest compatible versions" message. #ShowPackageChanges
-  // // Check that every requested package is actually used by the project, and
-  // // print an error if they are not. We don't check this on the original
-  // // versions because it could be out of date to begin with (ex: if you edited
-  // // the packages file) and we don't throw an error because, technically, it is
-  // // not an error. You could have gotten here by requesting updates of
-  // // transitive dependencies that are no longer there.
-  // _.each(upgradePackages, function (packageName) {
-  //   if (! _.has(newVersions, packageName)) {
-  //     Console.error(packageName + ': package is not in the project');
-  //   }
-  // });
+      // If the user explicitly mentioned some packages to upgrade, they must
+      // actually end up in our solution!
+      _.each(options.args, function (packageName) {
+        if (! projectContext.packageMap.getInfo(packageName)) {
+          buildmessage.error(packageName + ': package is not in the project');
+        }
+      });
+      if (buildmessage.jobHasMessages())
+        return;
 
-  // // Just for the sake of good messages, check to see if anything changed.
-  // if (_.isEqual(newVersions, versions)) {
-  //   Console.info("Your packages are at their latest compatible versions.");
-  //   return 0;
-  // }
+      // Finish preparing the project.
+      projectContext.prepareProjectForBuild();
+    }
+  );
+
+  if (projectContext.packageMapDelta.hasChanges()) {
+    projectContext.packageMapDelta.displayOnConsole({
+      title: ("Changes to your project's package version selections from " +
+              "updating package versions:")
+    });
+  } else {
+    Console.info("Your packages are at their latest compatible versions.");
+  }
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1772,6 +1790,7 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
 
   var upgrader = options.args[0];
 
@@ -1948,12 +1967,10 @@ main.registerCommand({
     return 1;
   }
 
-  // XXX #3006 #ShowPackageChanges
-
   _.each(infoMessages, function (message) {
     Console.info(message);
   });
-
+  projectContext.packageMapDelta.displayOnConsole();
 
   // Show descriptions of directly added packages.
   Console.stdout.write("\n");
@@ -2051,10 +2068,11 @@ main.registerCommand({
   main.captureAndExit("=> Errors after removing packages", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
-  // which is why there are these two tiers of error messages.
+  // which is why we do this in addition to dislpaying the PackageMapDelta.
   _.each(packagesToRemove, function (packageName) {
     Console.info(packageName + ": removed dependency");
   });
@@ -2621,4 +2639,5 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
 });

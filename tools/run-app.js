@@ -320,6 +320,8 @@ var AppRunner = function (options) {
   self.noRestartBanner = options.noRestartBanner;
   self.recordPackageUsage =
     options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
+  self.omitPackageMapDeltaDisplayOnFirstRun =
+    options.omitPackageMapDeltaDisplayOnFirstRun;
 
   // Keep track of the app's Cordova plugins and platforms. If the set
   // of plugins or platforms changes from one run to the next, we just
@@ -445,6 +447,11 @@ _.extend(AppRunner.prototype, {
             watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
           }
         };
+      }
+
+      // Show package changes... unless it's the first time in test-packages.
+      if (!(self.omitPackageMapDeltaDisplayOnFirstRun && firstRun)) {
+        self.projectContext.packageMapDelta.displayOnConsole();
       }
 
       if (self.recordPackageUsage) {

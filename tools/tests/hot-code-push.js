@@ -54,7 +54,7 @@ selftest.define("css hot code push", function (options) {
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
 
     s.write(".meteor/packages", "standard-app-packages \n my-package");
-    // run.match("added my-package");  // XXX #3006 re-add package changes #ShowPackageChanges
+    run.match(/my-package.*added,/);
     run.match("client connected");
     run.match("numCssChanges: 0");
 
@@ -64,7 +64,7 @@ selftest.define("css hot code push", function (options) {
 
     // Add appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", "standard-app-packages \n my-package \n appcache");
-    // run.match("added appcache");  // XXX #3006 re-add package changes #ShowPackageChanges
+    run.match(/appcache.*added,/);
     run.match("server restarted");
     run.match("numCssChanges: 0");
     run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
@@ -80,7 +80,7 @@ selftest.define("css hot code push", function (options) {
     utils.sleepMs(10000);
 
     s.write(".meteor/packages", "standard-app-packages");
-    // run.match("removed my-package");  // XXX #3006 re-add package changes #ShowPackageChanges
+    run.match(/my-package.*removed from your project/);
     run.match("numCssChanges: 0");
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
 
@@ -197,7 +197,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("jsVar: undefined");
 
     s.write(".meteor/packages", "standard-app-packages \n my-package");
-    // run.match("added my-package");  // XXX #3006 re-add package changes #ShowPackageChanges
+    run.match(/my-package.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: undefined");
@@ -210,7 +210,7 @@ selftest.define("javascript hot code push", function (options) {
 
     // Add appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", "standard-app-packages \n appcache");
-    // run.match("added appcache");  // XXX #3006 re-add package changes #ShowPackageChanges
+    run.match(/appcache.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: undefined");
@@ -226,7 +226,7 @@ selftest.define("javascript hot code push", function (options) {
 
     // Remove appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", "standard-app-packages");
-    // run.match("removed appcache");  // XXX #3006 re-add package changes #ShowPackageChanges
+    run.match(/appcache.*removed from your project/);
     run.match("server restarted");
     run.match("client connected: 0");
 

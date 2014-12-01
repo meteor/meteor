@@ -97,7 +97,9 @@ var Runner = function (options) {
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
     noRestartBanner: self.quiet,
-    recordPackageUsage: options.recordPackageUsage
+    recordPackageUsage: options.recordPackageUsage,
+    omitPackageMapDeltaDisplayOnFirstRun: (
+      options.omitPackageMapDeltaDisplayOnFirstRun)
   });
 
   self.selenium = null;

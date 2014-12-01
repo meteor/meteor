@@ -132,6 +132,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     // Initialized by _resolveConstraints.
     self.packageMap = null;
+    self.packageMapDelta = null;
 
     // Initialized by _buildLocalPackages.
     self.isopackCache = null;
@@ -374,14 +375,17 @@ _.extend(exports.ProjectContext.prototype, {
     if (!solution)
       return;  // error is already in buildmessage
 
-    // XXX #3006 Check solution.neededToUseUnanticipatedPrereleases and maybe
-    // print something about it. This code used to exist in catalog.js.
-
-    // XXX #3006 For commands other than create and test-packages, show package
-    // changes. This code used to exist in project.js.   #ShowPackageChanges
-
     self.packageMap = new packageMapModule.PackageMap(
       solution.answer, self.projectCatalog);
+
+    self.packageMapDelta = new packageMapModule.PackageMapDelta({
+      cachedVersions: cachedVersions,
+      packageMap: self.packageMap,
+      usedRCs: solution.usedRCs,
+      neededToUseUnanticipatedPrereleases:
+          solution.neededToUseUnanticipatedPrereleases,
+      anticipatedPrereleases: anticipatedPrereleases
+    });
 
     self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
   },

@@ -266,6 +266,7 @@ function doRunCommand (options) {
       main.captureAndExit("=> Errors while initializing project:", function () {
         projectContext.prepareProjectForBuild();
       });
+      projectContext.packageMapDelta.displayOnConsole();
 
       var appName = path.basename(projectContext.projectDir);
       cordova.buildTargets(projectContext, options.args, _.extend({
@@ -565,8 +566,6 @@ main.registerCommand({
 
   // We are actually working with a new meteor project at this point, so
   // set up its context.
-  // XXX #3006 Make sure that when we reimplement showPackageChanges, they
-  // don't show here.  #ShowPackageChanges
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: appPath,
     // Write .meteor/versions even if --release is specified.
@@ -590,6 +589,9 @@ main.registerCommand({
 
     projectContext.prepareProjectForBuild();
   });
+  // No need to display the PackageMapDelta here, since it would include all of
+  // the packages (or maybe an unpredictable subset based on what happens to be
+  // in the template's versions file).
 
   {
     var message = appPathAsEntered + ": created";
@@ -675,6 +677,7 @@ var buildCommand = function (options) {
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
 
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,
@@ -1053,6 +1056,7 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
 
   var buildOptions = {
     minify: ! options.debug,
@@ -1373,6 +1377,8 @@ main.registerCommand({
     main.captureAndExit("=> Errors while initializing project:", function () {
       projectContext.prepareProjectForBuild();
     });
+    // No need to display the PackageMapDelta here, since it would include all
+    // of the packages!
 
     try {
       var appName = path.basename(projectContext.projectDir);
@@ -1466,6 +1472,8 @@ var runTestAppForPackages = function (projectContext, options) {
     main.captureAndExit("=> Errors while initializing project:", function () {
       projectContext.prepareProjectForBuild();
     });
+    // No need to display the PackageMapDelta here, since it would include all
+    // of the packages!
 
     buildOptions.serverArch = DEPLOY_ARCH;
     return deploy.bundleAndDeploy({
@@ -1493,7 +1501,11 @@ var runTestAppForPackages = function (projectContext, options) {
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],
-      extraRunners: options.extraRunners
+      extraRunners: options.extraRunners,
+      // On the first run, we shouldn't display the delta between "no packages
+      // in the temp app" and "all the packages we're testing". If we make
+      // changes and reload, though, it's fine to display them.
+      omitPackageMapDeltaDisplayOnFirstRun: true
     });
   }
 };
@@ -1518,6 +1530,8 @@ main.registerCommand({
   main.captureAndExit("=> Errors while rebuilding packages:", function () {
     projectContext.prepareProjectForBuild();
   });
+  projectContext.packageMapDelta.displayOnConsole();
+
   Console.info("Packages rebuilt.");
 });
 

@@ -260,7 +260,7 @@ selftest.define("change packages during hot code push", [], function () {
 // Add packages through the command line. Make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list. Make
 // sure that debugOnly packages don't show up in production mode.
-selftest.define("add packages to app", ["net"], function () {
+selftest.define("add packages to app", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -311,8 +311,7 @@ selftest.define("add packages to app", ["net"], function () {
                 ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
-  // run.match(" added");  // XXX #3006 show package changes #ShowPackageChanges
-  run.match("depends-on-plugin");
+  run.match(/depends-on-plugin.*added,/);
   run.expectExit(0);
 
   checkPackages(s,
@@ -332,8 +331,8 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
-  // run.match("removed contains-plugin");  // XXX #3006 show package changes #ShowPackageChanges
-  // run.match("removed depends-on-plugin");  // XXX #3006 show package changes #ShowPackageChanges
+  run.match(/contains-plugin.*removed from your project/);
+  run.match(/depends-on-plugin.*removed from your project/);
   run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
@@ -383,10 +382,9 @@ selftest.define("add packages client archs", function (options) {
     s.set("METEOR_OFFLINE_CATALOG", "t");
 
     var outerRun = s.run("add", "say-something-client-targets");
-    // outerRun.match("added");  // XXX #3006 re-add package changes #ShowPackageChanges
+    outerRun.match(/say-something-client-targets.*added,/);
     outerRun.expectExit(0);
-    checkPackages(s,
-                  ["meteor-platform", "say-something-client-targets"]);
+    checkPackages(s, ["meteor-platform", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {

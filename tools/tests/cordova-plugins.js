@@ -184,7 +184,7 @@ selftest.define("add cordova plugins", ["slow"], function () {
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
-  // run.match("added");  // XXX #3006 show package changes #ShowPackageChanges
+  run.match("added,");
   run.match("contains a cordova plugin");
   run.expectExit(0);
 
