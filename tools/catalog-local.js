@@ -600,7 +600,8 @@ _.extend(LocalCatalog.prototype, {
             ! self.isopacketBuildingCatalog) {
           // Save the build, for a fast load next time
           try {
-            var buildDir = path.join(sourcePath, '.build.'+ name);
+            var buildDir = path.join(sourcePath, '.build.'+
+              utils.escapePackageNameForPath(name));
             files.addToGitignore(sourcePath, '.build*');
             unip.saveToPath(buildDir, {
               buildOfPath: sourcePath,
