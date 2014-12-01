@@ -245,12 +245,6 @@ _.extend(exports, {
     }
   },
 
-  // XXX this should just be moved into an extra table in sqlite
-  getBannersShownFilename: function() {
-    return path.join(tropohouse.default.root,
-                     "package-metadata", "v2.0.1", "banners-shown.json");
-  },
-
   // Return the domain name of the current Meteor Accounts server in
   // use. This is used as a key for storing your Meteor Accounts
   // login token.
