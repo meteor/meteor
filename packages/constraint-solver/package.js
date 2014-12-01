@@ -11,7 +11,7 @@ Package.on_use(function (api) {
   api.export('ConstraintSolver');
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random'], 'server');
-  api.add_files(['types.js',
+  api.add_files(['types.js', 'catalog-loader.js',
                  'constraint-solver.js', 'resolver.js', 'constraints-list.js',
                  'resolver-state.js', 'priority-queue.js'], ['server']);
 });

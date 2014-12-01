@@ -20,79 +20,7 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
 
   self.catalog = catalog;
   self.catalogCache = new CatalogCache();
-
-  self._packageInfoLoadQueue = [];
-  self._packagesEverEnqueued = {};
-  self._loadingPackageInfo = false;
-};
-
-ConstraintSolver.PackagesResolver.prototype._ensurePackageInfoLoaded = function (
-    packageName) {
-  var self = this;
-  if (_.has(self._packagesEverEnqueued, packageName))
-    return;
-  self._packagesEverEnqueued[packageName] = true;
-  self._packageInfoLoadQueue.push(packageName);
-
-  // Is there already an instance of _ensurePackageInfoLoaded up the stack?
-  // Great, it'll get this.
-  // XXX does this work correctly with multiple fibers?
-  if (self._loadingPackageInfo)
-    return;
-
-  self._loadingPackageInfo = true;
-  try {
-    while (self._packageInfoLoadQueue.length) {
-      var nextPackageName = self._packageInfoLoadQueue.shift();
-      self._loadPackageInfo(nextPackageName);
-    }
-  } finally {
-    self._loadingPackageInfo = false;
-  }
-};
-
-ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
-    packageName) {
-  var self = this;
-
-  // We rely on sortedness in the constraint solver, since one of the cost
-  // functions wants to be able to quickly find the earliest or latest version.
-  var sortedVersions = self.catalog.getSortedVersions(packageName);
-  _.each(sortedVersions, function (version) {
-    var versionDef = self.catalog.getVersion(packageName, version);
-
-    var depsArray = []; // array of Dependency objects
-
-    _.each(versionDef.dependencies, function (depRecord, depName) {
-      self._ensurePackageInfoLoaded(depName);
-
-      // `depRecord` contains a list of references, which describes
-      // which unibuilds of this unitVersion depend on depName, as
-      // well as a constraint, which constraints the versions it
-      // depends on.
-
-      // The package->package dependency is weak if ALL of the underlying
-      // unibuild->unibuild dependencies are weak.  ie,
-      //     api.use('dep', 'server', { weak: true });
-      //     api.use('dep', 'client');
-      // is not weak at the package->package level.
-      var isStrong = _.any(depRecord.references, function (ref) {
-        return !ref.weak;
-      });
-
-      var constraint = (depRecord.constraint || null);
-      if (constraint === 'none') {
-        // (not sure why this code is necessary)
-        constraint = null;
-      }
-
-      depsArray.push(new Dependency(depName, constraint,
-                                    isStrong ? null : { weak: true }));
-    });
-
-    self.catalogCache.addPackageVersion(packageName, version,
-                                        depsArray);
-  });
+  self.catalogLoader = new CatalogLoader(catalog, self.catalogCache);
 };
 
 // dependencies - an array of string names of packages (not slices)
@@ -154,15 +82,19 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     }
   }));
 
+  var packagesToLoad = {}; // package -> true
+
   _.each(dependencies, function (packageName) {
-    self._ensurePackageInfoLoaded(packageName);
+    packagesToLoad[packageName] = true;
   });
   _.each(constraints, function (constraint) {
-    self._ensurePackageInfoLoaded(constraint.name);
+    packagesToLoad[constraint.name] = true;
   });
   _.each(options.previousSolution, function (version, packageName) {
-    self._ensurePackageInfoLoaded(packageName);
+    packagesToLoad[packageName] = true;
   });
+
+  self.catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
 
   self.catalogCache.eachPackageVersion(function (pv, depsMap) {
     var uv = new ConstraintSolver.UnitVersion(pv.package, pv.version);
