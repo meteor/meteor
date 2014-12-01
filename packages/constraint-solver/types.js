@@ -23,7 +23,9 @@ ConstraintSolver.Dependency = function (package, constraint, flags) {
   if (constraint) {
     check(constraint, Match.OneOf(String, VersionConstraint));
   }
-  check(flags, Match.Optional(Object));
+  if (flags != null) {
+    check(flags, Object);
+  }
 
   this.package = package;
   this.constraint = null;
@@ -177,4 +179,18 @@ ConstraintSolver.CatalogCache.fromJSONable = function (obj) {
                             _.map(depsArray, Dependency.fromString));
   });
   return cache;
+};
+
+// Calls `iter` on each PackageVersion, with the second argument being
+// a map from package name to Dependency.  If `iter` returns true,
+// iteration is stopped.
+ConstraintSolver.CatalogCache.prototype.eachPackageVersion = function (iter) {
+  var self = this;
+  for (var key in self.packageVersionToDeps) {
+    var stop = iter(PackageVersion.fromString(key),
+                    self.packageVersionToDeps[key]);
+    if (stop) {
+      break;
+    }
+  }
 };

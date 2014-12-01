@@ -16,13 +16,10 @@ ConstraintSolver.PackagesResolver = function (catalog, options) {
   var self = this;
 
   options = options || {};
+  self._options = _.clone(options);
 
   self.catalog = catalog;
-
-  // The main resolver
-  self.resolver = new ConstraintSolver.Resolver({
-    nudge: options.nudge
-  });
+  self.catalogCache = new CatalogCache();
 
   self._packageInfoLoadQueue = [];
   self._packagesEverEnqueued = {};
@@ -64,35 +61,37 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   _.each(sortedVersions, function (version) {
     var versionDef = self.catalog.getVersion(packageName, version);
 
-    var unitVersion = new ConstraintSolver.UnitVersion(packageName, version);
-    self.resolver.addUnitVersion(unitVersion);
+    var depsArray = []; // array of Dependency objects
 
-    _.each(versionDef.dependencies, function (dep, depName) {
+    _.each(versionDef.dependencies, function (depRecord, depName) {
       self._ensurePackageInfoLoaded(depName);
 
-      // "dep" contains a list of references, which describes which unibuilds of
-      // this unitVersion depend on depName, as well as a constraint, which
-      // constraints the versions it depends on.
+      // `depRecord` contains a list of references, which describes
+      // which unibuilds of this unitVersion depend on depName, as
+      // well as a constraint, which constraints the versions it
+      // depends on.
 
       // The package->package dependency is weak if ALL of the underlying
       // unibuild->unibuild dependencies are weak.  ie,
       //     api.use('dep', 'server', { weak: true });
       //     api.use('dep', 'client');
       // is not weak at the package->package level.
-      var createsDependency = _.any(dep.references, function (ref) {
+      var isStrong = _.any(depRecord.references, function (ref) {
         return !ref.weak;
       });
 
-      // Add the dependency if needed.
-      if (createsDependency)
-        unitVersion.addDependency(depName);
-
-      // Add a constraint if needed.
-      if (dep.constraint && dep.constraint !== "none") {
-        var constraint = self.resolver.getConstraint(depName, dep.constraint);
-        unitVersion.addConstraint(constraint);
+      var constraint = (depRecord.constraint || null);
+      if (constraint === 'none') {
+        // (not sure why this code is necessary)
+        constraint = null;
       }
+
+      depsArray.push(new Dependency(depName, constraint,
+                                    isStrong ? null : { weak: true }));
     });
+
+    self.catalogCache.addPackageVersion(packageName, version,
+                                        depsArray);
   });
 };
 
@@ -110,6 +109,11 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 ConstraintSolver.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
+
+  var resolver = new ConstraintSolver.Resolver({
+    nudge: self._options.nudge
+  });
+
   // clone because we mutate options
   options = _.extend({
     _testing: false,
@@ -160,12 +164,34 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     self._ensurePackageInfoLoaded(packageName);
   });
 
+  self.catalogCache.eachPackageVersion(function (pv, depsMap) {
+    var uv = new ConstraintSolver.UnitVersion(pv.package, pv.version);
+    // XXX technically, we should ensure that UnitVersions are added in
+    // version order, but in practice, they already are as long as
+    // the CatalogCache was populated in version order (and JavaScript
+    // key order is preserved).  The new solver will make this code
+    // obsolete.
+    resolver.addUnitVersion(uv);
+
+    _.each(depsMap, function (dep) {
+      // `dep` is a ConstraintSolver.Dependency object
+      if (! dep.weak) {
+        uv.addDependency(dep.package);
+      }
+
+      if (dep.constraint) {
+        uv.addConstraint(resolver.getConstraint(dep.package,
+                                                dep.constraint.toString()));
+      }
+    });
+  });
+
   if (options.previousSolution) {
     // Replace previousSolution map with a list of the UnitVersions that we know
     // about that were mentioned.  (_.compact drops unknown UnitVersions.)
     options.previousSolution = _.compact(
       _.map(options.previousSolution, function (version, packageName) {
-        return self.resolver.getUnitVersion(packageName, version);
+        return resolver.getUnitVersion(packageName, version);
       }));
   }
 
@@ -177,10 +203,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   });
   options.upgrade = upgradePackages;
 
-  constraints = self._makeConstraintObjects(constraints);
+  constraints = _.map(constraints, function (c) {
+    return resolver.getConstraint(c.name, c.constraintString);
+  });
 
   options.rootDependencies = dependencies;
-  var resolverOptions = self._getResolverOptions(options);
+  var resolverOptions = self._getResolverOptions(resolver, options);
   var res = null;
   // If a previous solution existed, try resolving with additional (weak)
   // equality constraints on all the versions from the previous solution (except
@@ -200,12 +228,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     var constraintsWithPreviousSolutionLock = _.clone(constraints);
     _.each(options.previousSolution, function (uv) {
       constraintsWithPreviousSolutionLock.push(
-        self.resolver.getConstraint(uv.name, '=' + uv.version));
+        resolver.getConstraint(uv.name, '=' + uv.version));
     });
     try {
       // Try running the resolver. If it fails to resolve, that's OK, we'll keep
       // working.
-      res = self.resolver.resolve(
+      res = resolver.resolve(
         dependencies, constraintsWithPreviousSolutionLock, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
@@ -217,7 +245,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // without locking in the previous solution as strict equality.
   if (!res) {
     try {
-      res = self.resolver.resolve(dependencies, constraints, resolverOptions);
+      res = resolver.resolve(dependencies, constraints, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
         throw e;
@@ -229,7 +257,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // constraints?
   if (!res) {
     resolverOptions["useRCs"] = true;
-    res = self.resolver.resolve(dependencies, constraints, resolverOptions);
+    res = resolver.resolve(dependencies, constraints, resolverOptions);
   }
   var ret = { answer:  resolverResultToPackageMap(res) };
   if (resolverOptions.useRCs)
@@ -247,18 +275,8 @@ var resolverResultToPackageMap = function (choices) {
   return packageMap;
 };
 
-
-ConstraintSolver.PackagesResolver.prototype._makeConstraintObjects = function (
-    inputConstraints) {
-  var self = this;
-  return _.map(inputConstraints, function (constraint) {
-    return self.resolver.getConstraint(
-      constraint.name, constraint.constraintString);
-  });
-};
-
 ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
-  function (options) {
+  function (resolver, options) {
   var self = this;
 
   var resolverOptions = {};
@@ -338,7 +356,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            PVP.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
+            PVP.versionMagnitude(_.last(resolver.unitsVersions[uv.name]).version) -
             PVP.versionMagnitude(uv.version);
 
           if (isRootDep[uv.name]) {
@@ -402,12 +420,12 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
           cost[MAJOR] += versionsDistance;
         } else {
-          var versions = self.resolver.unitsVersions[dep];
+          var versions = resolver.unitsVersions[dep];
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
             PVP.versionMagnitude(
-              _.last(self.resolver.unitsVersions[dep]).version) -
+              _.last(resolver.unitsVersions[dep]).version) -
             PVP.versionMagnitude(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;
