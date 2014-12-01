@@ -6,6 +6,7 @@ selftest.define("create", function () {
 
   // Can we create an app? Yes!
   var run = s.run("create", "foobar");
+  run.waitSecs(15);
   run.match("foobar: created");
   run.match("To run your new app");
   run.expectExit(0);
