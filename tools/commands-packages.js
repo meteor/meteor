@@ -1706,7 +1706,6 @@ var maybeUpdateRelease = function (options) {
   return 0;
 };
 
-// XXX #3006 All improvements to 'update' need to be thoroughly QA'd.
 main.registerCommand({
   name: 'update',
   options: {
