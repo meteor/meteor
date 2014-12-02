@@ -1050,7 +1050,8 @@ main.registerCommand({
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()])
+    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
+    requireControlProgram: useGalaxy
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {

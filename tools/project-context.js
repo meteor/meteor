@@ -102,6 +102,9 @@ _.extend(exports.ProjectContext.prototype, {
     // package names.
     self._upgradePackageNames = options.upgradePackageNames;
 
+    // Set when deploying to a previous Galaxy prototype.
+    self._requireControlProgram = options.requireControlProgram;
+
     // If explicitly specified as null, use no release for constraints.
     // If specified non-null, should be a release version catalog record.
     // If not specified, defaults to release.current.
@@ -444,7 +447,7 @@ _.extend(exports.ProjectContext.prototype, {
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
     self._addReleaseConstraints(depsAndConstraints);
-    // XXX #3006 Add a dependency on ctl
+    self._addGalaxyPrototypeConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
@@ -481,6 +484,17 @@ _.extend(exports.ProjectContext.prototype, {
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
     });
+  },
+
+  // We only need to build ctl if deploying to the legacy Galaxy
+  // prototype. (Note that this means that we will need a new constraint
+  // solution when deploying vs when running locally. This code will be deleted
+  // soon anyway.)
+  _addGalaxyPrototypeConstraints: function (depsAndConstraints) {
+    var self = this;
+    if (self._requireControlProgram) {
+      depsAndConstraints.deps.push('ctl');
+    }
   },
 
   _getAnticipatedPrereleases: function (rootConstraints, cachedVersions) {

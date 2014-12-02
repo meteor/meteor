@@ -2038,7 +2038,6 @@ exports.bundle = function (options) {
 
     // Create a "control program". This is required for an old version of
     // Galaxy.
-    // XXX #3006 Check to see if this is still required.
     var controlProgram = null;
     if (options.requireControlProgram) {
       var target = makeServerTarget("ctl");
