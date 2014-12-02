@@ -164,6 +164,11 @@ _.extend(LayeredCatalog.prototype, {
     return this._returnFirst("getSortedVersions", arguments, ACCEPT_NON_EMPTY);
   },
 
+  getSortedVersionRecords: function (name) {
+    return this._returnFirst(
+      "getSortedVersionRecords", arguments, ACCEPT_NON_EMPTY);
+  },
+
   getVersion: function (name, version) {
     var self = this;
     var result = self.localCatalog.getVersion(name, version);

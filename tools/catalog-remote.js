@@ -565,8 +565,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
 
     var versions = self.getSortedVersions(name);
-    versions.reverse();
-    return self.getVersion(name, versions[0]);
+    return self.getVersion(name, _.last(versions));
   },
 
   getSortedVersions: function (name) {
@@ -576,6 +575,20 @@ _.extend(RemoteCatalog.prototype, {
     if (match === null)
       return [];
     return _.pluck(match, 'version').sort(VersionParser.compare);
+  },
+
+  // Just getVersion mapped over getSortedVersions, but only makes one round
+  // trip to sqlite.
+  getSortedVersionRecords: function (name) {
+    var self = this;
+    var versionRecords = this._contentQuery(
+      "SELECT content FROM versions WHERE packageName=?", [name]);
+    if (! versionRecords)
+      return [];
+    versionRecords.sort(function (a, b) {
+      return VersionParser.compare(a.version, b.version);
+    });
+    return versionRecords;
   },
 
   getLatestMainlineVersion: function (name) {

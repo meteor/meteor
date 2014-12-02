@@ -281,8 +281,8 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
 // Given a set of gems definitions returns a Catalog-like object
 function getCatalogStub (gems) {
   return {
-    getSortedVersions: function (name) {
-      return _.chain(gems)
+    getSortedVersionRecords: function (name) {
+      var versions = _.chain(gems)
         .filter(function (pv) { return pv.name === name; })
         .pluck('number')
         .filter(function (v) {
@@ -291,32 +291,32 @@ function getCatalogStub (gems) {
         .sort(PackageVersion.compare)
         .uniq(true)
         .value();
-    },
-    getVersion: function (name, version) {
-      var gem = _.find(gems, function (pv) {
-        return pv.name === name && pv.number === version;
-      });
+      return _.map(versions, function (version) {
+        var gem = _.find(gems, function (pv) {
+          return pv.name === name && pv.number === version;
+        });
 
-      var packageVersion = {
-        packageName: gem.name,
-        version: gem.number,
-        dependencies: {}
-      };
-
-      _.each(gem.dependencies, function (dep) {
-        var name = dep[0];
-        var constraint = dep[1];
-
-        packageVersion.dependencies[name] = {
-          constraint: constraint,
-          references: [{
-            "arch": "web"
-          }, {
-            "arch": "os" }]
+        var packageVersion = {
+          packageName: gem.name,
+          version: gem.number,
+          dependencies: {}
         };
-      });
 
-      return packageVersion;
+        _.each(gem.dependencies, function (dep) {
+          var name = dep[0];
+          var constraint = dep[1];
+
+          packageVersion.dependencies[name] = {
+            constraint: constraint,
+            references: [{
+              "arch": "web"
+            }, {
+              "arch": "os" }]
+          };
+        });
+
+        return packageVersion;
+      });
     }
   };
 }

@@ -1,10 +1,9 @@
 ConstraintSolver = {};
 
-// `catalog` has the following methods:
+// `catalog` has the following method:
 //
-// * getSortedVersions(packageName) -> [String]
-// * getVersion(packageName, version) -> {
-//     packageName, version, dependencies }
+// * getSortedVersionRecords(packageName) ->
+//     [{packageName, version, dependencies}]
 //
 // Where `dependencies` is a map from packageName to
 // an object of the form `{ constraint: String,
@@ -62,9 +61,9 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 
   // We rely on sortedness in the constraint solver, since one of the cost
   // functions wants to be able to quickly find the earliest or latest version.
-  var sortedVersions = self.catalog.getSortedVersions(packageName);
-  _.each(sortedVersions, function (version) {
-    var versionDef = self.catalog.getVersion(packageName, version);
+  var sortedVersionRecords = self.catalog.getSortedVersionRecords(packageName);
+  _.each(sortedVersionRecords, function (versionDef) {
+    var version = versionDef.version;
 
     var unitVersion = new ConstraintSolver.UnitVersion(packageName, version);
     self.resolver.addUnitVersion(unitVersion);

@@ -23,19 +23,12 @@ var makeResolver = function (data) {
   });
 
   var catalogStub = {
-    getSortedVersions: function (name) {
-      return _.pluck(
-        Versions.find({
-          packageName: name
-        }, { fields: { version: 1 } }).fetch(),
-        'version'
-      ).sort(PackageVersion.compare);
-    },
-    getVersion: function (name, version) {
-      return Versions.findOne({
-        packageName: name,
-        version: version
+    getSortedVersionRecords: function (name) {
+      var records = Versions.find({packageName: name}).fetch();
+      records.sort(function (a, b) {
+        return PackageVersion.compare(a.version, b.version);
       });
+      return records;
     }
   };
   return new ConstraintSolver.PackagesResolver(catalogStub);

@@ -149,6 +149,17 @@ _.extend(LocalCatalog.prototype, {
     return [self.packages[name].versionRecord.version];
   },
 
+  // Given a package, returns an array of the version records available (ie, the
+  // one version we have, or an empty array).
+  getSortedVersionRecords: function (name) {
+    var self = this;
+    self._requireInitialized();
+
+    if (!_.has(self.packages, name))
+      return [];
+    return [self.packages[name].versionRecord];
+  },
+
   // Return information about a particular version of a package, or
   // null if there is no such package or version.
   getVersion: function (name, version) {
