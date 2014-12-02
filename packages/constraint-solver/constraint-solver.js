@@ -93,14 +93,16 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     self.catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
   }
 
-  /*console.log(JSON.stringify({
-    dependencies: dependencies,
-    constraints: constraints,
-    upgrade: options.upgrade,
-    previousSolution: options.previousSolution,
-    catalogCache: self.catalogCache.toJSONable()
-  }).replace(
-      /[\]}],/g, '$&\n  '));*/
+  if (process.env.DUMP_CONSTRAINTS) {
+    console.log(JSON.stringify({
+      dependencies: dependencies,
+      constraints: constraints,
+      upgrade: options.upgrade,
+      previousSolution: options.previousSolution,
+      catalogCache: self.catalogCache.toJSONable()
+    }).replace(/[\]}],/g, '$&\n  ').replace(/.{50},(?=.)/g, '$&\n      ')
+                .replace(/:\[/g, ': ['));
+  }
 
   self.catalogCache.eachPackageVersion(function (pv, depsMap) {
     var uv = new ConstraintSolver.UnitVersion(pv.package, pv.version);
