@@ -592,7 +592,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getPackage: function (name, options) {
     var result = this._contentQuery(
-      "SELECT * FROM packages WHERE name=?", name);
+      "SELECT content FROM packages WHERE name=?", name);
     if (!result || result.length === 0)
       return null;
     if (result.length !== 1) {
@@ -603,7 +603,7 @@ _.extend(RemoteCatalog.prototype, {
 
   getAllBuilds: function (name, version) {
     var result = this._contentQuery(
-      "SELECT * FROM builds WHERE builds.versionId = " +
+      "SELECT content FROM builds WHERE builds.versionId = " +
         "(SELECT _id FROM versions WHERE versions.packageName=? AND " +
         "versions.version=?)",
       [name, version]);
@@ -720,8 +720,18 @@ _.extend(RemoteCatalog.prototype, {
 
       // Extra indexes for the most expensive queries
       // These are non-unique indexes
-      txn.execute("CREATE INDEX IF NOT EXISTS versionsNamesIdx ON versions(packageName)");
-      txn.execute("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON builds(versionId)");
+      // XXX We used to have a versionsNamesIdx here on versions(packageName);
+      //     we no longer create it but we don't waste time dropping it either.
+      txn.execute("CREATE INDEX IF NOT EXISTS versionsIdx ON " +
+                  "versions(packageName, version)");
+      txn.execute("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON " +
+                  "builds(versionId)");
+      txn.execute("CREATE INDEX IF NOT EXISTS packagesIdx ON " +
+                  "packages(name)");
+      txn.execute("CREATE INDEX IF NOT EXISTS releaseTracksIdx ON " +
+                  "releaseTracks(name)");
+      txn.execute("CREATE INDEX IF NOT EXISTS releaseVersionsIdx ON " +
+                  "releaseVersions(track, version)");
     });
   },
 
@@ -779,6 +789,8 @@ _.extend(RemoteCatalog.prototype, {
   // exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
     var self = this;
+    // XXX releaseVersions content objects are kinda big; if we put
+    // 'recommended' and 'orderKey' in their own columns this could be faster
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
