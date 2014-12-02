@@ -2281,7 +2281,7 @@ main.registerCommand({
   var toolVersion = toolConstraint.constraints[0].version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
-    toolPkgBuilds, toolVersion);
+    toolPackage, toolVersion);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
     Console.error('Tool version unknown: ' + release.tool + '');
