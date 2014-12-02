@@ -89,7 +89,9 @@ _.extend(Builder.prototype, {
   _sanitize: function (relPath, isDirectory) {
     var self = this;
 
-    var parts = relPath.split(path.sep);
+    // When the paths come into this function, the slashes could be either way
+    var parts = relPath.split(/[\\\/]/g);
+
     var partsOut = [];
     for (var i = 0; i < parts.length; i++) {
       var part = parts[i];
