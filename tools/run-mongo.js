@@ -228,7 +228,9 @@ var launchMongo = function (options) {
     var proc = null;
     var procExitHandler;
 
-    findMongoAndKillItDead(port);
+    if (options.allowKilling) {
+      findMongoAndKillItDead(port);
+    }
 
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
@@ -528,14 +530,15 @@ var MongoRunner = function (options) {
   self.restartTimer = null;
 };
 
-_.extend(MongoRunner.prototype, {
-  // Blocks (yields) until the server has started for the first time
-  // and is accepting connections. (It might subsequently die and be
-  // restarted; we won't tell you about that.) Returns true if we were
-  // able to get it to start at least once.
+var MRp = MongoRunner.prototype;
+
+_.extend(MRp, {
+  // Blocks (yields) until the server has started for the first time and
+  // is accepting connections. (It might subsequently die and be
+  // restarted; we won't tell you about that.)
   //
   // If the server fails to start for the first time (after a few
-  // restarts), we'll print a message and give up, returning false.
+  // restarts), we'll print a message and give up.
   start: function () {
     var self = this;
 
@@ -580,11 +583,17 @@ _.extend(MongoRunner.prototype, {
       appDir: self.appDir,
       port: self.port,
       multiple: self.multiple,
+      allowKilling: self._isKillingAllowed(),
       onExit: _.bind(self._exited, self)
     });
+
     if (self.handle) {
       self._allowStartupToReturn();
     }
+  },
+
+  _isKillingAllowed: function() {
+    return this.multiple || this.errorCount > 0;
   },
 
   _exited: function (code, signal, stderr) {
@@ -598,11 +607,17 @@ _.extend(MongoRunner.prototype, {
     if (self.shuttingDown)
       return;
 
-    // Print the last 20 lines of stderr.
-    runLog.log(
-      stderr.split('\n').slice(-20).join('\n') +
-      "Unexpected mongo exit code " + code +
-        (self.multiple ? "." : ". Restarting."));
+    // Only print an error if we tried to kill Mongo and something went
+    // wrong. If we didn't try to kill Mongo, we'll do that on the next
+    // restart. Not killing it on the first try is important for speed,
+    // since findMongoAndKillItDead is a very slow operation.
+    if (self._isKillingAllowed()) {
+      // Print the last 20 lines of stderr.
+      runLog.log(
+        stderr.split('\n').slice(-20).join('\n') +
+          "Unexpected mongo exit code " + code +
+          (self.multiple ? "." : ". Restarting."));
+    }
 
     // If we're in multiple mode, we never try to restart. That's to keep the
     // test-only multiple code simple.

@@ -336,6 +336,10 @@ var AppRunner = function (options) {
   self.runFuture = null;
   self.exitFuture = null;
   self.watchFuture = null;
+
+  // Futures added to this list by calling self.awaitFutureBeforeStart
+  // will be waited on just before self.appProcess.start() is called.
+  self._beforeStartFutures = [];
 };
 
 _.extend(AppRunner.prototype, {
@@ -379,6 +383,14 @@ _.extend(AppRunner.prototype, {
 
     self.exitFuture.wait();
     self.exitFuture = null;
+  },
+
+  awaitFutureBeforeStart: function(future) {
+    if (future instanceof Future) {
+      this._beforeStartFutures.push(future);
+    } else {
+      throw new Error("non-Future passed to awaitFutureBeforeStart");
+    }
   },
 
   // Run the program once, wait for it to exit, and then return. The
@@ -589,6 +601,12 @@ _.extend(AppRunner.prototype, {
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings
     });
+
+    // Empty self._beforeStartFutures and await its elements.
+    if (self._beforeStartFutures.length > 0) {
+      Future.wait(self._beforeStartFutures.splice(0));
+    }
+
     appProcess.start();
 
     // Start watching for changes for files if requested. There's no

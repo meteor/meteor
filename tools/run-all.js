@@ -132,6 +132,8 @@ _.extend(Runner.prototype, {
       runLog.log("=> Started proxy.");
     }
 
+    self._startMongoAsync();
+
     if (! self.stopped) {
       self.updater.start();
     }
@@ -141,17 +143,6 @@ _.extend(Runner.prototype, {
       self.httpProxy.start();
       if (! self.quiet) {
         runLog.log("=> Started http proxy.");
-      }
-    }
-
-    if (! self.stopped && self.mongoRunner) {
-      buildmessage.enterJob({ title: 'Starting MongoDB' }, function () {
-        self.mongoRunner.start();
-      });
-
-      if (! self.quiet) {
-        if (! self.stopped)
-          runLog.log("=> Started MongoDB.");
       }
     }
 
@@ -190,6 +181,19 @@ _.extend(Runner.prototype, {
     // error. It'd be better to overwrite it with "failed to start
     // foo" and then print the error.
   },
+
+  _startMongoAsync: function () {
+    if (! this.stopped && this.mongoRunner) {
+      this.appRunner.awaitFutureBeforeStart(this._startMongoFuture());
+    }
+  },
+
+  _startMongoFuture: function () {
+    this.mongoRunner.start();
+    if (! this.stopped && ! this.quiet) {
+      runLog.log("=> Started MongoDB.");
+    }
+  }.future(),
 
   // Idempotent
   stop: function () {
