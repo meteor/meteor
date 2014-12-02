@@ -316,9 +316,6 @@ function doRunCommand (options) {
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
   }
 
-  // XXX #3006 Does this actually need to be in the foreground?
-  auth.tryRevokeOldTokens({timeout: 1000});
-
   if (options['raw-logs'])
     runLog.setRawLogs(true);
 

@@ -13,6 +13,7 @@ var isopack = require('./isopack.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
+var auth = require('./auth.js');
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -36,6 +37,10 @@ exports.tryToDownloadUpdate = function (options) {
 var firstCheck = true;
 
 var checkForUpdate = function (showBanner) {
+  // While we're doing background stuff, try to revoke any old tokens in our
+  // session file.
+  auth.tryRevokeOldTokens({timeout: 15*1000});
+
   if (firstCheck) {
     // We want to avoid a potential race condition here, because we run an
     // update almost immediately at run.  We don't want to drop the resolver
