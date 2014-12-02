@@ -55,11 +55,13 @@ var STAGE = {
 };
 
 _.extend(exports.ProjectContext.prototype, {
-  reset: function (moreOptions) {
+  reset: function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset; used by
     // 'meteor update' code to try various values of releaseForConstraints.
     var options = _.extend({}, self.originalOptions, moreOptions);
+    // This is options that are actually directed at reset itself.
+    resetOptions = resetOptions || {};
 
     self.projectDir = options.projectDir;
     self.tropohouse = options.tropohouse || tropohouse.default;
@@ -137,11 +139,15 @@ _.extend(exports.ProjectContext.prototype, {
     self.packageMap = null;
     self.packageMapDelta = null;
 
+    if (resetOptions.softRefreshIsopacks && self.isopackCache) {
+      // Make sure we only hold on to one old isopack cache, not a linked list
+      // of all of them.
+      self.isopackCache.forgetPreviousIsopackCache();
+      self._previousIsopackCache = self.isopackCache;
+    } else {
+      self._previousIsopackCache = null;
+    }
     // Initialized by _buildLocalPackages.
-    // XXX #SoftRefresh Perhaps save the old IsopackCache and try
-    //     to reuse unchanged in-memory Isopack objects?
-    //     Be careful to only save one old IsopackCache, not a
-    //     linked list of them.  #3213
     self.isopackCache = null;
 
     self._completedStage = STAGE.INITIAL;
@@ -565,7 +571,8 @@ _.extend(exports.ProjectContext.prototype, {
     self.isopackCache = new isopackCacheModule.IsopackCache({
       packageMap: self.packageMap,
       cacheDir: self.getProjectLocalDirectory('isopacks'),
-      tropohouse: self.tropohouse
+      tropohouse: self.tropohouse,
+      previousIsopackCache: self._previousIsopackCache
     });
 
     if (self._forceRebuildPackages) {

@@ -405,14 +405,12 @@ _.extend(AppRunner.prototype, {
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
         // XXX We can try to be a little less conservative here:
-        // - Keep around some in-memory Isopack objects and validate them
-        //   by their buildinfo (we used to call this #SoftRefresh).
         // - Don't re-build the whole local catalog if we know which local
         //   packages have changed.  (This one might be a little trickier due
         //   to how the WatchSets are laid out.  Might be possible to avoid
         //   re-building the local catalog at all if packages didn't change
         //   at all, though.)
-        self.projectContext.reset();
+        self.projectContext.reset({}, { softRefreshIsopacks: true });
         var messages = buildmessage.capture(function () {
           self.projectContext.readProjectMetadata();
         });

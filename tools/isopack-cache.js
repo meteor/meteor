@@ -11,17 +11,31 @@ var watch = require('./watch.js');
 exports.IsopackCache = function (options) {
   var self = this;
   options = options || {};
+
   // cacheDir may be null; in this case, we just don't ever save things to disk.
   self.cacheDir = options.cacheDir;
+
   // Defines the versions of packages that we build. Must be set.
   self._packageMap = options.packageMap;
+
   // tropohouse may be null; in this case, we can't load versioned packages.
   // eg, for building isopackets.
   self._tropohouse = options.tropohouse;
+
+  // If provided, this is another IsopackCache for the same cache dir; when
+  // loading Isopacks, if they are definitely unchanged we can load the
+  // in-memory objects from this cache instead of recompiling.
+  self._previousIsopackCache = options.previousIsopackCache;
+  if (self._previousIsopackCache &&
+      self._previousIsopackCache.cacheDir !== self.cacheDir) {
+    throw Error("previousIsopackCache has different cacheDir!");
+  }
+
   // Map from package name to {isopack, pluginProviderPackageMap} object.
   // pluginProviderPackageMap is null for isopacks that are loaded from the
   // tropohouse, and otherwise is a PackageMap object listing
   self._isopacks = {};
+
   self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
 };
 
@@ -124,24 +138,37 @@ _.extend(exports.IsopackCache.prototype, {
         throw Error("Can't load versioned packages without a tropohouse!");
       }
 
-      var packagesToLoad;
-      // Load the isopack from disk.
-      buildmessage.enterJob(
-        "loading package " + name + "@" + packageInfo.version,
-        function () {
-          var isopackPath = self._tropohouse.packagePath(
-            name, packageInfo.version);
-          var isopack = new isopackModule.Isopack();
-          isopack.initFromPath(name, isopackPath);
-          self._isopacks[name] = {
-            isopack: isopack,
-            pluginProviderPackageMap: null
-          };
-          if (buildmessage.jobHasMessages())
-            return;
+      var isopack = null, packagesToLoad = [];
+      if (self._previousIsopackCache
+          && _.has(self._previousIsopackCache._isopacks, name)) {
+        var previousIsopack = self._previousIsopackCache._isopacks[name];
+        if (previousIsopack.version === packageInfo.version) {
+          isopack = previousIsopack;
           packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
-        });
+        }
+      }
+      if (! isopack) {
+        // Load the isopack from disk.
+        buildmessage.enterJob(
+          "loading package " + name + "@" + packageInfo.version,
+          function () {
+            var isopackPath = self._tropohouse.packagePath(
+              name, packageInfo.version);
+            isopack = new isopackModule.Isopack();
+            isopack.initFromPath(name, isopackPath);
+            // If loading the isopack fails, then we don't need to look for more
+            // packages to load, but we should still recover by putting it in
+            // self._isopacks.
+            if (buildmessage.jobHasMessages())
+              return;
+            packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
+          });
+      }
 
+      self._isopacks[name] = {
+        isopack: isopack,
+        pluginProviderPackageMap: null
+      };
       // Also load its dependencies. This is so that if this package is being
       // built as part of a plugin, all the transitive dependencies of the
       // plugin are loaded.
@@ -157,6 +184,9 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
+      // XXX #3213 use _previousIsopackCache here too (which involves moving
+      // pluginProviderPackageMap into the Isopack object)
+
       // Do we have an up-to-date package on disk?
       var isopackBuildInfoJson = self.cacheDir && files.readJSONOrNull(
         self._isopackBuildInfoPath(name));
@@ -231,5 +261,10 @@ _.extend(exports.IsopackCache.prototype, {
   _isopackBuildInfoPath: function (packageName) {
     var self = this;
     return path.join(self._isopackDir(packageName), 'isopack-buildinfo.json');
+  },
+
+  forgetPreviousIsopackCache: function () {
+    var self = this;
+    self._previousIsopackCache = null;
   }
 });
