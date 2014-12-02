@@ -404,11 +404,14 @@ _.extend(AppRunner.prototype, {
       if (! firstRun) {
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
-        // XXX #3006 We can try to be a little less conservative here:
+        // XXX We can try to be a little less conservative here:
         // - Keep around some in-memory Isopack objects and validate them
-        //   by their buildinfo (we used to call this Soft Refresh).
-        // - Don't re-build the whole local catalog if we know which ones
-        //   have changed.
+        //   by their buildinfo (we used to call this #SoftRefresh).
+        // - Don't re-build the whole local catalog if we know which local
+        //   packages have changed.  (This one might be a little trickier due
+        //   to how the WatchSets are laid out.  Might be possible to avoid
+        //   re-building the local catalog at all if packages didn't change
+        //   at all, though.)
         self.projectContext.reset();
         var messages = buildmessage.capture(function () {
           self.projectContext.readProjectMetadata();
@@ -511,8 +514,8 @@ _.extend(AppRunner.prototype, {
         outcome: 'outdated-cordova-platforms'
       };
     }
-    // XXX #3006 This is racy --- we should get this from the pre-runner build,
-    // not from the first runner build.
+    // XXX This is racy --- we should get this from the pre-runner build, not
+    // from the first runner build.
     self.cordovaPlatforms = platforms;
 
     var plugins = cordova.getCordovaDependenciesFromStar(
@@ -523,8 +526,8 @@ _.extend(AppRunner.prototype, {
         outcome: 'outdated-cordova-plugins'
       };
     }
-    // XXX #3006 This is racy --- we should get this from the pre-runner build,
-    // not from the first runner build.
+    // XXX This is racy --- we should get this from the pre-runner build, not
+    // from the first runner build.
     self.cordovaPlugins = plugins;
 
     var serverWatchSet = bundleResult.serverWatchSet;

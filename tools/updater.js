@@ -172,7 +172,6 @@ var updateMeteorToolSymlink = function () {
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
     try {
-      // XXX #3006 how does this work with respect to progress bars?
       buildmessage.enterJob({
         title: "Downloading tool package " + latestRelease.tool
       }, function () {

@@ -138,6 +138,10 @@ _.extend(exports.ProjectContext.prototype, {
     self.packageMapDelta = null;
 
     // Initialized by _buildLocalPackages.
+    // XXX #SoftRefresh Perhaps save the old IsopackCache and try
+    //     to reuse unchanged in-memory Isopack objects?
+    //     Be careful to only save one old IsopackCache, not a
+    //     linked list of them.  #3213
     self.isopackCache = null;
 
     self._completedStage = STAGE.INITIAL;

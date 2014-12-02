@@ -1375,7 +1375,6 @@ _.extend(PackageSource.prototype, {
       // which needs to be loaded by the linker).
       // XXX add a better API for js-analyze to declare itself here
       if (self.name !== "meteor" && self.name !== "js-analyze" &&
-          // XXX #3006 is this still needed?
           !process.env.NO_METEOR_PACKAGE) {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that

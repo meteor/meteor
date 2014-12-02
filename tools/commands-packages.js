@@ -1670,9 +1670,11 @@ var maybeUpdateRelease = function (options) {
   var upgradersToRun = upgraders.upgradersToRun(projectContext);
 
   // Download and build packages and write the new versions to .meteor/versions.
-  // XXX #3006 If we're about to try to upgrade packages, do we really want to
-  //           download and build packages here? Note that if we change this,
-  //           that changes the upgraders interface.
+  // XXX It's a little weird that we do a full preparation for build
+  //     (downloading packages, building packages, etc) when we might be about
+  //     to upgrade packages and have to do it again. Maybe we shouldn't? Note
+  //     that if we change this, that changes the upgraders interface, which
+  //     expects a projectContext that is fully prepared for build.
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
@@ -2247,7 +2249,6 @@ main.registerCommand({
 // admin make-bootstrap-tarballs
 ///////////////////////////////////////////////////////////////////////////////
 
-// XXX #3006 make sure this still works
 main.registerCommand({
   name: 'admin make-bootstrap-tarballs',
   minArgs: 2,
