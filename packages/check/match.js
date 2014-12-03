@@ -104,7 +104,7 @@ Match = {
   // (using `description` in the message).
   //
   _failIfArgumentsAreNotAllChecked: function (f, context, args, description) {
-    var argChecker = new ArgumentChecker(args, description);
+    var argChecker = new ArgumentChecker(f, args, description);
     var result = currentArgumentChecker.withValue(argChecker, function () {
       return f.apply(context, args);
     });
@@ -313,15 +313,14 @@ var checkSubtree = function (value, pattern) {
   });
 };
 
-var ArgumentChecker = function (args, description) {
+var ArgumentChecker = function (f, args, description) {
   var self = this;
-  // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
-  // against its contents.)
-  self.args = _.clone(args);
-  // Since the common case will be to check arguments in order, and we splice
-  // out arguments when we check them, make it so we splice out from the end
-  // rather than the beginning.
-  self.args.reverse();
+  // Make a SHALLOW copy of the arguments with their indices.
+  // (We'll be doing identity checks against its contents.)
+  self.args = _.map(args, function(arg, i) { return [arg, i]; });
+  // In the case that some arguments are left unchecked, we will need
+  // to extract the argument names from the function.
+  self.f = f;
   self.description = description;
 };
 
@@ -343,7 +342,7 @@ _.extend(ArgumentChecker.prototype, {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
-      if (value === self.args[i]) {
+      if (value === self.args[i][0]) {
         self.args.splice(i, 1);
         return true;
       }
@@ -352,9 +351,20 @@ _.extend(ArgumentChecker.prototype, {
   },
   throwUnlessAllArgumentsHaveBeenChecked: function () {
     var self = this;
-    if (!_.isEmpty(self.args))
-      throw new Error("Did not check() all arguments during " +
-                      self.description);
+    if (!_.isEmpty(self.args)) {
+      // Are there any named arguments left unchecked?
+      var argNames = _argumentNames(self.f);
+      var unchecked = _.map(self.args, function(arg) {
+        if (argNames[arg[1]]) {
+          return argNames[arg[1]];
+        } else {
+          throw new Error("Passed too many arguments to function " +
+                          self.description);
+        }
+      });
+      throw new Error("Some arguments (" + unchecked.join(", ") +
+                      ") left unchecked during " + self.description);
+    }
   }
 });
 
@@ -379,3 +389,12 @@ var _prependPath = function (key, base) {
   return key + base;
 };
 
+// To extract the name of the arguments, convert the function to a string
+// and run it through a regex. The regex has been battled tested by Prototype
+// https://ajax.googleapis.com/ajax/libs/prototype/1.7.1.0/prototype.js
+var _argumentNames = function (f) {
+  var names = f.toString().match(/^[\s\(]*function[^(]*\(([^)]*)\)/)[1]
+    .replace(/\/\/.*?[\r\n]|\/\*(?:.|[\r\n])*?\*\//g, '')
+    .replace(/\s+/g, '').split(",");
+  return names.length === 1 && !names[0] ? [] : names;
+};
