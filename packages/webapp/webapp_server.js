@@ -187,6 +187,23 @@ WebApp.addHtmlAttributeHook = function (hook) {
   htmlAttributeHooks.push(hook);
 };
 
+// Extra body hooks: functions to be called to determine any body content to be
+// added inside the '<body>' tag. Each function is passed a 'request' object
+// (see #BrowserIdentification) and should return a string,
+var extraBodyHooks = [];
+var getExtraBody = function (request) {
+  var bodyContent = '';
+  _.each(extraBodyHooks || [], function (hook) {
+    var body = hook(request);
+    if (body !== null && body !== undefined && body !== '')
+      bodyContent += body;
+  });
+  return bodyContent;
+};
+WebApp.addExtraBodyHook = function (hook) {
+  extraBodyHooks.push(hook);
+};
+
 // Serve app HTML for this URL?
 var appUrl = function (url) {
   if (url === '/favicon.ico' || url === '/robots.txt')
@@ -298,19 +315,22 @@ var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
 
   var htmlAttributes = getHtmlAttributes(request);
+  var extraBody = getExtraBody(request);
 
   // The only thing that changes from request to request (for now) are
-  // the HTML attributes (used by, eg, appcache) and whether inline
-  // scripts are allowed, so we can memoize based on that.
+  // the HTML attributes (used by, eg, appcache), extra body and whether
+  // inline scripts are allowed, so we can memoize based on that.
   var memHash = JSON.stringify({
     inlineScriptsAllowed: inlineScriptsAllowed,
     htmlAttributes: htmlAttributes,
+    extraBody: extraBody,
     arch: arch
   });
 
   if (! memoizedBoilerplate[memHash]) {
     memoizedBoilerplate[memHash] = boilerplateByArch[arch].toHTML({
-      htmlAttributes: htmlAttributes
+      htmlAttributes: htmlAttributes,
+      extraBody: extraBody
     });
   }
   return memoizedBoilerplate[memHash];

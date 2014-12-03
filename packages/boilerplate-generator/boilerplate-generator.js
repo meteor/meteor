@@ -54,6 +54,7 @@ Boilerplate.prototype._generateBoilerplateFromManifestAndSource =
       js: [],
       head: '',
       body: '',
+      extraBody: '',
       meteorManifest: JSON.stringify(manifest)
     };
 
