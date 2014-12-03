@@ -306,15 +306,14 @@ var toc = [
   ],
 
   "Packages", [ [
+    "appcache",
     "accounts-ui",
     "audit-argument-checks",
     "coffeescript",
-    "fastclick",
     "jquery",
     "less",
     "oauth-encryption",
     "random",
-    "stylus",
     "showdown",
     "underscore",
     "webapp"
