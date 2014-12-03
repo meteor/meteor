@@ -14,6 +14,8 @@
 * Remove support for the undocumented earliestCompatibleVersion feature of the
   package system.
 
+* Fix audit-argument-checks spurious failure when an argument is NaN. #2914
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
