@@ -117,10 +117,8 @@ var ensureIsopacketsLoadable = function () {
     return;
   }
 
-  // We make these objects lazily later.
-  var isopacketCatalog = null;
-  var isopackCache = null;
-  var packageMap = null;
+  // We make this object lazily later.
+  var isopacketBuildContext = null;
 
   var failedPackageBuild = false;
   // Look at each isopacket. Check to see if it's on disk and up to date. If
@@ -153,35 +151,23 @@ var ensureIsopacketsLoadable = function () {
 
         // We're going to need to build! Make a catalog and loader if we haven't
         // yet.
-        if (! isopacketCatalog) {
-          isopacketCatalog = newIsopacketBuildingCatalog();
-          var versions = {};
-          _.each(isopacketCatalog.getAllPackageNames(), function (packageName) {
-            versions[packageName] =
-              isopacketCatalog.getLatestVersion(packageName).version;
-          });
-          packageMap = new packageMapModule.PackageMap(
-            versions, isopacketCatalog);
-          // Make an isopack cache that doesn't save isopacks to disk and has no
-          // access to versioned packages.
-          isopackCache = new isopackCacheModule.IsopackCache({
-            packageMap: packageMap
-          });
+        if (! isopacketBuildContext) {
+          isopacketBuildContext = makeIsopacketBuildContext();
         }
 
         buildmessage.enterJob({
           title: "Bundling " + isopacketName + " packages for the tool"
         }, function () {
           // Build the packages into the in-memory IsopackCache.
-          isopackCache.buildLocalPackages(packages);
+          isopacketBuildContext.isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages())
             return;
 
           // Now bundle them into a program.
           var built = bundler.buildJsImage({
             name: "isopacket-" + isopacketName,
-            packageMap: packageMap,
-            isopackCache: isopackCache,
+            packageMap: isopacketBuildContext.packageMap,
+            isopackCache: isopacketBuildContext.isopackCache,
             use: packages
           });
           if (buildmessage.jobHasMessages())
@@ -239,6 +225,22 @@ var newIsopacketBuildingCatalog = function () {
   return isopacketCatalog;
 };
 
+var makeIsopacketBuildContext = function () {
+  var context = {};
+  var catalog = newIsopacketBuildingCatalog();
+  var versions = {};
+  _.each(catalog.getAllPackageNames(), function (packageName) {
+    versions[packageName] = catalog.getLatestVersion(packageName).version;
+  });
+  context.packageMap = new packageMapModule.PackageMap(versions, catalog);
+  // Make an isopack cache that doesn't save isopacks to disk and has no
+  // access to versioned packages.
+  context.isopackCache = new isopackCacheModule.IsopackCache({
+    packageMap: context.packageMap
+  });
+  return context;
+};
+
 // Loads a built isopacket from disk. Always loads (the cache is in 'load', not
 // this function). Does not run a build process; it must already be built.
 var loadIsopacketFromDisk = function (isopacketName) {
@@ -283,5 +285,5 @@ _.extend(exports, {
   load: load,
   ensureIsopacketsLoadable: ensureIsopacketsLoadable,
   ISOPACKETS: ISOPACKETS,
-  newIsopacketBuildingCatalog: newIsopacketBuildingCatalog
+  makeIsopacketBuildContext: makeIsopacketBuildContext
 });
