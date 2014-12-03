@@ -236,7 +236,13 @@ var makeIsopacketBuildContext = function () {
   // Make an isopack cache that doesn't save isopacks to disk and has no
   // access to versioned packages.
   context.isopackCache = new isopackCacheModule.IsopackCache({
-    packageMap: context.packageMap
+    packageMap: context.packageMap,
+    // When linking JS files, don't include the padding spaces and line number
+    // comments. Since isopackets are loaded as part of possibly very short
+    // 'meteor' tool command invocations, we care more about startup time than
+    // legibility, and the difference is actually observable (eg 25% speedup
+    // loading constraint-solver).
+    noLineNumbers: true
   });
   return context;
 };

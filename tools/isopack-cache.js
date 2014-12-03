@@ -36,6 +36,8 @@ exports.IsopackCache = function (options) {
   // tropohouse, and otherwise is a PackageMap object listing
   self._isopacks = {};
 
+  self._noLineNumbers = !! options.noLineNumbers;
+
   self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
 };
 
@@ -204,7 +206,8 @@ _.extend(exports.IsopackCache.prototype, {
         // Nope! Compile it again.
         var compilerResult = compiler.compile(packageInfo.packageSource, {
           packageMap: self._packageMap,
-          isopackCache: self
+          isopackCache: self,
+          noLineNumbers: self._noLineNumbers
         });
         // Accept the compiler's result, even if there were errors (since it at
         // least will have a useful WatchSet and will allow us to keep going and

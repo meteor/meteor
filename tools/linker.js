@@ -32,6 +32,7 @@ var Module = function (options) {
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
   self.jsAnalyze = options.jsAnalyze;
+  self.noLineNumbers = options.noLineNumbers;
 };
 
 _.extend(Module.prototype, {
@@ -134,7 +135,10 @@ _.extend(Module.prototype, {
     _.each(self.files, function (file) {
       if (!_.isEmpty(chunks))
         chunks.push("\n\n\n\n\n\n");
-      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth }));
+      chunks.push(file.getPrelinkedOutput({
+        sourceWidth: sourceWidth,
+        noLineNumbers: self.noLineNumbers
+      }));
     });
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
@@ -291,6 +295,8 @@ _.extend(File.prototype, {
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
+  // - noLineNumbers: We still include the banners and such, but
+  //   no line number suffix.
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
@@ -355,7 +361,8 @@ _.extend(File.prototype, {
       _.each(lines, function (line) {
         var suffix = "\n";
 
-        if (line.length <= width && line[line.length - 1] !== "\\") {
+        if (! options.noLineNumbers
+            && line.length <= width && line[line.length - 1] !== "\\") {
           suffix = padding.slice(line.length, width) + " // " + num + "\n";
         }
         f(line, suffix, num);
@@ -494,7 +501,8 @@ var prelink = function (options) {
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
-    jsAnalyze: options.jsAnalyze
+    jsAnalyze: options.jsAnalyze,
+    noLineNumbers: options.noLineNumbers
   });
 
   _.each(options.inputFiles, function (inputFile) {
