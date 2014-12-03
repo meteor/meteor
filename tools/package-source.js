@@ -1021,8 +1021,8 @@ _.extend(PackageSource.prototype, {
          * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.x.y`, or exactly `2.0.1`).
          * @param {String} [architecture] If you only use the package on the
          * server (or the client), you can pass in the second argument (e.g.,
-         * `'server'`, `'client'`, 'web.browser', 'web.cordova') to specify what architecture the package is
-         * used with.
+         * `'server'`, `'client'`, `'web.browser'`, `'web.cordova'`) to specify
+         * what architecture the package is used with.
          * @param {Object} [options]
          * @param {Boolean} options.weak Establish a weak dependency on a
          * package. If package A has a weak dependency on package B, it means
@@ -1146,7 +1146,10 @@ _.extend(PackageSource.prototype, {
          * @summary Specify the source code for your package.
          * @locus package.js
          * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
-         * @param {String} [architecture] If you only want to export the file on the server (or the client), you can pass in the second argument (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify what architecture the file is used with.
+         * @param {String} [architecture] If you only want to export the file
+         * on the server (or the client), you can pass in the second argument
+         * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
+         * what architecture the file is used with.
          */
         addFiles: function (paths, arch, fileOptions) {
           paths = toArray(paths);
@@ -1229,7 +1232,10 @@ _.extend(PackageSource.prototype, {
          * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
          * @locus package.js
          * @param {String} exportedObject Name of the object.
-         * @param {String} [architecture] If you only want to export the object on the server (or the client), you can pass in the second argument (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify what architecture the export is used with.
+         * @param {String} [architecture] If you only want to export the object
+         * on the server (or the client), you can pass in the second argument
+         * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
+         * what architecture the export is used with.
          */
         export: function (symbols, arch, options) {
           // Support `api.export("FooTest", {testOnly: true})` without
