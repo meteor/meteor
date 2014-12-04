@@ -189,6 +189,10 @@ Tinytest.add("check - argument checker", function (test) {
     check(x, Number);
     check(_.toArray(arguments).slice(1), [String]);
   }, 1, "foo", "bar", "baz");
+  // NaN values
+  checksAllArguments(function (x) {
+    check(x, Number);
+  }, NaN);
 
   var doesntCheckAllArguments = function (f /*arguments*/) {
     try {

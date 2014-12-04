@@ -2,6 +2,7 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
@@ -97,17 +98,34 @@ exports.hasScheme = function (str) {
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
 // Input is an array of objects with keys 'name' and 'description'.
-exports.printPackageList = function (unsortedItems, options) {
+exports.printPackageList = function (items, options) {
   options = options || {};
 
-  var alphaSort = function (item) {
-    return item.name;
+  var rows = _.map(items, function (item) {
+    var name = item.name;
+    var description = item.description || 'No description';
+    return [name, description];
+  });
+
+  var alphaSort = function (row) {
+    return row[0];
   };
-  var items = _.sortBy(unsortedItems, alphaSort);
+  rows = _.sortBy(rows, alphaSort);
+
+  return utils.printTwoColumns(rows, options);
+};
+
+// XXX: Move to e.g. formatters.js?
+// Prints a two column table in a nice format:
+//  The first column is printed entirely, the second only as space permits
+exports.printTwoColumns = function (rows, options) {
+  options = options || {};
+
   var longest = '';
-  _.each(items, function (item) {
-    if (item.name.length > longest.length)
-      longest = item.name;
+  _.each(rows, function (row) {
+    var col0 = row[0] || '';
+    if (col0.length > longest.length)
+      longest = col0;
   });
 
   var pad = longest.replace(/./g, ' ');
@@ -121,10 +139,11 @@ exports.printPackageList = function (unsortedItems, options) {
   var Console = require("./console.js").Console;
 
   var out = '';
-  _.each(items, function (item) {
-    var name = Console.bold(item.name) + pad.substr(item.name.length);
-    var description = item.description || 'No description';
-    var line = name + "  " + description;
+  _.each(rows, function (row) {
+    var col0 = row[0] || '';
+    var col1 = row[1] || '';
+    var line = Console.bold(col0) + pad.substr(col0.length);
+    line += "  " + col1;
     if (line.length > width) {
       line = line.substr(0, width - 3) + '...';
     }
@@ -218,28 +237,35 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
-exports.parseConstraint = packageVersionParser.parseConstraint;
-exports.validatePackageName = packageVersionParser.validatePackageName;
-
-// XXX should unify this with utils.parseConstraint
-exports.splitConstraint = function (constraint) {
-  var m = constraint.split("@");
-  var ret = { package: m[0] };
-  if (m.length > 1) {
-    ret.constraint = m[1];
-  } else {
-    ret.constraint = null;
+// Like packageVersionParser.parseConstraint, but if called in a buildmessage
+// context uses buildmessage to raise errors.
+exports.parseConstraint = function (constraintString, options) {
+  try {
+    return packageVersionParser.parseConstraint(constraintString, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
   }
-  return ret;
+};
+exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+exports.validatePackageName = function (name, options) {
+  try {
+    return packageVersionParser.validatePackageName(name, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
+  }
 };
 
-
-// XXX should unify this with utils.parseConstraint
-exports.dealConstraint = function (constraint, pkg) {
-  return { package: pkg, constraint: constraint};
+// Returns true if the parsed constraint was just a@b with no `=` or `||`.
+exports.isSimpleConstraint = function (parsedConstraint) {
+  return parsedConstraint.constraints.length === 1 &&
+    parsedConstraint.constraints[0].type === "compatible-with";
 };
-
 
 
 // Check for invalid package names. Currently package names can only contain
@@ -374,11 +400,30 @@ exports.startsWith = function(str, starts) {
     str.substring(0, starts.length) === starts;
 };
 
-exports.displayRelease = function (track, version) {
+// Options: noPrefix: do not display 'Meteor ' in front of the version number.
+exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
+  options = options || {};
+  var prefix = options.noPrefix ? "" : "Meteor ";
   if (track === catalog.DEFAULT_TRACK)
-    return "Meteor " + version;
+    return prefix + version;
   return track + '@' + version;
+};
+
+exports.splitReleaseName = function (releaseName) {
+  var parts = releaseName.split('@');
+  var track, version;
+  if (parts.length === 1) {
+    var catalog = require('./catalog.js');
+    track = catalog.DEFAULT_TRACK;
+    version = parts[0];
+  } else {
+    track = parts[0];
+    // Do we forbid '@' sign in release versions? I sure hope so, but let's
+    // be careful.
+    version = parts.slice(1).join("@");
+  }
+  return [track, version];
 };
 
 // Calls cb with each subset of the array "total", with non-decreasing size,
@@ -438,7 +483,7 @@ exports.isUrlWithSha = function (x) {
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
-// This is talking about NPM versions specifically, not Meteor versions.
+// This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
@@ -446,12 +491,16 @@ exports.ensureOnlyExactVersions = function (dependencies) {
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+    if (! exports.isExactVersion(version)) {
       throw new Error(
-        "Must declare exact version of dependency: " +
-          name + '@' + version);
+        "Must declare exact version of dependency: " + name + '@' + version);
+    }
   });
 };
+exports.isExactVersion = function (version) {
+  return semver.valid(version) || exports.isUrlWithSha(version);
+};
+
 
 exports.execFileSync = function (file, args, opts) {
   var future = new Future;
@@ -630,4 +679,12 @@ exports.mobileServerForRun = function (options) {
     port: parsedUrl.port,
     protocol: "http://"
   };
+};
+
+exports.escapePackageNameForPath = function (packageName) {
+  return packageName.replace(":", "_");
+};
+
+exports.unescapePackageNameForPath = function (escapedPackageName) {
+  return escapedPackageName.replace("_", ":");
 };

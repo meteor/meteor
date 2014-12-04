@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.15"
+  version: "1.0.16-ipc.0"
 });
 
 Npm.depends({
@@ -21,6 +21,7 @@ Package.on_test(function (api) {
   // data for big benchmarky tests
   api.add_files('test-data.js', ['server']);
   api.add_files('constraint-solver-tests.js', ['server']);
+  api.add_files('benchmark-tests.js', ['server']);
   api.add_files('resolver-tests.js', ['server']);
   api.use('underscore');
 });

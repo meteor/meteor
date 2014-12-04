@@ -1,6 +1,5 @@
 var _ = require('underscore');
-var uniload = require('./uniload.js');
-var release = require('./release.js');
+var isopackets = require("./isopackets.js");
 var Console = require('./console.js').Console;
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
@@ -19,9 +18,7 @@ var Console = require('./console.js').Console;
 
 
 var getLoggingPackage = function () {
-  var Log = uniload.load({
-    packages: ['logging']
-  }).logging.Log;
+  var Log = isopackets.load('logging').logging.Log;
 
   // Since no other process will be listening to stdout and parsing it,
   // print directly in the same format as log messages from other apps

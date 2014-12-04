@@ -1,6 +1,6 @@
 var Future = require("fibers/future");
 var _ = require("underscore");
-var uniload = require("./uniload.js");
+var isopackets = require("./isopackets.js");
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful
@@ -15,8 +15,6 @@ var uniload = require("./uniload.js");
 // protocol selected, they use just one underlying TCP connection, and fail
 // fast.
 //
-// - Package: a Package object as returned from uniload.load, containing
-//   the ddp and meteor packages
 // - endpointUrl: the url to connect to
 // - options:
 //   - headers: an object containing extra headers to use when opening the
@@ -24,8 +22,10 @@ var uniload = require("./uniload.js");
 //   - _dontPrintErrors: boolean
 //   ...and anything else you'd normally pass as options to DDP.connect
 //
-var ServiceConnection = function (Package, endpointUrl, options) {
+var ServiceConnection = function (endpointUrl, options) {
   var self = this;
+
+  var Package = isopackets.load('ddp');
 
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.
@@ -68,10 +68,14 @@ var ServiceConnection = function (Package, endpointUrl, options) {
       // Otherwise, ignore this error. We're going to reconnect!
       return;
     }
+    // Are we waiting to connect or for the result of a method apply or a
+    // subscribeAndWait? If so, disconnecting is a problem.
     if (self.currentFuture) {
       var fut = self.currentFuture;
       self.currentFuture = null;
-      fut.throw(error || new Error("DDP disconnected"));
+      fut.throw(error ||
+                new Package.ddp.DDP.ConnectionError(
+                  "DDP disconnected while connection in progress"));
     } else if (error) {
       // We got some sort of error with nobody listening for it; handle it.
       // XXX probably have a better way to handle it than this

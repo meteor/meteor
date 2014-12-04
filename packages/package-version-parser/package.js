@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Parses Meteor Smart Package version string",
-  version: "2.0.2"
+  version: "2.0.3-ipc.0"
 });
 
 Npm.depends({
-  'semver': '3.0.1'
+  'semver': '4.1.0'
 });
 
 Package.on_use(function (api) {

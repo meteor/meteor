@@ -13,6 +13,9 @@ var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 // several jobs. Each job has an (absolute) path associated with
 // it. Filenames in messages within a job are to be interpreted
 // relative to that path.
+//
+// Jobs are used both for error handling (via buildmessage.capture) and to set
+// the progress bar title (via progress.js).
 var Job = function (options) {
   var self = this;
   self.messages = [];
@@ -281,6 +284,10 @@ var enterJob = function (options, f) {
     options = {};
   }
 
+  if (typeof options === "string") {
+    options = {title: options};
+  }
+
   var progress;
   {
     var parentProgress = currentProgress.get();
@@ -499,33 +506,24 @@ var forkJoin = function (options, iterable, fn) {
   options.forkJoin = true;
 
   enterJob(options, function () {
-    var job = currentJob.get();
-    var messageSet = currentMessageSet.get();
-    var progress = currentProgress.get();
-    var nestingLevel = currentNestingLevel.get();
-
     var parallel = (options.parallel !== undefined) ? options.parallel : true;
     if (parallel) {
+      var runOne = fiberHelpers.bindEnvironment(function (fut, fnArguments) {
+        try {
+          var result = enterJob({title: (options.title || '') + ' child'}, function () {
+            return fn.apply(null, fnArguments);
+          });
+          fut['return'](result);
+        } catch (e) {
+          fut['throw'](e);
+        }
+      });
+
       _.each(iterable, function (/*arguments*/) {
         var fut = new Future();
         var fnArguments = arguments;
         Fiber(function () {
-          currentNestingLevel.withValue(nestingLevel, function() {
-            currentProgress.withValue(progress, function () {
-              currentMessageSet.withValue(messageSet, function () {
-                currentJob.withValue(job, function () {
-                  try {
-                    var result = enterJob({title: (options.title || '') + ' child'}, function () {
-                      return fn.apply(null, fnArguments);
-                    });
-                    fut['return'](result);
-                  } catch (e) {
-                    fut['throw'](e);
-                  }
-                });
-              });
-            });
-          });
+          runOne(fut, fnArguments);
         }).run();
         futures.push(fut);
       });

@@ -14,7 +14,11 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
-    var callbackUrl = OAuth._redirectUri(service.serviceName, config, {state: query.state});
+    var callbackUrl = OAuth._redirectUri(service.serviceName, config, {
+      state: query.state,
+      cordova: (query.cordova === "true"),
+      android: (query.android === "true")
+    });
 
     // Get a request token to start auth process
     oauthBinding.prepareRequestToken(callbackUrl);
@@ -42,6 +46,7 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     }
 
     // redirect to provider login, which will redirect back to "step 2" below
+
     res.writeHead(302, {'Location': redirectUrl});
     res.end();
   } else {
@@ -67,7 +72,8 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
       oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      var oauthResult = service.handleOauthRequest(oauthBinding);
+      var oauthResult = service.handleOauthRequest(
+        oauthBinding, { query: query });
 
       var credentialToken = OAuth._credentialTokenFromQuery(query);
       credentialSecret = Random.secret();

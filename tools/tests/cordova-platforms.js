@@ -12,9 +12,9 @@ selftest.define("add cordova platforms", function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
 
   run = s.run("run", "android");
-  run.matchErr("Platform is not added");
+  run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform android");
-  run.expectExit(1);
+  run.expectExit(2);
 
   // XXX: This prints the Android EULA.
   // We should move this to a once-per-machine agreement.
@@ -25,13 +25,13 @@ selftest.define("add cordova platforms", function () {
   */
 
   run = s.run("install-sdk", "android");
-  run.extraTime = 90; // Big downloads
+  run.waitSecs(90); // Big downloads
   run.expectExit(0);
 
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added");
 
   run = s.run("remove-platform", "foo");
@@ -40,7 +40,7 @@ selftest.define("add cordova platforms", function () {
   run = s.run("remove-platform", "android");
   run.match("removed");
   run = s.run("run", "android");
-  run.matchErr("Platform is not added");
+  run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform android");
-  run.expectExit(1);
+  run.expectExit(2);
 });

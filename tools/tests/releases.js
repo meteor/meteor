@@ -2,7 +2,6 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var catalog = require('../catalog.js');
-var packageLoader = require("../package-loader.js");
 
 // XXX: Why is this an internet using test? Because our warehouse is a
 // hackhackhack. If we clean up the hackhackhackhack, then this does not need
@@ -19,22 +18,15 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   });
   var run;
 
-  var toolsPackage;
-  selftest.doOrThrow(function() {
-      toolsPackage = selftest.getToolsPackage();
-  });
-  var toolsVersion = toolsPackage.name + '@' +
-        toolsPackage.version;
-
   // If run not in an app dir, runs the latest version ...
-  run = s.run("--long-version");
-  run.read('METEOR@v2\n' + toolsVersion + '\n');
+  run = s.run("--version");
+  run.read('Meteor v2\n');
   run.expectEnd();
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--long-version", "--release", "METEOR@v1");
-  run.read('METEOR@v1\n' + toolsVersion + '\n');
+  run = s.run("--version", "--release", "METEOR@v1");
+  run.read('Meteor v1\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -43,23 +35,23 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   run.waitSecs(5);
   run.expectExit(0);
   s.cd('myapp', function () {
-    run = s.run("--long-version");
-    run.read('METEOR@v2\n' + toolsVersion + '\n');
+    run = s.run("--version");
+    run.read('Meteor v2\n');
     run.expectExit(0);
   });
 
   // ... unless you asked for a different one.
   run = s.run("create", "myapp2", "--release", "METEOR@v1").expectExit(0);
   s.cd('myapp2', function () {
-    run = s.run("--long-version");
-    run.read('METEOR@v1\n' + toolsVersion + '\n');
+    run = s.run("--version");
+    run.read('Meteor v1\n');
     run.expectExit(0);
   });
 
   // Suppose you ask for a release that doesn't exist.
   s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
   run = s.run("--release", "weird");
-  run.readErr("weird: unknown release.\n");
+  run.readErr("Meteor weird: unknown release.\n");
   run.expectEnd();
   run.expectExit(1);
 
@@ -78,15 +70,15 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     s.write(".meteor/release", "strange");
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
     run = s.run();
-    run.matchErr("version strange of Meteor");
-    run.matchErr("valid Meteor release");
+    run.matchErr("uses Meteor strange");
+    run.matchErr("don't have it either");
     run.expectExit(1);
 
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
     run.matchErr("offline");
-    run.matchErr("version strange of Meteor");
+    run.matchErr("it uses Meteor strange");
     run.matchErr("don't have that version of Meteor installed");
     run.matchErr("update servers");
     run.expectExit(1);
@@ -101,7 +93,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     run.expectExit(1);
 
     // As previous, but you pass --release to manually pick a release.
-    run = s.run("--long-version", "--release", "v1");
+    run = s.run("--version", "--release", "v1");
     run.expectExit(0);
     run.forbidAll("must specify");
     run.forbidAll("permanently set");
@@ -109,14 +101,14 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     // You use modern Meteor with a super old release from the dark ages
     // before the .meteor/release file. You get an error.
     s.unlink('.meteor/release');
-    run = s.run("--long-version");
+    run = s.run("--version");
     run.matchErr("does not have a .meteor/release file");
     run.matchErr("edit the .meteor/release file");
     run.expectExit(1);
 
     // .meteor/release exists but is empty. You get an error.
     s.write(".meteor/release", "\n");
-    run = s.run("--long-version");
+    run = s.run("--version");
     run.matchErr("release file which is empty");
     run.expectExit(1);
 
@@ -138,20 +130,13 @@ selftest.define("writing versions file", ['checkout', 'net'], function () {
   });
   var run;
 
-  var toolsPackage;
-  selftest.doOrThrow(function() {
-    toolsPackage = selftest.getToolsPackage();
-  });
-  var toolsVersion = toolsPackage.name + '@' +
-        toolsPackage.version;
-
   // Create an app with the latest release.
   run = s.run("create", "myapp");
   run.waitSecs(15);
   run.expectExit(0);
   s.cd('myapp');
-  run = s.run("--long-version");
-  run.read('METEOR@v2\n' + toolsVersion + '\n');
+  run = s.run("--version");
+  run.read('Meteor v2\n');
   run.expectExit(0);
 
   // Check the contents of the versions file.
@@ -201,7 +186,7 @@ selftest.define("checkout", ['checkout'], function () {
     s.write(".meteor/release", "something");
     run = s.run("list");
     run.readErr("=> Running Meteor from a checkout");
-    run.matchErr("project version (something)\n");
+    run.matchErr("project version (Meteor something)\n");
     run.expectExit(0);
   });
 });
@@ -223,4 +208,39 @@ selftest.define("download release", ['net', 'slow'], function () {
   run.waitSecs(1000);
   run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
   run.expectExit();
+});
+
+
+selftest.define("unknown release", [], function () {
+  var s = new Sandbox({
+    warehouse: {
+      v2: { recommended: true }
+    }
+  });
+ s.set("METEOR_OFFLINE_CATALOG", "t");
+  var run;
+
+  s.createApp('myapp', 'packageless', { dontPrepareApp: true });
+  s.cd('myapp');
+  run = s.run("--release", "bad");
+  run.matchErr("Meteor bad: unknown release");
+
+  // METEOR in the release file.
+  s.write('.meteor/release', "METEOR@0.9-bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor 0.9-bad, but");
+
+  // No METEOR in the release file.
+  s.write('.meteor/release', "0.9.x-bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor 0.9.x-bad, but");
+
+  // Non-standard track
+  s.write('.meteor/release', "FOO@bad");
+  run = s.run();
+  run.matchErr(
+    "This project says that it uses Meteor release FOO@bad, but");
+
 });

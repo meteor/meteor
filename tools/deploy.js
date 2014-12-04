@@ -66,7 +66,7 @@ var deployRpc = function (options) {
   if (options.headers.cookie)
     throw new Error("sorry, can't combine cookie headers yet");
 
-  var progress = buildmessage.addChildTracker("Uploading");
+  // XXX: Reintroduce progress for upload
   try {
     var result = httpHelpers.request(_.extend(options, {
       url: config.getDeployUrl() + '/' + options.operation +
@@ -74,16 +74,13 @@ var deployRpc = function (options) {
       method: options.method || 'GET',
       bodyStream: options.bodyStream,
       useAuthHeader: true,
-      encoding: 'utf8', // Hack, but good enough for the deploy server..
-      progress: progress
+      encoding: 'utf8' // Hack, but good enough for the deploy server..
     }));
   } catch (e) {
     return {
       statusCode: null,
       errorMessage: "Connection error (" + e.message + ")"
     };
-  } finally {
-    progress.reportProgressDone();
   }
 
   var response = result.response;
@@ -327,7 +324,7 @@ site + " is too long.\n" +
 // messages. Return a command exit code.
 //
 // Options:
-// - appDir: root directory of app to bundle up
+// - projectContext: the ProjectContext for the app
 // - site: site to deploy as
 // - settingsFile: file from which to read deploy settings (undefined
 //   to leave unchanged from previous deploy of the app, if any)
@@ -383,10 +380,10 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  var buildDir = path.join(options.appDir, '.meteor', 'local', 'build_tar');
+  var buildDir = options.projectContext.getProjectLocalDirectory('build_tar');
   var bundlePath = path.join(buildDir, 'bundle');
 
-  Console.stdout.write('Deploying to http://' + site + '. Bundling...\n');
+  Console.stdout.write('Deploying to ' + site + '.\n');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -401,24 +398,13 @@ var bundleAndDeploy = function (options) {
     var bundler = require('./bundler.js');
 
     var bundleResult = bundler.bundle({
+      projectContext: options.projectContext,
       outputPath: bundlePath,
       buildOptions: options.buildOptions
     });
 
     if (bundleResult.errors)
-      messages.merge(bundleResult.errors);
-
-    if (options.recordPackageUsage) {
-      var statsMessages = buildmessage.capture({ title: 'Reporting statistics' }, function () {
-        stats.recordPackages("sdk.deploy", site);
-      });
-      if (statsMessages.hasMessages()) {
-        Console.stdout.write("Error recording package list:\n" +
-                             statsMessages.formatMessages());
-        // ... but continue;
-      }
-    }
-
+      messages = bundleResult.errors;
   }
 
   if (messages.hasMessages()) {
@@ -427,11 +413,16 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  Console.stdout.write('Uploading...\n');
+  if (options.recordPackageUsage) {
+    stats.recordPackages({
+      what: "sdk.deploy",
+      projectContext: options.projectContext,
+      site: site
+    });
+  }
 
-  var result;
-  buildmessage.enterJob({ title: "Uploading" }, function () {
-    result = authedRpc({
+  var result = buildmessage.enterJob({ title: "Uploading" }, function () {
+    return authedRpc({
       method: 'POST',
       operation: 'deploy',
       site: site,
@@ -468,7 +459,7 @@ var bundleAndDeploy = function (options) {
             Console.stdout.write('-------------\n');
           }
         });
-        }
+      }
     });
   }
 

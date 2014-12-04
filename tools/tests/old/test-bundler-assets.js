@@ -5,38 +5,28 @@ var assert = require('assert');
 var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
-var uniload = require('../../uniload.js');
+var isopackets = require("../../isopackets.js");
 var release = require('../../release.js');
-var project = require('../../project.js');
 var catalog = require('../../catalog.js');
 var buildmessage = require('../../buildmessage.js');
-
-var appWithPublic = path.join(__dirname, 'app-with-public');
-var appWithPrivate = path.join(__dirname, 'app-with-private');
+var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var setAppDir = function (appDir) {
-  project.project.setRootDir(appDir);
-
-  if (files.usesWarehouse()) {
-    throw Error("This old test doesn't support non-checkout");
-  }
-  var appPackageDir = path.join(appDir, 'packages');
-  var checkoutPackageDir = path.join(
-    files.getCurrentToolsDir(), 'packages');
-
-  doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
-    });
-    catalog.complete.initialize({
-      localPackageDirs: [appPackageDir, checkoutPackageDir]
-    });
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-assets");
+  files.cp_r(path.join(__dirname, appName), projectDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: projectDir
   });
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return projectContext;
 };
 
 var doOrThrow = function (f) {
@@ -54,16 +44,17 @@ var doOrThrow = function (f) {
 // are client and server programs inside programs/.
 
 var runTest = function () {
-   // As preparation, we need to initialize the official catalog, which serves
-   // as our sql data store.
-   catalog.official.initialize();
+  // As preparation, we need to initialize the official catalog, which serves
+  // as our sql data store.
+  catalog.official.initialize();
 
   console.log("Bundle app with public/ directory");
   assert.doesNotThrow(function () {
-    setAppDir(appWithPublic);
+    var projectContext = makeProjectContext("app-with-public");
 
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     var clientManifest = JSON.parse(
@@ -88,15 +79,12 @@ var runTest = function () {
 
   console.log("Bundle app with private/ directory and package asset");
   assert.doesNotThrow(function () {
-    setAppDir(appWithPrivate);
-
-    // Make sure we rebuild this app package.
-    files.rm_recursive(
-      path.join(appWithPrivate, "packages", "test-package", ".build"));
+    var projectContext = makeProjectContext("app-with-private");
 
     var tmpOutputDir = tmpDir();
 
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
 
@@ -142,7 +130,7 @@ var runTest = function () {
     var fut = new Future();
     // use a non-default port so we don't fail if someone is running an app now
     var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
-      cwd: path.join(__dirname, "app-with-private"),
+      cwd: projectContext.projectDir,
       stdio: 'inherit'
     });
     proc.on("exit", function (code) {
@@ -154,9 +142,13 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
 
   try {
+    release.setCurrent(release.load(null));
+    isopackets.ensureIsopacketsLoadable();
     runTest();
   } catch (err) {
     console.log(err.stack);

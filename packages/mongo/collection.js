@@ -262,6 +262,7 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Mongo.Cursor}
    */
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
@@ -286,6 +287,7 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Object}
    */
   findOne: function (/* selector, options */) {
     var self = this;
@@ -855,7 +857,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
             //     we get from the network to this function, we should actually
             //     know the correct arguments for the function and pass just
             //     them.  For example, if you have an extraneous extra null
-            //     argument and this is Mongo on the server, the _wrapAsync'd
+            //     argument and this is Mongo on the server, the .wrapAsync'd
             //     functions like update will get confused and pass the
             //     "fut.resolver()" in the wrong slot, where _update will never
             //     invoke it. Bam, broken DDP connection.  Probably should just

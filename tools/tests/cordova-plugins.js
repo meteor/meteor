@@ -124,9 +124,15 @@ selftest.define("change cordova plugins", function () {
   run.waitSecs(2);
   run.match("restarted");
 
+  // Introduce an error.
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
   run.match("exact version");
+
+  // Fix the error.
+  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
+  run.waitSecs(2);
+  run.match("restarted");
 });
 
 
@@ -146,21 +152,24 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("removed");
 
   run = s.run("run", "android");
-  run.matchErr("not added to the project");
+  run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
+  run.waitSecs(2);
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
   run.waitSecs(5);
   run.match("added cordova plugin org.apache.cordova.camera");
+  run.expectExit(0);
 
   run = s.run("add", "cordova:org.apache.cordova.file");
-  run.matchErr("Must declare exact version");
+  run.matchErr("exact version or tarball url");
+  run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
   // build time.
@@ -175,7 +184,9 @@ selftest.define("add cordova plugins", ["slow"], function () {
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
-  run.match("added");
+  run.match("added,");
+  run.match("contains a cordova plugin");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
@@ -243,13 +254,276 @@ selftest.define("remove cordova plugins", function () {
   run = s.run("remove", "cordova:blahblah");
   run.matchErr("not in this project");
   run.forbidAll("removed");
-  run.expectExit(0);
+  run.expectExit(1);
 
   run = s.run("remove", "cordova:blahblah",
               "cordova:org.apache.cordova.camera");
   run.waitSecs(5);
   run.matchErr("not in this project");
   run.match("removed");
-  run.expectExit(0);
+  run.expectExit(1);
   checkUserPlugins(s, []);
+});
+
+selftest.define("meteor exits when cordova platforms change", ["slow"], function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  // Add a platform via command line
+  var platformRun = s.run("add-platform", "android");
+  platformRun.match("Do you agree");
+  platformRun.write("Y\n");
+  platformRun.waitSecs(90); // Huge download
+  platformRun.match("added platform");
+
+  run.waitSecs(60);
+  run.matchErr("Your app's platforms have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  // Remove a platform via command line
+  platformRun = s.run("remove-platform", "android");
+  platformRun.waitSecs(15);
+  platformRun.match("removed platform");
+
+  run.waitSecs(60);
+  run.matchErr("Your app's platforms have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  // Add a platform in .meteor/platforms
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  var platforms = s.read(path.join(".meteor", "platforms"));
+  platforms = platforms + "\nandroid";
+  s.write(path.join(".meteor", "platforms"), platforms);
+
+  run.waitSecs(60);
+  run.matchErr("Your app's platforms have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  // Remove a platform in .meteor/platforms
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  platforms = s.read(path.join(".meteor", "platforms"));
+  platforms = platforms.replace(/android/g, "");
+  s.write(path.join(".meteor", "platforms"), platforms);
+
+  run.waitSecs(60);
+  run.matchErr("Your app's platforms have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+});
+
+selftest.define("meteor exits when cordova plugins change", ["slow"], function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+
+  run = s.run("add-platform", "android");
+  run.match("Do you agree");
+  run.write("Y\n");
+  run.waitSecs(90); // Huge download
+  run.match("added platform");
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  // First add a plugin directly.
+  var pluginRun = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  // This shouldn't cause an exit because it contains the same plugin
+  // that we're already using.
+  pluginRun = s.run("add", "contains-old-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.match("restarted");
+
+  pluginRun = s.run("remove", "contains-old-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.match("restarted");
+
+  // This exits because it contains a new plugin, facebookconnect.
+  pluginRun = s.run("add", "contains-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  pluginRun = s.run("remove", "contains-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  pluginRun = s.run("remove", "cordova:org.apache.cordova.camera");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  // Adding and removing just a Meteor package that contains plugins
+  // should also cause the tool to exit.
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  pluginRun = s.run("add", "contains-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  pluginRun = s.run("remove", "contains-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+  run.waitSecs(60);
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+
+  // Adding a package with a newer version of a plugin that we're
+  // already using should also cause us to restart.
+  pluginRun = s.run("add", "contains-old-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+
+  run = s.run();
+  run.waitSecs(30);
+  run.match("Started your app");
+
+  pluginRun = s.run("add", "contains-camera-cordova-plugin");
+  pluginRun.waitSecs(30);
+  pluginRun.expectExit(0);
+
+  run.matchErr("Your app's Cordova plugins have changed");
+  run.matchErr("Restart meteor");
+  run.expectExit(254);
+});
+
+var buildAndCheckPluginInStar = selftest.markStack(function (s, name, version) {
+  var run = s.run(
+    "build", "../a", "--server", "localhost:3000", "--directory");
+  run.waitSecs(90);
+  run.expectExit(0);
+
+  var starJson = JSON.parse(s.read("../a/bundle/star.json"));
+  var program = _.findWhere(starJson.programs, { name: "web.cordova" });
+  if (! program) {
+    selftest.fail("No cordova program in star.json?");
+    return;
+  }
+  var plugins = program.cordovaDependencies;
+  selftest.expectEqual(plugins[name], version);
+});
+
+selftest.define("cordova plugins in star.json, direct and transitive", ["slow"], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+  run = s.run("add-platform", "android");
+  run.match("Do you agree");
+  run.write("Y\n");
+  run.waitSecs(90); // Huge download
+  run.match("added platform");
+
+  // Add a direct dependency: it should appear in star.json after we
+  // build.
+  run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
+  run.waitSecs(30);
+  run.expectExit(0);
+
+  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.0");
+
+  // Add a Cordova dependency from a package, at a newer version: the
+  // plugin should appear in star.json at the version added in the
+  // direct dependency, even though it's older than the version that the
+  // package uses.
+  run = s.run("add", "contains-camera-cordova-plugin");
+  run.waitSecs(30);
+  run.expectExit(0);
+
+  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.0");
+
+  // After removing the direct dependency, star.json should contain
+  // camera@0.3.0, the version used by the package.
+  run = s.run("remove", "cordova:org.apache.cordova.camera");
+  run.waitSecs(30);
+  run.expectExit(0);
+
+  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.2");
+
+  // If we add another package that uses an older version of the plugin,
+  // the version in star.json shouldn't change.
+  run = s.run("add", "contains-old-cordova-plugin");
+  run.waitSecs(30);
+  run.expectExit(0);
+
+  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.2");
+
+  // If we remove the package that uses a newer version, the version in
+  // star.json should change.
+  run = s.run("remove", "contains-camera-cordova-plugin");
+  run.waitSecs(30);
+  run.expectExit(0);
+
+  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.0");
 });

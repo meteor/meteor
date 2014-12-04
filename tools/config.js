@@ -229,16 +229,20 @@ _.extend(exports, {
     return prefix + ".data.db";
   },
 
-  getPackageStorage: function (tropo) {
+  getPackageStorage: function (options) {
     var self = this;
-    tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v2.0.1",
-                     self.getLocalPackageCacheFilename());
+    options = options || {};
+    var root = options.root || tropohouse.default.root;
+    return path.join(root, "package-metadata", "v2.0.1",
+                     self.getLocalPackageCacheFilename(options.serverUrl));
   },
 
-  getBannersShownFilename: function() {
-    return path.join(tropohouse.default.root,
-                     "package-metadata", "v1.1", "banners-shown.json");
+  getIsopacketRoot: function () {
+    if (files.inCheckout()) {
+      return path.join(files.getCurrentToolsDir(), '.meteor', 'isopackets');
+    } else {
+      return path.join(files.getCurrentToolsDir(), 'isopackets');
+    }
   },
 
   // Return the domain name of the current Meteor Accounts server in

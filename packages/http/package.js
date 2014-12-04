@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.0.7'
+  version: '1.0.9-ipc.0'
 });
 
-Npm.depends({request: "2.33.0"});
+Npm.depends({request: "2.47.0"});
 
 Package.on_use(function (api) {
   api.use('underscore');

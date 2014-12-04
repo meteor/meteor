@@ -13,7 +13,7 @@ selftest.define("npm", ["net"], function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 
-  s.createApp("npmtestapp", "npmtest");
+  s.createApp("npmtestapp", "npmtest", { dontPrepareApp: true });
   s.cd("npmtestapp");
 
   // Ensure that we don't lose the executable bits of npm modules.

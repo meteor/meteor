@@ -5,7 +5,7 @@ applications.
 
 With Meteor you write apps:
 
-* in pure Javascript
+* in pure JavaScript
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
@@ -88,6 +88,5 @@ Interested in contributing to Meteor?
 * Core framework design mailing list: https://groups.google.com/group/meteor-core
 * Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
 
-We are hiring!  Visit https://www.meteor.com/jobs/working-at-meteor to
+We are hiring!  Visit https://www.meteor.com/jobs to
 learn more about working full-time on the Meteor project.
-

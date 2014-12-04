@@ -2,11 +2,11 @@
   "banners": [
     {
       "versions": ["0.9.0", "0.9.0.1", "0.9.1", "0.9.1.1", "0.9.2",
-        "0.9.2.1", "0.9.2.2", "0.9.3", "0.9.3.1"],
+        "0.9.2.1", "0.9.2.2", "0.9.3", "0.9.3.1", "0.9.4"],
       "banner": {
         "text":
 
-"=> Meteor 0.9.4 is out with improved PhoneGap/Cordova support, speedups for the\n   packaging system, several backwards-compatible API changes, and some new\n   features: a new meteor debug command, an option for running Velocity tests with\n   the command line tool, and a new configuration file for specifying mobile app\n   metadata, icons, and splash screens.\n\n   Meteor 0.9.4 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
+"=> Meteor 1.0 is out! Visit www.meteor.com for all the details.\n\n   Meteor 1.0 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
        }
     }
   ]

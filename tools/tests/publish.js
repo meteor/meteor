@@ -50,13 +50,13 @@ selftest.define("publish-and-search",
 
   run = s.run("publish");
   run.waitSecs(15);
+  run.matchErr("There is no package named"); // need to pass --create
   run.expectExit(1);
-  run.matchErr("Publish failed"); // need to pass --create
 
   run = s.run("publish", "--create");
-  run.waitSecs(15);
+  run.waitSecs(30);
+  run.match("Published");
   run.expectExit(0);
-  run.match("Done");
 
   run = s.run("search", packageName);
   run.waitSecs(15);
@@ -93,7 +93,7 @@ selftest.define("publish-and-search",
     run = s.run("publish", "--create");
     run.waitSecs(30);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   run = s.run("show", newPackageName);
@@ -123,7 +123,7 @@ selftest.define("publish-one-arch",
   run = s.run("publish", "--create");
   run.waitSecs(15);
   run.expectExit(0);
-  run.match("Done");
+  run.match("Published");
   run.forbidAll("WARNING");
 
   packageName = utils.randomToken();
@@ -135,8 +135,8 @@ selftest.define("publish-one-arch",
   run = s.run("publish", "--create");
   run.waitSecs(15);
   run.expectExit(0);
-  run.match("Done");
-  run.matchErr("WARNING");
+  run.matchErr(
+"This package contains binary code and must be built on multiple architectures.");
 
 });
 
@@ -160,7 +160,7 @@ selftest.define("list-with-a-new-version",
     run = s.run("publish", "--create");
     run.waitSecs(15);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Create an app. Add the package to it. Check that list shows the package and
@@ -186,7 +186,7 @@ selftest.define("list-with-a-new-version",
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   // cd into the app and run list again. We should get some sort of message.
@@ -239,7 +239,7 @@ selftest.define("list-with-a-new-version",
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   s.cd('mapp', function () {
@@ -305,26 +305,23 @@ selftest.define("do-not-update-to-rcs",
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
     run.waitSecs(120);
+    run.match("Published " + fullPackageName + "@");
     run.expectExit(0);
-    run.match("Done");
-  });
 
-  // Change the package to increment version and publish the new package.
-  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
-  s.cd(fullPackageName, function () {
+    s.cp('package2.js', 'package.js');
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Now publish an 1.0.4-rc.3.
-  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
   s.cd(fullPackageName, function () {
+    s.cp('packagerc.js', 'package.js');
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Create an app. Add the package to it. Check that list shows the package, at
@@ -382,12 +379,12 @@ selftest.define("do-not-update-to-rcs",
   });
 
   // Now publish an 1.0.4-rc.4.
-  s.cp(fullPackageName+'/packagerc2.js', fullPackageName+'/package.js');
   s.cd(fullPackageName, function () {
+    s.cp('packagerc2.js', 'package.js');
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 
   s.cd('mapp', function () {
@@ -424,7 +421,7 @@ selftest.define("package-depends-on-either-version",
    s.cd(fullPackageNameDep, function() {
     run = s.run("publish", "--create");
     run.waitSecs(20);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Then, we publish fullPackageNameDep at 2.0.
@@ -432,7 +429,7 @@ selftest.define("package-depends-on-either-version",
     s.cp("package3.js", "package.js");
     run = s.run("publish");
     run.waitSecs(20);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Then, we make another one that depends on either version and publish.
@@ -448,7 +445,7 @@ selftest.define("package-depends-on-either-version",
     s.write("package.js", packOpen);
     run = s.run("publish", "--create");
     run.waitSecs(20);
-    run.match("Done");
+    run.match("Published");
   });
 
   // Now we add them to an app.

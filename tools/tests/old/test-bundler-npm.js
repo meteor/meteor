@@ -7,35 +7,28 @@ var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
 var release = require('../../release.js');
-var project = require('../../project.js');
 var catalog = require('../../catalog.js');
 var buildmessage = require('../../buildmessage.js');
 var meteorNpm = require('../../meteor-npm.js');
+var isopackets = require("../../isopackets.js");
+var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var setAppDir = function (appDir) {
-  project.project.setRootDir(appDir);
-
-  var checkoutPackageDir = path.join(
-    files.getCurrentToolsDir(), 'packages');
-  var localPackageDirs = [tmpPackageDirContainer, checkoutPackageDir];
-
-  if (files.usesWarehouse()) {
-    throw Error("This old test doesn't support non-checkout");
-  }
-
-  doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
-    });
-    catalog.complete.initialize({
-      localPackageDirs: localPackageDirs
-    });
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-assets");
+  files.cp_r(path.join(__dirname, appName), projectDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: projectDir
   });
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return projectContext;
 };
 
 var doOrThrow = function (f) {
@@ -49,50 +42,44 @@ var doOrThrow = function (f) {
   return ret;
 };
 
-///
-/// TEST PACKAGE DIR
-///
-var tmpPackageDirContainer = tmpDir();
-var testPackageDir = path.join(tmpPackageDirContainer, 'test-package');
+var getTestPackageDir = function (projectContext) {
+  return path.join(projectContext.projectDir, 'packages', 'test-package');
+};
 
-var reloadPackages = function () {
+var reloadPackages = function (projectContext) {
+  projectContext.reset();
   doOrThrow(function () {
-    catalog.complete.refreshLocalPackages();
+    projectContext.prepareProjectForBuild();
   });
 };
 
-var updateTestPackage = function (npmDependencies) {
-  if (!fs.existsSync(testPackageDir))
-    fs.mkdirSync(testPackageDir);
-
-  fs.writeFileSync(path.join(testPackageDir, 'package.js'),
-                   "Package.describe({version: '1.0.0'});\n"
-                   + "\n"
-                   + "Npm.depends(" + JSON.stringify(npmDependencies) + ");"
-                   + "\n"
-                   + "Package.on_use(function (api) { api.add_files('dummy.js', 'server'); });");
-  // we need at least one server file, otherwise we don't bother copying
-  // the gcd module into the bundle.
-  fs.writeFileSync(path.join(testPackageDir, 'dummy.js'), "");
-  reloadPackages();
+var updateTestPackage = function (projectContext, npmDependencies, options) {
+  options = options || {};
+  fs.writeFileSync(
+    path.join(getTestPackageDir(projectContext), 'package.js'),
+    "Package.describe({version: '1.0.0'});\n"
+      + "\n"
+      + "Npm.depends(" + JSON.stringify(npmDependencies) + ");"
+      + "\n"
+      + "Package.on_use(function (api) { api.add_files('dummy.js', 'server'); });");
+  if (! options.noReload)
+    reloadPackages(projectContext);
 };
-
-///
-/// TEST APP USING TEST PACKAGE DIR
-///
-var appWithPackageDir = path.join(__dirname, 'app-with-package');
 
 ///
 /// HELPERS
 ///
 
-var _assertCorrectPackageNpmDir = function (deps) {
+var _assertCorrectPackageNpmDir = function (projectContext, deps) {
   // test-package/.npm was generated
 
   // sort of a weird way to do it, but i don't want to have to look up
   // all subdependencies to write these tests, so just transplant that
   // information
-  var actualMeteorNpmShrinkwrapDependencies = JSON.parse(fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8')).dependencies;
+  var actualMeteorNpmShrinkwrapDependencies = JSON.parse(
+    fs.readFileSync(path.join(getTestPackageDir(projectContext), ".npm",
+                              "package", "npm-shrinkwrap.json"),
+                    'utf8')).dependencies;
   var expectedMeteorNpmShrinkwrapDependencies = _.object(_.map(deps, function (version, name) {
     var expected = {};
     if (/tarball/.test(version)) {
@@ -115,6 +102,7 @@ var _assertCorrectPackageNpmDir = function (deps) {
     return [name, val];
   }));
 
+  var testPackageDir = getTestPackageDir(projectContext);
   var actual = fs.readFileSync(path.join(testPackageDir, ".npm", "package", "npm-shrinkwrap.json"), 'utf8');
   var expected = JSON.stringify({
     dependencies: expectedMeteorNpmShrinkwrapDependencies}, null, /*indentation, the way npm does it*/2) + '\n';
@@ -185,21 +173,25 @@ var looksInstalled = function (nodeModulesDir, name) {
 ///
 
 var runTest = function () {
-   // As preparation, we need to initialize the official catalog, which serves
-   // as our sql data store.
-   catalog.official.initialize();
+  // As preparation, we need to initialize the official catalog, which serves as
+  // our sql data store.
+  catalog.official.initialize();
+
+  var projectContext = makeProjectContext('app-with-package');
+  var testPackageDir = getTestPackageDir(projectContext);
 
   // XXX this is a huge nasty hack. see release.js,
   // #HandlePackageDirsDifferently
   console.log("app that uses gcd - clean run");
   assert.doesNotThrow(function () {
-    updateTestPackage({gcd: '0.0.0'});
+    updateTestPackage(projectContext, {gcd: '0.0.0'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir({gcd: '0.0.0'});
+    _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0'});
     _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
   });
 
@@ -207,10 +199,11 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir({gcd: '0.0.0'});
+    _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0'});
     _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
   });
 
@@ -218,16 +211,15 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
 
-    // rm -rf .npm/package/node_modules
-    var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
-    assert(fs.existsSync(path.join(nodeModulesDir)));
+    // rm -rf .npm
+    var nodeModulesDir = path.join(testPackageDir, ".npm",
+                                   "package", "node_modules");
+    assert(fs.existsSync(nodeModulesDir));
     files.rm_recursive(nodeModulesDir);
-    // We also have to delete the .build directory or else we won't rebuild at
-    // all.
-    // XXX this seems wrong!
-    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
-    assert(!fs.existsSync(path.join(nodeModulesDir)));
-    reloadPackages();
+    // We also have to change something in the package or else we won't rebuild
+    // at all.
+    fs.appendFileSync(path.join(testPackageDir, 'package.js'), '\n');
+    reloadPackages(projectContext);
 
     // while bundling, verify that we don't call `npm install
     // name@version unnecessarily` -- calling `npm install` is enough,
@@ -241,25 +233,30 @@ var runTest = function () {
       return bareExecFileSync(file, args, opts);
     };
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     meteorNpm._execFileSync = bareExecFileSync;
 
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir({gcd: '0.0.0'});
+    _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0'});
     _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0'});
   });
 
   console.log("app that uses gcd - add mime and semver");
   assert.doesNotThrow(function () {
-    updateTestPackage({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
+    updateTestPackage(projectContext,
+                      {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
-    _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
+    _assertCorrectPackageNpmDir(
+      projectContext, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
+    _assertCorrectBundleNpmContents(
+      tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   });
 
   console.log("app that uses gcd - add mime, as it would happen if you pulled in this change (updated npm-shrinkwrap.json but not node_modules)");
@@ -267,149 +264,104 @@ var runTest = function () {
     var tmpOutputDir = tmpDir();
 
     // rm -rf .npm/package/node_modules/mime
-    var nodeModulesMimeDir = path.join(testPackageDir, ".npm", "package", "node_modules", "mime");
+    var nodeModulesMimeDir = path.join(
+      testPackageDir, ".npm", "package", "node_modules", "mime");
     assert(fs.existsSync(path.join(nodeModulesMimeDir)));
     files.rm_recursive(nodeModulesMimeDir);
-    // We also have to delete the .build directory or else we won't rebuild at
+    // We also have to change something in the package or we won't rebuild at
     // all.
-    // XXX this seems wrong!
-    files.rm_recursive(path.join(testPackageDir, ".build.test-package"));
-    assert(!fs.existsSync(path.join(nodeModulesMimeDir)));
+    fs.appendFileSync(path.join(testPackageDir, 'package.js'), '\n');
+    reloadPackages(projectContext);
 
-    reloadPackages();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
-    _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
+    _assertCorrectPackageNpmDir(
+      projectContext, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
+    _assertCorrectBundleNpmContents(
+      tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7', semver: '1.1.0'});
   });
 
   console.log("app that uses gcd - upgrade mime, remove semver");
   assert.doesNotThrow(function () {
-    updateTestPackage({gcd: '0.0.0', mime: '1.2.8'});
+    updateTestPackage(projectContext, {gcd: '0.0.0', mime: '1.2.8'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'});
-    _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.8'});
+    _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0', mime: '1.2.8'});
+    _assertCorrectBundleNpmContents(
+      tmpOutputDir, {gcd: '0.0.0', mime: '1.2.8'});
   });
 
   console.log("app that uses gcd - try downgrading mime to non-existant version");
   assert.doesNotThrow(function () {
-    updateTestPackage({gcd: '0.0.0', mime: '0.1.2'});
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      outputPath: tmpOutputDir
+    updateTestPackage(
+      projectContext, {gcd: '0.0.0', mime: '0.1.2'}, {noReload: true});
+    projectContext.reset();
+    var messages = buildmessage.capture(function () {
+      projectContext.prepareProjectForBuild();
     });
-    assert(result.errors);
-    var job = _.find(result.errors.jobs, function (job) {
-      return job.title === "building package `test-package`";
+    assert(messages.hasMessages());
+    var job = _.find(messages.jobs, function (job) {
+      return job.title === "building package test-package";
     });
     assert(job);
     assert(/mime version 0.1.2 is not available/.test(job.messages[0].message));
-    _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.8'}); // shouldn't've changed
+    _assertCorrectPackageNpmDir(
+      projectContext, {gcd: '0.0.0', mime: '1.2.8'}); // shouldn't've changed
   });
 
   console.log("app that uses gcd - downgrade mime to an existant version");
   assert.doesNotThrow(function () {
-    updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
+    updateTestPackage(projectContext, {gcd: '0.0.0', mime: '1.2.7'});
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
-    _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7'});
-    _assertCorrectBundleNpmContents(tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7'});
+    _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0', mime: '1.2.7'});
+    _assertCorrectBundleNpmContents(
+      tmpOutputDir, {gcd: '0.0.0', mime: '1.2.7'});
   });
 
   console.log("app that uses gcd - install gzippo via tarball");
   assert.doesNotThrow(function () {
     var deps = {gzippo: 'https://github.com/meteor/gzippo/tarball/1e4b955439abc643879ae264b28a761521818f3b'};
-    updateTestPackage(deps);
+    updateTestPackage(projectContext, deps);
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    _assertCorrectPackageNpmDir(deps);
+    _assertCorrectPackageNpmDir(projectContext, deps);
     _assertCorrectBundleNpmContents(tmpOutputDir, deps);
     // Check that a string introduced by our fork is in the source.
     assert(/clientMaxAge = 604800000/.test(
       fs.readFileSync(
-        path.join(testPackageDir, ".npm", "package", "node_modules", "gzippo", "lib", "staticGzip.js"), "utf8")));
+        path.join(testPackageDir, ".npm", "package", "node_modules",
+                  "gzippo", "lib", "staticGzip.js"), "utf8")));
   });
-
-  console.log("bundle multiple apps in parallel using a meteor package dependent on an npm package");
-  // this fails if we don't manage the package .npm directory correctly
-  // against parallel bundling.  this happens if you are running more
-  // than one app at once using a certain package and that package is
-  // updated.
-  // (Note that it still can fail if the _renameAlmostAtomically fails due to its
-  //  lack of atomicity, but this is relatively rare.)
-  assert.doesNotThrow(function () {
-    updateTestPackage({gcd: '0.0.0', mime: '1.2.7'});
-    // rm -rf .npm/package/node_modules, to make sure installing modules takes some time
-    var nodeModulesDir = path.join(testPackageDir, ".npm", "package", "node_modules");
-    assert(fs.existsSync(path.join(nodeModulesDir)));
-    files.rm_recursive(nodeModulesDir);
-    assert(!fs.existsSync(path.join(nodeModulesDir)));
-
-    var futures = _.map(_.range(0, 10), function () {
-      var future = new Future;
-      Fiber(function () {
-        var tmpAppDir = tmpDir();
-        files.cp_r(appWithPackageDir, tmpAppDir);
-        fs.writeFileSync(
-          path.join(tmpAppDir, '.meteor', 'release'),
-          release.current.isProperRelease()
-            ? release.current.name : 'none');
-
-        var tmpDirToPutBundleTarball = tmpDir();
-
-        // bundle in a separate process, since we have various bits of
-        // shared state, such as cached compiled packages
-        try {
-          var env = _.clone(process.env);
-          env.PACKAGE_DIRS = tmpPackageDirContainer;
-
-          // XXX: Calling this causes an SQLITE_BUSY error!
-          var result = meteorNpm._execFileSync(
-            process.env.METEOR_TOOL_PATH,
-            ["bundle", path.join(tmpDirToPutBundleTarball, "bundle.tar.gz")],
-            {cwd: tmpAppDir, env: env});
-
-          files.rm_recursive(tmpDirToPutBundleTarball);
-        } catch (e) {
-          console.log(e.stdout);
-          console.log(e.stderr);
-          throw e;
-        }
-        assert(result.success, result.stderr);
-        _assertCorrectPackageNpmDir({gcd: '0.0.0', mime: '1.2.7'});
-
-        files.rm_recursive(tmpAppDir);
-        future["return"]();
-      }).run();
-      return future;
-    });
-
-    Future.wait(futures);
-  });
-
 };
 
 
-var Fiber = require('fibers');
 Fiber(function () {
-  setAppDir(appWithPackageDir);
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
+
   meteorNpm._printNpmCalls = true;
 
   try {
+    release.setCurrent(release.load(null));
+    isopackets.ensureIsopacketsLoadable();
     runTest();
   } catch (err) {
     console.log(err.stack);

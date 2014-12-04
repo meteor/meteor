@@ -104,75 +104,10 @@ a:hover {
     background-color: yellow;
 }
 
-/** Section nav **/
-
-#nav {
-    line-height: 1.2;
-    border-width: 1px;
-    border-color: black;
-    border-style: none dotted none none;
-}
-
-#nav-inner {
-    padding-left: 30px;
-    padding-right: 30px;
-    padding-top: -10px;
-    padding-bottom: 30px;
-}
-
-#nav a {
-    text-decoration: none;
-    color: black;
-}
-
-#nav a:hover {
-    margin: 0px -5px 0px -5px;
-    padding: 2px 5px 2px 5px;
-}
-
-#nav h1 {
-    font-size: 1.7em;
-    margin: 1.2em 0 .2em 0;
-}
-
-#nav h2 {
-    font-size: 1.2em;
-    font-weight: normal;
-    margin: .3em 0 0 0;
-}
-
-#nav h3 {
-    font-size: .8em;
-    font-weight: normal;
-    margin: 4px 0px 2px 0px;
-    padding-left: 10px;
-    color: #333333;
-}
-
-#nav h4 {
-    font-size: .8em;
-    font-weight: normal;
-    margin: 4px 0px 4px 0px;
-    padding-left: 20px;
-    color: #333333;
-}
-
-#nav .spacer {
-    height: .33em;
-}
-
-#nav .noncode {
-    font-style: italic;
-}
-
-#nav .current {
-    color: red;
-}
-
 /** Main pane **/
 
 #main {
-    margin: 10px 10px 10px 60px;
+    margin: 10px;
     line-height: 1.3;
     color: #333333;
 }
@@ -369,6 +304,10 @@ h3.api-title {
     margin: 1em;
 }
 
+.api pre {
+    margin-right: 10px;
+}
+
 ol {
     list-style: decimal;
     padding-left: 30px;
@@ -412,15 +351,56 @@ ol {
     display: none;
 }
 
+
+/** layout control **/
+
+#menu-ico {
+    font-size: 30px;
+    float: right;
+    position: fixed;
+    top: 3px;
+    left: 6px;
+}
+
+#menu-ico.hidden {
+    display: none;
+}
+
+@nav-width: 270px;
+@top-bar-height: 50px;
+
 /* default to no sidebar */
+.hidden {
+  display: none;
+}
+
 #nav {
     display: block;
-    background: #FFF;
     position: fixed;
-    width: 260px;
+    width: @nav-width;
     height: 100%;
     top: 0;
-    left: -220px;
+    overflow-y: scroll;
+}
+
+.main-content {
+    position: absolute;
+    width: 100%;
+    top: @top-bar-height;
+    bottom: 0;
+    z-index: 1;
+    background: white;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    margin-left: 0;
+    transition: margin-left 300ms ease-out;
+}
+
+.overlay {
+    margin-left: 0;
+    transition: margin-left 300ms ease-out, opacity 300ms ease-out;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.3);
 }
 
 #nav.show {
@@ -435,17 +415,121 @@ pre {
     white-space: pre-wrap;
 }
 
+#main {
+    padding: 10px;
+    max-width: 700px;
+}
+
+.basic-or-full {
+    font-size: 1em;
+    margin: 10px 0;
+}
+
+#nav {
+    h1 {
+        margin-top: 1em;
+        font-size: 1.3em;
+
+        a {
+            text-decoration: none;
+            color: black;
+
+            &:hover {
+                background: none;
+                text-decoration: underline;
+            }
+        }
+    }
+
+    .logo {
+        width: 180px;
+        margin-bottom: 10px;
+    }
+}
+
+
+.top-bar {
+    position: absolute;
+    background: white;
+    width: 100%;
+    top: 0;
+    left: 0;
+    height: @top-bar-height;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+    margin-left: 0;
+    transition: margin-left 300ms ease-out, opacity 300ms ease-out;
+    border-bottom: 1px solid #aaa;
+
+    .fa-bars {
+        font-size: 25px;
+        margin: 13px 10px 13px 20px;
+    }
+
+    h1 {
+        margin: 13px auto;
+        text-align: center;
+        font-size: 25px;
+        padding: 0;
+        margin-top: 8px;
+
+        .logo {
+            display: inline;
+            height: 1.1em;
+            vertical-align: baseline;
+            margin-bottom: 1px;
+            margin-right: 3px;
+        }
+    }
+
+    .open-sidebar {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        font-size: 30px;
+    }
+}
+
+.sidebar-open {
+    overflow: hidden;
+    width: 100%;
+    position: absolute;
+    height: 100%;
+
+    .main-content {
+        margin-left: @nav-width;
+    }
+
+    .top-bar {
+        margin-left: @nav-width;
+    }
+
+    .overlay {
+        position: absolute;
+        margin-left: @nav-width;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+        opacity: 1;
+    }
+}
+
 @media (min-width: 768px) {
     /* ipad portrait or better */
-    #main {
-        width: 440px;
+    .main-content {
         height: 100%;
-        margin-left: 260px; /* nav width + padding */
-        padding: 30px;
+        margin-left: 0; /* nav width + padding */
+        padding-top: 0;
+        left: @nav-width;
+        right: 0;
+        width: auto;
+        border-left: 1px solid #ccc;
+        top: 0;
     }
+
     #nav {
         display: block;
-        width: 200px;
+        width: @nav-width;
         position: fixed;
         overflow: auto;
         height: 100%;
@@ -459,22 +543,66 @@ pre {
     #menu-ico {
         display: none;
     }
+
+    .overlay {
+        display: none;
+    }
+
+    .top-bar {
+        display: none;
+    }
+
+    #main {
+        padding: 30px;
+    }
+
+    .sidebar-open {
+        overflow: hidden;
+        width: 100%;
+        position: absolute;
+        height: 100%;
+
+        .main-content {
+            margin-left: 0;
+        }
+
+        .top-bar {
+            margin-left: 0;
+        }
+
+        .overlay {
+            display: none;
+        }
+    }
 }
 
-@media (min-width: 1024px) {
-    /* ipad landscape and desktop */
-    #main {
-        width: auto;
-        max-width: 720px;
-        margin-left: 330px; /* nav width + padding */
+.complete-link {
+    font-size: 0.9em;
+    text-decoration: underline !important;
+}
+
+@media print {
+    body {
+        font-size: 10pt;
     }
+
+    code, pre {
+        font-size: 8pt;
+    }
+
     #nav {
-        width: 270px;
+        display: none;
     }
-    .github-ribbon {
-        display: block;
+
+    .main-content {
+        position: relative;
+        height: auto;
+        margin: 0;
+        left: 0;
+        top: 0;
     }
-    #menu-ico {
+
+    .top-bar {
         display: none;
     }
 }

@@ -209,6 +209,7 @@ LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
  * @method  fetch
  * @instance
  * @locus Anywhere
+ * @returns {Object[]}
  */
 LocalCollection.Cursor.prototype.fetch = function () {
   var self = this;

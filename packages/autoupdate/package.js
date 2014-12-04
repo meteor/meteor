@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.1.2'
+  version: '1.1.4-ipc.0'
 });
 
 Cordova.depends({
@@ -14,7 +14,7 @@ Package.on_use(function (api) {
   api.use(['ddp', 'mongo', 'underscore'], ['client', 'server']);
   api.use('tracker', 'client');
   api.use('reload', 'client', {weak: true});
-  api.use('http', 'web.cordova');
+  api.use(['http', 'random'], 'web.cordova');
 
   api.export('Autoupdate');
   api.add_files('autoupdate_server.js', 'server');

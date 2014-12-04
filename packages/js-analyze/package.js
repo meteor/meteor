@@ -4,7 +4,7 @@
 
 Package.describe({
   summary: "JavaScript code analysis for Meteor",
-  version: '1.0.3'
+  version: '1.0.4-ipc.0'
 });
 
 // Use some packages from the Esprima project.  If it turns out we need these on
@@ -15,6 +15,10 @@ Npm.depends({
   // probably switch to a built NPM version when it gets released.
   esprima: "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018",
   escope: "1.0.0"
+});
+
+Npm.strip({
+  esprima: ["test/"]
 });
 
 // This package may not depend on ANY other Meteor packages, even in the test

@@ -30,13 +30,13 @@ selftest.define("cordova builds with server options", ["slow"], function () {
   s.cd("myapp");
 
   run = s.run("install-sdk", "android");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.expectExit(0);
 
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added");
   run.expectExit(0);
 

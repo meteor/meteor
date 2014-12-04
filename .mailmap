@@ -8,6 +8,7 @@
 # For any emails that show up in the shortlog that aren't in one of
 # these lists, figure out their GitHub username and add them.
 
+
 GITHUB: aldeed <eric@dairystatedesigns.com>
 GITHUB: AlexeyMK <alexey@alexeymk.com>
 GITHUB: ansman <nicklas@ansman.se>
@@ -23,6 +24,7 @@ GITHUB: davegonzalez <gonzalez.dalex@gmail.com>
 GITHUB: DenisGorbachev <Denis.Gorbachev@faster-than-wind.ru>
 GITHUB: ducdigital <duc@ducdigital.com>
 GITHUB: duckspeaker <gallo.j@gmail.com>
+GITHUB: ecwyne <ecwyne@users.noreply.github.com>
 GITHUB: emgee3 <hello@gravitronic.com>
 GITHUB: EOT <eot@gmx.at>
 GITHUB: felixrabe <felix@rabe.io>
@@ -47,6 +49,7 @@ GITHUB: mitar <mitar.git@tnode.com>
 GITHUB: mitar <mitar.github@tnode.com>
 GITHUB: mizzao <mizzao@gmail.com>
 GITHUB: mquandalle <maxime.quandalle@gmail.com>
+GITHUB: mquandalle <maxime@quandalle.com>
 GITHUB: nathan-muir <ndmuir@gmail.com>
 GITHUB: Neftedollar <oildollar@gmail.com>
 GITHUB: OyoKooN <nathan@sxnlabs.com>
@@ -54,6 +57,7 @@ GITHUB: paulswartz <paulswartz@gmail.com>
 GITHUB: Pent <jon@empire5design.com>
 GITHUB: prapicault <pascal@rapicault.net>
 GITHUB: prapicault <pascal@rapicorp.com>
+GITHUB: Primigenus <rchoudhury@gmail.com>
 GITHUB: pscanf <paolo.scanferla@mondora.com>
 GITHUB: queso <joshua.owens@gmail.com>
 GITHUB: rcy <rcyeske@gmail.com>
@@ -69,6 +73,7 @@ GITHUB: ryw <ry@rywalker.com>
 GITHUB: rzymek <rzymek@gmail.com>
 GITHUB: sdarnell <stephen@darnell.plus.com>
 GITHUB: subhog <hubert@orlikarnia.com>
+GITHUB: svda <svdakker@gmail.com>
 GITHUB: tbjers <torgny@xorcode.com>
 GITHUB: thatneat <thatneat@users.noreply.github.com>
 GITHUB: timhaines <tmhaines@gmail.com>
@@ -77,6 +82,7 @@ GITHUB: tmeasday <tom@thesnail.org>
 GITHUB: twhy <tom.wanghaiyi@gmail.com>
 GITHUB: waitingkuo <waitingkuo0527@gmail.com>
 GITHUB: wulfmeister <wulfmeister@users.noreply.github.com>
+GITHUB: yauh <stephan@yauh.de>
 GITHUB: yeputons <egor.suvorov@gmail.com>
 GITHUB: zol <zol@percolatestudio.com>
 

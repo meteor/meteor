@@ -2,6 +2,7 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
   require('./profile-require.js').start();
 
+var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('./console.js').Console;
@@ -10,7 +11,7 @@ var path = require('path');
 var warehouse = require('./warehouse.js');
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
-var project = require('./project.js');
+var projectContextModule = require('./project-context.js');
 var fs = require('fs');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
@@ -29,7 +30,9 @@ Error.stackTraceLimit = Infinity;
 // Command registration
 ///////////////////////////////////////////////////////////////////////////////
 
-var Command = function (options) {
+function Command(options) {
+  assert.ok(this instanceof Command);
+
   options = _.extend({
     minArgs: 0,
     options: {},
@@ -76,13 +79,16 @@ var messages = {};
 
 // Exception to throw from a command to bail out and show command
 // usage information.
-main.ShowUsage = function () {};
+main.ShowUsage = function ShowUsage() {
+  assert.ok(this instanceof ShowUsage);
+};
 
 // Exception to throw from a helper function inside a command which is identical
 // to returning the given exit code from the command.  ONLY USE THIS IN HELPERS
 // THAT ARE ONLY CALLED DIRECTLY FROM COMMANDS! DON'T BE LAZY AND PUT THROW OF
 // THIS IN RANDOM LIBRARY CODE!
-main.ExitWithCode = function (code) {
+main.ExitWithCode = function ExitWithCode(code) {
+  assert.ok(this instanceof ExitWithCode);
   this.code = code;
 };
 
@@ -94,20 +100,26 @@ _.extend(main.ExitWithCode.prototype, {
 });
 
 // Exception to throw to skip the process.exit call.
-main.WaitForExit = function () {};
+main.WaitForExit = function WaitForExit() {
+  assert.ok(this instanceof WaitForExit);
+};
 
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the latest available (downloaded) Meteor release.
 // If track is specified, it uses the latest available in the given
 // track instead of the default track.
-main.SpringboardToLatestRelease = function (track) {
+main.SpringboardToLatestRelease =
+function SpringboardToLatestRelease(track) {
+  assert.ok(this instanceof SpringboardToLatestRelease);
   this.track = track;
 };
 
 // Exception to throw from a command to exit, restart, and reinvoke
 // the command with the given Meteor release.
-main.SpringboardToSpecificRelease = function (releaseRecord, msg) {
-  this.releaseRecord = releaseRecord;
+main.SpringboardToSpecificRelease =
+function SpringboardToSpecificRelease(fullReleaseName, msg) {
+  assert.ok(this instanceof SpringboardToSpecificRelease);
+  this.fullReleaseName = fullReleaseName;
   this.msg = msg;
 };
 
@@ -231,6 +243,20 @@ main.registerCommand = function (options, func) {
   target[nameParts[0]] = new Command(options);
 };
 
+main.captureAndExit = function (header, title, f) {
+  var messages;
+  if (f) {
+    messages = buildmessage.capture({ title: title }, f);
+  } else {
+    messages = buildmessage.capture(title);  // title is really f
+  }
+  if (messages.hasMessages()) {
+    Console.error(header);
+    Console.printMessages(messages);
+    throw new main.ExitWithCode(1);
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Load all the commands
 ///////////////////////////////////////////////////////////////////////////////
@@ -338,12 +364,16 @@ var longHelp = exports.longHelp = function (commandName) {
 // Exit and restart the program, with the same arguments, but using a
 // different version of the tool and/or forcing a particular release.
 //
-// - release: required. the version of the tool to run. must
-//   already be downloaded.
+// - release: required. the version of the tool to run.
+//
+// options:
 // - releaseOverride: optional. if provided, a release name to force
 //   us to use when restarting (this functions exactly like --release
 //   and will cause release.forced to be true).
-var springboard = function (rel, releaseOverride) {
+// - fromApp: this release was suggested because it is the app's
+//   release.  affects error messages.
+var springboard = function (rel, options) {
+  options = options || {};
   if (process.env.METEOR_DEBUG_SPRINGBOARD)
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
@@ -355,35 +385,30 @@ var springboard = function (rel, releaseOverride) {
 
   // XXX split better
   try {
-    Console.setPretty(true);
-    Console.enableProgressDisplay(true);
-
-    var messages = buildmessage.capture({
-      title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
-    }, function () {
-      tropohouse.default.maybeDownloadPackageForArchitectures({
-        packageName: toolsPkg,
-        version: toolsVersion,
-        architectures: [archinfo.host()],
-        definitelyNotLocal: true
+    Console.withProgressDisplayVisible(function () {
+      buildmessage.enterJob({
+        title: "Downloading tools package " + toolsPkg + "@" + toolsVersion
+      }, function () {
+        tropohouse.default.maybeDownloadPackageForArchitectures({
+          packageName: toolsPkg,
+          version: toolsVersion,
+          architectures: [archinfo.host()]
+        });
       });
     });
-
-    Console.enableProgressDisplay(false);
-    Console.setPretty(false);
   } catch (err) {
     // We have failed to download the tool that we are supposed to springboard
     // to! That's bad. Let's exit.
-    process.stderr.write(
-      "Could not springboard to release: " + rel.name +
-      ": could not download tool in " +
-      rel.getToolsPackageAtVersion() + "\n");
-    process.exit(1);
-  }
-  if (messages.hasMessages()) {
-    process.stderr.write(
-      "Could not springboard to release: " + rel.name + ".\n" +
-        messages.formatMessages());
+    if (options.fromApp) {
+      Console.error(
+"Sorry, this project uses " + rel.getDisplayName() + ", which is not\n" +
+"installed and could not be downloaded. Please check to make sure that you\n" +
+"are online.");
+    } else {
+      Console.error(
+"Sorry, " + rel.getDisplayName() + " is not installed and could not be\n" +
+"downloaded. Please check to make sure that you are online.");
+    }
     process.exit(1);
   }
 
@@ -401,12 +426,12 @@ var springboard = function (rel, releaseOverride) {
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
 
-  if (releaseOverride !== undefined) {
+  if (_.has(options, 'releaseOverride')) {
     // We used to just append --release=<releaseOverride> to the arguments, and
     // though that's probably safe in practice, it makes us worry about things
     // like other --release options.  So now we use an environment
     // variable. #SpringboardEnvironmentVar
-    process.env['METEOR_SPRINGBOARD_RELEASE'] = releaseOverride;
+    process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
   }
 
   // Now exec; we're not coming back.
@@ -451,10 +476,10 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.29';
+  var MIN_NODE_VERSION = 'v0.10.33';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
-    process.stderr.write(
-      'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
+    Console.error(
+      'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
     process.exit(1);
   }
 
@@ -464,7 +489,7 @@ Fiber(function () {
   if (process.env.ROOT_URL) {
     var parsedUrl = require('url').parse(process.env.ROOT_URL);
     if (!parsedUrl.host) {
-      process.stderr.write('$ROOT_URL, if specified, must be an URL.\n');
+      Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }
   }
@@ -561,7 +586,7 @@ Fiber(function () {
     }
 
     if (term.match(/^--?=/)) {
-      process.stderr.write("Option names cannot begin with '='.\n");
+      Console.error("Option names cannot begin with '='.");
       process.exit(1);
     }
 
@@ -655,57 +680,16 @@ Fiber(function () {
   var appDir = files.findAppDir();
   if (appDir) {
     appDir = path.resolve(appDir);
-    // Set the project root directory. This doesn't do any dependency
-    // calculation -- we can't do that until the release is initialized.
-    project.project.setRootDir(appDir);
   }
 
-  // XXX compare this to the previous block's usesWarehouse...
-  if (files.inCheckout()) {
-    // When running from a checkout, uniload does use local packages, but *ONLY
-    // THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS packages.
-    // One side effect of this: we really really expect them to all build, and
-    // we're fine with dying if they don't (there's no worries about needing to
-    // springboard).
-    var messages = buildmessage.capture({ title: "Initializing local packages" }, function () {
-      catalog.uniload.initialize({
-        localPackageDirs: [path.join(files.getCurrentToolsDir(), 'packages')]
-      });
-    });
-    if (messages.hasMessages()) {
-      process.stderr.write("=> Errors while scanning core packages:\n\n");
-      process.stderr.write(messages.formatMessages());
-      process.exit(1);
-    }
-  } else {
-    // This doesn't need to be in a buildmessage, because the
-    // BuiltUniloadCatalog really shouldn't need to build anything: it's just a
-    // bunch of precompiled isopacks!
-    catalog.uniload.initialize({
-      uniloadDir: files.getUniloadDir()
-    });
-  }
+  require('./isopackets.js').ensureIsopacketsLoadable();
 
-
-  // Initialize the server catalog. Among other things, this is where
-  // we get release information (used by springboarding).  This doesn't
-  // build anything (except maybe, if running from a checkout, packages
-  // that we need to uniload, which really ought to build) so it's OK
-  // to die on errors.
-  var messages = buildmessage.capture({ title: "Initializing server catalog" }, function () {
-    catalog.official.initialize({
-      offline: !!process.env.METEOR_OFFLINE_CATALOG
-    });
+  // Initialize the server catalog. Among other things, this is where we get
+  // release information (used by springboarding). We do not at this point talk
+  // to the server and refresh it.
+  catalog.official.initialize({
+    offline: !!process.env.METEOR_OFFLINE_CATALOG
   });
-  if (messages.hasMessages()) {
-    process.stderr.write("=> Errors while initializing package catalog:\n\n");
-    process.stderr.write(messages.formatMessages());
-    process.exit(1);
-  }
-
-  // We do NOT initialize catalog.complete yet.  When we do that, we will build
-  // all local packages, and for both performance and correctness reasons, we
-  // will wait until after the springboard check to do so.
 
   // Now before we do anything else, figure out the release to use,
   // and if that release goes with a different version of the tools,
@@ -724,63 +708,59 @@ Fiber(function () {
   var releaseOverride = null;
   var releaseForced = false;
   var releaseExplicit = false;
+  var releaseFromApp = false;
   if (_.has(rawOptions, '--release')) {
     if (rawOptions['--release'].length > 1) {
-      process.stderr.write(
+      Console.error(
 "--release should only be passed once.\n" +
-"Try 'meteor help' for help.\n");
+"Try 'meteor help' for help.");
       process.exit(1);
     }
     releaseOverride = rawOptions['--release'][0];
     releaseForced = true;
+    releaseExplicit = true;
     if (! releaseOverride) {
-      process.stderr.write(
+      Console.error(
 "The --release option needs a value.\n" +
-"Try 'meteor help' for help.\n");
+"Try 'meteor help' for help.");
       process.exit(1);
     }
     delete rawOptions['--release'];
   }
 
-  // Let's keep track of whether this is an explicit release, due to different
-  // update behavior.
-  if (releaseOverride) {
-   releaseExplicit = true;
-  }
-
   if (_.has(process.env, 'METEOR_SPRINGBOARD_RELEASE')) {
     // See #SpringboardEnvironmentVar
-    // Note that this does *NOT* cause release.forced to be true.
-    // release.forced should only be set when the user actually
-    // ran with --release, not just because (eg) they ran
-    // 'meteor update' and we springboarded to the latest release.
-    // (It's important that 'meteor update' be able to tell these
-    // conditions apart even after the springboard!)
+    // Note that this causes release.forced to be true, but not
+    // release.explicit.  release.forced means "we're using
+    // some sort of externally specified release, not the app
+    // release"; release.explicit means "the end-user typed
+    // --release".
     releaseOverride = process.env['METEOR_SPRINGBOARD_RELEASE'];
+    releaseForced = true;
   }
 
-  var releaseName, appRelease;
+  var releaseName, appReleaseFile;
   if (appDir) {
-    // appRelease will be null if a super old project with no
-    // .meteor/release or 'none' if created by a checkout
-    appRelease = project.project.getMeteorReleaseVersion();
+    appReleaseFile = new projectContextModule.ReleaseFile({
+      projectDir: appDir
+    });
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
-    if (appRelease === '') {
-      process.stderr.write(
+    if (appReleaseFile.noReleaseSpecified()) {
+      Console.error(
 "Problem! This project has a .meteor/release file which is empty.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
 "or the word 'none' if you will only use the project with unreleased\n" +
 "checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
-"and change it to a valid Meteor release or 'none'.\n");
+"and change it to a valid Meteor release or 'none'.");
       process.exit(1);
-    } else if (appRelease === null) {
-      process.stderr.write(
+    } else if (appReleaseFile.fileMissing()) {
+      Console.error(
 "Problem! This project does not have a .meteor/release file.\n" +
 "The file should either contain the release of Meteor that you want to use,\n" +
 "or the word 'none' if you will only use the project with unreleased\n" +
 "checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
-"and change it to a valid Meteor release or 'none'.\n");
+"and change it to a valid Meteor release or 'none'.");
       process.exit(1);
     }
   }
@@ -790,8 +770,8 @@ Fiber(function () {
   if (! files.usesWarehouse()) {
     // Running from a checkout
     if (releaseOverride) {
-      process.stderr.write(
-        "Can't specify a release when running Meteor from a checkout.\n");
+      Console.error(
+        "Can't specify a release when running Meteor from a checkout.");
       process.exit(1);
     }
     releaseName = null;
@@ -802,11 +782,12 @@ Fiber(function () {
       releaseName = releaseOverride;
     } else if (appDir) {
       // Running from an app directory. Use release specified by app.
-      if (appRelease === 'none') {
+      if (appReleaseFile.isCheckout()) {
         // Looks like we don't have a release. Leave release.current === null.
       } else {
         // Use the project's desired release
-        releaseName = appRelease;
+        releaseName = appReleaseFile.unnormalizedReleaseName;
+        releaseFromApp = true;
       }
     } else {
       // Run outside an app dir with no --release flag. Use the latest
@@ -816,21 +797,19 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
         releaseName = release.latestKnown();
       }
       if (!releaseName) {
         if (catalog.refreshFailed) {
-          process.stderr.write(
+          Console.error(
 "The package catalog has no information about any Meteor releases, and we\n" +
-"had trouble connecting to the package server.\n");
+"had trouble connecting to the package server.");
         } else {
-          process.stderr.write(
-"The package catalog has no information about any Meteor releases.\n");
+          Console.error(
+"The package catalog has no information about any Meteor releases.");
         }
         process.exit(1);
       }
@@ -876,11 +855,9 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        Console.setPretty(true);
-        Console.enableProgressDisplay(true);
-        alreadyRefreshed = catalog.refreshOrWarn();
-        Console.enableProgressDisplay(false);
-        Console.setPretty(false);
+        Console.withProgressDisplayVisible(function () {
+          alreadyRefreshed = catalog.refreshOrWarn();
+        });
 
         // Try to load the release even if the refresh failed, since it might
         // have failed on a later page than the one we needed.
@@ -924,33 +901,39 @@ Fiber(function () {
 
     if (!rel) {
       // Nope, still have no idea about this release!
+
+      // Let's do some processing here. If the user/release file specified a
+      // track, we need to display that correctly, and if they didn't, we should
+      // make it clear that we are talking about the default track.
+      var utils = require('./utils.js');
+      var trackAndVersion = utils.splitReleaseName(releaseName);
+      var displayRelease = utils.displayRelease(
+        trackAndVersion[0], trackAndVersion[1]);
+      // Now, let's process this.
       if (releaseOverride) {
-        process.stderr.write(releaseName + ": unknown release.\n");
+        Console.error(displayRelease + ": unknown release.");
       } else if (appDir) {
+        if (trackAndVersion[0] !== catalog.DEFAULT_TRACK) {
+          displayRelease = "Meteor release " + displayRelease;
+        }
         if (catalog.refreshFailed) {
-          process.stderr.write(
-"Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
-"but you don't have that version of Meteor installed, and we were unable to\n" +
+          Console.error(
+"This project says that it uses " + displayRelease + ", but\n" +
+"you don't have that version of Meteor installed, and we were unable to\n" +
 "contact Meteor's update servers to find out about it. Please edit the\n" +
-".meteor/release file in the project and change it to a valid Meteor release,\n" +
-"or go online.\n");
+".meteor/release file in the project and change it to a valid Meteor\n" +
+"release, or go online.");
         } else {
-          process.stderr.write(
-"Problem! This project says that it uses version " + releaseName + " of Meteor,\n" +
-"but you don't have that version of Meteor installed and the Meteor update\n" +
-"servers don't have it either. Please edit the .meteor/release file in the\n" +
-"project and change it to a valid Meteor release.\n");
+          Console.error(
+"This project says that it uses " + displayRelease + ", but you don't have\n" +
+"that version of Meteor installed and the Meteor update servers\n" +
+"don't have it either. Please edit the .meteor/release file in\n" +
+"the project and change it to a valid Meteor release.");
         }
       } else {
         throw new Error("can't load latest release?");
       }
       process.exit(1);
-    }
-
-    // Let's keep track of whether this is an explicit release, due to different
-    // update behavior.
-    if (releaseOverride) {
-      releaseForced = true;
     }
 
     release.setCurrent(rel, releaseForced, releaseExplicit);
@@ -965,7 +948,8 @@ Fiber(function () {
   // release is a checkout, because that doesn't make any sense.
   if (release.current && release.current.isProperRelease() &&
       release.current.getToolsPackageAtVersion() !== files.getToolsVersion()) {
-    springboard(release.current); // does not return!
+    springboard(release.current, { fromApp: releaseFromApp });
+    // Does not return!
   }
 
   // Check for the '--help' option.
@@ -986,13 +970,13 @@ Fiber(function () {
 
       if (rawOptions[fullName]) {
         if (rawOptions[fullName].length > 1) {
-          process.stderr.write("It doesn't make sense to pass " +
-                               fullName + " more than once.\n");
+          Console.error("It doesn't make sense to pass " +
+                               fullName + " more than once.");
           process.exit(1);
         }
         if (_.size(rawOptions) > 1 || rawArgs.length !== 0 || command) {
-          process.stderr.write("Can't pass anything else along with " +
-                               value.name + ".\n");
+          Console.error("Can't pass anything else along with " +
+                               value.name + ".");
           process.exit(1);
         }
         command = value;
@@ -1032,8 +1016,8 @@ Fiber(function () {
         commandName += (commandName.length > 0 ? " " : "") + word;
 
         if (! _.has(walk, word)) {
-          process.stderr.write(
-"'" + commandName + "' is not a Meteor command. See 'meteor --help'.\n");
+          Console.error(
+"'" + commandName + "' is not a Meteor command. See 'meteor --help'.");
           process.exit(1);
         }
 
@@ -1051,8 +1035,8 @@ Fiber(function () {
   if (! command && ! showHelp) {
     // They typed something like 'meteor admin' (when they were
     // supposed to type 'meteor admin grant' or something).
-    process.stderr.write(
-"Try 'meteor " + commandName + " help' for available commands.\n");
+    Console.error(
+"Try 'meteor " + commandName + " help' for available commands.");
     process.exit(1);
   }
 
@@ -1064,7 +1048,7 @@ Fiber(function () {
   // which case showHelp will be true and command will be null
 
   if (showHelp) {
-    process.stdout.write(longHelp(commandName) + "\n");
+    Console.stdout.write(longHelp(commandName) + "\n");
     process.exit(0);
   }
 
@@ -1080,10 +1064,10 @@ Fiber(function () {
 
     if (presentShort && presentLong) {
       // this would get caught below, but give a clearer error message
-      process.stderr.write(
+      Console.error(
 commandName + ": can't pass both -" + optionInfo.short + " and --" +
             optionName + ".\n" +
-"Try 'meteor help " + commandName + "' for help.\n");
+"Try 'meteor help " + commandName + "' for help.");
       process.exit(1);
     }
     var helpfulOptionName = "--" + optionName +
@@ -1101,9 +1085,9 @@ commandName + ": can't pass both -" + optionInfo.short + " and --" +
     if (values.length > 1) {
       // in the future, we could support multiple values, but we don't
       // for now since no command needs it
-      process.stderr.write(
+      Console.error(
 commandName + ": can only take one " + helpfulOptionName + " option.\n" +
-"Try 'meteor help " + commandName + "' for help.\n");
+"Try 'meteor help " + commandName + "' for help.");
       process.exit(1);
     } else if (values.length === 1) {
       // OK, they provided exactly one value. Check its type and add
@@ -1112,23 +1096,23 @@ commandName + ": can only take one " + helpfulOptionName + " option.\n" +
       if (value === null) {
         // This option requires a value and they didn't give it one
         // (it was the last word on the command line).
-        process.stderr.write(
+        Console.error(
 commandName + ": the " + helpfulOptionName + " option needs a value.\n" +
-"Try 'meteor help " + commandName + "' for help.\n");
+"Try 'meteor help " + commandName + "' for help.");
         process.exit(1);
       } else if (optionInfo.type === Number) {
         if (! value.match(/^[0-9]+$/)) {
-          process.stderr.write(
+          Console.error(
 commandName + ": " + helpfulOptionName + " must be a number.\n" +
-"Try 'meteor help " + commandName + "' for help.\n");
+"Try 'meteor help " + commandName + "' for help.");
           process.exit(1);
         }
         value = parseInt(value);
       } else if (optionInfo.type === Boolean) {
         if (!value) {
-          process.stderr.write(
+          Console.error(
 commandName + ": the " + helpfulOptionName + " option does not need a value.\n" +
-"Try 'meteor help " + commandName + "' for help.\n");
+"Try 'meteor help " + commandName + "' for help.");
           process.exit(1);
         }
         value = true;
@@ -1152,9 +1136,9 @@ commandName + ": the " + helpfulOptionName + " option does not need a value.\n" 
       if (_.has(optionInfo, 'default')) {
         options[optionName] = optionInfo.default;
       } else if (optionInfo.required) {
-        process.stderr.write(
+        Console.error(
 commandName + ": the --" + optionName + " option is required.\n" +
-longHelp(commandName) + "\n");
+longHelp(commandName));
         process.exit(1);
       }
     }
@@ -1162,24 +1146,24 @@ longHelp(commandName) + "\n");
 
   // Check for unrecognized options.
   if (_.keys(rawOptions).length > 0) {
-    process.stderr.write(
+    Console.error(
 _.keys(rawOptions)[0] + ": unknown option.\n" +
-longHelp(commandName) + "\n");
+longHelp(commandName));
     process.exit(1);
   }
 
   // Check argument count.
   if (options.args.length < command.minArgs) {
-    process.stderr.write(
+    Console.error(
 commandName + ": not enough arguments.\n" +
-longHelp(commandName) + "\n");
+longHelp(commandName));
     process.exit(1);
   }
 
   if (options.args.length > command.maxArgs) {
-    process.stderr.write(
+    Console.error(
 commandName + ": too many arguments.\n" +
-longHelp(commandName) + "\n");
+longHelp(commandName));
     process.exit(1);
   }
 
@@ -1190,14 +1174,15 @@ longHelp(commandName) + "\n");
   if (typeof requiresApp === "function")
     requiresApp = requiresApp(options);
 
-  if (appDir)
+  if (appDir) {
     options.appDir = appDir;
+  }
 
   if (requiresApp && ! options.appDir) {
     // This is where you end up if you type 'meteor' with no args,
     // since you'll default to the 'run' command which requires an
     // app. Be welcoming to our new developers!
-    process.stderr.write(
+    Console.error(
 commandName + ": You're not in a Meteor project directory.\n" +
 "\n" +
 "To create a new Meteor project:\n" +
@@ -1205,99 +1190,49 @@ commandName + ": You're not in a Meteor project directory.\n" +
 "For example:\n" +
 "   meteor create myapp\n" +
 "\n" +
-"For more help, see 'meteor --help'.\n");
+"For more help, see 'meteor --help'.");
     process.exit(1);
   }
 
-  if (!command.catalogRefresh.doesNotUsePackages) {
-    // OK, now it's finally time to set up the complete catalog. Only after this
-    // can we use the build system (other than via uniload).
+  // Same check for commands that can only be run from a package dir.
+  // You can't specify this on a Refresh.Never command.
+  var requiresPackage = command.requiresPackage;
+  if (typeof requiresPackage === "function") {
+    requiresPackage = requiresPackage(options);
+  }
 
-    // Figure out the directories that we should search for local
-    // packages (in addition to packages downloaded from the package
-    // server)
-    var localPackageDirs = [];
-    if (appDir)
-      localPackageDirs.push(path.join(appDir, 'packages'));
-
-    if (process.env.PACKAGE_DIRS) {
-      // User can provide additional package directories to search in
-      // PACKAGE_DIRS (colon-separated).
-      localPackageDirs = localPackageDirs.concat(
-        _.map(process.env.PACKAGE_DIRS.split(':'), function (p) {
-          return path.resolve(p);
-        }));
+  if (requiresPackage) {
+    var packageDir = files.findPackageDir();
+    if (packageDir)
+      packageDir = path.resolve(packageDir);
+    if (packageDir) {
+      options.packageDir = packageDir;
     }
 
-    if (!files.usesWarehouse()) {
-      // Running from a checkout, so use the Meteor core packages from
-      // the checkout.
-      localPackageDirs.push(path.join(
-        files.getCurrentToolsDir(), 'packages'));
-    }
-
-    var messages = buildmessage.capture({ title: "Initializing catalog" }, function () {
-      catalog.complete.initialize({
-        localPackageDirs: localPackageDirs
-      });
-    });
-    if (messages.hasMessages()) {
-      process.stderr.write("=> Errors while scanning packages:\n\n");
-      process.stderr.write(messages.formatMessages());
+    if (! options.packageDir) {
+      Console.error(
+        commandName + ": You're not in a Meteor package directory.");
       process.exit(1);
-    }
-
-    // Same check for commands that can only be run from a package dir.
-    // You can't specify this on a Refresh.Never command.
-    var requiresPackage = command.requiresPackage;
-    if (typeof requiresPackage === "function") {
-      requiresPackage = requiresPackage(options);
-    }
-
-    if (requiresPackage) {
-      var packageDir = files.findPackageDir();
-      if (packageDir)
-        packageDir = path.resolve(packageDir);
-      if (packageDir) {
-        options.packageDir = packageDir;
-      }
-
-      if (! options.packageDir) {
-        process.stderr.write(
-          commandName + ": You're not in a Meteor package directory.\n");
-        process.exit(1);
-      }
-      // Commands that require you to be in a package directory add that package
-      // as a local package to the catalog. Other random commands don't (but if
-      // we see a reason for them to, we can change this rule).
-      messages = buildmessage.capture(function () {
-        catalog.complete.addLocalPackage(options.packageDir);
-      });
-      if (messages.hasMessages()) {
-        process.stderr.write("=> Errors while scanning current package:\n\n");
-        process.stderr.write(messages.formatMessages());
-        process.exit(1);
-      }
     }
   }
 
   if (command.requiresRelease && ! release.current) {
-    process.stderr.write(
+    Console.error(
 "You must specify a Meteor version with --release when you work with this\n" +
 "project. It was created from an unreleased Meteor checkout and doesn't\n" +
 "have a version associated with it.\n" +
 "\n" +
-"You can permanently set a release for this project with 'meteor update'.\n");
+"You can permanently set a release for this project with 'meteor update'.");
     process.exit(1);
   }
 
   if (command.requiresApp && release.current.isCheckout() &&
-      appRelease && appRelease !== "none") {
+      appReleaseFile && ! appReleaseFile.isCheckout()) {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
-    process.stderr.write(
+    Console.warn(
 "=> Running Meteor from a checkout -- overrides project version (" +
-        appRelease + ")\n");
+        appReleaseFile.displayReleaseName + ")");
   }
 
   // Now that we're ready to start executing the command, if we are in
@@ -1306,7 +1241,6 @@ commandName + ": You're not in a Meteor project directory.\n" +
     require('./profile-require.js').printReport();
 
   Console.setPretty(command.pretty);
-
   Console.enableProgressDisplay(true);
 
   // Run the command!
@@ -1330,7 +1264,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
     } else if (e instanceof main.ShowUsage) {
-      process.stderr.write(longHelp(commandName) + "\n");
+      Console.error(longHelp(commandName));
       process.exit(1);
     } else if (e instanceof main.SpringboardToLatestRelease) {
       // Load the metadata for the latest release (or at least, the latest
@@ -1339,15 +1273,14 @@ commandName + ": You're not in a Meteor project directory.\n" +
       // 'update' and 'create', which are both catalog.Refresh.OnceAtStart
       // commands, so we ought to have decent knowledge of the latest release.
       var latestRelease = release.load(release.latestKnown(e.track));
-      springboard(latestRelease, latestRelease.name);
+      springboard(latestRelease, { releaseOverride: latestRelease.name });
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {
       // Springboard to a specific release. This is only throw by
       // publish-for-arch, which is catalog.Refresh.OnceAtStart, so we ought to
       // have decent knowledge of the latest release.
-      var relName = e.releaseRecord.track + "@" + e.releaseRecord.version;
-      var nextRelease = release.load(relName);
-      springboard(nextRelease, relName);
+      var nextRelease = release.load(e.fullReleaseName);
+      springboard(nextRelease, { releaseOverride: e.fullReleaseName });
       // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;

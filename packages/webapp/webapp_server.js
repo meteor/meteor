@@ -169,7 +169,7 @@ WebApp.categorizeRequest = function (req) {
 
 // HTML attribute hooks: functions to be called to determine any attributes to
 // be added to the '<html>' tag. Each function is passed a 'request' object (see
-// #BrowserIdentification) and should return a string,
+// #BrowserIdentification) and should return null or object.
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function (request) {
   var combinedAttributes  = {};
@@ -567,10 +567,20 @@ var runWebAppServer = function () {
     var defaultOptionsForArch = {
       'web.cordova': {
         runtimeConfigOverrides: {
+          // XXX We use absoluteUrl() here so that we serve https://
+          // URLs to cordova clients if force-ssl is in use. If we were
+          // to use __meteor_runtime_config__.ROOT_URL instead of
+          // absoluteUrl(), then Cordova clients would immediately get a
+          // HCP setting their DDP_DEFAULT_CONNECTION_URL to
+          // http://example.meteor.com. This breaks the app, because
+          // force-ssl doesn't serve CORS headers on 302
+          // redirects. (Plus it's undesirable to have clients
+          // connecting to http://example.meteor.com when force-ssl is
+          // in use.)
           DDP_DEFAULT_CONNECTION_URL: process.env.MOBILE_DDP_URL ||
-            __meteor_runtime_config__.ROOT_URL,
+            Meteor.absoluteUrl(),
           ROOT_URL: process.env.MOBILE_ROOT_URL ||
-            __meteor_runtime_config__.ROOT_URL
+            Meteor.absoluteUrl()
         }
       }
     };

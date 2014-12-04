@@ -36,11 +36,11 @@ selftest.define("run", function () {
 
   // File change
   s.write("empty.js", "");
-  run.waitSecs(1);
+  run.waitSecs(2);
   run.match("restarted");
   s.write("empty.js", " ");
-  run.waitSecs(1);
-  run.match("restarted (x2)");
+  run.waitSecs(2);
+  run.match("restarted");
   // XXX want app to generate output so that we can see restart counter reset
 
   // Crashes
@@ -56,7 +56,9 @@ selftest.define("run", function () {
   run.match("restarted");
   s.write("empty.js", "");
   run.waitSecs(5);
-  run.match("restarted (x2)"); // see that restart counter reset
+  // We used to see the restart counter reset but right now restart messages
+  // don't coalesce due to intermediate use of the progress bar.
+  run.match("restarted");
   s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
   run.waitSecs(5);
   run.match("from signal: SIGKILL");
@@ -161,20 +163,6 @@ selftest.define("run --once", function () {
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
 
-  // running a different program
-  run = s.run("--once", "--program", "other");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(8);
-  run.match("other program\n");
-  run.expectExit(44);
-
-  // bad program name
-  run = s.run("--once", "--program", "xyzzy");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
-  run.match("'xyzzy' not found");
-  run.expectExit(254);
-
   // Try it with a real Mongo. Make sure that it actually starts one.
   s = new Sandbox;
   s.createApp("onceapp", "once");
@@ -238,21 +226,16 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "packageless");
+  s.createApp("myapp", "packageless", { release: 'METEOR@v1' });
   s.cd("myapp");
 
-  // This makes packages not depend on meteor (specifically, makes our empty
-  // control program not depend on meteor).
-  s.set("NO_METEOR_PACKAGE", "t");
-
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('localhost:3000');
   s.write('.meteor/release', 'METEOR@v2');
-  run.matchErr('to Meteor METEOR@v2 from Meteor METEOR@v1');
+  run.matchErr('to Meteor v2 from Meteor v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
