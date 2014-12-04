@@ -56,7 +56,7 @@ function onConnection(socket) {
       prompt: "> ",
       terminal: true,
       useColors: true,
-      useGlobal: true,
+      useGlobal: false,
       ignoreUndefined: true,
     });
 
