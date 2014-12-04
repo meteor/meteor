@@ -38,13 +38,13 @@ var Template = Blaze.Template;
 
 var HelperMap = function () {};
 HelperMap.prototype.get = function (name) {
-  return this[' '+name];
+  return this[name];
 };
 HelperMap.prototype.set = function (name, helper) {
-  this[' '+name] = helper;
+  this[name] = helper;
 };
 HelperMap.prototype.has = function (name) {
-  return (' '+name) in this;
+  return (name) in this;
 };
 
 /**
