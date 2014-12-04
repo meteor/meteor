@@ -1517,6 +1517,7 @@ main.registerCommand({
   maxArgs: Infinity,
   hidden: true,
   pretty: true,
+  requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContextModule = require('./project-context.js');
