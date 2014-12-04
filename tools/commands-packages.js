@@ -1066,7 +1066,7 @@ main.registerCommand({
       Console.error(
         "No recommended versions of release " + name + " exist.");
     } else {
-      Console.error("No versions of package" + name + " exist.");
+      Console.error("No versions of package " + name + " exist.");
     }
   } else {
     var lastVersion = versionRecords[versionRecords.length - 1];
