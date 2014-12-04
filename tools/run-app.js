@@ -97,11 +97,9 @@ _.extend(AppProcess.prototype, {
 
     eachline(self.proc.stderr, 'utf8', fiberHelpers.inBareFiber(function (line) {
       if (self.debugPort &&
-          line.indexOf("debugger listening on port " + self.debugPort) >= 0) {
+          line.indexOf("debugger listening on port ") >= 0) {
         Console.enableProgressDisplay(false);
-        process.stdout.write(
-          require("./inspector.js").banner(self.debugPort)
-        );
+        return;
       }
 
       runLog.logAppOutput(line, true);
@@ -207,21 +205,30 @@ _.extend(AppProcess.prototype, {
     var child_process = require('child_process');
 
     var opts = _.clone(self.nodeOptions);
+    var entryPoint = path.join(self.bundlePath, 'main.js');
 
     if (self.debugPort) {
-      require("./inspector.js").start(self.debugPort);
-      opts.push("--debug-brk=" + self.debugPort);
+      var attach = require("./inspector.js").start(
+        self.debugPort,
+        entryPoint
+      );
+      opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
     }
 
     opts.push(
-      path.join(self.bundlePath, 'main.js'),
-      '--parent-pid',
+      entryPoint, '--parent-pid',
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
     );
 
-    return child_process.spawn(process.execPath, opts, {
+    var child = child_process.spawn(process.execPath, opts, {
       env: self._computeEnvironment()
     });
+
+    if (attach) {
+      attach(child);
+    }
+
+    return child;
   }
 });
 
