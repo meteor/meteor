@@ -677,12 +677,18 @@ Meteor.Collection.prototype._validatedUpdate = function(
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
 
+  var noReplaceError = "Access denied. In a restricted collection you can only" +
+        " update documents, not replace them. Use a Mongo update operator, such " +
+        "as '$set'.";
+
   // compute modified fields
   var fields = [];
+  if (_.isEmpty(mutator)) {
+    throw new Meteor.Error(403, noReplaceError);
+  }
   _.each(mutator, function (params, op) {
     if (op.charAt(0) !== '$') {
-      throw new Meteor.Error(
-        403, "Access denied. In a restricted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
+      throw new Meteor.Error(403, noReplaceError);
     } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
       throw new Meteor.Error(
         403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
