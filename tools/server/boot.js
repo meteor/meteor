@@ -168,6 +168,9 @@ Fiber(function () {
     var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+    // The final 'true' is an undocumented argument to runIn[Foo]Context that
+    // causes it to print out a descriptive error message on parse error. It's
+    // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
