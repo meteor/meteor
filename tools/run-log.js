@@ -100,9 +100,13 @@ _.extend(RunLog.prototype, {
     // XXX deal with test server logging differently?!
   },
 
-  log: function (msg) {
+  // Log the message.
+  //  msg: message
+  //  options:
+  //    - arrow: if true, preface with => and wrap accordingly.
+  log: function (msg, options) {
     var self = this;
-
+    options = options || {};
     var obj = {
       time: new Date,
       message: msg
@@ -113,7 +117,19 @@ _.extend(RunLog.prototype, {
     self._record(obj);
 
     self._clearSpecial();
-    Console.stdout.write(msg + "\n");
+
+    // Process the options. By default, we want to wordwrap the message with
+    // Console.info. If we ask for raw output, then we don't want to do that. If
+    // we ask for an arrow, we want to wrap around with => as the bulletPoint.
+    var printFn;
+    if (options.arrow) {
+      printFn = Console.arrowInfo;
+    } else {
+      printFn = Console.info;
+   }
+
+   // Print the message to the logs.
+   printFn(msg);
   },
 
   // Write a message to the terminal that will get overwritten by the

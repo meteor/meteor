@@ -79,7 +79,8 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     run = s.run();
     run.matchErr("offline");
     run.matchErr("it uses Meteor strange");
-    run.matchErr("don't have that version of Meteor installed");
+    run.matchErr("don't have that version");
+    run.matchErr("of Meteor installed");
     run.matchErr("update servers");
     run.expectExit(1);
 
@@ -186,7 +187,8 @@ selftest.define("checkout", ['checkout'], function () {
     s.write(".meteor/release", "something");
     run = s.run("list");
     run.readErr("=> Running Meteor from a checkout");
-    run.matchErr("project version (Meteor something)\n");
+    run.matchErr("project version");
+    run.matchErr("(Meteor something)\n");
     run.expectExit(0);
   });
 });

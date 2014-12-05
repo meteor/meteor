@@ -401,13 +401,13 @@ var springboard = function (rel, options) {
     // to! That's bad. Let's exit.
     if (options.fromApp) {
       Console.error(
-"Sorry, this project uses " + rel.getDisplayName() + ", which is not\n" +
-"installed and could not be downloaded. Please check to make sure that you\n" +
-"are online.");
+        "Sorry, this project uses " + rel.getDisplayName() + ", which is not",
+        "installed and could not be downloaded. Please check to make sure",
+        "that you are online.");
     } else {
       Console.error(
-"Sorry, " + rel.getDisplayName() + " is not installed and could not be\n" +
-"downloaded. Please check to make sure that you are online.");
+        "Sorry, " + rel.getDisplayName() + " is not installed and could not",
+        "be downloaded. Please check to make sure that you are online.");
     }
     process.exit(1);
   }
@@ -712,8 +712,8 @@ Fiber(function () {
   if (_.has(rawOptions, '--release')) {
     if (rawOptions['--release'].length > 1) {
       Console.error(
-"--release should only be passed once.\n" +
-"Try 'meteor help' for help.");
+        "--release should only be passed once. " +
+        "Try 'meteor help' for help.");
       process.exit(1);
     }
     releaseOverride = rawOptions['--release'][0];
@@ -721,8 +721,8 @@ Fiber(function () {
     releaseExplicit = true;
     if (! releaseOverride) {
       Console.error(
-"The --release option needs a value.\n" +
-"Try 'meteor help' for help.");
+        "The --release option needs a value. " +
+        "Try 'meteor help' for help.");
       process.exit(1);
     }
     delete rawOptions['--release'];
@@ -748,19 +748,21 @@ Fiber(function () {
     // shouldn't happen unless the user did it manually.
     if (appReleaseFile.noReleaseSpecified()) {
       Console.error(
-"Problem! This project has a .meteor/release file which is empty.\n" +
-"The file should either contain the release of Meteor that you want to use,\n" +
-"or the word 'none' if you will only use the project with unreleased\n" +
-"checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
-"and change it to a valid Meteor release or 'none'.");
+        "Problem! This project has a .meteor/release file which is empty.",
+        "The file should either contain the release of Meteor that you want",
+        "to use, or the word 'none' if you will only use the project with",
+        "unreleased checkouts of Meteor. Please edit the .meteor/release",
+        "file in the project and change it to a valid Meteor release or",
+        "'none'.");
       process.exit(1);
     } else if (appReleaseFile.fileMissing()) {
       Console.error(
-"Problem! This project does not have a .meteor/release file.\n" +
-"The file should either contain the release of Meteor that you want to use,\n" +
-"or the word 'none' if you will only use the project with unreleased\n" +
-"checkouts of Meteor. Please edit the .meteor/release file in the project\n" +
-"and change it to a valid Meteor release or 'none'.");
+        "Problem! This project does not have a .meteor/release file.",
+        "The file should either contain the release of Meteor that you",
+        "want to use, or the word 'none' if you will only use the project",
+        "with unreleased checkouts of Meteor. Please edit the",
+        ".meteor/release file in the project and change it to a valid Meteor",
+        "release or 'none'.");
       process.exit(1);
     }
   }
@@ -805,11 +807,12 @@ Fiber(function () {
       if (!releaseName) {
         if (catalog.refreshFailed) {
           Console.error(
-"The package catalog has no information about any Meteor releases, and we\n" +
-"had trouble connecting to the package server.");
+            "The package catalog has no information about any Meteor",
+            "releases, and we had trouble connecting to the package server.");
         } else {
           Console.error(
-"The package catalog has no information about any Meteor releases.");
+            "The package catalog has no information about",
+            "any Meteor releases.");
         }
         process.exit(1);
       }
@@ -883,7 +886,8 @@ Fiber(function () {
           } else if (e instanceof files.OfflineError) {
             if (!catalog.refreshFailed) {
               // Warn if we didn't already warn.
-              Console.warn("Unable to contact release server (are you offline?)");
+              Console.warn(
+                "Unable to contact release server (are you offline?)");
             }
             // Treat this like a failure to refresh the catalog
             // (map the old world to the new world)
@@ -918,17 +922,18 @@ Fiber(function () {
         }
         if (catalog.refreshFailed) {
           Console.error(
-"This project says that it uses " + displayRelease + ", but\n" +
-"you don't have that version of Meteor installed, and we were unable to\n" +
-"contact Meteor's update servers to find out about it. Please edit the\n" +
-".meteor/release file in the project and change it to a valid Meteor\n" +
-"release, or go online.");
+            "This project says that it uses " + displayRelease + ", but",
+            "you don't have that version of Meteor installed, and we were",
+            "unable to contact Meteor's update servers to find out about it.",
+            "Please edit the .meteor/release file in the project and change",
+            "it to a valid Meteor release, or go online.");
         } else {
           Console.error(
-"This project says that it uses " + displayRelease + ", but you don't have\n" +
-"that version of Meteor installed and the Meteor update servers\n" +
-"don't have it either. Please edit the .meteor/release file in\n" +
-"the project and change it to a valid Meteor release.");
+            "This project says that it uses " + displayRelease + ", but you",
+            "don't have that version of Meteor installed and the Meteor",
+            "update servers don't have it either. Please edit the",
+            ".meteor/release file in the project and change it to a valid",
+            "Meteor release.");
         }
       } else {
         throw new Error("can't load latest release?");
@@ -971,12 +976,12 @@ Fiber(function () {
       if (rawOptions[fullName]) {
         if (rawOptions[fullName].length > 1) {
           Console.error("It doesn't make sense to pass " +
-                               fullName + " more than once.");
+                        fullName + " more than once.");
           process.exit(1);
         }
         if (_.size(rawOptions) > 1 || rawArgs.length !== 0 || command) {
           Console.error("Can't pass anything else along with " +
-                               value.name + ".");
+                        value.name + ".");
           process.exit(1);
         }
         command = value;
@@ -1017,7 +1022,9 @@ Fiber(function () {
 
         if (! _.has(walk, word)) {
           Console.error(
-"'" + commandName + "' is not a Meteor command. See 'meteor --help'.");
+            Console.command("'" + commandName + "'") +
+            " is not a Meteor command. See " +
+            Console.command("'meteor --help'")+ ".");
           process.exit(1);
         }
 
@@ -1036,7 +1043,8 @@ Fiber(function () {
     // They typed something like 'meteor admin' (when they were
     // supposed to type 'meteor admin grant' or something).
     Console.error(
-"Try 'meteor " + commandName + " help' for available commands.");
+      "Try " + Console.command("'meteor " + commandName + " help'") + " " +
+      "for available commands.");
     process.exit(1);
   }
 
@@ -1048,7 +1056,9 @@ Fiber(function () {
   // which case showHelp will be true and command will be null
 
   if (showHelp) {
-    Console.stdout.write(longHelp(commandName) + "\n");
+    // XXX: Until we rewrite the longHelp function to cope with the new output
+    // format, let's go with the static, painstakingly-formatted version.
+    Console.rawInfo(longHelp(commandName));
     process.exit(0);
   }
 
@@ -1061,13 +1071,16 @@ Fiber(function () {
     var presentLong = _.has(rawOptions, "--" + optionName);
     var presentShort = _.has(optionInfo, 'short') &&
       _.has(rawOptions, "-" + optionInfo.short);
+    var tryHelpMessage =
+        "Try " + Console.command("'meteor help " + commandName + "'") + " " +
+        "for help.";
+
 
     if (presentShort && presentLong) {
       // this would get caught below, but give a clearer error message
       Console.error(
-commandName + ": can't pass both -" + optionInfo.short + " and --" +
-            optionName + ".\n" +
-"Try 'meteor help " + commandName + "' for help.");
+        commandName + ": can't pass both -" + optionInfo.short + " and --" +
+        optionName + ". " + tryHelpMessage);
       process.exit(1);
     }
     var helpfulOptionName = "--" + optionName +
@@ -1086,8 +1099,10 @@ commandName + ": can't pass both -" + optionInfo.short + " and --" +
       // in the future, we could support multiple values, but we don't
       // for now since no command needs it
       Console.error(
-commandName + ": can only take one " + helpfulOptionName + " option.\n" +
-"Try 'meteor help " + commandName + "' for help.");
+        Console.command(commandName) + ": can only take one " +
+          Console.command(helpfulOptionName) + " option.");
+      Console.error(tryHelpMessage);
+
       process.exit(1);
     } else if (values.length === 1) {
       // OK, they provided exactly one value. Check its type and add
@@ -1097,22 +1112,27 @@ commandName + ": can only take one " + helpfulOptionName + " option.\n" +
         // This option requires a value and they didn't give it one
         // (it was the last word on the command line).
         Console.error(
-commandName + ": the " + helpfulOptionName + " option needs a value.\n" +
-"Try 'meteor help " + commandName + "' for help.");
+          Console.command(commandName) + ": the " +
+            Console.command(helpfulOptionName) + " option needs a value.");
+        Console.error(tryHelpMessage);
+
         process.exit(1);
       } else if (optionInfo.type === Number) {
         if (! value.match(/^[0-9]+$/)) {
           Console.error(
-commandName + ": " + helpfulOptionName + " must be a number.\n" +
-"Try 'meteor help " + commandName + "' for help.");
+            Console.command(commandName) + ": " +
+              Console.command(helpfulOptionName) + " must be a number.");
+          Console.error(tryHelpMessage);
           process.exit(1);
         }
         value = parseInt(value);
       } else if (optionInfo.type === Boolean) {
         if (!value) {
           Console.error(
-commandName + ": the " + helpfulOptionName + " option does not need a value.\n" +
-"Try 'meteor help " + commandName + "' for help.");
+            Console.command(commandName) + ": the " +
+              Console.command(helpfulOptionName) + " " +
+              "option does not need a value.");
+          Console.error(tryHelpMessage);
           process.exit(1);
         }
         value = true;
@@ -1137,8 +1157,9 @@ commandName + ": the " + helpfulOptionName + " option does not need a value.\n" 
         options[optionName] = optionInfo.default;
       } else if (optionInfo.required) {
         Console.error(
-commandName + ": the --" + optionName + " option is required.\n" +
-longHelp(commandName));
+          Console.command(commandName) + ": the --" +
+          Console.command(optionName) + " option is required.");
+        Console.error(longHelp(commandName));
         process.exit(1);
       }
     }
@@ -1147,23 +1168,23 @@ longHelp(commandName));
   // Check for unrecognized options.
   if (_.keys(rawOptions).length > 0) {
     Console.error(
-_.keys(rawOptions)[0] + ": unknown option.\n" +
-longHelp(commandName));
+      Console.command(_.keys(rawOptions)[0]) + ": unknown option.\n" +
+      longHelp(commandName));
     process.exit(1);
   }
 
   // Check argument count.
   if (options.args.length < command.minArgs) {
     Console.error(
-commandName + ": not enough arguments.\n" +
-longHelp(commandName));
+      Console.command(commandName) + ": not enough arguments.\n" +
+      longHelp(commandName));
     process.exit(1);
   }
 
   if (options.args.length > command.maxArgs) {
     Console.error(
-commandName + ": too many arguments.\n" +
-longHelp(commandName));
+      Console.command(commandName) + ": too many arguments.\n" +
+      longHelp(commandName));
     process.exit(1);
   }
 
@@ -1183,14 +1204,20 @@ longHelp(commandName));
     // since you'll default to the 'run' command which requires an
     // app. Be welcoming to our new developers!
     Console.error(
-commandName + ": You're not in a Meteor project directory.\n" +
-"\n" +
-"To create a new Meteor project:\n" +
-"   meteor create <project name>\n" +
-"For example:\n" +
-"   meteor create myapp\n" +
-"\n" +
-"For more help, see 'meteor --help'.");
+      Console.command(commandName) +
+      ": You're not in a Meteor project directory.");
+    Console.error();
+    Console.error("To create a new Meteor project:");
+    Console.error(
+      Console.command("meteor create <project name>"),
+      Console.options({ indent: 2 }));
+    Console.error("For example:");
+    Console.error(
+      Console.command("meteor create myapp"),
+      Console.options({ indent: 2 }));
+    Console.error();
+    Console.error(
+      "For more help, see " + Console.command("'meteor --help'") + ".");
     process.exit(1);
   }
 
@@ -1211,18 +1238,20 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
     if (! options.packageDir) {
       Console.error(
-        commandName + ": You're not in a Meteor package directory.");
+        Console.command(commandName) +
+        ": You're not in a Meteor package directory.");
       process.exit(1);
     }
   }
 
   if (command.requiresRelease && ! release.current) {
     Console.error(
-"You must specify a Meteor version with --release when you work with this\n" +
-"project. It was created from an unreleased Meteor checkout and doesn't\n" +
-"have a version associated with it.\n" +
-"\n" +
-"You can permanently set a release for this project with 'meteor update'.");
+      "You must specify a Meteor version with --release when you work with",
+      "this project. It was created from an unreleased Meteor checkout and",
+      "doesn't have a version associated with it.");
+    Console.error(
+      "You can permanently set a release for this project with " +
+      Console.command("'meteor update'") + ".");
     process.exit(1);
   }
 
@@ -1230,9 +1259,9 @@ commandName + ": You're not in a Meteor project directory.\n" +
       appReleaseFile && ! appReleaseFile.isCheckout()) {
     // For commands that work with apps, if we have overridden the
     // app's usual release by using a checkout, print a reminder banner.
-    Console.warn(
-"=> Running Meteor from a checkout -- overrides project version (" +
-        appReleaseFile.displayReleaseName + ")");
+    Console.arrowWarn(
+      "Running Meteor from a checkout -- overrides project version " +
+      Console.command("(" + appReleaseFile.displayReleaseName + ")"));
   }
 
   // Now that we're ready to start executing the command, if we are in
@@ -1264,7 +1293,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
     } else if (e instanceof main.ShowUsage) {
-      Console.error(longHelp(commandName));
+      Console.rawError(longHelp(commandName));
       process.exit(1);
     } else if (e instanceof main.SpringboardToLatestRelease) {
       // Load the metadata for the latest release (or at least, the latest

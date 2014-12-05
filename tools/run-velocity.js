@@ -30,8 +30,8 @@ var runVelocity = function (url) {
 
       ddpConnection.subscribe("VelocityTestReports", {
         onError: function () {
-          Console.stderr.write("failed to subscribe to VelocityTestReports "
-                               + "subscription");
+          Console.error("failed to subscribe to VelocityTestReports " +
+                        "subscription");
           // XXX tell user to add velocity:core
           // XXX these also fire if the user turns on autopublish
         }, onReady: function () {
@@ -65,8 +65,8 @@ var runVelocity = function (url) {
       var isFinished = false;
       ddpConnection.subscribe("VelocityAggregateReports", {
         onError: function () {
-          Console.stderr.write("failed to subscribe to " +
-                               "VelocityAggregateReports subscription");
+          Console.error("failed to subscribe to " +
+                        "VelocityAggregateReports subscription");
         }, onReady: function () {
           this.connection.registerStore("velocityAggregateReports", {
             update: function (msg) {
@@ -113,8 +113,8 @@ var runVelocity = function (url) {
 
       ddpConnection.subscribe("VelocityMirrors", {
         onError: function (err) {
-          Console.stderr.write("failed to subscribe to VelocityMirrors " +
-                               "subscription", err);
+          Console.error("failed to subscribe to VelocityMirrors " +
+                        "subscription", err);
         }, onReady: function () {
           this.connection.registerStore("velocityMirrors", {
             update: function (msg) {

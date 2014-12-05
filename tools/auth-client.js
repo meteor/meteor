@@ -58,9 +58,10 @@ exports.loggedInConnection = function (url, domain, sessionType) {
 
   if (! auth.isLoggedIn()) {
     // XXX we should have a better account signup page.
-    Console.stderr.write(
-"Please log in with your Meteor developer account. If you don't have one,\n" +
-"you can quickly create one at www.meteor.com.\n");
+    Console.error(
+      "Please log in with your Meteor developer account.",
+      "If you don't have one,",
+      "you can quickly create one at www.meteor.com.");
     auth.doUsernamePasswordLogin({ retry: true });
   }
 
@@ -78,10 +79,10 @@ exports.loggedInConnection = function (url, domain, sessionType) {
     if (err.message === "access-denied") {
       // Maybe we thought we were logged in, but our token had been
       // revoked.
-      Console.stderr.write(
-"It looks like you have been logged out! Please log in with your Meteor\n" +
-"developer account. If you don't have one, you can quickly create one\n" +
-"at www.meteor.com.\n");
+      Console.error(
+        "It looks like you have been logged out!",
+        "Please log in with your Meteor developer account. If you don't have",
+        "one, you can quickly create one at www.meteor.com.");
       auth.doUsernamePasswordLogin({ retry: true });
       auth.loginWithTokenOrOAuth(
         conn,

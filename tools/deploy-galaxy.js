@@ -13,6 +13,7 @@ var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
 var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
+var Console = require('./console.js').Console;
 
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
@@ -27,9 +28,9 @@ var handleError = function (error, galaxyName, messages) {
   if (error.errorType === "Meteor.Error") {
     var msg = messages[error.error];
     if (msg)
-      process.stderr.write(msg + "\n");
+      Console.error(msg);
     else if (error.message)
-      process.stderr.write("Denied: " + error.message + "\n");
+      Console.error("Denied: " + error.message);
     return 1;
   } else if (error.errorType === "DDP.ConnectionError") {
     // If we have an http/https URL for a galaxyName instead of a
@@ -39,7 +40,7 @@ var handleError = function (error, galaxyName, messages) {
     if (m)
       galaxyName = m[1];
 
-    process.stderr.write(galaxyName + ": connection failed\n");
+    Console.error(galaxyName + ": connection failed");
     return 1;
   } else {
     throw error;
@@ -147,7 +148,7 @@ exports.deleteApp = function (app) {
 
   try {
     conn.call("destroyApp", app);
-    process.stdout.write("Deleted.\n");
+    Console.info("Deleted.");
   } catch (e) {
     return handleError(e, galaxy);
   } finally {
@@ -193,7 +194,7 @@ exports.deploy = function (options) {
     // concurrent with bundling.
 
     if (! options.starball && ! messages.hasMessages()) {
-      process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
+      Console.info('Deploying ' + options.app + '. Bundling...');
       var bundleResult = bundler.bundle({
         projectContext: options.projectContext,
         outputPath: bundlePath,
@@ -230,12 +231,12 @@ exports.deploy = function (options) {
     }
 
     if (messages.hasMessages()) {
-      process.stdout.write("\nErrors prevented deploying:\n");
-      process.stdout.write(messages.formatMessages());
+      Console.info("\nErrors prevented deploying:");
+      Console.info(messages.formatMessages());
       return 1;
     }
 
-    process.stdout.write('Uploading...\n');
+    Console.info('Uploading...');
 
     var galaxy = exports.discoverGalaxy(options.app);
     conn = galaxyServiceConnection(galaxy, "ultraworld");
@@ -289,11 +290,11 @@ exports.deploy = function (options) {
       if (error || ((response.statusCode !== 200)
                     && (response.statusCode !== 201))) {
         if (error && error.message)
-          process.stderr.write("Upload failed: " + error.message + "\n");
+          Console.error("Upload failed: " + error.message);
         else
-          process.stderr.write("Upload failed" +
-                               (response.statusCode ?
-                                " (" + response.statusCode + ")\n" : "\n"));
+          Console.error("Upload failed" +
+                        (response.statusCode ?
+                        " (" + response.statusCode + ")" : ""));
         future['return'](false);
       } else
         future['return'](true);
@@ -313,10 +314,10 @@ exports.deploy = function (options) {
     }
 
     if (created)
-      process.stderr.write(options.app + ": created app\n");
+      Console.error(options.app + ": created app\n");
 
-    process.stderr.write(options.app + ": " +
-                         "pushed revision " + result.serial + "\n");
+    Console.error(options.app + ": " +
+                  "pushed revision " + result.serial);
     return 0;
   } finally {
     // Close the connection to Galaxy (otherwise Node will continue running).

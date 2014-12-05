@@ -171,7 +171,7 @@ var newSelfTestCatalog = function () {
       });
     });
   if (messages.hasMessages()) {
-    Console.error("=> Errors while scanning core packages:");
+    Console.arrowError("Errors while scanning core packages:");
     Console.printMessages(messages);
     throw new Error("scan failed?");
   }
@@ -240,7 +240,7 @@ _.extend(Matcher.prototype, {
     var self = this;
 
     if (self.buf.length > 0) {
-      console.log("Extra junk is ", self.buf);
+      Console.info("Extra junk is :", self.buf);
       throw new TestFailure('junk-at-end', { run: self.run });
     }
   },
@@ -1639,7 +1639,7 @@ var listTests = function (options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
-    Console.stderr.write("No tests defined.\n");
+    Console.error("No tests defined.\n");
     return;
   }
 
@@ -1652,9 +1652,9 @@ var listTests = function (options) {
     });
   });
 
-  Console.stderr.write('\n');
-  Console.stderr.write(testList.filteredTests.length + " tests listed.");
-  Console.stderr.write(testList.generateSkipReport());
+  Console.error();
+  Console.error(testList.filteredTests.length + " tests listed.");
+  Console.error(testList.generateSkipReport());
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1669,7 +1669,7 @@ var runTests = function (options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
-    Console.stderr.write("No tests defined.\n");
+    Console.error("No tests defined.");
     return 0;
   }
 
@@ -1689,7 +1689,7 @@ var runTests = function (options) {
       if (e instanceof TestFailure) {
         failure = e;
       } else {
-        Console.stderr.write("exception\n\n");
+        Console.error("exception\n");
         throw e;
       }
     } finally {
@@ -1698,84 +1698,85 @@ var runTests = function (options) {
     }
 
     if (failure) {
-      Console.stderr.write("fail!\n");
+      Console.error("fail!");
       failedTests.push(test);
       testList.notifyFailed(test);
 
       var frames = parseStack.parse(failure);
       var relpath = path.relative(files.getCurrentToolsDir(),
                                   frames[0].file);
-      Console.stderr.write("  => " + failure.reason + " at " +
-                           relpath + ":" + frames[0].line + "\n");
+      Console.rawError("  => " + failure.reason + " at " +
+                    relpath + ":" + frames[0].line);
       if (failure.reason === 'no-match') {
-        Console.stderr.write("  => Pattern: " + failure.details.pattern + "\n");
+        Console.arrowError("Pattern: " + failure.details.pattern, 2);
       }
       if (failure.reason === "wrong-exit-code") {
         var s = function (status) {
           return status.signal || ('' + status.code) || "???";
         };
 
-        Console.stderr.write("  => Expected: " + s(failure.details.expected) +
-                             "; actual: " + s(failure.details.actual) + "\n");
+        Console.rawError("  => " + "Expected: " + s(failure.details.expected) +
+                      "; actual: " + s(failure.details.actual));
       }
       if (failure.reason === 'expected-exception') {
       }
       if (failure.reason === 'not-equal') {
-        Console.stderr.write(
-          "  => Expected: " + JSON.stringify(failure.details.expected) +
-            "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        Console.rawError(
+          "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+          "; actual: " + JSON.stringify(failure.details.actual));
       }
 
       if (failure.details.run) {
         failure.details.run.outputLog.end();
         var lines = failure.details.run.outputLog.get();
         if (! lines.length) {
-          Console.stderr.write("  => No output\n");
+          Console.arrowError("No output", 2);
         } else {
           var historyLines = options.historyLines || 100;
 
-          Console.stderr.write("  => Last " + historyLines + " lines:\n");
+          Console.arrowError("Last " + historyLines + " lines:", 2
+          );
           _.each(lines.slice(-historyLines), function (line) {
-            Console.stderr.write("  " +
-                                 (line.channel === "stderr" ? "2| " : "1| ") +
-                                 line.text +
-                                 (line.bare ? "%" : "") + "\n");
+            Console.rawError("  " +
+                             (line.channel === "stderr" ? "2| " : "1| ") +
+                             line.text +
+                             (line.bare ? "%" : ""));
           });
         }
       }
 
       if (failure.details.messages) {
-        Console.stderr.write("  => Errors while building:\n");
-        Console.stderr.write(failure.details.messages.formatMessages());
+        Console.arrowError("Errors while building:", 2);
+        Console.rawError(failure.details.messages.formatMessages());
       }
     } else {
       var durationMs = +(new Date) - startTime;
-      Console.stderr.write("ok (" + durationMs + " ms)\n");
+      Console.error("ok (" + durationMs + " ms)");
     }
   });
 
   testList.saveTestState();
 
   if (totalRun > 0)
-    Console.stderr.write("\n");
+    Console.error();
 
-  Console.stderr.write(testList.generateSkipReport());
+  Console.error(testList.generateSkipReport());
 
   if (testList.filteredTests.length === 0) {
-    Console.stderr.write("No tests run.\n");
+    Console.error("No tests run.");
     return 0;
   } else if (failedTests.length === 0) {
     var disclaimers = '';
     if (testList.filteredTests.length < testList.allTests.length)
       disclaimers += " other";
-    Console.stderr.write("All" + disclaimers + " tests passed.\n");
+    Console.error("All" + disclaimers + " tests passed.");
     return 0;
   } else {
     var failureCount = failedTests.length;
-    Console.stderr.write(failureCount + " failure" +
-                         (failureCount > 1 ? "s" : "") + ":\n");
+    Console.error(failureCount + " failure" +
+                  (failureCount > 1 ? "s" : "") + ":");
     _.each(failedTests, function (test) {
-      Console.stderr.write("  - " + test.file + ": " + test.name);
+      Console.rawError("  - " + test.file + ": " + test.name);
     });
     return 1;
   }

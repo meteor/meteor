@@ -129,7 +129,7 @@ _.extend(Runner.prototype, {
     // print the banner only once we've successfully bound the port
     if (! self.quiet && ! self.stopped) {
       runLog.log("[[[[[ " + self.banner + " ]]]]]\n");
-      runLog.log("=> Started proxy.");
+      runLog.log("Started proxy.",  { arrow: true });
     }
 
     self._startMongoAsync();
@@ -142,7 +142,7 @@ _.extend(Runner.prototype, {
     if (! self.stopped && self.httpProxy) {
       self.httpProxy.start();
       if (! self.quiet) {
-        runLog.log("=> Started http proxy.");
+        runLog.log("Started http proxy.", { arrow: true });
       }
     }
 
@@ -153,7 +153,7 @@ _.extend(Runner.prototype, {
           extraRunner.start();
         });
         if (! self.quiet && ! self.stopped)
-          runLog.log("=> Started " + title + ".");
+          runLog.log("Started " + title + ".",  { arrow: true });
       }
     });
 
@@ -162,18 +162,20 @@ _.extend(Runner.prototype, {
         self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped)
-        runLog.log("=> Started your app.");
+        runLog.log("Started your app.",  { arrow: true });
     }
 
-    if (! self.stopped && ! self.quiet)
-      runLog.log("\n=> App running at: " + self.rootUrl);
+    if (! self.stopped && ! self.quiet) {
+      runLog.log("");
+      runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+    }
 
     if (self.selenium && ! self.stopped) {
       buildmessage.enterJob({ title: "Starting Selenium" }, function () {
         self.selenium.start();
       });
       if (! self.quiet && ! self.stopped)
-        runLog.log("=> Started Selenium.");
+        runLog.log("Started Selenium.", { arrow: true });
     }
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
@@ -191,7 +193,7 @@ _.extend(Runner.prototype, {
   _startMongoFuture: function () {
     this.mongoRunner.start();
     if (! this.stopped && ! this.quiet) {
-      runLog.log("=> Started MongoDB.");
+      runLog.log("Started MongoDB.",  { arrow: true });
     }
   }.future(),
 
@@ -321,25 +323,26 @@ exports.run = function (options) {
   runner.stop();
 
   if (result.outcome === "conflicting-versions") {
-    process.stderr.write(
-"The constraint solver could not find a set of package versions to use that would\n" +
-"satisfy the constraints of .meteor/versions and .meteor/packages. This could be\n" +
-"caused by conflicts in .meteor/versions, conflicts in .meteor/packages, and/or\n" +
-"inconsistent changes to the dependencies in local packages.");
+    Console.error(
+      "The constraint solver could not find a set of package versions to",
+      "use that would satisfy the constraints of .meteor/versions and",
+      ".meteor/packages. This could be caused by conflicts in",
+      ".meteor/versions, conflicts in .meteor/packages, and/or",
+      "inconsistent changes to the dependencies in local packages.");
     return 254;
   }
 
   if (result.outcome === "outdated-cordova-plugins") {
-    process.stderr.write(
-"Your app's Cordova plugins have changed.\n" +
-"Restart meteor to use the new set of plugins.\n");
+    Console.error(
+      "Your app's Cordova plugins have changed.",
+      "Restart meteor to use the new set of plugins.");
     return 254;
   }
 
   if (result.outcome === "outdated-cordova-platforms") {
-    process.stderr.write(
-"Your app's platforms have changed.\n" +
-"Restart meteor to use the new set of platforms.\n");
+    Console.error(
+      "Your app's platforms have changed.",
+      "Restart meteor to use the new set of platforms.");
     return 254;
   }
 
@@ -357,10 +360,9 @@ exports.run = function (options) {
     // this (which prevents weird errors) is a start.)
     var from = release.current.getDisplayName();
     var to = result.displayReleaseNeeded;
-    process.stderr.write(
-"Your app has been updated to " + to + " from " + from +
-".\n" +
-"Restart meteor to use the new release.\n");
+    Console.error(
+      "Your app has been updated to " + to + " from " + from + ".",
+      "Restart meteor to use the new release.");
     return 254;
   }
 
@@ -373,14 +375,14 @@ exports.run = function (options) {
   }
 
   if (once && result.outcome === "bundle-fail") {
-    process.stderr.write("=> Build failed:\n\n" +
-                         result.errors.formatMessages() + "\n");
+    Console.arrowError("Build failed:\n\n" +
+                       result.errors.formatMessages());
     return 254;
   }
 
   if (once && result.outcome === "terminated") {
     if (result.signal) {
-      process.stderr.write("Killed (" + result.signal + ")\n");
+      Console.error("Killed (" + result.signal + ")");
       return 255;
     } else if (typeof result.code === "number") {
       // We used to print 'Your application is exiting' here, but that

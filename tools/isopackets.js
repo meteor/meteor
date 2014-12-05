@@ -218,7 +218,7 @@ var newIsopacketBuildingCatalog = function () {
       });
     });
   if (messages.hasMessages()) {
-    Console.error("=> Errors while scanning core packages:");
+    Console.arrowError("Errors while scanning core packages:");
     Console.printMessages(messages);
     throw new Error("isopacket scan failed?");
   }

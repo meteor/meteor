@@ -14,6 +14,7 @@ var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var Future = require('fibers/future');
+var Console = require('./console.js').Console;
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -1090,8 +1091,8 @@ _.extend(Isopack.prototype, {
     // and similar to a isopacket load failure, it can just crash the app
     // instead of being handled nicely.
     if (messages.hasMessages()) {
-      process.stderr.write("Errors prevented tool build:\n");
-      process.stderr.write(messages.formatMessages());
+      Console.error("Errors prevented tool build:");
+      Console.error(messages.formatMessages());
       throw new Error("tool build failed?");
     }
 
