@@ -16,8 +16,12 @@ Accounts.emailTemplates.resetPassword.html =
 Accounts.emailTemplates.resetPassword.from =
   Accounts.emailTemplates.enrollAccount.from =
     Accounts.emailTemplates.verifyEmail.from = function (user) {
-      return user.emails[0].address;
+      return 'test@meteor.com';
     };
+
+Accounts.emailTemplates.headers = {
+  'My-Custom-Header' : 'Cool'
+};
 
 EmailTest.hookSend(function (options) {
   var to = options.to;

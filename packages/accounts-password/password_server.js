@@ -400,6 +400,10 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     options.html =
       Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
 
+  if (typeof Accounts.emailTemplates.headers === 'object') {
+    options.headers = Accounts.emailTemplates.headers;
+  }
+
   Email.send(options);
 };
 
@@ -458,6 +462,10 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
+
+  if (typeof Accounts.emailTemplates.headers === 'object') {
+    options.headers = Accounts.emailTemplates.headers;
+  }
 
   Email.send(options);
 };
@@ -595,6 +603,10 @@ Accounts.sendVerificationEmail = function (userId, address) {
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
       Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);
+
+  if (typeof Accounts.emailTemplates.headers === 'object') {
+    options.headers = Accounts.emailTemplates.headers;
+  }
 
   Email.send(options);
 };
