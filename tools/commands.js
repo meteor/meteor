@@ -21,7 +21,6 @@ var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
-var commandsPackages = require('./commands-packages.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
