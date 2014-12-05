@@ -437,7 +437,7 @@ _.extend(Isopack.prototype, {
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
-      // 'options' can be elided. The only known option is 'isTemplate', which
+      // 'options' can be omitted. The only known option is 'isTemplate', which
       // is a bit of a hack meaning "in an app, these files should be loaded
       // before non-templates".
       //
