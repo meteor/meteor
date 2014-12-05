@@ -164,7 +164,6 @@ var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
-var tropohouse = require('./tropohouse.js');
 var packageVersionParser = require('./package-version-parser.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
