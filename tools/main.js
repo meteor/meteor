@@ -1259,7 +1259,7 @@ commandName + ": You're not in a Meteor project directory.\n" +
 
     if (e === main.ShowUsage || e === main.WaitForExit ||
         e === main.SpringboardToLatestRelease ||
-        e === main.SpringboardToSpecificReleaseg ||
+        e === main.SpringboardToSpecificRelease ||
         e === main.WaitForExit) {
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
