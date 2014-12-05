@@ -12,6 +12,13 @@ Accounts.emailTemplates.resetPassword.html =
     return url;
   };
 
+// override the from address and return the users email
+Accounts.emailTemplates.resetPassword.from =
+  Accounts.emailTemplates.enrollAccount.from =
+    Accounts.emailTemplates.verifyEmail.from = function (user) {
+      return user.emails[0].address;
+    };
+
 EmailTest.hookSend(function (options) {
   var to = options.to;
   if (to.indexOf('intercept') === -1) {

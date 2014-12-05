@@ -5,6 +5,9 @@ var email1;
 var email2;
 var email3;
 var email4;
+var email5;
+var email6;
+var email7;
 
 var resetPasswordToken;
 var verifyEmailToken;
@@ -220,5 +223,76 @@ testAsyncMulti("accounts emails - enroll account flow", [
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
+  }
+]);
+
+testAsyncMulti("accounts emails - verify email from address override", [
+  function (test, expect) {
+    email5 = Random.id() + "-intercept@example.com";
+    Accounts.createUser(
+      {email: email5, password: 'foobar'},
+      loggedIn(test, expect));
+  },
+  function(test, expect) {
+    Accounts.connection.call(
+      "getInterceptedEmails", email5, expect(function (error, result) {
+        test.equal(error, undefined);
+        test.notEqual(result, undefined);
+        test.equal(result.length, 1);
+        var options = result[0];
+
+        test.equal(options.from, email5);
+      }));
+  }
+]);
+
+testAsyncMulti("accounts emails - reset password from address override", [
+  function (test, expect) {
+    email6 = Random.id() + "-intercept@example.com";
+    Accounts.createUser({email: email6, password: 'foobar'},
+      expect(function (error) {
+        test.equal(error, undefined);
+      }));
+  },
+  function (test, expect) {
+    Accounts.forgotPassword({email: email6}, expect(function (error) {
+      test.equal(error, undefined);
+    }));
+  },
+  function(test, expect) {
+    Accounts.connection.call(
+      "getInterceptedEmails", email6, expect(function (error, result) {
+        test.equal(error, undefined);
+        test.notEqual(result, undefined);
+        test.equal(result.length, 2);
+        var options = result[1];
+
+        test.equal(options.from, email6);
+      }));
+  }
+]);
+
+testAsyncMulti("accounts emails - enroll account from address override", [
+  function (test, expect) {
+    email7 = Random.id() + "-intercept@example.com";
+    Accounts.connection.call("createUserOnServer", email7,
+      expect(function (error, result) {
+        test.isFalse(error);
+        var user = result;
+        test.equal(user.emails.length, 1);
+        test.equal(user.emails[0].address, email7);
+        test.isFalse(user.emails[0].verified);
+      }));
+  },
+  function(test, expect) {
+    Accounts.connection.call(
+      "getInterceptedEmails", email7, expect(function (error, result) {
+        test.equal(error, undefined);
+        test.notEqual(result, undefined);
+        test.equal(result.length, 1);
+        var options = result[0];
+
+        test.equal(options.from, email7);
+      }));
   }
 ]);
