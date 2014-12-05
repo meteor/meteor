@@ -360,7 +360,7 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
 
   sourceExtensions['js'] = false;
   allHandlersWithPkgs['js'] = {
-    pkg: { /* native handler */ },
+    pkgName: null /* native handler */,
     handler: function (compileStep) {
       // This is a hardcoded handler for *.js files. Since plugins
       // are written in JavaScript we have to start somewhere.
@@ -391,7 +391,7 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
         buildmessage.error(
           "conflict: two packages included in " +
             (inputSourceArch.pkg.name || "the app") + ", " +
-            (allHandlersWithPkgs[ext].pkg.name || "the app") + " and " +
+            (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
             (otherPkg.name || "the app") + ", " +
             "are both trying to handle ." + ext);
         // Recover by just going with the first handler we saw
@@ -404,16 +404,11 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
         return;
       }
       allHandlersWithPkgs[ext] = {
-        pkg: otherPkg,
+        pkgName: otherPkg.name,
         handler: sourceHandler.handler
       };
       sourceExtensions[ext] = !!sourceHandler.isTemplate;
     });
-  });
-
-  var allHandlers = {};
-  _.each(_.keys(allHandlersWithPkgs), function (key) {
-    allHandlers[key] = allHandlersWithPkgs[key].handler;
   });
 
   // *** Determine source files
@@ -479,8 +474,8 @@ var compileUnibuild = function (isopk, inputSourceArch, packageLoader,
       var parts = filename.split('.');
       for (var i = 0; i < parts.length; i++) {
         var extension = parts.slice(i).join('.');
-        if (_.has(allHandlers, extension)) {
-          handler = allHandlers[extension];
+        if (_.has(allHandlersWithPkgs, extension)) {
+          handler = allHandlersWithPkgs[extension].handler;
           break;
         }
       }
