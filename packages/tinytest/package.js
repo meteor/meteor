@@ -1,6 +1,8 @@
 Package.describe({
+  name: 'tinytest',
   summary: "Tiny testing framework",
-  version: '1.0.4-ipc.0'
+  version: '1.0.4-ipc.0',
+  git: 'https://github.com/meteor/meteor.git'
 });
 
 Package.on_use(function (api) {
@@ -9,14 +11,14 @@ Package.on_use(function (api) {
 
   api.export('Tinytest');
 
-  api.add_files('tinytest.js', ['client', 'server']);
+  api.addFiles('tinytest.js', ['client', 'server']);
 
   api.use('ddp', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
-  api.add_files('model.js', ['client', 'server']);
+  api.addFiles('model.js', ['client', 'server']);
 
-  api.add_files('tinytest_client.js', 'client');
-  api.add_files('tinytest_server.js', 'server');
+  api.addFiles('tinytest_client.js', 'client');
+  api.addFiles('tinytest_server.js', 'server');
 
   api.use('check');
 });
