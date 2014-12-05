@@ -82,7 +82,11 @@ Tracker.autorun(function () {
       // XXX COMPAT WITH old docs
       navigate("#/full/" + deHash(current));
     } else {
-      navigate("#/basic/");
+      if (localStorage.getItem("fullApi") === "true") {
+        navigate("#/full/");
+      } else {
+        navigate("#/basic/");
+      }
     }
     return;
   }
@@ -115,4 +119,12 @@ Tracker.autorun(function () {
       });
     }, 0);
   });
+});
+
+// Remember which docs page (full or basic) we were on last, and use it as
+// the default next time when we visit docs.meteor.com
+// 
+// Make sure that this block is below the initial URL logic
+Tracker.autorun(function () {
+  localStorage.setItem("fullApi", !! Session.get("fullApi"));
 });
