@@ -11,13 +11,15 @@ Session.setDefault("searchOpen", false);
 Session.set("searchQuery", "");
 
 $(document).on("keydown", function (event) {
+  console.log(event);
   if (event.which === 27) {
     Session.set("searchOpen", false);
   }
 });
 
+var doNotOpenSearch = [13, 27, 32];
 $(document).on("keypress", function (event) {
-  if (event.which && (event.which !== 13) && (event.which !== 32)) {
+  if (event.which && (! _.contains(doNotOpenSearch, event.which))) {
     if (! Session.get("searchOpen")) {
       Session.set("searchOpen", true);
 
