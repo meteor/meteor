@@ -19,7 +19,9 @@ $(document).on("keydown", function (event) {
 
 var doNotOpenSearch = [13, 27, 32];
 $(document).on("keypress", function (event) {
-  if (event.which && (! _.contains(doNotOpenSearch, event.which))) {
+  // Don't activate search for special keys or keys with modifiers
+  if (event.which && (! _.contains(doNotOpenSearch, event.which)) &&
+      (! event.ctrlKey) && (! event.metaKey)) {
     if (! Session.get("searchOpen")) {
       Session.set("searchOpen", true);
 
