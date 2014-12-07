@@ -1122,7 +1122,7 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
   // OAuth flow to log in.
   var redirectUri = url + '/_oauth/meteor-developer';
 
-  // Duplicate login from packages/oauth/oauth_common.js. If we are
+  // Duplicate logic from packages/oauth/oauth_common.js. If we are
   // authenticating against a <=0.9.0 app server, then the app server
   // uses a redirect URL with a "?close" query parameter, and we have to
   // match the server's redirect URL. After 0.9.0, we deprecated the
@@ -1132,8 +1132,8 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
   // configuration is new-style or old-style, so we use that option here
   // to match the server's redirect URL.
   //
-  // tl;dr this code is for compatibility with app servers that did
-  // their oauth configuration with <= 0.9.0.
+  // In other words: this code is for compatibility with app servers
+  // that did their oauth configuration with <= 0.9.0.
   if (! accountsConfiguration.loginStyle) {
     redirectUri = redirectUri + "?close";
   }
