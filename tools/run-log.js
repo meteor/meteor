@@ -62,12 +62,12 @@ _.extend(RunLog.prototype, {
 
     if (self.consecutiveRestartMessages) {
       self.consecutiveRestartMessages = null;
-      Console.stdout.write("\n");
+      Console.info();
     }
 
     if (self.consecutiveClientRestartMessages) {
       self.consecutiveClientRestartMessages = null;
-      Console.stdout.write("\n");
+      Console.info();
     }
 
     if (self.temporaryMessageLength) {
@@ -95,7 +95,7 @@ _.extend(RunLog.prototype, {
     if (self.rawLogs)
       Console[isStderr ? "stderr" : "stdout"].write(line + "\n");
     else
-      Console.stdout.write(Log.format(obj, { color: true }) + "\n");
+      Console.rawInfo(Log.format(obj, { color: true }) + "\n");
 
     // XXX deal with test server logging differently?!
   },

@@ -1094,7 +1094,7 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
           Console.error();
         } else if (err) {
           Console.error();
-          Console.stderr.write(
+          Console.error(
             chalk.green("Could not start your app."),
             chalk.green("Try running again with the --verbose option.")
           );

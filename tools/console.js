@@ -9,8 +9,6 @@
 ///    to pre-process the output.)
 ///  - Progress bar support
 ///    Display a progress bar on the screen, but hide it around log messages.
-///  - 'legacy' functions: Console.stdout.write & Console.stderr.write
-///    Make porting code a lot easier (just a regex from process -> Console)
 ///
 /// In future, we might do things like move all support for verbose mode in
 /// here, and also integrate the buildmessage functionality into here

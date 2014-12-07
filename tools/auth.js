@@ -936,8 +936,8 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       animationFrame = (animationFrame + 1) % spinner.length;
     }, 200);
     var stopSpinner = function () {
-      Console.stderr.write(new Array(lastLinePrinted.length + 1).join(' ') +
-                           "\r");
+      Console.rawError(new Array(lastLinePrinted.length + 1).join(' ') +
+                       "\r");
       clearInterval(timer);
     };
 

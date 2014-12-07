@@ -1644,11 +1644,11 @@ var listTests = function (options) {
   }
 
   _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
-    Console.stdout.write(file + ':\n');
+    Console.rawInfo(file + ':\n');
     _.each(tests, function (test) {
-      Console.stdout.write('  - ' + test.name +
-                           (test.tags.length ? ' [' + test.tags.join(' ') + ']'
-                            : ''));
+      Console.rawInfo('  - ' + test.name +
+                      (test.tags.length ? ' [' + test.tags.join(' ') + ']'
+                      : ''));
     });
   });
 
