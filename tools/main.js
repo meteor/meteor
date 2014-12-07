@@ -1186,7 +1186,7 @@ Fiber(function () {
   if (options.args.length > command.maxArgs) {
     Console.error(
       Console.command(commandName) + ": too many arguments.");
-    Console.rawErro(
+    Console.rawError(
       longHelp(commandName));
     process.exit(1);
   }

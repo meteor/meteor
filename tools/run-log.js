@@ -93,7 +93,7 @@ _.extend(RunLog.prototype, {
 
     self._clearSpecial();
     if (self.rawLogs)
-      Console[isStderr ? "stderr" : "stdout"].write(line + "\n");
+      Console[isStderr ? "rawError" : "rawInfo"](line + "\n");
     else
       Console.rawInfo(Log.format(obj, { color: true }) + "\n");
 
