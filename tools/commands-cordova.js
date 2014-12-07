@@ -911,7 +911,9 @@ var CordovaRunner = function (projectContext, platformName, options) {
       "mobile apps in local development mode, except in the iOS " +
       "simulator. You can run the iOS simulator with 'meteor run ios'. " +
       "For additional workarounds, see " +
-      "https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.");
+      Console.url(
+        "https://github.com/meteor/meteor/wiki/" +
+        "OAuth-for-mobile-Meteor-clients."));
   }
 };
 
@@ -1035,7 +1037,7 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
         chalk.green("Could not open your project in Xcode.") +
         chalk.green("Try running again with the --verbose option.") +
         chalk.green("Instructions for running your app on an iOS device:")+
-        chalk.cyan(
+        Console.url(
           "https://github.com/meteor/meteor/wiki/" +
           "How-to-run-your-app-on-an-iOS-device")
       );
@@ -1048,11 +1050,11 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
         "Your project has been opened in Xcode so that you can run your " +
         "app on an iOS device. For further instructions, visit this " +
         "wiki page:") +
-      chalk.cyan(
+      Console.url(
         "https://github.com/meteor/meteor/wiki/" +
         "How-to-run-your-app-on-an-iOS-device"
     ));
-    Consoke.info();
+    Console.info();
   } else {
     verboseLog('Running emulator:', localCordova, args);
     var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
@@ -1073,7 +1075,7 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
               "Could not start the app on your device. Is it plugged in? " +
               "Try running again with the --verbose option. " +
               "Instructions for running your app on an Android device: ") +
-            chalk.cyan(
+            Console.url(
               "https://github.com/meteor/meteor/wiki/" +
               "How-to-run-your-app-on-an-Android-device")
            );
@@ -1284,7 +1286,7 @@ var checkAgreePlatformTerms = function (platform, name) {
     verboseLog("Error while downloading license terms: " + e);
 
     // most likely we don't have a net connection
-    Console.warn("Unable to download license terms for " + name + ". " +
+    Console.warn("Unable to download license terms for " + name + ".\n" +
                  "Please make sure you are online.\n");
     throw new main.ExitWithCode(2);
   }
@@ -2938,8 +2940,8 @@ main.registerCommand({
     // explain why we can't remove server or browser platforms
     if (_.contains(projectContextModule.PlatformList.DEFAULT_PLATFORMS,
                    platform)) {
-      Console.info(platform + ": cannot remove platform " +
-                           "in this version of Meteor\n");
+      Console.warn(
+        platform + ": cannot remove platform in this version of Meteor");
       return;
     }
 
@@ -2950,7 +2952,7 @@ main.registerCommand({
       return;
     }
 
-    Console.info(platform + ": platform is not in this project.");
+    Console.error(platform + ": platform is not in this project");
   });
 
   if (! changed) {
@@ -3098,7 +3100,7 @@ main.registerCommand({
       }
       openUrl(url);
       Console.info(
-        "Please follow the instructions here:\n" + Console.bold(url) + "\n");
+        "Please follow the instructions here:\n" + Console.url(url) + "\n");
     } else {
       Console.info("We don't have installation instructions for your platform");
     }

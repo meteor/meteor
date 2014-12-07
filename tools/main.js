@@ -1159,7 +1159,7 @@ Fiber(function () {
         Console.error(
           Console.command(commandName) + ": the --" +
           Console.command(optionName) + " option is required.");
-        Console.error(longHelp(commandName));
+        Console.rawError(longHelp(commandName));
         process.exit(1);
       }
     }
@@ -1168,7 +1168,8 @@ Fiber(function () {
   // Check for unrecognized options.
   if (_.keys(rawOptions).length > 0) {
     Console.error(
-      Console.command(_.keys(rawOptions)[0]) + ": unknown option.\n" +
+      Console.command(_.keys(rawOptions)[0]) + ": unknown option.");
+    Console.rawError(
       longHelp(commandName));
     process.exit(1);
   }
@@ -1176,14 +1177,16 @@ Fiber(function () {
   // Check argument count.
   if (options.args.length < command.minArgs) {
     Console.error(
-      Console.command(commandName) + ": not enough arguments.\n" +
+      Console.command(commandName) + ": not enough arguments.");
+    Console.rawError(
       longHelp(commandName));
     process.exit(1);
   }
 
   if (options.args.length > command.maxArgs) {
     Console.error(
-      Console.command(commandName) + ": too many arguments.\n" +
+      Console.command(commandName) + ": too many arguments.");
+    Console.rawErro(
       longHelp(commandName));
     process.exit(1);
   }
@@ -1261,7 +1264,7 @@ Fiber(function () {
     // app's usual release by using a checkout, print a reminder banner.
     Console.arrowWarn(
       "Running Meteor from a checkout -- overrides project version " +
-      Console.command("(" + appReleaseFile.displayReleaseName + ")"));
+      Console.doNotWrap("(" + appReleaseFile.displayReleaseName + ")"));
   }
 
   // Now that we're ready to start executing the command, if we are in

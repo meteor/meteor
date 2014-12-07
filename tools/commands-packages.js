@@ -59,7 +59,7 @@ var refreshOfficialCatalogOrDie = function (options) {
 
 var explainIfRefreshFailed = function () {
   if (catalog.official.offline || catalog.refreshFailed) {
-    Console.info("Your package catalog may be out of date. " +
+    Console.info("Your package catalog may be out of date.\n" +
       "Please connect to the internet and try again.");
   }
 };
@@ -391,7 +391,7 @@ main.registerCommand({
     Console.info(
       "For more information on binary ABIs and consistent builds, see:");
     Console.info(
-      "https://github.com/meteor/meteor/wiki/Build-Machines",
+      Console.url("https://github.com/meteor/meteor/wiki/Build-Machines"),
       Console.options({ indent: 2 })
     );
     Console.info();
@@ -977,7 +977,7 @@ main.registerCommand({
           packageClient.callPackageServer(
             conn, '_changeReadmeURL', name,  version, url);
           Console.info(
-            "Setting the readme of", name + "@" + version, "to", url);
+            "Setting the readme of", name + "@" + version, "to", Console.url(url));
         });
       }
     }
@@ -1030,6 +1030,7 @@ main.registerCommand({
   var versionVisible = function (record) {
     return options['show-old'] || !record.unmigrated;
   };
+  var INDENT = 6;
 
   var full = options.args[0].split('@');
   var name = full[0];
@@ -1134,15 +1135,15 @@ main.registerCommand({
             "Architectures: ",
             formatAsList(
               buildArchitectures, { formatter: formatArchitecture }),
-            Console.options({ indent: 6 }));
+            Console.options({ indent: INDENT }));
         }
         // XXX: else show "no architectures"?
         if (v.packages) {
-          Console.info("tool: " + v.tool, Console.options({ indent: 6 }));
-          Console.info("packages:",  Console.options({ indent: 6 }));
+          Console.info("tool: " + v.tool, Console.options({ indent: INDENT }));
+          Console.info("packages:",  Console.options({ indent: INDENT }));
 
           _.each(v.packages, function(pv, pn) {
-            Console.info(pn + "@" + pv,  Console.options({ indent: 6 }));
+            Console.info(pn + "@" + pv,  Console.options({ indent: INDENT }));
           });
         }
       });
@@ -1636,8 +1637,7 @@ var maybeUpdateRelease = function (options) {
     // not try to patch you to an unfriendly release. So, either way, as far
     // as we are concerned you are at the 'latest patch version'
     if (!patchRecord || !patchRecord.recommended ) {
-      Console.error(
-        "You are at the latest patch version.");
+      Console.error("You are at the latest patch version.");
       return 0;
     }
     // Great, we found a patch version. You can only have one latest patch for
@@ -1686,7 +1686,7 @@ var maybeUpdateRelease = function (options) {
       Console.debug(
         "Update to release", releaseTrack + "@" + versionToTry,
         "is impossible:");
-       Console.debug(messages.formatMessages());
+      Console.debug(messages.formatMessages());
       return false;
     }
 
@@ -2656,15 +2656,14 @@ main.registerCommand({
     var status = options.success ? "successfully" : "unsuccessfully";
     // XXX: This should probably use progress bars instead.
     _.each(versions, function (version) {
-      var migrating =  "Setting "
-          + name + "@" + version + " as " +
-          status + " migrated ...";
-      process.stdout.write(migrating + "\r");
+      Console.rawInfo(
+        "Setting " + name + "@" + version + " as " +
+         status + " migrated ... ");
       packageClient.callPackageServer(
         conn,
         '_changeVersionMigrationStatus',
         name, version, !options.success);
-      Console.info(migrating + "done.");
+      Console.info("done.");
     });
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
@@ -2711,9 +2710,7 @@ main.registerCommand({
 
   try {
     // XXX: This output should probably use progress bars instead!
-    var setting =
-          "Setting README of " + name + "@" + version + " to " + url + " ...";
-    process.stdout.write(setting + "\r");
+    Console.rawInfo("Setting README of " + name + "@" + version + " to " + url + " ...");
     packageClient.callPackageServer(
       conn,
       '_changeReadmeURL',

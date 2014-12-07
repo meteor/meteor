@@ -320,7 +320,7 @@ var canonicalizeSite = function (site) {
   if (parsed.pathname != '/' || parsed.hash || parsed.query) {
     Console.info(
       "Sorry, Meteor does not yet support specific path URLs, such as " +
-      "http://www.example.com/blog .  Please specify the root of a domain.");
+      Console.url("http://www.example.com/blog") + " .  Please specify the root of a domain.");
     return false;
   }
 
@@ -723,7 +723,7 @@ var claim = function (site) {
       Console.error(
         "You need to set a password on your Meteor developer account before",
         "you can claim sites. You can do that here in under a minute:");
-      Console.error(auth.registrationUrl());
+      Console.error(Console.url(auth.registrationUrl()));
       Console.error();
     } else {
       Console.error("Couldn't claim site: " + result.errorMessage);

@@ -88,7 +88,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var archinfo = require('./archinfo.js');
-  Console.info(archinfo.host());
+  Console.rawInfo(archinfo.host() + "\n);
 });
 
 // Prints the current release in use. Note that if there is not
@@ -134,8 +134,8 @@ main.registerCommand({
     Console.error("none");
     return 1;
   } else {
-    Console.info(release.current.name);
-    Console.info(files.getToolsVersion());
+    Console.rawInfo(release.current.name + "\n);
+    Console.rawInfo(files.getToolsVersion() + "\n");
     return 0;
   }
 });
@@ -659,7 +659,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
       "build for multiple platforms and outputs a directory instead of " +
       "a single tarball. See " + Console.command("'meteor help build'") +
       "for more information.");
-      Console.error();x
+      Console.error();
       return buildCommand(_.extend(options, { _serverOnly: true }));
 });
 
@@ -760,8 +760,8 @@ var buildCommand = function (options) {
     // means the first step to getting there is going up a level.
     if (relative.substr(0, 3) !== ('..' + path.sep)) {
       Console.warn();
-      Console.warn("Warning: The output directory is under your source tree.");
-      Console.warn(
+      Console.labelWarn(
+        "Warning: The output directory is under your source tree.",g
         "Your generated files may get interpreted as source code!",
         "Consider building into a different directory instead (" +
         Console.command("meteor build ../output") + ")",
@@ -950,10 +950,10 @@ main.registerCommand({
     Console.error();
     Console.error("To reset a deployed application use");
     Console.error(
-      "meteor deploy --delete appname", Console.options({ indent: 2 }));
+      Console.command("meteor deploy --delete appname"), Console.options({ indent: 2 }));
     Console.error("followed by");
     Console.error(
-      "meteor deploy appname", Console.options({ indent: 2 }));
+      Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
 
@@ -1060,8 +1060,7 @@ main.registerCommand({
   if (options['override-architecture-with-local']) {
     Console.warn();
     Console.labelWarn(
-      "OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.");
-    Console.arrowInfo(
+      "OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.",
       "If your app contains binary code, it may break in unexpected " +
       "and terrible ways.");
     buildArch = archinfo.host();

@@ -51,9 +51,9 @@ var FALLBACK_STATUS = '';
 
 // If there is a part of the larger text, and we really want to make sure that
 // it doesn't get split up, we will replace the space with a utf character that
-// we are not likely to use anywhere else. This one looks like the sun! We
-// intentionally want to NOT use a space-like character: it should be obvious
-// that something has gone wrong if this ever gets printed.
+// we are not likely to use anywhere else. This one looks like the a BLACK SUN
+// WITH RAYS. We intentionally want to NOT use a space-like character: it should
+// be obvious that something has gone wrong if this ever gets printed.
 var SPACE_REPLACEMENT = '\u2600';
 // In Javascript, replace only replaces the first occurance and this is the
 // proposed alternative.
@@ -486,12 +486,6 @@ var Console = function (options) {
   // Legacy helpers
   self.stdout = {};
   self.stderr = {};
-  self.stdout.write = function (msg) {
-    self._print(LEVEL_INFO, msg);
-  };
-  self.stderr.write = function (msg) {
-    self._print(LEVEL_WARN, msg);
-  };
 
   self._stream = process.stdout;
 
@@ -633,19 +627,19 @@ _.extend(Console.prototype, {
   _parseVariadicInput: function (args) {
     var self = this;
     var msgArgs;
-    var opts;
+    var options;
     // If the last argument is an instance of ConsoleOptions, then we should
     // separate it out, and only send the first N-1 arguments to be parsed as a
     // message.
     if (_.last(args) instanceof ConsoleOptions) {
       msgArgs = _.initial(args);
-      opts = _.last(args).options;
+      options = _.last(args).options;
     } else {
       msgArgs = args;
-      opts = {};
+      options = {};
     }
     var message = self._format(msgArgs);
-    return { message: message, opts: opts };
+    return { message: message, opts: options };
   },
 
   isLevelEnabled: function (levelCode) {
@@ -669,7 +663,7 @@ _.extend(Console.prototype, {
     self._print(LEVEL_DEBUG, message);
   },
 
-  // By default, Console.debug automatically line wrapps the output.
+  // By default, Console.debug automatically line wraps the output.
   //
   // Takes in an optional Console.options({}) argument at the end, with the
   // following keys:
@@ -708,7 +702,6 @@ _.extend(Console.prototype, {
   info: function(/*arguments*/) {
     var self = this;
     if (! self.isInfoEnabled()) { return; }
-
 
     var message = self._prettifyMessage(arguments);
     self._print(LEVEL_INFO, message);
@@ -760,8 +753,8 @@ _.extend(Console.prototype, {
     var self = this;
     var parsedArgs = self._parseVariadicInput(msgArguments);
     var wrapOpts = {
-      indent: parsedArgs.opts.indent,
-      bulletPoint: parsedArgs.opts.bulletPoint
+      indent: parsedArgs.options.indent,
+      bulletPoint: parsedArgs.options.bulletPoint
     };
 
     var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
@@ -816,32 +809,31 @@ _.extend(Console.prototype, {
   },
 
   // A wrapper around Console.info. Prints the message out in green (if pretty),
-  // with the ascii checkmark as the bullet point in front of it.
+  // with the CHECKMARK as the bullet point in front of it.
   success: function (message) {
     var self = this;
 
     if (! self._pretty) {
       return self.info(message);
     }
-
-    var checkmark = chalk.green('\u2713');
+    var checkmark = chalk.green('\u2713'); // CHECKMARK
     return self.info(
         chalk.green(message),
-        self.options({ bulletPoint: checkmark }));
+        self.options({ bulletPoint: checkmark  + " "}));
   },
 
   // Wrapper around Console.info. Prints the message out in red (if pretty)
-  // with the ascii x as the bullet point in front of it.
+  // with the BALLOT X as the bullet point in front of it.
   failInfo: function (message) {
     var self = this;
-    return self._fail(message, self.info);
+    return self._fail(message, "info");
   },
 
   // Wrapper around Console.warn. Prints the message out in red (if pretty)
   // with the ascii x as the bullet point in front of it.
   failWarn: function (message) {
     var self = this;
-    return self._fail(message, self.warn);
+    return self._fail(message, "warn");
   },
 
   // Print the message in red (if pretty) with an x bullet point in front of it.
@@ -853,15 +845,15 @@ _.extend(Console.prototype, {
     }
 
     var xmark = chalk.red('\u2717');
-    return printFn(
+    return self[printFn](
         chalk.red(message),
-        self.options({ bulletPoint: xmark }));
+        self.options({ bulletPoint: xmark + " " }));
   },
 
   // Wrapper around Console.warn that prints a large "WARNING" label in front.
   labelWarn: function (message) {
     var self = this;
-    return self.warn(message, self.options({ bulletPoint: "WARNING" }));
+    return self.warn(message, self.options({ bulletPoint: "WARNING: " }));
   },
 
   // Wrappers around Console functions to prints an "=> " in front. Optional
@@ -881,10 +873,9 @@ _.extend(Console.prototype, {
   _arrowPrint: function(printFn, message, indent) {
     var self = this;
     indent = indent || 0;
-    var myIndent = Array(indent + 1).join(" ");
     return self[printFn](
       message,
-      self.options({ bulletPoint: myIndent + ARROW }));
+      self.options({ bulletPoint: ARROW, indent: indent }));
   },
 
   // A wrapper around console.error. Given an error and some background
@@ -931,14 +922,23 @@ _.extend(Console.prototype, {
   // If pretty print is on, this will also bold the commands.
   command: function (message) {
     var self = this;
-    var noBlanks =
-          replaceAll(message, ' ', SPACE_REPLACEMENT);
-    return this.bold(noBlanks);
+    var unwrapped = self.doNotWrap(message);
+    return self.bold(unwrapped);
   },
 
   // Underline the URLs (if pretty print is on).
   url: function (message) {
-    return this.underline(message);
+    var self = this;
+    var unwrapped = self.doNotWrap(message);
+    return self.underline(unwrapped);
+  },
+
+  // Do not wrap this substring when you send it into a non-raw print function.
+  // DO NOT print the result of this call with a raw function.
+  doNotWrap: function (message) {
+    var noBlanks =
+          replaceAll(message, ' ', SPACE_REPLACEMENT);
+    return noBlanks;
   },
 
   // A wrapper around the underline functionality of chalk.
@@ -1007,8 +1007,10 @@ _.extend(Console.prototype, {
   //
   // text: the text to wrap
   // options:
+
   //   - bulletPoint: start the first line with a given string, then offset the
-  //     subsequent lines by the length of that string. For example:
+  //     subsequent lines by the length of that string. For example, if the
+  //     bulletpoint is " => ", we would get:
   //     " => some long message starts here
   //          and then continues here."
   //   - indent: offset the entire string by a specific number of
@@ -1038,7 +1040,7 @@ _.extend(Console.prototype, {
     }
 
     // Get the maximum width, or if we are not running in a terminal (self-test,
-    // for exmaple), default to 80 columns.
+    // for example), default to 80 columns.
     var max = self.width();
 
     // Wrap the text using the npm wordwrap library.

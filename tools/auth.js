@@ -853,7 +853,7 @@ exports.whoAmICommand = function (options) {
 
   var username = currentUsername(data);
   if (username) {
-    Console.info(Console.command(username));
+    Console.rawInfo(username + "\n");
     return 0;
   }
 
@@ -861,7 +861,7 @@ exports.whoAmICommand = function (options) {
   if (url) {
     Console.error("You haven't chosen your username yet. To pick it, go here:");
     Console.error();
-    Console.error(url);
+    Console.error(Console.url(url));
   } else {
     // Won't happen in normal operation
     Console.error("You haven't chosen your username yet.");
@@ -932,7 +932,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       var spinner = ['-', '\\', '|', '/'];
       lastLinePrinted = "Waiting for you to register on the web... " +
         spinner[animationFrame];
-      Console.error(lastLinePrinted + "\r");
+      Console.rawError(lastLinePrinted + "\r");
       animationFrame = (animationFrame + 1) % spinner.length;
     }, 200);
     var stopSpinner = function () {

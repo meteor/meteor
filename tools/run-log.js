@@ -121,15 +121,7 @@ _.extend(RunLog.prototype, {
     // Process the options. By default, we want to wordwrap the message with
     // Console.info. If we ask for raw output, then we don't want to do that. If
     // we ask for an arrow, we want to wrap around with => as the bulletPoint.
-    var printFn;
-    if (options.arrow) {
-      printFn = Console.arrowInfo;
-    } else {
-      printFn = Console.info;
-   }
-
-   // Print the message to the logs.
-   printFn(msg);
+    Console[options.arrow ? 'arrowInfo' : 'info'](msg);
   },
 
   // Write a message to the terminal that will get overwritten by the
