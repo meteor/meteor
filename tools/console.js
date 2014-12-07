@@ -489,10 +489,10 @@ var Console = function (options) {
   self.stdout = {};
   self.stderr = {};
   self.stdout.write = function (msg) {
-    self._legacyWrite(LEVEL_INFO, msg);
+    self._print(LEVEL_INFO, msg);
   };
   self.stderr.write = function (msg) {
-    self._legacyWrite(LEVEL_WARN, msg);
+    self._print(LEVEL_WARN, msg);
   };
 
   self._stream = process.stdout;
@@ -513,7 +513,6 @@ var Console = function (options) {
     self.enableProgressDisplay(false);
   });
 };
-
 
 var LEVEL_CODE_ERROR = 4;
 var LEVEL_CODE_WARN = 3;
@@ -685,14 +684,8 @@ _.extend(Console.prototype, {
     var self = this;
     if (! self.isDebugEnabled()) { return; }
 
-    var parsedArgs = self._parseVariadicInput(arguments);
-    var wrapOpts = {
-      indent: parsedArgs.opts.indent,
-      bulletPoint: parsedArgs.opts.bulletPoint
-    };
-
-    var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
-    self._print(LEVEL_DEBUG, wrappedMessage);
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_DEBUG, message);
   },
 
   isInfoEnabled: function () {
@@ -718,14 +711,9 @@ _.extend(Console.prototype, {
     var self = this;
     if (! self.isInfoEnabled()) { return; }
 
-    var parsedArgs = self._parseVariadicInput(arguments);
-    var wrapOpts = {
-      indent: parsedArgs.opts.indent,
-      bulletPoint: parsedArgs.opts.bulletPoint
-    };
 
-    var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
-    self._print(LEVEL_INFO, wrappedMessage);
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_INFO, message);
   },
 
   isWarnEnabled: function () {
@@ -745,18 +733,12 @@ _.extend(Console.prototype, {
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawWarn function. For more information about options, see: debug.
-  warn: function(/*arguments*/) {
+  warn: function(/* arguments */) {
     var self = this;
     if (! self.isWarnEnabled()) { return; }
 
-    var parsedArgs = self._parseVariadicInput(arguments);
-    var wrapOpts = {
-      indent: parsedArgs.opts.indent,
-      bulletPoint: parsedArgs.opts.bulletPoint
-    };
-
-    var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
-    self._print(LEVEL_WARN, wrappedMessage);
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_WARN, message);
   },
 
   rawError: function(/*arguments*/) {
@@ -768,10 +750,16 @@ _.extend(Console.prototype, {
 
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
-  // rawWarn function. For more information about options, see: debug.
+  // rawError function. For more information about options, see: debug.
   error: function(/*arguments*/) {
     var self = this;
 
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_ERROR, message);
+  },
+
+  _prettifyMessage: function (/* arguments */) {
+    var self = this;
     var parsedArgs = self._parseVariadicInput(arguments);
     var wrapOpts = {
       indent: parsedArgs.opts.indent,
@@ -779,15 +767,8 @@ _.extend(Console.prototype, {
     };
 
     var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
-    self._print(LEVEL_ERROR, wrappedMessage);
-  },
-
-  _legacyWrite: function (level, message) {
-    var self = this;
-    if(message.substr && message.substr(-1) == '\n') {
-      message = message.substr(0, message.length - 1);
-    }
-    self._print(level, message);
+    wrappedMessage += "\n";
+    return wrappedMessage;
   },
 
   _print: function(level, message) {
@@ -825,9 +806,9 @@ _.extend(Console.prototype, {
     }
 
     if (style) {
-      dest.write(style(message + '\n'));
+      dest.write(style(message));
     } else {
-      dest.write(message + '\n');
+      dest.write(message);
     }
 
     // XXX: Pause before showing the progress display, to prevent
@@ -1011,6 +992,7 @@ _.extend(Console.prototype, {
     });
 
     var level = options.level || self.LEVEL_INFO;
+    out += "/n";
     self._print(level, out);
 
     return out;
