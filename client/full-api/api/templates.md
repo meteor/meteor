@@ -167,7 +167,8 @@ Alias for `template.view.autorun`.
 {{> autoApiBox "Template.parentData"}}
 
 For example, `Template.parentData(0)` is equivalent to `Template.currentData()`.  `Template.parentData(2)`
-is equivalent to `{{dstache}}../..}}` in a template.
+is equivalent to `{{dstache}}../..}}` in a template. `Template.parentData()` is equivalent to
+`Template.parentData(1)`.
 
 {{> autoApiBox "Template.body"}}
 
