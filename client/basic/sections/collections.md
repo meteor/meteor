@@ -233,7 +233,7 @@ For example, we might say that users can only create new posts if the
 impersonate each other.
 
 ```
-// In a file loaded on the client and server
+// In a file loaded on the server (ignored on the client)
 Posts.allow({
   insert: function (userId, post) {
     // can only create posts where you are the author
@@ -284,7 +284,7 @@ For example, if we wanted to override part of our `allow` rule above to exclude
 certain post titles:
 
 ```
-// In a file loaded on the client and server
+// In a file loaded on the server (ignored on the client)
 Posts.deny({
   insert: function (userId, post) {
     // Don't allow posts with a certain title
