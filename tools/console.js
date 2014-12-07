@@ -621,7 +621,7 @@ _.extend(Console.prototype, {
   // optional ConsoleOptions argument at the end.
   //
   // Returns an object with keys:
-  //  - opts: The options that were passed in, or an empty object.
+  //  - options: The options that were passed in, or an empty object.
   //  - message: Arguments to the original function, parsed as a string.
   //
   _parseVariadicInput: function (args) {
@@ -639,7 +639,7 @@ _.extend(Console.prototype, {
       options = {};
     }
     var message = self._format(msgArgs);
-    return { message: message, opts: options };
+    return { message: message, options: options };
   },
 
   isLevelEnabled: function (levelCode) {

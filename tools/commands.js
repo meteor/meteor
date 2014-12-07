@@ -88,7 +88,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var archinfo = require('./archinfo.js');
-  Console.rawInfo(archinfo.host() + "\n);
+  Console.rawInfo(archinfo.host() + "\n");
 });
 
 // Prints the current release in use. Note that if there is not
@@ -134,7 +134,7 @@ main.registerCommand({
     Console.error("none");
     return 1;
   } else {
-    Console.rawInfo(release.current.name + "\n);
+    Console.rawInfo(release.current.name + "\n");
     Console.rawInfo(files.getToolsVersion() + "\n");
     return 0;
   }
@@ -761,7 +761,7 @@ var buildCommand = function (options) {
     if (relative.substr(0, 3) !== ('..' + path.sep)) {
       Console.warn();
       Console.labelWarn(
-        "Warning: The output directory is under your source tree.",g
+        "Warning: The output directory is under your source tree.",
         "Your generated files may get interpreted as source code!",
         "Consider building into a different directory instead (" +
         Console.command("meteor build ../output") + ")",
