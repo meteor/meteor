@@ -122,7 +122,8 @@ var logErrorIfInCheckout = function (err) {
     Console.warn(
       "(This error is hidden when you are not running Meteor from a",
       "checkout.)");
-    Console.rawWarn(err.stack || err);
+    var printErr = err.stack || err;
+    Console.rawWarn(printErr + "\n");
     Console.warn();
     Console.warn();
   }

@@ -758,9 +758,9 @@ _.extend(Console.prototype, {
     self._print(LEVEL_ERROR, message);
   },
 
-  _prettifyMessage: function (/* arguments */) {
+  _prettifyMessage: function (msgArguments) {
     var self = this;
-    var parsedArgs = self._parseVariadicInput(arguments);
+    var parsedArgs = self._parseVariadicInput(msgArguments);
     var wrapOpts = {
       indent: parsedArgs.opts.indent,
       bulletPoint: parsedArgs.opts.bulletPoint
@@ -909,7 +909,7 @@ _.extend(Console.prototype, {
 
     self.error(message);
     if (self.verbose && err.stack) {
-      self.rawInfo(err.stack);
+      self.rawInfo(err.stack + "\n");
     }
   },
 

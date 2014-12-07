@@ -1058,7 +1058,7 @@ Fiber(function () {
   if (showHelp) {
     // XXX: Until we rewrite the longHelp function to cope with the new output
     // format, let's go with the static, painstakingly-formatted version.
-    Console.rawInfo(longHelp(commandName));
+    Console.rawInfo(longHelp(commandName) + "\n");
     process.exit(0);
   }
 
@@ -1293,7 +1293,7 @@ Fiber(function () {
       throw new Error(
         "you meant 'throw new main.Foo', not 'throw main.Foo'");
     } else if (e instanceof main.ShowUsage) {
-      Console.rawError(longHelp(commandName));
+      Console.rawError(longHelp(commandName) + "\n");
       process.exit(1);
     } else if (e instanceof main.SpringboardToLatestRelease) {
       // Load the metadata for the latest release (or at least, the latest

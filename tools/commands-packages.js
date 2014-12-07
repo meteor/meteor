@@ -1174,7 +1174,8 @@ main.registerCommand({
   var myMaintainerString = "";
   var myMaintainers = _.pluck(record.maintainers, 'username');
   if (myMaintainers.length === 0) {
-    Console.rawDebug("No maintainer records found: ", JSON.stringify(record));
+    Console.rawDebug(
+      "No maintainer records found: ", JSON.stringify(record), "\n");
   } else if (myMaintainers.length === 1) {
     myMaintainerString = myMaintainers[0];
   } else {

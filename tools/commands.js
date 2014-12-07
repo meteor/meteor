@@ -198,7 +198,7 @@ function doRunCommand (options) {
   } catch (err) {
     if (options.verbose) {
       Console.rawError(
-        "Error while parsing --port option: " + err.stack);
+        "Error while parsing --port option: " + err.stack + "\n");
     } else {
       Console.error(err.message);
     }
@@ -215,7 +215,7 @@ function doRunCommand (options) {
   } catch (err) {
     if (options.verbose) {
       Console.rawError(
-        "Error while parsing --mobile-server option: " + err.stack);
+        "Error while parsing --mobile-server option: " + err.stack  + "\n");
     } else {
       Console.error(err.message);
     }
@@ -1676,7 +1676,7 @@ main.registerCommand({
   if (body.organizations.length === 0) {
     Console.info("You are not a member of any organizations.");
   } else {
-    Console.rawInfo(_.pluck(body.organizations, "name").join("\n"));
+    Console.rawInfo(_.pluck(body.organizations, "name").join("\n") + "\n");
   }
   return 0;
 });
@@ -1732,7 +1732,7 @@ main.registerCommand({
     }
 
     var members = _.pluck(result, "username");
-    Console.rawInfo(members.join("\n"));
+    Console.rawInfo(members.join("\n") + "\n");
   }
 
   return 0;
@@ -1925,7 +1925,7 @@ main.registerCommand({
       'key' : ret.sshKey,
       'hostKey' : ret.hostKey
     };
-    Console.rawInfo(JSON.stringify(retJson, null, 2));
+    Console.rawInfo(JSON.stringify(retJson, null, 2) + "\n");
     return 0;
   }
 

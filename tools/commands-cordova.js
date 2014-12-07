@@ -184,7 +184,7 @@ var setVerboseness = cordova.setVerboseness = function (v) {
 };
 var verboseLog = cordova.verboseLog = function (/* args */) {
   if (verboseness)
-    Console.rawError('%% ' + util.format.apply(null, arguments));
+    Console.rawError('%% ' + util.format.apply(null, arguments) + "\n");
 };
 
 
@@ -374,8 +374,8 @@ var ensureCordovaProject = function (projectContext, appName) {
       if (err instanceof main.ExitWithCode) {
         process.exit(err.code);
       }
-      Console.rawError("Error creating Cordova project: " +
-        err.message + "\n" + err.stack);
+      Console.error("Error creating Cordova prject: " + err.message);
+      Console.rawError(err.stack + "\n");
     }
   }
 };
@@ -2075,8 +2075,8 @@ _.extend(Android.prototype, {
     if (execution.exitCode !== 0) {
       Console.warn(
         "Unexpected exit code from android process: " + execution.exitCode);
-      Console.rawWarn("stdout: " + execution.stdout);
-      Console.rawWarn("stderr: " + execution.stderr);
+      Console.rawWarn("stdout: " + execution.stdout + "\n");
+      Console.rawWarn("stderr: " + execution.stderr + "\n");
 
       throw new Error("Error running android tool: exit code " + execution.exitCode);
     }
@@ -2195,9 +2195,9 @@ _.extend(Android.prototype, {
       if (execution.exitCode !== 0) {
         Console.debug("Unable to run aapt." +
                       " (This is normal if 32 bit libraries are not found)");
-        Console.rawDebug("  exit code: " + execution.exitCode);
-        Console.rawDebug("  stdout: " + execution.stdout);
-        Console.rawDebug("  stderr: " + execution.stderr);
+        Console.rawDebug("  exit code: " + execution.exitCode + "\n");
+        Console.rawDebug("  stdout: " + execution.stdout + "\n");
+        Console.rawDebug("  stderr: " + execution.stderr + "\n");
 
         return false;
       }
@@ -2396,7 +2396,9 @@ _.extend(Android.prototype, {
 
       if (Host.hasAptGet()) {
         Console.info("You can install the JDK using:");
-        Console.rawInfo("  sudo apt-get install --yes openjdk-7-jdk");
+        Console.info(
+          Console.comand("sudo apt-get install --yes openjdk-7-jdk"),
+          Console.options({ indent: 2 }));
 
         // XXX: Technically, these are for Android, not installing Java
         if (processor == "x86_64") {
@@ -2496,8 +2498,8 @@ _.extend(Android.prototype, {
         if (execution.exitCode != 0) {
           Console.warn(
             "Unexpected exit code from script: " + execution.exitCode);
-          Console.rawWarn("stdout: " + execution.stdout);
-          Console.rawWarn("stderr: " + execution.stderr);
+          Console.rawWarn("stdout: " + execution.stdout + "\n");
+          Console.rawWarn("stderr: " + execution.stderr + "\n");
           throw new Error('Could not download Android bundle');
         }
       });
@@ -2592,7 +2594,7 @@ _.extend(Android.prototype, {
         device[kv[0]] = kv[1];
       }
       devices.push(device);
-      Console.rawDebug("Found device", JSON.stringify(device));
+      Console.rawDebug("Found device", JSON.stringify(device) + "\n");
     });
     return devices;
   },
@@ -2977,7 +2979,7 @@ main.registerCommand({
 
   var platforms = projectContext.platformList.getPlatforms();
 
-  Console.rawInfo(platforms.join("\n"));
+  Console.rawInfo(platforms.join("\n") + "\n");
 });
 
 main.registerCommand({
