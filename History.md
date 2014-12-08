@@ -112,6 +112,13 @@ Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle,
 Primigenus, svda, yauh, and zol.
 
 
+## v0.9.4.1
+
+* Fix a security issue in allow/deny rules that could result in data
+  loss. If your app uses allow/deny rules, or uses packages that use
+  allow/deny rules, we recommend that you update immediately.
+
+
 ## v0.9.4
 
 ### New Features
@@ -588,6 +595,12 @@ Other changes:
 Patches by Github users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
 mquandalle, rcy, RichardLitt, thatneat, and twhy.
 
+
+## v0.8.3.1
+
+* Fix a security issue in allow/deny rules that could result in data
+  loss. If your app uses allow/deny rules, or uses packages that use
+  allow/deny rules, we recommend that you update immediately.
 
 
 ## v0.8.3
@@ -1115,6 +1128,13 @@ for full details on upgrading your app to 0.8.0.  This includes:
   `UI.registerHelper`.
 
 Patches contributed by GitHub users cmather and mart-jansink.
+
+
+## v0.7.2.1
+
+* Fix a security issue in allow/deny rules that could result in data
+  loss. If your app uses allow/deny rules, or uses packages that use
+  allow/deny rules, we recommend that you update immediately.
 
 
 ## v0.7.2
@@ -1703,6 +1723,13 @@ Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,
 sdarnell, and timhaines.
 
 
+## v0.6.5.3
+
+* Fix a security issue in allow/deny rules that could result in data
+  loss. If your app uses allow/deny rules, or uses packages that use
+  allow/deny rules, we recommend that you update immediately.
+
+
 ## v0.6.5.2
 
 * Upgrade Node from 0.8.24 to 0.8.26 (security patch)
@@ -1875,6 +1902,13 @@ sdarnell, and timhaines.
   * MongoDB Driver from 1.3.7 to 1.3.17
 
 Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
+
+
+## v0.6.4.2
+
+* Fix a security issue in allow/deny rules that could result in data
+  loss. If your app uses allow/deny rules, or uses packages that use
+  allow/deny rules, we recommend that you update immediately.
 
 
 ## v0.6.4.1
