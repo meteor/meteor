@@ -2386,6 +2386,12 @@ Tinytest.add(
     height.set(3);
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
+
+    // Test that calling Template.parentData() without any arguments is the same as Template.parentData(1)
+
+    height.set(null);
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "baz");
   }
 );
 

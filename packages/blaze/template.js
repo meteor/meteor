@@ -317,7 +317,7 @@ Template.currentData = Blaze.getData;
  * @summary Accesses other data contexts that enclose the current data context.
  * @locus Client
  * @function
- * @param {Integer} numLevels The number of levels beyond the current data context to look.
+ * @param {Integer} [numLevels] The number of levels beyond the current data context to look. Defaults to 1.
  */
 Template.parentData = Blaze._parentData;
 
