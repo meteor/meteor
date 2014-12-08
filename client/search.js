@@ -10,12 +10,14 @@ _.each(DocsData, function (val) {
 Session.setDefault("searchOpen", false);
 Session.set("searchQuery", "");
 
+// Close search with ESC
 $(document).on("keydown", function (event) {
   if (event.which === 27) {
     Session.set("searchOpen", false);
   }
 });
 
+// Open search with any non-special key
 var doNotOpenSearch = [13, 27, 32];
 $(document).on("keydown", function (event) {
   // Don't activate search for special keys or keys with modifiers
@@ -31,16 +33,26 @@ $(document).on("keydown", function (event) {
   }
 });
 
-var updateQuery = _.throttle(function () {
-  Session.set("searchQuery", $(".search-query").val());
+// scroll searchResults to make sure $result is visible
+var ensureVisible = function ($result, searchResults) {
+  // make sure it's inside the visible area
+  var viewportTop = searchResults.offset().top;
+  var viewportHeight = searchResults.height();
+  var elTop = $result.offset().top;
+  var elHeight = $result.height();
 
-  Tracker.afterFlush(function () {
-    var currentSelected = $(".search-results .selected");
-    if (! currentSelected.length) {
-      selectListItem($(".search-results li").first());
-    }
-  });
-}, 200);
+  // check if bottom is below visible part
+  if (elTop + elHeight > viewportTop + viewportHeight) {
+    var amount = searchResults.scrollTop() +
+      (elTop + elHeight - (viewportTop + viewportHeight));
+    searchResults.scrollTop(amount);
+  }
+
+  // check if top is above visible section
+  if (elTop < viewportTop) {
+    searchResults.scrollTop(searchResults.scrollTop() + elTop - viewportTop);
+  }
+};
 
 var selectListItem = function ($newSelected) {
   var currentSelected = $(".search-results .selected");
@@ -48,32 +60,23 @@ var selectListItem = function ($newSelected) {
 
   if ($newSelected.length) {
     $newSelected.addClass("selected");
-
-    // scroll to make sure everything is inside the viewport
     var searchResults = $(".search-results");
 
-    // make sure it's inside the visible area
-    var viewportTop = searchResults.offset().top;
-    var viewportHeight = searchResults.height();
-    var elTop = $newSelected.offset().top;
-    var elHeight = $newSelected.height();
+    ensureVisible($newSelected, searchResults);
+  }
+};
 
-    // check if bottom is below visible part
-    if (elTop + elHeight > viewportTop + viewportHeight) {
-      var amount = searchResults.scrollTop() +
-        (elTop + elHeight - (viewportTop + viewportHeight));
-      searchResults.scrollTop(amount);
-    }
-
-    // check if top is above visible section
-    if (elTop < viewportTop) {
-      searchResults.scrollTop(searchResults.scrollTop() + elTop - viewportTop);
-    }
+var selectFirstResult = function () {
+  var currentSelected = $(".search-results .selected");
+  if (! currentSelected.length) {
+    selectListItem($(".search-results li").first());
   }
 };
 
 Template.search.events({
-  "keyup input": updateQuery,
+  "keyup input": function (event) {
+    Session.set("searchQuery", event.target.value);
+  },
   "click .close-search": function () {
     Session.set("searchOpen", false);
     return false;
@@ -130,32 +133,52 @@ Template.search.events({
   }
 });
 
-var dedup = function (arr) {
+// When you have two arrays of search results, use this function to deduplicate
+// them
+var dedup = function (arrayOfSearchResultsArrays) {
   var ids = {};
-  var output = [];
+  var dedupedResults = [];
 
-  _.each(arr, function (innerArray) {
-    _.each(innerArray, function (item) {
+  _.each(arrayOfSearchResultsArrays, function (searchResults) {
+    _.each(searchResults, function (item) {
       if (! ids.hasOwnProperty(item._id)) {
         ids[item._id] = true;
-        output.push(item);
+        dedupedResults.push(item);
       }
     });
   });
 
-  return output;
+  return dedupedResults;
 };
+
+// Only update the search results every 200 ms
+var updateSearchResults = _.throttle(function (query) {
+  var regex = new RegExp(query, "i");
+
+  // We do two separate queries so that we can be sure that the name matches
+  // are above the summary matches, since they are probably more relevant
+  var nameMatches = APICollection.find({ longname: {$regex: regex}}).fetch();
+  var summaryMatches = APICollection.find({ summary: {$regex: regex}}).fetch();
+
+  var deduplicatedResults = dedup([nameMatches, summaryMatches]);
+
+  Session.set("searchResults", deduplicatedResults);
+
+  Tracker.afterFlush(selectFirstResult);
+}, 200);
+
+// Call updateSearchResults when the query changes
+Tracker.autorun(function () {
+  if (Session.get("searchQuery")) {
+    updateSearchResults(Session.get("searchQuery"));
+  } else {
+    Session.set("searchResults", []);
+  }
+});
 
 Template.search.helpers({
   searchResults: function () {
-    if (Session.get("searchQuery")) {
-      var regex = new RegExp(Session.get("searchQuery"), "i");
-
-      var nameMatches = APICollection.find({ longname: {$regex: regex}}).fetch();
-      var summaryMatches = APICollection.find({ summary: {$regex: regex}}).fetch();
-
-      return dedup([nameMatches, summaryMatches]);
-    }
+    return Session.get("searchResults");
   },
   searchOpen: function () {
     return Session.get("searchOpen");
