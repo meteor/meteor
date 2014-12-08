@@ -1663,7 +1663,7 @@ var maybeUpdateRelease = function (options) {
       // that track, so we are done.
       Console.info(
         "This project is already at " +
-        Console.doNotWrap(projectContext.releaseFile.displayReleaseName) +
+        Console.noWrap(projectContext.releaseFile.displayReleaseName) +
         ", which is newer than the latest release.");
       return 0;
     }

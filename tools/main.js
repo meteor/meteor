@@ -1264,7 +1264,7 @@ Fiber(function () {
     // app's usual release by using a checkout, print a reminder banner.
     Console.arrowWarn(
       "Running Meteor from a checkout -- overrides project version " +
-      Console.doNotWrap("(" + appReleaseFile.displayReleaseName + ")"));
+      Console.noWrap("(" + appReleaseFile.displayReleaseName + ")"));
   }
 
   // Now that we're ready to start executing the command, if we are in

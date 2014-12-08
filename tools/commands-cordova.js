@@ -1899,7 +1899,7 @@ _.extend(IOS.prototype, {
       if (self.isSdkInstalled(version) && log) {
         Console.warn(
             "An old version of the iPhone SDK is installed",
-            Console.doNotWrap("(" + version + ")") + ";",
+            Console.noWrap("(" + version + ")") + ";",
             "you should probably delete it. With SDK versions prior to 7.0",
             "installed, your apps can't be published to the App Store.",
             "Moreover, some Cordova plugins are incompatible with this SDK.",
@@ -1954,7 +1954,7 @@ _.extend(Android.prototype, {
 
     Console.info(
       "Can't determine acceleration for unknown host: ",
-      Console.doNotWrap(archinfo.host()));
+      Console.noWrap(archinfo.host()));
     return undefined;
   },
 

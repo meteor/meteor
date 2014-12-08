@@ -922,7 +922,7 @@ _.extend(Console.prototype, {
   // If pretty print is on, this will also bold the commands.
   command: function (message) {
     var self = this;
-    var unwrapped = self.doNotWrap(message);
+    var unwrapped = self.noWrap(message);
     return self.bold(unwrapped);
   },
 
@@ -933,7 +933,7 @@ _.extend(Console.prototype, {
     // things browsers understand.
     var unspaced =
           replaceAll(message, ' ', '%20');
-    // There is no need to call doNotWrap here, since that only handles spaces
+    // There is no need to call noWrap here, since that only handles spaces
     // (and we have done that). If it ever handles other things, we should call
     // it here.
     return self.underline(unspaced);
@@ -943,15 +943,14 @@ _.extend(Console.prototype, {
     var self = this;
     // XXX: Consider automatically escaping spaces.
     // (Want to make sure that we don't escape a space twice though)
-    var unwrapped = self.doNotWrap(message);
+    var unwrapped = self.noWrap(message);
     return self.bold(unwrapped);
   },
 
   // Do not wrap this substring when you send it into a non-raw print function.
   // DO NOT print the result of this call with a raw function.
-  doNotWrap: function (message) {
-    var noBlanks =
-          replaceAll(message, ' ', SPACE_REPLACEMENT);
+  noWrap: function (message) {
+    var noBlanks = replaceAll(message, ' ', SPACE_REPLACEMENT);
     return noBlanks;
   },
 
