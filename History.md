@@ -1,5 +1,13 @@
 ## v.NEXT
 
+
+## v1.0.1
+
+* Fix a security issue in allow/deny rules that could result in data
+  loss. If your app uses allow/deny rules, or uses packages that use
+  allow/deny rules, we recommend that you update immediately.
+
+
 ## v1.0
 
 ### New Features
