@@ -34,9 +34,11 @@ Blaze.Template = function (viewName, renderFunction) {
   this.__helpers = new HelperMap;
   this.__eventMaps = [];
 
-  this.__createdCallbacks = [];
-  this.__renderedCallbacks = [];
-  this.__destroyedCallbacks = [];
+  this._callbacks = {
+    created: [],
+    rendered: [],
+    destroyed: []
+  };
 };
 var Template = Blaze.Template;
 
@@ -69,7 +71,7 @@ Blaze.isTemplate = function (t) {
  * @locus Client
  */
 Template.prototype.onCreated = function (cb) {
-  this.__createdCallbacks.push(cb);
+  this._callbacks.created.push(cb);
 };
 
 /**
@@ -81,7 +83,7 @@ Template.prototype.onCreated = function (cb) {
  * @locus Client
  */
 Template.prototype.onRendered = function (cb) {
-  this.__renderedCallbacks.push(cb);
+  this._callbacks.rendered.push(cb);
 };
 
 /**
@@ -93,7 +95,17 @@ Template.prototype.onRendered = function (cb) {
  * @locus Client
  */
 Template.prototype.onDestroyed = function (cb) {
-  this.__destroyedCallbacks.push(cb);
+  this._callbacks.destroyed.push(cb);
+};
+
+Template.prototype._fireCallbacks = function (template, which) {
+  var self = this;
+  var callbacks = self[which] ? [self[which]] : [];
+  callbacks = callbacks.concat(self._callbacks[which]);
+
+  for (var i = 0, N = callbacks.length; i < N; i++) {
+    callbacks[i].call(template);
+  }
 };
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
@@ -154,16 +166,6 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     return inst;
   };
 
-  var combinedEventHandlers = function (handlers, optionalHandler, template) {
-    return function () {
-      if (optionalHandler) {
-        optionalHandler.call(template);
-      }
-      _.each(handlers, function (cb) {
-        cb.call(template);
-      });
-    };
-  };
   /**
    * @name  created
    * @instance
@@ -172,9 +174,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
-  var createdHandler = combinedEventHandlers(
-    self.__createdCallbacks, self.created, view.templateInstance());
-  view.onViewCreated(createdHandler);
+  view.onViewCreated(function () {
+    self._fireCallbacks(view.templateInstance(), 'created');
+  });
 
   /**
    * @name  rendered
@@ -184,9 +186,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
-  var readyHandler = combinedEventHandlers(
-    self.__renderedCallbacks, self.rendered, view.templateInstance());
-  view.onViewReady(readyHandler);
+  view.onViewReady(function () {
+    self._fireCallbacks(view.templateInstance(), 'rendered');
+  });
 
   /**
    * @name  destroyed
@@ -196,9 +198,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
-  var destroyedHandler = combinedEventHandlers(
-    self.__destroyedCallbacks, self.destroyed, view.templateInstance());
-  view.onViewDestroyed(destroyedHandler);
+  view.onViewDestroyed(function () {
+    self._fireCallbacks(view.templateInstance(), 'destroyed');
+  });
 
   return view;
 };
