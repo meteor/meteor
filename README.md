@@ -277,7 +277,7 @@ Meteor.methods({
       throw new Meteor.Error(403, "Access denied")
     }
 
-    Roles.setUserRoles(targetUser, roles, group)
+    Roles.setUserRoles(targetUserId, roles, group)
   }
 })
 ```
