@@ -8,7 +8,7 @@
       </div>
       <ul class="search-results">
         {{#each searchResults}}
-          <li>
+          <li class="{{#if selected _id}}selected{{/if}}">
             <strong>{{longname}}</strong>: {{#markdown}}{{summary}}{{/markdown}}
           </li>
         {{else}}
