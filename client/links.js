@@ -27,30 +27,6 @@ var updateUrlFromWaypoint = function (el) {
   }
 };
 
-Meteor.startup(function () {
-  Tracker.autorun(function () {
-    var docsType = Session.get("fullApi") ? "full" : "basic";
-    Tracker.afterFlush(function () {
-      $.waypoints('destroy');
-
-      // XXX this timeout is a temporary hack to yield more before setting the
-      // waypoints.
-      setTimeout(function () {
-        $('.main-content :not(.hidden) [id]').each(function (i, el) {
-          if (! $("#nav [href='#/" + docsType + '/' + el.id + "']").get(0)) {
-            // only add waypoints to things that have sidebar links
-            return;
-          }
-
-          $(el).waypoint(function() {
-            updateUrlFromWaypoint(this);
-          }, { context: $('.main-content'), offset: -50 });
-        });
-      }, 0);
-    });
-  });
-});
-
 Tracker.autorun(function () {
   // returns a "location" like object with all of the url parts
   var current = Session.get('urlHash');
@@ -128,3 +104,48 @@ Tracker.autorun(function () {
 Tracker.autorun(function () {
   localStorage.setItem("fullApi", !! Session.get("fullApi"));
 });
+
+var setHashFromCurrentPosition = _.debounce(function () {
+  var tocClass = Session.get("fullApi") ? ".full-api-toc" : ".basic-toc";
+
+  // get all IDs that are linked to from sidebar
+  var ids = {};
+  $("#nav " + tocClass + " a").each(function (i, el) {
+    ids[_.last(el.href.split("/"))] = true;
+  });
+
+  var pageEls = $('.main-content :not(.hidden) [id]');
+  var correctIndex = -1;
+  var lastIndex = -1;
+
+  // how far from the top of the page is the waypoint triggered?
+  var distanceFromTop = 150;
+
+  pageEls.each(function (i, el) {
+    if (! ids[el.id]) {
+      // only add waypoints to things that have sidebar links
+      return;
+    }
+
+    if ($(el).offset().top > distanceFromTop) {
+      if (correctIndex === -1) { // don't do this twice
+        // If this element is below the cutoff, we want to set the URL to
+        // link to the previous element
+        correctIndex = lastIndex;
+      }
+    }
+
+    lastIndex = i;
+  });
+
+  if (correctIndex !== -1) {
+    updateUrlFromWaypoint(pageEls[correctIndex]);
+  }
+}, 200);
+
+Template.body.events({
+  "scroll .main-content": function () {
+    setHashFromCurrentPosition();
+  }
+});
+
