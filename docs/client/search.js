@@ -36,6 +36,10 @@ $(document).on("keydown", function (event) {
 // scroll $parent to make sure $child is visible
 // XXX doesn't work that well, needs improvement
 var ensureVisible = function ($child, $parent) {
+  if (! $child) {
+    return;
+  }
+
   // make sure it's inside the visible area
   var parentTop = $parent.offset().top;
   var parentHeight = $parent.height();
