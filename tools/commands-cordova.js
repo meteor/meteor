@@ -1071,7 +1071,7 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
         if (err && platform === "android" && isDevice) {
           Console.error();
           Console.error(
-            chalk.green("Could not start the app on your device. Is it plugged in?");
+            chalk.green("Could not start the app on your device. Is it plugged in?"));
           Console.error("Try running again with the --verbose option.");
           Console.error(
             chalk.green("Instructions for running your app on an Android device: ") +
@@ -1898,13 +1898,15 @@ _.extend(IOS.prototype, {
     _.each(['5.0', '5.0.1', '5.1', '6.0', '6.1'], function (version) {
       if (self.isSdkInstalled(version) && log) {
         Console.warn(
-            "An old version of the iPhone SDK is installed (" + version + ");",
+            "An old version of the iPhone SDK is installed",
+            Console.doNotWrap("(" + version + ")") + ";",
             "you should probably delete it. With SDK versions prior to 7.0",
             "installed, your apps can't be published to the App Store.",
             "Moreover, some Cordova plugins are incompatible with this SDK.",
             "You can remove it by deleting this directory: ");
         Console.warn(
-            self.getDirectoryForSdk(version), Console.options({ indent: 4 }));
+            Console.directory(self.getDirectoryForSdk(version)),
+            Console.options({ indent: 4 }));
         // Not really a failure; just warn...
       }
     });
@@ -1951,7 +1953,8 @@ _.extend(Android.prototype, {
     }
 
     Console.info(
-      "Can't determine acceleration for unknown host: ", archinfo.host());
+      "Can't determine acceleration for unknown host: ",
+      Console.doNotWrap(archinfo.host()));
     return undefined;
   },
 

@@ -1663,7 +1663,7 @@ var maybeUpdateRelease = function (options) {
       // that track, so we are done.
       Console.info(
         "This project is already at " +
-        projectContext.releaseFile.displayReleaseName +
+        Console.doNotWrap(projectContext.releaseFile.displayReleaseName) +
         ", which is newer than the latest release.");
       return 0;
     }
@@ -2287,9 +2287,9 @@ main.registerCommand({
   Console.info("The maintainers for " + name + " are:");
   _.each(record.maintainers, function (user) {
     if (! user || !user.username)
-      Console.info("<unknown>");
+      Console.rawInfo("<unknown>" + "\n");
     else
-      Console.info(user.username + "");
+      Console.rawInfo(user.username + "\n");
   });
   return 0;
 });
@@ -2334,11 +2334,11 @@ main.registerCommand({
     toolPackage, toolVersion);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
-    Console.error('Tool version unknown: ' + release.tool + '');
+    Console.error('Tool version unknown: ' + release.tool);
     return 1;
   }
   if (!toolPkgBuilds.length) {
-    Console.error('Tool version has no builds: ' + release.tool + '');
+    Console.error('Tool version has no builds: ' + release.tool);
     return 1;
   }
 
@@ -2358,8 +2358,8 @@ main.registerCommand({
   });
 
   Console.error(
-    'Building bootstrap tarballs for architectures ' +
-      osArches.join(', ') + '');
+    'Building bootstrap tarballs for architectures ' + osArches.join(', '));
+
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
   var messages = buildmessage.capture(function () {
@@ -2378,7 +2378,7 @@ main.registerCommand({
   });
 
   if (messages.hasMessages()) {
-    Console.error("\n" + messages.formatMessages());
+    Console.printMessages(messages);
     return 1;
   };
 
@@ -2482,8 +2482,7 @@ main.registerCommand({
     var bannersData = fs.readFileSync(bannersFile, 'utf8');
     bannersData = JSON.parse(bannersData);
   } catch (e) {
-    Console.error("Could not parse banners file: ");
-    Console.error(e.message + "");
+    Console.error("Could not parse banners file: " + e.message);
     return 1;
   }
   if (!bannersData.track) {
@@ -2603,12 +2602,12 @@ main.registerCommand({
   }
 
   try {
-    Console.info(
-        "Changing homepage on  "
+    Console.rawInfo(
+        "Changing homepage on "
           + name + " to " + url + "...");
       packageClient.callPackageServer(conn,
           '_changePackageHomepage', name, url);
-      Console.info("Done!");
+      Console.info(" done");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;
@@ -2710,12 +2709,12 @@ main.registerCommand({
 
   try {
     // XXX: This output should probably use progress bars instead!
-    Console.rawInfo("Setting README of " + name + "@" + version + " to " + url + " ...");
+    Console.rawInfo("Setting README of " + name + "@" + version + " to " + url + " ... ");
     packageClient.callPackageServer(
       conn,
       '_changeReadmeURL',
       name, version, url);
-    Console.info(setting + " done.");
+    Console.info("done.");
   } catch (err) {
     packageClient.handlePackageServerConnectionError(err);
     return 1;

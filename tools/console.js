@@ -939,6 +939,14 @@ _.extend(Console.prototype, {
     return self.underline(unspaced);
   },
 
+  directory: function (message) {
+    var self = this;
+    // XXX: Consider automatically escaping spaces.
+    // (Want to make sure that we don't escape a space twice though)
+    var unwrapped = self.doNotWrap(message);
+    return self.bold(unwrapped);
+  },
+
   // Do not wrap this substring when you send it into a non-raw print function.
   // DO NOT print the result of this call with a raw function.
   doNotWrap: function (message) {
