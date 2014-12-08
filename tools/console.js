@@ -933,16 +933,20 @@ _.extend(Console.prototype, {
     // things browsers understand.
     var unspaced =
           replaceAll(message, ' ', '%20');
-    // There is no need to call noWrap here, since that only handles spaces
-    // (and we have done that). If it ever handles other things, we should call
-    // it here.
+    // There is no need to call noWrap here, since that only handles spaces (and
+    // we have done that). If it ever handles things other than spaces, we
+    // should make sure to call it here.
     return self.underline(unspaced);
   },
 
   directory: function (message) {
     var self = this;
-    // XXX: Consider automatically escaping spaces.
-    // (Want to make sure that we don't escape a space twice though)
+    // Escape any spaces that we don't already escape.
+    var escapedSpace = "\\ ";
+    message = _.map(message.split(escapedSpace), function (msg) {
+      return replaceAll(msg, ' ', escapedSpace);
+    }).join(escapedSpace);
+    // Make sure that we don't wrap this.
     var unwrapped = self.noWrap(message);
     return self.bold(unwrapped);
   },
