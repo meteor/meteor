@@ -8,90 +8,115 @@ _.each(DocsData, function (val) {
 });
 
 Session.setDefault("searchOpen", false);
-Session.set("searchQuery", "");
+Session.setDefault("searchQuery", "");
+Session.setDefault("searchResults", []);
+Session.setDefault("selectedResultId", null);
 
+// Close search with ESC
 $(document).on("keydown", function (event) {
   if (event.which === 27) {
     Session.set("searchOpen", false);
   }
 });
 
-var doNotOpenSearch = [13, 27, 32];
+// Open search with any non-special key
+var keysToOpenSearch = /[A-Za-z0-9]/;
 $(document).on("keydown", function (event) {
   // Don't activate search for special keys or keys with modifiers
-  if (event.which && (! _.contains(doNotOpenSearch, event.which)) &&
-      (! event.ctrlKey) && (! event.metaKey)) {
-    if (! Session.get("searchOpen")) {
-      Session.set("searchOpen", true);
+  if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
+      (! event.ctrlKey) && (! event.metaKey) && (! Session.get("searchOpen"))) {
+    Session.set("searchOpen", true);
 
-      Tracker.flush();
-      $(".search-query").val("");
-      $(".search-query").focus();
-    }
+    Tracker.flush();
+    $(".search-query").val("");
+    $(".search-query").focus();
   }
 });
 
-var updateQuery = _.throttle(function () {
-  Session.set("searchQuery", $(".search-query").val());
+// scroll $parent to make sure $child is visible
+// XXX doesn't work that well, needs improvement
+var ensureVisible = function ($child, $parent) {
+  if (! $child) {
+    return;
+  }
 
-  Tracker.afterFlush(function () {
-    var currentSelected = $(".search-results .selected");
-    if (! currentSelected.length) {
-      selectListItem($(".search-results li").first());
+  // make sure it's inside the visible area
+  var parentTop = $parent.offset().top;
+  var parentHeight = $parent.height();
+  var childTop = $child.offset().top;
+  var childHeight = $child.height();
+
+  // check if bottom is below visible part
+  if (childTop + childHeight > parentTop + parentHeight) {
+    var amount = $parent.scrollTop() +
+      (childTop + childHeight - (parentTop + parentHeight));
+    $parent.scrollTop(amount);
+  }
+
+  // check if top is above visible section
+  if (childTop < parentTop) {
+    $parent.scrollTop($parent.scrollTop() + childTop - parentTop);
+  }
+};
+
+// Whenever selectedResultId changes, make sure the selected element is visible
+Tracker.autorun(function () {
+  if (Session.get("selectedResultId")) {
+    Tracker.afterFlush(function () {
+      ensureVisible($(".search-results .selected"), $(".search-results"));
+    });
+  }
+});
+
+var indexOfByFunction = function (array, truthFunction) {
+  for (var i = 0; i < array.length; i++) {
+    if(truthFunction(array[i], i, array)) {
+      return i;
     }
+  }
+  return -1;
+};
+
+var selectPrevItem = function () {
+  // find currently selected item
+  var curIndex = indexOfByFunction(Session.get("searchResults"), function (res) {
+    return res._id === Session.get("selectedResultId");
   });
-}, 200);
 
-var selectListItem = function ($newSelected) {
-  var currentSelected = $(".search-results .selected");
-  currentSelected.removeClass("selected");
+  // select the previous item
+  if (curIndex > 0) {
+    Session.set("selectedResultId",
+      Session.get("searchResults")[curIndex - 1]._id);
+  }
+};
 
-  if ($newSelected.length) {
-    $newSelected.addClass("selected");
+var selectNextItem = function () {
+  // find currently selected item
+  var curIndex = indexOfByFunction(Session.get("searchResults"), function (res) {
+    return res._id === Session.get("selectedResultId");
+  });
 
-    // scroll to make sure everything is inside the viewport
-    var searchResults = $(".search-results");
-
-    // make sure it's inside the visible area
-    var viewportTop = searchResults.offset().top;
-    var viewportHeight = searchResults.height();
-    var elTop = $newSelected.offset().top;
-    var elHeight = $newSelected.height();
-
-    // check if bottom is below visible part
-    if (elTop + elHeight > viewportTop + viewportHeight) {
-      var amount = searchResults.scrollTop() +
-        (elTop + elHeight - (viewportTop + viewportHeight));
-      searchResults.scrollTop(amount);
-    }
-
-    // check if top is above visible section
-    if (elTop < viewportTop) {
-      searchResults.scrollTop(searchResults.scrollTop() + elTop - viewportTop);
-    }
+  // select the previous item
+  if (curIndex < Session.get("searchResults").length - 1) {
+    Session.set("selectedResultId",
+      Session.get("searchResults")[curIndex + 1]._id);
   }
 };
 
 Template.search.events({
-  "keyup input": updateQuery,
+  "keyup input": function (event) {
+    Session.set("searchQuery", event.target.value);
+  },
   "click .close-search": function () {
     Session.set("searchOpen", false);
     return false;
   },
-  "keydown": function (event, template) {
-    var currentSelected = template.$(".search-results .selected");
-
+  "keydown": function (event) {
     if (event.which === 13) {
-      // enter pressed, go to the selected item
-      Session.set("searchQuery", $(".search-query").val());
-
       Tracker.afterFlush(function () {
-        if (! currentSelected.length) {
-          currentSelected = template.$(".search-results li").first();
-        }
-
-        if (currentSelected.length) {
-          var selectedName = Blaze.getView(currentSelected.get(0)).dataVar.get().longname;
+        if (Session.get("selectedResultId")) {
+          // XXX make sure this is completely up to date
+          var selectedName = APICollection.findOne(Session.get("selectedResultId")).longname;
           var id = nameToId[selectedName] || selectedName.replace(/[.#]/g, "-");
           var url = "#/full/" + id;
           window.location.replace(url);
@@ -103,61 +128,70 @@ Template.search.events({
       return;
     }
 
-    var change = 0;
     if (event.which === 38) {
       // up
-      change = -1;
+      selectPrevItem();
+      return false;
     } else if (event.which === 40) {
       // down
-      change = 1;
-    }
-
-    if (change !== 0) {
-      if (change === 1) {
-        if (currentSelected.length) {
-          selectListItem(currentSelected.next());
-        } else {
-          selectListItem(template.$(".search-results li").first());
-        }
-      } else {
-        if (currentSelected.length) {
-          selectListItem(currentSelected.prev());
-        }
-      }
-
+      selectNextItem();
       return false;
     }
   }
 });
 
-var dedup = function (arr) {
+// When you have two arrays of search results, use this function to deduplicate
+// them
+var dedup = function (arrayOfSearchResultsArrays) {
   var ids = {};
-  var output = [];
+  var dedupedResults = [];
 
-  _.each(arr, function (innerArray) {
-    _.each(innerArray, function (item) {
+  _.each(arrayOfSearchResultsArrays, function (searchResults) {
+    _.each(searchResults, function (item) {
       if (! ids.hasOwnProperty(item._id)) {
         ids[item._id] = true;
-        output.push(item);
+        dedupedResults.push(item);
       }
     });
   });
 
-  return output;
+  return dedupedResults;
 };
+
+// Only update the search results every 200 ms
+var updateSearchResults = _.throttle(function (query) {
+  var regex = new RegExp(query, "i");
+
+  // We do two separate queries so that we can be sure that the name matches
+  // are above the summary matches, since they are probably more relevant
+  var nameMatches = APICollection.find({ longname: {$regex: regex}}).fetch();
+  var summaryMatches = APICollection.find({ summary: {$regex: regex}}).fetch();
+
+  var deduplicatedResults = dedup([nameMatches, summaryMatches]);
+
+  Session.set("searchResults", deduplicatedResults);
+  if (deduplicatedResults.length) {
+    Session.set("selectedResultId", deduplicatedResults[0]._id);
+  }
+}, 200);
+
+// Call updateSearchResults when the query changes
+Tracker.autorun(function () {
+  if (Session.get("searchQuery")) {
+    updateSearchResults(Session.get("searchQuery"));
+  } else {
+    Session.set("searchResults", []);
+  }
+});
 
 Template.search.helpers({
   searchResults: function () {
-    if (Session.get("searchQuery")) {
-      var regex = new RegExp(Session.get("searchQuery"), "i");
-
-      var nameMatches = APICollection.find({ longname: {$regex: regex}}).fetch();
-      var summaryMatches = APICollection.find({ summary: {$regex: regex}}).fetch();
-
-      return dedup([nameMatches, summaryMatches]);
-    }
+    return Session.get("searchResults");
   },
   searchOpen: function () {
     return Session.get("searchOpen");
+  },
+  selected: function (_id) {
+    return _id === Session.get("selectedResultId");
   }
 });
