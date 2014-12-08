@@ -24,4 +24,3 @@ Template.sidebar.helpers({
     return "#/" + docsType + "/";
   }
 });
-
