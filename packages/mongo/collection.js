@@ -964,6 +964,8 @@ Mongo.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
+  check(mutator, Object);
+
   options = options || {};
 
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
