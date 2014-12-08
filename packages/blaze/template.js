@@ -68,6 +68,10 @@ Blaze.isTemplate = function (t) {
  * @param {Function} callback A function to be added as a callback.
  * @locus Client
  */
+Template.prototype.onCreated = function (cb) {
+  this.__createdCallbacks.push(cb);
+};
+
 /**
  * @name  onRendered
  * @instance
@@ -76,6 +80,10 @@ Blaze.isTemplate = function (t) {
  * @param {Function} callback A function to be added as a callback.
  * @locus Client
  */
+Template.prototype.onRendered = function (cb) {
+  this.__renderedCallbacks.push(cb);
+};
+
 /**
  * @name  onDestroyed
  * @instance
@@ -84,13 +92,9 @@ Blaze.isTemplate = function (t) {
  * @param {Function} callback A function to be added as a callback.
  * @locus Client
  */
-var templateEvents = ['created', 'rendered', 'destroyed'];
-_.each(templateEvents, function (event) {
-  var methodName = 'on' + event.charAt(0).toUpperCase() + event.slice(1);
-  Template.prototype[methodName] = function (cb) {
-    this['__' + event + 'Callbacks'].push(cb);
-  };
-});
+Template.prototype.onDestroyed = function (cb) {
+  this.__destroyedCallbacks.push(cb);
+};
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
   var self = this;
@@ -150,44 +154,51 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     return inst;
   };
 
+  var combinedEventHandlers = function (handlers, optionalHandler, template) {
+    return function () {
+      if (optionalHandler) {
+        optionalHandler.call(template);
+      }
+      _.each(handlers, function (cb) {
+        cb.call(template);
+      });
+    };
+  };
   /**
    * @name  created
    * @instance
    * @memberOf Template
    * @summary Provide a callback when an instance of a template is created.
    * @locus Client
+   * @deprecated in 1.1
    */
+  var createdHandler = combinedEventHandlers(
+    self.__createdCallbacks, self.created, view.templateInstance());
+  view.onViewCreated(createdHandler);
+
   /**
    * @name  rendered
    * @instance
    * @memberOf Template
    * @summary Provide a callback when an instance of a template is rendered.
    * @locus Client
+   * @deprecated in 1.1
    */
+  var readyHandler = combinedEventHandlers(
+    self.__renderedCallbacks, self.rendered, view.templateInstance());
+  view.onViewReady(readyHandler);
+
   /**
    * @name  destroyed
    * @instance
    * @memberOf Template
    * @summary Provide a callback when an instance of a template is destroyed.
    * @locus Client
+   * @deprecated in 1.1
    */
-  var viewEvents = ['created', 'ready', 'destroyed'];
-  _.each(templateEvents, function (event, indx) {
-    var viewEvent = viewEvents[indx];
-    var viewMethod = 'onView' +
-      viewEvent.charAt(0).toUpperCase() + viewEvent.slice(1);
-
-    if (self[event]) {
-      view[viewMethod](function () {
-        self[event].call(view.templateInstance());
-      });
-    }
-    _.each(self['__' + event + 'Callbacks'], function (cb) {
-      view[viewMethod](function () {
-        cb.call(view.templateInstance());
-      });
-    });
-  });
+  var destroyedHandler = combinedEventHandlers(
+    self.__destroyedCallbacks, self.destroyed, view.templateInstance());
+  view.onViewDestroyed(destroyedHandler);
 
   return view;
 };
