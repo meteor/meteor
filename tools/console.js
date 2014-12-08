@@ -929,8 +929,14 @@ _.extend(Console.prototype, {
   // Underline the URLs (if pretty print is on).
   url: function (message) {
     var self = this;
-    var unwrapped = self.doNotWrap(message);
-    return self.underline(unwrapped);
+    // If we are going to print URLs with spaces, we should turn spaces into
+    // things browsers understand.
+    var unspaced =
+          replaceAll(message, ' ', '%20');
+    // There is no need to call doNotWrap here, since that only handles spaces
+    // (and we have done that). If it ever handles other things, we should call
+    // it here.
+    return self.underline(unspaced);
   },
 
   // Do not wrap this substring when you send it into a non-raw print function.
