@@ -1033,10 +1033,10 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
       execFileSyncOrThrow('sh', args);
     } catch (err) {
       Console.error();
+      Console.error(chalk.green("Could not open your project in Xcode."));
+      Console.error(chalk.green("Try running again with the --verbose option."));
       Console.error(
-        chalk.green("Could not open your project in Xcode.") +
-        chalk.green("Try running again with the --verbose option.") +
-        chalk.green("Instructions for running your app on an iOS device:")+
+        chalk.green("Instructions for running your app on an iOS device: ") +
         Console.url(
           "https://github.com/meteor/meteor/wiki/" +
           "How-to-run-your-app-on-an-iOS-device")
@@ -1049,7 +1049,7 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
       chalk.green(
         "Your project has been opened in Xcode so that you can run your " +
         "app on an iOS device. For further instructions, visit this " +
-        "wiki page:") +
+        "wiki page: ") +
       Console.url(
         "https://github.com/meteor/meteor/wiki/" +
         "How-to-run-your-app-on-an-iOS-device"
@@ -1071,33 +1071,32 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
         if (err && platform === "android" && isDevice) {
           Console.error();
           Console.error(
-            chalk.green(
-              "Could not start the app on your device. Is it plugged in? " +
-              "Try running again with the --verbose option. " +
-              "Instructions for running your app on an Android device: ") +
+            chalk.green("Could not start the app on your device. Is it plugged in?");
+          Console.error("Try running again with the --verbose option.");
+          Console.error(
+            chalk.green("Instructions for running your app on an Android device: ") +
             Console.url(
               "https://github.com/meteor/meteor/wiki/" +
-              "How-to-run-your-app-on-an-Android-device")
-           );
+              "How-to-run-your-app-on-an-Android-device"));
           Console.error();
         } else if (err && platform === "android") {
           Console.error();
           Console.error(
-            chalk.green("Could not start the app in the Android emulator."),
+            chalk.green("Could not start the app in the Android emulator.\n"),
             chalk.green("Try running again with the --verbose option.")
           );
           Console.error();
         } else if (err && platform === "ios") {
           Console.error();
           Console.error(
-            chalk.green("Could not start the app in the iOS simulator."),
+            chalk.green("Could not start the app in the iOS simulator.\n"),
             chalk.green("Try running again with the --verbose option.")
           );
           Console.error();
         } else if (err) {
           Console.error();
           Console.error(
-            chalk.green("Could not start your app."),
+            chalk.green("Could not start your app.\n"),
             chalk.green("Try running again with the --verbose option.")
           );
           Console.error();
