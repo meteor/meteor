@@ -117,6 +117,7 @@ Primigenus, svda, yauh, and zol.
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
+  Backport from 1.0.1.
 
 
 ## v0.9.4
@@ -601,6 +602,7 @@ mquandalle, rcy, RichardLitt, thatneat, and twhy.
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
+  Backport from 1.0.1.
 
 
 ## v0.8.3
@@ -1135,6 +1137,7 @@ Patches contributed by GitHub users cmather and mart-jansink.
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
+  Backport from 1.0.1.
 
 
 ## v0.7.2
@@ -1728,6 +1731,7 @@ sdarnell, and timhaines.
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
+  Backport from 1.0.1.
 
 
 ## v0.6.5.2
@@ -1909,6 +1913,7 @@ Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
+  Backport from 1.0.1.
 
 
 ## v0.6.4.1
