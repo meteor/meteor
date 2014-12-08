@@ -366,7 +366,7 @@ Template.nav.helpers({
           if (typeof(item) === "string")
             item = {name: item};
 
-          var id = item.name && name_to_id(item.name) || undefined;
+          var id = item.id || (item.name && name_to_id(item.name) || undefined);
 
           ret.push(_.extend({
             type: "section",
