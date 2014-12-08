@@ -19,6 +19,8 @@
 * Fix a check for a parent process in 'meteor run' that was happening
   constantly instead of every few seconds. #3252
 
+* `Template.parentData`'s argument defaults to 1. #2861
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
