@@ -810,7 +810,7 @@ Meteor.Collection.prototype._validatedUpdate = function(
 
   check(mutator, Object);
 
-  options = options || {};
+  options = _.clone(options) || {};
 
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
