@@ -1005,7 +1005,7 @@ _.extend(Console.prototype, {
     });
 
     var level = options.level || self.LEVEL_INFO;
-    out += "/n";
+    out += "\n";
     self._print(level, out);
 
     return out;
