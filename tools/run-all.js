@@ -333,16 +333,14 @@ exports.run = function (options) {
   }
 
   if (result.outcome === "outdated-cordova-plugins") {
-    Console.error(
-      "Your app's Cordova plugins have changed.\n",
-      "Restart meteor to use the new set of plugins.");
+    Console.error("Your app's Cordova plugins have changed.");
+    Console.error("Restart meteor to use the new set of plugins.");
     return 254;
   }
 
   if (result.outcome === "outdated-cordova-platforms") {
-    Console.error(
-      "Your app's platforms have changed.\n",
-      "Restart meteor to use the new set of platforms.");
+    Console.error("Your app's platforms have changed.");
+    Console.error("Restart meteor to use the new set of platforms.");
     return 254;
   }
 

@@ -1081,24 +1081,18 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
           Console.error();
         } else if (err && platform === "android") {
           Console.error();
-          Console.error(
-            chalk.green("Could not start the app in the Android emulator.\n"),
-            chalk.green("Try running again with the --verbose option.")
-          );
+          Console.error(chalk.green("Could not start the app in the Android emulator."));
+          Console.error(chalk.green("Try running again with the --verbose option."));
           Console.error();
         } else if (err && platform === "ios") {
           Console.error();
-          Console.error(
-            chalk.green("Could not start the app in the iOS simulator.\n"),
-            chalk.green("Try running again with the --verbose option.")
-          );
+          Console.error(chalk.green("Could not start the app in the iOS simulator."));
+          Console.error(chalk.green("Try running again with the --verbose option."));
           Console.error();
         } else if (err) {
           Console.error();
-          Console.error(
-            chalk.green("Could not start your app.\n"),
-            chalk.green("Try running again with the --verbose option.")
-          );
+          Console.error(chalk.green("Could not start your app."));
+          Console.error(chalk.green("Try running again with the --verbose option."));
           Console.error();
         }
 
