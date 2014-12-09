@@ -2,6 +2,7 @@ var fs = require('fs');
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
+var watch = require('./watch.js');
 
 var packageDot = function (name) {
   if (/^[a-zA-Z0-9]*$/.exec(name))
@@ -215,6 +216,10 @@ var File = function (inputFile, module) {
   // source code for this file (a string)
   self.source = inputFile.source;
 
+  // hash of source (precalculated for *.js files, calculated here for files
+  // produced by plugins)
+  self.sourceHash = inputFile.sourceHash || watch.sha1(self.source);
+
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
 
@@ -232,6 +237,15 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
+// The JsAnalyze code is somewhat slow, and we often compute assigned variables
+// on the same file multiple times in one process (notably, a single file is
+// often processed for two or three different unibuilds, and is processed again
+// when rebuilding a package when another file has changed). We cache the
+// calculated variables under the source file's hash (calculating the source
+// file's hash is faster than running jsAnalyze, and in the case of *.js files
+// we have the hash already anyway).
+var ASSIGNED_GLOBALS_CACHE = {};
+
 _.extend(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
@@ -247,8 +261,13 @@ _.extend(File.prototype, {
     if (!jsAnalyze)
       return [];
 
+    if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
+      return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
+    }
+
     try {
-      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+      return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
+              _.keys(jsAnalyze.findAssignedGlobals(self.source)));
     } catch (e) {
       if (!e.$ParseError)
         throw e;

@@ -224,7 +224,8 @@ var compileUnibuild = function (options) {
     var options = {
       data: compileStep.read().toString('utf8'),
       path: compileStep.inputPath,
-      sourcePath: compileStep.inputPath
+      sourcePath: compileStep.inputPath,
+      _hash: compileStep._hash
     };
 
     if (compileStep.fileOptions.hasOwnProperty("bare")) {
@@ -489,6 +490,9 @@ var compileUnibuild = function (options) {
       // public API.
       _fullInputPath: absPath, // avoid, see above..
 
+      // Used for one optimization. Don't rely on this otherwise.
+      _hash: file.hash,
+
       // XXX duplicates _pathForSourceMap() in linker
       /**
        * @summary If you are generating a sourcemap for the compiled file, use
@@ -663,7 +667,8 @@ var compileUnibuild = function (options) {
           sourcePath: options.sourcePath,
           servePath: path.join(inputSourceArch.pkg.serveRoot, options.path),
           bare: !! bare,
-          sourceMap: options.sourceMap
+          sourceMap: options.sourceMap,
+          sourceHash: options._hash
         });
       },
 
