@@ -3025,3 +3025,23 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - observe limit bug", [
   }
 ]);
 
+Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidden", [
+  function (test, expect) {
+    var c = new Meteor.Collection(Random.id());
+
+    var id = c.insert({ foo: "bar" });
+
+    c.update(id, { foo2: "bar2" });
+    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+
+    test.throws(function () {
+      c.update(id, { foo3: "bar3" }, { _forbidReplace: true });
+    }, "Replacements are forbidden");
+    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+
+    test.throws(function () {
+      c.update(id, { foo3: "bar3", $set: { blah: 1 } });
+    }, "cannot be mixed");
+    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+  }
+]);

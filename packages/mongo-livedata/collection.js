@@ -888,6 +888,8 @@ Meteor.Collection.prototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied");
   }
 
+  options._forbidReplace = true;
+
   // Back when we supported arbitrary client-provided selectors, we actually
   // rewrote the selector to include an _id clause before passing to Mongo to
   // avoid races, but since selector is guaranteed to already just be an ID, we
