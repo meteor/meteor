@@ -1,4 +1,4 @@
-release = Meteor.release ? "1.0" : "(checkout)";
+release = Meteor.release ? "1.0.1" : "(checkout)";
 
 Template.registerHelper("release", release);
 
@@ -17,5 +17,3 @@ Template.registerHelper('tstache', function() {
 Template.registerHelper('lt', function () {
   return '<';
 });
-
-

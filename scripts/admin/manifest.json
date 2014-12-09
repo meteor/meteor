@@ -1,7 +1,7 @@
 {
     "releases": {
         "stable": {
-            "version": "1.0",
+            "version": "1.0.1",
             "banner": "=> Meteor 1.0 is out! Visit www.meteor.com for all the details.\n\n   Meteor 1.0 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
         }
     },
