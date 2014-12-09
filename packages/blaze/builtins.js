@@ -184,7 +184,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   return eachView;
 };
 
-Blaze._TemplateWith = function (arg, contentBlock) {
+Blaze._TemplateWith = function (arg, contentFunc) {
   var w;
 
   var argFunc = arg;
@@ -217,7 +217,23 @@ Blaze._TemplateWith = function (arg, contentBlock) {
     }
   };
 
-  w = Blaze.With(wrappedArgFunc, contentBlock);
+  var wrappedContentFunc = function () {
+    var content = contentFunc.call(this);
+
+    // Since we are generating the Blaze._TemplateWith view for the
+    // user, set the flag on the child view.  If `content` is a template,
+    // construct the View so that we can set the flag.
+    if (content instanceof Blaze.Template) {
+      content = content.constructView();
+    }
+    if (content instanceof Blaze.View) {
+      content._hasGeneratedParent = true;
+    }
+
+    return content;
+  };
+
+  w = Blaze.With(wrappedArgFunc, wrappedContentFunc);
   w.__isTemplateWith = true;
   return w;
 };

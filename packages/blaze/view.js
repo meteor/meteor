@@ -541,14 +541,8 @@ Blaze.insert = function (view, parentElement, nextNode) {
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
   // We defer the handling of optional arguments to Blaze.render.  At this point,
   // `nextNode` may actually be `parentView`.
-  var view = Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
+  return Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
                           parentElement, nextNode, parentView);
-
-  // Since we generated the Blaze._TemplateWith (or #with) view for the user,
-  // set the flag on the child view.
-  view._domrange.members[0].view._hasGeneratedParent = true;
-
-  return view;
 };
 
 /**
