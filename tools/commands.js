@@ -761,7 +761,7 @@ var buildCommand = function (options) {
     if (relative.substr(0, 3) !== ('..' + path.sep)) {
       Console.warn();
       Console.labelWarn(
-        "Warning: The output directory is under your source tree.",
+        "The output directory is under your source tree.",
         "Your generated files may get interpreted as source code!",
         "Consider building into a different directory instead (" +
         Console.command("meteor build ../output") + ")",
