@@ -3037,3 +3037,13 @@ Tinytest.add("spacebars-tests - template_tests - old-style helpers", function (t
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), '');
 });
+
+Tinytest.add("spacebars-tests - template_tests - with data remove (#3130)", function (test) {
+  var tmpl = Template.spacebars_template_test_with_data_remove;
+
+  var div = renderToDiv(tmpl, { foo: 3130 });
+  test.equal(canonicalizeHtml(div.innerHTML), '<b>some data - 3130</b>');
+  var view = Blaze.getView(div.querySelector('b'));
+  Blaze.remove(view);
+  test.equal(div.innerHTML, "");
+});
