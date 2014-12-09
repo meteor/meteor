@@ -112,7 +112,7 @@ _.extend(AppProcess.prototype, {
     }));
 
     self.proc.on('error', fiberHelpers.inBareFiber(function (err) {
-      runLog.log("=> Couldn't spawn process: " + err.message);
+      runLog.log("Couldn't spawn process: " + err.message,  { arrow: true });
 
       // node docs say that it might make both an 'error' and a
       // 'close' callback, so we use a guard to make sure we only call
@@ -770,11 +770,11 @@ _.extend(AppRunner.prototype, {
       }
 
       else if (runResult.outcome === "bundle-fail") {
-        runLog.log("=> Errors prevented startup:\n\n" +
-                        runResult.errors.formatMessages());
+        runLog.log("Errors prevented startup:\n\n" +
+                        runResult.errors.formatMessages(),  { arrow: true });
         if (self.watchForChanges) {
-          runLog.log("=> Your application has errors. " +
-                     "Waiting for file change.");
+          runLog.log("Your application has errors. " +
+                     "Waiting for file change.",  { arrow: true });
           Console.enableProgressDisplay(false);
         }
       }
@@ -784,9 +784,9 @@ _.extend(AppRunner.prototype, {
 
       else if (runResult.outcome === "terminated") {
         if (runResult.signal) {
-          runLog.log('=> Exited from signal: ' + runResult.signal);
+          runLog.log('Exited from signal: ' + runResult.signal, { arrow: true });
         } else if (runResult.code !== undefined) {
-          runLog.log('=> Exited with code: ' + runResult.code);
+          runLog.log('Exited with code: ' + runResult.code, { arrow: true });
         } else {
           // explanation should already have been logged
         }
@@ -796,8 +796,9 @@ _.extend(AppRunner.prototype, {
           continue;
 
         if (self.watchForChanges) {
-          runLog.log("=> Your application is crashing. " +
-                     "Waiting for file change.");
+          runLog.log("Your application is crashing. " +
+                     "Waiting for file change.",
+                     { arrow: true });
           Console.enableProgressDisplay(false);
         }
       }
@@ -824,7 +825,7 @@ _.extend(AppRunner.prototype, {
         // While we were waiting, did somebody stop() us?
         if (self.exitFuture)
           break;
-        runLog.log("=> Modified -- restarting.");
+        runLog.log("Modified -- restarting.",  { arrow: true });
         Console.enableProgressDisplay(true);
         continue;
       }

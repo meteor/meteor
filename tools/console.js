@@ -1,17 +1,17 @@
 ///
-/// utility functions for formatting output to the screen
+/// A set of utility functions for formatting output sent to the screen.
 ///
 /// Console offers several pieces of functionality:
-///   debug / info / warn messages:
-///     Outputs to the screen, optionally with colors (when pretty == true)
-///   'legacy' functions: Console.stdout.write & Console.stderr.write
-///     Make porting code a lot easier (just a regex from process -> Console)
-///   Progress bar support
-///     Displays a progress bar on the screen, but hides it around log messages
-///     (The need to hide it is why we have this class)
+///  - debug / info / warn messages: Output to the screen, optionally with
+///    colors (when pretty == true).  Wrap the output to the width of the user's
+///    terminal, making sure to not split the same word over multiple
+///    lines. (Also provides 'rawInfo', 'rawDebug' (etc) for when you DON'T want
+///    to pre-process the output.)
+///  - Progress bar support
+///    Display a progress bar on the screen, but hide it around log messages.
 ///
-/// In future, we might do things like move all support for verbose mode in here,
-/// and also integrate the buildmessage functionality into here
+/// In future, we might do things like move all support for verbose mode in
+/// here, and also integrate the buildmessage functionality into here
 ///
 
 var _ = require('underscore');
@@ -24,6 +24,7 @@ var buildmessage = require('./buildmessage.js');
 var chalk = require('chalk');
 var cleanup = require('./cleanup.js');
 var utils = require('./utils.js');
+var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
@@ -31,10 +32,9 @@ if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
 }
 
-if (!process.env.METEOR_COLOR) {
+if (! process.env.METEOR_COLOR) {
   chalk.enabled = false;
 }
-
 
 var STATUSLINE_MAX_LENGTH = 60;  // XXX unused?
 var STATUS_MAX_LENGTH = 40;
@@ -49,6 +49,18 @@ var STATUS_INTERVAL_MS = 500;
 // XXX: ? FALLBACK_STATUS = 'Pondering';
 var FALLBACK_STATUS = '';
 
+// If there is a part of the larger text, and we really want to make sure that
+// it doesn't get split up, we will replace the space with a utf character that
+// we are not likely to use anywhere else. This one looks like the a BLACK SUN
+// WITH RAYS. We intentionally want to NOT use a space-like character: it should
+// be obvious that something has gone wrong if this ever gets printed.
+var SPACE_REPLACEMENT = '\u2600';
+// In Javascript, replace only replaces the first occurance and this is the
+// proposed alternative.
+var replaceAll = function (str, search, replace) {
+ return str.split(search).join(replace);
+};
+
 var spacesArray = new Array(200).join(' ');
 var spacesString = function (length) {
   if (length > spacesArray.length) {
@@ -56,6 +68,8 @@ var spacesString = function (length) {
   }
   return spacesArray.substring(0, length);
 };
+var ARROW = "=> ";
+
 
 var toFixedLength = function (text, length) {
   text = text || "";
@@ -72,7 +86,8 @@ var toFixedLength = function (text, length) {
   return text;
 };
 
-// No-op progress display, that means we don't have to handle the 'no progress display' case
+// No-op progress display, that means we don't have to handle the 'no progress
+// display' case
 var ProgressDisplayNone = function () {
 };
 
@@ -217,7 +232,7 @@ _.extend(ProgressBarRenderer.prototype, {
       .replace(':current', self.curr)
       .replace(':total', self.total)
       .replace(':elapsed', isNaN(elapsed) ? '0.0' : (elapsed / 1000).toFixed(1))
-      .replace(':eta', (isNaN(eta) || !isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
+      .replace(':eta', (isNaN(eta) || ! isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
       .replace(':percent', percent.toFixed(0) + '%');
 
     /* compute the available space (non-zero) for the bar */
@@ -312,7 +327,7 @@ _.extend(ProgressDisplayFull.prototype, {
     var streamColumns = this._stream.columns;
     var statusColumns;
     var progressColumns;
-    if (!streamColumns) {
+    if (! streamColumns) {
       statusColumns = STATUS_MAX_LENGTH;
       progressColumns = 0;
     } else {
@@ -377,7 +392,7 @@ _.extend(StatusPoller.prototype, {
     }
 
     self._pollFiber = Fiber(function () {
-      while (!self._stop) {
+      while (! self._stop) {
         utils.sleepMs(100);
 
         self.statusPoll();
@@ -414,7 +429,7 @@ _.extend(StatusPoller.prototype, {
         } else {
           var fraction = state.done ? 1.0 : (state.current / state.end);
 
-          if (!isNaN(fraction) && fraction >= 0) {
+          if (! isNaN(fraction) && fraction >= 0) {
             progressDisplay.updateProgress(fraction, startTime);
           } else {
             progressDisplay.updateProgress(0, startTime);
@@ -471,12 +486,6 @@ var Console = function (options) {
   // Legacy helpers
   self.stdout = {};
   self.stderr = {};
-  self.stdout.write = function (msg) {
-    self._legacyWrite(LEVEL_INFO, msg);
-  };
-  self.stderr.write = function (msg) {
-    self._legacyWrite(LEVEL_WARN, msg);
-  };
 
   self._stream = process.stdout;
 
@@ -497,7 +506,6 @@ var Console = function (options) {
   });
 };
 
-
 var LEVEL_CODE_ERROR = 4;
 var LEVEL_CODE_WARN = 3;
 var LEVEL_CODE_INFO = 2;
@@ -507,6 +515,15 @@ var LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
 var LEVEL_WARN = { code: LEVEL_CODE_WARN };
 var LEVEL_INFO = { code: LEVEL_CODE_INFO };
 var LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
+
+// We use a special class to represent the options that we send to the Console
+// because it allows us to call 'instance of' on the last argument of variadic
+// functions. This allows us to keep the signature of our custom output
+// functions (ex: info) roughly the same as the originals.
+var ConsoleOptions = function (o) {
+  var self = this;
+  self.options = o;
+}
 
 _.extend(Console.prototype, {
   LEVEL_ERROR: LEVEL_ERROR,
@@ -537,7 +554,7 @@ _.extend(Console.prototype, {
     self._pretty = self._progressDisplayEnabled = true;
 
     // Update the screen if anything changed.
-    if (!originalPretty || !originalProgressDisplayEnabled)
+    if (! originalPretty || ! originalProgressDisplayEnabled)
       self._updateProgressDisplay();
 
     try {
@@ -547,7 +564,7 @@ _.extend(Console.prototype, {
       self._pretty = originalPretty;
       self._progressDisplayEnabled = originalProgressDisplayEnabled;
       // Update the screen if anything changed.
-      if (!originalPretty || !originalProgressDisplayEnabled)
+      if (! originalPretty || ! originalProgressDisplayEnabled)
         self._updateProgressDisplay();
     }
   },
@@ -555,6 +572,16 @@ _.extend(Console.prototype, {
   setVerbose: function (verbose) {
     var self = this;
     self.verbose = verbose;
+  },
+
+  // Get the current width of the Console.
+  width: function () {
+    var width = 80;
+    var stream = process.stdout;
+    if (stream && stream.isTTY && stream.columns) {
+      width = stream.columns;
+    }
+    return width;
   },
 
   // This can be called during long lived operations; it will keep the spinner spinning.
@@ -583,6 +610,38 @@ _.extend(Console.prototype, {
     }
   },
 
+  // Initializes and returns a new ConsoleOptions object. This allows us to call
+  // 'instance of' on the ConsoleOptions in parseVariadicInput, by ensuring that
+  // the object created with Console.options is, in fact, a new object.
+  options: function (o) {
+    return new ConsoleOptions(o);
+  },
+
+  // Deal with the arguments to a variadic print function that also takes an
+  // optional ConsoleOptions argument at the end.
+  //
+  // Returns an object with keys:
+  //  - options: The options that were passed in, or an empty object.
+  //  - message: Arguments to the original function, parsed as a string.
+  //
+  _parseVariadicInput: function (args) {
+    var self = this;
+    var msgArgs;
+    var options;
+    // If the last argument is an instance of ConsoleOptions, then we should
+    // separate it out, and only send the first N-1 arguments to be parsed as a
+    // message.
+    if (_.last(args) instanceof ConsoleOptions) {
+      msgArgs = _.initial(args);
+      options = _.last(args).options;
+    } else {
+      msgArgs = args;
+      options = {};
+    }
+    var message = self._format(msgArgs);
+    return { message: message, options: options };
+  },
+
   isLevelEnabled: function (levelCode) {
     return (this.verbose || this._logThreshold <= levelCode);
   },
@@ -591,9 +650,12 @@ _.extend(Console.prototype, {
     return this.isLevelEnabled(LEVEL_CODE_DEBUG);
   },
 
-  debug: function(/*arguments*/) {
+
+  // Don't pretty-fy this output by trying to, for example, line-wrap it. Just
+  // print it to the screen as it is.
+  rawDebug: function(/*arguments*/) {
     var self = this;
-    if (!self.isDebugEnabled()) {
+    if (! self.isDebugEnabled()) {
       return;
     }
 
@@ -601,13 +663,32 @@ _.extend(Console.prototype, {
     self._print(LEVEL_DEBUG, message);
   },
 
+  // By default, Console.debug automatically line wraps the output.
+  //
+  // Takes in an optional Console.options({}) argument at the end, with the
+  // following keys:
+  //   - bulletPoint: start the first line with a given string, then offset the
+  //     subsequent lines by the length of that string. See _wrap for more details.
+  //   - indent: offset the entire string by a specific number of
+  //     characters. See _wrap for more details.
+  //
+  debug: function(/*arguments*/) {
+    var self = this;
+    if (! self.isDebugEnabled()) { return; }
+
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_DEBUG, message);
+  },
+
   isInfoEnabled: function () {
     return this.isLevelEnabled(LEVEL_CODE_INFO);
   },
 
-  info: function(/*arguments*/) {
+  // Don't pretty-fy this output by trying to, for example, line-wrap it. Just
+  // print it to the screen as it is.
+  rawInfo: function(/*arguments*/) {
     var self = this;
-    if (!self.isInfoEnabled()) {
+    if (! self.isInfoEnabled()) {
       return;
     }
 
@@ -615,13 +696,24 @@ _.extend(Console.prototype, {
     self._print(LEVEL_INFO, message);
   },
 
+  // Generally, we want to process the output for legibility, for example, by
+  // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
+  // rawInfo function. For more information about options, see: debug.
+  info: function(/*arguments*/) {
+    var self = this;
+    if (! self.isInfoEnabled()) { return; }
+
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_INFO, message);
+  },
+
   isWarnEnabled: function () {
     return this.isLevelEnabled(LEVEL_CODE_WARN);
   },
 
-  warn: function(/*arguments*/) {
+  rawWarn: function(/*arguments*/) {
     var self = this;
-    if (!self.isWarnEnabled()) {
+    if (! self.isWarnEnabled()) {
       return;
     }
 
@@ -629,19 +721,45 @@ _.extend(Console.prototype, {
     self._print(LEVEL_WARN, message);
   },
 
-  error: function(/*arguments*/) {
+  // Generally, we want to process the output for legibility, for example, by
+  // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
+  // rawWarn function. For more information about options, see: debug.
+  warn: function(/* arguments */) {
+    var self = this;
+    if (! self.isWarnEnabled()) { return; }
+
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_WARN, message);
+  },
+
+  rawError: function(/*arguments*/) {
     var self = this;
 
     var message = self._format(arguments);
     self._print(LEVEL_ERROR, message);
   },
 
-  _legacyWrite: function (level, message) {
+  // Generally, we want to process the output for legibility, for example, by
+  // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
+  // rawError function. For more information about options, see: debug.
+  error: function(/*arguments*/) {
     var self = this;
-    if(message.substr && message.substr(-1) == '\n') {
-      message = message.substr(0, message.length - 1);
-    }
-    self._print(level, message);
+
+    var message = self._prettifyMessage(arguments);
+    self._print(LEVEL_ERROR, message);
+  },
+
+  _prettifyMessage: function (msgArguments) {
+    var self = this;
+    var parsedArgs = self._parseVariadicInput(msgArguments);
+    var wrapOpts = {
+      indent: parsedArgs.options.indent,
+      bulletPoint: parsedArgs.options.bulletPoint
+    };
+
+    var wrappedMessage = self._wrapText(parsedArgs.message, wrapOpts);
+    wrappedMessage += "\n";
+    return wrappedMessage;
   },
 
   _print: function(level, message) {
@@ -679,69 +797,95 @@ _.extend(Console.prototype, {
     }
 
     if (style) {
-      dest.write(style(message + '\n'));
+      dest.write(style(message));
     } else {
-      dest.write(message + '\n');
+      dest.write(message);
     }
 
-    // XXX: Pause before showing the progress display, to prevent flicker/spewing messages
+    // XXX: Pause before showing the progress display, to prevent
+    // flicker/spewing messages
     // Repaint the progress display
     progressDisplay.repaint();
   },
 
+  // A wrapper around Console.info. Prints the message out in green (if pretty),
+  // with the CHECKMARK as the bullet point in front of it.
   success: function (message) {
     var self = this;
 
-    if (!self._pretty) {
-      return message;
+    if (! self._pretty) {
+      return self.info(message);
     }
-    return chalk.green('\u2713 ' + message);  // CHECK MARK
+    var checkmark = chalk.green('\u2713'); // CHECKMARK
+    return self.info(
+        chalk.green(message),
+        self.options({ bulletPoint: checkmark  + " "}));
   },
 
-  fail: function (message) {
+  // Wrapper around Console.info. Prints the message out in red (if pretty)
+  // with the BALLOT X as the bullet point in front of it.
+  failInfo: function (message) {
+    var self = this;
+    return self._fail(message, "info");
+  },
+
+  // Wrapper around Console.warn. Prints the message out in red (if pretty)
+  // with the ascii x as the bullet point in front of it.
+  failWarn: function (message) {
+    var self = this;
+    return self._fail(message, "warn");
+  },
+
+  // Print the message in red (if pretty) with an x bullet point in front of it.
+  _fail: function (message, printFn) {
     var self = this;
 
-    if (!self._pretty) {
-      return message;
+    if (! self._pretty) {
+      return printFn(message);
     }
-    return chalk.red('\u2717 ' + message);  // BALLOT X
+
+    var xmark = chalk.red('\u2717');
+    return self[printFn](
+        chalk.red(message),
+        self.options({ bulletPoint: xmark + " " }));
   },
 
-  command: function (message) {
-    return this.bold(message);
-  },
-
-  url: function (message) {
-    return this.underline(message);
-  },
-
-  underline: function (message) {
+  // Wrapper around Console.warn that prints a large "WARNING" label in front.
+  labelWarn: function (message) {
     var self = this;
-
-    if (!self._pretty) {
-      return message;
-    }
-    return chalk.underline(message);
+    return self.warn(message, self.options({ bulletPoint: "WARNING: " }));
   },
 
-  bold: function (message) {
+  // Wrappers around Console functions to prints an "=> " in front. Optional
+  // indent to indent the arrow.
+  arrowError: function (message, indent) {
     var self = this;
-
-    if (!self._pretty) {
-      return message;
-    }
-    return chalk.bold(message);
+    return self._arrowPrint("error", message, indent);
+  },
+  arrowWarn: function (message, indent) {
+    var self = this;
+    return self._arrowPrint("warn", message, indent);
+  },
+  arrowInfo: function (message, indent) {
+    var self = this;
+    return self._arrowPrint("info", message, indent);
+  },
+  _arrowPrint: function(printFn, message, indent) {
+    var self = this;
+    indent = indent || 0;
+    return self[printFn](
+      message,
+      self.options({ bulletPoint: ARROW, indent: indent }));
   },
 
-  _format: function (logArguments) {
-    return util.format.apply(util, logArguments);
-  },
-
+  // A wrapper around console.error. Given an error and some background
+  // information, print out the correct set of messages depending on verbose
+  // level, etc.
   printError: function (err, info) {
     var self = this;
 
     var message = err.message;
-    if (!message) {
+    if (! message) {
       message = "Unexpected error";
       if (self.verbose) {
         message += " (" + err.toString() + ")";
@@ -754,17 +898,186 @@ _.extend(Console.prototype, {
 
     self.error(message);
     if (self.verbose && err.stack) {
-      self.info(err.stack);
+      self.rawInfo(err.stack + "\n");
     }
   },
 
+  // A wrapper to print out buildmessage errors.
   printMessages: function (messages) {
     var self = this;
 
     if (messages.hasMessages()) {
-      self._print(LEVEL_ERROR, "\n" + messages.formatMessages());
+      self.error("\n" + messages.formatMessages());
     }
   },
+
+  // Wrap commands in this function -- it ensures that commands don't get line
+  // wrapped (ie: print 'meteor' at the end of the line, and 'create --example'
+  // at the beginning of the next one).
+  //
+  // To use, wrap commands that you send into print functions with this
+  // function, like so: Console.info(text + Console.command("meteor create
+  // --example leaderboard") + moretext).
+  //
+  // If pretty print is on, this will also bold the commands.
+  command: function (message) {
+    var self = this;
+    var unwrapped = self.noWrap(message);
+    return self.bold(unwrapped);
+  },
+
+  // Underline the URLs (if pretty print is on).
+  url: function (message) {
+    var self = this;
+    // If we are going to print URLs with spaces, we should turn spaces into
+    // things browsers understand.
+    var unspaced =
+          replaceAll(message, ' ', '%20');
+    // There is no need to call noWrap here, since that only handles spaces (and
+    // we have done that). If it ever handles things other than spaces, we
+    // should make sure to call it here.
+    return self.underline(unspaced);
+  },
+
+  // Format a filepath to not wrap. This does NOT automatically escape spaces
+  // (ie: add a slash in front so the user could copy paste the file path into a
+  // terminal).
+  path: function (message) {
+    var self = this;
+    // Make sure that we don't wrap this.
+    var unwrapped = self.noWrap(message);
+    return self.bold(unwrapped);
+  },
+
+  // Do not wrap this substring when you send it into a non-raw print function.
+  // DO NOT print the result of this call with a raw function.
+  noWrap: function (message) {
+    var noBlanks = replaceAll(message, ' ', SPACE_REPLACEMENT);
+    return noBlanks;
+  },
+
+  // A wrapper around the underline functionality of chalk.
+  underline: function (message) {
+    var self = this;
+
+    if (! self._pretty) {
+      return message;
+    }
+    return chalk.underline(message);
+  },
+
+  // A wrapper around the bold functionality of chalk.
+  bold: function (message) {
+    var self = this;
+
+    if (! self._pretty) {
+      return message;
+    }
+    return chalk.bold(message);
+  },
+
+  // Prints a two column table in a nice format:
+  //  The first column is printed entirely, the second only as space permits
+  printTwoColumns : function (rows, options) {
+    var self = this;
+    options = options || {};
+
+    var longest = '';
+    _.each(rows, function (row) {
+      var col0 = row[0] || '';
+      if (col0.length > longest.length)
+        longest = col0;
+    });
+
+    var pad = longest.replace(/./g, ' ');
+    var width = self.width();
+
+    var out = '';
+    _.each(rows, function (row) {
+      var col0 = row[0] || '';
+      var col1 = row[1] || '';
+      var line = self.bold(col0) + pad.substr(col0.length);
+      line += "  " + col1;
+      if (line.length > width) {
+        line = line.substr(0, width - 3) + '...';
+      }
+      out += line + "\n";
+    });
+
+    var level = options.level || self.LEVEL_INFO;
+    out += "\n";
+    self._print(level, out);
+
+    return out;
+  },
+
+  // Format logs according to the spec in utils.
+  _format: function (logArguments) {
+    return util.format.apply(util, logArguments);
+  },
+
+  // Wraps long strings to the length of user's terminal. Inserts linebreaks
+  // between words when nearing the end of the line. Returns the wrapped string
+  // and takes the following arguments:
+  //
+  // text: the text to wrap
+  // options:
+
+  //   - bulletPoint: start the first line with a given string, then offset the
+  //     subsequent lines by the length of that string. For example, if the
+  //     bulletpoint is " => ", we would get:
+  //     " => some long message starts here
+  //          and then continues here."
+  //   - indent: offset the entire string by a specific number of
+  //     characters. For example:
+  //     "  This entire message is indented
+  //        by two characters."
+  //
+  // Passing in both options will offset the bulletPoint by the indentation,
+  // like so:
+  //  "  this message is indented by two."
+  //  "  => this mesage indented by two and
+  //        and also starts with an arrow."
+  //
+  // When printing commands in-line, it is best to wrap commands in with Console.command
+  // to make sure that they don't get line-wrapped. See Console.command for more details.
+  _wrapText: function (text, options) {
+    var self = this;
+    options = options || {};
+
+    // Compute the maximum offset on the bulk of the message.
+    var maxIndent = 0;
+    if (options.indent && options.indent > 0) {
+      maxIndent = maxIndent + options.indent;
+    }
+    if (options.bulletPoint) {
+      maxIndent = maxIndent + options.bulletPoint.length;
+    }
+
+    // Get the maximum width, or if we are not running in a terminal (self-test,
+    // for example), default to 80 columns.
+    var max = self.width();
+
+    // Wrap the text using the npm wordwrap library.
+    var wrappedText = wordwrap(maxIndent, max)(text);
+
+    // Insert the start string, if applicable.
+    if (options.bulletPoint) {
+      // Save the initial indent level.
+      var initIndent = options.indent ?
+          wrappedText.substring(0, options.indent) : "";
+      // Add together the initial indent (if any), the bullet point and the
+      // remainder of the message.
+      wrappedText = initIndent + options.bulletPoint +
+          wrappedText.substring(maxIndent);
+    }
+
+    // If we have previously replaces any spaces, now is the time to bring them
+    // back.
+    wrappedText = replaceAll(wrappedText, SPACE_REPLACEMENT, ' ');
+    return wrappedText;
+  },
+
 
   // Enables the progress bar, or disables it when called with (false)
   enableProgressDisplay: function (enabled) {
@@ -789,12 +1102,12 @@ _.extend(Console.prototype, {
 
     var newProgressDisplay;
 
-    if (!self._progressDisplayEnabled) {
+    if (! self._progressDisplayEnabled) {
       newProgressDisplay = new ProgressDisplayNone();
-    } else if ((!self._stream.isTTY) || (!self._pretty)) {
+    } else if ((! self._stream.isTTY) || (! self._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(self);
-    } else if (self._stream.isTTY && !self._stream.columns) {
+    } else if (self._stream.isTTY && ! self._stream.columns) {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
@@ -809,7 +1122,7 @@ _.extend(Console.prototype, {
 
     // Start/stop the status poller, so we never block exit
     if (self._progressDisplayEnabled) {
-      if (!self._statusPoller) {
+      if (! self._statusPoller) {
         self._statusPoller = new StatusPoller(self);
       }
     } else {
@@ -833,8 +1146,6 @@ _.extend(Console.prototype, {
     self._progressDisplay = newProgressDisplay;
   }
 });
-
-Console.prototype.warning = Console.prototype.warn;
 
 // options:
 //   - echo (boolean): defaults to true

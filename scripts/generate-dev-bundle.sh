@@ -117,7 +117,6 @@ npm install
 npm dedupe
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
-
 cd "${DIR}/lib"
 
 # TODO Move this into dev-bundle-tool-package.js when it can be safely
@@ -142,6 +141,7 @@ delete browserstack-webdriver/docs
 delete browserstack-webdriver/lib/test
 
 delete sqlite3/deps
+delete wordwrap/test
 
 # dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
 find . -path '*/esprima/test' | xargs rm -rf

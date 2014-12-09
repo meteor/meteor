@@ -90,17 +90,17 @@ cordova.buildTargets = function (projectContext, targets, options) {
 
     if (! inProject) {
       if (! supported) {
-        Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
+        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
       } else {
         Console.warn("Please add the " + displayPlatform +
                      " platform to your project first.");
         if (! hasSdk) {
           Console.info("First install the SDK by running: " +
-                       Console.bold("meteor install-sdk " + platform));
+                       Console.command("meteor install-sdk " + platform));
           Console.info("Then run: " +
-                       Console.bold("meteor add-platform " + platform));
+                       Console.command("meteor add-platform " + platform));
         } else {
-          Console.info("Run: " + Console.bold("meteor add-platform " + platform));
+          Console.info("Run: " + Console.command("meteor add-platform " + platform));
         }
       }
       throw new main.ExitWithCode(2);
@@ -115,9 +115,9 @@ cordova.buildTargets = function (projectContext, targets, options) {
       if (supported)
         Console.warn("The " + displayPlatform + " platform is not installed;" +
                      " please run: " +
-                     Console.bold("meteor install-sdk " + platform));
+                     Console.command("meteor install-sdk " + platform));
       else
-        Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
+        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
 
       throw new main.ExitWithCode(2);
     }
@@ -184,7 +184,7 @@ var setVerboseness = cordova.setVerboseness = function (v) {
 };
 var verboseLog = cordova.verboseLog = function (/* args */) {
   if (verboseness)
-    Console.stderr.write('%% ' + util.format.apply(null, arguments) + '\n');
+    Console.rawError('%% ' + util.format.apply(null, arguments) + "\n");
 };
 
 
@@ -374,8 +374,8 @@ var ensureCordovaProject = function (projectContext, appName) {
       if (err instanceof main.ExitWithCode) {
         process.exit(err.code);
       }
-      Console.stderr.write("Error creating Cordova project: " +
-        err.message + "\n" + err.stack + "\n");
+      Console.error("Error creating Cordova prject: " + err.message);
+      Console.rawError(err.stack + "\n");
     }
   }
 };
@@ -904,14 +904,16 @@ var CordovaRunner = function (projectContext, platformName, options) {
   // projectContext being asynchronously reset.)
   if (self.platformName !== "ios" &&
       self.projectContext.packageMap.getInfo('oauth2')) {
-    Console.warn(
-"\n" +
-"WARNING: It looks like you are using OAuth2 login in your app.\n" +
-"         Meteor's OAuth2 implementation does not currently work with\n" +
-"         mobile apps in local development mode, except in the iOS\n" +
-"         simulator. You can run the iOS simulator with 'meteor run ios'.\n" +
-"         For additional workarounds, see\n" +
-"         https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients.\n");
+    Console.warn();
+    Console.labelWarn(
+      "It looks like you are using OAuth2 login in your app. " +
+      "Meteor's OAuth2 implementation does not currently work with " +
+      "mobile apps in local development mode, except in the iOS " +
+      "simulator. You can run the iOS simulator with 'meteor run ios'. " +
+      "For additional workarounds, see " +
+      Console.url(
+        "https://github.com/meteor/meteor/wiki/" +
+        "OAuth-for-mobile-Meteor-clients."));
   }
 };
 
@@ -1030,30 +1032,29 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
     try {
       execFileSyncOrThrow('sh', args);
     } catch (err) {
-      Console.stderr.write([
-        "",
-        chalk.green("Could not open your project in Xcode."),
-        chalk.green("Try running again with the --verbose option."),
-        chalk.green("Instructions for running your app on an iOS device:"),
-        chalk.cyan("https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-iOS-device"),
-        ""
-      ].join("\n"));
-
+      Console.error();
+      Console.error(chalk.green("Could not open your project in Xcode."));
+      Console.error(chalk.green("Try running again with the --verbose option."));
+      Console.error(
+        chalk.green("Instructions for running your app on an iOS device: ") +
+        Console.url(
+          "https://github.com/meteor/meteor/wiki/" +
+          "How-to-run-your-app-on-an-iOS-device")
+      );
+      Console.error();
       process.exit(2);
     }
-
-    Console.stdout.write([
-      "",
-      chalk.green([
-        "Your project has been opened in Xcode so that you can run your app on ",
-        "an iOS device. For further instructions, visit this wiki page:",
-      ].join("\n")),
-      chalk.cyan(
-        "https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-iOS-device"
-      ),
-      ""
-    ].join("\n"));
-
+    Console.info();
+    Console.info(
+      chalk.green(
+        "Your project has been opened in Xcode so that you can run your " +
+        "app on an iOS device. For further instructions, visit this " +
+        "wiki page: ") +
+      Console.url(
+        "https://github.com/meteor/meteor/wiki/" +
+        "How-to-run-your-app-on-an-iOS-device"
+    ));
+    Console.info();
   } else {
     verboseLog('Running emulator:', localCordova, args);
     var emulatorOptions = { verbose: options.verbose, cwd: cordovaPath };
@@ -1068,35 +1069,31 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
       localCordova, args, emulatorOptions,
       function(err, code) {
         if (err && platform === "android" && isDevice) {
-          Console.stderr.write([
-            "",
-            chalk.green("Could not start the app on your device. Is it plugged in?"),
-            chalk.green("Try running again with the --verbose option."),
-            chalk.green("Instructions for running your app on an Android device:"),
-            chalk.cyan("https://github.com/meteor/meteor/wiki/How-to-run-your-app-on-an-Android-device"),
-            ""
-          ].join("\n"));
+          Console.error();
+          Console.error(
+            chalk.green("Could not start the app on your device. Is it plugged in?"));
+          Console.error("Try running again with the --verbose option.");
+          Console.error(
+            chalk.green("Instructions for running your app on an Android device: ") +
+            Console.url(
+              "https://github.com/meteor/meteor/wiki/" +
+              "How-to-run-your-app-on-an-Android-device"));
+          Console.error();
         } else if (err && platform === "android") {
-          Console.stderr.write([
-            "",
-            chalk.green("Could not start the app in the Android emulator."),
-            chalk.green("Try running again with the --verbose option."),
-            ""
-          ].join("\n"));
+          Console.error();
+          Console.error(chalk.green("Could not start the app in the Android emulator."));
+          Console.error(chalk.green("Try running again with the --verbose option."));
+          Console.error();
         } else if (err && platform === "ios") {
-          Console.stderr.write([
-            "",
-            chalk.green("Could not start the app in the iOS simulator."),
-            chalk.green("Try running again with the --verbose option."),
-            ""
-          ].join("\n"));
+          Console.error();
+          Console.error(chalk.green("Could not start the app in the iOS simulator."));
+          Console.error(chalk.green("Try running again with the --verbose option."));
+          Console.error();
         } else if (err) {
-          Console.stderr.write([
-            "",
-            chalk.green("Could not start your app."),
-            chalk.green("Try running again with the --verbose option."),
-            ""
-          ].join("\n"));
+          Console.error();
+          Console.error(chalk.green("Could not start your app."));
+          Console.error(chalk.green("Try running again with the --verbose option."));
+          Console.error();
         }
 
         // Don't throw an error or print the stack trace, but still exit the
@@ -1292,9 +1289,12 @@ var checkAgreePlatformTerms = function (platform, name) {
     return true;
   }
 
-  Console.stdout.write("The following terms apply to " + name + ":\n\n");
-  Console.stdout.write(terms + "\n\n");
-  Console.stdout.write("You must agree to the terms to proceed.\n");
+  Console.info("The following terms apply to " + name + ":");
+  Console.info();
+  Console.info(terms);
+  Console.info();
+  Console.info("You must agree to the terms to proceed.");
+  Console.info();
 
   var agreed = false;
 
@@ -1312,7 +1312,8 @@ var checkAgreePlatformTerms = function (platform, name) {
 };
 
 var checkPlatformRequirements = function (platform, options) {
-  options = _.extend({log: false, fix: false, fixConsole: false, fixSilent: false}, options);
+  options = _.extend(
+    { log: false, fix: false, fixConsole: false, fixSilent: false }, options);
   if (platform == 'android') {
     return Android.checkRequirements(options);
   } else if (platform == 'ios') {
@@ -1327,7 +1328,9 @@ var requirePlatformReady = function (platform) {
   try {
     var installed = checkPlatformRequirements(platform);
     if (!installed.acceptable) {
-      Console.warn("The " + platformToHuman(platform) + " platform is not installed; please run: " + Console.bold("meteor install-sdk " + platform));
+      Console.warn(
+        "The " + platformToHuman(platform) + " platform is not installed;",
+        "please run: " + Console.command("meteor install-sdk " + platform));
       throw new main.ExitWithCode(2);
     }
   } catch (err) {
@@ -1336,7 +1339,8 @@ var requirePlatformReady = function (platform) {
     } else if (err instanceof main.ExitWithCode) {
       throw err;
     } else {
-      Console.warn("Unexpected error while checking platform requirements: ", err);
+      Console.warn(
+        "Unexpected error while checking platform requirements: ", err);
     }
     throw new main.ExitWithCode(2);
   }
@@ -1787,7 +1791,9 @@ _.extend(IOS.prototype, {
     }
 
     buildmessage.enterJob({title: 'Installing Xcode'}, function () {
-      //Console.info("Launching Xcode installer; please choose 'Get Xcode' to install Xcode");
+      //Console.info(
+      //  "Launching Xcode installer;",
+      //  "please choose 'Get Xcode' to install Xcode");
       //files.run('/usr/bin/xcodebuild', '--install');
 
       // XXX: Any way to open direct in AppStore (rather than in browser)?
@@ -1832,7 +1838,9 @@ _.extend(IOS.prototype, {
     var fix = !!options.fix;
 
     if (!Host.isMac()) {
-      log && Console.info("You are not running on OSX; we won't be able to install Xcode for local iOS development");
+      log && Console.info(
+        "You are not running on OSX;",
+        "we won't be able to install Xcode for local iOS development");
       return { acceptable: false, missing: [ "ios" ] };
     }
 
@@ -1840,14 +1848,14 @@ _.extend(IOS.prototype, {
 
     var okay = true;
     if (self.hasXcode()) {
-      log && Console.info(Console.success("Xcode is installed"));
+      log && Console.success("Xcode is installed");
     } else {
       if (fix) {
         log && Console.info("Installing Xcode");
 
         self.installXcode();
       } else {
-        log && Console.info(Console.fail("Xcode is not installed"));
+        log && Console.failInfo("Xcode is not installed");
 
         result.missing.push("xcode");
         result.acceptable = false;
@@ -1864,7 +1872,7 @@ _.extend(IOS.prototype, {
 
     if (self.hasXcode()) {
       if (self.hasAgreedXcodeLicense()) {
-        log && Console.info(Console.success("Xcode license agreed"));
+        log && Console.success("Xcode license agreed");
       } else {
         if (fix) {
           log && Console.info("Please accept the Xcode license");
@@ -1873,7 +1881,7 @@ _.extend(IOS.prototype, {
 
           // XXX: Wait?
         } else {
-          log && Console.info(Console.fail("You must accept the Xcode license"));
+          log && Console.failInfo("You must accept the Xcode license");
 
           result.missing.push("xcode-license");
           result.acceptable = false;
@@ -1882,14 +1890,17 @@ _.extend(IOS.prototype, {
     }
 
     _.each(['5.0', '5.0.1', '5.1', '6.0', '6.1'], function (version) {
-      if (self.isSdkInstalled(version)) {
-        log && Console.warn("An old version of the iPhone SDK is installed (" + version + "); you should");
-        log && Console.warn("probably delete it. With SDK versions prior to 7.0 installed, your apps");
-        log && Console.warn("can't be published to the App Store. Moreover, some Cordova plugins are");
-        log && Console.warn("incompatible with this SDK.");
-        log && Console.info("You can remove it by deleting this directory: ");
-        log && Console.info("    " + self.getDirectoryForSdk(version));
-
+      if (self.isSdkInstalled(version) && log) {
+        Console.warn(
+            "An old version of the iPhone SDK is installed",
+            Console.noWrap("(" + version + ")") + ";",
+            "you should probably delete it. With SDK versions prior to 7.0",
+            "installed, your apps can't be published to the App Store.",
+            "Moreover, some Cordova plugins are incompatible with this SDK.",
+            "You can remove it by deleting this directory: ");
+        Console.warn(
+            Console.path(self.getDirectoryForSdk(version)),
+            Console.options({ indent: 4 }));
         // Not really a failure; just warn...
       }
     });
@@ -1935,7 +1946,9 @@ _.extend(Android.prototype, {
       return stat != null;
     }
 
-    Console.info("Can't determine acceleration for unknown host: ", archinfo.host());
+    Console.info(
+      "Can't determine acceleration for unknown host: ",
+      Console.noWrap(archinfo.host()));
     return undefined;
   },
 
@@ -1956,7 +1969,9 @@ _.extend(Android.prototype, {
       files.mkdir_p(dir);
       fs.writeFileSync(filepath, mpkg);
 
-      Console.info("Launching HAXM installer; we recommend allocating 1024MB of RAM (or more)");
+      Console.info(
+        "Launching HAXM installer;",
+        "we recommend allocating 1024MB of RAM (or more)");
       files.run('open', filepath);
 
       return;
@@ -1969,7 +1984,8 @@ _.extend(Android.prototype, {
       return;
     }
 
-    throw new Error("Can't install acceleration for unknown host: " + archinfo.host());
+    throw new Error(
+      "Can't install acceleration for unknown host: " + archinfo.host());
   },
 
   useGlobalAdk: function () {
@@ -1998,7 +2014,8 @@ _.extend(Android.prototype, {
       }
 
       if (!optional && !androidSdkPath) {
-        throw new Error("Cannot find Android SDK; be sure the 'android' tool is on your path");
+        throw new Error(
+          "Cannot find Android SDK; be sure the 'android' tool is on your path");
       }
 
       Console.debug("Using (global) Android SDK at", androidSdkPath);
@@ -2054,9 +2071,10 @@ _.extend(Android.prototype, {
     }
 
     if (execution.exitCode !== 0) {
-      Console.warn("Unexpected exit code from android process: " + execution.exitCode);
-      Console.warn("stdout: " + execution.stdout);
-      Console.warn("stderr: " + execution.stderr);
+      Console.warn(
+        "Unexpected exit code from android process: " + execution.exitCode);
+      Console.rawWarn("stdout: " + execution.stdout + "\n");
+      Console.rawWarn("stderr: " + execution.stderr + "\n");
 
       throw new Error("Error running android tool: exit code " + execution.exitCode);
     }
@@ -2175,9 +2193,9 @@ _.extend(Android.prototype, {
       if (execution.exitCode !== 0) {
         Console.debug("Unable to run aapt." +
                       " (This is normal if 32 bit libraries are not found)");
-        Console.debug("  exit code: " + execution.exitCode);
-        Console.debug("  stdout: " + execution.stdout);
-        Console.debug("  stderr: " + execution.stderr);
+        Console.rawDebug("  exit code: " + execution.exitCode + "\n");
+        Console.rawDebug("  stdout: " + execution.stdout + "\n");
+        Console.rawDebug("  stderr: " + execution.stderr + "\n");
 
         return false;
       }
@@ -2376,25 +2394,38 @@ _.extend(Android.prototype, {
 
       if (Host.hasAptGet()) {
         Console.info("You can install the JDK using:");
-        Console.info("  sudo apt-get install --yes openjdk-7-jdk");
+        Console.info(
+          Console.comand("sudo apt-get install --yes openjdk-7-jdk"),
+          Console.options({ indent: 2 }));
 
         // XXX: Technically, these are for Android, not installing Java
         if (processor == "x86_64") {
           Console.info("You will also need some 32-bit libraries:");
-          Console.info("  sudo apt-get install --yes lib32z1 lib32stdc++6");
+          Console.info(
+            Console.command("sudo apt-get install --yes lib32z1 lib32stdc++6"),
+            Console.options({ indent: 2 }));
         }
       } else if (Host.hasYum()) {
         Console.info("You can install the JDK using:");
-        Console.info("  sudo yum install -y java-1.7.0-openjdk-devel");
+        Console.info(
+          Console.command("sudo yum install -y java-1.7.0-openjdk-devel"),
+          Console.options({ indent: 2 }));
 
         // XXX: Technically, these are for Android, not installing Java
         if (processor == "x86_64") {
           Console.info("You will also need some 32-bit libraries:");
-          Console.info("  sudo yum install -y glibc.i686 zlib.i686 libstdc++.i686 ncurses-libs.i686");
+        Console.info(
+          Console.command(
+            "sudo yum install -y glibc.i686 zlib.i686 " +
+            "libstdc++.i686 ncurses-libs.i686"),
+          Console.options({ indent: 2 }));
         }
       } else {
-        Console.warn("You should install the JDK; we don't have instructions for your distribution (sorry!)");
-        Console.info("Please do submit the instructions so we can include them.")
+        Console.warn(
+          "You should install the JDK; we don't have instructions",
+          "for your distribution (sorry!)");
+        Console.info(
+          "Please do submit the instructions so we can include them.");
       }
 
       return;
@@ -2463,9 +2494,10 @@ _.extend(Android.prototype, {
         }
 
         if (execution.exitCode != 0) {
-          Console.warn("Unexpected exit code from script: " + execution.exitCode);
-          Console.warn("stdout: " + execution.stdout);
-          Console.warn("stderr: " + execution.stderr);
+          Console.warn(
+            "Unexpected exit code from script: " + execution.exitCode);
+          Console.rawWarn("stdout: " + execution.stdout + "\n");
+          Console.rawWarn("stderr: " + execution.stderr + "\n");
           throw new Error('Could not download Android bundle');
         }
       });
@@ -2484,8 +2516,12 @@ _.extend(Android.prototype, {
 
     // Boost timeout if not running HAXM/KVM
     if (self.hasAcceleration() === false) {
-      Console.warn("Android emulator acceleration was not installed; the emulator will be very slow.");
-      Console.info("You can run '" + Console.command("meteor install-sdk android") + "' for help.")
+      Console.warn(
+        "Android emulator acceleration was not installed;",
+        "the emulator will be very slow.");
+      Console.info(
+        "You can run '" +
+        Console.command("meteor install-sdk android") + "' for help.");
       timeLimit *= 4;
     }
 
@@ -2503,11 +2539,15 @@ _.extend(Android.prototype, {
     Console.error("The emulator did not start in the expected time.");
     if (self.hasAcceleration() === false) {
       if (Host.isLinux()) {
-        Console.info("We highly recommend enabling KVM to speed up the emulator.");
+        Console.info(
+          "We highly recommend enabling KVM to speed up the emulator.");
       } else {
-        Console.info("We highly recommend installing HAXM to speed up the emulator.");
+        Console.info(
+          "We highly recommend installing HAXM to speed up the emulator.");
       }
-      Console.info("You can run '" + Console.command("meteor install-sdk android") + "' for help.")
+      Console.info(
+        "You can run '" +
+        Console.command("meteor install-sdk android") + "' for help.");
     }
 
     throw new main.ExitWithCode(1);
@@ -2552,7 +2592,7 @@ _.extend(Android.prototype, {
         device[kv[0]] = kv[1];
       }
       devices.push(device);
-      Console.debug("Found device", JSON.stringify(device));
+      Console.rawDebug("Found device", JSON.stringify(device) + "\n");
     });
     return devices;
   },
@@ -2581,7 +2621,7 @@ _.extend(Android.prototype, {
     var hasAndroid = false;
     if (!self.useGlobalAdk()) {
       if (self.hasAndroidBundle()) {
-        log && Console.info(Console.success("Found Android bundle"));
+        log && Console.success("Found Android bundle");
         hasAndroid = true;
       } else {
         if (fixConsole) {
@@ -2590,7 +2630,7 @@ _.extend(Android.prototype, {
           self.installAndroidBundle();
           hasAndroid = true;
         } else {
-          log && Console.info(Console.fail("Android bundle not found"));
+          log && Console.failInfo("Android bundle not found");
 
           result.missing.push("android-bundle");
           result.acceptable = false;
@@ -2601,14 +2641,14 @@ _.extend(Android.prototype, {
     if (self.useGlobalAdk()) {
       var androidSdk = self.findAndroidSdk(true);
       if (androidSdk) {
-        log && Console.info(Console.success("Found Android SDK"));
+        log && Console.success("Found Android SDK");
 
         // XXX: Verify
         hasAndroid = true;
       } else {
-        log && Console.info(Console.fail("Android SDK not found"));
-
-        log && Console.info("If you set USE_GLOBAL_ADK, the 'android' tool must be on your path");
+        log && Console.failInfo("Android SDK not found");
+        log && Console.info(
+          "If you set USE_GLOBAL_ADK, the 'android' tool must be on your path");
 
         result.missing.push("android-global-sdk");
         result.acceptable = false;
@@ -2616,9 +2656,9 @@ _.extend(Android.prototype, {
 
       var hasAnt = !!Host.which("ant");
       if (hasAnt) {
-        log && Console.info(Console.success("Found ant on PATH"));
+        log && Console.success("Found ant on PATH");
       } else {
-        log && Console.info(Console.fail("Ant not found on PATH"));
+        log && Console.failInfo("Ant not found on PATH");
 
         result.missing.push("apache-ant");
         result.acceptable = false;
@@ -2627,7 +2667,7 @@ _.extend(Android.prototype, {
 
     var hasJava = false;
     if (self.hasJdk()) {
-      log && Console.info(Console.success("A JDK is installed"));
+      log && Console.success("A JDK is installed");
       hasJava = true;
     } else {
       if (fix) {
@@ -2636,7 +2676,7 @@ _.extend(Android.prototype, {
         self.installJdk();
         hasJava = true;
       } else {
-        log && Console.info(Console.fail("A JDK is not installed"));
+        log && Console.failInfo("A JDK is not installed");
 
         result.missing.push("jdk");
         result.acceptable = false;
@@ -2645,16 +2685,16 @@ _.extend(Android.prototype, {
 
     if (hasAndroid && hasJava) {
       if (self.isPlatformToolsInstalled()) {
-        log && Console.info(Console.success("Found Android Platform tools"));
+        log && Console.success("Found Android Platform tools");
       } else {
         if (fixSilent) {
           log && Console.info("Installing Android Platform tools");
           self.installTarget('platform-tools', function () {
             return self.isPlatformToolsInstalled();
           });
-          log && Console.info(Console.success("Installed Android Platform tools"));
+          log && Console.success("Installed Android Platform tools");
         } else {
-          log && Console.info(Console.fail("Android Platform tools not found"));
+          log && Console.failInfo("Android Platform tools not found");
 
           result.missing.push("android-platform-tools");
           result.acceptable = false;
@@ -2663,7 +2703,7 @@ _.extend(Android.prototype, {
 
       var hasBuildToolsVersion;
       if (self.isBuildToolsInstalled('21.0.0')) {
-        log && Console.info(Console.success("Found Android Build Tools"));
+        log && Console.success("Found Android Build Tools");
         hasBuildToolsVersion = '21.0.0';
       } else {
         if (fixSilent) {
@@ -2671,10 +2711,10 @@ _.extend(Android.prototype, {
           self.installTarget('build-tools-21.0.0', function () {
             return self.isBuildToolsInstalled('21.0.0');
           });
-          log && Console.info(Console.success("Installed Android Build Tools"));
+          log && Console.success("Installed Android Build Tools");
           hasBuildToolsVersion = '21.0.0';
         } else {
-          log && Console.info(Console.fail("Android Build Tools not found"));
+          log && Console.failInfo("Android Build Tools not found");
 
           result.missing.push("android-build-tools");
           result.acceptable = false;
@@ -2685,7 +2725,7 @@ _.extend(Android.prototype, {
         // Check that we can actually run aapt - on 64 bit, we need 32 bit libs
         // We need aapt to be installed to do this!
         if (!self.canRunAapt(hasBuildToolsVersion)) {
-          log && Console.info(Console.fail("32-bit libraries not found"));
+          log && Console.failInfo("32-bit libraries not found");
 
           result.missing.push("libs32");
           result.acceptable = false;
@@ -2693,31 +2733,33 @@ _.extend(Android.prototype, {
       }
 
       if (self.isPlatformInstalled('android-19')) {
-        log && Console.info(Console.success("Found Android 19 API"));
+        log && Console.success("Found Android 19 API");
       } else {
         if (fixSilent) {
           log && Console.info("Installing Android 19 API");
           self.installTarget('android-19', function () {
             return self.isPlatformInstalled('android-19');
           });
-          log && Console.info(Console.success("Installed Android 19 API"));
+          log && Console.success("Installed Android 19 API");
         } else {
-          log && Console.info(Console.fail("Android API 19 not found"));
+          log && Console.failInfo("Android API 19 not found");
 
           result.missing.push("android-api");
           result.acceptable = false;
         }
       }
 
-      // (We could alternatively check for {SDK}/system-images/android-19/default/x86/build.prop)
+      // (We could alternatively check for
+      // {SDK}/system-images/android-19/default/x86/build.prop)
       if (self.hasTarget('19', 'default/x86')) {
-        log && Console.info(Console.success("Found suitable Android x86 image"));
+        log && Console.success("Found suitable Android x86 image");
       } else {
         if (fixSilent) {
           // The x86 image will fail to install if dependencies aren't there;
           // we've checked the others by version,but we should double-check
           // platform-tools as we don't check versions there
-          log && Console.info("Making sure Android Platform tools are up to date");
+          log && Console.info(
+            "Making sure Android Platform tools are up to date");
           self.installTarget('platform-tools', function () {
             return self.isPlatformToolsInstalled();
           });
@@ -2726,9 +2768,9 @@ _.extend(Android.prototype, {
           self.installTarget('sys-img-x86-android-19', function () {
             return self.hasTarget('19', 'default/x86');
           });
-          log && Console.info(Console.success("Installed Android x86 image"));
+          log && Console.success("Installed Android x86 image");
         } else {
-          log && Console.info(Console.fail("Suitable Android x86 image not found"));
+          log && Console.failInfo("Suitable Android x86 image not found");
 
           result.missing.push("android-sys-img");
           result.acceptable = false;
@@ -2737,21 +2779,26 @@ _.extend(Android.prototype, {
 
       var avdName = self.getAvdName();
       if (self.hasAvd(avdName)) {
-        log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) found"));
+        log && Console.success(
+          "'" + avdName + "' android virtual device (AVD) found");
       } else {
         var isDefaultAvd = avdName === DEFAULT_AVD_NAME;
         if (fixSilent && isDefaultAvd) {
-          log && Console.info("Creating android virtual device (AVD): " + avdName);
-
+          log && Console.info(
+            "Creating android virtual device (AVD): " + avdName);
           var avdOptions = {};
           self.createAvd(avdName, avdOptions);
 
-          log && Console.info(Console.success("'" + avdName + "' android virtual device (AVD) created"));
+          log && Console.success(
+            "'" + avdName + "' android virtual device (AVD) created");
         } else {
-          log && Console.info(Console.fail("'" + avdName + "' android virtual device (AVD) not found"));
+          log && Console.failInfo(
+            "'" + avdName + "' android virtual device (AVD) not found");
 
           if (!isDefaultAvd) {
-            log && Console.info("(Because you specified a custom AVD, we don't create it automatically)");
+            log && Console.info(
+              "(Because you specified a custom AVD, we don't create it",
+              "automatically)");
           }
 
           result.missing.push("android-avd");
@@ -2766,18 +2813,21 @@ _.extend(Android.prototype, {
       if (fix) {
         self.installAcceleration();
       } else {
-        log && Console.info(Console.fail("Android emulator acceleration is not installed"));
-        log && Console.info("  (The Android emulator will be very slow without acceleration)");
+        log && Console.failInfo(
+          "Android emulator acceleration is not installed");
+        log && Console.info(
+          "(The Android emulator will be very slow without acceleration)",
+          Console.options({ indent: 2 }));
 
         result.missing.push("haxm");
 
         // Not all systems can install the accelerator, so don't block
-        // XXX: Maybe we should block the emulator (only); it is unusable without it
-        //result.acceptable = false
+        // XXX: Maybe we should block the emulator (only); it is unusable
+        //without it result.acceptable = false
       }
     } else if (hasAcceleration === true) {
       // (can be undefined)
-      log && Console.info(Console.success("Android emulator acceleration is installed"));
+      log && Console.success("Android emulator acceleration is installed");
     }
 
     return result;
@@ -2886,19 +2936,19 @@ main.registerCommand({
     // explain why we can't remove server or browser platforms
     if (_.contains(projectContextModule.PlatformList.DEFAULT_PLATFORMS,
                    platform)) {
-      Console.stdout.write(platform + ": cannot remove platform " +
-                           "in this version of Meteor\n");
+      Console.warn(
+        platform + ": cannot remove platform in this version of Meteor");
       return;
     }
 
     if (_.contains(platforms, platform)) {
-      Console.stdout.write(platform + ": removed platform\n");
+      Console.info(platform + ": removed platform");
       platforms = _.without(platforms, platform);
       changed = true;
       return;
     }
 
-    Console.stdout.write(platform + ": platform is not in this project\n");
+    Console.error(platform + ": platform is not in this project");
   });
 
   if (! changed) {
@@ -2927,7 +2977,7 @@ main.registerCommand({
 
   var platforms = projectContext.platformList.getPlatforms();
 
-  Console.stdout.write(platforms.join("\n"));
+  Console.rawInfo(platforms.join("\n") + "\n");
 });
 
 main.registerCommand({
@@ -2978,7 +3028,9 @@ main.registerCommand({
 
   if (!Android.hasAvd(avd)) {
     Console.error("'" + avd + "' android virtual device (AVD) does not exist");
-    Console.info("The default AVD is called meteor, and will be created automatically for you");
+    Console.info(
+      "The default AVD is called meteor, and will be created",
+      "automatically for you");
     return 1;
   }
 
@@ -3023,7 +3075,7 @@ main.registerCommand({
   var installed = checkPlatformRequirements(platform, { log:true, fix: false, fixConsole: true, fixSilent: true } );
   if (!_.isEmpty(installed.missing)) {
     if (Host.isLinux() && platform === "ios") {
-      Console.warn(Console.fail(MESSAGE_IOS_ONLY_ON_MAC));
+      Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
       return 1;
     }
 
@@ -3043,7 +3095,8 @@ main.registerCommand({
         url += "#" + anchor;
       }
       openUrl(url);
-      Console.info("Please follow the instructions here:\n" + Console.bold(url) + "\n");
+      Console.info(
+        "Please follow the instructions here:\n" + Console.url(url) + "\n");
     } else {
       Console.info("We don't have installation instructions for your platform");
     }

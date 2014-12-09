@@ -62,12 +62,12 @@ _.extend(RunLog.prototype, {
 
     if (self.consecutiveRestartMessages) {
       self.consecutiveRestartMessages = null;
-      Console.stdout.write("\n");
+      Console.info();
     }
 
     if (self.consecutiveClientRestartMessages) {
       self.consecutiveClientRestartMessages = null;
-      Console.stdout.write("\n");
+      Console.info();
     }
 
     if (self.temporaryMessageLength) {
@@ -93,16 +93,20 @@ _.extend(RunLog.prototype, {
 
     self._clearSpecial();
     if (self.rawLogs)
-      Console[isStderr ? "stderr" : "stdout"].write(line + "\n");
+      Console[isStderr ? "rawError" : "rawInfo"](line + "\n");
     else
-      Console.stdout.write(Log.format(obj, { color: true }) + "\n");
+      Console.rawInfo(Log.format(obj, { color: true }) + "\n");
 
     // XXX deal with test server logging differently?!
   },
 
-  log: function (msg) {
+  // Log the message.
+  //  msg: message
+  //  options:
+  //    - arrow: if true, preface with => and wrap accordingly.
+  log: function (msg, options) {
     var self = this;
-
+    options = options || {};
     var obj = {
       time: new Date,
       message: msg
@@ -113,7 +117,11 @@ _.extend(RunLog.prototype, {
     self._record(obj);
 
     self._clearSpecial();
-    Console.stdout.write(msg + "\n");
+
+    // Process the options. By default, we want to wordwrap the message with
+    // Console.info. If we ask for raw output, then we don't want to do that. If
+    // we ask for an arrow, we want to wrap around with => as the bulletPoint.
+    Console[options.arrow ? 'arrowInfo' : 'info'](msg);
   },
 
   // Write a message to the terminal that will get overwritten by the

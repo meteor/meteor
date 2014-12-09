@@ -112,49 +112,8 @@ exports.printPackageList = function (items, options) {
   };
   rows = _.sortBy(rows, alphaSort);
 
-  return utils.printTwoColumns(rows, options);
-};
-
-// XXX: Move to e.g. formatters.js?
-// Prints a two column table in a nice format:
-//  The first column is printed entirely, the second only as space permits
-exports.printTwoColumns = function (rows, options) {
-  options = options || {};
-
-  var longest = '';
-  _.each(rows, function (row) {
-    var col0 = row[0] || '';
-    if (col0.length > longest.length)
-      longest = col0;
-  });
-
-  var pad = longest.replace(/./g, ' ');
-
-  var width = 80;
-  var stream = process.stdout;
-  if (stream && stream.isTTY && stream.columns) {
-    width = stream.columns;
-  }
-
-  var Console = require("./console.js").Console;
-
-  var out = '';
-  _.each(rows, function (row) {
-    var col0 = row[0] || '';
-    var col1 = row[1] || '';
-    var line = Console.bold(col0) + pad.substr(col0.length);
-    line += "  " + col1;
-    if (line.length > width) {
-      line = line.substr(0, width - 3) + '...';
-    }
-    out += line + "\n";
-  });
-
-  // XXX: Naughty call to 'private' function
-  var level = options.level || Console.LEVEL_INFO;
-  Console._print(level, out);
-
-  return out;
+  var Console = require('./console.js').Console;
+  return Console.printTwoColumns(rows, options);
 };
 
 // Determine a human-readable hostname for this computer. Prefer names
@@ -300,7 +259,8 @@ exports.validatePackageNameOrExit = function (packageName, options) {
   } catch (e) {
     if (!e.versionParserError)
       throw e;
-    process.stderr.write("Error: " + e.message + "\n");
+    var Console = require('./console.js').Console;
+    Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file
     var main = require('./main.js');
