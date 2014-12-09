@@ -3041,9 +3041,26 @@ Tinytest.add("spacebars-tests - template_tests - old-style helpers", function (t
 Tinytest.add("spacebars-tests - template_tests - with data remove (#3130)", function (test) {
   var tmpl = Template.spacebars_template_test_with_data_remove;
 
-  var div = renderToDiv(tmpl, { foo: 3130 });
+  var div = document.createElement("DIV");
+  var theWith = Blaze.renderWithData(tmpl, { foo: 3130 }, div);
   test.equal(canonicalizeHtml(div.innerHTML), '<b>some data - 3130</b>');
   var view = Blaze.getView(div.querySelector('b'));
+  test.isFalse(theWith.isDestroyed);
   Blaze.remove(view);
+  test.isTrue(theWith.isDestroyed);
   test.equal(div.innerHTML, "");
+});
+
+Tinytest.add("spacebars-tests - template_tests - inclusion with data remove (#3130)", function (test) {
+  var tmpl = Template.spacebars_template_test_inclusion_with_data_remove;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), '<span><b>stuff</b></span>');
+  var view = Blaze.getView(div.querySelector('b'));
+  var parentView = view.parentView;
+  test.isTrue(parentView.__isTemplateWith);
+  test.isFalse(parentView.isDestroyed);
+  Blaze.remove(view);
+  test.isTrue(parentView.isDestroyed);
+  test.equal(canonicalizeHtml(div.innerHTML), "<span></span>");
 });

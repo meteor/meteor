@@ -1006,3 +1006,12 @@ Hi there!
   <b>some data - {{foo}}</b>
 </template>
 
+<template name="spacebars_template_test_inclusion_with_data_remove">
+  <span>
+    {{> spacebars_template_test_inclusion_with_data_remove_inner "stuff"}}
+  </span>
+</template>
+
+<template name="spacebars_template_test_inclusion_with_data_remove_inner">
+  <b>{{.}}</b>
+</template>
