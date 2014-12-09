@@ -1132,13 +1132,23 @@ for full details on upgrading your app to 0.8.0.  This includes:
 Patches contributed by GitHub users cmather and mart-jansink.
 
 
-## v0.7.2.1
+## v0.7.2.3
 
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
   Backport from 1.0.1.
 
+## v0.7.2.2
+
+* Fix a security flaw in OAuth1 and OAuth2 implementations.
+  Backport from 0.8.1; see its entry for recommended actions to take.
+
+## v0.7.2.1
+
+* Fix security flaw in OAuth1 implementation. Clients can no longer
+  choose the callback_url for OAuth1 logins.
+  Backport from 0.8.0.1.
 
 ## v0.7.2
 
