@@ -28,5 +28,8 @@ Package.on_use(function (api) {
 
   api.use('autoupdate', 'server', {weak: true});
   api.use('random', 'server');
-  api.add_files('autoupdate.js', 'server');
+  api.add_files([
+    'autoupdate.js',
+    'reporter.js'
+  ], 'server');
 });
