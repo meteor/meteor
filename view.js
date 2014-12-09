@@ -70,6 +70,15 @@ Blaze.View = function (name, render) {
   this._isInRender = false;
   this.parentView = null;
   this._domrange = null;
+  // This flag is normally set to false except for the cases when view's parent
+  // was generated as part of expanding some syntactic sugar expressions or
+  // methods.
+  // Ex.: Blaze.renderWithData is an equivalent to creating a view with regular
+  // Blaze.render and wrapping it into {{#with data}}{{/with}} view. Since the
+  // users don't know anything about these generated parent views, Blaze needs
+  // this information to be available on views to make smarter decisions. For
+  // example: removing the generated parent view with the view on Blaze.remove.
+  this._hasGeneratedParent = false;
 
   this.renderCount = 0;
 };
@@ -532,8 +541,14 @@ Blaze.insert = function (view, parentElement, nextNode) {
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
   // We defer the handling of optional arguments to Blaze.render.  At this point,
   // `nextNode` may actually be `parentView`.
-  return Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
-                      parentElement, nextNode, parentView);
+  var view = Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
+                          parentElement, nextNode, parentView);
+
+  // Since we generated the Blaze._TemplateWith (or #with) view for the user,
+  // set the flag on the child view.
+  view._domrange.members[0].view._hasGeneratedParent = true;
+
+  return view;
 };
 
 /**
@@ -545,11 +560,15 @@ Blaze.remove = function (view) {
   if (! (view && (view._domrange instanceof Blaze._DOMRange)))
     throw new Error("Expected template rendered with Blaze.render");
 
-  if (! view.isDestroyed) {
-    var range = view._domrange;
-    if (range.attached && ! range.parentRange)
-      range.detach();
-    range.destroy();
+  while (view) {
+    if (! view.isDestroyed) {
+      var range = view._domrange;
+      if (range.attached && ! range.parentRange)
+        range.detach();
+      range.destroy();
+    }
+
+    view = view._hasGeneratedParent && view.parentView;
   }
 };
 
