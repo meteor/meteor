@@ -939,13 +939,11 @@ _.extend(Console.prototype, {
     return self.underline(unspaced);
   },
 
-  directory: function (message) {
+  // Format a filepath to not wrap. This does NOT automatically escape spaces
+  // (ie: add a slash in front so the user could copy paste the file path into a
+  // terminal).
+  path: function (message) {
     var self = this;
-    // Escape any spaces that we don't already escape.
-    var escapedSpace = "\\ ";
-    message = _.map(message.split(escapedSpace), function (msg) {
-      return replaceAll(msg, ' ', escapedSpace);
-    }).join(escapedSpace);
     // Make sure that we don't wrap this.
     var unwrapped = self.noWrap(message);
     return self.bold(unwrapped);

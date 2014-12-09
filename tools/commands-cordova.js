@@ -1899,7 +1899,7 @@ _.extend(IOS.prototype, {
             "Moreover, some Cordova plugins are incompatible with this SDK.",
             "You can remove it by deleting this directory: ");
         Console.warn(
-            Console.directory(self.getDirectoryForSdk(version)),
+            Console.path(self.getDirectoryForSdk(version)),
             Console.options({ indent: 4 }));
         // Not really a failure; just warn...
       }
