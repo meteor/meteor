@@ -25,7 +25,7 @@ the [`Meteor.users`](#meteor_users) collection.
 On the client, this will be the subset of the fields in the document that
 are published from the server (other fields won't be available on the
 client). By default the server publishes `username`, `emails`, and
-`profile`. See [`Meteor.users`](#meteor_users) for more on
+`profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
 {{> autoApiBox "Meteor.userId"}}
@@ -71,8 +71,9 @@ treats the following fields specially:
   a Boolean which is true if the user has [verified the
   address](#accounts_verifyemail) with a token sent over email.
 - `createdAt`: the Date at which the user document was created.
-- `profile`: an Object which (by default) the user can create
-  and update with any data.
+- `profile`: an Object which the user can create and update with any data.
+  Do not store anything on `profile` that you wouldn't want the user to edit
+  unless you have a deny rule on the `Meteor.users` collection.
 - `services`: an Object containing data used by particular
   login services. For example, its `reset` field contains
   tokens used by [forgot password](#accounts_forgotpassword) links,
