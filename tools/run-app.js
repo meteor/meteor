@@ -422,7 +422,19 @@ _.extend(AppRunner.prototype, {
         //   to how the WatchSets are laid out.  Might be possible to avoid
         //   re-building the local catalog at all if packages didn't change
         //   at all, though.)
-        self.projectContext.reset({}, { softRefreshIsopacks: true });
+        self.projectContext.reset({}, {
+          // Don't forget all Isopack objects; just make sure to check that they
+          // are up to date.
+          // XXX this feature is only half-implemented.  #3213
+          softRefreshIsopacks: true,
+          // Don't forget the package map we calculated last time, even if we
+          // didn't write it to disk (because, eg, we're not running with a
+          // release that matches the app's release).  While we will still check
+          // our constraints, we will use the map we calculated last time as the
+          // previous solution (not what's on disk). Package deltas should be
+          // shown from the previous solution.
+          preservePackageMap: true
+        });
         var messages = buildmessage.capture(function () {
           self.projectContext.readProjectMetadata();
         });

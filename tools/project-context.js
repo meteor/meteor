@@ -122,6 +122,12 @@ _.extend(exports.ProjectContext.prototype, {
       self._releaseForConstraints = release.current.getCatalogReleaseData();
     }
 
+    if (resetOptions.preservePackageMap && self.packageMap) {
+      self._cachedVersionsBeforeReset = self.packageMap.toVersionMap();
+    } else {
+      self._cachedVersionsBeforeReset = null;
+    }
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -360,7 +366,13 @@ _.extend(exports.ProjectContext.prototype, {
     buildmessage.assertInCapture();
 
     var depsAndConstraints = self._getRootDepsAndConstraints();
-    var cachedVersions = self.packageMapFile.getCachedVersions();
+    // If this is in the runner and we have reset this ProjectContext for a
+    // rebuild, use the versions we calculated last time in this process (which
+    // may not have been written to disk if our release doesn't match the
+    // project's release on disk). Otherwise use the versions from
+    // .meteor/versions.
+    var cachedVersions = self._cachedVersionsBeforeReset ||
+          self.packageMapFile.getCachedVersions();
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
     var resolver = self._buildResolver();
