@@ -325,13 +325,33 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
+
+    var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
+    var isModify = isModificationMod(mongoMod);
+
+    if (options._forbidReplace && ! isModify) {
+      var e = new Error("Invalid modifier. Replacements are forbidden.");
+      if (callback) {
+        return callback(e);
+      } else {
+        throw e;
+      }
+    }
+
     collection.update(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                      replaceTypes(mod, replaceMeteorAtomWithMongo),
+                      mongoMod,
                       mongoOpts, callback);
   } catch (e) {
     write.committed();
     throw e;
   }
+};
+
+var isModificationMod = function (mod) {
+  for (var k in mod)
+    if (k.substr(0, 1) === '$')
+      return true;
+  return false;
 };
 
 _.each(["insert", "update", "remove"], function (method) {

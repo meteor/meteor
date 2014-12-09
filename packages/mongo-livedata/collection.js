@@ -676,6 +676,8 @@ Meteor.Collection.prototype._validatedUpdate = function(
 
   check(mutator, Object);
 
+  options = options || {};
+
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
 
@@ -745,6 +747,8 @@ Meteor.Collection.prototype._validatedUpdate = function(
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+
+  options._forbidReplace = true;
 
   // Back when we supported arbitrary client-provided selectors, we actually
   // rewrote the selector to include an _id clause before passing to Mongo to
