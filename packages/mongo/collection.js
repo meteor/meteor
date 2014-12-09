@@ -964,7 +964,9 @@ Mongo.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
-  options = options || {};
+  check(mutator, Object);
+
+  options = _.clone(options) || {};
 
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
@@ -975,12 +977,18 @@ Mongo.Collection.prototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied. Upserts not " +
                            "allowed in a restricted collection.");
 
+  var noReplaceError = "Access denied. In a restricted collection you can only" +
+        " update documents, not replace them. Use a Mongo update operator, such " +
+        "as '$set'.";
+
   // compute modified fields
   var fields = [];
+  if (_.isEmpty(mutator)) {
+    throw new Meteor.Error(403, noReplaceError);
+  }
   _.each(mutator, function (params, op) {
     if (op.charAt(0) !== '$') {
-      throw new Meteor.Error(
-        403, "Access denied. In a restricted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
+      throw new Meteor.Error(403, noReplaceError);
     } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
       throw new Meteor.Error(
         403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
@@ -1035,6 +1043,8 @@ Mongo.Collection.prototype._validatedUpdate = function(
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+
+  options._forbidReplace = true;
 
   // Back when we supported arbitrary client-provided selectors, we actually
   // rewrote the selector to include an _id clause before passing to Mongo to

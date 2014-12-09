@@ -9,7 +9,7 @@ email
 jquery-waypoints
 fastclick
 tmeasday:publish-counts@0.3.1
-iron:router
+iron:router@0.9.4
 percolate:velocityjs
 accounts-twitter
 service-configuration
