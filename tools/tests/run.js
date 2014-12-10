@@ -314,7 +314,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.match("prevented startup");
   run.match("file change.\n");
   run.tellMongo({exit: 23});
-  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  run.match('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});
   run.read('Unexpected mongo exit code 46. Restarting.\n');
   run.tellMongo({exit: 47});

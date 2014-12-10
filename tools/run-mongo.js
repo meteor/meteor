@@ -528,6 +528,8 @@ var MongoRunner = function (options) {
   self.errorCount = 0;
   self.errorTimer = null;
   self.restartTimer = null;
+  self.firstStart = true;
+  self.suppressExitMessage = false;
 };
 
 var MRp = MongoRunner.prototype;
@@ -579,21 +581,29 @@ _.extend(MRp, {
     if (self.handle)
       throw new Error("already running?");
 
+    var allowKilling = self.multiple || self.firstStart;
+    self.firstStart = false;
+    if (! allowKilling) {
+      // If we're not going to try to kill an existing mongod first, then we
+      // shouldn't annoy the user by telling it that we couldn't start up.
+      self.suppressExitMessage = true;
+    }
+
     self.handle = launchMongo({
       appDir: self.appDir,
       port: self.port,
       multiple: self.multiple,
-      allowKilling: self._isKillingAllowed(),
+      allowKilling: allowKilling,
       onExit: _.bind(self._exited, self)
     });
+
+    // It has successfully started up, so if it exits after this point, that
+    // actually is an interesting fact and we shouldn't suppress it.
+    self.suppressExitMessage = false;
 
     if (self.handle) {
       self._allowStartupToReturn();
     }
-  },
-
-  _isKillingAllowed: function() {
-    return this.multiple || this.errorCount > 0;
   },
 
   _exited: function (code, signal, stderr) {
@@ -611,7 +621,7 @@ _.extend(MRp, {
     // wrong. If we didn't try to kill Mongo, we'll do that on the next
     // restart. Not killing it on the first try is important for speed,
     // since findMongoAndKillItDead is a very slow operation.
-    if (self._isKillingAllowed()) {
+    if (! self.suppressExitMessage) {
       // Print the last 20 lines of stderr.
       runLog.log(
         stderr.split('\n').slice(-20).join('\n') +
