@@ -10,6 +10,7 @@ var os = require('os');
 var util = require('util');
 var _ = require('underscore');
 var Fiber = require('fibers');
+var rimraf = require('./rimraf');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
@@ -247,25 +248,9 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  try {
-    // the l in lstat is critical -- we want to remove symbolic
-    // links, not what they point to
-    var stat = files.lstat(p);
-
-    if (stat.isDirectory()) {
-      _.each(files.readdir(p), function (file) {
-        file = path.join(p, file);
-        files.rm_recursive(file);
-      });
-      files.rmdir(p);
-    } else {
-      files.unlink(p);
-    }
-  } catch (e) {
-    if (e.code == "ENOENT")
-      return;
-    throw e;
-  }
+  var fut = new Future();
+  rimraf(p, { busyTries: 10 }, fut.resolver());
+  fut.wait();
 };
 
 // Makes all files in a tree read-only.
