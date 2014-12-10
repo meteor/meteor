@@ -5,7 +5,7 @@ Package.describe({
   version: '1.1.4-ipc.0'
 });
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: "basicFileTypes",
   sources: ['plugin/basic-file-types.js']
 });

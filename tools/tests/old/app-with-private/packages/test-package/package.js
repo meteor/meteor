@@ -2,7 +2,7 @@ Package.describe({
   version: "1.0.0"
 });
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: 'addTxt',
   use: [],
   sources: ['plugin.js']

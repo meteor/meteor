@@ -3,7 +3,7 @@ Package.describe({
   version: "1.0.12-ipc.0"
 });
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: "compileLess",
   use: [],
   sources: [

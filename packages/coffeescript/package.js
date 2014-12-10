@@ -3,7 +3,7 @@ Package.describe({
   version: "1.0.5-ipc.0"
 });
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: "compileCoffeescript",
   use: [],
   sources: [
