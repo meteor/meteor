@@ -26,7 +26,6 @@ var LocalCatalog = function (options) {
   self.packages = {};
 
   self.initialized = false;
-  self.containingCatalog = options.containingCatalog || self;
 
     // Local directories to search for package source trees
   self.localPackageSearchDirs = null;

@@ -11,13 +11,13 @@ var utils = require('./utils.js');
 // .meteor/packages file on disk.)
 //
 // It has a corresponding JSON format (used, eg, inside buildinfo files).
-exports.PackageMap = function (versions, cat) {
+exports.PackageMap = function (versions, localCatalog) {
   var self = this;
   self._map = {};
-  self.catalog = cat;
+  self._localCatalog = localCatalog;
 
   _.each(versions, function (version, packageName) {
-    var packageSource = cat.getPackageSource(packageName);
+    var packageSource = localCatalog.getPackageSource(packageName);
     if (packageSource) {
       self._map[packageName] =
         { kind: 'local', version: version, packageSource: packageSource };
@@ -50,7 +50,7 @@ _.extend(exports.PackageMap.prototype, {
         throw Error("not a subset: " + packageName);
       subsetVersions[packageName] = info.version;
     });
-    return new exports.PackageMap(subsetVersions, self.catalog);
+    return new exports.PackageMap(subsetVersions, self._localCatalog);
   },
 
   toJSON: function () {

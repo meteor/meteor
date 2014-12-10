@@ -401,7 +401,7 @@ _.extend(exports.ProjectContext.prototype, {
       return;  // error is already in buildmessage
 
     self.packageMap = new packageMapModule.PackageMap(
-      solution.answer, self.projectCatalog);
+      solution.answer, self.localCatalog);
 
     self.packageMapDelta = new packageMapModule.PackageMapDelta({
       cachedVersions: cachedVersions,
@@ -444,15 +444,13 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    self.projectCatalog = new catalog.LayeredCatalog;
-    self.localCatalog = new catalogLocal.LocalCatalog({
-      containingCatalog: self.projectCatalog
-    });
-    self.projectCatalog.setCatalogs(self.localCatalog, catalog.official);
+    self.localCatalog = new catalogLocal.LocalCatalog;
+    self.projectCatalog = new catalog.LayeredCatalog(
+      self.localCatalog, catalog.official);
 
     var searchDirs = self._localPackageSearchDirs();
     buildmessage.enterJob({ title: "scanning local packages" }, function () {
-      self.projectCatalog.initialize({
+      self.localCatalog.initialize({
         localPackageSearchDirs: searchDirs,
         explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
       });
