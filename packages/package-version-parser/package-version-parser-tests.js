@@ -199,6 +199,8 @@ Tinytest.add(
     compare("1.0.0-r.1", "1.0.0", "<");
     // test the edges of `versionMagnitude`
     compare("1.0.0-zzzzzzzzzzzz", "1.0.0", "<");
+    // prerelease parts can contain digits and non-digits
+    compare("1.0.0-r1", "1.0.0-rc", "<");
 
     // Our broken implementation of Rule 11 (see [*] above the
     // declaration of PackageVersion.versionMagnitude). Maybe one day

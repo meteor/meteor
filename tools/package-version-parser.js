@@ -72,6 +72,8 @@ var extractSemverPart = function (versionString) {
 // instead of a vanilla JavaScript number. That will make the
 // constraint solver slower (by how much?), and would require some
 // careful thought.
+// (Or it could just return some sort of tuple, and ensure that
+// the cost functions that consume this can deal with tuples...)
 PV.versionMagnitude = function (versionString) {
   var version = extractSemverPart(versionString);
   var v = semver.parse(version.semver);
@@ -95,7 +97,8 @@ var prereleaseIdentifierToFraction = function (prerelease) {
     if (typeof part === 'number') {
       digit = part+1;
     } else if (typeof part === 'string') {
-      var VALID_CHARACTERS = "-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+      var VALID_CHARACTERS =
+            "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
       var validCharToNumber = function (ch) {
         var result = VALID_CHARACTERS.indexOf(ch);
@@ -112,10 +115,10 @@ var prereleaseIdentifierToFraction = function (prerelease) {
       throw new Error("Unexpected prerelease identifier part: " + part + " of type " + typeof part);
     }
 
-    // 3000 > 101 + VALID_CHARACTERS.length *
+    // 4100 > 101 + VALID_CHARACTERS.length *
     // VALID_CHARACTERS.length. And there's a test to verify this
     // ("test the edges of `versionMagnitude`")
-    return memo + digit / Math.pow(3000, index+1);
+    return memo + digit / Math.pow(4100, index+1);
   }, -1);
 };
 
