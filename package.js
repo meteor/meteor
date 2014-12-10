@@ -3,7 +3,7 @@ Package.describe({
   version: '1.0.4-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('SpacebarsCompiler');
 
   api.use('htmljs');
@@ -12,19 +12,19 @@ Package.on_use(function (api) {
 
   api.use('underscore');
   api.use('minifiers', ['server']);
-  api.add_files(['templatetag.js',
+  api.addFiles(['templatetag.js',
                  'optimizer.js',
                  'codegen.js',
                  'compiler.js']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('underscore');
   api.use('spacebars-compiler');
   api.use('tinytest');
   api.use('blaze-tools');
   api.use('coffeescript');
-  api.add_files('spacebars_tests.js');
-  api.add_files('compile_tests.js');
-  api.add_files('compiler_output_tests.coffee');
+  api.addFiles('spacebars_tests.js');
+  api.addFiles('compile_tests.js');
+  api.addFiles('compiler_output_tests.coffee');
 });
