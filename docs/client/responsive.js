@@ -1,3 +1,16 @@
+Meteor.startup(function () {
+  // set up a swipe left / right handler
+  $(document.body).touchwipe({
+    wipeLeft: function () {
+      Session.set("sidebarOpen", false);
+    },
+    wipeRight: function () {
+      Session.set("sidebarOpen", true);
+    },
+    preventDefaultEvents: false
+  });
+});
+
 Template.body.events({
   "click .open-sidebar": function () {
     Session.set("sidebarOpen", true);
