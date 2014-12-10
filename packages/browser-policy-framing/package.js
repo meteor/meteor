@@ -3,8 +3,8 @@ Package.describe({
   version: "1.0.3-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.imply(["browser-policy-common"], "server");
   api.use(["underscore", "browser-policy-common"], "server");
-  api.add_files("browser-policy-framing.js", "server");
+  api.addFiles("browser-policy-framing.js", "server");
 });

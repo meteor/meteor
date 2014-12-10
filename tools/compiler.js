@@ -364,7 +364,7 @@ var compileUnibuild = function (options) {
     //   will get prepended to the paths you pick for your output
     //   files so that you get your own namespace, for example
     //   '/packages/foo'. null on non-web targets
-    // - fileOptions: any options passed to "api.add_files"; for
+    // - fileOptions: any options passed to "api.addFiles"; for
     //   use by the plugin. The built-in "js" plugin uses the "bare"
     //   option for files that shouldn't be wrapped in a closure.
     // - declaredExports: An array of symbols exported by this unibuild, or null

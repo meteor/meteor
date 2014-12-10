@@ -3,22 +3,22 @@ Package.describe({
   version: '1.0.2-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('BlazeTools');
 
   api.use('htmljs');
   api.use('underscore');
 
-  api.add_files(['preamble.js',
+  api.addFiles(['preamble.js',
                  'tokens.js',
                  'tojs.js']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('blaze-tools');
   api.use('tinytest');
   api.use('underscore');
   api.use('html-tools');
 
-  api.add_files(['token_tests.js']);
+  api.addFiles(['token_tests.js']);
 });

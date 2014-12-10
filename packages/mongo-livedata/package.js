@@ -3,6 +3,6 @@ Package.describe({
   version: '1.0.7-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.imply("mongo");
 });

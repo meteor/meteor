@@ -3,7 +3,7 @@ Package.describe({
   version: "1.1.3-ipc.0"
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
@@ -12,10 +12,10 @@ Package.on_use(function(api) {
 
   api.export('Google');
 
-  api.add_files(
+  api.addFiles(
     ['google_configure.html', 'google_configure.js'],
     'client');
 
-  api.add_files('google_server.js', 'server');
-  api.add_files('google_client.js', 'client');
+  api.addFiles('google_server.js', 'server');
+  api.addFiles('google_client.js', 'client');
 });

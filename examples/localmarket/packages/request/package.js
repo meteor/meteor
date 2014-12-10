@@ -5,7 +5,7 @@ Package.describe({
 
 Npm.depends({request: "2.47.0"});
 
-Package.on_use(function (api) {
-  api.add_files('request-server.js', 'server');
+Package.onUse(function (api) {
+  api.addFiles('request-server.js', 'server');
   api.export('Request');
 });

@@ -3,8 +3,8 @@ Package.describe({
   version: '1.0.2-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['tinytest', 'underscore', 'ejson'], 'server');
 
-  api.add_files(['server.js'], "server");
+  api.addFiles(['server.js'], "server");
 });

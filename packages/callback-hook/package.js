@@ -3,10 +3,10 @@ Package.describe({
   version: '1.0.2-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('underscore', ['client', 'server']);
 
   api.export('Hook');
 
-  api.add_files('hook.js', ['client', 'server']);
+  api.addFiles('hook.js', ['client', 'server']);
 });

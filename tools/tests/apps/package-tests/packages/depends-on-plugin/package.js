@@ -3,7 +3,7 @@ Package.describe({
   summary: "depend on and watch a plugin"
 });
 
-Package.on_use(function (api) {
-  api.add_files('foo.js');
+Package.onUse(function (api) {
+  api.addFiles('foo.js');
   api.use('contains-plugin');
 });

@@ -3,8 +3,8 @@ Package.describe({
   version: "1.0.2-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('jquery');
   api.use('coffeescript');
-  api.add_files('waypoints.coffee', 'client');
+  api.addFiles('waypoints.coffee', 'client');
 });

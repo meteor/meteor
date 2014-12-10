@@ -3,10 +3,10 @@ Package.describe({
   version: "1.0.5-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['dev-bundle-fetcher']);
   api.export('StarTranslator');
-  api.add_files(['translator.js'], 'server');
+  api.addFiles(['translator.js'], 'server');
 });
 
 Npm.depends({ncp: "0.4.2"});

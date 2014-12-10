@@ -7,8 +7,8 @@ Package.describe({
   version: "1.0.3"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.versionsFrom("1.0");
   api.use('jquery');
-  api.add_files('jquery.layout.js', 'client');
+  api.addFiles('jquery.layout.js', 'client');
 });

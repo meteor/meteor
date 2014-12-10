@@ -61,7 +61,7 @@ var updateTestPackage = function (projectContext, npmDependencies, options) {
       + "\n"
       + "Npm.depends(" + JSON.stringify(npmDependencies) + ");"
       + "\n"
-      + "Package.on_use(function (api) { api.add_files('dummy.js', 'server'); });");
+      + "Package.onUse(function (api) { api.addFiles('dummy.js', 'server'); });");
   if (! options.noReload)
     reloadPackages(projectContext);
 };

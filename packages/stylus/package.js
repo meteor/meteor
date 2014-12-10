@@ -12,9 +12,9 @@ Package.registerBuildPlugin({
   npmDependencies: { stylus: "0.46.3", nib: "1.0.2" }
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use(['tinytest', 'stylus', 'test-helpers', 'templating']);
-  api.add_files([
+  api.addFiles([
     'stylus_tests.html',
     'stylus_tests.styl',
     'stylus_tests.import.styl',

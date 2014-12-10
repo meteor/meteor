@@ -3,7 +3,7 @@ Package.describe({
   version: '1.0.6-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   // XXX this should go away, and there should be a clean interface
   // that tinytest and the driver both implement?
   api.use('tinytest');
@@ -16,11 +16,11 @@ Package.on_use(function (api) {
   api.use(['blaze', 'templating', 'spacebars',
            'ddp', 'tracker'], 'client');
 
-  api.add_files('diff_match_patch_uncompressed.js', 'client');
+  api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
-  api.add_files('diff_match_patch_uncompressed.js', 'client');
+  api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
-  api.add_files([
+  api.addFiles([
     'driver.css',
     'driver.html',
     'driver.js'
@@ -28,5 +28,5 @@ Package.on_use(function (api) {
 
   api.use('autoupdate', 'server', {weak: true});
   api.use('random', 'server');
-  api.add_files('autoupdate.js', 'server');
+  api.addFiles('autoupdate.js', 'server');
 });

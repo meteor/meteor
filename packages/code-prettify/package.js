@@ -13,8 +13,8 @@ Package.describe({
 
 // XXX this code dumps symbols into the global namespace (directly
 // onto 'window'.) we need to fix that.
-Package.on_use(function (api) {
-  api.add_files([
+Package.onUse(function (api) {
+  api.addFiles([
     'prettify.js',
     'prettify.css',
     path.join('styles', 'sunburst.css')], "client");

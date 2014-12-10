@@ -3,7 +3,7 @@ Package.describe({
   version: "1.0.2-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('SHA256');
-  api.add_files(['sha256.js'], ['client', 'server']);
+  api.addFiles(['sha256.js'], ['client', 'server']);
 });

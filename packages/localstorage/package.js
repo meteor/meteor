@@ -3,15 +3,15 @@ Package.describe({
   version: "1.0.2-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('random', 'client');
 
-  api.add_files('localstorage.js', 'client');
+  api.addFiles('localstorage.js', 'client');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('localstorage', 'client');
   api.use('tinytest');
 
-  api.add_files('localstorage_tests.js', 'client');
+  api.addFiles('localstorage_tests.js', 'client');
 });

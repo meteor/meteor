@@ -3,15 +3,15 @@ Package.describe({
   version: '1.0.4-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('Tracker');
   api.export('Deps');
-  api.add_files('tracker.js');
-  api.add_files('deprecated.js');
+  api.addFiles('tracker.js');
+  api.addFiles('deprecated.js');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('tracker');
-  api.add_files('tracker_tests.js', 'client');
+  api.addFiles('tracker_tests.js', 'client');
 });

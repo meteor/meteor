@@ -3,8 +3,8 @@ Package.describe({
   version: "1.0.2-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('coffeescript', ['client', 'server']);
   api.export('COFFEESCRIPT_EXPORTED');
-  api.add_files("exporting.coffee", ['client', 'server']);
+  api.addFiles("exporting.coffee", ['client', 'server']);
 });

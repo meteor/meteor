@@ -164,7 +164,7 @@ var SourceArch = function (pkg, options) {
   // isopack.
   //
   // fileOptions is optional and represents arbitrary options passed
-  // to "api.add_files"; they are made available on to the plugin as
+  // to "api.addFiles"; they are made available on to the plugin as
   // compileStep.fileOptions.
   //
   // This is a function rather than a literal array because for an
@@ -361,8 +361,8 @@ _.extend(PackageSource.prototype, {
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
   // the name field provided and the name/test fields in the package.js file to
-  // figre out if this is a test package (load from on_test) or a use package
-  // (load from on_use).
+  // figre out if this is a test package (load from onTest) or a use package
+  // (load from onUse).
   //
   // name: name of the package.
   // dir: location of directory on disk.
@@ -925,7 +925,7 @@ _.extend(PackageSource.prototype, {
       });
     };
 
-    // For this old-style, on_use/on_test/where-based package, figure
+    // For this old-style, onUse/onTest/where-based package, figure
     // out its dependencies by calling its on_xxx functions and seeing
     // what it does.
     //
@@ -934,7 +934,7 @@ _.extend(PackageSource.prototype, {
     // directly to an app, and see what files it adds to the client
     // and the server. When a package is used, include it in both the client
     // and the server by default. This simple strategy doesn't capture even
-    // 10% of the complexity possible with on_use, on_test, and where, but
+    // 10% of the complexity possible with onUse, onTest, and where, but
     // probably is sufficient for virtually all packages that actually
     // exist in the field, if not every single one. #OldStylePackageSupport
 

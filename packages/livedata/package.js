@@ -3,7 +3,7 @@ Package.describe({
   version: '1.0.12-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use("ddp");
   api.imply("ddp");
 

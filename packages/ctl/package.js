@@ -3,8 +3,8 @@ Package.describe({
   version: "1.0.3-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['underscore', 'ddp', 'mongo', 'ctl-helper', 'application-configuration', 'follower-livedata'], 'server');
   api.export('main', 'server');
-  api.add_files('ctl.js', 'server');
+  api.addFiles('ctl.js', 'server');
 });

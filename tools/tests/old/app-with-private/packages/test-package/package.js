@@ -8,7 +8,7 @@ Package.registerBuildPlugin({
   sources: ['plugin.js']
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('TestAsset', 'server');
-  api.add_files(['test-package.js', 'test-package.txt', 'test.notregistered'], 'server');
+  api.addFiles(['test-package.js', 'test-package.txt', 'test.notregistered'], 'server');
 });

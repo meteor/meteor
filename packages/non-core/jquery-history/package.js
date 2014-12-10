@@ -4,11 +4,11 @@ Package.describe({
   version: "1.0.2"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.versionsFrom('1.0');
   api.use('json', 'client');
   api.use('jquery', 'client');
-  api.add_files(['history.adapter.jquery.js',
+  api.addFiles(['history.adapter.jquery.js',
                  'history.html4.js',
                  'history.js'],
                 'client');

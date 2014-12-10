@@ -3,13 +3,13 @@ Package.describe({
   version: '1.0.2-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('GeoJSON');
-  api.add_files(['pre.js', 'geojson-utils.js', 'post.js']);
+  api.addFiles(['pre.js', 'geojson-utils.js', 'post.js']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('geojson-utils');
-  api.add_files(['geojson-utils.tests.js'], 'client');
+  api.addFiles(['geojson-utils.tests.js'], 'client');
 });

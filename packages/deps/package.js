@@ -5,7 +5,7 @@ Package.describe({
   version: '1.0.6-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('tracker');
   api.imply('tracker');
 

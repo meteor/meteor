@@ -16,7 +16,7 @@ Npm.depends({
   sockjs: "0.3.11"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'tracker',
            'logging', 'retry'],
           ['client', 'server']);
@@ -46,50 +46,50 @@ Package.on_use(function (api) {
 
   // Transport
   api.use('reload', 'client', {weak: true});
-  api.add_files('common.js');
-  api.add_files(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
-  api.add_files('stream_client_nodejs.js', 'server');
-  api.add_files('stream_client_common.js', ['client', 'server']);
-  api.add_files('stream_server.js', 'server');
+  api.addFiles('common.js');
+  api.addFiles(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
+  api.addFiles('stream_client_nodejs.js', 'server');
+  api.addFiles('stream_client_common.js', ['client', 'server']);
+  api.addFiles('stream_server.js', 'server');
 
   // we depend on LocalCollection._diffObjects, _applyChanges,
   // _idParse, _idStringify.
   api.use('minimongo', ['client', 'server']);
 
-  api.add_files('heartbeat.js', ['client', 'server']);
+  api.addFiles('heartbeat.js', ['client', 'server']);
 
-  api.add_files('livedata_server.js', 'server');
+  api.addFiles('livedata_server.js', 'server');
 
-  api.add_files('writefence.js', 'server');
-  api.add_files('crossbar.js', 'server');
+  api.addFiles('writefence.js', 'server');
+  api.addFiles('crossbar.js', 'server');
 
-  api.add_files('livedata_common.js', ['client', 'server']);
-  api.add_files('random_stream.js', ['client', 'server']);
+  api.addFiles('livedata_common.js', ['client', 'server']);
+  api.addFiles('random_stream.js', ['client', 'server']);
 
-  api.add_files('livedata_connection.js', ['client', 'server']);
+  api.addFiles('livedata_connection.js', ['client', 'server']);
 
 
-  api.add_files('client_convenience.js', 'client');
-  api.add_files('server_convenience.js', 'server');
+  api.addFiles('client_convenience.js', 'client');
+  api.addFiles('server_convenience.js', 'server');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
   api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
 
-  api.add_files('stub_stream.js');
-  api.add_files('livedata_server_tests.js', 'server');
-  api.add_files('livedata_connection_tests.js', ['client', 'server']);
-  api.add_files('livedata_tests.js', ['client', 'server']);
-  api.add_files('livedata_test_service.js', ['client', 'server']);
-  api.add_files('session_view_tests.js', ['server']);
-  api.add_files('crossbar_tests.js', ['server']);
-  api.add_files('random_stream_tests.js', ['client', 'server']);
+  api.addFiles('stub_stream.js');
+  api.addFiles('livedata_server_tests.js', 'server');
+  api.addFiles('livedata_connection_tests.js', ['client', 'server']);
+  api.addFiles('livedata_tests.js', ['client', 'server']);
+  api.addFiles('livedata_test_service.js', ['client', 'server']);
+  api.addFiles('session_view_tests.js', ['server']);
+  api.addFiles('crossbar_tests.js', ['server']);
+  api.addFiles('random_stream_tests.js', ['client', 'server']);
 
   api.use('http', 'client');
-  api.add_files(['stream_tests.js'], 'client');
-  api.add_files('stream_client_tests.js', 'server');
+  api.addFiles(['stream_tests.js'], 'client');
+  api.addFiles('stream_client_tests.js', 'server');
   api.use('check', ['client', 'server']);
 });

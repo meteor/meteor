@@ -3,14 +3,14 @@ Package.describe({
   version: "1.0.3-ipc.0"
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-oauth', ['client', 'server']);
   api.use('weibo', ['client', 'server']);
 
-  api.add_files('weibo_login_button.css', 'client');
+  api.addFiles('weibo_login_button.css', 'client');
 
-  api.add_files("weibo.js");
+  api.addFiles("weibo.js");
 });

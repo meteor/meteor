@@ -28,7 +28,7 @@ Npm.strip({
 // would be impossible to load at link time (or all transitive dependencies
 // packages would need to function without the analysis provided by this
 // package).
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('JSAnalyze', 'server');
-  api.add_files('js_analyze.js', 'server');
+  api.addFiles('js_analyze.js', 'server');
 });

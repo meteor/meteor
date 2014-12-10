@@ -3,7 +3,7 @@ Package.describe({
   version: "1.1.3-ipc.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('underscore', ['client', 'server']);
   api.use('random', ['client', 'server']);
   api.use('check', ['client', 'server']);
@@ -13,12 +13,12 @@ Package.on_use(function (api) {
   api.imply('accounts-base', ['client', 'server']);
   api.use('oauth');
 
-  api.add_files('oauth_common.js');
-  api.add_files('oauth_client.js', 'client');
-  api.add_files('oauth_server.js', 'server');
+  api.addFiles('oauth_common.js');
+  api.addFiles('oauth_client.js', 'client');
+  api.addFiles('oauth_server.js', 'server');
 });
 
 
-Package.on_test(function (api) {
-  api.add_files("oauth_tests.js", 'server');
+Package.onTest(function (api) {
+  api.addFiles("oauth_tests.js", 'server');
 });

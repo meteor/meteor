@@ -11,6 +11,6 @@ Package.registerBuildPlugin({
   ],
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('accounts-base');
 });

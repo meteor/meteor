@@ -7,21 +7,21 @@ Npm.depends({
   'mori': '0.2.6'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('ConstraintSolver');
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random'], 'server');
-  api.add_files(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
+  api.addFiles(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
                  'resolver-state.js', 'priority-queue.js'], ['server']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('constraint-solver', ['server']);
   api.use(['tinytest', 'minimongo', 'package-version-parser']);
   // data for big benchmarky tests
-  api.add_files('test-data.js', ['server']);
-  api.add_files('constraint-solver-tests.js', ['server']);
-  api.add_files('benchmark-tests.js', ['server']);
-  api.add_files('resolver-tests.js', ['server']);
+  api.addFiles('test-data.js', ['server']);
+  api.addFiles('constraint-solver-tests.js', ['server']);
+  api.addFiles('benchmark-tests.js', ['server']);
+  api.addFiles('resolver-tests.js', ['server']);
   api.use('underscore');
 });

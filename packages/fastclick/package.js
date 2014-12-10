@@ -3,7 +3,7 @@ Package.describe({
   version: '1.0.2-ipc.0'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('FastClick', 'web');
 
   api.addFiles(['pre.js', 'fastclick.js', 'post.js'], 'web');

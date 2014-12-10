@@ -12,7 +12,7 @@ Npm.strip({
   useragent: ["test/"]
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
            'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
@@ -26,11 +26,11 @@ Package.on_use(function (api) {
   // loaded after webapp.
   api.export(['WebApp', 'main', 'WebAppInternals'], 'server');
   api.export(['WebApp'], 'client');
-  api.add_files('webapp_server.js', 'server');
-  api.add_files('webapp_client.js', 'client');
+  api.addFiles('webapp_server.js', 'server');
+  api.addFiles('webapp_client.js', 'client');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use(['tinytest', 'webapp', 'http']);
-  api.add_files('webapp_tests.js', 'server');
+  api.addFiles('webapp_tests.js', 'server');
 });
