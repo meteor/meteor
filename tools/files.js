@@ -1131,6 +1131,27 @@ wrapFsFunc("lstat", [0]);
 wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
 
+var rename = files.rename;
+files.rename = function (from, to) {
+  // retries are necessarily only on Windows, because the rename call can fail
+  // with EBUSY, which means the file is "busy"
+  var maxTries = 10;
+  var success = false;
+  while (! success && maxTries-- > 0) {
+    try {
+      rename(from, to);
+      success = true;
+    } catch (err) {
+      if (err.code !== 'EPERM')
+        throw err;
+    }
+  }
+  if (! success) {
+    files.cp_r(from, to);
+    files.rm_recursive(from);
+  }
+};
+
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
   modifyReturnValue: convertToStandardPath
