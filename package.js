@@ -8,7 +8,7 @@ Package.describe({
 // the future, perhaps we should have the concept of a template system
 // registry and a default templating system, ideally per-package.
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: "compileTemplates",
   use: ['spacebars-compiler'],
   sources: [
