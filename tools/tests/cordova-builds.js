@@ -1,7 +1,3 @@
-var fs = require("fs");
-var path = require("path");
-var _ = require('underscore');
-
 var files = require('../files.js');
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
@@ -18,8 +14,8 @@ var checkMobileServer = selftest.markStack(function (s, expected) {
 });
 
 var cleanUpBuild = function (s) {
-  files.rm_recursive(path.join(s.cwd, "android"));
-  fs.unlinkSync(path.join(s.cwd, "myapp.tar.gz"));
+  files.rm_recursive(files.pathJoin(s.cwd, "android"));
+  files.unlink(files.pathJoin(s.cwd, "myapp.tar.gz"));
 };
 
 selftest.define("cordova builds with server options", ["slow"], function () {

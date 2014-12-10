@@ -1,5 +1,5 @@
 var fs = require("fs");
-var path = require("path");
+var files = require('./files.js');
 var _ = require('underscore');
 var Future = require('fibers/future');
 var fiberHelpers = require('./fiber-helpers.js');
@@ -243,7 +243,8 @@ var readDirectory = function (options) {
       // We do stat instead of lstat here, so that we treat symlinks to
       // directories just like directories themselves.
       // XXX Does the treatment of symlinks make sense?
-      var stats = statSyncOrYield(path.join(options.absPath, entry), yielding);
+      var stats =
+        statSyncOrYield(files.pathJoin(options.absPath, entry), yielding);
     } catch (e) {
       if (e && (e.code === 'ENOENT')) {
         // Disappeared after the readdirSync (or a dangling symlink)? Eh,
@@ -424,7 +425,7 @@ _.extend(Watcher.prototype, {
       if (err.code === "ENOENT" || // For fs.watch.
           (err instanceof TypeError && // For pathwatcher.watch.
            err.message === "Unable to watch path")) {
-        var parentDir = path.dirname(absPath);
+        var parentDir = files.pathDirname(absPath);
         if (parentDir !== absPath) {
           self._watchFileOrDirectory(parentDir);
         }
@@ -472,7 +473,7 @@ _.extend(Watcher.prototype, {
 
       } else if (stat.isDirectory()) {
         try {
-          var files = readdirSyncOrYield(absPath, true);
+          var dirFiles = readdirSyncOrYield(absPath, true);
         } catch (err) {
           if (err.code === "ENOENT" ||
               err.code === "ENOTDIR") {
@@ -484,8 +485,8 @@ _.extend(Watcher.prototype, {
           throw err;
         }
 
-        _.each(files, function(file) {
-          var fullPath = path.join(absPath, file);
+        _.each(dirFiles, function(file) {
+          var fullPath = files.pathJoin(absPath, file);
 
           // Recursively watch new files, if we ever previously tried to
           // watch them. Recall that when we attempt to watch a

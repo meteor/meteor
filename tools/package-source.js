@@ -1,5 +1,3 @@
-var fs = require('fs');
-var path = require('path');
 var _ = require('underscore');
 var sourcemap = require('source-map');
 
@@ -46,31 +44,31 @@ var loadOrderSort = function (templateExtensions) {
     // before the corresponding .html file.
     //
     // maybe all of the templates should go in one file?
-    var isTemplate_a = _.has(templateExtnames, path.extname(a));
-    var isTemplate_b = _.has(templateExtnames, path.extname(b));
+    var isTemplate_a = _.has(templateExtnames, files.pathExtname(a));
+    var isTemplate_b = _.has(templateExtnames, files.pathExtname(b));
     if (isTemplate_a !== isTemplate_b) {
       return (isTemplate_a ? -1 : 1);
     }
 
     // main.* loaded last
-    var ismain_a = (path.basename(a).indexOf('main.') === 0);
-    var ismain_b = (path.basename(b).indexOf('main.') === 0);
+    var ismain_a = (files.pathBasename(a).indexOf('main.') === 0);
+    var ismain_b = (files.pathBasename(b).indexOf('main.') === 0);
     if (ismain_a !== ismain_b) {
       return (ismain_a ? 1 : -1);
     }
 
     // /lib/ loaded first
-    var islib_a = (a.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
-                   a.indexOf('lib' + path.sep) === 0);
-    var islib_b = (b.indexOf(path.sep + 'lib' + path.sep) !== -1 ||
-                   b.indexOf('lib' + path.sep) === 0);
+    var islib_a = (a.indexOf(files.pathSep + 'lib' + files.pathSep) !== -1 ||
+                   a.indexOf('lib' + files.pathSep) === 0);
+    var islib_b = (b.indexOf(files.pathSep + 'lib' + files.pathSep) !== -1 ||
+                   b.indexOf('lib' + files.pathSep) === 0);
     if (islib_a !== islib_b) {
       return (islib_a ? -1 : 1);
     }
 
     // deeper paths loaded first.
-    var len_a = a.split(path.sep).length;
-    var len_b = b.split(path.sep).length;
+    var len_a = a.split(files.pathSep).length;
+    var len_b = b.split(files.pathSep).length;
     if (len_a !== len_b) {
       return (len_a < len_b ? 1 : -1);
     }
@@ -328,8 +326,8 @@ _.extend(PackageSource.prototype, {
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
-    self.sourceRoot = options.sourceRoot || path.sep;
-    self.serveRoot = options.serveRoot || path.sep;
+    self.sourceRoot = options.sourceRoot || files.pathSep;
+    self.serveRoot = options.serveRoot || files.pathSep;
 
     var nodeModulesPath = null;
     utils.ensureOnlyExactVersions(options.npmDependencies);
@@ -397,20 +395,20 @@ _.extend(PackageSource.prototype, {
     // If we are running from checkout we may be looking at a core package. If
     // we are, let's remember this for things like not recording version files.
     if (files.inCheckout()) {
-      var packDir = path.join(files.getCurrentToolsDir(), 'packages');
-      if (path.dirname(self.sourceRoot) === packDir) {
+      var packDir = files.pathJoin(files.getCurrentToolsDir(), 'packages');
+      if (files.pathDirname(self.sourceRoot) === packDir) {
         self.isCore = true;
       }
     }
-    if (! fs.existsSync(self.sourceRoot))
+    if (! files.exists(self.sourceRoot))
       throw new Error("putative package directory " + dir + " doesn't exist?");
 
     var fileAndDepLoader = null;
     var npmDependencies = null;
     var cordovaDependencies = null;
 
-    var packageJsPath = path.join(self.sourceRoot, 'package.js');
-    var code = fs.readFileSync(packageJsPath);
+    var packageJsPath = files.pathJoin(self.sourceRoot, 'package.js');
+    var code = files.readFile(packageJsPath);
     var packageJsHash = watch.sha1(code);
 
     var releaseRecords = [];
@@ -743,9 +741,9 @@ _.extend(PackageSource.prototype, {
       },
 
       require: function (name) {
-        var nodeModuleDir = path.join(self.sourceRoot,
+        var nodeModuleDir = files.pathJoin(self.sourceRoot,
                                       '.npm', 'package', 'node_modules', name);
-        if (fs.existsSync(nodeModuleDir)) {
+        if (files.exists(nodeModuleDir)) {
           return require(nodeModuleDir);
         } else {
           try {
@@ -865,7 +863,7 @@ _.extend(PackageSource.prototype, {
       // For backwards-compatibility, we will take the package name from the
       // directory of the package. That was what we used to do: in fact, we used
       // to only do that.
-      self.name = path.basename(dir);
+      self.name = files.pathBasename(dir);
     }
 
     // Check to see if our name is valid.
@@ -1357,7 +1355,7 @@ _.extend(PackageSource.prototype, {
     // package's node_modules.  XXX maybe there should be separate NPM
     // dirs for use vs test?
     self.npmCacheDirectory =
-      path.resolve(path.join(self.sourceRoot, '.npm', 'package'));
+      files.pathResolve(files.pathJoin(self.sourceRoot, '.npm', 'package'));
     self.npmDependencies = npmDependencies;
 
     self.cordovaDependencies = cordovaDependencies;
@@ -1371,7 +1369,7 @@ _.extend(PackageSource.prototype, {
     var preLinkerFiles = [
       'npm-shrinkwrap.json', 'README', '.gitignore', 'node_modules'];
     _.each(preLinkerFiles, function (f) {
-      files.rm_recursive(path.join(self.sourceRoot, '.npm', f));
+      files.rm_recursive(files.pathJoin(self.sourceRoot, '.npm', f));
     });
 
     // Create source architectures, one for the server and one for each web
@@ -1416,7 +1414,7 @@ _.extend(PackageSource.prototype, {
     });
 
     // Serve root of the package.
-    self.serveRoot = path.join(path.sep, 'packages', self.name);
+    self.serveRoot = files.pathJoin(files.pathSep, 'packages', self.name);
 
     // Name of the test.
     if (hasTests) {
@@ -1430,7 +1428,7 @@ _.extend(PackageSource.prototype, {
     var appDir = projectContext.projectDir;
     self.name = null;
     self.sourceRoot = appDir;
-    self.serveRoot = path.sep;
+    self.serveRoot = files.pathSep;
 
     // special files those are excluded from app's top-level sources
     var controlFiles = ['mobile-config.js'];
@@ -1482,14 +1480,14 @@ _.extend(PackageSource.prototype, {
         // sourceRoot-relative directories.
         var readAndWatchDirectory = function (relDir, filters) {
           filters = filters || {};
-          var absPath = path.join(self.sourceRoot, relDir);
+          var absPath = files.pathJoin(self.sourceRoot, relDir);
           var contents = watch.readAndWatchDirectory(watchSet, {
             absPath: absPath,
             include: filters.include,
             exclude: filters.exclude
           });
           return _.map(contents, function (x) {
-            return path.join(relDir, x);
+            return files.pathJoin(relDir, x);
           });
         };
 
@@ -1507,12 +1505,12 @@ _.extend(PackageSource.prototype, {
 
         // The paths that we've called checkForInfiniteRecursion on.
         var seenPaths = {};
-        // Used internally by fs.realpathSync as an optimization.
+        // Used internally by files.realpath as an optimization.
         var realpathCache = {};
         var checkForInfiniteRecursion = function (relDir) {
-          var absPath = path.join(self.sourceRoot, relDir);
+          var absPath = files.pathJoin(self.sourceRoot, relDir);
           try {
-            var realpath = fs.realpathSync(absPath, realpathCache);
+            var realpath = files.realpath(absPath, realpathCache);
           } catch (e) {
             if (!e || e.code !== 'ELOOP')
               throw e;
@@ -1581,8 +1579,10 @@ _.extend(PackageSource.prototype, {
           // `client/compatibility` directory don't get wrapped in a closure.
           if (archinfo.matches(arch, "web") && relPath.match(/\.js$/)) {
             var clientCompatSubstr =
-                  path.sep + 'client' + path.sep + 'compatibility' + path.sep;
-            if ((path.sep + relPath).indexOf(clientCompatSubstr) !== -1)
+              files.pathSep + 'client' +
+              files.pathSep + 'compatibility' + files.pathSep;
+
+            if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1)
               sourceObj.fileOptions = {bare: true};
           }
           return sourceObj;

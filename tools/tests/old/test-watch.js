@@ -1,30 +1,28 @@
-var path = require('path');
-var fs = require('fs');
 var _ = require('underscore');
 var assert = require('assert');
 var crypto = require('crypto');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var watch = require(path.join(__dirname, '..', '..', 'watch.js'));
-var files = require(path.join(__dirname, '..', '..', 'files.js'));
+var watch = require('../../watch.js');
+var files = require('../../files.js');
 
 var tmp = files.mkdtemp('test_watch');
 var serial = 0;
 
 var touchFile = function (filePath, contents) {
-  filePath = path.join(tmp, filePath);
-  files.mkdir_p(path.dirname(filePath));
-  fs.writeFileSync(filePath, contents || ('' + serial));
+  filePath = files.pathJoin(tmp, filePath);
+  files.mkdir_p(files.pathDirname(filePath));
+  files.writeFile(filePath, contents || ('' + serial));
   serial++;
 };
 
 var touchDir = function (dirPath) {
-  dirPath = path.join(tmp, dirPath);
+  dirPath = files.pathJoin(tmp, dirPath);
   files.mkdir_p(dirPath);
 };
 
 var remove = function (fileOrDirPath) {
-  fileOrDirPath = path.join(tmp, fileOrDirPath);
+  fileOrDirPath = files.pathJoin(tmp, fileOrDirPath);
   files.rm_recursive(fileOrDirPath);
 };
 
@@ -44,11 +42,11 @@ var go = function (options) {
   var watchSet = new watch.WatchSet();
 
   _.each(options.files, function (value, file) {
-    file = path.join(tmp, file);
+    file = files.pathJoin(tmp, file);
     if (value !== null && typeof value !== "string") {
-      if (fs.existsSync(file)) {
+      if (files.exists(file)) {
         var hash = crypto.createHash('sha1');
-        hash.update(fs.readFileSync(file));
+        hash.update(files.readFile(file));
         value = hash.digest('hex');
       } else {
         value = 'dummyhash';
@@ -61,7 +59,7 @@ var go = function (options) {
     // don't mutate options.directories, since we may reuse it with a no-arg
     // go() call
     var realDir = {
-      absPath: path.join(tmp, dir.absPath),
+      absPath: files.pathJoin(tmp, dir.absPath),
       include: dir.include,
       exclude: dir.exclude
     };

@@ -1,5 +1,3 @@
-var fs = require('fs');
-var path = require('path');
 var url = require('url');
 var files = require('./files.js');
 var _ = require('underscore');
@@ -35,9 +33,9 @@ var getUniverse = function () {
     universe = "www.meteor.com";
 
     if (files.inCheckout()) {
-      var p = path.join(files.getCurrentToolsDir(), 'universe');
-      if (fs.existsSync(p))
-        universe = fs.readFileSync(p, 'utf8').trim();
+      var p = files.pathJoin(files.getCurrentToolsDir(), 'universe');
+      if (files.exists(p))
+        universe = files.readFile(p, 'utf8').trim();
     }
   }
 
@@ -214,7 +212,7 @@ _.extend(exports, {
 
     var prefix = config.getPackageServerFilePrefix(serverUrl);
     if (prefix !== 'packages') {
-      prefix = path.join('packages-from-server', prefix);
+      prefix = files.pathJoin('packages-from-server', prefix);
     }
 
     return prefix;
@@ -233,15 +231,15 @@ _.extend(exports, {
     var self = this;
     options = options || {};
     var root = options.root || tropohouse.default.root;
-    return path.join(root, "package-metadata", "v2.0.1",
+    return files.pathJoin(root, "package-metadata", "v2.0.1",
                      self.getLocalPackageCacheFilename(options.serverUrl));
   },
 
   getIsopacketRoot: function () {
     if (files.inCheckout()) {
-      return path.join(files.getCurrentToolsDir(), '.meteor', 'isopackets');
+      return files.pathJoin(files.getCurrentToolsDir(), '.meteor', 'isopackets');
     } else {
-      return path.join(files.getCurrentToolsDir(), 'isopackets');
+      return files.pathJoin(files.getCurrentToolsDir(), 'isopackets');
     }
   },
 
@@ -294,7 +292,7 @@ _.extend(exports, {
   getSessionFilePath: function () {
     // METEOR_SESSION_FILE is for automated testing purposes only.
     return process.env.METEOR_SESSION_FILE ||
-      path.join(process.env.HOME, '.meteorsession');
+      files.pathJoin(process.env.HOME, '.meteorsession');
   },
 
   // Port to use when querying URLs for the deploy server that backs

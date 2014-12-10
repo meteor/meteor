@@ -7,12 +7,10 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
-var path = require('path');
 var warehouse = require('./warehouse.js');
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
 var projectContextModule = require('./project-context.js');
-var fs = require('fs');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var main = exports;
@@ -275,7 +273,7 @@ require('./commands-packages.js');
 // - body (contents of body, trimmed to end with a newline but no blank lines)
 var loadHelp = function () {
   var ret = [];
-  var raw = fs.readFileSync(path.join(__dirname, 'help.txt'), 'utf8');
+  var raw = files.readFile(files.pathJoin(__dirname, 'help.txt'), 'utf8');
   return _.map(raw.split(/^>>>/m).slice(1), function (r) {
     var lines = r.split('\n');
     var name = lines.shift().trim();
@@ -417,7 +415,7 @@ var springboard = function (rel, options) {
   if (!toolRecord)
     throw Error("missing tool for " + archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
-  var executable = path.join(packagePath, toolRecord.path, 'meteor');
+  var executable = files.pathJoin(packagePath, toolRecord.path, 'meteor');
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
@@ -441,7 +439,8 @@ var oldSpringboard = function (toolsVersion) {
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
-  var cmd = path.join(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
+  var cmd =
+    files.pathJoin(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
 
   // Now exec; we're not coming back.
   require('kexec')(cmd, newArgv);
@@ -676,7 +675,7 @@ Fiber(function () {
 
   var appDir = files.findAppDir();
   if (appDir) {
-    appDir = path.resolve(appDir);
+    appDir = files.pathResolve(appDir);
   }
 
   require('./isopackets.js').ensureIsopacketsLoadable();
@@ -1231,7 +1230,7 @@ Fiber(function () {
   if (requiresPackage) {
     var packageDir = files.findPackageDir();
     if (packageDir)
-      packageDir = path.resolve(packageDir);
+      packageDir = files.pathResolve(packageDir);
     if (packageDir) {
       options.packageDir = packageDir;
     }

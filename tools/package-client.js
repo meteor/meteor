@@ -1,5 +1,3 @@
-var fs = require('fs');
-var path = require('path');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var auth = require('./auth.js');
@@ -229,11 +227,11 @@ var bundleSource = function (isopack, includeSources, packageDir,
 
   var tempDir = files.mkdtemp('build-source-package-');
   var packageTarName = name + '-' + isopack.version + '-source';
-  var dirToTar = path.join(tempDir, 'source', packageTarName);
+  var dirToTar = files.pathJoin(tempDir, 'source', packageTarName);
   // XXX name probably needs to be escaped for windows?
   // XXX note that publish-for-arch thinks it knows how this tarball is laid
   //     out, which is a bit of a shame
-  var sourcePackageDir = path.join(dirToTar, name);
+  var sourcePackageDir = files.pathJoin(dirToTar, name);
   if (! files.mkdir_p(sourcePackageDir)) {
     buildmessage.error('Failed to create temporary source directory: ' +
                        sourcePackageDir);
@@ -246,8 +244,8 @@ var bundleSource = function (isopack, includeSources, packageDir,
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
   _.each(includeSources, function (f) {
-    files.copyFile(path.join(packageDir, f),
-                   path.join(sourcePackageDir, f));
+    files.copyFile(files.pathJoin(packageDir, f),
+                   files.pathJoin(sourcePackageDir, f));
   });
 
   // Write a package map to `.versions` inside the source tarball.  Note that
@@ -258,8 +256,8 @@ var bundleSource = function (isopack, includeSources, packageDir,
   //  (b) It is ALWAYS put into the source tarball, even if the package came
   //      from inside an app, whereas the package-source-tree .versions file
   //      is only used for standalone packages
-  var packageMapFilename = path.join(sourcePackageDir, '.versions');
-  if (fs.existsSync(packageMapFilename))
+  var packageMapFilename = files.pathJoin(sourcePackageDir, '.versions');
+  if (files.exists(packageMapFilename))
     throw Error(".versions file already exists? " + packageMapFilename);
   var packageMapFile = new projectContextModule.PackageMapFile({
     filename: packageMapFilename
@@ -270,7 +268,7 @@ var bundleSource = function (isopack, includeSources, packageDir,
   // temp dir gets cleaned up on process exit, so we don't have to worry
   // about cleaning up our tarball (or our copied source files)
   // ourselves.
-  var sourceTarball = path.join(tempDir, packageTarName + '.tgz');
+  var sourceTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
   files.createTarball(dirToTar, sourceTarball);
 
   var tarballHash = files.fileHash(sourceTarball);
@@ -284,8 +282,8 @@ var bundleSource = function (isopack, includeSources, packageDir,
 };
 
 var uploadTarball = function (putUrl, tarball) {
-  var size = fs.statSync(tarball).size;
-  var rs = fs.createReadStream(tarball);
+  var size = files.stat(tarball).size;
+  var rs = files.createReadStream(tarball);
   try {
     // Use getUrl instead of request, to throw on 4xx/5xx.
     httpHelpers.getUrl({
@@ -311,7 +309,7 @@ var bundleBuild = function (isopack) {
 
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = isopack.tarballName();
-  var tarInputDir = path.join(tempDir, packageTarName);
+  var tarInputDir = files.pathJoin(tempDir, packageTarName);
 
   // Note that we do need to do this even though we already have the isopack on
   // disk in an IsopackCache, because we don't want to include
@@ -319,7 +317,7 @@ var bundleBuild = function (isopack) {
   // includeIsopackBuildInfo to saveToPath here.)
   isopack.saveToPath(tarInputDir);
 
-  var buildTarball = path.join(tempDir, packageTarName + '.tgz');
+  var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
@@ -330,7 +328,7 @@ var bundleBuild = function (isopack) {
     // differences. The tree hash will still notice any actual CODE changes in
     // the npm packages.
     ignore: function (relativePath) {
-      var pieces = relativePath.split(path.sep);
+      var pieces = relativePath.split(files.pathSep);
       return pieces.length && _.last(pieces) === 'package.json'
         && _.contains(pieces, 'npm');
     }

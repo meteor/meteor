@@ -1,7 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
-var path = require('path');
 var files = require('../files.js');
 var release = require('../release.js');
 
@@ -21,7 +20,7 @@ var maybeFixRelease = function (env) {
 var runOldTest = function (filename) {
   var s = new Sandbox;
   var run = new Run(process.execPath, {
-    args: [path.resolve(__dirname, 'old', filename)],
+    args: [files.pathResolve(__dirname, 'old', filename)],
     env: maybeFixRelease({
       METEOR_TOOL_PATH: s.execPath
     })
@@ -69,7 +68,7 @@ selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
 
 selftest.define("old cli tests", ["slow", "net"], function () {
   var s = new Sandbox;
-  var run = new Run(path.join(__dirname, 'old', 'cli-test.sh'), {
+  var run = new Run(files.pathJoin(__dirname, 'old', 'cli-test.sh'), {
     env: maybeFixRelease({
       METEOR_TOOL_PATH: s.execPath,
       NODE: process.execPath
