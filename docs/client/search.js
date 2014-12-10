@@ -19,24 +19,28 @@ $(document).on("keydown", function (event) {
   }
 });
 
+var openSearchOverlay = function () {
+  Session.set("searchOpen", true);
+
+  Tracker.flush();
+  $(".search-query").focus();
+};
+
 // Open search with any non-special key
 var keysToOpenSearch = /[A-Za-z0-9]/;
 $(document).on("keydown", function (event) {
   // Don't activate search for special keys or keys with modifiers
   if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
       (! event.ctrlKey) && (! event.metaKey) && (! Session.get("searchOpen"))) {
-    Session.set("searchOpen", true);
-
-    Tracker.flush();
-    $(".search-query").val("");
-    $(".search-query").focus();
+    Session.set("searchQuery", "");
+    openSearchOverlay();
   }
 });
 
 // scroll $parent to make sure $child is visible
 // XXX doesn't work that well, needs improvement
 var ensureVisible = function ($child, $parent) {
-  if (! $child) {
+  if (! ($child && $parent)) {
     return;
   }
 
@@ -103,6 +107,13 @@ var selectNextItem = function () {
   }
 };
 
+var goToLongname = function (longname) {
+  var id = nameToId[longname] || longname.replace(/[.#]/g, "-");
+  var url = "#/full/" + id;
+  window.location.replace(url);
+  Session.set("searchOpen", false);
+};
+
 Template.search.events({
   "keyup input": function (event) {
     Session.set("searchQuery", event.target.value);
@@ -117,10 +128,7 @@ Template.search.events({
         if (Session.get("selectedResultId")) {
           // XXX make sure this is completely up to date
           var selectedName = APICollection.findOne(Session.get("selectedResultId")).longname;
-          var id = nameToId[selectedName] || selectedName.replace(/[.#]/g, "-");
-          var url = "#/full/" + id;
-          window.location.replace(url);
-          Session.set("searchOpen", false);
+          goToLongname(selectedName);
         }
       });
 
@@ -137,6 +145,27 @@ Template.search.events({
       selectNextItem();
       return false;
     }
+  },
+  "click .search-results li": function () {
+    goToLongname(this.longname);
+  },
+  "mouseover .search-results li": function () {
+    Session.set("selectedResultId", this._id);
+  }
+});
+
+Template.searchHint.helpers({
+  searchQuery: function () {
+    return Session.get("searchQuery");
+  },
+  searchOverlayOpen: function () {
+    return Session.get("searchOpen");
+  }
+});
+
+Template.searchHint.events({
+  "focus .search-hint": function () {
+    openSearchOverlay(true);
   }
 });
 
@@ -193,5 +222,8 @@ Template.search.helpers({
   },
   selected: function (_id) {
     return _id === Session.get("selectedResultId");
+  },
+  searchQuery: function () {
+    return Session.get("searchQuery");
   }
 });

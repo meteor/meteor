@@ -38,6 +38,8 @@
       </a>
     </h1>
 
+    {{> searchHint}}
+
     {{> basicOrFullSelect}}
 
     {{> tableOfContents}}
@@ -54,6 +56,12 @@
       <img src="/logo.png" class="logo" alt="Meteor" /> 1.0 Docs
     </h1>
   </div>
+</template>
+
+<template name="searchHint">
+  <input type="text" placeholder="Start typing to search..."
+    class="search-hint {{#if searchOverlayOpen}}overlay-open{{/if}}"
+    value="{{searchQuery}}" />
 </template>
 
 <template name="basicOrFullSelect">

@@ -3,8 +3,9 @@
     <div class="search-overlay">
       <div class="search-box">
         <a href="#" class="close-search"><span class="hotkey">[esc]</span> &times;</a>
-        <h3>Search Documentation</h3>
-        <input type="text" class="search-query" />
+        <h3>Search Docs</h3>
+        <input type="text" class="search-query" value="{{searchQuery}}"
+          placeholder="Start typing to search..." />
       </div>
       <ul class="search-results">
         {{#each searchResults}}

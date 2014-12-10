@@ -428,7 +428,7 @@ pre {
 #nav {
     h1 {
         margin-top: 1em;
-        font-size: 1.3em;
+        font-size: 1.2em;
 
         a {
             text-decoration: none;
@@ -444,6 +444,20 @@ pre {
     .logo {
         width: 180px;
         margin-bottom: 10px;
+    }
+
+    .search-hint {
+        font-size: 0.8em;
+        padding: 5px 7px;
+        box-sizing: border-box;
+        display: block;
+        margin-bottom: 10px;
+        width: 100%;
+        border: 1px solid #eee;
+
+        &.overlay-open {
+            visibility: hidden;
+        }
     }
 }
 
@@ -606,19 +620,21 @@ pre {
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 3;
+    z-index: 4;
     background: white;
 
     overflow: hidden;
 
     .close-search {
         float: right;
-        font-size: 2em;
+        font-size: 1.7em;
 
         .hotkey {
             font-size: 0.6em;
             color: #777;
             vertical-align: middle;
+            position: relative;
+            bottom: 2px;
         }
 
         text-decoration: none;
@@ -630,19 +646,19 @@ pre {
     }
 
     .search-box {
-        margin: 40px;
+        margin: 20px;
 
         h3 {
-            font-size: 2em;
+            font-size: 1.7em;
         }
 
         input {
-            font-size: 2em;
-            padding: 0.5em 0;
+            font-size: 1.5em;
+            padding: 0.3em 0;
             background: transparent;
             border: none;
             border-bottom: 2px solid #777;
-            width: 80%;
+            width: 100%;
 
             &:focus {
                 outline: 0;
@@ -651,13 +667,13 @@ pre {
     }
 
     .search-results {
-        margin: 40px;
+        margin: 20px;
 
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        top: 170px;
+        top: 120px;
 
         overflow-y: scroll;
         list-style: none;
@@ -666,7 +682,7 @@ pre {
 
         li {
             font-size: 1em;
-            margin-bottom: 0.5em;
+            margin-bottom: 0.2em;
             padding: 10px;
             white-space: nowrap;
 
