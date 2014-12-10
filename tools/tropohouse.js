@@ -149,43 +149,42 @@ _.extend(exports.Tropohouse.prototype, {
   // buildRecord into a temporary directory, whose path is returned.
   //
   // XXX: Error handling.
-  downloadBuildToTempDir: function (versionInfo, buildRecord) {
+  _downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
     var targetDirectory = files.mkdtemp();
 
     var url = buildRecord.build.url;
 
-    buildmessage.enterJob({title: "Downloading build"}, function () {
-      // XXX: We use one progress for download & untar; this isn't ideal:
-      // it relies on extractTarGz being fast and not reporting any progress.
-      // Really, we should create two subtasks
-      // (and, we should stream the download to the tar extractor)
-      var packageTarball = httpHelpers.getUrl({
-        url: url,
-        encoding: null,
-        progress: buildmessage.getCurrentProgressTracker(),
-        wait: false
-      });
-      files.extractTarGz(packageTarball, targetDirectory);
+    // XXX: We use one progress for download & untar; this isn't ideal:
+    // it relies on extractTarGz being fast and not reporting any progress.
+    // Really, we should create two subtasks
+    // (and, we should stream the download to the tar extractor)
+    var packageTarball = httpHelpers.getUrl({
+      url: url,
+      encoding: null,
+      progress: buildmessage.getCurrentProgressTracker(),
+      wait: false
     });
+    files.extractTarGz(packageTarball, targetDirectory);
 
     return targetDirectory;
   },
 
-  // Given versionInfo for a package version and required architectures, checks
-  // to make sure that we have the package at the requested arch. If we do not
-  // have the package, contact the server and attempt to download and extract
-  // the right build.
+  // Given a package name, version, and required architectures, checks to make
+  // sure that we have the package downloaded at the requested arch. If we do,
+  // returns null.
   //
-  // XXX more precise error handling in offline case. maybe throw instead like
-  // warehouse does.  actually, generally deal with error handling.
+  // Otherwise, if the catalog has no information about appropriate builds,
+  // registers a buildmessage error and returns null.
   //
-  // XXX This function is in transition.  If the returnDownloadCallback option
-  // is passed, then it returns null if no download is needed and returns a
-  // callback that does the download if a download is needed.  Otherwise it
-  // just downloads the package itself.
-  maybeDownloadPackageForArchitectures: function (options) {
+  // Otherwise, returns a 'downloader' object with keys packageName, version,
+  // and download; download is a method which should be called in a buildmessage
+  // capture which actually downloads the package (registering any errors with
+  // buildmessage).
+  _makeDownloader: function (options) {
     var self = this;
+    buildmessage.assertInJob();
+
     if (!options.packageName)
       throw Error("Missing required argument: packageName");
     if (!options.version)
@@ -243,15 +242,12 @@ _.extend(exports.Tropohouse.prototype, {
     var buildsToDownload = catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
-      var e = new Error(
-        "No compatible build found for " + packageName + "@" + version);
-      e.noCompatibleBuildError = true;
-      throw e;
+      buildmessage.error("No compatible build found");
+      return null;
     }
 
-    var actuallyDownload = function (useBuildmessage) {
-      if (useBuildmessage)
-        buildmessage.assertInCapture();
+    var download = function download () {
+      buildmessage.assertInCapture();
 
       Console.debug("Downloading missing local versions of package",
                     packageName + "@" + version, ":", archesToDownload);
@@ -270,15 +266,15 @@ _.extend(exports.Tropohouse.prototype, {
         // warehouse?
         _.each(buildsToDownload, function (build) {
           try {
-            buildTempDirs.push(self.downloadBuildToTempDir(
+            buildTempDirs.push(self._downloadBuildToTempDir(
               { packageName: packageName, version: version }, build));
           } catch (e) {
-            if (!useBuildmessage || !(e instanceof files.OfflineError))
+            if (!(e instanceof files.OfflineError))
               throw e;
             buildmessage.error(e.error.message);
           }
         });
-        if (useBuildmessage && buildmessage.jobHasMessages())
+        if (buildmessage.jobHasMessages())
           return;
 
         // We need to turn our builds into a single isopack.
@@ -305,9 +301,11 @@ _.extend(exports.Tropohouse.prototype, {
       });
     };
 
-    if (options.returnDownloadCallback)
-      return actuallyDownload;
-    actuallyDownload();
+    return {
+      packageName: packageName,
+      version: version,
+      download: download
+    };
   },
 
 
@@ -321,35 +319,57 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArchs = options.serverArchitectures || [archinfo.host()];
 
-    var downloadCallbacks = {};
-    buildmessage.enterJob('checking package versions', function () {
-      packageMap.eachPackage(function (packageName, info) {
-        if (info.kind !== 'versioned')
-          return;
-        try {
-          var downloadCallback = self.maybeDownloadPackageForArchitectures({
-            returnDownloadCallback: true,
+    var downloaders = [];
+    packageMap.eachPackage(function (packageName, info) {
+      if (info.kind !== 'versioned')
+        return;
+      buildmessage.enterJob(
+        "checking for " + packageName + "@" + info.version,
+        function () {
+          var downloader = self._makeDownloader({
             packageName: packageName,
             version: info.version,
             architectures: serverArchs
           });
-        } catch (e) {
-          if (!e.noCompatibleBuildError)
-            throw e;
-          buildmessage.error(e.message);
-          return;
+          if (buildmessage.jobHasMessages()) {
+            downloaders = null;
+            return;
+          }
+          if (downloader && downloaders)
+            downloaders.push(downloader);
         }
-        if (downloadCallback)
-          downloadCallbacks[packageName] = downloadCallback;
-      });
+      );
     });
 
-    buildmessage.forkJoin(
-      { title: 'downloading packages', parallel: true},
-      downloadCallbacks,
-      function (cb, packageName) {
-        cb(true);
-      });
+    // Did anything fail? Don't download anything.
+    if (! downloaders)
+      return;
+
+    // Nothing to download? Great.
+    if (! downloaders.length)
+      return;
+
+    // Just one package to download? Use a good message.
+    if (downloaders.length === 1) {
+      var downloader = downloaders[0];
+      buildmessage.enterJob(
+        "downloading " + downloader.packageName + "@" + downloader.version,
+        function () {
+          downloader.download();
+        }
+      );
+      return;
+    }
+
+    // Download multiple packages in parallel.
+    // XXX use a better progress bar that shows how many you've
+    // finished downloading.
+    buildmessage.forkJoin({
+      title: 'downloading ' + downloaders.length + ' packages',
+      parallel: true
+    }, downloaders, function (downloader) {
+      downloader.download();
+    });
   },
 
   latestMeteorSymlink: function () {
