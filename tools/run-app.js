@@ -10,7 +10,6 @@ var bundler = require('./bundler.js');
 var release = require('./release.js');
 var buildmessage = require('./buildmessage.js');
 var runLog = require('./run-log.js');
-var catalog = require('./catalog.js');
 var stats = require('./stats.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;

@@ -8,7 +8,6 @@ var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
-var catalog = require('./catalog.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
