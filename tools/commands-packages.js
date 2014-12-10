@@ -25,6 +25,7 @@ var isopack = require('./isopack.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
+var packageMapModule = require('./package-map.js');
 var packageVersionParser = require('./package-version-parser.js');
 
 // On some informational actions, we only refresh the package catalog if it is >
@@ -2303,6 +2304,7 @@ main.registerCommand({
   minArgs: 2,
   maxArgs: 2,
   hidden: true,
+  pretty: true,
 
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
@@ -2316,17 +2318,18 @@ main.registerCommand({
   var releaseTrack = trackAndVersion[0];
   var releaseVersion = trackAndVersion[1];
 
-  var release = catalog.official.getReleaseVersion(
+  var releaseRecord = catalog.official.getReleaseVersion(
     releaseTrack, releaseVersion);
-  if (!release) {
+  if (!releaseRecord) {
     // XXX this could also mean package unknown.
     Console.error('Release unknown: ' + releaseNameAndVersion + '');
     return 1;
   }
 
-  var toolConstraint = release.tool && utils.parseConstraint(release.tool);
+  var toolConstraint = releaseRecord.tool &&
+        utils.parseConstraint(releaseRecord.tool);
   if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
-    throw new Error("bad tool in release: " + release.tool);
+    throw new Error("bad tool in release: " + releaseRecord.tool);
   var toolPackage = toolConstraint.name;
   var toolVersion = toolConstraint.constraints[0].version;
 
@@ -2334,11 +2337,11 @@ main.registerCommand({
     toolPackage, toolVersion);
   if (!toolPkgBuilds) {
     // XXX this could also mean package unknown.
-    Console.error('Tool version unknown: ' + release.tool);
+    Console.error('Tool version unknown: ' + releaseRecord.tool);
     return 1;
   }
   if (!toolPkgBuilds.length) {
-    Console.error('Tool version has no builds: ' + release.tool);
+    Console.error('Tool version has no builds: ' + releaseRecord.tool);
     return 1;
   }
 
@@ -2364,7 +2367,7 @@ main.registerCommand({
   // need for the OSes that the tool is built for.
   var messages = buildmessage.capture(function () {
     _.each(osArches, function (osArch) {
-      _.each(release.packages, function (pkgVersion, pkgName) {
+      _.each(releaseRecord.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
           title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
@@ -2410,32 +2413,22 @@ main.registerCommand({
                 + " so the data file will be incomplete!");
   }
 
+  var packageMap =
+        packageMapModule.PackageMap.fromReleaseVersion(releaseRecord);
+
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
+    Console.info("Building tarball for " + osArch);
     // We're going to build and tar up a tropohouse in a temporary directory.
     var tmpTropo = new tropohouse.Tropohouse(path.join(tmpdir, '.meteor'));
-    buildmessage.enterJob({
-      title: "Downloading tool package " + toolPackage + "@" +
-        toolVersion
-    }, function () {
-      tmpTropo.maybeDownloadPackageForArchitectures({
-        packageName: toolPackage,
-        version: toolVersion,
-        architectures: [osArch]  // XXX 'web.browser' too?
-      });
-    });
-    _.each(release.packages, function (pkgVersion, pkgName) {
-      // XXX use forkJoin?
-      buildmessage.enterJob({
-        title: "Downloading package " + pkgName + "@" + pkgVersion
-      }, function () {
-        tmpTropo.maybeDownloadPackageForArchitectures({
-          packageName: pkgName,
-          version: pkgVersion,
-          architectures: [osArch]  // XXX 'web.browser' too?
+    main.captureAndExit(
+      "=> Errors downloading packages for " + osArch + ":",
+      function () {
+        tmpTropo.downloadPackagesMissingFromMap(packageMap, {
+          serverArchitectures: [osArch]
         });
-      });
-    });
+      }
+    );
 
     // Install the sqlite DB file we synced earlier. We have previously
     // confirmed that the "-wal" file (which could contain extra log entries

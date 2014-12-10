@@ -14,6 +14,7 @@ var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
 var auth = require('./auth.js');
+var packageMapModule = require('./package-map.js');
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -176,31 +177,14 @@ var updateMeteorToolSymlink = function () {
     // The latest release from the catalog is not where the ~/.meteor/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
-    try {
-      buildmessage.enterJob({
-        title: "Downloading tool package " + latestRelease.tool
-      }, function () {
-        tropohouse.default.maybeDownloadPackageForArchitectures({
-          packageName: latestReleaseToolPackage,
-          version: latestReleaseToolVersion,
-          architectures: [archinfo.host()],
-          silent: true
-        });
-      });
-      _.each(latestRelease.packages, function (pkgVersion, pkgName) {
-        buildmessage.enterJob({
-          title: "Downloading package " + pkgName + "@" + pkgVersion
-        }, function () {
-          tropohouse.default.maybeDownloadPackageForArchitectures({
-            packageName: pkgName,
-            version: pkgVersion,
-            architectures: [archinfo.host()],
-            silent: true
-          });
-        });
-      });
-    } catch (err) {
-      return;  // since we are running in the background.
+    var packageMap =
+          packageMapModule.PackageMap.fromReleaseVersion(latestRelease);
+    var messages = buildmessage.capture(function () {
+      tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+    });
+    if (messages.hasMessages()) {
+      // Ignore errors, because we are running in the background.
+      return;
     }
 
     var toolIsopack = new isopack.Isopack;

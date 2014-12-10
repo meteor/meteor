@@ -11,13 +11,21 @@ var utils = require('./utils.js');
 // .meteor/packages file on disk.)
 //
 // It has a corresponding JSON format (used, eg, inside buildinfo files).
-exports.PackageMap = function (versions, localCatalog) {
+//
+// If you specify the localCatalog option to the constructor, any package in
+// that localCatalog will be considered to be local, and all others will be
+// considered to be prebuilt versioned packages from troposphere.  If you do not
+// specify the localCatalog option, all packages will be considered to prebuilt
+// versioned packages.
+exports.PackageMap = function (versions, options) {
   var self = this;
+  options = options || {};
   self._map = {};
-  self._localCatalog = localCatalog;
+  self._localCatalog = options.localCatalog || null;
 
   _.each(versions, function (version, packageName) {
-    var packageSource = localCatalog.getPackageSource(packageName);
+    var packageSource = self._localCatalog &&
+          self._localCatalog.getPackageSource(packageName);
     if (packageSource) {
       self._map[packageName] =
         { kind: 'local', version: version, packageSource: packageSource };
@@ -50,7 +58,9 @@ _.extend(exports.PackageMap.prototype, {
         throw Error("not a subset: " + packageName);
       subsetVersions[packageName] = info.version;
     });
-    return new exports.PackageMap(subsetVersions, self._localCatalog);
+    return new exports.PackageMap(subsetVersions, {
+      localCatalog: self._localCatalog
+    });
   },
 
   toJSON: function () {
@@ -101,6 +111,27 @@ _.extend(exports.PackageMap.prototype, {
   }
 });
 
+// Static method: returns a PackageMap that represents a (catalog)
+// ReleaseVersion entry (including its tool).  Note that this function assumes
+// that all packages will be prebuilt versioned, not local. This is mostly used
+// to create PackageMaps to pass to tropohouse.downloadPackagesMissingFromMap;
+// it should not be used as part of a ProjectContext because it does not allow
+// you to override release packages with local packages.
+exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
+  var toolConstraint = releaseVersion.tool &&
+        utils.parseConstraint(releaseVersion.tool);
+  if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
+    throw new Error("bad tool in release: " + releaseVersion.tool);
+  var toolPackage = toolConstraint.name;
+  var toolVersion = toolConstraint.constraints[0].version;
+
+  var versionMap = _.clone(releaseVersion.packages || {});
+  versionMap[toolPackage] = toolVersion;
+
+  // As described in this function's description, all packages in this map are
+  // versioned, so we do not specify a localCatalog.
+  return new exports.PackageMap(versionMap);
+};
 
 
 

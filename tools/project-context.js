@@ -400,8 +400,9 @@ _.extend(exports.ProjectContext.prototype, {
     if (!solution)
       return;  // error is already in buildmessage
 
-    self.packageMap = new packageMapModule.PackageMap(
-      solution.answer, self.localCatalog);
+    self.packageMap = new packageMapModule.PackageMap(solution.answer, {
+      localCatalog: self.localCatalog
+    });
 
     self.packageMapDelta = new packageMapModule.PackageMapDelta({
       cachedVersions: cachedVersions,

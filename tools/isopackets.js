@@ -232,7 +232,9 @@ var makeIsopacketBuildContext = function () {
   _.each(catalog.getAllPackageNames(), function (packageName) {
     versions[packageName] = catalog.getLatestVersion(packageName).version;
   });
-  context.packageMap = new packageMapModule.PackageMap(versions, catalog);
+  context.packageMap = new packageMapModule.PackageMap(versions, {
+    localCatalog: catalog
+  });
   // Make an isopack cache that doesn't save isopacks to disk and has no
   // access to versioned packages.
   context.isopackCache = new isopackCacheModule.IsopackCache({

@@ -120,8 +120,9 @@ var setUpBuiltPackageTropohouse = function () {
       versions[packageName] =
         tropohouseLocalCatalog.getLatestVersion(packageName).version;
   });
-  var packageMap = new packageMapModule.PackageMap(
-    versions, tropohouseLocalCatalog);
+  var packageMap = new packageMapModule.PackageMap(versions, {
+    localCatalog: tropohouseLocalCatalog
+  });
   // Make an isopack cache that doesn't automatically save isopacks to disk and
   // has no access to versioned packages.
   tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
