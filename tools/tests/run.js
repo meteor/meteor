@@ -187,7 +187,7 @@ selftest.define("run errors", function () {
   f.wait();
 
   var run = s.run("-p", proxyPort);
-  _.times(3, function () {
+  _.times(2, function () {
     run.waitSecs(30);
     run.match("Unexpected mongo exit code 48. Restarting.");
   });

@@ -343,9 +343,9 @@ var AppRunner = function (options) {
   self.exitFuture = null;
   self.watchFuture = null;
 
-  // Futures added to this list by calling self.awaitFutureBeforeStart
-  // will be waited on just before self.appProcess.start() is called.
-  self._beforeStartFutures = [];
+  // If this future is set with self.awaitFutureBeforeStart, then for the first
+  // run, we will wait on it just before self.appProcess.start() is called.
+  self._beforeStartFuture = null;
 };
 
 _.extend(AppRunner.prototype, {
@@ -386,14 +386,21 @@ _.extend(AppRunner.prototype, {
 
     self._runFutureReturn({ outcome: 'stopped' });
     self._watchFutureReturn();
-
+    if (self._beforeStartFuture && ! self._beforeStartFuture.isResolved()) {
+      // If we stopped before mongod started (eg, due to mongod startup
+      // failure), unblock the runner fiber from waiting for mongod to start.
+      self._beforeStartFuture.return(true);
+    }
     self.exitFuture.wait();
     self.exitFuture = null;
   },
 
   awaitFutureBeforeStart: function(future) {
-    if (future instanceof Future) {
-      this._beforeStartFutures.push(future);
+    var self = this;
+    if (self._beforeStartFuture) {
+      throw new Error("awaitFutureBeforeStart called twice?");
+    } else if (future instanceof Future) {
+      self._beforeStartFuture = future;
     } else {
       throw new Error("non-Future passed to awaitFutureBeforeStart");
     }
@@ -621,8 +628,11 @@ _.extend(AppRunner.prototype, {
     });
 
     // Empty self._beforeStartFutures and await its elements.
-    if (self._beforeStartFutures.length > 0) {
-      Future.wait(self._beforeStartFutures.splice(0));
+    if (options.firstRun && self._beforeStartFuture) {
+      var stopped = self._beforeStartFuture.wait();
+      if (stopped) {
+        return true;
+      }
     }
 
     appProcess.start();

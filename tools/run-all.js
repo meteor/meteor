@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var Fiber = require('fibers');
 var Future = require('fibers/future');
 
 var files = require('./files.js');
@@ -185,17 +186,22 @@ _.extend(Runner.prototype, {
   },
 
   _startMongoAsync: function () {
-    if (! this.stopped && this.mongoRunner) {
-      this.appRunner.awaitFutureBeforeStart(this._startMongoFuture());
+    var self = this;
+    if (! self.stopped && self.mongoRunner) {
+      var future = new Future;
+      self.appRunner.awaitFutureBeforeStart(future);
+      Fiber(function () {
+        self.mongoRunner.start();
+        if (! self.stopped && ! self.quiet) {
+          runLog.log("Started MongoDB.",  { arrow: true });
+        }
+        // This future might also get resolved by appRunner.stop, so we need
+        // this check here (which is why we can't use f.future(), which does not
+        // have this check).
+        future.isResolved() || future.return();
+      }).run();
     }
   },
-
-  _startMongoFuture: function () {
-    this.mongoRunner.start();
-    if (! this.stopped && ! this.quiet) {
-      runLog.log("Started MongoDB.",  { arrow: true });
-    }
-  }.future(),
 
   // Idempotent
   stop: function () {
