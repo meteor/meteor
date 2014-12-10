@@ -17,12 +17,12 @@ Package.registerBuildPlugin({
   ]
 });
 
-// This on_use describes the *runtime* implications of using this package.
-Package.on_use(function (api) {
+// This onUse describes the *runtime* implications of using this package.
+Package.onUse(function (api) {
   // XXX would like to do the following only when the first html file
   // is encountered
 
-  api.add_files('templating.js', 'client');
+  api.addFiles('templating.js', 'client');
   api.export('Template', 'client');
 
   api.use('underscore'); // only the subset in packages/blaze/microscore.js
@@ -34,7 +34,7 @@ Package.on_use(function (api) {
   api.imply(['meteor', 'blaze'], 'client');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('htmljs');
   api.use('templating');
@@ -43,7 +43,7 @@ Package.on_test(function (api) {
            'minimongo'], 'client');
   api.use('spacebars-compiler');
 
-  api.add_files([
+  api.addFiles([
     'plugin/html_scanner.js',
     'scanner_tests.js'
   ], 'server');
