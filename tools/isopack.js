@@ -184,27 +184,6 @@ _.extend(Unibuild.prototype, {
 // Isopack
 ///////////////////////////////////////////////////////////////////////////////
 
-var convertIsopackFormat = function (data, versionFrom, versionTo) {
-  var convertedData = _.clone(data);
-  if (versionFrom === versionTo) {
-    return convertedData;
-  }
-
-  // XXX COMPAT WITH 0.9.3
-  if (versionFrom === "unipackage-pre2" && versionTo === "isopack-1") {
-    convertedData.builds = convertedData.unibuilds;
-    delete convertedData.unibuilds;
-    return convertedData;
-  } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
-    convertedData.unibuilds = convertedData.builds;
-    convertedData.format = "unipackage-pre2";
-    delete convertedData.builds;
-    return convertedData;
-  }
-};
-
-var currentFormat = "isopack-1";
-
 // XXX document
 var Isopack = function () {
   var self = this;
@@ -261,6 +240,75 @@ var Isopack = function () {
 
   // XXX doc
   self.pluginProviderPackageMap = null;
+};
+
+Isopack.currentFormat = "isopack-1";
+
+Isopack.convertIsopackFormat = function (data, versionFrom, versionTo) {
+  var convertedData = _.clone(data);
+  if (versionFrom === versionTo) {
+    return convertedData;
+  }
+
+  // XXX COMPAT WITH 0.9.3
+  if (versionFrom === "unipackage-pre2" && versionTo === "isopack-1") {
+    convertedData.builds = convertedData.unibuilds;
+    delete convertedData.unibuilds;
+    return convertedData;
+  } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
+    convertedData.unibuilds = convertedData.builds;
+    convertedData.format = "unipackage-pre2";
+    delete convertedData.builds;
+    return convertedData;
+  }
+};
+
+// Read the correct file from isopackDirectory and convert to current format
+// of the isopack metadata. Returns null if there is no package here.
+Isopack.readMetadataFromDirectory = function (isopackDirectory) {
+  var metadata;
+
+  // deal with different versions of "isopack.json", backwards compatible
+  var isopackJsonPath = files.pathJoin(isopackDirectory, "isopack.json");
+  var unipackageJsonPath = files.pathJoin(isopackDirectory, "unipackage.json");
+
+  if (files.exists(isopackJsonPath)) {
+    var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
+
+    if (isopackJson[Isopack.currentFormat]) {
+      metadata = isopackJson[Isopack.currentFormat];
+    } else {
+      // This file is from the future and no longer supports this version
+      throw new Error("Could not find isopack data with format " + Isopack.currentFormat + ".\n" +
+        "This isopack was likely built with a much newer version of Meteor.");
+    }
+  } else if (files.exists(unipackageJsonPath)) {
+    // super old version with different file name
+    // XXX COMPAT WITH 0.9.3
+    if (files.exists(unipackageJsonPath)) {
+      metadata = JSON.parse(files.readFile(unipackageJsonPath));
+
+      // in the old format, builds were called unibuilds
+      // use string to make sure this doesn't get caught in a find/replace
+      metadata.builds = metadata["unibuilds"];
+
+      metadata = Isopack.convertIsopackFormat(metadata,
+        "unipackage-pre2", Isopack.currentFormat);
+    }
+
+    if (metadata.format !== "unipackage-pre2") {
+      // We don't support pre-0.9.0 isopacks, but we do know enough to delete
+      // them if we find them in an isopack cache somehow (rather than crash).
+      if (metadata.format === "unipackage-pre1") {
+        throw new exports.OldIsopackFormatError();
+      }
+
+      throw new Error("Unsupported isopack format: " +
+                      JSON.stringify(metadata.format));
+    }
+  }
+
+  return metadata;
 };
 
 _.extend(Isopack.prototype, {
@@ -524,49 +572,7 @@ _.extend(Isopack.prototype, {
     // realpath'ing dir.
     dir = files.realpath(dir);
 
-    var mainJson;
-
-    // deal with different versions of "isopack.json", backwards compatible
-    var isopackJsonPath = files.pathJoin(dir, "isopack.json");
-    if (files.exists(isopackJsonPath)) {
-      var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
-
-      if (isopackJson[currentFormat]) {
-        mainJson = isopackJson[currentFormat];
-      } else {
-        // This file is from the future and no longer supports this version
-        throw new Error("Could not find isopack data with format " + currentFormat + ".\n" +
-          "This isopack was likely built with a much newer version of Meteor.");
-      }
-    } else {
-      // super old version with different file name
-      // XXX COMPAT WITH 0.9.3
-      var unipackageJsonPath = files.pathJoin(dir, "unipackage.json");
-      if (files.exists(unipackageJsonPath)) {
-        mainJson = JSON.parse(files.readFile(unipackageJsonPath));
-
-        // in the old format, builds were called unibuilds
-        // use string to make sure this doesn't get caught in a find/replace
-        mainJson.builds = mainJson["unibuilds"];
-
-        mainJson = convertIsopackFormat(mainJson,
-          "unipackage-pre2", currentFormat);
-      }
-
-      if (mainJson.format !== "unipackage-pre2") {
-        // We don't support pre-0.9.0 isopacks, but we do know enough to delete
-        // them if we find them in an isopack cache somehow (rather than crash).
-        if (mainJson.format === "unipackage-pre1") {
-          throw new exports.OldIsopackFormatError();
-        }
-
-        throw new Error("Unsupported isopack format: " +
-                        JSON.stringify(mainJson.format));
-      }
-    }
-
-    // done dealing with different versions, below here
-    // mainJson is the data we want
+    var mainJson = Isopack.readMetadataFromDirectory(dir);
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
@@ -988,7 +994,7 @@ _.extend(Isopack.prototype, {
       // old unipackage.json format/filename
       // XXX COMPAT WITH 0.9.3
       builder.writeJson("unipackage.json",
-        convertIsopackFormat(mainJson, currentFormat, "unipackage-pre2"));
+        Isopack.convertIsopackFormat(mainJson, Isopack.currentFormat, "unipackage-pre2"));
 
       // write several versions of the file
       // add your new format here, and define some stuff
@@ -997,8 +1003,8 @@ _.extend(Isopack.prototype, {
       var isopackJson = {};
       _.each(formats, function (format) {
         // new, extensible format - forwards-compatible
-        isopackJson[format] = convertIsopackFormat(mainJson,
-          currentFormat, format);
+        isopackJson[format] = Isopack.convertIsopackFormat(mainJson,
+          Isopack.currentFormat, format);
       });
 
       // writes one file with all of the new formats, so that it is possible
