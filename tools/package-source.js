@@ -1446,6 +1446,13 @@ _.extend(PackageSource.prototype, {
     var projectWatchSet = projectContext.getProjectWatchSet();
 
     _.each(self.allArchs, function (arch) {
+      // We don't need to build a Cordova SourceArch if there are no Cordova
+      // platforms.
+      if (arch === 'web.cordova' &&
+          _.isEmpty(projectContext.platformList.getCordovaPlatforms())) {
+        return;
+      }
+
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
 
