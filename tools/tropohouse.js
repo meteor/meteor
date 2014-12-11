@@ -242,7 +242,8 @@ _.extend(exports.Tropohouse.prototype, {
     var buildsToDownload = catalog.official.getBuildsForArches(
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
-      buildmessage.error("No compatible build found");
+      buildmessage.error(
+        "No compatible build found", {tags: { refreshCouldHelp: true }});
       return null;
     }
 

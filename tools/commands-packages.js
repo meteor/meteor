@@ -166,7 +166,7 @@ main.registerCommand({
   name: '--prepare-app',
   pretty: true,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir
@@ -1971,6 +1971,8 @@ main.registerCommand({
         if (buildmessage.jobHasMessages())
           return;
 
+        // It's OK to make errors based on looking at the catalog, because this
+        // is a OnceAtStart command.
         var packageRecord = projectContext.projectCatalog.getPackage(
           constraint.name);
         if (! packageRecord) {
@@ -2000,13 +2002,6 @@ main.registerCommand({
         });
         if (buildmessage.jobHasMessages())
           return;
-
-        // We used to check that packages exist and that that if versions were
-        // specified, that they exist. This was especially important when
-        // earliestCompatibleVersion existed, because whether @1.2.3 matched
-        // 1.4.6 depended on the ECV of those two versions; now we just know
-        // that the answer is "yes". We get similar behavior from just running
-        // the constraint solver now.
 
         var current = projectContext.projectConstraintsFile.getConstraint(
           constraint.name);
@@ -2097,7 +2092,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir

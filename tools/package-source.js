@@ -1211,7 +1211,8 @@ _.extend(PackageSource.prototype, {
             var releaseRecord = catalog.official.getReleaseVersion(
               relInf[0], relInf[1]);
             if (!releaseRecord) {
-              buildmessage.error("Unknown release "+ release);
+              buildmessage.error("Unknown release "+ release,
+                                 { tags: { refreshCouldHelp: true } });
             } else {
               releaseRecords.push(releaseRecord);
             }

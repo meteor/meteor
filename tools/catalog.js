@@ -15,6 +15,7 @@ var Console = require('./console.js').Console;
 var catalog = exports;
 
 catalog.refreshFailed = undefined;
+catalog.triedToRefreshRecently = false;
 
 catalog.Refresh = {};
 
@@ -51,6 +52,7 @@ catalog.Refresh.Never = function (options) {
 // THIS IS A HIGH-LEVEL UI COMMAND. DO NOT CALL IT FROM LOW-LEVEL CODE (ie, call
 // it only from main.js or command implementations).
 catalog.refreshOrWarn = function (options) {
+  catalog.triedToRefreshRecently = true;
   try {
     catalog.official.refresh(options);
     catalog.refreshFailed = false;

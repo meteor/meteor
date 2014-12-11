@@ -13,6 +13,7 @@ var runLog = require('./run-log.js');
 var stats = require('./stats.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
+var catalog = require('./catalog.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -427,6 +428,11 @@ _.extend(AppRunner.prototype, {
 
     var bundleApp = function () {
       if (! firstRun) {
+        // If the build fails in a way that could be fixed by a refresh, allow
+        // it even if we refreshed previously, since that might have been a
+        // little while ago.
+        catalog.triedToRefreshRecently = false;
+
         // If this isn't the first time we've run, we need to reset the project
         // context since everything we have cached may have changed.
         // XXX We can try to be a little less conservative here:

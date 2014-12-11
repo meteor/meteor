@@ -1298,9 +1298,7 @@ Fiber(function () {
     } else if (e instanceof main.SpringboardToLatestRelease) {
       // Load the metadata for the latest release (or at least, the latest
       // release we know about locally). We should only do this if we know there
-      // is some latest release on this track. Note that this is only throw by
-      // 'update' and 'create', which are both catalog.Refresh.OnceAtStart
-      // commands, so we ought to have decent knowledge of the latest release.
+      // is some latest release on this track.
       var latestRelease = release.load(release.latestKnown(e.track));
       springboard(latestRelease, { releaseOverride: latestRelease.name });
       // (does not return)

@@ -141,7 +141,6 @@ selftest.define("run --once", function () {
   s.set("RUN_ONCE_OUTCOME", "exit");
   s.write("junk.js", "]");
   run = s.run("--once");
-  run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.matchErr("Build failed");
   run.matchErr("Unexpected token");

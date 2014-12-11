@@ -363,7 +363,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   _resolveConstraints: function () {
     var self = this;
-    buildmessage.assertInCapture();
+    buildmessage.assertInJob();
 
     var depsAndConstraints = self._getRootDepsAndConstraints();
     // If this is in the runner and we have reset this ProjectContext for a
@@ -375,45 +375,49 @@ _.extend(exports.ProjectContext.prototype, {
           self.packageMapFile.getCachedVersions();
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
-    var resolver = self._buildResolver();
 
-    var solution;
-    buildmessage.enterJob("selecting package versions", function () {
-      var resolveOptions = {
-        previousSolution: cachedVersions,
-        anticipatedPrereleases: anticipatedPrereleases
-      };
-      if (self._upgradePackageNames)
-        resolveOptions.upgrade = self._upgradePackageNames;
+    // Nothing before this point looked in the official or project catalog!
+    // However, the resolver does, so it gets run in the retry context.
+    self._runAndRetryWithRefreshIfHelpful(function () {
+      buildmessage.enterJob("selecting package versions", function () {
+        var resolver = self._buildResolver();
 
-      try {
-        solution = resolver.resolve(
-          depsAndConstraints.deps, depsAndConstraints.constraints,
-          resolveOptions);
-      } catch (e) {
-        if (!e.constraintSolverError)
-          throw e;
-        buildmessage.error(e.message);
-      }
-    });
+        var resolveOptions = {
+          previousSolution: cachedVersions,
+          anticipatedPrereleases: anticipatedPrereleases
+        };
+        if (self._upgradePackageNames)
+          resolveOptions.upgrade = self._upgradePackageNames;
 
-    if (!solution)
-      return;  // error is already in buildmessage
+        try {
+          var solution = resolver.resolve(
+            depsAndConstraints.deps, depsAndConstraints.constraints,
+            resolveOptions);
+        } catch (e) {
+          if (!e.constraintSolverError)
+            throw e;
+          buildmessage.error(e.message, { tags: { refreshCouldHelp: true }});
+        }
 
-    self.packageMap = new packageMapModule.PackageMap(solution.answer, {
-      localCatalog: self.localCatalog
-    });
+        if (buildmessage.jobHasMessages())
+          return;
 
-    self.packageMapDelta = new packageMapModule.PackageMapDelta({
-      cachedVersions: cachedVersions,
-      packageMap: self.packageMap,
-      usedRCs: solution.usedRCs,
-      neededToUseUnanticipatedPrereleases:
+        self.packageMap = new packageMapModule.PackageMap(solution.answer, {
+          localCatalog: self.localCatalog
+        });
+
+        self.packageMapDelta = new packageMapModule.PackageMapDelta({
+          cachedVersions: cachedVersions,
+          packageMap: self.packageMap,
+          usedRCs: solution.usedRCs,
+          neededToUseUnanticipatedPrereleases:
           solution.neededToUseUnanticipatedPrereleases,
-      anticipatedPrereleases: anticipatedPrereleases
-    });
+          anticipatedPrereleases: anticipatedPrereleases
+        });
 
-    self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
+        self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
+      });
+    });
   },
 
   _localPackageSearchDirs: function () {
@@ -443,21 +447,85 @@ _.extend(exports.ProjectContext.prototype, {
   // Must be run in a buildmessage context. On build error, returns null.
   _initializeCatalog: function () {
     var self = this;
-    buildmessage.assertInCapture();
+    buildmessage.assertInJob();
 
-    self.localCatalog = new catalogLocal.LocalCatalog;
-    self.projectCatalog = new catalog.LayeredCatalog(
-      self.localCatalog, catalog.official);
+    self._runAndRetryWithRefreshIfHelpful(function () {
+      buildmessage.enterJob(
+        "scanning local packages",
+        function () {
+          self.localCatalog = new catalogLocal.LocalCatalog;
+          self.projectCatalog = new catalog.LayeredCatalog(
+            self.localCatalog, catalog.official);
 
-    var searchDirs = self._localPackageSearchDirs();
-    buildmessage.enterJob({ title: "scanning local packages" }, function () {
-      self.localCatalog.initialize({
-        localPackageSearchDirs: searchDirs,
-        explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
-      });
+          var searchDirs = self._localPackageSearchDirs();
+          self.localCatalog.initialize({
+            localPackageSearchDirs: searchDirs,
+            explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
+          });
+
+          if (buildmessage.jobHasMessages()) {
+            // Even if this fails, we want to leave self.localCatalog assigned,
+            // so that it gets counted included in the projectWatchSet.
+            return;
+          }
+
+          self._completedStage = STAGE.INITIALIZE_CATALOG;
+        }
+      );
     });
+  },
 
-    self._completedStage = STAGE.INITIALIZE_CATALOG;
+  // Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
+  // official catalog, does that and tries again.
+  _runAndRetryWithRefreshIfHelpful: function (attempt) {
+    var self = this;
+    buildmessage.assertInJob();
+
+    // Run `attempt` in a nested buildmessage context.
+    var messages = buildmessage.capture(attempt);
+
+    // Did it work? Great. Move on to the next stage.
+    if (! messages.hasMessages()) {
+      return;
+    }
+
+    // Is refreshing unlikely to be useful, either because the error wasn't
+    // related to that, or because we tried to refresh recently, or because
+    // we're not allowed to refresh? Fail, merging the result of these errors
+    // into the current job (which will cause the _completeStagesThrough loop to
+    // halt).
+    if (! messages.hasMessageWithTag('refreshCouldHelp') ||
+        catalog.triedToRefreshRecently ||
+        catalog.official.offline) {
+      buildmessage.mergeMessagesIntoCurrentJob(messages);
+      return;
+    }
+
+    // Refresh!
+    // XXX This is a little hacky, as it shares a bunch of code with
+    // catalog.refreshOrWarn, which is a higher-level function that's allowed to
+    // log.
+    catalog.triedToRefreshRecently = true;
+    try {
+      catalog.official.refresh();
+      catalog.refreshFailed = false;
+    } catch (err) {
+      if (err.errorType !== 'DDP.ConnectionError')
+        throw err;
+      // First place the previous errors in the capture.
+      buildmessage.mergeMessagesIntoCurrentJob(messages);
+      // Then put an error representing this DDP error.
+      buildmessage.enterJob(
+        "refreshing package catalog to resolve previous errors",
+        function () {
+          buildmessage.error(err.message);
+        }
+      );
+      return;
+    }
+
+    // Try again, this time directly in the current buildmessage job.
+    attempt();
   },
 
   _getRootDepsAndConstraints: function () {
@@ -566,13 +634,20 @@ _.extend(exports.ProjectContext.prototype, {
 
   _downloadMissingPackages: function () {
     var self = this;
-    buildmessage.assertInCapture();
+    buildmessage.assertInJob();
     if (!self.packageMap)
       throw Error("which packages to download?");
-    self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
-      serverArchitectures: self._serverArchitectures
+
+    self._runAndRetryWithRefreshIfHelpful(function () {
+      buildmessage.enterJob("downloading missing packages", function () {
+        self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
+          serverArchitectures: self._serverArchitectures
+        });
+        if (buildmessage.jobHasMessages())
+          return;
+        self._completedStage = STAGE.DOWNLOAD_MISSING_PACKAGES;
+      });
     });
-    self._completedStage = STAGE.DOWNLOAD_MISSING_PACKAGES;
   },
 
   _buildLocalPackages: function () {

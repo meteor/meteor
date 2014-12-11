@@ -179,7 +179,7 @@ var runCommandOptions = {
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean}
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 };
 
 main.registerCommand(_.extend(
@@ -404,7 +404,7 @@ main.registerCommand({
     package: { type: Boolean }
   },
   pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
   // Creating a package is much easier than creating an app, so if that's what
@@ -636,7 +636,7 @@ var buildCommands = {
     verbose: { type: Boolean, short: "v" }
   },
   pretty: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 };
 
 main.registerCommand(_.extend({ name: 'build' }, buildCommands),
@@ -1007,7 +1007,7 @@ main.registerCommand({
   requiresApp: function (options) {
     return options.delete || options.star ? false : true;
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
@@ -1288,7 +1288,7 @@ main.registerCommand({
     android: { type: Boolean },
     'android-device': { type: Boolean }
   },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -1543,7 +1543,7 @@ main.registerCommand({
   hidden: true,
   pretty: true,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContextModule = require('./project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
@@ -1758,7 +1758,7 @@ main.registerCommand({
     file: { type: String }
   },
   hidden: true,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var selftest = require('./selftest.js');
 

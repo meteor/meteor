@@ -42,6 +42,13 @@ _.extend(Job.prototype, {
     return self.messages.length > 0;
   },
 
+  hasMessageWithTag: function (tagName) {
+    var self = this;
+    return _.any(self.messages, function (message) {
+      return message.tags && _.has(message.tags, tagName);
+    });
+  },
+
   // Returns a multi-line string suitable for displaying to the user
   formatMessages: function (indent) {
     var self = this;
@@ -139,8 +146,15 @@ _.extend(MessageSet.prototype, {
 
   hasMessages: function () {
     var self = this;
-    return !! _.find(self.jobs, function (job) {
+    return _.any(self.jobs, function (job) {
       return job.hasMessages();
+    });
+  },
+
+  hasMessageWithTag: function (tagName) {
+    var self = this;
+    return _.any(self.jobs, function (job) {
+      return job.hasMessageWithTag(tagName);
     });
   },
 
@@ -401,6 +415,9 @@ var markBoundary = function (f) {
 //   errors in this job (the implication is that it's probably
 //   downstream of the other error, ie, a consequence of our attempt
 //   to continue past other errors)
+// - tags: object with other error-specific data; there is a method
+//   on MessageSet which can search for errors with a specific named
+//   tag.
 var error = function (message, options) {
   options = options || {};
 
@@ -486,6 +503,19 @@ var assertInJob = function () {
 var assertInCapture = function () {
   if (! currentMessageSet.get())
     throw new Error("Expected to be in a buildmessage capture");
+};
+
+var mergeMessagesIntoCurrentJob = function (innerMessages) {
+  var outerMessages = currentMessageSet.get();
+  if (! outerMessages)
+    throw new Error("Expected to be in a buildmessage capture");
+  var outerJob = currentJob.get();
+  if (! outerJob)
+    throw new Error("Expected to be in a buildmessage job");
+  _.each(innerMessages.jobs, function (j) {
+    outerJob.children.push(j);
+  });
+  outerMessages.merge(innerMessages);
 };
 
 // Like _.each, but runs each operation in a separate job
@@ -580,6 +610,7 @@ _.extend(exports, {
   jobHasMessages: jobHasMessages,
   assertInJob: assertInJob,
   assertInCapture: assertInCapture,
+  mergeMessagesIntoCurrentJob: mergeMessagesIntoCurrentJob,
   forkJoin: forkJoin,
   getRootProgress: getRootProgress,
   reportProgress: reportProgress,
