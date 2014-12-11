@@ -564,7 +564,17 @@ _.extend(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {
-      utils.sleepMs(1);
+      var f = new Future;
+      // setImmediate allows signals and IO to be processed but doesn't
+      // otherwise add time-based delays. It is better for yielding than
+      // process.nextTick (which doesn't allow signals or IO to be processed) or
+      // setTimeout 1 (which adds a minimum of 1 ms and often more in delays).
+      // XXX Actually, setImmediate is so fast that we might not even need
+      // to use the throttler at all?
+      setImmediate(function () {
+        f.return();
+      });
+      f.wait();
     }
   }
 });
