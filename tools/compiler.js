@@ -9,6 +9,7 @@ var isopackets = require('./isopackets.js');
 var linker = require('./linker.js');
 var meteorNpm = require('./meteor-npm.js');
 var watch = require('./watch.js');
+var Console = require('./console.js').Console;
 
 var compiler = exports;
 
@@ -312,6 +313,8 @@ var compileUnibuild = function (options) {
     var filename = path.basename(relPath);
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
+
+    Console.nudge(true);
 
     if (contents === null) {
       buildmessage.error("File not found: " + source.relPath);
