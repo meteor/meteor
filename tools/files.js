@@ -1025,9 +1025,9 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation) {
 
 /////// Below here, functions have been corrected for slashes
 
-var toPosixPath = function (p) {
+var toPosixPath = function (p, notAbsolute) {
   p = p.replace(/\\/g, '/');
-  if (p[1] === ':') {
+  if (p[1] === ':' && ! notAbsolute) {
     // transform "C:/bla/bla" to "/C/bla/bla"
     p = '/' + p[0] + p.slice(2);
   }
@@ -1035,8 +1035,8 @@ var toPosixPath = function (p) {
   return p;
 };
 
-var toDosPath = function (p) {
-  if (p[0] === '/') {
+var toDosPath = function (p, notAbsolute) {
+  if (p[0] === '/' && ! notAbsolute) {
     if (! /^\/[A-Z]\//.test(p))
       throw new Error("Surprising path: " + p);
     // transform a previously windows path back
@@ -1049,17 +1049,17 @@ var toDosPath = function (p) {
 };
 
 
-var convertToOSPath = function (standardPath) {
+var convertToOSPath = function (standardPath, notAbsolute) {
   if (process.platform === "win32") {
-    return toDosPath(standardPath);
+    return toDosPath(standardPath, notAbsolute);
   }
 
   return standardPath;
 };
 
-var convertToStandardPath = function (osPath) {
+var convertToStandardPath = function (osPath, notAbsolute) {
   if (process.platform === "win32") {
-    return toPosixPath(osPath);
+    return toPosixPath(osPath, notAbsolute);
   }
 
   return osPath;
@@ -1249,11 +1249,15 @@ files.unwatchFile = function () {
 // forward slashes)
 var wrapPathFunction = function (name) {
   var f = path[name];
-
   return function (/* args */) {
     if (process.platform === 'win32') {
       var args = _.toArray(arguments);
-      return toPosixPath(f.apply(path, _.map(args, toDosPath)));
+      args = _.map(args, function (p, i) {
+        // if partialPaths is turned on (for path.join mostly)
+        // forget about conversion of absolute paths for Windows
+        return toDosPath(p, partialPaths);
+      });
+      return toPosixPath(f.apply(path, args), partialPaths);
     } else {
       return f.apply(path, arguments);
     }
