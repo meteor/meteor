@@ -43,7 +43,7 @@ var PROGRESS_MAX_WIDTH = 40;
 var PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 var TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
-var STATUS_INTERVAL_MS = 500;
+var STATUS_INTERVAL_MS = 50;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
@@ -379,6 +379,9 @@ var StatusPoller = function (console) {
   self._console = console;
 
   self._pollFiber = null;
+  self._throttledStatusPoll = new utils.Throttled({
+    interval: STATUS_INTERVAL_MS
+  });
   self._startPoller();
   self._stop = false;
 };
@@ -393,7 +396,7 @@ _.extend(StatusPoller.prototype, {
 
     self._pollFiber = Fiber(function () {
       while (! self._stop) {
-        utils.sleepMs(100);
+        utils.sleepMs(STATUS_INTERVAL_MS);
 
         self.statusPoll();
       }
@@ -409,10 +412,15 @@ _.extend(StatusPoller.prototype, {
 
   statusPoll: function () {
     var self = this;
+    if (self._throttledStatusPoll.isAllowed()) {
+      self._statusPoll();
+    }
+  },
+
+  _statusPoll: function () {
+    var self = this;
 
     // XXX: Early exit here if we're not showing status at all?
-
-    self._lastStatusPoll = Date.now();
 
     var rootProgress = buildmessage.getRootProgress();
     if (PROGRESS_DEBUG) {
@@ -479,7 +487,6 @@ var Console = function (options) {
   self._statusPoller = null;
 
   self._throttledYield = new utils.ThrottledYield();
-  self._throttledStatusPoll = new utils.Throttled(STATUS_INTERVAL_MS);
 
   self.verbose = false;
 
@@ -600,10 +607,8 @@ _.extend(Console.prototype, {
   // if you just want to update the spinner and not yield, but you should avoid this.
   nudge: function (canYield) {
     var self = this;
-    if (self._throttledStatusPoll.isAllowed()) {
-      if (self._statusPoller) {
-        self._statusPoller.statusPoll();
-      }
+    if (self._statusPoller) {
+      self._statusPoller.statusPoll();
     }
     if (canYield === undefined || canYield === true) {
       self._throttledYield.yield();
