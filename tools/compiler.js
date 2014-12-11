@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var url = require('url');
 
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
@@ -317,7 +318,7 @@ var compileUnibuild = function (options) {
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, relPath),
+      servePath: url.resolve(inputSourceArch.pkg.serveRoot, relPath),
       hash: hash
     });
   };
@@ -646,7 +647,7 @@ var compileUnibuild = function (options) {
           type: "css",
           refreshable: true,
           data: new Buffer(options.data, 'utf8'),
-          servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, options.path),
+          servePath: url.resolve(inputSourceArch.pkg.serveRoot, options.path),
           sourceMap: options.sourceMap
         });
       },
@@ -684,7 +685,7 @@ var compileUnibuild = function (options) {
         js.push({
           source: options.data,
           sourcePath: options.sourcePath,
-          servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, options.path),
+          servePath: url.resolve(inputSourceArch.pkg.serveRoot, options.path),
           bare: !! bare,
           sourceMap: options.sourceMap,
           sourceHash: options._hash

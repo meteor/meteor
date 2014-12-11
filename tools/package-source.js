@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
+var url = require('url');
 
 var files = require('./files.js');
 var utils = require('./utils.js');
@@ -382,8 +383,8 @@ _.extend(PackageSource.prototype, {
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
-    self.sourceRoot = options.sourceRoot || files.pathSep;
-    self.serveRoot = options.serveRoot || files.pathSep;
+    self.sourceRoot = options.sourceRoot || '/';
+    self.serveRoot = options.serveRoot || '/';
 
     var nodeModulesPath = null;
     utils.ensureOnlyExactVersions(options.npmDependencies);
@@ -1481,7 +1482,7 @@ _.extend(PackageSource.prototype, {
     });
 
     // Serve root of the package.
-    self.serveRoot = files.pathJoin(files.pathSep, 'packages', self.name);
+    self.serveRoot = url.resolve('/packages/', self.name);
 
     // Name of the test.
     if (hasTests) {
@@ -1495,7 +1496,7 @@ _.extend(PackageSource.prototype, {
     var appDir = projectContext.projectDir;
     self.name = null;
     self.sourceRoot = appDir;
-    self.serveRoot = files.pathSep;
+    self.serveRoot = '/';
 
     // special files those are excluded from app's top-level sources
     var controlFiles = ['mobile-config.js'];
