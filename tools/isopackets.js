@@ -156,7 +156,7 @@ var ensureIsopacketsLoadable = function () {
         }
 
         buildmessage.enterJob({
-          title: "Bundling " + isopacketName + " packages for the tool"
+          title: "bundling " + isopacketName + " packages for the tool"
         }, function () {
           // Build the packages into the in-memory IsopackCache.
           isopacketBuildContext.isopackCache.buildLocalPackages(packages);
@@ -204,7 +204,7 @@ var newIsopacketBuildingCatalog = function () {
   var catalogLocal = require('./catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
-    { title: "Scanning local core packages" },
+    { title: "scanning local core packages" },
     function () {
       // When running from a checkout, isopacket building does use local
       // packages, but *ONLY THOSE FROM THE CHECKOUT*: not app packages or
@@ -264,7 +264,7 @@ var loadIsopacketFromDisk = function (isopacketName) {
 
   var ret;
   var messages = buildmessage.capture({
-    title: "Loading isopacket `" + isopacketName + "`"
+    title: "loading isopacket `" + isopacketName + "`"
   }, function () {
     ret = image.load(env);
   });

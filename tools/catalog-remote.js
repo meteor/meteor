@@ -786,7 +786,7 @@ _.extend(RemoteCatalog.prototype, {
 
     var updateResult = {};
     // XXX This buildmessage.enterJob only exists for showing progress.
-    buildmessage.enterJob({ title: 'Updating package catalog.' }, function () {
+    buildmessage.enterJob({ title: 'updating package catalog' }, function () {
       updateResult = packageClient.updateServerPackageData(self);
     });
 

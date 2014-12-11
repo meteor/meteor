@@ -1277,7 +1277,7 @@ Fiber(function () {
     // Before run, do a package sync if one is configured
     var catalogRefreshStrategy = command.catalogRefresh;
     if (!alreadyRefreshed && catalogRefreshStrategy.beforeCommand) {
-      buildmessage.enterJob({title: 'Updating package catalog'}, function () {
+      buildmessage.enterJob({title: 'updating package catalog'}, function () {
         catalogRefreshStrategy.beforeCommand();
       });
     }

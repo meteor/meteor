@@ -22,6 +22,10 @@ var Progress = function (options) {
   self._watchers = options.watchers || [];
 
   self._title = options.title;
+  if (self._title) {
+    // Capitalize job titles when displayed in the progress bar.
+    self._title = self._title[0].toUpperCase() + self._title.slice(1);
+  }
 
   // XXX: Should we have a strict/mdg mode that enables this test?
   //if (!self._title && self._parent) {

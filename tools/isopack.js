@@ -494,7 +494,7 @@ _.extend(Isopack.prototype, {
 
       var plugin = pluginsByArch[arch];
       buildmessage.enterJob({
-        title: "Loading plugin `" + name +
+        title: "loading plugin `" + name +
           "` from package `" + self.name + "`"
         // don't necessarily have rootPath anymore
         // (XXX we do, if the isopack was locally built, which is
@@ -1067,7 +1067,7 @@ _.extend(Isopack.prototype, {
       // isopackets that we're writing out.
       _.each(isopackets.ISOPACKETS, function (packages, isopacketName) {
         buildmessage.enterJob({
-          title: "Compiling " + isopacketName + " packages for the tool"
+          title: "compiling " + isopacketName + " packages for the tool"
         }, function () {
           isopacketBuildContext.isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages())

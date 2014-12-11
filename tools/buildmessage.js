@@ -16,6 +16,11 @@ var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 //
 // Jobs are used both for error handling (via buildmessage.capture) and to set
 // the progress bar title (via progress.js).
+//
+// Job titles should begin with a lower-case letter (unless they begin with a
+// proper noun), so that they look correct in error messages which say "While
+// jobbing the job".  The first letter will be capitalized automatically for the
+// progress bar.
 var Job = function (options) {
   var self = this;
   self.messages = [];
@@ -214,7 +219,8 @@ var getCurrentProgressTracker = function () {
 
 var addChildTracker = function (title) {
   var options = {};
-  options.title = title;
+  if (title !== undefined)
+    options.title = title;
   return getCurrentProgressTracker().addChildTask(options);
 };
 
@@ -231,19 +237,10 @@ var capture = function (options, f) {
   var messageSet = new MessageSet;
   var parentMessageSet = currentMessageSet.get();
 
-  {
-    var parentProgress = currentProgress.get();
-    if (!parentProgress) {
-      parentProgress = rootProgress;
-    }
-    var childOptions = {};
-    if (typeof options === "object") {
-      if (options.title) {
-        childOptions.title = options.title;
-      }
-    }
-    var progress = parentProgress.addChildTask(childOptions);
-  }
+  var title;
+  if (typeof options === "object" && options.title)
+    title = options.title;
+  var progress = addChildTracker(title);
 
   currentProgress.withValue(progress, function () {
     currentMessageSet.withValue(messageSet, function () {
@@ -304,10 +301,6 @@ var enterJob = function (options, f) {
 
   var progress;
   {
-    var parentProgress = currentProgress.get();
-    if (!parentProgress) {
-      parentProgress = rootProgress;
-    }
     var progressOptions = {};
     // XXX: Just pass all the options?
     if (typeof options === "object") {
@@ -318,7 +311,7 @@ var enterJob = function (options, f) {
         progressOptions.forkJoin = options.forkJoin;
       }
     }
-    progress = parentProgress.addChildTask(progressOptions);
+    progress = getCurrentProgressTracker().addChildTask(progressOptions);
   }
 
   return currentProgress.withValue(progress, function () {

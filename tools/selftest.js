@@ -159,7 +159,7 @@ var newSelfTestCatalog = function () {
   var catalogLocal = require('./catalog-local.js');
   var selfTestCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
-    { title: "Scanning local core packages" },
+    { title: "scanning local core packages" },
     function () {
       // When building a fake warehouse from a checkout, we use local packages,
       // but *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS

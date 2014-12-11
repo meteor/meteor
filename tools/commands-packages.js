@@ -847,7 +847,7 @@ main.registerCommand({
     _.each(toPublish, function (packageName) {
       main.captureAndExit(
         "=> Errors while publishing:",
-        "Publishing package " + packageName,
+        "publishing package " + packageName,
         function () {
           var isopk = projectContext.isopackCache.getIsopack(packageName);
           if (! isopk)
@@ -1306,7 +1306,7 @@ main.registerCommand({
   }
 
 
-  buildmessage.enterJob({ title: 'Searching packages' }, function () {
+  buildmessage.enterJob({ title: 'searching packages' }, function () {
     _.each(allPackages, function (pack) {
       if (selector(pack, false)) {
         var vr;
@@ -2360,11 +2360,11 @@ main.registerCommand({
 
   // Before downloading anything, check that the catalog contains everything we
   // need for the OSes that the tool is built for.
-  var messages = buildmessage.capture(function () {
+  main.captureAndExit("=> Errors finding builds:", function () {
     _.each(osArches, function (osArch) {
       _.each(releaseRecord.packages, function (pkgVersion, pkgName) {
         buildmessage.enterJob({
-          title: "Looking up " + pkgName + "@" + pkgVersion + " on " + osArch
+          title: "looking up " + pkgName + "@" + pkgVersion + " on " + osArch
         }, function () {
           if (!catalog.official.getBuildsForArches(pkgName, pkgVersion, [osArch])) {
             buildmessage.error("missing build of " + pkgName + "@" + pkgVersion +
@@ -2374,11 +2374,6 @@ main.registerCommand({
       });
     });
   });
-
-  if (messages.hasMessages()) {
-    Console.printMessages(messages);
-    return 1;
-  };
 
   files.mkdir_p(outputDirectory);
 

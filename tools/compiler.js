@@ -42,7 +42,7 @@ compiler.compile = function (packageSource, options) {
   // Build plugins
   _.each(packageSource.pluginInfo, function (info) {
     buildmessage.enterJob({
-      title: "Building plugin `" + info.name +
+      title: "building plugin `" + info.name +
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {

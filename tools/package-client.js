@@ -105,7 +105,7 @@ var loadRemotePackageData = function (conn, syncToken, options) {
 //  - useShortPages: Boolean. Request short pages of ~3 records from the
 //    server, instead of ~100 that it would send otherwise
 exports.updateServerPackageData = function (dataStore, options) {
-  return buildmessage.enterJob({ title: 'Updating package catalog' }, function () {
+  return buildmessage.enterJob('updating package catalog', function () {
     return _updateServerPackageData(dataStore, options);
   });
 };

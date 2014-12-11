@@ -393,7 +393,7 @@ var bundleAndDeploy = function (options) {
 
   var settings = null;
   var messages = buildmessage.capture({
-    title: "Preparing to deploy",
+    title: "preparing to deploy",
     rootPath: process.cwd()
   }, function () {
     if (options.settingsFile)
@@ -427,7 +427,7 @@ var bundleAndDeploy = function (options) {
     });
   }
 
-  var result = buildmessage.enterJob({ title: "Uploading" }, function () {
+  var result = buildmessage.enterJob({ title: "uploading" }, function () {
     return authedRpc({
       method: 'POST',
       operation: 'deploy',

@@ -334,7 +334,7 @@ _.extend(LocalCatalog.prototype, {
     // XXX We should make this work with parallel: true; right now it seems to
     // hit node problems.
     buildmessage.forkJoin(
-      { 'title': 'Initializing packages', parallel: false },
+      { 'title': 'initializing packages', parallel: false },
       self.effectiveLocalPackageDirs,
       function (dir) {
         initSourceFromDir(dir);

@@ -805,14 +805,14 @@ _.extend(Target.prototype, {
         return file.contents('utf8');
       });
 
-      buildmessage.enterJob({title: "Minifying"}, function () {
+      buildmessage.enterJob({title: "minifying"}, function () {
         allJs = _minify(minifiers.UglifyJS, '', sources, minifyOptions).code;
       });
     } else {
       minifyOptions.compress.unused = false;
       minifyOptions.compress.dead_code = false;
 
-      allJs = buildmessage.forkJoin({title: "Minifying" }, self.js, function (file) {
+      allJs = buildmessage.forkJoin({title: "minifying" }, self.js, function (file) {
         var source = file.contents('utf8');
         return _minify(minifiers.UglifyJS, file.info, source, minifyOptions).code;
       }).join("\n\n");
@@ -925,7 +925,7 @@ var _minify = function (UglifyJS, key, files, options) {
   } else {
     if (typeof files == "string")
       files = [ files ];
-    buildmessage.forkJoin({title: 'Minifying: parsing ' + key}, files, function (file) {
+    buildmessage.forkJoin({title: 'minifying: parsing ' + key}, files, function (file) {
       var code = options.fromString
         ? file
         : fs.readFileSync(file, "utf8");
@@ -942,12 +942,12 @@ var _minify = function (UglifyJS, key, files, options) {
 
   // 2. compress
   var compress;
-  if (options.compress) buildmessage.enterJob({title: "Minify: compress 1 " + key}, function () {
+  if (options.compress) buildmessage.enterJob({title: "minify: compress 1 " + key}, function () {
     compress = { warnings: options.warnings };
     UglifyJS.merge(compress, options.compress);
     toplevel.figure_out_scope();
   });
-  if (options.compress) buildmessage.enterJob({title: "Minify: compress 2 " + key}, function () {
+  if (options.compress) buildmessage.enterJob({title: "minify: compress 2 " + key}, function () {
     var sq = UglifyJS.Compressor(compress);
     toplevel = toplevel.transform(sq);
 
@@ -956,7 +956,7 @@ var _minify = function (UglifyJS, key, files, options) {
   });
 
   // 3. mangle
-  if (options.mangle) buildmessage.enterJob({title: "Minify: mangling " + key}, function () {
+  if (options.mangle) buildmessage.enterJob({title: "minify: mangling " + key}, function () {
     toplevel.figure_out_scope();
     toplevel.compute_char_frequency();
     toplevel.mangle_names(options.mangle);
@@ -985,7 +985,7 @@ var _minify = function (UglifyJS, key, files, options) {
       }
     }
   }
-  if (options.output) buildmessage.enterJob({title: "Minify: merging " + key}, function () {
+  if (options.output) buildmessage.enterJob({title: "minify: merging " + key}, function () {
     UglifyJS.merge(output, options.output);
 
     progress.current += totalFileSize;
@@ -994,7 +994,7 @@ var _minify = function (UglifyJS, key, files, options) {
 
 
   var stream;
-  buildmessage.enterJob({title: "Minify: printing " + key}, function () {
+  buildmessage.enterJob({title: "minify: printing " + key}, function () {
     stream = UglifyJS.OutputStream(output);
     toplevel.print(stream);
 
@@ -1972,7 +1972,7 @@ exports.bundle = function (options) {
     throw new Error("running wrong release for app?");
 
   var messages = buildmessage.capture({
-    title: "Building the application"
+    title: "building the application"
   }, function () {
     var makeClientTarget = function (app, webArch) {
       var client = new ClientTarget({

@@ -638,7 +638,7 @@ var ensureCordovaPlugins = function (projectContext, options) {
       ensureCordovaPlatforms(projectContext);
     };
 
-    buildmessage.enterJob({ title: "Installing Cordova plugins..."}, function () {
+    buildmessage.enterJob({ title: "installing Cordova plugins"}, function () {
       uninstallAllPlugins();
 
       // Now install all of the plugins.
@@ -746,7 +746,7 @@ var buildCordova = function (projectContext, platforms, options) {
   if (_.isEmpty(platforms))
     return;
 
-  buildmessage.enterJob({ title: 'Building for mobile devices' }, function () {
+  buildmessage.enterJob({ title: 'building for mobile devices' }, function () {
     var bundlePath =
           projectContext.getProjectLocalDirectory('build-cordova-temp');
     var programPath = path.join(bundlePath, 'programs');
@@ -852,7 +852,7 @@ var buildCordova = function (projectContext, platforms, options) {
         args.push('--release');
       }
 
-      buildmessage.enterJob({ title: 'Building mobile project' }, function () {
+      buildmessage.enterJob({ title: 'building mobile project' }, function () {
         execFileSyncOrThrow(localCordova, args,
                             { cwd: cordovaPath,
                               env: buildCordovaEnv(),
@@ -1790,7 +1790,7 @@ _.extend(IOS.prototype, {
       throw new Error("Can only install Xcode on OSX");
     }
 
-    buildmessage.enterJob({title: 'Installing Xcode'}, function () {
+    buildmessage.enterJob({title: 'installing Xcode'}, function () {
       //Console.info(
       //  "Launching Xcode installer;",
       //  "please choose 'Get Xcode' to install Xcode");
@@ -2132,7 +2132,7 @@ _.extend(Android.prototype, {
 
     var stdout;
 
-    buildmessage.enterJob({ title: 'Installing Android target ' + target}, function () {
+    buildmessage.enterJob({ title: 'installing Android target ' + target}, function () {
       var options = {stdin: 'y\n'};
       options.progress = buildmessage.getCurrentProgressTracker();
       stdout = self.runAndroidTool(['update', 'sdk', '-t', target, '--all', '-u'], options);
@@ -2277,7 +2277,7 @@ _.extend(Android.prototype, {
   createAvd: function (avd, options) {
     var self = this;
 
-    buildmessage.enterJob({title: 'Creating AVD'}, function () {
+    buildmessage.enterJob({title: 'creating AVD'}, function () {
       var abi = "default/x86";
 
       //# XXX if this command fails, it would be really hard to debug or understand
@@ -2461,7 +2461,7 @@ _.extend(Android.prototype, {
 
     // XXX: Replace script
     try {
-      buildmessage.enterJob({ title: 'Downloading Android bundle' }, function () {
+      buildmessage.enterJob({ title: 'downloading Android bundle' }, function () {
         var scriptPath = path.join(files.getCurrentToolsDir(), 'tools', 'cordova-scripts', 'ensure_android_bundle.sh');
 
         verboseLog('Running script ' + scriptPath);
@@ -2901,7 +2901,7 @@ main.registerCommand({
     return 1;
   }
 
-  buildmessage.enterJob({ title: 'Adding platforms' }, function () {
+  buildmessage.enterJob({ title: 'adding platforms' }, function () {
     projectContext.platformList.write(currentPlatforms.concat(platforms));
 
     var appName = path.basename(projectContext.projectDir);

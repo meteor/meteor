@@ -150,7 +150,7 @@ _.extend(Runner.prototype, {
     _.forEach(self.extraRunners, function (extraRunner) {
       if (! self.stopped) {
         var title = extraRunner.title;
-        buildmessage.enterJob({ title: "Starting " + title }, function () {
+        buildmessage.enterJob({ title: "starting " + title }, function () {
           extraRunner.start();
         });
         if (! self.quiet && ! self.stopped)
@@ -159,7 +159,7 @@ _.extend(Runner.prototype, {
     });
 
     if (! self.stopped) {
-      buildmessage.enterJob({ title: "Starting your app" }, function () {
+      buildmessage.enterJob({ title: "starting your app" }, function () {
         self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped)
@@ -172,7 +172,7 @@ _.extend(Runner.prototype, {
     }
 
     if (self.selenium && ! self.stopped) {
-      buildmessage.enterJob({ title: "Starting Selenium" }, function () {
+      buildmessage.enterJob({ title: "starting Selenium" }, function () {
         self.selenium.start();
       });
       if (! self.quiet && ! self.stopped)
