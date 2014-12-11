@@ -222,6 +222,27 @@ _.extend(exports.Tropohouse.prototype, {
     }
     return { arches: downloadedArches, target: packageLinkTarget };
   },
+
+  _saveIsopack: function (isopack, packageName) {
+    // XXX does this actually need the name as an argument or can we just get
+    // it from isopack?
+
+    var self = this;
+
+    // Note: wipeAllPackages depends on this filename structure, as does the
+    // part above which readlinks.
+    var newPackageLinkTarget = '.' + isopack.version + '.' +
+      utils.randomToken() + '++' + isopack.buildArchitectures();
+
+    var combinedDirectory = self.packagePath(
+      packageName, newPackageLinkTarget);
+
+    isopack.saveToPath(combinedDirectory);
+
+    files.symlinkOverSync(newPackageLinkTarget,
+      self.packagePath(packageName, isopack.version));
+  },
+
   // Given a package name, version, and required architectures, checks to make
   // sure that we have the package downloaded at the requested arch. If we do,
   // returns null.
@@ -336,14 +357,8 @@ _.extend(exports.Tropohouse.prototype, {
             buildTempDir,
             {firstIsopack: i === 0});
         });
-        // Note: wipeAllPackages depends on this filename structure, as does the
-        // part above which readlinks.
-        var newPackageLinkTarget = '.' + version + '.'
-              + utils.randomToken() + '++' + isopack.buildArchitectures();
-        var combinedDirectory = self.packagePath(
-          packageName, newPackageLinkTarget);
-        isopack.saveToPath(combinedDirectory);
-        files.symlinkOverSync(newPackageLinkTarget, packagePath);
+
+        self._saveIsopack(isopack, packageName, version);
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {
