@@ -3,7 +3,21 @@ Meetup = {};
 OAuth.registerService('meetup', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
-  var identity = getIdentity(accessToken);
+  console.log("xcxc Meetup access token is:", accessToken);
+  for (var i = 0; i < 5; i++) {
+    try {
+      var identity = getIdentity(accessToken);
+    } catch (e) {
+      if (i === 4)
+        throw e;
+    }
+
+    if (identity)
+      break;
+
+    console.log("xcxc failed to fetch ideneity from meetup #" + i);
+    Meteor._sleepForMs(500);
+  }
 
   return {
     serviceData: {
