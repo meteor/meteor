@@ -1048,6 +1048,7 @@ var toDosPath = function (p) {
   return p;
 };
 
+
 var convertToOSPath = function (standardPath) {
   if (process.platform === "win32") {
     return toDosPath(standardPath);
@@ -1139,26 +1140,60 @@ wrapFsFunc("lstat", [0]);
 wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
 
-var rename = files.rename;
-files.rename = function (from, to) {
-  // retries are necessarily only on Windows, because the rename call can fail
-  // with EBUSY, which means the file is "busy"
-  var maxTries = 10;
-  var success = false;
-  while (! success && maxTries-- > 0) {
-    try {
-      rename(from, to);
-      success = true;
-    } catch (err) {
-      if (err.code !== 'EPERM')
-        throw err;
+// Automagically convert line endings for writeFile and appendFile
+if (process.platform === "win32") {
+  // File reading and writing; need to convert line endings
+  var writeFile = files.writeFile;
+  var appendFile = files.appendFile;
+  var readFile = files.readFile;
+  var rename = files.rename;
+
+  files.writeFile = function (filename, data, options) {
+    if (_.isString(data)) {
+      // on windows, replace line endings
+      data = data.replace(/\n/g, os.EOL);
     }
-  }
-  if (! success) {
-    files.cp_r(from, to);
-    files.rm_recursive(from);
-  }
-};
+
+    writeFile(filename, data, options);
+  };
+
+  files.appendFile = function (filename, data, options) {
+    if (_.isString(data)) {
+      // on windows, replace line endings
+      data = data.replace(/\n/g, os.EOL);
+    }
+
+    appendFile(filename, data, options);
+  };
+
+  files.readFile = function () {
+    var fileData = readFile.apply(files, arguments);
+
+    if (_.isString(fileData)) {
+      return fileData.replace(new RegExp(os.EOL, "g"), "\n");
+    }
+  };
+
+  files.rename = function (from, to) {
+    // retries are necessarily only on Windows, because the rename call can fail
+    // with EBUSY, which means the file is "busy"
+    var maxTries = 10;
+    var success = false;
+    while (! success && maxTries-- > 0) {
+      try {
+        rename(from, to);
+        success = true;
+      } catch (err) {
+        if (err.code !== 'EPERM')
+          throw err;
+      }
+    }
+    if (! success) {
+      files.cp_r(from, to);
+      files.rm_recursive(from);
+    }
+  };
+}
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
@@ -1184,6 +1219,7 @@ wrapFsFunc("close", []);
 wrapFsFunc("symlink", [0, 1]);
 wrapFsFunc("readlink", [0]);
 
+// These don't need to be Fiberized
 files.createReadStream = function () {
   var args = _.toArray(arguments);
   args[0] = convertToOSPath(args[0]);
