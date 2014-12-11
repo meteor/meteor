@@ -369,6 +369,18 @@ meteorNpm._execFileSync = function (file, args, opts) {
   return future.wait();
 };
 
+var runNpmCommand = function (args, opts) {
+  var npmPath;
+
+  if (os.platform() === "win32") {
+    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm.cmd");
+  } else {
+    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm");
+  }
+
+  return meteorNpm._execFileSync(npmPath, args, opts);
+}
+
 var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
   var packageJsonContents = JSON.stringify({
