@@ -832,10 +832,10 @@ _.extend(Sandbox.prototype, {
 
     // And a cherry on top
     // XXX this is hacky
-    files.symlink(files.pathJoin(packagesDirectoryName,
-                                  "meteor-tool", toolPackageVersion,
-                                  'meteor-tool-' + archinfo.host(), 'meteor'),
-                  files.pathJoin(self.warehouse, 'meteor'));
+    files.linkToMeteorScript(
+      files.pathJoin(packagesDirectoryName, "meteor-tool", toolPackageVersion,
+        'meteor-tool-' + archinfo.host(), 'meteor'),
+      files.pathJoin(self.warehouse, 'meteor'));
   }
 });
 

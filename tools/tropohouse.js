@@ -452,6 +452,6 @@ _.extend(exports.Tropohouse.prototype, {
   linkToLatestMeteor: function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.symlinkOverSync(scriptLocation, linkPath);
+    files.linkToMeteorScript(scriptLocation, linkPath);
   }
 });
