@@ -1015,7 +1015,15 @@ _.extend(files.KeyValueFile.prototype, {
   }
 });
 
-/////// Below here are wrappers of fs.* and path.* functions
+files.getHomeDir = function () {
+  return process.env.HOME || process.env.LOCALAPPDATA || process.env.APPDATA;
+};
+
+files.linkToMeteorScript = function (scriptLocation, linkLocation) {
+  files.symlinkOverSync(scriptLocation, linkLocation);
+};
+
+/////// Below here, functions have been corrected for slashes
 
 var toPosixPath = function (p) {
   p = p.replace(/\\/g, '/');
