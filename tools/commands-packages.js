@@ -2143,12 +2143,11 @@ main.registerCommand({
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
-    files.symlink(
-      files.pathJoin(
+
+    tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
-        'meteor'),
-      files.pathJoin(tmpTropo.root, 'meteor'));
+        'meteor'));
 
     files.createTarball(
       tmpTropo.root,
