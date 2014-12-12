@@ -323,10 +323,16 @@ _.extend(Builder.prototype, {
         throw new Error("can't copy only specific paths with a single symlink");
       }
 
-      var canSymlink = true;
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
                         " but it is is already a file");
+      }
+
+      var canSymlink = true;
+      // Symlinks don't work exactly the same way on Windows, and furthermore
+      // they request Admin permissions to set.
+      if (process.platform === 'win32') {
+        canSymlink = false;
       } else if (normOptionsTo in self.usedAsFile) {
         // It's already here and is a directory, maybe because of a call to
         // reserve with {directory: true}. If it's an empty directory, this is

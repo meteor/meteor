@@ -1682,8 +1682,9 @@ _.extend(ServerTarget.prototype, {
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
     if (options.includeNodeModulesSymlink) {
-      builder.write('node_modules', {
-        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
+      builder.copyDirectory({
+        from: files.pathJoin(files.getDevBundle(), 'lib', 'node_modules'),
+        to: 'node_modules'
       });
     }
 
