@@ -2015,11 +2015,14 @@ exports.bundle = function (options) {
     };
 
     // Create a Isopack object that represents the app
+    // XXX should this be part of prepareProjectForBuild and get cached?
+    //     at the very least, would speed up deploy after build.
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
-      isopackCache: projectContext.isopackCache
+      isopackCache: projectContext.isopackCache,
+      includeCordovaUnibuild: projectContext.platformList.usesCordova()
     }).isopack;
 
     var clientTargets = [];
@@ -2159,7 +2162,9 @@ exports.buildJsImage = function (options) {
 
   var isopack = compiler.compile(packageSource, {
     packageMap: options.packageMap,
-    isopackCache: options.isopackCache
+    isopackCache: options.isopackCache,
+    // There's no web.cordova unibuild here anyway, just os.
+    includeCordovaUnibuild: false
   }).isopack;
 
   var target = new JsImageTarget({
