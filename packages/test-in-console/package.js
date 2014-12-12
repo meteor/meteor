@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests noninteractively, with results going to the console.",
-  version: '1.0.4-ipc.0'
+  version: '1.0.4-rc.1'
 });
 
 Package.onUse(function (api) {

@@ -4,7 +4,7 @@
 
 Package.describe({
   summary: "JavaScript code analysis for Meteor",
-  version: '1.0.4-ipc.0'
+  version: '1.0.4-rc.1'
 });
 
 // Use some packages from the Esprima project.  If it turns out we need these on
