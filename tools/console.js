@@ -54,7 +54,7 @@
 ///     Console.rawError(err.stack + "\n");
 ///
 /// In addition to printing functions, the Console class provides progress bar
-/// spport, that is mostly handled through buildmessage.js.
+/// support, that is mostly handled through buildmessage.js.
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
