@@ -1705,7 +1705,11 @@ _.extend(ServerTarget.prototype, {
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64'
+      'os.osx.x86_64': 'Darwin_x86_64',
+      // XXX once we put Windows dev_bundles to warehouse we should fill these
+      // fields in.
+      'os.windows.x86_32': 'XXX',
+      'os.windows.x86_64': 'XXX'
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
