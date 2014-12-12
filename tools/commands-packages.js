@@ -221,7 +221,10 @@ main.registerCommand({
       packageMapFilename: path.join(options.packageDir, '.versions'),
       // We always want to write our '.versions' package map, overriding a
       // comparison against the value of a release file that doesn't exist.
-      alwaysWritePackageMap: true
+      alwaysWritePackageMap: true,
+      // When we publish, we should always include web.cordova unibuilds, even
+      // though this temporary directory does not have any cordova platforms
+      forceIncludeCordovaUnibuild: true
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
@@ -229,7 +232,10 @@ main.registerCommand({
     // ensure that we can actually build the package and its tests).
     projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir,
-      neverWriteProjectConstraintsFile: true
+      neverWriteProjectConstraintsFile: true,
+      // When we publish, we should always include web.cordova unibuilds, even
+      // if this project does not have any cordova platforms
+      forceIncludeCordovaUnibuild: true
     });
   }
 
@@ -536,7 +542,10 @@ main.registerCommand({
   // Set up the project.
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: tempProjectDir,
-    explicitlyAddedLocalPackageDirs: [packageDir]
+    explicitlyAddedLocalPackageDirs: [packageDir],
+    // When we publish, we should always include web.cordova unibuilds, even
+    // though this temporary directory does not have any cordova platforms
+    forceIncludeCordovaUnibuild: true
   });
   // Just get up to initializing the catalog. We're going to mutate the
   // constraints file a bit before we prepare the build.
@@ -735,7 +744,10 @@ main.registerCommand({
     var projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,  // won't have a packages dir, that's OK
       // seriously, we only want checkout packages
-      ignorePackageDirsEnvVar: true
+      ignorePackageDirsEnvVar: true,
+      // When we publish, we should always include web.cordova unibuilds, even
+      // though this temporary directory does not have any cordova platforms
+      forceIncludeCordovaUnibuild: true
     });
 
     // Read metadata and initialize catalog.

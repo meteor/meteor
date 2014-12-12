@@ -126,7 +126,8 @@ var setUpBuiltPackageTropohouse = function () {
   // Make an isopack cache that doesn't automatically save isopacks to disk and
   // has no access to versioned packages.
   tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
-    packageMap: packageMap
+    packageMap: packageMap,
+    includeCordovaUnibuild: true
   });
   doOrThrow(function () {
     buildmessage.enterJob("building self-test packages", function () {

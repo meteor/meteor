@@ -239,6 +239,7 @@ var makeIsopacketBuildContext = function () {
   // access to versioned packages.
   context.isopackCache = new isopackCacheModule.IsopackCache({
     packageMap: context.packageMap,
+    includeCordovaUnibuild: false,
     // When linking JS files, don't include the padding spaces and line number
     // comments. Since isopackets are loaded as part of possibly very short
     // 'meteor' tool command invocations, we care more about startup time than

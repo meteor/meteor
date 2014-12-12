@@ -766,7 +766,10 @@ _.extend(Isopack.prototype, {
           // our package.js (because modifications to package.js could add a new
           // plugin), as well as any files making up plugins in our package.
           pluginDependencies: self.pluginWatchSet.toJSON(),
-          pluginProviderPackageMap: options.pluginProviderPackageMap.toJSON()
+          pluginProviderPackageMap: options.pluginProviderPackageMap.toJSON(),
+          includeCordovaUnibuild: _.any(self.unibuilds, function (unibuild) {
+            return unibuild.arch === 'web.cordova';
+          })
         };
       }
 

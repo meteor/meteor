@@ -107,6 +107,11 @@ _.extend(exports.ProjectContext.prototype, {
     // Set when deploying to a previous Galaxy prototype.
     self._requireControlProgram = options.requireControlProgram;
 
+    // Set by publishing commands to ensure that published packages always have
+    // a web.cordova slice (because we aren't yet smart enough to just default
+    // to using the web.browser slice instead or make a common 'web' slice).
+    self._forceIncludeCordovaUnibuild = options.forceIncludeCordovaUnibuild;
+
     // If explicitly specified as null, use no release for constraints.
     // If specified non-null, should be a release version catalog record.
     // If not specified, defaults to release.current.
@@ -656,6 +661,8 @@ _.extend(exports.ProjectContext.prototype, {
 
     self.isopackCache = new isopackCacheModule.IsopackCache({
       packageMap: self.packageMap,
+      includeCordovaUnibuild: (self._forceIncludeCordovaUnibuild
+                               || self.platformList.usesCordova()),
       cacheDir: self.getProjectLocalDirectory('isopacks'),
       tropohouse: self.tropohouse,
       previousIsopackCache: self._previousIsopackCache
@@ -1037,6 +1044,11 @@ _.extend(exports.PlatformList.prototype, {
     var self = this;
     return _.difference(self._platforms,
                         exports.PlatformList.DEFAULT_PLATFORMS);
+  },
+
+  usesCordova: function () {
+    var self = this;
+    return ! _.isEmpty(self.getCordovaPlatforms());
   },
 
   getWebArchs: function () {

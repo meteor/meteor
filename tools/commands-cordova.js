@@ -2909,6 +2909,12 @@ main.registerCommand({
     ensureCordovaPlatforms(projectContext);
   });
 
+  // If this was the first Cordova platform, we may need to rebuild all of the
+  // local packages to add the web.cordova unibuild to the IsopackCache.
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
+
   _.each(platforms, function (platform) {
     Console.info(platform + ": added platform");
   });
@@ -2959,6 +2965,12 @@ main.registerCommand({
   var appName = path.basename(projectContext.projectDir);
   ensureCordovaProject(projectContext, appName);
   ensureCordovaPlatforms(projectContext);
+
+  // If this was the last Cordova platform, we may need to rebuild all of the
+  // local packages to remove the web.cordova unibuild from the IsopackCache.
+  main.captureAndExit("=> Errors while initializing project:", function () {
+    projectContext.prepareProjectForBuild();
+  });
 });
 
 main.registerCommand({

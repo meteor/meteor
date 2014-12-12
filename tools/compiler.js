@@ -33,6 +33,7 @@ compiler.compile = function (packageSource, options) {
 
   var packageMap = options.packageMap;
   var isopackCache = options.isopackCache;
+  var includeCordovaUnibuild = options.includeCordovaUnibuild;
 
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
@@ -124,6 +125,9 @@ compiler.compile = function (packageSource, options) {
   });
 
   _.each(packageSource.architectures, function (unibuild) {
+    if (unibuild.arch === 'web.cordova' && ! includeCordovaUnibuild)
+      return;
+
     var unibuildResult = compileUnibuild({
       isopack: isopk,
       sourceArch: unibuild,
