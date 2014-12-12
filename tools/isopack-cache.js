@@ -127,11 +127,16 @@ _.extend(exports.IsopackCache.prototype, {
     if (packageInfo.kind === 'local') {
       var packageNames =
             packageInfo.packageSource.getPackagesToLoadFirst(self._packageMap);
-      _.each(packageNames, function (depName) {
-        ensureLoaded(depName);
+      buildmessage.enterJob("preparing to build package " + name, function () {
+        _.each(packageNames, function (depName) {
+          ensureLoaded(depName);
+        });
+        // If we failed to load something that this package depends on, don't
+        // load it.
+        if (buildmessage.jobHasMessages())
+          return;
+        self._loadLocalPackage(name, packageInfo);
       });
-
-      self._loadLocalPackage(name, packageInfo);
     } else if (packageInfo.kind === 'versioned') {
       // We don't have to build this package, and we don't have to build its
       // dependencies either! Just load it from disk.

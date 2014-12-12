@@ -902,3 +902,61 @@ selftest.define("show unknown version of package", function () {
   run.matchErr("0.123.456: unknown version of meteor-platform");
   run.expectExit(1);
 });
+
+
+selftest.define("circular dependency errors", function () {
+  var s = new Sandbox();
+  // meteor add refreshes, but we don't need anything from the official catalog
+  // here.
+  s.set('METEOR_OFFLINE_CATALOG', 't');
+  var run;
+
+  // This app contains some pairs of packages with circular dependencies The app
+  // currently *uses* no packages, so it can be created successfully.
+  s.createApp("myapp", "circular-deps");
+  s.cd("myapp");
+
+  // Try to add one of a pair of circularly-depending packages. See an error.
+  run = s.run('add', 'first');
+  run.matchErr('error: circular dependency');
+  run.expectExit(1);
+
+  // Note that the app still builds fine because 'first' didn't actually get
+  // added.
+  run = s.run('--prepare-app');
+  run.expectExit(0);
+
+
+  // This pair has first-imply uses second-imply, second-imply implies
+  // first-imply.
+  run = s.run('add', 'first-imply');
+  run.matchErr('error: circular dependency');
+  run.expectExit(1);
+
+  // This pair has first-weak uses second-weak, second-weak uses first-weak
+  // weakly.  Currently, it's possible to add a weak cycle to an app (ie, the
+  // prepare-app step passes), but not to run the bundler. We don't want to
+  // write a test that prevents us from making the weak cycle an error at
+  // prepare-time, so let's skip straight to bundling.
+  s.write('.meteor/packages', 'first-weak');
+  run = s.run('--once');
+  run.matchErr('error: circular dependency');
+  run.expectExit(254);
+
+  // ... but we can add second-weak, which just doesn't pull in first-weak at
+  // all.
+  s.write('.meteor/packages', 'second-weak');
+  run = s.run('--once');
+  run.match(/first-weak.*removed from your project/);
+  run.expectExit(123);  // the app immediately calls process.exit(123)
+
+  // This pair has first-unordered uses second-unordered, second-unordered uses
+  // first-unordered unorderedly.  This should work just fine: that's why
+  // unordered exists!
+  s.write('.meteor/packages', 'first-unordered');
+  run = s.run('--once');
+  run.match(/first-unordered.*added/);
+  run.match(/second-unordered.*added/);
+  run.match(/second-weak.*removed from your project/);
+  run.expectExit(123);  // the app immediately calls process.exit(123)
+});
