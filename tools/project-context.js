@@ -86,19 +86,24 @@ _.extend(exports.ProjectContext.prototype, {
     // package names.
     self._forceRebuildPackages = options.forceRebuildPackages;
 
+    // Set in a few cases where we really want to only get packages from
+    // checkout.
+    self._ignorePackageDirsEnvVar = options.ignorePackageDirsEnvVar;
+
+    if (options.alwaysWritePackageMap && options.neverWritePackageMap)
+      throw Error("always or never?");
+
     // Set by 'meteor create' and 'meteor update' to ensure that
     // .meteor/versions is always written even if release.current does not match
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
-    // Set in a few cases where we really want to only get packages from
-    // checkout.
-    self._ignorePackageDirsEnvVar = options.ignorePackageDirsEnvVar;
-
-    // Set by 'meteor publish' to ensure that .meteor/packages is not written
-    // even though they may do an in-memory mutation of the constraints.
+    // Set by 'meteor publish' to ensure that .meteor/packages and
+    // .meteor/versions are not written even though the command adds some
+    // constraints (like making sure the test is built).
     self._neverWriteProjectConstraintsFile =
       options.neverWriteProjectConstraintsFile;
+    self._neverWritePackageMap = options.neverWritePackageMap;
 
     // Set by 'meteor update' to specify which packages may be updated. Array of
     // package names.
@@ -689,10 +694,11 @@ _.extend(exports.ProjectContext.prototype, {
 
     // Write .meteor/versions if the command always wants to (create/update),
     // or if the release of the app matches the release of the process.
-    if (self._alwaysWritePackageMap ||
-        (release.current.isCheckout() && self.releaseFile.isCheckout()) ||
-        (! release.current.isCheckout() &&
-         release.current.name === self.releaseFile.fullReleaseName)) {
+    if (! self._neverWritePackageMap &&
+        (self._alwaysWritePackageMap ||
+         (release.current.isCheckout() && self.releaseFile.isCheckout()) ||
+         (! release.current.isCheckout() &&
+          release.current.name === self.releaseFile.fullReleaseName))) {
       self.packageMapFile.write(self.packageMap);
     }
 

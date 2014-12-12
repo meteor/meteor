@@ -228,11 +228,13 @@ main.registerCommand({
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
-    // overwrite .meteor/packages when we add some temporary constraints (which
-    // ensure that we can actually build the package and its tests).
+    // overwrite .meteor/packages or .meteor/versions when we add some temporary
+    // constraints (which ensure that we can actually build the package and its
+    // tests).
     projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir,
       neverWriteProjectConstraintsFile: true,
+      neverWritePackageMap: true,
       // When we publish, we should always include web.cordova unibuilds, even
       // if this project does not have any cordova platforms
       forceIncludeCordovaUnibuild: true
@@ -329,7 +331,8 @@ main.registerCommand({
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
-  projectContext.packageMapDelta.displayOnConsole();
+  // We don't display the package map delta here, because it includes adding the
+  // package's test and all the test's dependencies.
 
   var isopack = projectContext.isopackCache.getIsopack(packageName);
   if (! isopack) {
