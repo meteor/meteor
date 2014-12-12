@@ -3,6 +3,7 @@ var path = require("path");
 var _ = require('underscore');
 var Future = require('fibers/future');
 var fiberHelpers = require('./fiber-helpers.js');
+var pathwatcher = require("./safe-pathwatcher.js");
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -411,12 +412,13 @@ _.extend(Watcher.prototype, {
 
     var onWatchEvent = self._makeWatchEventCallback(absPath);
 
+    if (self.justCheckOnce) {
+      onWatchEvent();
+      return;
+    }
+
     try {
-      // In principle, all this logic for watching files should continue
-      // to work perfectly well if we substitute fs.watch for
-      // pathwatcher.watch, but that will probably have to wait until we
-      // upgrade Node to v0.11.x, so that fs.watch is more reliable.
-      entry.watcher = require('pathwatcher').watch(absPath, onWatchEvent);
+      entry.watcher = pathwatcher.watch(absPath, onWatchEvent);
 
     } catch (err) {
       if (err.code === "ENOENT" || // For fs.watch.
