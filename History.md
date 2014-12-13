@@ -1,5 +1,30 @@
 ## v.NEXT
 
+
+## v1.0.2
+
+* Tool performance improvements XXX
+    - The entire build tool has been refactored with an eye to correctness,
+      maintainability, and performance
+    - We refresh the package catalog for build commands only when an error
+      occurs that could be fixed by a refresh, not for every command
+    - Constraint solver is now run only once per command
+    - Packages are now cached inside the app directory
+    - Mongo started in parallel with app build
+    - Constraint solver no longer leaves a `versions.json` file in your
+      packages; when publishing a package that is not inside an app, it uses a
+      similar `.versions` file
+    - Constraint edges are by package, not unibuild, and plugins must use the
+      same version of packages as their surrounding package (when built from
+      local source)
+
+* `meteor shell` XXX
+
+* `meteor debug` improvements ba89b7d and maybe e63ac7c
+
+* Output from the command-line tool is now word-wrapped to the width of your
+  terminal.
+
 * Spacebars: Allow curly braces to be escaped, with special
   sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
 
@@ -8,8 +33,6 @@
 
 * Some packages are no longer released as part of the core release process:
   amplify, backbone, bootstrap, d3, jquery-history, and jquery-layout.
-
-* Rework how Meteor packages get loaded into the command-line tool
 
 * Remove support for the undocumented earliestCompatibleVersion feature of the
   package system.
@@ -24,6 +47,22 @@
 * `Blaze.remove` on a template's view now correctly removes the DOM
   when the template was inserted using `Blaze.renderWithData`. #3130
 
+* Fix crash when two plugins defined source handlers for the same
+  extension. #3015 #3180
+
+* Fix crash when a package version contained a dot-separated prerelease part
+  with both digits and non-digits. #3147
+
+* Fix bug (introduced in 0.9.3) where the warning about using experimental
+  versions of packages was printed too often.
+
+* Fix bug (introduced in 1.0) where `meteor update --patch` crashed.
+
+* Fix bug (introduced in 0.9.4) where banners about new releases could be
+  printed too many times.
+
+* Make query parameter available to oauth1 services 6b8221d
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
@@ -35,9 +74,12 @@
   - phantomjs npm module: 1.9.12 (from 1.8.1-1)
   - http-proxy: 1.6.0 (from a fork of 1.0.2)
   - esprima: 1.2.2 (from an unreleased 1.1-era commit)
+  - escope: 1.0.1 (from 1.0.0)
   - openssl in mongo: 1.0.1j (from 1.0.1g)
   - faye-websocket: 0.8.1 (from using websocket-driver instead)
   - MongoDB: 2.4.12 (from 2.4.9)
+
+XXX include contributor list
 
 
 ## v1.0.1
