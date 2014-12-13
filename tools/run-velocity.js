@@ -22,7 +22,16 @@ var runVelocity = function (url) {
 
   // XXX maybe a startup message so users know the tests are running.
 
+  // All running browser processes that visit the mirror pages
+  var browserProcesses = [];
   var ddpConnection = DDP.connect(url);
+
+  var killBrowserProcesses = function () {
+    browserProcesses.forEach(function (browserProcess) {
+      browserProcess.kill('SIGINT');
+    });
+    browserProcesses = [];
+  };
 
   var interval = setInterval(function () {
     if (ddpConnection.status().status === "connected") {
@@ -81,6 +90,7 @@ var runVelocity = function (url) {
                 if (report.name === "aggregateComplete" &&
                     report.result === "completed") {
                   setTimeout(function () {
+                    killBrowserProcesses();
                     if (aggregateResult === "passed") {
                       console.log("TESTS RAN SUCCESSFULLY");
                       // XXX XXX this is not great. We shouldn't be
@@ -104,11 +114,12 @@ var runVelocity = function (url) {
 
       function visitWithPhantom (url) {
         var phantomScript = "require('webpage').create().open('" + url + "');";
-        child_process.execFile(
+        var browserProcess = child_process.execFile(
           '/bin/bash',
           ['-c',
            ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
             phantomScript + "END\n")]);
+        browserProcesses.push(browserProcess);
       }
 
       ddpConnection.subscribe("VelocityMirrors", {
