@@ -1,9 +1,3 @@
-Meteor.startup(function () {
-  // Make external links open in a new tab.
-  // XXX doesn't work in multipage
-  $('a:not([href^="#"])').attr('target', '_blank');
-});
-
 check_links = function() {
   var body = document.body.innerHTML;
 
