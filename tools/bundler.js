@@ -1321,9 +1321,12 @@ _.extend(JsImage.prototype, {
             var nodeModuleDir =
               files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
 
+            // Use files.existsSync instead of files.exists here so that
+            // isopack loading doesn't yield.
             if (files.existsSync(nodeModuleDir)) {
               return require(nodeModuleDir);
             }
+
             try {
               return require(name);
             } catch (e) {
