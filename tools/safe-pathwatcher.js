@@ -4,7 +4,10 @@ var Future = require("fibers/future");
 var _ = require("underscore");
 var switchFunctions = [];
 var pollingInterval = 500;
-var canUsePathwatcher = true;
+
+// Set this environment variable to a truthy value to force the use of
+// fs.watchFile instead of pathwatcher.watch.
+var canUsePathwatcher = !process.env.METEOR_WATCH_FORCE_POLLING;
 
 // The pathwatcher library does not work on all platforms and file systems
 // (notably, network file systems), so we have to do a little feature
@@ -18,8 +21,8 @@ var canUsePathwatcher = true;
 
 // There is some theoretical risk of missing file system events from
 // pathwatcher watches created before we discover that we can't use
-// pathwatcher.watch, but the window of time where that can happen is so
-// small (200ms) that developers are highly unlikely to notice.
+// pathwatcher.watch, but the window of time where that can happen is
+// small enough (500ms) that developers are highly unlikely to care.
 
 exports.testDirectory = function(dir) {
   if (! canUsePathwatcher) {
@@ -69,13 +72,13 @@ exports.testDirectory = function(dir) {
       }
     });
 
-    // Set a time limit of 200ms for the change event.
+    // Set a time limit of 500ms for the change event.
     setTimeout(function() {
       if (watcher) {
         cleanUp();
         fallBack();
       }
-    }, 200);
+    }, 500);
   });
 };
 
