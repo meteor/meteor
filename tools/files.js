@@ -1003,23 +1003,22 @@ var toPosixPath = function (p) {
   p = p.replace(/\\/g, '/');
   if (p[1] === ':') {
     // transform "C:/bla/bla" to "/C/bla/bla"
-    p[1] = p[0];
-    p[0] = '/';
+    p = '/' + p[0] + p.slice(2);
   }
 
   return p;
 };
 
 var toDosPath = function (p) {
-  p = p.replace(/\//g, '\\');
   if (p[0] === '/') {
     if (! /^\/[A-Z]\//.test(p))
       throw new Error("Surprising path: " + p);
     // transform a previously windows path back
-    p[0] = p[1];
-    p[1] = '/';
+    // "/C/something" to "C:/something"
+    p = p[1] + ":" + p.slice(2);
   }
 
+  p = p.replace(/\//g, '\\');
   return p;
 };
 
