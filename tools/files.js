@@ -361,8 +361,8 @@ files.treeHash = function (root, options) {
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.
 files.mkdir_p = function (dir, mode) {
-  var p = path.resolve(dir);
-  var ps = path.normalize(p).split(path.sep);
+  var p = files.pathResolve(dir);
+  var ps = files.pathNormalize(p).split(files.pathSep);
 
   var stat = files.statOrNull(p);
   if (stat) {
@@ -370,9 +370,12 @@ files.mkdir_p = function (dir, mode) {
   }
 
   // doesn't exist. recurse to build parent.
-  var success = files.mkdir_p(ps.slice(0,-1).join(path.sep), mode);
+  // Don't use files.pathJoin here because it can strip off the leading slash
+  // accidentally.
+  var parentPath = ps.slice(0, -1).join(files.pathSep);
+  var success = files.mkdir_p(parentPath, mode);
   // parent is not a directory.
-  if (!success) { return false; }
+  if (! success) { return false; }
 
   var pathIsDirectory = function (path) {
     var stat = files.statOrNull(path);
@@ -1289,10 +1292,6 @@ files.pathwatcherWatch = function () {
   var pathwatcher = require('meteor-pathwatcher-tweaks');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
-<<<<<<< HEAD
-=======
-
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
->>>>>>> Fix path conversions in a lot of places
