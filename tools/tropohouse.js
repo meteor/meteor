@@ -309,7 +309,7 @@ _.extend(exports.Tropohouse.prototype, {
             {firstIsopack: i === 0});
         });
 
-        self._saveIsopack(isopack, packageName, version);
+        self._saveIsopack(isopack, packageName);
 
         // Clean up old version.
         if (packageLinkTarget) {
