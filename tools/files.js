@@ -1238,7 +1238,7 @@ files.unwatchFile = function () {
 
 // wrappings for path functions that always run as they were on unix (using
 // forward slashes)
-var wrapPathFunction = function (name) {
+var wrapPathFunction = function (name, partialPaths) {
   var f = path[name];
   return function (/* args */) {
     if (process.platform === 'win32') {
@@ -1255,7 +1255,7 @@ var wrapPathFunction = function (name) {
   };
 };
 
-files.pathJoin = wrapPathFunction("join");
+files.pathJoin = wrapPathFunction("join", true);
 files.pathNormalize = wrapPathFunction("normalize");
 files.pathRelative = wrapPathFunction("relative");
 files.pathResolve = wrapPathFunction("resolve");
