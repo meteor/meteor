@@ -9,6 +9,7 @@ var path = require('path');
 var os = require('os');
 var util = require('util');
 var _ = require('underscore');
+var Fiber = require('fibers');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
@@ -1052,63 +1053,55 @@ var convertToStandardPath = function (osPath) {
  * @param {Function} options.modifyReturnValue Pass in a function to modify the
  * return value
  */
-var wrapFsFunc = function (fsFuncName, pathArgIndices, options) {
+function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   options = options || {};
 
   var fsFunc = fs[fsFuncName];
   var fsFuncSync = fs[fsFuncName + "Sync"];
 
-  // Yielding version
-  files[fsFuncName] = function () {
-    var args = _.toArray(arguments);
+  function wrapper() {
+    var argc = arguments.length;
+    var args = new Array(argc);
+    for (var i = 0; i < argc; ++i) {
+      args[i] = arguments[i];
+    }
 
-    // convert slashes
-    _.each(pathArgIndices, function (i) {
+    for (var j = pathArgIndices.length - 1; j >= 0; --j) {
+      i = pathArgIndices[j];
       args[i] = convertToOSPath(args[i]);
-    });
+    }
 
-    // This branch is used in the case where a callback doesn't have a first
-    // error argument, since Future.wrap doesn't handle that case
-    if (options.noErr) {
-      var fut = new Future();
+    if (Fiber.current &&
+        Fiber.yield && ! Fiber.yield.disallowed) {
+      var fut = new Future;
 
-      var callback = function (value) {
-        fut.return(value);
-      }
-
-      args.push(callback);
+      args.push(function callback(err, value) {
+        if (options.noErr) {
+          fut.return(err);
+        } else if (err) {
+          fut.throw(err);
+        } else {
+          fut.return(value);
+        }
+      });
 
       fsFunc.apply(fs, args);
 
-      var returnValue = fut.wait();
-
-      if (options.modifyReturnValue) {
-        return options.modifyReturnValue(returnValue);
-      }
-
-      return returnValue;
-    } else {
-      var returnValue = Future.wrap(fsFunc).apply(fs, args).wait();
-
-      if (options.modifyReturnValue) {
-        return options.modifyReturnValue(returnValue);
-      }
-
-      return returnValue;
+      var result = fut.wait();
+      return options.modifyReturnValue
+        ? options.modifyReturnValue(result)
+        : result;
     }
+
+    // If we're not in a Fiber, run the sync version of the fs.* method.
+    var result = fsFuncSync.apply(fs, args);
+    return options.modifyReturnValue
+      ? options.modifyReturnValue(result)
+      : result;
   }
 
-  // Non-yielding version
-  files[fsFuncName + "Sync"] = function () {
-    var args = _.toArray(arguments);
-
-    // convert slashes
-    _.each(pathArgIndices, function (i) {
-      args[i] = convertToOSPath(args[i]);
-    });
-
-    return fsFuncSync.apply(fs, args);
-  }
+  wrapper.displayName = fsFuncName;
+  return files[fsFuncName] = wrapper;
 }
 
 wrapFsFunc("writeFile", [0]);

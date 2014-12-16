@@ -1321,9 +1321,7 @@ _.extend(JsImage.prototype, {
             var nodeModuleDir =
               files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
 
-            // Use files.existsSync instead of files.exists here so that
-            // isopack loading doesn't yield.
-            if (files.existsSync(nodeModuleDir)) {
+            if (files.exists(nodeModuleDir)) {
               return require(nodeModuleDir);
             }
 
@@ -1524,7 +1522,7 @@ _.extend(JsImage.prototype, {
 // write()). `dir` is the path to the control file.
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
-  var json = JSON.parse(files.readFileSync(controlFilePath));
+  var json = JSON.parse(files.readFile(controlFilePath));
   var dir = files.pathDirname(controlFilePath);
 
   if (json.format !== "javascript-image-pre1")
@@ -1554,14 +1552,14 @@ JsImage.readFromDisk = function (controlFilePath) {
 
     var loadItem = {
       targetPath: item.path,
-      source: files.readFileSync(files.pathJoin(dir, item.path), 'utf8'),
+      source: files.readFile(files.pathJoin(dir, item.path), 'utf8'),
       nodeModulesDirectory: nmd
     };
 
     if (item.sourceMap) {
       // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
-      loadItem.sourceMap = files.readFileSync(
+      loadItem.sourceMap = files.readFile(
         files.pathJoin(dir, item.sourceMap), 'utf8');
       loadItem.sourceMapRoot = item.sourceMapRoot;
     }
@@ -1569,7 +1567,7 @@ JsImage.readFromDisk = function (controlFilePath) {
     if (!_.isEmpty(item.assets)) {
       loadItem.assets = {};
       _.each(item.assets, function (filename, relPath) {
-        loadItem.assets[relPath] = files.readFileSync(files.pathJoin(dir, filename));
+        loadItem.assets[relPath] = files.readFile(files.pathJoin(dir, filename));
       });
     }
 
