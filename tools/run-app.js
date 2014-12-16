@@ -200,28 +200,31 @@ _.extend(AppProcess.prototype, {
   _spawn: function () {
     var self = this;
 
-    var child_process = require('child_process');
+    // Path conversions
+    var nodePath = process.execPath; // This path is an OS path already
+    var entryPoint = files.convertToOSPath(
+      files.pathJoin(self.bundlePath, 'main.js'));
 
+    // Setting options
     var opts = _.clone(self.nodeOptions);
-    var entryPoint = files.pathJoin(self.bundlePath, 'main.js');
 
+    var attach;
     if (self.debugPort) {
-      var attach = require("./inspector.js").start(
-        self.debugPort,
-        entryPoint
-      );
-      opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
+      attach = require("./inspector.js").start(self.debugPort, entryPoint);
+      opts.push("--debug-brk", attach.suggestedDebugBrkPort);
     }
 
-    opts.push(
-      entryPoint, '--parent-pid',
-      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
-    );
+    opts.push(entryPoint);
+    opts.push('--parent-pid',
+      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid);
 
-    var child = child_process.spawn(process.execPath, opts, {
+    // Call node
+    var child_process = require('child_process');
+    var child = child_process.spawn(nodePath, opts, {
       env: self._computeEnvironment()
     });
 
+    // Attach inspector
     if (attach) {
       attach(child);
     }
