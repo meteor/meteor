@@ -26,6 +26,9 @@
 
 * Expire a user's password reset tokens when their password is changed.
 
+* Require plain objects as the update parameter when doing replacements
+  in server-side collections.
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
