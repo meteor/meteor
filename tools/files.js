@@ -361,8 +361,8 @@ files.treeHash = function (root, options) {
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.
 files.mkdir_p = function (dir, mode) {
-  var p = path.resolve(dir);
-  var ps = path.normalize(p).split(path.sep);
+  var p = files.pathResolve(dir);
+  var ps = files.pathNormalize(p).split(files.pathSep);
 
   if (files.exists(p)) {
     if (files.stat(p).isDirectory()) { return true;}
@@ -370,15 +370,18 @@ files.mkdir_p = function (dir, mode) {
   }
 
   // doesn't exist. recurse to build parent.
-  var success = files.mkdir_p(ps.slice(0,-1).join(path.sep), mode);
+  // Don't use files.pathJoin here because it can strip off the leading slash
+  // accidentally.
+  var parentPath = ps.slice(0, -1).join(files.pathSep);
+  var success = files.mkdir_p(parentPath, mode);
   // parent is not a directory.
-  if (!success) { return false; }
+  if (! success) { return false; }
 
   files.mkdir(p, mode);
 
   // double check we exist now
-  if (!files.exists(p) ||
-      !files.stat(p).isDirectory())
+  if (! files.exists(p) ||
+      ! files.stat(p).isDirectory())
     return false; // wtf
   return true;
 };
