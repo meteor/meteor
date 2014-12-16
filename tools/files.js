@@ -1060,15 +1060,15 @@ var wrapFsFunc = function (fsFuncName, pathArgIndices, options) {
 
   // Yielding version
   files[fsFuncName] = function () {
-    var args = arguments;
+    var args = _.toArray(arguments);
 
     // convert slashes
     _.each(pathArgIndices, function (i) {
       args[i] = convertToOSPath(args[i]);
     });
 
-    // return fsFunc.apply(fs, args);
-
+    // This branch is used in the case where a callback doesn't have a first
+    // error argument, since Future.wrap doesn't handle that case
     if (options.noErr) {
       var fut = new Future();
 
@@ -1076,8 +1076,7 @@ var wrapFsFunc = function (fsFuncName, pathArgIndices, options) {
         fut.return(value);
       }
 
-      // convert args to an array
-      args = [].splice.call(args, 0).concat(callback);
+      args.push(callback);
 
       fsFunc.apply(fs, args);
 
@@ -1101,7 +1100,7 @@ var wrapFsFunc = function (fsFuncName, pathArgIndices, options) {
 
   // Non-yielding version
   files[fsFuncName + "Sync"] = function () {
-    var args = arguments;
+    var args = _.toArray(arguments);
 
     // convert slashes
     _.each(pathArgIndices, function (i) {
@@ -1145,13 +1144,15 @@ wrapFsFunc("symlink", [0, 1]);
 wrapFsFunc("readlink", [0]);
 
 files.createReadStream = function () {
-  arguments[0] = convertToOSPath(arguments[0]);
-  return fs.createReadStream.apply(fs, arguments);
+  var args = _.toArray(arguments);
+  args[0] = convertToOSPath(args[0]);
+  return fs.createReadStream.apply(fs, args);
 };
 
 files.createWriteStream = function () {
-  arguments[0] = convertToOSPath(arguments[0]);
-  return fs.createWriteStream.apply(fs, arguments);
+  var args = _.toArray(arguments);
+  args[0] = convertToOSPath(args[0]);
+  return fs.createWriteStream.apply(fs, args);
 };
 
 // wrappings for path functions that always run as they were on unix (using
@@ -1160,8 +1161,8 @@ var wrapPathFunction = function (name) {
   var f = path[name];
 
   return function (/* args */) {
-    var args = _.toArray(arguments);
     if (process.platform === 'win32')
+      var args = _.toArray(arguments);
       return toPosixPath(f.apply(path, _.map(args, toDosPath)));
     else
       return f.apply(path, arguments);
