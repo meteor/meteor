@@ -63,6 +63,8 @@
 
 * Make query parameter available to oauth1 services 6b8221d
 
+* Expire a user's password reset tokens when their password is changed.
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
