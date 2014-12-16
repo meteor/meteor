@@ -1195,6 +1195,7 @@ files.pathDelimiter = ':';
 // wrap pathwatcher because it works with file system paths
 files.pathwatcherWatch = function () {
   var args = _.toArray(arguments);
+  args[0] = convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
   var pathwatcher = require('pathwatcher');
