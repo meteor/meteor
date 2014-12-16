@@ -1481,6 +1481,7 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       test.isFalse(err);
       test.isTrue(id);
       docId = id;
+      self.docId = docId;
       var cursor = self.coll.find();
       test.equal(cursor.count(), 1);
       var inColl = self.coll.findOne();
@@ -1493,6 +1494,12 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       test.isTrue(err);
       test.isFalse(id);
     }));
+  }, function (test, expect) {
+    var self = this;
+    self.coll.update(
+      self.docId, new Dog("rover", "orange"), expect(function (err) {
+        test.isTrue(err);
+      }));
   }
 ]);
 
