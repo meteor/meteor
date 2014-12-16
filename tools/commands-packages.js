@@ -1571,8 +1571,11 @@ var maybeUpdateRelease = function (options) {
       // command even ran. They could equivalently have run 'meteor
       // help --release xyz'.
       Console.info(
-        "Installed. Run " + Console.command("'meteor update' ") +
-        "inside of a particular project directory to update that project to " +
+        "Installed. Run",
+        Console.command(
+          "'meteor update --release " +
+            release.current.getDisplayName({ noPrefix: true } + "'")),
+        "inside of a particular project directory to update that project to",
         release.current.getDisplayName() + ".");
     } else {
       // We get here if the user ran 'meteor update' and we didn't
