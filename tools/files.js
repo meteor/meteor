@@ -549,6 +549,9 @@ files.extractTarGz = function (buffer, destPath) {
       future.isResolved() || future.throw(e);
     });
   var extractor = new tar.Extract({ path: tempDir })
+    .on('entry', function (e) {
+      e.path = files.adaptLegacyPath(e.path);
+    })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
     })
@@ -1007,6 +1010,12 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation) {
   files.symlinkOverSync(scriptLocation, linkLocation);
 };
 
+// In the old World we used to have any paths that worked on unix,
+// but in the new World we restrict the use of characters like ':'.
+files.adaptLegacyPath = function (p) {
+  return p.replace(/:/g, '_');
+};
+
 /////// Below here, functions have been corrected for slashes
 
 var toPosixPath = function (p, notAbsolute) {
@@ -1283,3 +1292,4 @@ files.pathwatcherWatch = function () {
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
+
