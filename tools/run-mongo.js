@@ -37,7 +37,7 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
   mongodPath = files.convertToOSPath(mongodPath);
   dbPath = files.convertToOSPath(dbPath);
 
-  child_process.spawn(mongodPath, [
+  return child_process.spawn(mongodPath, [
       // nb: cli-test.sh and findMongoPids make strong assumptions about the
       // order of the arguments! Check them before changing any arguments.
       '--bind_ip', '127.0.0.1',
