@@ -1324,7 +1324,7 @@ _.extend(JsImage.prototype, {
             // Use files.existsSync instead of files.exists here so that
             // isopack loading doesn't yield.
             if (files.existsSync(nodeModuleDir)) {
-              return require(nodeModuleDir);
+              return require(files.convertToOSPath(nodeModuleDir));
             }
 
             try {
