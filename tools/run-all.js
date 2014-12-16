@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 
@@ -83,6 +82,10 @@ var Runner = function (options) {
   }
 
   self.updater = new Updater;
+
+  require("./safe-pathwatcher.js").testDirectory(
+    files.pathJoin(self.projectContext.projectDir, ".meteor", "local")
+  );
 
   self.appRunner = new AppRunner({
     projectContext: self.projectContext,

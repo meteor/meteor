@@ -103,7 +103,7 @@ files.findPackageDir = function (filepath) {
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
 files.addToGitignore = function (dirPath, entry) {
-  var filepath = path.join(dirPath, ".gitignore");
+  var filepath = files.pathJoin(dirPath, ".gitignore");
   if (files.exists(filepath)) {
     var data = files.readFile(filepath, 'utf8');
     var lines = data.split(/\n/);
