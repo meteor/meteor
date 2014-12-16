@@ -3068,7 +3068,7 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
 
     test.throws(function () {
       c.update(id, { foo3: "bar3", $set: { blah: 1 } });
-    }, "cannot be mixed");
+    }, "cannot have both modifier and non-modifier fields");
     test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
   }
 ]);
