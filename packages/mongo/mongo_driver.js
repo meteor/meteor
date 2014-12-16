@@ -320,7 +320,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   if (!(LocalCollection._isPlainObject(document) &&
         !EJSON._isCustomType(document))) {
     sendError(new Error(
-      "Only documents (plain objects) may be inserted into MongoDB"));
+      "Only plain objects may be inserted into MongoDB"));
     return;
   }
 
@@ -431,6 +431,14 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   // error here.
   if (!mod || typeof mod !== 'object')
     throw new Error("Invalid modifier. Modifier must be an object.");
+
+  if (!(LocalCollection._isPlainObject(mod) &&
+        !EJSON._isCustomType(mod))) {
+    throw new Error(
+      "Only plain objects may be used as replacement" +
+        " documents in MongoDB");
+    return;
+  }
 
   if (!options) options = {};
 
