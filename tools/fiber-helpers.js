@@ -53,14 +53,17 @@ exports.waitForOne = function (/* futures */) {
   return combinedFuture.wait();
 };
 
+function disallowedYield() {
+  throw new Error("Can't call yield in a noYieldsAllowed block!");
+}
+// Allow testing Fiber.yield.disallowed.
+disallowedYield.disallowed = true;
 
-exports.noYieldsAllowed = function (f) {
+exports.noYieldsAllowed = function (f, context) {
   var savedYield = Fiber.yield;
-  Fiber.yield = function () {
-    throw new Error("Can't call yield in a noYieldsAllowed block!");
-  };
+  Fiber.yield = disallowedYield;
   try {
-    return f();
+    return f.call(context || null);
   } finally {
     Fiber.yield = savedYield;
   }
