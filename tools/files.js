@@ -52,7 +52,7 @@ var findUpwards = function (predicate, startPath) {
     if (predicate(testDir)) {
       break;
     }
-    var newDir = path.dirname(testDir);
+    var newDir = files.pathDirname(testDir);
     if (newDir === testDir) {
       testDir = null;
     } else {
@@ -78,7 +78,8 @@ files.findAppDir = function (filepath) {
     // $HOME/.meteor, we want to make sure your home directory (and all
     // subdirectories therein) don't count as being within a meteor app.
     try { // use try/catch to avoid the additional syscall to files.exists
-      return files.stat(path.join(filepath, '.meteor', 'packages')).isFile();
+      return files.stat(
+        files.pathJoin(filepath, '.meteor', 'packages')).isFile();
     } catch (e) {
       return false;
     }
@@ -90,7 +91,7 @@ files.findAppDir = function (filepath) {
 files.findPackageDir = function (filepath) {
   var isPackageDir = function (filepath) {
     try {
-      return files.stat(path.join(filepath, 'package.js')).isFile();
+      return files.stat(files.pathJoin(filepath, 'package.js')).isFile();
     } catch (e) {
       return false;
     }
@@ -147,7 +148,7 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    var isopackJsonPath = path.join(files.getCurrentToolsDir(),
+    var isopackJsonPath = files.pathJoin(files.getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'isopack.json');
 
@@ -163,7 +164,7 @@ files.getToolsVersion = function () {
     }
 
     // XXX COMPAT WITH 0.9.3
-    var unipackageJsonPath = path.join(files.getCurrentToolsDir(),
+    var unipackageJsonPath = files.pathJoin(files.getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'unipackage.json');
     var unipackageJson = files.readFile(unipackageJsonPath);
@@ -178,7 +179,7 @@ files.getToolsVersion = function () {
 // Return the root of dev_bundle (probably /usr/local/meteor in an
 // install, or (checkout root)/dev_bundle in a checkout.).
 files.getDevBundle = function () {
-  return path.join(files.getCurrentToolsDir(), 'dev_bundle');
+  return files.pathJoin(files.getCurrentToolsDir(), 'dev_bundle');
 };
 
 // Return the top-level directory for this meteor install or checkout
@@ -192,7 +193,7 @@ files.getCurrentToolsDir = function () {
 // emitted).
 files.getSettings = function (filename, watchSet) {
   buildmessage.assertInCapture();
-  var absPath = path.resolve(filename);
+  var absPath = files.pathResolve(filename);
   var buffer = watch.readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
@@ -229,10 +230,10 @@ files.prettyPath = function (p) {
   var home = files.getHomeDir();
   if (! home)
     return p;
-  var relativeToHome = path.relative(home, p);
-  if (relativeToHome.substr(0, 3) === ('..' + path.sep))
+  var relativeToHome = files.pathRelative(home, p);
+  if (relativeToHome.substr(0, 3) === ('..' + files.pathSep))
     return p;
-  return path.join('~', relativeToHome);
+  return files.pathJoin('~', relativeToHome);
 };
 
 // Like statSync, but null if file not found
@@ -267,7 +268,7 @@ var makeTreeReadOnly = function (p) {
 
   if (stat.isDirectory()) {
     _.each(files.readdir(p), function (file) {
-      makeTreeReadOnly(path.join(p, file));
+      makeTreeReadOnly(files.pathJoin(p, file));
     });
   }
   if (stat.isFile()) {
@@ -323,7 +324,7 @@ files.treeHash = function (root, options) {
       return;
     }
 
-    var absPath = path.join(root, relativePath);
+    var absPath = files.pathJoin(root, relativePath);
     var stat = files.lstat(absPath);
 
     if (stat.isDirectory()) {
@@ -331,7 +332,7 @@ files.treeHash = function (root, options) {
         updateHash('dir ' + JSON.stringify(relativePath) + '\n');
       }
       _.each(files.readdir(absPath), function (entry) {
-        traverse(path.join(relativePath, entry));
+        traverse(files.pathJoin(relativePath, entry));
       });
     } else if (stat.isFile()) {
       if (!relativePath) {
@@ -347,7 +348,7 @@ files.treeHash = function (root, options) {
         throw Error("must call files.treeHash on a directory");
       }
       updateHash('symlink ' + JSON.stringify(relativePath) + ' ' +
-                 JSON.stringify(fs.readlinkSync(absPath)) + '\n');
+                 JSON.stringify(files.readlink(absPath)) + '\n');
     }
     // ignore anything weirder
   };
@@ -414,7 +415,7 @@ files.mkdir_p = function (dir, mode) {
 files.cp_r = function (from, to, options) {
   options = options || {};
 
-  var absFrom = path.resolve(from);
+  var absFrom = files.pathResolve(from);
   files.mkdir_p(to, 0755);
 
   _.each(files.readdir(from), function (f) {
@@ -422,19 +423,19 @@ files.cp_r = function (from, to, options) {
       return f.match(pattern);
     })) return;
 
-    var fullFrom = path.join(from, f);
+    var fullFrom = files.pathJoin(from, f);
     if (options.transformFilename)
       f = options.transformFilename(f);
-    var fullTo = path.join(to, f);
+    var fullTo = files.pathJoin(to, f);
     var stats = options.preserveSymlinks
           ? files.lstat(fullFrom) : files.stat(fullFrom);
     if (stats.isDirectory()) {
       files.cp_r(fullFrom, fullTo, options);
     } else if (stats.isSymbolicLink()) {
-      var linkText = fs.readlinkSync(fullFrom);
-      fs.symlinkSync(linkText, fullTo);
+      var linkText = files.readlink(fullFrom);
+      files.symlink(linkText, fullTo);
     } else {
-      var absFullFrom = path.resolve(fullFrom);
+      var absFullFrom = files.pathResolve(fullFrom);
 
       // Create the file as readable and writable by everyone, and executable by
       // everyone if the original file is executably by owner. (This mode will
@@ -457,7 +458,7 @@ files.cp_r = function (from, to, options) {
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
 files.copyFile = function (from, to) {
-  files.mkdir_p(path.dirname(path.resolve(to)), 0755);
+  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0755);
 
   var stats = files.stat(from);
   if (!stats.isFile()) {
@@ -503,14 +504,21 @@ files.mkdtemp = function (prefix) {
     // find /tmp
     var tmpDir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
       return process.env[t];
-    }).filter(_.identity)) || path.sep + 'tmp';
+    }).filter(_.identity));
+
+    if (! tmpDir && process.platform !== 'win32')
+      tmpDir = files.pathSep + 'tmp';
+
+    if (! tmpDir)
+      throw new Error("Couldn't create a temporary directory.");
+
     tmpDir = files.realpath(tmpDir);
 
     // make the directory. give it 3 tries in case of collisions from
     // crappy random.
     var tries = 3;
     while (tries > 0) {
-      var dirPath = path.join(
+      var dirPath = files.pathJoin(
         tmpDir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
       try {
         files.mkdir(dirPath, 0700);
@@ -559,8 +567,8 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
 // be renamed atomically to destPath. The entire tree will be made
 // readonly.
 files.extractTarGz = function (buffer, destPath) {
-  var parentDir = path.dirname(destPath);
-  var tempDir = path.join(parentDir, '.tmp' + utils.randomToken());
+  var parentDir = files.pathDirname(destPath);
+  var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
   var future = new Future;
@@ -592,7 +600,7 @@ files.extractTarGz = function (buffer, destPath) {
     throw new Error(
       "Extracted archive '" + tempDir + "' should only contain one entry");
 
-  var extractDir = path.join(tempDir, topLevelOfArchive[0]);
+  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
   makeTreeReadOnly(extractDir);
   files.rename(extractDir, destPath);
   files.rmdir(tempDir);
@@ -680,9 +688,9 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
 };
 
 files.writeFileAtomically = function (filename, contents) {
-  var tmpFile = path.join(
-    path.dirname(filename),
-    '.' + path.basename(filename) + '.' + utils.randomToken());
+  var tmpFile = files.pathJoin(
+    files.pathDirname(filename),
+    '.' + files.pathBasename(filename) + '.' + utils.randomToken());
   files.writeFile(tmpFile, contents);
   files.rename(tmpFile, filename);
 };
@@ -690,11 +698,11 @@ files.writeFileAtomically = function (filename, contents) {
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 files.symlinkOverSync = function (linkText, file) {
-  file = path.resolve(file);
-  var tmpSymlink = path.join(
-    path.dirname(file),
-    "." + path.basename(file) + ".tmp" + utils.randomToken());
-  fs.symlinkSync(linkText, tmpSymlink);
+  file = files.pathResolve(file);
+  var tmpSymlink = files.pathJoin(
+    files.pathDirname(file),
+    "." + files.pathBasename(file) + ".tmp" + utils.randomToken());
+  files.symlinkSync(linkText, tmpSymlink);
   files.rename(tmpSymlink, file);
 };
 
@@ -731,8 +739,8 @@ files.run = function (command /*, arguments */) {
 
 files.runGitInCheckout = function (/* arguments */) {
   var args = _.toArray(arguments);
-  args.unshift('git',
-               '--git-dir=' + path.join(files.getCurrentToolsDir(), '.git'));
+  args.unshift(
+    'git', '--git-dir=' + files.pathJoin(files.getCurrentToolsDir(), '.git'));
   var ret = files.run.apply(files, args);
   if (ret === null) {
     // XXX files.run really ought to give us some actual context
@@ -804,7 +812,7 @@ files.runJavaScript = function (code, options) {
     parsedSourceMap = results.map.toJSON();
     if (options.sourceMapRoot) {
       // Add the specified root to any root that may be in the file.
-      parsedSourceMap.sourceRoot = path.join(
+      parsedSourceMap.sourceRoot = files.pathJoin(
         options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
     }
     // source-map-support doesn't ever look at the sourcesContent field, so
