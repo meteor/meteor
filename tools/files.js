@@ -103,7 +103,7 @@ files.findPackageDir = function (filepath) {
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
 files.addToGitignore = function (dirPath, entry) {
-  var filepath = path.join(dirPath, ".gitignore");
+  var filepath = files.pathJoin(dirPath, ".gitignore");
   if (files.exists(filepath)) {
     var data = files.readFile(filepath, 'utf8');
     var lines = data.split(/\n/);
@@ -1259,6 +1259,7 @@ files.pathDelimiter = ':';
 // wrap pathwatcher because it works with file system paths
 files.pathwatcherWatch = function () {
   var args = _.toArray(arguments);
+  args[0] = convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
   var pathwatcher = require('pathwatcher');
