@@ -1161,11 +1161,12 @@ var wrapPathFunction = function (name) {
   var f = path[name];
 
   return function (/* args */) {
-    if (process.platform === 'win32')
+    if (process.platform === 'win32') {
       var args = _.toArray(arguments);
       return toPosixPath(f.apply(path, _.map(args, toDosPath)));
-    else
+    } else {
       return f.apply(path, arguments);
+    }
   };
 };
 
