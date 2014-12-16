@@ -30,7 +30,7 @@ exports.testDirectory = function (dir) {
   }
 
   var canaryFile = files.pathJoin(
-    dir, "canary$" + Math.random().toString(36).slice(2)
+    dir, ".pathwatcher-canary-" + Math.random().toString(36).slice(2)
   );
 
   files.mkdir_p(dir);
@@ -82,7 +82,7 @@ exports.testDirectory = function (dir) {
   // if other events sneak in while we're waiting, since all we care
   // about is whether pathwatcher.watch works.
   try {
-    files.writeFile(canaryFile, "ok");
+    files.writeFile(canaryFile, "ok\n");
   } catch (err) {
     cleanUp();
     throw err;
