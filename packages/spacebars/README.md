@@ -192,7 +192,7 @@ Block tags invoke built-in directives or custom block helpers, passing a block o
 {{/block}}
 ```
 
-Block tags may also have specify "else" content, separated from the main content by the special template tag `{{else}}`. 
+Block tags may also specify "else" content, separated from the main content by the special template tag `{{else}}`. 
 
 A block tag's content must consist of HTML with balanced tags.
 
