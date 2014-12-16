@@ -1,5 +1,4 @@
 var files = require("./files.js");
-var Future = require("fibers/future");
 var _ = require("underscore");
 var switchFunctions = [];
 var pollingInterval = 500;
@@ -21,7 +20,7 @@ var canUsePathwatcher = !process.env.METEOR_WATCH_FORCE_POLLING;
 // There is some theoretical risk of missing file system events from
 // pathwatcher watches created before we discover that we can't use
 // pathwatcher.watch, but the window of time where that can happen is
-// small enough (500ms) that developers are highly unlikely to care.
+// small enough (200ms) that developers are highly unlikely to care.
 
 exports.testDirectory = function (dir) {
   if (! canUsePathwatcher) {
@@ -35,12 +34,6 @@ exports.testDirectory = function (dir) {
   );
 
   files.mkdir_p(dir);
-
-  try {
-    files.unlink(canaryFile);
-  } catch (err) {
-    // ignore the error
-  }
 
   var cleanUp = function () {
     if (watcher) {
@@ -64,7 +57,7 @@ exports.testDirectory = function (dir) {
       switchToPolling();
     });
 
-    require("./console.js").Console.warn(
+    require("./console.js").Console.debug(
       "Falling back to files.watchFile instead of pathwatcher.watch..."
     );
   };
@@ -72,34 +65,38 @@ exports.testDirectory = function (dir) {
   try {
     // Watch the candidate directory using pathwatcher.watch.
     var watcher = files.pathwatcherWatch(dir, cleanUp);
+
   } catch (err) {
     // If the directory did not exist, do not treat this failure as
     // evidence against pathwatcher.watch, but simply return and leave
     // canUsePathwatcher set to true.
-    if (err instanceof TypeError && err.message === "Unable to watch path") {
+    if (err instanceof TypeError &&
+        err.message === "Unable to watch path") {
       return;
     }
-    
+
     throw err;
   }
 
   // Create a new file to trigger a change event (hopefully). It's fine
   // if other events sneak in while we're waiting, since all we care
   // about is whether pathwatcher.watch works.
-  files.writeFile(canaryFile, "ok", function (err) {
-    if (err) {
-      cleanUp();
-      throw err;
-    }
-  });
+  try {
+    files.writeFile(canaryFile, "ok");
+  } catch (err) {
+    cleanUp();
+    throw err;
+  }
 
-  // Set a time limit of 500ms for the change event.
-  setTimeout(function () {
+  // Set a time limit of 200ms, starting from the time the file was
+  // written, in which the change event must fire, else we fall back to
+  // using files.watchFile.
+  setTimeout(function() {
     if (watcher) {
       cleanUp();
       fallBack();
     }
-  }, 500);
+  }, 200);
 };
 
 exports.watch = function (absPath, callback) {
