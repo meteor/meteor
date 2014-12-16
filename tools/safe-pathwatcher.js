@@ -32,7 +32,7 @@ exports.testDirectory = function(dir) {
   }
 
   var canaryFile = path.join(
-    dir, "canary$" + Math.random().toString(36).slice(2)
+    dir, ".pathwatcher-canary-" + Math.random().toString(36).slice(2)
   );
 
   // Make sure the test directory exists.
@@ -80,7 +80,7 @@ exports.testDirectory = function(dir) {
     // Create a new file to trigger a change event (hopefully). It's fine
     // if other events sneak in while we're waiting, since all we care
     // about is whether pathwatcher.watch works.
-    fs.writeFile(canaryFile, "ok", function(err) {
+    fs.writeFile(canaryFile, "ok\n", function(err) {
       if (err) {
         cleanUp();
         throw err;
