@@ -223,17 +223,17 @@ var runTest = function () {
     // and installing each package separately could unintentionally bump
     // subdependency versions. (to intentionally bump subdependencies,
     // just remove all of the .npm directory)
-    var bareExecFileSync = meteorNpm._execFileSync;
-    meteorNpm._execFileSync = function (file, args, opts) {
+    var bareRunNpmCommand = meteorNpm.runNpmCommand;
+    meteorNpm.runNpmCommand = function (file, args, opts) {
       if (args.length > 1 && args[0] === 'install')
         assert.fail("shouldn't be installing specific npm packages: " + args[1]);
-      return bareExecFileSync(file, args, opts);
+      return bareRunNpmCommand(file, args, opts);
     };
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir
     });
-    meteorNpm._execFileSync = bareExecFileSync;
+    meteorNpm.runNpmCommand = bareRunNpmCommand;
 
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
     _assertCorrectPackageNpmDir(projectContext, {gcd: '0.0.0'});
