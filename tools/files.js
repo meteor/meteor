@@ -1080,6 +1080,14 @@ var convertToStandardPath = function (osPath, notAbsolute) {
   return osPath;
 }
 
+var convertToOSLineEndings = function (fileContents) {
+  return fileContents.replace(/\n/g, os.EOL);
+};
+
+var convertToStandardLineEndings = function (fileContents) {
+  return fileContents.replace(new RegExp(os.EOL, "g"), "\n");
+};
+
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
  * and run in a fiber, then assign it to the "files" namespace. Each call
@@ -1149,7 +1157,15 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
 wrapFsFunc("writeFile", [0]);
 wrapFsFunc("appendFile", [0]);
-wrapFsFunc("readFile", [0]);
+wrapFsFunc("readFile", [0], {
+  modifyReturnValue: function (fileData) {
+    if (_.isString(fileData)) {
+      return convertToStandardLineEndings(fileData);
+    }
+
+    return fileData;
+  }
+});
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("exists", [0], {noErr: true});
@@ -1160,13 +1176,12 @@ if (process.platform === "win32") {
   // File reading and writing; need to convert line endings
   var writeFile = files.writeFile;
   var appendFile = files.appendFile;
-  var readFile = files.readFile;
   var rename = files.rename;
 
   files.writeFile = function (filename, data, options) {
     if (_.isString(data)) {
       // on windows, replace line endings
-      data = data.replace(/\n/g, os.EOL);
+      data = convertToOSLineEndings(data);
     }
 
     writeFile(filename, data, options);
@@ -1175,19 +1190,10 @@ if (process.platform === "win32") {
   files.appendFile = function (filename, data, options) {
     if (_.isString(data)) {
       // on windows, replace line endings
-      data = data.replace(/\n/g, os.EOL);
+      data = convertToOSLineEndings(data);
     }
 
     appendFile(filename, data, options);
-  };
-
-  files.readFile = function () {
-    var fileData = readFile.apply(files, arguments);
-
-    if (_.isString(fileData)) {
-      return fileData.replace(new RegExp(os.EOL, "g"), "\n");
-    }
-    return fileData;
   };
 
   files.rename = function (from, to) {
