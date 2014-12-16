@@ -1155,6 +1155,18 @@ files.createWriteStream = function () {
   return fs.createWriteStream.apply(fs, args);
 };
 
+files.watchFile = function () {
+  var args = _.toArray(arguments);
+  args[0] = convertToOSPath(args[0]);
+  return fs.watchFile.apply(fs, args);
+};
+
+files.unwatchFile = function () {
+  var args = _.toArray(arguments);
+  args[0] = convertToOSPath(args[0]);
+  return fs.unwatchFile.apply(fs, args);
+};
+
 // wrappings for path functions that always run as they were on unix (using
 // forward slashes)
 var wrapPathFunction = function (name) {
@@ -1179,4 +1191,13 @@ files.pathBasename = wrapPathFunction("basename");
 files.pathExtname = wrapPathFunction("extname");
 files.pathSep = '/';
 files.pathDelimiter = ':';
+
+// wrap pathwatcher because it works with file system paths
+files.pathwatcherWatch = function () {
+  var args = _.toArray(arguments);
+  // don't import pathwatcher until the moment we actually need it
+  // pathwatcher has a record of keeping some global state
+  var pathwatcher = require('pathwatcher');
+  return pathwatcher.watch.apply(pathwatcher, args);
+};
 
