@@ -695,6 +695,25 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
+// XXX We should eventually rewrite the whole meteor tools to use yielding fs
+// calls instead of sync (so that meteor is responsive to C-c during bundling,
+// so that the proxy accepts connections, etc) but we don't want to do this in
+// the point release in which we are adding these functions.
+var readdirSyncOrYield = function (path, yielding) {
+  if (yielding) {
+    return files.readdir(path);
+  } else {
+    return files.readdirSync(path);
+  }
+};
+var statSyncOrYield = function (path, yielding) {
+  if (yielding) {
+    return files.stat(path);
+  } else {
+    return files.statSync(path);
+  }
+};
+
 _.extend(exports, {
   WatchSet: WatchSet,
   Watcher: Watcher,
