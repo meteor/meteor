@@ -2,6 +2,7 @@
 /// exits.
 
 var _ = require('underscore');
+var Fiber = require("fibers");
 
 var cleanup = exports;
 _.extend(exports, {
@@ -15,11 +16,13 @@ _.extend(exports, {
 });
 
 var runHandlers = function () {
-  var handlers = cleanup._exitHandlers;
-  cleanup._exitHandlers = [];
-  _.each(handlers, function (f) {
-    f();
-  });
+  Fiber(function () {
+    var handlers = cleanup._exitHandlers;
+    cleanup._exitHandlers = [];
+    _.each(handlers, function (f) {
+      f();
+    });
+  }).run();
 };
 
 process.on('exit', runHandlers);

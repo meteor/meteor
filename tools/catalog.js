@@ -1,15 +1,5 @@
-var fs = require('fs');
-var path = require('path');
 var _ = require('underscore');
-var util = require('util');
-var buildmessage = require('./buildmessage.js');
-var tropohouse = require('./tropohouse.js');
-var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
-var files = require('./files.js');
-var utils = require('./utils.js');
-var config = require('./config.js');
-var packageClient = require('./package-client.js');
 var Console = require('./console.js').Console;
 
 var catalog = exports;

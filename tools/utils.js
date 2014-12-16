@@ -7,9 +7,7 @@ var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
-var fs = require('fs');
 var url = require('url');
-var child_process = require('child_process');
 
 var utils = exports;
 
@@ -344,10 +342,11 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   return ret + '$';
 };
 
+// XXX should be in files.js
 exports.isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK
-    var stats = fs.statSync(dir);
+    var stats = files.stat(dir);
   } catch (e) {
     return false;
   }

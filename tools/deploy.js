@@ -5,7 +5,6 @@
 // send RPC with or without password as required
 
 var qs = require('querystring');
-var path = require('path');
 var files = require('./files.js');
 var httpHelpers = require('./http-helpers.js');
 var buildmessage = require('./buildmessage.js');
@@ -387,7 +386,7 @@ var bundleAndDeploy = function (options) {
   }
 
   var buildDir = options.projectContext.getProjectLocalDirectory('build_tar');
-  var bundlePath = path.join(buildDir, 'bundle');
+  var bundlePath = files.pathJoin(buildDir, 'bundle');
 
   Console.info('Deploying to ' + site + '.');
 
@@ -433,7 +432,7 @@ var bundleAndDeploy = function (options) {
       operation: 'deploy',
       site: site,
       qs: settings !== null ? {settings: settings} : {},
-      bodyStream: files.createTarGzStream(path.join(buildDir, 'bundle')),
+      bodyStream: files.createTarGzStream(files.pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword
     });

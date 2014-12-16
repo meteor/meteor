@@ -1,14 +1,7 @@
-var path = require("path");
-var fs = require("fs");
-var os = require("os");
-var Future = require("fibers/future");
 var _ = require("underscore");
 var files = require('./files.js');
 var utils = require('./utils.js');
-var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
-var fiberHelpers = require('./fiber-helpers.js');
-var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
 var Isopack = require('./isopack.js').Isopack;
@@ -34,7 +27,7 @@ var defaultWarehouseDir = function () {
   // XXX This will be `.meteor` soon, once we've written the code to make the
   // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
   // tools to springboard to warehouse tools).
-  return path.join(warehouseBase, ".meteor");
+  return files.pathJoin(warehouseBase, ".meteor");
 };
 
 // The default tropohouse is on disk at defaultWarehouseDir(); you can make your
@@ -53,10 +46,12 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
-    var relativePath = path.join(config.getPackagesDirectoryName(),
-                                 utils.escapePackageNameForPath(packageName),
-                                 version);
-    return relative ? relativePath : path.join(self.root, relativePath);
+    var relativePath = files.pathJoin(
+      config.getPackagesDirectoryName(),
+      utils.escapePackageNameForPath(packageName),
+      version);
+
+    return relative ? relativePath : files.pathJoin(self.root, relativePath);
   },
 
   // Pretty extreme! We call this when we learn that something has changed on
@@ -66,9 +61,11 @@ _.extend(exports.Tropohouse.prototype, {
 
     var packagesDirectoryName = config.getPackagesDirectoryName();
 
-    var packageRootDir = path.join(self.root, packagesDirectoryName);
+    var packageRootDir = files.pathJoin(self.root, packagesDirectoryName);
     try {
-      var escapedPackages = fs.readdirSync(packageRootDir);
+      // XXX this variable actually can't be accessed from outside this
+      // line, this is definitely a bug
+      var escapedPackages = files.readdir(packageRootDir);
     } catch (e) {
       // No packages at all? We're done.
       if (e.code === 'ENOENT')
@@ -90,9 +87,9 @@ _.extend(exports.Tropohouse.prototype, {
       var toolsDir = files.getCurrentToolsDir();
       // eg, 'meteor-tool'
       currentToolPackageEscaped =
-        path.basename(path.dirname(path.dirname(toolsDir)));
+        files.pathBasename(files.pathDirname(files.pathDirname(toolsDir)));
       // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova'
-      var toolVersionDir = path.basename(path.dirname(toolsDir));
+      var toolVersionDir = files.pathBasename(files.pathDirname(toolsDir));
       var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
       var pieces = toolVersionWithDotAndRandomBit.split('.');
       pieces.shift();
@@ -100,18 +97,20 @@ _.extend(exports.Tropohouse.prototype, {
       currentToolVersion = pieces.join('.');
       var latestMeteorSymlink = self.latestMeteorSymlink();
       if (utils.startsWith(latestMeteorSymlink,
-                           packagesDirectoryName + path.sep)) {
-        var rest = latestMeteorSymlink.substr(packagesDirectoryName.length + path.sep.length);
-        var pieces = rest.split(path.sep);
+                           packagesDirectoryName + files.pathSep)) {
+        var rest = latestMeteorSymlink.substr(
+          packagesDirectoryName.length + files.pathSep.length);
+
+        var pieces = rest.split(files.pathSep);
         latestToolPackageEscaped = pieces[0];
         latestToolVersion = pieces[1];
       }
     }
 
     _.each(escapedPackages, function (packageEscaped) {
-      var packageDir = path.join(packageRootDir, packageEscaped);
+      var packageDir = files.pathJoin(packageRootDir, packageEscaped);
       try {
-        var versions = fs.readdirSync(packageDir);
+        var versions = files.readdir(packageDir);
       } catch (e) {
         // Somebody put a file in here or something? Whatever, ignore.
         if (e.code === 'ENOENT' || e.code === 'ENOTDIR')
@@ -140,7 +139,7 @@ _.extend(exports.Tropohouse.prototype, {
           return;
         }
 
-        files.rm_recursive(path.join(packageDir, version));
+        files.rm_recursive(files.pathJoin(packageDir, version));
       });
     });
   },
@@ -201,7 +200,7 @@ _.extend(exports.Tropohouse.prototype, {
     var downloadedArches = [];
     var packageLinkTarget = null;
     try {
-      packageLinkTarget = fs.readlinkSync(packageLinkFile);
+      packageLinkTarget = files.readlink(packageLinkFile);
     } catch (e) {
       // Complain about anything other than "we don't have it at all". This
       // includes "not a symlink": The main reason this would not be a symlink
@@ -259,8 +258,9 @@ _.extend(exports.Tropohouse.prototype, {
         var buildTempDirs = [];
         // If there's already a package in the tropohouse, start with it.
         if (packageLinkTarget) {
-          buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
-                                          packageLinkTarget));
+          buildTempDirs.push(
+            files.pathResolve(files.pathDirname(packageLinkFile),
+                              packageLinkTarget));
         }
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
@@ -375,13 +375,13 @@ _.extend(exports.Tropohouse.prototype, {
 
   latestMeteorSymlink: function () {
     var self = this;
-    var linkPath = path.join(self.root, 'meteor');
-    return fs.readlinkSync(linkPath);
+    var linkPath = files.pathJoin(self.root, 'meteor');
+    return files.readlink(linkPath);
   },
 
   replaceLatestMeteorSymlink: function (linkText) {
     var self = this;
-    var linkPath = path.join(self.root, 'meteor');
+    var linkPath = files.pathJoin(self.root, 'meteor');
     files.symlinkOverSync(linkText, linkPath);
   }
 });

@@ -1,12 +1,10 @@
 var _ = require('underscore');
-var fs = require('fs');
-var path = require('path');
+var files = require('./files.js');
 
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog.js');
 var catalogLocal = require('./catalog-local.js');
-var catalogRemote = require('./catalog-remote.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var isopackCacheModule = require('./isopack-cache.js');
@@ -67,7 +65,7 @@ _.extend(exports.ProjectContext.prototype, {
     self.tropohouse = options.tropohouse || tropohouse.default;
 
     self._packageMapFilename = options.packageMapFilename ||
-      path.join(self.projectDir, '.meteor', 'versions');
+      files.pathJoin(self.projectDir, '.meteor', 'versions');
 
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
@@ -216,7 +214,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return path.join(self.projectDir, '.meteor', 'local', subdirectory);
+    return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
   },
 
   // You can call this manually if you want to do some work before resolving
@@ -288,18 +286,18 @@ _.extend(exports.ProjectContext.prototype, {
 
   _ensureProjectDir: function () {
     var self = this;
-    files.mkdir_p(path.join(self.projectDir, '.meteor'));
+    files.mkdir_p(files.pathJoin(self.projectDir, '.meteor'));
 
     // This file existing is what makes a project directory a project directory,
     // so let's make sure it exists!
-    var constraintFilePath = path.join(self.projectDir, '.meteor', 'packages');
-    if (! fs.existsSync(constraintFilePath)) {
+    var constraintFilePath = files.pathJoin(self.projectDir, '.meteor', 'packages');
+    if (! files.exists(constraintFilePath)) {
       files.writeFileAtomically(constraintFilePath, '');
     }
 
     // Let's also make sure we have a minimal gitignore.
-    var gitignorePath = path.join(self.projectDir, '.meteor', '.gitignore');
-    if (! fs.existsSync(gitignorePath)) {
+    var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
+    if (! files.exists(gitignorePath)) {
       files.writeFileAtomically(gitignorePath, 'local\n');
     }
   },
@@ -345,7 +343,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   _ensureAppIdentifier: function () {
     var self = this;
-    var identifierFile = path.join(self.projectDir, '.meteor', '.id');
+    var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
 
     // Find the first non-empty line, ignoring comments. We intentionally don't
     // put this in a WatchSet, since changing this doesn't affect the built app
@@ -432,20 +430,20 @@ _.extend(exports.ProjectContext.prototype, {
 
   _localPackageSearchDirs: function () {
     var self = this;
-    var searchDirs = [path.join(self._projectDirForLocalPackages, 'packages')];
+    var searchDirs = [files.pathJoin(self._projectDirForLocalPackages, 'packages')];
 
     if (! self._ignorePackageDirsEnvVar && process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
       // PACKAGE_DIRS (colon-separated).
       _.each(process.env.PACKAGE_DIRS.split(':'), function (p) {
-        searchDirs.push(path.resolve(p));
+        searchDirs.push(files.pathResolve(p));
       });
     }
 
     if (files.inCheckout()) {
       // Running from a checkout, so use the Meteor core packages from the
       // checkout.
-      searchDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
+      searchDirs.push(files.pathJoin(files.getCurrentToolsDir(), 'packages'));
     }
     return searchDirs;
   },
@@ -712,7 +710,7 @@ exports.ProjectConstraintsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = path.join(options.projectDir, '.meteor', 'packages');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'packages');
   self.watchSet = null;
 
   // Have we modified the in-memory representation since reading from disk?
@@ -991,7 +989,7 @@ _.extend(exports.PackageMapFile.prototype, {
 exports.PlatformList = function (options) {
   var self = this;
 
-  self.filename = path.join(options.projectDir, '.meteor', 'platforms');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'platforms');
   self.watchSet = null;
   self._platforms = null;
 
@@ -1073,7 +1071,7 @@ exports.CordovaPluginsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = path.join(options.projectDir, '.meteor', 'cordova-plugins');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'cordova-plugins');
   self.watchSet = null;
   // Map from plugin name to version.
   self._plugins = null;
@@ -1151,7 +1149,7 @@ _.extend(exports.CordovaPluginsFile.prototype, {
 exports.ReleaseFile = function (options) {
   var self = this;
 
-  self.filename = path.join(options.projectDir, '.meteor', 'release');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'release');
   self.watchSet = null;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
@@ -1228,7 +1226,7 @@ _.extend(exports.ReleaseFile.prototype, {
 exports.FinishedUpgraders = function (options) {
   var self = this;
 
-  self.filename = path.join(
+  self.filename = files.pathJoin(
     options.projectDir, '.meteor', '.finished-upgraders');
 };
 
@@ -1251,7 +1249,7 @@ _.extend(exports.FinishedUpgraders.prototype, {
 
     var current = null;
     try {
-      current = fs.readFileSync(self.filename, 'utf8');
+      current = files.readFile(self.filename, 'utf8');
     } catch (e) {
       if (e.code !== 'ENOENT')
         throw e;
@@ -1274,6 +1272,6 @@ _.extend(exports.FinishedUpgraders.prototype, {
       appendText += upgrader + '\n';
     });
 
-    fs.appendFileSync(self.filename, appendText);
+    files.appendFile(self.filename, appendText);
   }
 });

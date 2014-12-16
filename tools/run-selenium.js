@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var fs = require('fs');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
@@ -121,7 +120,7 @@ _.extend(Selenium.prototype, {
 
     if (self.xunitOutputFile) {
       runLog.log("Writing xunit output to: " + self.xunitOutputFile);
-      fs.writeFileSync(self.xunitOutputFile, self.xunitLines.join('\n'));
+      files.writeFile(self.xunitOutputFile, self.xunitLines.join('\n'));
     }
 
     if (self.runner) {

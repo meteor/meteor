@@ -2,12 +2,9 @@ var Future = require('fibers/future');
 var files = require('./files.js');
 var config = require('./config.js');
 var path = require('path');
-var fs = require('fs');
 var isopackets = require("./isopackets.js");
-var fiberHelpers = require('./fiber-helpers.js');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
-var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
@@ -277,8 +274,8 @@ exports.deploy = function (options) {
 
     // Upload
     // XXX copied from galaxy/tool/galaxy.js
-    var fileSize = fs.statSync(starball).size;
-    var fileStream = fs.createReadStream(starball);
+    var fileSize = files.stat(starball).size;
+    var fileStream = files.createReadStream(starball);
     var future = new Future;
     var req = httpHelpers.request({
       method: "PUT",

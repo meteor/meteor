@@ -1,14 +1,8 @@
-var fs = require('fs');
-var path = require('path');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var auth = require('./auth.js');
-var httpHelpers = require('./http-helpers.js');
-var release = require('./release.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var isopackets = require("./isopackets.js");
 var tropohouse = require('./tropohouse.js');
 var config = require('./config.js');
 var packageClient = require('./package-client.js');
@@ -270,10 +264,10 @@ _.extend(Db.prototype, {
   open: function (dbFile) {
     var self = this;
 
-    if ( !fs.existsSync(path.dirname(dbFile)) ) {
+    if ( !files.exists(files.pathDirname(dbFile)) ) {
       Console.debug("Creating database directory", dbFile);
 
-      var folder = path.dirname(dbFile);
+      var folder = files.pathDirname(dbFile);
       if ( !files.mkdir_p(folder) )
         throw new Error("Could not create folder at " + folder);
     }

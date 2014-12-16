@@ -1,7 +1,5 @@
 var main = require('./main.js');
-var path = require('path');
 var _ = require('underscore');
-var fs = require("fs");
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -218,7 +216,7 @@ main.registerCommand({
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,  // won't have a packages dir, that's OK
       explicitlyAddedLocalPackageDirs: [options.packageDir],
-      packageMapFilename: path.join(options.packageDir, '.versions'),
+      packageMapFilename: files.pathJoin(options.packageDir, '.versions'),
       // We always want to write our '.versions' package map, overriding a
       // comparison against the value of a release file that doesn't exist.
       alwaysWritePackageMap: true,
@@ -522,16 +520,16 @@ main.registerCommand({
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
-  var packageDir = path.join(sourcePath, name);
-  if (! fs.existsSync(packageDir)) {
+  var packageDir = files.pathJoin(sourcePath, name);
+  if (! files.exists(packageDir)) {
     Console.error('Malformed source tarball');
     return 1;
   }
 
   var tempProjectDir = files.mkdtemp('meteor-package-arch-build');
   // Copy over a version lock file from the source tarball.
-  var versionsFile = path.join(packageDir, '.versions');
-  if (! fs.existsSync(versionsFile)) {
+  var versionsFile = files.pathJoin(packageDir, '.versions');
+  if (! files.exists(versionsFile)) {
     Console.error(
       "This package has no valid version lock file: are you trying to use " +
       "publish-for-arch on a core package? Publish-for-arch cannot " +
@@ -539,8 +537,8 @@ main.registerCommand({
       Console.command("'meteor publish --existing-version'"), "instead.");
     process.exit(1);
   }
-  files.copyFile(path.join(packageDir, '.versions'),
-                 path.join(tempProjectDir, '.meteor', 'versions'));
+  files.copyFile(files.pathJoin(packageDir, '.versions'),
+                 files.pathJoin(tempProjectDir, '.meteor', 'versions'));
 
   // Set up the project.
   var projectContext = new projectContextModule.ProjectContext({
@@ -614,7 +612,7 @@ main.registerCommand({
   // the release track name, the release version and some short freeform
   // description.
   try {
-    var data = fs.readFileSync(options.args[0], 'utf8');
+    var data = files.readFile(options.args[0], 'utf8');
     relConf = JSON.parse(data);
   } catch (e) {
     Console.error("Could not parse release file: " + e.message);
@@ -1748,7 +1746,7 @@ var maybeUpdateRelease = function (options) {
             "updating the release:")
   });
 
-  Console.info(path.basename(options.appDir) + ": updated to " +
+  Console.info(files.pathBasename(options.appDir) + ": updated to " +
                projectContext.releaseFile.displayReleaseName + ".");
   if (newerAvailable) {
     Console.info(
@@ -1912,7 +1910,7 @@ main.registerCommand({
 
   var upgraders = require("./upgraders.js");
   console.log("%s: running upgrader %s.",
-              path.basename(options.appDir), upgrader);
+              files.pathBasename(options.appDir), upgrader);
   upgraders.runUpgrader(projectContext, upgrader);
 });
 
@@ -2394,7 +2392,7 @@ main.registerCommand({
 
   // Get a copy of the data.json.
   var dataTmpdir = files.mkdtemp();
-  var tmpDataFile = path.join(dataTmpdir, 'packages.data.db');
+  var tmpDataFile = files.pathJoin(dataTmpdir, 'packages.data.db');
 
   var tmpCatalog = new catalogRemote.RemoteCatalog();
   tmpCatalog.initialize({
@@ -2413,7 +2411,7 @@ main.registerCommand({
   // release is the latest recommended until it manages to sync.
   tmpCatalog.forceRecommendRelease(releaseTrack, releaseVersion);
   tmpCatalog.closePermanently();
-  if (fs.existsSync(tmpDataFile + '-wal')) {
+  if (files.exists(tmpDataFile + '-wal')) {
     throw Error("Write-ahead log still exists for " + tmpDataFile
                 + " so the data file will be incomplete!");
   }
@@ -2425,7 +2423,7 @@ main.registerCommand({
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
     // We're going to build and tar up a tropohouse in a temporary directory.
-    var tmpTropo = new tropohouse.Tropohouse(path.join(tmpdir, '.meteor'));
+    var tmpTropo = new tropohouse.Tropohouse(files.pathJoin(tmpdir, '.meteor'));
     main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       function () {
@@ -2452,16 +2450,16 @@ main.registerCommand({
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
-    fs.symlinkSync(
-      path.join(
+    files.symlink(
+      files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
         'meteor'),
-      path.join(tmpTropo.root, 'meteor'));
+      files.pathJoin(tmpTropo.root, 'meteor'));
 
     files.createTarball(
       tmpTropo.root,
-      path.join(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
+      files.pathJoin(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
   });
 
   return 0;
@@ -2477,7 +2475,7 @@ main.registerCommand({
 }, function (options) {
   var bannersFile = options.args[0];
   try {
-    var bannersData = fs.readFileSync(bannersFile, 'utf8');
+    var bannersData = files.readFile(bannersFile, 'utf8');
     bannersData = JSON.parse(bannersData);
   } catch (e) {
     Console.error("Could not parse banners file: " + e.message);

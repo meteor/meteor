@@ -1,7 +1,4 @@
 var selftest = require('../selftest.js');
-var path = require('path');
-var fs = require('fs');
-var _ = require('underscore');
 var config = require("../config.js");
 var catalogRemote = require("../catalog-remote.js");
 var buildmessage = require("../buildmessage.js");

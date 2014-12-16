@@ -1,7 +1,5 @@
 var main = require('./main.js');
-var path = require('path');
 var _ = require('underscore');
-var fs = require('fs');
 var files = require('./files.js');
 var deploy = require('./deploy.js');
 var buildmessage = require('./buildmessage.js');
@@ -270,7 +268,7 @@ function doRunCommand (options) {
       });
       projectContext.packageMapDelta.displayOnConsole();
 
-      var appName = path.basename(projectContext.projectDir);
+      var appName = files.pathBasename(projectContext.projectDir);
       cordova.buildTargets(projectContext, options.args, _.extend({
         appName: appName,
         debug: ! options.production,
@@ -429,11 +427,11 @@ main.registerCommand({
       packageName, {detailedColonExplanation: true});
 
     var packageDir = options.appDir
-          ? path.resolve(options.appDir, 'packages', packageName)
-          : path.resolve(packageName);
+          ? files.pathResolve(options.appDir, 'packages', packageName)
+          : files.pathResolve(packageName);
     var inYourApp = options.appDir ? " in your app" : "";
 
-    if (fs.existsSync(packageDir)) {
+    if (files.exists(packageDir)) {
       Console.error(packageName + ": Already exists" + inYourApp);
       return 1;
     }
@@ -460,7 +458,7 @@ main.registerCommand({
       return xn.replace(/~release~/g, relString);
     };
     try {
-      files.cp_r(path.join(__dirname, 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
       },
@@ -497,8 +495,8 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = path.join(__dirname, '..', 'examples');
-  var examples = _.reject(fs.readdirSync(exampleDir), function (e) {
+  var exampleDir = files.pathJoin(__dirname, '..', 'examples');
+  var examples = _.reject(files.readdir(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
   });
 
@@ -523,9 +521,9 @@ main.registerCommand({
     appPathAsEntered = options.example;
   else
     throw new main.ShowUsage;
-  var appPath = path.resolve(appPathAsEntered);
+  var appPath = files.pathResolve(appPathAsEntered);
 
-  if (fs.existsSync(appPath)) {
+  if (files.exists(appPath)) {
     Console.error(appPath + ": Already exists");
     return 1;
   }
@@ -537,7 +535,7 @@ main.registerCommand({
   }
 
   var transform = function (x) {
-    return x.replace(/~name~/g, path.basename(appPath));
+    return x.replace(/~name~/g, files.pathBasename(appPath));
   };
 
   if (options.example) {
@@ -549,7 +547,7 @@ main.registerCommand({
         Console.command("'meteor create --list'") + ".");
       return 1;
     } else {
-      files.cp_r(path.join(exampleDir, options.example), appPath, {
+      files.cp_r(files.pathJoin(exampleDir, options.example), appPath, {
         // We try not to check the project ID into git, but it might still
         // accidentally exist and get added (if running from checkout, for
         // example). To be on the safe side, explicitly remove the project ID
@@ -558,7 +556,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(path.join(__dirname, 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },
@@ -702,7 +700,7 @@ var buildCommand = function (options) {
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
-  var appName = path.basename(options.appDir);
+  var appName = files.pathBasename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
     // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
@@ -749,15 +747,15 @@ var buildCommand = function (options) {
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
-  var outputPath = path.resolve(options.args[0]); // get absolute path
+  var outputPath = files.pathResolve(options.args[0]); // get absolute path
 
   // Unless we're just making a tarball, warn if people try to build inside the
   // app directory.
   if (options.directory || ! _.isEmpty(mobilePlatforms)) {
-    var relative = path.relative(options.appDir, outputPath);
+    var relative = files.pathRelative(options.appDir, outputPath);
     // We would like the output path to be outside the app directory, which
     // means the first step to getting there is going up a level.
-    if (relative.substr(0, 3) !== ('..' + path.sep)) {
+    if (relative.substr(0, 3) !== ('..' + files.pathSep)) {
       Console.warn();
       Console.labelWarn(
         "The output directory is under your source tree.",
@@ -770,15 +768,16 @@ var buildCommand = function (options) {
   }
 
   var bundlePath = options.directory ?
-      (options._serverOnly ? outputPath : path.join(outputPath, 'bundle')) :
-      path.join(buildDir, 'bundle');
+      (options._serverOnly ? outputPath :
+      files.pathJoin(outputPath, 'bundle')) :
+      files.pathJoin(buildDir, 'bundle');
 
   stats.recordPackages({
     what: "sdk.bundle",
     projectContext: projectContext
   });
 
-  var bundler = require(path.join(__dirname, 'bundler.js'));
+  var bundler = require(files.pathJoin(__dirname, 'bundler.js'));
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
@@ -805,9 +804,9 @@ var buildCommand = function (options) {
   if (! options.directory) {
     try {
       var outputTar = options._serverOnly ? outputPath :
-        path.join(outputPath, appName + '.tar.gz');
+        files.pathJoin(outputPath, appName + '.tar.gz');
 
-      files.createTarball(path.join(buildDir, 'bundle'), outputTar);
+      files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
     } catch (err) {
       Console.error("Errors during tarball creation:");
       Console.error(err.message);
@@ -819,26 +818,26 @@ var buildCommand = function (options) {
   // Copy over the Cordova builds AFTER we bundle so that they are not included
   // in the main bundle.
   !options._serverOnly && _.each(mobilePlatforms, function (platformName) {
-    var buildPath = path.join(
+    var buildPath = files.pathJoin(
       projectContext.getProjectLocalDirectory('cordova-build'),
       'platforms', platformName);
-    var platformPath = path.join(outputPath, platformName);
+    var platformPath = files.pathJoin(outputPath, platformName);
 
     if (platformName === 'ios') {
       if (process.platform !== 'darwin') return;
-      files.cp_r(buildPath, path.join(platformPath, 'project'));
-      fs.writeFileSync(
-        path.join(platformPath, 'README'),
+      files.cp_r(buildPath, files.pathJoin(platformPath, 'project'));
+      files.writeFile(
+        files.pathJoin(platformPath, 'README'),
         "This is an auto-generated XCode project for your iOS application.\n\n" +
         "Instructions for publishing your iOS app to App Store can be found at:\n" +
           "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
         "utf8");
     } else if (platformName === 'android') {
-      files.cp_r(buildPath, path.join(platformPath, 'project'));
-      var apkPath = findApkPath(path.join(buildPath, 'ant-build'));
-      files.copyFile(apkPath, path.join(platformPath, 'unaligned.apk'));
-      fs.writeFileSync(
-        path.join(platformPath, 'README'),
+      files.cp_r(buildPath, files.pathJoin(platformPath, 'project'));
+      var apkPath = findApkPath(files.pathJoin(buildPath, 'ant-build'));
+      files.copyFile(apkPath, files.pathJoin(platformPath, 'unaligned.apk'));
+      files.writeFile(
+        files.pathJoin(platformPath, 'README'),
         "This is an auto-generated Ant project for your Android application.\n\n" +
         "Instructions for publishing your Android app to Play Store can be found at:\n" +
           "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
@@ -850,13 +849,13 @@ var buildCommand = function (options) {
 };
 
 var findApkPath = function (dirPath) {
-  var apkPath = _.find(fs.readdirSync(dirPath), function (filePath) {
-    return path.extname(filePath) === '.apk';
+  var apkPath = _.find(files.readdir(dirPath), function (filePath) {
+    return files.pathExtname(filePath) === '.apk';
   });
 
   if (! apkPath)
     throw new Error('The APK file for the Android build was not found.');
-  return path.join(dirPath, apkPath);
+  return files.pathJoin(dirPath, apkPath);
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -960,7 +959,7 @@ main.registerCommand({
   // MONGO_URL was set, so we don't see a Mongo process
 
   var findMongoPort =
-    require(path.join(__dirname, 'run-mongo.js')).findMongoPort;
+    require(files.pathJoin(__dirname, 'run-mongo.js')).findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
     Console.error("reset: Meteor is running.");
@@ -971,7 +970,7 @@ main.registerCommand({
     return 1;
   }
 
-  var localDir = path.join(options.appDir, '.meteor', 'local');
+  var localDir = files.pathJoin(options.appDir, '.meteor', 'local');
   files.rm_recursive(localDir);
 
   Console.info("Project reset.");
@@ -1404,7 +1403,7 @@ main.registerCommand({
     // of the packages!
 
     try {
-      var appName = path.basename(projectContext.projectDir);
+      var appName = files.pathBasename(projectContext.projectDir);
       cordova.buildTargets(projectContext, mobileTargets,
         _.extend({}, options, {
           appName: appName,
@@ -1466,7 +1465,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
         } else {
           // Otherwise, it's a directory; find it by source root.
           version = projectContext.localCatalog.getVersionBySourceRoot(
-            path.resolve(p));
+            files.pathResolve(p));
           if (! version) {
             throw Error("should have been caught when initializing catalog?");
           }
@@ -1931,13 +1930,13 @@ main.registerCommand({
   // that ssh-agent requires it to have.
   var idpath = "/tmp/meteor-key-" + utils.randomToken();
   maybeLog("Writing ssh key to " + idpath);
-  fs.writeFileSync(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
+  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
 
   // Add the known host key to a custom known hosts file.
   var hostpath = "/tmp/meteor-host-" + utils.randomToken();
   var addendum = ret.host + " " + ret.hostKey + "\n";
   maybeLog("Writing host key to " + hostpath);
-  fs.writeFileSync(hostpath, addendum, 'utf8');
+  files.writeFile(hostpath, addendum, 'utf8');
 
   // Finally, connect to the machine.
   var login = ret.username + "@" + ret.host;
@@ -1970,9 +1969,9 @@ main.registerCommand({
   });
   var sshEnd = future.wait();
   maybeLog("Removing hostkey at " + hostpath);
-  fs.unlinkSync(hostpath);
+  files.unlink(hostpath);
   maybeLog("Removing sshkey at " + idpath);
-  fs.unlinkSync(idpath);
+  files.unlink(idpath);
   return sshEnd;
 });
 

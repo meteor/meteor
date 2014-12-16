@@ -1,5 +1,3 @@
-var fs = require("fs");
-var path = require("path");
 var _ = require('underscore');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
@@ -205,7 +203,7 @@ _.extend(AppProcess.prototype, {
     var child_process = require('child_process');
 
     var opts = _.clone(self.nodeOptions);
-    var entryPoint = path.join(self.bundlePath, 'main.js');
+    var entryPoint = files.pathJoin(self.bundlePath, 'main.js');
 
     if (self.debugPort) {
       var attach = require("./inspector.js").start(

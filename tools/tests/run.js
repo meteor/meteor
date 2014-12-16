@@ -5,7 +5,6 @@ var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../files.js');
-var httpHelpers = require('../http-helpers.js');
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };

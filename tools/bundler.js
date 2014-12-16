@@ -149,19 +149,17 @@
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
-var path = require('path');
 var util = require('util');
-var files = require(path.join(__dirname, 'files.js'));
-var Builder = require(path.join(__dirname, 'builder.js'));
-var archinfo = require(path.join(__dirname, 'archinfo.js'));
+var files = require('./files.js');
+var Builder = require('./builder.js');
+var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
-var fs = require('fs');
 var _ = require('underscore');
 var isopackets = require("./isopackets.js");
 var watch = require('./watch.js');
 var release = require('./release.js');
 var Fiber = require('fibers');
-var Future = require(path.join('fibers', 'future'));
+var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
@@ -304,7 +302,7 @@ _.extend(File.prototype, {
         throw new Error("Have neither contents nor sourcePath for file");
       }
       else
-        self._contents = fs.readFileSync(self.sourcePath);
+        self._contents = files.readFile(self.sourcePath);
     }
 
     return encoding ? self._contents.toString(encoding) : self._contents;
@@ -357,7 +355,7 @@ _.extend(File.prototype, {
   // component separator.
   setUrlFromRelPath: function (relPath) {
     var self = this;
-    var url = relPath.split(path.sep).join('/');
+    var url = relPath;
 
     if (url.charAt(0) !== '/')
       url = '/' + url;
@@ -374,7 +372,7 @@ _.extend(File.prototype, {
     if (relPath.match(/^packages\//) || relPath.match(/^assets\//))
       self.targetPath = relPath;
     else
-      self.targetPath = path.join('app', relPath);
+      self.targetPath = files.pathJoin('app', relPath);
 
     // XXX same as in setUrlFromRelPath, we replace colons with a different
     // separator to avoid difficulties further. E.g.: on Windows it is not a
@@ -699,7 +697,7 @@ _.extend(Target.prototype, {
         });
 
         var relPath = isOs
-              ? path.join("assets", resource.servePath)
+              ? files.pathJoin("assets", resource.servePath)
               : stripLeadingSlash(resource.servePath);
         f.setTargetPathFromRelPath(relPath);
 
@@ -750,7 +748,7 @@ _.extend(Target.prototype, {
                   // node_modules. Otherwise, if two modules in this package
                   // depend on each other, they won't be able to find each
                   // other!
-                  preferredBundlePath: path.join(
+                  preferredBundlePath: files.pathJoin(
                     'npm', unibuild.pkg.name, 'node_modules'),
                   npmDiscards: unibuild.pkg.npmDiscards
                 });
@@ -762,7 +760,7 @@ _.extend(Target.prototype, {
 
           // Both CSS and JS files can have source maps
           if (resource.sourceMap) {
-            f.setSourceMap(resource.sourceMap, path.dirname(relPath));
+            f.setSourceMap(resource.sourceMap, files.pathDirname(relPath));
           }
 
           self[resource.type].push(f);
@@ -928,7 +926,7 @@ var _minify = function (UglifyJS, key, files, options) {
     buildmessage.forkJoin({title: 'minifying: parsing ' + key}, files, function (file) {
       var code = options.fromString
         ? file
-        : fs.readFileSync(file, "utf8");
+        : files.readFile(file, "utf8");
       sourcesContent[file] = code;
       toplevel = UglifyJS.parse(code, {
         filename: options.fromString ? "?" : file,
@@ -969,7 +967,7 @@ var _minify = function (UglifyJS, key, files, options) {
   var inMap = options.inSourceMap;
   var output = {};
   if (typeof options.inSourceMap == "string") {
-    inMap = fs.readFileSync(options.inSourceMap, "utf8");
+    inMap = files.readFile(options.inSourceMap, "utf8");
   }
   if (options.outSourceMap) {
     output.source_map = UglifyJS.SourceMap({
@@ -1321,11 +1319,14 @@ _.extend(JsImage.prototype, {
             }
 
             var nodeModuleDir =
-              path.join(item.nodeModulesDirectory.sourcePath, name);
+              files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
 
-            if (fs.existsSync(nodeModuleDir)) {
+            // Use files.existsSync instead of files.exists here so that
+            // isopack loading doesn't yield.
+            if (files.existsSync(nodeModuleDir)) {
               return require(nodeModuleDir);
             }
+
             try {
               return require(name);
             } catch (e) {
@@ -1405,12 +1406,12 @@ _.extend(JsImage.prototype, {
       // We do a little manipulation to make sure that generateFilename only
       // adds suffixes to parts of the path other than the final node_modules,
       // which needs to stay node_modules.
-      var dirname = path.dirname(nmd.preferredBundlePath);
-      var base = path.basename(nmd.preferredBundlePath);
+      var dirname = files.pathDirname(nmd.preferredBundlePath);
+      var base = files.pathBasename(nmd.preferredBundlePath);
       var generatedDir = builder.generateFilename(dirname, {directory: true});
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: path.join(generatedDir, base),
+        preferredBundlePath: files.pathJoin(generatedDir, base),
         npmDiscards: nmd.npmDiscards
       }));
     });
@@ -1452,7 +1453,7 @@ _.extend(JsImage.prototype, {
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
 
-        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
         item.source = item.source.replace(
@@ -1472,11 +1473,11 @@ _.extend(JsImage.prototype, {
         // XXX same hack as setTargetPathFromRelPath
           var assetBundlePath;
         if (item.targetPath.match(/^packages\//)) {
-          var dir = path.dirname(item.targetPath);
-          var base = path.basename(item.targetPath, ".js");
-          assetBundlePath = path.join('assets', dir, base);
+          var dir = files.pathDirname(item.targetPath);
+          var base = files.pathBasename(item.targetPath, ".js");
+          assetBundlePath = files.pathJoin('assets', dir, base);
         } else {
-          assetBundlePath = path.join('assets', 'app');
+          assetBundlePath = files.pathJoin('assets', 'app');
         }
 
         loadItem.assets = {};
@@ -1487,7 +1488,7 @@ _.extend(JsImage.prototype, {
           } else {
             loadItem.assets[relPath] = assetFilesBySha[sha] =
               builder.writeToGeneratedFilename(
-                path.join(assetBundlePath, relPath), { data: data });
+                files.pathJoin(assetBundlePath, relPath), { data: data });
           }
         });
       }
@@ -1523,8 +1524,8 @@ _.extend(JsImage.prototype, {
 // write()). `dir` is the path to the control file.
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
-  var json = JSON.parse(fs.readFileSync(controlFilePath));
-  var dir = path.dirname(controlFilePath);
+  var json = JSON.parse(files.readFileSync(controlFilePath));
+  var dir = files.pathDirname(controlFilePath);
 
   if (json.format !== "javascript-image-pre1")
     throw new Error("Unsupported plugin format: " +
@@ -1538,7 +1539,7 @@ JsImage.readFromDisk = function (controlFilePath) {
     var nmd = undefined;
     if (item.node_modules) {
       rejectBadPath(item.node_modules);
-      var node_modules = path.join(dir, item.node_modules);
+      var node_modules = files.pathJoin(dir, item.node_modules);
       if (! (node_modules in ret.nodeModulesDirectories)) {
         ret.nodeModulesDirectories[node_modules] =
           new NodeModulesDirectory({
@@ -1553,22 +1554,22 @@ JsImage.readFromDisk = function (controlFilePath) {
 
     var loadItem = {
       targetPath: item.path,
-      source: fs.readFileSync(path.join(dir, item.path), 'utf8'),
+      source: files.readFileSync(files.pathJoin(dir, item.path), 'utf8'),
       nodeModulesDirectory: nmd
     };
 
     if (item.sourceMap) {
       // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
-      loadItem.sourceMap = fs.readFileSync(
-        path.join(dir, item.sourceMap), 'utf8');
+      loadItem.sourceMap = files.readFileSync(
+        files.pathJoin(dir, item.sourceMap), 'utf8');
       loadItem.sourceMapRoot = item.sourceMapRoot;
     }
 
     if (!_.isEmpty(item.assets)) {
       loadItem.assets = {};
       _.each(item.assets, function (filename, relPath) {
-        loadItem.assets[relPath] = fs.readFileSync(path.join(dir, filename));
+        loadItem.assets[relPath] = files.readFileSync(files.pathJoin(dir, filename));
       });
     }
 
@@ -1659,7 +1660,7 @@ _.extend(ServerTarget.prototype, {
     var clientTargetPaths = {};
     if (self.clientTargets) {
       _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = path.join(options.getRelativeTargetPath({
+        clientTargetPaths[target.arch] = files.pathJoin(options.getRelativeTargetPath({
           forTarget: target, relativeTo: self}), 'program.json');
       });
     }
@@ -1674,10 +1675,10 @@ _.extend(ServerTarget.prototype, {
     // Write package.json and npm-shrinkwrap.json for the dependencies of
     // boot.js.
     builder.write('package.json', {
-      file: path.join(files.getDevBundle(), 'etc', 'package.json')
+      file: files.pathJoin(files.getDevBundle(), 'etc', 'package.json')
     });
     builder.write('npm-shrinkwrap.json', {
-      file: path.join(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
+      file: files.pathJoin(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
     });
 
     // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
@@ -1685,7 +1686,7 @@ _.extend(ServerTarget.prototype, {
     // rebuild).
     if (options.includeNodeModulesSymlink) {
       builder.write('node_modules', {
-        symlink: path.join(files.getDevBundle(), 'server-lib', 'node_modules')
+        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
     }
 
@@ -1695,9 +1696,9 @@ _.extend(ServerTarget.prototype, {
 
     // Server bootstrap
     builder.write('boot.js',
-                  { file: path.join(__dirname, 'server', 'boot.js') });
+                  { file: files.pathJoin(__dirname, 'server', 'boot.js') });
     builder.write('shell.js',
-                  { file: path.join(__dirname, 'server', 'shell.js') });
+                  { file: files.pathJoin(__dirname, 'server', 'shell.js') });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     var archToPlatform = {
@@ -1714,8 +1715,8 @@ _.extend(ServerTarget.prototype, {
     }
 
     var devBundleVersion =
-      fs.readFileSync(
-        path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
+      files.readFile(
+        files.pathJoin(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
     devBundleVersion = devBundleVersion.split('\n')[0];
 
     var Packages = isopackets.load('dev-bundle-fetcher');
@@ -1747,7 +1748,7 @@ var writeFile = function (file, builder) {
 // Writes a target a path in 'programs'
 var writeTargetToPath = function (name, target, outputPath, options) {
   var builder = new Builder({
-    outputPath: path.join(outputPath, 'programs', name),
+    outputPath: files.pathJoin(outputPath, 'programs', name),
     symlink: options.includeNodeModulesSymlink
   });
 
@@ -1761,7 +1762,7 @@ var writeTargetToPath = function (name, target, outputPath, options) {
   return {
     name: name,
     arch: target.mostCompatibleArch(),
-    path: path.join('programs', name, relControlFilePath),
+    path: files.pathJoin('programs', name, relControlFilePath),
     cordovaDependencies: target.cordovaDependencies || undefined
   };
 };
@@ -1818,8 +1819,8 @@ var writeSiteArchive = function (targets, outputPath, options) {
     // it to work in spite of the presence of node_modules for the
     // wrong arch). The place we stash this is grody for temporary
     // reasons of backwards compatibility.
-    builder.write(path.join('server', '.bundle_version.txt'), {
-      file: path.join(files.getDevBundle(), '.bundle_version.txt')
+    builder.write(files.pathJoin('server', '.bundle_version.txt'), {
+      file: files.pathJoin(files.getDevBundle(), '.bundle_version.txt')
     });
 
     // Affordances for standalone use
@@ -2057,11 +2058,11 @@ exports.bundle = function (options) {
         });
         if (! name)
           throw new Error("missing target?");
-        return path.join('programs', name);
+        return files.pathJoin('programs', name);
       };
 
-      return path.relative(pathForTarget(options.relativeTo),
-                           pathForTarget(options.forTarget));
+      return files.pathRelative(pathForTarget(options.relativeTo),
+                                pathForTarget(options.forTarget));
     };
 
     // Write to disk
@@ -2152,7 +2153,7 @@ exports.buildJsImage = function (options) {
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],
-    serveRoot: path.sep,
+    serveRoot: files.pathSep,
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });

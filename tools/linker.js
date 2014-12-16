@@ -1,4 +1,3 @@
-var fs = require('fs');
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
