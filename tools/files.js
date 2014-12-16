@@ -125,7 +125,7 @@ files.addToGitignore = function (dirPath, entry) {
 files.inCheckout = _.once(function () {
   try {
     // can't use files.exists here because not in a fiber
-    if (fs.existsSync(path.join(files.getCurrentToolsDir(), '.git')))
+    if (files.existsSync(files.pathJoin(files.getCurrentToolsDir(), '.git')))
       return true;
   } catch (e) { console.log(e); }
 
@@ -183,7 +183,8 @@ files.getDevBundle = function () {
 
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
-  return path.join(__dirname, '..');
+  var dirname = convertToStandardPath(__dirname);
+  return files.pathJoin(dirname, '..');
 };
 
 // Read a settings file and sanity-check it. Returns a string on
@@ -985,7 +986,10 @@ _.extend(files.KeyValueFile.prototype, {
 });
 
 files.getHomeDir = function () {
-  return process.env.HOME || process.env.LOCALAPPDATA || process.env.APPDATA;
+  var homeDir = process.env.HOME ||
+    process.env.LOCALAPPDATA ||
+    process.env.APPDATA;
+  return convertToStandardPath(homeDir);
 };
 
 files.linkToMeteorScript = function (scriptLocation, linkLocation) {
@@ -1258,3 +1262,6 @@ files.pathwatcherWatch = function () {
   return pathwatcher.watch.apply(pathwatcher, args);
 };
 
+
+files.convertToStandardPath = convertToStandardPath;
+files.convertToOSPath = convertToOSPath;

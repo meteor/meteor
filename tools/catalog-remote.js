@@ -273,7 +273,7 @@ _.extend(Db.prototype, {
     }
 
     Console.debug("Opening db file", dbFile);
-    return new sqlite3.Database(dbFile);
+    return new sqlite3.Database(files.convertToOSPath(dbFile));
   },
 
   // Runs a query synchronously, returning all rows
