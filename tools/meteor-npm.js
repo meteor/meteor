@@ -337,22 +337,26 @@ var currentNodeCompatibilityVersion = function () {
   return version + '\n';
 };
 
-// Returns object with keys 'stdout', 'stderr', and 'success' (true
-// for clean exit with exit code 0, else false)
-//
-// This is exported because it is used by a test.
-//
-// XXX this duplicates files.run(). use files.run() in this file and
-// give the test some hook to get the info it needs.
-meteorNpm._execFileSync = function (file, args, opts) {
+var runNpmCommand = function (args, cwd) {
+  var npmPath;
+
+  if (os.platform() === "win32") {
+    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm.cmd");
+  } else {
+    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm");
+  }
+
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
-    process.stdout.write('cd ' + opts.cwd + ' && ' + file + ' ' +
+    process.stdout.write('cd ' + cwd + ' && ' + file + ' ' +
                          args.join(' ') + ' ...\n');
 
-  var future = new Future;
+  if (cwd)
+    cwd = files.convertToOSPath(cwd);
 
+  var future = new Future;
   var child_process = require('child_process');
-  child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+  child_process.execFile(
+    npmPath, args, { cwd: cwd }, function (err, stdout, stderr) {
     if (meteorNpm._printNpmCalls)
       process.stdout.write(err ? 'failed\n' : 'done\n');
 
@@ -364,18 +368,6 @@ meteorNpm._execFileSync = function (file, args, opts) {
   });
 
   return future.wait();
-};
-
-var runNpmCommand = function (args, opts) {
-  var npmPath;
-
-  if (os.platform() === "win32") {
-    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm.cmd");
-  } else {
-    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm");
-  }
-
-  return meteorNpm._execFileSync(npmPath, args, opts);
 }
 
 var constructPackageJson = function (packageName, newPackageNpmDir,
@@ -410,7 +402,7 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
 //   }
 // }
 var getInstalledDependenciesTree = function (dir) {
-  var result = runNpmCommand(["ls", "--json"], {cwd: dir});
+  var result = runNpmCommand(["ls", "--json"], dir);
 
   if (result.success)
     return JSON.parse(result.stdout);
@@ -479,7 +471,7 @@ var installNpmModule = function (name, version, dir) {
   //
   // We now use a forked version of npm with our PR
   // https://github.com/npm/npm/pull/5137 to work around this.
-  var result = runNpmCommand(["install", installArg], {cwd: dir});
+  var result = runNpmCommand(["install", installArg], dir);
 
   if (! result.success) {
     var pkgNotFound = "404 '" + utils.quotemeta(name) +
@@ -510,7 +502,7 @@ var installFromShrinkwrap = function (dir) {
   ensureConnected();
 
   // `npm install`, which reads npm-shrinkwrap.json.
-  var result = runNpmCommand(["install"], {cwd: dir});
+  var result = runNpmCommand(["install"], dir);
 
   if (! result.success) {
     // XXX include this in the buildmessage.error instead
@@ -541,7 +533,7 @@ var shrinkwrap = function (dir) {
   //    (the `silent` flag isn't piped in to the call to npm.commands.ls)
   // 2. In various (non-deterministic?) cases we observed the
   //    npm-shrinkwrap.json file not being updated
-  var result = runNpmCommand(["shrinkwrap"], {cwd: dir});
+  var result = runNpmCommand(["shrinkwrap"], dir);
 
   if (! result.success) {
     // XXX include this in the buildmessage.error instead
@@ -612,3 +604,6 @@ var logUpdateDependencies = function (packageName, npmDependencies) {
   runLog.log(packageName + ': updating npm dependencies -- ' +
              _.keys(npmDependencies).join(', ') + '...');
 };
+
+exports.runNpmCommand = runNpmCommand;
+
