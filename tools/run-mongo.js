@@ -26,11 +26,29 @@ var runMongoShell = function (url) {
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
   var child_process = require('child_process');
-  var proc = child_process.spawn(mongoPath,
-                                 args,
-                                 { stdio: 'inherit' });
+  var proc = child_process.spawn(files.convertToOSPath(mongoPath),
+    args, { stdio: 'inherit' });
 };
 
+// Start mongod with a dummy replSet and wait for it to listen.
+var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
+  var child_process = require('child_process');
+
+  // We make sure to convert mongodPath to an OS path
+  child_process.spawn(files.convertToOSPath(mongodPath), [
+      // nb: cli-test.sh and findMongoPids make strong assumptions about the
+      // order of the arguments! Check them before changing any arguments.
+      '--bind_ip', '127.0.0.1',
+      '--smallfiles',
+      '--nohttpinterface',
+      '--port', port,
+      '--dbpath', dbPath,
+      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
+      // initializes faster. (Not recommended for production!)
+      '--oplogSize', '8',
+      '--replSet', replSetName
+    ]);
+};
 
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
@@ -334,27 +352,14 @@ var launchMongo = function (options) {
       }
     }
 
-    // Start mongod with a dummy replSet and wait for it to listen.
-    var child_process = require('child_process');
-
     // Let's not actually start a process if we yielded (eg during
     // findMongoAndKillItDead) and we decided to stop in the middle (eg, because
     // we're in multiple mode and another process exited).
     if (stopped)
       return;
-    proc = child_process.spawn(mongod_path, [
-      // nb: cli-test.sh and findMongoPids make strong assumptions about the
-      // order of the arguments! Check them before changing any arguments.
-      '--bind_ip', '127.0.0.1',
-      '--smallfiles',
-      '--nohttpinterface',
-      '--port', port,
-      '--dbpath', dbPath,
-      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
-      // initializes faster. (Not recommended for production!)
-      '--oplogSize', '8',
-      '--replSet', replSetName
-    ]);
+
+    proc = spawnMongod(mongod_path, port, dbPath, replSetName);
+
     subHandles.push({
       stop: function () {
         if (proc) {
