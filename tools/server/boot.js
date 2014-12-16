@@ -1,7 +1,7 @@
 var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
-var Future = require(path.join("fibers", "future"));
+var Future = require("fibers/future");
 var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 

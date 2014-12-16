@@ -777,7 +777,7 @@ var buildCommand = function (options) {
     projectContext: projectContext
   });
 
-  var bundler = require(files.pathJoin(__dirname, 'bundler.js'));
+  var bundler = require('./bundler.js');
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
@@ -958,8 +958,7 @@ main.registerCommand({
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
 
-  var findMongoPort =
-    require(files.pathJoin(__dirname, 'run-mongo.js')).findMongoPort;
+  var findMongoPort = require('./run-mongo.js').findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
     Console.error("reset: Meteor is running.");

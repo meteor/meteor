@@ -329,7 +329,7 @@ var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
 // options
 //  - debug
 var getBundle = function (projectContext, bundlePath, options) {
-  var bundler = require(files.pathJoin(__dirname, 'bundler.js'));
+  var bundler = require('./bundler.js');
 
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
