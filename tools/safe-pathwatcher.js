@@ -54,7 +54,7 @@ exports.testDirectory = function(dir) {
         switchToPolling();
       });
 
-      require("./console.js").Console.warn(
+      require("./console.js").Console.debug(
         "Falling back to fs.watchFile instead of pathwatcher.watch..."
       );
     }
