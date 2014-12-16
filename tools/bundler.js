@@ -180,9 +180,11 @@ var rejectBadPath = function (p) {
 };
 
 var stripLeadingSlash = function (p) {
-  if (p.charAt(0) !== '/')
-    throw new Error("bad path: " + p);
-  return p.slice(1);
+  if (p.charAt(0) === '/') {
+    return p.slice(1);
+  }
+
+  return p;
 };
 
 
