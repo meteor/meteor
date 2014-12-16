@@ -34,8 +34,10 @@ var runMongoShell = function (url) {
 var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
   var child_process = require('child_process');
 
-  // We make sure to convert mongodPath to an OS path
-  child_process.spawn(files.convertToOSPath(mongodPath), [
+  mongodPath = files.convertToOSPath(mongodPath);
+  dbPath = files.convertToOSPath(dbPath);
+
+  child_process.spawn(mongodPath, [
       // nb: cli-test.sh and findMongoPids make strong assumptions about the
       // order of the arguments! Check them before changing any arguments.
       '--bind_ip', '127.0.0.1',
