@@ -24,6 +24,8 @@
 * `Blaze.remove` on a template's view now correctly removes the DOM
   when the template was inserted using `Blaze.renderWithData`. #3130
 
+* Expire a user's password reset tokens when their password is changed.
+
 * Upgraded dependencies:
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)

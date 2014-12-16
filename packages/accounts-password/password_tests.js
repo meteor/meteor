@@ -4,6 +4,10 @@ if (Meteor.isServer) {
   Meteor.methods({
     getUserId: function () {
       return this.userId;
+    },
+    getResetToken: function () {
+      var token = Meteor.users.findOne(this.userId).services.password.reset;
+      return token;
     }
   });
 }
@@ -167,6 +171,21 @@ if (Meteor.isClient) (function () {
         {username: this.username, email: this.email, password: this.password},
         loggedInAs(this.username, test, expect));
     },
+    // Send a password reset email so that we can test that password
+    // reset tokens get deleted on password change.
+    function (test, expect) {
+      Meteor.call("forgotPassword", { email: this.email }, expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call("getResetToken", expect(function (err, token) {
+        test.isFalse(err);
+        test.isTrue(token);
+        self.token = token;
+      }));
+    },
     // change password with bad old password. we stay logged in.
     function (test, expect) {
       var self = this;
@@ -179,6 +198,12 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       Accounts.changePassword(this.password, this.password2,
                               loggedInAs(this.username, test, expect));
+    },
+    function (test, expect) {
+      Meteor.call("getResetToken", expect(function (err, token) {
+        test.isFalse(err);
+        test.isFalse(token);
+      }));
     },
     logoutStep,
     // old password, failed login

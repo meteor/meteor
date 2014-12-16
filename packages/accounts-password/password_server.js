@@ -307,7 +307,8 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
       $set: { 'services.password.bcrypt': hashed },
       $pull: {
         'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
-      }
+      },
+      $unset: { 'services.password.reset': 1 }
     }
   );
 
