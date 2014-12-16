@@ -35,6 +35,9 @@ exports.testDirectory = function(dir) {
     dir, "canary$" + Math.random().toString(36).slice(2)
   );
 
+  // Make sure the test directory exists.
+  require("./files.js").mkdir_p(dir);
+
   fs.unlink(canaryFile, function(ignoredError) {
     function cleanUp(arg) {
       if (watcher) {
@@ -60,7 +63,19 @@ exports.testDirectory = function(dir) {
     }
 
     // Watch the candidate directory using pathwatcher.watch.
-    var watcher = require("pathwatcher").watch(dir, cleanUp);
+    var pathwatcher = require("pathwatcher");
+    try {
+      var watcher = pathwatcher.watch(dir, cleanUp);
+    } catch (err) {
+      // If the directory did not exist, do not treat this failure as
+      // evidence against pathwatcher.watch, but simply return and leave
+      // canUsePathwatcher set to true.
+      if (err instanceof TypeError &&
+          err.message === "Unable to watch path") {
+        return;
+      }
+      throw err;
+    }
 
     // Create a new file to trigger a change event (hopefully). It's fine
     // if other events sneak in while we're waiting, since all we care
