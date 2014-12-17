@@ -579,7 +579,8 @@ files.extractTarGz = function (buffer, destPath) {
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
     });
-  var extractor = new tar.Extract({ path: tempDir })
+
+  var extractor = new tar.Extract({ path: convertToOSPath(tempDir) })
     .on('entry', function (e) {
       e.path = files.adaptLegacyPath(e.path);
     })
