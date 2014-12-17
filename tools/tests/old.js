@@ -1,3 +1,5 @@
+var _ = require('underscore');
+var Future = require('fibers/future');
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
@@ -17,13 +19,13 @@ var maybeFixRelease = function (env) {
 // they are very chatty about logging their progress to stdout/stderr.
 //
 // filename is interpreted relative to tools/selftests/old.
-var runOldTest = function (filename) {
+var runOldTest = function (filename, extraEnv) {
   var s = new Sandbox;
   var run = new Run(process.execPath, {
     args: [files.pathResolve(__dirname, 'old', filename)],
-    env: maybeFixRelease({
+    env: maybeFixRelease(_.extend({
       METEOR_TOOL_PATH: s.execPath
-    })
+    }, extraEnv))
   });
   run.waitSecs(1000);
   run.expectExit(0);
@@ -44,7 +46,17 @@ var runOldTest = function (filename) {
 // before 0.9.0.
 //
 selftest.define("watch", ["slow"], function () {
-  runOldTest('test-watch.js');
+  var runFuture = runOldTest.future();
+
+  Future.wait(
+    runFuture('test-watch.js', {
+      METEOR_WATCH_FORCE_POLLING: 0
+    }),
+
+    runFuture('test-watch.js', {
+      METEOR_WATCH_FORCE_POLLING: 1
+    })
+  );
 });
 
 selftest.define("bundler-assets", ["checkout"], function () {
