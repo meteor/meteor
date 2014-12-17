@@ -332,8 +332,6 @@ Isopack.readMetadataFromDirectory = function (isopackDirectory) {
     }
   }
 
-  metadata = Isopack.convertLegacyPaths(metadata);
-
   return metadata;
 };
 
