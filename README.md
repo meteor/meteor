@@ -1,4 +1,4 @@
-# percolate:migrations (Meteor package)
+# percolate:migrations
 
 A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage.
 
@@ -7,7 +7,7 @@ A simple migration system for [Meteor](http://meteor.com) supporting up/downward
 Meteor Migrations can be installed through Meteor's package manager. Type:
 
 ``` sh
-$ meteor add percolatestudio:percolatestudio-migrations
+$ meteor add percolate:migrations
 ```
 
 ## API
