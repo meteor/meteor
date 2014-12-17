@@ -229,18 +229,23 @@ _.extend(exports.Tropohouse.prototype, {
 
     var self = this;
 
-    // Note: wipeAllPackages depends on this filename structure, as does the
-    // part above which readlinks.
-    var newPackageLinkTarget = '.' + isopack.version + '.' +
-      utils.randomToken() + '++' + isopack.buildArchitectures();
+    if (process.platform === "win32") {
+      // XXX wipeAllPackages won't work on Windows until we fix that function
+      isopack.saveToPath(self.packagePath(packageName, isopack.version));
+    } else {
+      // Note: wipeAllPackages depends on this filename structure, as does the
+      // part above which readlinks.
+      var combinedDirectory = self.packagePath(
+        packageName, newPackageLinkTarget);
 
-    var combinedDirectory = self.packagePath(
-      packageName, newPackageLinkTarget);
+      var newPackageLinkTarget = '.' + isopack.version + '.' +
+        utils.randomToken() + '++' + isopack.buildArchitectures();
 
-    isopack.saveToPath(combinedDirectory);
+      isopack.saveToPath(combinedDirectory);
 
-    files.symlinkOverSync(newPackageLinkTarget,
-      self.packagePath(packageName, isopack.version));
+      files.symlinkOverSync(newPackageLinkTarget,
+        self.packagePath(packageName, isopack.version));
+    }
   },
 
   // Given a package name, version, and required architectures, checks to make
