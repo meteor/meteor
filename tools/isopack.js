@@ -1054,10 +1054,15 @@ _.extend(Isopack.prototype, {
       to: '',
       specificFiles: pathsToCopy
     });
+
+    // Include the dev bundle, but drop a few things that are only used by
+    // self-test (which isn't supported from release).
+    var devBundleIgnore = _.clone(bundler.ignoreFiles);
+    devBundleIgnore.push(/BrowserStackLocal/, /browserstack-webdriver/);
     builder.copyDirectory({
       from: files.pathJoin(files.getDevBundle()),
       to: 'dev_bundle',
-      ignore: bundler.ignoreFiles
+      ignore: devBundleIgnore
     });
 
     // Build all of the isopackets now, so that no build step is required when
