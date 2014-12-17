@@ -65,7 +65,10 @@ exports.testDirectory = function(dir) {
     // Watch the candidate directory using pathwatcher.watch.
     var pathwatcher = require("pathwatcher");
     try {
-      var watcher = pathwatcher.watch(dir, cleanUp);
+      var watcher = pathwatcher.watch(dir, function () {
+        cleanUp();
+        switchFunctions = null;
+      });
     } catch (err) {
       // If the directory did not exist, do not treat this failure as
       // evidence against pathwatcher.watch, but simply return and leave
@@ -108,17 +111,19 @@ exports.watch = function(absPath, callback) {
     var closed = false;
     var switched = false;
 
-    switchFunctions.push(function switchToPolling() {
-      if (! switched && ! closed) {
-        switched = true;
-        watcher.close();
+    if (switchFunctions) {
+      switchFunctions.push(function switchToPolling() {
+        if (! switched && ! closed) {
+          switched = true;
+          watcher.close();
 
-        // Re-watch the file using fs.watchFile instead.
-        fs.watchFile(absPath, {
-          interval: pollingInterval
-        }, callback);
-      }
-    });
+          // Re-watch the file using fs.watchFile instead.
+          fs.watchFile(absPath, {
+            interval: pollingInterval
+          }, callback);
+        }
+      });
+    }
 
     return {
       close: function close() {
