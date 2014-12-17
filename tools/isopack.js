@@ -244,23 +244,47 @@ var Isopack = function () {
 
 Isopack.currentFormat = "isopack-1";
 
-Isopack.convertIsopackFormat = function (data, versionFrom, versionTo) {
+Isopack.knownFormats = ["unipackage-pre2", "isopack-1"];
+Isopack.convertOneStepForward = function (data, fromFormat) {
   var convertedData = _.clone(data);
-  if (versionFrom === versionTo) {
-    return convertedData;
-  }
-
   // XXX COMPAT WITH 0.9.3
-  if (versionFrom === "unipackage-pre2" && versionTo === "isopack-1") {
+  if (fromFormat === "unipackage-pre2") {
     convertedData.builds = convertedData.unibuilds;
     delete convertedData.unibuilds;
     return convertedData;
-  } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
+  }
+};
+Isopack.convertOneStepBackward = function (data, fromFormat) {
+  var convertedData = _.clone(data);
+  if (fromFormat === "isopack-1") {
     convertedData.unibuilds = convertedData.builds;
     convertedData.format = "unipackage-pre2";
     delete convertedData.builds;
     return convertedData;
   }
+};
+Isopack.convertIsopackFormat = function (data, fromFormat, toFormat) {
+  var fromPos = _.indexOf(Isopack.knownFormats, fromFormat);
+  var toPos = _.indexOf(Isopack.knownFormats, toFormat);
+  var step = fromPos < toPos ? 1 : -1;
+
+  if (fromPos === -1)
+    throw new Error("Can't convert from unknown Isopack format: " + fromFormat);
+  if (toPos === -1)
+    throw new Error("Can't convert to unknown Isopack format: " + toFormat);
+
+  while (fromPos !== toPos) {
+    if (step > 0) {
+      data = Isopack.convertOneStepForward(data, fromFormat);
+    } else {
+      data = Isopack.convertOneStepBackward(data, fromFormat);
+    }
+
+    fromPos += step;
+    fromFormat = Isopack.knownFormats[fromPos];
+  }
+
+  return data;
 };
 
 // Read the correct file from isopackDirectory and convert to current format
@@ -307,6 +331,8 @@ Isopack.readMetadataFromDirectory = function (isopackDirectory) {
                       JSON.stringify(metadata.format));
     }
   }
+
+  metadata = Isopack.convertLegacyPaths(metadata);
 
   return metadata;
 };
