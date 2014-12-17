@@ -1760,6 +1760,11 @@ main.registerCommand({
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
+  if (! files.inCheckout()) {
+    Console.error("self-test is only supported running from a checkout");
+    return 1;
+  }
+
   var selftest = require('./selftest.js');
 
   // Auto-detect whether to skip 'net' tests, unless --force-online is passed.
