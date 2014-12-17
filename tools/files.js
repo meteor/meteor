@@ -251,7 +251,7 @@ files.statOrNull = function (path) {
 // Like rm -r.
 files.rm_recursive = function (p) {
   var fut = new Future();
-  rimraf(p, { busyTries: 10 }, fut.resolver());
+  rimraf(convertToOSPath(p), { busyTries: 10 }, fut.resolver());
   fut.wait();
 };
 
