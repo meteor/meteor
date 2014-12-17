@@ -770,7 +770,9 @@ files.run = function (command /*, arguments */) {
 files.runGitInCheckout = function (/* arguments */) {
   var args = _.toArray(arguments);
   args.unshift(
-    'git', '--git-dir=' + files.pathJoin(files.getCurrentToolsDir(), '.git'));
+    'git', '--git-dir=' +
+    files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
+
   var ret = files.run.apply(files, args);
   if (ret === null) {
     // XXX files.run really ought to give us some actual context
