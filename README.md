@@ -5,7 +5,7 @@ A simple cron system for [Meteor](http://meteor.com). It supports syncronizing j
 ## Installation
 
 ``` sh
-$ meteor add percolatestudio:synced-cron
+$ meteor add percolate:synced-cron
 ```
 
 ## API
