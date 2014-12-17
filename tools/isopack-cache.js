@@ -119,6 +119,20 @@ _.extend(exports.IsopackCache.prototype, {
     var packageInfo = self._packageMap.getInfo(name);
     if (! packageInfo)
       throw Error("Depend on unknown package " + name + "?");
+    var previousIsopack = null;
+    if (self._previousIsopackCache &&
+        _.has(self._previousIsopackCache._isopacks, name)) {
+      var previousInfo = self._previousIsopackCache._packageMap.getInfo(name);
+      if ((packageInfo.kind === 'versioned' &&
+           previousInfo.kind === 'versioned' &&
+           packageInfo.version === previousInfo.version) ||
+          (packageInfo.kind === 'local' &&
+           previousInfo.kind === 'local' &&
+           (packageInfo.packageSource.sourceRoot ===
+            previousInfo.packageSource.sourceRoot))) {
+        previousIsopack = self._previousIsopackCache._isopacks[name];
+      }
+    }
 
     if (packageInfo.kind === 'local') {
       var packageNames =
@@ -131,7 +145,7 @@ _.extend(exports.IsopackCache.prototype, {
         // load it.
         if (buildmessage.jobHasMessages())
           return;
-        self._loadLocalPackage(name, packageInfo);
+        self._loadLocalPackage(name, packageInfo, previousIsopack);
       });
     } else if (packageInfo.kind === 'versioned') {
       // We don't have to build this package, and we don't have to build its
@@ -142,13 +156,9 @@ _.extend(exports.IsopackCache.prototype, {
       }
 
       var isopack = null, packagesToLoad = [];
-      if (self._previousIsopackCache
-          && _.has(self._previousIsopackCache._isopacks, name)) {
-        var previousIsopack = self._previousIsopackCache._isopacks[name];
-        if (previousIsopack.version === packageInfo.version) {
-          isopack = previousIsopack;
-          packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
-        }
+      if (previousIsopack) {
+        isopack = previousIsopack;
+        packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
       }
       if (! isopack) {
         // Load the isopack from disk.
@@ -180,41 +190,42 @@ _.extend(exports.IsopackCache.prototype, {
     }
   },
 
-  _loadLocalPackage: function (name, packageInfo) {
+  _loadLocalPackage: function (name, packageInfo, previousIsopack) {
     var self = this;
     buildmessage.assertInCapture();
     buildmessage.enterJob("building package " + name, function () {
-      // XXX #3213 use _previousIsopackCache here too (which involves moving
-      // pluginProviderPackageMap into the Isopack object)
-
-      // Do we have an up-to-date package on disk?
-      var isopackBuildInfoJson = self.cacheDir && files.readJSONOrNull(
-        self._isopackBuildInfoPath(name));
-      var upToDate = self._checkUpToDate(isopackBuildInfoJson);
-
       var isopack;
-      if (upToDate) {
-        isopack = new isopackModule.Isopack;
-        isopack.initFromPath(name, self._isopackDir(name), {
-          isopackBuildInfoJson: isopackBuildInfoJson
-        });
+      if (previousIsopack && self._checkUpToDatePreloaded(previousIsopack)) {
+        isopack = previousIsopack;
       } else {
-        // Nope! Compile it again.
-        isopack = compiler.compile(packageInfo.packageSource, {
-          packageMap: self._packageMap,
-          isopackCache: self,
-          noLineNumbers: self._noLineNumbers,
-          includeCordovaUnibuild: self._includeCordovaUnibuild,
-          includePluginProviderPackageMap: true
-        });
-        // Accept the compiler's result, even if there were errors (since it at
-        // least will have a useful WatchSet and will allow us to keep going and
-        // compile other packages that depend on this one).
-        if (self.cacheDir && ! buildmessage.jobHasMessages()) {
-          // Save to disk, for next time!
-          isopack.saveToPath(self._isopackDir(name), {
-            includeIsopackBuildInfo: true
+        // Do we have an up-to-date package on disk?
+        var isopackBuildInfoJson = self.cacheDir && files.readJSONOrNull(
+          self._isopackBuildInfoPath(name));
+        var upToDate = self._checkUpToDate(isopackBuildInfoJson);
+
+        if (upToDate) {
+          isopack = new isopackModule.Isopack;
+          isopack.initFromPath(name, self._isopackDir(name), {
+            isopackBuildInfoJson: isopackBuildInfoJson
           });
+        } else {
+          // Nope! Compile it again.
+          isopack = compiler.compile(packageInfo.packageSource, {
+            packageMap: self._packageMap,
+            isopackCache: self,
+            noLineNumbers: self._noLineNumbers,
+            includeCordovaUnibuild: self._includeCordovaUnibuild,
+            includePluginProviderPackageMap: true
+          });
+          // Accept the compiler's result, even if there were errors (since it
+          // at least will have a useful WatchSet and will allow us to keep
+          // going and compile other packages that depend on this one).
+          if (self.cacheDir && ! buildmessage.jobHasMessages()) {
+            // Save to disk, for next time!
+            isopack.saveToPath(self._isopackDir(name), {
+              includeIsopackBuildInfo: true
+            });
+          }
         }
       }
 
@@ -251,6 +262,27 @@ _.extend(exports.IsopackCache.prototype, {
     _.each(isopackBuildInfoJson.unibuildDependencies, function (deps) {
       watchSet.merge(watch.WatchSet.fromJSON(deps));
     });
+    return watch.isUpToDate(watchSet);
+  },
+
+  _checkUpToDatePreloaded: function (previousIsopack) {
+    var self = this;
+
+    // If we include Cordova but this Isopack doesn't, or via versa, then we're
+    // not up to date.
+    if (self._includeCordovaUnibuild !== previousIsopack.hasCordovaUnibuild()) {
+      return false;
+    }
+
+    // If any of the direct dependencies changed their version or location, we
+    // aren't up to date.
+    if (!self._packageMap.isSupersetOfJSON(
+      previousIsopack.pluginProviderPackageMap)) {
+      return false;
+    }
+    // Merge in the watchsets for all unibuilds and plugins in the package, then
+    // check it once.
+    var watchSet = previousIsopack.getMergedWatchSet();
     return watch.isUpToDate(watchSet);
   },
 

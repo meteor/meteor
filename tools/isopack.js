@@ -726,6 +726,13 @@ _.extend(Isopack.prototype, {
     return true;
   },
 
+  hasCordovaUnibuild: function () {
+    var self = this;
+    return _.any(self.unibuilds, function (unibuild) {
+      return unibuild.arch === 'web.cordova';
+    });
+  },
+
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
@@ -763,9 +770,7 @@ _.extend(Isopack.prototype, {
           // plugin), as well as any files making up plugins in our package.
           pluginDependencies: self.pluginWatchSet.toJSON(),
           pluginProviderPackageMap: self.pluginProviderPackageMap.toJSON(),
-          includeCordovaUnibuild: _.any(self.unibuilds, function (unibuild) {
-            return unibuild.arch === 'web.cordova';
-          })
+          includeCordovaUnibuild: self.hasCordovaUnibuild()
         };
       }
 

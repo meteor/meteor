@@ -442,7 +442,6 @@ _.extend(AppRunner.prototype, {
         self.projectContext.reset({}, {
           // Don't forget all Isopack objects; just make sure to check that they
           // are up to date.
-          // XXX this feature is only half-implemented.  #3213
           softRefreshIsopacks: true,
           // Don't forget the package map we calculated last time, even if we
           // didn't write it to disk (because, eg, we're not running with a
