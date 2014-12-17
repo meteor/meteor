@@ -410,33 +410,24 @@ _.extend(Watcher.prototype, {
       return;
     }
 
-    var onWatchEvent = self._makeWatchEventCallback(absPath);
-
     if (self.justCheckOnce) {
-      onWatchEvent();
-      return;
-    }
+      self._makeWatchEventCallback(absPath)();
 
-    try {
+    } else if (fs.existsSync(absPath)) {
+      var onWatchEvent = self._makeWatchEventCallback(absPath);
       entry.watcher = pathwatcher.watch(absPath, onWatchEvent);
 
-    } catch (err) {
-      if (err.code === "ENOENT" || // For fs.watch.
-          (err instanceof TypeError && // For pathwatcher.watch.
-           err.message === "Unable to watch path")) {
-        var parentDir = path.dirname(absPath);
-        if (parentDir !== absPath) {
-          self._watchFileOrDirectory(parentDir);
-        }
-      } else {
-        throw err;
-      }
-    }
-
-    if (entry.watcher) {
       // If we successfully created the watcher, invoke the callback
       // immediately, so that we examine this file at least once.
       onWatchEvent();
+
+    } else {
+      var parentDir = path.dirname(absPath);
+      if (parentDir === absPath) {
+        throw new Error("Unable to watch parent directory of " + absPath);
+      }
+
+      self._watchFileOrDirectory(parentDir);
     }
   },
 
