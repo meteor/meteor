@@ -873,8 +873,9 @@ if (Meteor.isServer) (function () {
     'passwords - setPassword',
     function (test) {
       var username = Random.id();
+      var email = username + '-intercept@example.com';
 
-      var userId = Accounts.createUser({username: username});
+      var userId = Accounts.createUser({username: username, email: email});
 
       var user = Meteor.users.findOne(userId);
       // no services yet.
@@ -886,12 +887,22 @@ if (Meteor.isServer) (function () {
       var oldSaltedHash = user.services.password.bcrypt;
       test.isTrue(oldSaltedHash);
 
+      // Send a reset password email (setting a reset token) and insert a login
+      // token.
+      Accounts.sendResetPasswordEmail(userId, email);
+      Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
+      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
+      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+
       // reset with the same password, see we get a different salted hash
       Accounts.setPassword(userId, 'new password');
       user = Meteor.users.findOne(userId);
       var newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
+      // No more tokens.
+      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
+      test.isFalse(Meteor.users.findOne(userId).services.resume.loginTokens);
 
       // cleanup
       Meteor.users.remove(userId);

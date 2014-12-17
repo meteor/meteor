@@ -24,7 +24,8 @@
 * `Blaze.remove` on a template's view now correctly removes the DOM
   when the template was inserted using `Blaze.renderWithData`. #3130
 
-* Expire a user's password reset tokens when their password is changed.
+* Expire a user's password reset and login tokens in all circumstances when
+  their password is changed.
 
 * Require plain objects as the update parameter when doing replacements
   in server-side collections.
