@@ -221,8 +221,7 @@ exports.loggedInPackagesConnection = function () {
 // XXX this is missing a few things. In retrospect a better approach here might
 //     be to actually make "save source somewhere else" or perhaps "add source
 //     to tarball" be part of the package build itself...
-var bundleSource = function (isopack, includeSources, packageDir,
-                             pluginProviderPackageMap) {
+var bundleSource = function (isopack, includeSources, packageDir) {
   buildmessage.assertInJob();
 
   var name = isopack.name;
@@ -261,6 +260,9 @@ var bundleSource = function (isopack, includeSources, packageDir,
   var packageMapFilename = path.join(sourcePackageDir, '.versions');
   if (fs.existsSync(packageMapFilename))
     throw Error(".versions file already exists? " + packageMapFilename);
+  var pluginProviderPackageMap = isopack.pluginProviderPackageMap;
+  if (! pluginProviderPackageMap)
+    throw Error("no pluginProviderPackageMap on isopack?");
   var packageMapFile = new projectContextModule.PackageMapFile({
     filename: packageMapFilename
   });
@@ -522,17 +524,10 @@ exports.publishPackage = function (options) {
     sourceFiles = _.union(sourceFiles, testSourceFiles);
   }
 
-  // Find the PackageMap of packages that are build time dependencies of this
-  // package.
-  var pluginProviderPackageMap =
-        projectContext.isopackCache.getPluginProviderPackageMap(name);
-  if (! pluginProviderPackageMap)
-    throw Error("missing pluginProviderPackageMap for " + name);
-
   var sourceBundleResult;
   buildmessage.enterJob("bundling source", function () {
     sourceBundleResult = bundleSource(
-      isopack, sourceFiles, packageSource.sourceRoot, pluginProviderPackageMap);
+      isopack, sourceFiles, packageSource.sourceRoot);
   });
   if (buildmessage.jobHasMessages())
     return;

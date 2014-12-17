@@ -37,9 +37,7 @@ exports.IsopackCache = function (options) {
     throw Error("previousIsopackCache has different cacheDir!");
   }
 
-  // Map from package name to {isopack, pluginProviderPackageMap} object.
-  // pluginProviderPackageMap is null for isopacks that are loaded from the
-  // tropohouse, and otherwise is a PackageMap object listing
+  // Map from package name to Isopack.
   self._isopacks = {};
 
   self._noLineNumbers = !! options.noLineNumbers;
@@ -91,21 +89,14 @@ _.extend(exports.IsopackCache.prototype, {
     var self = this;
     if (! _.has(self._isopacks, name))
       throw Error("isopack " + name + " not yet loaded?");
-    return self._isopacks[name].isopack;
+    return self._isopacks[name];
   },
 
   eachBuiltIsopack: function (iterator) {
     var self = this;
-    _.each(self._isopacks, function (info, packageName) {
-      iterator(packageName, info.isopack);
+    _.each(self._isopacks, function (isopack, packageName) {
+      iterator(packageName, isopack);
     });
-  },
-
-  getPluginProviderPackageMap: function (name) {
-    var self = this;
-    if (! _.has(self._isopacks, name))
-      throw Error("isopack " + name + " not yet loaded?");
-    return self._isopacks[name].pluginProviderPackageMap;
   },
 
   _ensurePackageLoaded: function (name, onStack) {
@@ -178,10 +169,7 @@ _.extend(exports.IsopackCache.prototype, {
           });
       }
 
-      self._isopacks[name] = {
-        isopack: isopack,
-        pluginProviderPackageMap: null
-      };
+      self._isopacks[name] = isopack;
       // Also load its dependencies. This is so that if this package is being
       // built as part of a plugin, all the transitive dependencies of the
       // plugin are loaded.
@@ -205,42 +193,34 @@ _.extend(exports.IsopackCache.prototype, {
         self._isopackBuildInfoPath(name));
       var upToDate = self._checkUpToDate(isopackBuildInfoJson);
 
-      var isopack, pluginProviderPackageMap;
+      var isopack;
       if (upToDate) {
         isopack = new isopackModule.Isopack;
         isopack.initFromPath(name, self._isopackDir(name), {
           isopackBuildInfoJson: isopackBuildInfoJson
         });
-        pluginProviderPackageMap = self._packageMap.makeSubsetMap(
-          _.keys(isopackBuildInfoJson.pluginProviderPackageMap));
       } else {
         // Nope! Compile it again.
-        var compilerResult = compiler.compile(packageInfo.packageSource, {
+        isopack = compiler.compile(packageInfo.packageSource, {
           packageMap: self._packageMap,
           isopackCache: self,
           noLineNumbers: self._noLineNumbers,
-          includeCordovaUnibuild: self._includeCordovaUnibuild
+          includeCordovaUnibuild: self._includeCordovaUnibuild,
+          includePluginProviderPackageMap: true
         });
         // Accept the compiler's result, even if there were errors (since it at
         // least will have a useful WatchSet and will allow us to keep going and
         // compile other packages that depend on this one).
-        isopack = compilerResult.isopack;
-        pluginProviderPackageMap = self._packageMap.makeSubsetMap(
-          compilerResult.pluginProviderPackageNames);
         if (self.cacheDir && ! buildmessage.jobHasMessages()) {
           // Save to disk, for next time!
           isopack.saveToPath(self._isopackDir(name), {
-            pluginProviderPackageMap: pluginProviderPackageMap,
             includeIsopackBuildInfo: true
           });
         }
       }
 
       self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
-      self._isopacks[name] = {
-        isopack: isopack,
-        pluginProviderPackageMap: pluginProviderPackageMap
-      };
+      self._isopacks[name] = isopack;
     });
   },
 
