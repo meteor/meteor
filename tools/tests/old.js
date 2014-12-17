@@ -28,7 +28,7 @@ var runOldTest = function (filename, extraEnv) {
       METEOR_TOOL_PATH: s.execPath
     }, extraEnv))
   });
-  run.waitSecs(1000);
+  run.waitSecs(40);
   run.expectExit(0);
 };
 
@@ -48,16 +48,19 @@ var runOldTest = function (filename, extraEnv) {
 //
 selftest.define("watch", ["slow"], function () {
   var runFuture = runOldTest.future();
-
-  Future.wait(
-    runFuture('test-watch.js', {
-      METEOR_WATCH_FORCE_POLLING: 0
-    }),
-
+  var futures = [
+    // Run with pathwatcher (if possible)
+    runFuture('test-watch.js'),
+    // Run with fs.watchFile fallback
     runFuture('test-watch.js', {
       METEOR_WATCH_FORCE_POLLING: 1
     })
-  );
+  ];
+  Future.wait(futures);
+  // Throw if any threw.
+  _.each(futures, function (f) {
+    f.get();
+  });
 });
 
 selftest.define("bundler-assets", ["checkout"], function () {
