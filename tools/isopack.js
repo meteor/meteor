@@ -232,17 +232,6 @@ var Isopack = function () {
   // isopack-buildinfo.json file). They are not set for Isopacks read from
   // the tropohouse.
 
-  // The versions that we used at build time for each of our direct
-  // dependencies. Map from package name to version string.
-  self.buildTimeDirectDependencies = null;
-
-  // The complete list of versions (including transitive dependencies)
-  // that we used at build time to build each of our plugins. Map from
-  // plugin name to package name to version string. Note that two
-  // plugins might not use the same version for the same transitive
-  // dependency.
-  self.buildTimePluginDependencies = null;
-
   // XXX this is likely to change once we have build versions
   //
   // A WatchSet for the full transitive dependencies for all plugins in this
@@ -292,8 +281,6 @@ _.extend(Isopack.prototype, {
     self.plugins = options.plugins;
     self.cordovaDependencies = options.cordovaDependencies;
     self.pluginWatchSet = options.pluginWatchSet;
-    self.buildTimeDirectDependencies = options.buildTimeDirectDependencies;
-    self.buildTimePluginDependencies = options.buildTimePluginDependencies;
     self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
