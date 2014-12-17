@@ -10,6 +10,7 @@ var meteorNpm = require('./meteor-npm.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
+var colonConverter = require('./metadata-colon-converter.js');
 
 var compiler = exports;
 
@@ -311,7 +312,8 @@ var compileUnibuild = function (options) {
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, relPath),
+      servePath: colonConverter.convert(
+        files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
       hash: hash
     });
   };
@@ -640,7 +642,8 @@ var compileUnibuild = function (options) {
           type: "css",
           refreshable: true,
           data: new Buffer(options.data, 'utf8'),
-          servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, options.path),
+          servePath: colonConverter.convert(
+            files.pathJoin(inputSourceArch.pkg.serveRoot, options.path)),
           sourceMap: options.sourceMap
         });
       },
@@ -757,8 +760,10 @@ var compileUnibuild = function (options) {
     // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
     // XXX: If we change this, we can get rid of source arch names!
     combinedServePath: isApp ? null :
-      "/packages/" + inputSourceArch.pkg.name +
-      (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) + ".js",
+      "/packages/" + colonConverter.convert(
+        inputSourceArch.pkg.name +
+        (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) +
+        ".js"),
     name: inputSourceArch.pkg.name || null,
     declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
     jsAnalyze: jsAnalyze,

@@ -166,6 +166,7 @@ var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var tropohouse = require('./tropohouse.js');
 var packageVersionParser = require('./package-version-parser.js');
+var colonConverter = require('./metadata-colon-converter.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -1527,6 +1528,7 @@ _.extend(JsImage.prototype, {
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(files.readFileSync(controlFilePath));
+  json = colonConverter.convertJSImage(json);
   var dir = files.pathDirname(controlFilePath);
 
   if (json.format !== "javascript-image-pre1")
