@@ -741,9 +741,9 @@ exports.loginCommand = withAccountsConnection(function (options,
   data = readSessionData();
   Console.error();
   Console.error("Logged in" + (galaxy ? " to " + galaxy : "") +
-                 (currentUsername(data) ?
-                 " as " + currentUsername(data) : "") + "." +
-                 "Thanks for being a Meteor developer!");
+                (currentUsername(data) ?
+                 " as " + currentUsername(data) : "") + ".",
+                "Thanks for being a Meteor developer!");
   return 0;
 });
 
