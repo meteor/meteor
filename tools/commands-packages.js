@@ -26,15 +26,14 @@ var projectContextModule = require('./project-context.js');
 var packageMapModule = require('./package-map.js');
 var packageVersionParser = require('./package-version-parser.js');
 
-// On some informational actions, we only refresh the package catalog if it is >
-// 15 minutes old
-var DEFAULT_MAX_AGE_MS = 15 * 60 * 1000;
-
-// Returns an object with keys:
-//  record : (a package or version record)
-//  release : true if it is a release instead of a package.
+// For each release (or package), we store a meta-record with its name,
+// maintainers, etc. This function takes in a name, figures out if
+// it is a release or a package, and fetches the correct record.
+//
+// Specifically, it returns an object with the following keys:
+//  - record : (a package or version record)
+//  - isRelease : true if it is a release instead of a package.
 var getReleaseOrPackageRecord = function(name) {
-  // Too lazy to do string parsing.
   var rec = catalog.official.getPackage(name);
   var rel = false;
   if (!rec) {
@@ -53,13 +52,6 @@ var refreshOfficialCatalogOrDie = function (options) {
     Console.error(
       "This command requires an up-to-date package catalog. Exiting.");
     throw new main.ExitWithCode(1);
-  }
-};
-
-var explainIfRefreshFailed = function () {
-  if (catalog.official.offline || catalog.refreshFailed) {
-    Console.info("Your package catalog may be out of date.\n" +
-      "Please connect to the internet and try again.");
   }
 };
 
@@ -1024,352 +1016,6 @@ main.registerCommand({
   return 0;
 });
 
-
-///////////////////////////////////////////////////////////////////////////////
-// search & show
-///////////////////////////////////////////////////////////////////////////////
-
-
-main.registerCommand({
-  name: 'show',
-  pretty: true,
-  minArgs: 1,
-  maxArgs: 1,
-  options: {
-    "show-old": {type: Boolean, required: false }
-  },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
-}, function (options) {
-  // We only show compatible versions unless we know otherwise.
-  var versionVisible = function (record) {
-    return options['show-old'] || !record.unmigrated;
-  };
-  var INDENT = 6;
-
-  var full = options.args[0].split('@');
-  var name = full[0];
-  var allRecord = getReleaseOrPackageRecord(name);
-
-  var record = allRecord.record;
-  if (!record) {
-    Console.error("Unknown package or release: " +  name);
-    explainIfRefreshFailed();
-    return 1;
-  }
-
-  var versionRecords;
-  var label;
-  var showName;
-  if (!allRecord.isRelease) {
-    label = "package";
-    showName = "Package " + Console.bold(allRecord.record.name);
-    var getRelevantRecord = function (version) {
-      var versionRecord = catalog.official.getVersion(name, version);
-      var myBuilds = _.pluck(catalog.official.getAllBuilds(name, version),
-                             'buildArchitectures');
-      // Does this package only have a cross-platform build?
-      if (myBuilds.length === 1) {
-        var allArches = myBuilds[0].split('+');
-        if (!_.any(allArches, function (arch) {
-          return arch.match(/^os\./);
-        })) {
-          return versionRecord;
-        }
-      }
-      // This package is only available for some architectures.
-      // XXX show in a more human way?
-      var myStringBuilds = myBuilds.join(' ');
-      return versionRecord ? _.extend({
-        buildArchitectures: myStringBuilds
-      }, versionRecord) : versionRecord;
-    };
-    // XXX should this skip pre-releases? No, it should.
-    var versions = catalog.official.getSortedVersions(name);
-    if (full.length > 1) {
-      versions = [full[1]];
-    }
-    versionRecords = _.map(versions, getRelevantRecord);
-    if (full.length > 1 && versionRecords.length == 1 && versionRecords[0]) {
-      showName += Console.bold("@" + versionRecords[0].version);
-    }
-  } else {
-    label = "release";
-    showName = "Release " + Console.bold(allRecord.record.name);
-    if (full.length > 1) {
-      versionRecords = [catalog.official.getReleaseVersion(name, full[1])];
-      if (versionRecords.length == 1 && versionRecords[0]) {
-        showName += Console.bold("@" + versionRecords[0].version);
-      }
-    } else {
-      versionRecords =
-        _.map(
-          catalog.official.getSortedRecommendedReleaseVersions(name, "").reverse(),
-          function (v) {
-            return catalog.official.getReleaseVersion(name, v);
-          });
-    }
-  }
-  if (_.isEqual(versionRecords, [])) {
-    if (allRecord.release) {
-      Console.error(
-        "No recommended versions of release " + name + " exist.");
-    } else {
-      Console.error("No versions of package " + name + " exist.");
-    }
-  } else {
-    var lastVersion = versionRecords[versionRecords.length - 1];
-    if (!lastVersion && full.length > 1) {
-      Console.error(
-        full[1] + ": unknown version of " + name);
-      return 1;
-    }
-
-    if (showName) {
-      Console.info(showName + ":\n");
-    }
-
-    var unknown = "< unknown >";
-
-    if (full.length > 1) {
-      // Specific version with details; we don't expect more than one match
-      _.each(versionRecords, function (v) {
-        // Don't show versions that we shouldn't be showing.
-        if (!versionVisible(v)) {
-          return;
-        }
-
-        var versionDesc = Console.bold("Version " + v.version);
-        if (v.description)
-          versionDesc = versionDesc + "    " + v.description;
-        Console.info(versionDesc);
-
-        if (v.buildArchitectures) {
-          var buildArchitectures = v.buildArchitectures.split(' ');
-          Console.info(
-            "Architectures: ",
-            formatAsList(
-              buildArchitectures, { formatter: formatArchitecture }),
-            Console.options({ indent: INDENT }));
-        }
-        // XXX: else show "no architectures"?
-        if (v.packages) {
-          Console.info("tool: " + v.tool, Console.options({ indent: INDENT }));
-          Console.info("packages:",  Console.options({ indent: INDENT }));
-
-          _.each(v.packages, function(pv, pn) {
-            Console.info(pn + "@" + pv,  Console.options({ indent: INDENT }));
-          });
-        }
-      });
-
-      Console.info();
-      Console.info();
-    } else {
-      // Non-detailed list of versions
-
-      var rows = [];
-
-      _.each(versionRecords, function (v) {
-        // Don't show versions that we shouldn't be showing.
-        if (!versionVisible(v)) {
-          return;
-        }
-
-        var row = ["Version " + v.version, v.description];
-        rows.push(row);
-      });
-
-      Console.printTwoColumns(rows);
-    }
-  }
-
-  // Creating the maintainer string. We have anywhere between 1 and lots of
-  // maintainers on a package. We probably want output along the lines of
-  // "bob", "bob and alice" or "bob, alex and alice".
-  var myMaintainerString = "";
-  var myMaintainers = _.pluck(record.maintainers, 'username');
-  if (myMaintainers.length === 0) {
-    Console.rawDebug(
-      "No maintainer records found: ", JSON.stringify(record), "\n");
-  } else if (myMaintainers.length === 1) {
-    myMaintainerString = myMaintainers[0];
-  } else {
-    var myTotal = myMaintainers.length;
-    // If we have two maintainers exactly, this is a no-op. Otherwise, it will
-    // produce a list of the first (n-2) maintainers, separated by comas.
-    _.each(myMaintainers.slice(0, myTotal - 2), function (name) {
-      myMaintainerString += name + ", ";
-    });
-    myMaintainerString +=  myMaintainers[myTotal - 2];
-    myMaintainerString +=  " and " +  myMaintainers[myTotal - 1];
-  }
-
-  if (myMaintainerString) {
-    Console.info("Maintained by:", myMaintainerString + ".");
-  }
-
-  if (lastVersion && lastVersion.git) {
-    // No full stop, as it makes copying and pasting painful
-    Console.info("Git repository at:", Console.url(lastVersion.git));
-  }
-
-  if (record && record.homepage) {
-    // No full stop, as it makes copying and pasting painful
-    Console.info("More information at:", Console.url(record.homepage));
-  }
-});
-
-main.registerCommand({
-  name: 'search',
-  pretty: true,
-  minArgs: 0, // So we can provide specific help
-  maxArgs: 1,
-  options: {
-    maintainer: {type: String, required: false },
-    "show-old": {type: Boolean, required: false },
-    "show-rcs": {type: Boolean, required: false},
-    // Undocumented debug-only option for Velocity.
-    "debug-only": {type: Boolean, required: false}
-  },
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
-}, function (options) {
-  if (options.args.length === 0) {
-    Console.info(
-      "To show all packages, do", Console.command("meteor search ."));
-    return 1;
-  }
-
-  // Show all means don't do any filtering at all. So, don't do any filtering
-  // for anything at all.
-  if (options["show-rcs"]) {
-    options["show-old"] = true;
-  }
-
-  // XXX We should push the queries into SQLite!
-
-  var allPackages = catalog.official.getAllPackageNames();
-  var allReleases = catalog.official.getAllReleaseTracks();
-  var matchingPackages = [];
-  var matchingReleases = [];
-
-  var selector;
-  var pattern = options.args[0];
-
-  var search;
-  try {
-    search = new RegExp(pattern);
-  } catch (err) {
-    Console.error(err + "");
-    return 1;
-  }
-
-  // Do not return true on broken packages, unless requested in options.
-  var filterBroken = function (match, isRelease, name) {
-    // If the package does not match, or it is not a package at all or if we
-    // don't want to filter anyway, we do not care.
-    if (!match || isRelease)
-      return match;
-    var vr;
-    if (!options["show-rcs"]) {
-      vr = catalog.official.getLatestMainlineVersion(name);
-    } else {
-      vr = catalog.official.getLatestVersion(name);
-    }
-    if (!vr) {
-      return false;
-    }
-    // If we did NOT ask for unmigrated packages and this package is unmigrated,
-    // we don't care.
-    if (!options["show-old"] && vr.unmigrated){
-      return false;
-    }
-    // If we asked for debug-only packages and this package is NOT debug only,
-    // we don't care.
-    if (options["debug-only"] && !vr.debugOnly) {
-      return false;
-    }
-    return true;
-  };
-
-  if (options.maintainer) {
-    var username =  options.maintainer;
-    // In the future, we should consider checking this on the server, but I
-    // suspect the main use of this command will be to deal with the automatic
-    // migration and uncommon in everyday use. From that perspective, it makes
-    // little sense to require you to be online to find out what packages you
-    // own; and the consequence of not mentioning your group packages until
-    // you update to a new version of meteor is not that dire.
-    selector = function (name, isRelease) {
-      var record;
-      // XXX make sure search works while offline
-      if (isRelease) {
-        record = catalog.official.getReleaseTrack(name);
-      } else {
-        record = catalog.official.getPackage(name);
-      }
-      return filterBroken((name.match(search) &&
-        !!_.findWhere(record.maintainers, {username: username})),
-        isRelease, name);
-    };
-  } else {
-    selector = function (name, isRelease) {
-      return filterBroken(name.match(search),
-        isRelease, name);
-    };
-  }
-
-
-  buildmessage.enterJob({ title: 'searching packages' }, function () {
-    _.each(allPackages, function (pack) {
-      if (selector(pack, false)) {
-        var vr;
-        if (!options['show-rcs']) {
-          vr = catalog.official.getLatestMainlineVersion(pack);
-        } else {
-          vr = catalog.official.getLatestVersion(pack);
-        }
-        if (vr) {
-          matchingPackages.push(
-            { name: pack, description: vr.description});
-        }
-      }
-    });
-    _.each(allReleases, function (track) {
-      if (selector(track, true)) {
-        var vr = catalog.official.getDefaultReleaseVersion(track);
-        if (vr) {
-          var vrlong = catalog.official.getReleaseVersion(track, vr.version);
-          matchingReleases.push(
-            { name: track, description: vrlong.description});
-        }
-      }
-    });
-  });
-
-  var output = false;
-  if (!_.isEqual(matchingPackages, [])) {
-    output = true;
-    Console.info("Found the following packages:");
-    utils.printPackageList(matchingPackages);
-  }
-
-  if (!_.isEqual(matchingReleases, [])) {
-    output = true;
-    Console.info("Found the following releases:");
-    utils.printPackageList(matchingReleases);
-  }
-
-  if (!output) {
-    Console.error(pattern + ': no matching packages or releases found');
-
-    explainIfRefreshFailed();
-  } else {
-    Console.info(
-      "To get more information on a specific item, use",
-      Console.command("meteor show"));
-  }
-});
-
 ///////////////////////////////////////////////////////////////////////////////
 // list
 ///////////////////////////////////////////////////////////////////////////////
@@ -2059,7 +1705,7 @@ main.registerCommand({
   if (messages.hasMessages()) {
     Console.arrowError("Errors while parsing arguments:", 1);
     Console.printMessages(messages);
-    explainIfRefreshFailed();  // this is why we're not using captureAndExit
+    utils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
     return 1;
   }
 
@@ -2072,7 +1718,7 @@ main.registerCommand({
   if (messages.hasMessages()) {
     Console.arrowError("Errors while adding packages:", 1);
     Console.printMessages(messages);
-    explainIfRefreshFailed();  // this is why we're not using captureAndExit
+    utils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
     return 1;
   }
 

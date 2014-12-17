@@ -34,6 +34,7 @@ var packageJson = {
     phantomjs: "1.9.12",
     "http-proxy": "1.6.0",
     "wordwrap": "0.0.2",
+    "moment": "2.8.4",
     // XXX We ought to be able to get this from the copy in js-analyze rather
     // than in the dev bundle.)
     esprima: "1.2.2",

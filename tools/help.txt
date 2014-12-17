@@ -657,43 +657,41 @@ debugging the Meteor packaging tools themselves.
 
 >>> search
 Search through the package server database.
-Usage: meteor search <regex> [--maintainer <username>] [--show-old]
+Usage: meteor search <regex> [--maintainer <username>] [--show-all]
 
-Search through the meteor package&release database for names containing the
-specified substring.
+Searches through the Meteor package and release database for items whose
+names or descriptions match the regular expression. You can use the
+--maintainer option to filter for items maintained by a particular
+developer.
 
-Use --maintainer to filter by authorized maintainers.
-
-By default, meteor search will not show packages that, due to migration issues,
-are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those packages anyway, use the --show-old option.
-
-By default, meteor search will not show packages that have no official versions
-(ie: non-pre-release versions) If you want to see those packages anyway, use
-the --show-rcs option.
+By default, this will not show packages that have no official versions
+(for example, those that have only prereleases). It will also hide packages
+that, due to migration issues, are known to be incompatible with Meteor 0.9.0
+and later. You can use the show-all option to see hidden packages.
 
 Options:
   --maintainer    filter by authorized maintainer
-  --show-old      show packages incompatible with Meteor 0.9.0 and later.
-  --show-rcs      show packages with no non-prerelease versions
+  --show-all      show all matches, even prereleases
+  --ejson         show more detailed output in EJSON format
 
 
 >>> show
 Show detailed information about a release or package.
-Usage: meteor show <name>
-       meteor show <name@version>
+Usage: meteor show <name> [--show-all] [--ejson]
+       meteor show <name@version> [--show-all][--ejson]
 
-Show detailed information on a specific package or release, including available
-versions. Use <name>@<version> to get more information about a specific
-version of a package or release.
+Show detailed information on a specific package or release, including
+a list of available versions. Use <name>@<version> to get more information
+about a specific version of a package or release.
 
-By default, meteor show will not show versions that, due to migration issues,
-are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those versions anyway, use the --show-old option.
+By default, Meteor will not show more than five versions, and will not
+show experimental release versions. Meteor will also hide packages that
+are known to not be compatible with  Meteor 0.9.0 and later. Running with the
+--show-all option will show everything.
 
 Options:
-  --show-old      show versions incompatible with Meteor 0.9.0 and later.
-
+  --ejson         show more detailed output in EJSON format
+  --show-all      show hidden versions of packages and releases
 
 
 >>> admin maintainers

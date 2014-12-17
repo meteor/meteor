@@ -791,16 +791,25 @@ _.extend(RemoteCatalog.prototype, {
     return true;
   },
 
-  // Given a release track, return all recommended versions for this track, sorted
-  // by their orderKey. Returns the empty array if the release track does not
-  // exist or does not have any recommended versions.
+  // Given a release track, returns all recommended versions for this track,
+  // sorted by their orderKey. Returns the empty array if the release track does
+  // not exist or does not have any recommended versions.
   getSortedRecommendedReleaseVersions: function (track, laterThanOrderKey) {
+    var self = this;
+    var versions =
+          self.getSortedRecommendedReleaseRecords(track, laterThanOrderKey);
+    return _.pluck(versions, "version");
+  },
+
+  // Given a release track, returns all recommended version *records* for this
+  // track, sorted by their orderKey. Returns the empty array if the release
+  // track does not exist or does not have any recommended versions.
+  getSortedRecommendedReleaseRecords: function (track, laterThanOrderKey) {
     var self = this;
     // XXX releaseVersions content objects are kinda big; if we put
     // 'recommended' and 'orderKey' in their own columns this could be faster
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
-
     var recommended = _.filter(result, function (v) {
       if (!v.recommended)
         return false;
@@ -811,19 +820,46 @@ _.extend(RemoteCatalog.prototype, {
       return rec.orderKey;
     });
     recSort.reverse();
-    return _.pluck(recSort, "version");
+    return recSort;
   },
 
+  // Given a release track, returns all version records for this track.
+  getReleaseVersionRecords: function (track) {
+    var self = this;
+    var result = self._contentQuery(
+      "SELECT content FROM releaseVersions WHERE track=?", track);
+    return result;
+  },
+
+  // For a given track, returns the total number of release versions on that
+  // track.
+  getNumReleaseVersions: function (track) {
+    var self = this;
+    var result = self._columnsQuery(
+      "SELECT count(*) FROM releaseVersions WHERE track=?", track);
+    return result[0]["count(*)"];
+  },
+
+  // Returns the default release version on the DEFAULT_TRACK, or for a
+  // given release track.
   getDefaultReleaseVersion: function (track) {
+    var self = this;
+    var versionRecord = self.getDefaultReleaseVersionRecord(track);
+    return _.pick(versionRecord, ["track", "version" ]);
+  },
+
+  // Returns the default release version record for the DEFAULT_TRACK, or for a
+  // given release track.
+  getDefaultReleaseVersionRecord: function (track) {
     var self = this;
 
     if (!track)
       track = exports.DEFAULT_TRACK;
 
-    var versions = self.getSortedRecommendedReleaseVersions(track);
+    var versions = self.getSortedRecommendedReleaseRecords(track);
     if (!versions.length)
       return null;
-    return {track: track, version: versions[0]};
+    return  versions[0];
   },
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {

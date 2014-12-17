@@ -263,6 +263,7 @@ main.captureAndExit = function (header, title, f) {
 
 require('./commands.js');
 require('./commands-packages.js');
+require('./commands-packages-query.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Long-form help
@@ -1227,20 +1228,30 @@ Fiber(function () {
     requiresPackage = requiresPackage(options);
   }
 
-  if (requiresPackage) {
+  // Some commands have different results when run from a package dir, but don't
+  // strictly require it. These commands should use 'usesPackage' instead of
+  // requiresPackage. (We want to avoid searching up the directory tree for
+  // package.js when we don’t have to. Hopefully, a unified control file will
+  // allow us better control in the future).
+  var usesPackage = command.usesPackage;
+  if (typeof usesPackage === "function") {
+    usesPackage = usesPackage(options);
+  }
+
+  if (requiresPackage || usesPackage) {
     var packageDir = files.findPackageDir();
     if (packageDir)
       packageDir = files.pathResolve(packageDir);
     if (packageDir) {
       options.packageDir = packageDir;
     }
+  }
 
-    if (! options.packageDir) {
-      Console.error(
-        Console.command(commandName) +
+  if (requiresPackage && ! options.packageDir) {
+    Console.error(
+      Console.command(commandName) +
         ": You're not in a Meteor package directory.");
-      process.exit(1);
-    }
+    process.exit(1);
   }
 
   if (command.requiresRelease && ! release.current) {
