@@ -1,4 +1,4 @@
-# percolate:synced-cron (Meteor package)
+# percolate:synced-cron
 
 A simple cron system for [Meteor](http://meteor.com). It supports syncronizing jobs between multiple processes. In other words, if you add a job that runs every hour and your deployment consists of multiple app servers, only one of the app servers will execute the job each time (whichever tries first).
 
@@ -14,7 +14,7 @@ $ meteor add percolatestudio:synced-cron
 
 To write a cron job, give it a unique name, a schedule an a function to run like below. SyncedCron uses the fantastic [later.js](http://bunkat.github.io/later/) library behind the scenes. A Later.js `parse` object is passed into the schedule call that gives you a huge amount of flexibility for scheduling your jobs, see the [documentation](http://bunkat.github.io/later/parsers.html#overview). 
 
-``` javascript
+``` js
 SyncedCron.add({
   name: 'Crunch some important numbers for the marketing department',
   schedule: function(parser) {
@@ -30,7 +30,7 @@ SyncedCron.add({
 
 To start processing your jobs, somewhere in your project add:
 
-``` javascript
+``` js
 SyncedCron.start();
 ```
 
@@ -38,7 +38,7 @@ SyncedCron.start();
 
 SyncedCron uses a collection called `cronHistory` to syncronize between processes. This also serves as a useful log of when jobs ran along with their output or error. A sample item looks like:
 
-```
+``` js
 { _id: 'wdYLPBZp5zzbwdfYj',
   intendedAt: Sun Apr 13 2014 17:34:00 GMT-0700 (MST),
   finishedAt: Sun Apr 13 2014 17:34:01 GMT-0700 (MST),
@@ -59,7 +59,7 @@ Call `SyncedCron.stop()` to remove and stop all jobs.
 
 Modify the object `SyncedCron.options` to set configuration entries. Defaults are: 
 
-```
+``` js
   SyncedCron.options = {
     //Log job run details to console
     log: true,
