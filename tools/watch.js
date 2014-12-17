@@ -380,15 +380,12 @@ _.extend(Watcher.prototype, {
       if (self.stopped)
         return;
 
+      if (! self.justCheckOnce)
+        self._watchFileOrDirectory(absPath);
+
       // Check for the case where by the time we created the watch,
       // the file had already changed from the sha we were provided.
-      if (self._fireIfFileChanged(absPath))
-        return;
-
-      if (self.justCheckOnce)
-        return;
-
-      self._watchFileOrDirectory(absPath);
+      self._fireIfFileChanged(absPath);
     });
   },
 
@@ -414,6 +411,11 @@ _.extend(Watcher.prototype, {
       self._makeWatchEventCallback(absPath)();
 
     } else if (fs.existsSync(absPath)) {
+      if (self._mustNotExist(absPath)) {
+        self._fire();
+        return;
+      }
+
       var onWatchEvent = self._makeWatchEventCallback(absPath);
       entry.watcher = pathwatcher.watch(absPath, onWatchEvent);
 
@@ -422,6 +424,11 @@ _.extend(Watcher.prototype, {
       onWatchEvent();
 
     } else {
+      if (self._mustBeAFile(absPath)) {
+        self._fire();
+        return;
+      }
+
       var parentDir = path.dirname(absPath);
       if (parentDir === absPath) {
         throw new Error("Unable to watch parent directory of " + absPath);
@@ -501,6 +508,20 @@ _.extend(Watcher.prototype, {
     });
   },
 
+  _mustNotExist: function(absPath) {
+    var wsFiles = this.watchSet.files;
+    if (_.has(wsFiles, absPath))
+      return wsFiles[absPath] === null;
+    return false;
+  },
+
+  _mustBeAFile: function(absPath) {
+    var wsFiles = this.watchSet.files;
+    if (_.has(wsFiles, absPath))
+      return _.isString(wsFiles[absPath]);
+    return false;
+  },
+
   _updateStatForWatch: function(absPath) {
     var self = this;
     var entry = self.watches[absPath];
@@ -515,14 +536,8 @@ _.extend(Watcher.prototype, {
       }
     }
 
-    // Note: these defaults do *not* mean mustExist or mustNotBeAFile.
-    var mustNotExist = false;
-    var mustBeAFile = false;
-    var wsFiles = self.watchSet.files;
-    if (_.has(wsFiles, absPath)) {
-      mustNotExist = wsFiles[absPath] === null;
-      mustBeAFile = _.isString(wsFiles[absPath]);
-    }
+    var mustNotExist = self._mustNotExist(absPath);
+    var mustBeAFile = self._mustBeAFile(absPath);
 
     if (stat && lastStat === undefined) {
       // We have not checked for this file before, so our expectations are
@@ -581,13 +596,12 @@ _.extend(Watcher.prototype, {
       if (self.stopped)
         return;
 
-      // Check for the case where by the time we created the watch, the
-      // directory has already changed.
-      if (self._fireIfDirectoryChanged(info, yielding))
-        return;
-
       if (! self.justCheckOnce)
         self._watchFileOrDirectory(info.absPath);
+
+      // Check for the case where by the time we created the watch, the
+      // directory has already changed.
+      self._fireIfDirectoryChanged(info, yielding);
     });
   },
 
