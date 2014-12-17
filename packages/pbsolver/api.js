@@ -214,7 +214,7 @@ var calcSolutionCost = function (solution, costVectorMap, costN) {
   var sum = 0;
   for (var i = 0; i < solution.length; i++) {
     var v = solution[i];
-    if (costVectorMap[v]) {
+    if (_.has(costVectorMap, v)) {
       sum += (costVectorMap[v][costN] || 0);
     }
   }

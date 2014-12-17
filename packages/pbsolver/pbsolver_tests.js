@@ -1658,7 +1658,9 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
     "net-ssh 2.8.0"
   ];
 
-/*  var initialSolution = solver.solve();
+  // -----
+
+  var initialSolution = solver.solve();
   test.isTrue(initialSolution);
 
   var numPackagesChosen =
@@ -1668,18 +1670,21 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
 
   var secondSolution = solver._solveAgainWithConstraint(
     allPackageVersions, 1, '<', 25);
+  test.isTrue(secondSolution);
 
   numPackagesChosen =
     _.intersection(secondSolution, allPackageVersions).length;
 
   test.equal(numPackagesChosen, 24);
- */
 
-  var optimizeCosts = {};
-  _.each(allPackageVersions, function (k) {
-    optimizeCosts[k] = [1];
-  });
+  var thirdSolution = solver._solveAgainWithConstraint(
+    allPackageVersions, 1, '<', 24);
+  test.isFalse(
+    thirdSolution,
+    'cost: ' + _.intersection(thirdSolution, allPackageVersions).length);
 
-  solver.optimize(optimizeCosts);
+  // -----
+
+  //solver.optimize(costVectorMap);
 
 });
