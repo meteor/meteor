@@ -1,4 +1,4 @@
-# Meteor Migrations
+# percolate:migrations (Meteor package)
 
 A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage.
 
