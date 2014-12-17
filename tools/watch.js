@@ -1,4 +1,3 @@
-var fs = require("fs");
 var files = require('./files.js');
 var _ = require('underscore');
 var Future = require('fibers/future');
@@ -224,11 +223,10 @@ WatchSet.fromJSON = function (json) {
   return set;
 };
 
-var readDirectory = function (options) {
-  var yielding = !!options._yielding;
+function readDirectory(options) {
   // Read the directory.
   try {
-    var contents = readdirSyncOrYield(options.absPath, yielding);
+    var contents = files.readdir(options.absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
@@ -243,11 +241,10 @@ var readDirectory = function (options) {
       // We do stat instead of lstat here, so that we treat symlinks to
       // directories just like directories themselves.
       // XXX Does the treatment of symlinks make sense?
-      var stats =
-        statSyncOrYield(files.pathJoin(options.absPath, entry), yielding);
+      var stats = files.stat(files.pathJoin(options.absPath, entry));
     } catch (e) {
       if (e && (e.code === 'ENOENT')) {
-        // Disappeared after the readdirSync (or a dangling symlink)? Eh,
+        // Disappeared after the readdir (or a dangling symlink)? Eh,
         // pretend it was never there in the first place.
         return;
       }
@@ -271,7 +268,7 @@ var readDirectory = function (options) {
   // Sort it!
   filtered.sort();
   return filtered;
-};
+}
 
 // All fields are private.
 var Watcher = function (options) {
@@ -297,7 +294,7 @@ var Watcher = function (options) {
     //   watcher: <object returned by pathwatcher.watch> | null,
     //   // Undefined until we stat the file for the first time, then null
     //   // if the file is observed to be missing.
-    //   lastStat: <object returned by fs.statSync> | null | undefined
+    //   lastStat: <object returned by files.stat> | null | undefined
     // }
   };
 
@@ -351,17 +348,16 @@ _.extend(Watcher.prototype, {
     return true;
   },
 
-  _fireIfDirectoryChanged: function (info, yielding) {
+  _fireIfDirectoryChanged: function (info) {
     var self = this;
 
     if (self.stopped)
       return true;
 
-    var newContents = exports.readDirectory({
+    var newContents = readDirectory({
       absPath: info.absPath,
       include: info.include,
-      exclude: info.exclude,
-      _yielding: yielding
+      exclude: info.exclude
     });
 
     // If the directory has changed (including being deleted or created).
@@ -400,7 +396,7 @@ _.extend(Watcher.prototype, {
       self.watches[absPath] = {
         watcher: null,
         // Initially undefined (instead of null) to indicate we have never
-        // called fs.stat on this file before.
+        // called files.stat on this file before.
         lastStat: undefined
       };
     }
@@ -473,7 +469,7 @@ _.extend(Watcher.prototype, {
 
       } else if (stat.isDirectory()) {
         try {
-          var dirFiles = readdirSyncOrYield(absPath, true);
+          var dirFiles = files.readdir(absPath);
         } catch (err) {
           if (err.code === "ENOENT" ||
               err.code === "ENOTDIR") {
@@ -517,7 +513,7 @@ _.extend(Watcher.prototype, {
     var lastStat = entry.lastStat;
 
     try {
-      var stat = statSyncOrYield(absPath, true);
+      var stat = files.stat(absPath);
     } catch (err) {
       stat = null;
       if (err.code !== "ENOENT") {
@@ -581,7 +577,7 @@ _.extend(Watcher.prototype, {
     return stat;
   },
 
-  _checkDirectories: function (yielding) {
+  _checkDirectories: function () {
     var self = this;
 
     if (self.stopped)
@@ -593,7 +589,7 @@ _.extend(Watcher.prototype, {
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
-      if (self._fireIfDirectoryChanged(info, yielding))
+      if (self._fireIfDirectoryChanged(info))
         return;
 
       if (! self.justCheckOnce)
@@ -674,9 +670,9 @@ var readAndWatchFile = function (watchSet, absPath) {
   return readAndWatchFileWithHash(watchSet, absPath).contents;
 };
 
-var readFile = function (absPath) {
+function readFile(absPath) {
   try {
-    return fs.readFileSync(absPath);
+    return files.readFile(absPath);
   } catch (e) {
     // Rethrow most errors.
     if (!e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
@@ -684,32 +680,13 @@ var readFile = function (absPath) {
     // File does not exist (or is a directory).
     return null;
   }
-};
+}
 
 var sha1 = function (contents) {
   var crypto = require('crypto');
   var hash = crypto.createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
-
-// XXX We should eventually rewrite the whole meteor tools to use yielding fs
-// calls instead of sync (so that meteor is responsive to C-c during bundling,
-// so that the proxy accepts connections, etc) but we don't want to do this in
-// the point release in which we are adding these functions.
-var readdirSyncOrYield = function (path, yielding) {
-  if (yielding) {
-    return Future.wrap(fs.readdir)(path).wait();
-  } else {
-    return fs.readdirSync(path);
-  }
-};
-var statSyncOrYield = function (path, yielding) {
-  if (yielding) {
-    return Future.wrap(fs.stat)(path).wait();
-  } else {
-    return fs.statSync(path);
-  }
 };
 
 _.extend(exports, {
