@@ -404,10 +404,7 @@ _.extend(Watcher.prototype, {
       return;
     }
 
-    if (self.justCheckOnce) {
-      self._makeWatchEventCallback(absPath)();
-
-    } else if (files.exists(absPath)) {
+    if (files.exists(absPath)) {
       if (self._mustNotExist(absPath)) {
         self._fire();
         return;
