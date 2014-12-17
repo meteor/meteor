@@ -618,6 +618,32 @@ files.createTarGzStream = function (dirPath, options) {
   var fstream = require('fstream');
   var zlib = require("zlib");
 
+  if (process.platform === "win32") {
+    // This is a special case for Windows, we need to make sure the directories
+    // that we put into the tarball have execute permissions, which is not a
+    // thing on Windows.
+    //
+    // Unfortunately, this is a partial duplicate of the code below, since we
+    // can't use filter and apply the stream workaround at the same time.
+    // Therefore, we have this block that uses filter and the one below that
+    // uses a single argument to fstream.Reader.
+
+    var fixDirPermissions = function (entry) {
+      // Make sure readable directories have execute permission
+      if (entry.props.type === "Directory") {
+        entry.props.mode |= (entry.props.mode >>> 2) & 0111;
+      }
+
+      return true;
+    };
+
+    return fstream.Reader({
+      path: files.convertToOSPath(dirPath),
+      type: 'Directory',
+      filter: fixDirPermissions
+    }).pipe(tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
+  }
+
   // Use `dirPath` as the argument to `fstream.Reader` here instead of
   // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
   // collection of odd behaviors in fstream (which might be bugs or
