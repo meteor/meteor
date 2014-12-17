@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
-var url = require('url');
 
 var files = require('./files.js');
 var utils = require('./utils.js');
@@ -1482,7 +1481,7 @@ _.extend(PackageSource.prototype, {
     });
 
     // Serve root of the package.
-    self.serveRoot = url.resolve('/packages/', self.name);
+    self.serveRoot = files.pathJoin('/packages/', self.name);
 
     // Name of the test.
     if (hasTests) {
