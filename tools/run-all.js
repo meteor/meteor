@@ -84,10 +84,6 @@ var Runner = function (options) {
 
   self.updater = new Updater;
 
-  require("./safe-pathwatcher.js").testDirectory(
-    self.projectContext.projectDir
-  );
-
   self.appRunner = new AppRunner({
     projectContext: self.projectContext,
     port: self.appPort,

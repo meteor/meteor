@@ -1,153 +1,73 @@
 var files = require("./files.js");
-var _ = require("underscore");
-var switchFunctions = [];
-var pollingInterval = 500;
 
-// Set this environment variable to a truthy value to force the use of
-// files.watchFile instead of pathwatcher.watch.
+// Set this env variable to a truthy value to force files.watchFile
+// instead of files.pathwatcherWatch.
 var canUsePathwatcher = !process.env.METEOR_WATCH_FORCE_POLLING;
 
-// The pathwatcher library does not work on all platforms and file systems
-// (notably, network file systems), so we have to do a little feature
-// detection to see if we can use it.
+var pollingInterval = canUsePathwatcher
+  // Set this env variable to alter the watchFile polling interval.
+  ? ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000
+  : 500;
 
-// We optimistically watch files using pathwatcher.watch until one of the
-// directories tested fails to support file system events. When that
-// happens, we switch all previously created pathwatcher watches to use
-// files.watchFile, and set canUsePathwatcher to false so that all future
-// watches will use files.watchFile as well.
+exports.watch = function watch(absPath, callback) {
+  var lastPathwatcherEventTime = 0;
+  var lastWatchFileEventTime = 0;
 
-// There is some theoretical risk of missing file system events from
-// pathwatcher watches created before we discover that we can't use
-// pathwatcher.watch, but the window of time where that can happen is
-// small enough (200ms) that developers are highly unlikely to care.
+  // The maximum amount of time in milliseconds that we're willing to wait
+  // for a pathwatcher event to fire, if it's ever going to fire.
+  var pathwatcherLatencyBound = 50;
 
-exports.testDirectory = function (dir) {
-  if (! canUsePathwatcher) {
-    // No need to test this directory if we've already decided we can't
-    // use pathwatcher.watch.
-    return;
+  var watcher = canUsePathwatcher && files.pathwatcherWatch(absPath, function() {
+    // It's tempting to call files.unwatchFile(absPath, watchFileWrapper)
+    // here, but previous pathwatcher success is no guarantee of future
+    // pathwatcher reliability. For example, pathwatcher works just fine
+    // when file changes originate from within a Vagrant VM, but changes
+    // to shared files made outside the VM are invisible to pathwatcher,
+    // so our only hope of catching them is to continue polling.
+
+    // If a watchFile event fired very recently, ignore this event.
+    var now = +new Date;
+    if (now - lastWatchFileEventTime > pathwatcherLatencyBound) {
+      lastPathwatcherEventTime = now;
+      callback.apply(this, arguments);
+    }
+  });
+
+  function watchFileWrapper() {
+    // If a pathwatcher event fired in the last polling interval, ignore
+    // this event.
+    var now = +new Date;
+    if (now - lastPathwatcherEventTime > pollingInterval) {
+      lastWatchFileEventTime = now;
+      console.log("firing watchFile event");
+      callback.apply(this, arguments);
+    } else {
+      console.log("dropping watchFile event");
+    }
   }
 
-  var canaryFile = files.pathJoin(
-    dir, ".pathwatcher-canary-" + Math.random().toString(36).slice(2)
-  );
-
-  files.mkdir_p(dir);
-
-  var cleanUp = function () {
-    if (watcher) {
-      watcher.close();
-      watcher = null;
-      try {
-        files.unlink(canaryFile);
-      } catch (err) {
-        // ignore the error
-      }
-    }
-  };
-
-  var fallBack = function () {
-    // Disallow future uses of pathwatcher.watch.
-    canUsePathwatcher = false;
-
-    // Convert any pathwatcher watchers we previously created to
-    // files.watchFile watchers.
-    _.each(switchFunctions.splice(0), function (switchToPolling) {
-      switchToPolling();
-    });
-
-    require("./console.js").Console.debug(
-      "Falling back to files.watchFile instead of pathwatcher.watch..."
-    );
-  };
-
-  try {
-    // Watch the candidate directory using pathwatcher.watch.
-    var watcher = files.pathwatcherWatch(dir, function () {
-      cleanUp();
-      switchFunctions = null;
-    });
-
-  } catch (err) {
-    // If the directory did not exist, do not treat this failure as
-    // evidence against pathwatcher.watch, but simply return and leave
-    // canUsePathwatcher set to true.
-    if (err instanceof TypeError &&
-        err.message === "Unable to watch path") {
-      return;
-    }
-
-    throw err;
-  }
-
-  // Create a new file to trigger a change event (hopefully). It's fine
-  // if other events sneak in while we're waiting, since all we care
-  // about is whether pathwatcher.watch works.
-  try {
-    files.writeFile(canaryFile, "ok\n");
-  } catch (err) {
-    cleanUp();
-    throw err;
-  }
-
-  // Set a time limit of 200ms, starting from the time the file was
-  // written, in which the change event must fire, else we fall back to
-  // using files.watchFile.
-  setTimeout(function() {
-    if (watcher) {
-      cleanUp();
-      fallBack();
-    }
-  }, 200);
-};
-
-exports.watch = function (absPath, callback) {
-  if (canUsePathwatcher) {
-    // In principle, all this logic for watching files should continue to
-    // work perfectly if we substitute files.watch for pathwatcher.watch, but
-    // that will probably have to wait until we upgrade Node to v0.11.x,
-    // so that files.watch is more reliable.
-    var watcher = files.pathwatcherWatch(absPath, callback);
-
-    var closed = false;
-    var switched = false;
-
-    if (switchFunctions) {
-      switchFunctions.push(function switchToPolling() {
-        if (! switched && ! closed) {
-          switched = true;
-          watcher.close();
-
-          // Re-watch the file using files.watchFile instead.
-          files.watchFile(absPath, {
-            interval: pollingInterval
-          }, callback);
-        }
-      });
-    }
-
-    return {
-      close: function close() {
-        if (! closed) {
-          closed = true;
-          if (switched) {
-            files.unwatchFile(absPath, callback);
-          } else {
-            watcher.close();
-          }
-        }
-      }
-    };
-  }
-
+  // We use files.watchFile in addition to files.pathwatcherWatch as a
+  // fail-safe to detect file changes even on network file systems.
+  // However (unless canUsePathwatcher is false), we use a relatively long
+  // default polling interval of 5000ms to save CPU cycles.
   files.watchFile(absPath, {
+    persistent: false,
     interval: pollingInterval
-  }, callback);
+  }, watchFileWrapper);
+
+  var polling = true;
 
   return {
-    close: function close () {
-      files.unwatchFile(absPath, callback);
+    close: function close() {
+      if (watcher) {
+        watcher.close();
+        watcher = null;
+      }
+
+      if (polling) {
+        polling = false;
+        files.unwatchFile(absPath, watchFileWrapper);
+      }
     }
   };
 };
