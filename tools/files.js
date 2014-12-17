@@ -612,8 +612,19 @@ files.createTarGzStream = function (dirPath, options) {
   // the first file inside it. This manifests as an EACCESS when
   // untarring if the first file inside the top-level directory is not
   // writeable.
-  return fstream.Reader(dirPath).pipe(
-    tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
+
+  function fixDirPermissions(entry) {
+    // Make sure readable directories have execute permission
+    if (entry.props.type === "Directory")
+      entry.props.mode |= (entry.props.mode >>> 2) & 0111;
+    return true;
+  }
+
+  return fstream.Reader({
+    path: files.convertToOSPath(dirPath),
+    type: 'Directory',
+    filter: fixDirPermissions
+  }).pipe(tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
 };
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
