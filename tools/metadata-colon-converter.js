@@ -1,3 +1,6 @@
+var _ = require('underscore');
+var files = require('./files.js');
+
 // scheme - Object, representing paths to correct. Ex.:
 // {
 //   format: false,
@@ -13,7 +16,7 @@
 // }
 var convertByScheme = function (val, scheme) {
   if (scheme === true)
-    return converted(val);
+    return convert(val);
   else if (scheme === false)
     return val;
 
@@ -31,10 +34,15 @@ var convertByScheme = function (val, scheme) {
 
   var ret = _.clone(val);
   _.each(scheme, function (subscheme, key) {
-    ret[key] = convertByScheme(subscheme, val[key]);
+    if (_.has(ret, key))
+      ret[key] = convertByScheme(val[key], subscheme);
   });
 
   return ret;
+};
+
+var convert = function (str) {
+  return files.adaptLegacyPath(str);
 };
 
 var ISOPACK_SCHEME = {
@@ -51,7 +59,7 @@ var UNIBUILD_SCHEME = {
   resources: [{
     file: true,
     sourceMap: true,
-    servePath: false
+    servePath: true
   }]
 };
 
@@ -59,7 +67,22 @@ var JAVASCRIPT_IMAGE_SCHEME = {
   load: [{
     sourceMap: true,
     sourceMapRoot: true,
-    path: true
+    path: true,
+    node_modules: true
   }]
 };
+
+exports.convertIsopack = function (data) {
+  return convertByScheme(data, ISOPACK_SCHEME);
+};
+
+exports.convertUnibuild = function (data) {
+  return convertByScheme(data, UNIBUILD_SCHEME);
+};
+
+exports.convertJSImage = function (data) {
+  return convertByScheme(data, JAVASCRIPT_IMAGE_SCHEME);
+};
+
+exports.convert = convert;
 
