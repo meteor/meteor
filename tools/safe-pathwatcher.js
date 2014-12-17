@@ -39,10 +39,7 @@ exports.watch = function watch(absPath, callback) {
     var now = +new Date;
     if (now - lastPathwatcherEventTime > pollingInterval) {
       lastWatchFileEventTime = now;
-      console.log("firing watchFile event");
       callback.apply(this, arguments);
-    } else {
-      console.log("dropping watchFile event");
     }
   }
 
