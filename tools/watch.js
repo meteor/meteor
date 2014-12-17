@@ -407,10 +407,7 @@ _.extend(Watcher.prototype, {
       return;
     }
 
-    if (self.justCheckOnce) {
-      self._makeWatchEventCallback(absPath)();
-
-    } else if (fs.existsSync(absPath)) {
+    if (fs.existsSync(absPath)) {
       if (self._mustNotExist(absPath)) {
         self._fire();
         return;
