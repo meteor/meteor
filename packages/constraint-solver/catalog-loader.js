@@ -38,6 +38,11 @@ CatalogLoader.prototype._getSortedVersions = function (package) {
   if (! _.has(self._versionListCache, package)) {
     self._versionListCache[package] =
       self.catalog.getSortedVersions(package);
+    var xxx = self._versionListCache[package];
+    self._versionListCache[package] =
+      _.flatten(_.map(_.values(_.groupBy(xxx, function (v) { return v.charAt(0); })),
+                      function(array) { return array.slice(-4); }));
+    // XXXXXX
   }
   return self._versionListCache[package];
 };

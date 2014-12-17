@@ -26,4 +26,5 @@ Package.on_test(function (api) {
   api.add_files('resolver-tests.js', ['server']);
   api.add_files('types-tests.js', ['server']);
   api.use('underscore');
+  api.use('pbsolver', 'server');
 });

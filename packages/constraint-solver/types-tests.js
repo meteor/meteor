@@ -112,3 +112,23 @@ Tinytest.add("constraint solver - types - Dependency", function (test) {
     new ConstraintSolver.Dependency('ham', {weak: true});
   });
 });
+
+Tinytest.add("constraint solver - types - VersionConstraint NEW", function (test) {
+  var VC = ConstraintSolver.VersionConstraint;
+
+  var satisfies = function (v, constraint, doesIt) {
+    test.equal(new VC(constraint).isSatisfiedBy(v), doesIt);
+  };
+
+  satisfies('1.0.0', '1.0.0', true);
+  satisfies('1.0.1', '1.0.0', true);
+  satisfies('1.0.1', '1.0.1', true);
+  satisfies('1.0.2', '1.0.1', true);
+  satisfies('1.0.0', '1.0.1', false);
+  satisfies('2.0.0', '1.0.0', false);
+  satisfies('1.9.9', '1.0.0', true);
+  satisfies('1.10.0', '1.9.0', true);
+  satisfies('2.5.0', '1.0.0 || 2.0.0 || 3.0.0', true);
+  satisfies('3.5.0', '1.0.0 || 2.0.0 || 3.0.0', true);
+  satisfies('4.5.0', '1.0.0 || 2.0.0 || 3.0.0', false);
+});

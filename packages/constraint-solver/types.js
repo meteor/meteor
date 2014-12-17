@@ -5,8 +5,40 @@ PVP = Package['package-version-parser'].PackageVersion;
 // "=1.9.1 || 2.0.0".
 ConstraintSolver.VersionConstraint = function (constraintString) {
   this.constraintString = constraintString;
+  var parsed = PVP.parseConstraint('a@' + constraintString);
+  this._alternatives = parsed.alternatives;
 };
 VersionConstraint = ConstraintSolver.VersionConstraint;
+
+ConstraintSolver.VersionConstraint.prototype.isSatisfiedBy = function (v2) {
+  var self = this;
+  return _.some(self._alternatives, function (simpleConstraint) {
+    var type = simpleConstraint.type;
+
+    if (type === "exactly") {
+      return (simpleConstraint.version === v2);
+    } else if (type === 'compatible-with') {
+      var version = simpleConstraint.version;
+
+      // If the candidate version is less than the version named in the
+      // constraint, we are not satisfied.
+      if (PVP.lessThan(v2, version)) {
+        return false;
+      }
+
+      // To be compatible, the two versions must have the same major version
+      // number.
+      if (PVP.majorVersion(v2) !== PVP.majorVersion(version)) {
+        return false;
+      }
+
+      return true;
+    } else {
+      // in particular, "any-reasonable" is not allowed!
+      throw Error("Bad constraint type: " + type);
+    }
+  });
+};
 
 ConstraintSolver.VersionConstraint.prototype.toString = function () {
   return this.constraintString;
@@ -214,6 +246,19 @@ ConstraintSolver.CatalogCache.prototype.eachPackageVersion = function (iter) {
   for (var key in self._packageVersionToDeps) {
     var stop = iter(PackageVersion.fromString(key),
                     self._packageVersionToDeps[key]);
+    if (stop) {
+      break;
+    }
+  }
+};
+
+// Calls `iter` on each package name, with the second argument being
+// a list of versions present for that package.  If `iter` returns true,
+// iteration is stopped.
+ConstraintSolver.CatalogCache.prototype.eachPackage = function (iter) {
+  var self = this;
+  for (var key in self._packageVersionsByPackage) {
+    var stop = iter(key, self.getPackageVersions(key));
     if (stop) {
       break;
     }

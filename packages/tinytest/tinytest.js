@@ -395,6 +395,9 @@ TestManager = function () {
 _.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
+//    if (! (/NEW/.test(test.name) || /sinatraxxx/.test(test.name)))
+    if (! (/buggy optimization/.test(test.name)))
+      return;
     if (test.name in self.tests)
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +

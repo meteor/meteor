@@ -8,6 +8,8 @@ var runBenchmarks = !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
 var railsCatalog = getCatalogStub(railsGems);
 var sinatraCatalog = getCatalogStub(sinatraGems);
 
+var CS = ConstraintSolver;
+
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra", function (test) {
   var r = new ConstraintSolver.PackagesResolver(sinatraCatalog);
 
@@ -24,7 +26,188 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra",
     'sqlite3': '1.3.7'
   });
 
-  r.resolve(args.dependencies, args.constraints);
+  var result = r.resolve(args.dependencies, args.constraints);
+  var solution = _.map(result.answer, function (v, k) {
+    return (new CS.PackageVersion(k, v)).toString();
+  }).sort();
+  test.equal(solution.join('\n'), [
+    'addressable 2.3.2',
+    'bcrypt-ruby 3.0.0',
+    'capistrano 2.15.5',
+    'data-mapper 1.2.0',
+    'data-objects 0.10.6',
+    'dm-aggregates 1.2.0',
+    'dm-constraints 1.2.0',
+    'dm-core 1.2.1',
+    'dm-do-adapter 1.2.0',
+    'dm-migrations 1.2.0',
+    'dm-serializer 1.2.0',
+    'dm-sqlite-adapter 1.2.0',
+    'dm-timestamps 1.2.0',
+    'dm-transactions 1.2.0',
+    'dm-types 1.2.0',
+    'dm-validations 1.2.0',
+    'do-sqlite3 0.10.6',
+    'fastercsv 1.5.4',
+    'haml 3.1.8',
+    'highline 0.2.0',
+    'json 1.5.4',
+    'json-pure 1.5.4',
+    'multi-json 1.0.3',
+    'net-scp 1.0.0',
+    'net-sftp 2.0.0',
+    'net-ssh 2.0.14',
+    'net-ssh-gateway 1.1.0',
+    'rack 1.4.0',
+    'rack-protection 1.4.0',
+    'sass 3.3.4',
+    'shotgun 0.9.0',
+    'sinatra 1.4.4',
+    'sqlite3 1.3.9',
+    'stringex 1.3.0',
+    'tilt 1.3.4',
+    'uuidtools 2.1.2'
+  ].join('\n'));
+});
+
+runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra (NEW)", function (test) {
+  var solver = new PBSolver();
+
+  var cache = new ConstraintSolver.CatalogCache();
+  var loader = new ConstraintSolver.CatalogLoader(sinatraCatalog, cache);
+
+  var args = splitArgs({
+    'capistrano': '2.14.2',
+    'data-mapper': '1.2.0'
+//    'dm-core': '1.2.0'
+//    'dm-sqlite-adapter': '1.2.0',
+//    'dm-timestamps': '1.2.0'
+//    'haml': '3.1.7'
+//    'sass': '3.2.1'
+//    'shotgun': '0.9.0'
+//    'sinatra': '1.3.5'
+//    'sqlite3': '1.3.7'
+  });
+
+  loader.loadAllVersionsRecursive(args.dependencies);
+
+  var SOLVER_CALLS = [];
+
+  cache.eachPackage(function (package, versions) {
+    var pvs = _.map(versions, function (v) {
+      return (new CS.PackageVersion(package, v)).toString();
+    });
+    // e.g. atMostOne(["foo 1.0.0", "foo 1.0.1", "foo 2.0.0"])
+    solver.atMostOne(pvs);
+    SOLVER_CALLS.push('atMostOne(' + JSON.stringify(pvs) +')');
+    // e.g. equalsOr("foo", ["foo 1.0.0", ...])
+    solver.equalsOr(package, pvs);
+    SOLVER_CALLS.push('equalsOr(' + JSON.stringify(package) + ', ' +
+                      JSON.stringify(pvs) +')');
+  });
+
+  cache.eachPackageVersion(function (pv, depsMap) {
+    var pvStr1 = pv.toString();
+    _.each(depsMap, function (dep) {
+      // `dep` is a ConstraintSolver.Dependency object
+      var package2 = dep.package;
+      var versions2 = cache.getPackageVersions(package2);
+      if ((! dep.weak) && ! versions2.length) {
+        // can't satisfy this dependency.  without this check,
+        // if a package depended on a non-existent package "foo"
+        // we would just create an unconstrained variable "foo".
+        solver.isFalse(pvStr1);
+        SOLVER_CALLS.push('isFalse(' + JSON.stringify(pvStr1) + ')');
+      } else {
+        if (! dep.weak) {
+          // e.g. implies("foo 1.2.3", "bar")
+          solver.implies(pvStr1, package2);
+          SOLVER_CALLS.push('implies(' + JSON.stringify(pvStr1) + ', ' +
+                            JSON.stringify(package2) +')');
+        }
+        if (dep.constraint) {
+          _.each(versions2, function (version2) {
+            if (! dep.constraint.isSatisfiedBy(version2)) {
+              var pvStr2 = (new CS.PackageVersion(package2, version2)).toString();
+              solver.impliesNot(pvStr1, pvStr2);
+              SOLVER_CALLS.push('impliesNot(' + JSON.stringify(pvStr1) + ', ' +
+                                JSON.stringify(pvStr2) +')');
+            }
+          });
+        }
+      }
+    });
+  });
+
+  _.each(args.dependencies, function (package) {
+    solver.isTrue(package);
+    SOLVER_CALLS.push('isTrue(' + JSON.stringify(package) + ')');
+  });
+
+  _.each(args.constraints, function (constraint) {
+    var package2 = constraint.name;
+    var vc = new CS.VersionConstraint(constraint.constraintString);
+    _.each(cache.getPackageVersions(package2), function (version2) {
+      if (! vc.isSatisfiedBy(version2)) {
+        var pvStr2 = (new CS.PackageVersion(package2, version2)).toString();
+        solver.isFalse(pvStr2);
+        SOLVER_CALLS.push('isFalse(' + JSON.stringify(pvStr2) + ')');
+      }
+    });
+  });
+
+  console.log(SOLVER_CALLS.join('\n'));
+
+  var optimizeCosts = {};
+  cache.eachPackageVersion(function (pv) {
+    optimizeCosts[pv.toString()] = [1];
+  });
+  console.log(JSON.stringify(optimizeCosts));
+
+  var solution = _.filter(
+    solver.optimize(optimizeCosts),
+    function (v) {
+      return v.indexOf(' ') >= 0;
+    });
+  test.equal(solution.join('\n'), [
+    'addressable 2.3.5',
+    'bcrypt-ruby 3.1.2',
+    'capistrano 2.15.1',
+    'data-mapper 1.2.0',
+    'data-objects 0.10.12',
+    'dm-aggregates 1.2.0',
+    'dm-constraints 1.2.0',
+    'dm-core 1.2.1',
+    'dm-do-adapter 1.2.0',
+    'dm-migrations 1.2.0',
+    'dm-serializer 1.2.0',
+    'dm-sqlite-adapter 1.2.0',
+    'dm-timestamps 1.2.0',
+    'dm-transactions 1.2.0',
+    'dm-types 1.2.2',
+    'dm-validations 1.2.0',
+    'do-sqlite3 0.10.12',
+    'echoe 1.0.0',
+    'fastercsv 1.5.4',
+    'haml 3.1.7',
+    'highline 1.0.4',
+    'json 1.7.7',
+    'json-pure 1.8.1',
+    'multi-json 1.3.7',
+    'net-scp 1.0.2',
+    'net-sftp 2.0.2',
+    'net-ssh 2.8.0',
+    'net-ssh-gateway 1.1.0',
+    'rack 1.5.2',
+    'rack-protection 1.3.1',
+    'sass 3.2.3',
+    'shotgun 0.9.0',
+    'sinatra 1.3.5',
+    'sqlite3 1.3.7',
+    'stringex 2.5.0',
+    'tilt 1.3.6',
+    'uuidtools 2.1.3'
+  ].join('\n'));
 });
 
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails", function (test) {

@@ -309,8 +309,6 @@ ConstraintSolver.Constraint = function (name, constraintString) {
     name = name + "@" + constraintString;
   }
 
-  // See comment in UnitVersion constructor. We want to strip out build IDs
-  // because the code they represent is considered equivalent.
   var parsed = PVP.parseConstraint(name);
 
   self.name = parsed.name;
