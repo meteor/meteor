@@ -140,10 +140,12 @@ compiler.compile = function (packageSource, options) {
              unibuildResult.pluginProviderPackageNames);
   });
 
-  return {
-    isopack: isopk,
-    pluginProviderPackageNames: _.keys(pluginProviderPackageNames)
-  };
+  if (options.includePluginProviderPackageMap) {
+    isopk.setPluginProviderPackageMap(
+      packageMap.makeSubsetMap(_.keys(pluginProviderPackageNames)));
+  }
+
+  return isopk;
 };
 
 // options.sourceArch is a SourceArch to compile.  Process all source files

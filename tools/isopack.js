@@ -258,6 +258,9 @@ var Isopack = function () {
   // This is tools to copy from trees on disk. This is used by the
   // isopack-merge code in tropohouse.
   self.toolsOnDisk = [];
+
+  // XXX doc
+  self.pluginProviderPackageMap = null;
 };
 
 _.extend(Isopack.prototype, {
@@ -291,6 +294,11 @@ _.extend(Isopack.prototype, {
   addUnibuild: function (options) {
     var self = this;
     self.unibuilds.push(new Unibuild(self, options));
+  },
+
+  setPluginProviderPackageMap: function (pluginProviderPackageMap) {
+    var self = this;
+    self.pluginProviderPackageMap = pluginProviderPackageMap;
   },
 
   getSourceFilesUnderSourceRoot: function (sourceRoot) {
@@ -754,7 +762,7 @@ _.extend(Isopack.prototype, {
           // our package.js (because modifications to package.js could add a new
           // plugin), as well as any files making up plugins in our package.
           pluginDependencies: self.pluginWatchSet.toJSON(),
-          pluginProviderPackageMap: options.pluginProviderPackageMap.toJSON(),
+          pluginProviderPackageMap: self.pluginProviderPackageMap.toJSON(),
           includeCordovaUnibuild: _.any(self.unibuilds, function (unibuild) {
             return unibuild.arch === 'web.cordova';
           })

@@ -2022,7 +2022,7 @@ exports.bundle = function (options) {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
-    }).isopack;
+    });
 
     var clientTargets = [];
     // Client
@@ -2164,7 +2164,7 @@ exports.buildJsImage = function (options) {
     isopackCache: options.isopackCache,
     // There's no web.cordova unibuild here anyway, just os.
     includeCordovaUnibuild: false
-  }).isopack;
+  });
 
   var target = new JsImageTarget({
     packageMap: options.packageMap,
