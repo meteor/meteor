@@ -10,6 +10,7 @@ var files = require('./files.js');
 var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
+var colonConverter = require('./metadata-colon-converter.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 
@@ -597,6 +598,7 @@ _.extend(Isopack.prototype, {
     dir = files.realpath(dir);
 
     var mainJson = Isopack.readMetadataFromDirectory(dir);
+    mainJson = colonConverter.convertIsopack(mainJson);
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
@@ -669,6 +671,7 @@ _.extend(Isopack.prototype, {
 
       var unibuildJson = JSON.parse(
         files.readFile(files.pathJoin(dir, unibuildMeta.path)));
+      unibuildJson = colonConverter.convertUnibuild(unibuildJson);
       var unibuildBasePath =
         files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
@@ -981,9 +984,11 @@ _.extend(Isopack.prototype, {
       // Plugins
       _.each(self.plugins, function (pluginsByArch, name) {
         _.each(pluginsByArch, function (plugin) {
-          var pluginDir =
-                builder.generateFilename('plugin.' + name + '.' + plugin.arch,
-                                         { directory: true });
+          // XXX the name of the plugin doesn't typically contain a colon, but
+          // escape it just in case.
+          var pluginDir = builder.generateFilename(
+            'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
+            { directory: true });
           var relPath = plugin.write(builder.enter(pluginDir));
           mainJson.plugins.push({
             name: name,
