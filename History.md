@@ -9,19 +9,19 @@
 
 * We've done a major internal overhaul of the `meteor` command-line tool with an
   eye to correctness, maintainability, and performance.  Some details include:
-  * We refresh the package catalog for build commands only when an error
+  * Refresh the package catalog for build commands only when an error
     occurs that could be fixed by a refresh, not for every build command.
-  * We never run the constraint solver to select package versions more than once
+  * Never run the constraint solver to select package versions more than once
     per build.
   * Built packages ("isopacks") are now cached inside individual app directories
     instead of inside their source directories.
-  * `meteor run` starts Mongo and builds your app in parallel with each other.
+  * `meteor run` starts Mongo in parallel with building the application.
   * The constraint solver no longer leaves a `versions.json` file in your
     packages source directories; when publishing a package that is not inside an
     app, it will leave a `.versions` file (with the same format as
     `.meteor/versions`) which you should check into source control.
   * The constraint solver's model has been simplified so that plugins must use
-    the same version of packages as their surrounding package, when built from
+    the same version of packages as their surrounding package when built from
     local source.
 
 * Using `meteor debug` no longer requires manually continuing the debugger when
@@ -30,14 +30,15 @@
 * Output from the command-line tool is now word-wrapped to the width of your
   terminal.
 
-* Corporate HTTP proxy support is now implemented using our websocket library's
-  new built-in implementation instead of a custom implementation. #2515
-
 * Remove support for the undocumented earliestCompatibleVersion feature of the
   package system.
 
-* Fix a check for a parent process in 'meteor run' that was happening
-  constantly instead of every few seconds. #3252
+* Reduce CPU usage and disk I/O bandwidth by using kernel file-system
+  change notification events where possible. This can be disabled with
+  the `METEOR_WATCH_FORCE_POLLING` environment variable if needed. #2135
+
+* Reduce CPU usage by fixing a check for a parent process in `meteor
+  run` that was happening constantly instead of every few seconds. #3252
 
 * Fix crash when two plugins defined source handlers for the same
   extension. #3015 #3180
@@ -50,17 +51,22 @@
 * Fix bug (introduced in 0.9.4) where banners about new releases could be
   printed too many times.
 
-* Fix crash when a package version contained a dot-separated prerelease part
+* Fix crash when a package version contained a dot-separated pre-release part
   with both digits and non-digits. #3147
+
+* Corporate HTTP proxy support is now implemented using our websocket library's
+  new built-in implementation instead of a custom implementation. #2515
 
 ### Blaze
 
-* `Template.parentData`'s argument defaults to 1. #2861
+* Add default behavior for `Template.parentData` with no arguments. This
+  selects the first parent. #2861
 
-* `Blaze.remove` on a template's view now correctly removes the DOM
-  when the template was inserted using `Blaze.renderWithData`. #3130
+* Fix `Blaze.remove` on a template's view to correctly remove the DOM
+  elements when the template was inserted using
+  `Blaze.renderWithData`. #3130
 
-* Spacebars: Allow curly braces to be escaped, with special
+* Allow curly braces to be escaped in Spacebars. Use the special
   sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
 
 ### Meteor Accounts
