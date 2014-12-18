@@ -326,6 +326,17 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     additionalOptions.runtimeConfigOverrides || {}
   );
 
+  var jsCssPrefix;
+  if (arch === 'web.cordova') {
+    // in cordova we serve assets up directly from disk so it doesn't make
+    // sense to use the prefix (ordinarily something like a CDN) and go out 
+    // to the internet for those files.
+    jsCssPrefix = '';
+  } else {
+    jsCssPrefix = bundledJsCssPrefix ||
+      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+  }
+
   return new Boilerplate(arch, manifest,
     _.extend({
       pathMapper: function (itemPath) {
@@ -342,8 +353,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
         ),
         meteorRuntimeConfig: JSON.stringify(runtimeConfig),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssPrefix: bundledJsCssPrefix ||
-          __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+        bundledJsCssPrefix: jsCssPrefix,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
         inline: additionalOptions.inline
       }
