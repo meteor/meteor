@@ -814,7 +814,7 @@ _.extend(PackageSource.prototype, {
           return require(nodeModuleDir);
         } else {
           try {
-            return require(name); // from the dev bundle
+            return require(files.convertToOSPath(name)); // from the dev bundle
           } catch (e) {
             buildmessage.error("can't find npm module '" + name +
                                "'. Did you forget to call 'Npm.depends'?",
