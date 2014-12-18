@@ -41,9 +41,12 @@
 * Remove support for the undocumented earliestCompatibleVersion feature of the
   package system.
 
-* Reduce CPU usage and disk I/O bandwidth by using kernel file-system
-  change notification events where possible. This can be disabled with
-  the `METEOR_WATCH_FORCE_POLLING` environment variable if needed. #2135
+* Reduce CPU usage and disk I/O bandwidth by using kernel file-system change
+  notification events where possible. On file systems that do not support these
+  events (NFS, Vagrant Virtualbox shared folders, etc), file changes will only
+  be detected every 5 seconds; to detect changes more often in these cases (but
+  use more CPU), set the `METEOR_WATCH_FORCE_POLLING` environment
+  variable. #2135
 
 * Reduce CPU usage by fixing a check for a parent process in `meteor
   run` that was happening constantly instead of every few seconds. #3252
