@@ -1112,7 +1112,7 @@ _.extend(Run.prototype, {
     var env = _.clone(process.env);
     _.extend(env, self.env);
 
-    self.proc = crossSpawn(files.convertToOSPath(self.execPath), args, {
+    self.proc = crossSpawn(files.convertToOSPath(self.execPath), self._args, {
       cwd: files.convertToOSPath(self.cwd),
       env: env
     });
