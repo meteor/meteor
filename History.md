@@ -3,24 +3,27 @@
 
 ## v1.0.2
 
-* Tool performance improvements XXX
-    - The entire build tool has been refactored with an eye to correctness,
-      maintainability, and performance
-    - We refresh the package catalog for build commands only when an error
-      occurs that could be fixed by a refresh, not for every command
-    - Constraint solver is now run only once per command
-    - Packages are now cached inside the app directory
-    - Mongo started in parallel with app build
-    - Constraint solver no longer leaves a `versions.json` file in your
-      packages; when publishing a package that is not inside an app, it uses a
-      similar `.versions` file
-    - Constraint edges are by package, not unibuild, and plugins must use the
-      same version of packages as their surrounding package (when built from
-      local source)
+* `meteor shell` XXX ben will describe this.
 
-* `meteor shell` XXX
+* We've done a major internal overhaul of the `meteor` command-line tool with an
+  eye to correctness, maintainability, and performance.  Some details include:
+  * We refresh the package catalog for build commands only when an error
+    occurs that could be fixed by a refresh, not for every build command.
+  * We never run the constraint solver to select package versions more than once
+    per build.
+  * Built packages ("isopacks") are now cached inside individual app directories
+    instead of inside their source directories.
+  * `meteor run` starts Mongo and builds your app in parallel with each other.
+  * The constraint solver no longer leaves a `versions.json` file in your
+    packages source directories; when publishing a package that is not inside an
+    app, it will leave a `.versions` file (with the same format as
+    `.meteor/versions`) which you should check into source control.
+  * The constraint solver's model has been simplified so that plugins must use
+    the same version of packages as their surrounding package, when built from
+    local source.
 
-* `meteor debug` improvements ba89b7d and maybe e63ac7c
+* Using `meteor debug` no longer requires manually continuing the debugger when
+  your app restarts, and it no longer overwrites the symbol `_` inside your app.
 
 * Output from the command-line tool is now word-wrapped to the width of your
   terminal.
@@ -61,7 +64,8 @@
 * Fix bug (introduced in 0.9.4) where banners about new releases could be
   printed too many times.
 
-* Make query parameter available to oauth1 services 6b8221d
+* Make query parameter available to oauth1 services 6b8221d XXX emily will
+  describe this
 
 * Expire a user's password reset and login tokens in all circumstances when
   their password is changed.
