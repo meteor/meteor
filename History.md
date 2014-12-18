@@ -3,6 +3,8 @@
 
 ## v1.0.2
 
+### Improvements to the `meteor` command-line tool
+
 * `meteor shell` XXX ben will describe this.
 
 * We've done a major internal overhaul of the `meteor` command-line tool with an
@@ -28,33 +30,17 @@
 * Output from the command-line tool is now word-wrapped to the width of your
   terminal.
 
-* Spacebars: Allow curly braces to be escaped, with special
-  sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
-
 * Corporate HTTP proxy support is now implemented using our websocket library's
   new built-in implementation instead of a custom implementation. #2515
-
-* Some packages are no longer released as part of the core release process:
-  amplify, backbone, bootstrap, d3, jquery-history, and jquery-layout.
 
 * Remove support for the undocumented earliestCompatibleVersion feature of the
   package system.
 
-* Fix audit-argument-checks spurious failure when an argument is NaN. #2914
-
 * Fix a check for a parent process in 'meteor run' that was happening
   constantly instead of every few seconds. #3252
 
-* `Template.parentData`'s argument defaults to 1. #2861
-
-* `Blaze.remove` on a template's view now correctly removes the DOM
-  when the template was inserted using `Blaze.renderWithData`. #3130
-
 * Fix crash when two plugins defined source handlers for the same
   extension. #3015 #3180
-
-* Fix crash when a package version contained a dot-separated prerelease part
-  with both digits and non-digits. #3147
 
 * Fix bug (introduced in 0.9.3) where the warning about using experimental
   versions of packages was printed too often.
@@ -64,13 +50,38 @@
 * Fix bug (introduced in 0.9.4) where banners about new releases could be
   printed too many times.
 
+* Fix crash when a package version contained a dot-separated prerelease part
+  with both digits and non-digits. #3147
+
+### Blaze
+
+* `Template.parentData`'s argument defaults to 1. #2861
+
+* `Blaze.remove` on a template's view now correctly removes the DOM
+  when the template was inserted using `Blaze.renderWithData`. #3130
+
+* Spacebars: Allow curly braces to be escaped, with special
+  sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
+
+### Meteor Accounts
+
 * Make query parameter available to oauth1 services 6b8221d XXX emily will
   describe this
 
 * Expire a user's password reset and login tokens in all circumstances when
   their password is changed.
 
-* Upgraded dependencies:
+### Other bug fixes and improvements
+
+* Some packages are no longer released as part of the core release process:
+  amplify, backbone, bootstrap, d3, jquery-history, and jquery-layout. This
+  means that new versions of these packages can be published outside of the full
+  Meteor release cycle.
+
+* Fix audit-argument-checks spurious failure when an argument is NaN. #2914
+
+### Upgraded dependencies
+
   - node: 0.10.33 (from 0.10.29)
   - source-map-support: 0.2.8 (from 0.2.5)
   - semver: 4.1.0 (from 2.2.1)
