@@ -65,8 +65,8 @@
 
 ### Meteor Accounts
 
-* Make query parameter available to oauth1 services 6b8221d XXX emily will
-  describe this
+* Allow integration with OAuth1 servers that require additional query
+  parameters to be passed with the access token. #2894
 
 * Expire a user's password reset and login tokens in all circumstances when
   their password is changed.
