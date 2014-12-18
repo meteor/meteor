@@ -495,7 +495,7 @@ var compileUnibuild = function (options) {
        * @instance
        * @memberOf CompileStep
        */
-      inputPath: files.convertToOSPath(relPath),
+      inputPath: files.convertToOSPath(relPath, true),
 
       /**
        * @summary The filename and absolute path of the input file.
@@ -522,8 +522,9 @@ var compileUnibuild = function (options) {
        * @memberOf CompileStep
        * @instance
        */
-      pathForSourceMap: files.convertToOSPath(inputSourceArch.pkg.name ?
-        inputSourceArch.pkg.name + "/" + relPath : files.pathBasename(relPath)),
+      pathForSourceMap: files.convertToOSPath(
+        inputSourceArch.pkg.name ?  inputSourceArch.pkg.name + "/" + relPath :
+                                    files.pathBasename(relPath), true),
 
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
@@ -543,7 +544,8 @@ var compileUnibuild = function (options) {
        * @memberOf CompileStep
        * @instance
        */
-      rootOutputPath: files.convertToOSPath(inputSourceArch.pkg.serveRoot),
+      rootOutputPath: files.convertToOSPath(
+        inputSourceArch.pkg.serveRoot, true),
 
       /**
        * @summary The architecture for which we are building. Can be "os",
@@ -651,7 +653,7 @@ var compileUnibuild = function (options) {
           servePath: colonConverter.convert(
             files.pathJoin(
               inputSourceArch.pkg.serveRoot,
-              files.convertToStandardPath(options.path))),
+              files.convertToStandardPath(options.path, true))),
           sourceMap: options.sourceMap
         });
       },
@@ -688,10 +690,10 @@ var compileUnibuild = function (options) {
 
         js.push({
           source: options.data,
-          sourcePath: files.convertToStandardPath(options.sourcePath),
+          sourcePath: files.convertToStandardPath(options.sourcePath, true),
           servePath: files.pathJoin(
             inputSourceArch.pkg.serveRoot,
-            files.convertToStandardPath(options.path)),
+            files.convertToStandardPath(options.path, true)),
           bare: !! bare,
           sourceMap: options.sourceMap,
           sourceHash: options._hash
@@ -719,7 +721,7 @@ var compileUnibuild = function (options) {
           }
         }
 
-        addAsset(options.data, files.convertToStandardPath(options.path));
+        addAsset(options.data, files.convertToStandardPath(options.path, true));
       },
 
       /**
