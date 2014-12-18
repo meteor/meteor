@@ -1066,8 +1066,36 @@ files.getHomeDir = function () {
   return convertToStandardPath(homeDir);
 };
 
-files.linkToMeteorScript = function (scriptLocation, linkLocation) {
-  files.symlinkOverSync(scriptLocation, linkLocation);
+files.linkToMeteorScript = function (scriptLocation, linkLocation, argsList) {
+  if (process.platform === "win32") {
+    // Make a meteor batch script that points to current tool
+
+    // add .bat extension to destination if not present
+    if (scriptLocation.indexOf(".bat") !== (scriptLocation.length - 4)) {
+      scriptLocation = scriptLocation + ".bat";
+    }
+
+    // add .bat extension to link file if not present
+    if (linkLocation.indexOf(".bat") !== (linkLocation.length - 4)) {
+      linkLocation = linkLocation + ".bat";
+    }
+
+    var args = "";
+    // Let the link pass arguments to the target script, used for "--release"
+    if (_.isArray(argsList)) {
+      args = argsList.join(" ");
+    }
+
+    var newScript = [
+      "@echo off",
+      "%~dp0\\" + files.convertToOSPath(scriptLocation) + " " + args + " %*"
+    ].join(os.EOL);
+
+    files.writeFile(linkLocation, newScript, {encoding: "ascii"});
+  } else {
+    // Symlink meteor tool
+    files.symlinkOverSync(scriptLocation, linkLocation);
+  }
 };
 
 // In the old World we used to have any paths that worked on unix,

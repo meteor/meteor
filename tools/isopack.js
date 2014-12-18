@@ -1067,7 +1067,7 @@ _.extend(Isopack.prototype, {
       '--full-tree',
       'HEAD',
       // The actual trees to copy!
-      'tools', 'examples', 'LICENSE.txt', 'meteor',
+      'tools', 'examples', 'LICENSE.txt', 'meteor', 'meteor.bat',
       'scripts/admin/launch-meteor');
 
     // Trim blank line and unnecessary examples.
