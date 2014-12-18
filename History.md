@@ -5,7 +5,15 @@
 
 ### Improvements to the `meteor` command-line tool
 
-* `meteor shell` XXX ben will describe this.
+* A new command called `meteor shell` attaches an interactive terminal to
+  an already-running server process, enabling inspection and execution of
+  server-side data and code, with dynamic tab completion of variable names
+  and properties. To see `meteor shell` in action, type `meteor run` in an
+  app directory, then (in another terminal) type `meteor shell` in the
+  same app directory. You do not have to wait for the app to start before
+  typing `meteor shell`, as it will automatically connect when the server
+  is ready. Note that `meteor shell` currently works for local development
+  only, and is not yet supported for apps running on remote hosts.
 
 * We've done a major internal overhaul of the `meteor` command-line tool with an
   eye to correctness, maintainability, and performance.  Some details include:
