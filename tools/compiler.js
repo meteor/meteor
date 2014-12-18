@@ -495,7 +495,7 @@ var compileUnibuild = function (options) {
        * @instance
        * @memberOf CompileStep
        */
-      inputPath: relPath,
+      inputPath: files.convertToOSPath(relPath),
 
       /**
        * @summary The filename and absolute path of the input file.
@@ -505,11 +505,11 @@ var compileUnibuild = function (options) {
        * @instance
        * @memberOf CompileStep
        */
-      fullInputPath: absPath,
+      fullInputPath: files.convertToOSPath(absPath),
 
       // The below is used in the less and stylus packages... so it should be
       // public API.
-      _fullInputPath: absPath, // avoid, see above..
+      _fullInputPath: files.convertToOSPath(absPath), // avoid, see above..
 
       // Used for one optimization. Don't rely on this otherwise.
       _hash: file.hash,
@@ -522,7 +522,7 @@ var compileUnibuild = function (options) {
        * @memberOf CompileStep
        * @instance
        */
-      pathForSourceMap: (inputSourceArch.pkg.name ?
+      pathForSourceMap: files.convertToOSPath(inputSourceArch.pkg.name ?
         inputSourceArch.pkg.name + "/" + relPath : files.pathBasename(relPath)),
 
       // null if this is an app. intended to be used for the sources
@@ -543,7 +543,7 @@ var compileUnibuild = function (options) {
        * @memberOf CompileStep
        * @instance
        */
-      rootOutputPath: inputSourceArch.pkg.serveRoot,
+      rootOutputPath: files.convertToOSPath(inputSourceArch.pkg.serveRoot),
 
       /**
        * @summary The architecture for which we are building. Can be "os",
@@ -649,7 +649,9 @@ var compileUnibuild = function (options) {
           refreshable: true,
           data: new Buffer(options.data, 'utf8'),
           servePath: colonConverter.convert(
-            files.pathJoin(inputSourceArch.pkg.serveRoot, options.path)),
+            files.pathJoin(
+              inputSourceArch.pkg.serveRoot,
+              files.convertToStandardPath(options.path))),
           sourceMap: options.sourceMap
         });
       },
@@ -686,8 +688,10 @@ var compileUnibuild = function (options) {
 
         js.push({
           source: options.data,
-          sourcePath: options.sourcePath,
-          servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, options.path),
+          sourcePath: files.convertToStandardPath(options.sourcePath),
+          servePath: files.pathJoin(
+            inputSourceArch.pkg.serveRoot,
+            files.convertToStandardPath(options.path)),
           bare: !! bare,
           sourceMap: options.sourceMap,
           sourceHash: options._hash
@@ -715,7 +719,7 @@ var compileUnibuild = function (options) {
           }
         }
 
-        addAsset(options.data, options.path);
+        addAsset(options.data, files.convertToStandardPath(options.path));
       },
 
       /**
