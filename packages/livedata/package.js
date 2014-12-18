@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to the 'ddp' package",
-  version: '1.0.12-ipc.0'
+  version: '1.0.12-winr.0'
 });
 
 Package.onUse(function (api) {

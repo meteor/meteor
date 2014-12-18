@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Maintain a connection to the leader of an election set",
-  version: '1.0.3-ipc.0'
+  version: '1.0.3-winr.0'
 });
 
 Package.onUse(function (api) {
