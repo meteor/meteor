@@ -1574,7 +1574,7 @@ var maybeUpdateRelease = function (options) {
         "Installed. Run",
         Console.command(
           "'meteor update --release " +
-            release.current.getDisplayName({ noPrefix: true } + "'")),
+            release.current.getDisplayName({ noPrefix: true }) + "'"),
         "inside of a particular project directory to update that project to",
         release.current.getDisplayName() + ".");
     } else {
