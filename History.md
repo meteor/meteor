@@ -114,7 +114,11 @@
   - faye-websocket: 0.8.1 (from using websocket-driver instead)
   - MongoDB: 2.4.12 (from 2.4.9)
 
-XXX include contributor list
+
+Patches by GitHub users andylash, anstarovoyt, benweissmann, chrisbridgett,
+colllin, dandv, ecwyne, graemian, JamesLefrere, kevinchiu, LyuGGang, matteodem,
+mitar, mitar, mquandalle, musically-ut, ograycode, pcjpcj2, physiocoder,
+rgoomar, trusktr, Urigo, and zol.
 
 
 ## v1.0.1
@@ -225,7 +229,7 @@ XXX include contributor list
 * Allow build plugins to override the 'bare' option on added source
   files. #2834
 
-Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle,
+Patches by GitHub users DenisGorbachev, ecwyne, mitar, mquandalle,
 Primigenus, svda, yauh, and zol.
 
 
@@ -359,7 +363,7 @@ Primigenus, svda, yauh, and zol.
   other CPU-intensive tasks. #2536, #2588.
 
 
-Patches by Github users cryptoquick, Gaelan, jperl, meonkeys, mitar,
+Patches by GitHub users cryptoquick, Gaelan, jperl, meonkeys, mitar,
 mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen,
 rissem, rosh93, rzymek, and timoabend
 
@@ -426,7 +430,7 @@ will not be able to use versions of packages that use the new features.
   enable data persistence during hot code push.
 
 
-Patches by Github users evliu, meonkeys, mitar, mizzao, mquandalle,
+Patches by GitHub users evliu, meonkeys, mitar, mizzao, mquandalle,
 prapicault, waitingkuo, wulfmeister.
 
 
@@ -505,7 +509,7 @@ integration with Apache's Cordova/PhoneGap project.
   `bundle/programs/client` is now `bundle/programs/web.browser`.
 
 
-Patches by Github users awwx, mizzao, and mquandalle.
+Patches by GitHub users awwx, mizzao, and mquandalle.
 
 
 
@@ -595,7 +599,7 @@ prefix instead of your own username.
 
 * Fix `meteor list` if not all packages on server. Fixes #2468
 
-Patch by Github user mitar.
+Patch by GitHub user mitar.
 
 
 ## v0.9.0.1
@@ -710,7 +714,7 @@ Other changes:
   - tar: 1.0.1 (from 0.1.19)
   - fstream: 1.0.2 (from 0.1.25)
 
-Patches by Github users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
+Patches by GitHub users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
 mquandalle, rcy, RichardLitt, thatneat, and twhy.
 
 
