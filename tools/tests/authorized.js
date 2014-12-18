@@ -134,8 +134,7 @@ selftest.define('authorized - no username', ['net', 'slow'], function () {
   var token = testUtils.deployWithNewEmail(s, email, appName);
   var run = s.run('authorized', appName, '--add', 'test');
   run.waitSecs(commandTimeoutSecs);
-  run.matchErr('You must set a password on your account before ' +
-               'you can authorize other users');
+  run.matchErr('You must set a password on your account');
   run.expectExit(1);
   // After we set a username, we should be able to authorize others.
   testUtils.registerWithToken(token, username, 'testtest', email);
