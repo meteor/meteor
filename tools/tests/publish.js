@@ -85,7 +85,6 @@ selftest.define("publish-and-search",
     // in any case, that we can't rely on the rest of this test working.
     run = s.run("publish");
     run.waitSecs(15);
-    run.match("Reading package...\n");
     run.matchErr("There is no package named " + newPackageName);
     run.expectExit(1);
 
