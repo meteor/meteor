@@ -120,8 +120,8 @@
 
 Patches by GitHub users andylash, anstarovoyt, benweissmann, chrisbridgett,
 colllin, dandv, ecwyne, graemian, JamesLefrere, kevinchiu, LyuGGang, matteodem,
-mitar, mitar, mquandalle, musically-ut, ograycode, pcjpcj2, physiocoder,
-rgoomar, timhaines, trusktr, Urigo, and zol.
+mitar, mquandalle, musically-ut, ograycode, pcjpcj2, physiocoder, rgoomar,
+timhaines, trusktr, Urigo, and zol.
 
 
 ## v1.0.1
