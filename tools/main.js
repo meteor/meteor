@@ -444,6 +444,18 @@ var springboard = function (rel, options) {
     process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
   }
 
+  if (process.platform === 'win32') {
+    var toolsRoot = path.join(packagePath, toolRecord.path);
+    var ret = new Future();
+    var child = require("child_process").spawn(
+      files.convertToOSPath(executable + ".bat"), newArgv,
+      { env: process.env, stdio: 'inherit' });
+    child.on('exit', function (code) {
+      ret.return(code);
+    });
+    process.exit(ret.wait());
+  }
+
   // Now exec; we're not coming back.
   require('kexec')(executable, newArgv);
   throw Error('exec failed?');
