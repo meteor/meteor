@@ -4,9 +4,13 @@ var _ = require("underscore");
 var switchFunctions = [];
 var pollingInterval = 500;
 
-// Set this environment variable to a truthy value to force the use of
-// files.watchFile instead of pathwatcher.watch.
-var canUsePathwatcher = !process.env.METEOR_WATCH_FORCE_POLLING;
+// Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
+// force the use of files.watchFile instead of pathwatcher.watch.
+// Enabled on Mac and Linux and disabled on Windows by default.
+// Set METEOR_WATCH_FORCE_PATHWATCHER environment variable to a truthy value to
+// force the use of pathwatcher.
+var canUsePathwatcher = !process.env.METEOR_WATCH_FORCE_POLLING &&
+  (process.platform !== 'win32' || process.env.METEOR_WATCH_FORCE_PATHWATCHER);
 
 // The pathwatcher library does not work on all platforms and file systems
 // (notably, network file systems), so we have to do a little feature
@@ -79,7 +83,7 @@ exports.testDirectory = function (dir) {
     if (err instanceof TypeError && err.message === "Unable to watch path") {
       return;
     }
-    
+
     throw err;
   }
 
