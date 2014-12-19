@@ -80,71 +80,11 @@ selftest.define('deploy - bad arguments', [], function () {
 });
 
 selftest.define('deploy - logged in', ['net', 'slow'], function () {
-  // Create two sandboxes: one with a warehouse so that we can run
-  // --release, and one without a warehouse so that we run from the
-  // checkout or release that we started from.
-  // XXX Is having two sandboxes the only way to do this?
   var sandbox = new Sandbox;
-  var sandboxWithWarehouse;
-  if (files.inCheckout()) {
-    sandboxWithWarehouse = new Sandbox({
-      // Include a warehouse arugment so that we can deploy apps with
-      // --release arguments.
-      warehouse: {
-        v1: { tools: 'tool1', latest: true }
-      }
-    });
-  } else {
-    sandboxWithWarehouse = new Sandbox;
-  }
   sandbox.createApp('deployapp', 'empty');
   sandbox.cd('deployapp');
 
-  // LEGACY APPS
-
-  // Deploy a legacy app with no password
-  var noPasswordLegacyApp = testUtils.createAndDeployLegacyApp(sandboxWithWarehouse);
-
   testUtils.login(sandbox, 'test', 'testtest');
-
-  // Now, with our logged in current release, we should be able to
-  // deploy to the legacy app.
-  var run = sandbox.run('deploy', noPasswordLegacyApp);
-  run.waitSecs(90);
-  run.match('Now serving at http://' + noPasswordLegacyApp);
-  run.expectExit(0);
-  // And we should have claimed the app by deploying to it.
-  run = sandbox.run('claim', noPasswordLegacyApp);
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('already belongs to you');
-  run.expectExit(1);
-  // Clean up
-  testUtils.cleanUpApp(sandbox, noPasswordLegacyApp);
-
-  // Deploy a legacy password-protected app
-  var passwordLegacyApp = testUtils.createAndDeployLegacyApp(
-    sandboxWithWarehouse,
-    'test'
-  );
-  // We shouldn't be able to deploy to this app without claiming it
-  run = sandbox.run('deploy', passwordLegacyApp);
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('meteor claim');
-  run.expectExit(1);
-  // If we claim it, we should be able to deploy to it.
-  run = sandbox.run('claim', passwordLegacyApp);
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('Password:');
-  run.write('test\n');
-  run.waitSecs(commandTimeoutSecs);
-  run.match('successfully transferred to your account');
-  run.expectExit(0);
-  run = sandbox.run('deploy', passwordLegacyApp);
-  run.waitSecs(90);
-  run.match('Now serving at http://' + passwordLegacyApp);
-  run.expectExit(0);
-  // Clean up
-  testUtils.cleanUpApp(sandbox, passwordLegacyApp);
 
   // NON-LEGACY APPS
 
@@ -154,7 +94,7 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
   // Try to deploy to it from a different account -- should fail.
   testUtils.logout(sandbox);
   testUtils.login(sandbox, 'testtest', 'testtest');
-  run = sandbox.run('deploy', appName);
+  var run = sandbox.run('deploy', appName);
   run.waitSecs(commandTimeoutSecs);
   run.matchErr('belongs to a different user');
   run.expectExit(1);
@@ -170,14 +110,6 @@ selftest.define('deploy - logged in', ['net', 'slow'], function () {
 
 selftest.define('deploy - logged out', ['net', 'slow'], function () {
   var s = new Sandbox;
-  var sandboxWithWarehouse;
-  if (files.inCheckout()) {
-    sandboxWithWarehouse = new Sandbox({
-      warehouse: { v1: { tools: 'tool1', latest: true } }
-    });
-  } else {
-    sandboxWithWarehouse = new Sandbox;
-  }
 
   testUtils.login(s, 'test', 'testtest');
   var appName = testUtils.createAndDeployApp(s);
@@ -197,45 +129,6 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.expectExit(0);
   testUtils.cleanUpApp(s, appName);
 
-  testUtils.logout(s);
-
-  // Any deploy command for a legacy app that isn't password-protected
-  // should prompt us to log in, and then should work.
-  var legacyNoPassword = testUtils.createAndDeployLegacyApp(
-    sandboxWithWarehouse
-  );
-  run = s.run('deploy', legacyNoPassword);
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('Email:');
-  run.write('test@test.com\n');
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('Password: ');
-  run.write('testtest\n');
-  run.waitSecs(90);
-  run.match('Now serving');
-  run.expectExit(0);
-
-  // Deploying to a legacy app that is password-protected should prompt
-  // us to log in, and then tell us about 'meteor claim'.
-  testUtils.logout(s);
-  var legacyPassword = testUtils.createAndDeployLegacyApp(
-    sandboxWithWarehouse,
-    'test'
-  );
-  run = s.run('deploy', legacyPassword);
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('Email:');
-  // Log in with a username here to test that the email prompt also
-  // accepts emails. (We put an email in the email prompt above.)
-  run.write('test\n');
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('Password:');
-  run.write('testtest\n');
-  run.waitSecs(commandTimeoutSecs);
-  run.matchErr('meteor claim');
-  run.expectExit(1);
-
-  testUtils.cleanUpLegacyApp(sandboxWithWarehouse, legacyPassword, 'test');
   testUtils.logout(s);
 
   // Deploying to a new app using a user that exists but has no password
@@ -263,6 +156,6 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.write(email + '\n');
   run.waitSecs(commandTimeoutSecs);
   run.matchErr('pick a password');
-  run.matchErr('An email has been sent to you with the link');
+  run.matchErr('sent to you with the link');
   run.stop();
 });

@@ -1,6 +1,126 @@
 ## v.NEXT
 
 
+## v1.0.2
+
+### Improvements to the `meteor` command-line tool
+
+* A new command called `meteor shell` attaches an interactive terminal to
+  an already-running server process, enabling inspection and execution of
+  server-side data and code, with dynamic tab completion of variable names
+  and properties. To see `meteor shell` in action, type `meteor run` in an
+  app directory, then (in another terminal) type `meteor shell` in the
+  same app directory. You do not have to wait for the app to start before
+  typing `meteor shell`, as it will automatically connect when the server
+  is ready. Note that `meteor shell` currently works for local development
+  only, and is not yet supported for apps running on remote hosts.
+
+* We've done a major internal overhaul of the `meteor` command-line tool with an
+  eye to correctness, maintainability, and performance.  Some details include:
+  * Refresh the package catalog for build commands only when an error
+    occurs that could be fixed by a refresh, not for every build command.
+  * Never run the constraint solver to select package versions more than once
+    per build.
+  * Built packages ("isopacks") are now cached inside individual app directories
+    instead of inside their source directories.
+  * `meteor run` starts Mongo in parallel with building the application.
+  * The constraint solver no longer leaves a `versions.json` file in your
+    packages source directories; when publishing a package that is not inside an
+    app, it will leave a `.versions` file (with the same format as
+    `.meteor/versions`) which you should check into source control.
+  * The constraint solver's model has been simplified so that plugins must use
+    the same version of packages as their surrounding package when built from
+    local source.
+
+* Using `meteor debug` no longer requires manually continuing the debugger when
+  your app restarts, and it no longer overwrites the symbol `_` inside your app.
+
+* Output from the command-line tool is now word-wrapped to the width of your
+  terminal.
+
+* Remove support for the undocumented earliestCompatibleVersion feature of the
+  package system.
+
+* Reduce CPU usage and disk I/O bandwidth by using kernel file-system change
+  notification events where possible. On file systems that do not support these
+  events (NFS, Vagrant Virtualbox shared folders, etc), file changes will only
+  be detected every 5 seconds; to detect changes more often in these cases (but
+  use more CPU), set the `METEOR_WATCH_FORCE_POLLING` environment
+  variable. #2135
+
+* Reduce CPU usage by fixing a check for a parent process in `meteor
+  run` that was happening constantly instead of every few seconds. #3252
+
+* Fix crash when two plugins defined source handlers for the same
+  extension. #3015 #3180
+
+* Fix bug (introduced in 0.9.3) where the warning about using experimental
+  versions of packages was printed too often.
+
+* Fix bug (introduced in 1.0) where `meteor update --patch` crashed.
+
+* Fix bug (introduced in 0.9.4) where banners about new releases could be
+  printed too many times.
+
+* Fix crash when a package version contained a dot-separated pre-release part
+  with both digits and non-digits. #3147
+
+* Corporate HTTP proxy support is now implemented using our websocket library's
+  new built-in implementation instead of a custom implementation. #2515
+
+### Blaze
+
+* Add default behavior for `Template.parentData` with no arguments. This
+  selects the first parent. #2861
+
+* Fix `Blaze.remove` on a template's view to correctly remove the DOM
+  elements when the template was inserted using
+  `Blaze.renderWithData`. #3130
+
+* Allow curly braces to be escaped in Spacebars. Use the special
+  sequences `{{|` and `{{{|` to insert a literal `{{` or `{{{`.
+
+### Meteor Accounts
+
+* Allow integration with OAuth1 servers that require additional query
+  parameters to be passed with the access token. #2894
+
+* Expire a user's password reset and login tokens in all circumstances when
+  their password is changed.
+
+### Other bug fixes and improvements
+
+* Some packages are no longer released as part of the core release process:
+  amplify, backbone, bootstrap, d3, jquery-history, and jquery-layout. This
+  means that new versions of these packages can be published outside of the full
+  Meteor release cycle.
+
+* Fix audit-argument-checks spurious failure when an argument is NaN. #2914
+
+### Upgraded dependencies
+
+  - node: 0.10.33 (from 0.10.29)
+  - source-map-support: 0.2.8 (from 0.2.5)
+  - semver: 4.1.0 (from 2.2.1)
+  - request: 2.47.0 (from 2.33.0)
+  - tar: 1.0.2 (from 1.0.1)
+  - source-map: 0.1.40 (from 0.1.32)
+  - sqlite3: 3.0.2 (from 3.0.0)
+  - phantomjs npm module: 1.9.12 (from 1.8.1-1)
+  - http-proxy: 1.6.0 (from a fork of 1.0.2)
+  - esprima: 1.2.2 (from an unreleased 1.1-era commit)
+  - escope: 1.0.1 (from 1.0.0)
+  - openssl in mongo: 1.0.1j (from 1.0.1g)
+  - faye-websocket: 0.8.1 (from using websocket-driver instead)
+  - MongoDB: 2.4.12 (from 2.4.9)
+
+
+Patches by GitHub users andylash, anstarovoyt, benweissmann, chrisbridgett,
+colllin, dandv, ecwyne, graemian, JamesLefrere, kevinchiu, LyuGGang, matteodem,
+mitar, mitar, mquandalle, musically-ut, ograycode, pcjpcj2, physiocoder,
+rgoomar, timhaines, trusktr, Urigo, and zol.
+
+
 ## v1.0.1
 
 * Fix a security issue in allow/deny rules that could result in data
@@ -25,7 +145,8 @@
 
 ### Performance
 
-* Reduce unnecessary syncs with the package server, speeding up many commands.
+* Reduce unnecessary syncs with the package server, which speeds up
+  startup times for many commands.
 
 * Speed up `meteor deploy` by not bundling unnecessary files and
   programs.
@@ -108,7 +229,7 @@
 * Allow build plugins to override the 'bare' option on added source
   files. #2834
 
-Patches by Github users DenisGorbachev, ecwyne, mitar, mquandalle,
+Patches by GitHub users DenisGorbachev, ecwyne, mitar, mquandalle,
 Primigenus, svda, yauh, and zol.
 
 
@@ -242,7 +363,7 @@ Primigenus, svda, yauh, and zol.
   other CPU-intensive tasks. #2536, #2588.
 
 
-Patches by Github users cryptoquick, Gaelan, jperl, meonkeys, mitar,
+Patches by GitHub users cryptoquick, Gaelan, jperl, meonkeys, mitar,
 mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen,
 rissem, rosh93, rzymek, and timoabend
 
@@ -309,7 +430,7 @@ will not be able to use versions of packages that use the new features.
   enable data persistence during hot code push.
 
 
-Patches by Github users evliu, meonkeys, mitar, mizzao, mquandalle,
+Patches by GitHub users evliu, meonkeys, mitar, mizzao, mquandalle,
 prapicault, waitingkuo, wulfmeister.
 
 
@@ -388,7 +509,7 @@ integration with Apache's Cordova/PhoneGap project.
   `bundle/programs/client` is now `bundle/programs/web.browser`.
 
 
-Patches by Github users awwx, mizzao, and mquandalle.
+Patches by GitHub users awwx, mizzao, and mquandalle.
 
 
 
@@ -478,7 +599,7 @@ prefix instead of your own username.
 
 * Fix `meteor list` if not all packages on server. Fixes #2468
 
-Patch by Github user mitar.
+Patch by GitHub user mitar.
 
 
 ## v0.9.0.1
@@ -593,7 +714,7 @@ Other changes:
   - tar: 1.0.1 (from 0.1.19)
   - fstream: 1.0.2 (from 0.1.25)
 
-Patches by Github users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
+Patches by GitHub users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
 mquandalle, rcy, RichardLitt, thatneat, and twhy.
 
 

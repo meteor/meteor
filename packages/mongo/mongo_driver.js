@@ -320,7 +320,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   if (!(LocalCollection._isPlainObject(document) &&
         !EJSON._isCustomType(document))) {
     sendError(new Error(
-      "Only documents (plain objects) may be inserted into MongoDB"));
+      "Only plain objects may be inserted into MongoDB"));
     return;
   }
 
@@ -432,6 +432,14 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   if (!mod || typeof mod !== 'object')
     throw new Error("Invalid modifier. Modifier must be an object.");
 
+  if (!(LocalCollection._isPlainObject(mod) &&
+        !EJSON._isCustomType(mod))) {
+    throw new Error(
+      "Only plain objects may be used as replacement" +
+        " documents in MongoDB");
+    return;
+  }
+
   if (!options) options = {};
 
   var write = self._maybeBeginWrite();
@@ -506,10 +514,20 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 };
 
 var isModificationMod = function (mod) {
-  for (var k in mod)
-    if (k.substr(0, 1) === '$')
-      return true;
-  return false;
+  var isReplace = false;
+  var isModify = false;
+  for (var k in mod) {
+    if (k.substr(0, 1) === '$') {
+      isModify = true;
+    } else {
+      isReplace = true;
+    }
+  }
+  if (isModify && isReplace) {
+    throw new Error(
+      "Update parameter cannot have both modifier and non-modifier fields.");
+  }
+  return isModify;
 };
 
 var NUM_OPTIMISTIC_TRIES = 3;

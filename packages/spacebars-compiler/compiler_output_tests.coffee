@@ -251,3 +251,33 @@ function() {
     }) });
   }
   """
+
+  run "<textarea>{{{{|{{|foo}}</textarea>",
+  """
+  function() {
+    var view = this;
+    return HTML.TEXTAREA({value: (function () {
+      return [ "{{{{", "{{", "foo}}" ];
+    }) });
+  }
+  """
+
+  run "{{|foo}}",
+  """
+  function() {
+    var view = this;
+    return [ "{{", "foo}}" ];
+  }
+  """
+
+  run "<a b={{{|></a>",
+  """
+  function() {
+    var view = this;
+    return HTML.A({
+      b: (function () {
+        return "{{{";
+      })
+    });
+  }
+  """

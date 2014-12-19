@@ -120,14 +120,14 @@ files.addToGitignore = function (dirPath, entry) {
 };
 
 // Are we running Meteor from a git checkout?
-files.inCheckout = function () {
+files.inCheckout = _.once(function () {
   try {
     if (fs.existsSync(path.join(files.getCurrentToolsDir(), '.git')))
       return true;
   } catch (e) { console.log(e); }
 
   return false;
-};
+});
 
 // True if we are using a warehouse: either installed Meteor, or if
 // $METEOR_WAREHOUSE_DIR is set. Otherwise false (we're in a git checkout and
@@ -183,18 +183,11 @@ files.getCurrentToolsDir = function () {
   return path.join(__dirname, '..');
 };
 
-// Returns a directory with pre-built isopacks for use by the tool, or 'null'
-// if in a checkout.
-files.getUniloadDir = function () {
-  if (files.inCheckout())
-    return null;
-  return path.join(files.getCurrentToolsDir(), 'isopacks');
-};
-
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).
 files.getSettings = function (filename, watchSet) {
+  buildmessage.assertInCapture();
   var absPath = path.resolve(filename);
   var buffer = watch.readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
@@ -227,12 +220,15 @@ files.getSettings = function (filename, watchSet) {
 
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
-files.prettyPath = function (path) {
-  path = fs.realpathSync(path);
+files.prettyPath = function (p) {
+  p = fs.realpathSync(p);
   var home = process.env.HOME;
-  if (home && path.substr(0, home.length) === home)
-    path = "~" + path.substr(home.length);
-  return path;
+  if (! home)
+    return p;
+  var relativeToHome = path.relative(home, p);
+  if (relativeToHome.substr(0, 3) === ('..' + path.sep))
+    return p;
+  return path.join('~', relativeToHome);
 };
 
 // Like statSync, but null if file not found
@@ -427,9 +423,13 @@ files.cp_r = function (from, to, options) {
     if (options.transformFilename)
       f = options.transformFilename(f);
     var fullTo = path.join(to, f);
-    var stats = fs.statSync(fullFrom);
+    var stats = options.preserveSymlinks
+          ? fs.lstatSync(fullFrom) : fs.statSync(fullFrom);
     if (stats.isDirectory()) {
       files.cp_r(fullFrom, fullTo, options);
+    } else if (stats.isSymbolicLink()) {
+      var linkText = fs.readlinkSync(fullFrom);
+      fs.symlinkSync(linkText, fullTo);
     } else {
       var absFullFrom = path.resolve(fullFrom);
 
@@ -900,8 +900,8 @@ files.readdirNoDots = function (path) {
 // processed individually. Throws if the file doesn't exist or if
 // anything else goes wrong.
 var getLines = function (file) {
-  var raw = fs.readFileSync(file, 'utf8');
-  var lines = raw.split(/\r*\n\r*/);
+  var buffer = fs.readFileSync(file);
+  var lines = exports.splitBufferToLines(buffer);
 
   // strip blank lines at the end
   while (lines.length) {
@@ -916,6 +916,10 @@ var getLines = function (file) {
 
 exports.getLines = getLines;
 
+exports.splitBufferToLines = function (buffer) {
+  return buffer.toString('utf8').split(/\r*\n\r*/);
+};
+
 // Same as `getLines`, but returns [] if the file doesn't exist.
 exports.getLinesOrEmpty = function (file) {
   try {
@@ -927,13 +931,30 @@ exports.getLinesOrEmpty = function (file) {
   }
 };
 
+// Returns null if the file does not exist, otherwise returns the parsed JSON in
+// the file. Throws on errors other than ENOENT (including JSON parse failure).
+exports.readJSONOrNull = function (file) {
+  try {
+    var raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return null;
+    throw e;
+  }
+  return JSON.parse(raw);
+};
+
 // Trims whitespace & other filler characters of a line in a project file.
-exports.trimLine = function (line) {
+files.trimSpaceAndComments = function (line) {
   var match = line.match(/^([^#]*)#/);
   if (match)
     line = match[1];
-  line = line.replace(/^\s+|\s+$/g, ''); // leading/trailing whitespace
-  return line;
+  return files.trimSpace(line);
+};
+
+// Trims leading and trailing whilespace in a project file.
+files.trimSpace = function (line) {
+  return line.replace(/^\s+|\s+$/g, '');
 };
 
 

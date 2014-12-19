@@ -124,9 +124,15 @@ selftest.define("change cordova plugins", function () {
   run.waitSecs(2);
   run.match("restarted");
 
+  // Introduce an error.
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
   run.match("exact version");
+
+  // Fix the error.
+  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
+  run.waitSecs(2);
+  run.match("restarted");
 });
 
 
@@ -150,17 +156,20 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
+  run.waitSecs(2);
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
   run.waitSecs(5);
   run.match("added cordova plugin org.apache.cordova.camera");
+  run.expectExit(0);
 
   run = s.run("add", "cordova:org.apache.cordova.file");
-  run.matchErr("Must declare exact version");
+  run.matchErr("exact version or tarball url");
+  run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
   // build time.
@@ -175,7 +184,9 @@ selftest.define("add cordova plugins", ["slow"], function () {
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
-  run.match("added");
+  run.match("added,");
+  run.match("contains a cordova plugin");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
@@ -243,14 +254,14 @@ selftest.define("remove cordova plugins", function () {
   run = s.run("remove", "cordova:blahblah");
   run.matchErr("not in this project");
   run.forbidAll("removed");
-  run.expectExit(0);
+  run.expectExit(1);
 
   run = s.run("remove", "cordova:blahblah",
               "cordova:org.apache.cordova.camera");
   run.waitSecs(5);
   run.matchErr("not in this project");
   run.match("removed");
-  run.expectExit(0);
+  run.expectExit(1);
   checkUserPlugins(s, []);
 });
 
@@ -269,7 +280,7 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   var platformRun = s.run("add-platform", "android");
   platformRun.match("Do you agree");
   platformRun.write("Y\n");
-  platformRun.extraTime = 90; // Huge download
+  platformRun.waitSecs(90); // Huge download
   platformRun.match("added platform");
 
   run.waitSecs(60);
@@ -330,7 +341,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow"], function (
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run();
@@ -471,7 +482,7 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow"],
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   // Add a direct dependency: it should appear in star.json after we

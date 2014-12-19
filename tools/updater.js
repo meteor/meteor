@@ -13,6 +13,8 @@ var isopack = require('./isopack.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
+var auth = require('./auth.js');
+var packageMapModule = require('./package-map.js');
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -36,40 +38,33 @@ exports.tryToDownloadUpdate = function (options) {
 var firstCheck = true;
 
 var checkForUpdate = function (showBanner) {
-  var messages = buildmessage.capture(function () {
-    if (firstCheck) {
-      // We want to avoid a potential race condition here, because we run an update almost immediately
-      // at run.  We don't want to drop the resolver cache; that would be slow.  "meteor run" itself
-      // should have run a refresh anyway.  So, the first time, we just skip the remote catalog sync.
-      // But we do want to do the out-of-date release checks, so we can't just delay the first update cycle.
-      firstCheck = false;
-    } else {
-      // Silent is currently unused, but we keep it as a hint here...
-      try {
-        catalog.complete.refreshOfficialCatalog({silent: true});
-      } catch (err) {
-        Console.debug("Failed to refresh catalog, ignoring error", err);
-        return;
-      }
-    }
+  // While we're doing background stuff, try to revoke any old tokens in our
+  // session file.
+  auth.tryRevokeOldTokens({timeout: 15*1000});
 
-    if (!release.current.isProperRelease())
+  if (firstCheck) {
+    // We want to avoid a potential race condition here, because we run an
+    // update almost immediately at run.  We don't want to drop the resolver
+    // cache; that would be slow.  "meteor run" itself should have run a refresh
+    // anyway.  So, the first time, we just skip the remote catalog sync.  But
+    // we do want to do the out-of-date release checks, so we can't just delay
+    // the first update cycle.
+    firstCheck = false;
+  } else {
+    try {
+      catalog.official.refresh();
+    } catch (err) {
+      Console.debug("Failed to refresh catalog, ignoring error", err);
       return;
-
-    updateMeteorToolSymlink();
-
-    maybeShowBanners();
-  });
-
-  if (messages.hasMessages()) {
-    // Ignore, since running in the background.
-    // XXX unfortunately the "can't refresh" message still prints :(
-    // XXX But maybe if it's just a "we're offline" message we should keep
-    //     going? In case we want to present the "hey there's a locally
-    //     available recommended release?
-    Console.debug("Errors while updating in background");
-    return;
+    }
   }
+
+  if (!release.current.isProperRelease())
+    return;
+
+  updateMeteorToolSymlink();
+
+  maybeShowBanners();
 };
 
 var lastShowTimes = {};
@@ -98,37 +93,14 @@ var maybeShowBanners = function () {
 
   var banner = releaseData.banner;
   if (banner) {
-    var bannersShown = {};
-    try {
-      bannersShown = JSON.parse(
-        fs.readFileSync(config.getBannersShownFilename()));
-    } catch (e) {
-      // ... ignore
-    }
-
-    var shouldShowBanner = false;
-    if (_.has(bannersShown, release.current.name)) {
-      // XXX use EJSON so that we can just have Dates
-      var lastShown = new Date(bannersShown[release.current.name]);
-      var bannerUpdated = banner.lastUpdated ?
-            new Date(banner.lastUpdated) : new Date;
-      // XXX should the default really be "once ever" and not eg "once a week"?
-      if (lastShown < bannerUpdated) {
-        shouldShowBanner = true;
-      }
-    } else {
-      shouldShowBanner = true;
-    }
-
-    if (shouldShowBanner) {
+    var bannerDate =
+          banner.lastUpdated ? new Date(banner.lastUpdated) : new Date;
+    if (catalog.official.shouldShowBanner(release.current.name, bannerDate)) {
       // This banner is new; print it!
       runLog.log("");
       runLog.log(banner.text);
       runLog.log("");
-      bannersShown[release.current.name] = new Date;
-      // XXX ick slightly racy
-      fs.writeFileSync(config.getBannersShownFilename(),
-                       JSON.stringify(bannersShown, null, 2));
+      catalog.official.setBannerShownDate(release.current.name, bannerDate);
       return;
     }
   }
@@ -179,8 +151,6 @@ var maybeShowBanners = function () {
 // Update ~/.meteor/meteor to point to the tool binary from the tools of the
 // latest recommended release on the default release track.
 var updateMeteorToolSymlink = function () {
-  buildmessage.assertInCapture();
-
   // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
@@ -207,36 +177,14 @@ var updateMeteorToolSymlink = function () {
     // The latest release from the catalog is not where the ~/.meteor/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.
-    try {
-      var messages = buildmessage.capture(function () {
-        buildmessage.enterJob({
-          title: "Downloading tool package " + latestRelease.tool
-        }, function () {
-          tropohouse.default.maybeDownloadPackageForArchitectures({
-            packageName: latestReleaseToolPackage,
-            version: latestReleaseToolVersion,
-            architectures: [archinfo.host()],
-            silent: true
-          });
-        });
-        _.each(latestRelease.packages, function (pkgVersion, pkgName) {
-          buildmessage.enterJob({
-            title: "Downloading package " + pkgName + "@" + pkgVersion
-          }, function () {
-            tropohouse.default.maybeDownloadPackageForArchitectures({
-              packageName: pkgName,
-              version: pkgVersion,
-              architectures: [archinfo.host()],
-              silent: true
-            });
-          });
-        });
-      });
-    } catch (err) {
-      return;  // since we are running in the background.
-    }
+    var packageMap =
+          packageMapModule.PackageMap.fromReleaseVersion(latestRelease);
+    var messages = buildmessage.capture(function () {
+      tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+    });
     if (messages.hasMessages()) {
-      return;  // since we are running in the background
+      // Ignore errors, because we are running in the background.
+      return;
     }
 
     var toolIsopack = new isopack.Isopack;

@@ -136,7 +136,7 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
   FAIL("foo@1.0.0-rc|1.0.0");
 
   // This is the current implementation, but is arguably not great.
-  FAIL("foo@1.0.0 ");
+  FAIL("foo@1.0.0 "); // trailing space
 });
 
 Tinytest.add(
@@ -199,6 +199,8 @@ Tinytest.add(
     compare("1.0.0-r.1", "1.0.0", "<");
     // test the edges of `versionMagnitude`
     compare("1.0.0-zzzzzzzzzzzz", "1.0.0", "<");
+    // prerelease parts can contain digits and non-digits
+    compare("1.0.0-r1", "1.0.0-rc", "<");
 
     // Our broken implementation of Rule 11 (see [*] above the
     // declaration of PackageVersion.versionMagnitude). Maybe one day

@@ -12,6 +12,7 @@ SpacebarsCompiler = {};
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
 // - `"ELSE"` - `{{else}}`
+// - `"ESCAPE"` - `{{|`, `{{{|`, `{{{{|` and so on
 //
 // Besides `type`, the mandatory properties of a TemplateTag are:
 //
@@ -52,7 +53,11 @@ var makeStacheTagStartRegex = function (r) {
                     r.ignoreCase ? 'i' : '');
 };
 
+// "starts" regexes are used to see what type of template
+// tag the parser is looking at.  They must match a non-empty
+// result, but not the interesting part of the tag.
 var starts = {
+  ESCAPE: /^\{\{(?=\{*\|)/,
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -230,9 +235,10 @@ TemplateTag.parse = function (scannerOrString) {
     error('Expected ' + what);
   };
 
-  // must do ELSE first; order of others doesn't matter
-
-  if (run(starts.ELSE)) type = 'ELSE';
+  // must do ESCAPE first, immediately followed by ELSE
+  // order of others doesn't matter
+  if (run(starts.ESCAPE)) type = 'ESCAPE';
+  else if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
@@ -263,6 +269,9 @@ TemplateTag.parse = function (scannerOrString) {
   } else if (type === 'ELSE') {
     if (! run(ends.DOUBLE))
       expected('`}}`');
+  } else if (type === 'ESCAPE') {
+    var result = run(/^\{*\|/);
+    tag.value = '{{' + result.slice(0, -1);
   } else {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
@@ -445,7 +454,7 @@ var validateTag = function (ttag, scanner) {
 
   var position = ttag.position || TEMPLATE_TAG_POSITION.ELEMENT;
   if (position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-    if (ttag.type === 'DOUBLE') {
+    if (ttag.type === 'DOUBLE' || ttag.type === 'ESCAPE') {
       return;
     } else if (ttag.type === 'BLOCKOPEN') {
       var path = ttag.path;

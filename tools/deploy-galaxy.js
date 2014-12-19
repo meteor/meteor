@@ -3,7 +3,7 @@ var files = require('./files.js');
 var config = require('./config.js');
 var path = require('path');
 var fs = require('fs');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var fiberHelpers = require('./fiber-helpers.js');
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
@@ -13,13 +13,7 @@ var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
 var ServiceConnection = require('./service-connection.js');
 var stats = require('./stats.js');
-
-// a bit of a hack
-var getPackage = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp' ]
-  });
-};
+var Console = require('./console.js').Console;
 
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
@@ -34,9 +28,9 @@ var handleError = function (error, galaxyName, messages) {
   if (error.errorType === "Meteor.Error") {
     var msg = messages[error.error];
     if (msg)
-      process.stderr.write(msg + "\n");
+      Console.error(msg);
     else if (error.message)
-      process.stderr.write("Denied: " + error.message + "\n");
+      Console.error("Denied: " + error.message);
     return 1;
   } else if (error.errorType === "DDP.ConnectionError") {
     // If we have an http/https URL for a galaxyName instead of a
@@ -46,7 +40,7 @@ var handleError = function (error, galaxyName, messages) {
     if (m)
       galaxyName = m[1];
 
-    process.stderr.write(galaxyName + ": connection failed\n");
+    Console.error(galaxyName + ": connection failed");
     return 1;
   } else {
     throw error;
@@ -62,7 +56,6 @@ var handleError = function (error, galaxyName, messages) {
 // - service: the service to connect to within the Galaxy, such as
 //   'ultraworld' or 'log-reader'.
 var galaxyServiceConnection = function (galaxy, service) {
-  var Package = getPackage();
   var endpointUrl = galaxy + "/" + service;
   var parsedEndpoint = url.parse(endpointUrl);
   var authToken = auth.getSessionToken(parsedEndpoint.hostname);
@@ -73,7 +66,7 @@ var galaxyServiceConnection = function (galaxy, service) {
   if (! authToken)
     throw new Error("not logged in to galaxy?");
 
-  return new ServiceConnection(Package, endpointUrl, {
+  return new ServiceConnection(endpointUrl, {
     headers: {
       cookie: "GALAXY_AUTH=" + authToken
     }
@@ -155,7 +148,7 @@ exports.deleteApp = function (app) {
 
   try {
     conn.call("destroyApp", app);
-    process.stdout.write("Deleted.\n");
+    Console.info("Deleted.");
   } catch (e) {
     return handleError(e, galaxy);
   } finally {
@@ -201,24 +194,23 @@ exports.deploy = function (options) {
     // concurrent with bundling.
 
     if (! options.starball && ! messages.hasMessages()) {
-      process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
-      var statsMessages = buildmessage.capture(function () {
-        stats.recordPackages("sdk.deploy", options.app);
-      });
-      if (statsMessages.hasMessages()) {
-        process.stdout.write("Error recording package list:\n" +
-                             statsMessages.formatMessages());
-        // ... but continue;
-      }
+      Console.info('Deploying ' + options.app + '. Bundling...');
       var bundleResult = bundler.bundle({
+        projectContext: options.projectContext,
         outputPath: bundlePath,
         buildOptions: options.buildOptions,
         requireControlProgram: true
       });
 
       if (bundleResult.errors) {
-        messages.merge(bundleResult.errors);
+        messages = bundleResult.errors;
       } else {
+        stats.recordPackages({
+          what: "sdk.deploy",
+          projectContext: options.projectContext,
+          site: options.app
+        });
+
         // S3 (which is what's likely on the other end our upload)
         // requires a content-length header for HTTP PUT uploads. That
         // means that we have to actually tgz up the bundle before we
@@ -239,16 +231,15 @@ exports.deploy = function (options) {
     }
 
     if (messages.hasMessages()) {
-      process.stdout.write("\nErrors prevented deploying:\n");
-      process.stdout.write(messages.formatMessages());
+      Console.info("\nErrors prevented deploying:");
+      Console.info(messages.formatMessages());
       return 1;
     }
 
-    process.stdout.write('Uploading...\n');
+    Console.info('Uploading...');
 
     var galaxy = exports.discoverGalaxy(options.app);
     conn = galaxyServiceConnection(galaxy, "ultraworld");
-    var Package = getPackage();
 
     var created = true;
     var appConfig = {};
@@ -299,11 +290,11 @@ exports.deploy = function (options) {
       if (error || ((response.statusCode !== 200)
                     && (response.statusCode !== 201))) {
         if (error && error.message)
-          process.stderr.write("Upload failed: " + error.message + "\n");
+          Console.error("Upload failed: " + error.message);
         else
-          process.stderr.write("Upload failed" +
-                               (response.statusCode ?
-                                " (" + response.statusCode + ")\n" : "\n"));
+          Console.error("Upload failed" +
+                        (response.statusCode ?
+                        " (" + response.statusCode + ")" : ""));
         future['return'](false);
       } else
         future['return'](true);
@@ -323,10 +314,10 @@ exports.deploy = function (options) {
     }
 
     if (created)
-      process.stderr.write(options.app + ": created app\n");
+      Console.error(options.app + ": created app\n");
 
-    process.stderr.write(options.app + ": " +
-                         "pushed revision " + result.serial + "\n");
+    Console.error(options.app + ": " +
+                  "pushed revision " + result.serial);
     return 0;
   } finally {
     // Close the connection to Galaxy (otherwise Node will continue running).
@@ -347,9 +338,7 @@ exports.logs = function (options) {
 
   try {
     var lastLogId = null;
-    var Log = uniload.load({
-      packages: [ 'logging' ]
-    }).logging.Log;
+    var Log = isopackets.load('logging').logging.Log;
 
     // XXX we're cheating a bit here, relying on the server sending
     // the log messages in order

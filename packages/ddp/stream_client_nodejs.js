@@ -36,7 +36,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
   send: function (data) {
     var self = this;
     if (self.currentStatus.connected) {
-      self.client.messages.write(data);
+      self.client.send(data);
     }
   },
 
@@ -111,6 +111,17 @@ _.extend(LivedataTest.ClientStream.prototype, {
     }
   },
 
+  _getProxyUrl: function (targetUrl) {
+    var self = this;
+    // Similar to code in tools/http-helpers.js.
+    var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
+    // if we're going to a secure url, try the https_proxy env variable first.
+    if (targetUrl.match(/^wss:/)) {
+      proxy = process.env.HTTPS_PROXY || process.env.https_proxy || proxy;
+    }
+    return proxy;
+  },
+
   _launchConnection: function () {
     var self = this;
     self._cleanup(); // cleanup the old socket, if there was one.
@@ -118,15 +129,24 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // Since server-to-server DDP is still an experimental feature, we only
     // require the module if we actually create a server-to-server
     // connection.
-    var websocketDriver = Npm.require('websocket-driver');
+    var FayeWebSocket = Npm.require('faye-websocket');
+
+    var targetUrl = toWebsocketUrl(self.endpoint);
+    var fayeOptions = { headers: self.headers };
+    var proxyUrl = self._getProxyUrl(targetUrl);
+    if (proxyUrl) {
+      fayeOptions.proxy = { origin: proxyUrl };
+    };
 
     // We would like to specify 'ddp' as the subprotocol here. The npm module we
     // used to use as a client would fail the handshake if we ask for a
     // subprotocol and the server doesn't send one back (and sockjs doesn't).
     // Faye doesn't have that behavior; it's unclear from reading RFC 6455 if
     // Faye is erroneous or not.  So for now, we don't specify protocols.
-    var wsUrl = toWebsocketUrl(self.endpoint);
-    var client = self.client = websocketDriver.client(wsUrl);
+    var subprotocols = [];
+
+    var client = self.client = new FayeWebSocket.Client(
+      targetUrl, subprotocols, fayeOptions);
 
     self._clearConnectionTimer();
     self.connectionTimer = Meteor.setTimeout(
@@ -135,22 +155,6 @@ _.extend(LivedataTest.ClientStream.prototype, {
           new DDP.ConnectionError("DDP connection timed out"));
       },
       self.CONNECT_TIMEOUT);
-
-    var onConnect = function () {
-      client.start();
-    };
-    var stream = self._createSocket(wsUrl, onConnect);
-
-    if (!self.client) {
-      // We hit a connection timeout or other issue while yielding in
-      // _createSocket. Drop the connection.
-      stream.end();
-      return;
-    }
-
-    _.each(self.headers, function (header, name) {
-      client.setHeader(name, header);
-    });
 
     self.client.on('open', Meteor.bindEnvironment(function () {
       return self._onConnect(client);
@@ -165,125 +169,29 @@ _.extend(LivedataTest.ClientStream.prototype, {
       }, description));
     };
 
-    var finalize = Meteor.bindEnvironment(function () {
-      stream.end();
-      if (client === self.client) {
-        self._lostConnection();
-      }
-    }, "finalizing stream");
-
-    stream.on('end', finalize);
-    stream.on('close', finalize);
-    client.on('close', finalize);
-
-    var onError = function (message) {
+    clientOnIfCurrent('error', 'stream error callback', function (error) {
       if (!self.options._dontPrintErrors)
-        Meteor._debug("driver error", message);
+        Meteor._debug("stream error", error.message);
 
       // Faye's 'error' object is not a JS error (and among other things,
       // doesn't stringify well). Convert it to one.
-      self._lostConnection(new DDP.ConnectionError(message));
-    };
-
-    clientOnIfCurrent('error', 'driver error callback', function (error) {
-      onError(error.message);
+      self._lostConnection(new DDP.ConnectionError(error.message));
     });
 
-    stream.on('error', Meteor.bindEnvironment(function (error) {
-      if (client === self.client) {
-        onError('Network error: ' + wsUrl + ': ' + error.message);
-      }
-      stream.end();
-    }));
+
+    clientOnIfCurrent('close', 'stream close callback', function () {
+      self._lostConnection();
+    });
+
 
     clientOnIfCurrent('message', 'stream message callback', function (message) {
-      // Ignore binary frames, where data is a Buffer
+      // Ignore binary frames, where message.data is a Buffer
       if (typeof message.data !== "string")
         return;
+
       _.each(self.eventCallbacks.message, function (callback) {
         callback(message.data);
       });
     });
-
-    stream.pipe(self.client.io);
-    self.client.io.pipe(stream);
-  },
-
-  _createSocket: function (wsUrl, onConnect) {
-    var self = this;
-    var urlModule = Npm.require('url');
-    var parsedTargetUrl = urlModule.parse(wsUrl);
-    var targetUrlPort = +parsedTargetUrl.port;
-    if (!targetUrlPort) {
-      targetUrlPort = parsedTargetUrl.protocol === 'wss:' ? 443 : 80;
-    }
-
-    // Corporate proxy tunneling support.
-    var proxyUrl = self._getProxyUrl(parsedTargetUrl.protocol);
-    if (proxyUrl) {
-      var targetProtocol =
-            (parsedTargetUrl.protocol === 'wss:' ? 'https' : 'http');
-      var parsedProxyUrl = urlModule.parse(proxyUrl);
-      var proxyProtocol =
-            (parsedProxyUrl.protocol === 'https:' ? 'Https' : 'Http');
-      var proxyUrlPort = +parsedProxyUrl.port;
-      if (!proxyUrlPort) {
-        proxyUrlPort = parsedProxyUrl.protocol === 'https:' ? 443 : 80;
-      }
-      var tunnelFnName = targetProtocol + 'Over' + proxyProtocol;
-      var tunnelAgent = Npm.require('tunnel-agent');
-      var proxyOptions = {
-        host: parsedProxyUrl.hostname,
-        port: proxyUrlPort,
-        headers: {
-          host: parsedTargetUrl.host + ':' + targetUrlPort
-        }
-      };
-      if (parsedProxyUrl.auth) {
-        proxyOptions.proxyAuth = Npm.require('querystring').unescape(
-          parsedProxyUrl.auth);
-      }
-      var tunneler = tunnelAgent[tunnelFnName]({proxy: proxyOptions});
-      var events = Npm.require('events');
-      var fakeRequest = new events.EventEmitter();
-      var Future = Npm.require('fibers/future');
-      var fut = new Future;
-      fakeRequest.on('error', function (e) {
-        fut.isResolved() || fut.throw(e);
-      });
-      tunneler.createSocket({
-        host: parsedTargetUrl.host,
-        port: targetUrlPort,
-        request: fakeRequest
-      }, function (socket) {
-        socket.on('close', function () {
-          tunneler.removeSocket(socket);
-        });
-        process.nextTick(onConnect);
-        fut.return(socket);
-      });
-      return fut.wait();
-    }
-
-    if (parsedTargetUrl.protocol === 'wss:') {
-      return Npm.require('tls').connect(
-        targetUrlPort, parsedTargetUrl.hostname, onConnect);
-    } else {
-      var stream = Npm.require('net').createConnection(
-        targetUrlPort, parsedTargetUrl.hostname);
-      stream.on('connect', onConnect);
-      return stream;
-    }
-  },
-
-  _getProxyUrl: function (protocol) {
-    var self = this;
-    // Similar to code in tools/http-helpers.js.
-    var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
-    // if we're going to a secure url, try the https_proxy env variable first.
-    if (protocol === 'wss:') {
-      proxy = process.env.HTTPS_PROXY || process.env.https_proxy || proxy;
-    }
-    return proxy;
   }
 });

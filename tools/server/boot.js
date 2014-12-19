@@ -6,7 +6,7 @@ var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.29';
+var MIN_NODE_VERSION = 'v0.10.33';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -77,6 +77,10 @@ sourcemap_support.install({
   handleUncaughtExceptions: false
 });
 
+// Only enabled by default in development.
+if (process.env.ENABLE_METEOR_SHELL) {
+  require('./shell.js').listen();
+}
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
@@ -164,6 +168,9 @@ Fiber(function () {
     var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+    // The final 'true' is an undocumented argument to runIn[Foo]Context that
+    // causes it to print out a descriptive error message on parse error. It's
+    // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });

@@ -2,40 +2,32 @@ var _ = require('underscore');
 var path = require('path');
 var fs = require('fs');
 var assert = require('assert');
+var utils = require('../../utils.js');
 var bundler = require('../../bundler.js');
 var release = require('../../release.js');
 var files = require('../../files.js');
 var catalog = require('../../catalog.js');
-var project = require('../../project.js');
-var compiler = require('../../compiler.js');
 var buildmessage = require('../../buildmessage.js');
+var isopackets = require("../../isopackets.js");
+var projectContextModule = require('../../project-context.js');
 
-// an empty app. notably this app has no .meteor/release file.
-var emptyAppDir = path.join(__dirname, 'empty-app');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var setAppDir = function (appDir) {
-  project.project.setRootDir(appDir);
-
-  if (files.usesWarehouse()) {
-    throw Error("This old test doesn't support non-checkout");
-  }
-  var appPackageDir = path.join(appDir, 'packages');
-  var checkoutPackageDir = path.join(
-    files.getCurrentToolsDir(), 'packages');
-
-  doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
-    });
-    catalog.complete.initialize({
-      localPackageDirs: [appPackageDir, checkoutPackageDir]
-    });
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-options");
+  files.cp_r(path.join(__dirname, appName), projectDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: projectDir
   });
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return projectContext;
 };
 
 var doOrThrow = function (f) {
@@ -50,9 +42,9 @@ var doOrThrow = function (f) {
 };
 
 var runTest = function () {
-   // As preparation, let's initialize the official catalog. It servers as our
-   // data store, so we will probably need it.
-   catalog.official.initialize();
+  // As preparation, let's initialize the official catalog. It servers as our
+  // data store, so we will probably need it.
+  catalog.official.initialize();
 
   var readManifest = function (tmpOutputDir) {
     return JSON.parse(fs.readFileSync(
@@ -60,22 +52,16 @@ var runTest = function () {
       "utf8")).manifest;
   };
 
-  setAppDir(emptyAppDir);
-  var loader;
-  var messages = buildmessage.capture(function () {
-    loader = project.project.getPackageLoader();
-  });
-  if (messages.hasMessages()) {
-    throw Error("failed to get package loader: " + messages.formatMessages());
-  }
+  // an empty app. notably this app has no .meteor/release file.
+  var projectContext = makeProjectContext('empty-app');
 
-  console.log("nodeModules: 'skip'");
+  console.log("basic version");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: true },
-      packageLoader: loader
+      buildOptions: { minify: true }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -100,13 +86,13 @@ var runTest = function () {
     });
   });
 
-  console.log("nodeModules: 'skip', no minify");
+  console.log("no minify");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: false },
-      packageLoader: loader
+      buildOptions: { minify: false }
     });
     assert.strictEqual(result.errors, false);
 
@@ -138,9 +124,9 @@ var runTest = function () {
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      includeNodeModulesSymlink: true,
-      packageLoader: loader
+      includeNodeModulesSymlink: true
     });
     assert.strictEqual(result.errors, false);
 
@@ -162,7 +148,12 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
+
+  release.setCurrent(release.load(null));
+  isopackets.ensureIsopacketsLoadable();
 
   try {
     runTest();

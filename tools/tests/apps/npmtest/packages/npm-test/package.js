@@ -5,6 +5,6 @@ Package.describe({
   summary: "test npm"
 });
 
-Package.on_use(function (api) {
-  api.add_files("npmtest.js", "server");
+Package.onUse(function (api) {
+  api.addFiles("npmtest.js", "server");
 });

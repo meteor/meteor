@@ -98,25 +98,23 @@ var checkVersions = selftest.markStack(function(sand, packages) {
 //  getReleaseVersion (t, v) - given track & version, return the document record
 var DataStub = function (remoteCatalog) {
   var self = this;
-  selftest.doOrThrow(function () {
-    var packageNames = remoteCatalog.getAllPackageNames();
-    self.packages = {};
-    _.each(packageNames, function (p) {
-      var versions = remoteCatalog.getSortedVersions(p);
-      var record = remoteCatalog.getPackage(p);
-      self.packages[p] = { versions: versions, record: record };
+  var packageNames = remoteCatalog.getAllPackageNames();
+  self.packages = {};
+  _.each(packageNames, function (p) {
+    var versions = remoteCatalog.getSortedVersions(p);
+    var record = remoteCatalog.getPackage(p);
+    self.packages[p] = { versions: versions, record: record };
+  });
+  var releaseTracks = remoteCatalog.getAllReleaseTracks();
+  self.releases = {};
+  _.each(releaseTracks, function (t) {
+    var versions =
+          remoteCatalog.getSortedRecommendedReleaseVersions(t);
+    var records = {};
+    _.each(versions, function (v) {
+      records[v] = remoteCatalog.getReleaseVersion(t, v);
     });
-    var releaseTracks = remoteCatalog.getAllReleaseTracks();
-    self.releases = {};
-    _.each(releaseTracks, function (t) {
-      var versions =
-            remoteCatalog.getSortedRecommendedReleaseVersions(t);
-      var records = {};
-      _.each(versions, function (v) {
-        records[v] = remoteCatalog.getReleaseVersion(t, v);
-      });
-      self.releases[t] = { versions: versions, records: records };
-    });
+    self.releases[t] = { versions: versions, records: records };
   });
 };
 
@@ -217,13 +215,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(10);
   run.match("restarted");
 
-  // Add packages to sub-programs of an app. Make sure that the correct change
-  // is propagated to its versions file.
-  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
-
-  run.waitSecs(2);
-  run.match("restarted");
-
   // Switch back to say-something for a moment.
   s.write(".meteor/packages", "meteor-platform \n say-something");
   run.waitSecs(3);
@@ -269,7 +260,7 @@ selftest.define("change packages during hot code push", [], function () {
 // Add packages through the command line. Make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list. Make
 // sure that debugOnly packages don't show up in production mode.
-selftest.define("add packages to app", ["net"], function () {
+selftest.define("add packages to app", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -279,12 +270,19 @@ selftest.define("add packages to app", ["net"], function () {
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  // This is a legit version, but accounts-base started with 1.0.0 and is
+  // This has legit version syntax, but accounts-base started with 1.0.0 and is
   // unlikely to backtrack.
   run = s.run("add", "accounts-base@0.123.123");
   run.matchErr("no such version");
   run.expectExit(1);
 
+  // Adding a nonexistent package at a nonexistent version should print
+  // only one error message, not two. (We used to print "no such
+  // package" and "no such version".)
+  run = s.run("add", "not-a-real-package-and-never-will-be@1.0.0");
+  run.matchErr("no such package");
+  run.expectExit(1);
+  run.forbidAll("no such version");
 
   run = s.run("add", "accounts-base");
 
@@ -293,6 +291,15 @@ selftest.define("add packages to app", ["net"], function () {
 
   checkPackages(s,
                 ["meteor-platform", "accounts-base"]);
+
+  // Adding the nonexistent version now should still say "no such
+  // version". Regression test for
+  // https://github.com/meteor/meteor/issues/2898.
+  run = s.run("add", "accounts-base@0.123.123");
+  run.matchErr("no such version");
+  run.expectExit(1);
+  run.forbidAll("Currently using accounts-base");
+  run.forbidAll("will be changed to");
 
   run = s.run("--once");
 
@@ -304,8 +311,7 @@ selftest.define("add packages to app", ["net"], function () {
                 ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
-  run.match(" added");
-  run.match("depends-on-plugin");
+  run.match(/depends-on-plugin.*added,/);
   run.expectExit(0);
 
   checkPackages(s,
@@ -325,8 +331,8 @@ selftest.define("add packages to app", ["net"], function () {
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
-  run.match("removed contains-plugin");
-  run.match("removed depends-on-plugin");
+  run.match(/contains-plugin.*removed from your project/);
+  run.match(/depends-on-plugin.*removed from your project/);
   run.match("depends-on-plugin: removed dependency");
 
   checkVersions(s,
@@ -335,21 +341,6 @@ selftest.define("add packages to app", ["net"], function () {
   run = s.run("list");
   run.match("accounts-base");
   run.match("meteor-platform");
-
-  // Add packages to sub-programs of an app. Make sure that the correct change
-  // is propagated to its versions file.
-  s.cp('programs/empty/package2.js', 'programs/empty/package.js');
-
-  // Don't add the file to packages.
-  run = s.run("list");
-  run.match("accounts-base");
-  run.match("meteor-platform");
-
-  // Do add the file to versions.
-  checkVersions(s,
-                ["accounts-base",  "depends-on-plugin",
-                 "meteor-platform",
-                 "contains-plugin"]);
 
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
@@ -391,10 +382,9 @@ selftest.define("add packages client archs", function (options) {
     s.set("METEOR_OFFLINE_CATALOG", "t");
 
     var outerRun = s.run("add", "say-something-client-targets");
-    outerRun.match("added");
+    outerRun.match(/say-something-client-targets.*added,/);
     outerRun.expectExit(0);
-    checkPackages(s,
-                  ["meteor-platform", "say-something-client-targets"]);
+    checkPackages(s, ["meteor-platform", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
@@ -435,9 +425,9 @@ var publishMostBasicPackage = selftest.markStack(function (s, fullPackageName) {
 
   s.cd(fullPackageName, function () {
     run = s.run("publish", "--create");
-    run.waitSecs(60);
+    run.waitSecs(120);
     run.expectExit(0);
-    run.match("Done");
+    run.match("Published");
   });
 });
 
@@ -623,8 +613,10 @@ selftest.define("update server package data unit test",
   var rC = require('../catalog-remote.js');
   var config = require('../config.js');
   var packageStorage = new rC.RemoteCatalog();
-  var packageStorageFile =
-    config.getPackageStorage({root: packageStorageFileDir});
+  var packageStorageFile = config.getPackageStorage({
+    root: packageStorageFileDir,
+    serverUrl: s.env.METEOR_PACKAGE_SERVER_URL
+  });
   packageStorage.initialize({
     packageStorage : packageStorageFile,
     // Don't let this catalog refresh: we do that manually, and in any case the
@@ -657,32 +649,30 @@ selftest.define("update server package data unit test",
     useShortPages: true
   });
 
-  selftest.doOrThrow(function () {
-    var packages = oldStorage.getAllPackageNames();
-    _.each(packages, function (p) {
-      // We could be more pedantic about comparing all the records, but it
-      // is a significant effort, time-wise to do that.
-      selftest.expectEqual(
-        packageStorage.getPackage(p), oldStorage.getPackage(p));
-      selftest.expectEqual(
-        packageStorage.getSortedVersions(p),
-        oldStorage.getSortedVersions(p));
-    });
-    var releaseTracks = oldStorage.getAllReleaseTracks;
-    _.each(releaseTracks, function (t) {
-      _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
-             function (v) {
-               selftest.expectEqual(
-                 packageStorage.getReleaseVersion(t, v),
-                 oldStorage.getReleaseVersion(t, v));
-             });
-    });
+  var packages = oldStorage.getAllPackageNames();
+  _.each(packages, function (p) {
+    // We could be more pedantic about comparing all the records, but it
+    // is a significant effort, time-wise to do that.
+    selftest.expectEqual(
+      packageStorage.getPackage(p), oldStorage.getPackage(p));
+    selftest.expectEqual(
+      packageStorage.getSortedVersions(p),
+      oldStorage.getSortedVersions(p));
+  });
+  var releaseTracks = oldStorage.getAllReleaseTracks;
+  _.each(releaseTracks, function (t) {
+    _.each(oldStorage.getSortedRecommendedReleaseVersions(t),
+           function (v) {
+             selftest.expectEqual(
+               packageStorage.getReleaseVersion(t, v),
+               oldStorage.getReleaseVersion(t, v));
+           });
+  });
 
-    // Check that our newly published packages appear in newData and on disk.
-    _.each(newPackageNames, function (name) {
-      var found = packageStorage.getPackage(name);
-      selftest.expectEqual(!! found, true);
-    });
+  // Check that our newly published packages appear in newData and on disk.
+  _.each(newPackageNames, function (name) {
+    var found = packageStorage.getPackage(name);
+    selftest.expectEqual(!! found, true);
   });
 });
 
@@ -727,14 +717,16 @@ selftest.define("package specifying a name",
   // What about test-packages?
   s.cd('packages');
   s.cd('ac-fake');
-  run = s.run('test-packages', './');
+  // note: use test-in-console because test-in-browser depends on bootstrap
+  // and we don't need an atmosphere dependency.
+  run = s.run('test-packages', './', '--driver-package=test-in-console');
   run.waitSecs(15);
   run.match("overriding accounts-base!");
   run.stop();
 });
 
 selftest.define("talk to package server with expired or no accounts token",
-  ['net', 'test-package-server'], function () {
+                ['net', 'test-package-server', 'slow'], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
@@ -798,20 +790,18 @@ var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   s.write("package.js", packageJs);
 
   var run = s.run("publish");
-  run.waitSecs(60);
+  run.waitSecs(120);
   if (expectAuthorizationFailure) {
     run.matchErr("not an authorized maintainer");
-    // XXX Why is this 3? Other unauthorized errors (e.g. maintainers
-    // --add when you are not a maintainer) exit 1
-    run.expectExit(3);
+    run.expectExit(1);
   } else {
-    run.match("Done");
+    run.match("Published");
     run.expectExit(0);
   }
 };
 
 selftest.define("packages with organizations",
-    ["net", "test-package-server"], function () {
+    ["net", "test-package-server", "slow"], function () {
   var s = new Sandbox();
   testUtils.login(s, "test", "testtest");
 
@@ -838,7 +828,7 @@ selftest.define("packages with organizations",
   // Removing 'orgName' as a maintainer should fail.
   run = s.run("admin", "maintainers", fullPackageName, "--remove", orgName);
   run.waitSecs(15);
-  run.matchErr("remove the maintainer in the package prefix");
+  run.matchErr("remove the maintainer in the package");
   run.expectExit(1);
 
   // Publish a package with 'test' as the prefix.
@@ -872,44 +862,19 @@ selftest.define("packages with organizations",
   changeVersionAndPublish(s, true /* expect authorization failure */);
 });
 
-selftest.define("add package with no builds", ["net", "test-package-server"], function () {
+selftest.define("add package with no builds", ["net"], function () {
   var s = new Sandbox();
-  testUtils.login(s, "test", "testtest");
-  var packageName = utils.randomToken();
-  var fullPackageName = "test:" + packageName;
+  // This depends on glasser:binary-package-with-no-builds@1.0.0 existing with
+  // no published builds.
 
-  // Create and publish a package with a binary dependency.
-
-  var run = s.run("create", "--package", fullPackageName);
-  run.waitSecs(15);
-  run.expectExit(0);
-
-  s.cd(fullPackageName, function () {
-    // Add a binary dependency.
-    var packageJs = s.read("package.js");
-    // XXX HACK: prepend Npm.depends to the first 'api.addFiles'
-    packageJs = packageJs.replace(
-      "api.addFiles",
-      "Npm.depends({ bcrypt: '0.7.7' });\n  api.addFiles"
-    );
-
-    s.write("package.js", packageJs);
-
-    run = s.run("publish", "--create");
-    run.waitSecs(60);
-    run.expectExit(0);
-  });
-
-  s.createApp("myapp", "package-tests");
+  s.createApp("myapp", "empty");
   s.cd("myapp");
 
-  run = s.run("add", fullPackageName);
-  run.waitSecs(30);
-  run.matchErr("Package " + fullPackageName +
-               " has no compatible build");
+  var run = s.run("add", "glasser:binary-package-with-no-builds");
+  run.waitSecs(10);
+  run.matchErr("glasser:binary-package-with-no-builds@1.0.0");
+  run.matchErr("No compatible build found");
   run.expectExit(1);
-
-  testUtils.logout(s);
 });
 
 selftest.define("package skeleton creates correct versionsFrom", function () {
@@ -928,31 +893,70 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
   }
 });
 
-selftest.define("show unknown version of package", ["net", "test-package-server"], function () {
+selftest.define("show unknown version of package", function () {
   var s = new Sandbox();
-  var fullPackageName = "test:" + utils.randomToken();
 
-  var run = s.run("create", "--package", fullPackageName);
-  run.waitSecs(15);
-  run.expectExit(0);
+  // This version doesn't exist and is unlikely to exist.
+  var run = s.run("show", "meteor-platform@0.123.456");
+  run.waitSecs(5);
+  run.matchErr("0.123.456: unknown version of meteor-platform");
+  run.expectExit(1);
+});
 
-  testUtils.login(s, "test", "testtest");
 
-  s.cd(fullPackageName, function () {
-    run = s.run("publish", "--create");
-    run.waitSecs(60);
-    run.expectExit(0);
-  });
+selftest.define("circular dependency errors", function () {
+  var s = new Sandbox();
+  // meteor add refreshes, but we don't need anything from the official catalog
+  // here.
+  s.set('METEOR_OFFLINE_CATALOG', 't');
+  var run;
 
-  run = s.run("show", fullPackageName);
-  run.waitSecs(15);
-  run.match("Version 1.0.0");
-  run.expectExit(0);
+  // This app contains some pairs of packages with circular dependencies The app
+  // currently *uses* no packages, so it can be created successfully.
+  s.createApp("myapp", "circular-deps");
+  s.cd("myapp");
 
-  run = s.run("show", fullPackageName + "@2.0.0");
-  run.waitSecs(15);
-  run.matchErr("2.0.0: unknown version of " + fullPackageName);
+  // Try to add one of a pair of circularly-depending packages. See an error.
+  run = s.run('add', 'first');
+  run.matchErr('error: circular dependency');
   run.expectExit(1);
 
-  testUtils.logout(s);
+  // Note that the app still builds fine because 'first' didn't actually get
+  // added.
+  run = s.run('--prepare-app');
+  run.expectExit(0);
+
+
+  // This pair has first-imply uses second-imply, second-imply implies
+  // first-imply.
+  run = s.run('add', 'first-imply');
+  run.matchErr('error: circular dependency');
+  run.expectExit(1);
+
+  // This pair has first-weak uses second-weak, second-weak uses first-weak
+  // weakly.  Currently, it's possible to add a weak cycle to an app (ie, the
+  // prepare-app step passes), but not to run the bundler. We don't want to
+  // write a test that prevents us from making the weak cycle an error at
+  // prepare-time, so let's skip straight to bundling.
+  s.write('.meteor/packages', 'first-weak');
+  run = s.run('--once');
+  run.matchErr('error: circular dependency');
+  run.expectExit(254);
+
+  // ... but we can add second-weak, which just doesn't pull in first-weak at
+  // all.
+  s.write('.meteor/packages', 'second-weak');
+  run = s.run('--once');
+  run.match(/first-weak.*removed from your project/);
+  run.expectExit(123);  // the app immediately calls process.exit(123)
+
+  // This pair has first-unordered uses second-unordered, second-unordered uses
+  // first-unordered unorderedly.  This should work just fine: that's why
+  // unordered exists!
+  s.write('.meteor/packages', 'first-unordered');
+  run = s.run('--once');
+  run.match(/first-unordered.*added/);
+  run.match(/second-unordered.*added/);
+  run.match(/second-weak.*removed from your project/);
+  run.expectExit(123);  // the app immediately calls process.exit(123)
 });

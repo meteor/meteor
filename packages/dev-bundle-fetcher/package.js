@@ -1,9 +1,9 @@
 Package.describe({
   summary: "A shell script for downloading the Meteor dev bundle",
-  version: "1.0.1"
+  version: "1.0.2"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('DevBundleFetcher', 'server');
-  api.add_files(['dev-bundle', 'dev-bundle.js'], ['server']);
+  api.addFiles(['dev-bundle', 'dev-bundle.js'], ['server']);
 });

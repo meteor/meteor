@@ -11,15 +11,13 @@ var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require('./isopackets.js');
 var Console = require('./console.js').Console;
 
 var auth = exports;
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp', 'mongo' ]
-  });
+  return isopackets.load('ddp');
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember
@@ -338,11 +336,10 @@ var tryRevokeOldTokens = function (options) {
   var logoutFailWarning = function (domain) {
     if (! warned) {
       // This isn't ideal but is probably better that saying nothing at all
-      process.stderr.write("warning: " +
-                           (options.firstTry ?
-                            "couldn't" : "still trying to") +
-                           " confirm logout with " + domain +
-                           "\n");
+      Console.error("warning: " +
+                    (options.firstTry ?
+                    "couldn't" : "still trying to") +
+                     " confirm logout with " + domain);
       warned = true;
     }
   };
@@ -605,7 +602,7 @@ var doInteractivePasswordLogin = function (options) {
 
   var loginFailed = function () {
     if (! options.suppressErrorMessage) {
-      process.stderr.write("Login failed.\n");
+      Console.error("Login failed.");
     }
   };
 
@@ -636,7 +633,7 @@ var doInteractivePasswordLogin = function (options) {
     } else {
       loginFailed();
       if (options.retry) {
-        process.stderr.write("\n");
+        Console.error();
         continue;
       } else {
         maybeCloseConnection();
@@ -717,17 +714,18 @@ exports.loginCommand = withAccountsConnection(function (options,
     var galaxyLoginResult = logInToGalaxy(galaxy);
     if (galaxyLoginResult.error) {
       // XXX add human readable error messages
-      process.stderr.write('\nLogin to ' + galaxy + ' failed. ');
-
+      var failedLoginMsg = "\nLogin to ' + galaxy + ' failed. ";
       if (galaxyLoginResult.error === 'unauthorized') {
-        process.stderr.write('You are not authorized for this galaxy.\n');
+        Console.error(
+          failedLoginMsg + 'You are not authorized for this galaxy.');
       } else if (galaxyLoginResult.error === 'no_oauth_server') {
-        process.stderr.write('The galaxy could not ' +
-                             'contact Meteor Accounts.\n');
+        Console.error(
+          failedLoginMsg + 'The galaxy could not contact Meteor Accounts.');
       } else if (galaxyLoginResult.error === 'no_identity') {
-        process.stderr.write('Your login information could not be found.\n');
+        Console.error(
+          failedLoginMsg + 'Your login information could not be found.');
       } else {
-        process.stderr.write('Error: ' + galaxyLoginResult.error + '\n');
+        Console.error(failedLoginMsg + 'Error: ' + galaxyLoginResult.error );
       }
 
       return 1;
@@ -743,10 +741,11 @@ exports.loginCommand = withAccountsConnection(function (options,
   tryRevokeOldTokens({ firstTry: true, connection: connection });
 
   data = readSessionData();
-  process.stderr.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
-                       (currentUsername(data) ?
-                        " as " + currentUsername(data) : "") + ".\n" +
-                       "Thanks for being a Meteor developer!\n");
+  Console.error();
+  Console.error("Logged in" + (galaxy ? " to " + galaxy : "") +
+                (currentUsername(data) ?
+                 " as " + currentUsername(data) : "") + ".",
+                "Thanks for being a Meteor developer!");
   return 0;
 });
 
@@ -761,11 +760,11 @@ exports.logoutCommand = function (options) {
   tryRevokeOldTokens({ firstTry: true });
 
   if (wasLoggedIn)
-    process.stderr.write("Logged out.\n");
+    Console.error("Logged out.");
   else
     // We called logOutAllSessions/writeSessionData anyway, out of an
     // abundance of caution.
-    process.stderr.write("Not logged in.\n");
+    Console.error("Not logged in.");
 };
 
 // If this is fully set up account (with a username and password), or
@@ -847,25 +846,25 @@ exports.whoAmICommand = function (options) {
 
   var data = readSessionData();
   if (! loggedIn(data)) {
-    process.stderr.write("Not logged in. 'meteor login' to log in.\n");
+    Console.error(
+      "Not logged in. " + Console.command("'meteor login'") + " to log in.");
     return 1;
   }
 
   var username = currentUsername(data);
   if (username) {
-    process.stdout.write(username + "\n");
+    Console.rawInfo(username + "\n");
     return 0;
   }
 
   var url = getSession(data, config.getAccountsDomain()).registrationUrl;
   if (url) {
-    process.stderr.write(
-"You haven't chosen your username yet. To pick it, go here:\n" +
-"\n" +
-url + "\n");
+    Console.error("You haven't chosen your username yet. To pick it, go here:");
+    Console.error();
+    Console.error(Console.url(url));
   } else {
     // Won't happen in normal operation
-    process.stderr.write("You haven't chosen your username yet.\n");
+    Console.error("You haven't chosen your username yet.");
   }
 
   return 1;
@@ -895,11 +894,13 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       break;
     } catch (err) {
       if (err.error === 400 && ! utils.validEmail(email)) {
-        if (email.trim().length)
-          process.stderr.write("Please double-check that address.\n\n");
+        if (email.trim().length) {
+          Console.error("Please double-check that address.");
+          Console.error();
+        }
       } else {
-        process.stderr.write("\nCouldn't connect to server. " +
-                             "Check your internet connection.\n");
+        Console.error("\nCouldn't connect to server. " +
+                             "Check your internet connection.");
         return false;
       }
     }
@@ -919,10 +920,11 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     writeSessionData(data);
     return true;
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
-    process.stderr.write(
-"\n" +
-"You need to pick a password for your account so that you can log in.\n" +
-"An email has been sent to you with the link.\n\n");
+    Console.error();
+    Console.error(
+      "You need to pick a password for your account so that you can log in.",
+      "An email has been sent to you with the link.");
+    Console.error();
 
     var animationFrame = 0;
     var lastLinePrinted = "";
@@ -930,12 +932,12 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       var spinner = ['-', '\\', '|', '/'];
       lastLinePrinted = "Waiting for you to register on the web... " +
         spinner[animationFrame];
-      process.stderr.write(lastLinePrinted + "\r");
+      Console.rawError(lastLinePrinted + "\r");
       animationFrame = (animationFrame + 1) % spinner.length;
     }, 200);
     var stopSpinner = function () {
-      process.stderr.write(new Array(lastLinePrinted.length + 1).join(' ') +
-                           "\r");
+      Console.rawError(new Array(lastLinePrinted.length + 1).join(' ') +
+                       "\r");
       clearInterval(timer);
     };
 
@@ -948,14 +950,14 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       stopSpinner();
       if (e.errorType !== "Meteor.Error")
         throw e;
-      process.stderr.write(
-        "When you've picked your password, run 'meteor login' to log in.\n")
+      Console.error(
+        "When you've picked your password, run " +
+        Console.command("'meteor login'") + " to log in.");
       return false;
     }
 
     stopSpinner();
-    process.stderr.write("Username: " +
-                         waitForRegistrationResult.username + "\n");
+    Console.error("Username: " + waitForRegistrationResult.username);
     loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true,
@@ -963,7 +965,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     });
     return loginResult;
   } else if (result.alreadyExisted && result.username) {
-    process.stderr.write("\nLogging in as " + result.username + ".\n");
+    Console.error("\nLogging in as " + Console.command(result.username) + ".");
 
     loginResult = doInteractivePasswordLogin({
       username: result.username,
@@ -973,8 +975,9 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     return loginResult;
   } else {
     // Hmm, got an email we don't understand.
-    process.stderr.write(
-      "\nThere was a problem. Please log in with 'meteor login'.\n");
+    Console.error(
+      "\nThere was a problem. Please log in with " +
+      Console.command("'meteor login'") + ".");
     return false;
   }
 });
@@ -991,26 +994,29 @@ exports.maybePrintRegistrationLink = function (options) {
 
   if (session.userId && ! session.username && session.registrationUrl) {
     if (options.leadingNewline)
-      process.stderr.write("\n");
+      Console.error();
     if (options.onlyAllowIfRegistered) {
       // A stronger message: we're going to not allow whatever they were trying
       // to do!
-      process.stderr.write(
-"You need to claim a username and set a password on your Meteor developer\n" +
-"account to run this command. It takes about a minute at:\n" +
-"  " + session.registrationUrl + "\n");
+      Console.error(
+        "You need to claim a username and set a password on your Meteor",
+        "developer account to run this command. It takes about a minute at:",
+        session.registrationUrl);
+      Console.error();
     } else if (! options.firstTime) {
       // If they've already been prompted to set a password then this
       // is more of a friendly reminder, so we word it slightly
       // differently than the first time they're being shown a
       // registration url.
-      process.stderr.write(
-"You should set a password on your Meteor developer account. It takes\n" +
-"about a minute at: " + session.registrationUrl + "\n\n");
+      Console.error(
+        "You should set a password on your Meteor developer account.",
+        "It takes about a minute at:", session.registrationUrl);
+      Console.error();
     } else {
-      process.stderr.write(
-"You can set a password on your account or change your email address at:\n" +
-session.registrationUrl + "\n\n");
+      Console.error(
+        "You can set a password on your account or change your email",
+        "address at:" + session.registrationUrl);
+      Console.error();
     }
     return true;
   }
@@ -1050,17 +1056,24 @@ exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var Package = getLoadedPackages();
-  var serviceConfigurations = new Package.mongo.Mongo.Collection(
-    'meteor_accounts_loginServiceConfiguration',
-    { connection: conn.connection }
-  );
-  var serviceConfigurationsSub = conn.
-        subscribeAndWait('meteor.loginServiceConfiguration');
+  var accountsConfiguration = null;
 
-  var accountsConfiguration = serviceConfigurations.findOne({
-    service: 'meteor-developer'
+  // We avoid the overhead of creating a 'ddp-and-mongo' isopacket (or
+  // always loading mongo whenever we load ddp) by just using the low-level
+  // DDP client API here.
+  conn.connection.registerStore('meteor_accounts_loginServiceConfiguration', {
+    update: function (msg) {
+      if (msg.msg === 'added' && msg.fields &&
+          msg.fields.service === 'meteor-developer') {
+        // Note that this doesn't include the _id (which we'd have to parse),
+        // but that's OK.
+        accountsConfiguration = msg.fields;
+      }
+    }
   });
 
+  var serviceConfigurationsSub = conn.subscribeAndWait(
+    'meteor.loginServiceConfiguration');
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
     throw new Error('no-accounts-configuration');
   }

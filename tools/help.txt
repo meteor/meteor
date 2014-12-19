@@ -56,7 +56,6 @@ Options:
   --raw-logs       Run without parsing logs from stdout and stderr.
   --settings       Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
-  --program        The program in the app to run (Advanced).
   --verbose        Print all output from builds logs.
   --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
@@ -81,6 +80,7 @@ Options:
   --debug-port   Port on which the server process debugger should listen
                  for incoming connections from debugging clients, such as
                  node-inspector (default 5858).
+
 
 >>> create
 Create a new project.
@@ -145,9 +145,9 @@ Options:
   --release  Update to a specific release of meteor.
 
 
->>> run-upgrader
+>>> admin run-upgrader
 Execute a specific upgrader by name. Intended for testing.
-Usage: meteor run-upgrader <upgrader>
+Usage: meteor admin run-upgrader <upgrader>
 
 Runs a specific upgrader on the current app. This is for testing
 internal functionality of Meteor.
@@ -272,6 +272,32 @@ Options:
   --server            Location where mobile builds connect to the Meteor server.
                       Defaults to localhost:3000. Can include a URL scheme
                       (for example, --server=https://example.com:443).
+
+
+>>> shell
+Launch a Node REPL for interactively evaluating server-side code.
+
+Usage: meteor shell
+
+When `meteor shell` is executed in an application directory where a server
+is already running, it connects to the server and starts an interactive
+shell for evaluating server-side code.
+
+Multiple shells can be attached to the same server. If no server is
+currently available, `meteor shell` will keep trying to connect until it
+succeeds.
+
+Exiting the shell does not terminate the server. If the server restarts
+because a change was made in server code, or a fatal exception was
+encountered, the shell will restart along with the server. This behavior
+can be simulated by typing `.reload` in the shell.
+
+The shell supports tab completion for global variables like `Meteor`,
+`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+
+The shell maintains a persistent history across sessions. Previously-run
+commands can be accessed by pressing the up arrow.
+
 
 >>> mongo
 Connect to the Mongo database for the specified site.
@@ -613,10 +639,10 @@ server.
 
 >>> rebuild
 Rebuild local packages.
-Usage: meteor rebuild [<package name>]
+Usage: meteor rebuild [<package name>...]
 
-Rebuild a specified local packages. Deletes the package's build directory
-and rebuilds the package from scratch. Please specify the package by name.
+Rebuild specified local packages. Deletes the package's build directory
+and rebuilds the package from scratch. Packages are specified by name.
 
 If you pass no arguments, this will rebuild all local packages.
 That includes packages found through the

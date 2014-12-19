@@ -7,9 +7,8 @@ var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
-var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var util = require('util');
@@ -17,10 +16,10 @@ var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
-var Package = uniload.load({ packages: ["ejson"] });
 var Console = require('./console.js').Console;
-
-var toolPackageName = "meteor-tool";
+var tropohouseModule = require('./tropohouse.js');
+var packageMapModule = require('./package-map.js');
+var isopackCacheModule = require('./isopack-cache.js');
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -46,6 +45,7 @@ var fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 var expectEqual = markStack(function (actual, expected) {
+  var Package = isopackets.load('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,
@@ -66,20 +66,6 @@ var expectThrows = markStack(function (f) {
     throw new TestFailure("expected-exception");
 });
 
-var getToolsPackage = function () {
-  buildmessage.assertInCapture();
-  // Rebuild the tool package --- necessary because we don't actually
-  // rebuild the tool in the cached version every time.
-  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
-    throw Error("didn't rebuild meteor-tool?");
-  }
-  var loader = new packageLoader.PackageLoader({
-    versions: null,
-    catalog: catalog.complete
-  });
-  return loader.getPackage(toolPackageName);
-};
-
 // Execute a command synchronously, discarding stderr.
 var execFileSync = function (binary, args, opts) {
   return Future.wrap(function(cb) {
@@ -98,6 +84,102 @@ var doOrThrow = function (f) {
   }
   return ret;
 };
+
+// Our current strategy for running tests that need warehouses is to build all
+// packages from the checkout into this temporary tropohouse directory, and for
+// each test that need a fake warehouse, copy the built packages into the
+// test-specific warehouse directory.  This isn't particularly fast, but it'll
+// do for now. We build the packages during the first test that needs them.
+var builtPackageTropohouseDir = null;
+var tropohouseLocalCatalog = null;
+var tropohouseIsopackCache = null;
+
+// Let's build a minimal set of packages that's enough to get self-test
+// working.  (And that doesn't need us to download any Atmosphere packages.)
+var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
+  // We need the tool in order to run from the fake warehouse at all.
+  "meteor-tool",
+  // We need the packages in the skeleton app in order to test 'meteor create'.
+  "meteor-platform", "autopublish", "insecure"
+];
+
+var setUpBuiltPackageTropohouse = function () {
+  if (builtPackageTropohouseDir)
+    return;
+  builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
+
+  if (config.getPackagesDirectoryName() !== 'packages')
+    throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
+
+  var tropohouse = new tropohouseModule.Tropohouse(builtPackageTropohouseDir);
+  tropohouseLocalCatalog = newSelfTestCatalog();
+  var versions = {};
+  _.each(
+    tropohouseLocalCatalog.getAllNonTestPackageNames(),
+    function (packageName) {
+      versions[packageName] =
+        tropohouseLocalCatalog.getLatestVersion(packageName).version;
+  });
+  var packageMap = new packageMapModule.PackageMap(versions, {
+    localCatalog: tropohouseLocalCatalog
+  });
+  // Make an isopack cache that doesn't automatically save isopacks to disk and
+  // has no access to versioned packages.
+  tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
+    packageMap: packageMap,
+    includeCordovaUnibuild: true
+  });
+  doOrThrow(function () {
+    buildmessage.enterJob("building self-test packages", function () {
+      // Build the packages into the in-memory IsopackCache.
+      tropohouseIsopackCache.buildLocalPackages(
+        ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
+    });
+  });
+
+  // Save all the isopacks into builtPackageTropohouseDir/packages.  (Note that
+  // we are always putting them into the default 'packages' (assuming
+  // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
+  // though some tests will want them to be under
+  // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
+  tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
+    // XXX we should stop relying on symlinks and just parse isopack.json (we
+    // need to do this for Windows anyway).
+    var directPath = '.' + isopack.version + '.XXX++' +
+          isopack.buildArchitectures();
+    isopack.saveToPath(tropohouse.packagePath(name, directPath));
+    files.symlinkOverSync(directPath,
+                          tropohouse.packagePath(name, isopack.version));
+  });
+};
+
+var newSelfTestCatalog = function () {
+  if (! files.inCheckout())
+    throw Error("Only can build packages from a checkout");
+
+  var catalogLocal = require('./catalog-local.js');
+  var selfTestCatalog = new catalogLocal.LocalCatalog;
+  var messages = buildmessage.capture(
+    { title: "scanning local core packages" },
+    function () {
+      // When building a fake warehouse from a checkout, we use local packages,
+      // but *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
+      // packages.  One side effect of this: we really really expect them to all
+      // build, and we're fine with dying if they don't (there's no worries
+      // about needing to springboard).
+      selfTestCatalog.initialize({
+        localPackageSearchDirs: [path.join(
+          files.getCurrentToolsDir(), 'packages')]
+      });
+    });
+  if (messages.hasMessages()) {
+    Console.arrowError("Errors while scanning core packages:");
+    Console.printMessages(messages);
+    throw new Error("scan failed?");
+  }
+  return selfTestCatalog;
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
@@ -154,14 +236,13 @@ _.extend(Matcher.prototype, {
     var self = this;
     self.ended = true;
     self._tryMatch();
-    self.buf = '';
   },
 
   matchEmpty: function () {
     var self = this;
 
     if (self.buf.length > 0) {
-      console.log("Extra junk is ", self.buf);
+      Console.info("Extra junk is :", self.buf);
       throw new TestFailure('junk-at-end', { run: self.run });
     }
   },
@@ -212,10 +293,12 @@ _.extend(Matcher.prototype, {
     }
 
     if (self.ended) {
+      var failure = new TestFailure('no-match', { run: self.run,
+                                                  pattern: self.matchPattern });
       self.matchFuture = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['throw'](new TestFailure('no-match', { run: self.run }));
+      f['throw'](failure);
       return;
     }
   }
@@ -480,16 +563,35 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
-  createApp: function (to, template) {
+  createApp: function (to, template, options) {
     var self = this;
+    options = options || {};
     files.cp_r(path.join(__dirname, 'tests', 'apps', template),
                path.join(self.cwd, to),
                { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
-    if (!self.warehouse && release.current.isProperRelease()) {
+    if (options.release) {
+      self.write(path.join(to, '.meteor/release'), options.release);
+    } else if (!self.warehouse && release.current.isProperRelease()) {
       self.write(path.join(to, '.meteor/release'), release.current.name);
     }
+
+    if (options.dontPrepareApp)
+      return;
+
+    // Prepare the app (ie, build or download packages). We give this a nice
+    // long timeout, which allows the next command to not need a bloated
+    // timeout. (meteor create does this anyway.)
+    self.cd(to, function () {
+      var run = self.run("--prepare-app");
+      // XXX Can we cache the output of running this once somewhere, so that
+      // multiple calls to createApp with the same template get the same cache?
+      // This is a little tricky because isopack-buildinfo.json uses absolute
+      // paths.
+      run.waitSecs(20);
+      run.expectExit(0);
+    });
   },
 
   // Same as createApp, but with a package.
@@ -614,8 +716,12 @@ _.extend(Sandbox.prototype, {
     if (self.warehouse) {
       // Tell it where the warehouse lives.
       env.METEOR_WAREHOUSE_DIR = self.warehouse;
-      // Don't ever try to refresh the stub catalog we made.
-      env.METEOR_OFFLINE_CATALOG = "t";
+
+      if (! _.contains(runningTest.tags, 'test-package-server')) {
+        // Don't ever try to refresh the stub catalog we made.
+        // (It's OK to refresh a catalog for the test package server though.)
+        env.METEOR_OFFLINE_CATALOG = "t";
+      }
     }
 
     // By default (ie, with no mock warehouse and no --release arg) we should be
@@ -636,12 +742,15 @@ _.extend(Sandbox.prototype, {
   // command you are running in this sandbox.
   _makeWarehouse: function (releases) {
     var self = this;
+
+    // Ensure we have a tropohouse to copy stuff out of.
+    setUpBuiltPackageTropohouse();
+
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
-    files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2.0.1'), 0755);
+    files.cp_r(path.join(builtPackageTropohouseDir, 'packages'),
+               path.join(self.warehouse, packagesDirectoryName),
+               { preserveSymlinks: true });
 
     var stubCatalog = {
       syncToken: {},
@@ -655,48 +764,36 @@ _.extend(Sandbox.prototype, {
       }
     };
 
-    // Build all packages and symlink them into the warehouse. Remember
-    // their versions (which happen to contain build IDs).
-    // XXX Not sure where this comment comes from. We should presumably
-    // be building some packages besides meteor-tool (so that we can
-    // build apps that contain core packages).
+    var packageVersions = {};
+    var toolPackageVersion = null;
 
-    var toolPackage, toolPackageDirectory;
-    doOrThrow(function () {
-      toolPackage = getToolsPackage();
-      toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
-        + toolPackage.buildArchitectures();
-      toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                       toolPackageName, toolPackageDirectory),
-                             { elideBuildInfo: true });
+    tropohouseIsopackCache.eachBuiltIsopack(function (packageName, isopack) {
+      var packageRec = tropohouseLocalCatalog.getPackage(packageName);
+      if (! packageRec)
+        throw Error("no package record for " + packageName);
+      stubCatalog.collections.packages.push(packageRec);
+
+      var versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
+      if (! versionRec)
+        throw Error("no version record for " + packageName);
+      stubCatalog.collections.versions.push(versionRec);
+
+      stubCatalog.collections.builds.push({
+        architecture: isopack.buildArchitectures(),
+        versionId: versionRec._id,
+        _id: utils.randomToken()
+      });
+
+      if (packageName === "meteor-tool") {
+        toolPackageVersion = versionRec.version;
+      } else {
+        packageVersions[packageName] = versionRec.version;
+      }
     });
 
-    fs.symlinkSync(toolPackageDirectory,
-                   path.join(self.warehouse, packagesDirectoryName,
-                             toolPackageName, toolPackage.version));
-    stubCatalog.collections.packages.push({
-      name: toolPackageName,
-      _id: utils.randomToken()
-    });
-    var toolVersionId = utils.randomToken();
-    stubCatalog.collections.versions.push({
-      packageName: toolPackageName,
-      version: toolPackage.version,
-      earliestCompatibleVersion: toolPackage.version,
-      containsPlugins: false,
-      description: toolPackage.metadata.summary,
-      dependencies: {},
-      compilerVersion: require('./compiler.js').BUILT_BY,
-      _id: toolVersionId
-    });
+    if (! toolPackageVersion)
+      throw Error("no meteor-tool?");
 
-    self.toolPackageVersion = toolPackage.version;
-
-    stubCatalog.collections.builds.push({
-      architecture: toolPackage.buildArchitectures(),
-      versionId: toolVersionId,
-      _id: utils.randomToken()
-    });
     stubCatalog.collections.releaseTracks.push({
       name: catalog.DEFAULT_TRACK,
       _id: utils.randomToken()
@@ -713,88 +810,25 @@ _.extend(Sandbox.prototype, {
         description: "test release " + releaseName,
         recommended: !!configuration.recommended,
         // XXX support multiple tools packages for springboard tests
-        tool: toolPackageName + "@" + toolPackage.version,
-        packages: {}
+        tool: "meteor-tool@" + toolPackageVersion,
+        packages: packageVersions
       });
     });
 
-    // XXX: This is an incremental hack to be able to create apps from the
-    // warehouse. We need the constraint solver that runs are create-time to be
-    // able to solve for the starting app packages (standrd-app-packages,
-    // insecure & autopublish). But the solution doesn't have to be
-    // accurate. Later, when we care about the solution making sense, we should
-    // consider actually importing real data.
-
-    // XXXX: HACK.  We are going to cheat and assume that these are already
-    // in the official catalog. Since we don't care about the contents, we
-    // should be OK.
-    var oldOffline = catalog.official.offline;
-    catalog.official.offline = true;
-    doOrThrow(function () {
-      catalog.complete.refreshOfficialCatalog();
+    var dataFile = config.getPackageStorage({
+      root: self.warehouse,
+      serverUrl: serverUrl
     });
-    _.each(
-      ['autopublish', 'meteor-platform', 'insecure'],
-      function (name) {
-        var versionRec = doOrThrow(function () {
-          return catalog.official.getLatestMainlineVersion(name);
-        });
-        if (!versionRec) {
-          catalog.official.offline = false;
-          doOrThrow(function () {
-            catalog.complete.refreshOfficialCatalog();
-          });
-          catalog.official.offline = true;
-          versionRec = doOrThrow(function () {
-            return catalog.official.getLatestMainlineVersion(name);
-          });
-          if (!versionRec) {
-            throw new Error(" hack fails for " + name);
-          }
-        }
-        var buildRec = doOrThrow(function () {
-          return catalog.official.getAllBuilds(name, versionRec.version)[0];
-        });
-
-        // Insert into packages.
-        stubCatalog.collections.packages.push({
-          name: name,
-          _id: utils.randomToken()
-        });
-
-        // Insert into versions. We are making up a lot of this data.
-        var versionId = utils.randomToken();
-        stubCatalog.collections.versions.push({
-          packageName: name,
-          version: versionRec.version,
-          earliestCompatibleVersion: versionRec.earliestCompatibleVersion,
-          containsPlugins: false,
-          description: "warehouse test",
-          dependencies: {},
-          compilerVersion: require('./compiler.js').BUILT_BY,
-          _id: versionRec._id
-        });
-
-        // Insert into builds. Assume the package is available for all
-        // architectures.
-        stubCatalog.collections.builds.push({
-          buildArchitectures: "web.browser+os",
-          versionId: versionRec._id,
-          build: buildRec.build,
-          _id: utils.randomToken()
-        });
-    });
-    catalog.official.offline = oldOffline;
-
-    var dataFile = config.getLocalPackageCacheFilename(serverUrl);
     var tmpCatalog = new catalogRemote.RemoteCatalog();
     tmpCatalog.initialize({
-      packageStorage: path.join(self.warehouse, 'package-metadata', 'v2.0.1', dataFile)});
+      packageStorage: dataFile
+    });
     tmpCatalog.insertData(stubCatalog);
 
     // And a cherry on top
+    // XXX this is hacky
     fs.symlinkSync(path.join(packagesDirectoryName,
-                             toolPackageName, toolPackage.version,
+                             "meteor-tool", toolPackageVersion,
                              'meteor-tool-' + archinfo.host(), 'meteor'),
                    path.join(self.warehouse, 'meteor'));
   }
@@ -1607,22 +1641,22 @@ var listTests = function (options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
-    Console.stderr.write("No tests defined.\n");
+    Console.error("No tests defined.\n");
     return;
   }
 
   _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
-    Console.stdout.write(file + ':\n');
+    Console.rawInfo(file + ':\n');
     _.each(tests, function (test) {
-      Console.stdout.write('  - ' + test.name +
-                           (test.tags.length ? ' [' + test.tags.join(' ') + ']'
-                            : ''));
+      Console.rawInfo('  - ' + test.name +
+                      (test.tags.length ? ' [' + test.tags.join(' ') + ']'
+                      : '') + '\n');
     });
   });
 
-  Console.stderr.write('\n');
-  Console.stderr.write(testList.filteredTests.length + " tests listed.");
-  Console.stderr.write(testList.generateSkipReport());
+  Console.error();
+  Console.error(testList.filteredTests.length + " tests listed.");
+  Console.error(testList.generateSkipReport());
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1637,7 +1671,7 @@ var runTests = function (options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
-    Console.stderr.write("No tests defined.\n");
+    Console.error("No tests defined.");
     return 0;
   }
 
@@ -1657,7 +1691,7 @@ var runTests = function (options) {
       if (e instanceof TestFailure) {
         failure = e;
       } else {
-        Console.stderr.write("exception\n\n");
+        Console.error("exception\n");
         throw e;
       }
     } finally {
@@ -1666,83 +1700,85 @@ var runTests = function (options) {
     }
 
     if (failure) {
-      Console.stderr.write("fail!\n");
+      Console.error("fail!");
       failedTests.push(test);
       testList.notifyFailed(test);
 
       var frames = parseStack.parse(failure);
       var relpath = path.relative(files.getCurrentToolsDir(),
                                   frames[0].file);
-      Console.stderr.write("  => " + failure.reason + " at " +
-                           relpath + ":" + frames[0].line + "\n");
+      Console.rawError("  => " + failure.reason + " at " +
+                    relpath + ":" + frames[0].line + "\n");
       if (failure.reason === 'no-match') {
+        Console.arrowError("Pattern: " + failure.details.pattern, 2);
       }
       if (failure.reason === "wrong-exit-code") {
         var s = function (status) {
           return status.signal || ('' + status.code) || "???";
         };
 
-        Console.stderr.write("  => Expected: " + s(failure.details.expected) +
-                             "; actual: " + s(failure.details.actual) + "\n");
+        Console.rawError("  => " + "Expected: " + s(failure.details.expected) +
+                      "; actual: " + s(failure.details.actual) + "\n");
       }
       if (failure.reason === 'expected-exception') {
       }
       if (failure.reason === 'not-equal') {
-        Console.stderr.write(
-          "  => Expected: " + JSON.stringify(failure.details.expected) +
-            "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        Console.rawError(
+          "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+          "; actual: " + JSON.stringify(failure.details.actual) + "\n");
       }
 
       if (failure.details.run) {
         failure.details.run.outputLog.end();
         var lines = failure.details.run.outputLog.get();
         if (! lines.length) {
-          Console.stderr.write("  => No output\n");
+          Console.arrowError("No output", 2);
         } else {
           var historyLines = options.historyLines || 100;
 
-          Console.stderr.write("  => Last " + historyLines + " lines:\n");
+          Console.arrowError("Last " + historyLines + " lines:", 2
+          );
           _.each(lines.slice(-historyLines), function (line) {
-            Console.stderr.write("  " +
-                                 (line.channel === "stderr" ? "2| " : "1| ") +
-                                 line.text +
-                                 (line.bare ? "%" : "") + "\n");
+            Console.rawError("  " +
+                             (line.channel === "stderr" ? "2| " : "1| ") +
+                             line.text +
+                             (line.bare ? "%" : "") + "\n");
           });
         }
       }
 
       if (failure.details.messages) {
-        Console.stderr.write("  => Errors while building:\n");
-        Console.stderr.write(failure.details.messages.formatMessages());
+        Console.arrowError("Errors while building:", 2);
+        Console.rawError(failure.details.messages.formatMessages() + "\n");
       }
     } else {
       var durationMs = +(new Date) - startTime;
-      Console.stderr.write("ok (" + durationMs + " ms)\n");
+      Console.error("ok (" + durationMs + " ms)");
     }
   });
 
   testList.saveTestState();
 
   if (totalRun > 0)
-    Console.stderr.write("\n");
+    Console.error();
 
-  Console.stderr.write(testList.generateSkipReport());
+  Console.error(testList.generateSkipReport());
 
   if (testList.filteredTests.length === 0) {
-    Console.stderr.write("No tests run.\n");
+    Console.error("No tests run.");
     return 0;
   } else if (failedTests.length === 0) {
     var disclaimers = '';
     if (testList.filteredTests.length < testList.allTests.length)
       disclaimers += " other";
-    Console.stderr.write("All" + disclaimers + " tests passed.\n");
+    Console.error("All" + disclaimers + " tests passed.");
     return 0;
   } else {
     var failureCount = failedTests.length;
-    Console.stderr.write(failureCount + " failure" +
-                         (failureCount > 1 ? "s" : "") + ":\n");
+    Console.error(failureCount + " failure" +
+                  (failureCount > 1 ? "s" : "") + ":");
     _.each(failedTests, function (test) {
-      Console.stderr.write("  - " + test.file + ": " + test.name);
+      Console.rawError("  - " + test.file + ": " + test.name + "\n");
     });
     return 1;
   }
@@ -1789,7 +1825,6 @@ _.extend(exports, {
   fail: fail,
   expectEqual: expectEqual,
   expectThrows: expectThrows,
-  getToolsPackage: getToolsPackage,
   execFileSync: execFileSync,
   doOrThrow: doOrThrow,
   testPackageServerUrl: config.getTestPackageServerUrl()

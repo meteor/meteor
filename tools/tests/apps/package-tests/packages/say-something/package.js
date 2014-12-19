@@ -3,6 +3,6 @@ Package.describe({
   summary: "print to console"
 });
 
-Package.on_use(function (api) {
-  api.add_files('foo.js');
+Package.onUse(function (api) {
+  api.addFiles('foo.js');
 });

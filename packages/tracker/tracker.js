@@ -2,6 +2,10 @@
 // Package docs at http://docs.meteor.com/#tracker //
 //////////////////////////////////////////////////
 
+/**
+ * @namespace Tracker
+ * @summary The namespace for Tracker-related methods.
+ */
 Tracker = {};
 
 // http://docs.meteor.com/#tracker_active
@@ -9,6 +13,7 @@ Tracker = {};
 /**
  * @summary True if there is a current computation, meaning that dependencies on reactive data sources will be tracked and potentially cause the current computation to be rerun.
  * @locus Client
+ * @type {Boolean}
  */
 Tracker.active = false;
 
@@ -17,6 +22,7 @@ Tracker.active = false;
 /**
  * @summary The current computation, or `null` if there isn't one.  The current computation is the [`Tracker.Computation`](#tracker_computation) object created by the innermost active call to `Tracker.autorun`, and it's the computation that gains dependencies when reactive data sources are accessed.
  * @locus Client
+ * @type {Tracker.Computation}
  */
 Tracker.currentComputation = null;
 
@@ -146,6 +152,7 @@ Tracker.Computation = function (f, parent) {
    * @memberOf Tracker.Computation
    * @instance
    * @name  invalidated
+   * @type {Boolean}
    */
   self.invalidated = false;
 
@@ -157,6 +164,7 @@ Tracker.Computation = function (f, parent) {
    * @memberOf Tracker.Computation
    * @instance
    * @name  firstRun
+   * @type {Boolean}
    */
   self.firstRun = true;
 
@@ -313,6 +321,7 @@ If there is no current computation and `depend()` is called with no arguments, i
 Returns true if the computation is a new dependent of `dependency` rather than an existing one.
  * @locus Client
  * @param {Tracker.Computation} [fromComputation] An optional computation declared to depend on `dependency` instead of the current computation.
+ * @returns {Boolean}
  */
 Tracker.Dependency.prototype.depend = function (computation) {
   if (! computation) {
@@ -350,6 +359,7 @@ Tracker.Dependency.prototype.changed = function () {
 /**
  * @summary True if this Dependency has one or more dependent Computations, which would be invalidated if this Dependency were to change.
  * @locus Client
+ * @returns {Boolean}
  */
 Tracker.Dependency.prototype.hasDependents = function () {
   var self = this;
@@ -434,6 +444,7 @@ Tracker.flush = function (_opts) {
  * @summary Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning.
  * @locus Client
  * @param {Function} runFunc The function to run. It receives one argument: the Computation object that will be returned.
+ * @returns {Tracker.Computation}
  */
 Tracker.autorun = function (f) {
   if (typeof f !== 'function')

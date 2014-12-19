@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.2.0'
+  version: '1.2.1'
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   // The "imply" here means that if your app uses "meteor-platform", it is
   // treated as if it also directly included all of these packages (and it gets
   // their exports, plugins, etc).

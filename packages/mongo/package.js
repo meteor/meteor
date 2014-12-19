@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.0.9'
+  version: '1.0.10'
 });
 
 Npm.depends({
@@ -20,7 +20,7 @@ Npm.strip({
   mongodb: ["test/"]
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
            'ddp', 'tracker', 'application-configuration'],
           ['client', 'server']);
@@ -56,26 +56,26 @@ Package.on_use(function (api) {
   api.export('MongoTest', 'server', {testOnly: true});
   api.export("Mongo");
 
-  api.add_files(['mongo_driver.js', 'oplog_tailing.js',
+  api.addFiles(['mongo_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
                  'polling_observe_driver.js','oplog_observe_driver.js'],
                 'server');
-  api.add_files('local_collection_driver.js', ['client', 'server']);
-  api.add_files('remote_collection_driver.js', 'server');
-  api.add_files('collection.js', ['client', 'server']);
+  api.addFiles('local_collection_driver.js', ['client', 'server']);
+  api.addFiles('remote_collection_driver.js', 'server');
+  api.addFiles('collection.js', ['client', 'server']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('mongo');
   api.use('check');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'ddp', 'base64']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
-  api.add_files('mongo_livedata_tests.js', ['client', 'server']);
-  api.add_files('allow_tests.js', ['client', 'server']);
-  api.add_files('collection_tests.js', ['client', 'server']);
-  api.add_files('observe_changes_tests.js', ['client', 'server']);
-  api.add_files('oplog_tests.js', 'server');
-  api.add_files('doc_fetcher_tests.js', 'server');
+  api.addFiles('mongo_livedata_tests.js', ['client', 'server']);
+  api.addFiles('allow_tests.js', ['client', 'server']);
+  api.addFiles('collection_tests.js', ['client', 'server']);
+  api.addFiles('observe_changes_tests.js', ['client', 'server']);
+  api.addFiles('oplog_tests.js', 'server');
+  api.addFiles('doc_fetcher_tests.js', 'server');
 });

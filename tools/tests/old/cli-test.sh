@@ -162,9 +162,9 @@ Package.describe({
   summary: "die-now",
   version: "1.0.0"
 });
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('deps'); // try to use a core package
-  api.add_files(['die-now.js'], 'server');
+  api.addFiles(['die-now.js'], 'server');
 });
 EOF
 cat > "$TEST_TMPDIR/local-packages/die-now/die-now.js" <<EOF
@@ -249,8 +249,8 @@ Package.describe({
 });
 Npm.depends({gcd: '0.0.0'});
 
-Package.on_use(function(api) {
-  api.add_files(['call_gcd.js'], 'server');
+Package.onUse(function(api) {
+  api.addFiles(['call_gcd.js'], 'server');
 });
 EOF
 

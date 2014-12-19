@@ -2,7 +2,7 @@ Package.describe({
   summary: "test local package reloading"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('packageVar');
-  api.add_files('foo.js', 'client');
+  api.addFiles('foo.js', 'client');
 });

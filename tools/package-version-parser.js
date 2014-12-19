@@ -1,7 +1,8 @@
 // This file is in tools/package-version-parser.js and is symlinked into
-// packages/package-version-parser/package-version-parser.js. It's part
-// of both the tool and the package!  We don't use uniload for it because
-// it needs to be used as part of initializing the uniload catalog.
+// packages/package-version-parser/package-version-parser.js. It's part of both
+// the tool and the package!  We don't use an isopacket for it because it used
+// to be required as part of building isopackets (though that may no longer be
+// true).
 var inTool = typeof Package === 'undefined';
 
 var PV;
@@ -71,6 +72,8 @@ var extractSemverPart = function (versionString) {
 // instead of a vanilla JavaScript number. That will make the
 // constraint solver slower (by how much?), and would require some
 // careful thought.
+// (Or it could just return some sort of tuple, and ensure that
+// the cost functions that consume this can deal with tuples...)
 PV.versionMagnitude = function (versionString) {
   var version = extractSemverPart(versionString);
   var v = semver.parse(version.semver);
@@ -89,12 +92,13 @@ var prereleaseIdentifierToFraction = function (prerelease) {
   if (prerelease.length === 0)
     return 0;
 
-  return _.reduce(prerelease, function (memo, part, index) {
+  return __.reduce(prerelease, function (memo, part, index) {
     var digit;
     if (typeof part === 'number') {
       digit = part+1;
     } else if (typeof part === 'string') {
-      var VALID_CHARACTERS = "-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+      var VALID_CHARACTERS =
+            "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
       var validCharToNumber = function (ch) {
         var result = VALID_CHARACTERS.indexOf(ch);
@@ -111,10 +115,10 @@ var prereleaseIdentifierToFraction = function (prerelease) {
       throw new Error("Unexpected prerelease identifier part: " + part + " of type " + typeof part);
     }
 
-    // 3000 > 101 + VALID_CHARACTERS.length *
+    // 4100 > 101 + VALID_CHARACTERS.length *
     // VALID_CHARACTERS.length. And there's a test to verify this
     // ("test the edges of `versionMagnitude`")
-    return memo + digit / Math.pow(3000, index+1);
+    return memo + digit / Math.pow(4100, index+1);
   }, -1);
 };
 
@@ -123,16 +127,18 @@ PV.lessThan = function (versionOne, versionTwo) {
   return PV.compare(versionOne, versionTwo) < 0;
 };
 
-// Given a string version, computes its default ECV (not counting any overrides).
+// Given a string version, returns its major version (the first section of the
+// semver), as an integer. Two versions are compatible if they have the same
+// version number.
 //
 // versionString: valid meteor version string.
-PV.defaultECV = function (versionString) {
+PV.majorVersion = function (versionString) {
   var version = extractSemverPart(versionString).semver;
   var parsed = semver.parse(version);
   if (! parsed)
-     throwVersionParserError("not a valid version: " + version);
-  return parsed.major + ".0.0";
-}
+    throwVersionParserError("not a valid version: " + version);
+  return parsed.major;
+};
 
 // Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
 // v2 is greater.
@@ -240,23 +246,14 @@ PV.parseConstraint = function (constraintString, options) {
   var splitted = constraintString.split('@');
 
   var name = splitted[0];
-  var versionString = splitted[1];
+  var versionString = splitted[1] || '';
 
   if (splitted.length > 2) {
     // throw error complaining about @
     PV.validatePackageName('a@');
   }
 
-  if (options.archesOK) {
-    var newNames = name.split('#');
-    if (newNames.length > 2) {
-      // It is invalid and should register as such. This will throw.
-      PV.validatePackageName(name);
-    }
-    PV.validatePackageName(newNames[0]);
-  } else {
-    PV.validatePackageName(name);
-  }
+  PV.validatePackageName(name);
 
   if (splitted.length === 2 && !versionString) {
     throwVersionParserError(

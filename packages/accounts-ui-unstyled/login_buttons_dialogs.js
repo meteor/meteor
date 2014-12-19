@@ -41,7 +41,8 @@ Template._resetPasswordDialog.events({
   },
   'click #login-buttons-cancel-reset-password': function () {
     loginButtonsSession.set('resetPasswordToken', null);
-    doneCallback();
+    if (doneCallback)
+      doneCallback();
   }
 });
 
@@ -59,7 +60,8 @@ var resetPassword = function () {
       } else {
         loginButtonsSession.set('resetPasswordToken', null);
         loginButtonsSession.set('justResetPassword', true);
-        doneCallback();
+        if (doneCallback)
+          doneCallback();
       }
     });
 };
@@ -103,7 +105,8 @@ Template._enrollAccountDialog.events({
   },
   'click #login-buttons-cancel-enroll-account': function () {
     loginButtonsSession.set('enrollAccountToken', null);
-    doneCallback();
+    if (doneCallback)
+      doneCallback();
   }
 });
 
@@ -120,7 +123,8 @@ var enrollAccount = function () {
         loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
         loginButtonsSession.set('enrollAccountToken', null);
-        doneCallback();
+        if (doneCallback)
+          doneCallback();
       }
     });
 };

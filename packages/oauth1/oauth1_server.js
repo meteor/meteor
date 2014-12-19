@@ -72,7 +72,8 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
       oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      var oauthResult = service.handleOauthRequest(oauthBinding);
+      var oauthResult = service.handleOauthRequest(
+        oauthBinding, { query: query });
 
       var credentialToken = OAuth._credentialTokenFromQuery(query);
       credentialSecret = Random.secret();

@@ -56,11 +56,11 @@ rest of this section will explain the specific API commands in greater detail.
       simplesmtp: "0.3.10",
       "stream-buffers": "0.2.5"});
 
-Build plugins are created with `_transitional_registerBuildPlugin`, an API that is
-very much in flux. See the coffeescript package for an
-example. Build plugins are fully-fledged Meteor programs in their own right and
-have their own namespace, package dependencies, source files and npm
-requirements.
+Build plugins are created with
+[`Package.registerBuildPlugin`](#Package-registerBuildPlugin). See the
+coffeescript package for an example. Build plugins are fully-fledged Meteor
+programs in their own right and have their own namespace, package dependencies,
+source files and npm requirements.
 
 <h3 id="packagedescription"><span>Package Description</span></h3>
 

@@ -141,7 +141,6 @@ selftest.define("run --once", function () {
   s.set("RUN_ONCE_OUTCOME", "exit");
   s.write("junk.js", "]");
   run = s.run("--once");
-  run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.matchErr("Build failed");
   run.matchErr("Unexpected token");
@@ -162,20 +161,6 @@ selftest.define("run --once", function () {
   run.forbidAll("updated");
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
-
-  // running a different program
-  run = s.run("--once", "--program", "other");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(8);
-  run.match("other program\n");
-  run.expectExit(44);
-
-  // bad program name
-  run = s.run("--once", "--program", "xyzzy");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
-  run.match("'xyzzy' not found");
-  run.expectExit(254);
 
   // Try it with a real Mongo. Make sure that it actually starts one.
   s = new Sandbox;
@@ -201,7 +186,7 @@ selftest.define("run errors", function () {
   f.wait();
 
   var run = s.run("-p", proxyPort);
-  _.times(3, function () {
+  _.times(2, function () {
     run.waitSecs(30);
     run.match("Unexpected mongo exit code 48. Restarting.");
   });
@@ -240,18 +225,13 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "packageless");
+  s.createApp("myapp", "packageless", { release: 'METEOR@v1' });
   s.cd("myapp");
 
-  // This makes packages not depend on meteor (specifically, makes our empty
-  // control program not depend on meteor).
-  s.set("NO_METEOR_PACKAGE", "t");
-
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('localhost:3000');
   s.write('.meteor/release', 'METEOR@v2');
   run.matchErr('to Meteor v2 from Meteor v1');
@@ -333,7 +313,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.match("prevented startup");
   run.match("file change.\n");
   run.tellMongo({exit: 23});
-  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  run.match('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});
   run.read('Unexpected mongo exit code 46. Restarting.\n');
   run.tellMongo({exit: 47});

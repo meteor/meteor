@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript and CSS minifiers",
-  version: "1.1.2"
+  version: "1.1.3"
 });
 
 Npm.depends({
@@ -15,17 +15,17 @@ Npm.strip({
   "css-stringify": ["test/"],
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('underscore', 'server');
   api.export(['CssTools', 'UglifyJSMinify', 'UglifyJS']);
-  api.add_files(['minification.js', 'minifiers.js'], 'server');
+  api.addFiles(['minification.js', 'minifiers.js'], 'server');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('minifiers', 'server');
   api.use('tinytest');
 
-  api.add_files([
+  api.addFiles([
     'beautify-tests.js',
     'minifiers-tests.js',
     'urlrewriting-tests.js'

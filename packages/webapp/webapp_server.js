@@ -87,7 +87,7 @@ var startCheckForLiveParent = function (parentPid) {
         console.error("Parent process is dead! Exiting.");
         process.exit(1);
       }
-    });
+    }, 3000);
   }
 };
 
@@ -169,7 +169,7 @@ WebApp.categorizeRequest = function (req) {
 
 // HTML attribute hooks: functions to be called to determine any attributes to
 // be added to the '<html>' tag. Each function is passed a 'request' object (see
-// #BrowserIdentification) and should return a string,
+// #BrowserIdentification) and should return null or object.
 var htmlAttributeHooks = [];
 var getHtmlAttributes = function (request) {
   var combinedAttributes  = {};

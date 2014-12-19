@@ -3,7 +3,7 @@ Package.describe({
   version: "1.0.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('jquery', 'client');
-  api.add_files('amplify.js', 'client');
+  api.addFiles('amplify.js', 'client');
 });
