@@ -145,7 +145,7 @@ Pass in arguments by putting them inside the curly braces after the name of the
 helper:
 
 ```html
-<p>There are {{dstache}}commentCount 3}} comments.</p>
+<p>There are {{dstache}}commentCount 3}}.</p>
 ```
 
 The helpers above have all been associated with specific templates, but

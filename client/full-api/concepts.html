@@ -131,7 +131,7 @@ treated specially by Meteor:
     This folder is for compatibility JavaScript libraries that rely on variables
     declared with var at the top level being exported as globals.  Files in this
     directory are executed without being wrapped in a new variable scope.  These
-    files are executed before other client-side JavaScript fies.
+    files are executed before other client-side JavaScript files.
 
 - **tests**
 
@@ -805,10 +805,10 @@ debugger, you've got two options:
   don't use the `email` package directly.
 
 When declaring functions, keep in mind that `function x () {}` is just
-shorthand for `var x = function () {}` in JavaScript. Consider these
+shorthand for `var x = function x () {}` in JavaScript. Consider these
 examples:
 
-    // This is the same as 'var x = function () ...'. So x() is
+    // This is the same as 'var x = function x () ...'. So x() is
     // file-scope and can be called only from within this one file.
     function x () { ... }
 
@@ -878,8 +878,7 @@ To get started, run
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
-0.10.29; older versions contain a serious bug that can cause production servers
-to stall.) You can then run the application by invoking node, specifying the
+0.10.33.) You can then run the application by invoking node, specifying the
 HTTP port for the application to listen on, and the MongoDB endpoint.
 
 ```bash
@@ -910,7 +909,7 @@ package.js file.
 Meteor promises repeatable builds for both packages and applications. This means
 that, if you built your package on a machine, then checked the code into a
 repository and checked it out elsewhere, you should get the same result. In your
-package directory, you will find an automatically generated versions.json
+package directory, you will find an automatically generated `.versions`
 file. This file specifies the versions of all packages used to build your
 package and is part of the source. Check it into version control to ensure
 repeatable builds across machines.
@@ -920,10 +919,10 @@ repeatable builds across machines.
 Sometimes, packages do not just stand on their own, but function in the context
 of an app (specifically, packages in the packages directory of an app). In that
 case, the app's context will take precedence. Rather than using the
-versions.json file as a guide, we will build the package with the same
+`.versions` file as a guide, we will build the package with the same
 dependencies as used by the app (we think that, in practice, it would be
 confusing to find your local packages built with different versions of
-things). However, we will still write the new versions.json file.
+things).
 
 {{/note}}
 
