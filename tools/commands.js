@@ -1258,6 +1258,7 @@ main.registerCommand({
     deploy: { type: String },
     production: { type: Boolean },
     settings: { type: String },
+    velocity: { type: Boolean},
     verbose: { type: Boolean, short: "v" },
 
     // Undocumented. See #Once
@@ -1425,6 +1426,13 @@ main.registerCommand({
       }
     }
     options.extraRunners = runners;
+  }
+
+  if (options['velocity']){
+    var serverUrl = "http://" + (parsedUrl.host || "localhost") +
+          ":" + parsedUrl.port;
+    var velocity = require('./run-velocity.js');
+    velocity.runVelocity(serverUrl);
   }
 
   return runTestAppForPackages(projectContext, options);
