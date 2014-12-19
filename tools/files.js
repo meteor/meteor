@@ -1114,6 +1114,12 @@ files.adaptLegacyPath = function (p) {
 /////// Below here, functions have been corrected for slashes
 
 var toPosixPath = function (p, notAbsolute) {
+  // Sometimes, you can have a path like \Users\IEUser on windows, and this
+  // actually means you want C:\Users\IEUser
+  if (p[0] === "\\" && (! notAbsolute)) {
+    p = process.env.SystemDrive + p;
+  }
+
   p = p.replace(/\\/g, '/');
   if (p[1] === ':' && ! notAbsolute) {
     // transform "C:/bla/bla" to "/C/bla/bla"
