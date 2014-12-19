@@ -1,8 +1,10 @@
 var files = require("./files.js");
 
-// Set this env variable to a truthy value to force files.watchFile instead
-// of pathwatcher.watch.
-var PATHWATCHER_ENABLED = !process.env.METEOR_WATCH_FORCE_POLLING;
+// Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
+// force the use of files.watchFile instead of pathwatcher.watch.
+// Enabled on Mac and Linux and disabled on Windows by default.
+var PATHWATCHER_ENABLED = !process.env.METEOR_WATCH_FORCE_POLLING &&
+  (process.platform !== 'win32' || process.env.METEOR_WATCH_FORCE_PATHWATCHER);
 
 var DEFAULT_POLLING_INTERVAL =
       ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
@@ -62,6 +64,35 @@ exports.watch = function watch(absPath, callback) {
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
     }
+  };
+
+  var fallBack = function () {
+    // Disallow future uses of pathwatcher.watch.
+    canUsePathwatcher = false;
+
+    // Convert any pathwatcher watchers we previously created to
+    // files.watchFile watchers.
+    _.each(switchFunctions.splice(0), function (switchToPolling) {
+      switchToPolling();
+    });
+
+    require("./console.js").Console.warn(
+      "Falling back to files.watchFile instead of pathwatcher.watch..."
+    );
+  };
+
+  try {
+    // Watch the candidate directory using pathwatcher.watch.
+    var watcher = files.pathwatcherWatch(dir, cleanUp);
+  } catch (err) {
+    // If the directory did not exist, do not treat this failure as
+    // evidence against pathwatcher.watch, but simply return and leave
+    // canUsePathwatcher set to true.
+    if (err instanceof TypeError && err.message === "Unable to watch path") {
+      return;
+    }
+
+    throw err;
   }
 
   var pollingInterval = watcher
