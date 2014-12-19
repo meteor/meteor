@@ -1349,4 +1349,5 @@ files.pathwatcherWatch = function () {
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
+files.convertToPosixPath = toPosixPath;
 
