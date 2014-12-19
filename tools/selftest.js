@@ -1648,7 +1648,7 @@ var listTests = function (options) {
     _.each(tests, function (test) {
       Console.rawInfo('  - ' + test.name +
                       (test.tags.length ? ' [' + test.tags.join(' ') + ']'
-                      : ''));
+                      : '') + '\n');
     });
   });
 

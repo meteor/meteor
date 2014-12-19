@@ -156,6 +156,6 @@ selftest.define('deploy - logged out', ['net', 'slow'], function () {
   run.write(email + '\n');
   run.waitSecs(commandTimeoutSecs);
   run.matchErr('pick a password');
-  run.matchErr('An email has been sent to you with the link');
+  run.matchErr('sent to you with the link');
   run.stop();
 });

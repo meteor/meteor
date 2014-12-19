@@ -979,6 +979,75 @@ stringstream: https://github.com/mhart/StringStream
 Copyright 2012 Michael Hart (michael.hart.au@gmail.com)
 
 
+----------
+clone: https://github.com/pvorb/node-clone
+----------
+
+Copyright © 2011-2014 Paul Vorbach <paul@vorba.ch>
+
+
+----------
+defaults: https://github.com/tmpvar/defaults
+----------
+
+----------
+throttleit: https://github.com/component/throttle
+----------
+
+
+----------
+emissary: https://github.com/atom/emissary
+event-kit: https://github.com/atom/event-kit
+fs-plus: https://github.com/atom/fs-plus
+grim: https://github.com/atom/grim
+mixto: https://github.com/atom/mixto
+pathwatcher: https://github.com/atom/node-pathwatcher
+property-accessors: https://github.com/atom/property-accessors
+runas: https://github.com/atom/node-runas
+underscore-plus: https://github.com/atom/underscore-plus
+----------
+
+Copyright (c) 2013 GitHub Inc.
+Copyright (c) 2014 GitHub Inc.
+
+
+----------
+harmony-collections: https://github.com/Benvie/harmony-collections
+----------
+
+Copyright (c) 2012 Brandon Benvie http://bbenvie.com
+
+
+----------
+iconv-lite: https://github.com/ashtuchkin/iconv-lite
+----------
+
+Copyright (c) 2011 Alexander Shtuchkin
+
+
+----------
+request-progress: https://github.com/IndigoUnited/node-request-progress
+----------
+
+Copyright (c) 2012 IndigoUnited
+
+
+----------
+wcwidth: https://github.com/mycoboco/wcwidth.js
+----------
+
+Copyright (C) 2012-2014 by Jun Woong and Tim Oxley.
+
+
+----------
+adm-zip: https://github.com/cthackers/adm-zip
+----------
+
+Copyright (c) 2012 Another-D-Mention Software and other contributors, 
+http://www.another-d-mention.ro/
+
+
+
 ==============
 Apache License
 ==============
@@ -1165,6 +1234,14 @@ ip: https://github.com/indutny/node-ip
 ----------
 
 Copyright Fedor Indutny, 2012
+
+
+----------
+kew: https://github.com/Medium/kew
+----------
+
+Copyright 2012 The Obvious Corporation.
+http://obvious.com/
 
 
 
@@ -3558,6 +3635,27 @@ npm-cache-filename: https://github.com/npm/npm-cache-filename
 Copyright (c) npm, Inc. and Contributors
 
 The ISC License
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
+IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+
+----------
+wrappy: https://github.com/npm/wrappy
+----------
+
+The ISC License
+
+Copyright (c) Isaac Z. Schlueter and Contributors
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above

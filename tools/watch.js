@@ -404,7 +404,7 @@ _.extend(Watcher.prototype, {
       return;
     }
 
-    if (files.exists(absPath)) {
+    if (files.existsSync(absPath)) {
       if (self._mustNotExist(absPath)) {
         self._fire();
         return;

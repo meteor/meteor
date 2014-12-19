@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.3-ipc.0'
+  version: '1.0.3'
 });
 
 Package.onUse(function (api) {

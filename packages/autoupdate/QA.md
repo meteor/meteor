@@ -68,8 +68,8 @@ client automatically reloads.  Remove the `reload` package so you can
 see the variable without having the client also reload.
 
     $ meteor remove meteor-platform
-    $ meteor add meteor webapp logging deps session livedata
-    $ meteor add mongo-livedata templating handlebars check underscore
+    $ meteor add meteor webapp logging tracker session ddp
+    $ meteor add mongo templating handlebars check underscore
     $ meteor add jquery random ejson autoupdate spacebars
 
 Add to leaderboard.js:
