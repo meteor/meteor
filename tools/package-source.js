@@ -1220,6 +1220,18 @@ _.extend(PackageSource.prototype, {
           paths = toArray(paths);
           arch = toArchArray(arch);
 
+          // Convert Dos-style paths to Unix-style paths.
+          // XXX it is possible to convert an already Unix-style path by mistake
+          // and break it. e.g.: 'some\folder/anotherFolder' is a valid path
+          // consisting of two components. #WindowsPathApi
+          paths = _.map(paths, function (p) {
+            if (p.indexOf('/') !== -1) {
+              // it is already a Unix-style path most likely
+              return p;
+            }
+            return files.convertToPosixPath(p, true);
+          });
+
           _.each(paths, function (path) {
             forAllMatchingArchs(arch, function (a) {
               var source = {relPath: path};

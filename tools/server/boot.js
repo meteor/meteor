@@ -170,6 +170,15 @@ Fiber(function () {
         console.log("Exception in callback of getAsset", e.stack);
       });
 
+      // Convert a DOS-style path to Unix-style in case the application code was
+      // written on Windows.
+      // XXX note that we can't always correctly convert #WindowsPathApi
+      if (assetPath.indexOf('/') !== -1) {
+        // it is already a Unix-style path most likely
+      } else {
+        assetPath = assetPath.replace(/\\/g, '/');
+      }
+
       if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {

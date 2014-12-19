@@ -1366,3 +1366,8 @@ files.pathwatcherWatch = function () {
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
+<<<<<<< HEAD
+=======
+files.convertToPosixPath = toPosixPath;
+
+>>>>>>> Package.js:api.addFiles and Assets.get* accept both type of paths
