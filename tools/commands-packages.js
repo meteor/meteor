@@ -2314,13 +2314,21 @@ main.registerCommand({
   hidden: true,
   pretty: true,
 
+  options: {
+    // Copy the tarball contents to the output directory instead of making a
+    // tarball (useful for testing the release process)
+    "unpacked": { type: Boolean, required: false }
+  },
+
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   var releaseNameAndVersion = options.args[0];
-  var outputDirectory = options.args[1];
+
+  // We get this as an argument, so it is an OS path. Make it a standard path.
+  var outputDirectory = files.convertToStandardPath(options.args[1]);
 
   var trackAndVersion = utils.splitReleaseName(releaseNameAndVersion);
   var releaseTrack = trackAndVersion[0];
@@ -2456,9 +2464,14 @@ main.registerCommand({
         toolRecord.path,
         'meteor'));
 
-    files.createTarball(
-      tmpTropo.root,
-      files.pathJoin(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
+    if (options.unpacked) {
+      files.cp_r(tmpTropo.root, outputDirectory);
+    } else {
+      files.createTarball(
+        tmpTropo.root,
+        files.pathJoin(outputDirectory,
+          'meteor-bootstrap-' + osArch + '.tar.gz'));
+    }
   });
 
   return 0;
