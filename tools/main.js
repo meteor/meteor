@@ -445,7 +445,6 @@ var springboard = function (rel, options) {
   }
 
   if (process.platform === 'win32') {
-    var toolsRoot = path.join(packagePath, toolRecord.path);
     var ret = new Future();
     var child = require("child_process").spawn(
       files.convertToOSPath(executable + ".bat"), newArgv,
