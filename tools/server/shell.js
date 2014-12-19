@@ -338,7 +338,7 @@ function shellBanner() {
     // Tab completion sadly does not work in Emacs.
     bannerLines.push(
       "",
-      "Tab compeletion is enabled for global variables."
+      "Tab completion is enabled for global variables."
     );
   }
 
