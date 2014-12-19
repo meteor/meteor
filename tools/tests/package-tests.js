@@ -828,7 +828,7 @@ selftest.define("packages with organizations",
   // Removing 'orgName' as a maintainer should fail.
   run = s.run("admin", "maintainers", fullPackageName, "--remove", orgName);
   run.waitSecs(15);
-  run.matchErr("remove the maintainer in the package prefix");
+  run.matchErr("remove the maintainer in the package");
   run.expectExit(1);
 
   // Publish a package with 'test' as the prefix.
