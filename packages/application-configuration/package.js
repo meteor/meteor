@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Interaction with the configuration sources for your apps",
-  version: '1.0.4-rc.1'
+  version: '1.0.4'
 });
 
 Package.onUse(function (api) {
