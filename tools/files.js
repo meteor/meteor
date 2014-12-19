@@ -376,7 +376,23 @@ files.mkdir_p = function (dir, mode) {
   // parent is not a directory.
   if (! success) { return false; }
 
-  files.mkdir(p, mode);
+  // Sometimes, we get here and the check from the top of the function is stale
+  // because we yielded
+  try {
+    files.mkdir(p, mode);
+  } catch (e) {
+    if (e.code === "EEXIST") {
+      if (files.existsSync(p) && files.statSync(p).isDirectory()) {
+        // all good, someone else created this directory for us while we were
+        // yielding
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      throw e;
+    }
+  }
 
   // double check we exist now
   if (! files.exists(p) ||
