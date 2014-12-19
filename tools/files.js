@@ -387,9 +387,16 @@ files.mkdir_p = function (dir, mode) {
     files.mkdir(p, mode);
   } catch (err) {
     if (err.code !== "EEXIST") {
-      throw err;
+      if (pathIsDirectory(p)) {
+        // all good, someone else created this directory for us while we were
+        // yielding
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      throw e;
     }
-    return pathIsDirectory(p);
   }
 
   // double check we exist now
@@ -1375,8 +1382,4 @@ files.pathwatcherWatch = function () {
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
-<<<<<<< HEAD
-=======
 files.convertToPosixPath = toPosixPath;
-
->>>>>>> Package.js:api.addFiles and Assets.get* accept both type of paths
