@@ -3,6 +3,8 @@ var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
 var _ = require('underscore');
 
+var longest = 0;
+
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
 // packages). It can create a temporary directory in which to build
@@ -179,6 +181,12 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(files.pathDirname(relPath));
     var absPath = files.pathJoin(self.buildPath, relPath);
+    
+    if(absPath.length > longest) {
+      longest = absPath.length;
+      console.log(longest, absPath);
+    }
+
     if (options.symlink) {
       files.symlink(options.symlink, absPath);
     } else {
