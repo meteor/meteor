@@ -1546,21 +1546,29 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
 
   test.equal(numPackagesChosen, 25);
 
-  var logOffset = solver._C._getClauseLogSize();
+  //var logOffset = solver._C._getClauseLogSize();
 
-  //*
-  var secondSolution = solver._solveAgainWithConstraint(
-    allPackageVersions, 1, '<', 25);
+  var q1 = solver.genVar();
+  solver._enterConditional(q1);
+  solver.lessThanOrEqual(solver.getSum(allPackageVersions),
+                         solver.getConstantNumber(24));
+  solver._exitConditional();
+  var secondSolution = solver._solveAgainWithAssumption(
+    solver._getVariableIndex(q1));
   test.isTrue(secondSolution);
 
   numPackagesChosen =
     _.intersection(secondSolution, allPackageVersions).length;
 
   test.equal(numPackagesChosen, 24);
-  //*/
 
-  var thirdSolution = solver._solveAgainWithConstraint(
-    allPackageVersions, 1, '<', 24);
+  var q2 = solver.genVar();
+  solver._enterConditional(q2);
+  solver.lessThanOrEqual(solver.getSum(allPackageVersions),
+                         solver.getConstantNumber(23));
+  solver._exitConditional();
+
+  var thirdSolution = solver._solveAgainWithAssumption(solver._getVariableIndex(q2));
   test.isFalse(
     thirdSolution,
     'cost: ' + _.intersection(thirdSolution, allPackageVersions).length);
@@ -1571,4 +1579,46 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
 
   //solver.optimize(costVectorMap);
 
+});
+
+Tinytest.add("pbsolver - number and inequality", function (test) {
+  var solver = new PBSolver();
+  var eleven = solver.getConstantNumber(11);
+  test.equal(eleven, ["`1", "`1", "`0", "`1"]);
+  var myNum = "abcde".split('');
+  solver.lessThanOrEqual(myNum, eleven);
+  solver.lessThanOrEqual(eleven, myNum);
+  test.equal(solver.solve(), ["a", "b", "d"]);
+});
+
+Tinytest.add("pbsolver - empty clause", function (test) {
+  (function () {
+    var solver = new PBSolver();
+    solver.addClause(["a"]);
+    test.equal(solver.solve(), ["a"]);
+  })();
+
+  (function () {
+    var solver = new PBSolver();
+    solver.addClause(["a"]);
+    solver.addClause([]);
+    test.equal(solver.solve(), null);
+  })();
+});
+
+Tinytest.add("pbsolver - inequality and sum", function (test) {
+  var solver = new PBSolver();
+  var vars = [];
+  for (var i = 0; i < 15; i++) {
+    vars.push("x"+i);
+  }
+
+  var sum = solver.getSum(vars);
+  var C = solver.getConstantNumber(11);
+  solver.lessThanOrEqual(sum, C);
+  solver.lessThanOrEqual(C, sum);
+
+  var solution = solver.solve();
+  test.isTrue(solution);
+  test.equal(solution.length, 11, solution.join(','));
 });

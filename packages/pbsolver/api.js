@@ -32,6 +32,8 @@ PBSolver = function () {
 
   this._usedVars = {}; // var -> true
   this._solved = false;
+
+  this._conditionalVar = null;
 };
 
 // This is just a test of passing in a string that gets split
@@ -59,15 +61,18 @@ var WholeNumber = Match.Where(function (x) {
 });
 
 PBSolver.prototype.validateVar = function (v) {
+  if (! v) {
+    throw new Error("Variable name must be non-empty");
+  }
   var k = ' '+v;
   if (this._solved) {
     // Because of the way variable names are converted to
     // numbers in the solver, we can only do it before the solver
     // has been run.  We could fix this by doing all name mapping
     // in JS.
-    if (! _.has(this._usedVars, k)) {
-      throw new Error("Can't add new vars after first solve");
-    }
+//    if (! _.has(this._usedVars, k)) {
+//      throw new Error("Can't add new vars after first solve");
+//    }
   } else {
     this._usedVars[k] = true;
   }
@@ -90,12 +95,25 @@ PBSolver.prototype.addClause = function (positives, negatives) {
   this.validateVars(positives);
   this.validateVars(negatives);
 
+  if (self._conditionalVar) {
+    negatives = negatives.concat([self._conditionalVar]);
+  }
+
   self._native.savingStack(function (native, C) {
     C._addClause(native.pushString(positives.join('\n')),
                  native.pushString(negatives.join('\n')));
   });
 
   self._numClausesAdded++;
+};
+
+PBSolver.prototype._enterConditional = function (v) {
+  this.validateVar(v);
+  this._conditionalVar = v;
+};
+
+PBSolver.prototype._exitConditional = function () {
+  this._conditionalVar = null;
 };
 
 var TYPE_CODES = {
@@ -247,14 +265,14 @@ PBSolver.prototype.getSum = function (vars) {
     var S = this.genVar();
     var R = this.genVar();
     // S = xor(A,B,C) [sum]
-    this.addClause([A, B, C, S], []); // A v B v C v S
-    this.addClause([A, S], [B, C]); // A v -B v -C v S
-    this.addClause([B, S], [A, C]); // -A v B v -C v S
-    this.addClause([C, S], [A, B]); // -A v -B v C v S
-    this.addClause([], [A, B, C, S]); // -A v -B v -C v -S
-    this.addClause([B, C], [A, S]); // -A v B v C v -S
-    this.addClause([A, C], [B, S]); // A v -B v C v -S
-    this.addClause([A, B], [C, S]); // A v B v -C v -S
+    this.addClause([S], [A, B, C]); // -A v -B v -C v S
+    this.addClause([B, C, S], [A]); // -A v B v C v S
+    this.addClause([A, C, S], [B]); // A v -B v C v S
+    this.addClause([A, B, S], [C]); // A v B v -C v S
+    this.addClause([A, B, C], [S]); // A v B v C v -S
+    this.addClause([A], [B, C, S]); // A v -B v -C v -S
+    this.addClause([B], [A, C, S]); // -A v B v -C v -S
+    this.addClause([C], [A, B, S]); // -A v -B v C v -S
     // R == (A + B + C >= 2) [carry]
     this.addClause([R], [A, B]); // -A v -B v R
     this.addClause([R], [A, C]); // -A v -C v R
@@ -274,6 +292,20 @@ PBSolver.prototype._equalsXor2 = function (S, A, B) {
   this.addClause([A, S], [B]); // A v -B v S
   this.addClause([], [A, B, S]); // -A v -B v -S
   this.addClause([A, B], [S]); // A v B v -S
+};
+
+PBSolver.prototype.getConstantNumber = function (wholeNumber) {
+  check(wholeNumber, WholeNumber);
+  if (wholeNumber === 0) {
+    return [this.getFalse()];
+  } else {
+    var result = [];
+    while (wholeNumber) {
+      result.push((wholeNumber & 1) ? this.getTrue() : this.getFalse());
+      wholeNumber >>>= 1;
+    }
+    return result;
+  }
 };
 
 PBSolver.prototype.lessThanOrEqual = function (A, B) {
@@ -517,13 +549,15 @@ PBSolver.prototype.solve = function () {
   return this._readOffSolution();
 };
 
-PBSolver.prototype._solveAgainWithAssumption = function (v) {
+PBSolver.prototype._solveAgainWithAssumption = function (vnum) {
+  check(vnum, WholeNumber);
+
   if (! this._solved) {
     throw new Error("Must already have called solve()");
   }
 
   var satisfiable = this._native.savingStack(function (native, C) {
-    return C._solveAgain(v);
+    return C._solveAgain(vnum);
   });
 
   if (! satisfiable) {
@@ -619,6 +653,12 @@ PBSolver.prototype._solveAgainWithConstraint =
 //    }
     return ret;
   };
+
+PBSolver.prototype._getVariableIndex = function (v) {
+  return this._native.savingStack(function (native, C) {
+    return C._getVariableIndex(native.pushString(v));
+  });
+};
 
 PBSolver.prototype._readOffSolution = function () {
   var numVariables = this._C._getNumVariables();
