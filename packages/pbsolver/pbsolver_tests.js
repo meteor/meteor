@@ -377,6 +377,7 @@ Tinytest.add("pbsolver - toy packages", function (test) {
 
 Tinytest.add("pbsolver - buggy optimization", function (test) {
   var solver = new PBSolver();
+
   solver.equalsOr("data-mapper", ["data-mapper 1.2.0"]);
   solver.atMostOne(["dm-transactions 1.0.1","dm-transactions 1.0.2","dm-transactions 1.1.0","dm-transactions 1.2.0"]);
   solver.equalsOr("dm-transactions", ["dm-transactions 1.0.1","dm-transactions 1.0.2","dm-transactions 1.1.0","dm-transactions 1.2.0"]);
@@ -1668,6 +1669,9 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
 
   test.equal(numPackagesChosen, 25);
 
+  var logOffset = solver._C._getClauseLogSize();
+
+  //*
   var secondSolution = solver._solveAgainWithConstraint(
     allPackageVersions, 1, '<', 25);
   test.isTrue(secondSolution);
@@ -1676,12 +1680,15 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
     _.intersection(secondSolution, allPackageVersions).length;
 
   test.equal(numPackagesChosen, 24);
+  //*/
 
   var thirdSolution = solver._solveAgainWithConstraint(
     allPackageVersions, 1, '<', 24);
   test.isFalse(
     thirdSolution,
     'cost: ' + _.intersection(thirdSolution, allPackageVersions).length);
+
+  //solver._dumpClauses(false, logOffset);
 
   // -----
 

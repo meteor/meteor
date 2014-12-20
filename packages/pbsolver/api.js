@@ -23,11 +23,14 @@ PBSolver = function () {
 
   C._createTheSolver();
 
-  this._nextGenVarNum = 1;
+  // The variable "`0" is reserved for FALSE,
+  // and "`1" for TRUE.
+  this._nextGenVarNum = 2;
+
   this._numClausesAdded = 0;
   this._numConstraintsAdded = 0;
 
-  this._usedVars = {};
+  this._usedVars = {}; // var -> true
   this._solved = false;
 };
 
@@ -44,8 +47,9 @@ var VariableName = Match.Where(function (x) {
   if (x.indexOf('\n') >= 0) {
     return false;
   }
+  // Vars starting with backtick have to be numeric.
   if (x.charAt(0) === '`') {
-    return /^`[1-9][0-9]*$/.test(x);
+    return /^`[0-9]+$/.test(x);
   }
   return true;
 });
@@ -145,6 +149,186 @@ PBSolver.prototype.equalsOr = function (x, vars) {
   }
 };
 
+PBSolver.prototype.getWeightedSum = function (vars, weights) {
+  check(vars, [VariableName]);
+  check(weights, [WholeNumber]);
+  if (! (vars.length === weights.length && vars.length)) {
+    throw new Error("vars and weights must be same length (> 0)");
+  }
+  var weightedVars = [];
+  for (var i = 0; i < vars.length; i++) {
+    var v = vars[i];
+    var w = weights[i];
+    var whichBit = 0;
+    while (w) {
+      if (w & 1) {
+        weightedVars[whichBit] =
+          (weightedVars[whichBit] || []);
+        weightedVars[whichBit].push(v);
+      }
+      w >>>= 1;
+      whichBit++;
+    }
+  }
+
+  return this.getBinaryWeightedSum(weightedVars);
+};
+
+// Takes a list of list of vars.  The first list is vars
+// to give weight 1; the second is vars to give weight 2;
+// and so on.
+PBSolver.prototype.getBinaryWeightedSum = function (varsByWeight) {
+  check(varsByWeight, [[VariableName]]);
+  // deep clone so we can mutate the arrays in place
+  var buckets = _.map(varsByWeight, _.clone);
+  var lowestWeight = 0; // index of the first non-empty array
+  var output = [];
+  while (lowestWeight < buckets.length) {
+    var i = lowestWeight;
+    var bucket = buckets[i];
+    if (! bucket.length) {
+      output.push(this.getFalse());
+      lowestWeight++;
+    } else if (bucket.length === 1) {
+      output.push(bucket[0]);
+      lowestWeight++;
+    } else if (bucket.length === 2) {
+      var sum = this.getSum(bucket);
+      bucket.length = 0;
+      bucket.push(sum[0]);
+      buckets[i+1] = (buckets[i+1] || []);
+      buckets[i+1].push(sum[1]);
+    } else {
+      // take the first three, not the last three,
+      // so that the list operates as a queue.  This
+      // produces a different (maybe better) result.
+      // It makes a shallower graph.
+      var three = buckets[i].splice(0, 3);
+      var sum = this.getSum(three);
+      bucket.push(sum[0]);
+      buckets[i+1] = (buckets[i+1] || []);
+      buckets[i+1].push(sum[1]);
+    }
+  }
+  return output;
+};
+
+// Takes a list of zero or more boolean vars and
+// returns a list of bits of the sum of the vars
+// (the number of true bars).  The "list of bits"
+// is a list of variable names representing the
+// bits, least significant first (i.e. the 1 bit,
+// then the 2 bit, then the 4 bit...)
+PBSolver.prototype.getSum = function (vars) {
+  check(vars, [VariableName]);
+  if (! vars.length) {
+    throw new Error("At least one variable required");
+  }
+  if (vars.length === 1) {
+    return vars;
+  } else if (vars.length === 2) {
+    // "Half Adder"
+    var A = vars[0];
+    var B = vars[1];
+    var S = this.genVar();
+    var R = this.genVar();
+    // S = (A xor B) [sum]
+    this._equalsXor2(S, A, B);
+    // R = (A and B) [carry]
+    this.addClause([R], [A, B]); // -A v -B v R
+    this.addClause([A], [R]); // A v -R
+    this.addClause([B], [R]); // A v -R
+    return [S, R];
+  } else if (vars.length === 3) {
+    // "Full Adder"
+    var A = vars[0];
+    var B = vars[1];
+    var C = vars[2];
+    var S = this.genVar();
+    var R = this.genVar();
+    // S = xor(A,B,C) [sum]
+    this.addClause([A, B, C, S], []); // A v B v C v S
+    this.addClause([A, S], [B, C]); // A v -B v -C v S
+    this.addClause([B, S], [A, C]); // -A v B v -C v S
+    this.addClause([C, S], [A, B]); // -A v -B v C v S
+    this.addClause([], [A, B, C, S]); // -A v -B v -C v -S
+    this.addClause([B, C], [A, S]); // -A v B v C v -S
+    this.addClause([A, C], [B, S]); // A v -B v C v -S
+    this.addClause([A, B], [C, S]); // A v B v -C v -S
+    // R == (A + B + C >= 2) [carry]
+    this.addClause([R], [A, B]); // -A v -B v R
+    this.addClause([R], [A, C]); // -A v -C v R
+    this.addClause([R], [B, C]); // -B v -C v R
+    this.addClause([A, B], [R]); // A v B v -R
+    this.addClause([A, C], [R]); // A v C v -R
+    this.addClause([B, C], [R]); // B v C v -R
+    return [S, R];
+  } else {
+    return this.getBinaryWeightedSum([vars]);
+  }
+};
+
+PBSolver.prototype._equalsXor2 = function (S, A, B) {
+  // S == (A xor B)
+  this.addClause([B, S], [A]); // -A v B v S
+  this.addClause([A, S], [B]); // A v -B v S
+  this.addClause([], [A, B, S]); // -A v -B v -S
+  this.addClause([A, B], [S]); // A v B v -S
+};
+
+PBSolver.prototype.lessThanOrEqual = function (A, B) {
+  // A <= B, where A and B are arrays of variables representing
+  // bit strings, least significant bit first
+  check(A, [VariableName]);
+  check(B, [VariableName]);
+  // clone A and B so we can mutate them in place
+  A = A.slice();
+  B = B.slice();
+  var i = 0;
+  // if A is longer than B, the extra (high) bits
+  // must be 0.
+  while (A.length > B.length) {
+    var hi = A.pop();
+    this.isFalse(hi);
+  }
+  // now B.length >= A.length
+  // xors[i] is (A[i] xor B[i]), or B[i] if A is too short.
+  var xors = new Array(B.length);
+  for(var i=0; i < B.length; i++) {
+    if (i < A.length) {
+      xors[i] = this.genVar();
+      this._equalsXor2(xors[i], A[i], B[i]);
+    } else {
+      xors[i] = B[i];
+    }
+  }
+  // Suppose we are comparing 3-bit numbers, asserting
+  // that ABC <= XYZ.  Here is what we assert:
+  //
+  // * It is false that A=1 and X=0.
+  // * It is false that A=X, B=1, and Y=0.
+  // * It is false that A=X, B=Y, C=1, and Y=0.
+  //
+  // Translating these into clauses using DeMorgan's law:
+  //
+  // * A=0 or X=1
+  // * (A xor X) or B=0 or Y=1
+  // * (A xor X) or (B xor Y) or C=0 or Y=1
+  //
+  // Since our arguments are LSB first, in the example
+  // we would be given [C, B, A] and [Z, Y, X] as input.
+  // We iterate over the first argument starting from
+  // the right, and build up a clause by iterating over
+  // the xors from the right (note that there may be
+  // more xors, because we may have been given [Z, Y, X, W]).
+  for(var i = A.length-1; i >= 0; i--) {
+    var positive = xors.slice(i+1);
+    positive.push(B[i]);
+    var negative = [A[i]];
+    this.addClause(positive, negative);
+  }
+};
+
 PBSolver.prototype.atMostOne = function (vars) {
   if (! vars.length) {
     throw new Error("At least one variable required");
@@ -208,6 +392,20 @@ PBSolver.prototype.notPImpliesQ = function (p, q) {
 
 PBSolver.prototype.notPImpliesNotQ = function (p, q) {
   this.addClause([p], [q]);
+};
+
+PBSolver.prototype.getTrue = function () {
+  if (! _.has(this._usedVars, "`1")) {
+    this.addClause(["`1"]);
+  }
+  return "`1";
+};
+
+PBSolver.prototype.getFalse = function () {
+  if (! _.has(this._usedVars, "`0")) {
+    this.addClause([], ["`0"]);
+  }
+  return "`0";
 };
 
 var calcSolutionCost = function (solution, costVectorMap, costN) {
@@ -361,6 +559,8 @@ PBSolver.prototype._dumpClauses = function (withModel, startOffset) {
   var NOT = function (x) {
     return x < 0;
   };
+  var numBad = 0;
+  var lines = [];
   _.each(clauses, function (cl) {
     if (withModel) {
       var termTruths = _.map(cl, function (x) {
@@ -391,10 +591,16 @@ PBSolver.prototype._dumpClauses = function (withModel, startOffset) {
     });
     var line = stringified.join(' ');
     if (withModel) {
-      line += ' ' + (_.any(termTruths) ? 'GOOD' : 'BAD');
+      var isBad = ! _.any(termTruths);
+      if (isBad) {
+        numBad++;
+      }
+      line += ' ' + ((! isBad) ? 'GOOD' : 'BAD');
     }
-    console.log(line);
+    lines.push(line);
   });
+  console.log(lines.join('\n'));
+  console.log(numBad + " bad");
 };
 
 PBSolver.prototype._solveAgainWithConstraint =
@@ -421,9 +627,9 @@ PBSolver.prototype._readOffSolution = function () {
     var result = native.allocateBytes(numVariables);
     C._getSolution(result);
     for (var i = 0; i < numVariables; i++) {
-      console.log(i,
-                  C.Pointer_stringify(C._getVariableAtIndex(i)),
-                  C.HEAPU8[result+i]);
+//      console.log(i,
+//                  C.Pointer_stringify(C._getVariableAtIndex(i)),
+//                  C.HEAPU8[result+i]);
       if (C.HEAPU8[result + i]) {
         var varNamePtr = C._getVariableAtIndex(i);
         if (C.HEAPU8[varNamePtr] !== 96) { // Doesn't start with backtick `
