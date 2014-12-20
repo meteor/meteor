@@ -236,7 +236,7 @@ _.extend(AppProcess.prototype, {
 
 // Given an app, bundle and run the app. If the app's source changes,
 // kill, rebundle, and rerun it. If the app dies, restart it, unless
-// it dies repeatly immediately after being started, in which case
+// it dies repeatedly immediately after being started, in which case
 // wait for source changes to restart.
 //
 // Communicates with a Proxy to tell it when the app is up,
