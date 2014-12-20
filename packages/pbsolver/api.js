@@ -461,7 +461,7 @@ PBSolver.prototype.optimize = function (costVectorMap) {
   for (var n = 0; n < maxVectorLength; n++) {
     var solutionCost = calcSolutionCost(solution, costVectorMap, n);
     finalCostVector[n] = solutionCost;
-    console.log(finalCostVector);
+    //console.log(finalCostVector);
     var newSolution;
     while ((solutionCost > 0) &&
            (newSolution = this._solveAgainWithConstraint(
@@ -489,7 +489,7 @@ PBSolver.prototype.optimize = function (costVectorMap) {
       }
       solutionCost = newCost;
       finalCostVector[n] = solutionCost;
-      console.log(finalCostVector);
+      //console.log(finalCostVector);
     }
     this.addConstraint(costVars, costValues[n], '=', solutionCost);
   }
