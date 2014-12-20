@@ -1555,6 +1555,8 @@ Tinytest.add("pbsolver - buggy optimization", function (test) {
   solver._exitConditional();
   var secondSolution = solver._solveAgainWithAssumption(
     solver._getVariableIndex(q1));
+  solver._C._retireVar(solver._getVariableIndex(q1));
+
   test.isTrue(secondSolution);
 
   numPackagesChosen =

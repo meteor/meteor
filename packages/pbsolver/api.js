@@ -217,11 +217,10 @@ PBSolver.prototype.getBinaryWeightedSum = function (varsByWeight) {
       buckets[i+1] = (buckets[i+1] || []);
       buckets[i+1].push(sum[1]);
     } else {
-      // take the first three, not the last three,
-      // so that the list operates as a queue.  This
-      // produces a different (maybe better) result.
-      // It makes a shallower graph.
-      var three = buckets[i].splice(0, 3);
+      // Not clear whether it's better to take the three
+      // vars from the start or end of the bucket, but
+      // the end seems faster in initial tests.
+      var three = [bucket.pop(), bucket.pop(), bucket.pop()];
       var sum = this.getSum(three);
       bucket.push(sum[0]);
       buckets[i+1] = (buckets[i+1] || []);
