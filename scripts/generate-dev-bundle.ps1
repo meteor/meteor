@@ -2,13 +2,15 @@ $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 $CHECKOUT_DIR = split-path -parent $scriptPath
 
 # extract the bundle version from the meteor bash script
-$BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION="(\S+)"'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
+$BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
+$BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 
 # generate-dev-bundle-xxxxxxxx shortly
 $DIR = $scriptPath + "\gdbXXX"
 echo $DIR
 
-cmd /C "rmdir /S /Q ${DIR}"
+Remove-Item -Recurse -Force "${DIR}"
+
 
 New-Item -Type Directory "$DIR"
 Set-Location "$DIR"
