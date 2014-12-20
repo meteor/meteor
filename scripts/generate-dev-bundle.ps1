@@ -2,7 +2,7 @@ $scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
 $CHECKOUT_DIR = split-path -parent $scriptPath
 
 # extract the bundle version from the meteor bash script
-$BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "meteor") -Pattern 'BUNDLE_VERSION="(\S+)"'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
+$BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION="(\S+)"'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
 
 $DIR = $scriptPath + "\generate-dev-bundle-XXXXXXXX"
 echo $DIR
