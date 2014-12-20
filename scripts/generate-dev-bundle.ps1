@@ -19,7 +19,7 @@ mkdir npm-server-install
 cd npm-server-install
 
 npm config set loglevel error
-node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" > package.json
+node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | out-file -FilePath package.json -Encoding ascii
 npm install
 npm shrinkwrap
 
@@ -28,7 +28,7 @@ cp -R node_modules "${DIR}\server-lib\node_modules"
 
 mkdir -Force "${DIR}\npm-tool-install"
 cd "${DIR}\npm-tool-install"
-node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" > package.json
+node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
 npm install
 npm dedupe
 cp -R node_modules "${DIR}\lib\node_modules"
