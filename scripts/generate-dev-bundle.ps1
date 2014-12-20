@@ -4,7 +4,8 @@ $CHECKOUT_DIR = split-path -parent $scriptPath
 # extract the bundle version from the meteor bash script
 $BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION="(\S+)"'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
 
-$DIR = $scriptPath + "\generate-dev-bundle-XXXXXXXX"
+# generate-dev-bundle-xxxxxxxx shortly
+$DIR = $scriptPath + "\gdbXXX"
 echo $DIR
 
 cmd /C "rmdir /S /Q ${DIR}"
@@ -13,28 +14,29 @@ New-Item -Type Directory "$DIR"
 Set-Location "$DIR"
 
 # install dev-bundle-package.json
-mkdir build
-cd build
-mkdir npm-server-install
-cd npm-server-install
+# use short folder names
+mkdir b # for build
+cd b
+mkdir t
+cd t
 
 npm config set loglevel error
 node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | out-file -FilePath package.json -Encoding ascii
-npm install
+npm install --production
 npm shrinkwrap
 
-mkdir -Force "${DIR}\server-lib\node_modules"
-cp -R node_modules "${DIR}\server-lib\node_modules"
+mkdir -Force "${DIR}\t\node_modules"
+cp -R node_modules "${DIR}\t\node_modules"
 
-mkdir -Force "${DIR}\npm-tool-install"
-cd "${DIR}\npm-tool-install"
+mkdir -Force "${DIR}\p"
+cd "${DIR}\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
-npm install
+npm install --production
 npm dedupe
 cp -R node_modules "${DIR}\lib\node_modules"
 cd "$DIR"
 
-rm -Recurse -Force "${DIR}\build"
+rm -Recurse -Force "${DIR}\b"
 
 cd "$DIR"
 mkdir "$DIR\mongodb"
