@@ -25,11 +25,11 @@ node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | out-file -FilePath
 npm install --production
 npm shrinkwrap
 
-mkdir -Force "${DIR}\t\node_modules"
-cp -R node_modules "${DIR}\t\node_modules"
+mkdir -Force "${DIR}\server-lib\node_modules"
+cp -R node_modules "${DIR}\server-lib\node_modules"
 
-mkdir -Force "${DIR}\p"
-cd "${DIR}\p"
+mkdir -Force "${DIR}\b\p"
+cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
 npm install --production
 npm dedupe
