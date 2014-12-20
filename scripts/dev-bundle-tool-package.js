@@ -56,11 +56,11 @@ var packageJson = {
 
 if (process.platform === 'win32') {
   // Cordova is not supported on Windows
-  delete packageJson.cordova;
+  delete packageJson.dependencies.cordova;
   // netroute is only needed for Cordova support
-  delete packageJson.netroute;
+  delete packageJson.dependencies.netroute;
   // kexec doesn't work on Windows
-  delete packageJson.kexec;
+  delete packageJson.dependencies.kexec;
 }
 
 process.stdout.write(JSON.stringify(packageJson, null, 2) + '\n');
