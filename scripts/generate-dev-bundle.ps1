@@ -18,8 +18,9 @@ $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 $DIR = $scriptPath + "\gdbXXX"
 echo $DIR
 
+# removing folders isn't easy on Windows, try both commands
 Remove-Item -Recurse -Force "${DIR}"
-
+cmd /C "rmdir /S /Q ${DIR}"
 
 New-Item -Type Directory "$DIR"
 Set-Location "$DIR"
