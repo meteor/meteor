@@ -9,8 +9,8 @@ echo $DIR
 
 cmd /C "rmdir /S /Q ${DIR}"
 
-New-Item -Type Directory -Name generate-dev-bundle-XXXXXXXX
-Set-Location $DIR
+New-Item -Type Directory "$DIR"
+Set-Location "$DIR"
 
 # install dev-bundle-package.json
 mkdir build
@@ -32,13 +32,13 @@ node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" > package.json
 npm install
 npm dedupe
 cp -R node_modules "${DIR}\lib\node_modules"
-cd $DIR
+cd "$DIR"
 
 rm -Recurse -Force "${DIR}\build"
 
-cd $DIR
-mkdir $DIR\mongodb
-mkdir $DIR\mongodb\bin
+cd "$DIR"
+mkdir "$DIR\mongodb"
+mkdir "$DIR\mongodb\bin"
 
 $webclient = New-Object System.Net.WebClient
 
