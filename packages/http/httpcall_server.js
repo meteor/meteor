@@ -76,6 +76,9 @@ var _call = function(method, url, options, callback) {
     timeout: options.timeout,
     body: content,
     followRedirect: options.followRedirects,
+    // Follow redirects on non-GET requests
+    // also. (https://github.com/meteor/meteor/issues/2808)
+    followAllRedirects: options.followRedirects,
     headers: headers
   };
 
