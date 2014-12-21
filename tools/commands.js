@@ -1470,10 +1470,11 @@ var getTestPackageNames = function (projectContext, packageNames) {
           }
           if (version.testName) {
             testPackages.push(version.testName);
-          } else {
-            // This case only happens when explicitly asked for.
-            buildmessage.error("Package has no tests");
           }
+          // It is not an error to mention a package by directory that is a
+          // package but has no tests; this means you can run `meteor
+          // test-packages $APP/packages/*` without having to worry about the
+          // packages that don't have tests.
         }
       });
     });
