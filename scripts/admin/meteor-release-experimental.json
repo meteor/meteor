@@ -1,6 +1,6 @@
 {
  "track": "METEOR",
- "version": "CORDOVA-4.1",
+ "version": "cordova-41.0",
  "recommended": false,
  "official": false,
  "description": "A test release with the newest cordova and ios-sim"
