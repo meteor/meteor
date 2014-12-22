@@ -40,7 +40,7 @@ Here are two Spacebars templates from an example app called
 "Leaderboard" which displays a sorted list of top players and their
 scores:
 
-```
+```html
 <template name="leaderboard">
   <ol class="leaderboard">
     {{#each players}}
@@ -62,7 +62,7 @@ the data context (the current player), while `players` and `selected`
 refer to helper functions.  Helper functions and event handlers are defined
 in JavaScript:
 
-```
+```javascript
 Template.leaderboard.helpers({
   players: function () {
     // Perform a reactive database query against minimongo
