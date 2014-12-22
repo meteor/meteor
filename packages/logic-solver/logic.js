@@ -25,7 +25,7 @@ Logic.Term = Match.Where(function (x) {
 
 // A Term that is represented as a number, not a name.
 // (Subtype of Term.)
-Logic._NTerm = Match.Where(function (x) {
+Logic.NTerm = Match.Where(function (x) {
   check(x, Match.Integer);
   return (x !== 0);
 });
@@ -75,8 +75,8 @@ Logic.Formula._genFalse = function (formula, solver) {
 
 Logic.Clause = function (termOrArray/*, ...*/) {
   var terms = _.flatten(arguments);
-  check(terms, [Logic._NTerm]);
-  this.terms = terms; // immutable [_NTerm]
+  check(terms, [Logic.NTerm]);
+  this.terms = terms; // immutable [NTerm]
 };
 
 Logic.Solver = function () {
@@ -111,19 +111,34 @@ Logic.Solver.prototype.getVarNum = function (vname, _internal) {
   }
 };
 
-// Converts Terms to _NTerms
+Logic.Solver.prototype.getVarName = function (vnum) {
+  var num2name = this._num2name;
+  if (vnum < 1 || vnum >= num2name.length) {
+    throw new Error("Bad variable num: " + vnum);
+  } else {
+    return num2name[vnum];
+  }
+};
+
+// Converts Terms to NTerms (if they aren't already).  This is done
+// when a Formula creates Clauses for a Solver, since Clauses require
+// NTerms.  Takes a Term or an array.  For example, [-3, "-foo"] might
+// become [-3, -4].
 Logic.Solver.prototype._toN = function (t) {
   var self = this;
 
   if (_.isArray(t)) {
+    check(t, [Logic.Term]);
     return _.map(t, function (tt) {
       return self._toN(tt);
     });
+  } else {
+    check(t, Logic.Term);
   }
 
   if (typeof t === 'number') {
     return t;
-  } else if (typeof t === 'string') {
+  } else { // string
     var not = false;
     while (t.charAt(0) === '-') {
       t = t.slice(1);
@@ -131,8 +146,39 @@ Logic.Solver.prototype._toN = function (t) {
     }
     var n = self.getVarNum(t);
     return (not ? -n : n);
+  }
+};
+
+// Converts Terms to string form.
+Logic.Solver.prototype._toName = function (t) {
+  var self = this;
+
+  if (_.isArray(t)) {
+    check(t, [Logic.Term]);
+    return _.map(t, function (tt) {
+      return self._toName(tt);
+    });
   } else {
-    throw new Error("Expected number or string");
+    check(t, Logic.Term);
+  }
+
+  if (typeof t === 'string') {
+    // canonicalize, removing leading "--"
+    while (t.slice(0, 2) == '--') {
+      t = t.slice(2);
+    }
+    return t;
+  } else { // number
+    var not = false;
+    if (t < 0) {
+      not = true;
+      t = -t;
+    }
+    t = self.getVarName(t);
+    if (not) {
+      t = '-' + t;
+    }
+    return t;
   }
 };
 
@@ -168,6 +214,8 @@ Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
   });
 };
 
+// Get clause data as an array of arrays of integers,
+// for testing and debugging purposes.
 Logic.Solver.prototype._clauseData = function () {
   var clauses = _.pluck(this.clauses, 'terms');
   if (! this._T_used) {
@@ -177,6 +225,32 @@ Logic.Solver.prototype._clauseData = function () {
     clauses.splice(0, 1);
   }
   return clauses;
+};
+
+// Get clause data as an array of human-readable strings,
+// for testing and debugging purposes.
+// A clause might look like "A v -B" (where "v" represents
+// and OR operator).
+Logic.Solver.prototype._clauseStrings = function () {
+  var self = this;
+  var clauseData = self._clauseData();
+  return _.map(clauseData, function (clause) {
+    return _.map(clause, function (nterm) {
+      var str = self._toName(nterm);
+      if (/\s/.test(str)) {
+        // write name in quotes for readability.  we don't bother
+        // making this string machine-parsable in the general case.
+        var sign = '';
+        if (str.charAt(0) === '-') {
+          // temporarily remove '-'
+          sign = '-';
+          str = str.slice(1);
+        }
+        str = sign + '"' + str + '"';
+      }
+      return str;
+    }).join(' v ');
+  });
 };
 
 Logic.or = function (termOrArray/*, ...*/) {
@@ -192,6 +266,6 @@ Logic.OrFormula.prototype._genTrue = function (solver) {
 };
 Logic.OrFormula.prototype._genFalse = function (solver) {
   return _.map(this.terms, function (t) {
-    return [new Logic.Clause(-solver._toN(t))];
+    return new Logic.Clause(-solver._toN(t));
   });
 };
