@@ -89,6 +89,11 @@ Logic.Clause = function (termOrArray/*, ...*/) {
   this.terms = terms; // immutable [NTerm]
 };
 
+// Returns a new Clause with the extra term or terms appended
+Logic.Clause.prototype.append = function (termOrArray/*, ...*/) {
+  return new Logic.Clause(this.terms.concat(_.flatten(arguments)));
+};
+
 Logic.Solver = function () {
   this.clauses = []; // mutable [Clause]
   this._num2name = [null]; // no 0th var
@@ -103,6 +108,8 @@ Logic.Solver = function () {
   // of the clauses array)
   this.clauses.push(new Logic.Clause(-this._F));
   this.clauses.push(new Logic.Clause(this._T));
+
+  this._formulaInfo = {}; // Formula guid -> info object
 };
 
 // Get a var number for vname, assigning it a number if it is new.
@@ -261,6 +268,27 @@ Logic.Solver.prototype._clauseStrings = function () {
       return str;
     }).join(' v ');
   });
+};
+
+Logic.Solver.prototype._getFormulaInfo = function (formula) {
+  var self = this;
+  var guid = formula.guid();
+  if (! self._formulaInfo[guid]) {
+    self._formulaInfo[guid] = {
+      // We generate a variable when a Formula is used that has
+      // not been explicitly required or forbidden.  If the variable
+      // is only used positively or only used negatively, we can
+      // generate fewer clauses, using a method that relies on
+      // the fact that the generated variable is unobservable so we
+      // can get away without a bidirectional implication.
+      isRequired: false,
+      isForbidden: false,
+      variable: null,
+      occursPositively: false,
+      occursNegatively: false
+    };
+  }
+  return self._formulaInfo[guid];
 };
 
 Logic._defineFormula = function (constructor, typeName, methods) {
