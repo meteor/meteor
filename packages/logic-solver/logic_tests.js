@@ -29,18 +29,54 @@ Tinytest.add("logic-solver - _clauseStrings", function (test) {
   test.equal(s._clauseStrings(), ["foo", '-"myPackage 1.0.0"']);
 });
 
+var checkClauses = function (test, f, expected) {
+  check(f, Function);
+  check(expected, [String]);
+  var s = new Logic.Solver;
+  f(s);
+  test.equal(s._clauseStrings(), expected);
+};
+
+var runClauseTests = function (test, funcsAndExpecteds) {
+  check(funcsAndExpecteds.length % 2, 0);
+  for (var i = 0; i < funcsAndExpecteds.length; i++) {
+    var f = funcsAndExpecteds[i];
+    i++;
+    var expected = funcsAndExpecteds[i];
+    checkClauses(test, f, expected);
+  }
+};
 
 Tinytest.add("logic-solver - Logic.Or", function (test) {
-  var s = new Logic.Solver;
-
-  s.require(Logic.or('A', 'B'));
-  test.equal(s._clauseStrings(), ["A v B"]);
-
-  s.require(Logic.or('-C', 'D', 3));
-  test.equal(s._clauseData(), [[3, 4], [-5, 6, 3]]);
-  test.equal(s._clauseStrings(), ["A v B", "-C v D v A"]);
-
-  s.forbid(Logic.or('A', '-B'));
-  test.equal(s._clauseStrings(), ["A v B", "-C v D v A",
-                                  "-A", "B"]);
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.or('A', 'B'));
+    },
+    ["A v B"],
+    function (s) {
+      s.require(Logic.or(['A', 'B']));
+    },
+    ["A v B"],
+    function (s) {
+      s.require(Logic.or(['A'], ['B']));
+    },
+    ["A v B"],
+    function (s) {
+      s.require('A');
+      s.require(Logic.or('-C', 'D', 3));
+    },
+    ["A", "-C v D v A"],
+    function (s) {
+      s.forbid(Logic.or('A', '-B'));
+    },
+    ["-A", "B"],
+    function (s) {
+      s.forbid(Logic.or());
+    },
+    [],
+    function (s) {
+      s.require(Logic.or());
+    },
+    [""]
+  ]);
 });

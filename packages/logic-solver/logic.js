@@ -48,6 +48,16 @@ Logic.Formula.prototype._genTrue = function (solver) { return []; };
 // Returns a list of clauses that together require the
 // Formula to be false.
 Logic.Formula.prototype._genFalse = function (solver) { return []; };
+// All Formulas have a globally-unique id so that Solvers can track them.
+// It is assigned lazily.
+Logic.Formula._nextGuid = 1;
+Logic.Formula.prototype._guid = null;
+Logic.Formula.prototype.guid = function () {
+  if (this._guid === null) {
+    this._guid = Logic.Formula._nextGuid++;
+  }
+  return this._guid;
+};
 
 // Like `formula._genTrue(solver)` but works on Terms too (in effect
 // promoting them to formulas).
@@ -253,19 +263,32 @@ Logic.Solver.prototype._clauseStrings = function () {
   });
 };
 
+Logic._defineFormula = function (constructor, typeName, methods) {
+  check(constructor, Function);
+  check(typeName, String);
+  Meteor._inherits(constructor, Logic.Formula);
+  constructor.prototype.type = typeName;
+  if (methods) {
+    _.extend(constructor.prototype, methods);
+  }
+};
+
 Logic.or = function (termOrArray/*, ...*/) {
   return new Logic.OrFormula(_.flatten(arguments));
 };
+
 Logic.OrFormula = function (terms) {
   check(terms, [Logic.Term]);
   this.terms = terms;
 };
-Meteor._inherits(Logic.OrFormula, Logic.Formula);
-Logic.OrFormula.prototype._genTrue = function (solver) {
-  return [new Logic.Clause(solver._toN(this.terms))];
-};
-Logic.OrFormula.prototype._genFalse = function (solver) {
-  return _.map(this.terms, function (t) {
-    return new Logic.Clause(-solver._toN(t));
-  });
-};
+
+Logic._defineFormula(Logic.OrFormula, 'or', {
+  _genTrue: function (solver) {
+    return [new Logic.Clause(solver._toN(this.terms))];
+  },
+  _genFalse: function (solver) {
+    return _.map(this.terms, function (t) {
+      return new Logic.Clause(-solver._toN(t));
+    });
+  }
+});
