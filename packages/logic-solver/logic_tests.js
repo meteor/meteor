@@ -20,4 +20,6 @@ Tinytest.add("logic-solver - Logic.Or", function (test) {
   s.require(Logic.or('-c', 'd', 3));
   test.equal(s._clauseData(), [[3, 4], [-5, 6, 3]]);
 
+  s.forbid(Logic.or('a', '-b'));
+  test.equal(s._clauseData(), [[3, 4], [-5, 6, 3], [-3], [4]]);
 });
