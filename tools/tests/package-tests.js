@@ -898,6 +898,14 @@ selftest.define("show unknown version of package", function () {
   run.waitSecs(5);
   run.matchErr("meteor-platform@0.123.456: not found");
   run.expectExit(1);
+
+  // This package exists in the server (we need it to publish the tool), but is
+  // not a local package.
+  run = s.run("show", "npm-bcrypt@local");
+  run.waitSecs(5);
+  run.matchErr("npm-bcrypt@local: not found");
+  run.expectExit(1);
+
 });
 
 selftest.define("circular dependency errors", function () {
