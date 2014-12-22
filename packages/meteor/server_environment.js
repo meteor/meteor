@@ -1,6 +1,7 @@
 Meteor = {
   isClient: false,
-  isServer: true
+  isServer: true,
+  isCordova: false
 };
 
 Meteor.settings = {};

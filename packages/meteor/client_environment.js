@@ -18,7 +18,8 @@ Meteor = {
    * @static
    * @type {Boolean}
    */
-  isServer: false
+  isServer: false,
+  isCordova: false
 };
 
 if (typeof __meteor_runtime_config__ === 'object' &&
