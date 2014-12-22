@@ -190,6 +190,8 @@ Meteor._inherits(Logic.OrFormula, Logic.Formula);
 Logic.OrFormula.prototype._genTrue = function (solver) {
   return [new Logic.Clause(solver._toN(this.terms))];
 };
-//Logic.OrFormula.prototype._genFalse = function (solver) {
-  // XXX
-//};
+Logic.OrFormula.prototype._genFalse = function (solver) {
+  return _.map(this.terms, function (t) {
+    return [new Logic.Clause(-solver._toN(t))];
+  });
+};
