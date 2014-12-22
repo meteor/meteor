@@ -460,6 +460,8 @@ _.extend(Watcher.prototype, {
       if (stat === null || stat.isFile()) {
         if (_.has(self.watchSet.files, absPath)) {
           self._fireIfFileChanged(absPath);
+          // XXX #3335 We probably should check again in a second, due to low
+          // filesystem modtime resolution.
         }
 
       } else if (stat.isDirectory()) {
@@ -497,6 +499,8 @@ _.extend(Watcher.prototype, {
           return self.stopped ||
             (absPath === info.absPath &&
              self._fireIfDirectoryChanged(info, true));
+          // XXX #3335 We probably should check again in a second, due to low
+          // filesystem modtime resolution.
         });
       }
     });
