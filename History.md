@@ -1,6 +1,16 @@
 ## v.NEXT
 
 
+## v1.0.2.1
+
+* Fix crash in file change watcher.  #3336
+
+* Allow `meteor test-packages packages/*` even if not all package directories
+  have tests.  #3334
+
+* Fix typo in `meteor shell` output. #3326
+
+
 ## v1.0.2
 
 ### Improvements to the `meteor` command-line tool
