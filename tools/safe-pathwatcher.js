@@ -54,11 +54,9 @@ exports.watch = function watch(absPath, callback) {
           archinfo.matches(archinfo.host(), 'os.linux')) {
         suggestedRaisingWatchLimit = true;
         var Console = require('./console.js').Console;
-        // XXX If we're comfortable with this message appearing in the new user
-        // experience, change it from debug to arrowWarn.
-        Console.debug(
+        Console.arrowWarn(
           "It looks like a simple tweak to your system's configuration will " +
-            "make many tools (including this meteor command) more efficient. " +
+            "make many tools (including this Meteor command) more efficient. " +
             "To learn more, see " +
             Console.url("https://github.com/meteor/meteor/wiki/File-Change-Watcher-Efficiency"));
       }
