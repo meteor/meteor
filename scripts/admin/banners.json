@@ -10,7 +10,7 @@
     {
       "versions": ["1.0.2"],
       "banner": {
-        "text": "=> Meteor 1.0.2.1: Fixes crash while watching source files for changes.\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.0.2.1 by running 'meteor update --patch'."
+        "text": "=> Meteor 1.0.2.1: Fixes crash while watching source files for changes.\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.0.2.1 by running 'meteor update'."
       }
     }
   ]
