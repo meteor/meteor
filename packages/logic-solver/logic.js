@@ -1,32 +1,16 @@
-// Next steps:
-// - Solver has _formulaToTerm, which takes Formulas and
-//   converts them to NTerms by creating variables.
-//   It does not actually generate the Formula clauses,
-//   because we don't know if the variable will be used!
-//   The Clause we're making might not get used.  When the
-//   variable is part of a clause that is added to the solver,
-//   then we do generation of the appropriate polarity.
-// - There are some edge cases to test, like what if we
-//   use a formula in the positive polarity and then forbid it.
-//   (Should forbid the variable and also generate the negative
-//   polarity.  Test this.)
-
 Logic = {};
 
 // WholeNumber: a non-negative integer (0 is allowed)
 Logic.WholeNumber = Match.Where(function (x) {
-  check(x, Match.Integer);
-  return x >= 0;
+  return Match.test(x, Match.Integer) && x >= 0;
 });
 
 Logic.NumTerm = Match.Where(function (x) {
-  check(x, Match.Integer);
-  return (x !== 0);
+  return Match.test(x, Match.Integer) && x !== 0;
 });
 
 Logic.NameTerm = Match.Where(function (x) {
-  check(x, String);
-  return !! x;
+  return (typeof x === 'string') && (!! x);
 });
 
 // Term: a variable name or variable number, optionally
@@ -38,14 +22,23 @@ Logic.NameTerm = Match.Where(function (x) {
 // keep it to either one or zero of them.
 Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
 
-Logic.not = function (term) {
-  check(term, Logic.Term);
-  if (typeof term === 'number') {
-    return -term;
-  } else if (term.charAt(0) === '-') {
-    return term.slice(1);
+// Takes a Formula or Term, returns a Formula or Term.
+// Unlike other operators, if you give it a Term,
+// you will get a Term back (of the same type, NameTerm
+// or NumTerm).
+Logic.not = function (operand) {
+  check(operand, Logic.FormulaOrTerm);
+  if (operand instanceof Logic.Formula) {
+    return new Logic.NotFormula(operand);
   } else {
-    return '-' + term;
+    // Term
+    if (typeof operand === 'number') {
+      return -operand;
+    } else if (operand.charAt(0) === '-') {
+      return operand.slice(1);
+    } else {
+      return '-' + operand;
+    }
   }
 };
 
@@ -69,6 +62,8 @@ Logic.Formula.prototype.guid = function () {
   }
   return this._guid;
 };
+
+Logic.FormulaOrTerm = Match.OneOf(Logic.Formula, Logic.Term);
 
 Logic.Clause = function (termOrArray/*, ...*/) {
   var terms = _.flatten(arguments);
@@ -99,6 +94,9 @@ Logic.Solver = function () {
   this._formulaInfo = {}; // Formula guid -> info object
   // For generating formula names like "or1", "or2", "and1", "and2"
   this._nextFormulaNumByType = {}; // Formula type -> next var id
+  // Map of Formulas whose info has `false` for either
+  // `occursPositively` or `occursNegatively`
+  this._ungeneratedFormulas = {}; // varNum -> Formula
 };
 
 // Get a var number for vname, assigning it a number if it is new.
@@ -118,6 +116,7 @@ Logic.Solver.prototype.getVarNum = function (vname, _internal) {
 };
 
 Logic.Solver.prototype.getVarName = function (vnum) {
+  check(vnum, Match.Integer);
   var num2name = this._num2name;
   if (vnum < 1 || vnum >= num2name.length) {
     throw new Error("Bad variable num: " + vnum);
@@ -189,44 +188,80 @@ Logic.Solver.prototype.toNameTerm = function (t) {
   }
 };
 
-Logic.Solver.prototype._addClause = function (cls) {
+Logic.Solver.prototype._addClause = function (cls, _internal) {
   var self = this;
 
   check(cls, Logic.Clause);
 
-  var usedF = false;
-  var usedT = false;
+  if (! _internal) {
+    var usedF = false;
+    var usedT = false;
 
-  _.each(cls.terms, function (t) {
-    var v = (t < 0) ? -t : t;
-    if (v === 1) {
-      usedF = true;
-    } else if (v === 2) {
-      usedT = true;
-    } else if (v < 1 || v >= self._num2name.length) {
-      throw new Error("Bad variable number: " + v);
-    }
-  });
+    _.each(cls.terms, function (t) {
+      var v = (t < 0) ? -t : t;
+      if (v === 1) {
+        usedF = true;
+      } else if (v === 2) {
+        usedT = true;
+      } else if (v < 1 || v >= self._num2name.length) {
+        throw new Error("Bad variable number: " + v);
+      } else if (_.has(self._ungeneratedFormulas, v)) {
+        // using a Formula's var, maybe have to generate clauses
+        // for the Formula
+        var formula = self._ungeneratedFormulas[v];
+        var info = self._getFormulaInfo(formula);
+        var positive = t > 0;
+        if (positive && ! info.occursPositively) {
+          // generate clauses for the formula.
+          // Eg, if we use variable `X` which represents the formula
+          // `A v B`, add the clause `A v B v -X`.
+          info.occursPositively = true;
+          var clauses = formula._genTrue(self);
+          self._addClauses(_.map(clauses, function (clause) {
+            return clause.append(-v);
+          }), true);
+        } else if ((! positive) && ! info.occursNegatively) {
+          // Eg, if we have the term `-X` where `X` represents the
+          // formula `A v B`, add the clauses `-A v X` and `-B v X`.
+          info.occursNegatively = true;
+          var clauses = formula._genFalse(self);
+          self._addClauses(_.map(clauses, function (clause) {
+            return clause.append(v);
+          }), true);
+        }
+        if (info.occursPositively && info.occursNegatively) {
+          delete self._ungeneratedFormulas[v];
+        }
+      }
+    });
 
-  this._F_used = (this._F_used || usedF);
-  this._T_used = (this._T_used || usedT);
+    this._F_used = (this._F_used || usedF);
+    this._T_used = (this._T_used || usedT);
+  }
 
   this.clauses.push(cls);
 };
 
-Logic.Solver.prototype._addClauses = function (array) {
+Logic.Solver.prototype._addClauses = function (array, _internal) {
   check(array, [Logic.Clause]);
   var self = this;
-  _.each(array, function (cls) { self._addClause(cls); });
+  _.each(array, function (cls) { self._addClause(cls, _internal); });
 };
 
 Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
   var self = this;
   var formulas = _.flatten(arguments);
-  check(formulas, [Match.OneOf(Logic.Formula, Logic.Term)]);
+  check(formulas, [Logic.FormulaOrTerm]);
   _.each(_.flatten(arguments), function (f) {
-    if (f instanceof Logic.Formula) {
-      self._addClauses(f._genTrue(self));
+    if (f instanceof Logic.NotFormula) {
+      self.forbid(f.operand);
+    } else if (f instanceof Logic.Formula) {
+      var info = self._getFormulaInfo(f);
+      if (info.varNum !== null) {
+        self._addClause(new Logic.Clause(info.varNum));
+      } else {
+        self._addClauses(f._genTrue(self));
+      }
     } else if (Match.test(f, Logic.Term)) {
       self._addClause(new Logic.Clause(self.toNumTerm(f)));
     }
@@ -236,10 +271,17 @@ Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
 Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
   var self = this;
   var formulas = _.flatten(arguments);
-  check(formulas, [Match.OneOf(Logic.Formula, Logic.Term)]);
+  check(formulas, [Logic.FormulaOrTerm]);
   _.each(_.flatten(arguments), function (f) {
-    if (f instanceof Logic.Formula) {
-      self._addClauses(f._genFalse(self));
+    if (f instanceof Logic.NotFormula) {
+      self.require(f.operand);
+    } else if (f instanceof Logic.Formula) {
+      var info = self._getFormulaInfo(f);
+      if (info.varNum !== null) {
+        self._addClause(new Logic.Clause(-info.varNum));
+      } else {
+        self._addClauses(f._genFalse(self));
+      }
     } else if (Match.test(f, Logic.Term)) {
       self._addClause(new Logic.Clause(-self.toNumTerm(f)));
     }
@@ -290,14 +332,11 @@ Logic.Solver.prototype._getFormulaInfo = function (formula) {
   var guid = formula.guid();
   if (! self._formulaInfo[guid]) {
     self._formulaInfo[guid] = {
-      // We generate a variable when a Formula is used that has
-      // not been explicitly required or forbidden.  If the variable
-      // is only used positively or only used negatively, we can
-      // generate fewer clauses, using a method that relies on
-      // the fact that the generated variable is unobservable so we
-      // can get away without a bidirectional implication.
-      isRequired: false,
-      isForbidden: false,
+      // We generate a variable when a Formula is used.  If the
+      // variable is only used positively or only used negatively, we
+      // can generate fewer clauses, using a method that relies on the
+      // fact that the generated variable is unobservable so we can
+      // get away without a bidirectional implication.
       varName: null,
       varNum: null,
       occursPositively: false,
@@ -307,10 +346,24 @@ Logic.Solver.prototype._getFormulaInfo = function (formula) {
   return self._formulaInfo[guid];
 };
 
+// Takes a Formula or an array of Formulas, returns a NumTerm.
 Logic.Solver.prototype._formulaToTerm = function (formula) {
-  check(formula, Match.OneOf(Logic.Formula, Logic.Term));
+  var self = this;
 
-  if (formula instanceof Logic.Formula) {
+  if (_.isArray(formula)) {
+    check(formula, [Logic.FormulaOrTerm]);
+    return _.map(formula, function (f) {
+      return self._formulaToTerm(f);
+    });
+  } else {
+    check(formula, Logic.FormulaOrTerm);
+  }
+
+  if (formula instanceof Logic.NotFormula) {
+    // shortcut that avoids creating a variable called
+    // something like "not1" when you use Logic.not(formula).
+    return Logic.not(self._formulaToTerm(formula.operand));
+  } else if (formula instanceof Logic.Formula) {
     var info = this._getFormulaInfo(formula);
     if (info.varNum === null) {
       // generate a Solver-local formula name like "or1"
@@ -320,17 +373,14 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
       }
       var numForVarName = this._nextFormulaNumByType[type]++;
       info.varName = formula.type + numForVarName;
-      info.varNum = this.getVarName(info.varName);
+      info.varNum = this.getVarNum(info.varName);
+      this._ungeneratedFormulas[info.varNum] = formula;
     }
     return info.varNum;
   } else {
-    return formula; // already a Term
+    // formula is a Term
+    return self.toNumTerm(formula);
   }
-};
-
-Logic.Solver.prototype._makeClause = function (formulaOrArray/*, ...*/) {
-  var formulas = _.flatten(arguments);
-
 };
 
 Logic._defineFormula = function (constructor, typeName, methods) {
@@ -347,18 +397,32 @@ Logic.or = function (termOrArray/*, ...*/) {
   return new Logic.OrFormula(_.flatten(arguments));
 };
 
-Logic.OrFormula = function (terms) {
-  check(terms, [Logic.Term]);
-  this.terms = terms;
+Logic.OrFormula = function (operands) {
+  check(operands, [Logic.FormulaOrTerm]);
+  this.operands = operands;
 };
 
 Logic._defineFormula(Logic.OrFormula, 'or', {
   _genTrue: function (solver) {
-    return [new Logic.Clause(solver.toNumTerm(this.terms))];
+    return [new Logic.Clause(solver._formulaToTerm(this.operands))];
   },
   _genFalse: function (solver) {
-    return _.map(this.terms, function (t) {
-      return new Logic.Clause(-solver.toNumTerm(t));
+    return _.map(this.operands, function (formula) {
+      return new Logic.Clause(-solver._formulaToTerm(formula));
     });
+  }
+});
+
+Logic.NotFormula = function (operand) {
+  check(operand, Logic.FormulaOrTerm);
+  this.operand = operand;
+};
+
+Logic._defineFormula(Logic.NotFormula, 'not', {
+  _genTrue: function (solver) {
+    return [new Logic.Clause(- solver._formulaToTerm(this.operand))];
+  },
+  _genFalse: function (solver) {
+    return [new Logic.Clause(solver._formulaToTerm(this.operand))];
   }
 });
