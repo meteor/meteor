@@ -1,9 +1,32 @@
+// Next steps:
+// - Solver has _formulaToTerm, which takes Formulas and
+//   converts them to NTerms by creating variables.
+//   It does not actually generate the Formula clauses,
+//   because we don't know if the variable will be used!
+//   The Clause we're making might not get used.  When the
+//   variable is part of a clause that is added to the solver,
+//   then we do generation of the appropriate polarity.
+// - There are some edge cases to test, like what if we
+//   use a formula in the positive polarity and then forbid it.
+//   (Should forbid the variable and also generate the negative
+//   polarity.  Test this.)
+
 Logic = {};
 
 // WholeNumber: a non-negative integer (0 is allowed)
 Logic.WholeNumber = Match.Where(function (x) {
   check(x, Match.Integer);
   return x >= 0;
+});
+
+Logic.NumTerm = Match.Where(function (x) {
+  check(x, Match.Integer);
+  return (x !== 0);
+});
+
+Logic.NameTerm = Match.Where(function (x) {
+  check(x, String);
+  return !! x;
 });
 
 // Term: a variable name or variable number, optionally
@@ -13,22 +36,7 @@ Logic.WholeNumber = Match.Where(function (x) {
 // variable number 1, for example.  Any number of leading
 // "-" will be parsed in the string form, but we try to
 // keep it to either one or zero of them.
-Logic.Term = Match.Where(function (x) {
-  if (typeof x === 'number') {
-    check(x, Match.Integer);
-    return (x !== 0);
-  } else {
-    check(x, String);
-    return !! x;
-  }
-});
-
-// A Term that is represented as a number, not a name.
-// (Subtype of Term.)
-Logic.NTerm = Match.Where(function (x) {
-  check(x, Match.Integer);
-  return (x !== 0);
-});
+Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
 
 Logic.not = function (term) {
   check(term, Logic.Term);
@@ -40,6 +48,9 @@ Logic.not = function (term) {
     return '-' + term;
   }
 };
+
+Logic.TRUE = "`T";
+Logic.FALSE = "`F";
 
 Logic.Formula = function () {};
 // Returns a list of clauses that together require the
@@ -59,34 +70,10 @@ Logic.Formula.prototype.guid = function () {
   return this._guid;
 };
 
-// Like `formula._genTrue(solver)` but works on Terms too (in effect
-// promoting them to formulas).
-Logic.Formula._genTrue = function (formula, solver) {
-  if (formula instanceof Logic.Formula) {
-    return formula._genTrue(solver);
-  } else if (Match.test(formula, Logic.Term)) {
-    var t = solver._toN(formula);
-    return [new Logic.Clause([t])];
-  } else {
-    throw new Error("Expected a Formula or Term");
-  }
-};
-
-Logic.Formula._genFalse = function (formula, solver) {
-  if (formula instanceof Logic.Formula) {
-    return formula._genFalse(solver);
-  } else if (Match.test(formula, Logic.Term)) {
-    var t = solver._toN(formula);
-    return [new Logic.Clause([-t])];
-  } else {
-    throw new Error("Expected a Formula or Term");
-  }
-};
-
 Logic.Clause = function (termOrArray/*, ...*/) {
   var terms = _.flatten(arguments);
-  check(terms, [Logic.NTerm]);
-  this.terms = terms; // immutable [NTerm]
+  check(terms, [Logic.NumTerm]);
+  this.terms = terms; // immutable [NumTerm]
 };
 
 // Returns a new Clause with the extra term or terms appended
@@ -110,6 +97,8 @@ Logic.Solver = function () {
   this.clauses.push(new Logic.Clause(this._T));
 
   this._formulaInfo = {}; // Formula guid -> info object
+  // For generating formula names like "or1", "or2", "and1", "and2"
+  this._nextFormulaNumByType = {}; // Formula type -> next var id
 };
 
 // Get a var number for vname, assigning it a number if it is new.
@@ -137,17 +126,17 @@ Logic.Solver.prototype.getVarName = function (vnum) {
   }
 };
 
-// Converts Terms to NTerms (if they aren't already).  This is done
+// Converts Terms to NumTerms (if they aren't already).  This is done
 // when a Formula creates Clauses for a Solver, since Clauses require
-// NTerms.  Takes a Term or an array.  For example, [-3, "-foo"] might
+// NumTerms.  Takes a Term or an array.  For example, [-3, "-foo"] might
 // become [-3, -4].
-Logic.Solver.prototype._toN = function (t) {
+Logic.Solver.prototype.toNumTerm = function (t) {
   var self = this;
 
   if (_.isArray(t)) {
     check(t, [Logic.Term]);
     return _.map(t, function (tt) {
-      return self._toN(tt);
+      return self.toNumTerm(tt);
     });
   } else {
     check(t, Logic.Term);
@@ -166,14 +155,15 @@ Logic.Solver.prototype._toN = function (t) {
   }
 };
 
-// Converts Terms to string form.
-Logic.Solver.prototype._toName = function (t) {
+// Converts Terms to NameTerms (if they aren't already).
+// Takes a Term or an array.
+Logic.Solver.prototype.toNameTerm = function (t) {
   var self = this;
 
   if (_.isArray(t)) {
     check(t, [Logic.Term]);
     return _.map(t, function (tt) {
-      return self._toName(tt);
+      return self.toNameTerm(tt);
     });
   } else {
     check(t, Logic.Term);
@@ -200,14 +190,27 @@ Logic.Solver.prototype._toName = function (t) {
 };
 
 Logic.Solver.prototype._addClause = function (cls) {
+  var self = this;
+
   check(cls, Logic.Clause);
 
-  if (_.contains(cls.terms, 1)) {
-    this._F_used = true;
-  }
-  if (_.contains(cls.terms, 2)) {
-    this._T_used = true;
-  }
+  var usedF = false;
+  var usedT = false;
+
+  _.each(cls.terms, function (t) {
+    var v = (t < 0) ? -t : t;
+    if (v === 1) {
+      usedF = true;
+    } else if (v === 2) {
+      usedT = true;
+    } else if (v < 1 || v >= self._num2name.length) {
+      throw new Error("Bad variable number: " + v);
+    }
+  });
+
+  this._F_used = (this._F_used || usedF);
+  this._T_used = (this._T_used || usedT);
+
   this.clauses.push(cls);
 };
 
@@ -219,15 +222,27 @@ Logic.Solver.prototype._addClauses = function (array) {
 
 Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
   var self = this;
+  var formulas = _.flatten(arguments);
+  check(formulas, [Match.OneOf(Logic.Formula, Logic.Term)]);
   _.each(_.flatten(arguments), function (f) {
-    self._addClauses(Logic.Formula._genTrue(f, self));
+    if (f instanceof Logic.Formula) {
+      self._addClauses(f._genTrue(self));
+    } else if (Match.test(f, Logic.Term)) {
+      self._addClause(new Logic.Clause(self.toNumTerm(f)));
+    }
   });
 };
 
 Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
   var self = this;
+  var formulas = _.flatten(arguments);
+  check(formulas, [Match.OneOf(Logic.Formula, Logic.Term)]);
   _.each(_.flatten(arguments), function (f) {
-    self._addClauses(Logic.Formula._genFalse(f, self));
+    if (f instanceof Logic.Formula) {
+      self._addClauses(f._genFalse(self));
+    } else if (Match.test(f, Logic.Term)) {
+      self._addClause(new Logic.Clause(-self.toNumTerm(f)));
+    }
   });
 };
 
@@ -253,7 +268,7 @@ Logic.Solver.prototype._clauseStrings = function () {
   var clauseData = self._clauseData();
   return _.map(clauseData, function (clause) {
     return _.map(clause, function (nterm) {
-      var str = self._toName(nterm);
+      var str = self.toNameTerm(nterm);
       if (/\s/.test(str)) {
         // write name in quotes for readability.  we don't bother
         // making this string machine-parsable in the general case.
@@ -283,12 +298,39 @@ Logic.Solver.prototype._getFormulaInfo = function (formula) {
       // can get away without a bidirectional implication.
       isRequired: false,
       isForbidden: false,
-      variable: null,
+      varName: null,
+      varNum: null,
       occursPositively: false,
       occursNegatively: false
     };
   }
   return self._formulaInfo[guid];
+};
+
+Logic.Solver.prototype._formulaToTerm = function (formula) {
+  check(formula, Match.OneOf(Logic.Formula, Logic.Term));
+
+  if (formula instanceof Logic.Formula) {
+    var info = this._getFormulaInfo(formula);
+    if (info.varNum === null) {
+      // generate a Solver-local formula name like "or1"
+      var type = formula.type;
+      if (! this._nextFormulaNumByType[type]) {
+        this._nextFormulaNumByType[type] = 1;
+      }
+      var numForVarName = this._nextFormulaNumByType[type]++;
+      info.varName = formula.type + numForVarName;
+      info.varNum = this.getVarName(info.varName);
+    }
+    return info.varNum;
+  } else {
+    return formula; // already a Term
+  }
+};
+
+Logic.Solver.prototype._makeClause = function (formulaOrArray/*, ...*/) {
+  var formulas = _.flatten(arguments);
+
 };
 
 Logic._defineFormula = function (constructor, typeName, methods) {
@@ -312,11 +354,11 @@ Logic.OrFormula = function (terms) {
 
 Logic._defineFormula(Logic.OrFormula, 'or', {
   _genTrue: function (solver) {
-    return [new Logic.Clause(solver._toN(this.terms))];
+    return [new Logic.Clause(solver.toNumTerm(this.terms))];
   },
   _genFalse: function (solver) {
     return _.map(this.terms, function (t) {
-      return new Logic.Clause(-solver._toN(t));
+      return new Logic.Clause(-solver.toNumTerm(t));
     });
   }
 });
