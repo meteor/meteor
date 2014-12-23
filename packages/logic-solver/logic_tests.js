@@ -134,3 +134,83 @@ Tinytest.add("logic-solver - Formula sharing", function (test) {
   test.equal(s1._clauseData(), [[3], [4, 5]]);
   test.equal(s2._clauseData(), [[-3], [-4]]);
 });
+
+Tinytest.add("logic-solver - nested Logic.or", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.or(Logic.or("A", "B"), Logic.or("C", "D")));
+    },
+    ["A v B v -or1", "C v D v -or2", "or1 v or2"]
+  ]);
+});
+
+Tinytest.add("logic-solver - Logic.not term", function (test) {
+  test.equal(Logic.not("foo"), "-foo");
+  test.equal(Logic.not("-foo"), "foo");
+  test.equal(Logic.not("--foo"), "-foo");
+  test.equal(Logic.not(1), -1);
+  test.equal(Logic.not(-1), 1);
+});
+
+Tinytest.add("logic-solver - Logic.not formula", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.not(Logic.or("A", "B")));
+    },
+    ["-A", "-B"],
+    function (s) {
+      s.forbid(Logic.not(Logic.or("A", "B")));
+    },
+    ["A v B"],
+    function (s) {
+      s.require(Logic.or(Logic.not(Logic.or("A", "B")), "C"));
+    },
+    ["-A v or1", "-B v or1", "-or1 v C"]
+  ]);
+});
+
+Tinytest.add("logic-solver - Require/forbid after formula gen", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      // Use a formula in the positive and then require it.  Requiring
+      // the formula does not regenerate its clauses, it just requires
+      // the formula's variable (or1).
+      var f = Logic.or("A", "B");
+      s.require(Logic.or(f, "C"));
+      s.require(f);
+    },
+    ["A v B v -or1","or1 v C","or1"]
+  ]);
+
+  runClauseTests(test, [
+    function (s) {
+      // Use a formula in the posiive and then forbid it.
+      // Forbidding a formula that has not been used in the
+      // negative before requires generating new clauses.
+      var f = Logic.or("A", "B");
+      s.require(Logic.or(f, "C"));
+      s.forbid(f);
+    },
+    ["A v B v -or1","or1 v C","-A v or1","-B v or1","-or1"]
+  ]);
+
+  runClauseTests(test, [
+    function (s) {
+      // Use a formula in the negative and then forbid it.
+      var f = Logic.or("A", "B");
+      s.require(Logic.or(Logic.not(f), "C"));
+      s.forbid(f);
+    },
+    ["-A v or1","-B v or1","-or1 v C","-or1"]
+  ]);
+
+  runClauseTests(test, [
+    function (s) {
+      // Use a formula in the negative and then require it.
+      var f = Logic.or("A", "B");
+      s.require(Logic.or(Logic.not(f), "C"));
+      s.require(f);
+    },
+    ["-A v or1","-B v or1","-or1 v C","A v B v -or1","or1"]
+  ]);
+});
