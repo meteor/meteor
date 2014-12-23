@@ -19,14 +19,15 @@ Tinytest.add("logic-solver - _clauseStrings", function (test) {
   var s = new Logic.Solver;
 
   s.require('foo');
-  // test this canonicalization that is part of _toName
-  // (though not actually used by _clauseStrings because
-  // Clauses use numeric Terms).
-  test.equal(s._toName("-----foo"), "-foo");
 
   test.equal(s._clauseStrings(), ["foo"]);
   s.require('-myPackage 1.0.0');
   test.equal(s._clauseStrings(), ["foo", '-"myPackage 1.0.0"']);
+});
+
+Tinytest.add("logic-solver - toNameTerm", function (test) {
+  var s = new Logic.Solver;
+  test.equal(s.toNameTerm("-----foo"), "-foo");
 });
 
 var checkClauses = function (test, f, expected) {
@@ -47,7 +48,46 @@ var runClauseTests = function (test, funcsAndExpecteds) {
   }
 };
 
-Tinytest.add("logic-solver - Logic.Or", function (test) {
+Tinytest.add("logic-solver - bad NumTerms", function (test) {
+  test.throws(function () {
+    var s = new Logic.Solver;
+    s.require(3);
+  });
+
+  test.throws(function () {
+    var s = new Logic.Solver;
+    s.require(-3);
+  });
+
+  test.throws(function () {
+    var s = new Logic.Solver;
+    s.require(0);
+  });
+
+  test.throws(function () {
+    var s = new Logic.Solver;
+    s.require(Logic.or(3));
+  });
+});
+
+Tinytest.add("logic-solver - true and false", function (test) {
+  runClauseTests(test, [
+    // Clauses that forbid `F and require `T are automatically
+    // generated as the first two clauses.  Using each of them
+    // causes the relevant clause to be included in the output.
+    function (s) {
+      s.require(Logic.not(Logic.TRUE));
+    },
+    ["`T", "-`T"],
+    function (s) {
+      s.require(Logic.or(Logic.not(Logic.TRUE),
+                         Logic.not(Logic.FALSE)));
+    },
+    ["-`F", "`T", "-`T v -`F"]
+  ]);
+});
+
+Tinytest.add("logic-solver - Logic.or", function (test) {
   runClauseTests(test, [
     function (s) {
       s.require(Logic.or('A', 'B'));
@@ -79,4 +119,18 @@ Tinytest.add("logic-solver - Logic.Or", function (test) {
     },
     [""]
   ]);
+});
+
+Tinytest.add("logic-solver - Formula sharing", function (test) {
+  var f = Logic.or("A", "B");
+  var s1 = new Logic.Solver;
+  var s2 = new Logic.Solver;
+
+  s1.require("X");
+  s1.require(f);
+
+  s2.forbid(f);
+
+  test.equal(s1._clauseData(), [[3], [4, 5]]);
+  test.equal(s2._clauseData(), [[-3], [-4]]);
 });
