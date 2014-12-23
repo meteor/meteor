@@ -236,13 +236,13 @@ Tinytest.add("logic-solver - Logic.and", function (test) {
     },
     ["A", "B"],
     function (s) {
-      s.require(Logic.and(['A'], ['-B']));
+      s.require(Logic.and(['A'], ['-B'], 'C'));
     },
-    ["A", "-B"],
+    ["A", "-B", "C"],
     function (s) {
-      s.forbid(Logic.and('A', '-B'));
+      s.forbid(Logic.and('A', '-B', 'C'));
     },
-    ["-A v B"],
+    ["-A v B v -C"],
     function (s) {
       s.forbid(Logic.and());
     },
@@ -272,5 +272,32 @@ Tinytest.add("logic-solver - Logic.and", function (test) {
      "-C v $or2",
      "-$or1 v -$or2 v $and1",
      "-$and1 v -D"]
+  ]);
+});
+
+Tinytest.add("logic-solver - Logic.xor", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.xor()); },
+    [""],
+    function (s) {
+      s.forbid(Logic.xor()); },
+    [],
+    function (s) {
+      s.require(Logic.xor("A")); },
+    ["A"],
+    function (s) {
+      s.forbid(Logic.xor("A")); },
+    ["-A"],
+    function (s) {
+      s.require(Logic.xor("A", "B")); },
+    ["A v B", "-A v -B"],
+    function (s) {
+      s.forbid(Logic.xor("A", "B")); },
+    ["A v -B", "-A v B"],
+    function (s) {
+      s.require(Logic.xor(["A", []], ["B"], [])); },
+    ["A v B", "-A v -B"]
+    // XXX test 3 and 4 args
   ]);
 });

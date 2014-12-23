@@ -470,3 +470,73 @@ Logic._defineFormula(Logic.AndFormula, 'and', {
     return makeClause(_.map(this.operands, Logic.not));
   }
 });
+
+Logic.xor = function (termOrArray/*, ...*/) {
+  return new Logic.XorFormula(_.flatten(arguments));
+};
+
+Logic.XorFormula = function (operands) {
+  check(operands, [Logic.FormulaOrTerm]);
+  this.operands = operands;
+};
+
+// Group `array` into groups of N, where the last group
+// may be shorter than N.  group([a,b,c,d,e], 3) => [[a,b,c],[d,e]]
+var group = function (array, N) {
+  var ret = [];
+  for (var i = 0; i < array.length; i += N) {
+    ret.push(array.slice(i, i+N));
+  }
+  return ret;
+};
+
+Logic._defineFormula(Logic.XorFormula, 'xor', {
+  _genTrue: function (makeClause) {
+    var args = this.operands;
+    var not = Logic.not;
+    if (args.length === 0) {
+      return makeClause(); // always fail
+    } else if (args.length === 1) {
+      return makeClause(args[0]);
+    } else if (args.length === 2) {
+      var A = args[0], B = args[1];
+      return [makeClause(A, B), // A v B
+              makeClause(not(A), not(B))]; // -A v -B
+    } else if (args.length === 3) {
+      var A = args[0], B = args[1], C = args[2];
+      return [makeClause(A, B, C), // A v B v C
+              makeClause(A, not(B), not(C)), // A v -B v -C
+              makeClause(not(A), B, not(C)), // -A v B v -C
+              makeClause(not(A), not(B), C)]; // -A v -B v C
+    } else {
+      return (new Logic.XorFormula(
+        _.map(group(args, 3), function (group) {
+          return new Logic.XorFormula(group);
+        })))._genTrue(makeClause);
+    }
+  },
+  _genFalse: function (makeClause) {
+    var args = this.operands;
+    var not = Logic.not;
+    if (args.length === 0) {
+      return []; // always succeed
+    } else if (args.length === 1) {
+      return makeClause(not(args[0]));
+    } else if (args.length === 2) {
+      var A = args[0], B = args[1];
+      return [makeClause(A, not(B)), // A v -B
+              makeClause(not(A), B)]; // -A v B
+    } else if (args.length === 3) {
+      var A = args[0], B = args[1], C = args[2];
+      return [makeClause(not(A), not(B), not(C)), // -A v -B v -C
+              makeClause(not(A), B, C), // -A v B v C
+              makeClause(A, not(B), C), // A v -B v C
+              makeClause(A, B, not(C))]; // A v B v -C
+    } else {
+      return (new Logic.XorFormula(
+        _.map(group(args, 3), function (group) {
+          return new Logic.XorFormula(group);
+        })))._genFalse(makeClause);
+    }
+  }
+});
