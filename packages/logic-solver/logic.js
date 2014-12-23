@@ -46,8 +46,13 @@ Logic.TRUE = "$T";
 Logic.FALSE = "$F";
 
 Logic.Formula = function () {};
-// Returns a list of clauses that together require the
-// Formula to be true.  (Does not add them to the solver.)
+// Returns a list of Clauses that together require the Formula to be
+// true.  A single Clause may also be returned.  The implementation
+// should call makeClause(formulaOrArray, ...)  on the Formulas and
+// Terms of the clause in order to construct Clause objects to return.
+// makeClause is provided by the caller (the Solver) and returns a
+// Clause object that uses variable numbers specific to that Solver
+// instance.
 Logic.Formula.prototype._genTrue = function (makeClause) { return []; };
 // Returns a list of clauses that together require the
 // Formula to be false.
@@ -184,64 +189,69 @@ Logic.Solver.prototype.toNameTerm = function (t) {
   }
 };
 
-Logic.Solver.prototype._addClause = function (cls, _internal) {
+Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
   var self = this;
 
   check(cls, Logic.Clause);
 
-  if (! _internal) {
-    var usedF = false;
-    var usedT = false;
-
-    _.each(cls.terms, function (t) {
-      var v = (t < 0) ? -t : t;
-      if (v === 1) {
-        usedF = true;
-      } else if (v === 2) {
-        usedT = true;
-      } else if (v < 1 || v >= self._num2name.length) {
-        throw new Error("Bad variable number: " + v);
-      } else if (_.has(self._ungeneratedFormulas, v)) {
-        // using a Formula's var, maybe have to generate clauses
-        // for the Formula
-        var formula = self._ungeneratedFormulas[v];
-        var info = self._getFormulaInfo(formula);
-        var positive = t > 0;
-        if (positive && ! info.occursPositively) {
-          // generate clauses for the formula.
-          // Eg, if we use variable `X` which represents the formula
-          // `A v B`, add the clause `A v B v -X`.
-          info.occursPositively = true;
-          var clauses = formula._genTrue(_.bind(self._makeClause, self));
-          self._addClauses(_.map(clauses, function (clause) {
-            return clause.append(-v);
-          }), true);
-        } else if ((! positive) && ! info.occursNegatively) {
-          // Eg, if we have the term `-X` where `X` represents the
-          // formula `A v B`, add the clauses `-A v X` and `-B v X`.
-          info.occursNegatively = true;
-          var clauses = formula._genFalse(_.bind(self._makeClause, self));
-          self._addClauses(_.map(clauses, function (clause) {
-            return clause.append(v);
-          }), true);
-        }
-        if (info.occursPositively && info.occursNegatively) {
-          delete self._ungeneratedFormulas[v];
-        }
-      }
-    });
-
-    this._F_used = (this._F_used || usedF);
-    this._T_used = (this._T_used || usedT);
+  var extraTerms = null;
+  if (_extraTerms) {
+    extraTerms = _extraTerms;
+    check(extraTerms, [Logic.Term]);
   }
+
+  var usedF = false;
+  var usedT = false;
+
+  var numRealTerms = cls.terms.length;
+  if (extraTerms) {
+    cls = cls.append(extraTerms);
+  }
+
+  _.each(cls.terms, function (t, i) {
+    var v = (t < 0) ? -t : t;
+    if (v === 1) {
+      usedF = true;
+    } else if (v === 2) {
+      usedT = true;
+    } else if (v < 1 || v >= self._num2name.length) {
+      throw new Error("Bad variable number: " + v);
+    } else if ((i < numRealTerms) && _.has(self._ungeneratedFormulas, v)) {
+      // using a Formula's var; maybe have to generate clauses
+      // for the Formula
+      var formula = self._ungeneratedFormulas[v];
+      var info = self._getFormulaInfo(formula);
+      var positive = t > 0;
+      if (positive && ! info.occursPositively) {
+        // generate clauses for the formula.
+        // Eg, if we use variable `X` which represents the formula
+        // `A v B`, add the clause `A v B v -X`.
+        info.occursPositively = true;
+        var clauses = self._callGenTrue(formula);
+        self._addClauses(clauses, [-v]);
+      } else if ((! positive) && ! info.occursNegatively) {
+        // Eg, if we have the term `-X` where `X` represents the
+        // formula `A v B`, add the clauses `-A v X` and `-B v X`.
+        info.occursNegatively = true;
+        var clauses = self._callGenFalse(formula);
+        self._addClauses(clauses, [v]);
+      }
+      if (info.occursPositively && info.occursNegatively) {
+        delete self._ungeneratedFormulas[v];
+      }
+    }
+  });
+
+  this._F_used = (this._F_used || usedF);
+  this._T_used = (this._T_used || usedT);
 
   this.clauses.push(cls);
 };
 
-Logic.Solver.prototype._addClauses = function (array, _internal) {
+Logic.Solver.prototype._addClauses = function (array, _extraTerms) {
   check(array, [Logic.Clause]);
   var self = this;
-  _.each(array, function (cls) { self._addClause(cls, _internal); });
+  _.each(array, function (cls) { self._addClause(cls, _extraTerms); });
 };
 
 Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
@@ -256,7 +266,7 @@ Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
       if (info.varNum !== null) {
         self._addClause(new Logic.Clause(info.varNum));
       } else {
-        self._addClauses(f._genTrue(_.bind(self._makeClause, self)));
+        self._addClauses(self._callGenTrue(f));
       }
     } else if (Match.test(f, Logic.Term)) {
       self._addClause(new Logic.Clause(self.toNumTerm(f)));
@@ -276,12 +286,22 @@ Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
       if (info.varNum !== null) {
         self._addClause(new Logic.Clause(-info.varNum));
       } else {
-        self._addClauses(f._genFalse(_.bind(self._makeClause, self)));
+        self._addClauses(self._callGenFalse(f));
       }
     } else if (Match.test(f, Logic.Term)) {
       self._addClause(new Logic.Clause(-self.toNumTerm(f)));
     }
   });
+};
+
+// Helpers for invoking _genTrue and _genFalse on a Formula.
+Logic.Solver.prototype._callGenTrue = function (formula) {
+  var ret = formula._genTrue(_.bind(this._makeClause, this));
+  return _.isArray(ret) ? ret : [ret];
+};
+Logic.Solver.prototype._callGenFalse = function (formula) {
+  var ret = formula._genFalse(_.bind(this._makeClause, this));
+  return _.isArray(ret) ? ret : [ret];
 };
 
 // Get clause data as an array of arrays of integers,
@@ -405,12 +425,12 @@ Logic.OrFormula = function (operands) {
 Logic._defineFormula(Logic.OrFormula, 'or', {
   _genTrue: function (makeClause) {
     // eg A v B v C
-    return [makeClause(this.operands)];
+    return makeClause(this.operands);
   },
   _genFalse: function (makeClause) {
     // eg -A; -B; -C
-    return _.map(this.operands, function (formula) {
-      return makeClause(Logic.not(formula));
+    return _.map(this.operands, function (o) {
+      return makeClause(Logic.not(o));
     });
   }
 });
@@ -426,5 +446,27 @@ Logic._defineFormula(Logic.NotFormula, 'not', {
   },
   _genFalse: function (makeClause) {
     throw new Error("'not' is special and doesn't gen");
+  }
+});
+
+Logic.and = function (termOrArray/*, ...*/) {
+  return new Logic.AndFormula(_.flatten(arguments));
+};
+
+Logic.AndFormula = function (operands) {
+  check(operands, [Logic.FormulaOrTerm]);
+  this.operands = operands;
+};
+
+Logic._defineFormula(Logic.AndFormula, 'and', {
+  _genTrue: function (makeClause) {
+    // eg A; B; C
+    return _.map(this.operands, function (o) {
+      return makeClause(o);
+    });
+  },
+  _genFalse: function (makeClause) {
+    // eg -A v -B v -C
+    return makeClause(_.map(this.operands, Logic.not));
   }
 });
