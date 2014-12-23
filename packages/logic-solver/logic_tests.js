@@ -223,3 +223,54 @@ Tinytest.add("logic-solver - Require/forbid after formula gen", function (test) 
     ["-A v $or1","-B v $or1","-$or1 v C","A v B v -$or1","$or1"]
   ]);
 });
+
+
+Tinytest.add("logic-solver - Logic.and", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.and('A', 'B'));
+    },
+    ["A", "B"],
+    function (s) {
+      s.require(Logic.and(['A', 'B']));
+    },
+    ["A", "B"],
+    function (s) {
+      s.require(Logic.and(['A'], ['-B']));
+    },
+    ["A", "-B"],
+    function (s) {
+      s.forbid(Logic.and('A', '-B'));
+    },
+    ["-A v B"],
+    function (s) {
+      s.forbid(Logic.and());
+    },
+    [""],
+    function (s) {
+      s.require(Logic.and());
+    },
+    [],
+    function (s) {
+      s.require(Logic.or(Logic.and(Logic.or("A", "B"),
+                                   Logic.or("-A", "C")),
+                         "-D"));
+    },
+    ["A v B v -$or1",
+     "$or1 v -$and1",
+     "-A v C v -$or2",
+     "$or2 v -$and1",
+     "$and1 v -D"],
+    function (s) {
+      s.require(Logic.or(Logic.not(Logic.and(Logic.or("A", "B"),
+                                             Logic.or("-A", "C"))),
+                         "-D"));
+    },
+    ["-A v $or1",
+     "-B v $or1",
+     "A v $or2",
+     "-C v $or2",
+     "-$or1 v -$or2 v $and1",
+     "-$and1 v -D"]
+  ]);
+});
