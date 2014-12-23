@@ -42,8 +42,8 @@ Logic.not = function (operand) {
   }
 };
 
-Logic.TRUE = "`T";
-Logic.FALSE = "`F";
+Logic.TRUE = "$T";
+Logic.FALSE = "$F";
 
 Logic.Formula = function () {};
 // Returns a list of clauses that together require the
@@ -82,8 +82,8 @@ Logic.Solver = function () {
   this._name2num = {}; // (' '+vname) -> vnum
 
   // true and false
-  this._F = this.getVarNum("`F", true); // 1
-  this._T = this.getVarNum("`T", true); // 2
+  this._F = this.getVarNum("$F", true); // 1
+  this._T = this.getVarNum("$T", true); // 2
   this._F_used = false;
   this._T_used = false;
   // (it's important that these clauses are elements 0 and 1
@@ -105,8 +105,8 @@ Logic.Solver.prototype.getVarNum = function (vname, _internal) {
   if (_.has(this._name2num, key)) {
     return this._name2num[key];
   } else {
-    if (vname.charAt(0) === "`" && ! _internal) {
-      throw new Error("Only generated variable names can start with `");
+    if (vname.charAt(0) === "$" && ! _internal) {
+      throw new Error("Only generated variable names can start with $");
     }
     var vnum = this._num2name.length;
     this._name2num[key] = vnum;
@@ -372,8 +372,8 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
         this._nextFormulaNumByType[type] = 1;
       }
       var numForVarName = this._nextFormulaNumByType[type]++;
-      info.varName = formula.type + numForVarName;
-      info.varNum = this.getVarNum(info.varName);
+      info.varName = "$" + formula.type + numForVarName;
+      info.varNum = this.getVarNum(info.varName, true);
       this._ungeneratedFormulas[info.varNum] = formula;
     }
     return info.varNum;
