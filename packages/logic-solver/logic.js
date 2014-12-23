@@ -48,10 +48,10 @@ Logic.FALSE = "$F";
 Logic.Formula = function () {};
 // Returns a list of clauses that together require the
 // Formula to be true.  (Does not add them to the solver.)
-Logic.Formula.prototype._genTrue = function (solver) { return []; };
+Logic.Formula.prototype._genTrue = function (makeClause) { return []; };
 // Returns a list of clauses that together require the
 // Formula to be false.
-Logic.Formula.prototype._genFalse = function (solver) { return []; };
+Logic.Formula.prototype._genFalse = function (makeClause) { return []; };
 // All Formulas have a globally-unique id so that Solvers can track them.
 // It is assigned lazily.
 Logic.Formula._nextGuid = 1;
@@ -134,9 +134,7 @@ Logic.Solver.prototype.toNumTerm = function (t) {
 
   if (_.isArray(t)) {
     check(t, [Logic.Term]);
-    return _.map(t, function (tt) {
-      return self.toNumTerm(tt);
-    });
+    return _.map(t, _.bind(self.toNumTerm, self));
   } else {
     check(t, Logic.Term);
   }
@@ -161,9 +159,7 @@ Logic.Solver.prototype.toNameTerm = function (t) {
 
   if (_.isArray(t)) {
     check(t, [Logic.Term]);
-    return _.map(t, function (tt) {
-      return self.toNameTerm(tt);
-    });
+    return _.map(t, _.bind(self.toNameTerm, self));
   } else {
     check(t, Logic.Term);
   }
@@ -216,7 +212,7 @@ Logic.Solver.prototype._addClause = function (cls, _internal) {
           // Eg, if we use variable `X` which represents the formula
           // `A v B`, add the clause `A v B v -X`.
           info.occursPositively = true;
-          var clauses = formula._genTrue(self);
+          var clauses = formula._genTrue(_.bind(self._makeClause, self));
           self._addClauses(_.map(clauses, function (clause) {
             return clause.append(-v);
           }), true);
@@ -224,7 +220,7 @@ Logic.Solver.prototype._addClause = function (cls, _internal) {
           // Eg, if we have the term `-X` where `X` represents the
           // formula `A v B`, add the clauses `-A v X` and `-B v X`.
           info.occursNegatively = true;
-          var clauses = formula._genFalse(self);
+          var clauses = formula._genFalse(_.bind(self._makeClause, self));
           self._addClauses(_.map(clauses, function (clause) {
             return clause.append(v);
           }), true);
@@ -260,7 +256,7 @@ Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
       if (info.varNum !== null) {
         self._addClause(new Logic.Clause(info.varNum));
       } else {
-        self._addClauses(f._genTrue(self));
+        self._addClauses(f._genTrue(_.bind(self._makeClause, self)));
       }
     } else if (Match.test(f, Logic.Term)) {
       self._addClause(new Logic.Clause(self.toNumTerm(f)));
@@ -280,7 +276,7 @@ Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
       if (info.varNum !== null) {
         self._addClause(new Logic.Clause(-info.varNum));
       } else {
-        self._addClauses(f._genFalse(self));
+        self._addClauses(f._genFalse(_.bind(self._makeClause, self)));
       }
     } else if (Match.test(f, Logic.Term)) {
       self._addClause(new Logic.Clause(-self.toNumTerm(f)));
@@ -352,9 +348,7 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
 
   if (_.isArray(formula)) {
     check(formula, [Logic.FormulaOrTerm]);
-    return _.map(formula, function (f) {
-      return self._formulaToTerm(f);
-    });
+    return _.map(formula, _.bind(self._formulaToTerm, self));
   } else {
     check(formula, Logic.FormulaOrTerm);
   }
@@ -383,6 +377,12 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   }
 };
 
+Logic.Solver.prototype._makeClause = function (formulaOrArray/*, ...*/) {
+  var formulas = _.flatten(arguments);
+  check(formulas, [Logic.FormulaOrTerm]);
+  return new Logic.Clause(this._formulaToTerm(formulas));
+};
+
 Logic._defineFormula = function (constructor, typeName, methods) {
   check(constructor, Function);
   check(typeName, String);
@@ -403,12 +403,14 @@ Logic.OrFormula = function (operands) {
 };
 
 Logic._defineFormula(Logic.OrFormula, 'or', {
-  _genTrue: function (solver) {
-    return [new Logic.Clause(solver._formulaToTerm(this.operands))];
+  _genTrue: function (makeClause) {
+    // eg A v B v C
+    return [makeClause(this.operands)];
   },
-  _genFalse: function (solver) {
+  _genFalse: function (makeClause) {
+    // eg -A; -B; -C
     return _.map(this.operands, function (formula) {
-      return new Logic.Clause(-solver._formulaToTerm(formula));
+      return makeClause(Logic.not(formula));
     });
   }
 });
@@ -419,10 +421,10 @@ Logic.NotFormula = function (operand) {
 };
 
 Logic._defineFormula(Logic.NotFormula, 'not', {
-  _genTrue: function (solver) {
-    return [new Logic.Clause(- solver._formulaToTerm(this.operand))];
+  _genTrue: function (makeClause) {
+    throw new Error("'not' is special and doesn't gen");
   },
-  _genFalse: function (solver) {
-    return [new Logic.Clause(solver._formulaToTerm(this.operand))];
+  _genFalse: function (makeClause) {
+    throw new Error("'not' is special and doesn't gen");
   }
 });
