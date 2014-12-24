@@ -491,6 +491,13 @@ var group = function (array, N) {
 };
 
 Logic._defineFormula(Logic.XorFormula, 'xor', {
+  _grouped: function () {
+    return new Logic.XorFormula(
+      _.map(group(this.operands, 3), function (group) {
+        return (group.length === 1 ?
+                group[0] : new Logic.XorFormula(group));
+      }));
+  },
   _genTrue: function (makeClause) {
     var args = this.operands;
     var not = Logic.not;
@@ -509,10 +516,7 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
               makeClause(not(A), B, not(C)), // -A v B v -C
               makeClause(not(A), not(B), C)]; // -A v -B v C
     } else {
-      return (new Logic.XorFormula(
-        _.map(group(args, 3), function (group) {
-          return new Logic.XorFormula(group);
-        })))._genTrue(makeClause);
+      return this._grouped()._genTrue(makeClause);
     }
   },
   _genFalse: function (makeClause) {
@@ -533,10 +537,7 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
               makeClause(A, not(B), C), // A v -B v C
               makeClause(A, B, not(C))]; // A v B v -C
     } else {
-      return (new Logic.XorFormula(
-        _.map(group(args, 3), function (group) {
-          return new Logic.XorFormula(group);
-        })))._genFalse(makeClause);
+      return this._grouped()._genFalse(makeClause);
     }
   }
 });
