@@ -46,5 +46,5 @@ Package.onTest(function (api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.inappbrowser': '0.5.1'
+  'org.apache.cordova.inappbrowser': '0.5.4'
 });
