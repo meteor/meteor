@@ -255,54 +255,35 @@ Logic.Solver.prototype._addClauses = function (array, _extraTerms) {
 };
 
 Logic.Solver.prototype.require = function (/*formulaOrArray, ...*/) {
-  var self = this;
-  var formulas = _.flatten(arguments);
-  check(formulas, [Logic.FormulaOrTerm]);
-  _.each(_.flatten(arguments), function (f) {
-    if (f instanceof Logic.NotFormula) {
-      self.forbid(f.operand);
-    } else if (f instanceof Logic.Formula) {
-      var info = self._getFormulaInfo(f);
-      if (info.varNum !== null) {
-        self._addClause(new Logic.Clause(info.varNum));
-      } else {
-        self._addClauses(self._callGenerate(true, f));
-      }
-    } else if (Match.test(f, Logic.Term)) {
-      var t = self.toNumTerm(f);
-      if (t === self._T || t === -self._F) {
-        // do nothing
-      } else if (t === self._F || t === -self._T) {
-        self._addClause(new Logic.Clause([])); // never satsified
-      } else {
-        self._addClause(new Logic.Clause(t));
-      }
-    }
-  });
+  this._requireForbidImpl(true, _.flatten(arguments));
 };
 
 Logic.Solver.prototype.forbid = function (/*formulaOrArray, ...*/) {
+  this._requireForbidImpl(false, _.flatten(arguments));
+};
+
+Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
   var self = this;
-  var formulas = _.flatten(arguments);
   check(formulas, [Logic.FormulaOrTerm]);
+  var sign = isRequire ? 1 : -1;
   _.each(_.flatten(arguments), function (f) {
     if (f instanceof Logic.NotFormula) {
-      self.require(f.operand);
+      self._requireForbidImpl(!isRequire, [f.operand]);
     } else if (f instanceof Logic.Formula) {
       var info = self._getFormulaInfo(f);
       if (info.varNum !== null) {
-        self._addClause(new Logic.Clause(-info.varNum));
+        self._addClause(new Logic.Clause(sign*info.varNum));
       } else {
-        self._addClauses(self._callGenerate(false, f));
+        self._addClauses(self._callGenerate(isRequire, f));
       }
     } else if (Match.test(f, Logic.Term)) {
       var t = self.toNumTerm(f);
-      if (t === self._F || t === -self._T) {
+      if (t === sign*self._T || t === -sign*self._F) {
         // do nothing
-      } else if (t === self._T || t === -self._F) {
+      } else if (t === sign*self._F || t === -sign*self._T) {
         self._addClause(new Logic.Clause([])); // never satsified
       } else {
-        self._addClause(new Logic.Clause(-t));
+        self._addClause(new Logic.Clause(sign*t));
       }
     }
   });
