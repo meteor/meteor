@@ -373,3 +373,79 @@ Tinytest.add("logic-solver - Logic.xor", function (test) {
      "-$xor1 v $xor2"]
   ]);
 });
+
+Tinytest.add("logic-solver - require/forbid generation", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(Logic.or(f, "C"));
+      debugger;
+      s.forbid(f);
+    },
+    ["A v -$and1", "B v -$and1", "$and1 v C", "-A v -B v $and1", "-$and1"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(Logic.or(Logic.not(f), "C"));
+      s.require(f);
+    },
+    ["-A v -B v $and1", "-$and1 v C", "A v -$and1", "B v -$and1", "$and1"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(f);
+      s.require(f);
+    },
+    ["A", "B"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.forbid(f);
+      s.forbid(f);
+    },
+    ["-A v -B"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(f);
+      s.forbid(f);
+      s.forbid(f);
+    },
+    ["A", "B", ""],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.forbid(f);
+      s.require(f);
+      s.require(f);
+    },
+    ["-A v -B", ""],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(f);
+      s.require(Logic.or(f, "C"));
+    },
+    ["$T", "A", "B", "$T v C"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(f);
+      s.require(Logic.or(Logic.not(f), "C"));
+    },
+    ["$T", "A", "B", "-$T v C"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.forbid(f);
+      s.require(Logic.or(Logic.not(f), "C"));
+    },
+    ["-$F", "-A v -B", "-$F v C"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.require(f);
+      s.forbid(f);
+      s.require(Logic.or(f, "C"));
+    },
+    ["$T", "A", "B", "", "$T v C"],
+    function (s) {
+      var f = Logic.and("A", "B");
+      s.forbid(f);
+      s.require(f);
+      s.require(Logic.or(f, "C"));
+    },
+    ["$T", "-A v -B", "", "$T v C"]
+  ]);
+});
