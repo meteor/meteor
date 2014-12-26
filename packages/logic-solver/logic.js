@@ -266,15 +266,26 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
   var self = this;
   check(formulas, [Logic.FormulaOrTerm]);
   var sign = isRequire ? 1 : -1;
-  _.each(_.flatten(arguments), function (f) {
+  _.each(formulas, function (f) {
     if (f instanceof Logic.NotFormula) {
       self._requireForbidImpl(!isRequire, [f.operand]);
     } else if (f instanceof Logic.Formula) {
       var info = self._getFormulaInfo(f);
-      if (info.varNum !== null) {
+      if ((isRequire && info.isRequired) ||
+          (!isRequire && info.isForbidden)) {
+        // do nothing
+      } else if ((isRequire && info.isForbidden) ||
+                 (!isRequire && info.isRequired)) {
+        self._addClause(new Logic.Clause([])); // never satisfied
+      } else if (info.varNum !== null) {
         self._addClause(new Logic.Clause(sign*info.varNum));
       } else {
         self._addClauses(self._callGenerate(isRequire, f));
+      }
+      if (isRequire) {
+        info.isRequired = true;
+      } else {
+        info.isForbidden = true;
       }
     } else if (Match.test(f, Logic.Term)) {
       var t = self.toNumTerm(f);
@@ -346,7 +357,9 @@ Logic.Solver.prototype._getFormulaInfo = function (formula) {
       varName: null,
       varNum: null,
       occursPositively: false,
-      occursNegatively: false
+      occursNegatively: false,
+      isRequired: false,
+      isForbidden: false
     };
   }
   return self._formulaInfo[guid];
@@ -369,7 +382,11 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
     return Logic.not(self._formulaToTerm(formula.operand));
   } else if (formula instanceof Logic.Formula) {
     var info = this._getFormulaInfo(formula);
-    if (info.varNum === null) {
+    if (info.isRequired) {
+      return self._T;
+    } else if (info.isForbidden) {
+      return self._F;
+    } else if (info.varNum === null) {
       // generate a Solver-local formula name like "or1"
       var type = formula.type;
       if (! this._nextFormulaNumByType[type]) {
