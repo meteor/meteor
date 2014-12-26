@@ -85,14 +85,25 @@ Tinytest.add("logic-solver - true and false", function (test) {
     // generated as the first two clauses.  Using each of them
     // causes the relevant clause to be included in the output.
     function (s) {
-      s.require(Logic.not(Logic.TRUE));
+      s.require(Logic.or(Logic.TRUE, Logic.not(Logic.TRUE)));
     },
-    ["$T", "-$T"],
+    ["$T", "$T v -$T"],
     function (s) {
       s.require(Logic.or(Logic.not(Logic.TRUE),
                          Logic.not(Logic.FALSE)));
     },
-    ["-$F", "$T", "-$T v -$F"]
+    ["-$F", "$T", "-$T v -$F"],
+    // requiring or forbidding $T, $F, or the negation of one
+    // of those is optimizated.  this is helpful when formulas
+    // expand to one of these (e.g. Logic.and() => $T => []).
+    function (s) { s.require(Logic.TRUE); }, [],
+    function (s) { s.require(Logic.FALSE); }, [""],
+    function (s) { s.require(Logic.not(Logic.TRUE)); }, [""],
+    function (s) { s.require(Logic.not(Logic.FALSE)); }, [],
+    function (s) { s.forbid(Logic.TRUE); }, [""],
+    function (s) { s.forbid(Logic.FALSE); }, [],
+    function (s) { s.forbid(Logic.not(Logic.TRUE)); }, [],
+    function (s) { s.forbid(Logic.not(Logic.FALSE)); }, [""]
   ]);
 });
 

@@ -47,16 +47,16 @@ Logic.FALSE = "$F";
 
 Logic.Formula = function () {};
 // Returns a list of Clauses that together require the Formula to be
-// true.  A single Clause may also be returned.  The implementation
-// should call makeClause(formulaOrArray, ...)  on the Formulas and
-// Terms of the clause in order to construct Clause objects to return.
-// makeClause is provided by the caller (the Solver) and returns a
-// Clause object that uses variable numbers specific to that Solver
-// instance.
-Logic.Formula.prototype._genTrue = function (makeClause) { return []; };
-// Returns a list of clauses that together require the
-// Formula to be false.
-Logic.Formula.prototype._genFalse = function (makeClause) { return []; };
+// true, or false (depending on isTrue; both cases must be
+// implemented).  A single Clause may also be returned.  The
+// implementation should call makeClause(formulaOrArray, ...)  on the
+// Formulas and Terms of the clause in order to construct Clause
+// objects to return.  makeClause is provided by the caller (the
+// Solver) and returns a Clause object that uses variable numbers
+// specific to that Solver instance.
+Logic.Formula.prototype.generateClauses = function (isTrue, makeClause) {
+  throw new Error("Cannot generate this Formula; it must be simplified away");
+};
 // All Formulas have a globally-unique id so that Solvers can track them.
 // It is assigned lazily.
 Logic.Formula._nextGuid = 1;
@@ -70,14 +70,14 @@ Logic.Formula.prototype.guid = function () {
 
 Logic.FormulaOrTerm = Match.OneOf(Logic.Formula, Logic.Term);
 
-Logic.Clause = function (termOrArray/*, ...*/) {
+Logic.Clause = function (/*formulaOrArray, ...*/) {
   var terms = _.flatten(arguments);
   check(terms, [Logic.NumTerm]);
   this.terms = terms; // immutable [NumTerm]
 };
 
 // Returns a new Clause with the extra term or terms appended
-Logic.Clause.prototype.append = function (termOrArray/*, ...*/) {
+Logic.Clause.prototype.append = function (/*formulaOrArray, ...*/) {
   return new Logic.Clause(this.terms.concat(_.flatten(arguments)));
 };
 
@@ -210,9 +210,9 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
 
   _.each(cls.terms, function (t, i) {
     var v = (t < 0) ? -t : t;
-    if (v === 1) {
+    if (v === self._F) {
       usedF = true;
-    } else if (v === 2) {
+    } else if (v === self._T) {
       usedT = true;
     } else if (v < 1 || v >= self._num2name.length) {
       throw new Error("Bad variable number: " + v);
@@ -227,13 +227,13 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
         // Eg, if we use variable `X` which represents the formula
         // `A v B`, add the clause `A v B v -X`.
         info.occursPositively = true;
-        var clauses = self._callGenTrue(formula);
+        var clauses = self._callGenerate(true, formula);
         self._addClauses(clauses, [-v]);
       } else if ((! positive) && ! info.occursNegatively) {
         // Eg, if we have the term `-X` where `X` represents the
         // formula `A v B`, add the clauses `-A v X` and `-B v X`.
         info.occursNegatively = true;
-        var clauses = self._callGenFalse(formula);
+        var clauses = self._callGenerate(false, formula);
         self._addClauses(clauses, [v]);
       }
       if (info.occursPositively && info.occursNegatively) {
@@ -254,7 +254,7 @@ Logic.Solver.prototype._addClauses = function (array, _extraTerms) {
   _.each(array, function (cls) { self._addClause(cls, _extraTerms); });
 };
 
-Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
+Logic.Solver.prototype.require = function (/*formulaOrArray, ...*/) {
   var self = this;
   var formulas = _.flatten(arguments);
   check(formulas, [Logic.FormulaOrTerm]);
@@ -266,15 +266,22 @@ Logic.Solver.prototype.require = function (formulaOrArray/*, ...*/) {
       if (info.varNum !== null) {
         self._addClause(new Logic.Clause(info.varNum));
       } else {
-        self._addClauses(self._callGenTrue(f));
+        self._addClauses(self._callGenerate(true, f));
       }
     } else if (Match.test(f, Logic.Term)) {
-      self._addClause(new Logic.Clause(self.toNumTerm(f)));
+      var t = self.toNumTerm(f);
+      if (t === self._T || t === -self._F) {
+        // do nothing
+      } else if (t === self._F || t === -self._T) {
+        self._addClause(new Logic.Clause([])); // never satsified
+      } else {
+        self._addClause(new Logic.Clause(t));
+      }
     }
   });
 };
 
-Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
+Logic.Solver.prototype.forbid = function (/*formulaOrArray, ...*/) {
   var self = this;
   var formulas = _.flatten(arguments);
   check(formulas, [Logic.FormulaOrTerm]);
@@ -286,21 +293,23 @@ Logic.Solver.prototype.forbid = function (formulaOrArray/*, ...*/) {
       if (info.varNum !== null) {
         self._addClause(new Logic.Clause(-info.varNum));
       } else {
-        self._addClauses(self._callGenFalse(f));
+        self._addClauses(self._callGenerate(false, f));
       }
     } else if (Match.test(f, Logic.Term)) {
-      self._addClause(new Logic.Clause(-self.toNumTerm(f)));
+      var t = self.toNumTerm(f);
+      if (t === self._F || t === -self._T) {
+        // do nothing
+      } else if (t === self._T || t === -self._F) {
+        self._addClause(new Logic.Clause([])); // never satsified
+      } else {
+        self._addClause(new Logic.Clause(-t));
+      }
     }
   });
 };
 
-// Helpers for invoking _genTrue and _genFalse on a Formula.
-Logic.Solver.prototype._callGenTrue = function (formula) {
-  var ret = formula._genTrue(_.bind(this._makeClause, this));
-  return _.isArray(ret) ? ret : [ret];
-};
-Logic.Solver.prototype._callGenFalse = function (formula) {
-  var ret = formula._genFalse(_.bind(this._makeClause, this));
+Logic.Solver.prototype._callGenerate = function (isTrue, formula) {
+  var ret = formula.generateClauses(isTrue, _.bind(this._makeClause, this));
   return _.isArray(ret) ? ret : [ret];
 };
 
@@ -397,7 +406,7 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   }
 };
 
-Logic.Solver.prototype._makeClause = function (formulaOrArray/*, ...*/) {
+Logic.Solver.prototype._makeClause = function (/*formulaOrArray, ...*/) {
   var formulas = _.flatten(arguments);
   check(formulas, [Logic.FormulaOrTerm]);
   return new Logic.Clause(this._formulaToTerm(formulas));
@@ -413,7 +422,7 @@ Logic._defineFormula = function (constructor, typeName, methods) {
   }
 };
 
-Logic.or = function (termOrArray/*, ...*/) {
+Logic.or = function (/*formulaOrArray, ...*/) {
   return new Logic.OrFormula(_.flatten(arguments));
 };
 
@@ -423,15 +432,16 @@ Logic.OrFormula = function (operands) {
 };
 
 Logic._defineFormula(Logic.OrFormula, 'or', {
-  _genTrue: function (makeClause) {
-    // eg A v B v C
-    return makeClause(this.operands);
-  },
-  _genFalse: function (makeClause) {
-    // eg -A; -B; -C
-    return _.map(this.operands, function (o) {
-      return makeClause(Logic.not(o));
-    });
+  generateClauses: function (isTrue, makeClause) {
+    if (isTrue) {
+      // eg A v B v C
+      return makeClause(this.operands);
+    } else {
+      // eg -A; -B; -C
+      return _.map(this.operands, function (o) {
+        return makeClause(Logic.not(o));
+      });
+    }
   }
 });
 
@@ -440,16 +450,11 @@ Logic.NotFormula = function (operand) {
   this.operand = operand;
 };
 
-Logic._defineFormula(Logic.NotFormula, 'not', {
-  _genTrue: function (makeClause) {
-    throw new Error("'not' is special and doesn't gen");
-  },
-  _genFalse: function (makeClause) {
-    throw new Error("'not' is special and doesn't gen");
-  }
-});
+// No generation or simplification for 'not'; it is
+// simplified away by the solver itself.
+Logic._defineFormula(Logic.NotFormula, 'not');
 
-Logic.and = function (termOrArray/*, ...*/) {
+Logic.and = function (/*formulaOrArray, ...*/) {
   return new Logic.AndFormula(_.flatten(arguments));
 };
 
@@ -459,26 +464,18 @@ Logic.AndFormula = function (operands) {
 };
 
 Logic._defineFormula(Logic.AndFormula, 'and', {
-  _genTrue: function (makeClause) {
-    // eg A; B; C
-    return _.map(this.operands, function (o) {
-      return makeClause(o);
-    });
-  },
-  _genFalse: function (makeClause) {
-    // eg -A v -B v -C
-    return makeClause(_.map(this.operands, Logic.not));
+  generateClauses: function (isTrue, makeClause) {
+    if (isTrue) {
+      // eg A; B; C
+      return _.map(this.operands, function (o) {
+        return makeClause(o);
+      });
+    } else {
+      // eg -A v -B v -C
+      return makeClause(_.map(this.operands, Logic.not));
+    }
   }
 });
-
-Logic.xor = function (termOrArray/*, ...*/) {
-  return new Logic.XorFormula(_.flatten(arguments));
-};
-
-Logic.XorFormula = function (operands) {
-  check(operands, [Logic.FormulaOrTerm]);
-  this.operands = operands;
-};
 
 // Group `array` into groups of N, where the last group
 // may be shorter than N.  group([a,b,c,d,e], 3) => [[a,b,c],[d,e]]
@@ -490,54 +487,104 @@ var group = function (array, N) {
   return ret;
 };
 
+Logic.xor = function (/*formulaOrArray, ...*/) {
+  return new Logic.XorFormula(_.flatten(arguments));
+};
+
+Logic.XorFormula = function (operands) {
+  check(operands, [Logic.FormulaOrTerm]);
+  this.operands = operands;
+};
+
 Logic._defineFormula(Logic.XorFormula, 'xor', {
-  _grouped: function () {
-    return new Logic.XorFormula(
+  _expand: function () {
+    return Logic.xor(
       _.map(group(this.operands, 3), function (group) {
         return (group.length === 1 ?
-                group[0] : new Logic.XorFormula(group));
+                group[0] : Logic.xor(group));
       }));
   },
-  _genTrue: function (makeClause) {
+  generateClauses: function (isTrue, makeClause) {
     var args = this.operands;
     var not = Logic.not;
-    if (args.length === 0) {
-      return makeClause(); // always fail
-    } else if (args.length === 1) {
-      return makeClause(args[0]);
-    } else if (args.length === 2) {
-      var A = args[0], B = args[1];
-      return [makeClause(A, B), // A v B
-              makeClause(not(A), not(B))]; // -A v -B
-    } else if (args.length === 3) {
-      var A = args[0], B = args[1], C = args[2];
-      return [makeClause(A, B, C), // A v B v C
-              makeClause(A, not(B), not(C)), // A v -B v -C
-              makeClause(not(A), B, not(C)), // -A v B v -C
-              makeClause(not(A), not(B), C)]; // -A v -B v C
+    if (isTrue) {
+      if (args.length === 0) {
+        return makeClause(); // always fail
+      } else if (args.length === 1) {
+        return makeClause(args[0]);
+      } else if (args.length === 2) {
+        var A = args[0], B = args[1];
+        return [makeClause(A, B), // A v B
+                makeClause(not(A), not(B))]; // -A v -B
+      } else if (args.length === 3) {
+        var A = args[0], B = args[1], C = args[2];
+        return [makeClause(A, B, C), // A v B v C
+                makeClause(A, not(B), not(C)), // A v -B v -C
+                makeClause(not(A), B, not(C)), // -A v B v -C
+                makeClause(not(A), not(B), C)]; // -A v -B v C
+      } else {
+        return this._expand().generateClauses(true, makeClause);
+      }
     } else {
-      return this._grouped()._genTrue(makeClause);
-    }
-  },
-  _genFalse: function (makeClause) {
-    var args = this.operands;
-    var not = Logic.not;
-    if (args.length === 0) {
-      return []; // always succeed
-    } else if (args.length === 1) {
-      return makeClause(not(args[0]));
-    } else if (args.length === 2) {
-      var A = args[0], B = args[1];
-      return [makeClause(A, not(B)), // A v -B
-              makeClause(not(A), B)]; // -A v B
-    } else if (args.length === 3) {
-      var A = args[0], B = args[1], C = args[2];
-      return [makeClause(not(A), not(B), not(C)), // -A v -B v -C
-              makeClause(not(A), B, C), // -A v B v C
-              makeClause(A, not(B), C), // A v -B v C
-              makeClause(A, B, not(C))]; // A v B v -C
-    } else {
-      return this._grouped()._genFalse(makeClause);
+      if (args.length === 0) {
+        return []; // always succeed
+      } else if (args.length === 1) {
+        return makeClause(not(args[0]));
+      } else if (args.length === 2) {
+        var A = args[0], B = args[1];
+        return [makeClause(A, not(B)), // A v -B
+                makeClause(not(A), B)]; // -A v B
+      } else if (args.length === 3) {
+        var A = args[0], B = args[1], C = args[2];
+        return [makeClause(not(A), not(B), not(C)), // -A v -B v -C
+                makeClause(not(A), B, C), // -A v B v C
+                makeClause(A, not(B), C), // A v -B v C
+                makeClause(A, B, not(C))]; // A v B v -C
+      } else {
+        return this._expand().generateClauses(false, makeClause);
+      }
     }
   }
 });
+
+// Logic.atMostOne = function (/*formulaOrArray, ...*/) {
+//   return new Logic.AtMostOneFormula(_.flatten(arguments));
+// };
+
+// Logic.AtMostOneFormula = function (operands) {
+//   check(operands, [Logic.FormulaOrTerm]);
+//   this.operands = operands;
+// };
+// Logic.AtMostOneFormula.MAX_N_BEFORE_GROUPING = 5;
+
+// Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
+//   _expand: function () {
+//     var groups = group(this.operands, 3);
+//     return new Logic.AndFormula(
+//     return new Logic.(
+//       _.map(group(this.operands, 3), function (group) {
+//         return (group.length === 1 ?
+//                 group[0] : new Logic.XorFormula(group));
+//       }));
+//   },
+//   _genTrue: function (makeClause) {
+//     var args = this.operands;
+//     var not = Logic.not;
+//     if (args.length <= 1) {
+//       return []; // always succeed
+//     } else if (args.length <= Logic.AtMostOneFormula.MAX_N_BEFORE_GROUPING) {
+//       // Generate O(N^2) clauses of the form: -A v -B; -A v -C; ...
+//       // This generates a lot of clauses, but it results in fast
+//       // propagation when solving.  Definitely use it for N <= 5.
+//       var result = [];
+//       for (var i = 0; i < args.length; i++) {
+//         for (var j = j+1; j < args.length; j++) {
+//           result.push(makeClause(not(args[i]), not(args[j])));
+//         }
+//       }
+//       return result;
+//     } else {
+
+//     }
+//   }
+// });
