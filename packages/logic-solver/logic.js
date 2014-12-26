@@ -49,13 +49,11 @@ Logic.Formula = function () {};
 // Returns a list of Clauses that together require the Formula to be
 // true, or false (depending on isTrue; both cases must be
 // implemented).  A single Clause may also be returned.  The
-// implementation should call makeClause(formulaOrArray, ...)  on the
-// Formulas and Terms of the clause in order to construct Clause
-// objects to return.  makeClause is provided by the caller (the
-// Solver) and returns a Clause object that uses variable numbers
-// specific to that Solver instance.
-Logic.Formula.prototype.generateClauses = function (isTrue, makeClause) {
-  throw new Error("Cannot generate this Formula; it must be simplified away");
+// implementation should call the termifier to convert terms and
+// formulas to NumTerms specific to a solver instance, and use them to
+// construct a Logic.Clause.
+Logic.Formula.prototype.generateClauses = function (isTrue, termifier) {
+  throw new Error("Cannot generate this Formula; it must be expanded");
 };
 // All Formulas have a globally-unique id so that Solvers can track them.
 // It is assigned lazily.
@@ -280,6 +278,7 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
       } else if (info.varNum !== null) {
         self._addClause(new Logic.Clause(sign*info.varNum));
       } else {
+        // Never create a variable for this formula
         self._addClauses(self._callGenerate(isRequire, f));
       }
       if (isRequire) {
@@ -301,7 +300,16 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
 };
 
 Logic.Solver.prototype._callGenerate = function (isTrue, formula) {
-  var ret = formula.generateClauses(isTrue, _.bind(this._makeClause, this));
+  var ret = formula.generateClauses(
+    isTrue,
+    {
+      term: _.bind(this._formulaToTerm, this),
+      clause: function (/*args*/) {
+        var formulas = _.flatten(arguments);
+        check(formulas, [Logic.FormulaOrTerm]);
+        return new Logic.Clause(_.map(formulas, this.term));
+      }
+    });
   return _.isArray(ret) ? ret : [ret];
 };
 
@@ -404,12 +412,6 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   }
 };
 
-Logic.Solver.prototype._makeClause = function (/*formulaOrArray, ...*/) {
-  var formulas = _.flatten(arguments);
-  check(formulas, [Logic.FormulaOrTerm]);
-  return new Logic.Clause(this._formulaToTerm(formulas));
-};
-
 Logic._defineFormula = function (constructor, typeName, methods) {
   check(constructor, Function);
   check(typeName, String);
@@ -430,14 +432,14 @@ Logic.OrFormula = function (operands) {
 };
 
 Logic._defineFormula(Logic.OrFormula, 'or', {
-  generateClauses: function (isTrue, makeClause) {
+  generateClauses: function (isTrue, t) {
     if (isTrue) {
       // eg A v B v C
-      return makeClause(this.operands);
+      return t.clause(this.operands);
     } else {
       // eg -A; -B; -C
       return _.map(this.operands, function (o) {
-        return makeClause(Logic.not(o));
+        return t.clause(Logic.not(o));
       });
     }
   }
@@ -462,15 +464,15 @@ Logic.AndFormula = function (operands) {
 };
 
 Logic._defineFormula(Logic.AndFormula, 'and', {
-  generateClauses: function (isTrue, makeClause) {
+  generateClauses: function (isTrue, t) {
     if (isTrue) {
       // eg A; B; C
       return _.map(this.operands, function (o) {
-        return makeClause(o);
+        return t.clause(o);
       });
     } else {
       // eg -A v -B v -C
-      return makeClause(_.map(this.operands, Logic.not));
+      return t.clause(_.map(this.operands, Logic.not));
     }
   }
 });
@@ -502,44 +504,44 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
                 group[0] : Logic.xor(group));
       }));
   },
-  generateClauses: function (isTrue, makeClause) {
+  generateClauses: function (isTrue, t) {
     var args = this.operands;
     var not = Logic.not;
     if (isTrue) {
       if (args.length === 0) {
-        return makeClause(); // always fail
+        return t.clause(); // always fail
       } else if (args.length === 1) {
-        return makeClause(args[0]);
+        return t.clause(args[0]);
       } else if (args.length === 2) {
         var A = args[0], B = args[1];
-        return [makeClause(A, B), // A v B
-                makeClause(not(A), not(B))]; // -A v -B
+        return [t.clause(A, B), // A v B
+                t.clause(not(A), not(B))]; // -A v -B
       } else if (args.length === 3) {
         var A = args[0], B = args[1], C = args[2];
-        return [makeClause(A, B, C), // A v B v C
-                makeClause(A, not(B), not(C)), // A v -B v -C
-                makeClause(not(A), B, not(C)), // -A v B v -C
-                makeClause(not(A), not(B), C)]; // -A v -B v C
+        return [t.clause(A, B, C), // A v B v C
+                t.clause(A, not(B), not(C)), // A v -B v -C
+                t.clause(not(A), B, not(C)), // -A v B v -C
+                t.clause(not(A), not(B), C)]; // -A v -B v C
       } else {
-        return this._expand().generateClauses(true, makeClause);
+        return this._expand().generateClauses(true, t);
       }
     } else {
       if (args.length === 0) {
         return []; // always succeed
       } else if (args.length === 1) {
-        return makeClause(not(args[0]));
+        return t.clause(not(args[0]));
       } else if (args.length === 2) {
         var A = args[0], B = args[1];
-        return [makeClause(A, not(B)), // A v -B
-                makeClause(not(A), B)]; // -A v B
+        return [t.clause(A, not(B)), // A v -B
+                t.clause(not(A), B)]; // -A v B
       } else if (args.length === 3) {
         var A = args[0], B = args[1], C = args[2];
-        return [makeClause(not(A), not(B), not(C)), // -A v -B v -C
-                makeClause(not(A), B, C), // -A v B v C
-                makeClause(A, not(B), C), // A v -B v C
-                makeClause(A, B, not(C))]; // A v B v -C
+        return [t.clause(not(A), not(B), not(C)), // -A v -B v -C
+                t.clause(not(A), B, C), // -A v B v C
+                t.clause(A, not(B), C), // A v -B v C
+                t.clause(A, B, not(C))]; // A v B v -C
       } else {
-        return this._expand().generateClauses(false, makeClause);
+        return this._expand().generateClauses(false, t);
       }
     }
   }
