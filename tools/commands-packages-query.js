@@ -140,7 +140,8 @@ var itemNotFound = function (item) {
 // the details of printing their data to the screen.
 //
 // A query class has:
-//  - data: an object representing the data it has collected in response to the query.
+//  - data: an object representing the data it has collected in response to the
+//  - query.
 //  - a print method, that take options as an argument and prints the results to
 //    the terminal.
 
@@ -149,9 +150,10 @@ var itemNotFound = function (item) {
 // packages, it has to interact with the projectContext.
 //
 // The constructor takes in the following options:
-//   - record: (mandatory) the meta-record for this package from the Packages collection.
-//   - projectContext: (mandatory) a projectContext that we can use to look up information
-//     on local packages.
+//   - record: (mandatory) the meta-record for this package from the Packages
+//   - collection.
+//   - projectContext: (mandatory) a projectContext that we can use to look up
+//     information on local packages.
 //   - version: query for a specific version of this package.
 //   - showOSArchitectures: collect and process data on OS
 //     architectures that are available for different versions of this package.
@@ -317,11 +319,20 @@ _.extend(PackageQuery.prototype, {
     // information.  We want to use the right version for that. (We don't want
     // to display data from unofficial or un-migrated versions just because they
     // are recent.)
-    data["defaultVersion"] =
-          local ||
-          catalog.official.getLatestMainlineVersion(self.name) ||
-          _.last(data.versions);
-
+    if (local) {
+      data["defaultVersion"] = local;
+    } else {
+      var mainlineRecord = catalog.official.getLatestMainlineVersion(self.name);
+      if (mainlineRecord) {
+        data["defaultVersion"] = {
+          summary: mainlineRecord.description,
+          description: mainlineRecord.longDescription,
+          git: mainlineRecord.git
+        };
+      } else {
+        data["defaultVersion"] = _.last(data.versions);
+      }
+    }
     return data;
   },
   // Takes in a version record from the official catalog and looks up extra
@@ -439,10 +450,20 @@ _.extend(PackageQuery.prototype, {
       data["dependencies"] = formatDependencies(localRecord.dependencies);
     }
 
+    var readmeInfo;
+    main.captureAndExit("=> Errors while reading local packages:", function () {
+      buildmessage.enterJob("reading " + data["directory"], function () {
+        readmeInfo = packageSource.processReadme();
+      });
+    });
+    if (readmeInfo) {
+      data["description"] = readmeInfo.excerpt;
+    }
     return data;
   },
-  // Displays version information from this PackageQuery to the terminal in a human-friendly
-  // format. Takes in an object that contains some, but not all, of the following keys:
+  // Displays version information from this PackageQuery to the terminal in a
+  // human-friendly format. Takes in an object that contains some, but not all,
+  // of the following keys:
   //
   // - name: (mandatory) package Name
   // - version: (mandatory) package version
@@ -626,7 +647,8 @@ _.extend(PackageQuery.prototype, {
 // This class looks up release-related information in the official catalog.
 //
 // The constructor takes in an object with the following keys:
-//   - record: (mandatory) the meta-record for this release from the Releases collection.
+//   - record: (mandatory) the meta-record for this release from the Releases
+//     collection.
 //   - version: specific version of a release that we want to query.
 //   - showHiddenVersions: show experimental, pre-release & otherwise
 //     non-recommended versions of this release.
@@ -773,7 +795,6 @@ _.extend(ReleaseQuery.prototype, {
   // - packages: map of packages for this release version
   _displayVersion: function (data) {
     var self = this;
-    var data = self.data;
     Console.info("Release: " + data.track);
     Console.info("Version: " + data.version);
     Console.info(
