@@ -225,13 +225,13 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
         // Eg, if we use variable `X` which represents the formula
         // `A v B`, add the clause `A v B v -X`.
         info.occursPositively = true;
-        var clauses = self._callGenerate(true, formula);
+        var clauses = self._generateFormula(true, formula);
         self._addClauses(clauses, [-v]);
       } else if ((! positive) && ! info.occursNegatively) {
         // Eg, if we have the term `-X` where `X` represents the
         // formula `A v B`, add the clauses `-A v X` and `-B v X`.
         info.occursNegatively = true;
-        var clauses = self._callGenerate(false, formula);
+        var clauses = self._generateFormula(false, formula);
         self._addClauses(clauses, [v]);
       }
       if (info.occursPositively && info.occursNegatively) {
@@ -279,7 +279,7 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
         self._addClause(new Logic.Clause(sign*info.varNum));
       } else {
         // Never create a variable for this formula
-        self._addClauses(self._callGenerate(isRequire, f));
+        self._addClauses(self._generateFormula(isRequire, f));
       }
       if (isRequire) {
         info.isRequired = true;
@@ -299,18 +299,34 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
   });
 };
 
-Logic.Solver.prototype._callGenerate = function (isTrue, formula) {
-  var ret = formula.generateClauses(
-    isTrue,
-    {
-      term: _.bind(this._formulaToTerm, this),
+Logic.Solver.prototype._generateFormula = function (isTrue, formula) {
+  var self = this;
+  check(formula, Logic.FormulaOrTerm);
+  if (formula instanceof Logic.NotFormula) {
+    return self._generateFormula(!isTrue, formula.operand);
+  } else if (formula instanceof Logic.Formula) {
+    var termifier = {
+      term: _.bind(self._formulaToTerm, self),
       clause: function (/*args*/) {
         var formulas = _.flatten(arguments);
         check(formulas, [Logic.FormulaOrTerm]);
-        return new Logic.Clause(_.map(formulas, this.term));
-      }
-    });
-  return _.isArray(ret) ? ret : [ret];
+        return new Logic.Clause(_.map(formulas, termifier.term));
+      },
+      generate: _.bind(self._generateFormula, self)
+    };
+    var ret = formula.generateClauses(isTrue, termifier);
+    return _.isArray(ret) ? ret : [ret];
+  } else { // Term
+    var t = self.toNumTerm(formula);
+    var sign = isTrue ? 1 : -1;
+    if (t === sign*self._T || t === -sign*self._F) {
+      return [];
+    } else if (t === sign*self._F || t === -sign*self._T) {
+      return [new Logic.Clause()]; // never satisfied clause
+    } else {
+      return [new Logic.Clause(sign*t)];
+    }
+  }
 };
 
 // Get clause data as an array of arrays of integers,
@@ -497,17 +513,18 @@ Logic.XorFormula = function (operands) {
 };
 
 Logic._defineFormula(Logic.XorFormula, 'xor', {
-  _expand: function () {
-    return Logic.xor(
-      _.map(group(this.operands, 3), function (group) {
-        return (group.length === 1 ?
-                group[0] : Logic.xor(group));
-      }));
-  },
   generateClauses: function (isTrue, t) {
     var args = this.operands;
     var not = Logic.not;
-    if (isTrue) {
+    if (args.length > 3) {
+      return t.generate(
+        isTrue,
+        Logic.xor(
+          _.map(group(this.operands, 3), function (group) {
+            return (group.length === 1 ?
+                    group[0] : Logic.xor(group));
+          })));
+    } else if (isTrue) { // args.length <= 3
       if (args.length === 0) {
         return t.clause(); // always fail
       } else if (args.length === 1) {
@@ -522,10 +539,8 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
                 t.clause(A, not(B), not(C)), // A v -B v -C
                 t.clause(not(A), B, not(C)), // -A v B v -C
                 t.clause(not(A), not(B), C)]; // -A v -B v C
-      } else {
-        return this._expand().generateClauses(true, t);
       }
-    } else {
+    } else { // !isTrue, args.length <= 3
       if (args.length === 0) {
         return []; // always succeed
       } else if (args.length === 1) {
@@ -540,8 +555,6 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
                 t.clause(not(A), B, C), // -A v B v C
                 t.clause(A, not(B), C), // A v -B v C
                 t.clause(A, B, not(C))]; // A v B v -C
-      } else {
-        return this._expand().generateClauses(false, t);
       }
     }
   }
