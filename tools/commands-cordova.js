@@ -1434,6 +1434,15 @@ var consumeControlFile = function (projectContext, controlFilePath,
     icon: {},
     splash: {}
   };
+  var accessRules = {
+    'tel:*': true,
+    'geo:*': true,
+    'mailto:*': true,
+    'sms:*': true,
+    'market:*': true,
+    'file:*': false,
+    'cdv:*': false
+  };
 
   var setIcon = function (size, name) {
     imagePaths.icon[name] = files.pathJoin(iconsPath, size + '.png');
@@ -1563,6 +1572,31 @@ var consumeControlFile = function (projectContext, controlFilePath,
           throw new Error(key + ": unknown key in App.launchScreens configuration.");
       });
       _.extend(imagePaths.splash, launchScreens);
+    },
+
+    /**
+     * @summary Set the access rules based on origin URL for your app.
+     * @param {Object} rules A dictionary where keys are origin URL
+     * patterns affected, and the values are booleans indicating if a
+     * matching URL should be launched externally.
+     *
+     * Default access rules:
+     * - `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` set to true
+     *
+     * Starting with Meteor 1.0.3 (XXX?) access rule for all domains
+     * (`<access origin="*"/>`) is no longer set by default due to
+     * [certain kind of possible
+     * attacks](https://www.ibm.com/developerworks/community/blogs/worklight/entry/action_required_cordova_android_security_update?lang=en).
+     *
+     * @memberOf App
+     */
+    accessRules: function (rules) {
+      _.each(rules, function (launchExternal, pattern) {
+        if (! _.isBoolean(launchExternal))
+          throw new Error(
+            "Values of rules passed to accessRules must be booleans.");
+      });
+      _.extend(accessRules, rules);
     }
   };
 
@@ -1606,8 +1640,15 @@ var consumeControlFile = function (projectContext, controlFilePath,
 
   // load from index.html by default
   config.ele('content', { src: 'index.html' });
-  // allow cors for the initial file
-  config.ele('access', { origin: '*' });
+
+  // Copy all the access rules
+  _.each(accessRules, function (launchExternal, pattern) {
+    var opts = { origin: pattern };
+    if (launchExternal)
+      opts['launch-external'] = true;
+
+    config.ele('access', opts);
+  });
 
   var iosPlatform = config.ele('platform', { name: 'ios' });
   var androidPlatform = config.ele('platform', { name: 'android' });
