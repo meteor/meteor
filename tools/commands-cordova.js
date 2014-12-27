@@ -766,7 +766,11 @@ var buildCordova = function (projectContext, platforms, options) {
     var controlFilePath =
       files.pathJoin(projectContext.projectDir, 'mobile-config.js');
     consumeControlFile(
-      projectContext, controlFilePath, cordovaPath, options.appName);
+      projectContext,
+      controlFilePath,
+      cordovaPath,
+      options.appName,
+      options.host);
 
     ensureCordovaPlatforms(projectContext);
     ensureCordovaPlugins(projectContext, _.extend({}, options, {
@@ -1391,8 +1395,9 @@ var launchAndroidSizes = {
 // Given the mobile control file converts it to the Phongep/Cordova project's
 // config.xml file and copies the necessary files (icons and launch screens) to
 // the correct build location. Replaces all the old resources.
-var consumeControlFile = function (projectContext, controlFilePath,
-                                   cordovaPath, appName) {
+var consumeControlFile = function (
+  projectContext, controlFilePath, cordovaPath, appName, serverDomain) {
+
   verboseLog('Reading the mobile control file');
   // clean up the previous settings and resources
   files.rm_recursive(files.pathJoin(cordovaPath, 'resources'));
@@ -1441,8 +1446,14 @@ var consumeControlFile = function (projectContext, controlFilePath,
     'sms:*': true,
     'market:*': true,
     'file:*': false,
-    'cdv:*': false
+    'cdv:*': false,
+    'gap:*': false,
+    'http://meteor.local/*': false
   };
+
+  if (serverDomain) {
+    accessRules['*://' + serverDomain + '/*'] = false;
+  }
 
   var setIcon = function (size, name) {
     imagePaths.icon[name] = files.pathJoin(iconsPath, size + '.png');
