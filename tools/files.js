@@ -525,12 +525,19 @@ files.mkdtemp = function (prefix) {
   return dir;
 };
 
-if (!process.env.METEOR_SAVE_TMPDIRS) {
-  cleanup.onExit(function (sig) {
+// Cleans out the temporary directory if METEOR_SAVE_TMPDIRS is not set
+// May want to restrict this to the current user, now that it can be
+// executed at any point, rather than just on exit.
+files.cleanTemp = function () {
+  if (!process.env.METEOR_SAVE_TMPDIRS) {
     _.each(tempDirs, files.rm_recursive);
     tempDirs = [];
-  });
+  }
 }
+
+cleanup.onExit(function (sig) {
+  files.cleanTemp();
+});
 
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and
