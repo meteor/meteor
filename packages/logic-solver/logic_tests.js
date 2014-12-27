@@ -620,3 +620,118 @@ Tinytest.add("logic-solver - Logic.exactlyOne", function (test) {
      "-$atMostOne1 v -$or1"]
   ]);
 });
+
+var equalBitFormulas = function (test, bits1, bits2) {
+  test.isTrue(bits1 instanceof Logic.Bits);
+  test.isTrue(bits2 instanceof Logic.Bits);
+  // the elements of bits1 and bits2 will have to be
+  // terms (or the same Formula objects) for this to
+  // compare by value
+  test.equal(bits1.bits, bits2.bits);
+};
+
+Tinytest.add("logic-solver - Logic.constantBits", function (test) {
+  equalBitFormulas(test, Logic.constantBits(0), new Logic.Bits([]));
+  equalBitFormulas(test, Logic.constantBits(1), new Logic.Bits(["$T"]));
+  equalBitFormulas(test, Logic.constantBits(2), new Logic.Bits(["$F", "$T"]));
+  equalBitFormulas(test, Logic.constantBits(3), new Logic.Bits(["$T", "$T"]));
+  equalBitFormulas(test, Logic.constantBits(4), new Logic.Bits(["$F", "$F", "$T"]));
+  equalBitFormulas(test, Logic.constantBits(5), new Logic.Bits(["$T", "$F", "$T"]));
+});
+
+Tinytest.add("logic-solver - Logic.equalBits", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits([]),
+                                new Logic.Bits([]))); },
+    [],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits([]),
+                               new Logic.Bits([]))); },
+    [""],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits(["A"]),
+                                new Logic.Bits([]))); },
+    ["-A"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits([]),
+                                new Logic.Bits(["A"]))); },
+    ["-A"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits(["A"]),
+                               new Logic.Bits([]))); },
+    ["A"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits([]),
+                               new Logic.Bits(["A"]))); },
+    ["A"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits(["A", "B", "C"]),
+                                new Logic.Bits([]))); },
+    ["-A", "-B", "-C"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits([]),
+                                new Logic.Bits(["A", "B", "C"]))); },
+    ["-A", "-B", "-C"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits(["A", "B", "C"]),
+                               new Logic.Bits([]))); },
+    ["A v B v C"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits([]),
+                               new Logic.Bits(["A", "B", "C"]))); },
+    ["A v B v C"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits(["A"]),
+                                new Logic.Bits(["B"]))); },
+    ["A v -B", "-A v B"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits(["A"]),
+                               new Logic.Bits(["B"]))); },
+    ["A v B", "-A v -B"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits(["A", "B"]),
+                                new Logic.Bits(["X", "Y"]))); },
+    ["A v -X", "-A v X",
+     "B v -Y", "-B v Y"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits(["A", "B"]),
+                               new Logic.Bits(["X", "Y"]))); },
+    ["A v X v $equiv1",
+     "-A v -X v $equiv1",
+     "B v Y v $equiv2",
+     "-B v -Y v $equiv2",
+     "-$equiv1 v -$equiv2"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits(["A", "B"]),
+                                new Logic.Bits(["X"]))); },
+    ["A v -X", "-A v X", "-B"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits(["A", "B"]),
+                               new Logic.Bits(["X"]))); },
+    ["A v X v $equiv1",
+     "-A v -X v $equiv1",
+     "-$equiv1 v B"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits(["A"]),
+                                new Logic.Bits(["X", "Y"]))); },
+    ["A v -X", "-A v X", "-Y"],
+    function (s) {
+      s.forbid(Logic.equalBits(new Logic.Bits(["A"]),
+                               new Logic.Bits(["X", "Y"]))); },
+    ["A v X v $equiv1",
+     "-A v -X v $equiv1",
+     "-$equiv1 v Y"],
+    function (s) {
+      s.require(Logic.equalBits(new Logic.Bits([Logic.or("A", "B")]),
+                                new Logic.Bits([Logic.or("C", "D")]))); },
+    ["A v B v -$or1",
+     "-C v $or2",
+     "-D v $or2",
+     "$or1 v -$or2",
+     "-A v $or1",
+     "-B v $or1",
+     "C v D v -$or2",
+     "-$or1 v $or2"]
+  ]);
+});

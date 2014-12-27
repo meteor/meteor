@@ -701,3 +701,152 @@ Logic._defineFormula(Logic.ExactlyOneFormula, 'exactlyOne', {
     }
   }
 });
+
+// List of 0 or more formulas or terms, which together represent
+// a non-negative integer.  Least significant bit is first.  That is,
+// the kth array element has a place value of 2^k.
+Logic.Bits = function (formulaArray) {
+  check(formulaArray, [Logic.FormulaOrTerm]);
+  this.bits = formulaArray; // public, immutable
+};
+
+Logic.constantBits = function (wholeNumber) {
+  check(wholeNumber, Logic.WholeNumber);
+  var result = [];
+  while (wholeNumber) {
+    result.push((wholeNumber & 1) ? Logic.TRUE : Logic.FALSE);
+    wholeNumber >>>= 1;
+  }
+  return new Logic.Bits(result);
+};
+
+// bits1 <= bits2
+Logic.lessThanOrEqual = function (bits1, bits2) {
+  return new Logic.LessThanOrEqualFormula(bits1, bits2);
+};
+
+Logic.LessThanOrEqualFormula = function (bits1, bits2) {
+  check(bits1, Logic.Bits);
+  check(bits2, Logic.Bits);
+  check(arguments.length, 2);
+  this.bits1 = bits1;
+  this.bits2 = bits2;
+};
+
+var genLTE = function (bits1, bits2, t, notEqual) {
+  var ret = [];
+  // clone so we can mutate them in place
+  var A = bits1.bits.slice();
+  var B = bits2.bits.slice();
+  // if A is longer than B, the extra (high) bits
+  // must be 0.
+  while (A.length > B.length) {
+    var hi = A.pop();
+    ret.push(t.clause(Logic.not(hi)));
+    }
+  // now B.length >= A.length
+  // Let xors[i] be (A[i] xor B[i]), or just
+  // B[i] if A is too short.
+  var xors = _.map(B, function (b, i) {
+    if (i < A.length) {
+      return Logic.xor(b, A[i]);
+    } else {
+      return b;
+    }
+  });
+
+  // Suppose we are comparing 3-bit numbers, requiring
+  // that ABC <= XYZ.  Here is what we require:
+  //
+  // * It is false that A=1 and X=0.
+  // * It is false that A=X, B=1, and Y=0.
+  // * It is false that A=X, B=Y, C=1, and Y=0.
+  //
+  // Translating these into clauses using DeMorgan's law:
+  //
+  // * A=0 or X=1
+  // * (A xor X) or B=0 or Y=1
+  // * (A xor X) or (B xor Y) or C=0 or Y=1
+  //
+  // Since our arguments are LSB first, in the example
+  // we would be given [C, B, A] and [Z, Y, X] as input.
+  // We iterate over the first argument starting from
+  // the right, and build up a clause by iterating over
+  // the xors from the right (note that there may be
+  // more xors, because we may have been given [Z, Y, X, W]).
+  for (var i = A.length-1; i >= 0; i--) {
+    ret.push(t.clause(xors.slice(i+1), B[i], Logic.not(A[i])));
+  }
+  if (notEqual) {
+    ret.push(t.clause(xors));
+  }
+  return ret;
+};
+
+Logic._defineFormula(Logic.LessThanOrEqualFormula, 'lte', {
+  generateClauses: function (isTrue, t) {
+    if (isTrue) {
+      // bits1 <= bits2
+      return genLTE(this.bits1, this.bits2, t, false);
+    } else {
+      // bits2 < bits1
+      return genLTE(this.bits2, this.bits1, t, true);
+    }
+  }
+});
+
+// bits1 <= bits2
+Logic.lessThan = function (bits1, bits2) {
+  return new Logic.LessThanFormula(bits1, bits2);
+};
+
+Logic.LessThanFormula = function (bits1, bits2) {
+  check(bits1, Logic.Bits);
+  check(bits2, Logic.Bits);
+  check(arguments.length, 2);
+  this.bits1 = bits1;
+  this.bits2 = bits2;
+};
+
+Logic._defineFormula(Logic.LessThanFormula, 'lt', {
+  generateClauses: function (isTrue, t) {
+    if (isTrue) {
+      // bits1 < bits2
+      return genLTE(this.bits1, this.bits2, t, true);
+    } else {
+      // bits2 <= bits1
+      return genLTE(this.bits2, this.bits1, t, false);
+    }
+  }
+});
+
+Logic.equalBits = function (bits1, bits2) {
+  return new Logic.EqualBitsFormula(bits1, bits2);
+};
+
+Logic.EqualBitsFormula = function (bits1, bits2) {
+  check(bits1, Logic.Bits);
+  check(bits2, Logic.Bits);
+  check(arguments.length, 2);
+  this.bits1 = bits1;
+  this.bits2 = bits2;
+};
+
+Logic._defineFormula(Logic.EqualBitsFormula, 'equalBits', {
+  generateClauses: function (isTrue, t) {
+    var A = this.bits1.bits;
+    var B = this.bits2.bits;
+    var nbits = Math.max(A.length, B.length);
+    var facts = [];
+    for (var i = 0; i < nbits; i++) {
+      if (i >= A.length) {
+        facts.push(Logic.not(B[i]));
+      } else if (i >= B.length) {
+        facts.push(Logic.not(A[i]));
+      } else {
+        facts.push(Logic.equiv(A[i], B[i]));
+      }
+    }
+    return t.generate(isTrue, Logic.and(facts));
+  }
+});
