@@ -99,6 +99,93 @@ var splitConstraint = function (c) {
            constraint: parsed.constraintString || null };
 };
 
+// Given the text of a README.md file, excerpts the text between the first and
+// second heading.
+//
+// Specifically - if there is text between the document name, and the first
+// subheading, it will take that text. If there is no text there, and only text
+// after the first subheading, it will take that text. It won't look any deeper
+// than that (in case the user intentionally wants to leave the section blank
+// for some reason). Skips lines that start with an exclamation point.
+var getExcerptFromReadme = function (text) {
+  // Split into lines.
+  var fullText = text.split("\n");
+  if (! fullText) {
+    return "";
+  }
+
+  // The lines of the excerpt that we will return to the caller.
+  var excerpt = [];
+
+  // We want to take the data between the first and second headers, so it is
+  // important to keep track of how many headers we have passed.
+  var headerNum = 0;
+
+  // Counter and termination condition for the while loop.
+  var lineNum = 0;
+  var done = false;
+
+  // We want to scan until we have an excerpt, or decide that we are not getting
+  // one. If we are only taking the first five lines of a long README file, we
+  // want to avoid scanning all of it.
+  while (! done) {
+    var currentLine = fullText[lineNum];
+    var trimmedLine = currentLine.trim();
+
+    // According to "https://help.github.com/articles/markdown-basics/", a
+    // heading is denoted by a '#' symbol, though, I think, the line at the
+    // top (===) should also count as a header for our purposes.
+    var isHeader =
+      (trimmedLine[0] === "#") ||
+      (trimmedLine[0] === "=");
+
+    // Exclamation points indicate images, which are almost never inline. We get
+    // cleaner results if we skip those lines entirely.
+    var notText = (trimmedLine[0] === "!");
+
+    // Don't excerpt anything before the first header! It is probably the
+    // title. If we haven't started excerpting already, don't excerpt the empty
+    // line (it might just be an empty line between headers, not any
+    // text). Don't excerpt things that we know are not text.
+    if (! isHeader && (headerNum > 0) && ! notText &&
+        (! _.isEmpty(excerpt) || trimmedLine !== "")) {
+      // If we are currently in the middle of excerpting, continue doing that
+      // until we hit hit a header (and this is not a header). Otherwise, if
+      // this is text, we should begin to excerpt it.
+      excerpt.push(currentLine);
+    } else if (! _.isEmpty(excerpt) && isHeader) {
+      // We have been excerpting lines, and came across a header. That means
+      // that we are done.
+      done = true;
+    } else if (isHeader) {
+      // We told users that we are going to take whatever is between the first
+      // and second header, but I think it is not always entirely clear what
+      // that means, and we get better results if we are willing to scan a
+      // section down.
+      headerNum++;
+      if (headerNum > 2) {
+        done = true;
+      }
+    }
+
+    // Increase the line number and check that we haven't finished the file (if
+    // we have, we are done).
+    lineNum++;
+    if (lineNum === fullText.length) {
+      done = true;
+    }
+  }
+
+  // Strip off the last newline, if there is one. (Markdown files usually skip a
+  // line between the paragraph and the subsequent header, but we don't want
+  // that extra newline in our excerpt).
+  if (_.last(excerpt) === "") {
+    excerpt = _.initial(excerpt);
+  }
+
+  return excerpt.join("\n");
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // SourceArch
 ///////////////////////////////////////////////////////////////////////////////
@@ -210,10 +297,10 @@ var PackageSource = function () {
   // it's still nice to get it right).
   self.serveRoot = null;
 
-
-  // Package metadata. Keys are 'summary' and 'git'. Currently all of these are
-  // optional.
+  // Package metadata. Keys are 'summary', 'git' and 'documentation'. Currently
+  // all of these are optional.
   self.metadata = {};
+  self.docsExplicitlyProvided = false;
 
   // Package version as a meteor-version string. Optional; not all packages
   // (for example, the app) have versions.
@@ -390,6 +477,10 @@ _.extend(PackageSource.prototype, {
     // sets a version.
     self.version = "0.0.0";
 
+    // To make the transition to using Readme.md files in Isobuild easier, we
+    // initialize the documentation directory to Readme.md by default.
+    self.metadata.documentation = "README.md";
+
     self.sourceRoot = dir;
 
     // If we are running from checkout we may be looking at a core package. If
@@ -446,22 +537,29 @@ _.extend(PackageSource.prototype, {
        * the package, required for publication.
        * @param {String} options.version The (extended)
        * [semver](http://www.semver.org) version for your package. Additionally,
-       * Meteor allows a wrap number: a positive integer that follows the version number. If you are
-       * porting another package that uses semver versioning, you may want to
-       * use the original version, postfixed with `_wrapnumber`. For example,
-       * `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers sort after the original numbers:
-       * `1.2.3` < `1.2.3_1` < `1.2.3_2` < `1.2.4-rc.0`. If no version is specified,
-       * this field defaults to `0.0.0`. If you want to publish your package to
-       * the package server, you must specify a version.
+       * Meteor allows a wrap number: a positive integer that follows the
+       * version number. If you are porting another package that uses semver
+       * versioning, you may want to use the original version, postfixed with
+       * `_wrapnumber`. For example, `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers
+       * sort after the original numbers: `1.2.3` < `1.2.3_1` < `1.2.3_2` <
+       * `1.2.4-rc.0`. If no version is specified, this field defaults to
+       * `0.0.0`. If you want to publish your package to the package server, you
+       * must specify a version.
        * @param {String} options.name Optional name override. By default, the
        * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
+       * @param {String} options.documentation Optional Filepath to
+       * documentation. Set to'Readme.md' by default. Set this to null to submit
+       * no documentation.
        */
       describe: function (options) {
         _.each(options, function (value, key) {
           if (key === "summary" ||
               key === "git") {
             self.metadata[key] = value;
+          } else if (key === "documentation") {
+            self.metadata[key] = value;
+            self.docsExplicitlyProvided = true;
           } else if (key === "version") {
             if (typeof(value) !== "string") {
               buildmessage.error("The package version (specified with "
@@ -1710,6 +1808,64 @@ _.extend(PackageSource.prototype, {
       });
     });
     return _.keys(packages);
+  },
+
+  // Processes the documentation provided in Package.describe. Returns an object
+  // with the following keys:
+  //   - path: full filepath to the Readme file
+  //   - excerpt: the subsection between the first and second heading of the
+  //     Readme, to be used as a longform package description.
+  //   - hash: hash of the full text of this Readme, or "" if the Readme is
+  //     blank.
+  //
+  // Returns null if the documentation is marked as null, or throws a
+  // buildmessage error if the documentation could not be read.
+  //
+  // This function reads and performs string operations on a (potentially) long
+  // file. We do not call it unless we actually need this information.
+  processReadme: function () {
+    var self = this;
+    buildmessage.assertInCapture();
+    if (! self.metadata.documentation) {
+      return null;
+    }
+
+    var ret = {};
+    ret.path =
+      files.pathJoin(self.sourceRoot, self.metadata.documentation);
+    // Read in the text of the Readme.
+    try {
+      var fullReadme = files.readFile(ret.path);
+    } catch (err) {
+      var errorMessage = "";
+      if (err.code === "ENOENT") {
+        // This is the most likely and common case, especially when we are
+        // inferring the docs as a default value.
+        errorMessage = "Documentation not found: " + self.metadata.documentation;
+      } else {
+        // This is weird, and we don't usually protect the user from errors like
+        // this, but maybe we should.
+        errorMessage =
+          "Documentation couldn't be read: " + self.metadata.documentation;
+        errorMessage += "(Error: " + err + ")";
+      }
+
+      // The user might not understand that we are automatically inferring
+      // README.md as the docs! If they want to avoid pushing anything, explain
+      // how to do that.
+      if (! self.docsExplicitlyProvided) {
+        errorMessage += "\n" +
+          "If you don't want to publish any documentation, " +
+          "please set 'documentation: null' in Package.describe";
+      }
+      buildmessage.error(errorMessage);
+      // Recover by returning null
+      return null;
+    }
+
+    ret.hash = files.fileHash(ret.path);
+    ret.excerpt = getExcerptFromReadme(fullReadme.toString());
+    return ret;
   },
 
   // If dependencies aren't consistent across unibuilds, return false and

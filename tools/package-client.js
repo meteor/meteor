@@ -22,6 +22,24 @@ var openPackageServerConnection = function (packageServerUrl) {
   return authClient.openServiceConnection(serverUrl);
 };
 
+// We don't let the user upload a blank README for UX reasons, but we would
+// prefer that the server move to a world with 'readme' files for everything in
+// the future. As a way to breach these interfaces, for now, we are going to
+// upload blank documentation files when null docs are requested.
+//
+// This function generates a Readme object for a blank readme file, as well as
+// the file itself.
+var generateBlankReadme = function () {
+  var tempReadmeDir = files.mkdtemp('readme');
+  var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
+  files.writeFileAtomically(readmePath, '');
+  return {
+    excerpt: "",
+    hash: files.blankHash,
+    path: readmePath
+  };
+};
+
 // Given a connection, makes a call to the package server.  (Checks to see if
 // the connection is connected, and reconnects if needed -- a workaround for
 // the fact that connections in the tool do not reconnect)
@@ -281,7 +299,7 @@ var bundleSource = function (isopack, includeSources, packageDir,
   };
 };
 
-var uploadTarball = function (putUrl, tarball) {
+var uploadFile = function (putUrl, tarball) {
   var size = files.stat(tarball).size;
   var rs = files.createReadStream(tarball);
   try {
@@ -302,7 +320,7 @@ var uploadTarball = function (putUrl, tarball) {
   }
 };
 
-exports.uploadTarball = uploadTarball;
+exports.uploadFile = uploadFile;
 
 var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
@@ -367,8 +385,8 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
     return;
 
   buildmessage.enterJob("uploading build", function () {
-    uploadTarball(uploadInfo.uploadUrl,
-                  bundleResult.buildTarball);
+    uploadFile(uploadInfo.uploadUrl,
+               bundleResult.buildTarball);
   });
   if (buildmessage.jobHasMessages())
     return;
@@ -388,6 +406,91 @@ exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 // Handle an error thrown on trying to connect to the package server.
 exports.handlePackageServerConnectionError = function (error) {
   authClient.handleConnectionError(error, "package server");
+};
+
+
+// Update the package metdata in the server catalog. Chane the docs,
+// descriptions and the Git URL to new values.
+//
+// options:
+// - packageSource: the packageSource for this package.
+// - readmeInfo: null, or an object containing docs information for this package.
+// - connection: the open, logged-in connection over which we should talk to the
+//   package server. DO NOT CLOSE this connection here.
+//
+// Return true on success and an error code otherwise.
+exports.updatePackageMetadata = function (options) {
+  buildmessage.assertInJob();
+
+  var packageSource = options.packageSource;
+  var conn = options.connection;
+  var readmeInfo = options.readmeInfo;
+
+  var name = packageSource.name;
+  var version = packageSource.version;
+
+  if (! version) {
+    buildmessage.error(
+      "Package cannot be updated because it doesn't have a version");
+    return;
+  }
+
+  // For now, documentation is optional on the client, so we have to give people
+  // a way to remove it with 'documentation: null'.
+  if (! readmeInfo) {
+    readmeInfo = generateBlankReadme();
+  }
+
+  // This function is the only way to change README contents after
+  // publication. Since we are automatically migrating a lot of READMEs, we want
+  // to make it easy for people to change them. As such, we are unusually lax
+  // about missing information or making sure that the source matches the
+  // server.
+  // XXX: Tighten these restrictions in later versions.
+  var git = packageSource.metadata.git;
+  var summary = packageSource.metadata.summary;
+  var dataToUpdate = { };
+  if (git !== null) {
+    dataToUpdate["git"] = git;
+  }
+  dataToUpdate["longDescription"] = readmeInfo.excerpt;
+  // Since you can't set your summary to an empty string, we don't need to be as
+  // explicit about the possibility of an empty summary.
+  if (summary) {
+    dataToUpdate["description"] = summary;
+  }
+
+  // Check that the metadata fits under the established limits, and give helpful
+  // feedback.
+  if (dataToUpdate["description"] &&
+      dataToUpdate["description"].length > 100) {
+    buildmessage.error("Summary must be under 100 chars.");
+    return;
+  }
+  if (dataToUpdate["longDescription"].length > 1500) {
+    buildmessage.error(
+      "Documentation snippet is too long. Meteor uses the section of",
+      "the markdown documentation file, between the first and second",
+      "headings, for the long-form package description. That section",
+      "must be less than 1500 characters long.");
+    return;
+  }
+
+  // Update the general metadata.
+  var versionIdentifier = { packageName: name, version: version };
+  buildmessage.enterJob('updating metadata', function () {
+    callPackageServerBM(
+      conn, "changeVersionMetadata", versionIdentifier, dataToUpdate);
+  });
+
+  // Upload the new Readme.
+  buildmessage.enterJob('uploading documentation', function () {
+    var uploadInfo =
+          callPackageServerBM(conn, "createReadme", versionIdentifier);
+    uploadFile(uploadInfo.url, readmeInfo.path);
+    callPackageServerBM(
+      conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
+  });
 };
 
 // Publish the package information into the server catalog. Create new records
@@ -461,6 +564,38 @@ exports.publishPackage = function (options) {
         'You are not an authorized maintainer of ' + name + '.  Only ' +
           'authorized maintainers may publish new versions.');
     }
+  }
+
+  // Check that our documentation exists (or we know that it doesn't) and has
+  // been filled out.
+  var readmeInfo;
+  buildmessage.enterJob("processing docs", function () {
+    readmeInfo = packageSource.processReadme();
+  });
+  if (buildmessage.jobHasMessages())
+    return;
+  if (readmeInfo && (readmeInfo.hash === files.blankHash)) {
+    buildmessage.error(
+      "Your documentation file is blank, so users may have trouble figuring " +
+      "out how to use your package. Please fill it out, or " +
+      "set 'documentation: null' in your Package.describe");
+  }
+
+  if (readmeInfo &&
+      readmeInfo.excerpt.length > 1500) {
+    buildmessage.error(
+      "Documentation snippet is too long. Meteor uses the section of",
+      "the markdown documentation file, between the first and second",
+      "headings, for the long-form package description. That section",
+      "must be less than 1500 characters long.");
+    return;
+  }
+  // We don't let the user upload a blank README for UX reasons, but we would
+  // prefer that the server move to a world with 'readme' files for everything
+  // in the future. This helps unite these interfaces, and makes our code easier
+  // to reason about in the future.
+  if (! readmeInfo) {
+    readmeInfo = generateBlankReadme();
   }
 
   // Check that the package does not have any unconstrained references.
@@ -565,6 +700,7 @@ exports.publishPackage = function (options) {
         packageName: packageSource.name,
         version: version,
         description: packageSource.metadata.summary,
+        longDescription: readmeInfo.excerpt,
         git: packageSource.metadata.git,
         compilerVersion: compiler.BUILT_BY,
         containsPlugins: packageSource.containsPlugins(),
@@ -582,16 +718,26 @@ exports.publishPackage = function (options) {
     // publish a new build.
 
     buildmessage.enterJob("uploading source", function () {
-      uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+      uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+    });
+    if (buildmessage.jobHasMessages())
+      return;
+
+    var hashes = {
+      tarballHash: sourceBundleResult.tarballHash,
+      treeHash: sourceBundleResult.treeHash,
+      readmeHash: readmeInfo.hash
+    };
+
+    buildmessage.enterJob("uploading docs", function () {
+      uploadFile(uploadInfo.readmeUrl, readmeInfo.path);
     });
     if (buildmessage.jobHasMessages())
       return;
 
     buildmessage.enterJob("publishing package version", function () {
-      callPackageServerBM(conn, 'publishPackageVersion',
-                          uploadInfo.uploadToken,
-                          { tarballHash: sourceBundleResult.tarballHash,
-                            treeHash: sourceBundleResult.treeHash });
+      callPackageServerBM(
+        conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);
     });
     if (buildmessage.jobHasMessages())
       return;

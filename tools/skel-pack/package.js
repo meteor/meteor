@@ -1,8 +1,13 @@
 Package.describe({
   name: '~name~',
-  summary: ' /* Fill me in! */ ',
-  version: '1.0.0',
-  git: ' /* Fill me in! */ '
+  // Brief, one-line summary of the package.
+  summary: '',
+  version: '0.0.1',
+  // By default, Meteor will default to using README.md for documentation. Use
+  // this override to specify a different file, or 'null' to specify no
+  // documentation at all.
+  documentation: 'README.md',
+  git: ''
 });
 
 Package.onUse(function(api) {
