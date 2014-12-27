@@ -543,3 +543,42 @@ Tinytest.add("logic-solver - Logic.atMostOne", function (test) {
      "-$atMostOne1 v -$atMostOne2 v -$atMostOne3"]
   ]);
 });
+
+Tinytest.add("logic-solver - Logic.implies, Logic.equiv", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.implies("A", "B")); },
+    ["-A v B"],
+    function (s) {
+      s.forbid(Logic.implies("A", "B")); },
+    ["A", "-B"],
+    function (s) {
+      s.require(Logic.or(Logic.implies("A", "B"), "C")); },
+    ["-A v B v -$implies1", "$implies1 v C"],
+    function (s) {
+      s.require(Logic.or(Logic.implies(Logic.or("A", "D"), "B"), "C")); },
+    ["-A v $or1",
+     "-D v $or1",
+     "-$or1 v B v -$implies1",
+     "$implies1 v C"],
+    function (s) {
+      s.require(Logic.equiv("A", "B")); },
+    ["A v -B",
+     "-A v B"],
+    function (s) {
+      s.forbid(Logic.equiv("A", "B")); },
+    ["A v B",
+     "-A v -B"],
+    function (s) {
+      s.require(Logic.equiv(Logic.or("A", "B"),
+                           Logic.or("C", "D"))); },
+    ["A v B v -$or1",
+     "-C v $or2",
+     "-D v $or2",
+     "$or1 v -$or2",
+     "-A v $or1",
+     "-B v $or1",
+     "C v D v -$or2",
+     "-$or1 v $or2"]
+  ]);
+});
