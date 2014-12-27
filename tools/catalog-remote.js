@@ -929,8 +929,13 @@ _.extend(RemoteCatalog.prototype, {
     // We've never printed a banner for this release.
     if (! row)
       return true;
-    var lastShown = new Date(row.lastShown);
-    return lastShown < bannerDate;
+    try {
+      var lastShown = new Date(JSON.parse(row.lastShown));
+      return lastShown < bannerDate;
+    } catch (e) {
+      // Probably an error in JSON.parse or something. Just show the banner.
+      return true;
+    }
   },
 
   setBannerShownDate: function (releaseName, bannerShownDate) {
@@ -938,8 +943,9 @@ _.extend(RemoteCatalog.prototype, {
     self.db.runInTransaction(function (txn) {
       self.tableBannersShown.upsert(txn, [{
         _id: releaseName,
-        // XXX For now every column is a string, but this should probably change
-        // to a timestamp with time zone or whatever.
+        // XXX For now, there's no way to tell this file to make a non-string
+        // column in a sqlite table, but this should probably change to a
+        // 'timestamp with time zone' or whatever.
         lastShown: JSON.stringify(bannerShownDate)
       }]);
     });
