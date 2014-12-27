@@ -929,7 +929,7 @@ _.extend(RemoteCatalog.prototype, {
     // We've never printed a banner for this release.
     if (! row)
       return true;
-    var lastShown = new Date(row.lastShown);
+    var lastShown = new Date(Date.parse(row.lastShown));
     return lastShown < bannerDate;
   },
 
