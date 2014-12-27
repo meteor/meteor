@@ -503,6 +503,28 @@ Tinytest.add("logic-solver - Logic.atMostOne", function (test) {
      "A v B v $atMostOne2",
      "A v C v $atMostOne2",
      "B v C v $atMostOne2",
-     "-$atMostOne1 v -$atMostOne2"]
+     "-$atMostOne1 v -$atMostOne2"],
+    function (s) {
+      s.require(Logic.atMostOne("A", "B", "C", "D", "E")); },
+    ["-A v $or1",
+     "-B v $or1",
+     "-C v $or1",
+     "-D v $or2",
+     "-E v $or2",
+     "-$or1 v -$or2",
+     "-A v -B",
+     "-A v -C",
+     "-B v -C",
+     "-D v -E"],
+    function (s) {
+      s.forbid(Logic.atMostOne("A", "B", "C", "D", "E")); },
+    ["A v B v C v $atMostOne1",
+     "D v E v $atMostOne1",
+     "A v B v $atMostOne2",
+     "A v C v $atMostOne2",
+     "B v C v $atMostOne2",
+     "D v $atMostOne3",
+     "E v $atMostOne3",
+     "-$atMostOne1 v -$atMostOne2 v -$atMostOne3"]
   ]);
 });
