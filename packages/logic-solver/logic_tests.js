@@ -582,3 +582,41 @@ Tinytest.add("logic-solver - Logic.implies, Logic.equiv", function (test) {
      "-$or1 v $or2"]
   ]);
 });
+
+Tinytest.add("logic-solver - Logic.exactlyOne", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.exactlyOne()); },
+    [""],
+    function (s) {
+      s.forbid(Logic.exactlyOne()); },
+    [],
+    function (s) {
+      s.require(Logic.exactlyOne("A")); },
+    ["A"],
+    function (s) {
+      s.forbid(Logic.exactlyOne("A")); },
+    ["-A"],
+    function (s) {
+      s.require(Logic.exactlyOne("A", "B")); },
+    ["A v B", "-A v -B"],
+    function (s) {
+      s.forbid(Logic.exactlyOne("A", "B")); },
+    ["A v -B", "-A v B"],
+    function (s) {
+      s.require(Logic.exactlyOne("A", "B", "C")); },
+    ["-A v -B",
+     "-A v -C",
+     "-B v -C",
+     "A v B v C"],
+    function (s) {
+      s.forbid(Logic.exactlyOne("A", "B", "C")); },
+    ["A v B v $atMostOne1",
+     "A v C v $atMostOne1",
+     "B v C v $atMostOne1",
+     "-A v $or1",
+     "-B v $or1",
+     "-C v $or1",
+     "-$atMostOne1 v -$or1"]
+  ]);
+});

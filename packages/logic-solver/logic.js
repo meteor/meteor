@@ -673,3 +673,31 @@ Logic._defineFormula(Logic.EquivFormula, 'equiv', {
     return t.generate(!isTrue, Logic.xor(this.A, this.B));
   }
 });
+
+Logic.exactlyOne = function (/*formulaOrArray, ...*/) {
+  var args = _.flatten(arguments);
+  if (args.length === 0) {
+    return Logic.FALSE;
+  } else if (args.length === 1) {
+    return args[0];
+  } else {
+    return new Logic.ExactlyOneFormula(args);
+  }
+};
+
+Logic.ExactlyOneFormula = function (operands) {
+  check(operands, [Logic.FormulaOrTerm]);
+  this.operands = operands;
+};
+
+Logic._defineFormula(Logic.ExactlyOneFormula, 'exactlyOne', {
+  generateClauses: function (isTrue, t) {
+    var args = this.operands;
+    if (args.length < 3) {
+      return t.generate(isTrue, Logic.xor(args));
+    } else {
+      return t.generate(isTrue, Logic.and(Logic.atMostOne(args),
+                                          Logic.or(args)));
+    }
+  }
+});
