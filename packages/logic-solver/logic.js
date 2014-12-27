@@ -635,3 +635,41 @@ Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
      }
   }
 });
+
+Logic.implies = function (A, B) {
+  check(arguments.length, 2);
+  return new Logic.ImpliesFormula(A, B);
+};
+
+Logic.ImpliesFormula = function (A, B) {
+  check(A, Logic.FormulaOrTerm);
+  check(B, Logic.FormulaOrTerm);
+  check(arguments.length, 2);
+  this.A = A;
+  this.B = B;
+};
+
+Logic._defineFormula(Logic.ImpliesFormula, 'implies', {
+  generateClauses: function (isTrue, t) {
+    return t.generate(isTrue, Logic.or(Logic.not(this.A), this.B));
+  }
+});
+
+Logic.equiv = function (A, B) {
+  check(arguments.length, 2);
+  return new Logic.EquivFormula(A, B);
+};
+
+Logic.EquivFormula = function (A, B) {
+  check(A, Logic.FormulaOrTerm);
+  check(B, Logic.FormulaOrTerm);
+  check(arguments.length, 2);
+  this.A = A;
+  this.B = B;
+};
+
+Logic._defineFormula(Logic.EquivFormula, 'equiv', {
+  generateClauses: function (isTrue, t) {
+    return t.generate(!isTrue, Logic.xor(this.A, this.B));
+  }
+});
