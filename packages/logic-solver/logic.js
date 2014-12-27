@@ -263,22 +263,15 @@ Logic.Solver.prototype.forbid = function (/*formulaOrArray, ...*/) {
 Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
   var self = this;
   check(formulas, [Logic.FormulaOrTerm]);
-  var sign = isRequire ? 1 : -1;
   _.each(formulas, function (f) {
     if (f instanceof Logic.NotFormula) {
       self._requireForbidImpl(!isRequire, [f.operand]);
     } else if (f instanceof Logic.Formula) {
       var info = self._getFormulaInfo(f);
-      if ((isRequire && info.isRequired) ||
-          (!isRequire && info.isForbidden)) {
-        // do nothing
-      } else if ((isRequire && info.isForbidden) ||
-                 (!isRequire && info.isRequired)) {
-        self._addClause(new Logic.Clause([])); // never satisfied
-      } else if (info.varNum !== null) {
+      if (info.varNum !== null) {
+        var sign = isRequire ? 1 : -1;
         self._addClause(new Logic.Clause(sign*info.varNum));
       } else {
-        // Never create a variable for this formula
         self._addClauses(self._generateFormula(isRequire, f));
       }
       if (isRequire) {
@@ -286,15 +279,8 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
       } else {
         info.isForbidden = true;
       }
-    } else if (Match.test(f, Logic.Term)) {
-      var t = self.toNumTerm(f);
-      if (t === sign*self._T || t === -sign*self._F) {
-        // do nothing
-      } else if (t === sign*self._F || t === -sign*self._T) {
-        self._addClause(new Logic.Clause([])); // never satsified
-      } else {
-        self._addClause(new Logic.Clause(sign*t));
-      }
+    } else {
+      self._addClauses(self._generateFormula(isRequire, f));
     }
   });
 };
@@ -302,20 +288,30 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
 Logic.Solver.prototype._generateFormula = function (isTrue, formula) {
   var self = this;
   check(formula, Logic.FormulaOrTerm);
+
   if (formula instanceof Logic.NotFormula) {
     return self._generateFormula(!isTrue, formula.operand);
   } else if (formula instanceof Logic.Formula) {
-    var termifier = {
-      term: _.bind(self._formulaToTerm, self),
-      clause: function (/*args*/) {
-        var formulas = _.flatten(arguments);
-        check(formulas, [Logic.FormulaOrTerm]);
-        return new Logic.Clause(_.map(formulas, termifier.term));
-      },
-      generate: _.bind(self._generateFormula, self)
-    };
-    var ret = formula.generateClauses(isTrue, termifier);
-    return _.isArray(ret) ? ret : [ret];
+    var info = self._getFormulaInfo(formula);
+    if ((isTrue && info.isRequired) ||
+        (!isTrue && info.isForbidden)) {
+      return [];
+      } else if ((isTrue && info.isForbidden) ||
+                 (!isTrue && info.isRequired)) {
+        return [new Logic.Clause()]; // never satisfied clause
+      } else {
+        var termifier = {
+          term: _.bind(self._formulaToTerm, self),
+          clause: function (/*args*/) {
+            var formulas = _.flatten(arguments);
+            check(formulas, [Logic.FormulaOrTerm]);
+            return new Logic.Clause(_.map(formulas, termifier.term));
+          },
+          generate: _.bind(self._generateFormula, self)
+        };
+        var ret = formula.generateClauses(isTrue, termifier);
+        return _.isArray(ret) ? ret : [ret];
+      }
   } else { // Term
     var t = self.toNumTerm(formula);
     var sign = isTrue ? 1 : -1;
@@ -439,7 +435,14 @@ Logic._defineFormula = function (constructor, typeName, methods) {
 };
 
 Logic.or = function (/*formulaOrArray, ...*/) {
-  return new Logic.OrFormula(_.flatten(arguments));
+  var args = _.flatten(arguments);
+  if (args.length === 0) {
+    return Logic.FALSE;
+  } else if (args.length === 1) {
+    return args[0];
+  } else {
+    return new Logic.OrFormula(args);
+  }
 };
 
 Logic.OrFormula = function (operands) {
@@ -471,7 +474,14 @@ Logic.NotFormula = function (operand) {
 Logic._defineFormula(Logic.NotFormula, 'not');
 
 Logic.and = function (/*formulaOrArray, ...*/) {
-  return new Logic.AndFormula(_.flatten(arguments));
+  var args = _.flatten(arguments);
+  if (args.length === 0) {
+    return Logic.TRUE;
+  } else if (args.length === 1) {
+    return args[0];
+  } else {
+    return new Logic.AndFormula(args);
+  }
 };
 
 Logic.AndFormula = function (operands) {
@@ -504,7 +514,14 @@ var group = function (array, N) {
 };
 
 Logic.xor = function (/*formulaOrArray, ...*/) {
-  return new Logic.XorFormula(_.flatten(arguments));
+  var args = _.flatten(arguments);
+  if (args.length === 0) {
+    return Logic.FALSE;
+  } else if (args.length === 1) {
+    return args[0];
+  } else {
+    return new Logic.XorFormula(args);
+  }
 };
 
 Logic.XorFormula = function (operands) {
@@ -521,8 +538,7 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
         isTrue,
         Logic.xor(
           _.map(group(this.operands, 3), function (group) {
-            return (group.length === 1 ?
-                    group[0] : Logic.xor(group));
+            return Logic.xor(group);
           })));
     } else if (isTrue) { // args.length <= 3
       if (args.length === 0) {

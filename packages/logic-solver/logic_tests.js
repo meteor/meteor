@@ -44,7 +44,7 @@ var checkClauses = function (test, f, expected) {
   check(expected, [String]);
   var s = new Logic.Solver;
   f(s);
-  test.equal(s._clauseStrings(), expected);
+  test.equal(s._clauseStrings().join('\n'), expected.join('\n'));
 };
 
 var runClauseTests = function (test, funcsAndExpecteds) {
@@ -294,6 +294,9 @@ Tinytest.add("logic-solver - Logic.xor", function (test) {
     function (s) {
       s.forbid(Logic.xor()); },
     [],
+    function (s) {
+      s.require(Logic.or(Logic.xor(), Logic.xor())); },
+    ["-$F", "$F v $F"],
     function (s) {
       s.require(Logic.xor("A")); },
     ["A"],
