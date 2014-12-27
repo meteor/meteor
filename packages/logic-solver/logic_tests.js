@@ -39,12 +39,17 @@ Tinytest.add("logic-solver - toNameTerm, toNumTerm", function (test) {
   test.equal(s.toNameTerm("-----foo"), "-foo");
 });
 
+var formatLines = function (stringArray) {
+  return JSON.stringify(stringArray).replace(/","/g, '",\n "');
+};
+
 var checkClauses = function (test, f, expected) {
   check(f, Function);
   check(expected, [String]);
   var s = new Logic.Solver;
   f(s);
-  test.equal(s._clauseStrings().join('\n'), expected.join('\n'));
+  test.equal(formatLines(s._clauseStrings()),
+             formatLines(expected));
 };
 
 var runClauseTests = function (test, funcsAndExpecteds) {
@@ -267,10 +272,8 @@ Tinytest.add("logic-solver - Logic.and", function (test) {
                                    Logic.or("-A", "C")),
                          "-D"));
     },
-    ["A v B v -$or1",
-     "$or1 v -$and1",
-     "-A v C v -$or2",
-     "$or2 v -$and1",
+    ["A v B v -$and1",
+     "-A v C v -$and1",
      "$and1 v -D"],
     function (s) {
       s.require(Logic.or(Logic.not(Logic.and(Logic.or("A", "B"),
@@ -382,7 +385,6 @@ Tinytest.add("logic-solver - require/forbid generation", function (test) {
     function (s) {
       var f = Logic.and("A", "B");
       s.require(Logic.or(f, "C"));
-      debugger;
       s.forbid(f);
     },
     ["A v -$and1", "B v -$and1", "$and1 v C", "-A v -B v $and1", "-$and1"],
@@ -450,5 +452,57 @@ Tinytest.add("logic-solver - require/forbid generation", function (test) {
       s.require(Logic.or(f, "C"));
     },
     ["$T", "-A v -B", "", "$T v C"]
+  ]);
+});
+
+Tinytest.add("logic-solver - Logic.atMostOne", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.atMostOne()); },
+    [],
+    function (s) {
+      s.forbid(Logic.atMostOne()); },
+    [""],
+    function (s) {
+      s.require(Logic.atMostOne("A")); },
+    [],
+    function (s) {
+      s.forbid(Logic.atMostOne("A")); },
+    [""],
+    function (s) {
+      s.require(Logic.atMostOne("A", "B")); },
+    ["-A v -B"],
+    function (s) {
+      s.forbid(Logic.atMostOne("A", "B")); },
+    ["A", "B"],
+    function (s) {
+      s.require(Logic.atMostOne("A", "B", "C")); },
+    ["-A v -B", "-A v -C", "-B v -C"],
+    function (s) {
+      s.forbid(Logic.atMostOne("A", "B", "C")); },
+    ["A v B", "A v C", "B v C"],
+    function (s) {
+      s.require(Logic.atMostOne("A", "B", "C", "D")); },
+    // If D is true, then all of A,B,C must be false.
+    // Two of A,B,C must be false.
+    ["-A v $or1",
+     "-B v $or1",
+     "-C v $or1",
+     "-$or1 v -D",
+     "-A v -B",
+     "-A v -C",
+     "-B v -C"],
+    function (s) {
+      s.forbid(Logic.atMostOne("A", "B", "C", "D")); },
+    // If any two of A,B,C are false (lines 3,4,5), then we'll need
+    // one of A,B,C and D to be true (lines 1,2 by implication of
+    // line 6).  (This isn't the reasoning that generated the clauses,
+    // but it's one way to think of it.)
+    ["A v B v C v $atMostOne1",
+     "D v $atMostOne1",
+     "A v B v $atMostOne2",
+     "A v C v $atMostOne2",
+     "B v C v $atMostOne2",
+     "-$atMostOne1 v -$atMostOne2"]
   ]);
 });

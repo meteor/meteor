@@ -457,9 +457,11 @@ Logic._defineFormula(Logic.OrFormula, 'or', {
       return t.clause(this.operands);
     } else {
       // eg -A; -B; -C
-      return _.map(this.operands, function (o) {
-        return t.clause(Logic.not(o));
+      var result = [];
+      _.each(this.operands, function (o) {
+        result.push.apply(result, t.generate(false, o));
       });
+      return result;
     }
   }
 });
@@ -493,9 +495,11 @@ Logic._defineFormula(Logic.AndFormula, 'and', {
   generateClauses: function (isTrue, t) {
     if (isTrue) {
       // eg A; B; C
-      return _.map(this.operands, function (o) {
-        return t.clause(o);
+      var result = [];
+      _.each(this.operands, function (o) {
+        result.push.apply(result, t.generate(true, o));
       });
+      return result;
     } else {
       // eg -A v -B v -C
       return t.clause(_.map(this.operands, Logic.not));
@@ -576,44 +580,58 @@ Logic._defineFormula(Logic.XorFormula, 'xor', {
   }
 });
 
-// Logic.atMostOne = function (/*formulaOrArray, ...*/) {
-//   return new Logic.AtMostOneFormula(_.flatten(arguments));
-// };
+Logic.atMostOne = function (/*formulaOrArray, ...*/) {
+  var args = _.flatten(arguments);
+  if (args.length <= 1) {
+    return Logic.TRUE;
+  } else {
+    return new Logic.AtMostOneFormula(args);
+  }
+};
 
-// Logic.AtMostOneFormula = function (operands) {
-//   check(operands, [Logic.FormulaOrTerm]);
-//   this.operands = operands;
-// };
-// Logic.AtMostOneFormula.MAX_N_BEFORE_GROUPING = 5;
+Logic.AtMostOneFormula = function (operands) {
+  check(operands, [Logic.FormulaOrTerm]);
+  this.operands = operands;
+};
 
-// Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
-//   _expand: function () {
-//     var groups = group(this.operands, 3);
-//     return new Logic.AndFormula(
-//     return new Logic.(
-//       _.map(group(this.operands, 3), function (group) {
-//         return (group.length === 1 ?
-//                 group[0] : new Logic.XorFormula(group));
-//       }));
-//   },
-//   _genTrue: function (makeClause) {
-//     var args = this.operands;
-//     var not = Logic.not;
-//     if (args.length <= 1) {
-//       return []; // always succeed
-//     } else if (args.length <= Logic.AtMostOneFormula.MAX_N_BEFORE_GROUPING) {
-//       // Generate O(N^2) clauses of the form: -A v -B; -A v -C; ...
-//       // This generates a lot of clauses, but it results in fast
-//       // propagation when solving.  Definitely use it for N <= 5.
-//       var result = [];
-//       for (var i = 0; i < args.length; i++) {
-//         for (var j = j+1; j < args.length; j++) {
-//           result.push(makeClause(not(args[i]), not(args[j])));
-//         }
-//       }
-//       return result;
-//     } else {
-
-//     }
-//   }
-// });
+Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
+  generateClauses: function (isTrue, t) {
+     var args = this.operands;
+     var not = Logic.not;
+     if (args.length <= 1) {
+       return []; // always succeed
+     } else if (args.length === 2) {
+       return t.generate(isTrue, Logic.not(Logic.and(args)));
+     } else if (args.length === 3) {
+       var A = args[0], B = args[1], C = args[2];
+       if (isTrue) {
+         // Pick any two args; at least one is false (they aren't
+         // both true).  This strategy would also work for N > 3.
+         return [t.clause(not(A), not(B)),
+                 t.clause(not(A), not(C)),
+                 t.clause(not(B), not(C))];
+       } else { // !isTrue
+         // Pick any two args; at least one is true (they aren't
+         // both false).  This only works for N=3.
+         return [t.clause(A, B), t.clause(A, C), t.clause(B, C)];
+       }
+     } else {
+       // See the "commander variables" technique from:
+       // http://www.cs.cmu.edu/~wklieber/papers/2007_efficient-cnf-encoding-for-selecting-1.pdf
+       // But in short: At most one group has at least one "true",
+       // and each group has at most one "true".  Formula generation
+       // automatically generates the right implications.
+       var groups = group(args, 3);
+       var ors = _.map(groups, function (g) { return Logic.or(g); });
+       if (groups[groups.length - 1].length < 2) {
+         // Remove final group of length 1 so we don't generate
+         // no-op clauses of one sort or another
+         groups.length--;
+       }
+       var atMostOnes = _.map(groups, function (g) {
+         return Logic.atMostOne(g);
+       });
+       return t.generate(isTrue, Logic.and(Logic.atMostOne(ors), atMostOnes));
+     }
+  }
+});
