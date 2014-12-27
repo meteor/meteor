@@ -238,6 +238,21 @@ Tinytest.add("logic-solver - Require/forbid after formula gen", function (test) 
     },
     ["-A v $or1","-B v $or1","-$or1 v C","A v B v -$or1","$or1"]
   ]);
+
+  runClauseTests(test, [
+    function (s) {
+      var f = Logic.or("A", "B");
+      s.require(Logic.and(f, "C"));
+      s.require(f);
+    },
+    // Arguments to AND are generated in place, meaning that if `f`
+    // is used elsewhere, its clauses will be generated twice.
+    // Oh well.  It's a trade-off.  The same applies to OR when
+    // generating the false case.
+    ["A v B",
+     "C",
+     "A v B"]
+  ]);
 });
 
 
