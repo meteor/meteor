@@ -581,6 +581,15 @@ _.extend(AppRunner.prototype, {
         settings = files.getSettings(self.settingsFile, settingsWatchSet);
     });
 
+    // We only can refresh the client without restarting the server if the
+    // client contains the 'autoupdate' package.
+    var canRefreshClient = self.projectContext.packageMap &&
+          self.projectContext.packageMap.getInfo('autoupdate');
+    if (! canRefreshClient) {
+      // Restart server on client changes if we can't refresh the client.
+      serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
+    }
+
     // HACK: merge the watchset and messages from reading the settings
     // file into those from the build. This works fine but it sort of
     // messy. Maybe clean it up sometime.
@@ -670,7 +679,7 @@ _.extend(AppRunner.prototype, {
          }
       });
     };
-    if (self.watchForChanges) {
+    if (self.watchForChanges && canRefreshClient) {
       setupClientWatcher();
     }
 
@@ -682,6 +691,9 @@ _.extend(AppRunner.prototype, {
 
     try {
       while (ret.outcome === 'changed-refreshable') {
+        if (! canRefreshClient)
+          throw Error("Can't refresh client?");
+
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = bundleApp();
