@@ -295,6 +295,11 @@ _.extend(exports.Tropohouse.prototype, {
         isopack.saveToPath(combinedDirectory);
         files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
 
+        // Delete temp directories now (asynchronously).
+        _.each(buildTempDirs, function (buildTempDir) {
+          files.freeTempDir(buildTempDir);
+        });
+
         // Clean up old version.
         if (packageLinkTarget) {
           files.rm_recursive(self.packagePath(packageName, packageLinkTarget));

@@ -251,20 +251,21 @@ files.rm_recursive = function (p) {
     // the l in lstat is critical -- we want to remove symbolic
     // links, not what they point to
     var stat = files.lstat(p);
+
+    if (stat.isDirectory()) {
+      _.each(files.readdir(p), function (file) {
+        file = path.join(p, file);
+        files.rm_recursive(file);
+      });
+      files.rmdir(p);
+    } else {
+      files.unlink(p);
+    }
   } catch (e) {
     if (e.code == "ENOENT")
       return;
     throw e;
   }
-
-  if (stat.isDirectory()) {
-    _.each(files.readdir(p), function (file) {
-      file = path.join(p, file);
-      files.rm_recursive(file);
-    });
-    files.rmdir(p);
-  } else
-    files.unlink(p);
 };
 
 // Makes all files in a tree read-only.
@@ -525,7 +526,27 @@ files.mkdtemp = function (prefix) {
   return dir;
 };
 
-if (!process.env.METEOR_SAVE_TMPDIRS) {
+// Call this if you're done using a temporary directory. It will asynchronously
+// be deleted.
+files.freeTempDir = function (tempDir) {
+  if (! _.contains(tempDirs, tempDir))
+    throw Error("not a tracked temp dir: " + tempDir);
+  if (process.env.METEOR_SAVE_TMPDIRS)
+    return;
+  setImmediate(function () {
+    // note: rm_recursive can yield, so it's possible that during this
+    // rm_recursive call, the onExit rm_recursive fires too.  (Or it could even
+    // start firing before the setImmediate handler is called.) But it should be
+    // OK for there to be overlapping rm_recursive calls, since rm_recursive
+    // ignores all ENOENT calls. And we don't remove tempDir from tempDirs until
+    // it's done, so that if mid-way through this rm_recursive the onExit one
+    // fires, it still gets removed.
+    files.rm_recursive(tempDir);
+    tempDirs = _.without(tempDirs, tempDir);
+  });
+};
+
+if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function (sig) {
     _.each(tempDirs, files.rm_recursive);
     tempDirs = [];
