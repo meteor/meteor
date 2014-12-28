@@ -738,6 +738,10 @@ var genLTE = function (bits1, bits2, t, notEqual) {
   // clone so we can mutate them in place
   var A = bits1.bits.slice();
   var B = bits2.bits.slice();
+  if (notEqual && ! bits2.bits.length) {
+    // can't be less than 0
+    return t.clause();
+  }
   // if A is longer than B, the extra (high) bits
   // must be 0.
   while (A.length > B.length) {
@@ -749,7 +753,7 @@ var genLTE = function (bits1, bits2, t, notEqual) {
   // B[i] if A is too short.
   var xors = _.map(B, function (b, i) {
     if (i < A.length) {
-      return Logic.xor(b, A[i]);
+      return Logic.xor(A[i], b);
     } else {
       return b;
     }
@@ -775,10 +779,10 @@ var genLTE = function (bits1, bits2, t, notEqual) {
   // the xors from the right (note that there may be
   // more xors, because we may have been given [Z, Y, X, W]).
   for (var i = A.length-1; i >= 0; i--) {
-    ret.push(t.clause(xors.slice(i+1), B[i], Logic.not(A[i])));
+    ret.push(t.clause(xors.slice(i+1), Logic.not(A[i]), B[i]));
   }
   if (notEqual) {
-    ret.push(t.clause(xors));
+    ret.push.apply(ret, t.generate(true, Logic.or(xors)));
   }
   return ret;
 };
