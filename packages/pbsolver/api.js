@@ -254,7 +254,7 @@ PBSolver.prototype.getSum = function (vars) {
     // R = (A and B) [carry]
     this.addClause([R], [A, B]); // -A v -B v R
     this.addClause([A], [R]); // A v -R
-    this.addClause([B], [R]); // A v -R
+    this.addClause([B], [R]); // B v -R
     return [S, R];
   } else if (vars.length === 3) {
     // "Full Adder"
