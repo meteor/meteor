@@ -735,3 +735,202 @@ Tinytest.add("logic-solver - Logic.equalBits", function (test) {
      "-$or1 v $or2"]
   ]);
 });
+
+Tinytest.add("logic-solver - Logic.lessThan[OrEqual]", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits([]),
+                               new Logic.Bits([]))); },
+    [""],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits([]),
+                                      new Logic.Bits([]))); },
+    [],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits([]),
+                              new Logic.Bits([]))); },
+    [],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits([]),
+                                     new Logic.Bits([]))); },
+    [""],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits(["A"]),
+                               new Logic.Bits([]))); },
+    [""],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits(["A"]),
+                                      new Logic.Bits([]))); },
+    ["-A"],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits(["A"]),
+                              new Logic.Bits([]))); },
+    [],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits(["A"]),
+                                     new Logic.Bits([]))); },
+    ["A"],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits([]),
+                               new Logic.Bits(["A"]))); },
+    ["A"],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits([]),
+                                      new Logic.Bits(["A"]))); },
+    [],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits([]),
+                              new Logic.Bits(["A"]))); },
+    ["-A"],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits([]),
+                                     new Logic.Bits(["A"]))); },
+    [""],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits(["A"]),
+                               new Logic.Bits(["B"]))); },
+    ["-A v B",
+     "A v B",
+     "-A v -B"],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits(["A"]),
+                                      new Logic.Bits(["B"]))); },
+    ["-A v B"],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits(["A"]),
+                              new Logic.Bits(["B"]))); },
+    ["-B v A"],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits(["A"]),
+                                     new Logic.Bits(["B"]))); },
+    ["-B v A",
+     "B v A",
+     "-B v -A"],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits(["B", "A"]),
+                               new Logic.Bits(["Y", "X"]))); },
+    ["-A v X",
+     "A v X v -$xor1",
+     "-A v -X v -$xor1",
+     "$xor1 v -B v Y",
+     "B v Y v -$xor2",
+     "-B v -Y v -$xor2",
+     "$xor2 v $xor1"],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits(["B", "A"]),
+                                      new Logic.Bits(["Y", "X"]))); },
+    ["-A v X",
+     "A v X v -$xor1",
+     "-A v -X v -$xor1",
+     "$xor1 v -B v Y"],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits(["B", "A"]),
+                              new Logic.Bits(["Y", "X"]))); },
+    ["-X v A",
+     "X v A v -$xor1",
+     "-X v -A v -$xor1",
+     "$xor1 v -Y v B"],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits(["B", "A"]),
+                                     new Logic.Bits(["Y", "X"]))); },
+    ["-X v A",
+     "X v A v -$xor1",
+     "-X v -A v -$xor1",
+     "$xor1 v -Y v B",
+     "Y v B v -$xor2",
+     "-Y v -B v -$xor2",
+     "$xor2 v $xor1"],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits(["A"]),
+                               new Logic.Bits(["Y", "X"]))); },
+    ["X v -A v Y",
+     "A v Y v -$xor1",
+     "-A v -Y v -$xor1",
+     "$xor1 v X"],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits(["A"]),
+                                      new Logic.Bits(["Y", "X"]))); },
+    ["X v -A v Y"],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits(["A"]),
+                              new Logic.Bits(["Y", "X"]))); },
+    ["-X",
+     "-Y v A"],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits(["A"]),
+                                     new Logic.Bits(["Y", "X"]))); },
+    ["-X",
+     "-Y v A",
+     "Y v A",
+     "-Y v -A"],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits(["B", "A"]),
+                               new Logic.Bits(["X"]))); },
+    ["-A",
+     "-B v X",
+     "B v X",
+     "-B v -X"],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits(["B", "A"]),
+                                      new Logic.Bits(["X"]))); },
+    ["-A",
+     "-B v X"],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits(["B", "A"]),
+                              new Logic.Bits(["X"]))); },
+    ["A v -X v B"],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits(["B", "A"]),
+                                     new Logic.Bits(["X"]))); },
+    ["A v -X v B",
+     "X v B v -$xor1",
+     "-X v -B v -$xor1",
+     "$xor1 v A"],
+    function (s) {
+      s.require(Logic.lessThan(new Logic.Bits(["C", "B", "A"]),
+                               new Logic.Bits(["Z", "Y", "X"]))); },
+    ["-A v X",
+     "A v X v -$xor1",
+     "-A v -X v -$xor1",
+     "$xor1 v -B v Y",
+     "B v Y v -$xor2",
+     "-B v -Y v -$xor2",
+     "$xor2 v $xor1 v -C v Z",
+     "C v Z v -$xor3",
+     "-C v -Z v -$xor3",
+     "$xor3 v $xor2 v $xor1"],
+    function (s) {
+      s.require(Logic.lessThanOrEqual(new Logic.Bits(["C", "B", "A"]),
+                                      new Logic.Bits(["Z", "Y", "X"]))); },
+    ["-A v X",
+     "A v X v -$xor1",
+     "-A v -X v -$xor1",
+     "$xor1 v -B v Y",
+     "B v Y v -$xor2",
+     "-B v -Y v -$xor2",
+     "$xor2 v $xor1 v -C v Z"],
+    function (s) {
+      s.forbid(Logic.lessThan(new Logic.Bits(["C", "B", "A"]),
+                              new Logic.Bits(["Z", "Y", "X"]))); },
+    ["-X v A",
+     "X v A v -$xor1",
+     "-X v -A v -$xor1",
+     "$xor1 v -Y v B",
+     "Y v B v -$xor2",
+     "-Y v -B v -$xor2",
+     "$xor2 v $xor1 v -Z v C"],
+    function (s) {
+      s.forbid(Logic.lessThanOrEqual(new Logic.Bits(["C", "B", "A"]),
+                                     new Logic.Bits(["Z", "Y", "X"]))); },
+    ["-X v A",
+     "X v A v -$xor1",
+     "-X v -A v -$xor1",
+     "$xor1 v -Y v B",
+     "Y v B v -$xor2",
+     "-Y v -B v -$xor2",
+     "$xor2 v $xor1 v -Z v C",
+     "Z v C v -$xor3",
+     "-Z v -C v -$xor3",
+     "$xor3 v $xor2 v $xor1"]
+  ]);
+});
