@@ -854,3 +854,64 @@ Logic._defineFormula(Logic.EqualBitsFormula, 'equalBits', {
     return t.generate(isTrue, Logic.and(facts));
   }
 });
+
+Logic.HalfAdderSum = function (formula1, formula2) {
+  check(formula1, Logic.FormulaOrTerm);
+  check(formula2, Logic.FormulaOrTerm);
+  check(arguments.length, 2);
+  this.a = formula1;
+  this.b = formula2;
+};
+
+Logic._defineFormula(Logic.HalfAdderSum, 'hsum', {
+  generateClauses: function (isTrue, t) {
+    return t.generate(isTrue, Logic.xor(this.a, this.b));
+  }
+});
+
+Logic.HalfAdderCarry = function (formula1, formula2) {
+  check(formula1, Logic.FormulaOrTerm);
+  check(formula2, Logic.FormulaOrTerm);
+  check(arguments.length, 2);
+  this.a = formula1;
+  this.b = formula2;
+};
+
+Logic._defineFormula(Logic.HalfAdderCarry, 'hcarry', {
+  generateClauses: function (isTrue, t) {
+    return t.generate(isTrue, Logic.and(this.a, this.b));
+  }
+});
+
+Logic.FullAdderSum = function (formula1, formula2, formula3) {
+  check(formula1, Logic.FormulaOrTerm);
+  check(formula2, Logic.FormulaOrTerm);
+  check(formula3, Logic.FormulaOrTerm);
+  check(arguments.length, 3);
+  this.a = formula1;
+  this.b = formula2;
+  this.c = formula3;
+};
+
+Logic._defineFormula(Logic.FullAdderSum, 'fsum', {
+  generateClauses: function (isTrue, t) {
+    return t.generate(isTrue, Logic.xor(this.a, this.b, this.c));
+  }
+});
+
+Logic.FullAdderCarry = function (formula1, formula2, formula3) {
+  check(formula1, Logic.FormulaOrTerm);
+  check(formula2, Logic.FormulaOrTerm);
+  check(formula3, Logic.FormulaOrTerm);
+  check(arguments.length, 3);
+  this.a = formula1;
+  this.b = formula2;
+  this.c = formula3;
+};
+
+Logic._defineFormula(Logic.FullAdderCarry, 'fcarry', {
+  generateClauses: function (isTrue, t) {
+    return t.generate(! isTrue,
+                      Logic.atMostOne(this.a, this.b, this.c));
+  }
+});

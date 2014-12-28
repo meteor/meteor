@@ -934,3 +934,68 @@ Tinytest.add("logic-solver - Logic.lessThan[OrEqual]", function (test) {
      "$xor3 v $xor2 v $xor1"]
   ]);
 });
+
+Tinytest.add("logic-solver - half/full sum/carry", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(new Logic.HalfAdderSum("A", "B")); },
+    ["A v B", "-A v -B"],
+    function (s) {
+      s.forbid(new Logic.HalfAdderSum("A", "B")); },
+    ["A v -B", "-A v B"],
+    function (s) {
+      s.require(Logic.or(new Logic.HalfAdderSum("A", "B"), "C")); },
+    ["A v B v -$hsum1",
+     "-A v -B v -$hsum1",
+     "$hsum1 v C"],
+    function (s) {
+      s.require(new Logic.HalfAdderCarry("A", "B")); },
+    ["A", "B"],
+    function (s) {
+      s.forbid(new Logic.HalfAdderCarry("A", "B")); },
+    ["-A v -B"],
+    function (s) {
+      s.require(Logic.or(new Logic.HalfAdderCarry("A", "B"), "C")); },
+    ["A v -$hcarry1",
+     "B v -$hcarry1",
+     "$hcarry1 v C"]
+  ]);
+
+  runClauseTests(test, [
+    function (s) {
+      s.require(new Logic.FullAdderSum("A", "B", "C")); },
+    ["A v B v C",
+     "A v -B v -C",
+     "-A v B v -C",
+     "-A v -B v C"],
+    function (s) {
+      s.forbid(new Logic.FullAdderSum("A", "B", "C")); },
+    ["-A v -B v -C",
+     "-A v B v C",
+     "A v -B v C",
+     "A v B v -C"],
+    function (s) {
+      s.require(Logic.or(new Logic.FullAdderSum("A", "B", "C"), "D")); },
+    ["A v B v C v -$fsum1",
+     "A v -B v -C v -$fsum1",
+     "-A v B v -C v -$fsum1",
+     "-A v -B v C v -$fsum1",
+     "$fsum1 v D"],
+    function (s) {
+      s.require(new Logic.FullAdderCarry("A", "B", "C")); },
+    ["A v B",
+     "A v C",
+     "B v C"],
+    function (s) {
+      s.forbid(new Logic.FullAdderCarry("A", "B", "C")); },
+    ["-A v -B",
+     "-A v -C",
+     "-B v -C"],
+    function (s) {
+      s.require(Logic.or(new Logic.FullAdderCarry("A", "B", "C"), "D")); },
+    ["A v B v -$fcarry1",
+     "A v C v -$fcarry1",
+     "B v C v -$fcarry1",
+     "$fcarry1 v D"]
+  ]);
+});
