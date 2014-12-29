@@ -915,3 +915,94 @@ Logic._defineFormula(Logic.FullAdderCarry, 'fcarry', {
                       Logic.atMostOne(this.a, this.b, this.c));
   }
 });
+
+// Implements the Adder strategy from the MiniSat+ paper:
+// http://minisat.se/downloads/MiniSat+.pdf
+// "Translating Pseudo-boolean Constraints into SAT"
+//
+// Takes a list of list of Formulas.  The first list is bits
+// to give weight 1; the second is bits to give weight 2;
+// and so on.  Returns a Bits.
+var binaryWeightedSum = function (varsByWeight) {
+  check(varsByWeight, [[Logic.FormulaOrTerm]]);
+  // initialize buckets to a two-level clone of varsByWeight
+  var buckets = _.map(varsByWeight, _.clone);
+  var lowestWeight = 0; // index of the first non-empty array
+  var output = [];
+  while (lowestWeight < buckets.length) {
+    var i = lowestWeight;
+    var bucket = buckets[i];
+    if (! bucket.length) {
+      output.push(Logic.FALSE);
+      lowestWeight++;
+    } else if (bucket.length === 1) {
+      output.push(bucket[0]);
+      lowestWeight++;
+    } else if (bucket.length === 2) {
+      var sum = new Logic.HalfAdderSum(bucket[0], bucket[1]);
+      var carry = new Logic.HalfAdderCarry(bucket[0], bucket[1]);
+      bucket.length = 0;
+      bucket.push(sum);
+      buckets[i+1] = (buckets[i+1] || []);
+      buckets[i+1].push(carry);
+    } else {
+      // Not clear whether it's better to take the three
+      // vars from the start or end of the bucket, but
+      // based on a quick test, the end seems faster for solving.
+      var c = bucket.pop();
+      var b = bucket.pop();
+      var a = bucket.pop();
+      var sum = new Logic.FullAdderSum(a, b, c);
+      var carry = new Logic.FullAdderCarry(a, b, c);
+      bucket.push(sum);
+      buckets[i+1] = (buckets[i+1] || []);
+      buckets[i+1].push(carry);
+    }
+  }
+  return output;
+};
+
+var pushToNth = function (arrayOfArrays, n, newItem) {
+  arrayOfArrays[n] = (arrayOfArrays[n] || []);
+  arrayOfArrays[n].push(newItem);
+};
+
+Logic.weightedSum = function (formulas, weights) {
+  check(formulas, [Logic.FormulaOrTerm]);
+  check(weights, [Logic.WholeNumber]);
+  if (! (formulas.length === weights.length && formulas.length)) {
+    throw new Error("Formula array and weight array must be same length (> 0)");
+  }
+  var binaryWeighted = [];
+  _.each(formulas, function (f, i) {
+    var w = weights[i];
+    var whichBit = 0;
+    while (w) {
+      if (w & 1) {
+        pushToNth(binaryWeighted, whichBit, f);
+      }
+      w >>>= 1;
+      whichBit++;
+    }
+  });
+
+  return new Logic.Bits(binaryWeightedSum(binaryWeighted));
+};
+
+Logic.sum = function (/*formulaOrBitsOrArray, ...*/) {
+  var things = _.flatten(arguments);
+  check(things, [Match.OneOf(Logic.FormulaOrTerm, Logic.Bits)]);
+
+  var binaryWeighted = [];
+  _.each(things, function (x) {
+    if (x instanceof Logic.Bits) {
+      _.each(x.bits, function (b, i) {
+        pushToNth(binaryWeighted, i, b);
+      });
+    } else {
+      pushToNth(binaryWeighted, 0, x);
+    }
+  });
+
+  return new Logic.Bits(binaryWeightedSum(binaryWeighted));
+};

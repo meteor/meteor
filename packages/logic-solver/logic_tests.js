@@ -999,3 +999,106 @@ Tinytest.add("logic-solver - half/full sum/carry", function (test) {
      "$fcarry1 v D"]
   ]);
 });
+
+Tinytest.add("logic-solver - sum of terms", function (test) {
+  runClauseTests(test, [
+    function (s) {
+      s.require(
+        // XY = A + B + C
+        Logic.equalBits(new Logic.Bits(["Y", "X"]),
+                        Logic.sum("A", "B", "C")));
+    },
+    ["-A v -B v -C v $fsum1",
+     "-A v B v C v $fsum1",
+     "A v -B v C v $fsum1",
+     "A v B v -C v $fsum1",
+     "Y v -$fsum1",
+     "A v B v C v -$fsum1",
+     "A v -B v -C v -$fsum1",
+     "-A v B v -C v -$fsum1",
+     "-A v -B v C v -$fsum1",
+     "-Y v $fsum1",
+     "-A v -B v $fcarry1",
+     "-A v -C v $fcarry1",
+     "-B v -C v $fcarry1",
+     "X v -$fcarry1",
+     "A v B v -$fcarry1",
+     "A v C v -$fcarry1",
+     "B v C v -$fcarry1",
+     "-X v $fcarry1"],
+    function (s) {
+      s.require(
+        // AB + C = XYZ
+        Logic.equalBits(new Logic.Bits(["Z", "Y", "X"]),
+                        Logic.sum(new Logic.Bits(["B", "A"]), "C")));
+    },
+    ["B v -C v $hsum1",
+     "-B v C v $hsum1",
+     "Z v -$hsum1",
+     "B v C v -$hsum1",
+     "-B v -C v -$hsum1",
+     "-Z v $hsum1",
+     "-B v -C v $hcarry2",
+     "A v -$hcarry2 v $hsum2",
+     "B v -$hcarry2",
+     "C v -$hcarry2",
+     "-A v $hcarry2 v $hsum2",
+     "Y v -$hsum2",
+     "A v $hcarry2 v -$hsum2",
+     "-A v -$hcarry2 v -$hsum2",
+     "-Y v $hsum2",
+     "-A v -$hcarry2 v $hcarry1",
+     "X v -$hcarry1",
+     "A v -$hcarry1",
+     "B v -$hcarry1",
+     "C v -$hcarry1",
+     "-X v $hcarry1"],
+    function (s) {
+      s.require(
+        // 8X + 15Y = ZABCDE
+        Logic.equalBits(new Logic.Bits(["E", "D", "C", "B", "A", "Z"]),
+                        Logic.weightedSum(["X", "Y"], [8, 15])));
+    },
+    // C, D, and E all = Y
+    // AB = X + Y
+    // Z = 0
+    ["E v -Y",
+     "-E v Y",
+     "D v -Y",
+     "-D v Y",
+     "C v -Y",
+     "-C v Y",
+     "X v -Y v $hsum1",
+     "-X v Y v $hsum1",
+     "B v -$hsum1",
+     "X v Y v -$hsum1",
+     "-X v -Y v -$hsum1",
+     "-B v $hsum1",
+     "-X v -Y v $hcarry1",
+     "A v -$hcarry1",
+     "X v -$hcarry1",
+     "Y v -$hcarry1",
+     "-A v $hcarry1",
+     "-Z"],
+    function (s) {
+      // A + B < 2
+      s.require(Logic.lessThan(Logic.sum("A", "B"), Logic.constantBits(2)));
+    },
+    ["-$F",
+     "$T",
+     "-A v -B v $hcarry1",
+     "-$hcarry1 v $T",
+     "A v -$hcarry1",
+     "B v -$hcarry1",
+     "$hcarry1 v $T v -$xor1",
+     "-$hcarry1 v -$T v -$xor1",
+     "A v -B v $hsum1",
+     "-A v B v $hsum1",
+     "$xor1 v -$hsum1 v $F",
+     "A v B v -$hsum1",
+     "-A v -B v -$hsum1",
+     "$hsum1 v $F v -$xor2",
+     "-$hsum1 v -$F v -$xor2",
+     "$xor2 v $xor1"]
+  ]);
+});
