@@ -281,9 +281,8 @@ var PackageSource = function () {
   // XXX: 0.90 package versions.
   self.isCore = false;
 
-  // The list of archs that we can target. Doesn't include 'web' because
-  // it is expanded into 'web.*'.
-  self.allArchs = ['os', 'web.browser', 'web.cordova'];
+  // The list of architectures that this package source can target.
+  self.allArchs = compiler.ALL_ARCHES;
 };
 
 
@@ -1710,6 +1709,37 @@ _.extend(PackageSource.prototype, {
       });
     });
     return _.keys(packages);
+  },
+
+  // Returns an array of objects, representing this package's public
+  // exports. Each object has the following keys:
+  //  - name: export name (ex: "Accounts")
+  //  - arch: an array of strings representing architectures for which this
+  //    export is declared.
+  //
+  // This ignores testOnly exports.
+  getExports: function () {
+    var self = this;
+    var ret = {};
+    // Go over all of the architectures, and aggregate the exports together.
+    _.each(self.architectures, function (arch) {
+      _.each(arch.declaredExports, function (exp) {
+        // Skip testOnly exports -- the flag is intended for use in testing
+        // only, so it is not of any interest outside this package.
+        if (exp.testOnly) {
+          return;
+        }
+        // Add the export to the export map.
+        if (! _.has(ret, exp.name)) {
+          ret[exp.name] = [arch.arch];
+        } else {
+          ret[exp.name].push(arch.arch);
+        }
+     });
+    });
+    return _.map(ret, function (arches, name) {
+      return { name: name, architectures: arches };
+    });
   },
 
   // If dependencies aren't consistent across unibuilds, return false and
