@@ -20,7 +20,6 @@ var packageJson = {
     underscore: "1.5.2",
     "source-map-support": "0.2.8",
     semver: "4.1.0",
-    promise: "6.0.1",
     request: "2.47.0",
     fstream: "1.0.2",
     tar: "1.0.2",
