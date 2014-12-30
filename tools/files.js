@@ -1063,8 +1063,10 @@ var convertToStandardPath = function (osPath) {
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
  * and run in a fiber, then assign it to the "files" namespace. Each call
- * creates two versions: a files.func that runs asynchronously with Fibers,
- * and a files.funcSync that runs synchronously and doesn't yield.
+ * creates a files.func that runs asynchronously with Fibers (yielding and
+ * until the call is done), unless run outside a Fiber or in noYieldsAllowed, in
+ * which case it uses fs.funcSync.
+ *
  * @param  {String} fsFuncName         The name of the node fs function to wrap
  * @param  {Number[]} pathArgIndices Indices of arguments that have paths, these
  * arguments will be converted to the correct OS slashes
