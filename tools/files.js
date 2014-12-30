@@ -1209,12 +1209,14 @@ files.pathSep = '/';
 files.pathDelimiter = ':';
 
 // wrap pathwatcher because it works with file system paths
+// XXX we don't currently convert the path argument passed to the watch
+//     callback, but we currently don't use the argument either
 files.pathwatcherWatch = function () {
   var args = _.toArray(arguments);
   args[0] = convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
-  var pathwatcher = require('pathwatcher');
+  var pathwatcher = require('meteor-pathwatcher-tweaks');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
 

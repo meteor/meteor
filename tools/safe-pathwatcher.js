@@ -29,9 +29,8 @@ exports.watch = function watch(absPath, callback) {
 
   var watcher = null;
   if (PATHWATCHER_ENABLED) {
-    var pathwatcher = require('meteor-pathwatcher-tweaks');
     try {
-      watcher = pathwatcher.watch(absPath, pathwatcherWrapper);
+      watcher = files.pathwatcherWatch(absPath, pathwatcherWrapper);
     } catch (e) {
       // If it isn't an actual pathwatcher failure, rethrow.
       if (e.message !== 'Unable to watch path')
