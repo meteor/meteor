@@ -12,7 +12,7 @@ Plugin.registerSourceHandler("less", {archMatching: 'web'}, function (compileSte
     // we don't have to use Futures and (b) errors thrown by bugs in less
     // actually get caught.
     syncImport: true,
-    paths: [path.dirname(compileStep._fullInputPath)] // for @import
+    paths: [process.cwd(), path.dirname(compileStep._fullInputPath)] // for @import
   };
 
   var parser = new less.Parser(options);
