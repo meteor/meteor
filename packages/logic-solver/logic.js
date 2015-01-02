@@ -1,5 +1,7 @@
 Logic = {};
 
+Logic._MiniSat = MiniSat; // Expose for testing and poking around
+
 // WholeNumber: a non-negative integer (0 is allowed)
 Logic.WholeNumber = Match.Where(function (x) {
   return Match.test(x, Match.Integer) && x >= 0;

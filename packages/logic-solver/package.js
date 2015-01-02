@@ -7,7 +7,9 @@ Package.on_use(function (api) {
   api.export('Logic');
   api.use('check');
   api.use('underscore');
-  api.add_files(['logic.js']);
+  api.add_files(['minisat.js',
+                 'minisat_wrapper.js',
+                 'logic.js']);
 });
 
 Package.on_test(function (api) {
