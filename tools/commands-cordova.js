@@ -2846,7 +2846,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   cordova.setVerboseness(options.verbose);
@@ -2975,7 +2974,6 @@ main.registerCommand({
 main.registerCommand({
   name: 'list-platforms',
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -3021,7 +3019,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'android-launch',
-  pretty: true,
   options: {
     verbose: { type: Boolean, short: "v" }
   },
@@ -3063,7 +3060,6 @@ var openUrl = function (url) {
 
 main.registerCommand({
   name: 'install-sdk',
-  pretty: true,
   options: {
     verbose: { type: Boolean, short: "v" }
   },

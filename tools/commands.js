@@ -82,6 +82,7 @@ var showInvalidArchMsg = function (arch) {
 main.registerCommand({
   name: '--arch',
   requiresRelease: false,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var archinfo = require('./archinfo.js');
@@ -96,6 +97,7 @@ main.registerCommand({
 main.registerCommand({
   name: '--version',
   requiresRelease: false,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (release.current === null) {
@@ -121,6 +123,7 @@ main.registerCommand({
 main.registerCommand({
   name: '--long-version',
   requiresRelease: false,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (files.inCheckout()) {
@@ -141,6 +144,7 @@ main.registerCommand({
 main.registerCommand({
   name: '--requires-release',
   requiresRelease: true,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   return 0;
@@ -151,7 +155,6 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 
 var runCommandOptions = {
-  pretty: true,
   requiresApp: true,
   maxArgs: Infinity,
   options: {
@@ -376,6 +379,7 @@ main.registerCommand(_.extend(
 
 main.registerCommand({
   name: 'shell',
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (!options.appDir) {
@@ -401,7 +405,6 @@ main.registerCommand({
     example: { type: String },
     package: { type: Boolean }
   },
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
@@ -633,7 +636,6 @@ var buildCommands = {
     "mobile-port": { type: String },
     verbose: { type: Boolean, short: "v" }
   },
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 };
 
@@ -871,6 +873,7 @@ main.registerCommand({
   requiresApp: function (options) {
     return options.args.length === 0;
   },
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var mongoUrl;
@@ -981,7 +984,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'deploy',
-  pretty: true,
   minArgs: 1,
   maxArgs: 1,
   options: {
@@ -1157,6 +1159,11 @@ main.registerCommand({
     remove: { type: String, short: "r" },
     list: { type: Boolean }
   },
+  pretty: function (options) {
+    // pretty if we're mutating; plain if we're listing (which is more likely to
+    // be used by scripts)
+    return options.add || options.remove;
+  },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
@@ -1245,7 +1252,6 @@ main.registerCommand({
 main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
-  pretty: true,
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'http-proxy-port': { type: String },
@@ -1540,7 +1546,6 @@ main.registerCommand({
   name: 'rebuild',
   maxArgs: Infinity,
   hidden: true,
-  pretty: true,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1596,7 +1601,8 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'whoami',
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  pretty: false
 }, function (options) {
   return auth.whoAmICommand(options);
 });
@@ -1632,6 +1638,7 @@ main.registerCommand({
   name: 'admin list-organizations',
   minArgs: 0,
   maxArgs: 0,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
@@ -1686,6 +1693,11 @@ main.registerCommand({
     add: { type: String },
     remove: { type: String },
     list: { type: Boolean }
+  },
+  pretty: function (options) {
+    // pretty if we're mutating; plain if we're listing (which is more likely to
+    // be used by scripts)
+    return options.add || options.remove;
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1842,6 +1854,7 @@ main.registerCommand({
   name: 'list-sites',
   minArgs: 0,
   maxArgs: 0,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   auth.pollForRegistrationCompletion();
@@ -1871,6 +1884,7 @@ main.registerCommand({
     // 15. (MDG can reserve machines for longer than that.)
     minutes: { type: Number, required: false }
   },
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
@@ -1999,6 +2013,7 @@ main.registerCommand({
   },
   maxArgs: 2,
   hidden: true,
+  pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var p = function (key) {

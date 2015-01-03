@@ -119,7 +119,6 @@ var formatArchitecture = function (s) {
 // whenever necessary!
 main.registerCommand({
   name: '--get-ready',
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // If we're in an app, make sure that we can build the current app. Otherwise
@@ -164,7 +163,6 @@ main.registerCommand({
 // builds and downloads packages used by the current app.
 main.registerCommand({
   name: '--prepare-app',
-  pretty: true,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -184,7 +182,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'publish',
-  pretty: true,
   minArgs: 0,
   maxArgs: 0,
   options: {
@@ -418,7 +415,6 @@ main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
   maxArgs: 1,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // argument processing
@@ -598,7 +594,6 @@ main.registerCommand({
     'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
   },
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   try {
@@ -1034,7 +1029,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'show',
-  pretty: true,
   minArgs: 1,
   maxArgs: 1,
   options: {
@@ -1223,7 +1217,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'search',
-  pretty: true,
   minArgs: 0, // So we can provide specific help
   maxArgs: 1,
   options: {
@@ -1379,7 +1372,6 @@ main.registerCommand({
 main.registerCommand({
   name: 'list',
   requiresApp: true,
-  pretty: true,
   options: {
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
@@ -1783,7 +1775,6 @@ main.registerCommand({
   requiresRelease: false,
   minArgs: 0,
   maxArgs: Infinity,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   // If you are specifying packaging individually, you probably don't want to
@@ -1900,7 +1891,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -1928,7 +1918,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -2109,7 +2098,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -2201,7 +2189,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'refresh',
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // We already did it!
@@ -2317,7 +2304,6 @@ main.registerCommand({
   minArgs: 2,
   maxArgs: 2,
   hidden: true,
-  pretty: true,
 
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
