@@ -386,7 +386,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob("selecting package versions", function () {
         var resolver = self._buildResolver();
 
@@ -457,7 +457,7 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInJob();
 
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob(
         "scanning local packages",
         function () {
@@ -481,59 +481,6 @@ _.extend(exports.ProjectContext.prototype, {
         }
       );
     });
-  },
-
-  // Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
-  // official catalog, does that and tries again.
-  _runAndRetryWithRefreshIfHelpful: function (attempt) {
-    var self = this;
-    buildmessage.assertInJob();
-
-    // Run `attempt` in a nested buildmessage context.
-    var messages = buildmessage.capture(attempt);
-
-    // Did it work? Great. Move on to the next stage.
-    if (! messages.hasMessages()) {
-      return;
-    }
-
-    // Is refreshing unlikely to be useful, either because the error wasn't
-    // related to that, or because we tried to refresh recently, or because
-    // we're not allowed to refresh? Fail, merging the result of these errors
-    // into the current job (which will cause the _completeStagesThrough loop to
-    // halt).
-    if (! messages.hasMessageWithTag('refreshCouldHelp') ||
-        catalog.triedToRefreshRecently ||
-        catalog.official.offline) {
-      buildmessage.mergeMessagesIntoCurrentJob(messages);
-      return;
-    }
-
-    // Refresh!
-    // XXX This is a little hacky, as it shares a bunch of code with
-    // catalog.refreshOrWarn, which is a higher-level function that's allowed to
-    // log.
-    catalog.triedToRefreshRecently = true;
-    try {
-      catalog.official.refresh();
-      catalog.refreshFailed = false;
-    } catch (err) {
-      if (err.errorType !== 'DDP.ConnectionError')
-        throw err;
-      // First place the previous errors in the capture.
-      buildmessage.mergeMessagesIntoCurrentJob(messages);
-      // Then put an error representing this DDP error.
-      buildmessage.enterJob(
-        "refreshing package catalog to resolve previous errors",
-        function () {
-          buildmessage.error(err.message);
-        }
-      );
-      return;
-    }
-
-    // Try again, this time directly in the current buildmessage job.
-    attempt();
   },
 
   _getRootDepsAndConstraints: function () {
@@ -646,7 +593,7 @@ _.extend(exports.ProjectContext.prototype, {
     if (!self.packageMap)
       throw Error("which packages to download?");
 
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob("downloading missing packages", function () {
         self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
           serverArchitectures: self._serverArchitectures

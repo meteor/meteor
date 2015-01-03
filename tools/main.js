@@ -387,9 +387,13 @@ var springboard = function (rel, options) {
 
   // XXX split better
   Console.withProgressDisplayVisible(function () {
-    var messages = buildmessage.capture(function () {
-      tropohouse.default.downloadPackagesMissingFromMap(packageMap);
-    });
+    var messages = buildmessage.capture(
+      { title: "downloading the command-line tool" }, function () {
+        catalog.runAndRetryWithRefreshIfHelpful(function () {
+          tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+        });
+      }
+    );
     if (messages.hasMessages()) {
       // We have failed to download the tool that we are supposed to springboard
       // to! That's bad. Let's exit.
