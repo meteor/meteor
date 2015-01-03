@@ -763,8 +763,6 @@ Fiber(function () {
     }
   }
 
-  var alreadyRefreshed = false;
-
   if (! files.usesWarehouse()) {
     // Running from a checkout
     if (releaseOverride) {
@@ -796,7 +794,7 @@ Fiber(function () {
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
         Console.withProgressDisplayVisible(function () {
-          alreadyRefreshed = catalog.refreshOrWarn();
+          catalog.refreshOrWarn();
         });
         releaseName = release.latestKnown();
       }
@@ -855,7 +853,7 @@ Fiber(function () {
 
         // ATTEMPT 3: modern release, troposphere sync needed.
         Console.withProgressDisplayVisible(function () {
-          alreadyRefreshed = catalog.refreshOrWarn();
+          catalog.refreshOrWarn();
         });
 
         // Try to load the release even if the refresh failed, since it might
@@ -1275,7 +1273,8 @@ Fiber(function () {
   try {
     // Before run, do a package sync if one is configured
     var catalogRefreshStrategy = command.catalogRefresh;
-    if (!alreadyRefreshed && catalogRefreshStrategy.beforeCommand) {
+    if (! catalog.triedToRefreshRecently &&
+        catalogRefreshStrategy.beforeCommand) {
       buildmessage.enterJob({title: 'updating package catalog'}, function () {
         catalogRefreshStrategy.beforeCommand();
       });
