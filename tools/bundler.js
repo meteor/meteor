@@ -1695,6 +1695,9 @@ _.extend(ServerTarget.prototype, {
     // Server bootstrap
     builder.write('boot.js',
                   { file: files.pathJoin(__dirname, 'server', 'boot.js') });
+    builder.write(
+      'boot-utils.js',
+      { file: files.pathJoin(__dirname, 'server', 'boot-utils.js') });
     builder.write('shell.js',
                   { file: files.pathJoin(__dirname, 'server', 'shell.js') });
 

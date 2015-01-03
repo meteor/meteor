@@ -363,7 +363,7 @@ selftest.define("run and SIGKILL parent process", function () {
 
   run.stop();
 
-  // Test that passing a bad pid in --parent-pid logs an error and exits
+  // Test that passing a bad pid in $METEOR_PARENT_PID logs an error and exits
   // immediately.
   s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
   run = s.run();
