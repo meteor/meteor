@@ -37,7 +37,7 @@ function Command(options) {
     requiresApp: false,
     requiresRelease: true,
     hidden: false,
-    pretty: false
+    pretty: true
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -61,6 +61,16 @@ function Command(options) {
     if (_.has(value, 'short') && value.short.length !== 1)
       throw new Error(options.name + ": " + key + " has a bad short option");
   });
+};
+
+// Various registerCommand options such as requiresApp can be specified to
+// either as a constant value or as a function dependent on the parsed
+// command-line options object.
+Command.prototype.evaluateOption = function (optionName, options) {
+  var self = this;
+  if (typeof self[optionName] === 'function')
+    return self[optionName](options);
+  return self[optionName];
 };
 
 // map from command name to a Command, or to a subcommand map (a map
@@ -1190,9 +1200,7 @@ Fiber(function () {
   // We know we have a valid command and options. Now check to see if
   // the command can only be run from an app dir, and add the appDir
   // option if running from an app.
-  var requiresApp = command.requiresApp;
-  if (typeof requiresApp === "function")
-    requiresApp = requiresApp(options);
+  var requiresApp = command.evaluateOption('requiresApp', options);
 
   if (appDir) {
     options.appDir = appDir;
@@ -1222,10 +1230,7 @@ Fiber(function () {
 
   // Same check for commands that can only be run from a package dir.
   // You can't specify this on a Refresh.Never command.
-  var requiresPackage = command.requiresPackage;
-  if (typeof requiresPackage === "function") {
-    requiresPackage = requiresPackage(options);
-  }
+  var requiresPackage = command.evaluateOption('requiresPackage', options);
 
   if (requiresPackage) {
     var packageDir = files.findPackageDir();
@@ -1268,7 +1273,7 @@ Fiber(function () {
   if (showRequireProfile)
     require('./profile-require.js').printReport();
 
-  Console.setPretty(command.pretty);
+  Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);
 
   // Run the command!
