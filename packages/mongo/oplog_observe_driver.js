@@ -33,7 +33,6 @@ OplogObserveDriver = function (options) {
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
   self._multiplexer = options.multiplexer;
-  self._suppressInitial = options.suppressInitial;
 
   if (options.ordered) {
     throw Error("OplogObserveDriver only supports unordered observeChanges");
