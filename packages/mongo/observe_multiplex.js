@@ -142,9 +142,11 @@ _.extend(ObserveMultiplexer.prototype, {
       // though.
       self._cache.applyChange[callbackName].apply(null, EJSON.clone(args));
 
+      var ready = self._ready();
+
       // If we haven't finished the initial adds, then we should only be getting
       // adds.
-      if (!self._ready() &&
+      if (!ready &&
           (callbackName !== 'added' && callbackName !== 'addedBefore')) {
         throw new Error("Got " + callbackName + " during initial adds");
       }
@@ -156,7 +158,7 @@ _.extend(ObserveMultiplexer.prototype, {
       // queue; thus, we iterate over an array of keys that we control.)
       _.each(_.keys(self._handles), function (handleId) {
         var handle = self._handles && self._handles[handleId];
-        if (!handle)
+        if (!handle || (!ready && handle._suppressInitial))
           return;
         var callback = handle['_' + callbackName];
         // clone arguments so that callbacks can mutate their arguments
@@ -210,6 +212,11 @@ ObserveHandle = function (multiplexer, callbacks) {
       };
     }
   });
+
+  if(callbacks._suppressInitial || callbacks._suppress_initial) {
+    self._suppressInitial = true;
+  }
+
   self._stopped = false;
   self._id = nextObserveHandleId++;
 };

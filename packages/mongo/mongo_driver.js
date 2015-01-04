@@ -1054,7 +1054,6 @@ MongoConnection.prototype._observeChanges = function (
 
   var multiplexer, observeDriver;
   var firstHandle = false;
-  var suppressInitial = callbacks._suppressInitial || callbacks._suppress_initial;
 
   // Find a matching ObserveMultiplexer, or create a new one. This next block is
   // guaranteed to not yield (and it doesn't call anything that can observe a
@@ -1125,7 +1124,6 @@ MongoConnection.prototype._observeChanges = function (
       ordered: ordered,
       matcher: matcher,  // ignored by polling
       sorter: sorter,  // ignored by polling
-      suppressInitial: suppressInitial,  // ignored by polling
       _testOnlyPollCallback: callbacks._testOnlyPollCallback
     });
 

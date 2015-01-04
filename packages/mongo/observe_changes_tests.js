@@ -117,6 +117,39 @@ Tinytest.addAsync("observeChanges - unordered - initial adds", function (test, o
   });
 });
 
+Tinytest.addAsync("observeChanges - single id - suppress initial adds", function(test, onComplete) {
+  var c = makeCollection();
+  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+    logger._suppress_initial = true;
+    var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    var handle = c.find().observeChanges(logger);
+    logger.expectNoResult();
+    var barid = c.insert({noodles: "good", bacon: "weird", apples: "ok"});
+    logger.expectResult("added", [barid, {noodles: "good", bacon: "weird", apples: "ok"}]);
+    logger.expectNoResult();
+    handle.stop();
+    onComplete();
+  });
+});
+
+Tinytest.addAsync("observeChanges - unordered - suppress initial adds", function (test, onComplete) {
+  var c = makeCollection();
+  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+    logger._suppress_initial = true;
+    var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    var handle = c.find().observeChanges(logger);
+    logger.expectNoResult();
+    var barid = c.insert({noodles: "good", bacon: "weird", apples: "ok"});
+    logger.expectResultUnordered([
+      {callback: "added",
+       args: [barid, {noodles: "good", bacon: "weird", apples: "ok"}]}
+    ]);
+    logger.expectNoResult();
+    handle.stop();
+    onComplete();
+  });
+});
+
 Tinytest.addAsync("observeChanges - unordered - basics", function (test, onComplete) {
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {

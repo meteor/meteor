@@ -162,13 +162,7 @@ OplogObserveDriver = function (options) {
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
   Meteor.defer(finishIfNeedToPollQuery(function () {
-    if(self._suppressInitial) {
-      self._multiplexer.ready();
-      self._doneQuerying();
-    }
-    else {
-      self._runInitialQuery();
-    }
+    self._runInitialQuery();
   }));
 };
 
