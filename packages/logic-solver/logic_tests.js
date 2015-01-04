@@ -1102,3 +1102,19 @@ Tinytest.add("logic-solver - sum of terms", function (test) {
      "$xor2 v $xor1"]
   ]);
 });
+
+Tinytest.add("logic-solver - MiniSat", function (test) {
+  var M = new Logic._MiniSat;
+  // Unique solution is (1,2,3,4) = (0,1,0,0)
+  test.isTrue(M.addClause([-4]));
+  test.isTrue(M.addClause([-1, -2]));
+  test.isTrue(M.addClause([4, -1, 2]));
+  test.isTrue(M.addClause([1, 2, 3]));
+  test.isTrue(M.addClause([1, 2, -3, 4]));
+  test.isTrue(M.addClause([1, -2, -3]));
+  test.isTrue(M.solve());
+  test.equal(M.getSolution(), [null, false, true, false, false]);
+  M.addClause([1, -2, 3, 4]);
+  test.isFalse(M.solve());
+  test.isFalse(M.addClause([4]));
+});

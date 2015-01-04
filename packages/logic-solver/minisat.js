@@ -2805,7 +2805,7 @@ function _malloc($bytes) {
     $idx$0$i = $247 >>> ($270 + 7 | 0) & 1 | $270 << 1;
    }
    $277 = HEAP32[5128 + ($idx$0$i << 2) >> 2] | 0;
-   L126 : do if (!$277) {
+   L9 : do if (!$277) {
     $rsize$2$i = $250;
     $t$1$i = 0;
     $v$2$i = 0;
@@ -2823,7 +2823,7 @@ function _malloc($bytes) {
       $rsize$2$i = $287;
       $t$1$i = $t$0$i14;
       $v$2$i = $t$0$i14;
-      break L126;
+      break L9;
      } else {
       $rsize$1$i = $287;
       $v$1$i = $t$0$i14;
@@ -2983,7 +2983,7 @@ function _malloc($bytes) {
       break;
      }
     } while (0);
-    L204 : do if ($rsize$3$lcssa$i >>> 0 < 16) {
+    L87 : do if ($rsize$3$lcssa$i >>> 0 < 16) {
      $413 = $rsize$3$lcssa$i + $247 | 0;
      HEAP32[$v$3$lcssa$i + 4 >> 2] = $413 | 3;
      $416 = $v$3$lcssa$i + ($413 + 4) | 0;
@@ -3044,7 +3044,7 @@ function _malloc($bytes) {
      }
      $477 = HEAP32[$465 >> 2] | 0;
      if (($I7$0$i | 0) == 31) $486 = 0; else $486 = 25 - ($I7$0$i >>> 1) | 0;
-     L225 : do if ((HEAP32[$477 + 4 >> 2] & -8 | 0) == ($rsize$3$lcssa$i | 0)) $T$0$lcssa$i = $477; else {
+     L108 : do if ((HEAP32[$477 + 4 >> 2] & -8 | 0) == ($rsize$3$lcssa$i | 0)) $T$0$lcssa$i = $477; else {
       $K12$025$i = $rsize$3$lcssa$i << $486;
       $T$024$i = $477;
       while (1) {
@@ -3053,7 +3053,7 @@ function _malloc($bytes) {
        if (!$489) break;
        if ((HEAP32[$489 + 4 >> 2] & -8 | 0) == ($rsize$3$lcssa$i | 0)) {
         $T$0$lcssa$i = $489;
-        break L225;
+        break L108;
        } else {
         $K12$025$i = $K12$025$i << 1;
         $T$024$i = $489;
@@ -3064,7 +3064,7 @@ function _malloc($bytes) {
        HEAP32[$v$3$lcssa$i + ($247 + 24) >> 2] = $T$024$i;
        HEAP32[$v$3$lcssa$i + ($247 + 12) >> 2] = $349;
        HEAP32[$v$3$lcssa$i + ($247 + 8) >> 2] = $349;
-       break L204;
+       break L87;
       }
      } while (0);
      $501 = $T$0$lcssa$i + 8 | 0;
@@ -3730,15 +3730,15 @@ function ___floatscan($f, $prec, $pok) {
  sp = STACKTOP;
  STACKTOP = STACKTOP + 512 | 0;
  $x$i = sp;
- if (!$prec) {
-  $bits$0$ph = 24;
-  $emin$0$ph = -149;
+ if (($prec | 0) == 1) {
+  $bits$0$ph = 53;
+  $emin$0$ph = -1074;
  } else if (($prec | 0) == 2) {
   $bits$0$ph = 53;
   $emin$0$ph = -1074;
- } else if (($prec | 0) == 1) {
-  $bits$0$ph = 53;
-  $emin$0$ph = -1074;
+ } else if (!$prec) {
+  $bits$0$ph = 24;
+  $emin$0$ph = -149;
  } else {
   $$0 = 0.0;
   STACKTOP = sp;
@@ -3839,7 +3839,59 @@ function ___floatscan($f, $prec, $pok) {
    $c$5 = $c$1$lcssa;
    $i$3 = $i$0$lcssa;
   } while (0);
-  if (!$i$3) {
+  if (($i$3 | 0) == 3) {
+   $68 = HEAP32[$0 >> 2] | 0;
+   if ($68 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
+    HEAP32[$0 >> 2] = $68 + 1;
+    $76 = HEAPU8[$68 >> 0] | 0;
+   } else $76 = ___shgetc($f) | 0;
+   if (($76 | 0) == 40) $i$4 = 1; else {
+    if (!(HEAP32[$1 >> 2] | 0)) {
+     $$0 = nan;
+     STACKTOP = sp;
+     return +$$0;
+    }
+    HEAP32[$0 >> 2] = (HEAP32[$0 >> 2] | 0) + -1;
+    $$0 = nan;
+    STACKTOP = sp;
+    return +$$0;
+   }
+   while (1) {
+    $81 = HEAP32[$0 >> 2] | 0;
+    if ($81 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
+     HEAP32[$0 >> 2] = $81 + 1;
+     $89 = HEAPU8[$81 >> 0] | 0;
+    } else $89 = ___shgetc($f) | 0;
+    if (!(($89 + -48 | 0) >>> 0 < 10 | ($89 + -65 | 0) >>> 0 < 26)) if (!(($89 + -97 | 0) >>> 0 < 26 | ($89 | 0) == 95)) break;
+    $i$4 = $i$4 + 1 | 0;
+   }
+   if (($89 | 0) == 41) {
+    $$0 = nan;
+    STACKTOP = sp;
+    return +$$0;
+   }
+   $98 = (HEAP32[$1 >> 2] | 0) == 0;
+   if (!$98) HEAP32[$0 >> 2] = (HEAP32[$0 >> 2] | 0) + -1;
+   if ($39) {
+    HEAP32[(___errno_location() | 0) >> 2] = 22;
+    ___shlim($f, 0);
+    $$0 = 0.0;
+    STACKTOP = sp;
+    return +$$0;
+   }
+   if (($i$4 | 0) == 0 | $98) {
+    $$0 = nan;
+    STACKTOP = sp;
+    return +$$0;
+   } else $$in = $i$4;
+   do {
+    $$in = $$in + -1 | 0;
+    HEAP32[$0 >> 2] = (HEAP32[$0 >> 2] | 0) + -1;
+   } while (($$in | 0) != 0);
+   $$0 = nan;
+   STACKTOP = sp;
+   return +$$0;
+  } else if (!$i$3) {
    do if (($c$5 | 0) == 48) {
     $114 = HEAP32[$0 >> 2] | 0;
     if ($114 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
@@ -3894,7 +3946,7 @@ function ___floatscan($f, $prec, $pok) {
       continue;
      }
     }
-    L66 : do if ((label | 0) == 70) {
+    L107 : do if ((label | 0) == 70) {
      $138 = HEAP32[$0 >> 2] | 0;
      if ($138 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
       HEAP32[$0 >> 2] = $138 + 1;
@@ -3921,7 +3973,7 @@ function ___floatscan($f, $prec, $pok) {
         $scale$0$i = 1.0;
         $x$0$i = 0;
         $y$0$i = 0.0;
-        break L66;
+        break L107;
        }
        $157 = _i64Add($155 | 0, $156 | 0, -1, -1) | 0;
        $155 = $157;
@@ -3941,7 +3993,7 @@ function ___floatscan($f, $prec, $pok) {
       $y$0$i = 0.0;
      }
     } while (0);
-    L79 : while (1) {
+    L120 : while (1) {
      $159 = $c$2$i + -48 | 0;
      do if ($159 >>> 0 < 10) {
       $d$0$i = $159;
@@ -3951,7 +4003,7 @@ function ___floatscan($f, $prec, $pok) {
       $164 = ($c$2$i | 0) == 46;
       if (!(($161 + -97 | 0) >>> 0 < 6 | $164)) {
        $c$2$lcssa$i = $c$2$i;
-       break L79;
+       break L120;
       }
       if ($164) if (!$gotrad$0$i) {
        $712 = $172;
@@ -3967,7 +4019,7 @@ function ___floatscan($f, $prec, $pok) {
        break;
       } else {
        $c$2$lcssa$i = 46;
-       break L79;
+       break L120;
       } else {
        $d$0$i = ($c$2$i | 0) > 57 ? $161 + -87 | 0 : $159;
        label = 84;
@@ -4221,7 +4273,7 @@ function ___floatscan($f, $prec, $pok) {
      continue;
     }
    }
-   L168 : do if ((label | 0) == 139) {
+   L209 : do if ((label | 0) == 139) {
     $333 = HEAP32[$0 >> 2] | 0;
     if ($333 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
      HEAP32[$0 >> 2] = $333 + 1;
@@ -4242,7 +4294,7 @@ function ___floatscan($f, $prec, $pok) {
        $717 = $350;
        $gotdig$2$i11 = 1;
        $gotrad$0$i12 = 1;
-       break L168;
+       break L209;
       }
       $351 = _i64Add($349 | 0, $350 | 0, -1, -1) | 0;
       $349 = $351;
@@ -4259,7 +4311,7 @@ function ___floatscan($f, $prec, $pok) {
    HEAP32[$x$i >> 2] = 0;
    $353 = $$2$i + -48 | 0;
    $355 = ($$2$i | 0) == 46;
-   L182 : do if ($353 >>> 0 < 10 | $355) {
+   L223 : do if ($353 >>> 0 < 10 | $355) {
     $356 = $x$i + 496 | 0;
     $$397$i = $$2$i;
     $358 = 0;
@@ -4294,7 +4346,7 @@ function ___floatscan($f, $prec, $pok) {
       $j$086$i = $j$096$i;
       $k$084$i = $k$095$i;
       $lnz$079$i = $lnz$092$i;
-      break L182;
+      break L223;
      } else {
       $360 = _i64Add($358 | 0, $359 | 0, 1, 0) | 0;
       $361 = tempRet0;
@@ -4556,7 +4608,7 @@ function ___floatscan($f, $prec, $pok) {
     $rp$2$ph38$i = 9 - $503 + $rp$0$lcssa162$i | 0;
     $z$1$ph39$i = $z$0$i;
    }
-   L280 : while (1) {
+   L321 : while (1) {
     $527 = $x$i + ($a$2$ph40$i << 2) | 0;
     if (($rp$2$ph38$i | 0) < 18) {
      $e2$0$us$i = $e2$0$ph$i;
@@ -4617,7 +4669,7 @@ function ___floatscan($f, $prec, $pok) {
        $e2$1$ph$i = $e2$0$us44$i;
        $rp$3$ph33$i = 18;
        $z$5$ph$i = $z$1$us45$i;
-       break L280;
+       break L321;
       }
       $carry1$0$us49$i = 0;
       $k$5$in$us48$i = $z$1$us45$i + 127 | 0;
@@ -4671,7 +4723,7 @@ function ___floatscan($f, $prec, $pok) {
     $rp$2$ph38$i = $rp$2$ph38$i + 9 | 0;
     $z$1$ph39$i = $z$4$i;
    }
-   L311 : while (1) {
+   L352 : while (1) {
     $627 = $z$5$ph$i + 1 & 127;
     $632 = $x$i + (($z$5$ph$i + 127 & 127) << 2) | 0;
     $a$3$i$ph = $a$3$ph$i;
@@ -4706,7 +4758,7 @@ function ___floatscan($f, $prec, $pok) {
         break;
        }
       }
-      if (($i$1$i | 0) == 2 & $605) break L311;
+      if (($i$1$i | 0) == 2 & $605) break L352;
       $608 = $$14$i + $e2$1$i | 0;
       if (($a$3$i | 0) == ($z$5$ph$i | 0)) {
        $a$3$i = $z$5$ph$i;
@@ -4838,58 +4890,6 @@ function ___floatscan($f, $prec, $pok) {
     $y$3$i = $685;
    } while (0);
    $$0 = +_scalbnl($y$3$i, $e2$3$i);
-   STACKTOP = sp;
-   return +$$0;
-  } else if (($i$3 | 0) == 3) {
-   $68 = HEAP32[$0 >> 2] | 0;
-   if ($68 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
-    HEAP32[$0 >> 2] = $68 + 1;
-    $76 = HEAPU8[$68 >> 0] | 0;
-   } else $76 = ___shgetc($f) | 0;
-   if (($76 | 0) == 40) $i$4 = 1; else {
-    if (!(HEAP32[$1 >> 2] | 0)) {
-     $$0 = nan;
-     STACKTOP = sp;
-     return +$$0;
-    }
-    HEAP32[$0 >> 2] = (HEAP32[$0 >> 2] | 0) + -1;
-    $$0 = nan;
-    STACKTOP = sp;
-    return +$$0;
-   }
-   while (1) {
-    $81 = HEAP32[$0 >> 2] | 0;
-    if ($81 >>> 0 < (HEAP32[$1 >> 2] | 0) >>> 0) {
-     HEAP32[$0 >> 2] = $81 + 1;
-     $89 = HEAPU8[$81 >> 0] | 0;
-    } else $89 = ___shgetc($f) | 0;
-    if (!(($89 + -48 | 0) >>> 0 < 10 | ($89 + -65 | 0) >>> 0 < 26)) if (!(($89 + -97 | 0) >>> 0 < 26 | ($89 | 0) == 95)) break;
-    $i$4 = $i$4 + 1 | 0;
-   }
-   if (($89 | 0) == 41) {
-    $$0 = nan;
-    STACKTOP = sp;
-    return +$$0;
-   }
-   $98 = (HEAP32[$1 >> 2] | 0) == 0;
-   if (!$98) HEAP32[$0 >> 2] = (HEAP32[$0 >> 2] | 0) + -1;
-   if ($39) {
-    HEAP32[(___errno_location() | 0) >> 2] = 22;
-    ___shlim($f, 0);
-    $$0 = 0.0;
-    STACKTOP = sp;
-    return +$$0;
-   }
-   if (($i$4 | 0) == 0 | $98) {
-    $$0 = nan;
-    STACKTOP = sp;
-    return +$$0;
-   } else $$in = $i$4;
-   do {
-    $$in = $$in + -1 | 0;
-    HEAP32[$0 >> 2] = (HEAP32[$0 >> 2] | 0) + -1;
-   } while (($$in | 0) != 0);
-   $$0 = nan;
    STACKTOP = sp;
    return +$$0;
   } else {
@@ -5544,7 +5544,53 @@ function __ZN7Minisat6Solver7analyzeEjRNS_3vecINS_3LitEiEERi($this, $confl, $out
   $203 = $198;
  } else $203 = $191;
  $201 = HEAP32[$this + 84 >> 2] | 0;
- if (($201 | 0) == 2) if (($203 | 0) > 1) {
+ if (($201 | 0) == 1) if (($203 | 0) > 1) {
+  $$pre = HEAP32[$out_learnt >> 2] | 0;
+  $$pre86 = HEAP32[$34 >> 2] | 0;
+  $i$148 = 1;
+  $j1$251 = 1;
+  while (1) {
+   $222 = HEAP32[$$pre + ($i$148 << 2) >> 2] | 0;
+   $225 = HEAP32[$$pre86 + ($222 >> 1 << 3) >> 2] | 0;
+   L89 : do if (($225 | 0) == -1) {
+    HEAP32[$$pre + ($j1$251 << 2) >> 2] = $222;
+    $j1$3 = $j1$251 + 1 | 0;
+   } else {
+    $230 = (HEAP32[$31 >> 2] | 0) + ($225 << 2) | 0;
+    $231 = HEAP32[$230 >> 2] | 0;
+    if ($231 >>> 0 > 63) {
+     $233 = HEAP32[$33 >> 2] | 0;
+     $k$043 = 1;
+     while (1) {
+      $236 = HEAP32[$230 + ($k$043 << 2) + 4 >> 2] >> 1;
+      if (!(HEAP8[$233 + $236 >> 0] | 0)) if ((HEAP32[$$pre86 + ($236 << 3) + 4 >> 2] | 0) > 0) break;
+      $k$043 = $k$043 + 1 | 0;
+      if (($k$043 | 0) >= ($231 >>> 5 | 0)) {
+       $j1$3 = $j1$251;
+       break L89;
+      }
+     }
+     HEAP32[$$pre + ($j1$251 << 2) >> 2] = $222;
+     $j1$3 = $j1$251 + 1 | 0;
+    } else $j1$3 = $j1$251;
+   } while (0);
+   $248 = $i$148 + 1 | 0;
+   $249 = HEAP32[$1 >> 2] | 0;
+   if (($248 | 0) < ($249 | 0)) {
+    $i$148 = $248;
+    $j1$251 = $j1$3;
+   } else {
+    $$promoted$i = $249;
+    $i$2 = $248;
+    $j1$4 = $j1$3;
+    break;
+   }
+  }
+ } else {
+  $$promoted$i = $203;
+  $i$2 = 1;
+  $j1$4 = 1;
+ } else if (($201 | 0) == 2) if (($203 | 0) > 1) {
   $i$036 = 1;
   $j1$038 = 1;
   while (1) {
@@ -5578,52 +5624,6 @@ function __ZN7Minisat6Solver7analyzeEjRNS_3vecINS_3LitEiEERi($this, $confl, $out
     $$promoted$i = $219;
     $i$2 = $218;
     $j1$4 = $j1$1;
-    break;
-   }
-  }
- } else {
-  $$promoted$i = $203;
-  $i$2 = 1;
-  $j1$4 = 1;
- } else if (($201 | 0) == 1) if (($203 | 0) > 1) {
-  $$pre = HEAP32[$out_learnt >> 2] | 0;
-  $$pre86 = HEAP32[$34 >> 2] | 0;
-  $i$148 = 1;
-  $j1$251 = 1;
-  while (1) {
-   $222 = HEAP32[$$pre + ($i$148 << 2) >> 2] | 0;
-   $225 = HEAP32[$$pre86 + ($222 >> 1 << 3) >> 2] | 0;
-   L99 : do if (($225 | 0) == -1) {
-    HEAP32[$$pre + ($j1$251 << 2) >> 2] = $222;
-    $j1$3 = $j1$251 + 1 | 0;
-   } else {
-    $230 = (HEAP32[$31 >> 2] | 0) + ($225 << 2) | 0;
-    $231 = HEAP32[$230 >> 2] | 0;
-    if ($231 >>> 0 > 63) {
-     $233 = HEAP32[$33 >> 2] | 0;
-     $k$043 = 1;
-     while (1) {
-      $236 = HEAP32[$230 + ($k$043 << 2) + 4 >> 2] >> 1;
-      if (!(HEAP8[$233 + $236 >> 0] | 0)) if ((HEAP32[$$pre86 + ($236 << 3) + 4 >> 2] | 0) > 0) break;
-      $k$043 = $k$043 + 1 | 0;
-      if (($k$043 | 0) >= ($231 >>> 5 | 0)) {
-       $j1$3 = $j1$251;
-       break L99;
-      }
-     }
-     HEAP32[$$pre + ($j1$251 << 2) >> 2] = $222;
-     $j1$3 = $j1$251 + 1 | 0;
-    } else $j1$3 = $j1$251;
-   } while (0);
-   $248 = $i$148 + 1 | 0;
-   $249 = HEAP32[$1 >> 2] | 0;
-   if (($248 | 0) < ($249 | 0)) {
-    $i$148 = $248;
-    $j1$251 = $j1$3;
-   } else {
-    $$promoted$i = $249;
-    $i$2 = $248;
-    $j1$4 = $j1$3;
     break;
    }
   }
@@ -7788,12 +7788,12 @@ function __ZN7Minisat10SimpSolver24backwardSubsumptionCheckEb($this, $verbose) {
         $i$08$i = $i$08$i + 1 | 0;
         if ($i$08$i >>> 0 >= $144 >>> 0) break; else $159 = $176;
        }
-       if (($176 | 0) == -2) break; else if (($176 | 0) == -1) {
+       if (($176 | 0) == -1) {
         $deleted_literals$2 = $deleted_literals$124;
         $j$1 = $j$028;
         $subsumed$2 = $subsumed$126;
         break L51;
-       }
+       } else if (($176 | 0) == -2) break;
        HEAP32[$0 >> 2] = $176 ^ 1;
        HEAP32[$$byval_copy + 0 >> 2] = HEAP32[$0 + 0 >> 2];
        if (!(__ZN7Minisat10SimpSolver16strengthenClauseEjNS_3LitE($this, $134, $$byval_copy) | 0)) {
@@ -8265,7 +8265,7 @@ function __ZN7Minisat10SimpSolver16strengthenClauseEjNS_3LitE($this, $cr, $l) {
   __ZN7Minisat10SimpSolver12removeClauseEj($this, $cr);
   $7 = HEAP32[$l >> 2] | 0;
   $8 = HEAP32[$3 >> 2] | 0;
-  L32 : do if ($8 >>> 0 > 31) {
+  L3 : do if ($8 >>> 0 > 31) {
    $10 = $8 >>> 5;
    $j$07$i$i = 0;
    while (1) {
@@ -8273,7 +8273,7 @@ function __ZN7Minisat10SimpSolver16strengthenClauseEjNS_3LitE($this, $cr, $l) {
     if ((HEAP32[$3 + ($j$07$i$i << 2) + 4 >> 2] | 0) == ($7 | 0)) {
      $$pre$phi$iZ2D = $10;
      $j$0$lcssa$i$i = $j$07$i$i;
-     break L32;
+     break L3;
     }
     if (($12 | 0) < ($10 | 0)) $j$07$i$i = $12; else {
      $$pre$phi$iZ2D = $10;
@@ -8332,7 +8332,7 @@ function __ZN7Minisat10SimpSolver16strengthenClauseEjNS_3LitE($this, $cr, $l) {
   __ZN7Minisat6Solver12detachClauseEjb($this, $cr, 1);
   $44 = HEAP32[$l >> 2] | 0;
   $45 = HEAP32[$3 >> 2] | 0;
-  L3 : do if ($45 >>> 0 > 31) {
+  L21 : do if ($45 >>> 0 > 31) {
    $47 = $45 >>> 5;
    $j$07$i$i9 = 0;
    while (1) {
@@ -8340,7 +8340,7 @@ function __ZN7Minisat10SimpSolver16strengthenClauseEjNS_3LitE($this, $cr, $l) {
     if ((HEAP32[$3 + ($j$07$i$i9 << 2) + 4 >> 2] | 0) == ($44 | 0)) {
      $$pre$phi$i11Z2D = $47;
      $j$0$lcssa$i$i12 = $j$07$i$i9;
-     break L3;
+     break L21;
     }
     if (($49 | 0) < ($47 | 0)) $j$07$i$i9 = $49; else {
      $$pre$phi$i11Z2D = $47;
@@ -8401,14 +8401,14 @@ function __ZN7Minisat10SimpSolver16strengthenClauseEjNS_3LitE($this, $cr, $l) {
   $84 = $83 + ($81 * 12 | 0) | 0;
   $85 = $83 + ($81 * 12 | 0) + 4 | 0;
   $86 = HEAP32[$85 >> 2] | 0;
-  L20 : do if (($86 | 0) > 0) {
+  L38 : do if (($86 | 0) > 0) {
    $88 = HEAP32[$84 >> 2] | 0;
    $j$03$i = 0;
    while (1) {
     $90 = $j$03$i + 1 | 0;
     if ((HEAP32[$88 + ($j$03$i << 2) >> 2] | 0) == ($cr | 0)) {
      $j$0$lcssa$i = $j$03$i;
-     break L20;
+     break L38;
     }
     if (($90 | 0) < ($86 | 0)) $j$03$i = $90; else {
      $j$0$lcssa$i = $90;
@@ -9567,14 +9567,14 @@ function __ZN7Minisat6Solver12detachClauseEjb($this, $cr, $strict) {
   $11 = $3 + ($cr + 2 << 2) | 0;
   $12 = $9 + ($7 * 12 | 0) + 4 | 0;
   $13 = HEAP32[$12 >> 2] | 0;
-  L8 : do if (($13 | 0) > 0) {
+  L3 : do if (($13 | 0) > 0) {
    $15 = HEAP32[$10 >> 2] | 0;
    $j$03$i5 = 0;
    while (1) {
     $17 = $j$03$i5 + 1 | 0;
     if ((HEAP32[$15 + ($j$03$i5 << 3) >> 2] | 0) == ($cr | 0)) {
      $j$0$lcssa$i6 = $j$03$i5;
-     break L8;
+     break L3;
     }
     if (($17 | 0) < ($13 | 0)) $j$03$i5 = $17; else {
      $j$0$lcssa$i6 = $17;
@@ -9607,14 +9607,14 @@ function __ZN7Minisat6Solver12detachClauseEjb($this, $cr, $strict) {
   $42 = $43 + ($41 * 12 | 0) | 0;
   $44 = $43 + ($41 * 12 | 0) + 4 | 0;
   $45 = HEAP32[$44 >> 2] | 0;
-  L20 : do if (($45 | 0) > 0) {
+  L15 : do if (($45 | 0) > 0) {
    $47 = HEAP32[$42 >> 2] | 0;
    $j$03$i = 0;
    while (1) {
     $49 = $j$03$i + 1 | 0;
     if ((HEAP32[$47 + ($j$03$i << 3) >> 2] | 0) == ($cr | 0)) {
      $j$0$lcssa$i = $j$03$i;
-     break L20;
+     break L15;
     }
     if (($49 | 0) < ($45 | 0)) $j$03$i = $49; else {
      $j$0$lcssa$i = $49;
@@ -15736,6 +15736,9 @@ function __ZN7Minisat10BoolOptionD1Ev($this) {
  $this = $this | 0;
  return;
 }
+function _getSolution() {
+ return HEAP32[(HEAP32[962] | 0) + 4 >> 2] | 0;
+}
 function __ZN7Minisat9IntOptionD1Ev($this) {
  $this = $this | 0;
  return;
@@ -15783,6 +15786,9 @@ function b4(p0) {
  abort(4);
  return 0;
 }
+function _getNumVars() {
+ return HEAP32[964] | 0;
+}
 function getTempRet0() {
  return tempRet0 | 0;
 }
@@ -15821,24 +15827,26 @@ setInnerFree = function (hookedFree) {
   var FUNCTION_TABLE_iii = [b7,__ZN7Minisat10BoolOption5parseEPKc,__ZN7Minisat9IntOption5parseEPKc,__ZN7Minisat12DoubleOption5parseEPKc];
   var FUNCTION_TABLE_viiii = [b8,__ZNK10__cxxabiv117__class_type_info27has_unambiguous_public_baseEPNS_19__dynamic_cast_infoEPvi,__ZNK10__cxxabiv120__si_class_type_info27has_unambiguous_public_baseEPNS_19__dynamic_cast_infoEPvi,b8];
 
-    return { _yo: _yo, _addClause: _addClause, ___cxa_can_catch: ___cxa_can_catch, _free: _free, _createTheSolver: _createTheSolver, ___cxa_is_pointer_type: ___cxa_is_pointer_type, _i64Add: _i64Add, _realloc: _realloc, _i64Subtract: _i64Subtract, _memset: _memset, _malloc: _malloc, _memcpy: _memcpy, _strlen: _strlen, _bitshift64Lshr: _bitshift64Lshr, _unyo: _unyo, _solve: _solve, _bitshift64Shl: _bitshift64Shl, __GLOBAL__I_a: __GLOBAL__I_a, __GLOBAL__I_a123: __GLOBAL__I_a123, runPostSets: runPostSets, stackAlloc: stackAlloc, stackSave: stackSave, stackRestore: stackRestore, setThrew: setThrew, setTempRet0: setTempRet0, getTempRet0: getTempRet0, dynCall_iiii: dynCall_iiii, dynCall_viiiii: dynCall_viiiii, dynCall_vi: dynCall_vi, dynCall_vii: dynCall_vii, dynCall_ii: dynCall_ii, dynCall_v: dynCall_v, dynCall_viiiiii: dynCall_viiiiii, dynCall_iii: dynCall_iii, dynCall_viiii: dynCall_viiii };
+    return { _yo: _yo, _addClause: _addClause, ___cxa_can_catch: ___cxa_can_catch, _getSolution: _getSolution, _createTheSolver: _createTheSolver, ___cxa_is_pointer_type: ___cxa_is_pointer_type, _i64Add: _i64Add, _realloc: _realloc, _i64Subtract: _i64Subtract, _getNumVars: _getNumVars, _memset: _memset, _malloc: _malloc, _memcpy: _memcpy, _strlen: _strlen, _bitshift64Lshr: _bitshift64Lshr, _free: _free, _unyo: _unyo, _solve: _solve, _bitshift64Shl: _bitshift64Shl, __GLOBAL__I_a: __GLOBAL__I_a, __GLOBAL__I_a123: __GLOBAL__I_a123, runPostSets: runPostSets, stackAlloc: stackAlloc, stackSave: stackSave, stackRestore: stackRestore, setThrew: setThrew, setTempRet0: setTempRet0, getTempRet0: getTempRet0, dynCall_iiii: dynCall_iiii, dynCall_viiiii: dynCall_viiiii, dynCall_vi: dynCall_vi, dynCall_vii: dynCall_vii, dynCall_ii: dynCall_ii, dynCall_v: dynCall_v, dynCall_viiiiii: dynCall_viiiiii, dynCall_iii: dynCall_iii, dynCall_viiii: dynCall_viiii };
   })
   // EMSCRIPTEN_END_ASM
   (Module.asmGlobalArg, Module.asmLibraryArg, buffer);
   var _yo = Module["_yo"] = asm["_yo"];
 var _addClause = Module["_addClause"] = asm["_addClause"];
 var ___cxa_can_catch = Module["___cxa_can_catch"] = asm["___cxa_can_catch"];
-var _free = Module["_free"] = asm["_free"];
+var _getSolution = Module["_getSolution"] = asm["_getSolution"];
 var _createTheSolver = Module["_createTheSolver"] = asm["_createTheSolver"];
 var ___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = asm["___cxa_is_pointer_type"];
 var _i64Add = Module["_i64Add"] = asm["_i64Add"];
 var _realloc = Module["_realloc"] = asm["_realloc"];
 var _i64Subtract = Module["_i64Subtract"] = asm["_i64Subtract"];
+var _getNumVars = Module["_getNumVars"] = asm["_getNumVars"];
 var _memset = Module["_memset"] = asm["_memset"];
 var _malloc = Module["_malloc"] = asm["_malloc"];
 var _memcpy = Module["_memcpy"] = asm["_memcpy"];
 var _strlen = Module["_strlen"] = asm["_strlen"];
 var _bitshift64Lshr = Module["_bitshift64Lshr"] = asm["_bitshift64Lshr"];
+var _free = Module["_free"] = asm["_free"];
 var _unyo = Module["_unyo"] = asm["_unyo"];
 var _solve = Module["_solve"] = asm["_solve"];
 var _bitshift64Shl = Module["_bitshift64Shl"] = asm["_bitshift64Shl"];

@@ -37,5 +37,17 @@ MiniSat.prototype.addClause = function (terms) {
 };
 
 MiniSat.prototype.solve = function () {
-  return this._C.solve() ? true : false;
+  return this._C._solve() ? true : false;
+};
+
+MiniSat.prototype.getSolution = function () {
+  var solution = [null]; // no 0th var
+  var C = this._C;
+  var numVars = C._getNumVars();
+  var solPtr = C._getSolution();
+  for (var i = 0; i < numVars; i++) {
+    // 0 is Minisat::l_True (lifted "true")
+    solution[i+1] = (C.getValue(solPtr+i, 'i8') === 0);
+  }
+  return solution;
 };
