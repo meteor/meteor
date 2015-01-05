@@ -147,7 +147,7 @@ var itemNotFound = function (item) {
 //
 // The constructor takes in the following options:
 
-//   - record: (mandatory) the meta-record for this package from the Packages
+//   - metaRecord: (mandatory) the meta-record for this package from the Packages
 //     collection.
 //   - projectContext: (mandatory) a projectContext that we can use to look up
 //     information on local packages.
@@ -163,7 +163,7 @@ var PackageQuery = function (options) {
 
   // This is the record in the packages collection. It contains things like
   // maintainers, and the package homepage.
-  self.metaRecord = options.record;
+  self.metaRecord = options.metaRecord;
   self.name = options.record.name;
 
   // This argument is required -- we use it to look up data. If it has not been
@@ -627,7 +627,7 @@ _.extend(PackageQuery.prototype, {
 // This class looks up release-related information in the official catalog.
 //
 // The constructor takes in an object with the following keys:
-//   - record: (mandatory) the meta-record for this release from the Releases collection.
+//   - metaRecord: (mandatory) the meta-record for this release from the Releases collection.
 //   - version: specific version of a release that we want to query.
 //   - showHiddenVersions: show experimental, pre-release & otherwise
 //     non-recommended versions of this release.
@@ -636,7 +636,7 @@ var ReleaseQuery = function (options) {
 
   // This is the record in the Releases collection. Contains metadata, such as
   // maintainers.
-  self.metaRecord = options.record;
+  self.metaRecord = options.metaRecord;
   self.name = options.record.name;
 
   // We don't always want to show non-recommended release versions.
@@ -963,7 +963,7 @@ main.registerCommand({
         projectContext.localCatalog.getPackage(name);
   if (packageRecord) {
     query =  new PackageQuery({
-      record: packageRecord,
+      metaRecord: packageRecord,
       version: version,
       projectContext: projectContext,
       showHiddenVersions: options["show-all"],
@@ -979,7 +979,7 @@ main.registerCommand({
     var releaseRecord = catalog.official.getReleaseTrack(name);
     if (releaseRecord) {
       query = new ReleaseQuery({
-        record: releaseRecord,
+        metaRecord: releaseRecord,
         version: version,
         showHiddenVersions: options["show-all"]
       });
