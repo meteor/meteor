@@ -125,7 +125,8 @@ main.registerCommand({
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir || files.mkdtemp('meteor-get-ready')
+    projectDir: options.appDir || files.mkdtemp('meteor-get-ready'),
+    neverWriteProjectConstraintsFile: true
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.initializeCatalog();

@@ -96,9 +96,11 @@ _.extend(exports.ProjectContext.prototype, {
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
-    // Set by 'meteor publish' to ensure that .meteor/packages and
-    // .meteor/versions are not written even though the command adds some
-    // constraints (like making sure the test is built).
+    // Set by a few special-case commands that call
+    // projectConstraintsFile.addConstraints for internal reasons without
+    // intending to actually write .meteor/packages and .meteor/versions (eg,
+    // 'publish' wants to make sure making sure the test is built, and
+    // --get-ready wants to build every conceivable package).
     self._neverWriteProjectConstraintsFile =
       options.neverWriteProjectConstraintsFile;
     self._neverWritePackageMap = options.neverWritePackageMap;
