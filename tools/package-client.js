@@ -347,18 +347,19 @@ exports.bundleBuild = bundleBuild;
 
 var createAndPublishBuiltPackage = function (conn, isopack) {
   buildmessage.assertInJob();
+  var name = isopack.name;
 
   // Note: we really want to do this before createPackageBuild, because the URL
   // we get from createPackageBuild will expire!
   var bundleResult;
-  buildmessage.enterJob("bundling build", function () {
+  buildmessage.enterJob("bundling build for " + name, function () {
     bundleResult = bundleBuild(isopack);
   });
   if (buildmessage.jobHasMessages())
     return;
 
   var uploadInfo;
-  buildmessage.enterJob('creating package build', function () {
+  buildmessage.enterJob('creating package build for ' + name, function () {
     uploadInfo = callPackageServerBM(conn, 'createPackageBuild', {
       packageName: isopack.name,
       version: isopack.version,
@@ -368,14 +369,14 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
   if (buildmessage.jobHasMessages())
     return;
 
-  buildmessage.enterJob("uploading build", function () {
+  buildmessage.enterJob("uploading build for " + name, function () {
     uploadTarball(uploadInfo.uploadUrl,
                   bundleResult.buildTarball);
   });
   if (buildmessage.jobHasMessages())
     return;
 
-  buildmessage.enterJob('publishing package build', function () {
+  buildmessage.enterJob('publishing package build for ' + name, function () {
     callPackageServerBM(conn, 'publishPackageBuild',
                         uploadInfo.uploadToken,
                         bundleResult.tarballHash,
@@ -523,7 +524,7 @@ exports.publishPackage = function (options) {
   }
 
   var sourceBundleResult;
-  buildmessage.enterJob("bundling source", function () {
+  buildmessage.enterJob("bundling source for " + name, function () {
     sourceBundleResult = bundleSource(
       isopack, sourceFiles, packageSource.sourceRoot);
   });
@@ -532,7 +533,7 @@ exports.publishPackage = function (options) {
 
   // Create the package. Check that the metadata exists.
   if (options.new) {
-    buildmessage.enterJob("creating package", function () {
+    buildmessage.enterJob("creating package " + name, function () {
       callPackageServerBM(conn, 'createPackage', {
         name: packageSource.name
       });
@@ -555,7 +556,7 @@ exports.publishPackage = function (options) {
     // XXX check that we're actually providing something new?
   } else {
     var uploadInfo;
-    buildmessage.enterJob("creating package version", function () {
+    buildmessage.enterJob("pre-publishing package " + name, function () {
       var uploadRec = {
         packageName: packageSource.name,
         version: version,
@@ -576,13 +577,13 @@ exports.publishPackage = function (options) {
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
 
-    buildmessage.enterJob("uploading source", function () {
+    buildmessage.enterJob("uploading source for " + name, function () {
       uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
     });
     if (buildmessage.jobHasMessages())
       return;
 
-    buildmessage.enterJob("publishing package version", function () {
+    buildmessage.enterJob("publishing package " + name, function () {
       callPackageServerBM(conn, 'publishPackageVersion',
                           uploadInfo.uploadToken,
                           { tarballHash: sourceBundleResult.tarballHash,
