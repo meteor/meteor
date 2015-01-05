@@ -1118,3 +1118,22 @@ Tinytest.add("logic-solver - MiniSat", function (test) {
   test.isFalse(M.solve());
   test.isFalse(M.addClause([4]));
 });
+
+Tinytest.add("logic-solver - simple solve", function (test) {
+  var s = new Logic.Solver;
+  // Unique solution is (1,2,3,4) = (0,1,0,0)
+  s.require("-D");
+  s.require(Logic.or("-A", "-B"));
+  s.require(Logic.or("D", "-A", "B"));
+  s.require(Logic.or("A", "B", "C"));
+  s.require(Logic.or("A", "B", "-C", "D"));
+  s.require(Logic.or("A", "-B", "-C"));
+  var sol = s.solve();
+  test.isTrue(sol);
+  test.equal(sol.getMap(), {
+    A: false, B: true, C: false, D: false
+  });
+  s.require(Logic.or("A", "-B", "C", "D"));
+  var sol2 = s.solve();
+  test.isFalse(sol2);
+});

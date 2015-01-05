@@ -102,6 +102,10 @@ Logic.Solver = function () {
   // Map of Formulas whose info has `false` for either
   // `occursPositively` or `occursNegatively`
   this._ungeneratedFormulas = {}; // varNum -> Formula
+
+  this._numClausesAddedToMiniSat = 0;
+  this._unsat = false; // once true, no solution henceforth
+  this._minisat = null; // created lazily
 };
 
 // Get a var number for vname, assigning it a number if it is new.
@@ -1007,4 +1011,54 @@ Logic.sum = function (/*formulaOrBitsOrArray, ...*/) {
   });
 
   return new Logic.Bits(binaryWeightedSum(binaryWeighted));
+};
+
+////////////////////////////////////////
+
+Logic.Solver.prototype.solve = function () {
+  var self = this;
+
+  if (self._unsat) {
+    return null;
+  }
+
+  if (! self._minisat) {
+    self._minisat = new MiniSat();
+  }
+
+  while (self._numClausesAddedToMiniSat < self.clauses.length) {
+    var i = self._numClausesAddedToMiniSat;
+    var stillSat = self._minisat.addClause(self.clauses[i].terms);
+    self._numClausesAddedToMiniSat++;
+    if (! stillSat) {
+      self._unsat = true;
+      return null;
+    }
+  }
+
+  var stillSat = self._minisat.solve();
+  if (! stillSat) {
+    self._unsat = true;
+    return null;
+  }
+
+  return new Logic.Solution(self, self._minisat.getSolution());
+};
+
+Logic.Solution = function (_solver, _assignment) {
+  this._solver = _solver;
+  this._assignment = _assignment;
+};
+
+Logic.Solution.prototype.getMap = function () {
+  var solver = this._solver;
+  var assignment = this._assignment;
+  var result = {};
+  for (var i = 1; i < assignment.length; i++) {
+    var name = solver.getVarName(i);
+    if (name && name.charAt(0) !== '$') {
+      result[name] = assignment[i];
+    }
+  }
+  return result;
 };
