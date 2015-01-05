@@ -84,8 +84,9 @@ _.extend(AppProcess.prototype, {
     var eachline = require('eachline');
     eachline(self.proc.stdout, 'utf8', fiberHelpers.inBareFiber(function (line) {
       if (line.match(/^LISTENING\s*$/)) {
-        // This is the child process telling us that it's ready to
-        // receive connections.
+        // This is the child process telling us that it's ready to receive
+        // connections.  (It does this because we told it to with
+        // $METEOR_PRINT_ON_LISTEN.)
         self.onListen && self.onListen();
 
       } else {
@@ -193,6 +194,11 @@ _.extend(AppProcess.prototype, {
 
     env.ENABLE_METEOR_SHELL = 'true';
 
+    env.METEOR_PARENT_PID =
+      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
+
+    env.METEOR_PRINT_ON_LISTEN = 'true';
+
     return env;
   },
 
@@ -213,10 +219,7 @@ _.extend(AppProcess.prototype, {
       opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
     }
 
-    opts.push(
-      entryPoint, '--parent-pid',
-      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
-    );
+    opts.push(entryPoint);
 
     var child = child_process.spawn(process.execPath, opts, {
       env: self._computeEnvironment()
