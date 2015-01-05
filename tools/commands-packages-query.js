@@ -37,12 +37,13 @@ var getReleaseVersionPublishedOn = function (versionRecord) {
   var toolName = toolPackage[0];
   var toolVersion = toolPackage[1];
   var toolRecord = catalog.official.getVersion(toolName, toolVersion);
+  if (! toolRecord || ! toolRecord.published) return null;
   return new Date(toolRecord.published);
 };
 
 // Convert package version dependencies into a more helpful format for output in
 // 'meteor show'.
-var formatDependencies = function (versionDependencies) {
+var rewriteDependencies = function (versionDependencies) {
   var dependencies = _.map(
     // The dependency on 'meteor' was almost certainly added automatically, by
     // Isobuild. Returning this to the user will only cause confusion.
@@ -63,7 +64,7 @@ var formatDependencies = function (versionDependencies) {
 };
 
 // Converts an object to an EJSON string with the right spacing.
-var convertToEJSON = function (data) {
+var formatEJSON = function (data) {
   var EJSON = isopackets.load('ejson').ejson.EJSON;
   return EJSON.stringify(data, { indent: true }) + "\n";
 };
@@ -96,8 +97,6 @@ var getTempContext = function (options) {
   if (options.appDir) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir,
-      // Don't change the state of the app.
-      neverWriteProjectConstraintsFile: true
     });
   } else {
     // We're not in an app, so we will create a temporary app and use it to load
@@ -107,8 +106,6 @@ var getTempContext = function (options) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,
       explicitlyAddedLocalPackageDirs: currentPackageDir,
-      neverWriteProjectConstraintsFile: true,
-      neverWritePackageMap: true
     });
   }
 
@@ -149,11 +146,13 @@ var itemNotFound = function (item) {
 // packages, it has to interact with the projectContext.
 //
 // The constructor takes in the following options:
-//   - record: (mandatory) the meta-record for this package from the Packages collection.
-//   - projectContext: (mandatory) a projectContext that we can use to look up information
-//     on local packages.
+
+//   - record: (mandatory) the meta-record for this package from the Packages
+//     collection.
+//   - projectContext: (mandatory) a projectContext that we can use to look up
+//     information on local packages.
 //   - version: query for a specific version of this package.
-//   - showOSArchitectures: collect and process data on OS
+//   - showArchitecturesOS: collect and process data on OS
 //     architectures that are available for different versions of this package.
 //   - showHiddenVersions: return information about all the versions of the
 //     package, including pre-releases and un-migrate versions.
@@ -177,7 +176,7 @@ var PackageQuery = function (options) {
 
   // Processing per-version availability architectures & dependencies is
   // expensive, so we don't do it unless we are asked to.
-  self.showOSArchitectures = options.showOSArchitectures;
+  self.showArchitecturesOS = options.showArchitecturesOS;
   self.showDependencies = options.showDependencies;
 
   // We don't want to show pre-releases and un-migrated versions to the user
@@ -230,7 +229,7 @@ _.extend(PackageQuery.prototype, {
   // Print the query information to screen.
   //
   // options:
-  //   - ejson: Don't pretty-print the data. Return a machine-readable ejson
+  //   - ejson: Don't pretty-print the data. Print a machine-readable ejson
   //     object.
   print: function (options) {
     var self = this;
@@ -245,7 +244,7 @@ _.extend(PackageQuery.prototype, {
       var packageFields =
         [ "name", "homepage", "maintainers", "versions", "totalVersions" ];
       var fields = self.data.version ? versionFields : packageFields;
-      Console.rawInfo(convertToEJSON(_.pick(self.data, fields)));
+      Console.rawInfo(formatEJSON(_.pick(self.data, fields)));
       return;
     }
 
@@ -336,7 +335,7 @@ _.extend(PackageQuery.prototype, {
   // - git: git URL for this version
   // - installed: true if the package exists in warehouse, and is therefore
   //   available for use offline.
-  // - architectures: (optional) if self.showOSArchitectures is true, returns an
+  // - architectures: (optional) if self.showArchitecturesOS is true, returns an
   //   array of system architectures for which that package is available.
   // - dependencies: (optional) if self.showDependencies is true, return an
   //   array of objects denoting that package's dependencies. The objects have
@@ -361,19 +360,24 @@ _.extend(PackageQuery.prototype, {
 
     // Processing and formatting architectures takes time, so we don't want to
     // do this if we don't have to.
-    if (self.showOSArchitectures) {
+    if (self.showArchitecturesOS) {
       var allBuilds = catalog.official.getAllBuilds(self.name, version);
       var architectures = _.map(allBuilds, function (build) {
-        return build['buildArchitectures'] &&
-          build.buildArchitectures.split('+')[0];
+        if (! build['buildArchitectures']) return "unknown";
+        var archOS =
+          _.filter(build.buildArchitectures.split('+'), function (arch) {
+             return ( arch !== "web.browser" ) && ( arch !== "web.cordova" );
+        });
+        // At this point, you can only have OS arch at a time per-build.
+        return archOS[0];
       });
-      data["OSarchitectures"] = architectures;
+      data["architecturesOS"] = architectures;
     }
 
     // Processing and formatting dependencies also takes time, so we would
     // rather not do it if we don't have to.
     if (self.showDependencies) {
-      data["dependencies"] = formatDependencies(versionRecord.dependencies);
+      data["dependencies"] = rewriteDependencies(versionRecord.dependencies);
     }
 
     // We want to figure out if we have already downloaded this package, and,
@@ -391,7 +395,7 @@ _.extend(PackageQuery.prototype, {
       // be awkward to fail 'meteor show' altogether. Print an error message (if
       // it is a permissions error, for example, that's something the user might
       // want to know), but don't throw.
-      Console.error(e);
+      Console.printError(e);
       data["installed"] = false;
     }
     return data;
@@ -436,7 +440,7 @@ _.extend(PackageQuery.prototype, {
     // Processing dependencies takes time, and we don't want to do it if we
     // don't have to.
     if (self.showDependencies) {
-      data["dependencies"] = formatDependencies(localRecord.dependencies);
+      data["dependencies"] = rewriteDependencies(localRecord.dependencies);
     }
 
     return data;
@@ -455,7 +459,7 @@ _.extend(PackageQuery.prototype, {
   // - directory: source directory of this package.
   // - installed: true if the package exists in warehouse, and is therefore
   //   available for use offline.
-  // - architectures: if self.showOSArchitectures is true, returns an
+  // - architectures: if self.showArchitecturesOS is true, returns an
   //   array of system architectures for which that package is available.
   // - dependencies: an array of package dependencies, as objects with the
   //   following keys:
@@ -490,8 +494,7 @@ _.extend(PackageQuery.prototype, {
     }
 
     // Print dependency information, if the package has any dependencies.
-    if (_.has(data, "dependencies") &&
-        ! _.isEmpty(data.dependencies)) {
+    if (! _.isEmpty(data.dependencies)) {
       Console.info("Depends on:");
       _.each(data.dependencies, function (dep) {
         var depString = dep.name;
@@ -571,22 +574,20 @@ _.extend(PackageQuery.prototype, {
       Console.info();
     }
 
-    var totalShownVersions = 0;
     // If we have any versions to show, print them out now.
+    var versionRows = [];
     if (data.versions && ! _.isEmpty(data.versions)) {
       var versionsHeader =
             self.showHiddenVersions ? "Versions:" : "Recent versions:";
       Console.info(versionsHeader);
-      var rows = [];
       _.each(data.versions, function (v) {
-        totalShownVersions++;
 
         // For a local package, we don't have a published date, and we don't
         // need to show if it has already been downloaded (it is local, we don't
         // need to download it). Instead of showing both of these values, let's
         // show the directory.
         if (v.local) {
-          rows.push([v.version, v.directory]);
+          versionRows.push([v.version, v.directory]);
           return;
         }
 
@@ -598,19 +599,19 @@ _.extend(PackageQuery.prototype, {
         // figure it out now.
         if (v.installed) {
           var paddedDate = padLongformDate(publishDate);
-          rows.push([v.version, paddedDate + "  " + "installed"]);
+          versionRows.push([v.version, paddedDate + "  " + "installed"]);
         } else {
-          rows.push([v.version, publishDate]);
+          versionRows.push([v.version, publishDate]);
         }
       });
       // The only time that we are going to go over a reasonable character limit
       // is with a directory for the local package. We would much rather display
       // the full directory than trail it off.
-      Console.printTwoColumns(rows, { indent: 2, ignoreWidth: true });
+      Console.printTwoColumns(versionRows, { indent: 2, ignoreWidth: true });
     }
 
     // If we have not shown all the available versions, let the user know.
-    if (data.totalVersions > totalShownVersions) {
+    if (data.totalVersions > versionRows.length) {
       var versionsPluralizer =
             (data.totalVersions > 1) ?
             "all " + data.totalVersions + " versions" :
@@ -665,7 +666,7 @@ _.extend(ReleaseQuery.prototype, {
       ];
       var packageFields = [ "name", "maintainers", "versions" ];
       var fields = self.data.version ? versionFields : packageFields;
-      Console.rawInfo(convertToEJSON(_.pick(self.data, fields)));
+      Console.rawInfo(formatEJSON(_.pick(self.data, fields)));
       return;
     }
 
@@ -736,10 +737,16 @@ _.extend(ReleaseQuery.prototype, {
       catalog.official.getDefaultReleaseVersionRecord(self.name);
 
     // Collect information about versions.
-    var versions = self.showHiddenVersions ?
-      catalog.official.getReleaseVersionRecords(self.name) :
-      catalog.official.getSortedRecommendedReleaseRecords(self.name);
-    versions.reverse();
+    var versions;
+    if (self.showHiddenVersions) {
+      // There is no obvious way to get an absolute ranking of all release
+      // versions, so this is unsorted. If we have to, we will deal with sorting
+      // this at display time.
+      versions = catalog.official.getReleaseVersionRecords(self.name);
+    } else {
+      versions = catalog.official.getSortedRecommendedReleaseRecords(self.name);
+      versions.reverse();
+    }
 
     // We don't want to show the user package or tool data in general release
     // mode (it is a lot of data). Select to show the fields that we want to
@@ -931,6 +938,13 @@ main.registerCommand({
   var splitArgs = itemName.split('@');
   var name = splitArgs[0];
   var version = (splitArgs.length > 1) ? splitArgs[1] : null;
+  if (splitArgs.length > 2) {
+    // Technically, this will be caught later on (since we won't find a version
+    // with an @ in it). Maybe it is good to give the user some more specific
+    // feedback in this case.
+    Console.error("Invalid request format: " + itemName);
+    process.exit(1);
+  }
   var query = null;
 
   // Because of the new projectContext interface, we need to initialize the
@@ -939,8 +953,11 @@ main.registerCommand({
 
   // First, we need to figure out if we are dealing with a package, or a
   // release. We don't want to rely on capitalization conventions, so we will
-  // start by checking if a package by that name exists. If it does, then we
-  // are dealing with a package.
+  // start by checking if a package by that name exists. If it does, then we are
+  // dealing with a package. (Unlike the normal projectContext, we want to
+  // prefer the remote record, if one exists, rather than the local record. The
+  // remote record contains data like 'homepage' and 'maintainers', that the
+  // local record does not).
   var packageRecord =
         catalog.official.getPackage(name) ||
         projectContext.localCatalog.getPackage(name);
@@ -950,7 +967,7 @@ main.registerCommand({
       version: version,
       projectContext: projectContext,
       showHiddenVersions: options["show-all"],
-      showOSArchitectures: options.ejson,
+      showArchitecturesOS: options.ejson,
       showDependencies: !! version
     });
   }
@@ -1131,7 +1148,7 @@ main.registerCommand({
       packages: matchingPackages,
       releases: matchingReleases
     };
-    Console.rawInfo(convertToEJSON(ret));
+    Console.rawInfo(formatEJSON(ret));
     return 0;
   }
 

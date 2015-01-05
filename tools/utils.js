@@ -651,9 +651,11 @@ exports.mobileServerForRun = function (options) {
 
 // Use this to convert dates into our preferred human-readable format.
 //
-// Takes in either a raw date string (ex: 2014-12-09T18:37:48.977Z) or a date
-// object and returns a long-form human-readable date (ex: December 9th, 2014).
+// Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
+// date object and returns a long-form human-readable date (ex: December 9th,
+// 2014) or unknown for null.
 exports.longformDate = function (date) {
+  if (! date) return "Unknown";
   var pubDate = moment(date).format('MMMM Do, YYYY');
   return pubDate;
 };
@@ -661,7 +663,7 @@ exports.longformDate = function (date) {
 // Length of the longest possible string that could come out of longformDate
 // (September is the longest month name, so "September 24th, 2014" would be an
 // example).
-exports.maxDateLength = 20;
+exports.maxDateLength = "September 24th, 2014".length;
 
 exports.escapePackageNameForPath = function (packageName) {
   return packageName.replace(":", "_");

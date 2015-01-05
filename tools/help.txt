@@ -667,7 +667,7 @@ developer.
 By default, this will not show packages that have no official versions
 (for example, those that have only prereleases). It will also hide packages
 that, due to migration issues, are known to be incompatible with Meteor 0.9.0
-and later. You can use the show-all option to see hidden packages.
+and later. You can use the --show-all option to see hidden packages.
 
 Options:
   --maintainer    filter by authorized maintainer
@@ -678,7 +678,7 @@ Options:
 >>> show
 Show detailed information about a release or package.
 Usage: meteor show <name> [--show-all] [--ejson]
-       meteor show <name@version> [--show-all][--ejson]
+       meteor show <name@version> [--ejson]
 
 Show detailed information on a specific package or release, including
 a list of available versions. Use <name>@<version> to get more information

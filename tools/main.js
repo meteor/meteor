@@ -1234,9 +1234,6 @@ Fiber(function () {
   // package.js when we don’t have to. Hopefully, a unified control file will
   // allow us better control in the future).
   var usesPackage = command.usesPackage;
-  if (typeof usesPackage === "function") {
-    usesPackage = usesPackage(options);
-  }
 
   if (requiresPackage || usesPackage) {
     var packageDir = files.findPackageDir();
