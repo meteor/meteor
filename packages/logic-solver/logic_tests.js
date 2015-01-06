@@ -1247,5 +1247,142 @@ Tinytest.add("logic-solver - assumptions", function (test) {
   s.forbid("C");
   test.equal(s.solve().getMap(),
              { A: true, B: true, C: false, D: true });
-  console.log(formatLines(s._clauseStrings()));
+});
+
+Tinytest.add("logic-solver - eight queens", function (test) {
+  var boardSquare = function (r, c) {
+    return String(r) + String(c);
+  };
+
+  var solver = new Logic.Solver;
+  var nums = _.range(1, 9); // 1..8
+  _.each(nums, function (x) {
+    // one per row x, one per column x
+    solver.require(Logic.exactlyOne(_.map(nums, function (y) {
+      return boardSquare(x, y);
+    })));
+    solver.require(Logic.exactlyOne(_.map(nums, function (y) {
+      return boardSquare(y, x);
+    })));
+  });
+
+  // At most one queen per diagonal.  A diagonal
+  // consists of squares whose row + column sums
+  // to a constant, or the horizontal flip of
+  // such a set of squares.
+  for (var flip = 0; flip <= 1; flip++) {
+    for (var sum = 2; sum <= 16; sum++) {
+      var vars = [];
+      for (var r = 1; r <= sum-1; r++) {
+        var c = sum - r;
+        if (flip)
+          c = 9-c;
+        if (r >= 1 && r <= 8 && c >= 1 && c <= 8) {
+          vars.push(boardSquare(r,c));
+        }
+      }
+      solver.require(Logic.atMostOne(vars));
+    }
+  }
+
+  var solution = solver.solve().getTrueVars();
+
+  // solution might be, for example,
+  // ["16", "24", "31", "45", "58", "62", "77", "83"]
+  test.equal(solution.length, 8);
+  test.isTrue(/^([1-8][1-8],){7}[1-8][1-8]$/.test(solution.join(',')));
+  var assertEightDifferent = function (transformFunc) {
+    test.equal(_.uniq(_.map(solution, transformFunc)).length, 8);
+  };
+  // queens occur in eight different rows, eight different columns
+  assertEightDifferent(function (queen) { return queen.charAt(0); });
+  assertEightDifferent(function (queen) { return queen.charAt(1); });
+  // queens' row/col have eight different sums, eight different differences
+  assertEightDifferent(function (queen) {
+    return Number(queen.charAt(0)) - Number(queen.charAt(1));
+  });
+  assertEightDifferent(function (queen) {
+    return Number(queen.charAt(0)) + Number(queen.charAt(1));
+  });
+
+});
+
+
+Tinytest.add("logic-solver - Sudoku", function (test) {
+  var v = function (row, col, value) {
+    return row + "," + col + "=" + value;
+  };
+
+  //console.profile('sudoku');
+
+  var solver = new Logic.Solver();
+
+  // All rows, columns, and digits are 0-based internally.
+  for (var x = 0; x < 9; x++) {
+    // Find the top-left of box x. For example, Box 0 has a top-left
+    // of (0,0).  Box 3 has a top-left of (3,0).
+    var boxRow = Math.floor(x/3)*3;
+    var boxCol = (x%3)*3;
+    for (var y = 0; y < 9; y++) {
+      var numberInEachSquare = [];
+      var columnHavingYInRowX = [];
+      var rowHavingYInColumnX = [];
+      var squareHavingYInBoxX = [];
+      for (var z = 0; z < 9; z++) {
+        numberInEachSquare.push(v(x,y,z));
+        columnHavingYInRowX.push(v(x,z,y));
+        rowHavingYInColumnX.push(v(z,x,y));
+        squareHavingYInBoxX.push(v(
+          boxRow + Math.floor(z/3),
+          boxCol + (z%3),
+          y));
+      }
+      solver.require(Logic.exactlyOne(numberInEachSquare));
+      solver.require(Logic.exactlyOne(columnHavingYInRowX));
+      solver.require(Logic.exactlyOne(rowHavingYInColumnX));
+      solver.require(Logic.exactlyOne(squareHavingYInBoxX));
+    }
+  }
+
+  // Input a pretty hard Sudoku from here:
+  // http://www.menneske.no/sudoku/eng/showpuzzle.html?number=6903541
+  var puzzle = [
+    "....839..",
+    "1......3.",
+    "..4....7.",
+    ".42.3....",
+    "6.......4",
+    "....7..1.",
+    ".2.......",
+    ".8...92..",
+    "...25...6"
+  ];
+  for (var r = 0; r < 9; r++) {
+    var str = puzzle[r];
+    for (var c = 0; c < 9; c++) {
+      // zero-based digit
+      var digit = str.charCodeAt(c) - 49;
+      if (digit >= 0 && digit < 9) {
+        solver.require(v(r, c, digit));
+      }
+    }
+  }
+
+  var solution = solver.solve().getTrueVars();
+  var solutionString = _.map(solution, function (v) {
+    return String(Number(v.slice(-1)) + 1);
+  }).join('').match(/.{9}/g).join('\n');
+  test.equal(solutionString, [
+    "765483921",
+    "198726435",
+    "234915678",
+    "842531769",
+    "617892354",
+    "359674812",
+    "926147583",
+    "581369247",
+    "473258196"
+  ].join('\n'));
+
+  //console.profileEnd('sudoku');
 });
