@@ -1492,24 +1492,6 @@ Tinytest.add("logic-solver - toy packages", function (test) {
       });
     });
 
-    var minimize = function (solver, solution, costTerms, costWeights) {
-      var weightedSum = Logic.weightedSum(costTerms, costWeights);
-      var curSolution = solution;
-      var curCost = curSolution.getWeightedSum(costTerms, costWeights);
-      while (curCost > 0) {
-        var decreaseCost = Logic.lessThan(weightedSum,
-                                          Logic.constantBits(curCost));
-        var newSolution = solver.solveAssuming(decreaseCost);
-        if (! newSolution) {
-          return curSolution;
-        }
-        solver.require(decreaseCost);
-        curSolution = newSolution;
-        curCost = curSolution.getWeightedSum(costTerms, costWeights);
-      }
-      return curSolution;
-    };
-
     var optimize = function (solver, costVectorMap) {
       var solution = solver.solve();
       if (! solution) {
@@ -1534,7 +1516,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
       for (var i = 0; i < vectorLength; i++) {
         var weights = _.pluck(weightVectors, i);
-        solution = minimize(solver, solution, terms, weights);
+        solution = solver.minimize(solution, terms, weights);
       }
 
       return solution;
@@ -1654,4 +1636,37 @@ Tinytest.add("logic-solver - toy packages", function (test) {
                ["bar@1.2.5", "foo@2.0.0"]);
   });
 
+});
+
+Tinytest.add("logic-solver - minimize", function (test) {
+  var s = new Logic.Solver();
+  s.require(Logic.or("A", "B", "C", "D"));
+  // cost is equal to the number of false variables
+  var costTerms = ["-A", "-B", "-C", "-D"];
+  var costWeights = [1, 1, 1, 1];
+  var solution1 = s.solve();
+  // nothing forces the cost (= the number of false variables)
+  // to be greater than 0, but MiniSat will always discover
+  // a sparser solution than (1,1,1,1) first.
+  test.isTrue(solution1.getWeightedSum(costTerms, costWeights) > 0);
+  var solution2 = s.minimize(solution1, costTerms, costWeights);
+  test.isFalse(solution1 === solution2);
+  test.equal(solution2.getWeightedSum(costTerms, costWeights), 0);
+  test.equal(solution2.getTrueVars(), ["A", "B", "C", "D"]);
+});
+
+Tinytest.add("logic-solver - maximize", function (test) {
+  var s = new Logic.Solver();
+  // Find subset of {2, 5, 10, 11, 15} that sums to as close
+  // as possible to 19 without going over.
+  var costWeights = [2, 5, 10, 11, 15];
+  // name variables after the weights
+  var costTerms = _.map(costWeights, function (w) {
+    return "#"+w;
+  });
+  var ws = Logic.weightedSum(costTerms, costWeights);
+  s.require(Logic.lessThanOrEqual(ws, Logic.constantBits(19)));
+  var sol = s.solve();
+  var sol2 = s.maximize(sol, costTerms, costWeights, ws);
+  test.equal(sol2.getTrueVars(), ["#11", "#2", "#5"]);
 });

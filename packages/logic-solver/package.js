@@ -9,7 +9,8 @@ Package.on_use(function (api) {
   api.use('underscore');
   api.add_files(['minisat.js',
                  'minisat_wrapper.js',
-                 'logic.js']);
+                 'logic.js',
+                 'optimize.js']);
 });
 
 Package.on_test(function (api) {
