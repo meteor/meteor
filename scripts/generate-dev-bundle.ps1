@@ -38,17 +38,19 @@ npm install --production
 npm shrinkwrap
 
 mkdir -Force "${DIR}\server-lib\node_modules"
-cp -R node_modules "${DIR}\server-lib\node_modules"
+cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
 
 mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
 npm install --production
 npm dedupe
-cp -R node_modules "${DIR}\lib\node_modules"
+cp -R "${DIR}\b\p\node_modules\" "${DIR}\lib\node_modules\"
 cd "$DIR"
 
+# deleting folders is hard so we try twice
 rm -Recurse -Force "${DIR}\b"
+cmd /C "rmdir /s /q $DIR\b"
 
 cd "$DIR"
 mkdir "$DIR\mongodb"
@@ -98,7 +100,15 @@ echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
 
 Set-Location "$DIR\.."
 
-Get-Childitem "$DIR" -Recurse | Write-Zip -IncludeEmptyDirectories -OutputPath "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.zip"
+# rename and move the folder with the devbundle
+# XXX this can generate a path that is too long
+Move-Item "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+
+cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" 
+cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
+del dev_bundle.tar
+rm -Recurse -Force "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+cmd /C "rmdir /s /q dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 
 echo "Done building Dev Bundle!"
 
