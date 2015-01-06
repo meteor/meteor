@@ -220,29 +220,8 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
       usedT = true;
     } else if (v < 1 || v >= self._num2name.length) {
       throw new Error("Bad variable number: " + v);
-    } else if ((i < numRealTerms) && _.has(self._ungeneratedFormulas, v)) {
-      // using a Formula's var; maybe have to generate clauses
-      // for the Formula
-      var formula = self._ungeneratedFormulas[v];
-      var info = self._getFormulaInfo(formula);
-      var positive = t > 0;
-      if (positive && ! info.occursPositively) {
-        // generate clauses for the formula.
-        // Eg, if we use variable `X` which represents the formula
-        // `A v B`, add the clause `A v B v -X`.
-        info.occursPositively = true;
-        var clauses = self._generateFormula(true, formula);
-        self._addClauses(clauses, [-v]);
-      } else if ((! positive) && ! info.occursNegatively) {
-        // Eg, if we have the term `-X` where `X` represents the
-        // formula `A v B`, add the clauses `-A v X` and `-B v X`.
-        info.occursNegatively = true;
-        var clauses = self._generateFormula(false, formula);
-        self._addClauses(clauses, [v]);
-      }
-      if (info.occursPositively && info.occursNegatively) {
-        delete self._ungeneratedFormulas[v];
-      }
+    } else if (i < numRealTerms) {
+      self._useFormulaTerm(t);
     }
   });
 
@@ -250,6 +229,43 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
   this._T_used = (this._T_used || usedT);
 
   this.clauses.push(cls);
+};
+
+// When we actually use a Formula variable, generate clauses for it,
+// based on whether the usage is positive or negative.  For example,
+// if the Formula `Logic.or("X", "Y")` is represented by `$or1`, which
+// is variable number 5, then when you actually use 5 or -5 in a clause,
+// the clauses "X v Y v -5" (when you use 5) or "-X v 5; -Y v 5"
+// (when you use -5) will be generated.
+Logic.Solver.prototype._useFormulaTerm = function (t) {
+  var self = this;
+  check(t, Logic.NumTerm);
+  var v = (t < 0) ? -t : t;
+
+  if (_.has(self._ungeneratedFormulas, v)) {
+    // using a Formula's var; maybe have to generate clauses
+    // for the Formula
+    var formula = self._ungeneratedFormulas[v];
+    var info = self._getFormulaInfo(formula);
+    var positive = t > 0;
+    if (positive && ! info.occursPositively) {
+      // generate clauses for the formula.
+      // Eg, if we use variable `X` which represents the formula
+      // `A v B`, add the clause `A v B v -X`.
+      info.occursPositively = true;
+      var clauses = self._generateFormula(true, formula);
+      self._addClauses(clauses, [-v]);
+    } else if ((! positive) && ! info.occursNegatively) {
+      // Eg, if we have the term `-X` where `X` represents the
+      // formula `A v B`, add the clauses `-A v X` and `-B v X`.
+      info.occursNegatively = true;
+      var clauses = self._generateFormula(false, formula);
+      self._addClauses(clauses, [v]);
+    }
+    if (info.occursPositively && info.occursNegatively) {
+      delete self._ungeneratedFormulas[v];
+    }
+  }
 };
 
 Logic.Solver.prototype._addClauses = function (array, _extraTerms) {
@@ -805,7 +821,7 @@ Logic._defineFormula(Logic.LessThanOrEqualFormula, 'lte', {
   }
 });
 
-// bits1 <= bits2
+// bits1 < bits2
 Logic.lessThan = function (bits1, bits2) {
   return new Logic.LessThanFormula(bits1, bits2);
 };
@@ -829,6 +845,14 @@ Logic._defineFormula(Logic.LessThanFormula, 'lt', {
     }
   }
 });
+
+Logic.greaterThan = function (bits1, bits2) {
+  return Logic.lessThan(bits2, bits1);
+};
+
+Logic.greaterThanOrEqual = function (bits1, bits2) {
+  return Logic.lessThanOrEqual(bits2, bits1);
+}
 
 Logic.equalBits = function (bits1, bits2) {
   return new Logic.EqualBitsFormula(bits1, bits2);
@@ -1015,8 +1039,13 @@ Logic.sum = function (/*formulaOrBitsOrArray, ...*/) {
 
 ////////////////////////////////////////
 
-Logic.Solver.prototype.solve = function () {
+Logic.Solver.prototype.solve = function (_assumpVar) {
   var self = this;
+  if (_assumpVar !== undefined) {
+    if (! (_assumpVar >= 1)) {
+      throw new Error("_assumpVar must be a variable number");
+    }
+  }
 
   if (self._unsat) {
     return null;
@@ -1035,15 +1064,65 @@ Logic.Solver.prototype.solve = function () {
       return null;
     }
   }
+  self._minisat.ensureVar(this._num2name.length - 1);
 
-  var stillSat = self._minisat.solve();
+  var stillSat = (_assumpVar ?
+                  self._minisat.solveAssuming(_assumpVar) :
+                  self._minisat.solve());
   if (! stillSat) {
-    self._unsat = true;
+    if (! _assumpVar) {
+      self._unsat = true;
+    }
     return null;
   }
 
   return new Logic.Solution(self, self._minisat.getSolution());
 };
+
+Logic.Solver.prototype.solveAssuming = function (formula) {
+  check(formula, Logic.FormulaOrTerm);
+
+  // Wrap the formula in a formula of type Assumption, so that
+  // we always generate a var like `$assump123`, regardless
+  // of whether `formula` is a Term, a NotFormula, an already
+  // required or forbidden Formula, etc.
+  var assump = new Logic.Assumption(formula);
+  var assumpVar = this._formulaToTerm(assump);
+  if (! (typeof assumpVar === 'number' && assumpVar > 0)) {
+    throw new Error("Assertion failure: not a positive numeric term");
+  }
+
+  // Generate clauses as if we used the assumption variable in a
+  // clause, in the positive.  So if we assume "A v B", we might get a
+  // clause like "A v B v -$assump123" (or actually, "$or1 v
+  // -$assump123"), as if we had used $assump123 in a clause.  Instead
+  // of using it in a clause, though, we temporarily assume it to be
+  // true.
+  this._useFormulaTerm(assumpVar);
+
+  var result = this.solve(assumpVar);
+  // Tell MiniSat that we will never use assumpVar again.
+  // The formula may be used again, however.  (For example, you
+  // can solve assuming a formula F, and if it works, require F.)
+  this._minisat.retireVar(assumpVar);
+  return result;
+};
+
+Logic.Assumption = function (formula) {
+  check(formula, Logic.FormulaOrTerm);
+  this.formula = formula;
+};
+
+Logic._defineFormula(Logic.Assumption, 'assump', {
+  generateClauses: function (isTrue, t) {
+    if (isTrue) {
+      return t.clause(this.formula);
+    } else {
+      return t.clause(Logic.not(this.formula));
+    }
+  }
+});
+
 
 Logic.Solution = function (_solver, _assignment) {
   this._solver = _solver;

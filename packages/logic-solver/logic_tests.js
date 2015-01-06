@@ -1119,9 +1119,26 @@ Tinytest.add("logic-solver - MiniSat", function (test) {
   test.isFalse(M.addClause([4]));
 });
 
+Tinytest.add("logic-solver - MiniSat solveAssuming", function (test) {
+  var M = new Logic._MiniSat;
+  M.ensureVar(1);
+  test.isTrue(M.solveAssuming(1));
+  test.equal(M.getSolution(), [null, true]);
+  test.isTrue(M.solveAssuming(1));
+  test.equal(M.getSolution(), [null, true]);
+  test.isTrue(M.addClause([-1]));
+  test.isTrue(M.addClause([2, -2]));
+  test.isTrue(M.solve());
+  test.equal(M.getSolution(), [null, false, false]); // empirically
+  test.isTrue(M.solveAssuming(2));
+  test.equal(M.getSolution(), [null, false, true]);
+  test.isTrue(M.solve());
+});
+
+
 Tinytest.add("logic-solver - simple solve", function (test) {
   var s = new Logic.Solver;
-  // Unique solution is (1,2,3,4) = (0,1,0,0)
+  // Unique solution is (A,B,C,D) = (0,1,0,0)
   s.require("-D");
   s.require(Logic.or("-A", "-B"));
   s.require(Logic.or("D", "-A", "B"));
@@ -1129,6 +1146,7 @@ Tinytest.add("logic-solver - simple solve", function (test) {
   s.require(Logic.or("A", "B", "-C", "D"));
   s.require(Logic.or("A", "-B", "-C"));
   var sol = s.solve();
+  test.equal(s._minisat._clauses.length, 8); // includes "$T" and "-$F"
   test.isTrue(sol);
   test.equal(sol.getMap(), {
     A: false, B: true, C: false, D: false
@@ -1136,4 +1154,98 @@ Tinytest.add("logic-solver - simple solve", function (test) {
   s.require(Logic.or("A", "-B", "C", "D"));
   var sol2 = s.solve();
   test.isFalse(sol2);
+  // make sure we only added the new clause
+  test.equal(s._minisat._clauses.length, 9);
+});
+
+Tinytest.add("logic-solver - assumptions", function (test) {
+  var s = new Logic.Solver;
+  s.getVarNum("A");
+  s.getVarNum("B");
+  s.getVarNum("C");
+  s.getVarNum("D");
+  // MiniSat could return any assignment of the variables here,
+  // but we happen to know that it uses all-false as a starting
+  // point for search.
+  test.equal(s.solve().getMap(), { A: false, B: false, C: false, D: false });
+
+  var atLeastOne = Logic.or("A", "B", "C", "D");
+  // which of A,B,C,D comes back true is totally arbitrary, but it's
+  // deterministic as long as we don't touch anything.
+  test.equal(s.solveAssuming(atLeastOne).getMap(),
+             { A: false, B: false, C: true, D: false });
+  test.equal(formatLines(s._clauseStrings()),
+             formatLines(["A v B v C v D v -$or1",
+                          "$or1 v -$assump1"]));
+
+  // assume the same thing again
+  test.equal(s.solveAssuming(atLeastOne).getMap(),
+             { A: false, B: false, C: true, D: false });
+  test.equal(formatLines(s._clauseStrings()),
+             formatLines(["A v B v C v D v -$or1",
+                          "$or1 v -$assump1",
+                          "$or1 v -$assump2"]));
+
+  var none = Logic.and("-A", "-B", "-C", "-D");
+  test.equal(s.solveAssuming(none).getMap(),
+             { A: false, B: false, C: false, D: false });
+  test.equal(formatLines(s._clauseStrings()),
+             formatLines(["A v B v C v D v -$or1",
+                          "$or1 v -$assump1",
+                          "$or1 v -$assump2",
+                          "-A v -$and1",
+                          "-B v -$and1",
+                          "-C v -$and1",
+                          "-D v -$and1",
+                          "$and1 v -$assump3"]));
+
+  // require a formula that was previously just temporarily assumed!
+  s.require(atLeastOne);
+  test.equal(s.solve().getMap(),
+             // any one could be true
+             { A: true, B: false, C: false, D: false });
+  test.equal(formatLines(s._clauseStrings()),
+             formatLines(["A v B v C v D v -$or1",
+                          "$or1 v -$assump1",
+                          "$or1 v -$assump2",
+                          "-A v -$and1",
+                          "-B v -$and1",
+                          "-C v -$and1",
+                          "-D v -$and1",
+                          "$and1 v -$assump3",
+                          "$or1"]));
+
+  test.equal(s.solveAssuming("D").getMap(),
+             // at least D is true; other than that, anything goes
+             { A: true, B: false, C: false, D: true });
+  test.equal(formatLines(s._clauseStrings()),
+             formatLines(["A v B v C v D v -$or1",
+                          "$or1 v -$assump1",
+                          "$or1 v -$assump2",
+                          "-A v -$and1",
+                          "-B v -$and1",
+                          "-C v -$and1",
+                          "-D v -$and1",
+                          "$and1 v -$assump3",
+                          "$or1",
+                          "D v -$assump4"]));
+
+  var sum = Logic.sum("A", "B", "C", "D");
+  var atLeast2 = Logic.greaterThanOrEqual(sum, Logic.constantBits(2));
+  test.equal(s.solveAssuming(atLeast2).getMap(),
+             { A: true, B: false, C: false, D: true });
+  s.require(atLeast2);
+  var atLeast3 = Logic.greaterThanOrEqual(sum, Logic.constantBits(3));
+  test.equal(s.solveAssuming(atLeast3).getMap(),
+             // any three or more, including D
+             { A: true, B: false, C: true, D: true });
+  s.require(atLeast3);
+  var atLeast4 = Logic.greaterThanOrEqual(sum, Logic.constantBits(4));
+  test.equal(s.solveAssuming(atLeast4).getMap(),
+             { A: true, B: true, C: true, D: true });
+
+  s.forbid("C");
+  test.equal(s.solve().getMap(),
+             { A: true, B: true, C: false, D: true });
+  console.log(formatLines(s._clauseStrings()));
 });

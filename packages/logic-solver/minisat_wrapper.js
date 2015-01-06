@@ -22,10 +22,23 @@ MiniSat = function () {
   };
 
   C._createTheSolver();
+
+  // useful log for debugging and testing
+  this._clauses = [];
+};
+
+// Make sure MiniSat has allocated space in its model for v,
+// even if v is unused.  If we have variables A,B,C,D which
+// are numbers 1,2,3,4, for example, but we never actually use
+// C and D, calling ensureVar(4) will make MiniSat give us
+// solution values for them anyway.
+MiniSat.prototype.ensureVar = function (v) {
+  this._C._ensureVar(v);
 };
 
 MiniSat.prototype.addClause = function (terms) {
   check(terms, [Logic.NumTerm]);
+  this._clauses.push(terms);
   return this._native.savingStack(function (native, C) {
     var termsPtr = C.allocate((terms.length+1)*4, 'i32', C.ALLOC_STACK);
     _.each(terms, function (t, i) {
@@ -40,6 +53,10 @@ MiniSat.prototype.solve = function () {
   return this._C._solve() ? true : false;
 };
 
+MiniSat.prototype.solveAssuming = function (v) {
+  return this._C._solveAssuming(v) ? true : false;
+};
+
 MiniSat.prototype.getSolution = function () {
   var solution = [null]; // no 0th var
   var C = this._C;
@@ -50,4 +67,8 @@ MiniSat.prototype.getSolution = function () {
     solution[i+1] = (C.getValue(solPtr+i, 'i8') === 0);
   }
   return solution;
+};
+
+MiniSat.prototype.retireVar = function (v) {
+  this._C._retireVar(v);
 };
