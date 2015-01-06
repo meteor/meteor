@@ -71,39 +71,35 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra",
 });
 
 runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra (NEW)", function (test) {
-  var solver = new PBSolver();
+
+  var solver = new Logic.Solver();
 
   var cache = new ConstraintSolver.CatalogCache();
   var loader = new ConstraintSolver.CatalogLoader(sinatraCatalog, cache);
 
   var args = splitArgs({
     'capistrano': '2.14.2',
-    'data-mapper': '1.2.0'
-//    'dm-core': '1.2.0'
-//    'dm-sqlite-adapter': '1.2.0',
-//    'dm-timestamps': '1.2.0'
-//    'haml': '3.1.7'
-//    'sass': '3.2.1'
-//    'shotgun': '0.9.0'
-//    'sinatra': '1.3.5'
-//    'sqlite3': '1.3.7'
+    'data-mapper': '1.2.0',
+    'dm-core': '1.2.0',
+    'dm-sqlite-adapter': '1.2.0',
+    'dm-timestamps': '1.2.0',
+    'haml': '3.1.7',
+    'sass': '3.2.1',
+    'shotgun': '0.9.0',
+    'sinatra': '1.3.5',
+    'sqlite3': '1.3.7'
   });
 
   loader.loadAllVersionsRecursive(args.dependencies);
-
-  var SOLVER_CALLS = [];
 
   cache.eachPackage(function (package, versions) {
     var pvs = _.map(versions, function (v) {
       return (new CS.PackageVersion(package, v)).toString();
     });
     // e.g. atMostOne(["foo 1.0.0", "foo 1.0.1", "foo 2.0.0"])
-    solver.atMostOne(pvs);
-    SOLVER_CALLS.push('atMostOne(' + JSON.stringify(pvs) +')');
+    solver.require(Logic.atMostOne(pvs));
     // e.g. equalsOr("foo", ["foo 1.0.0", ...])
-    solver.equalsOr(package, pvs);
-    SOLVER_CALLS.push('equalsOr(' + JSON.stringify(package) + ', ' +
-                      JSON.stringify(pvs) +')');
+    solver.require(Logic.equiv(package, Logic.or(pvs)));
   });
 
   cache.eachPackageVersion(function (pv, depsMap) {
@@ -116,22 +112,17 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra (
         // can't satisfy this dependency.  without this check,
         // if a package depended on a non-existent package "foo"
         // we would just create an unconstrained variable "foo".
-        solver.isFalse(pvStr1);
-        SOLVER_CALLS.push('isFalse(' + JSON.stringify(pvStr1) + ')');
+        solver.forbid(pvStr1);
       } else {
         if (! dep.weak) {
           // e.g. implies("foo 1.2.3", "bar")
-          solver.implies(pvStr1, package2);
-          SOLVER_CALLS.push('implies(' + JSON.stringify(pvStr1) + ', ' +
-                            JSON.stringify(package2) +')');
+          solver.require(Logic.implies(pvStr1, package2));
         }
         if (dep.constraint) {
           _.each(versions2, function (version2) {
             if (! dep.constraint.isSatisfiedBy(version2)) {
               var pvStr2 = (new CS.PackageVersion(package2, version2)).toString();
-              solver.impliesNot(pvStr1, pvStr2);
-              SOLVER_CALLS.push('impliesNot(' + JSON.stringify(pvStr1) + ', ' +
-                                JSON.stringify(pvStr2) +')');
+              solver.require(Logic.implies(pvStr1, Logic.not(pvStr2)));
             }
           });
         }
@@ -140,8 +131,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra (
   });
 
   _.each(args.dependencies, function (package) {
-    solver.isTrue(package);
-    SOLVER_CALLS.push('isTrue(' + JSON.stringify(package) + ')');
+    solver.require(package);
   });
 
   _.each(args.constraints, function (constraint) {
@@ -150,26 +140,27 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - sinatra (
     _.each(cache.getPackageVersions(package2), function (version2) {
       if (! vc.isSatisfiedBy(version2)) {
         var pvStr2 = (new CS.PackageVersion(package2, version2)).toString();
-        solver.isFalse(pvStr2);
-        SOLVER_CALLS.push('isFalse(' + JSON.stringify(pvStr2) + ')');
+        solver.forbid(pvStr2);
       }
     });
   });
 
-  console.log(SOLVER_CALLS.join('\n'));
-
-  var optimizeCosts = {};
+  var optimizeTerms = [];
+  var optimizeWeights = [];
   cache.eachPackageVersion(function (pv) {
-    optimizeCosts[pv.toString()] = [1];
+    optimizeTerms.push(pv.toString());
+    optimizeWeights.push(1);
   });
-  console.log(JSON.stringify(optimizeCosts));
 
-  var solution = _.filter(
-    solver.optimize(optimizeCosts),
+  var solution = solver.solve();
+  solution = solver.minimize(solution, optimizeTerms, optimizeWeights);
+
+  var trueVars = _.filter(
+    solution.getTrueVars(),
     function (v) {
       return v.indexOf(' ') >= 0;
     });
-  test.equal(solution.join('\n'), [
+  test.equal(trueVars.join('\n'), [
     'addressable 2.3.5',
     'bcrypt-ruby 3.1.2',
     'capistrano 2.15.1',

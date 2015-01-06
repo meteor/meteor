@@ -27,4 +27,5 @@ Package.on_test(function (api) {
   api.add_files('types-tests.js', ['server']);
   api.use('underscore');
   api.use('pbsolver', 'server');
+  api.use('logic-solver', 'server');
 });
