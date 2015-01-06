@@ -1254,6 +1254,8 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     return String(r) + String(c);
   };
 
+  var oldAssertionsEnabled = Logic._setAssertionsEnabled(false);
+
   var solver = new Logic.Solver;
   var nums = _.range(1, 9); // 1..8
   _.each(nums, function (x) {
@@ -1305,6 +1307,7 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     return Number(queen.charAt(0)) + Number(queen.charAt(1));
   });
 
+  Logic._setAssertionsEnabled(oldAssertionsEnabled);
 });
 
 
@@ -1313,6 +1316,7 @@ Tinytest.add("logic-solver - Sudoku", function (test) {
     return row + "," + col + "=" + value;
   };
 
+  var oldAssertionsEnabled = Logic._setAssertionsEnabled(false);
   //console.profile('sudoku');
 
   var solver = new Logic.Solver();
@@ -1384,5 +1388,270 @@ Tinytest.add("logic-solver - Sudoku", function (test) {
     "473258196"
   ].join('\n'));
 
+  Logic._setAssertionsEnabled(oldAssertionsEnabled);
   //console.profileEnd('sudoku');
+});
+
+Tinytest.add("logic-solver - goes to eleven", function (test) {
+  var solver = new Logic.Solver();
+  var eleven = Logic.constantBits(11);
+  var x = Logic.variableBits("x", 5);
+  solver.require(Logic.lessThanOrEqual(x, eleven));
+  solver.require(Logic.lessThanOrEqual(eleven, x));
+  test.equal(solver.solve().getTrueVars().join(','), "x0,x1,x3");
+});
+
+Tinytest.add("logic-solver - evaluate", function (test) {
+  var isTrue = function (x) {
+    test.isTrue(x === true); // require exact "true"
+  };
+  var isFalse = function (x) {
+    test.isFalse(x !== false); // require exact "false"
+  };
+
+  var s = new Logic.Solver();
+  s.require("A", "-B");
+  var f = Logic.and("A", "-B");
+  s.require(f);
+  var g = Logic.and("A", "B");
+  s.forbid(g);
+  var h1 = Logic.xor("A", "B");
+  var h2 = Logic.and("A", "B");
+  s.require(Logic.or("$T", h1));
+  s.require(Logic.or("$T", h2));
+  var sol = s.solve();
+  isTrue(sol.evaluate("A"));
+  isFalse(sol.evaluate("-A"));
+  isTrue(sol.evaluate("--A"));
+  isFalse(sol.evaluate("B"));
+  isTrue(sol.evaluate("-B"));
+  isTrue(sol.evaluate(f));
+  isFalse(sol.evaluate(g));
+  isTrue(sol.evaluate(h1));
+  isFalse(sol.evaluate(h2));
+  isFalse(sol.evaluate(Logic.not(h1)));
+  isTrue(sol.evaluate(Logic.not(h2)));
+  isTrue(sol.evaluate(Logic.exactlyOne("A", "B")));
+  isFalse(sol.evaluate(Logic.exactlyOne("-A", "B")));
+
+  s.require(Logic.or("$T", Logic.not(h1)));
+  s.require(Logic.or("$T", Logic.not(h2)));
+  isTrue(sol.evaluate(h1));
+  isFalse(sol.evaluate(h2));
+
+  test.throws(function () {
+    sol.evaluate("C");
+  });
+
+  s.require("D");
+  test.throws(function () {
+    sol.evaluate("D");
+  });
+  test.throws(function () {
+    sol.evaluate(Logic.or("D", "$T"));
+  });
+
+  test.equal(sol.evaluate(
+    new Logic.Bits(["A", "B", "-A", "$F", "-B"])), 17);
+
+  var numClauses = s.clauses.length;
+  test.equal(sol.evaluate(Logic.weightedSum([Logic.or("A", "B"),
+                                             "A", "A", "-B"],
+                                            [7, 7, 7, 7])), 28);
+  test.equal(s.clauses.length, numClauses);
+});
+
+Tinytest.add("logic-solver - toy packages", function (test) {
+
+  var withSolver = function (func) {
+
+    var solver = new Logic.Solver();
+
+    _.each(allPackageVersions, function (versions, package) {
+      versions = _.map(versions, function (v) {
+        return package + "@" + v;
+      });
+      // e.g. atMostOne(["foo@1.0.0", "foo@1.0.1", "foo@2.0.0"])
+      solver.require(Logic.atMostOne(versions));
+      // e.g. equiv("foo", or(["foo@1.0.0", ...]))
+      solver.require(Logic.equiv(package, Logic.or(versions)));
+    });
+
+    _.each(dependencies, function (depMap, packageVersion) {
+      _.each(depMap, function (compatibleVersions, package2) {
+        // e.g. implies("bar@1.2.4", "foo")
+        solver.require(Logic.implies(packageVersion, package2));
+        // Now ban all incompatible versions of package2 if
+        // we select this packageVersion
+        _.each(allPackageVersions[package2], function (v) {
+          if (! _.contains(compatibleVersions, v)) {
+            solver.require(Logic.implies(packageVersion,
+                                         Logic.not(package2 + "@" + v)));
+          }
+        });
+      });
+    });
+
+    var minimize = function (solver, solution, costTerms, costWeights) {
+      var weightedSum = Logic.weightedSum(costTerms, costWeights);
+      var curSolution = solution;
+      var curCost = curSolution.getWeightedSum(costTerms, costWeights);
+      while (curCost > 0) {
+        var decreaseCost = Logic.lessThan(weightedSum,
+                                          Logic.constantBits(curCost));
+        var newSolution = solver.solveAssuming(decreaseCost);
+        if (! newSolution) {
+          return curSolution;
+        }
+        solver.require(decreaseCost);
+        curSolution = newSolution;
+        curCost = curSolution.getWeightedSum(costTerms, costWeights);
+      }
+      return curSolution;
+    };
+
+    var optimize = function (solver, costVectorMap) {
+      var solution = solver.solve();
+      if (! solution) {
+        return null;
+      }
+
+      var terms = [];
+      var weightVectors = [];
+      var vectorLength = null;
+      _.each(costVectorMap, function (vector, key) {
+        terms.push(key);
+        weightVectors.push(vector);
+        if (vectorLength === null) {
+          vectorLength = vector.length;
+        } else {
+          if (vectorLength !== vector.length) {
+            throw new Error("Uneven vector lengths: " + vectorLength +
+                            " and " + vector.length);
+          }
+        }
+      });
+
+      for (var i = 0; i < vectorLength; i++) {
+        var weights = _.pluck(weightVectors, i);
+        solution = minimize(solver, solution, terms, weights);
+      }
+
+      return solution;
+    };
+
+    var solve = function (optionalCosts) {
+      var solution = (optionalCosts ? optimize(solver, optionalCosts) :
+                      solver.solve());
+      if (! solution) {
+        return solution; // null
+      } else {
+        // only return variables like "foo@1.0.0", not "foo"
+        return _.filter(solution.getTrueVars(), function (v) {
+          return v.indexOf('@') >= 0;
+        });
+      }
+    };
+
+    func(solver, solve);
+  };
+
+  var allPackageVersions = {
+    'foo': ['1.0.0', '1.0.1', '2.0.0'],
+    'bar': ['1.2.3', '1.2.4', '1.2.5'],
+    'baz': ['3.0.0']
+  };
+
+  // Exact dependencies.
+  var dependencies = {
+    'bar@1.2.3': { foo: ['1.0.0'] },
+    'bar@1.2.4': { foo: ['1.0.1'] },
+    'bar@1.2.5': { foo: ['2.0.0'] },
+    'baz@3.0.0': { foo: ['1.0.0', '1.0.1'],
+                   bar: ['1.2.4', '1.2.5'] }
+  };
+
+  withSolver(function (solver, solve) {
+    // Ask for "bar@1.2.5", get both it and "foo@2.0.0"
+    solver.require("bar@1.2.5");
+    test.equal(solve(), ["bar@1.2.5", "foo@2.0.0"]);
+  });
+
+  withSolver(function (solver, solve) {
+    // Ask for "foo@1.0.1" and *some* version of bar!
+    solver.require("foo@1.0.1");
+    solver.require("bar");
+    test.equal(solve(), ["bar@1.2.4", "foo@1.0.1"]);
+  });
+
+  withSolver(function (solver, solve) {
+    // Ask for versions that can't be combined
+    solver.require("foo@1.0.1");
+    solver.require("bar@1.2.3");
+    test.equal(solve(), null);
+  });
+
+  withSolver(function (solver, solve) {
+    // Ask for baz, automatically get versions of foo and bar
+    // such that foo satisfies bar's dependency!
+    solver.require("baz");
+    test.equal(solve(), ["bar@1.2.4",
+                         "baz@3.0.0",
+                         "foo@1.0.1"]);
+  });
+
+  withSolver(function (solver, solve) {
+    // pick earliest versions
+    solver.require("foo");
+    solver.require("bar");
+    test.equal(solve({ "foo@1.0.0": [0],
+                       "foo@1.0.1": [1],
+                       "foo@2.0.0": [2],
+                       "bar@1.2.3": [0],
+                       "bar@1.2.4": [1],
+                       "bar@1.2.5": [2] }),
+               ["bar@1.2.3", "foo@1.0.0"]);
+  });
+
+  withSolver(function (solver, solve) {
+    // pick latest versions
+    solver.require("foo");
+    solver.require("bar");
+    test.equal(solve({ "foo@1.0.0": [2],
+                       "foo@1.0.1": [1],
+                       "foo@2.0.0": [0],
+                       "bar@1.2.3": [2],
+                       "bar@1.2.4": [1],
+                       "bar@1.2.5": [0] }),
+               ["bar@1.2.5", "foo@2.0.0"]);
+  });
+
+  withSolver(function (solver, solve) {
+    // pick earliest versions (but give solver a
+    // cost vector with extra stuff)
+    solver.require("foo");
+    solver.require("bar");
+    test.equal(solve({ "foo@1.0.0": [1, 0],
+                       "foo@1.0.1": [1, 1],
+                       "foo@2.0.0": [1, 2],
+                       "bar@1.2.3": [2, 0],
+                       "bar@1.2.4": [2, 1],
+                       "bar@1.2.5": [2, 2] }),
+               ["bar@1.2.3", "foo@1.0.0"]);
+  });
+
+  withSolver(function (solver, solve) {
+    // pick latest versions (but give solver a
+    // bigger vector to work with)
+    solver.require("foo");
+    solver.require("bar");
+    test.equal(solve({ "foo@1.0.0": [1, 2],
+                       "foo@1.0.1": [1, 1],
+                       "foo@2.0.0": [1, 0],
+                       "bar@1.2.3": [2, 2],
+                       "bar@1.2.4": [2, 1],
+                       "bar@1.2.5": [2, 0] }),
+               ["bar@1.2.5", "foo@2.0.0"]);
+  });
+
 });

@@ -37,7 +37,7 @@ MiniSat.prototype.ensureVar = function (v) {
 };
 
 MiniSat.prototype.addClause = function (terms) {
-  check(terms, [Logic.NumTerm]);
+  _check(terms, [Logic.NumTerm]);
   this._clauses.push(terms);
   return this._native.savingStack(function (native, C) {
     var termsPtr = C.allocate((terms.length+1)*4, 'i32', C.ALLOC_STACK);
