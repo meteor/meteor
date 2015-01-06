@@ -1,5 +1,7 @@
 Logic = {};
 
+check = function () {};
+
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
 // WholeNumber: a non-negative integer (0 is allowed)
@@ -106,6 +108,18 @@ Logic.Solver = function () {
   this._numClausesAddedToMiniSat = 0;
   this._unsat = false; // once true, no solution henceforth
   this._minisat = null; // created lazily
+
+  var self = this;
+  var termifier = {
+    term: _.bind(self._formulaToTerm, self),
+    clause: function (/*args*/) {
+      var formulas = _.flatten(arguments);
+      check(formulas, [Logic.FormulaOrTerm]);
+      return new Logic.Clause(_.map(formulas, termifier.term));
+    },
+    generate: _.bind(self._generateFormula, self)
+  };
+  self._termifier = termifier;
 };
 
 // Get a var number for vname, assigning it a number if it is new.
@@ -212,7 +226,8 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
     cls = cls.append(extraTerms);
   }
 
-  _.each(cls.terms, function (t, i) {
+  for (var i = 0; i < cls.terms.length; i++) {
+    var t = cls.terms[i];
     var v = (t < 0) ? -t : t;
     if (v === self._F) {
       usedF = true;
@@ -223,7 +238,7 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
     } else if (i < numRealTerms) {
       self._useFormulaTerm(t);
     }
-  });
+  }
 
   this._F_used = (this._F_used || usedF);
   this._T_used = (this._T_used || usedT);
@@ -322,16 +337,7 @@ Logic.Solver.prototype._generateFormula = function (isTrue, formula) {
                  (!isTrue && info.isRequired)) {
         return [new Logic.Clause()]; // never satisfied clause
       } else {
-        var termifier = {
-          term: _.bind(self._formulaToTerm, self),
-          clause: function (/*args*/) {
-            var formulas = _.flatten(arguments);
-            check(formulas, [Logic.FormulaOrTerm]);
-            return new Logic.Clause(_.map(formulas, termifier.term));
-          },
-          generate: _.bind(self._generateFormula, self)
-        };
-        var ret = formula.generateClauses(isTrue, termifier);
+        var ret = formula.generateClauses(isTrue, self._termifier);
         return _.isArray(ret) ? ret : [ret];
       }
   } else { // Term
@@ -624,19 +630,25 @@ Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
        return []; // always succeed
      } else if (args.length === 2) {
        return t.generate(isTrue, Logic.not(Logic.and(args)));
-     } else if (args.length === 3) {
-       var A = args[0], B = args[1], C = args[2];
-       if (isTrue) {
-         // Pick any two args; at least one is false (they aren't
-         // both true).  This strategy would also work for N > 3.
-         return [t.clause(not(A), not(B)),
-                 t.clause(not(A), not(C)),
-                 t.clause(not(B), not(C))];
-       } else { // !isTrue
-         // Pick any two args; at least one is true (they aren't
-         // both false).  This only works for N=3.
-         return [t.clause(A, B), t.clause(A, C), t.clause(B, C)];
+     } else if (isTrue && args.length == 3) {
+       // Pick any two args; at least one is false (they aren't
+       // both true).  This strategy would also work for
+       // N>3, and could provide a speed-up by having more clauses
+       // (N^2) but fewer propagation steps.  No speed-up was
+       // observed on the Sudoku test from using this strategy
+       // up to N=10.
+       var clauses = [];
+       for (var i = 0; i < args.length; i++) {
+         for (var j = i+1; j < args.length; j++) {
+           clauses.push(t.clause(not(args[i]), not(args[j])));
+         }
        }
+       return clauses;
+     } else if ((! isTrue) && args.length === 3) {
+       var A = args[0], B = args[1], C = args[2];
+       // Pick any two args; at least one is true (they aren't
+       // both false).  This only works for N=3.
+       return [t.clause(A, B), t.clause(A, C), t.clause(B, C)];
      } else {
        // See the "commander variables" technique from:
        // http://www.cs.cmu.edu/~wklieber/papers/2007_efficient-cnf-encoding-for-selecting-1.pdf
@@ -1129,6 +1141,9 @@ Logic.Solution = function (_solver, _assignment) {
   this._assignment = _assignment;
 };
 
+// Get a map of variables to their assignments,
+// such as `{A: true, B: false, C: true}`.
+// Internal variables are excluded.
 Logic.Solution.prototype.getMap = function () {
   var solver = this._solver;
   var assignment = this._assignment;
@@ -1139,5 +1154,24 @@ Logic.Solution.prototype.getMap = function () {
       result[name] = assignment[i];
     }
   }
+  return result;
+};
+
+// Get an array of variables that are assigned
+// `true` by this solution, in sorted order.
+// Internal variables are excluded.
+Logic.Solution.prototype.getTrueVars = function () {
+  var solver = this._solver;
+  var assignment = this._assignment;
+  var result = [];
+  for (var i = 1; i < assignment.length; i++) {
+    if (assignment[i]) {
+      var name = solver.getVarName(i);
+      if (name && name.charAt(0) !== '$') {
+        result.push(name);
+      }
+    }
+  }
+  result.sort();
   return result;
 };
