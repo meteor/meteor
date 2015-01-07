@@ -1060,9 +1060,6 @@ main.registerCommand({
   var name = splitArgs[0];
   var version = (splitArgs.length > 1) ? splitArgs[1] : null;
   if (splitArgs.length > 2) {
-    // Technically, this will be caught later on (since we won't find a version
-    // with an @ in it). Maybe it is good to give the user some more specific
-    // feedback in this case.
     Console.error("Invalid request format: " + itemName);
     process.exit(1);
   }
