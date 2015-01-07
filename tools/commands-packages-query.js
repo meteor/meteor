@@ -9,6 +9,7 @@ var Console = require("./console.js").Console;
 var files = require('./files.js');
 var isopackets = require('./isopackets.js');
 var main = require('./main.js');
+var packageVersionParser = require('./package-version-parser.js');
 var projectContextModule = require('./project-context.js');
 var utils = require('./utils.js');
 
@@ -61,6 +62,71 @@ var rewriteDependencies = function (versionDependencies) {
       };
   });
   return dependencies;
+};
+
+// Processes information about the versions that we hid. Returns a brief
+// human-friendly string listing the reasons why some versions of the package
+// were not shown.
+var formatHiddenVersions = function (hiddenVersions, oldestShownVersion) {
+  // An array of strings, listing the reasons why some versions were hidden.
+  var reasons = [];
+  // Use our information about hidden versions to figure what reasons we
+  // actually want to return to the user.
+  if (! oldestShownVersion) {
+    // We did not show any versions, so presumably all existing versions of
+    // this package are either unmigrated or pre-release versions.
+    if (hiddenVersions.lastUnmigrated) {
+      reasons.push("unmigrated");
+    }
+    if (hiddenVersions.lastPreRelease) {
+      reasons.push("pre-release");
+    }
+  } else {
+    // If the oldest version on record is older than the oldest shown
+    // version, then it was hidden due to MAX_RECENT_VERSION number. (It
+    // might also be hidden because it is a pre-release or unmigrated, but
+    // age takes priority).
+    if (packageVersionParser.lessThan(
+        hiddenVersions.oldestVersion, oldestShownVersion)) {
+      reasons.push("older");
+    }
+
+    // If the latest unmigrated/pre-release version is older than the oldest
+    // version that we are showing, then we don't care about it. If it is
+    // younger, we need to tell the user.
+    //
+    // It is certainly possible that, even though a pre-release version is older
+    // than the oldest version that we are showing, but under the limit for the
+    // MAX_RECENT_VERSIONS. So, in that case, we are eliding that version
+    // because it is a pre-release, not because of age. It is still,
+    // technically, an 'older' version though, and that explanation is more
+    // intuitive.
+    if (hiddenVersions.lastPreRelease &&
+        packageVersionParser.lessThan(
+          oldestShownVersion, hiddenVersions.lastPreRelease)) {
+      reasons.push("pre-release");
+    }
+    if (hiddenVersions.lastUnmigrated &&
+        packageVersionParser.lessThan(
+          oldestShownVersion, hiddenVersions.lastUnmigrated)) {
+      reasons.push("unmigrated");
+    }
+  }
+
+  // Now, we will aggregate the reasons into a human-readable string.
+  if (reasons.length === 1) {
+    return reasons[0];
+  } else if (reasons.length === 2) {
+    // There is no oxford comma if only listing two objects
+    return reasons[0] + " and " + reasons[1];
+  } else if (reasons.length > 2)  {
+    return reasons.slice(0, -1).join(", ") + ", and " + _.last(reasons);
+  } else {
+    // Did we not figure out anything to write? Did something else go wrong?
+    // This should never happen, but if it does, recover by omitting
+    // information.
+    return "Some";
+  }
 };
 
 // Converts an object to an EJSON string with the right spacing.
@@ -164,7 +230,7 @@ var PackageQuery = function (options) {
   // This is the record in the packages collection. It contains things like
   // maintainers, and the package homepage.
   self.metaRecord = options.metaRecord;
-  self.name = options.record.name;
+  self.name = options.metaRecord.name;
 
   // This argument is required -- we use it to look up data. If it has not been
   // passed in, fail early.
@@ -192,7 +258,8 @@ var PackageQuery = function (options) {
       return;
     }
     self.data =  versionRecord.local ?
-      self._getLocalVersion(versionRecord) : self._getOfficialVersion(versionRecord);
+      self._getLocalVersion(versionRecord) :
+      self._getOfficialVersion(versionRecord);
   } else {
     self.data = self._collectPackageData();
   }
@@ -287,11 +354,37 @@ _.extend(PackageQuery.prototype, {
     // on them. Trim the serverVersionRecords array to only have the top
     // MAX_RECENT_VERSIONS migrated, official versions.
     if (! self.showHiddenVersions) {
-      serverVersionRecords =
+      // We might have to hide some versions from the user. We want to explain
+      // why we hid them. Here is how we are going to explain things -- any
+      // versions older than the oldest version that we show, are hidden because
+      // of age. If, in the covered time period, there are
+      // unmigrated/pre-release versions, then we will mention those  as well.
+      //
+      // Specifically, while we filter versions, we are going to memorize the
+      // most recent version hidden for a specific reason.
+      var lastUnmigrated = "";
+      var lastPreRelease = "";
+      var oldestVersion =
+        serverVersionRecords[0] && serverVersionRecords[0].version;
+      var filteredVersionRecords =
         _.filter(serverVersionRecords, function (vr) {
-          return ! vr.unmigrated && vr.version.indexOf("-") === -1;
-      });
-      serverVersionRecords = _.last(serverVersionRecords, MAX_RECENT_VERSIONS);
+          if (vr.unmigrated) {
+            lastUnmigrated = vr.version;
+            return false;
+          }
+
+          if (vr.version.indexOf("-") !== -1) {
+            lastPreRelease = vr.version;
+            return false;
+          }
+          return true;
+        });
+     serverVersionRecords = _.last(filteredVersionRecords, MAX_RECENT_VERSIONS);
+     data["hiddenVersions"] = {
+       oldestVersion: oldestVersion,
+       lastUnmigrated: lastUnmigrated,
+       lastPreRelease: lastPreRelease
+     };
     };
 
     // Process the catalog records into our preferred format, and look up any
@@ -545,6 +638,13 @@ _.extend(PackageQuery.prototype, {
   //       downloaded to the warehouse.
   //     - local: true for a local package.
   //     - directory: source root directory of a local package.
+  // - hiddenVersions: an object containing some information about versions that
+  //   have been hidden from the user. Has keys:
+  //     - oldestVersion: the version of this package with the smallest Meteor
+  //       semver number that exists in our records.
+  //     - lastUnmigrated: the most recent (largest Meteor semver) version that
+  //       is marked 'unmigrated'.
+  //     - lastPreRelease: the most recent pre-release version.
   _displayPackage: function (data) {
     var self = this;
     var defaultVersion = data.defaultVersion;
@@ -612,13 +712,28 @@ _.extend(PackageQuery.prototype, {
 
     // If we have not shown all the available versions, let the user know.
     if (data.totalVersions > versionRows.length) {
-      var versionsPluralizer =
-            (data.totalVersions > 1) ?
-            "all " + data.totalVersions + " versions" :
-            "the hidden version";
+      var oldestShownVersion =
+        (data["versions"][0] && data["versions"][0].version) || "";
+      // A string explaining why those versions have been hidden.
+      var hiddenVersions =
+         formatHiddenVersions(data["hiddenVersions"], oldestShownVersion);
+
+      // We will word things in the message in different ways, based on whether
+      // multiple versions exist/have been hidden.
+      var hiddenVersionsPluralizer =
+         (data.totalVersions - data.versions.length == 1) ?
+         "One " + hiddenVersions + " version of " + self.name + " has" :
+         hiddenVersions[0].toUpperCase() + hiddenVersions.slice(1) +
+         " versions of " + self.name + " have";
+      var allVersionsPluralizer =
+         (data.totalVersions === 1) ?
+         "the hidden version" :
+         "all " + data.totalVersions + " versions";
+
+      // Display the final message.
       Console.info(
-        "Some versions of", self.name, "have been hidden.",
-        "To see " + versionsPluralizer + ", run",
+        hiddenVersionsPluralizer, "been hidden.",
+        "To see " + allVersionsPluralizer + ", run",
         Console.command("'meteor show --show-all " + self.name + "'") + ".");
     }
   }
@@ -627,7 +742,8 @@ _.extend(PackageQuery.prototype, {
 // This class looks up release-related information in the official catalog.
 //
 // The constructor takes in an object with the following keys:
-//   - metaRecord: (mandatory) the meta-record for this release from the Releases collection.
+//   - metaRecord: (mandatory) the meta-record for this release from the
+//     Releases collection.
 //   - version: specific version of a release that we want to query.
 //   - showHiddenVersions: show experimental, pre-release & otherwise
 //     non-recommended versions of this release.
@@ -637,7 +753,7 @@ var ReleaseQuery = function (options) {
   // This is the record in the Releases collection. Contains metadata, such as
   // maintainers.
   self.metaRecord = options.metaRecord;
-  self.name = options.record.name;
+  self.name = options.metaRecord.name;
 
   // We don't always want to show non-recommended release versions.
   self.showHiddenVersions = options.showHiddenVersions;
@@ -854,8 +970,13 @@ _.extend(ReleaseQuery.prototype, {
             (data.totalVersions > 1) ?
             "all " + data.totalVersions + " versions" :
             "the hidden version";
+      // We only hide release versions for one reason -- they are not
+      // recommended. We would have to parse version numbers to differentiate
+      // between 'pre-release' and 'deprecated' (and sort-of-experimental, like
+      // '1.0-weird-trick) and we don't want to rely on version number
+      // conventions in code.
       Console.info(
-        "Some versions of", self.name, "have been hidden.",
+        "Non-recommended versions of", self.name, "have been hidden.",
         "To see " + versionsPluralizer + ", run",
         Console.command("'meteor show --show-all " + self.name + "'") + ".");
     }
