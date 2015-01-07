@@ -223,11 +223,7 @@ PV.compare = function (versionOne, versionTwo) {
 //    version has been explicitly selected (which at this stage in the game
 //    means they are mentioned in a top-level constraint in the top-level
 //    call to the resolver).
-//
-// Options:
-//    removeBuildIDs:  Remove the build ID at the end of the version.
-PV.parseVersionConstraint = function (versionString, options) {
-  options = options || {};
+PV.parseVersionConstraint = function (versionString) {
   var versionDesc = { version: null, type: "any-reasonable" };
 
   if (!versionString) {
@@ -243,10 +239,6 @@ PV.parseVersionConstraint = function (versionString, options) {
 
   // This will throw if the version string is invalid.
   PV.getValidServerVersion(versionString);
-
-  if (options.removeBuildIDs) {
-    versionString = PV.removeBuildID(versionString);
-  }
 
   versionDesc.version = versionString;
 
@@ -264,10 +256,9 @@ PV.getValidServerVersion = function (meteorVersionString) {
 };
 
 
-PV.parseConstraint = function (constraintString, options) {
+PV.parseConstraint = function (constraintString) {
   if (typeof constraintString !== "string")
     throw new TypeError("constraintString must be a string");
-  options = options || {};
 
   var splitted = constraintString.split('@');
 
@@ -308,7 +299,7 @@ PV.parseConstraint = function (constraintString, options) {
   constraint.constraints = [];
   __.each(versionConstraints, function (versionCon) {
     constraint.constraints.push(
-      PV.parseVersionConstraint(versionCon, options));
+      PV.parseVersionConstraint(versionCon));
   });
 
   return constraint;
@@ -364,7 +355,7 @@ PV.invalidFirstFormatConstraint = function (validConstraint) {
           /\|/.test(validConstraint));
 };
 
-// Remove a suffix like "+local" if present.
+// Remove a suffix like "+foo" if present.
 PV.removeBuildID = function (versionString) {
   return versionString.replace(/\+.*$/, '');
 };

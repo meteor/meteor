@@ -198,7 +198,7 @@ exports.randomPort = function () {
 // context uses buildmessage to raise errors.
 exports.parseConstraint = function (constraintString, options) {
   try {
-    return packageVersionParser.parseConstraint(constraintString, options);
+    return packageVersionParser.parseConstraint(constraintString);
   } catch (e) {
     if (! (e.versionParserError && options && options.useBuildmessage))
       throw e;
