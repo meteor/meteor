@@ -280,10 +280,6 @@ var PackageSource = function () {
   // specify the correct restrictions at 0.90.
   // XXX: 0.90 package versions.
   self.isCore = false;
-
-  // The list of archs that we can target. Doesn't include 'web' because
-  // it is expanded into 'web.*'.
-  self.allArchs = ['os', 'web.browser', 'web.cordova'];
 };
 
 
@@ -904,7 +900,7 @@ _.extend(PackageSource.prototype, {
     var uses = {};
     var implies = {};
 
-    _.each(self.allArchs, function (arch) {
+    _.each(compiler.ALL_ARCHES, function (arch) {
       sources[arch] = [];
       exports[arch] = [];
       uses[arch] = [];
@@ -915,7 +911,7 @@ _.extend(PackageSource.prototype, {
     // that match an element of self.allarchs.
     var forAllMatchingArchs = function (archs, f) {
       _.each(archs, function (arch) {
-        _.each(self.allArchs, function (matchArch) {
+        _.each(compiler.ALL_ARCHES, function (matchArch) {
           if (archinfo.matches(matchArch, arch)) {
             f(matchArch);
           }
@@ -945,12 +941,12 @@ _.extend(PackageSource.prototype, {
 
       var toArchArray = function (arch) {
         if (!(arch instanceof Array)) {
-          arch = arch ? [arch] : self.allArchs;
+          arch = arch ? [arch] : compiler.ALL_ARCHES;
         }
         arch = _.uniq(arch);
         arch = _.map(arch, mapWhereToArch);
         _.each(arch, function (inputArch) {
-          var isMatch = _.any(_.map(self.allArchs, function (actualArch) {
+          var isMatch = _.any(_.map(compiler.ALL_ARCHES, function (actualArch) {
             return archinfo.matches(actualArch, inputArch);
           }));
           if (! isMatch) {
@@ -1277,7 +1273,7 @@ _.extend(PackageSource.prototype, {
         // principle of least surprise to half-run a handler
         // and then continue.
         sources = {};
-        _.each(self.allArchs, function (arch) {
+        _.each(compiler.ALL_ARCHES, function (arch) {
           sources[arch] = [];
         });
 
@@ -1296,7 +1292,7 @@ _.extend(PackageSource.prototype, {
                            " depends on itself.\n");
       }
     };
-    _.each(self.allArchs, function (label) {
+    _.each(compiler.ALL_ARCHES, function (label) {
       _.each(uses[label], doNotDepOnSelf);
       _.each(implies[label], doNotDepOnSelf);
     });
@@ -1331,7 +1327,7 @@ _.extend(PackageSource.prototype, {
 
       // For all implies and uses, fill in the unspecified dependencies from the
       // release.
-      _.each(self.allArchs, function (label) {
+      _.each(compiler.ALL_ARCHES, function (label) {
         uses[label] = _.map(uses[label], setFromRel);
         implies[label] = _.map(implies[label], setFromRel);
       });
@@ -1374,7 +1370,7 @@ _.extend(PackageSource.prototype, {
 
     // Create source architectures, one for the server and one for each web
     // arch.
-    _.each(self.allArchs, function (arch) {
+    _.each(compiler.ALL_ARCHES, function (arch) {
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
@@ -1443,7 +1439,7 @@ _.extend(PackageSource.prototype, {
 
     var projectWatchSet = projectContext.getProjectWatchSet();
 
-    _.each(self.allArchs, function (arch) {
+    _.each(compiler.ALL_ARCHES, function (arch) {
       // We don't need to build a Cordova SourceArch if there are no Cordova
       // platforms.
       if (arch === 'web.cordova' &&
@@ -1710,6 +1706,37 @@ _.extend(PackageSource.prototype, {
       });
     });
     return _.keys(packages);
+  },
+
+  // Returns an array of objects, representing this package's public
+  // exports. Each object has the following keys:
+  //  - name: export name (ex: "Accounts")
+  //  - arch: an array of strings representing architectures for which this
+  //    export is declared.
+  //
+  // This ignores testOnly exports.
+  getExports: function () {
+    var self = this;
+    var ret = {};
+    // Go over all of the architectures, and aggregate the exports together.
+    _.each(self.architectures, function (arch) {
+      _.each(arch.declaredExports, function (exp) {
+        // Skip testOnly exports -- the flag is intended for use in testing
+        // only, so it is not of any interest outside this package.
+        if (exp.testOnly) {
+          return;
+        }
+        // Add the export to the export map.
+        if (! _.has(ret, exp.name)) {
+          ret[exp.name] = [arch.arch];
+        } else {
+          ret[exp.name].push(arch.arch);
+        }
+     });
+    });
+    return _.map(ret, function (arches, name) {
+      return { name: name, architectures: arches };
+    });
   },
 
   // If dependencies aren't consistent across unibuilds, return false and
