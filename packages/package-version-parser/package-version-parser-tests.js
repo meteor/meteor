@@ -1,5 +1,88 @@
 var currentTest = null;
 
+Tinytest.add("package-version-parser - parse", function (test) {
+  var throws = function (v, re) {
+    test.throws(function () {
+      new PackageVersion(v);
+    }, re);
+  };
+  var formatPV = function (pv) {
+    return (JSON.stringify(pv)
+            .replace(/,(?="prerelease"|"raw")/g, ',\n')
+            .replace(/,/g, ', ')
+            .replace(/"(\w+)":/g, '$1: ')
+            .replace("{", "{\n")
+            .replace("}", "\n}"));
+  };
+  var equal = function (pv1, pv2) {
+    test.equal(formatPV(pv1), formatPV(pv2));
+  };
+
+  equal(new PackageVersion("1.2.3-rc.5_1+12345"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: ["rc", 5], wrapNum: 1, build: ["12345"],
+    raw: "1.2.3-rc.5_1+12345", version: "1.2.3-rc.5_1",
+    semver: "1.2.3-rc.5+12345"
+  });
+
+  equal(new PackageVersion("1.2.3"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: [], wrapNum: 0, build: [],
+    raw: "1.2.3", version: "1.2.3", semver: "1.2.3"
+  });
+  throws("1.2", /must look like semver/);
+  throws("1", /must look like semver/);
+  equal(new PackageVersion("1.0.0-rc.1"), {
+    major: 1, minor: 0, patch: 0,
+    prerelease: ["rc", 1], wrapNum: 0, build: [],
+    raw: "1.0.0-rc.1", version: "1.0.0-rc.1", semver: "1.0.0-rc.1"
+  });
+  throws("1.0.0-.", /must look like semver/);
+  throws("1.0.0-rc.", /must look like semver/);
+  throws("1.0.0-01", /must look like semver/);
+  equal(new PackageVersion("1.2.3-1-1"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: ["1-1"], wrapNum: 0, build: [],
+    raw: "1.2.3-1-1", version: "1.2.3-1-1", semver: "1.2.3-1-1"
+  });
+  equal(new PackageVersion("1.2.3_4"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: [], wrapNum: 4, build: [],
+    raw: "1.2.3_4", version: "1.2.3_4", semver: "1.2.3"
+  });
+  throws("1.2.3_4_5", /have two _/);
+  throws("1.2.3_0", /must not have a leading zero/);
+  throws("1.2.3_01", /must not have a leading zero/);
+  throws("1.2.3_a", /must contain only digits/);
+  // (prerelease must go *before* the wrap num)
+  throws("1.2.3_a-rc.1", /must contain only digits/);
+  equal(new PackageVersion("1.2.3-4_5"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: [4], wrapNum: 5, build: [],
+    raw: "1.2.3-4_5", version: "1.2.3-4_5", semver: "1.2.3-4"
+  });
+  equal(new PackageVersion("1.2.3-rc.1_7+8.9-10.c"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: ["rc", 1], wrapNum: 7, build: ["8", "9-10", "c"],
+    raw: "1.2.3-rc.1_7+8.9-10.c", version: "1.2.3-rc.1_7",
+    semver: "1.2.3-rc.1+8.9-10.c"
+  });
+  throws("1.2.3+4+5", /have two \+/);
+  equal(new PackageVersion("1.2.3+x"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: [], wrapNum: 0, build: ["x"],
+    raw: "1.2.3+x", version: "1.2.3", semver: "1.2.3+x"
+  });
+  throws("1.2.3+x_1", /must look like semver/);
+  equal(new PackageVersion("1.2.3_1+x"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: [], wrapNum: 1, build: ["x"],
+    raw: "1.2.3_1+x", version: "1.2.3_1", semver: "1.2.3+x"
+  });
+
+  throws("v1.0.0", /must look like semver/);
+});
+
 var t = function (versionString, expected, descr) {
   currentTest.equal(
     _.omit(PackageVersion.parseConstraint(versionString),
