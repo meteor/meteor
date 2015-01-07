@@ -1082,11 +1082,12 @@ main.registerCommand({
       );
       process.exit(1);
     }
+    // Use the projectContext to get the name of the package.
     var currentVersion =
           projectContext.localCatalog.getVersionBySourceRoot(options.packageDir);
     name = currentVersion.packageName;
-    version = currentVersion.version;
-    fullName = name + "@" + version;
+    version = "local";
+    fullName = name + "@local";
   }
   var query = null;
 

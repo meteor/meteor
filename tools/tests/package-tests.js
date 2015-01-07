@@ -1249,6 +1249,16 @@ selftest.define("show and search local overrides server",
     run.waitSecs(15);
     run.match(summary);
     run.expectExit(0);
+
+    // Test that running without any arguments still gives us the local version.
+    run = s.run("show");
+    run.match("Package: " + fullPackageName + "\n");
+    run.match("Version: " + "1.0.0" + "\n");
+    run.match("Summary: " + summary + "\n");
+    run.match("Directory:\n" + packageDir + "\n");
+    run.read("\n" + summary + "\n\n");
+    run.read("\n" + addendum + "\n");
+    run.expectEnd(0);
   });
 
   // When we run outside of the package directory, we do not see the local
