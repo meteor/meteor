@@ -63,44 +63,6 @@ var formatDependencies = function (versionDependencies) {
   return dependencies;
 };
 
-// Convert package exports into a more helpful format for output in
-// 'meteor show'.
-var formatExports = function (rawexports) {
-  var exports = _.map(rawexports, function (exp) {
-    var arches = exp.architectures;
-    // Replace 'os' (what we store) with 'server' (what you would put in a
-    // package.js file). That's more user friendly, and avoids confusing this
-    // with different OS arches used in binary packages.
-    if ( _.indexOf(arches, "os") !== -1) {
-      arches = _.without(arches, "os");
-      arches.push("server");
-    }
-    // Sort architectures alphabetically.
-    arches.sort();
-    return { name: exp.name, architectures: arches };
-  });
-  // Sort exports alphabetically by name.
-  return _.sortBy(exports, "name");
-};
-
-// Convert package exports into a pretty, Console non-wrappable string.
-//
-// Goes through the package exports. If an export is only declared for certain
-// architectures, mentions those architectures in a user-friendly format.
-var exportsToString = function (exports) {
-  var strExports = _.map(exports, function (exp) {
-    // If this export is valid for all architectures, don't specify
-    // architectures here.
-    if (exp.architectures.length === compiler.ALL_ARCHES.length)
-      return exp.name;
-
-    // Don't split descriptions of individual exports between lines.
-    return Console.noWrap(
-      exp.name + " (" + exp.architectures.join(", ") + ")");
-  });
-  return strExports.join(", ");
-};
-
 // Converts an object to an EJSON string with the right spacing.
 var convertToEJSON = function (data) {
   var EJSON = isopackets.load('ejson').ejson.EJSON;
@@ -172,6 +134,61 @@ var itemNotFound = function (item) {
   utils.explainIfRefreshFailed();
   return 1;
 };
+
+// This class stores exports from a given package.
+//
+// Stores exports for a given package and returns them to the caller in a given
+// format. Takes in the raw exports from the package.
+var PkgExports = function (pkgExports) {
+ var self = this;
+ // Process and save the export data.
+ self.data = _.map(pkgExports, function (exp) {
+    var arches = exp.architectures;
+    // Replace 'os' (what we store) with 'server' (what you would put in a
+    // package.js file). That's more user friendly, and avoids confusing this
+    // with different OS arches used in binary packages.
+    if ( _.indexOf(arches, "os") !== -1) {
+      arches = _.without(arches, "os");
+      arches.push("server");
+    }
+    // Sort architectures alphabetically.
+    arches.sort();
+    return { name: exp.name, architectures: arches };
+  });
+  // Sort exports alphabetically by name.
+  self.data =  _.sortBy(self.data, "name");
+};
+
+_.extend(PkgExports.prototype, {
+  // Returns true if this class does not contain any exports.
+  isEmpty : function () {
+    var self = this;
+    return _.isEmpty(self.data);
+  },
+  // Get exports as a raw object.
+  getObject : function () {
+    var self = this;
+    return self.data;
+  },
+  // Convert package exports into a pretty, Console non-wrappable string. If an
+  // export is only declared for certain architectures, mentions those
+  // architectures in a user-friendly format.
+  getConsoleStr: function () {
+    var self = this;
+    var strExports = _.map(self.data, function (exp) {
+      // If this export is valid for all architectures, don't specify
+      // architectures here.
+      if (exp.architectures.length === compiler.ALL_ARCHES.length)
+        return exp.name;
+
+      // Don't split descriptions of individual pkgExports between lines.
+      return Console.noWrap(
+        exp.name + " (" + exp.architectures.join(", ") + ")");
+    });
+    return strExports.join(", ");
+  }
+});
+
 
 // The two classes below collect and print relevant information about Meteor
 // packages and Meteor releases, respectively. Specifically, they query the
@@ -277,15 +294,10 @@ _.extend(PackageQuery.prototype, {
     // If we are asking for an EJSON-style output, we will only print out the
     // relevant fields.
     if (options.ejson) {
-      var versionFields = [
-        "name", "version", "description", "summary", "git", "dependencies",
-        "publishedBy", "publishedOn", "installed", "local", "OSarchitectures",
-        "exports"
-      ];
-      var packageFields =
-        [ "name", "homepage", "maintainers", "versions", "totalVersions" ];
-      var fields = self.data.version ? versionFields : packageFields;
-      Console.rawInfo(convertToEJSON(_.pick(self.data, fields)));
+      Console.rawInfo(convertToEJSON(
+        self.data.version ?
+          self._generateVersionObject(self.data) :
+          self._generatePackageObject(self.data)));
       return;
     }
 
@@ -408,7 +420,7 @@ _.extend(PackageQuery.prototype, {
     };
 
     // Get the export data, if the record has any.
-    data["exports"] = formatExports(versionRecord.exports);
+    data["exports"] = new PkgExports(versionRecord.exports);
 
     // Processing and formatting architectures takes time, so we don't want to
     // do this if we don't have to.
@@ -479,7 +491,7 @@ _.extend(PackageQuery.prototype, {
     data["directory"] = packageSource.sourceRoot;
 
     // Get the exports.
-    data["exports"] = formatExports(packageSource.getExports());
+    data["exports"] = new PkgExports(packageSource.getExports());
 
     // If the version was not explicitly set by the user, the catalog backfills
     // a placeholder version for the constraint solver. We don't want to show
@@ -543,9 +555,9 @@ _.extend(PackageQuery.prototype, {
         Console.url(data.git),
         Console.options({ bulletPoint: "Git: " }));
     }
-    if (data.exports && ! _.isEmpty(data.exports)) {
+    if (data.exports && ! data.exports.isEmpty()) {
       Console.info(
-        exportsToString(data.exports),
+        data["exports"].getConsoleStr(),
         Console.options({ bulletPoint: "Exports: " }));
     }
     Console.info();
@@ -588,6 +600,38 @@ _.extend(PackageQuery.prototype, {
         "from outside the project.");
     }
   },
+  // Returns a user-friendly object from this PackageQuery to the caller.  Takes
+  // in a data object with the same keys as _displayVersion.
+  //
+  // Returns an object with some of the following keys:
+  // - name: String. Name of the package.
+  // - version: String. Meteor version number.
+  // - description: String. Longform description.
+  // - summary: String. Short summary.
+  // - git: String. Git URL.
+  // - publishedBy: String. Username of the publisher.
+  // - publishedOn: Date. Time of publication.
+  // - local: Boolean. True if this is a local package.
+  // - directory: source directory of this package.
+  // - installed: Boolean. True if the isopack for this package has been
+  //   downloaded, or if the package is local.
+  // - dependencies: Array of objects representing package dependencies, sorted
+  //   alphabetically by package name.
+  // - OSarchitectures: Array of OS architectures on for which an isopack of
+  //   this package exists (server packages only).
+  // - exports: Array of objects representing the package exports, sorted by
+  //   name of export.
+  _generateVersionObject: function (data) {
+    var versionFields = [
+      "name", "version", "description", "summary", "git", "dependencies",
+      "publishedBy", "publishedOn", "installed", "local", "OSarchitectures",
+      "directory"
+    ];
+    var processedData = data["exports"] ?
+          { exports: data["exports"].getObject() } : {};
+    return _.extend(processedData, _.pick(data, versionFields));
+  },
+
   // Displays general package data from this PackageQuery to the terminal in a
   // human-friendly format. Takes in an object that contains some, but not
   // always all, of the following keys:
@@ -633,9 +677,9 @@ _.extend(PackageQuery.prototype, {
     }
     // Print the exports.
     if (defaultVersion && defaultVersion.exports &&
-       ! _.isEmpty(defaultVersion.exports)) {
+       ! defaultVersion.exports.isEmpty()) {
       Console.info(
-        exportsToString(defaultVersion.exports),
+        defaultVersion["exports"].getConsoleStr(),
         Console.options({ bulletPoint: "Exports: " }));
     }
     Console.info();
@@ -699,7 +743,48 @@ _.extend(PackageQuery.prototype, {
         "To see " + versionsPluralizer + ", run",
         Console.command("'meteor show --show-all " + self.name + "'") + ".");
     }
-  }
+  },
+  // Returns a user-friendly object from this PackageQuery to the caller.  Takes
+  // in a data object with the same keys as _displayPackage.
+  //
+  // Returns an object with some of the following keys:
+  // - name: String. Name of the package.
+  // - homepage: String. URL of the package homepage.
+  // - maintainers: Array of strings. Usernames of package maintainers.
+  // - totalVersions: Number. Total number of versions that exist for this
+  //   package.
+  // - versions: Array of objects, representing versions of this
+  //   package. Objects have the following keys:
+  //   - name: String. Name of the package.
+  //   - version: String. Meteor version number.
+  //   - description: String. Longform description.
+  //   - summary: String. Short summary.
+  //   - git: String. Git URL.
+  //   - publishedBy: String. Username of the publisher.
+  //   - publishedOn: Date. Time of publication.
+  //   - local: Boolean. True if this is a local package.
+  //   - directory: source directory of this package.
+  //   - installed: Boolean. True if the isopack for this package has been
+  //     downloaded, or if the package is local.
+  //   - exports: Array of objects representing the package exports, sorted by
+  //     name of export.
+  _generatePackageObject: function (data) {
+    var packageFields =
+          [ "name", "homepage", "maintainers", "totalVersions" ];
+    // Process the versions array. We only want some of the keys, and we want to
+    // make sure to get the right exports object.
+    var versions = _.map(data["versions"], function (version) {
+      var versionFields = [
+        "name", "version", "description", "summary", "git", "publishedBy",
+        "publishedOn", "installed", "local", "directory"
+      ];
+      var processedData = version["exports"] ?
+            { exports: version["exports"].getObject() } : {};
+      return _.extend(processedData, _.pick(version, versionFields));
+    });
+    return _.extend({ versions: versions }, _.pick(data, packageFields));
+  },
+
 });
 
 // This class looks up release-related information in the official catalog.
@@ -742,8 +827,8 @@ _.extend(ReleaseQuery.prototype, {
         "track", "version", "description", "publishedBy", "publishedOn",
         "tool", "packages", "recommended"
       ];
-      var packageFields = [ "name", "maintainers", "versions" ];
-      var fields = self.data.version ? versionFields : packageFields;
+      var releaseFields = [ "name", "maintainers", "versions" ];
+      var fields = self.data.version ? versionFields : releaseFields;
       Console.rawInfo(convertToEJSON(_.pick(self.data, fields)));
       return;
     }
