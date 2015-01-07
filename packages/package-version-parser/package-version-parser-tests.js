@@ -25,6 +25,13 @@ Tinytest.add("package-version-parser - parse", function (test) {
     semver: "1.2.3-rc.5+12345"
   });
 
+  equal(PackageVersion.parse("1.2.3-rc.5_1+12345"), {
+    major: 1, minor: 2, patch: 3,
+    prerelease: ["rc", 5], wrapNum: 1, build: ["12345"],
+    raw: "1.2.3-rc.5_1+12345", version: "1.2.3-rc.5_1",
+    semver: "1.2.3-rc.5+12345"
+  });
+
   equal(new PackageVersion("1.2.3"), {
     major: 1, minor: 2, patch: 3,
     prerelease: [], wrapNum: 0, build: [],
