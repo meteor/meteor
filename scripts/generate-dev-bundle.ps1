@@ -45,6 +45,9 @@ cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
 npm install --production
 npm dedupe
+# install the latest flatten-packages
+npm install -g flatten-packages
+flatten-packages .
 cp -R "${DIR}\b\p\node_modules\" "${DIR}\lib\node_modules\"
 cd "$DIR"
 
