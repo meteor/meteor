@@ -2,6 +2,7 @@ var feedSubscription;
 
 // Handle for launch screen possibly dismissed from app-body.js
 dataReadyHold = null;
+connErrorTimeout = null;
 
 // Global subscriptions
 if (Meteor.isClient) {
@@ -25,6 +26,10 @@ HomeController = RouteController.extend({
   onBeforeAction: function() {
     Meteor.subscribe('latestActivity', function() {
       dataReadyHold.release();
+      if(connErrorTimeout) {
+        clearTimeout(connErrorTimeout);
+        connErrorTimeout = null;
+      };
     });
   }
 });
