@@ -9,6 +9,20 @@ var packageClient = require("../package-client.js");
 var username = "test";
 var password = "testtest";
 
+// Returns a random package name.
+var randomizedPackageName = function (username) {
+  // We often use package names in long, wrapped string output, so having them
+  // be the same length is very useful.
+  return username + ":" + utils.randomToken().substring(0, 6);
+}
+
+// Returns a random release name.
+var randomizedReleaseName = function (username) {
+  // We often use package names in long, wrapped string output, so having them
+  // be the same length is very useful.
+  return username + ":TEST-" +
+    utils.randomToken().substring(0, 6).toUpperCase();
+}
 
 // Given a sandbox, that has the app as its currend cwd, read the packages file
 // and check that it contains exactly the packages specified, in order.
@@ -456,9 +470,9 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
 
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName + "-a";
-  var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
+  var packageName = randomizedPackageName(username);
+  var fullPackageName =  packageName + "-a";
+  var releaseTrack = randomizedReleaseName(username);
 
   // First test -- pretend that the user has downloaded meteor for the purpose
   // of running a package or an app. Create a package. Clean out the
@@ -474,7 +488,7 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   publishReleaseInNewTrack(s, releaseTrack, fullPackageName /*tool*/, packages);
 
   // Create a package that has a versionsFrom for the just-published release.
-  var newPack = username + ":" + packageName + "-b";
+  var newPack = packageName + "-b";
   s.createPackage(newPack, "package-of-two-versions");
   s.cd(newPack, function() {
     var packOpen = s.read("package.js");
@@ -562,8 +576,7 @@ selftest.define("release track defaults to METEOR",
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = randomizedPackageName(username);
   var releaseVersion = utils.randomToken();
 
   // Create a package that has a versionsFrom for the just-published
@@ -636,7 +649,7 @@ selftest.define("update server package data unit test",
   // `useShortPages` option to updateServerPackageData, the server will send 3
   // records at a time instead of 100, so this is more than a page.
   _.times(5, function (i) {
-    var packageName = username + ":" + utils.randomToken();
+    var packageName = randomizedPackageName(username);
     createAndPublishPackage(s, packageName);
     newPackageNames.push(packageName);
   });
@@ -1187,8 +1200,7 @@ selftest.define("show and search local overrides server",
 
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName =  randomizedPackageName(username);
   // Publish the first version of this package.
   publishMostBasicPackage(s, fullPackageName);
 
@@ -1260,8 +1272,7 @@ selftest.define("show server package",
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = randomizedPackageName(username);
 
   // Publish a version the package without git or any dependencies. Make sure
   // that 'show' renders it correctly.
@@ -1316,9 +1327,9 @@ selftest.define("show server package",
   // Publish a version of the package with git that depends on other
   // packages. To do this, we need to publish two other packages (since we don't
   // want to rely on specific packages existing on the test server).
-  var baseDependency = username + ":base" + utils.randomToken();
+  var baseDependency = randomizedPackageName(username);
   publishMostBasicPackage(s, baseDependency);
-  var weakDependency = username + ":weak" + utils.randomToken();
+  var weakDependency = randomizedPackageName(username);
   publishMostBasicPackage(s, weakDependency);
 
   s.cd(fullPackageName, function () {
@@ -1408,21 +1419,22 @@ selftest.define("show server package",
     run.expectExit(0);
   });
   // Mark a version of the package as unmigrated.
-  run = s.run("admin", "set-unmigrated", fullPackageName + "@0.9.9");
+  run = s.run("admin", "set-unmigrated", fullPackageName + "@1.0.0");
   run.waitSecs(10);
   run.expectExit(0);
 
   // Neither of these versions should show up.
   var moreAvailable =
-    "Some versions of " + fullPackageName + " have been hidden. To see " +
-    "all 4 versions, run\n'meteor show --show-all " + fullPackageName + "'.";
+    "Pre-release and unmigrated versions of " + fullPackageName +
+    " have been hidden. To see all\n" +
+    "4 versions, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
     versions: [
-      { version: "1.0.0", date: today },
+      { version: "0.9.9", date: today },
       { version: "1.2.0", date: today, label: "installed" }
     ],
     addendum: moreAvailable
@@ -1465,8 +1477,7 @@ selftest.define("show rc-only package",
   var s = new Sandbox();
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = randomizedPackageName(username);
 
   // Create a package that has only an rc version.
   s.createPackage(fullPackageName, "package-for-show");
@@ -1481,8 +1492,8 @@ selftest.define("show rc-only package",
   // of a version header. But we should get an addendum saying that more
   // versions are available.
   var moreAvailable =
-    "Some versions of " + fullPackageName + " have been hidden. To see " +
-    "the hidden version, run\n'meteor show --show-all " + fullPackageName + "'.";
+    "One pre-release version of " + fullPackageName + " has been hidden. To see " +
+    "the hidden\nversion, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     maintainers: username,
     addendum: moreAvailable
@@ -1636,12 +1647,11 @@ selftest.define("show release",
   // In order to publish a release, we need a package to use as the
   // tool. Publish a package, and use it as the tool. (This release will not
   // actually run, but we are not testing that.)
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = randomizedPackageName(username);
   publishMostBasicPackage(s, fullPackageName);
 
   // Some base variables that we will use to create a release track.
-  var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
+  var releaseTrack = randomizedReleaseName(username);
   var tool = fullPackageName + "@1.0.0";
   var packages = {};
   packages[fullPackageName] = "1.0.0";
@@ -1688,8 +1698,8 @@ selftest.define("show release",
   });
   publishRelease(s, releaseConfig);
   var moreVersions =
-    "Some versions of " + releaseConfig.track + " have been hidden. To see all 2 " +
-    "versions, run\n'meteor show --show-all " + releaseConfig.track + "'.";
+    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 2\n" +
+    "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
   testShowRelease(s, {
     name: releaseTrack,
     description: recommendedDesc,
@@ -1756,8 +1766,8 @@ selftest.define("show release",
   });
 
   moreVersions =
-    "Some versions of " + releaseConfig.track + " have been hidden. To see all 4 " +
-    "versions, run\n'meteor show --show-all " + releaseConfig.track + "'.";
+    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 4\n" +
+    "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
   testShowRelease(s, {
     name: releaseTrack,
     description: recommendedDesc,
@@ -1797,12 +1807,11 @@ selftest.define("show release w/o recommended versions",
   // In order to publish a release, we need a package to use as the
   // tool. Publish a package, and use it as the tool. (This release will not
   // actually run, but we are not testing that.)
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = randomizedPackageName(username);
   publishMostBasicPackage(s, fullPackageName);
 
   // Some base variables that we will use to create a release track.
-  var releaseTrack = username + ":TEST-" + utils.randomToken().toUpperCase();
+  var releaseTrack = randomizedReleaseName(username);
   var tool = fullPackageName + "@1.0.0";
   var packages = {};
   packages[fullPackageName] = "1.0.0";
@@ -1828,8 +1837,8 @@ selftest.define("show release w/o recommended versions",
   });
   publishRelease(s, releaseConfig);
   var moreVersions =
-    "Some versions of " + releaseConfig.track + " have been hidden. To see all 2 " +
-    "versions, run\n'meteor show --show-all " + releaseConfig.track + "'.";
+    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 2\n" +
+    "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
 
   testShowRelease(s, {
     name: releaseTrack,
@@ -1880,12 +1889,7 @@ selftest.define("show package w/many versions",
     run.waitSecs(30);
     run.expectExit(0);
   };
-
-  // In order to publish a release, we need a package to use as the
-  // tool. Publish a package, and use it as the tool. (This release will not
-  // actually run, but we are not testing that.)
-  var packageName = utils.randomToken();
-  var fullPackageName = username + ":" + packageName;
+  var fullPackageName = randomizedPackageName(username);
   s.createPackage(fullPackageName, "package-of-two-versions");
   var packageDir = files.pathJoin(s.root, "home", fullPackageName);
   s.cd(fullPackageName, function () {
@@ -1895,16 +1899,16 @@ selftest.define("show package w/many versions",
 
     // Publish a couple more versions.
     setVersionAndPublish("1.0.1");
+    setVersionAndPublish("1.0.2-rc.1");
     setVersionAndPublish("1.0.5");
     setVersionAndPublish("1.0.6");
     setVersionAndPublish("1.0.7");
-    setVersionAndPublish("2.0.0-rc.1");
     setVersionAndPublish("2.0.0");
     setVersionAndPublish("2.0.1");
 
     // Make sure that the right versions show up when the local package is visible.
     var moreAvailable =
-          "Some versions of " + fullPackageName + " have been hidden. To see " +
+          "Older versions of " + fullPackageName + " have been hidden. To see " +
           "all 9 versions, run\n'meteor show --show-all " + fullPackageName + "'.";
     testShowPackage(s, fullPackageName, {
       maintainers: username,
@@ -1919,22 +1923,45 @@ selftest.define("show package w/many versions",
         { version: "2.0.1", directory: packageDir }
       ]
     });
+
+    // Make sure that we list the pre-release version in the list of versions
+    // that have been hidden.
+    setVersionAndPublish("2.0.0-rc.1");
+    setVersionAndPublish("2.0.2");
+    moreAvailable =
+          "Older and pre-release versions of " + fullPackageName +
+          " have been hidden. To see all 11\n" +
+          "versions, run 'meteor show --show-all " + fullPackageName + "'.";
+    testShowPackage(s, fullPackageName, {
+      maintainers: username,
+      summary: "Test package.",
+      addendum: moreAvailable,
+      versions: [
+        { version: "1.0.6", date: today },
+        { version: "1.0.7", date: today },
+        { version: "2.0.0", date: today },
+        { version: "2.0.1", date: today },
+        { version: "2.0.2", date: today },
+        { version: "2.0.2", directory: packageDir }
+      ]
+    });
+
   });
 
   // Make sure that the right versions show up when the local package is NOT visible.
   var moreAvailable =
-     "Some versions of " + fullPackageName + " have been hidden. To see " +
-     "all 8 versions, run\n'meteor show --show-all " + fullPackageName + "'.";
+     "Older and pre-release versions of " + fullPackageName + " have been hidden. " +
+     "To see all 10\nversions, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     maintainers: username,
     summary: "Test package.",
     addendum: moreAvailable,
     versions: [
-      { version: "1.0.5", date: today },
       { version: "1.0.6", date: today },
       { version: "1.0.7", date: today },
       { version: "2.0.0", date: today },
-      { version: "2.0.1", date: today }
+      { version: "2.0.1", date: today },
+      { version: "2.0.2", date: today }
     ]
   });
   testShowPackage(s, fullPackageName, {
@@ -1948,7 +1975,8 @@ selftest.define("show package w/many versions",
       { version: "1.0.6", date: today },
       { version: "1.0.7", date: today },
       { version: "2.0.0", date: today },
-      { version: "2.0.1", date: today }
+      { version: "2.0.1", date: today },
+      { version: "2.0.2", date: today }
     ]
   });
  });
