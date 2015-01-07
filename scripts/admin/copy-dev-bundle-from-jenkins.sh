@@ -35,7 +35,7 @@ echo Found build $DIRNAME
 
 # Check to make sure the proper number of each kind of file is there.
 s3cmd ls s3://com.meteor.jenkins/$DIRNAME/ | \
-  perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 3) }'
+  perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 4) }'
 
 for FILE in $(s3cmd ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nlaF/ -e 'print $F[-1]'); do
    if s3cmd info $TARGET$FILE >/dev/null 2>&1; then
