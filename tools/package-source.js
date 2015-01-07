@@ -121,15 +121,10 @@ var getExcerptFromReadme = function (text) {
   // important to keep track of how many headers we have passed.
   var headerNum = 0;
 
-  // Counter and termination condition for the while loop.
-  var lineNum = 0;
-  var done = false;
-
   // We want to scan until we have an excerpt, or decide that we are not getting
   // one. If we are only taking the first five lines of a long README file, we
   // want to avoid scanning all of it.
-  while (! done) {
-    var currentLine = fullText[lineNum];
+  _.any(fullText, function (currentLine) {
     var trimmedLine = currentLine.trim();
 
     // According to "https://help.github.com/articles/markdown-basics/", a
@@ -156,7 +151,7 @@ var getExcerptFromReadme = function (text) {
     } else if (! _.isEmpty(excerpt) && isHeader) {
       // We have been excerpting lines, and came across a header. That means
       // that we are done.
-      done = true;
+      return true;
     } else if (isHeader) {
       // We told users that we are going to take whatever is between the first
       // and second header, but I think it is not always entirely clear what
@@ -164,17 +159,12 @@ var getExcerptFromReadme = function (text) {
       // section down.
       headerNum++;
       if (headerNum > 2) {
-        done = true;
+        return true;
       }
     }
 
-    // Increase the line number and check that we haven't finished the file (if
-    // we have, we are done).
-    lineNum++;
-    if (lineNum === fullText.length) {
-      done = true;
-    }
-  }
+    return false;
+  });
 
   // Strip off the last newline, if there is one. (Markdown files usually skip a
   // line between the paragraph and the subsequent header, but we don't want
@@ -477,8 +467,8 @@ _.extend(PackageSource.prototype, {
     // sets a version.
     self.version = "0.0.0";
 
-    // To make the transition to using Readme.md files in Isobuild easier, we
-    // initialize the documentation directory to Readme.md by default.
+    // To make the transition to using README.md files in Isobuild easier, we
+    // initialize the documentation directory to README.md by default.
     self.metadata.documentation = "README.md";
 
     self.sourceRoot = dir;
@@ -549,7 +539,7 @@ _.extend(PackageSource.prototype, {
        * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
        * @param {String} options.documentation Optional Filepath to
-       * documentation. Set to'Readme.md' by default. Set this to null to submit
+       * documentation. Set to 'README.md' by default. Set this to null to submit
        * no documentation.
        */
       describe: function (options) {
@@ -1825,7 +1815,7 @@ _.extend(PackageSource.prototype, {
   // file. We do not call it unless we actually need this information.
   processReadme: function () {
     var self = this;
-    buildmessage.assertInCapture();
+    buildmessage.assertInJob();
     if (! self.metadata.documentation) {
       return null;
     }
@@ -1846,8 +1836,8 @@ _.extend(PackageSource.prototype, {
         // This is weird, and we don't usually protect the user from errors like
         // this, but maybe we should.
         errorMessage =
-          "Documentation couldn't be read: " + self.metadata.documentation;
-        errorMessage += "(Error: " + err + ")";
+          "Documentation couldn't be read: " + self.metadata.documentation + " ";
+        errorMessage += "(Error: " + err.message + ")";
       }
 
       // The user might not understand that we are automatically inferring

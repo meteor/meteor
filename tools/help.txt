@@ -595,6 +595,7 @@ Options:
 Publish a new version of a package to the package server.
 
 Usage: meteor publish [--create]
+       meteor publish --update
 
 Publishes a new version of a local package to the package server. Must be run
 from the directory containing the package. Reads the package.js file for version
@@ -602,18 +603,23 @@ information, builds the package and sends both the package source and the built
 version of the package to the package server.
 
 This will only create one build of the package. If your package has multiple
-builds for different OS architectures, it will create a build for this machine's
-architecture. To publish a different build for the same version, run
-publish-for-arch.
+builds for different OS architectures, it will ask you to use the Meteor build
+farm to create a build per each supported architecture. To publish a different
+build for the same version, run publish-for-arch.
 
 This will mark you as the only maintainer of the package. If you need to change
-maintainers and other metadata about this package & package version, take a look
-at the admin commands.
+package maintainers or add a homepage, take a look at the admin commands.
+
+Change the metadata for a given version of a package by running with the
+--update flag. That will set the git url, version summary, longform description
+and documentation in the database to their new values. You can use 'meteor show'
+to preview the results.
 
 Pass --create to create a new package.
 
 Options:
   --create   publish a new package
+  --update   changed metadata of a previously published version
 
 
 >>> publish-for-arch

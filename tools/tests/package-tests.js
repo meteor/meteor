@@ -1089,9 +1089,7 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
 // 'name@local' gives that local version.
 selftest.define("show local package w/o version",  function () {
   var s = new Sandbox();
-  // We rely on this package not existing on the server. It doesn't have a
-  // prefix (or a meaningful name), so it is a reasonably safe assumption.
-  var name = "my-local-package";
+  var name = "my-local-package" + utils.randomToken();
 
   // Create a package without version or summary; check that we can show its
   // information without crashing.
@@ -1125,9 +1123,7 @@ selftest.define("show and search local package",  function () {
   // Setup: create an app, containing a package. This local package should show
   // up in the results of `meteor show` and `meteor search`.
   var s = new Sandbox();
-  // We rely on this package not existing on the server. It doesn't have a
-  // prefix (or a meaningful name), so it is a reasonably safe assumption.
-  var name = "my-local-package";
+  var name = "my-local-package" + utils.randomToken();
   s.createApp("myapp", "empty");
   s.cd("myapp");
   s.mkdir("packages");
@@ -1965,9 +1961,7 @@ selftest.define("show package w/many versions",
 // that's covered in a different test.
 selftest.define("show readme excerpt",  function () {
   var s = new Sandbox();
-  // We rely on this package not existing on the server. It doesn't have a
-  // prefix (or a meaningful name), so it is a reasonably safe assumption.
-  var name = "my-local-package";
+  var name = "my-local-package" + utils.randomToken();
 
   // Create a package without version or summary; check that we can show its
   // information without crashing.

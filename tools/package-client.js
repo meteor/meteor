@@ -31,7 +31,7 @@ var openPackageServerConnection = function (packageServerUrl) {
 // the file itself.
 var generateBlankReadme = function () {
   var tempReadmeDir = files.mkdtemp('readme');
-  var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
+  var readmePath = files.pathJoin(tempReadmeDir, "README.md");
   files.writeFileAtomically(readmePath, '');
   return {
     excerpt: "",
@@ -469,10 +469,9 @@ exports.updatePackageMetadata = function (options) {
   }
   if (dataToUpdate["longDescription"].length > 1500) {
     buildmessage.error(
-      "Documentation snippet is too long. Meteor uses the section of",
-      "the markdown documentation file, between the first and second",
-      "headings, for the long-form package description. That section",
-      "must be less than 1500 characters long.");
+      "Longform package description is too long. Meteor uses the section of",
+      "the Markdown documentation file between the first and second",
+      "headings. That section must be less than 1500 characters long.");
     return;
   }
 
@@ -482,6 +481,7 @@ exports.updatePackageMetadata = function (options) {
     callPackageServerBM(
       conn, "changeVersionMetadata", versionIdentifier, dataToUpdate);
   });
+  if (buildmessage.jobHasMessages()) return;
 
   // Upload the new Readme.
   buildmessage.enterJob('uploading documentation', function () {
@@ -491,6 +491,7 @@ exports.updatePackageMetadata = function (options) {
     callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
   });
+  if (buildmessage.jobHasMessages()) return;
 };
 
 // Publish the package information into the server catalog. Create new records
@@ -568,9 +569,8 @@ exports.publishPackage = function (options) {
 
   // Check that our documentation exists (or we know that it doesn't) and has
   // been filled out.
-  var readmeInfo;
-  buildmessage.enterJob("processing docs", function () {
-    readmeInfo = packageSource.processReadme();
+  var readmeInfo = buildmessage.enterJob("processing docs", function () {
+    return packageSource.processReadme();
   });
   if (buildmessage.jobHasMessages())
     return;
@@ -579,15 +579,15 @@ exports.publishPackage = function (options) {
       "Your documentation file is blank, so users may have trouble figuring " +
       "out how to use your package. Please fill it out, or " +
       "set 'documentation: null' in your Package.describe");
+    return;
   }
 
   if (readmeInfo &&
       readmeInfo.excerpt.length > 1500) {
     buildmessage.error(
-      "Documentation snippet is too long. Meteor uses the section of",
-      "the markdown documentation file, between the first and second",
-      "headings, for the long-form package description. That section",
-      "must be less than 1500 characters long.");
+      "Longform package description is too long. Meteor uses the section of",
+      "the Markdown documentation file between the first and second",
+      "headings. That section must be less than 1500 characters long.");
     return;
   }
   // We don't let the user upload a blank README for UX reasons, but we would
@@ -717,6 +717,12 @@ exports.publishPackage = function (options) {
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
 
+    buildmessage.enterJob("uploading docs", function () {
+      uploadFile(uploadInfo.readmeUrl, readmeInfo.path);
+    });
+    if (buildmessage.jobHasMessages())
+      return;
+
     buildmessage.enterJob("uploading source", function () {
       uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
     });
@@ -728,13 +734,6 @@ exports.publishPackage = function (options) {
       treeHash: sourceBundleResult.treeHash,
       readmeHash: readmeInfo.hash
     };
-
-    buildmessage.enterJob("uploading docs", function () {
-      uploadFile(uploadInfo.readmeUrl, readmeInfo.path);
-    });
-    if (buildmessage.jobHasMessages())
-      return;
-
     buildmessage.enterJob("publishing package version", function () {
       callPackageServerBM(
         conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);

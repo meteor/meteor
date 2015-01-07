@@ -451,10 +451,11 @@ _.extend(PackageQuery.prototype, {
     }
 
     var readmeInfo;
-    main.captureAndExit("=> Errors while reading local packages:", function () {
-      buildmessage.enterJob("reading " + data["directory"], function () {
+    main.captureAndExit(
+      "=> Errors while reading local packages:",
+      "reading " + data["directory"],
+       function () {
         readmeInfo = packageSource.processReadme();
-      });
     });
     if (readmeInfo) {
       data["description"] = readmeInfo.excerpt;
