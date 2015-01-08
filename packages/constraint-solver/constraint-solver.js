@@ -1,4 +1,3 @@
-ConstraintSolver = {};
 
 // `catalog` has the following method:
 //
