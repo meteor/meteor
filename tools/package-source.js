@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
+var commonmark = require('commonmark');
 
 var files = require('./files.js');
 var utils = require('./utils.js');
@@ -108,72 +109,64 @@ var splitConstraint = function (c) {
 // than that (in case the user intentionally wants to leave the section blank
 // for some reason). Skips lines that start with an exclamation point.
 var getExcerptFromReadme = function (text) {
-  // Split into lines.
-  var fullText = text.split("\n");
-  if (! fullText) {
-    return "";
-  }
+  // Don't waste time parsing if the document is empty.
+  if (! text) return "";
 
-  // The lines of the excerpt that we will return to the caller.
-  var excerpt = [];
+  // Split into linesarse with Commonmark.
+  var reader = new commonmark.DocParser();
+  var parsed = reader.parse(text);
+
+  // Commonmark will parse the Markdown into an array of nodes. These are the
+  // nodes that represent the text between the first and second heading.
+  var relevantNodes = [];
 
   // We want to take the data between the first and second headers, so it is
   // important to keep track of how many headers we have passed.
   var headerNum = 0;
 
-  // We want to scan until we have an excerpt, or decide that we are not getting
-  // one. If we are only taking the first five lines of a long README file, we
-  // want to avoid scanning all of it.
-  _.any(fullText, function (currentLine) {
-    var trimmedLine = currentLine.trim();
-
-    // According to "https://help.github.com/articles/markdown-basics/", a
-    // heading is denoted by a '#' symbol, though, I think, the line at the
-    // top (===) should also count as a header for our purposes.
-    var isHeader =
-      (trimmedLine[0] === "#") ||
-      (trimmedLine[0] === "=");
-
-    // Exclamation points indicate images, which are almost never inline. We get
-    // cleaner results if we skip those lines entirely.
-    var notText = (trimmedLine[0] === "!");
-
-    // Don't excerpt anything before the first header! It is probably the
-    // title. If we haven't started excerpting already, don't excerpt the empty
-    // line (it might just be an empty line between headers, not any
-    // text). Don't excerpt things that we know are not text.
-    if (! isHeader && (headerNum > 0) && ! notText &&
-        (! _.isEmpty(excerpt) || trimmedLine !== "")) {
+  // Go through the document until we get the nodes that we are looking for,
+  // then stop.
+  _.any(parsed.children, function (child) {
+    var isHeader = (child.t === "Header");
+    // Don't excerpt anything before the first header.
+    if (! isHeader && (headerNum > 0)) {
       // If we are currently in the middle of excerpting, continue doing that
       // until we hit hit a header (and this is not a header). Otherwise, if
       // this is text, we should begin to excerpt it.
-      excerpt.push(currentLine);
-    } else if (! _.isEmpty(excerpt) && isHeader) {
-      // We have been excerpting lines, and came across a header. That means
+      relevantNodes.push(child);
+    } else if (! _.isEmpty(relevantNodes) && isHeader) {
+      // We have been excerpting, and came across a header. That means
       // that we are done.
       return true;
     } else if (isHeader) {
-      // We told users that we are going to take whatever is between the first
-      // and second header, but I think it is not always entirely clear what
-      // that means, and we get better results if we are willing to scan a
-      // section down.
+      // We are going to take the first text that we encounter under the first
+      // two headers. Beyond that, if we don't encounter anything, we won't
+      // excerpt it.
       headerNum++;
       if (headerNum > 2) {
         return true;
       }
     }
-
     return false;
   });
 
-  // Strip off the last newline, if there is one. (Markdown files usually skip a
-  // line between the paragraph and the subsequent header, but we don't want
-  // that extra newline in our excerpt).
-  if (_.last(excerpt) === "") {
-    excerpt = _.initial(excerpt);
-  }
+  // If we have not found anything, we are done.
+  if (_.isEmpty(relevantNodes)) return "";
 
-  return excerpt.join("\n");
+  // For now, we will do the simple thing of just taking the raw markdown from
+  // the start of the excerpt to the end.
+  var textLines = text.split("\n");
+  var start = relevantNodes[0].start_line - 1;
+  var stop = _.last(relevantNodes).end_line;
+  // XXX: There is a bug in commonmark that happens when processing the last
+  // node in the document.
+  if (stop === _.last(parsed.children).end_line) {
+    stop++;
+  }
+  var excerpt = textLines.slice(start, stop).join("\n");
+
+  // Strip the preceeding and trailing new lines.
+  return excerpt.replace(/^\n+|\n+$/g, "");
 };
 
 ///////////////////////////////////////////////////////////////////////////////

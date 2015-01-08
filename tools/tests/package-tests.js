@@ -2060,27 +2060,12 @@ selftest.define("show readme excerpt",  function () {
   // Some formatting in the text.
   var excerpt =
         "Here is a code sample:" + "\n\n" +
-        "```foobar\nand foobar```";
+        "```foobar and foobar```";
   readme =
     "Heading" + "\n" +
     "========" + "\n" + "\n" +
     excerpt + "\n\n" +
     "# Subheading" + "\n" + "\n" +
-    "## Another subheading" + "\n" + "\n" +
-    "You should not see this line!";
-  s.write("README.md", readme);
-  testShowPackage(
-    s, name, _.extend({ description: excerpt }, basePackageInfo));
-  testShowPackageVersion(
-    s, _.extend({ description: excerpt }, baseVersionInfo));
-
-  // Some formatting in the text that we are going to skip.
-  readme =
-    "Heading" + "\n" +
-    "========" + "\n" + "\n" +
-    "# Subheading" + "\n" + "\n" +
-    "![skip this image!] \n" +
-    excerpt + "\n\n" +
     "## Another subheading" + "\n" + "\n" +
     "You should not see this line!";
   s.write("README.md", readme);
@@ -2194,7 +2179,7 @@ selftest.define("show server readme",
     staging = staging.replace(/~summary~/g, summary);
     var current = staging.replace(/~version~/g, "1.0.0");
     s.write("package.js", current.replace(/~documentation~/g, "'MINE.md'"));
-    s.write("MINE.md", "Foobar\n====\nNew test!\n#Something\n");
+    s.write("MINE.md", "Foobar\n====\nNew test!\n\n# Something\n");
     publish();
   });
   testShowPackageVersion(s, {
@@ -2263,7 +2248,7 @@ selftest.define("show server readme",
     var longReadme = Array(75).join(" please do not read me! ");
     s.write("long", "Heading\n===\n" + longReadme);
     run = s.run("publish");
-    run.matchErr("Documentation snippet is too long");
+    run.matchErr("Longform package description is too long");
     run.expectExit(1);
   });
 
@@ -2528,7 +2513,7 @@ selftest.define("update package metadata",
     s.write("longReadme.md", "Heading\n===\n" + longDesc);
 
     var run = s.run("publish", "--update");
-    run.matchErr("Documentation snippet is too long.");
+    run.matchErr("Longform package description is too long.");
     run.expectExit(1);
   });
 
