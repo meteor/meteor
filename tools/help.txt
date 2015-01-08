@@ -602,13 +602,16 @@ from the directory containing the package. Reads the package.js file for version
 information, builds the package and sends both the package source and the built
 version of the package to the package server.
 
-This will only create one build of the package. If your package has multiple
-builds for different OS architectures, it will ask you to use the Meteor build
-farm to create a build per each supported architecture. To publish a different
-build for the same version, run publish-for-arch.
+This will create at most one build of the package. If the package has an
+OS-dependent binary component, publishing will only register metadata about the
+package. To actually publish the package builds, use `admin get-machine`
+and `publish-for-arch`. Packages with no published builds cannot be added
+to applications.
 
-This will mark you as the only maintainer of the package. If you need to change
-package maintainers or add a homepage, take a look at the admin commands.
+This will mark you as the only maintainer of the package. You can use
+'admin maintainers' to change package maintainers. Use 'admin change-homepage'
+to change the package homepage. You can run 'help admin' to learn more about
+admin commands.
 
 Change the metadata for a given version of a package by running with the
 --update flag. That will set the git url, version summary, longform description

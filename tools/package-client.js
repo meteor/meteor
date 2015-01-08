@@ -300,6 +300,7 @@ var bundleSource = function (isopack, includeSources, packageDir,
 };
 
 var uploadFile = function (putUrl, tarball) {
+  buildmessage.assertInJob();
   var size = files.stat(tarball).size;
   var rs = files.createReadStream(tarball);
   try {
@@ -315,6 +316,8 @@ var uploadFile = function (putUrl, tarball) {
       bodyStream: rs,
       bodyStreamLength: size
     });
+  } catch (err) {
+    buildmessage.error(err);
   } finally {
     rs.close();
   }
@@ -487,6 +490,7 @@ exports.updatePackageMetadata = function (options) {
   buildmessage.enterJob('uploading documentation', function () {
     var uploadInfo =
           callPackageServerBM(conn, "createReadme", versionIdentifier);
+    if (! uploadInfo) return;
     uploadFile(uploadInfo.url, readmeInfo.path);
     callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
@@ -569,8 +573,10 @@ exports.publishPackage = function (options) {
 
   // Check that our documentation exists (or we know that it doesn't) and has
   // been filled out.
-  var readmeInfo = buildmessage.enterJob("processing docs", function () {
-    return packageSource.processReadme();
+  var readmeInfo = buildmessage.enterJob(
+    "processing documentation",
+    function () {
+      return packageSource.processReadme();
   });
   if (buildmessage.jobHasMessages())
     return;
@@ -717,7 +723,7 @@ exports.publishPackage = function (options) {
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
 
-    buildmessage.enterJob("uploading docs", function () {
+    buildmessage.enterJob("uploading documentation", function () {
       uploadFile(uploadInfo.readmeUrl, readmeInfo.path);
     });
     if (buildmessage.jobHasMessages())
