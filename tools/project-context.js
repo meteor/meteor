@@ -920,31 +920,21 @@ _.extend(exports.PackageMapFile.prototype, {
       line = files.trimSpace(line);
       if (line === '')
         return;
-      var constraint = utils.parseConstraint(line, {
+      var packageVersion = utils.parsePackageAtVersion(line, {
         useBuildmessage: true,
         buildmessageFile: self.filename
       });
-      if (!constraint)
+      if (!packageVersion)
         return;  // recover by ignoring
 
       // If a package appears multiple times in .meteor/versions, we just ignore
       // the second one. This file is more meteor-controlled than
       // .meteor/packages and people shouldn't be surprised to see it
       // automatically fixed.
-      if (_.has(self._versions, constraint.name))
+      if (_.has(self._versions, packageVersion.name))
         return;
 
-      // We expect this constraint to be "foo@1.2.3", not a lack of a constraint
-      // or something with "||" or "@=".
-      if (! utils.isSimpleConstraint(constraint)) {
-        buildmessage.error("Bad version: " + line, {
-          // XXX should this be relative?
-          file: self.filename
-        });
-        return;  // recover by ignoring
-      }
-
-      self._versions[constraint.name] = constraint.constraints[0].version;
+      self._versions[packageVersion.name] = packageVersion.version;
     });
   },
 

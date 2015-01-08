@@ -2325,12 +2325,12 @@ main.registerCommand({
     return 1;
   }
 
-  var toolConstraint = releaseRecord.tool &&
-        utils.parseConstraint(releaseRecord.tool);
-  if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
+  var toolPackageVersion = releaseRecord.tool &&
+        utils.parsePackageAtVersion(releaseRecord.tool);
+  if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseRecord.tool);
-  var toolPackage = toolConstraint.name;
-  var toolVersion = toolConstraint.constraints[0].version;
+  var toolPackage = toolPackageVersion.name;
+  var toolVersion = toolPackageVersion.version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
     toolPackage, toolVersion);

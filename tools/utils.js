@@ -218,12 +218,33 @@ exports.validatePackageName = function (name, options) {
   }
 };
 
-// Returns true if the parsed constraint was just a@b with no `=` or `||`.
-exports.isSimpleConstraint = function (parsedConstraint) {
-  return parsedConstraint.constraints.length === 1 &&
-    parsedConstraint.constraints[0].type === "compatible-with";
+// Parse a string of the form package@version into an object of the form
+// {name, version}.
+exports.parsePackageAtVersion = function (packageAtVersionString, options) {
+  // A string that has to look like "package@version" isn't really a
+  // constraint, it's just a string of the form (package + "@" + version).
+  // However, using parseConstraint in the implementation is too convenient
+  // not to pass up (especially in terms of error-handling quality).
+  var parsedConstraint = exports.parseConstraint(packageAtVersionString,
+                                                 options);
+  if (! parsedConstraint) {
+    // It must be that options.useBuildmessage and an error has been
+    // registered.  Otherwise, parseConstraint would succeed or throw.
+    return null;
+  }
+  if (! (parsedConstraint.constraints.length === 1 &&
+         parsedConstraint.constraints[0].type === 'compatible-with')) {
+    if (options && options.useBuildmessage) {
+      buildmessage.error("Malformed package@version: " + packageAtVersionString,
+                         { file: options.buildmessageFile });
+      return null;
+    } else {
+      throw new Error("Malformed package@version: " + packageAtVersionString);
+    }
+  }
+  return { name: parsedConstraint.name,
+           version: parsedConstraint.constraints[0].version };
 };
-
 
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
