@@ -224,7 +224,7 @@ exports.parsePackageAtVersion = function (packageAtVersionString, options) {
   // A string that has to look like "package@version" isn't really a
   // constraint, it's just a string of the form (package + "@" + version).
   // However, using parseConstraint in the implementation is too convenient
-  // not to pass up (especially in terms of error-handling quality).
+  // to pass up (especially in terms of error-handling quality).
   var parsedConstraint = exports.parseConstraint(packageAtVersionString,
                                                  options);
   if (! parsedConstraint) {
