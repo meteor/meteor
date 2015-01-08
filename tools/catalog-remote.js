@@ -853,6 +853,9 @@ _.extend(RemoteCatalog.prototype, {
   getDefaultReleaseVersionRecord: function (track) {
     var self = this;
 
+    // XXX HACK for windows, because we don't have a real recommended release
+    return {track: "WINDOWS-PREVIEW", version: "0.0.21"};
+
     if (!track)
       track = exports.DEFAULT_TRACK;
 
