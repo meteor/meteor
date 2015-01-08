@@ -30,14 +30,19 @@ var openPackageServerConnection = function (packageServerUrl) {
 // This function generates a Readme object for a blank readme file, as well as
 // the file itself.
 var generateBlankReadme = function () {
-  var tempReadmeDir = files.mkdtemp('readme');
-  var readmePath = files.pathJoin(tempReadmeDir, "README.md");
-  files.writeFileAtomically(readmePath, '');
   return {
+    contents: "",
     excerpt: "",
-    hash: files.blankHash,
-    path: readmePath
+    hash: files.blankHash
   };
+};
+
+// Save a readme file to a temporary path.
+var saveReadmeToTmp = function (readmeInfo) {
+  var tempReadmeDir = files.mkdtemp('readme');
+  var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
+  files.writeFileAtomically(readmePath, readmeInfo.contents);
+  return readmePath;
 };
 
 // Given a connection, makes a call to the package server.  (Checks to see if
@@ -480,10 +485,11 @@ exports.updatePackageMetadata = function (options) {
 
   // Upload the new Readme.
   buildmessage.enterJob('uploading documentation', function () {
+    var readmePath = saveReadmeToTmp(readmeInfo);
     var uploadInfo =
           callPackageServerBM(conn, "createReadme", versionIdentifier);
     if (! uploadInfo) return;
-    if (uploadFile(uploadInfo.url, readmeInfo.path) < 0) return;
+    if (uploadFile(uploadInfo.url, readmePath) < 0) return;
     callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
   });
@@ -597,6 +603,7 @@ exports.publishPackage = function (options) {
   if (! readmeInfo) {
     readmeInfo = generateBlankReadme();
   }
+  var readmePath = saveReadmeToTmp(readmeInfo);
 
   // Check that the package does not have any unconstrained references.
   var packageDeps = packageSource.getDependencyMetadata();
@@ -718,7 +725,7 @@ exports.publishPackage = function (options) {
     // publish a new build.
 
     buildmessage.enterJob("uploading documentation", function () {
-      uploadFile(uploadInfo.readmeUrl, readmeInfo.path);
+      uploadFile(uploadInfo.readmeUrl, readmePath);
     });
     if (buildmessage.jobHasMessages())
       return;

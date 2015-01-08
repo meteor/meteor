@@ -157,7 +157,6 @@ selftest.define("change packages during hot code push", [], function () {
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run();
   run.waitSecs(5);
   run.match("myapp");
@@ -264,7 +263,6 @@ selftest.define("add packages to app", [], function () {
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   // This has legit version syntax, but accounts-base started with 1.0.0 and is
@@ -375,8 +373,7 @@ selftest.define("add packages client archs", function (options) {
     // Starting a run
     s.createApp("myapp", "package-tests");
     s.cd("myapp");
-    s.set("METEOR_TEST_TMP", files.mkdtemp());
-    s.set("METEOR_OFFLINE_CATALOG", "t");
+      s.set("METEOR_OFFLINE_CATALOG", "t");
 
     var outerRun = s.run("add", "say-something-client-targets");
     outerRun.match(/say-something-client-targets.*added,/);
@@ -440,7 +437,6 @@ selftest.define("sync local catalog", ["slow", "net", "test-package-server"],  f
   var s = new Sandbox();
   var run;
 
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName + "-a";
@@ -544,7 +540,6 @@ selftest.define("release track defaults to METEOR",
                 ["net", "test-package-server", "checkout"], function () {
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
@@ -668,7 +663,6 @@ selftest.define("package specifying a name",
   // Starting a run; introducing a new package overriding a core package.
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run("add", "accounts-base");
   run.waitSecs(40);
   run.match("accounts-base");
@@ -1181,7 +1175,6 @@ selftest.define("show and search local overrides server",
   var today = longformToday();
   var run;
 
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
@@ -1257,7 +1250,6 @@ selftest.define("show server package",
   var today = longformToday();
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
@@ -1464,7 +1456,6 @@ selftest.define("show server package",
 selftest.define("show rc-only package",
   ['net', 'test-package-server', 'slow'], function () {
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
@@ -1626,7 +1617,6 @@ selftest.define("show release",
   ['net', 'test-package-server', 'slow'], function () {
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
 
   // Technically, this could make our test a little flaky if run at exactly
@@ -1787,7 +1777,6 @@ selftest.define("show release w/o recommended versions",
   ['net', 'test-package-server', 'slow'], function () {
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
 
   // Technically, this could make our test a little flaky if run at exactly
@@ -1864,7 +1853,6 @@ selftest.define("show package w/many versions",
   ['net', 'test-package-server', 'slow'], function () {
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
 
   // Technically, this could make our test a little flaky if run at exactly
@@ -2125,7 +2113,6 @@ selftest.define("show server readme",
   ['net', 'test-package-server', 'slow'], function () {
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
 
   // Technically, this could make our test a little flaky if run at exactly
@@ -2289,7 +2276,6 @@ selftest.define("update package metadata",
   ['net', 'test-package-server', 'slow'], function () {
 
   var s = new Sandbox();
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
 
   // Technically, this could make our test a little flaky if run at exactly

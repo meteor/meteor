@@ -272,7 +272,7 @@ main.registerCommand({
   if (options.update && options["existing-version"]) {
     Console.error(
       "The --update option implies that the version already exists.",
-      "You do not need to use the --exising-version flag with --update.");
+      "You do not need to use the --existing-version flag with --update.");
     return 1;
   }
 

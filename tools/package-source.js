@@ -1813,6 +1813,7 @@ _.extend(PackageSource.prototype, {
       return null;
     }
 
+    // To ensure atomicity, we want to copy the README to a temporary file.
     var ret = {};
     ret.path =
       files.pathJoin(self.sourceRoot, self.metadata.documentation);
@@ -1846,9 +1847,12 @@ _.extend(PackageSource.prototype, {
       return null;
     }
 
-    ret.hash = files.fileHash(ret.path);
-    ret.excerpt = getExcerptFromReadme(fullReadme.toString());
-    return ret;
+    var text = fullReadme.toString();
+    return {
+      contents: text,
+      hash: utils.sha256(text),
+      excerpt: getExcerptFromReadme(text)
+    };
   },
 
   // If dependencies aren't consistent across unibuilds, return false and

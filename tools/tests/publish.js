@@ -459,7 +459,6 @@ selftest.define("package-depends-on-either-version",
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
 
   run = s.run("add", fullPackageNameDep + "@=1.0.0");
   run.match(fullPackageNameDep);
