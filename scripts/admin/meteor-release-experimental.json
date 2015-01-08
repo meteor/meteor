@@ -1,7 +1,7 @@
 {
  "track": "METEOR",
- "version": "1.0.2.1-rc.2",
+ "version": "1.0.2.1-compression.0",
  "recommended": false,
  "official": false,
- "description": "An RC of Meteor 1.0."
+ "description": "1.0.2.1 plus permessage-deflate"
 }
