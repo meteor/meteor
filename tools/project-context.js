@@ -613,8 +613,8 @@ _.extend(exports.ProjectContext.prototype, {
     // Pre-release versions that are root constraints (in .meteor/packages, in
     // the release, or the version of a local package) are anticipated.
     _.each(rootConstraints, function (constraintObject) {
-      _.each(constraintObject.constraints, function (alternative) {
-        var version = alternative.version;
+      _.each(constraintObject.vConstraint.alternatives, function (alternative) {
+        var version = alternative.versionString;
         version && add(constraintObject.name, version);
       });
     });

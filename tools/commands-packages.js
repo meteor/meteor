@@ -1987,24 +1987,24 @@ main.registerCommand({
           return;
         }
 
-        _.each(constraint.constraints, function (subConstraint) {
-          if (subConstraint.version === null)
+        _.each(constraint.vConstraint.alternatives, function (subConstraint) {
+          if (subConstraint.versionString === null)
             return;
           // Figure out if this version exists either in the official catalog or
           // the local catalog. (This isn't the same as using the combined
           // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
           // package is 1.1.0 as long as 1.0.0 exists.)
           var versionRecord = projectContext.localCatalog.getVersion(
-            constraint.name, subConstraint.version);
+            constraint.name, subConstraint.versionString);
           if (! versionRecord) {
             // XXX #2846 here's an example of something that might require a
             // refresh
             versionRecord = catalog.official.getVersion(
-              constraint.name, subConstraint.version);
+              constraint.name, subConstraint.versionString);
           }
           if (! versionRecord) {
             buildmessage.error("no such version " + constraint.name + "@" +
-                               subConstraint.version);
+                               subConstraint.versionString);
           }
         });
         if (buildmessage.jobHasMessages())

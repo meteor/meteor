@@ -98,20 +98,26 @@ Tinytest.add("package-version-parser - constraints - parseConstraint", function 
 
   test.equal(PackageVersion.parseConstraint("foo@1.2.3"),
              { name: "foo", constraintString: "1.2.3",
-               constraints: [{type: "compatible-with",
-                              version: "1.2.3"}] });
+               vConstraint: {
+                 raw: "1.2.3",
+                 alternatives: [{type: "compatible-with",
+                                 versionString: "1.2.3"}] } });
 
   test.equal(PackageVersion.parseConstraint("foo"),
              { name: "foo", constraintString: "",
-               constraints: [{type: "any-reasonable",
-                              version: null}] });
+               vConstraint: {
+                 raw: "",
+                 alternatives: [{type: "any-reasonable",
+                                 versionString: null}] } });
 
   test.equal(PackageVersion.parseConstraint("foo@1.0.0 || =2.0.0"),
              { name: "foo", constraintString: "1.0.0 || =2.0.0",
-               constraints: [{type: "compatible-with",
-                              version: "1.0.0"},
-                             {type: "exactly",
-                              version: "2.0.0"}] });
+               vConstraint: {
+                 raw: "1.0.0 || =2.0.0",
+                 alternatives: [{type: "compatible-with",
+                                 versionString: "1.0.0"},
+                                {type: "exactly",
+                                 versionString: "2.0.0"}] } });
 
   test.equal(new PackageVersion.PackageConstraint("foo@1.0.0 || =2.0.0"),
              PackageVersion.parseConstraint("foo@1.0.0 || =2.0.0"));
@@ -156,9 +162,20 @@ Tinytest.add("package-version-parser - constraints - parseConstraint", function 
 
 var t = function (pConstraintString, expected, descr) {
   var constraintString = pConstraintString.replace(/^.*?(@|$)/, '');
+  var versionConstraint = {
+    raw: constraintString,
+    alternatives: expected.alternatives
+  };
   currentTest.equal(
     PackageVersion.parseConstraint(pConstraintString),
-    _.extend({ constraintString: constraintString }, expected),
+    {
+      name: expected.name,
+      constraintString: constraintString,
+      vConstraint: {
+        raw: constraintString,
+        alternatives: expected.alternatives
+      }
+    },
     descr);
 };
 
@@ -171,22 +188,22 @@ var FAIL = function (versionString) {
 Tinytest.add("package-version-parser - constraints - any-reasonable", function (test) {
   currentTest = test;
 
-  t("foo", { name: "foo", constraints: [{
-        version: null, type: "any-reasonable" } ]});
-  t("foo-1234", { name: "foo-1234", constraints: [{
-        version: null, type: "any-reasonable" } ]});
+  t("foo", { name: "foo", alternatives: [{
+        versionString: null, type: "any-reasonable" } ]});
+  t("foo-1234", { name: "foo-1234", alternatives: [{
+        versionString: null, type: "any-reasonable" } ]});
   FAIL("bad_name");
 });
 
 Tinytest.add("package-version-parser - constraints - compatible version, compatible-with", function (test) {
   currentTest = test;
 
-  t("foo@1.2.3", { name: "foo", constraints: [{
-        version: "1.2.3", type: "compatible-with" } ]});
-  t("foo-1233@1.2.3", { name: "foo-1233", constraints: [{
-        version: "1.2.3", type: "compatible-with" } ]});
-  t("foo-bar@3.2.1", { name: "foo-bar", constraints: [{
-        version: "3.2.1", type: "compatible-with" } ]});
+  t("foo@1.2.3", { name: "foo", alternatives: [{
+        versionString: "1.2.3", type: "compatible-with" } ]});
+  t("foo-1233@1.2.3", { name: "foo-1233", alternatives: [{
+        versionString: "1.2.3", type: "compatible-with" } ]});
+  t("foo-bar@3.2.1", { name: "foo-bar", alternatives: [{
+        versionString: "3.2.1", type: "compatible-with" } ]});
   FAIL("42@0.2.0");
   FAIL("foo@1.2.3.4");
   FAIL("foo@1.4");
@@ -203,27 +220,27 @@ Tinytest.add("package-version-parser - constraints - compatible version, compati
   FAIL("foo-1233@1.2.3_");
   FAIL("foo-1233@1.2.3_0123");
 
-  t("foo@1.2.3_1", { name: "foo", constraints: [{
-       version: "1.2.3_1", type: "compatible-with" } ]});
-  t("foo-bar@3.2.1-rc0_123", { name: "foo-bar", constraints: [{
-       version: "3.2.1-rc0_123", type: "compatible-with" } ]});
-  t("foo-1233@1.2.3_5+1234", { name: "foo-1233", constraints: [{
-       version: "1.2.3_5+1234", type: "compatible-with" } ]});
-  t("foo", { name: "foo", constraints: [{
-       version: null, type: "any-reasonable" } ]});
+  t("foo@1.2.3_1", { name: "foo", alternatives: [{
+       versionString: "1.2.3_1", type: "compatible-with" } ]});
+  t("foo-bar@3.2.1-rc0_123", { name: "foo-bar", alternatives: [{
+       versionString: "3.2.1-rc0_123", type: "compatible-with" } ]});
+  t("foo-1233@1.2.3_5+1234", { name: "foo-1233", alternatives: [{
+       versionString: "1.2.3_5+1234", type: "compatible-with" } ]});
+  t("foo", { name: "foo", alternatives: [{
+       versionString: null, type: "any-reasonable" } ]});
 });
 
 Tinytest.add("package-version-parser - constraints - compatible version, exactly", function (test) {
   currentTest = test;
 
-  t("foo@=1.2.3", { name: "foo", constraints: [
-         { version: "1.2.3", type: "exactly" } ]});
-  t("foo-bar@=3.2.1", { name: "foo-bar", constraints: [{
-      version: "3.2.1", type: "exactly" } ]});
-  t("foo@=1.2.3_1", { name: "foo", constraints: [{
-       version: "1.2.3_1", type: "exactly" } ]});
-  t("foo-bar@=3.2.1_34", { name: "foo-bar", constraints: [{
-       version: "3.2.1_34", type: "exactly" } ]});
+  t("foo@=1.2.3", { name: "foo", alternatives: [
+         { versionString: "1.2.3", type: "exactly" } ]});
+  t("foo-bar@=3.2.1", { name: "foo-bar", alternatives: [{
+      versionString: "3.2.1", type: "exactly" } ]});
+  t("foo@=1.2.3_1", { name: "foo", alternatives: [{
+       versionString: "1.2.3_1", type: "exactly" } ]});
+  t("foo-bar@=3.2.1_34", { name: "foo-bar", alternatives: [{
+       versionString: "3.2.1_34", type: "exactly" } ]});
 
   FAIL("42@=0.2.0");
   FAIL("foo@=1.2.3.4");
@@ -255,33 +272,33 @@ Tinytest.add("package-version-parser - constraints - or", function (test) {
   currentTest = test;
 
   t("foo@1.0.0 || 2.0.0 || 3.0.0 || =4.0.0-rc1",
-    { name: "foo", constraints:
-      [{ version: "1.0.0", type: "compatible-with"},
-       { version: "2.0.0", type: "compatible-with"},
-       { version: "3.0.0", type: "compatible-with"},
-       { version: "4.0.0-rc1", type: "exactly"}]
+    { name: "foo", alternatives:
+      [{ versionString: "1.0.0", type: "compatible-with"},
+       { versionString: "2.0.0", type: "compatible-with"},
+       { versionString: "3.0.0", type: "compatible-with"},
+       { versionString: "4.0.0-rc1", type: "exactly"}]
    });
   t("foo@1.0.0|| 2.0.0||3.0.0    ||     =4.0.0-rc1",
-    { name: "foo", constraints:
-      [{ version: "1.0.0", type: "compatible-with"},
-       { version: "2.0.0", type: "compatible-with"},
-       { version: "3.0.0", type: "compatible-with"},
-       { version: "4.0.0-rc1", type: "exactly"}]
+    { name: "foo", alternatives:
+      [{ versionString: "1.0.0", type: "compatible-with"},
+       { versionString: "2.0.0", type: "compatible-with"},
+       { versionString: "3.0.0", type: "compatible-with"},
+       { versionString: "4.0.0-rc1", type: "exactly"}]
    });
   t("foo-bar@=3.2.1 || 1.0.0",
-    { name: "foo-bar", constraints:
-      [{ version: "3.2.1", type: "exactly"},
-       { version: "1.0.0", type: "compatible-with"}]
+    { name: "foo-bar", alternatives:
+      [{ versionString: "3.2.1", type: "exactly"},
+       { versionString: "1.0.0", type: "compatible-with"}]
    });
   t("foo@=1.2.3_1 || 1.2.4",
-    { name: "foo", constraints:
-      [{ version: "1.2.3_1", type: "exactly"},
-       { version: "1.2.4", type: "compatible-with"}]
+    { name: "foo", alternatives:
+      [{ versionString: "1.2.3_1", type: "exactly"},
+       { versionString: "1.2.4", type: "compatible-with"}]
    });
   t("foo-bar@=3.2.1_34 || =3.2.1-rc1",
-    { name: "foo-bar", constraints:
-      [{ version: "3.2.1_34", type: "exactly"},
-       { version: "3.2.1-rc1", type: "exactly"}]
+    { name: "foo-bar", alternatives:
+      [{ versionString: "3.2.1_34", type: "exactly"},
+       { versionString: "3.2.1-rc1", type: "exactly"}]
     });
 
   FAIL("foo@1.0.0 1.0.0");

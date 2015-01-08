@@ -97,6 +97,33 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
   });
 };
 
+// PackageConstraints and VersionConstraints passed in from the tool
+// to us (where we are a uniloaded package) will have constructors
+// that we don't recognize because they come from a different copy of
+// package-version-parser!  In addition, objects with constructors
+// can't be checked by "check" in the same way as plain objects, so we
+// have to resort to examining the fields explicitly.
+var VersionConstraintType = Match.OneOf(
+  PackageVersion.VersionConstraint,
+  Match.Where(function (vc) {
+    check(vc.raw, String);
+    check(vc.alternatives, [{
+      versionString: Match.OneOf(String, null),
+      type: String
+    }]);
+    return true;
+  }));
+
+var PackageConstraintType = Match.OneOf(
+  PackageVersion.PackageConstraint,
+  Match.Where(function (c) {
+    check(c.name, String);
+    check(c.constraintString,
+          Match.OneOf(String, undefined));
+    check(c.vConstraint, VersionConstraintType);
+    return true;
+  }));
+
 // dependencies - an array of string names of packages (not slices)
 // constraints - an array of objects:
 //  (almost, but not quite, what PackageVersion.parseConstraint returns)
@@ -124,21 +151,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   check(dependencies, [String]);
 
-  check(constraints, [Match.OneOf(
-    PackageVersion.PackageConstraint,
-    // PackageConstraints passed in from the tool to us (where we are
-    // a uniloaded package) will have a different constructor, also called
-    // PackageConstraint, that we have no access to.  They aren't plain
-    // objects, though, so we are forced to inspect their fields.
-    Match.Where(function (c) {
-      check(c.name, String);
-      check(c.constraintString,
-            Match.OneOf(String, undefined));
-      check(c.constraints, [{
-        version: Match.OneOf(String, null),
-        type: String }]);
-      return true;
-    }))]);
+  check(constraints, [PackageConstraintType]);
 
   check(options, {
     _testing: Match.Optional(Boolean),

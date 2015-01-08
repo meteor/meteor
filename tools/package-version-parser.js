@@ -244,7 +244,7 @@ var parseSimpleConstraint = function (constraintString) {
   // This will throw if the version string is invalid.
   PV.getValidServerVersion(versionString);
 
-  return { type: type, version: versionString };
+  return { type: type, versionString: versionString };
 };
 
 
@@ -255,6 +255,34 @@ var parseSimpleConstraint = function (constraintString) {
 // entered string was invalid.
 PV.getValidServerVersion = function (meteorVersionString) {
   return PV.parse(meteorVersionString).version;
+};
+
+PV.VersionConstraint = function (vConstraintString) {
+  var alternatives;
+  // If there is no version string ("" or null), then our only
+  // constraint is any-reasonable.
+  if (! vConstraintString) {
+    // .versionString === null is relied on in the tool
+    alternatives =
+      [ { type: "any-reasonable", versionString: null } ];
+  } else {
+    // Parse out the versionString.
+    var parts = vConstraintString.split(/ *\|\| */);
+    alternatives = __.map(parts, function (alt) {
+      if (! alt) {
+        throwVersionParserError("Invalid constraint string: " +
+                                vConstraintString);
+      }
+      return parseSimpleConstraint(alt);
+    });
+  }
+
+  this.raw = vConstraintString;
+  this.alternatives = alternatives;
+};
+
+PV.parseVersionConstraint = function (constraintString) {
+  return new PV.VersionConstraint(constraintString);
 };
 
 // A PackageConstraint consists of a package name and a version constraint.
@@ -289,28 +317,9 @@ PV.PackageConstraint = function (part1, part2) {
 
   PV.validatePackageName(name);
 
-  var constraints;
-
-  // If we did not specify a version string, then our only constraint is
-  // any-reasonable.
-  if (! vConstraintString) {
-    constraints =
-      [ { version: null, type: "any-reasonable" } ];
-  } else {
-    // Parse out the versionString.
-    var alternatives = vConstraintString.split(/ *\|\| */);
-    constraints = __.map(alternatives, function (alt) {
-      if (! alt) {
-        throwVersionParserError("Invalid constraint string: " +
-                                vConstraintString);
-      }
-      return parseSimpleConstraint(alt);
-    });
-  }
-
   this.name = name;
   this.constraintString = vConstraintString;
-  this.constraints = constraints;
+  this.vConstraint = PV.parseVersionConstraint(vConstraintString);
 };
 
 PV.parseConstraint = function (part1, part2) {

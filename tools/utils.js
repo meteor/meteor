@@ -232,8 +232,9 @@ exports.parsePackageAtVersion = function (packageAtVersionString, options) {
     // registered.  Otherwise, parseConstraint would succeed or throw.
     return null;
   }
-  if (! (parsedConstraint.constraints.length === 1 &&
-         parsedConstraint.constraints[0].type === 'compatible-with')) {
+  var alternatives = parsedConstraint.vConstraint.alternatives;
+  if (! (alternatives.length === 1 &&
+         alternatives[0].type === 'compatible-with')) {
     if (options && options.useBuildmessage) {
       buildmessage.error("Malformed package@version: " + packageAtVersionString,
                          { file: options.buildmessageFile });
@@ -243,7 +244,7 @@ exports.parsePackageAtVersion = function (packageAtVersionString, options) {
     }
   }
   return { name: parsedConstraint.name,
-           version: parsedConstraint.constraints[0].version };
+           version: alternatives[0].versionString };
 };
 
 // Check for invalid package names. Currently package names can only contain
