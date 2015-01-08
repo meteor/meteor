@@ -204,10 +204,9 @@ var updatePackageMetadata = function (packageSource, conn) {
     // You are still not allowed to upload a blank README.md.
     if (readmeInfo && readmeInfo.hash === files.blankHash) {
       Console.error(
-        "Please fill it out your documentation file! If you don't want to",
-        "update new documentation, you can remove it out from the package",
-        "description, or set 'documentation: null' in your Package.describe",
-        "to remove it entirely");
+        "Your documentation file is blank, so users may have trouble",
+        "figuring out how to use your package. Please fill it out, or",
+        "set 'documentation: null' in your Package.describe.");
       return 1;
     };
 

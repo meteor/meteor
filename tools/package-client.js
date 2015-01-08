@@ -299,10 +299,13 @@ var bundleSource = function (isopack, includeSources, packageDir,
   };
 };
 
-var uploadFile = function (putUrl, tarball) {
+// Uploads a file at a filepath to the HTTP put URL.
+//
+// Returns 0 on success and less than 0 on failure.
+var uploadFile = function (putUrl, filepath) {
   buildmessage.assertInJob();
-  var size = files.stat(tarball).size;
-  var rs = files.createReadStream(tarball);
+  var size = files.stat(filepath).size;
+  var rs = files.createReadStream(filepath);
   try {
     // Use getUrl instead of request, to throw on 4xx/5xx.
     httpHelpers.getUrl({
@@ -318,9 +321,11 @@ var uploadFile = function (putUrl, tarball) {
     });
   } catch (err) {
     buildmessage.error(err);
+    return -1;
   } finally {
     rs.close();
   }
+  return 0;
 };
 
 exports.uploadFile = uploadFile;
@@ -444,24 +449,11 @@ exports.updatePackageMetadata = function (options) {
     readmeInfo = generateBlankReadme();
   }
 
-  // This function is the only way to change README contents after
-  // publication. Since we are automatically migrating a lot of READMEs, we want
-  // to make it easy for people to change them. As such, we are unusually lax
-  // about missing information or making sure that the source matches the
-  // server.
-  // XXX: Tighten these restrictions in later versions.
-  var git = packageSource.metadata.git;
-  var summary = packageSource.metadata.summary;
-  var dataToUpdate = { };
-  if (git !== null) {
-    dataToUpdate["git"] = git;
-  }
-  dataToUpdate["longDescription"] = readmeInfo.excerpt;
-  // Since you can't set your summary to an empty string, we don't need to be as
-  // explicit about the possibility of an empty summary.
-  if (summary) {
-    dataToUpdate["description"] = summary;
-  }
+  var dataToUpdate = {
+    git: packageSource.metadata.git,
+    summary: packageSource.metadata.summary,
+    longDescription: readmeInfo.excerpt
+  };
 
   // Check that the metadata fits under the established limits, and give helpful
   // feedback.
@@ -491,11 +483,13 @@ exports.updatePackageMetadata = function (options) {
     var uploadInfo =
           callPackageServerBM(conn, "createReadme", versionIdentifier);
     if (! uploadInfo) return;
-    uploadFile(uploadInfo.url, readmeInfo.path);
+    if (uploadFile(uploadInfo.url, readmeInfo.path) < 0) return;
     callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
   });
   if (buildmessage.jobHasMessages()) return;
+
+
 };
 
 // Publish the package information into the server catalog. Create new records
