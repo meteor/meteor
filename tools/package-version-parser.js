@@ -265,6 +265,7 @@ PV.VersionConstraint = function (vConstraintString) {
     // .versionString === null is relied on in the tool
     alternatives =
       [ { type: "any-reasonable", versionString: null } ];
+    vConstraintString = "";
   } else {
     // Parse out the versionString.
     var parts = vConstraintString.split(/ *\|\| */);
@@ -286,18 +287,25 @@ PV.parseVersionConstraint = function (constraintString) {
 };
 
 // A PackageConstraint consists of a package name and a version constraint.
-// Call either with args (name, vConstraintString) or (pConstraintString).
-// That is, ("foo", "1.2.3") or ("foo@1.2.3").
+// Call either with args (name, vConstraintString) or (pConstraintString),
+// or (name, vConstraint).
+// That is, ("foo", "1.2.3") or ("foo@1.2.3"), or ("foo", vc) where vc
+// is instanceof PV.VersionConstraint.
 PV.PackageConstraint = function (part1, part2) {
   if ((typeof part1 !== "string") ||
-      (part2 && (typeof part2 !== "string"))) {
-    throw new TypeError("constraintString must be a string");
+      (part2 && (typeof part2 !== "string") &&
+       ! (part2 instanceof PV.VersionConstraint))) {
+    throw new Error("constraintString must be a string");
   }
 
-  var name, vConstraintString;
+  var name, vConstraint, vConstraintString;
   if (part2) {
     name = part1;
-    vConstraintString = part2;
+    if (part2 instanceof PV.VersionConstraint) {
+      vConstraint = part2;
+    } else {
+      vConstraintString = part2;
+    }
   } else if (part1.indexOf("@") >= 0) {
     // Shave off last part after @, with "a@b@c" becoming ["a@b", "c"].
     // Validating the package name will catch extra @.
@@ -316,10 +324,15 @@ PV.PackageConstraint = function (part1, part2) {
   }
 
   PV.validatePackageName(name);
+  if (vConstraint) {
+    vConstraintString = vConstraint.raw;
+  } else {
+    vConstraint = PV.parseVersionConstraint(vConstraintString);
+  }
 
   this.name = name;
   this.constraintString = vConstraintString;
-  this.vConstraint = PV.parseVersionConstraint(vConstraintString);
+  this.vConstraint = vConstraint;
 };
 
 // Structure of a parsed constraint:

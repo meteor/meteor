@@ -158,6 +158,31 @@ Tinytest.add("package-version-parser - constraints - parseConstraint", function 
   test.throws(function () {
     PackageVersion.parseConstraint("foo@=||=");
   }, /Empty string is not a valid version/);
+
+  test.equal(new PackageVersion.PackageConstraint(
+    "foo", new PackageVersion.VersionConstraint(null)),
+             { name: "foo", constraintString: "",
+               vConstraint: {
+                 raw: "",
+                 alternatives: [{type: "any-reasonable",
+                                 versionString: null}] } });
+
+  test.equal(PackageVersion.parseConstraint(
+    "foo", PackageVersion.parseVersionConstraint("1.0.0 || =2.0.0")),
+             { name: "foo", constraintString: "1.0.0 || =2.0.0",
+               vConstraint: {
+                 raw: "1.0.0 || =2.0.0",
+                 alternatives: [{type: "compatible-with",
+                                 versionString: "1.0.0"},
+                                {type: "exactly",
+                                 versionString: "2.0.0"}] } });
+
+  test.equal(PackageVersion.parseVersionConstraint(null),
+             {raw: "", alternatives: [{type: "any-reasonable",
+                                       versionString: null}]});
+  test.equal(PackageVersion.parseVersionConstraint(""),
+             {raw: "", alternatives: [{type: "any-reasonable",
+                                       versionString: null}]});
 });
 
 var t = function (pConstraintString, expected, descr) {
