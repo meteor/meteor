@@ -11,7 +11,7 @@ Package.onUse(function (api) {
   api.export('ConstraintSolver');
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random']);
-  api.addFiles(['datatypes.js']);
+  api.addFiles(['datatypes.js', 'catalog-cache.js']);
   api.addFiles(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
                  'resolver-state.js', 'priority-queue.js'], ['server']);
 });
@@ -25,6 +25,7 @@ Package.onTest(function (api) {
   api.addFiles('test-data.js', ['server']);
 
   api.addFiles('datatypes-tests.js', ['client', 'server']);
+  api.addFiles('catalog-cache-tests.js', ['client', 'server']);
   api.addFiles('constraint-solver-tests.js', ['server']);
   api.addFiles('benchmark-tests.js', ['server']);
   api.addFiles('resolver-tests.js', ['server']);
