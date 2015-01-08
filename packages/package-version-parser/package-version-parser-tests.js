@@ -183,6 +183,15 @@ Tinytest.add("package-version-parser - constraints - parseConstraint", function 
   test.equal(PackageVersion.parseVersionConstraint(""),
              {raw: "", alternatives: [{type: "any-reasonable",
                                        versionString: null}]});
+
+  test.equal(PackageVersion.parseConstraint("foo").toString(),
+             "foo");
+  test.equal(PackageVersion.parseConstraint("foo", null).toString(),
+             "foo");
+  test.equal(PackageVersion.parseConstraint("foo@1.0.0").toString(),
+             "foo@1.0.0");
+  test.equal(PackageVersion.parseConstraint("foo@=1.0.0 || 2.0.0").toString(),
+             "foo@=1.0.0 || 2.0.0");
 });
 
 var t = function (pConstraintString, expected, descr) {

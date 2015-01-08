@@ -335,6 +335,14 @@ PV.PackageConstraint = function (part1, part2) {
   this.vConstraint = vConstraint;
 };
 
+PV.PackageConstraint.prototype.toString = function () {
+  var ret = this.name;
+  if (this.constraintString) {
+    ret += "@" + this.constraintString;
+  }
+  return ret;
+};
+
 // Structure of a parsed constraint:
 //
 // { name: String,
