@@ -223,7 +223,7 @@ PV.compare = function (versionOne, versionTwo) {
 //    version has been explicitly selected (which at this stage in the game
 //    means they are mentioned in a top-level constraint in the top-level
 //    call to the resolver).
-PV.parseVersionConstraint = function (versionString) {
+var parseSimpleConstraint = function (versionString) {
   var versionDesc = { version: null, type: "any-reasonable" };
 
   if (!versionString) {
@@ -299,7 +299,7 @@ PV.parseConstraint = function (constraintString) {
   constraint.constraints = [];
   __.each(versionConstraints, function (versionCon) {
     constraint.constraints.push(
-      PV.parseVersionConstraint(versionCon));
+      parseSimpleConstraint(versionCon));
   });
 
   return constraint;

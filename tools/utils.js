@@ -206,7 +206,7 @@ exports.parseConstraint = function (constraintString, options) {
     return null;
   }
 };
-exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+
 exports.validatePackageName = function (name, options) {
   try {
     return packageVersionParser.validatePackageName(name, options);
