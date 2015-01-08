@@ -7,11 +7,15 @@ Tinytest.add("constraint solver - datatypes - Dependency", function (test) {
     test.equal(d1.pConstraint.toString(), foo);
     test.equal(d1.isWeak, false);
 
-    var d2 = new CS.Dependency(PV.parseConstraint(foo), { isWeak: false });
+    var d1 = new CS.Dependency(foo);
+    test.equal(d1.pConstraint.toString(), foo);
+    test.equal(d1.isWeak, false);
+
+    var d2 = new CS.Dependency(foo, { isWeak: false });
     test.equal(d2.pConstraint.toString(), foo);
     test.equal(d2.isWeak, false);
 
-    var d3 = new CS.Dependency(PV.parseConstraint(foo), { isWeak: true });
+    var d3 = new CS.Dependency(foo, { isWeak: true });
     test.equal(d3.pConstraint.toString(), foo);
     test.equal(d3.isWeak, true);
 
@@ -29,6 +33,6 @@ Tinytest.add("constraint solver - datatypes - Dependency", function (test) {
   });
 
   test.throws(function () {
-    new CS.Dependency("foo@1.0.0");
+    new CS.Dependency("foo", "1.0.0");
   });
 });

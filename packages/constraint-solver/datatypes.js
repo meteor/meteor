@@ -36,7 +36,10 @@ CS.PackageAndVersion.fromString = function (str) {
 // and flags, like "isWeak".
 
 CS.Dependency = function (packageConstraint, flags) {
-  check(packageConstraint, PV.PackageConstraint);
+  check(packageConstraint, Match.OneOf(PV.PackageConstraint, String));
+  if (typeof packageConstraint === 'string') {
+    packageConstraint = PV.parseConstraint(packageConstraint);
+  }
   if (flags) {
     check(flags, Object);
   }
@@ -71,5 +74,5 @@ CS.Dependency.fromString = function (str) {
 
   var flags = isWeak ? { isWeak: true } : null;
 
-  return new CS.Dependency(PV.parseConstraint(str), flags);
+  return new CS.Dependency(str, flags);
 };
