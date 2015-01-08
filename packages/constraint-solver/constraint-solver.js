@@ -124,13 +124,21 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
 
   check(dependencies, [String]);
 
-  check(constraints, [{
-    name: String,
-    constraintString: Match.Optional(Match.OneOf(String, undefined)),
-    constraints: [{
-      version: Match.OneOf(String, null),
-      type: String }]
-  }]);
+  check(constraints, [Match.OneOf(
+    PackageVersion.PackageConstraint,
+    // PackageConstraints passed in from the tool to us (where we are
+    // a uniloaded package) will have a different constructor, also called
+    // PackageConstraint, that we have no access to.  They aren't plain
+    // objects, though, so we are forced to inspect their fields.
+    Match.Where(function (c) {
+      check(c.name, String);
+      check(c.constraintString,
+            Match.OneOf(String, undefined));
+      check(c.constraints, [{
+        version: Match.OneOf(String, null),
+        type: String }]);
+      return true;
+    }))]);
 
   check(options, {
     _testing: Match.Optional(Boolean),

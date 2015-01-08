@@ -294,11 +294,8 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 //    new PackageVersion.Constraint("pacakgeA@=2.1.0")
 ConstraintSolver.Constraint = function (name, constraintString) {
   var self = this;
-  if (constraintString) {
-    name = name + "@" + constraintString;
-  }
 
-  var parsed = PackageVersion.parseConstraint(name);
+  var parsed = PackageVersion.parseConstraint(name, constraintString);
 
   self.name = parsed.name;
   self.constraintString = parsed.constraintString;

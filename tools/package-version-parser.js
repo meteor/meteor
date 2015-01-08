@@ -255,54 +255,58 @@ PV.getValidServerVersion = function (meteorVersionString) {
   return PV.parse(meteorVersionString).version;
 };
 
-
-PV.parseConstraint = function (constraintString) {
-  if (typeof constraintString !== "string")
+// A PackageConstraint consists of a package name and a version constraint.
+// Call either with args (name, vConstraintString) or (pConstraintString).
+// That is, ("foo", "1.2.3") or ("foo@1.2.3").
+PV.PackageConstraint = function (part1, part2) {
+  if ((typeof part1 !== "string") ||
+      (part2 && (typeof part2 !== "string"))) {
     throw new TypeError("constraintString must be a string");
+  }
 
-  var splitted = constraintString.split('@');
-
-  var name = splitted[0];
-  var versionString = splitted[1] || '';
-
-  if (splitted.length > 2) {
-    // throw error complaining about @
-    PV.validatePackageName('a@');
+  var name, vConstraintString;
+  if (part2) {
+    name = part1;
+    vConstraintString = part2;
+  } else if (part1.indexOf("@") >= 0) {
+    // Shave off last part after @, with "a@b@c" becoming ["a@b", "c"].
+    // Validating the package name will catch extra @.
+    var parts = part1.match(/^(.*)@([^@]*)$/).slice(1);
+    name = parts[0];
+    vConstraintString = parts[1];
+    if (! vConstraintString) {
+      throwVersionParserError(
+        "Version constraint for package '" + name +
+          "' cannot be empty; leave off the @ if you don't want to constrain " +
+          "the version.");
+    }
+  } else {
+    name = part1;
+    vConstraintString = "";
   }
 
   PV.validatePackageName(name);
 
-  if (splitted.length === 2 && !versionString) {
-    throwVersionParserError(
-      "Version constraint for package '" + name +
-        "' cannot be empty; leave off the @ if you don't want to constrain " +
-        "the version.");
-  }
-
-  var constraint = {
-    name: name
-  };
-
-  // Before we parse through versionString, we save it for future output.
-  constraint.constraintString = versionString;
+  var constraints;
 
   // If we did not specify a version string, then our only constraint is
-  // any-reasonable, so we are going to return that.
-  if (!versionString) {
-    constraint.constraints =
+  // any-reasonable.
+  if (! vConstraintString) {
+    constraints =
       [ { version: null, type: "any-reasonable" } ];
-    return constraint;
+  } else {
+    // Parse out the versionString.
+    var alternatives = vConstraintString.split(/ *\|\| */);
+    constraints = __.map(alternatives, parseSimpleConstraint);
   }
 
-  // Let's parse out the versionString.
-  var versionConstraints = versionString.split(/ *\|\| */);
-  constraint.constraints = [];
-  __.each(versionConstraints, function (versionCon) {
-    constraint.constraints.push(
-      parseSimpleConstraint(versionCon));
-  });
+  this.name = name;
+  this.constraintString = vConstraintString;
+  this.constraints = constraints;
+};
 
-  return constraint;
+PV.parseConstraint = function (part1, part2) {
+  return new PV.PackageConstraint(part1, part2);
 };
 
 PV.validatePackageName = function (packageName, options) {

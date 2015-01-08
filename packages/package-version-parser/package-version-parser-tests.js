@@ -1,6 +1,8 @@
 var currentTest = null;
 
 Tinytest.add("package-version-parser - parse", function (test) {
+  test.isTrue(new PackageVersion("1.2.3") instanceof PackageVersion);
+
   var throws = function (v, re) {
     test.throws(function () {
       new PackageVersion(v);
@@ -90,11 +92,67 @@ Tinytest.add("package-version-parser - parse", function (test) {
   throws("v1.0.0", /must look like semver/);
 });
 
-var t = function (versionString, expected, descr) {
+Tinytest.add("package-version-parser - constraints - parseConstraint", function (test) {
+  test.isTrue(PackageVersion.parseConstraint("foo") instanceof
+              PackageVersion.PackageConstraint);
+
+  test.equal(PackageVersion.parseConstraint("foo@1.2.3"),
+             { name: "foo", constraintString: "1.2.3",
+               constraints: [{type: "compatible-with",
+                              version: "1.2.3"}] });
+
+  test.equal(PackageVersion.parseConstraint("foo"),
+             { name: "foo", constraintString: "",
+               constraints: [{type: "any-reasonable",
+                              version: null}] });
+
+  test.equal(PackageVersion.parseConstraint("foo@1.0.0 || =2.0.0"),
+             { name: "foo", constraintString: "1.0.0 || =2.0.0",
+               constraints: [{type: "compatible-with",
+                              version: "1.0.0"},
+                             {type: "exactly",
+                              version: "2.0.0"}] });
+
+  test.equal(new PackageVersion.PackageConstraint("foo@1.0.0 || =2.0.0"),
+             PackageVersion.parseConstraint("foo@1.0.0 || =2.0.0"));
+
+  test.equal(PackageVersion.parseConstraint("foo", null),
+             PackageVersion.parseConstraint("foo"));
+
+  test.equal(PackageVersion.parseConstraint("foo", ""),
+             PackageVersion.parseConstraint("foo"));
+
+  test.equal(PackageVersion.parseConstraint("foo", "1.0.0"),
+             PackageVersion.parseConstraint("foo@1.0.0"));
+
+  test.equal(PackageVersion.parseConstraint("foo", "=1.0.0"),
+             PackageVersion.parseConstraint("foo@=1.0.0"));
+
+  test.throws(function () {
+    PackageVersion.parseConstraint("", "1.0.0");
+  });
+  test.throws(function () {
+    PackageVersion.parseConstraint("foo@1.0.0", "1.0.0");
+  });
+  test.throws(function () {
+    PackageVersion.parseConstraint("foo@", "1.0.0");
+  });
+  test.throws(function () {
+    PackageVersion.parseConstraint("foo@");
+  }, /leave off the @/);
+  test.throws(function () {
+    PackageVersion.parseConstraint("foo@", "");
+  });
+  test.throws(function () {
+    PackageVersion.parseConstraint("a@b@c");
+  });
+});
+
+var t = function (pConstraintString, expected, descr) {
+  var constraintString = pConstraintString.replace(/^.*?(@|$)/, '');
   currentTest.equal(
-    _.omit(PackageVersion.parseConstraint(versionString),
-           'constraintString'),
-    expected,
+    PackageVersion.parseConstraint(pConstraintString),
+    _.extend({ constraintString: constraintString }, expected),
     descr);
 };
 
@@ -104,17 +162,17 @@ var FAIL = function (versionString) {
   });
 };
 
-Tinytest.add("Smart Package version string parsing - old format", function (test) {
+Tinytest.add("package-version-parser - constraints - any-reasonable", function (test) {
   currentTest = test;
 
   t("foo", { name: "foo", constraints: [{
         version: null, type: "any-reasonable" } ]});
   t("foo-1234", { name: "foo-1234", constraints: [{
         version: null, type: "any-reasonable" } ]});
-  FAIL("my_awesome_InconsitentPackage123");
+  FAIL("bad_name");
 });
 
-Tinytest.add("Smart Package version string parsing - compatible version, compatible-with", function (test) {
+Tinytest.add("package-version-parser - constraints - compatible version, compatible-with", function (test) {
   currentTest = test;
 
   t("foo@1.2.3", { name: "foo", constraints: [{
@@ -149,7 +207,7 @@ Tinytest.add("Smart Package version string parsing - compatible version, compati
        version: null, type: "any-reasonable" } ]});
 });
 
-Tinytest.add("Smart Package version string parsing - compatible version, exactly", function (test) {
+Tinytest.add("package-version-parser - constraints - compatible version, exactly", function (test) {
   currentTest = test;
 
   t("foo@=1.2.3", { name: "foo", constraints: [
@@ -187,7 +245,7 @@ Tinytest.add("Smart Package version string parsing - compatible version, exactly
 });
 
 
-Tinytest.add("Smart Package version string parsing - or", function (test) {
+Tinytest.add("package-version-parser - constraints - or", function (test) {
   currentTest = test;
 
   t("foo@1.0.0 || 2.0.0 || 3.0.0 || =4.0.0-rc1",
@@ -230,7 +288,7 @@ Tinytest.add("Smart Package version string parsing - or", function (test) {
 });
 
 Tinytest.add(
-  "Meteor Version string parsing - less than, compare, version magnitude",
+  "package-version-parser - less than, compare, version magnitude",
   function (test) {
     var compare = function (v1, v2, expected) {
       if (expected === '<') {
@@ -300,7 +358,7 @@ Tinytest.add(
 
   });
 
-Tinytest.add("Invalid in 0.9.2", function (test) {
+Tinytest.add("package-version-parser - Invalid in 0.9.2", function (test) {
   // Note that invalidFirstFormatConstraint assumes that the initial version
   // passed in has been previously checked to be valid in 0.9.3.
 
