@@ -118,8 +118,7 @@ var PackageConstraintType = Match.OneOf(
   PackageVersion.PackageConstraint,
   Match.Where(function (c) {
     check(c.name, String);
-    check(c.constraintString,
-          Match.OneOf(String, undefined));
+    check(c.constraintString, String);
     check(c.vConstraint, VersionConstraintType);
     return true;
   }));

@@ -322,6 +322,17 @@ PV.PackageConstraint = function (part1, part2) {
   this.vConstraint = PV.parseVersionConstraint(vConstraintString);
 };
 
+// Structure of a parsed constraint:
+//
+// { name: String,
+//   constraintString: String,
+//   vConstraint: {
+//     raw: String,
+//     alternatives: [{versionString: String|null,
+//                     type: String}]}}
+//
+// The returned object is instanceof PackageConstraint, and
+// vConstraint is instanceof VersionConstraint.
 PV.parseConstraint = function (part1, part2) {
   return new PV.PackageConstraint(part1, part2);
 };
