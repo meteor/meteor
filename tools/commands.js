@@ -1373,6 +1373,9 @@ main.registerCommand({
   // resolution.)  This will get written to disk once we prepareProjectForBuild,
   // either in the Cordova code below, right before deploying below, or in the
   // app runner.
+  // XXX We need to also remove all other constraints from the file, or else
+  //     if you use --test-app-path twice it will keep testing stuff from the
+  //     previous iteration!  #3446
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
   // The rest of the projectContext preparation process will happen inside the
