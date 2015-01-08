@@ -130,13 +130,9 @@ _.extend(LivedataTest.ClientStream.prototype, {
     // require the module if we actually create a server-to-server
     // connection.
     var FayeWebSocket = Npm.require('faye-websocket');
-    var deflate = Npm.require('permessage-deflate');
 
     var targetUrl = toWebsocketUrl(self.endpoint);
-    var fayeOptions = {
-      headers: self.headers,
-      extensions: [deflate]
-    };
+    var fayeOptions = { headers: self.headers };
     var proxyUrl = self._getProxyUrl(targetUrl);
     if (proxyUrl) {
       fayeOptions.proxy = { origin: proxyUrl };
