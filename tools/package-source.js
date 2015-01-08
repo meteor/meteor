@@ -139,9 +139,9 @@ var getExcerptFromReadme = function (text) {
       // that we are done.
       return true;
     } else if (isHeader) {
-      // We are going to take the first text that we encounter under the first
-      // two headers. Beyond that, if we don't encounter anything, we won't
-      // excerpt it.
+      // We are going to take the first text that we encounter under either of
+      // the first two headers. Beyond that, if we don't encounter anything, we
+      // won't excerpt it.
       headerNum++;
       if (headerNum > 2) {
         return true;
