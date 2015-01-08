@@ -6,7 +6,7 @@ ConstraintSolver = {};
 //     [{packageName, version, dependencies}]
 //
 // Where `dependencies` is a map from packageName to
-// an object of the form `{ constraint: String,
+// an object of the form `{ constraint: String|null,
 // references: [{arch: String, optional "weak": true}] }`.
 //
 // TODO: Abstract away the catalog by pulling out the code that
