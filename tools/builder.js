@@ -182,11 +182,6 @@ _.extend(Builder.prototype, {
     self._ensureDirectory(files.pathDirname(relPath));
     var absPath = files.pathJoin(self.buildPath, relPath);
     
-    if(absPath.length > longest) {
-      longest = absPath.length;
-      console.log(longest, absPath);
-    }
-
     if (options.symlink) {
       files.symlink(options.symlink, absPath);
     } else {
