@@ -785,15 +785,6 @@ Fiber(function () {
     }
     releaseName = null;
   } else {
-    // XXX Hack for Windows because we don't want to do springboarding in this
-    // version
-    if (releaseOverride) {
-      Console.error("Sorry, this Windows preview doesn't support --release.");
-    }
-
-    releaseOverride = release.name;
-    // XXX end hack for Windows springboarding
-    
     // Running from an install
     if (releaseOverride) {
       // Use the release explicitly specified on the command line.
