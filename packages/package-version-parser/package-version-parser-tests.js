@@ -146,6 +146,12 @@ Tinytest.add("package-version-parser - constraints - parseConstraint", function 
   test.throws(function () {
     PackageVersion.parseConstraint("a@b@c");
   });
+  test.throws(function () {
+    PackageVersion.parseConstraint("foo@||");
+  }, /Invalid constraint string: \|\|/);
+  test.throws(function () {
+    PackageVersion.parseConstraint("foo@=||=");
+  }, /Empty string is not a valid version/);
 });
 
 var t = function (pConstraintString, expected, descr) {

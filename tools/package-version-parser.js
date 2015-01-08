@@ -30,8 +30,11 @@ var __ = inTool ? require('underscore') : _;
 //
 // You can write `PV.parse("1.2.3")` as an alternative to `new PV("1.2.3")`
 var PV = function (versionString) {
-  if (! (versionString && (typeof versionString === 'string'))) {
+  if (! (typeof versionString === 'string')) {
     throw new Error("Invalid PackageVersion argument: " + versionString);
+  }
+  if (! versionString) {
+    throwVersionParserError("Empty string is not a valid version");
   }
 
   // The buildID ("+foo" suffix) is part of semver, but split it off
@@ -223,26 +226,25 @@ PV.compare = function (versionOne, versionTwo) {
 //    version has been explicitly selected (which at this stage in the game
 //    means they are mentioned in a top-level constraint in the top-level
 //    call to the resolver).
-var parseSimpleConstraint = function (versionString) {
-  var versionDesc = { version: null, type: "any-reasonable" };
-
-  if (!versionString) {
-    return versionDesc;
+var parseSimpleConstraint = function (constraintString) {
+  if (! constraintString) {
+    throw new Error("Non-empty string required");
   }
 
-  if (versionString.charAt(0) === '=') {
-    versionDesc.type = "exactly";
-    versionString = versionString.substr(1);
+  var type, versionString;
+
+  if (constraintString.charAt(0) === '=') {
+    type = "exactly";
+    versionString = constraintString.substr(1);
   } else {
-    versionDesc.type = "compatible-with";
+    type = "compatible-with";
+    versionString = constraintString;
   }
 
   // This will throw if the version string is invalid.
   PV.getValidServerVersion(versionString);
 
-  versionDesc.version = versionString;
-
-  return versionDesc;
+  return { type: type, version: versionString };
 };
 
 
@@ -297,7 +299,13 @@ PV.PackageConstraint = function (part1, part2) {
   } else {
     // Parse out the versionString.
     var alternatives = vConstraintString.split(/ *\|\| */);
-    constraints = __.map(alternatives, parseSimpleConstraint);
+    constraints = __.map(alternatives, function (alt) {
+      if (! alt) {
+        throwVersionParserError("Invalid constraint string: " +
+                                vConstraintString);
+      }
+      return parseSimpleConstraint(alt);
+    });
   }
 
   this.name = name;
