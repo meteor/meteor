@@ -34,7 +34,7 @@ cd t
 
 npm config set loglevel error
 node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | out-file -FilePath package.json -Encoding ascii
-npm install --production
+npm install
 npm shrinkwrap
 
 mkdir -Force "${DIR}\server-lib\node_modules"
@@ -43,7 +43,7 @@ cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
 mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
-npm install --production
+npm install
 npm dedupe
 # install the latest flatten-packages
 npm install -g flatten-packages
