@@ -242,6 +242,13 @@ Tinytest.add("tracker - flush", function (test) {
       Tracker.flush(); // illegal to flush from a computation
     });
   });
+
+  test.throws(function () {
+    Tracker.autorun(function () {
+      Tracker.autorun(function () {});
+      Tracker.flush();
+    });
+  });
 });
 
 Tinytest.add("tracker - lifecycle", function (test) {
