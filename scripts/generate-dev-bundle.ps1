@@ -93,7 +93,9 @@ $node_link = "http://nodejs.org/dist/v0.10.33/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 # install npm
 echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm
+npm install npm --save
+flatten-packages .
+
 cp node_modules\npm\bin\npm.cmd .
 
 Set-Location $DIR
