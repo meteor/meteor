@@ -494,7 +494,7 @@ exports.updatePackageMetadata = function (options) {
     var uploadInfo =
           callPackageServerBM(conn, "createReadme", versionIdentifier);
     if (! uploadInfo) return;
-    if (! uploadFile(uploadInfo.url, readmePath) < 0) return;
+    if (! uploadFile(uploadInfo.url, readmePath)) return;
     callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
   });
