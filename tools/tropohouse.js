@@ -171,6 +171,7 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX: Error handling.
   _downloadBuildToTempDir: function (versionInfo, buildRecord) {
+    console.log("downloading to temp dir");
     var self = this;
     var targetDirectory = files.mkdtemp();
 
@@ -187,7 +188,7 @@ _.extend(exports.Tropohouse.prototype, {
       wait: false
     });
     files.extractTarGz(packageTarball, targetDirectory);
-
+    console.log("Extracted to " + targetDirectory);
     return targetDirectory;
   },
 
@@ -315,14 +316,15 @@ _.extend(exports.Tropohouse.prototype, {
       }, function() {
         var buildTempDirs = [];
 
-        // XXX on windows we will special case this whole block
         // Find the previous actual directory of the package
-        var packageLinkTarget = null;
-
         if (process.platform === "win32") {
           // On Windows, we don't use symlinks.
-          packageLinkTarget = packagePath;
+          // If there's already a package in the tropohouse, start with it.
+          if (files.exists(packagePath)) {
+            buildTempDirs.push(packagePath);
+          }
         } else {
+          var packageLinkTarget = null;
           try {
             packageLinkTarget = files.readFile(packagePath);
           } catch (e) {
@@ -336,14 +338,15 @@ _.extend(exports.Tropohouse.prototype, {
               throw e;
             }
           }
-        }
 
-        // If there's already a package in the tropohouse, start with it.
-        if (packageLinkTarget) {
-          buildTempDirs.push(
-            files.pathResolve(files.pathDirname(packagePath),
-                              packageLinkTarget));
+          // If there's already a package in the tropohouse, start with it.
+          if (packageLinkTarget) {
+            buildTempDirs.push(
+              files.pathResolve(files.pathDirname(packagePath),
+                                packageLinkTarget));
+          }
         }
+        
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
@@ -359,6 +362,8 @@ _.extend(exports.Tropohouse.prototype, {
         });
         if (buildmessage.jobHasMessages())
           return;
+
+        console.log(buildTempDirs);
 
         // We need to turn our builds into a single isopack.
         var isopack = new Isopack;
