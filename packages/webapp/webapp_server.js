@@ -565,6 +565,18 @@ var runWebAppServer = function () {
   var rawConnectHandlers = connect();
   app.use(rawConnectHandlers);
 
+  // We're not a proxy; reject (without crashing) attempts to treat us like
+  // one. (See #1212.)
+  app.use(function(req, res, next) {
+    if (RoutePolicy.isValidUrl(req.url)) {
+      next();
+      return;
+    }
+    res.writeHead(400);
+    res.write("Not a proxy");
+    res.end();
+  });
+
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
     var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
@@ -619,13 +631,6 @@ var runWebAppServer = function () {
   });
 
   app.use(function (req, res, next) {
-    if (!RoutePolicy.isValidUrl(req.url)) {
-      res.writeHead(500, {'Content-Type': 'text/html'});
-      res.write("Invalid Request");
-      res.end();
-      return undefined
-    }
-    
     if (! appUrl(req.url))
       return next();
 
