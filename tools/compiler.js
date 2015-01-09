@@ -28,6 +28,10 @@ var compiler = exports;
 // update BUILT_BY, though you will need to quit and rerun "meteor run".)
 compiler.BUILT_BY = 'meteor/15';
 
+// This is a list of all possible architectures that a build can target. (Client
+// is expanded into 'web.browser' and 'web.cordova')
+compiler.ALL_ARCHES = [ "os", "web.browser", "web.cordova" ];
+
 compiler.compile = function (packageSource, options) {
   buildmessage.assertInCapture();
 

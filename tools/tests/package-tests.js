@@ -1006,11 +1006,14 @@ var testShowPackage = function (s, fullPackageName, options) {
   if (options.homepage) {
     run.read("Homepage: " + options.homepage + "\n");
   }
+  if (options.maintainers) {
+    run.read("Maintainers: " + options.maintainers + "\n");
+  }
   if (options.git) {
     run.read("Git: " + options.git + "\n");
   }
-  if (options.maintainers) {
-    run.read("Maintainers: " + options.maintainers + "\n");
+  if (options.exports) {
+    run.read("Exports: " + options.exports + "\n");
   }
   run.read("\n");
   if (_.has(options, "summary")) {
@@ -1070,14 +1073,14 @@ var testShowPackageVersion = function (s, options) {
   if (options.publishedBy) {
     run.match("Published by " + options.publishedBy + " on " + options.publishedOn + "\n");
   }
+  if (options.directory) {
+    run.match("Directory:\n" + options.directory + "\n");
+  }
   if (options.git) {
     run.match("Git: " + options.git + "\n");
   }
-  if (options.directory) {
-    // Because of line wrapping, we will never be able to fit our root path on
-    // the same line as the label (on the 80 character terminal, with sandbox's
-    // super-long paths).
-    run.match("Directory:\n" + options.directory + "\n");
+  if (options.exports) {
+    run.read("Exports: " + options.exports + "\n");
   }
   run.read("\n");
   if (_.has(options, "summary")) {
@@ -1191,6 +1194,33 @@ selftest.define("show and search local package",  function () {
   run.match(name);
   run.match("You can use");
   run.expectExit(0);
+
+  // We can see exports on local packages.
+  s.cd("packages");
+  summary = "This is a test package";
+  name = "my-local-exports";
+  packageDir = files.pathJoin(s.root, "home", "myapp", "packages", name);
+  s.createPackage(name, "package-for-show");
+  s.cd(name, function () {
+    s.cp("package-with-exports.js", "package.js");
+  });
+
+  var exportStr =
+    "A, B (server), C (web.browser, web.cordova)," +
+    " D (web.browser),\n"  + "         " +
+    "E (web.cordova), G (server, web.cordova)";
+  testShowPackage(s, name, {
+    summary: summary,
+    exports: exportStr,
+    versions: [{ version: "1.0.1", directory: packageDir }]
+  });
+  testShowPackageVersion(s, {
+    packageName: name,
+    version: "1.0.1",
+    directory: packageDir,
+    summary: summary,
+    exports: exportStr
+  });
 });
 
 // Make sure that if a package exists both locally, and on the server, 'meteor
@@ -1295,6 +1325,7 @@ selftest.define("show server package",
   s.set("METEOR_TEST_TMP", files.mkdtemp());
   testUtils.login(s, username, password);
   var fullPackageName = randomizedPackageName(username);
+  var versions = [];
 
   // Publish a version the package without git or any dependencies. Make sure
   // that 'show' renders it correctly.
@@ -1306,10 +1337,11 @@ selftest.define("show server package",
   });
 
   var summary = "This is a test package";
+  versions.push({ version: "0.9.9", date: today });
   testShowPackage(s, fullPackageName, {
     summary: summary,
     maintainers: username,
-    versions: [{ version: "0.9.9", date: today }]
+    versions: versions
   });
 
   testShowPackageVersion(s, {
@@ -1327,15 +1359,13 @@ selftest.define("show server package",
     run.waitSecs(30);
     run.expectExit(0);
   });
+  versions.push({ version: "1.0.0", date: today });
 
   testShowPackage(s, fullPackageName, {
     summary: summary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today }
-    ]
+    versions: versions
   });
 
   testShowPackageVersion(s, {
@@ -1346,6 +1376,38 @@ selftest.define("show server package",
     summary: summary,
     git: "www.github.com/meteor/meteor"
   });
+
+  // Publish a version of the package with exports, and see that they show up.
+  s.cd(fullPackageName, function () {
+    s.cp("package-with-exports.js", "package.js");
+    var run = s.run("publish");
+    run.waitSecs(30);
+    run.expectExit(0);
+  });
+  versions.push({ version: "1.0.1", date: today });
+  var exportStr =
+    "A, B (server), C (web.browser, web.cordova)," +
+    " D (web.browser),\n"  + "         " +
+    "E (web.cordova), G (server, web.cordova)";
+
+  testShowPackage(s, fullPackageName, {
+    summary: summary,
+    maintainers: username,
+    exports: exportStr,
+    git: "www.github.com/meteor/meteor",
+    versions: versions
+  });
+
+  testShowPackageVersion(s, {
+    packageName: fullPackageName,
+    version: "1.0.1",
+    publishedBy: username,
+    publishedOn: today,
+    exports: exportStr,
+    summary: summary,
+    git: "www.github.com/meteor/meteor"
+  });
+
   // Publish a version of the package with git that depends on other
   // packages. To do this, we need to publish two other packages (since we don't
   // want to rely on specific packages existing on the test server).
@@ -1367,16 +1429,13 @@ selftest.define("show server package",
     run.expectExit(0);
   });
 
+  var newVersions = _.union(versions, [{ version: "1.2.0", date: today }]);
   var newSummary = "This is a test package with dependencies";
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today },
-      { version: "1.2.0", date: today }
-    ]
+    versions: newVersions
   });
 
   testShowPackageVersion(s, {
@@ -1403,11 +1462,7 @@ selftest.define("show server package",
     maintainers: username,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today },
-      { version: "1.2.0", date: today }
-    ]
+    versions: newVersions
   });
 
   // Add this package to an app, forcing us to download the isopack. Check that
@@ -1421,16 +1476,13 @@ selftest.define("show server package",
     run.expectExit(0);
   });
 
+  versions.push({ version: "1.2.0", date: today, label: "installed" });
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today },
-      { version: "1.2.0", date: today, label: "installed" }
-    ]
+    versions: versions
   });
 
   // Publish a pre-release version of the package.
@@ -1449,7 +1501,7 @@ selftest.define("show server package",
   var moreAvailable =
     "Pre-release and unmigrated versions of " + fullPackageName +
     " have been hidden. To see all\n" +
-    "4 versions, run 'meteor show --show-all " + fullPackageName + "'.";
+    "5 versions, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
@@ -1462,18 +1514,15 @@ selftest.define("show server package",
     addendum: moreAvailable
   });
 
+  newVersions =
+    _.union(versions, [{ version: "1.3.0-rc.1", date: today }]);
   // All the versions will show up when we run with the 'show-all' flag.
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
-    versions: [
-      { version: "0.9.9", date: today },
-      { version: "1.0.0", date: today },
-      { version: "1.2.0", date: today, label: "installed" },
-      { version: "1.3.0-rc.1", date: today }
-    ],
+    versions: newVersions,
     all: true
   });
 
