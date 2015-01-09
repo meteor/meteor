@@ -12,6 +12,7 @@ var main = require('./main.js');
 var packageVersionParser = require('./package-version-parser.js');
 var projectContextModule = require('./project-context.js');
 var utils = require('./utils.js');
+var compiler = require('./compiler.js');
 
 // We want these queries to be relatively fast, so we will only refresh the
 // catalog if it is > 15 minutes old
@@ -197,6 +198,61 @@ var itemNotFound = function (item) {
   return 1;
 };
 
+// This class stores exports from a given package.
+//
+// Stores exports for a given package and returns them to the caller in a given
+// format. Takes in the raw exports from the package.
+var PkgExports = function (pkgExports) {
+ var self = this;
+ // Process and save the export data.
+ self.data = _.map(pkgExports, function (exp) {
+    var arches = exp.architectures;
+    // Replace 'os' (what we store) with 'server' (what you would put in a
+    // package.js file). That's more user friendly, and avoids confusing this
+    // with different OS arches used in binary packages.
+    if ( _.indexOf(arches, "os") !== -1) {
+      arches = _.without(arches, "os");
+      arches.push("server");
+    }
+    // Sort architectures alphabetically.
+    arches.sort();
+    return { name: exp.name, architectures: arches };
+  });
+  // Sort exports alphabetically by name.
+  self.data =  _.sortBy(self.data, "name");
+};
+
+_.extend(PkgExports.prototype, {
+  // Returns true if this class does not contain any exports.
+  isEmpty : function () {
+    var self = this;
+    return _.isEmpty(self.data);
+  },
+  // Get exports as a raw object.
+  getObject : function () {
+    var self = this;
+    return self.data;
+  },
+  // Convert package exports into a pretty, Console non-wrappable string. If an
+  // export is only declared for certain architectures, mentions those
+  // architectures in a user-friendly format.
+  getConsoleStr: function () {
+    var self = this;
+    var strExports = _.map(self.data, function (exp) {
+      // If this export is valid for all architectures, don't specify
+      // architectures here.
+      if (exp.architectures.length === compiler.ALL_ARCHES.length)
+        return exp.name;
+
+      // Don't split descriptions of individual pkgExports between lines.
+      return Console.noWrap(
+        exp.name + " (" + exp.architectures.join(", ") + ")");
+    });
+    return strExports.join(", ");
+  }
+});
+
+
 // The two classes below collect and print relevant information about Meteor
 // packages and Meteor releases, respectively. Specifically, they query the
 // official catalog and, if applicable, relevant local sources. They also handle
@@ -304,14 +360,10 @@ _.extend(PackageQuery.prototype, {
     // If we are asking for an EJSON-style output, we will only print out the
     // relevant fields.
     if (options.ejson) {
-      var versionFields = [
-        "name", "version", "description", "summary", "git", "dependencies",
-        "publishedBy", "publishedOn", "installed", "local", "OSarchitectures"
-      ];
-      var packageFields =
-        [ "name", "homepage", "maintainers", "versions", "totalVersions" ];
-      var fields = self.data.version ? versionFields : packageFields;
-      Console.rawInfo(formatEJSON(_.pick(self.data, fields)));
+      Console.rawInfo(convertToEJSON(
+        self.data.version ?
+          self._generateVersionObject(self.data) :
+          self._generatePackageObject(self.data)));
       return;
     }
 
@@ -396,24 +448,31 @@ _.extend(PackageQuery.prototype, {
     // The local version doesn't count against the version limit. Look up relevant
     // information about the local version.
     var localVersion = self.localCatalog.getLatestVersion(self.name);
+    var local;
     if (localVersion) {
-      var local = self._getLocalVersion(localVersion);
+      local = self._getLocalVersion(localVersion);
       data["versions"].push(local);
       totalVersions++;
     }
 
-    // Record the total number of versions, including the ones we hid from the user.
+    // Record the total number of versions, including the ones we hid from the
+    // user.
     data["totalVersions"] = totalVersions;
 
     // Some per-version information gets displayed with the rest of the package
     // information.  We want to use the right version for that. (We don't want
     // to display data from unofficial or un-migrated versions just because they
     // are recent.)
-    data["defaultVersion"] =
-          local ||
-          catalog.official.getLatestMainlineVersion(self.name) ||
-          _.last(data.versions);
-
+    if (local) {
+      data["defaultVersion"] = local;
+    } else {
+      var mainRecord = catalog.official.getLatestMainlineVersion(self.name);
+      if (mainRecord) {
+        data["defaultVersion"] = self._getOfficialVersion(mainRecord);
+      } else {
+        data["defaultVersion"] = _.last(data.versions);
+      }
+    }
     return data;
   },
   // Takes in a version record from the official catalog and looks up extra
@@ -448,8 +507,12 @@ _.extend(PackageQuery.prototype, {
       publishedBy:
       versionRecord.publishedBy && versionRecord.publishedBy.username,
       publishedOn: new Date(versionRecord.published),
-      git: versionRecord.git
+      git: versionRecord.git,
+      exports: versionRecord.exports
     };
+
+    // Get the export data, if the record has any.
+    data["exports"] = new PkgExports(versionRecord.exports);
 
     // Processing and formatting architectures takes time, so we don't want to
     // do this if we don't have to.
@@ -524,6 +587,9 @@ _.extend(PackageQuery.prototype, {
     var packageSource = self.localCatalog.getPackageSource(self.name);
     data["directory"] = packageSource.sourceRoot;
 
+    // Get the exports.
+    data["exports"] = new PkgExports(packageSource.getExports());
+
     // If the version was not explicitly set by the user, the catalog backfills
     // a placeholder version for the constraint solver. We don't want to show
     // that version to the user.
@@ -538,8 +604,9 @@ _.extend(PackageQuery.prototype, {
 
     return data;
   },
-  // Displays version information from this PackageQuery to the terminal in a human-friendly
-  // format. Takes in an object that contains some, but not all, of the following keys:
+  // Displays version information from this PackageQuery to the terminal in a
+  // human-friendly format. Takes in an object that contains some, but not all,
+  // of the following keys:
   //
   // - name: (mandatory) package Name
   // - version: (mandatory) package version
@@ -561,21 +628,34 @@ _.extend(PackageQuery.prototype, {
   //     - weak: true if this is a weak dependency.
   _displayVersion: function (data) {
     var self = this;
-    Console.info("Package:", data.name);
-    Console.info("Version:", data.version);
+    Console.info(
+        data.name,
+        Console.options({ bulletPoint: "Package: " }));
+    Console.info(
+        data.version,
+        Console.options({ bulletPoint: "Version: " }));
     if (data.summary) {
-      Console.info("Summary:", data.summary);
+      Console.info(
+        data.summary,
+        Console.options({ bulletPoint: "Summary: " }));
     }
     if (data.publishedBy) {
       var publisher = data.publishedBy;
       var pubDate = utils.longformDate(data.publishedOn);
       Console.info("Published by", publisher, "on", pubDate);
     }
-    if (data.git) {
-      Console.info("Git:", Console.url(data.git));
-    }
     if (data.directory) {
-      Console.info("Directory:", Console.path(data.directory));
+      Console.info("Directory: " + Console.path(data.directory));
+    }
+    if (data.git) {
+      Console.info(
+        Console.url(data.git),
+        Console.options({ bulletPoint: "Git: " }));
+    }
+    if (data.exports && ! data.exports.isEmpty()) {
+      Console.info(
+        data["exports"].getConsoleStr(),
+        Console.options({ bulletPoint: "Exports: " }));
     }
     Console.info();
 
@@ -616,6 +696,38 @@ _.extend(PackageQuery.prototype, {
         "from outside the project.");
     }
   },
+  // Returns a user-friendly object from this PackageQuery to the caller.  Takes
+  // in a data object with the same keys as _displayVersion.
+  //
+  // Returns an object with some of the following keys:
+  // - name: String. Name of the package.
+  // - version: String. Meteor version number.
+  // - description: String. Longform description.
+  // - summary: String. Short summary.
+  // - git: String. Git URL.
+  // - publishedBy: String. Username of the publisher.
+  // - publishedOn: Date. Time of publication.
+  // - local: Boolean. True if this is a local package.
+  // - directory: source directory of this package.
+  // - installed: Boolean. True if the isopack for this package has been
+  //   downloaded, or if the package is local.
+  // - dependencies: Array of objects representing package dependencies, sorted
+  //   alphabetically by package name.
+  // - OSarchitectures: Array of OS architectures on for which an isopack of
+  //   this package exists (server packages only).
+  // - exports: Array of objects representing the package exports, sorted by
+  //   name of export.
+  _generateVersionObject: function (data) {
+    var versionFields = [
+      "name", "version", "description", "summary", "git", "dependencies",
+      "publishedBy", "publishedOn", "installed", "local", "OSarchitectures",
+      "directory"
+    ];
+    var processedData = data["exports"] ?
+          { exports: data["exports"].getObject() } : {};
+    return _.extend(processedData, _.pick(data, versionFields));
+  },
+
   // Displays general package data from this PackageQuery to the terminal in a
   // human-friendly format. Takes in an object that contains some, but not
   // always all, of the following keys:
@@ -650,17 +762,28 @@ _.extend(PackageQuery.prototype, {
     var defaultVersion = data.defaultVersion;
 
     // Every package has a name. Some packages have a homepage.
-    Console.info("Package:", data.name);
+    Console.info(data.name,
+       Console.options({ bulletPoint: "Package: " }));
     if (data.homepage) {
-      Console.info("Homepage:", Console.url(data.homepage));
-    }
-    // Git is per-version, so we will print the latest one, if one exists.
-    if (defaultVersion && defaultVersion.git) {
-      Console.info("Git:", Console.url(defaultVersion.git));
+      Console.info(Console.url(data.homepage),
+        Console.options({ bulletPoint: "Homepage: " }));
     }
     // Local packages might not have any maintainers.
     if (! _.isEmpty(data.maintainers)) {
-      Console.info("Maintainers:", data.maintainers.join(", "));
+      Console.info(data.maintainers.join(", "),
+        Console.options({ bulletPoint: "Maintainers: " }));
+    }
+    // Git is per-version, so we will print the latest one, if one exists.
+    if (defaultVersion && defaultVersion.git) {
+      Console.info(Console.url(defaultVersion.git),
+        Console.options({ bulletPoint: "Git: " }));
+    }
+    // Print the exports.
+    if (defaultVersion && defaultVersion.exports &&
+       ! defaultVersion.exports.isEmpty()) {
+      Console.info(
+        defaultVersion["exports"].getConsoleStr(),
+        Console.options({ bulletPoint: "Exports: " }));
     }
     Console.info();
 
@@ -736,7 +859,48 @@ _.extend(PackageQuery.prototype, {
         "To see " + allVersionsPluralizer + ", run",
         Console.command("'meteor show --show-all " + self.name + "'") + ".");
     }
-  }
+  },
+  // Returns a user-friendly object from this PackageQuery to the caller.  Takes
+  // in a data object with the same keys as _displayPackage.
+  //
+  // Returns an object with some of the following keys:
+  // - name: String. Name of the package.
+  // - homepage: String. URL of the package homepage.
+  // - maintainers: Array of strings. Usernames of package maintainers.
+  // - totalVersions: Number. Total number of versions that exist for this
+  //   package.
+  // - versions: Array of objects, representing versions of this
+  //   package. Objects have the following keys:
+  //   - name: String. Name of the package.
+  //   - version: String. Meteor version number.
+  //   - description: String. Longform description.
+  //   - summary: String. Short summary.
+  //   - git: String. Git URL.
+  //   - publishedBy: String. Username of the publisher.
+  //   - publishedOn: Date. Time of publication.
+  //   - local: Boolean. True if this is a local package.
+  //   - directory: source directory of this package.
+  //   - installed: Boolean. True if the isopack for this package has been
+  //     downloaded, or if the package is local.
+  //   - exports: Array of objects representing the package exports, sorted by
+  //     name of export.
+  _generatePackageObject: function (data) {
+    var packageFields =
+          [ "name", "homepage", "maintainers", "totalVersions" ];
+    // Process the versions array. We only want some of the keys, and we want to
+    // make sure to get the right exports object.
+    var versions = _.map(data["versions"], function (version) {
+      var versionFields = [
+        "name", "version", "description", "summary", "git", "publishedBy",
+        "publishedOn", "installed", "local", "directory"
+      ];
+      var processedData = version["exports"] ?
+            { exports: version["exports"].getObject() } : {};
+      return _.extend(processedData, _.pick(version, versionFields));
+    });
+    return _.extend({ versions: versions }, _.pick(data, packageFields));
+  },
+
 });
 
 // This class looks up release-related information in the official catalog.
