@@ -5,6 +5,7 @@ if (showRequireProfile)
 var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
+var Future = reqire('fibers/future');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
