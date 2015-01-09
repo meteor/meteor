@@ -96,6 +96,12 @@ echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install
 npm install npm --save
 flatten-packages .
 
+# npm depends on a hardcoded file path to node-gyp, so we need this to be
+# un-flattened
+cd node_modules\npm
+npm install node-gyp
+cd ..\..
+
 cp node_modules\npm\bin\npm.cmd .
 
 Set-Location $DIR
