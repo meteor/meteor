@@ -58,7 +58,8 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
   return this._dependencies[key];
 };
 
-// returns an array of version strings, unsorted, possibly empty.
+// Returns an array of version strings, unsorted, possibly empty.
+// (Don't mutate the result.)
 CS.CatalogCache.prototype.getPackageVersions = function (package) {
   return (_.has(this._versions, package) ?
           this._versions[package] : []);
