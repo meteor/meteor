@@ -434,3 +434,9 @@ Tinytest.add("package-version-parser - Invalid in 0.9.2", function (test) {
     test.isFalse(PackageVersion.invalidFirstFormatConstraint(v));
   });
 });
+
+Tinytest.add("package-version-parser - sort", function (test) {
+  var versions = ["1.0.0", "1.0.0-rc.0", "1.0.10", "1.0.2"];
+  versions.sort(PackageVersion.compare);
+  test.equal(versions, ["1.0.0-rc.0", "1.0.0", "1.0.2", "1.0.10"]);
+});

@@ -1,100 +1,19 @@
-ConstraintSolver = {};
+var PV = PackageVersion;
+var CS = ConstraintSolver;
 
-// `catalog` has the following method:
-//
-// * getSortedVersionRecords(packageName) ->
-//     [{packageName, version, dependencies}]
-//
-// Where `dependencies` is a map from packageName to
-// an object of the form `{ constraint: String|null,
-// references: [{arch: String, optional "weak": true}] }`.
-//
-// TODO: Abstract away the catalog by pulling out the code that
-// interfaces with it.  We shouldn't have to stub the catalog in
-// tests or conform to its format anywhere in order to, say,
-// run the solver with a real cost function.
-ConstraintSolver.PackagesResolver = function (catalog, options) {
+// This is the entry point for the constraint-solver package.  The tool
+// creates a ConstraintSolver.PackagesResolver and calls .resolve on it.
+
+CS.PackagesResolver = function (catalog, options) {
   var self = this;
-
-  options = options || {};
 
   self.catalog = catalog;
+  self.catalogCache = new CS.CatalogCache();
+  self.catalogLoader = new CS.CatalogLoader(self.catalog, self.catalogCache);
 
-  // The main resolver
-  self.resolver = new ConstraintSolver.Resolver({
-    nudge: options.nudge
-  });
-
-  self._packageInfoLoadQueue = [];
-  self._packagesEverEnqueued = {};
-  self._loadingPackageInfo = false;
-};
-
-ConstraintSolver.PackagesResolver.prototype._ensurePackageInfoLoaded = function (
-    packageName) {
-  var self = this;
-  if (_.has(self._packagesEverEnqueued, packageName))
-    return;
-  self._packagesEverEnqueued[packageName] = true;
-  self._packageInfoLoadQueue.push(packageName);
-
-  // Is there already an instance of _ensurePackageInfoLoaded up the stack?
-  // Great, it'll get this.
-  // XXX does this work correctly with multiple fibers?
-  if (self._loadingPackageInfo)
-    return;
-
-  self._loadingPackageInfo = true;
-  try {
-    while (self._packageInfoLoadQueue.length) {
-      var nextPackageName = self._packageInfoLoadQueue.shift();
-      self._loadPackageInfo(nextPackageName);
-    }
-  } finally {
-    self._loadingPackageInfo = false;
-  }
-};
-
-ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
-    packageName) {
-  var self = this;
-
-  // We rely on sortedness in the constraint solver, since one of the cost
-  // functions wants to be able to quickly find the earliest or latest version.
-  var sortedVersionRecords = self.catalog.getSortedVersionRecords(packageName);
-  _.each(sortedVersionRecords, function (versionDef) {
-    var version = versionDef.version;
-
-    var unitVersion = new ConstraintSolver.UnitVersion(packageName, version);
-    self.resolver.addUnitVersion(unitVersion);
-
-    _.each(versionDef.dependencies, function (dep, depName) {
-      self._ensurePackageInfoLoaded(depName);
-
-      // "dep" contains a list of references, which describes which unibuilds of
-      // this unitVersion depend on depName, as well as a constraint, which
-      // constraints the versions it depends on.
-
-      // The package->package dependency is weak if ALL of the underlying
-      // unibuild->unibuild dependencies are weak.  ie,
-      //     api.use('dep', 'server', { weak: true });
-      //     api.use('dep', 'client');
-      // is not weak at the package->package level.
-      var createsDependency = _.any(dep.references, function (ref) {
-        return !ref.weak;
-      });
-
-      // Add the dependency if needed.
-      if (createsDependency)
-        unitVersion.addDependency(depName);
-
-      // Add a constraint if needed.
-      if (dep.constraint && dep.constraint !== "none") {
-        var constraint = self.resolver.getConstraint(depName, dep.constraint);
-        unitVersion.addConstraint(constraint);
-      }
-    });
-  });
+  self._options = {
+    nudge: options && options.nudge
+  };
 };
 
 // PackageConstraints and VersionConstraints passed in from the tool
@@ -104,7 +23,7 @@ ConstraintSolver.PackagesResolver.prototype._loadPackageInfo = function (
 // can't be checked by "check" in the same way as plain objects, so we
 // have to resort to examining the fields explicitly.
 var VersionConstraintType = Match.OneOf(
-  PackageVersion.VersionConstraint,
+  PV.VersionConstraint,
   Match.Where(function (vc) {
     check(vc.raw, String);
     check(vc.alternatives, [{
@@ -115,7 +34,7 @@ var VersionConstraintType = Match.OneOf(
   }));
 
 var PackageConstraintType = Match.OneOf(
-  PackageVersion.PackageConstraint,
+  PV.PackageConstraint,
   Match.Where(function (c) {
     check(c.name, String);
     check(c.constraintString, String);
@@ -125,7 +44,7 @@ var PackageConstraintType = Match.OneOf(
 
 // dependencies - an array of string names of packages (not slices)
 // constraints - an array of objects:
-//  (almost, but not quite, what PackageVersion.parseConstraint returns)
+//  (almost, but not quite, what PV.parseConstraint returns)
 //  - packageName - string name
 //  - version - string constraint
 //  - type - constraint type
@@ -138,7 +57,7 @@ var PackageConstraintType = Match.OneOf(
 //    included versions are the only pre-releases that are allowed to match
 //    constraints that don't specifically name them during the "try not to
 //    use unanticipated pre-releases" pass
-ConstraintSolver.PackagesResolver.prototype.resolve = function (
+CS.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
   // clone because we mutate options
@@ -147,6 +66,10 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     upgrade: [],
     anticipatedPrereleases: {}
   }, options || {});
+
+  var resolver = new CS.Resolver({
+    nudge: self._options.nudge
+  });
 
   check(dependencies, [String]);
 
@@ -160,14 +83,40 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
       Match.ObjectWithValues(Match.ObjectWithValues(Boolean)))
   });
 
-  _.each(dependencies, function (packageName) {
-    self._ensurePackageInfoLoaded(packageName);
+  var packagesToLoad = {}; // package -> true
+
+  _.each(dependencies, function (package) {
+    packagesToLoad[package] = true;
   });
   _.each(constraints, function (constraint) {
-    self._ensurePackageInfoLoaded(constraint.name);
+    packagesToLoad[constraint.name] = true;
   });
-  _.each(options.previousSolution, function (version, packageName) {
-    self._ensurePackageInfoLoaded(packageName);
+  _.each(options.previousSolution, function (version, package) {
+    packagesToLoad[package] = true;
+  });
+
+  // Load packages into the cache (if they aren't loaded already).
+  self.catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
+
+  // Set up the Resolver using the package versions in the cache.
+  var cache = self.catalogCache;
+  cache.eachPackage(function (p, versions) {
+    versions = _.clone(versions).sort(PV.compare);
+    _.each(versions, function (v) {
+      var uv = new CS.UnitVersion(p, v);
+      resolver.addUnitVersion(uv);
+      _.each(cache.getDependencyMap(p, v), function (dep) {
+        // `dep` is a CS.Dependency
+        var p2 = dep.pConstraint.name;
+        var constr = dep.pConstraint.constraintString;
+        if (! dep.isWeak) {
+          uv.addDependency(p2);
+        }
+        if (constr) {
+          uv.addConstraint(resolver.getConstraint(p2, constr));
+        }
+      });
+    });
   });
 
   if (options.previousSolution) {
@@ -175,7 +124,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     // about that were mentioned.  (_.compact drops unknown UnitVersions.)
     options.previousSolution = _.compact(
       _.map(options.previousSolution, function (version, packageName) {
-        return self.resolver.getUnitVersion(packageName, version);
+        return resolver.getUnitVersion(packageName, version);
       }));
   }
 
@@ -187,10 +136,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   });
   options.upgrade = upgradePackages;
 
-  constraints = self._makeConstraintObjects(constraints);
+  constraints = _.map(constraints, function (c) {
+    return resolver.getConstraint(c.name, c.constraintString);
+  });
 
   options.rootDependencies = dependencies;
-  var resolverOptions = self._getResolverOptions(options);
+  var resolverOptions = self._getResolverOptions(resolver, options);
   var res = null;
   var neededToUseUnanticipatedPrereleases = false;
 
@@ -212,12 +163,12 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     var constraintsWithPreviousSolutionLock = _.clone(constraints);
     _.each(options.previousSolution, function (uv) {
       constraintsWithPreviousSolutionLock.push(
-        self.resolver.getConstraint(uv.name, '=' + uv.version));
+        resolver.getConstraint(uv.name, '=' + uv.version));
     });
     try {
       // Try running the resolver. If it fails to resolve, that's OK, we'll keep
       // working.
-      res = self.resolver.resolve(
+      res = resolver.resolve(
         dependencies, constraintsWithPreviousSolutionLock, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
@@ -229,7 +180,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
   // without locking in the previous solution as strict equality.
   if (!res) {
     try {
-      res = self.resolver.resolve(dependencies, constraints, resolverOptions);
+      res = resolver.resolve(dependencies, constraints, resolverOptions);
     } catch (e) {
       if (!(e.constraintSolverError))
         throw e;
@@ -243,7 +194,7 @@ ConstraintSolver.PackagesResolver.prototype.resolve = function (
     neededToUseUnanticipatedPrereleases = true;
     // Unlike the previous calls, this one throws a constraintSolverError on
     // failure.
-    res = self.resolver.resolve(dependencies, constraints, resolverOptions);
+    res = resolver.resolve(dependencies, constraints, resolverOptions);
   }
   return {
     answer:  resolverResultToPackageMap(res),
@@ -261,18 +212,8 @@ var resolverResultToPackageMap = function (choices) {
   return packageMap;
 };
 
-
-ConstraintSolver.PackagesResolver.prototype._makeConstraintObjects = function (
-    inputConstraints) {
-  var self = this;
-  return _.map(inputConstraints, function (constraint) {
-    return self.resolver.getConstraint(
-      constraint.name, constraint.constraintString);
-  });
-};
-
-ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
-  function (options) {
+CS.PackagesResolver.prototype._getResolverOptions =
+  function (resolver, options) {
   var self = this;
 
   var resolverOptions = {
@@ -282,7 +223,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
   if (options._testing) {
     resolverOptions.costFunction = function (state) {
       return mori.reduce(mori.sum, 0, mori.map(function (nameAndUv) {
-        return PackageVersion.versionMagnitude(mori.last(nameAndUv).version);
+        return PV.versionMagnitude(mori.last(nameAndUv).version);
       }, state.choices));
     };
   } else {
@@ -315,8 +256,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           // The package was present in the previous solution
           var prev = prevSolMapping[uv.name];
           var versionsDistance =
-            PackageVersion.versionMagnitude(uv.version) -
-            PackageVersion.versionMagnitude(prev.version);
+            PV.versionMagnitude(uv.version) -
+            PV.versionMagnitude(prev.version);
 
           var isCompatible = prev.majorVersion === uv.majorVersion;
 
@@ -343,8 +284,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
         } else {
           var latestDistance =
-            PackageVersion.versionMagnitude(_.last(self.resolver.unitsVersions[uv.name]).version) -
-            PackageVersion.versionMagnitude(uv.version);
+            PV.versionMagnitude(_.last(resolver.unitsVersions[uv.name]).version) -
+            PV.versionMagnitude(uv.version);
 
           if (isRootDep[uv.name]) {
             // root dependency
@@ -357,7 +298,7 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
             // How far is our choice from the most conservative version that
             // also matches our constraints?
             var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
-            cost[MINOR] += PackageVersion.versionMagnitude(uv.version) - PackageVersion.versionMagnitude(minimal);
+            cost[MINOR] += PV.versionMagnitude(uv.version) - PV.versionMagnitude(minimal);
             options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
           }
         }
@@ -398,8 +339,8 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
           }
 
           var versionsDistance =
-            PackageVersion.versionMagnitude(earliestMatching.version) -
-            PackageVersion.versionMagnitude(prev.version);
+            PV.versionMagnitude(earliestMatching.version) -
+            PV.versionMagnitude(prev.version);
           if (versionsDistance < 0) {
             cost[VMAJOR]++;
             return;
@@ -407,13 +348,13 @@ ConstraintSolver.PackagesResolver.prototype._getResolverOptions =
 
           cost[MAJOR] += versionsDistance;
         } else {
-          var versions = self.resolver.unitsVersions[dep];
+          var versions = resolver.unitsVersions[dep];
           var latestMatching = mori.last(alternatives);
 
           var latestDistance =
-            PackageVersion.versionMagnitude(
-              _.last(self.resolver.unitsVersions[dep]).version) -
-            PackageVersion.versionMagnitude(latestMatching.version);
+            PV.versionMagnitude(
+              _.last(resolver.unitsVersions[dep]).version) -
+            PV.versionMagnitude(latestMatching.version);
 
           cost[MEDIUM] += latestDistance;
         }
