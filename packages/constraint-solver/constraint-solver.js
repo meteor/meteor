@@ -43,11 +43,7 @@ var PackageConstraintType = Match.OneOf(
   }));
 
 // dependencies - an array of string names of packages (not slices)
-// constraints - an array of objects:
-//  (almost, but not quite, what PV.parseConstraint returns)
-//  - packageName - string name
-//  - version - string constraint
-//  - type - constraint type
+// constraints - an array of PV.PackageConstraints
 // options:
 //  - upgrade - list of dependencies for which upgrade is prioritized higher
 //    than keeping the old version
@@ -60,16 +56,11 @@ var PackageConstraintType = Match.OneOf(
 CS.PackagesResolver.prototype.resolve = function (
     dependencies, constraints, options) {
   var self = this;
-  // clone because we mutate options
   options = _.extend({
     _testing: false,
     upgrade: [],
     anticipatedPrereleases: {}
   }, options || {});
-
-  var resolver = new CS.Resolver({
-    nudge: self._options.nudge
-  });
 
   check(dependencies, [String]);
 
@@ -98,6 +89,10 @@ CS.PackagesResolver.prototype.resolve = function (
   // Load packages into the cache (if they aren't loaded already).
   self.catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
 
+  var resolver = new CS.Resolver({
+    nudge: self._options.nudge
+  });
+
   // Set up the Resolver using the package versions in the cache.
   var cache = self.catalogCache;
   cache.eachPackage(function (p, versions) {
@@ -119,10 +114,12 @@ CS.PackagesResolver.prototype.resolve = function (
     });
   });
 
+  var previousSolutionUVs = null;
   if (options.previousSolution) {
-    // Replace previousSolution map with a list of the UnitVersions that we know
-    // about that were mentioned.  (_.compact drops unknown UnitVersions.)
-    options.previousSolution = _.compact(
+    // Build a list of the UnitVersions that we know about that were
+    // mentioned in the previousSolution map.
+    // (_.compact drops unknown UnitVersions.)
+    previousSolutionUVs = _.compact(
       _.map(options.previousSolution, function (version, packageName) {
         return resolver.getUnitVersion(packageName, version);
       }));
@@ -134,14 +131,20 @@ CS.PackagesResolver.prototype.resolve = function (
   _.each(options.upgrade, function (packageName) {
     upgradePackages[packageName] = true;
   });
-  options.upgrade = upgradePackages;
 
   constraints = _.map(constraints, function (c) {
     return resolver.getConstraint(c.name, c.constraintString);
   });
 
   options.rootDependencies = dependencies;
-  var resolverOptions = self._getResolverOptions(resolver, options);
+  var resolverOptions = self._getResolverOptions(resolver, {
+    anticipatedPrereleases: options.anticipatedPrereleases,
+    rootDependencies: dependencies,
+    upgrade: upgradePackages,
+    previousSolution: previousSolutionUVs,
+    _testing: options._testing,
+    debug: options.debug
+  });
   var res = null;
   var neededToUseUnanticipatedPrereleases = false;
 
@@ -159,9 +162,9 @@ CS.PackagesResolver.prototype.resolve = function (
   // depended on.  (We still use the specific contents of options.upgrade to
   // guide which things are encouraged to be upgraded vs stay the same in the
   // heuristic.)
-  if (!_.isEmpty(options.previousSolution) && _.isEmpty(options.upgrade)) {
+  if (!_.isEmpty(previousSolutionUVs) && _.isEmpty(upgradePackages)) {
     var constraintsWithPreviousSolutionLock = _.clone(constraints);
-    _.each(options.previousSolution, function (uv) {
+    _.each(previousSolutionUVs, function (uv) {
       constraintsWithPreviousSolutionLock.push(
         resolver.getConstraint(uv.name, '=' + uv.version));
     });
@@ -212,6 +215,11 @@ var resolverResultToPackageMap = function (choices) {
   return packageMap;
 };
 
+// Takes options {anticipatedPrereleases, _testing, rootDependencies,
+// previousSolution, debug, upgrade}.
+//
+// Returns options {anticipatedPrereleases, costFunction,
+// estimateCostFunction, combineCostFunction}.
 CS.PackagesResolver.prototype._getResolverOptions =
   function (resolver, options) {
   var self = this;
@@ -269,18 +277,18 @@ CS.PackagesResolver.prototype._getResolverOptions =
               // XXX in fact we want to avoid downgrades to the direct
               // dependencies at all cost.
               cost[VMAJOR]++;
-              options.debug && console.log("root & *not* compatible: ", uv.name, prev.version, "=>", uv.version)
+              options.debug && console.log("root & *not* compatible: ", uv.name, prev.version, "=>", uv.version);
             } else {
               // compatible but possibly newer
               // prefer the version closest to the older solution
               cost[MAJOR] += versionsDistance;
-              options.debug && console.log("root & compatible: ", uv.name, prev.version, "=>", uv.version)
+              options.debug && console.log("root & compatible: ", uv.name, prev.version, "=>", uv.version);
             }
           } else {
             // transitive dependency
             // prefer to have less changed transitive dependencies
             cost[MINOR] += versionsDistance === 0 ? 0 : 1;
-            options.debug && console.log("transitive: ", uv.name, prev.version, "=>", uv.version)
+            options.debug && console.log("transitive: ", uv.name, prev.version, "=>", uv.version);
           }
         } else {
           var latestDistance =
@@ -291,7 +299,7 @@ CS.PackagesResolver.prototype._getResolverOptions =
             // root dependency
             // preferably latest
             cost[MEDIUM] += latestDistance;
-            options.debug && console.log("root: ", uv.name, "=>", uv.version)
+            options.debug && console.log("root: ", uv.name, "=>", uv.version);
           } else {
             // transitive dependency
             // prefarable earliest possible to be conservative
@@ -299,7 +307,7 @@ CS.PackagesResolver.prototype._getResolverOptions =
             // also matches our constraints?
             var minimal = state.constraints.getMinimalVersion(uv.name) || '0.0.0';
             cost[MINOR] += PV.versionMagnitude(uv.version) - PV.versionMagnitude(minimal);
-            options.debug && console.log("transitive: ", uv.name, "=>", uv.version)
+            options.debug && console.log("transitive: ", uv.name, "=>", uv.version);
           }
         }
       });
