@@ -631,6 +631,7 @@ _.extend(Sandbox.prototype, {
   cd: function (relativePath, callback) {
     var self = this;
     var previous = self.cwd;
+    self.spyLog("> cd " + relativePath);
     self.cwd = files.pathResolve(self.cwd, relativePath);
     if (callback) {
       callback();
@@ -842,6 +843,12 @@ _.extend(Sandbox.prototype, {
                                   "meteor-tool", toolPackageVersion,
                                   'meteor-tool-' + archinfo.host(), 'meteor'),
                   files.pathJoin(self.warehouse, 'meteor'));
+  },
+
+  spyLog: function (str) {
+    if (spying) {
+      Console.rawInfo(str);
+    }
   }
 });
 
@@ -1031,6 +1038,7 @@ var Run = function (execPath, options) {
   self.baseTimeout = 20;
   self.extraTime = 0;
   self.client = options.client;
+  self.sandbox = options.sandbox;
 
   self.stdoutMatcher = new Matcher(self);
   self.stderrMatcher = new Matcher(self);
@@ -1118,6 +1126,9 @@ _.extend(Run.prototype, {
     _.extend(env, self.env);
 
     var child_process = require('child_process');
+    if (spying) {
+      self.sandbox.spyLog('> meteor ' + self._args.join(' ') + '\n');
+    }
     self.proc = child_process.spawn(self.execPath, self._args, {
       cwd: self.cwd,
       env: env
@@ -1135,12 +1146,18 @@ _.extend(Run.prototype, {
 
     self.proc.stdout.setEncoding('utf8');
     self.proc.stdout.on('data', function (data) {
+      if (spying) {
+        self.sandbox.spyLog(data);
+      }
       self.outputLog.write('stdout', data);
       self.stdoutMatcher.write(data);
     });
 
     self.proc.stderr.setEncoding('utf8');
     self.proc.stderr.on('data', function (data) {
+      if (spying) {
+        self.sandbox.spyLog(data);
+      }
       self.outputLog.write('stderr', data);
       self.stderrMatcher.write(data);
     });
@@ -1674,11 +1691,15 @@ var listTests = function (options) {
 // Running tests
 ///////////////////////////////////////////////////////////////////////////////
 
+var spying = false; // global, like allTests
+
 // options: onlyChanged, offline, includeSlowTests, historyLines, testRegexp,
-//          fileRegexp,
+//          fileRegexp, spy,
 //          clients:
 //             - browserstack (need s3cmd credentials)
 var runTests = function (options) {
+  spying = options.spy;
+
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {

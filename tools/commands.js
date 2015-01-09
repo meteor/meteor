@@ -1769,7 +1769,8 @@ main.registerCommand({
     browserstack: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
-    file: { type: String }
+    file: { type: String },
+    spy: { type: Boolean }
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -1844,7 +1845,8 @@ main.registerCommand({
     fileRegexp: fileRegexp,
     // other options
     historyLines: options.history,
-    clients: clients
+    clients: clients,
+    spy: options.spy
   });
 
 });

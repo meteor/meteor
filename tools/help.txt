@@ -481,7 +481,7 @@ Options:
 >>> self-test
 Run tests of the 'meteor' tool.
 Usage: meteor self-test [pattern] [--list] [--file pattern] [--changed]
-                        [--slow] [--force-online] [--history n]
+                        [--slow] [--force-online] [--history n] [--spy]
                         [--browserstack]
 
 Runs internal tests. Exits with status 0 on success.
@@ -508,6 +508,9 @@ pass --force-online.
 
 Use --history to change the number of lines of program output that are
 shown on test failure. The default is 10.
+
+Pass --spy to log activity to stdout, including commands run and program
+output.
 
 Pass --browserstack to enable client side tests using BrowserStack.
 --browserstack requires s3cmd credentials.
