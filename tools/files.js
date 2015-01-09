@@ -629,17 +629,26 @@ files.createTarGzStream = function (dirPath, options) {
   // untarring if the first file inside the top-level directory is not
   // writeable.
 
-  function fixDirPermissions(entry) {
+  var maxPath = 260;
+
+  function filterEntry(entry) {
     // Make sure readable directories have execute permission
     if (entry.props.type === "Directory")
       entry.props.mode |= (entry.props.mode >>> 2) & 0111;
+
+    // Error about long paths on Windows
+    if(entry.path.length > maxPath && entry.path.indexOf("test") === -1) {
+      throw new Error("Path too long: " + entry.path + " is " +
+        entry.path.length + " characters.");
+    }
+
     return true;
   }
 
   return fstream.Reader({
     path: files.convertToOSPath(dirPath),
     type: 'Directory',
-    filter: fixDirPermissions
+    filter: filterEntry
   }).pipe(tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
 };
 
