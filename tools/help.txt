@@ -683,10 +683,16 @@ Options:
 Show detailed information about a release or package.
 Usage: meteor show <name> [--show-all] [--ejson]
        meteor show <name@version> [--ejson]
+       meteor show [--ejson]
 
 Show detailed information on a specific package or release, including
 a list of available versions. Use <name>@<version> to get more information
 about a specific version of a package or release.
+
+Meteor show works on packages built locally from source, as well as remote
+packages stored on the server. Use '<name>@local' to see information from a
+local version. Running from a package source directory with no arguments will
+show information for that package version.
 
 By default, Meteor will not show more than five versions, and will not
 show experimental release versions. Meteor will also hide packages that
