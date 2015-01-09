@@ -2466,15 +2466,17 @@ selftest.define("update package metadata",
     run.matchErr("Summary must be under");
     run.expectExit(1);
 
-    // Blank summary can still work, for now, but doesn't actually update the
-    // summary.
+    // Blank summary.
     staging = s.read("package-customizable.js");
     staging = staging.replace(/~git~/g, git);
     staging = staging.replace(/~summary~/g, "");
     staging = staging.replace(/~version~/g, "0.9.9");
     staging = staging.replace(/~documentation~/g, "null");
     s.write("package.js", staging);
-    update();
+    run = s.run("publish", "--update");
+    run.matchErr("Please provide");
+    run.expectExit(1);
+
   });
   testShowPackageVersion(s, _.extend({
     summary: summary,

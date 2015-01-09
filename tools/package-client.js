@@ -455,13 +455,18 @@ exports.updatePackageMetadata = function (options) {
   }
 
   var dataToUpdate = {
-    git: packageSource.metadata.git,
-    summary: packageSource.metadata.summary,
+    git: packageSource.metadata.git || "",
+    description: packageSource.metadata.summary,
     longDescription: readmeInfo.excerpt
   };
 
   // Check that the metadata fits under the established limits, and give helpful
   // feedback.
+  if (! dataToUpdate["description"]) {
+    buildmessage.error("Please provide a short description to use in 'meteor search'");
+    return;
+  }
+
   if (dataToUpdate["description"] &&
       dataToUpdate["description"].length > 100) {
     buildmessage.error("Summary must be under 100 chars.");
@@ -587,6 +592,15 @@ exports.publishPackage = function (options) {
       "set 'documentation: null' in your Package.describe");
     return;
   }
+  if (readmeInfo && readmeInfo.excerpt.length > 1500) {
+    buildmessage.error(
+      "Longform package description is too long. Meteor uses the section of",
+      "the Markdown documentation file between the first and second",
+      "headings. That section must be less than 1500 characters long.");
+    return;
+  }
+
+
   // We don't let the user upload a blank README for UX reasons, but we would
   // prefer that the server move to a world with 'readme' files for everything
   // in the future. This helps unite these interfaces, and makes our code easier
