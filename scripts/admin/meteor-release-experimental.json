@@ -1,6 +1,6 @@
 {
  "track": "WINDOWS-PREVIEW",
- "version": "0.0.20",
+ "version": "0.0.24",
  "recommended": false,
  "official": false,
  "description": "An RC of Meteor 1.0.3"

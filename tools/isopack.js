@@ -447,7 +447,7 @@ _.extend(Isopack.prototype, {
 
   tarballName: function () {
     var self = this;
-    return self.name + '-' + self.version + '-' + self.buildArchitectures();
+    return self.name + '-' + self.version;
   },
 
   _toolArchitectures: function () {
@@ -1079,7 +1079,7 @@ _.extend(Isopack.prototype, {
     var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
 
 
-    var toolPath = 'meteor-tool-' + archinfo.host();
+    var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
     builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
