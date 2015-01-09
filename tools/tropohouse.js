@@ -149,7 +149,6 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX: Error handling.
   _downloadBuildToTempDir: function (versionInfo, buildRecord) {
-    console.log("downloading to temp dir");
     var self = this;
     var targetDirectory = files.mkdtemp();
 
@@ -166,7 +165,6 @@ _.extend(exports.Tropohouse.prototype, {
       wait: false
     });
     files.extractTarGz(packageTarball, targetDirectory);
-    console.log("Extracted to " + targetDirectory);
     return targetDirectory;
   },
 
@@ -313,8 +311,6 @@ _.extend(exports.Tropohouse.prototype, {
         });
         if (buildmessage.jobHasMessages())
           return;
-
-        console.log(buildTempDirs);
 
         // We need to turn our builds into a single isopack.
         var isopack = new Isopack;
