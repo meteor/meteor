@@ -340,7 +340,7 @@ exports.uploadFile = uploadFile;
 var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
 
-  var tempDir = files.mkdtemp('build-package-');
+  var tempDir = files.mkdtemp('bp-');
   var packageTarName = isopack.tarballName();
   var tarInputDir = files.pathJoin(tempDir, packageTarName);
 
