@@ -306,7 +306,7 @@ var bundleSource = function (isopack, includeSources, packageDir,
 
 // Uploads a file at a filepath to the HTTP put URL.
 //
-// Returns 0 on success and less than 0 on failure.
+// Returns true on success and false on failure.
 var uploadFile = function (putUrl, filepath) {
   buildmessage.assertInJob();
   var size = files.stat(filepath).size;
@@ -325,12 +325,12 @@ var uploadFile = function (putUrl, filepath) {
       bodyStreamLength: size
     });
   } catch (err) {
-    buildmessage.error(err);
-    return -1;
+    buildmessage.error(err.error.toString());
+    return false;
   } finally {
     rs.close();
   }
-  return 0;
+  return true;
 };
 
 exports.uploadFile = uploadFile;
@@ -489,7 +489,7 @@ exports.updatePackageMetadata = function (options) {
     var uploadInfo =
           callPackageServerBM(conn, "createReadme", versionIdentifier);
     if (! uploadInfo) return;
-    if (uploadFile(uploadInfo.url, readmePath) < 0) return;
+    if (! uploadFile(uploadInfo.url, readmePath) < 0) return;
     callPackageServerBM(
       conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
   });
@@ -585,15 +585,6 @@ exports.publishPackage = function (options) {
       "Your documentation file is blank, so users may have trouble figuring " +
       "out how to use your package. Please fill it out, or " +
       "set 'documentation: null' in your Package.describe");
-    return;
-  }
-
-  if (readmeInfo &&
-      readmeInfo.excerpt.length > 1500) {
-    buildmessage.error(
-      "Longform package description is too long. Meteor uses the section of",
-      "the Markdown documentation file between the first and second",
-      "headings. That section must be less than 1500 characters long.");
     return;
   }
   // We don't let the user upload a blank README for UX reasons, but we would
@@ -724,6 +715,8 @@ exports.publishPackage = function (options) {
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
 
+    // Documentation is smaller than the source. Upload it first, to minimize
+    // the chances of PUT URLs expiring. (XXX: in the far future, parallelize this)
     buildmessage.enterJob("uploading documentation", function () {
       uploadFile(uploadInfo.readmeUrl, readmePath);
     });
