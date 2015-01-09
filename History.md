@@ -1,5 +1,6 @@
 ## v.NEXT
 
+* Fix stack trace when a browser tries to use the server like a proxy.  #1212
 
 ## v1.0.2.1, 2014-Dec-22
 
