@@ -1042,7 +1042,7 @@ _.extend(ReleaseQuery.prototype, {
 main.registerCommand({
   name: 'show',
   pretty: true,
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: 1,
   usesPackage: true,
   options: {
@@ -1053,21 +1053,43 @@ main.registerCommand({
     new catalog.Refresh.OnceAtStart(
         { maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
 }, function (options) {
-  // The foo@bar API means that we have to do some string parsing to figure out
-  // if we want a particular version.
-  var itemName = options.args[0];
-  var splitArgs = itemName.split('@');
-  var name = splitArgs[0];
-  var version = (splitArgs.length > 1) ? splitArgs[1] : null;
-  if (splitArgs.length > 2) {
-    Console.error("Invalid request format: " + itemName);
-    process.exit(1);
-  }
-  var query = null;
-
+  var fullName;
+  var name;
+  var version;
   // Because of the new projectContext interface, we need to initialize the
   // project context in order to load the local catalog. This is not ideal.
   var projectContext = getTempContext(options);
+
+  // If the user specified a query, process it.
+  if (! _.isEmpty(options.args)) {
+    // The foo@bar API means that we have to do some string parsing to figure out
+    // if we want a particular version.
+    fullName = options.args[0];
+    var splitArgs = fullName.split('@');
+    name = splitArgs[0];
+    version = (splitArgs.length > 1) ? splitArgs[1] : null;
+    if (splitArgs.length > 2) {
+      Console.error("Invalid request format: " + fullName);
+      process.exit(1);
+    }
+  } else {
+    if (! options.packageDir) {
+      // Letting the user run 'meteor show' without arguments from a package
+      // directory is a pleasant shortcut, but the default should be specifying
+      // a query.
+      Console.error(
+        "Please specify a package or release name to show information about it."
+      );
+      process.exit(1);
+    }
+    // Use the projectContext to get the name of the package.
+    var currentVersion =
+          projectContext.localCatalog.getVersionBySourceRoot(options.packageDir);
+    name = currentVersion.packageName;
+    version = "local";
+    fullName = name + "@local";
+  }
+  var query = null;
 
   // First, we need to figure out if we are dealing with a package, or a
   // release. We don't want to rely on capitalization conventions, so we will
@@ -1107,7 +1129,7 @@ main.registerCommand({
   // couldn't gather any data about our request, then the item that we are
   // looking for does not exist.
   if (! query || ! query.data) {
-    return itemNotFound(itemName);
+    return itemNotFound(fullName);
   }
 
   query.print({ ejson: !! options.ejson });
