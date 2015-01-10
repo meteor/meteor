@@ -111,7 +111,7 @@ var getExcerptFromReadme = function (text) {
   // Don't waste time parsing if the document is empty.
   if (! text) return "";
 
-  // Split into linesarse with Commonmark.
+  // Split into lines with Commonmark.
   var commonmark = require('commonmark');
   var reader = new commonmark.DocParser();
   var parsed = reader.parse(text);
