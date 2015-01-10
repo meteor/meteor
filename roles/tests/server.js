@@ -835,6 +835,20 @@
       test.equal(_.difference(expected, actual), [])
     })
 
+  Tinytest.add(
+    'roles - can get all users in role by group and passes through mongo query arguments', 
+    function (test) {
+      reset()
+      Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'group1')
+      Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'group2')
+
+      var results = Roles.getUsersInRole('admin','group1', { fields: { username: 0 }, limit: 1 }).fetch();
+
+      test.equal(1, results.length);
+      test.isTrue(results[0].hasOwnProperty('_id'));
+      test.isFalse(results[0].hasOwnProperty('username'));
+    })
+
 
   Tinytest.add(
     'roles - can use Roles.GLOBAL_GROUP to assign blanket permissions',
