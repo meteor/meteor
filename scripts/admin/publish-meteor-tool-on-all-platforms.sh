@@ -66,7 +66,7 @@ main () {
     echo "${green}Going to ssh into machine running $PLATFORM and publish the release${NC}"
     trap 'echo "${red}Failed to publish from $PLATFORM${NC}"; clean_up' EXIT
     # copy the meteor session file to the remote host
-    scp -oUserKnownHostsFile=$TEMP_KEY -P $PORT -i $TEMP_PRIV_KEY -q $SESSION_FILE $USERNAME@$HOST:~/session 
+    scp -oUserKnownHostsFile=$TEMP_KEY -P $PORT -i $TEMP_PRIV_KEY -q $SESSION_FILE $USERNAME@$HOST:~/session
 
     $METEOR admin get-machine $PLATFORM <<'END'
 set -e
@@ -87,7 +87,47 @@ END
     trap - EXIT
   done
 
-  # XXX publish from Windows machines
+  echo "${green}Publishing from Windowsy platforms.${NC}"
+  for PLATFORM in ${WINDOWS_PLATFORMS[@]}; do
+    trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
+    CREDS=$($METEOR admin get-machine $PLATFORM --json)
+
+    # save host key and login private key to temp files
+    echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key
+    TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key
+    chmod 600 $TEMP_PRIV_KEY
+
+    USERNAME=$(echo $CREDS | get_from_json "username")
+    HOST=$(echo $CREDS | get_from_json "host")
+    PORT=$(echo $CREDS | get_from_json "port")
+    echo -n "$HOST " > $CHECKOUT_DIR/temp_key
+    echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key
+    TEMP_KEY=$CHECKOUT_DIR/temp_key
+
+    trap - EXIT
+
+    echo "${green}Going to ssh into machine running $PLATFORM and publish the release${NC}"
+    trap 'echo "${red}Failed to publish from $PLATFORM${NC}"; clean_up' EXIT
+    # copy the meteor session file to the remote host
+    scp -oUserKnownHostsFile=$TEMP_KEY -P $PORT -i $TEMP_PRIV_KEY -q $SESSION_FILE $USERNAME@$HOST:C:\\meteor-session
+
+    SCRIPT="(
+IF EXISTS C:\\tmp ( rmdir /s /q C:\\tmp) &&
+md C:\\tmp &&
+cd C:\\tmp &&
+C:\\git\\bin\\git.exe clone https://github.com/meteor/meteor.git &&
+cd meteor &&
+C:\\git\\bin\\git.exe fetch --tags &&
+C:\\git\\bin\\git.exe checkout $GITSHA &&
+cd C:\\tmp\\meteor\\packages\\meteor-tool &&
+METEOR_SESSION_FILE=C:\\meteor-session ..\\..\\meteor.bat publish --existing-version
+) || exit 1
+"
+    # checkout the SHA1 we want to publish and publish it
+    echo $SCRIPT | $METEOR admin get-machine $PLATFORM
+
+    trap - EXIT
+  done
 }
 
 # print a value from a JSON file by key
