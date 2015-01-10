@@ -312,7 +312,7 @@ ConstraintSolver.Constraint.prototype.toString = function (options) {
 
 
 ConstraintSolver.Constraint.prototype.isSatisfied = function (
-  candidateUV, resolver, resolveContext) {
+  candidateUV, resolveContext) {
   var self = this;
   check(candidateUV, ConstraintSolver.UnitVersion);
 
