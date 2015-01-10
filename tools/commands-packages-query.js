@@ -62,7 +62,7 @@ var rewriteDependencies = function (versionDependencies) {
         weak: weak
       };
   });
-  return dependencies;
+  return _.sortBy(dependencies, "name");
 };
 
 // Processes information about the versions that we hid. Returns a brief
@@ -252,6 +252,63 @@ _.extend(PkgExports.prototype, {
   }
 });
 
+// This class stores implies from a given package.
+//
+// Stores exports for a given package and returns them to the caller in a given
+// format. Takes in the dependencies from the package.
+var PkgImplies = function (pkgDeps) {
+  var self = this;
+  self.implies = [];
+  // Go through all the package dependencies. If a dependency has any implied
+  // references, add it to the list.
+  _.each(pkgDeps, function (ref, name) {
+    var architectures = [];
+    // We want to select the references that are implied (instead of just used)
+    // and save their architectures. Also, we want to replace 'os' with
+    // 'server', as with exports.
+    _.each(ref.references, function (r) {
+      if (! r.implied) return;
+      var archName = (r.arch === "os") ? "server" : r.arch;
+      architectures.push(archName);
+    });
+    // Sort architecures alphabetically.
+    architectures.sort();
+    if (! _.isEmpty(architectures)) {
+      self.implies.push({ name: name, architectures: architectures });
+    }
+  });
+  // Sort by name.
+  self.implies =  _.sortBy(self.implies, "name");
+};
+
+_.extend(PkgImplies.prototype, {
+  // Returns true if this class does not contain any exports.
+  isEmpty : function () {
+    var self = this;
+    return _.isEmpty(self.implies);
+  },
+  // Get exports as a raw object.
+  getObject : function () {
+    var self = this;
+    return self.implies;
+  },
+  // Convert package exports into a pretty, Console non-wrappable string. If an
+  // export is only declared for certain architectures, mentions those
+  // architectures in a user-friendly format.
+  getConsoleStr: function () {
+    var self = this;
+    var strImplies = _.map(self.implies, function (ref) {
+      // If an imply is valid for all architectures, don't specify it here.
+      if (ref["architectures"].length === compiler.ALL_ARCHES.length)
+        return ref.name;
+
+      // Don't split descriptions of individual implies between lines.
+      return Console.noWrap(
+        ref.name + " (" + ref.architectures.join(", ") + ")");
+    });
+    return strImplies.join(", ");
+  }
+});
 
 // The two classes below collect and print relevant information about Meteor
 // packages and Meteor releases, respectively. Specifically, they query the
@@ -469,11 +526,13 @@ _.extend(PackageQuery.prototype, {
       var mainlineRecord = catalog.official.getLatestMainlineVersion(self.name);
       if (mainlineRecord) {
         var pkgExports = new PkgExports(mainlineRecord.exports);
+        var implies = new PkgImplies(mainlineRecord.dependencies);
         data["defaultVersion"] = {
           summary: mainlineRecord.description,
           description: mainlineRecord.longDescription,
           git: mainlineRecord.git,
-          exports: pkgExports
+          exports: pkgExports,
+          implies: implies
         };
       } else {
         data["defaultVersion"] = _.last(data.versions);
@@ -517,8 +576,9 @@ _.extend(PackageQuery.prototype, {
       exports: versionRecord.exports
     };
 
-    // Get the export data, if the record has any.
+    // Get the export and imply data, if the record has any.
     data["exports"] = new PkgExports(versionRecord.exports);
+    data["implies"] = new PkgImplies(versionRecord.dependencies);
 
     // Processing and formatting architectures takes time, so we don't want to
     // do this if we don't have to.
@@ -595,6 +655,7 @@ _.extend(PackageQuery.prototype, {
 
     // Get the exports.
     data["exports"] = new PkgExports(packageSource.getExports());
+    data["implies"] = new PkgImplies(localRecord.dependencies);
 
     // If the version was not explicitly set by the user, the catalog backfills
     // a placeholder version for the constraint solver. We don't want to show
@@ -673,6 +734,12 @@ _.extend(PackageQuery.prototype, {
         data["exports"].getConsoleStr(),
         Console.options({ bulletPoint: "Exports: " }));
     }
+    if (data.implies && ! data.implies.isEmpty()) {
+      Console.info(
+        data["implies"].getConsoleStr(),
+        Console.options({ bulletPoint: "Implies: " }));
+    }
+
     Console.info();
 
     // If we don't have a long-form description, print the summary. (If we don't
@@ -739,8 +806,10 @@ _.extend(PackageQuery.prototype, {
       "publishedBy", "publishedOn", "installed", "local", "OSarchitectures",
       "directory"
     ];
-    var processedData = data["exports"] ?
-          { exports: data["exports"].getObject() } : {};
+    var processedData = {};
+    _.each(["exports", "implies"], function (key) {
+      processedData[key] = data[key] ? data[key].getObject() : [];
+    });
     return _.extend(processedData, _.pick(data, versionFields));
   },
 
@@ -800,6 +869,12 @@ _.extend(PackageQuery.prototype, {
       Console.info(
         defaultVersion["exports"].getConsoleStr(),
         Console.options({ bulletPoint: "Exports: " }));
+    }
+    if (defaultVersion && defaultVersion.implies &&
+        ! defaultVersion.implies.isEmpty()) {
+      Console.info(
+        defaultVersion["implies"].getConsoleStr(),
+        Console.options({ bulletPoint: "Implies: " }));
     }
     Console.info();
 
@@ -910,8 +985,10 @@ _.extend(PackageQuery.prototype, {
         "name", "version", "description", "summary", "git", "publishedBy",
         "publishedOn", "installed", "local", "directory"
       ];
-      var processedData = version["exports"] ?
-            { exports: version["exports"].getObject() } : {};
+      var processedData = {};
+      _.each(["exports", "implies"], function (key) {
+        processedData[key] = version[key] ? version[key].getObject() : [];
+      });
       return _.extend(processedData, _.pick(version, versionFields));
     });
     return _.extend({ versions: versions }, _.pick(data, packageFields));
