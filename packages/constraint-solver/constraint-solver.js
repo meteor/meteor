@@ -136,7 +136,6 @@ CS.PackagesResolver.prototype.resolve = function (
     return resolver.getConstraint(c.name, c.constraintString);
   });
 
-  options.rootDependencies = dependencies;
   var resolverOptions = self._getResolverOptions(resolver, {
     anticipatedPrereleases: options.anticipatedPrereleases,
     rootDependencies: dependencies,
