@@ -393,11 +393,13 @@ main.registerCommand({
       "in a Meteor app directory."
     );
   } else {
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir
+    });
+
     require('./server/shell.js').connect(
-      new projectContextModule.ProjectContext({
-        projectDir: options.appDir
-      }).getMeteorShellDirectory()
-    );
+      files.convertToOSPath(projectContext.getMeteorShellDirectory()));
+
     throw new main.WaitForExit;
   }
 });

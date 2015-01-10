@@ -134,6 +134,11 @@ function startREPL(options) {
 }
 
 function getSocketFile(shellDir) {
+  if (process.platform === "win32") {
+    // Make a Windows named pipe based on the app's path
+    return "\\\\.\\pipe\\" + shellDir.replace(/[:\\]/g, "_");
+  }
+
   return path.join(shellDir, "shell.sock");
 }
 
