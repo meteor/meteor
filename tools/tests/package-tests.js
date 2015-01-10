@@ -10,10 +10,11 @@ var username = "test";
 var password = "testtest";
 
 // Returns a random package name.
-var randomizedPackageName = function (username) {
+var randomizedPackageName = function (username, start) {
   // We often use package names in long, wrapped string output, so having them
-  // be the same length is very useful.
-  return username + ":" + utils.randomToken().substring(0, 6);
+  // be a consistent length is very useful.
+  var startStr = start ? start + "-" : "";
+  return username + ":" + startStr + utils.randomToken().substring(0, 6);
 }
 
 // Returns a random release name.
@@ -994,6 +995,9 @@ var testShowPackage =  selftest.markStack(function (s, fullPackageName, options)
   if (options.exports) {
     run.read("Exports: " + options.exports + "\n");
   }
+  if (options.implies) {
+    run.read("Implies: " + options.implies + "\n");
+  }
   run.read("\n");
   if (_.has(options, "description")) {
     run.read(options.description + "\n");
@@ -1065,6 +1069,9 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
   }
   if (options.exports) {
     run.read("Exports: " + options.exports + "\n");
+  }
+  if (options.implies) {
+    run.read("Implies: " + options.implies + "\n");
   }
   run.read("\n");
   if (_.has(options, "description")) {
@@ -1199,11 +1206,13 @@ selftest.define("show and search local package",  function () {
     "A, B (server), C (web.browser, web.cordova)," +
     " D (web.browser),\n"  + "         " +
     "E (web.cordova), G (server, web.cordova)";
+  var description = "Test package.";
+
   testShowPackage(s, name, {
     summary: summary,
     git: "www.github.com/meteor/meteor",
     exports: exportStr,
-    description: "Test package.",
+    description: description,
     versions: [{ version: "1.0.1", directory: packageDir }]
   });
   testShowPackageVersion(s, {
@@ -1212,8 +1221,65 @@ selftest.define("show and search local package",  function () {
     directory: packageDir,
     git: "www.github.com/meteor/meteor",
     summary: summary,
-    description: "Test package.",
-    exports: exportStr
+    exports: exportStr,
+    description: description
+  });
+
+  // Test showing implies. Since we are not going to build the package, we don't
+  // have to publish any of the things that we imply.
+  var impRaw = {
+    A: "",
+    B: "server",
+    C: "web.browser, web.cordova",
+    D: "web.browser",
+    E: "web.cordova",
+    G: "server, web.cordova"
+  };
+  var impliesData = _.sortBy(_.map(impRaw, function (label, placeholder) {
+    var name =  randomizedPackageName(username, placeholder.toLowerCase());
+    return { placeholder: placeholder, name: name, label: label};
+  }), 'name');
+  s.cd(name, function () {
+    s.cp("package-with-implies.js", "package.js");
+    var packOpen = s.read("package.js");
+    _.each(impliesData, function (d) {
+      var repReg = new RegExp("~" + d.placeholder + "~", "g");
+      packOpen = packOpen.replace(repReg, d.name);
+    });
+    s.write("package.js", packOpen);
+  });
+
+  summary = "This is a test package";
+  description = "Test package.";
+  var impArr = _.map(impliesData, function (d) {
+    return d.label ? d.name + " (" + d.label + ")" : d.name;
+  });
+  var impStr =
+    impArr[0] + ", " + impArr[1] + ",\n" + "         " +
+    impArr[2] + ", " + impArr[3] + ",\n" + "         " +
+    impArr[4] + ", " + impArr[5];
+  testShowPackage(s, name, {
+    summary: summary,
+    description: description,
+    implies: impStr,
+    directory: packageDir,
+    git: "www.github.com/meteor/meteor",
+    versions: [{ version: "1.2.1", directory: packageDir }]
+  });
+
+  // Implies are also dependencies.
+  var deps = _.map(impliesData, function (d) {
+    return { name: d.name, constraint: "1.0.0" };
+  });
+  testShowPackageVersion(s, {
+    packageName: name,
+    version: "1.2.1",
+    directory: packageDir,
+    description: description,
+    summary: summary,
+    git: "www.github.com/meteor/meteor",
+    implies: impStr,
+    dependencies: deps
   });
 });
 
@@ -1411,9 +1477,9 @@ selftest.define("show server package",
   // Publish a version of the package with git that depends on other
   // packages. To do this, we need to publish two other packages (since we don't
   // want to rely on specific packages existing on the test server).
-  var baseDependency = randomizedPackageName(username);
+  var baseDependency = randomizedPackageName(username, "base");
   createAndPublishPackage(s, baseDependency);
-  var weakDependency = randomizedPackageName(username);
+  var weakDependency = randomizedPackageName(username, "weak");
   createAndPublishPackage(s, weakDependency);
   s.cd(fullPackageName, function () {
     // Replace the dependencies placeholders in the package.js file with the
@@ -1450,6 +1516,77 @@ selftest.define("show server package",
     ]
   });
 
+  // Publish a version of the package with git that implies other packages.
+
+  // Test showing implies. Since we are not going to build the package, we don't
+  // have to publish any of the things that we imply.
+  var impRaw = {
+    A: "",
+    B: "server",
+    C: "web.browser, web.cordova",
+    D: "web.browser",
+    E: "web.cordova",
+    G: "server, web.cordova"
+  };
+  var impliesData = _.sortBy(_.map(impRaw, function (label, placeholder) {
+    var name =  randomizedPackageName(username, placeholder.toLowerCase());
+    createAndPublishPackage(s, name);
+    return { placeholder: placeholder, name: name, label: label};
+  }), 'name');
+
+  s.cd(fullPackageName, function () {
+    // Replace the dependencies placeholders in the package.js file with the
+    // packages that we have just published.
+    s.cp("package-with-implies.js", "package.js");
+    var packOpen = s.read("package.js");
+    _.each(impliesData, function (d) {
+       var repReg = new RegExp("~" + d.placeholder + "~", "g");
+       packOpen = packOpen.replace(repReg, d.name);
+    });
+    s.write("package.js", packOpen);
+    var run = s.run("publish");
+    run.waitSecs(30);
+    run.expectExit(0);
+  });
+
+  summary = "This is a test package";
+  var impArr = _.map(impliesData, function (d) {
+    return d.label ? d.name + " (" + d.label + ")" : d.name;
+  });
+  var impStr =
+    impArr[0] + ", " + impArr[1] + ",\n" + "         " +
+    impArr[2] + ", " + impArr[3] + ",\n" + "         " +
+    impArr[4] + ", " + impArr[5];
+
+  // Implies are also dependencies.
+  var deps = _.map(impliesData, function (d) {
+    return { name: d.name, constraint: "1.0.0" };
+  });
+  versions.push({ version: "1.2.1", date: today });
+  newVersions.push({ version: "1.2.1", date: today });
+  summary = "This is a test package";
+  var description = "Test package.";
+  testShowPackage(s, fullPackageName, {
+    summary: summary,
+    maintainers: username,
+    implies: impStr,
+    description: description,
+    git: "www.github.com/meteor/meteor",
+    versions: versions
+  });
+
+  testShowPackageVersion(s, {
+    packageName: fullPackageName,
+    version: "1.2.1",
+    publishedBy: username,
+    publishedOn: today,
+    summary: summary,
+    description: description,
+    git: "www.github.com/meteor/meteor",
+    implies: impStr,
+    dependencies: deps
+  });
+
   // Set a homepage.
   var run = s.run("admin", "change-homepage", fullPackageName, "www.meteor.com");
   run.waitSecs(10);
@@ -1457,11 +1594,13 @@ selftest.define("show server package",
   run.expectExit(0);
 
   testShowPackage(s, fullPackageName, {
-    summary: newSummary,
+    summary: summary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
-    versions: newVersions
+    versions: versions,
+    implies: impStr,
+    description: description
   });
 
   // Add this package to an app, forcing us to download the isopack. Check that
@@ -1475,13 +1614,16 @@ selftest.define("show server package",
     run.expectExit(0);
   });
 
-  versions.push({ version: "1.2.0", date: today, label: "installed" });
+  versions = _.initial(versions);
+  versions.push({ version: "1.2.1", date: today, label: "installed" });
   testShowPackage(s, fullPackageName, {
-    summary: newSummary,
+    summary: summary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
-    versions: versions
+    versions: versions,
+    implies: impStr,
+    description: description
   });
 
   // Publish a pre-release version of the package.
@@ -1499,8 +1641,8 @@ selftest.define("show server package",
   // Neither of these versions should show up.
   var moreAvailable =
     "Pre-release and unmigrated versions of " + fullPackageName +
-    " have been hidden. To see all\n" +
-    "5 versions, run 'meteor show --show-all " + fullPackageName + "'.";
+    " have been hidden. To see all\n" + "6" +
+    " versions, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
@@ -1508,8 +1650,12 @@ selftest.define("show server package",
     homepage: "www.meteor.com",
     versions: [
       { version: "0.9.9", date: today },
-      { version: "1.2.0", date: today, label: "installed" }
+      { version: "1.0.1", date: today },
+      { version: "1.2.0", date: today },
+      { version: "1.2.1", date: today, label: "installed" }
     ],
+    implies: impStr,
+    description: description,
     addendum: moreAvailable
   });
 
@@ -1522,7 +1668,9 @@ selftest.define("show server package",
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
     versions: newVersions,
-    all: true
+    all: true,
+    implies: impStr,
+    description: description,
   });
 
   // If we just query for a specific version, it shows up.
