@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
-var commonmark = require('commonmark');
 
 var files = require('./files.js');
 var utils = require('./utils.js');
@@ -113,6 +112,7 @@ var getExcerptFromReadme = function (text) {
   if (! text) return "";
 
   // Split into linesarse with Commonmark.
+  var commonmark = require('commonmark');
   var reader = new commonmark.DocParser();
   var parsed = reader.parse(text);
 
@@ -120,16 +120,12 @@ var getExcerptFromReadme = function (text) {
   // nodes that represent the text between the first and second heading.
   var relevantNodes = [];
 
-  // We want to take the data between the first and second headers, so it is
-  // important to keep track of how many headers we have passed.
-  var headerNum = 0;
-
   // Go through the document until we get the nodes that we are looking for,
   // then stop.
   _.any(parsed.children, function (child) {
     var isHeader = (child.t === "Header");
     // Don't excerpt anything before the first header.
-    if (! isHeader && (headerNum > 0)) {
+    if (! isHeader) {
       // If we are currently in the middle of excerpting, continue doing that
       // until we hit hit a header (and this is not a header). Otherwise, if
       // this is text, we should begin to excerpt it.
@@ -138,14 +134,6 @@ var getExcerptFromReadme = function (text) {
       // We have been excerpting, and came across a header. That means
       // that we are done.
       return true;
-    } else if (isHeader) {
-      // We are going to take the first text that we encounter under either of
-      // the first two headers. Beyond that, if we don't encounter anything, we
-      // won't excerpt it.
-      headerNum++;
-      if (headerNum > 2) {
-        return true;
-      }
     }
     return false;
   });
@@ -159,7 +147,9 @@ var getExcerptFromReadme = function (text) {
   var start = relevantNodes[0].start_line - 1;
   var stop = _.last(relevantNodes).end_line;
   // XXX: There is a bug in commonmark that happens when processing the last
-  // node in the document.
+  // node in the document. Here is the github issue:
+  // https://github.com/jgm/CommonMark/issues/276
+  // Remove this workaround when the issue is fixed.
   if (stop === _.last(parsed.children).end_line) {
     stop++;
   }

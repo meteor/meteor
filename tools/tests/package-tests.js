@@ -2022,29 +2022,6 @@ selftest.define("show readme excerpt",  function () {
   testShowPackageVersion(
     s, _.extend({ description: "foobaz" }, baseVersionInfo));
 
-  // Top heading, sub heading, sub heading, text. No text should show up! The
-  // user is intentionally skipping a section.
-  readme =
-    "Heading" + "\n" +
-    "========" + "\n" + "\n" +
-    "## Subheading" + "\n" + "\n" +
-    "## Another subheading" + "\n" + "\n" +
-    "You should not see this line!";
-  s.write("README.md", readme);
-  testShowPackage(s, name, basePackageInfo);
-  testShowPackageVersion(s, baseVersionInfo);
-
-  // Same as above, but with more weird subheadings.
-  readme =
-    "Heading" + "\n" +
-    "========" + "\n" + "\n" +
-    "# Subheading" + "\n" + "\n" +
-    "## Another subheading" + "\n" + "\n" +
-    "You should not see this line!";
-  s.write("README.md", readme);
-  testShowPackage(s, name, basePackageInfo);
-  testShowPackageVersion(s, baseVersionInfo);
-
   // Some formatting in the text.
   var excerpt =
         "Here is a code sample:" + "\n\n" +
@@ -2239,10 +2216,9 @@ selftest.define("show server readme",
     run.expectExit(1);
   });
 
-  // If you didn't format things properly, we will still publish, but you might
-  // not have an excerpt.
+  // If you didn't format things properly, we will still publish and use that as
+  // an excerpt.
   s.cd(fullPackageName, function () {
-    // README is blank.
     var current = staging.replace(/~version~/g, "1.0.0_2");
     s.write("package.js", current.replace(/~documentation~/g, "'unformat'"));
     s.write("unformat", "I did not format this readme");
@@ -2253,6 +2229,7 @@ selftest.define("show server readme",
     git: git,
     packageName: fullPackageName,
     version:  "1.0.0_2",
+    description: "I did not format this readme",
     publishedBy: username,
     publishedOn: today
   });
@@ -2260,6 +2237,7 @@ selftest.define("show server readme",
     summary: summary,
     git: git,
     maintainers: username,
+    description: "I did not format this readme",
     versions: [
       { version: "0.9.9", date: today },
       { version: "1.0.0", date: today },
