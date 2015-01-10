@@ -393,7 +393,7 @@ main.registerCommand({
       "in a Meteor app directory."
     );
   } else {
-    require('./server/shell.js').connect(options.appDir);
+    require('./server/shell.js').connect(files.convertToOSPath(options.appDir));
     throw new main.WaitForExit;
   }
 });

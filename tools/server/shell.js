@@ -18,7 +18,11 @@ exports.listen = function listen() {
   var socketFile = getSocketFile();
   fs.unlink(socketFile, function() {
     net.createServer(onConnection)
-      .on("error", function(err){})
+      .on("error", function(err) {
+        if (err) {
+          throw err;
+        }
+      })
       .listen(socketFile);
   });
 };
@@ -113,6 +117,12 @@ function startREPL(options) {
 }
 
 function getSocketFile(appDir) {
+  if (process.platform === "win32") {
+    // Make a Windows named pipe based on the app's path
+    return "\\\\.\\pipe\\" +
+      (appDir || getAppDir()).replace(/[:\\]/g, "_");
+  }
+
   return path.join(appDir || getAppDir(), ".meteor", "local", "shell.sock");
 }
 exports.getSocketFile = getSocketFile;
