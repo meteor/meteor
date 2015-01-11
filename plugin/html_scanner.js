@@ -170,7 +170,9 @@ html_scanner = {
       } else {
         // <body>
         if (hasAttribs)
-          throwParseError("Attributes on <body> not supported");
+          results.js += "\nMeteor.startup(function() { \
+                            $('body').attr(" + JSON.stringify(attribs) + "); \
+                          });\n";
 
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
