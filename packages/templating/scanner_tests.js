@@ -112,6 +112,9 @@ Tinytest.add("templating - html scanner", function (test) {
                       'pizza</template>'),
     simpleTemplate('"the \\"cool\\" template"', '"pizza"'));
 
+  checkResults(html_scanner.scan('<body foo="bar">\n  Hello\n</body>'),
+    "\nMeteor.startup(function() { $('body').attr({\"foo\":\"bar\"}); });\n" + simpleBody('"Hello"'));
+
   // error cases; exact line numbers are not critical, these just reflect
   // the current implementation
 
@@ -152,11 +155,6 @@ Tinytest.add("templating - html scanner", function (test) {
     return html_scanner.scan(
       '<!doctype html>');
   }, "DOCTYPE", 1);
-
-  // attributes on body not supported
-  checkError(function() {
-    return html_scanner.scan('<body foo="bar">\n  Hello\n</body>');
-  }, "<body>", 1);
 
   // attributes on head not supported
   checkError(function() {
