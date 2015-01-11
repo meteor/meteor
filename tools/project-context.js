@@ -96,9 +96,11 @@ _.extend(exports.ProjectContext.prototype, {
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
-    // Set by 'meteor publish' to ensure that .meteor/packages and
-    // .meteor/versions are not written even though the command adds some
-    // constraints (like making sure the test is built).
+    // Set by a few special-case commands that call
+    // projectConstraintsFile.addConstraints for internal reasons without
+    // intending to actually write .meteor/packages and .meteor/versions (eg,
+    // 'publish' wants to make sure making sure the test is built, and
+    // --get-ready wants to build every conceivable package).
     self._neverWriteProjectConstraintsFile =
       options.neverWriteProjectConstraintsFile;
     self._neverWritePackageMap = options.neverWritePackageMap;
@@ -386,7 +388,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob("selecting package versions", function () {
         var resolver = self._buildResolver();
 
@@ -457,7 +459,7 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInJob();
 
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob(
         "scanning local packages",
         function () {
@@ -481,59 +483,6 @@ _.extend(exports.ProjectContext.prototype, {
         }
       );
     });
-  },
-
-  // Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
-  // official catalog, does that and tries again.
-  _runAndRetryWithRefreshIfHelpful: function (attempt) {
-    var self = this;
-    buildmessage.assertInJob();
-
-    // Run `attempt` in a nested buildmessage context.
-    var messages = buildmessage.capture(attempt);
-
-    // Did it work? Great. Move on to the next stage.
-    if (! messages.hasMessages()) {
-      return;
-    }
-
-    // Is refreshing unlikely to be useful, either because the error wasn't
-    // related to that, or because we tried to refresh recently, or because
-    // we're not allowed to refresh? Fail, merging the result of these errors
-    // into the current job (which will cause the _completeStagesThrough loop to
-    // halt).
-    if (! messages.hasMessageWithTag('refreshCouldHelp') ||
-        catalog.triedToRefreshRecently ||
-        catalog.official.offline) {
-      buildmessage.mergeMessagesIntoCurrentJob(messages);
-      return;
-    }
-
-    // Refresh!
-    // XXX This is a little hacky, as it shares a bunch of code with
-    // catalog.refreshOrWarn, which is a higher-level function that's allowed to
-    // log.
-    catalog.triedToRefreshRecently = true;
-    try {
-      catalog.official.refresh();
-      catalog.refreshFailed = false;
-    } catch (err) {
-      if (err.errorType !== 'DDP.ConnectionError')
-        throw err;
-      // First place the previous errors in the capture.
-      buildmessage.mergeMessagesIntoCurrentJob(messages);
-      // Then put an error representing this DDP error.
-      buildmessage.enterJob(
-        "refreshing package catalog to resolve previous errors",
-        function () {
-          buildmessage.error(err.message);
-        }
-      );
-      return;
-    }
-
-    // Try again, this time directly in the current buildmessage job.
-    attempt();
   },
 
   _getRootDepsAndConstraints: function () {
@@ -611,8 +560,8 @@ _.extend(exports.ProjectContext.prototype, {
     // Pre-release versions that are root constraints (in .meteor/packages, in
     // the release, or the version of a local package) are anticipated.
     _.each(rootConstraints, function (constraintObject) {
-      _.each(constraintObject.constraints, function (alternative) {
-        var version = alternative.version;
+      _.each(constraintObject.vConstraint.alternatives, function (alternative) {
+        var version = alternative.versionString;
         version && add(constraintObject.name, version);
       });
     });
@@ -646,7 +595,7 @@ _.extend(exports.ProjectContext.prototype, {
     if (!self.packageMap)
       throw Error("which packages to download?");
 
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob("downloading missing packages", function () {
         self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
           serverArchitectures: self._serverArchitectures
@@ -918,31 +867,21 @@ _.extend(exports.PackageMapFile.prototype, {
       line = files.trimSpace(line);
       if (line === '')
         return;
-      var constraint = utils.parseConstraint(line, {
+      var packageVersion = utils.parsePackageAtVersion(line, {
         useBuildmessage: true,
         buildmessageFile: self.filename
       });
-      if (!constraint)
+      if (!packageVersion)
         return;  // recover by ignoring
 
       // If a package appears multiple times in .meteor/versions, we just ignore
       // the second one. This file is more meteor-controlled than
       // .meteor/packages and people shouldn't be surprised to see it
       // automatically fixed.
-      if (_.has(self._versions, constraint.name))
+      if (_.has(self._versions, packageVersion.name))
         return;
 
-      // We expect this constraint to be "foo@1.2.3", not a lack of a constraint
-      // or something with "||" or "@=".
-      if (! utils.isSimpleConstraint(constraint)) {
-        buildmessage.error("Bad version: " + line, {
-          // XXX should this be relative?
-          file: self.filename
-        });
-        return;  // recover by ignoring
-      }
-
-      self._versions[constraint.name] = constraint.constraints[0].version;
+      self._versions[packageVersion.name] = packageVersion.version;
     });
   },
 

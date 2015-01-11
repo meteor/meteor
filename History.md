@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* Fix stack trace when a browser tries to use the server like a proxy.  #1212
+
+- Upgraded dependencies:
+  - jquery: 1.11.2 (from 1.11.0)
 
 ## v1.0.2.1, 2014-Dec-22
 

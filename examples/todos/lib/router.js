@@ -61,8 +61,3 @@ Router.map(function() {
     }
   });
 });
-
-if (Meteor.isClient) {
-  Router.onBeforeAction('loading', {except: ['join', 'signin']});
-  Router.onBeforeAction('dataNotFound', {except: ['join', 'signin']});
-}

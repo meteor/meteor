@@ -249,8 +249,8 @@ var checkSubtree = function (value, pattern) {
   if (pattern instanceof Function) {
     if (value instanceof pattern)
       return;
-    // XXX what if .name isn't defined
-    throw new Match.Error("Expected " + pattern.name);
+    throw new Match.Error("Expected " + (pattern.name ||
+                                         "particular constructor"));
   }
 
   var unknownKeysAllowed = false;

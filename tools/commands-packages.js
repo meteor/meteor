@@ -119,13 +119,14 @@ var formatArchitecture = function (s) {
 // whenever necessary!
 main.registerCommand({
   name: '--get-ready',
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir || files.mkdtemp('meteor-get-ready')
+    projectDir: options.appDir || files.mkdtemp('meteor-get-ready'),
+    neverWriteProjectConstraintsFile: true,
+    neverWritePackageMap: true
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.initializeCatalog();
@@ -162,7 +163,6 @@ main.registerCommand({
 // builds and downloads packages used by the current app.
 main.registerCommand({
   name: '--prepare-app',
-  pretty: true,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -182,7 +182,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'publish',
-  pretty: true,
   minArgs: 0,
   maxArgs: 0,
   options: {
@@ -416,7 +415,6 @@ main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
   maxArgs: 1,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // argument processing
@@ -596,7 +594,6 @@ main.registerCommand({
     'create-track': { type: Boolean, required: false },
     'from-checkout': { type: Boolean, required: false }
   },
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   try {
@@ -1032,7 +1029,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'show',
-  pretty: true,
   minArgs: 1,
   maxArgs: 1,
   options: {
@@ -1221,7 +1217,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'search',
-  pretty: true,
   minArgs: 0, // So we can provide specific help
   maxArgs: 1,
   options: {
@@ -1377,7 +1372,6 @@ main.registerCommand({
 main.registerCommand({
   name: 'list',
   requiresApp: true,
-  pretty: true,
   options: {
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
@@ -1781,7 +1775,6 @@ main.registerCommand({
   requiresRelease: false,
   minArgs: 0,
   maxArgs: Infinity,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   // If you are specifying packaging individually, you probably don't want to
@@ -1898,7 +1891,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -1926,7 +1918,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -1996,24 +1987,24 @@ main.registerCommand({
           return;
         }
 
-        _.each(constraint.constraints, function (subConstraint) {
-          if (subConstraint.version === null)
+        _.each(constraint.vConstraint.alternatives, function (subConstraint) {
+          if (subConstraint.versionString === null)
             return;
           // Figure out if this version exists either in the official catalog or
           // the local catalog. (This isn't the same as using the combined
           // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
           // package is 1.1.0 as long as 1.0.0 exists.)
           var versionRecord = projectContext.localCatalog.getVersion(
-            constraint.name, subConstraint.version);
+            constraint.name, subConstraint.versionString);
           if (! versionRecord) {
             // XXX #2846 here's an example of something that might require a
             // refresh
             versionRecord = catalog.official.getVersion(
-              constraint.name, subConstraint.version);
+              constraint.name, subConstraint.versionString);
           }
           if (! versionRecord) {
             buildmessage.error("no such version " + constraint.name + "@" +
-                               subConstraint.version);
+                               subConstraint.versionString);
           }
         });
         if (buildmessage.jobHasMessages())
@@ -2107,7 +2098,6 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  pretty: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
@@ -2199,7 +2189,6 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'refresh',
-  pretty: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   // We already did it!
@@ -2315,7 +2304,6 @@ main.registerCommand({
   minArgs: 2,
   maxArgs: 2,
   hidden: true,
-  pretty: true,
 
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
@@ -2337,12 +2325,12 @@ main.registerCommand({
     return 1;
   }
 
-  var toolConstraint = releaseRecord.tool &&
-        utils.parseConstraint(releaseRecord.tool);
-  if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
+  var toolPackageVersion = releaseRecord.tool &&
+        utils.parsePackageAtVersion(releaseRecord.tool);
+  if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseRecord.tool);
-  var toolPackage = toolConstraint.name;
-  var toolVersion = toolConstraint.constraints[0].version;
+  var toolPackage = toolPackageVersion.name;
+  var toolVersion = toolPackageVersion.version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
     toolPackage, toolVersion);

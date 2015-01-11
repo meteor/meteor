@@ -102,13 +102,13 @@ ConstraintSolver.ConstraintsList.prototype.each = function (iter) {
 
 // Checks if the passed unit version satisfies all of the constraints.
 ConstraintSolver.ConstraintsList.prototype.isSatisfied = function (
-    uv, resolver, resolveContext) {
+    uv, resolveContext) {
   var self = this;
 
   var satisfied = true;
 
   self.forPackage(uv.name, function (c) {
-    if (! c.isSatisfied(uv, resolver, resolveContext)) {
+    if (! c.isSatisfied(uv, resolveContext)) {
       satisfied = false;
       return BREAK;
     }

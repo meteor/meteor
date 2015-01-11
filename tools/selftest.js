@@ -52,6 +52,19 @@ var expectEqual = markStack(function (actual, expected) {
   }
 });
 
+// Call from a test to assert that 'actual' is truthy.
+var expectTrue = markStack(function (actual) {
+  if (! actual) {
+    throw new TestFailure('not-true');
+  }
+});
+// Call from a test to assert that 'actual' is falsey.
+var expectFalse = markStack(function (actual) {
+  if (actual) {
+    throw new TestFailure('not-false');
+  }
+});
+
 var expectThrows = markStack(function (f) {
   var threw = false;
   try {
@@ -1823,6 +1836,8 @@ _.extend(exports, {
   fail: fail,
   expectEqual: expectEqual,
   expectThrows: expectThrows,
+  expectTrue: expectTrue,
+  expectFalse: expectFalse,
   execFileSync: execFileSync,
   doOrThrow: doOrThrow,
   testPackageServerUrl: config.getTestPackageServerUrl()

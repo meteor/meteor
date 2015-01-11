@@ -174,7 +174,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("initial");
   run.match("restarted");
 
-  // Modify the local package 'say'something'.
+  // Modify the local package 'say-something'.
   s.cd("packages/say-something", function () {
     s.write("foo.js", "console.log(\"another\");");
   });

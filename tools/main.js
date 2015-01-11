@@ -37,7 +37,7 @@ function Command(options) {
     requiresApp: false,
     requiresRelease: true,
     hidden: false,
-    pretty: false
+    pretty: true
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -61,6 +61,16 @@ function Command(options) {
     if (_.has(value, 'short') && value.short.length !== 1)
       throw new Error(options.name + ": " + key + " has a bad short option");
   });
+};
+
+// Various registerCommand options such as requiresApp can be specified to
+// either as a constant value or as a function dependent on the parsed
+// command-line options object.
+Command.prototype.evaluateOption = function (optionName, options) {
+  var self = this;
+  if (typeof self[optionName] === 'function')
+    return self[optionName](options);
+  return self[optionName];
 };
 
 // map from command name to a Command, or to a subcommand map (a map
@@ -387,9 +397,13 @@ var springboard = function (rel, options) {
 
   // XXX split better
   Console.withProgressDisplayVisible(function () {
-    var messages = buildmessage.capture(function () {
-      tropohouse.default.downloadPackagesMissingFromMap(packageMap);
-    });
+    var messages = buildmessage.capture(
+      { title: "downloading the command-line tool" }, function () {
+        catalog.runAndRetryWithRefreshIfHelpful(function () {
+          tropohouse.default.downloadPackagesMissingFromMap(packageMap);
+        });
+      }
+    );
     if (messages.hasMessages()) {
       // We have failed to download the tool that we are supposed to springboard
       // to! That's bad. Let's exit.
@@ -763,8 +777,6 @@ Fiber(function () {
     }
   }
 
-  var alreadyRefreshed = false;
-
   if (! files.usesWarehouse()) {
     // Running from a checkout
     if (releaseOverride) {
@@ -796,7 +808,7 @@ Fiber(function () {
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
         Console.withProgressDisplayVisible(function () {
-          alreadyRefreshed = catalog.refreshOrWarn();
+          catalog.refreshOrWarn();
         });
         releaseName = release.latestKnown();
       }
@@ -855,7 +867,7 @@ Fiber(function () {
 
         // ATTEMPT 3: modern release, troposphere sync needed.
         Console.withProgressDisplayVisible(function () {
-          alreadyRefreshed = catalog.refreshOrWarn();
+          catalog.refreshOrWarn();
         });
 
         // Try to load the release even if the refresh failed, since it might
@@ -1190,9 +1202,7 @@ Fiber(function () {
   // We know we have a valid command and options. Now check to see if
   // the command can only be run from an app dir, and add the appDir
   // option if running from an app.
-  var requiresApp = command.requiresApp;
-  if (typeof requiresApp === "function")
-    requiresApp = requiresApp(options);
+  var requiresApp = command.evaluateOption('requiresApp', options);
 
   if (appDir) {
     options.appDir = appDir;
@@ -1222,10 +1232,7 @@ Fiber(function () {
 
   // Same check for commands that can only be run from a package dir.
   // You can't specify this on a Refresh.Never command.
-  var requiresPackage = command.requiresPackage;
-  if (typeof requiresPackage === "function") {
-    requiresPackage = requiresPackage(options);
-  }
+  var requiresPackage = command.evaluateOption('requiresPackage', options);
 
   if (requiresPackage) {
     var packageDir = files.findPackageDir();
@@ -1268,14 +1275,15 @@ Fiber(function () {
   if (showRequireProfile)
     require('./profile-require.js').printReport();
 
-  Console.setPretty(command.pretty);
+  Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);
 
   // Run the command!
   try {
     // Before run, do a package sync if one is configured
     var catalogRefreshStrategy = command.catalogRefresh;
-    if (!alreadyRefreshed && catalogRefreshStrategy.beforeCommand) {
+    if (! catalog.triedToRefreshRecently &&
+        catalogRefreshStrategy.beforeCommand) {
       buildmessage.enterJob({title: 'updating package catalog'}, function () {
         catalogRefreshStrategy.beforeCommand();
       });
