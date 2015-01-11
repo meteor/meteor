@@ -10,6 +10,8 @@ html_scanner = {
   ParseError: function () {
   },
 
+  bodyAttributes : [],
+
   scan: function (contents, source_name) {
     var rest = contents;
     var index = 0;
@@ -169,10 +171,15 @@ html_scanner = {
           templateDotNameLiteral + ", " + renderFuncCode + ");\n";
       } else {
         // <body>
-        if (hasAttribs)
-          results.js += "\nMeteor.startup(function() { \
-                            $('body').attr(" + JSON.stringify(attribs) + "); \
-                          });\n";
+        if (hasAttribs) {
+          for(var attr in attribs) {p
+            if (this.bodyAttributes.indexOf(attr) !== -1) {
+              console.log('WARNING: tag ' + attr + ' already defined on body.');
+            }
+            this.bodyAttributes.push(attr);
+          }
+          results.js += "\nMeteor.startup(function() { $('body').attr(" + JSON.stringify(attribs) + "); });\n";
+        }
 
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
