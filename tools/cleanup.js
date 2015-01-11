@@ -4,6 +4,8 @@
 var _ = require('underscore');
 var Fiber = require("fibers");
 
+var fiberHelpers = require('./fiber-helpers.js');
+
 var cleanup = exports;
 _.extend(exports, {
   _exitHandlers: [],
@@ -17,10 +19,12 @@ _.extend(exports, {
 
 var runHandlers = function () {
   Fiber(function () {
-    var handlers = cleanup._exitHandlers;
-    cleanup._exitHandlers = [];
-    _.each(handlers, function (f) {
-      f();
+    fiberHelpers.noYieldsAllowed(function () {
+      var handlers = cleanup._exitHandlers;
+      cleanup._exitHandlers = [];
+      _.each(handlers, function (f) {
+        f();
+      });
     });
   }).run();
 };
