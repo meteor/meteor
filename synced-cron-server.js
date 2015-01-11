@@ -74,11 +74,13 @@ SyncedCron.add = function(entry) {
   check(entry.job, Function);
 
   // check
-  this._entries[entry.name] = entry;
-
-  // If cron is already running, start directly.
-  if (this.running) {
-    scheduleEntry(entry);
+  if (!this._entries[entry.name]) {
+    this._entries[entry.name] = entry;
+  
+    // If cron is already running, start directly.
+    if (this.running) {
+      scheduleEntry(entry);
+    }
   }
 }
 
