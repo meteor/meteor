@@ -80,7 +80,11 @@ Tracker.autorun(function () {
         // the same time but they are still both in the DOM. New browsers allow us
         // to query by id even if ids repeat themselves. We cannot change it
         // easily because the markdown parser always produces an id for headings.
-        var selector = "#main>:not(.hidden) #" + id;
+        var cssEscape = function (selector) {
+          // XXX maybe use https://github.com/mathiasbynens/CSS.escape/blob/master/css.escape.js?
+          return selector.replace(/\$/g, "\\$");
+        };
+        var selector = "#main>:not(.hidden) #" + cssEscape(id);
         var foundElement = $(selector);
         if (foundElement.get(0)) {
           targetLocation = $(".main-content").scrollTop() + foundElement.offset().top - $(".main-content").offset().top;
