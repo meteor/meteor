@@ -85,7 +85,7 @@ Modify the object `SyncedCron.options` to set configuration entries. Defaults ar
 
 ## Caveats
 
-Beware, SyncedCron probably won't work as expected on certain shared hosting providers that shutdown app instances when they aren't receiving requests (like Heroku's free dyno tier).
+Beware, SyncedCron probably won't work as expected on certain shared hosting providers that shutdown app instances when they aren't receiving requests (like Heroku's free dyno tier or Meteor free galaxy).
 
 ## Contributing
 
