@@ -119,6 +119,9 @@ function startREPL(options) {
 function getSocketFile(appDir) {
   if (process.platform === "win32") {
     // Make a Windows named pipe based on the app's path
+    // Replace the colon with an underscore to avoid "C:" appearing in the pipe
+    // name, and replace slashes to avoid weird naming collisions with
+    // directories: http://stackoverflow.com/questions/3571422/can-named-pipe-names-have-backslashes
     return "\\\\.\\pipe\\" +
       (appDir || getAppDir()).replace(/[:\\]/g, "_");
   }
