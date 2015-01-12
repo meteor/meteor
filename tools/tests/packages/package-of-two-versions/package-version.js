@@ -1,4 +1,5 @@
 Package.describe({
   summary: "Test package.",
-  version: "~version~"
+  version: "~version~",
+  documentation: null
 });

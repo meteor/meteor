@@ -172,6 +172,67 @@ main.registerCommand({
 // publish a package
 ///////////////////////////////////////////////////////////////////////////////
 
+// Updates the metadata for a given package version. Prints user-friendly
+// messages if certain new values are invalid; calls to the packageClient to
+// perform the actual update.
+//
+// Takes in a packageSource and a connection to the package server. Returns 0 on
+// success and an exit code on failure.
+var updatePackageMetadata = function (packageSource, conn) {
+    var name = packageSource.name;
+    var version = packageSource.version;
+
+    // You can't change the metadata of a record that doesn't exist.
+    var existingRecord =
+          catalog.official.getVersion(name, version);
+    if (! existingRecord) {
+      Console.error(
+        "You can't call",  Console.command("`meteor publish --update`"),
+        "on version " + version + " of " + "package '" + name +
+          "' without publishing it first.");
+      return 1;
+    }
+
+    // Load in the user's documentation, and check that it isn't blank.
+    var readmeInfo;
+    main.captureAndExit(
+      "=> Errors while publishing:", "reading documentation",
+      function () {
+       readmeInfo = packageSource.processReadme();
+    });
+
+    // You are still not allowed to upload a blank README.md.
+    if (readmeInfo && readmeInfo.hash === files.blankHash) {
+      Console.error(
+        "Your documentation file is blank, so users may have trouble",
+        "figuring out how to use your package. Please fill it out, or",
+        "set 'documentation: null' in your Package.describe.");
+      return 1;
+    };
+
+    // Finally, call to the server.
+    main.captureAndExit(
+      "=> Errors while publishing:",
+      "updating package metadata",
+      function () {
+        packageClient.updatePackageMetadata({
+          packageSource: packageSource,
+          readmeInfo: readmeInfo,
+          connection: conn
+        });
+    });
+
+    Console.info(
+      "Success. You can take a look at the new metadata by running",
+      Console.command("'meteor show " + name + "@" + version + "'"),
+      "outside the current project directory.");
+
+    // Refresh, so that we actually learn about the thing we just published.
+    refreshOfficialCatalogOrDie();
+    return 0;
+}
+
+
 main.registerCommand({
   name: 'publish',
   pretty: true,
@@ -179,6 +240,7 @@ main.registerCommand({
   maxArgs: 0,
   options: {
     create: { type: Boolean },
+    update: { type: Boolean },
     // This is similar to publish-for-arch, but uses the source code you have
     // locally (and other local packages you may have) instead of downloading
     // the source bundle. It does verify that the source is the same, though.
@@ -195,8 +257,22 @@ main.registerCommand({
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
-    Console.error("The --create and --existing-version options cannot " +
-                         "both be specified.");
+    Console.error(
+      "The --create and --existing-version options cannot",
+      "both be specified.");
+    return 1;
+  }
+
+  if (options.update && options.create) {
+    Console.error(
+      "The --create and --update options cannot both be specified.");
+    return 1;
+  }
+
+  if (options.update && options["existing-version"]) {
+    Console.error(
+      "The --update option implies that the version already exists.",
+      "You do not need to use the --existing-version flag with --update.");
     return 1;
   }
 
@@ -274,6 +350,13 @@ main.registerCommand({
     Console.error("A version must be specified for the package. Set it with " +
                   "Package.describe.");
     return 1;
+  }
+
+  // If we just want to update the package metadata, then we have all we
+  // need. Don't bother building the package, just update the metadata and
+  // return the result.
+  if (options.update) {
+    return updatePackageMetadata(packageSource, conn);
   }
 
   // Fail early if the package record exists, but we don't think that it does

@@ -1,7 +1,8 @@
 Package.describe({
   summary: 'This is a test package with dependencies',
   version: '1.2.0',
-  git: 'www.github.com/meteor/meteor'
+  git: 'www.github.com/meteor/meteor',
+  documentation: null
 });
 
 Package.onUse(function(api) {

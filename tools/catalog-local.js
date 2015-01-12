@@ -308,6 +308,7 @@ _.extend(LocalCatalog.prototype, {
             version: packageSource.version,
             publishedBy: null,
             description: packageSource.metadata.summary,
+            git: packageSource.metadata.git,
             dependencies: packageSource.getDependencyMetadata(),
             source: null,
             lastUpdated: null,

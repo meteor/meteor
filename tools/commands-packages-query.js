@@ -259,7 +259,8 @@ _.extend(PkgExports.prototype, {
 // the details of printing their data to the screen.
 //
 // A query class has:
-//  - data: an object representing the data it has collected in response to the query.
+//  - data: an object representing the data it has collected in response to the
+//  - query.
 //  - a print method, that take options as an argument and prints the results to
 //    the terminal.
 
@@ -268,7 +269,6 @@ _.extend(PkgExports.prototype, {
 // packages, it has to interact with the projectContext.
 //
 // The constructor takes in the following options:
-
 //   - metaRecord: (mandatory) the meta-record for this package from the Packages
 //     collection.
 //   - projectContext: (mandatory) a projectContext that we can use to look up
@@ -466,9 +466,15 @@ _.extend(PackageQuery.prototype, {
     if (local) {
       data["defaultVersion"] = local;
     } else {
-      var mainRecord = catalog.official.getLatestMainlineVersion(self.name);
-      if (mainRecord) {
-        data["defaultVersion"] = self._getOfficialVersion(mainRecord);
+      var mainlineRecord = catalog.official.getLatestMainlineVersion(self.name);
+      if (mainlineRecord) {
+        var pkgExports = new PkgExports(mainlineRecord.exports);
+        data["defaultVersion"] = {
+          summary: mainlineRecord.description,
+          description: mainlineRecord.longDescription,
+          git: mainlineRecord.git,
+          exports: pkgExports
+        };
       } else {
         data["defaultVersion"] = _.last(data.versions);
       }
@@ -602,6 +608,16 @@ _.extend(PackageQuery.prototype, {
       data["dependencies"] = rewriteDependencies(localRecord.dependencies);
     }
 
+    var readmeInfo;
+    main.captureAndExit(
+      "=> Errors while reading local packages:",
+      "reading " + data["directory"],
+       function () {
+        readmeInfo = packageSource.processReadme();
+    });
+    if (readmeInfo) {
+      data["description"] = readmeInfo.excerpt;
+    }
     return data;
   },
   // Displays version information from this PackageQuery to the terminal in a
@@ -1060,7 +1076,6 @@ _.extend(ReleaseQuery.prototype, {
   // - packages: map of packages for this release version
   _displayVersion: function (data) {
     var self = this;
-    var data = self.data;
     Console.info("Release: " + data.track);
     Console.info("Version: " + data.version);
     Console.info(

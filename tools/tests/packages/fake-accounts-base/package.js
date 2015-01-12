@@ -2,7 +2,8 @@
 // by using the name attribute in Package.describe.
 
 Package.describe({
-  name: "accounts-base"
+  name: "accounts-base",
+  documentation: null
 });
 
 Package.onUse(function(api) {
