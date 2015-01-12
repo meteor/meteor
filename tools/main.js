@@ -419,7 +419,7 @@ var springboard = function (rel, options) {
           Console.error(
             "This project uses " + rel.getDisplayName() + ", which isn't",
             "available on Windows. To work with this app on all platforms, use",
-            "'meteor update --release " + releaseName + "'",
+            Console.command("meteor update --release " + releaseName),
             "to pin this app to the newest Windows preview release.");
         } else {
           Console.error(
