@@ -27,8 +27,7 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    chalk: "0.5.1",
-    portfinder: "0.3.0"
+    chalk: "0.5.1"
   }
 };
 
