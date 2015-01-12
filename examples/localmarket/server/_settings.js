@@ -12,13 +12,12 @@ _.defaults(Meteor.settings, {
   }
 });
 
-ServiceConfiguration.configurations.update(
-    { service: "twitter" },
-    {
-      $set: {
-        consumerKey: Meteor.settings.twitter.consumerKey,
-        secret: Meteor.settings.twitter.secret
-      }
-    },
-    { upsert: true }
+ServiceConfiguration.configurations.upsert(
+  { service: "twitter" },
+  {
+    $set: {
+      consumerKey: Meteor.settings.twitter.consumerKey,
+      secret: Meteor.settings.twitter.secret
+    }
+  }
 );

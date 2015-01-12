@@ -192,7 +192,7 @@ meteor add service-configuration
 Then, in your app:
 
 ```js
-ServiceConfiguration.configurations.update(
+ServiceConfiguration.configurations.upsert(
   { service: "weibo" },
   {
     $set: {
@@ -200,8 +200,7 @@ ServiceConfiguration.configurations.update(
       loginStyle: "popup",
       secret: "75a730b58f5691de5522789070c319bc"
     }
-  },
-  { upsert: true }
+  }
 );
 ```
 
