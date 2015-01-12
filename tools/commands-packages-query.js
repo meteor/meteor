@@ -645,45 +645,32 @@ _.extend(PackageQuery.prototype, {
   _displayVersion: function (data) {
     var self = this;
     Console.info(
-        data.name,
+        data.name + "@" + data.version,
         Console.options({ bulletPoint: "Package: " }));
-    Console.info(
-        data.version,
-        Console.options({ bulletPoint: "Version: " }));
-    if (data.summary) {
-      Console.info(
-        data.summary,
-        Console.options({ bulletPoint: "Summary: " }));
-    }
-    if (data.publishedBy) {
-      var publisher = data.publishedBy;
-      var pubDate = utils.longformDate(data.publishedOn);
-      Console.info("Published by", publisher, "on", pubDate);
-    }
     if (data.directory) {
       Console.info("Directory: " + Console.path(data.directory));
-    }
-    if (data.git) {
-      Console.info(
-        Console.url(data.git),
-        Console.options({ bulletPoint: "Git: " }));
     }
     if (data.exports && ! data.exports.isEmpty()) {
       Console.info(
         data["exports"].getConsoleStr(),
         Console.options({ bulletPoint: "Exports: " }));
     }
-    Console.info();
+    if (data.git) {
+      Console.info(
+        Console.url(data.git),
+        Console.options({ bulletPoint: "Git: " }));
+    }
 
     // If we don't have a long-form description, print the summary. (If we don't
     // have a summary, print nothing).
     if (data.description || data.summary) {
-      Console.info(data.description || data.summary);
       Console.info();
+      Console.info(data.description || data.summary);
     }
 
     // Print dependency information, if the package has any dependencies.
     if (! _.isEmpty(data.dependencies)) {
+      Console.info();
       Console.info("Depends on:");
       _.each(data.dependencies, function (dep) {
         var depString = dep.name;
@@ -699,6 +686,14 @@ _.extend(PackageQuery.prototype, {
       });
     }
 
+    // Print the 'published by' line at the very bottom.
+    if (data.publishedBy) {
+      var publisher = data.publishedBy;
+      var pubDate = utils.longformDate(data.publishedOn);
+      Console.info();
+      Console.info("Published by", publisher, "on", pubDate + ".");
+    }
+
     // Sometimes, there is a server package and a local package with the same
     // version. In this case, we prefer the local package. Explain our choice to
     // the user.
@@ -706,6 +701,7 @@ _.extend(PackageQuery.prototype, {
         catalog.official.getVersion(data.name, data.version)) {
       Console.info();
       Console.info(
+        "This package version is build locally from source.",
         "The same version of this package also exists on the package server.",
         "To view its metadata, run",
         Console.command("'meteor show " + data.name + "@" + data.version + "'"),
@@ -1076,14 +1072,10 @@ _.extend(ReleaseQuery.prototype, {
   // - packages: map of packages for this release version
   _displayVersion: function (data) {
     var self = this;
-    Console.info("Release: " + data.track);
-    Console.info("Version: " + data.version);
-    Console.info(
-      "Published by " + data.publishedBy + " on " +
-      utils.longformDate(getReleaseVersionPublishedOn(data)));
-    Console.info("Tool package: " + data.tool);
+    Console.info("Release: " + data.track + "@" + data.version);
     var isRecommended = data.recommended ? "yes" : "no";
     Console.info("Recommended: " + isRecommended);
+    Console.info("Tool package: " + data.tool);
     Console.info();
     Console.info(data.description);
     Console.info();
@@ -1094,7 +1086,11 @@ _.extend(ReleaseQuery.prototype, {
             package + ": " + version,
             Console.options({ indent: 2 }));
       });
+      Console.info();
     }
+    Console.info(
+      "Published by " + data.publishedBy + " on " +
+      utils.longformDate(getReleaseVersionPublishedOn(data)));
   },
   // Displays information about this release track in general in a
   // human-readable format. Takes in an object with the following keys:
@@ -1132,19 +1128,17 @@ _.extend(ReleaseQuery.prototype, {
     }
 
     // Display the recommended versions of this release.
-    var versionsShown = 0;
+    var rows = [];
     if (!_.isEmpty(data.versions)) {
       Console.info("Recommended versions:");
-      var rows = [];
       _.each(data.versions, function (v) {
         rows.push([v.version, utils.longformDate(v.publishedOn)]);
-        versionsShown++;
       });
       Console.printTwoColumns(rows, { indent: 2 });
     };
 
     // Display a warning about other release versions at the bottom.
-    if (data.totalVersions > versionsShown) {
+    if (data.totalVersions > rows.length) {
       var versionsPluralizer =
             (data.totalVersions > 1) ?
             "all " + data.totalVersions + " versions" :
@@ -1154,8 +1148,13 @@ _.extend(ReleaseQuery.prototype, {
       // between 'pre-release' and 'deprecated' (and sort-of-experimental, like
       // '1.0-weird-trick) and we don't want to rely on version number
       // conventions in code.
+      var versionsHidden =
+            (data.totalVersions - rows.length > 1) ?
+            "Non-recommended versions of " + self.name + " have been hidden." :
+            "One non-recommended version of " + self.name + " has been hidden.";
+
       Console.info(
-        "Non-recommended versions of", self.name, "have been hidden.",
+        versionsHidden,
         "To see " + versionsPluralizer + ", run",
         Console.command("'meteor show --show-all " + self.name + "'") + ".");
     }
