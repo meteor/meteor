@@ -705,3 +705,11 @@ exports.explainIfRefreshFailed = function () {
       "Please connect to the internet and try again.");
   }
 };
+
+// Returns a sha256 hash of a given string.
+exports.sha256 = function (contents) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.update(contents);
+  return hash.digest('base64');
+};

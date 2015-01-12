@@ -307,6 +307,8 @@ files.fileHash = function (filename) {
   return fut.wait();
 };
 
+// This is the result of running fileHash on a blank file.
+files.blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
@@ -1219,4 +1221,3 @@ files.pathwatcherWatch = function () {
   var pathwatcher = require('meteor-pathwatcher-tweaks');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
-
