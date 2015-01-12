@@ -801,11 +801,18 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
-    var recommended = _.filter(result, function (v) {
-      if (!v.recommended)
-        return false;
-      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
-    });
+    // XXX HACK for windows previews, since none of them are recommended,
+    // we should just pick the latest one
+    var recommended;
+    if (process.platform === "win32") {
+      recommended = result;
+    } else {
+      recommended = _.filter(result, function (v) {
+        if (!v.recommended)
+          return false;
+        return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
+      });
+    }
 
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
@@ -817,8 +824,11 @@ _.extend(RemoteCatalog.prototype, {
   getDefaultReleaseVersion: function (track) {
     var self = this;
 
-    // XXX HACK for windows, because we don't have a real recommended release
-    return {track: "WINDOWS-PREVIEW", version: "0.0.27"};
+    // XXX HACK for windows, because we don't have any working releases
+    // in other tracks
+    if (process.platform === "win32") {
+      track = "WINDOWS-PREVIEW";
+    }
 
     if (!track)
       track = exports.DEFAULT_TRACK;
