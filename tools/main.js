@@ -410,15 +410,26 @@ var springboard = function (rel, options) {
       // We have failed to download the tool that we are supposed to springboard
       // to! That's bad. Let's exit.
       if (options.fromApp) {
-        Console.error(
-          "Sorry, this project uses " + rel.getDisplayName() + ", which is not",
-          "installed and could not be downloaded. Please check to make sure",
-          "that you are online.");
+        if (process.platform === "win32") {
+          // XXX improve this message for real release
+          Console.error(
+            "This project uses " + rel.getDisplayName() + ", which isn't",
+            "available on Windows. To work with this app on all platforms, use",
+            "'meteor update' to pin this app to the newest Windows preview",
+            "release.");
+        } else {
+          Console.error(
+            "Sorry, this project uses " + rel.getDisplayName() + ", which is",
+            "not installed and could not be downloaded. Please check to make",
+            "sure that you are online.");
+        }
+
       } else {
         Console.error(
           "Sorry, " + rel.getDisplayName() + " is not installed and could not",
           "be downloaded. Please check to make sure that you are online.");
       }
+
       process.exit(1);
     }
   });
