@@ -1051,21 +1051,9 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
   var name = options.packageName;
   var version = options.version;
   var run = s.run("show", name + "@" + version);
-  run.match("Package: " + name + "\n");
-  run.match("Version: " + version + "\n");
-  if (_.has(options, "summary")) {
-    run.match("Summary: " + options.summary + "\n");
-  }
-  if (options.publishedBy) {
-    run.match(
-      "Published by " + options.publishedBy +
-      " on " + options.publishedOn + "\n");
-  }
+  run.match("Package: " + name + "@" + version + "\n");
   if (options.directory) {
     run.match("Directory:\n" + options.directory + "\n");
-  }
-  if (options.git) {
-    run.match("Git: " + options.git + "\n");
   }
   if (options.exports) {
     run.read("Exports: " + options.exports + "\n");
@@ -1073,13 +1061,18 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
   if (options.implies) {
     run.read("Implies: " + options.implies + "\n");
   }
-  run.read("\n");
+  if (options.git) {
+    run.match("Git: " + options.git + "\n");
+  }
   if (_.has(options, "description")) {
-    run.read(options.description + "\n\n");
+    run.read("\n");
+    run.read(options.description + "\n");
   } else if (_.has(options, "summary")) {
-    run.read(options.summary + "\n\n");
+    run.read("\n");
+    run.read(options.summary + "\n");
   }
   if (options.dependencies) {
+    run.read("\n");
     run.read("Depends on:\n");
     // Use 'read' to ensure that these are the only dependencies listed.
     _.each(options.dependencies, function (dep) {
@@ -1092,6 +1085,12 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
       }
       run.read("  " + depStr + "\n");
     });
+  }
+  if (options.publishedBy) {
+    run.match("\n");
+    run.match(
+      "Published by " + options.publishedBy +
+      " on " + options.publishedOn + ".\n");
   }
   if (options.addendum) {
     run.read("\n" + options.addendum + "\n");
@@ -1127,8 +1126,7 @@ selftest.define("show local package w/o version",  function () {
 
     // Test that running without any arguments also shows this package.
     var run = s.run("show");
-    run.match("Package: " + name + "\n");
-    run.match("Version: " + "local"  + "\n");
+    run.match("Package: " + name + "@local\n");
     run.match("Directory:\n" + packageDir + "\n");
     run.expectExit(0);
   });
@@ -1345,12 +1343,10 @@ selftest.define("show and search local overrides server",
 
     // Test that running without any arguments still gives us the local version.
     run = s.run("show");
-    run.match("Package: " + fullPackageName + "\n");
-    run.match("Version: " + "1.0.0" + "\n");
-    run.match("Summary: " + summary + "\n");
+    run.match("Package: " + fullPackageName + "@1.0.0\n");
     run.match("Directory:\n" + packageDir + "\n");
     run.match("Git: " + git + "\n");
-    run.read("\n" + summary + "\n\n");
+    run.read("\n" + summary + "\n");
     run.read("\n" + addendum + "\n");
     run.expectEnd(0);
   });
@@ -1831,12 +1827,9 @@ var testShowReleaseVersion = selftest.markStack(function (s, options) {
   var run = s.run(
     "show", options.name + "@" + options.version);
   run.waitSecs(10);
-  run.match("Release: " + options.name + "\n");
-  run.read("Version: " + options.version + "\n");
-  run.read(
-    "Published by " + options.publishedBy + " on " + options.publishedOn + "\n");
-  run.read("Tool package: " + options.tool + "\n");
+  run.match("Release: " + options.name + "@" + options.version + "\n");
   run.read("Recommended: " + options.recommended + "\n");
+  run.read("Tool package: " + options.tool + "\n");
   run.read("\n" + options.description + "\n");
   run.read("\n");
   if (options.packages) {
@@ -1844,7 +1837,10 @@ var testShowReleaseVersion = selftest.markStack(function (s, options) {
     _.each(options.packages, function (pkg) {
       run.read("  " + pkg.name + ": " + pkg.version + "\n");
     });
+    run.read("\n");
   };
+  run.read(
+    "Published by " + options.publishedBy + " on " + options.publishedOn + "\n");
   run.expectEnd(0);
 });
 
@@ -1915,7 +1911,8 @@ selftest.define("show release",
   });
   publishRelease(s, releaseConfig);
   var moreVersions =
-    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 2\n" +
+    "One non-recommended version of " + releaseConfig.track + " has been hidden. " +
+    "To see all 2\n" +
     "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
   testShowRelease(s, {
     name: releaseTrack,
