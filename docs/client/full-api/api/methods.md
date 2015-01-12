@@ -62,6 +62,9 @@ their stub version that update the local cache, and sending the same write
 request to the server. When the server responds, the client updates the local
 cache with the writes that actually occurred on the server.
 
+You don't have to put all your method definitions into a single `Meteor.methods`
+call; you may call it multiple times, as long as each method has a unique name.
+
 Since methods usually expect particular types as arguments,
 use [`check`](#check) liberally to ensure your method arguments have
 the correct [types and structure](#matchpatterns).
