@@ -12,11 +12,12 @@ _.defaults(Meteor.settings, {
   }
 });
 
-ServiceConfiguration.configurations.remove({
-  service: "twitter"
-});
-ServiceConfiguration.configurations.insert({
-  service: "twitter",
-  consumerKey: Meteor.settings.twitter.consumerKey,
-  secret: Meteor.settings.twitter.secret
-});
+ServiceConfiguration.configurations.upsert(
+  { service: "twitter" },
+  {
+    $set: {
+      consumerKey: Meteor.settings.twitter.consumerKey,
+      secret: Meteor.settings.twitter.secret
+    }
+  }
+);

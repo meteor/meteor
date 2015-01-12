@@ -3,15 +3,10 @@
 Configure login services. Example:
 
 ```
-// first, remove configuration entry in case service is already configured
-ServiceConfiguration.configurations.remove({
-  service: "weibo"
-});
-ServiceConfiguration.configurations.insert({
-  service: "weibo",
-  clientId: "1292962797",
-  secret: "75a730b58f5691de5522789070c319bc"
-});
+ServiceConfiguration.configurations.upsert(
+  { service: "weibo" },
+  { $set: { clientId: "1292962797", secret: "75a730b58f5691de5522789070c319bc" } }
+);
 ```
 
 Read more in the [Meteor
