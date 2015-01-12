@@ -45,6 +45,9 @@ Inside your method definition, `this` is bound to a method invocation object,
 which has several useful properties, including `this.userId`, which
 identifies the currently logged-in user.
 
+Server functions can be split across multiple files. Call `Meteor.methods` in
+each file to add additional functions. Ensure all functions have a unique name.
+
 ### Latency Compensation
 
 Calling a method on the server requires a round-trip over the network. It would
