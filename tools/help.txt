@@ -694,11 +694,13 @@ Usage: meteor show <name> [--show-all] [--ejson]
        meteor show [--ejson]
 
 Show detailed information on a specific package or release, including
-a list of available versions. Use <name>@<version> to get more information
-about a specific version of a package or release.
+a list of available versions. This works on packages built locally from source,
+as well as remote packages stored on the server.  For version-specific information,
+such as the list of exports, Meteor will use the local version, if one is available,
+or the latest official version.
 
-Meteor show works on packages built locally from source, as well as remote
-packages stored on the server. Use '<name>@local' to see information from a
+Use <name>@<version> to get more information about a specific version of a
+package or release. Use '<name>@local' to see information from a
 local version. Running from a package source directory with no arguments will
 show information for that package version.
 
