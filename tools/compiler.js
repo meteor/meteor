@@ -707,7 +707,7 @@ var compileUnibuild = function (options) {
             files.convertToStandardPath(options.path, true)),
           bare: !! bare,
           sourceMap: convertSourceMapPaths(options.sourceMap,
-                                           convertToStandardPath),
+                                           files.convertToStandardPath),
           sourceHash: options._hash
         });
       },
