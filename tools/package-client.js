@@ -721,7 +721,6 @@ exports.publishPackage = function (options) {
     });
     if (buildmessage.jobHasMessages())
       return;
-console.log(uploadInfo);
 
     // XXX If package version already exists, print a nice error message
     // telling them to try 'meteor publish-for-arch' if they want to
