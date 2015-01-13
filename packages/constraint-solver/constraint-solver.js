@@ -188,7 +188,7 @@ var getCostFunction = function (resolver, options) {
   });
 
   return {
-    costFunction: function (state, options) {
+    costFunction: function (state) {
       options = options || {};
       // very major, major, medium, minor costs
       // XXX maybe these can be calculated lazily?
@@ -228,8 +228,7 @@ var getCostFunction = function (resolver, options) {
             PV.versionMagnitude(_.last(resolver.unitsVersions[uv.name]).version) -
             PV.versionMagnitude(uv.version);
 
-          if (isRootDep[uv.name]) {
-            // root dependency
+          if (isRootDep[uv.name] || _.has(options.upgrade, uv.name)) {
             // preferably latest
             cost[MEDIUM] += latestDistance;
           } else {
@@ -246,7 +245,7 @@ var getCostFunction = function (resolver, options) {
       return cost;
     },
 
-    estimateCostFunction: function (state, options) {
+    estimateCostFunction: function (state) {
       options = options || {};
 
       var cost = [0, 0, 0, 0];

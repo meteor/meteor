@@ -77,7 +77,7 @@ ConstraintSolver.Resolver.prototype.getConstraint =
 };
 
 // options: Object:
-// - costFunction: function (state, options) - given a state evaluates its cost
+// - costFunction: function (state) - given a state evaluates its cost
 // - estimateCostFunction: function (state) - given a state, evaluates the
 // estimated cost of the best path from state to a final state
 // - combineCostFunction: function (cost, cost) - given two costs (obtained by
