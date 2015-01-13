@@ -1,6 +1,10 @@
 #!/bin/bash
 
+<<<<<<< HEAD
 BUNDLE_VERSION=0.3.82
+=======
+BUNDLE_VERSION=0.3.76
+>>>>>>> d1d1353... completely rewrite of ‘meteor show’; some changes to ‘meteor search’.
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.

@@ -981,8 +981,15 @@ _.extend(Console.prototype, {
     return chalk.bold(message);
   },
 
-  // Prints a two column table in a nice format:
-  //  The first column is printed entirely, the second only as space permits
+  // Prints a two column table in a nice format (The first column is printed
+  // entirely, the second only as space permits).
+  //  options:
+  //      - level: Allows to print to stderr, instead of stdout. Set the print
+  //        level with Console.LEVEL_INFO, Console.LEVEL_ERROR, etc.
+  //      - ignoreWidth: ignore the width of the terminal, and go over the
+  //        character limit instead of trailing off with '...'. Useful for
+  //        printing directories, for examle.
+  //      - indent: indent the entire table by a given number of spaces.
   printTwoColumns : function (rows, options) {
     var self = this;
     options = options || {};
@@ -996,14 +1003,16 @@ _.extend(Console.prototype, {
 
     var pad = longest.replace(/./g, ' ');
     var width = self.width();
+    var indent =
+      options.indent ? Array(options.indent + 1).join(' ') : "";
 
     var out = '';
     _.each(rows, function (row) {
       var col0 = row[0] || '';
       var col1 = row[1] || '';
-      var line = self.bold(col0) + pad.substr(col0.length);
+      var line = indent + self.bold(col0) + pad.substr(col0.length);
       line += "  " + col1;
-      if (line.length > width) {
+      if (! options.ignoreWidth && line.length > width) {
         line = line.substr(0, width - 3) + '...';
       }
       out += line + "\n";

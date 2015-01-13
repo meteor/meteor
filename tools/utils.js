@@ -8,6 +8,7 @@ var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var url = require('url');
+var moment = require('moment');
 
 var utils = exports;
 
@@ -662,9 +663,7 @@ exports.mobileServerForRun = function (options) {
     };
   }
 
-
   // we are running a simulator, use localhost:3000
-
   return {
     host: "localhost",
     port: parsedUrl.port,
@@ -672,10 +671,37 @@ exports.mobileServerForRun = function (options) {
   };
 };
 
+// Use this to convert dates into our preferred human-readable format.
+//
+// Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
+// date object and returns a long-form human-readable date (ex: December 9th,
+// 2014) or unknown for null.
+exports.longformDate = function (date) {
+  if (! date) return "Unknown";
+  var pubDate = moment(date).format('MMMM Do, YYYY');
+  return pubDate;
+};
+
+// Length of the longest possible string that could come out of longformDate
+// (September is the longest month name, so "September 24th, 2014" would be an
+// example).
+exports.maxDateLength = "September 24th, 2014".length;
+
 exports.escapePackageNameForPath = function (packageName) {
   return packageName.replace(":", "_");
 };
 
 exports.unescapePackageNameForPath = function (escapedPackageName) {
   return escapedPackageName.replace("_", ":");
+};
+
+// If we have failed to update the catalog, informs the user and advises them to
+// go online for up to date inforation.
+exports.explainIfRefreshFailed = function () {
+  var Console = require("./console.js").Console;
+  var catalog = require('./catalog.js');
+  if (catalog.official.offline || catalog.refreshFailed) {
+    Console.info("Your package catalog may be out of date.\n" +
+      "Please connect to the internet and try again.");
+  }
 };
