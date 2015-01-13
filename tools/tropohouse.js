@@ -235,12 +235,12 @@ _.extend(exports.Tropohouse.prototype, {
       // Note: wipeAllPackages depends on this filename structure, as does the
       // part above which readlinks.
       var combinedDirectory = self.packagePath(
-        packageName, newPackageLinkTarget);
+        packageName, isopack.version);
 
       var newPackageLinkTarget = '.' + isopack.version + '.' +
         utils.randomToken() + '++' + isopack.buildArchitectures();
 
-      isopack.saveToPath(combinedDirectory);
+      isopack.saveToPath(newPackageLinkTarget);
 
       files.symlinkOverSync(newPackageLinkTarget,
         self.packagePath(packageName, isopack.version));
@@ -324,7 +324,7 @@ _.extend(exports.Tropohouse.prototype, {
         } else {
           var packageLinkTarget = null;
           try {
-            packageLinkTarget = files.readFile(packagePath);
+            packageLinkTarget = files.readlink(packagePath);
           } catch (e) {
             // Complain about anything other than "we don't have it at all". This
             // includes "not a symlink": The main reason this would not be a symlink
