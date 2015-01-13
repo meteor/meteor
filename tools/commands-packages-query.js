@@ -566,13 +566,21 @@ _.extend(PackageQuery.prototype, {
     // to display data from unofficial or un-migrated versions just because they
     // are recent.)
     if (local) {
-      data["defaultVersion"] = local;
+      data["defaultVersion"] = {
+        version: "local",
+        summary: local.summary,
+        description: local.description,
+        git: local.git,
+        implies: local.implies,
+        exports: local.exports
+      };
     } else {
       var mainlineRecord = catalog.official.getLatestMainlineVersion(self.name);
       if (mainlineRecord) {
         var pkgExports = new PkgExports(mainlineRecord.exports);
         var implies = new PkgImplies(mainlineRecord.dependencies);
         data["defaultVersion"] = {
+          version: mainlineRecord.version,
           summary: mainlineRecord.description,
           description: mainlineRecord.longDescription,
           git: mainlineRecord.git,
@@ -874,8 +882,9 @@ _.extend(PackageQuery.prototype, {
     var defaultVersion = data.defaultVersion;
 
     // Every package has a name. Some packages have a homepage.
-    Console.info(data.name,
-       Console.options({ bulletPoint: "Package: " }));
+    var displayName = data.defaultVersion ?
+      data.name + "@" + data.defaultVersion.version : data.name;
+    Console.info(displayName, Console.options({ bulletPoint: "Package: " }));
     if (data.homepage) {
       Console.info(Console.url(data.homepage),
         Console.options({ bulletPoint: "Homepage: " }));
