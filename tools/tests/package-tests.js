@@ -966,8 +966,11 @@ selftest.define("circular dependency errors", function () {
 //   - summary: Expected summary of the latest version.
 //   - description: longform description of the latest version
 //   - maintainers: the string of maintainers
-//   - homepage: (optional) Homepage url, if one was set.
-//   - git: (optional) Git url, if one was set.
+//   - homepage: Homepage url, if one was set.
+//   - git:  Git url, if one was set.
+//   - exports: exports string
+//   - implies: implies string
+//   - defaultVersion: version that git/exports/etc come from
 //   - versions: array of objects representing versions that we have
 //     published, with keys:
 //     - version: version number (ex: 0.9.9)
@@ -982,7 +985,9 @@ var testShowPackage =  selftest.markStack(function (s, fullPackageName, options)
   } else {
     run = s.run("show", fullPackageName);
   }
-  run.match("Package: " + fullPackageName + "\n");
+  var packageName = options.defaultVersion ?
+    fullPackageName + "@" + options.defaultVersion : fullPackageName;
+  run.match("Package: " + packageName + "\n");
   if (options.homepage) {
     run.read("Homepage: " + options.homepage + "\n");
   }
@@ -1115,6 +1120,7 @@ selftest.define("show local package w/o version",  function () {
   s.cd(name, function () {
     s.cp("completely-empty-package.js", "package.js");
     testShowPackage(s, name, {
+      defaultVersion: "local",
       versions: [{ version: "local", directory: packageDir }]
     });
 
@@ -1168,6 +1174,7 @@ selftest.define("show and search local package",  function () {
   // that the package exists, even though it hasn't been added to the app.
   testShowPackage(s, name, {
     summary: summary,
+    defaultVersion: "local",
     git: 'www.github.com/meteor/meteor',
     versions: [{ version: "1.0.0", directory: packageDir }]
   });
@@ -1179,6 +1186,7 @@ selftest.define("show and search local package",  function () {
   testShowPackage(s, name, {
     summary: summary,
     git: 'www.github.com/meteor/meteor',
+    defaultVersion: "local",
     versions: [{ version: "1.0.0", directory: packageDir }]
   });
 
@@ -1211,6 +1219,7 @@ selftest.define("show and search local package",  function () {
     git: "www.github.com/meteor/meteor",
     exports: exportStr,
     description: description,
+    defaultVersion: "local",
     versions: [{ version: "1.0.1", directory: packageDir }]
   });
   testShowPackageVersion(s, {
@@ -1256,11 +1265,13 @@ selftest.define("show and search local package",  function () {
     impArr[0] + ", " + impArr[1] + ",\n" + "         " +
     impArr[2] + ", " + impArr[3] + ",\n" + "         " +
     impArr[4] + ", " + impArr[5];
+
   testShowPackage(s, name, {
     summary: summary,
     description: description,
     implies: impStr,
     directory: packageDir,
+    defaultVersion: "local",
     git: "www.github.com/meteor/meteor",
     versions: [{ version: "1.2.1", directory: packageDir }]
   });
@@ -1315,6 +1326,7 @@ selftest.define("show and search local overrides server",
       maintainers: username,
       summary: summary,
       git: git,
+      defaultVersion: "local",
       versions: [
         { version: "1.0.0", date: today },
         { version: "1.0.0", directory: packageDir }
@@ -1356,6 +1368,7 @@ selftest.define("show and search local overrides server",
   var summary = "Test package.";
   testShowPackage(s, fullPackageName, {
     summary: summary,
+    defaultVersion: "1.0.0",
     maintainers: username,
     versions: [
       { version: "1.0.0", date: today }
@@ -1400,7 +1413,8 @@ selftest.define("show server package",
     summary: summary,
     maintainers: username,
     versions: versions,
-    description: "Test package.",
+    defaultVersion: _.last(versions).version,
+    description: "Test package."
   });
 
   testShowPackageVersion(s, {
@@ -1422,6 +1436,7 @@ selftest.define("show server package",
   versions.push({ version: "1.0.0", date: today });
 
   testShowPackage(s, fullPackageName, {
+    defaultVersion: _.last(versions).version,
     summary: summary,
     maintainers: username,
     git: "www.github.com/meteor/meteor",
@@ -1454,6 +1469,7 @@ selftest.define("show server package",
     summary: summary,
     maintainers: username,
     exports: exportStr,
+    defaultVersion: _.last(versions).version,
     description: "Test package.",
     git: "www.github.com/meteor/meteor",
     versions: versions
@@ -1495,6 +1511,7 @@ selftest.define("show server package",
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
+    defaultVersion: "1.2.0",
     git: "www.github.com/meteor/meteor",
     versions: newVersions
   });
@@ -1565,6 +1582,7 @@ selftest.define("show server package",
   testShowPackage(s, fullPackageName, {
     summary: summary,
     maintainers: username,
+    defaultVersion: "1.2.1",
     implies: impStr,
     description: description,
     git: "www.github.com/meteor/meteor",
@@ -1592,6 +1610,7 @@ selftest.define("show server package",
   testShowPackage(s, fullPackageName, {
     summary: summary,
     maintainers: username,
+    defaultVersion: "1.2.1",
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
     versions: versions,
@@ -1615,6 +1634,7 @@ selftest.define("show server package",
   testShowPackage(s, fullPackageName, {
     summary: summary,
     maintainers: username,
+    defaultVersion: _.last(versions).version,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
     versions: versions,
@@ -1642,6 +1662,7 @@ selftest.define("show server package",
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
     maintainers: username,
+    defaultVersion: _.last(versions).version,
     git: "www.github.com/meteor/meteor",
     homepage: "www.meteor.com",
     versions: [
@@ -1667,6 +1688,7 @@ selftest.define("show server package",
     all: true,
     implies: impStr,
     description: description,
+    defaultVersion: "1.2.1"
   });
 
   // If we just query for a specific version, it shows up.
@@ -2126,6 +2148,7 @@ selftest.define("show package w/many versions",
       maintainers: username,
       summary: "Test package.",
       addendum: moreAvailable,
+      defaultVersion: "local",
       versions: [
         { version: "1.0.5", date: today },
         { version: "1.0.6", date: today },
@@ -2147,6 +2170,7 @@ selftest.define("show package w/many versions",
     testShowPackage(s, fullPackageName, {
       maintainers: username,
       summary: "Test package.",
+      defaultVersion: "local",
       addendum: moreAvailable,
       versions: [
         { version: "1.0.6", date: today },
@@ -2167,6 +2191,7 @@ selftest.define("show package w/many versions",
   testShowPackage(s, fullPackageName, {
     maintainers: username,
     summary: "Test package.",
+    defaultVersion: "2.0.2",
     addendum: moreAvailable,
     versions: [
       { version: "1.0.6", date: today },
@@ -2180,6 +2205,7 @@ selftest.define("show package w/many versions",
     all: true,
     maintainers: username,
     summary: "Test package.",
+    defaultVersion: "2.0.2",
     versions: [
       { version: "1.0.0", date: today },
       { version: "1.0.1", date: today },
@@ -2211,6 +2237,7 @@ selftest.define("show readme excerpt",  function () {
   // legible to factor them out here.
   var basePackageInfo = {
     summary: "This is a test package",
+    defaultVersion: "local",
     versions: [{ version: "0.9.9", directory: packageDir }]
   };
   var baseVersionInfo = {
@@ -2309,6 +2336,7 @@ selftest.define("show readme excerpt",  function () {
   basePackageInfo = {
     git: git,
     summary: summary,
+    defaultVersion: "local",
     versions: [{ version: "1.0.0", directory: packageDir }]
   };
   testShowPackageVersion(s, baseVersionInfo);
@@ -2379,6 +2407,7 @@ selftest.define("show server readme",
   });
   testShowPackage(s, fullPackageName, {
     summary: summary,
+    defaultVersion: "0.9.9",
     maintainers: username,
     versions: [{ version: "0.9.9", date: today }],
     description: "Test package."
@@ -2408,6 +2437,7 @@ selftest.define("show server readme",
   testShowPackage(s, fullPackageName, {
     summary: summary,
     git: git,
+    defaultVersion: "1.0.0",
     maintainers: username,
     description: "New test!",
     versions: [
@@ -2434,6 +2464,7 @@ selftest.define("show server readme",
     summary: summary,
     git: git,
     maintainers: username,
+    defaultVersion: "1.0.0_1",
     versions: [
       { version: "0.9.9", date: today },
       { version: "1.0.0", date: today },
@@ -2487,6 +2518,7 @@ selftest.define("show server readme",
     summary: summary,
     git: git,
     maintainers: username,
+    defaultVersion: "1.0.0_2",
     description: "I did not format this readme",
     versions: [
       { version: "0.9.9", date: today },
@@ -2524,6 +2556,7 @@ selftest.define("update package metadata",
   };
   var basePackage = {
     maintainers: username,
+    defaultVersion: "0.9.9",
     versions: [{ version: "0.9.9", date: today }]
   };
 
