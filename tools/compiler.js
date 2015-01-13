@@ -325,6 +325,11 @@ var compileUnibuild = function (options) {
   };
 
   var convertSourceMapPaths = function (sourcemap, f) {
+    if (! sourcemap) {
+      // Don't try to convert it if it doesn't exist
+      return sourcemap;
+    }
+
     var srcmap = JSON.parse(sourcemap);
     srcmap.sources = _.map(srcmap.sources, f);
     return JSON.stringify(srcmap);
