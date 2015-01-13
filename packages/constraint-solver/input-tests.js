@@ -1,10 +1,35 @@
-var runSlowTests = !!process.env.CONSTRAINT_SOLVER_SLOW_TESTS;
-
 var CS = ConstraintSolver;
 
-var yes = runSlowTests;
+Tinytest.add("constraint solver - input - upgrade indirect dependency", function (test) {
+  var input = CS.Input.fromJSONable({
+    dependencies: ["foo"],
+    constraints: [],
+    previousSolution: { foo: "1.0.0", bar: "2.0.0" },
+    upgrade: ["bar"],
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar@2.0.0"],
+        "bar 2.0.0": [],
+        "bar 2.0.1": []
+      }
+    }
+  });
 
-yes && Tinytest.add("constraint solver - input - slow solve", function (test) {
+  test.equal(
+    JSON.stringify(CS.PackagesResolver._resolveWithInput(input)),
+    JSON.stringify({
+      answer: {
+        foo: "1.0.0",
+        bar: "2.0.1"
+      },
+      neededToUseUnanticipatedPrereleases: false
+    }));
+});
+
+var runSlowTests = !!process.env.CONSTRAINT_SOLVER_SLOW_TESTS;
+var slow = runSlowTests;
+
+slow && Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({
     "dependencies": [
       "meteor-platform",
