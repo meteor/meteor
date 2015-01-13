@@ -9,6 +9,7 @@ var path = require('path');
 var os = require('os');
 var util = require('util');
 var _ = require('underscore');
+var crypto = require('crypto');
 
 var rimraf = require('./rimraf');
 var Future = require('fibers/future');
@@ -279,19 +280,14 @@ var makeTreeReadOnly = function (p) {
   }
 };
 
+var stringHash = function (str) {
+  return crypto.createHash('sha256').update(str, 'utf8').digest('base64');
+};
+
 // Returns the base64 SHA256 of the given file.
 files.fileHash = function (filename) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  var rs = files.createReadStream(filename);
-  var fut = new Future();
-  rs.on('end', function () {
-    rs.close();
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  return fut.wait();
+  var contents = files.readFile(filename, "utf-8");
+  return stringHash(contents);
 };
 
 
