@@ -323,6 +323,9 @@ var compileUnibuild = function (options) {
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = files.pathBasename(relPath);
+    // readAndWatchFileWithHash returns an object carrying a buffer with the
+    // file-contents. The buffer contains the original data of the file (no EOL
+    // transforms from the tools/files.js part).
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
 
@@ -582,6 +585,7 @@ var compileUnibuild = function (options) {
        * @param  {Integer} [n] The number of bytes to return.
        * @instance
        * @memberOf CompileStep
+       * @returns {Buffer}
        */
       read: function (n) {
         if (n === undefined || readOffset + n > contents.length)
@@ -611,7 +615,7 @@ var compileUnibuild = function (options) {
           throw new Error("'data' option to appendDocument must be a string");
         resources.push({
           type: options.section,
-          data: new Buffer(options.data, 'utf8')
+          data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
         });
       },
 
@@ -643,7 +647,7 @@ var compileUnibuild = function (options) {
         resources.push({
           type: "css",
           refreshable: true,
-          data: new Buffer(options.data, 'utf8'),
+          data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
           servePath: colonConverter.convert(
             files.pathJoin(
               inputSourceArch.pkg.serveRoot,
@@ -683,7 +687,7 @@ var compileUnibuild = function (options) {
         }
 
         js.push({
-          source: options.data,
+          source: files.convertToStandardLineEndings(options.data),
           sourcePath: files.convertToStandardPath(options.sourcePath, true),
           servePath: files.pathJoin(
             inputSourceArch.pkg.serveRoot,
