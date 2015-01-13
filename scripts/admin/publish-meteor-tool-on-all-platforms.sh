@@ -46,22 +46,7 @@ main () {
 
   echo "${green}Publishing from unixy platforms.${NC}"
   for PLATFORM in ${UNIX_PLATFORMS[@]}; do
-    trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
-    CREDS=$($METEOR admin get-machine $PLATFORM --json)
-
-    # save host key and login private key to temp files
-    echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key
-    TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key
-    chmod 600 $TEMP_PRIV_KEY
-
-    USERNAME=$(echo $CREDS | get_from_json "username")
-    HOST=$(echo $CREDS | get_from_json "host")
-    PORT=$(echo $CREDS | get_from_json "port")
-    echo -n "$HOST " > $CHECKOUT_DIR/temp_key
-    echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key
-    TEMP_KEY=$CHECKOUT_DIR/temp_key
-
-    trap - EXIT
+    parse_keys
 
     echo "${green}Going to ssh into machine running $PLATFORM and publish the release${NC}"
     trap 'echo "${red}Failed to publish from $PLATFORM${NC}"; clean_up' EXIT
@@ -89,25 +74,11 @@ END
 
   echo "${green}Publishing from Windowsy platforms.${NC}"
   for PLATFORM in ${WINDOWS_PLATFORMS[@]}; do
-    trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
-    CREDS=$($METEOR admin get-machine $PLATFORM --json)
-
-    # save host key and login private key to temp files
-    echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key
-    TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key
-    chmod 600 $TEMP_PRIV_KEY
-
-    USERNAME=$(echo $CREDS | get_from_json "username")
-    HOST=$(echo $CREDS | get_from_json "host")
-    PORT=$(echo $CREDS | get_from_json "port")
-    echo -n "$HOST " > $CHECKOUT_DIR/temp_key
-    echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key
-    TEMP_KEY=$CHECKOUT_DIR/temp_key
-
-    trap - EXIT
+    parse_keys
 
     echo "${green}Going to ssh into machine running $PLATFORM and publish the release${NC}"
     trap 'echo "${red}Failed to publish from $PLATFORM${NC}"; clean_up' EXIT
+
     # copy the meteor session file to the remote host
     scp -oUserKnownHostsFile=$TEMP_KEY -P $PORT -i $TEMP_PRIV_KEY -q $SESSION_FILE $USERNAME@$HOST:C:\\meteor-session
 
@@ -128,6 +99,26 @@ METEOR_SESSION_FILE=C:\\meteor-session ..\\..\\meteor.bat publish --existing-ver
 
     trap - EXIT
   done
+}
+
+# get keys from "meteor admin get-machine" command
+parse_keys () {
+  trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
+  CREDS=$($METEOR admin get-machine $PLATFORM --json)
+
+  # save host key and login private key to temp files
+  echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key
+  TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key
+  chmod 600 $TEMP_PRIV_KEY
+
+  USERNAME=$(echo $CREDS | get_from_json "username")
+  HOST=$(echo $CREDS | get_from_json "host")
+  PORT=$(echo $CREDS | get_from_json "port")
+  echo -n "$HOST " > $CHECKOUT_DIR/temp_key
+  echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key
+  TEMP_KEY=$CHECKOUT_DIR/temp_key
+
+  trap - EXIT
 }
 
 # print a value from a JSON file by key
