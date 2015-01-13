@@ -636,8 +636,14 @@ files.createTarGzStream = function (dirPath, options) {
     if (entry.props.type === "Directory")
       entry.props.mode |= (entry.props.mode >>> 2) & 0111;
 
-    // Error about long paths on Windows
-    if(entry.path.length > maxPath && entry.path.indexOf("test") === -1) {
+    // Error about long paths on Windows.
+    // As far as we know the tarball creation seems to fail silently when path
+    // is too long (the files don't get copied to tarball). To avoid it, we
+    // shout at the core developer early so she/he takes an action.
+    // When the tarball is created on Mac or Linux it doesn't seem to matter.
+    if (process.platform === "win32" &&
+        entry.path.length > maxPath &&
+        entry.path.indexOf("test") === -1) {
       throw new Error("Path too long: " + entry.path + " is " +
         entry.path.length + " characters.");
     }
