@@ -142,6 +142,7 @@ delete browserstack-webdriver/lib/test
 
 delete sqlite3/deps
 delete wordwrap/test
+delete moment/min
 
 # dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
 find . -path '*/esprima/test' | xargs rm -rf

@@ -143,7 +143,29 @@ _.extend(exports.Tropohouse.prototype, {
       });
     });
   },
+  // Returns true if the given package at the given version exists on disk, or
+  // false otherwise. Takes in the following:
+  //  - packageName: name of the package
+  //  - version: version
+  //  - architectures: (optional) array of architectures. Defaults to
+  //    archinfo.host().
+  installed: function (options) {
+    var self = this;
+    if (!options.packageName)
+      throw Error("Missing required argument: packageName");
+    if (!options.version)
+      throw Error("Missing required argument: version");
+    var architectures = options.architectures || [archinfo.host()];
 
+    var downloaded = self._alreadyDownloaded({
+      packageName: options.packageName,
+      version: options.version
+    });
+
+    return _.every(architectures, function (requiredArch) {
+      return archinfo.mostSpecificMatch(requiredArch, downloaded.arches);
+    });
+  },
   // Contacts the package server, downloads and extracts a tarball for a given
   // buildRecord into a temporary directory, whose path is returned.
   //
@@ -169,30 +191,22 @@ _.extend(exports.Tropohouse.prototype, {
     return targetDirectory;
   },
 
-  // Given a package name, version, and required architectures, checks to make
-  // sure that we have the package downloaded at the requested arch. If we do,
-  // returns null.
+  // Given a package name and version, returns a survey of what we have
+  // downloaded for this package at this version. Specifically, returns an
+  // object with the following keys:
+  //  - arches: the architectures for which we have downloaded this package
+  //  - target: the target of the symlink at which we store this package
   //
-  // Otherwise, if the catalog has no information about appropriate builds,
-  // registers a buildmessage error and returns null.
-  //
-  // Otherwise, returns a 'downloader' object with keys packageName, version,
-  // and download; download is a method which should be called in a buildmessage
-  // capture which actually downloads the package (registering any errors with
-  // buildmessage).
-  _makeDownloader: function (options) {
+  // Throws if the symlink cannot be read for any reason other than ENOENT/
+  _alreadyDownloaded: function (options) {
     var self = this;
-    buildmessage.assertInJob();
-
+    var packageName = options.packageName;
+    var version = options.version;
     if (!options.packageName)
       throw Error("Missing required argument: packageName");
     if (!options.version)
       throw Error("Missing required argument: version");
-    if (!options.architectures)
-      throw Error("Missing required argument: architectures");
 
-    var packageName = options.packageName;
-    var version = options.version;
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
@@ -222,6 +236,40 @@ _.extend(exports.Tropohouse.prototype, {
                     version + ": " + packageLinkTarget);
       downloadedArches = archPart.split('+');
     }
+    return { arches: downloadedArches, target: packageLinkTarget };
+  },
+  // Given a package name, version, and required architectures, checks to make
+  // sure that we have the package downloaded at the requested arch. If we do,
+  // returns null.
+  //
+  // Otherwise, if the catalog has no information about appropriate builds,
+  // registers a buildmessage error and returns null.
+  //
+  // Otherwise, returns a 'downloader' object with keys packageName, version,
+  // and download; download is a method which should be called in a buildmessage
+  // capture which actually downloads the package (registering any errors with
+  // buildmessage).
+  _makeDownloader: function (options) {
+    var self = this;
+    buildmessage.assertInJob();
+
+    if (!options.packageName)
+      throw Error("Missing required argument: packageName");
+    if (!options.version)
+      throw Error("Missing required argument: version");
+    if (!options.architectures)
+      throw Error("Missing required argument: architectures");
+
+    var packageName = options.packageName;
+    var version = options.version;
+
+    // Look up the information that we have already downloaded.
+    var downloaded = self._alreadyDownloaded({
+      packageName: packageName,
+      version: version
+    });
+    var downloadedArches = downloaded.arches;
+    var packageLinkTarget = downloaded.target;
 
     var archesToDownload = _.filter(options.architectures, function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
@@ -232,7 +280,6 @@ _.extend(exports.Tropohouse.prototype, {
       Console.debug("Local package version is up-to-date:", packageName + "@" + version);
       return null;
     }
-
 
     // Since we are downloading from the server (and we've already done the
     // local package check), we can use the official catalog here. (This is
@@ -246,6 +293,7 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
+    var packageLinkFile = self.packagePath(packageName, version);
     var download = function download () {
       buildmessage.assertInCapture();
 

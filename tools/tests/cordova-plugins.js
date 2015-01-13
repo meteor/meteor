@@ -99,7 +99,6 @@ selftest.define("change cordova plugins", function () {
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run();
   run.waitSecs(5);
   run.match("myapp");
@@ -142,7 +141,6 @@ selftest.define("add cordova plugins", ["slow"], function () {
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("remove", "meteor-platform");
@@ -473,7 +471,6 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow"],
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add-platform", "android");

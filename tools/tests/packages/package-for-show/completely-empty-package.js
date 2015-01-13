@@ -1,0 +1,3 @@
+Package.describe({
+  documentation: null
+});

@@ -99,6 +99,66 @@ var splitConstraint = function (c) {
            constraint: parsed.constraintString || null };
 };
 
+// Given the text of a README.md file, excerpts the text between the first and
+// second heading.
+//
+// Specifically - if there is text between the document name, and the first
+// subheading, it will take that text. If there is no text there, and only text
+// after the first subheading, it will take that text. It won't look any deeper
+// than that (in case the user intentionally wants to leave the section blank
+// for some reason). Skips lines that start with an exclamation point.
+var getExcerptFromReadme = function (text) {
+  // Don't waste time parsing if the document is empty.
+  if (! text) return "";
+
+  // Split into lines with Commonmark.
+  var commonmark = require('commonmark');
+  var reader = new commonmark.DocParser();
+  var parsed = reader.parse(text);
+
+  // Commonmark will parse the Markdown into an array of nodes. These are the
+  // nodes that represent the text between the first and second heading.
+  var relevantNodes = [];
+
+  // Go through the document until we get the nodes that we are looking for,
+  // then stop.
+  _.any(parsed.children, function (child) {
+    var isHeader = (child.t === "Header");
+    // Don't excerpt anything before the first header.
+    if (! isHeader) {
+      // If we are currently in the middle of excerpting, continue doing that
+      // until we hit hit a header (and this is not a header). Otherwise, if
+      // this is text, we should begin to excerpt it.
+      relevantNodes.push(child);
+    } else if (! _.isEmpty(relevantNodes) && isHeader) {
+      // We have been excerpting, and came across a header. That means
+      // that we are done.
+      return true;
+    }
+    return false;
+  });
+
+  // If we have not found anything, we are done.
+  if (_.isEmpty(relevantNodes)) return "";
+
+  // For now, we will do the simple thing of just taking the raw markdown from
+  // the start of the excerpt to the end.
+  var textLines = text.split("\n");
+  var start = relevantNodes[0].start_line - 1;
+  var stop = _.last(relevantNodes).end_line;
+  // XXX: There is a bug in commonmark that happens when processing the last
+  // node in the document. Here is the github issue:
+  // https://github.com/jgm/CommonMark/issues/276
+  // Remove this workaround when the issue is fixed.
+  if (stop === _.last(parsed.children).end_line) {
+    stop++;
+  }
+  var excerpt = textLines.slice(start, stop).join("\n");
+
+  // Strip the preceeding and trailing new lines.
+  return excerpt.replace(/^\n+|\n+$/g, "");
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // SourceArch
 ///////////////////////////////////////////////////////////////////////////////
@@ -210,10 +270,10 @@ var PackageSource = function () {
   // it's still nice to get it right).
   self.serveRoot = null;
 
-
-  // Package metadata. Keys are 'summary' and 'git'. Currently all of these are
-  // optional.
+  // Package metadata. Keys are 'summary', 'git' and 'documentation'. Currently
+  // all of these are optional.
   self.metadata = {};
+  self.docsExplicitlyProvided = false;
 
   // Package version as a meteor-version string. Optional; not all packages
   // (for example, the app) have versions.
@@ -280,10 +340,6 @@ var PackageSource = function () {
   // specify the correct restrictions at 0.90.
   // XXX: 0.90 package versions.
   self.isCore = false;
-
-  // The list of archs that we can target. Doesn't include 'web' because
-  // it is expanded into 'web.*'.
-  self.allArchs = ['os', 'web.browser', 'web.cordova'];
 };
 
 
@@ -390,6 +446,10 @@ _.extend(PackageSource.prototype, {
     // sets a version.
     self.version = "0.0.0";
 
+    // To make the transition to using README.md files in Isobuild easier, we
+    // initialize the documentation directory to README.md by default.
+    self.metadata.documentation = "README.md";
+
     self.sourceRoot = dir;
 
     // If we are running from checkout we may be looking at a core package. If
@@ -446,22 +506,29 @@ _.extend(PackageSource.prototype, {
        * the package, required for publication.
        * @param {String} options.version The (extended)
        * [semver](http://www.semver.org) version for your package. Additionally,
-       * Meteor allows a wrap number: a positive integer that follows the version number. If you are
-       * porting another package that uses semver versioning, you may want to
-       * use the original version, postfixed with `_wrapnumber`. For example,
-       * `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers sort after the original numbers:
-       * `1.2.3` < `1.2.3_1` < `1.2.3_2` < `1.2.4-rc.0`. If no version is specified,
-       * this field defaults to `0.0.0`. If you want to publish your package to
-       * the package server, you must specify a version.
+       * Meteor allows a wrap number: a positive integer that follows the
+       * version number. If you are porting another package that uses semver
+       * versioning, you may want to use the original version, postfixed with
+       * `_wrapnumber`. For example, `1.2.3_1` or `2.4.5-rc1_4`. Wrap numbers
+       * sort after the original numbers: `1.2.3` < `1.2.3_1` < `1.2.3_2` <
+       * `1.2.4-rc.0`. If no version is specified, this field defaults to
+       * `0.0.0`. If you want to publish your package to the package server, you
+       * must specify a version.
        * @param {String} options.name Optional name override. By default, the
        * package name comes from the name of its directory.
        * @param {String} options.git Optional Git URL to the source repository.
+       * @param {String} options.documentation Optional Filepath to
+       * documentation. Set to 'README.md' by default. Set this to null to submit
+       * no documentation.
        */
       describe: function (options) {
         _.each(options, function (value, key) {
           if (key === "summary" ||
               key === "git") {
             self.metadata[key] = value;
+          } else if (key === "documentation") {
+            self.metadata[key] = value;
+            self.docsExplicitlyProvided = true;
           } else if (key === "version") {
             if (typeof(value) !== "string") {
               buildmessage.error("The package version (specified with "
@@ -904,7 +971,7 @@ _.extend(PackageSource.prototype, {
     var uses = {};
     var implies = {};
 
-    _.each(self.allArchs, function (arch) {
+    _.each(compiler.ALL_ARCHES, function (arch) {
       sources[arch] = [];
       exports[arch] = [];
       uses[arch] = [];
@@ -915,7 +982,7 @@ _.extend(PackageSource.prototype, {
     // that match an element of self.allarchs.
     var forAllMatchingArchs = function (archs, f) {
       _.each(archs, function (arch) {
-        _.each(self.allArchs, function (matchArch) {
+        _.each(compiler.ALL_ARCHES, function (matchArch) {
           if (archinfo.matches(matchArch, arch)) {
             f(matchArch);
           }
@@ -945,12 +1012,12 @@ _.extend(PackageSource.prototype, {
 
       var toArchArray = function (arch) {
         if (!(arch instanceof Array)) {
-          arch = arch ? [arch] : self.allArchs;
+          arch = arch ? [arch] : compiler.ALL_ARCHES;
         }
         arch = _.uniq(arch);
         arch = _.map(arch, mapWhereToArch);
         _.each(arch, function (inputArch) {
-          var isMatch = _.any(_.map(self.allArchs, function (actualArch) {
+          var isMatch = _.any(_.map(compiler.ALL_ARCHES, function (actualArch) {
             return archinfo.matches(actualArch, inputArch);
           }));
           if (! isMatch) {
@@ -1277,7 +1344,7 @@ _.extend(PackageSource.prototype, {
         // principle of least surprise to half-run a handler
         // and then continue.
         sources = {};
-        _.each(self.allArchs, function (arch) {
+        _.each(compiler.ALL_ARCHES, function (arch) {
           sources[arch] = [];
         });
 
@@ -1296,7 +1363,7 @@ _.extend(PackageSource.prototype, {
                            " depends on itself.\n");
       }
     };
-    _.each(self.allArchs, function (label) {
+    _.each(compiler.ALL_ARCHES, function (label) {
       _.each(uses[label], doNotDepOnSelf);
       _.each(implies[label], doNotDepOnSelf);
     });
@@ -1331,7 +1398,7 @@ _.extend(PackageSource.prototype, {
 
       // For all implies and uses, fill in the unspecified dependencies from the
       // release.
-      _.each(self.allArchs, function (label) {
+      _.each(compiler.ALL_ARCHES, function (label) {
         uses[label] = _.map(uses[label], setFromRel);
         implies[label] = _.map(implies[label], setFromRel);
       });
@@ -1374,7 +1441,7 @@ _.extend(PackageSource.prototype, {
 
     // Create source architectures, one for the server and one for each web
     // arch.
-    _.each(self.allArchs, function (arch) {
+    _.each(compiler.ALL_ARCHES, function (arch) {
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
       // which needs to be loaded by the linker).
@@ -1443,7 +1510,7 @@ _.extend(PackageSource.prototype, {
 
     var projectWatchSet = projectContext.getProjectWatchSet();
 
-    _.each(self.allArchs, function (arch) {
+    _.each(compiler.ALL_ARCHES, function (arch) {
       // We don't need to build a Cordova SourceArch if there are no Cordova
       // platforms.
       if (arch === 'web.cordova' &&
@@ -1710,6 +1777,99 @@ _.extend(PackageSource.prototype, {
       });
     });
     return _.keys(packages);
+  },
+
+  // Returns an array of objects, representing this package's public
+  // exports. Each object has the following keys:
+  //  - name: export name (ex: "Accounts")
+  //  - arch: an array of strings representing architectures for which this
+  //    export is declared.
+  //
+  // This ignores testOnly exports.
+  getExports: function () {
+    var self = this;
+    var ret = {};
+    // Go over all of the architectures, and aggregate the exports together.
+    _.each(self.architectures, function (arch) {
+      _.each(arch.declaredExports, function (exp) {
+        // Skip testOnly exports -- the flag is intended for use in testing
+        // only, so it is not of any interest outside this package.
+        if (exp.testOnly) {
+          return;
+        }
+        // Add the export to the export map.
+        if (! _.has(ret, exp.name)) {
+          ret[exp.name] = [arch.arch];
+        } else {
+          ret[exp.name].push(arch.arch);
+        }
+     });
+    });
+    return _.map(ret, function (arches, name) {
+      return { name: name, architectures: arches };
+    });
+   },
+
+  // Processes the documentation provided in Package.describe. Returns an object
+  // with the following keys:
+  //   - path: full filepath to the Readme file
+  //   - excerpt: the subsection between the first and second heading of the
+  //     Readme, to be used as a longform package description.
+  //   - hash: hash of the full text of this Readme, or "" if the Readme is
+  //     blank.
+  //
+  // Returns null if the documentation is marked as null, or throws a
+  // buildmessage error if the documentation could not be read.
+  //
+  // This function reads and performs string operations on a (potentially) long
+  // file. We do not call it unless we actually need this information.
+  processReadme: function () {
+    var self = this;
+    buildmessage.assertInJob();
+    if (! self.metadata.documentation) {
+      return null;
+    }
+
+    // To ensure atomicity, we want to copy the README to a temporary file.
+    var ret = {};
+    ret.path =
+      files.pathJoin(self.sourceRoot, self.metadata.documentation);
+    // Read in the text of the Readme.
+    try {
+      var fullReadme = files.readFile(ret.path);
+    } catch (err) {
+      var errorMessage = "";
+      if (err.code === "ENOENT") {
+        // This is the most likely and common case, especially when we are
+        // inferring the docs as a default value.
+        errorMessage = "Documentation not found: " + self.metadata.documentation;
+      } else {
+        // This is weird, and we don't usually protect the user from errors like
+        // this, but maybe we should.
+        errorMessage =
+          "Documentation couldn't be read: " + self.metadata.documentation + " ";
+        errorMessage += "(Error: " + err.message + ")";
+      }
+
+      // The user might not understand that we are automatically inferring
+      // README.md as the docs! If they want to avoid pushing anything, explain
+      // how to do that.
+      if (! self.docsExplicitlyProvided) {
+        errorMessage += "\n" +
+          "If you don't want to publish any documentation, " +
+          "please set 'documentation: null' in Package.describe";
+      }
+      buildmessage.error(errorMessage);
+      // Recover by returning null
+      return null;
+    }
+
+    var text = fullReadme.toString();
+    return {
+      contents: text,
+      hash: utils.sha256(text),
+      excerpt: getExcerptFromReadme(text)
+    };
   },
 
   // If dependencies aren't consistent across unibuilds, return false and
