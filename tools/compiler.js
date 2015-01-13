@@ -318,6 +318,12 @@ var compileUnibuild = function (options) {
     });
   };
 
+  var convertSourceMapPaths = function (sourcemap, f) {
+    var srcmap = JSON.parse(sourcemap);
+    srcmap.sources = _.map(srcmap.sources, f);
+    return JSON.stringify(srcmap);
+  };
+
   _.each(sourceItems, function (source) {
     var relPath = source.relPath;
     var fileOptions = _.clone(source.fileOptions) || {};
@@ -652,7 +658,8 @@ var compileUnibuild = function (options) {
             files.pathJoin(
               inputSourceArch.pkg.serveRoot,
               files.convertToStandardPath(options.path, true))),
-          sourceMap: options.sourceMap
+          sourceMap: convertSourceMapPaths(options.sourceMap,
+                                           files.convertToStandardPath)
         });
       },
 
@@ -693,7 +700,8 @@ var compileUnibuild = function (options) {
             inputSourceArch.pkg.serveRoot,
             files.convertToStandardPath(options.path, true)),
           bare: !! bare,
-          sourceMap: options.sourceMap,
+          sourceMap: convertSourceMapPaths(options.sourceMap,
+                                           convertToStandardPath),
           sourceHash: options._hash
         });
       },
