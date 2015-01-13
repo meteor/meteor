@@ -169,6 +169,26 @@ _.extend(exports.Tropohouse.prototype, {
     return targetDirectory;
   },
 
+  _saveIsopack: function (isopack, packageName) {
+    // XXX does this actually need the name as an argument or can we just get
+    // it from isopack?
+
+    var self = this;
+
+    // Note: wipeAllPackages depends on this filename structure, as does the
+    // part above which readlinks.
+    var newPackageLinkTarget = '.' + isopack.version + '.' +
+      utils.randomToken() + '++' + isopack.buildArchitectures();
+
+    var combinedDirectory = self.packagePath(
+      packageName, newPackageLinkTarget);
+
+    isopack.saveToPath(combinedDirectory);
+
+    files.symlinkOverSync(newPackageLinkTarget,
+      self.packagePath(packageName, isopack.version));
+  },
+
   // Given a package name, version, and required architectures, checks to make
   // sure that we have the package downloaded at the requested arch. If we do,
   // returns null.
@@ -196,31 +216,15 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
-    var packageLinkFile = self.packagePath(packageName, version);
+    var packagePath = self.packagePath(packageName, version);
     var downloadedArches = [];
-    var packageLinkTarget = null;
-    try {
-      packageLinkTarget = files.readlink(packageLinkFile);
-    } catch (e) {
-      // Complain about anything other than "we don't have it at all". This
-      // includes "not a symlink": The main reason this would not be a symlink
-      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
-      // warehouse package not a tropohouse package). But the versions should
-      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-      // versions should be semver-like.
-      if (e.code !== 'ENOENT')
-        throw e;
-    }
-    if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
-      // so this strips off the part before the '++'.
-      // XXX maybe we should just read the isopack.json instead of
-      //     depending on the symlink?
-      var archPart = packageLinkTarget.split('++')[1];
-      if (!archPart)
-        throw Error("unexpected symlink target for " + packageName + "@" +
-                    version + ": " + packageLinkTarget);
-      downloadedArches = archPart.split('+');
+
+    // Find out which arches we have by reading the isopack metadata
+    var packageMetadata = Isopack.readMetadataFromDirectory(packagePath);
+
+    // packageMetadata is null if there is no package at packagePath
+    if (packageMetadata) {
+      downloadedArches = _.pluck(packageMetadata.builds, "arch");
     }
 
     var archesToDownload = _.filter(options.architectures, function (requiredArch) {
@@ -256,10 +260,28 @@ _.extend(exports.Tropohouse.prototype, {
         title: "downloading " + packageName + "@" + version + "..."
       }, function() {
         var buildTempDirs = [];
+
+        // XXX on windows we will special case this whole block
+        // Find the previous actual directory of the package
+        var packageLinkTarget = null;
+        try {
+          packageLinkTarget = files.readFile(packagePath);
+        } catch (e) {
+          // Complain about anything other than "we don't have it at all". This
+          // includes "not a symlink": The main reason this would not be a symlink
+          // is if it's a directory containing a pre-0.9.0 package (ie, this is a
+          // warehouse package not a tropohouse package). But the versions should
+          // not overlap: warehouse versions are truncated SHAs whereas tropohouse
+          // versions should be semver-like.
+          if (e.code !== 'ENOENT') {
+            throw e;
+          }
+        }
+
         // If there's already a package in the tropohouse, start with it.
         if (packageLinkTarget) {
           buildTempDirs.push(
-            files.pathResolve(files.pathDirname(packageLinkFile),
+            files.pathResolve(files.pathDirname(packagePath),
                               packageLinkTarget));
         }
         // XXX how does concurrency work here?  we could just get errors if we
@@ -286,14 +308,8 @@ _.extend(exports.Tropohouse.prototype, {
             buildTempDir,
             {firstIsopack: i === 0});
         });
-        // Note: wipeAllPackages depends on this filename structure, as does the
-        // part above which readlinks.
-        var newPackageLinkTarget = '.' + version + '.'
-              + utils.randomToken() + '++' + isopack.buildArchitectures();
-        var combinedDirectory = self.packagePath(
-          packageName, newPackageLinkTarget);
-        isopack.saveToPath(combinedDirectory);
-        files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+        self._saveIsopack(isopack, packageName);
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {
@@ -384,9 +400,9 @@ _.extend(exports.Tropohouse.prototype, {
     return files.readlink(linkPath);
   },
 
-  replaceLatestMeteorSymlink: function (linkText) {
+  linkToLatestMeteor: function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.symlinkOverSync(linkText, linkPath);
+    files.linkToMeteorScript(scriptLocation, linkPath);
   }
 });
