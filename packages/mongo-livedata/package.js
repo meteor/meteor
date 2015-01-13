@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to the 'mongo' package",
-  version: '1.0.7-winr.0'
+  version: '1.0.8-winr.0'
 });
 
 Package.onUse(function (api) {

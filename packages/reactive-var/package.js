@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive variable",
-  version: '1.0.4-winr.0'
+  version: '1.0.5-winr.0'
 });
 
 Package.onUse(function (api) {
