@@ -1369,3 +1369,6 @@ files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
 files.convertToPosixPath = toPosixPath;
 
+files.convertToStandardLineEndings = convertToStandardLineEndings;
+files.convertToOSLineEndings = convertToOSLineEndings;
+
