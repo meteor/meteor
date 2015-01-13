@@ -34,11 +34,15 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                            options);
   input.loadFromCatalog(self.catalogLoader);
 
-  return resolveWithInput(input, this._options.nudge);
+  return CS.PackagesResolver._resolveWithInput(input, this._options.nudge);
 };
 
-var resolveWithInput = function (input, _nudge) {
+// Exposed for tests.
+CS.PackagesResolver._resolveWithInput = function (input, _nudge) {
   check(input, CS.Input);
+
+  // Dump the input to the console!  XXX Put this behind a flag.
+  //console.log(JSON.stringify(input.toJSONable(), null, 2));
 
   var resolver = new CS.Resolver({nudge: _nudge});
 

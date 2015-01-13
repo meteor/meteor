@@ -30,4 +30,5 @@ Package.onTest(function (api) {
   api.addFiles('constraint-solver-tests.js', ['server']);
   api.addFiles('benchmark-tests.js', ['server']);
   api.addFiles('resolver-tests.js', ['server']);
+  api.addFiles('input-tests.js', ['server']);
 });
