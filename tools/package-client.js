@@ -721,6 +721,7 @@ exports.publishPackage = function (options) {
     });
     if (buildmessage.jobHasMessages())
       return;
+console.log(uploadInfo);
 
     // XXX If package version already exists, print a nice error message
     // telling them to try 'meteor publish-for-arch' if they want to
@@ -739,13 +740,6 @@ exports.publishPackage = function (options) {
     });
     if (buildmessage.jobHasMessages())
       return;
-
-    buildmessage.enterJob("publishing package " + name, function () {
-      callPackageServerBM(conn, 'publishPackageVersion',
-                          uploadInfo.uploadToken,
-                          { tarballHash: sourceBundleResult.tarballHash,
-                            treeHash: sourceBundleResult.treeHash });
-    });
 
     var hashes = {
       tarballHash: sourceBundleResult.tarballHash,
@@ -766,7 +760,8 @@ exports.publishPackage = function (options) {
     }
 
     return;
-  };
+  }
+};
 
   // Call the server to ask if we are authorized to update this release or
 // package. This is a way to save time before sending data to the server. It

@@ -809,7 +809,7 @@ _.extend(PackageQuery.prototype, {
         catalog.official.getVersion(data.name, data.version)) {
       Console.info();
       Console.info(
-        "This package version is build locally from source.",
+        "This package version is built locally from source.",
         "The same version of this package also exists on the package server.",
         "To view its metadata, run",
         Console.command("'meteor show " + data.name + "@" + data.version + "'"),

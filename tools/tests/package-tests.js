@@ -1335,8 +1335,9 @@ selftest.define("show and search local overrides server",
 
     // When we ask for version 1.0.0, we get the local version.
     var addendum =
-      "The same version of this package also exists on the package server. " +
-      "To view its\nmetadata, run 'meteor show " + fullPackageName +
+      "This package version is built locally from source. " +
+      "The same version of this\npackage also exists on the package server. " +
+      "To view its metadata, run\n'meteor show " + fullPackageName +
       "@1.0.0' from outside the project.";
     testShowPackageVersion(s, {
       packageName: fullPackageName,
