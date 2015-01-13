@@ -43,28 +43,6 @@ var getReleaseVersionPublishedOn = function (versionRecord) {
   return new Date(toolRecord.published);
 };
 
-// Convert package version dependencies into a more helpful format for output in
-// 'meteor show'.
-var rewriteDependencies = function (versionDependencies) {
-  var dependencies = _.map(
-    // The dependency on 'meteor' was almost certainly added automatically, by
-    // Isobuild. Returning this to the user will only cause confusion.
-    _.omit(versionDependencies, "meteor"),
-    function (dep, depName) {
-      // We will only consider this a weak dependency if all of its references
-      // are marked as weak.
-      var weak = _.every(dep.references, function (ref) {
-        return !! ref.weak;
-      });
-      return {
-        name: depName,
-        constraint: dep.constraint,
-        weak: weak
-      };
-  });
-  return _.sortBy(dependencies, "name");
-};
-
 // Processes information about the versions that we hid. Returns a brief
 // human-friendly string listing the reasons why some versions of the package
 // were not shown.
@@ -163,7 +141,7 @@ var getTempContext = function (options) {
   // (mostly immutable) projectContext.
   if (options.appDir) {
     projectContext = new projectContextModule.ProjectContext({
-      projectDir: options.appDir,
+      projectDir: options.appDir
     });
   } else {
     // We're not in an app, so we will create a temporary app and use it to load
@@ -172,7 +150,7 @@ var getTempContext = function (options) {
     var tempProjectDir = files.mkdtemp('meteor-show');
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,
-      explicitlyAddedLocalPackageDirs: currentPackageDir,
+      explicitlyAddedLocalPackageDirs: currentPackageDir
     });
   }
 
@@ -187,16 +165,48 @@ var getTempContext = function (options) {
   return projectContext;
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// show
-///////////////////////////////////////////////////////////////////////////////
-
 // Print an error message if the user asks about an unknown item.
 var itemNotFound = function (item) {
   Console.error(item + ": not found");
   utils.explainIfRefreshFailed();
   return 1;
 };
+
+// This is a base class for storing package fields that require some processing
+// to store and display correctly.
+//
+// Do NOT initialize this class by itself -- use one of the classes that
+// inherits from it.
+var BasePkgDatum = function () {
+  var self = this;
+  self.data = null;
+};
+_.extend(BasePkgDatum.prototype, {
+  // Throws if data has not been initialized.
+  _checkInitialized: function () {
+    var self = this;
+    if (self.data === null) {
+      throw new Error("do not use the BasePkgDatum class by itself");
+    }
+  },
+  // Returns true if this class does not contain any exports.
+  isEmpty : function () {
+    var self = this;
+    self._checkInitialized();
+    return _.isEmpty(self.data);
+  },
+  // Get exports as a raw object.
+  getObject : function () {
+    var self = this;
+    self._checkInitialized();
+    return self.data;
+  },
+  getConsoleStr : function () {
+    var self = this;
+    self._checkInitialized();
+    return "";
+  }
+});
 
 // This class stores exports from a given package.
 //
@@ -221,18 +231,10 @@ var PkgExports = function (pkgExports) {
   // Sort exports alphabetically by name.
   self.data =  _.sortBy(self.data, "name");
 };
+// Extend BasePkgDatum.
+PkgExports.prototype = new BasePkgDatum();
 
 _.extend(PkgExports.prototype, {
-  // Returns true if this class does not contain any exports.
-  isEmpty : function () {
-    var self = this;
-    return _.isEmpty(self.data);
-  },
-  // Get exports as a raw object.
-  getObject : function () {
-    var self = this;
-    return self.data;
-  },
   // Convert package exports into a pretty, Console non-wrappable string. If an
   // export is only declared for certain architectures, mentions those
   // architectures in a user-friendly format.
@@ -254,11 +256,11 @@ _.extend(PkgExports.prototype, {
 
 // This class stores implies from a given package.
 //
-// Stores exports for a given package and returns them to the caller in a given
+// Stores implies for a given package and returns them to the caller in a given
 // format. Takes in the dependencies from the package.
 var PkgImplies = function (pkgDeps) {
   var self = this;
-  self.implies = [];
+  self.data = [];
   // Go through all the package dependencies. If a dependency has any implied
   // references, add it to the list.
   _.each(pkgDeps, function (ref, name) {
@@ -274,30 +276,23 @@ var PkgImplies = function (pkgDeps) {
     // Sort architecures alphabetically.
     architectures.sort();
     if (! _.isEmpty(architectures)) {
-      self.implies.push({ name: name, architectures: architectures });
+      self.data.push({ name: name, architectures: architectures });
     }
   });
   // Sort by name.
-  self.implies =  _.sortBy(self.implies, "name");
+  self.data =  _.sortBy(self.data, "name");
 };
 
+// Extend BasePkgDatum.
+PkgImplies.prototype = new BasePkgDatum();
+
 _.extend(PkgImplies.prototype, {
-  // Returns true if this class does not contain any exports.
-  isEmpty : function () {
-    var self = this;
-    return _.isEmpty(self.implies);
-  },
-  // Get exports as a raw object.
-  getObject : function () {
-    var self = this;
-    return self.implies;
-  },
   // Convert package exports into a pretty, Console non-wrappable string. If an
   // export is only declared for certain architectures, mentions those
   // architectures in a user-friendly format.
   getConsoleStr: function () {
     var self = this;
-    var strImplies = _.map(self.implies, function (ref) {
+    var strImplies = _.map(self.data, function (ref) {
       // If an imply is valid for all architectures, don't specify it here.
       if (ref["architectures"].length === compiler.ALL_ARCHES.length)
         return ref.name;
@@ -309,6 +304,56 @@ _.extend(PkgImplies.prototype, {
     return strImplies.join(", ");
   }
 });
+
+// This class stores dependencies from a given package.
+//
+// Stores dependencies for a given package and returns them to the caller in a given
+// format. Takes in the raw dependencies from the package record.
+var PkgDependencies = function (pkgDeps) {
+  var self = this;
+  self.data = _.map(
+    // The dependency on 'meteor' was almost certainly added automatically, by
+    // Isobuild. Returning this to the user will only cause confusion.
+    _.omit(pkgDeps, "meteor"),
+    function (dep, depName) {
+      // We will only consider this a weak dependency if all of its references
+      // are marked as weak.
+      var weak = _.every(dep.references, function (ref) {
+        return !! ref.weak;
+      });
+      return {
+        name: depName,
+        constraint: dep.constraint,
+        weak: weak
+      };
+  });
+  // Sort by name.
+  self.data =  _.sortBy(self.data, "name");
+};
+
+// Extend BasePkgDatum.
+PkgDependencies.prototype = new BasePkgDatum();
+
+_.extend(PkgDependencies.prototype, {
+  // Convert package exports into a pretty, Console non-wrappable string. If an
+  // export is only declared for certain architectures, mentions those
+  // architectures in a user-friendly format.
+  getConsoleStr: function () {
+    var self = this;
+    var strDeps = _.map(self.data, function (dep) {
+      var depString = dep.name;
+      if (dep.constraint && dep.constraint !== null) {
+        depString += "@" + dep.constraint;
+      }
+      if (dep.weak) {
+        depString += " (weak dependency)";
+      }
+      return Console.noWrap(depString);
+    });
+    return strDeps.join("\n");
+  }
+});
+
 
 // The two classes below collect and print relevant information about Meteor
 // packages and Meteor releases, respectively. Specifically, they query the
@@ -417,7 +462,7 @@ _.extend(PackageQuery.prototype, {
     // If we are asking for an EJSON-style output, we will only print out the
     // relevant fields.
     if (options.ejson) {
-      Console.rawInfo(convertToEJSON(
+      Console.rawInfo(formatEJSON(
         self.data.version ?
           self._generateVersionObject(self.data) :
           self._generatePackageObject(self.data)));
@@ -599,7 +644,7 @@ _.extend(PackageQuery.prototype, {
     // Processing and formatting dependencies also takes time, so we would
     // rather not do it if we don't have to.
     if (self.showDependencies) {
-      data["dependencies"] = rewriteDependencies(versionRecord.dependencies);
+      data["dependencies"] = new PkgDependencies(versionRecord.dependencies);
     }
 
     // We want to figure out if we have already downloaded this package, and,
@@ -666,7 +711,7 @@ _.extend(PackageQuery.prototype, {
     // Processing dependencies takes time, and we don't want to do it if we
     // don't have to.
     if (self.showDependencies) {
-      data["dependencies"] = rewriteDependencies(localRecord.dependencies);
+      data["dependencies"] = new PkgDependencies(localRecord.dependencies);
     }
 
     var readmeInfo;
@@ -698,11 +743,9 @@ _.extend(PackageQuery.prototype, {
   //   available for use offline.
   // - architectures: if self.showArchitecturesOS is true, returns an
   //   array of system architectures for which that package is available.
-  // - dependencies: an array of package dependencies, as objects with the
-  //   following keys:
-  //     - packageName: name of the dependency
-  //     - constraint: constraint for that dependency
-  //     - weak: true if this is a weak dependency.
+  // - exports: a PkgExports object, representing package exports.
+  // - exports: a PkgImplies object, representing package implies.
+  // - dependencies: a PkgDependencies object, representing dependencies.
   _displayVersion: function (data) {
     var self = this;
     Console.info(
@@ -735,21 +778,12 @@ _.extend(PackageQuery.prototype, {
     }
 
     // Print dependency information, if the package has any dependencies.
-    if (! _.isEmpty(data.dependencies)) {
+    if (data.dependencies && ! data.dependencies.isEmpty()) {
       Console.info();
       Console.info("Depends on:");
-      _.each(data.dependencies, function (dep) {
-        var depString = dep.name;
-        if (dep.constraint && dep.constraint !== null) {
-          depString += "@" + dep.constraint;
-        }
-        if (dep.weak) {
-          depString += " (weak dependency)";
-        }
-        Console.info(
-          Console.noWrap(depString),
+      Console.info(
+          data.dependencies.getConsoleStr(),
           Console.options({ indent: 2 }));
-      });
     }
 
     // Print the 'published by' line at the very bottom.
@@ -797,12 +831,11 @@ _.extend(PackageQuery.prototype, {
   //   name of export.
   _generateVersionObject: function (data) {
     var versionFields = [
-      "name", "version", "description", "summary", "git", "dependencies",
+      "name", "version", "description", "summary", "git", "directory",
       "publishedBy", "publishedOn", "installed", "local", "OSarchitectures",
-      "directory"
     ];
     var processedData = {};
-    _.each(["exports", "implies"], function (key) {
+    _.each(["exports", "implies", "dependencies"], function (key) {
       processedData[key] = data[key] ? data[key].getObject() : [];
     });
     return _.extend(processedData, _.pick(data, versionFields));
@@ -1292,6 +1325,11 @@ _.extend(ReleaseQuery.prototype, {
     }
   }
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// show
+///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
   name: 'show',
