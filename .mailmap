@@ -3,7 +3,8 @@
 # This controls 'git shortlog'. eg, run:
 #   git shortlog -s release/METEOR@1.0.1..HEAD
 # to get a sorted list of all committers to revisions in HEAD but not
-# in 1.0.1.
+# in 1.0.1.  To get the list including email addresses (useful for input
+# to the script below) include --email as well.
 #
 # For any emails that show up in the shortlog that aren't in one of
 # these lists, figure out their GitHub username and add them.
