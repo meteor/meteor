@@ -751,15 +751,14 @@ exports.publishPackage = function (options) {
     });
     if (buildmessage.jobHasMessages())
       return;
-
-    if (! options.doNotPublishBuild) {
-      createAndPublishBuiltPackage(conn, isopack);
-      if (buildmessage.jobHasMessages())
-        return;
-    }
-
-    return;
   }
+  if (! options.doNotPublishBuild) {
+    createAndPublishBuiltPackage(conn, isopack);
+    if (buildmessage.jobHasMessages())
+      return;
+  }
+
+  return;
 };
 
   // Call the server to ask if we are authorized to update this release or
