@@ -234,13 +234,13 @@ _.extend(exports.Tropohouse.prototype, {
     } else {
       // Note: wipeAllPackages depends on this filename structure, as does the
       // part above which readlinks.
-      var combinedDirectory = self.packagePath(
-        packageName, isopack.version);
-
       var newPackageLinkTarget = '.' + isopack.version + '.' +
         utils.randomToken() + '++' + isopack.buildArchitectures();
 
-      isopack.saveToPath(newPackageLinkTarget);
+      var combinedDirectory = self.packagePath(
+        packageName, newPackageLinkTarget);
+
+      isopack.saveToPath(combinedDirectory);
 
       files.symlinkOverSync(newPackageLinkTarget,
         self.packagePath(packageName, isopack.version));
