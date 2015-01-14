@@ -1132,8 +1132,9 @@ var toPosixPath = function (p, notAbsolute) {
 
   p = p.replace(/\\/g, '/');
   if (p[1] === ':' && ! notAbsolute) {
-    // transform "C:/bla/bla" to "/C/bla/bla"
+    // transform "C:/bla/bla" to "/c/bla/bla"
     p = '/' + p[0] + p.slice(2);
+    p = p.toLowerCase();
   }
 
   return p;
@@ -1141,11 +1142,12 @@ var toPosixPath = function (p, notAbsolute) {
 
 var toDosPath = function (p, notAbsolute) {
   if (p[0] === '/' && ! notAbsolute) {
-    if (! /^\/[A-Z]\//.test(p))
+    if (! /^\/[A-Za-z]\//.test(p))
       throw new Error("Surprising path: " + p);
     // transform a previously windows path back
-    // "/C/something" to "C:/something"
+    // "/C/something" to "c:/something"
     p = p[1] + ":" + p.slice(2);
+    p = p.toLowerCase();
   }
 
   p = p.replace(/\//g, '\\');
