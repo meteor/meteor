@@ -15,6 +15,7 @@ Package.onUse(function (api) {
   api.export('Spacebars');
 
   api.use('htmljs');
+  api.use('tracker');
   api.use('blaze');
   api.use('observe-sequence');
   api.use('templating');
