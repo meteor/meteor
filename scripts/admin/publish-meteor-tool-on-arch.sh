@@ -110,15 +110,15 @@ parse_keys () {
   CREDS=$($METEOR admin get-machine $PLATFORM --json)
 
   # save host key and login private key to temp files
-  echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key
-  TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key
+  echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key_$PLATFORM
+  TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key_$PLATFORM
   chmod 600 $TEMP_PRIV_KEY
 
   USERNAME=$(echo $CREDS | get_from_json "username")
   HOST=$(echo $CREDS | get_from_json "host")
   PORT=$(echo $CREDS | get_from_json "port")
-  echo -n "$HOST " > $CHECKOUT_DIR/temp_key
-  echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key
+  echo -n "$HOST " > $CHECKOUT_DIR/temp_key_$PLATFORM
+  echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key_$PLATFORM
   TEMP_KEY=$CHECKOUT_DIR/temp_key
 
   trap - EXIT
