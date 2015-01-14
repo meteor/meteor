@@ -8,7 +8,6 @@ var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
 var url = require('url');
-var moment = require('moment');
 
 var utils = exports;
 
@@ -678,6 +677,7 @@ exports.mobileServerForRun = function (options) {
 // 2014) or unknown for null.
 exports.longformDate = function (date) {
   if (! date) return "Unknown";
+  var moment = require('moment');
   var pubDate = moment(date).format('MMMM Do, YYYY');
   return pubDate;
 };
