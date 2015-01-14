@@ -1,8 +1,20 @@
 ## v.NEXT
 
-* meteor show and search changes (XXX ekate)
+* meteor show and search: replaced '--show-unmigrated' and '--show-old' flags
+  with a simple '--show-all' flag. Introduce the --ejson flag.
 
-* README/docs changes (XXX ekate)
+* meteor show and search shows local package information.
+
+* meteor show indicates if the isopack has been downloaded and can now be used
+  offline.
+
+* meteor publish takes a documentation file, set to README.md by default and
+  changeable with the 'documentation' option in Package.describe. Excerpts the
+  first non-header Markdown section as the longform description for use in
+  'meteor show'.
+
+* meteor publish --update from a package directory now exists and updates the
+  metadata for a previously published version
 
 * Package version parser changes (XXX David Greenspan? Anything user visible?)
 
