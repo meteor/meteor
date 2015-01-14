@@ -1,8 +1,54 @@
 ## v.NEXT
 
+* meteor show and search changes (XXX ekate)
+
+* README/docs changes (XXX ekate)
+
+* Package version parser changes (XXX David Greenspan? Anything user visible?)
+
+* Constraint solver changes (XXX David Greenspan? Anything user visible?  other
+  than the next thing)
+
+* `meteor update foo` should update foo even if it's an indirect dependency of
+  your app.  #3282
+
 * Fix stack trace when a browser tries to use the server like a proxy.  #1212
 
-- Upgraded dependencies:
+* Switch CLI tool filesystem calls from synchronous to yielding (pro: more
+  concurrency, more responsive to signals; con: could introduce concurrency
+  bugs)
+
+* Don't apply CDN prefix on Cordova. #3278 #3311
+
+* Don't try to refresh client app in the runner unless the app actually has the
+autoupdate package. #3365
+
+* Fix custom release banner logic. #3353
+
+* Add `meteor test-packages --velocity` (similar to `meteor run --test).  #3330
+
+* HTTP followRedirects option should also apply to non-GET requests.  #2808
+
+* Clean up temporary directories used by package downloads sooner.  #3324
+
+* If the tool knows about the requested release but doesn't know about the build
+  of its tool for the platform, refresh the catalog rather than failing
+  immediately.  #3317
+
+* `meteor --get-ready` shouldn't add packages to your app.
+
+* Fix some corner cases in cleaning up app processes in the runner. Drop
+  undocumented `--keepalive` support. #3315
+
+* Fix CSS autoupdate when `$ROOT_URL` has a non-trivial path.  #3111
+
+* Save Google OAuth idToken to the User service info object.
+
+* Add git info to `meteor --version`.
+
+* Correctly catch a case of illegal `Tracker.flush` during `Tracker.autorun`.  #3037
+
+* Upgraded dependencies:
   - jquery: 1.11.2 (from 1.11.0)
 
 ## v1.0.2.1, 2014-Dec-22
