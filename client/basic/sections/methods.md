@@ -99,7 +99,7 @@ On the server, you don't have to pass a callback &mdash; the method call
 will simply block until the method is complete, returning a result or
 throwing an exception, just as if you called the function directly:
 
-```
+```js
 // Synchronous call on the server with no callback
 var result = Meteor.call('commentOnPost', comment, postId);
 ```
