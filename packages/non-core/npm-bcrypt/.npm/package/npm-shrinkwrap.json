@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "bcrypt": {
-      "version": "0.7.7",
+      "version": "0.7.8",
       "dependencies": {
         "bindings": {
           "version": "1.0.0"
