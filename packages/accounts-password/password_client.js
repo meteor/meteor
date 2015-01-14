@@ -25,7 +25,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      password: hashPassword(password)
+      password: Accounts.hashPassword(password)
     }],
     userCallback: function (error, result) {
       if (error && error.error === 400 &&
@@ -57,13 +57,6 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
-var hashPassword = function (password) {
-  return {
-    digest: SHA256(password),
-    algorithm: "sha-256"
-  };
-};
-
 // XXX COMPAT WITH 0.8.1.3
 // The server requested an upgrade from the old SRP password format,
 // so supply the needed SRP identity to login. Options:
@@ -85,13 +78,32 @@ var srpUpgradePath = function (options, callback) {
       methodArguments: [{
         user: options.userSelector,
         srp: SHA256(details.identity + ":" + options.plaintextPassword),
-        password: hashPassword(options.plaintextPassword)
+        password: Accounts.hashPassword(options.plaintextPassword)
       }],
       userCallback: callback
     });
   }
 };
 
+
+// Creates an object containing the hashed password. It is used by
+// Meteor.loginWithPassword, Accounts.createUser, Accounts.changePassword,
+// and Accounts.resetPassword in order __not__ to send the provided password
+// in plain text over the wire.
+//
+// @param password {String}
+
+/**
+* @summary Hash the provided password.
+* @locus Client
+* @param {String} password The password to be hashed.
+*/
+Accounts.hashPassword = function (password) {
+  return {
+    digest: SHA256(password),
+    algorithm: "sha-256"
+  };
+};
 
 // Attempt to log in as a new user.
 
@@ -116,7 +128,7 @@ Accounts.createUser = function (options, callback) {
   }
 
   // Replace password with the hashed password.
-  options.password = hashPassword(options.password);
+  options.password = Accounts.hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
@@ -124,8 +136,6 @@ Accounts.createUser = function (options, callback) {
     userCallback: callback
   });
 };
-
-
 
 // Change password. Must be logged in.
 //
@@ -156,7 +166,10 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 
   Accounts.connection.apply(
     'changePassword',
-    [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
+    [
+      oldPassword ? Accounts.hashPassword(oldPassword) : null,
+      Accounts.hashPassword(newPassword)
+    ],
     function (error, result) {
       if (error || !result) {
         if (error && error.error === 400 &&
@@ -234,7 +247,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
-    methodArguments: [token, hashPassword(newPassword)],
+    methodArguments: [token, Accounts.hashPassword(newPassword)],
     userCallback: callback});
 };
 
