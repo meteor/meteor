@@ -840,7 +840,7 @@ _.extend(PackageQuery.prototype, {
   _generateVersionObject: function (data) {
     var versionFields = [
       "name", "version", "description", "summary", "git", "directory",
-      "publishedBy", "publishedOn", "installed", "local", "OSarchitectures",
+      "publishedBy", "publishedOn", "installed", "local", "architecturesOS",
     ];
     var processedData = {};
     _.each(["exports", "implies", "dependencies"], function (key) {
@@ -1020,7 +1020,7 @@ _.extend(PackageQuery.prototype, {
     var versions = _.map(data["versions"], function (version) {
       var versionFields = [
         "name", "version", "description", "summary", "git", "publishedBy",
-        "publishedOn", "installed", "local", "directory"
+        "publishedOn", "installed", "local", "directory", "architecturesOS"
       ];
       var processedData = {};
       _.each(["exports", "implies"], function (key) {
