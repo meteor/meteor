@@ -73,30 +73,25 @@ END
 
     # copy the meteor session file to the remote host
     SESSION_CONTENT=$(cat $SESSION_FILE | tr '\n' ' ')
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $SESSION_CONTENT > C:\\meteor-session"
+    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $SESSION_CONTENT > C:\\meteor-session" 2>/dev/null
 
-    # checkout the SHA1 we want to publish and publish it
-    SCRIPT="( \
-IF EXIST C:\\tmp ( rmdir /s /q C:\\tmp ) && \
-md C:\\tmp && \
-cd C:\\tmp && \
-C:\\git\\bin\\git.exe clone https://github.com/meteor/meteor.git && \
-cd meteor && \
-C:\\git\\bin\\git.exe fetch --tags && \
-C:\\git\\bin\\git.exe checkout $GITSHA && \
-cd C:\\tmp\\meteor\\packages\\meteor-tool && \
-set METEOR_SESSION_FILE=C:\\meteor-session && \
-rem install 7zip && \
-C:\\git\\bin\\curl -L http://downloads.sourceforge.net/sevenzip/7z920-x64.msi >
- C:\\7z.msi && \
-msiexec /i C:\\7z.msi /quiet /qn /norestart && \
-set PATH=%PATH%;\"C:\\Program Files\\7-zip\" && \
-rem allow powershell script execution && \
-powershell \"Set-ExecutionPolicy RemoteSigned\" && \
-..\\..\\meteor.bat publish --existing-version \
-) || exit 1 \
-"
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c $SCRIPT"
+    # delete existing batch script if it exists
+    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c del C:\\publish-tool.bat || exit 0" 2>/dev/null
+
+    # copy batch script to windows machine
+    BAT_FILENAME="$ADMIN_DIR/publish-meteor-tool.bat"
+
+    # we need to use file descriptor 10 because otherwise SSH will conflict with
+    # the while loop
+    while read -u10 -r line
+    do
+      line="${line/\$GITSHA/$GITSHA}"
+      echo $line
+      ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $line>> C:\\publish-tool.bat" 2>/dev/null
+    done 10< $BAT_FILENAME
+
+    # run the batch script to publish the meteor tool
+    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c C:\\publish-tool.bat"
 
     trap - EXIT
   fi
@@ -119,7 +114,8 @@ parse_keys () {
   PORT=$(echo $CREDS | get_from_json "port")
   echo -n "$HOST " > $CHECKOUT_DIR/temp_key_$PLATFORM
   echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key_$PLATFORM
-  TEMP_KEY=$CHECKOUT_DIR/temp_key
+
+  TEMP_KEY=$CHECKOUT_DIR/temp_key_$PLATFORM
 
   trap - EXIT
 }
