@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Used by the coffeescript package's tests",
-  version: "1.0.3-winr.0"
+  version: "1.0.3-winr.1"
 });
 
 Package.onUse(function (api) {

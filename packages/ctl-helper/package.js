@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Helpers for control programs",
-  version: "1.0.6-winr.0"
+  version: "1.0.6-winr.1"
 });
 
 Npm.depends({optimist: '0.6.0'});
