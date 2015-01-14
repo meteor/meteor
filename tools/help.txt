@@ -475,6 +475,7 @@ Options:
   --test-app-path   Set the directory in which to create a temporary app used
                     for tests. Defaults to the system's temporary directory,
                     usually /tmp.
+  --velocity        [Experimental] Execute tests using phantomjs and exit.
   --verbose         Print all output from builds logs.
 
 
