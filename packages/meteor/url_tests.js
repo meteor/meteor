@@ -59,6 +59,10 @@ Tinytest.add("absolute-url - basics", function(test) {
     test.equal(Meteor.absoluteUrl('foo', {rootUrl: prefix + 'foo.localhost.com',
                                           replaceLocalhost: true}),
                'http://foo.localhost.com/foo');
+
+    // Test appending to a root URL that contains a query string
+    test.equal(Meteor.absoluteUrl('foo', {rootUrl: prefix + 'asdf.com/?mocha=true'}),
+               'http://asdf.com/foo');
   });
 });
 

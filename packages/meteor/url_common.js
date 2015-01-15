@@ -20,6 +20,12 @@ Meteor.absoluteUrl = function (path, options) {
   if (!url)
     throw new Error("Must pass options.rootUrl or set ROOT_URL in the server environment");
 
+  // Remove query string from url, if any
+  var queryIndex = url.indexOf('?');
+  if (queryIndex >= 0) {
+    url = url.substring(0, queryIndex);
+  }
+
   if (!/^http[s]?:\/\//i.test(url)) // url starts with 'http://' or 'https://'
     url = 'http://' + url; // we will later fix to https if options.secure is set
 
