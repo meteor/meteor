@@ -56,7 +56,7 @@ function onConnection(socket) {
       prompt: "> ",
       terminal: true,
       useColors: true,
-      useGlobal: false,
+      useGlobal: true,
       ignoreUndefined: true,
     });
 
@@ -76,6 +76,19 @@ function startREPL(options) {
 
   // History persists across shell sessions!
   initializeHistory(repl);
+
+  Object.defineProperty(repl.context, "_", {
+    // Force the global _ variable to remain bound to underscore.
+    get: function () { return _; },
+
+    // Expose the last REPL result as __ instead of _.
+    set: function(lastResult) {
+      repl.context.__ = lastResult;
+    },
+
+    enumerable: true,
+    configurable: false
+  });
 
   // Use the same `require` function and `module` object visible to the
   // shell.js module.
