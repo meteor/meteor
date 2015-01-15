@@ -5,36 +5,53 @@
 // true).
 var inTool = typeof Package === 'undefined';
 
-var PV;
-if (inTool) {
-  PV = exports;
-} else {
-  PackageVersion = PV = {};
-}
-
-var semver = inTool ? require ('semver') : Npm.require('semver');
+var semver = inTool ? require ('semver') : SemVer410;
 var __ = inTool ? require('underscore') : _;
 
-// Takes in a meteor version, for example 1.2.3-rc5_1+12345.
+// Takes in a meteor version string, for example 1.2.3-rc.5_1+12345.
 //
 // Returns an object composed of the following:
-//   semver: (ex: 1.2.3)
-//   wrapNum: 0 or a valid wrap number.
+//  * major (integer >= 0)
+//  * minor (integer >= 0)
+//  * patch (integer >= 0)
+//  * prerelease (Array of Number-or-String, possibly empty)
+//  * wrapNum (integer >= 0)
+//  * build (Array of String, possibly empty)
+//  * raw (String), the raw meteor version string
+//  * version (String), canonical meteor version without build ID
+//  * semver (String), canonical semver version with build ID but no wrap num
 //
-// Throws if the wrapNumber is invalid, or if the version cannot be split
-// reasonably.
-var extractSemverPart = function (versionString) {
-  if (!versionString) return { semver: "", wrapNum: -1 };
-  var noBuild = versionString.split('+');
-  var splitVersion = noBuild[0].split('_');
+// The input string "1.2.3-rc.5_1+12345" has a (major, minor, patch) of
+// (1, 2, 3), a prerelease of ["rc", 5], a wrapNum of 1, a build of
+// ["12345"], a raw of "1.2.3-rc.5_1+12345", a version of
+// "1.2.3-rc.5_1", and a semver of "1.2.3-rc.5+12345".
+//
+// Throws if the version string is invalid in any way.
+//
+// You can write `PV.parse("1.2.3")` as an alternative to `new PV("1.2.3")`
+var PV = function (versionString) {
+  if (! (typeof versionString === 'string')) {
+    throw new Error("Invalid PackageVersion argument: " + versionString);
+  }
+  if (! versionString) {
+    throwVersionParserError("Empty string is not a valid version");
+  }
+
+  // The buildID ("+foo" suffix) is part of semver, but split it off
+  // because it comes after the wrapNum.  The wrapNum ("_123" suffix)
+  // is a Meteor extension to semver.
+  var plusSplit = versionString.split('+');
+  var wrapSplit = plusSplit[0].split('_');
   var wrapNum = 0;
-  // If we find two +s, or two _, that's super invalid.
-  if (noBuild.length > 2 || splitVersion.length > 2) {
-    throwVersionParserError(
-      "Version string must look like semver (eg '1.2.3'), not '"
-        + versionString + "'.");
-  } else if (splitVersion.length > 1) {
-    wrapNum = splitVersion[1];
+
+  if (plusSplit.length > 2) {
+    throwVersionParserError("Can't have two + in version: " + versionString);
+  }
+  if (wrapSplit.length > 2) {
+    throwVersionParserError("Can't have two _ in version: " + versionString);
+  }
+  if (wrapSplit.length > 1) {
+    wrapNum = wrapSplit[1];
     if (!/^\d+$/.test(wrapNum)) {
       throwVersionParserError(
         "The wrap number (after _) must contain only digits, so " +
@@ -44,14 +61,56 @@ var extractSemverPart = function (versionString) {
         "The wrap number (after _) must not have a leading zero, so " +
           versionString + " is invalid.");
     }
+    wrapNum = parseInt(wrapNum, 10);
   }
-  return {
-    semver: (noBuild.length > 1) ?
-      splitVersion[0] + "+" + noBuild[1] :
-      splitVersion[0],
-    wrapNum: parseInt(wrapNum, 10)
+
+  // semverPart is everything but the wrapNum, so for "1.0.0_2+xyz",
+  // it is "1.0.0+xyz".
+  var semverPart = wrapSplit[0];
+  if (plusSplit.length > 1) {
+    semverPart += "+" + plusSplit[1];
+  }
+
+  // NPM's semver spec supports things like 'v1.0.0' and considers them valid,
+  // but we don't. Everything before the + or - should be of the x.x.x form.
+  if (! /^\d+\.\d+\.\d+(\+|-|$)/.test(semverPart)) {
+    throwVersionParserError(
+      "Version string must look like semver (eg '1.2.3'), not '"
+        + versionString + "'.");
   };
+
+  var semverParse = semver.parse(semverPart);
+  if (! semverParse) {
+    throwVersionParserError(
+      "Version string must look like semver (eg '1.2.3'), not '"
+        + semverPart + "'.");
+  }
+
+  this.major = semverParse.major; // Number
+  this.minor = semverParse.minor; // Number
+  this.patch = semverParse.patch; // Number
+  this.prerelease = semverParse.prerelease; // [OneOf(Number, String)]
+  this.wrapNum = wrapNum; // Number
+  this.build = semverParse.build; // [String]
+  this.raw = versionString; // the entire version string
+  // `.version` is everything but the build ID ("+foo"), and it
+  // has been run through semver's canonicalization, ie "cleaned"
+  // (for whatever that's worth)
+  this.version = semverParse.version + (wrapNum ? '_' + wrapNum : '');
+  // everything but the wrapnum ("_123")
+  this.semver = semverParse.version + (
+    semverParse.build.length ? '+' + semverParse.build.join('.') : '');
 };
+
+PV.parse = function (versionString) {
+  return new PV(versionString);
+};
+
+if (inTool) {
+  module.exports = PV;
+} else {
+  PackageVersion = PV;
+}
 
 // Converts a meteor version into a large floating point number, which
 // is (more or less [*]) unique to that version. Satisfies the
@@ -75,13 +134,12 @@ var extractSemverPart = function (versionString) {
 // (Or it could just return some sort of tuple, and ensure that
 // the cost functions that consume this can deal with tuples...)
 PV.versionMagnitude = function (versionString) {
-  var version = extractSemverPart(versionString);
-  var v = semver.parse(version.semver);
+  var v = PV.parse(versionString);
 
   return v.major * 100 * 100 +
     v.minor * 100 +
     v.patch +
-    version.wrapNum / 100 +
+    v.wrapNum / 100 +
     prereleaseIdentifierToFraction(v.prerelease) / 100 / 100;
 };
 
@@ -133,29 +191,25 @@ PV.lessThan = function (versionOne, versionTwo) {
 //
 // versionString: valid meteor version string.
 PV.majorVersion = function (versionString) {
-  var version = extractSemverPart(versionString).semver;
-  var parsed = semver.parse(version);
-  if (! parsed)
-    throwVersionParserError("not a valid version: " + version);
-  return parsed.major;
+  return PV.parse(versionString).major;
 };
 
 // Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
 // v2 is greater.
 PV.compare = function (versionOne, versionTwo) {
-  var meteorVOne = extractSemverPart(versionOne);
-  var meteorVTwo = extractSemverPart(versionTwo);
+  var v1 = PV.parse(versionOne);
+  var v2 = PV.parse(versionTwo);
 
-  // Wrap numbers only matter if the semver is equal, so if they don't even have
-  // wrap numbers, or if their semver is not equal, then we should let the
-  // semver library resolve this one.
-  if (meteorVOne.semver !== meteorVTwo.semver) {
-    return semver.compare(meteorVOne.semver, meteorVTwo.semver);
+  // If the semver parts are different, use the semver library to compare,
+  // ignoring wrap numbers.  (The semver library will ignore the build ID
+  // per the semver spec.)
+  if (v1.semver !== v2.semver) {
+    return semver.compare(v1.semver, v2.semver);
+  } else {
+    // If the semver components are equal, then the one with the smaller wrap
+    // numbers is smaller.
+    return v1.wrapNum - v2.wrapNum;
   }
-
-  // If their semver components are equal, then the one with the smaller wrap
-  // numbers is smaller.
-  return meteorVOne.wrapNum - meteorVTwo.wrapNum;
 };
 
 // Conceptually we have three types of constraints:
@@ -172,34 +226,25 @@ PV.compare = function (versionOne, versionTwo) {
 //    version has been explicitly selected (which at this stage in the game
 //    means they are mentioned in a top-level constraint in the top-level
 //    call to the resolver).
-//
-// Options:
-//    removeBuildIDs:  Remove the build ID at the end of the version.
-PV.parseVersionConstraint = function (versionString, options) {
-  options = options || {};
-  var versionDesc = { version: null, type: "any-reasonable" };
-
-  if (!versionString) {
-    return versionDesc;
+var parseSimpleConstraint = function (constraintString) {
+  if (! constraintString) {
+    throw new Error("Non-empty string required");
   }
 
-  if (versionString.charAt(0) === '=') {
-    versionDesc.type = "exactly";
-    versionString = versionString.substr(1);
+  var type, versionString;
+
+  if (constraintString.charAt(0) === '=') {
+    type = "exactly";
+    versionString = constraintString.substr(1);
   } else {
-    versionDesc.type = "compatible-with";
+    type = "compatible-with";
+    versionString = constraintString;
   }
 
   // This will throw if the version string is invalid.
   PV.getValidServerVersion(versionString);
 
-  if (options.removeBuildIDs) {
-    versionString = PV.removeBuildID(versionString);
-  }
-
-  versionDesc.version = versionString;
-
-  return versionDesc;
+  return { type: type, versionString: versionString };
 };
 
 
@@ -209,83 +254,108 @@ PV.parseVersionConstraint = function (versionString, options) {
 // server. That means that it has everything EXCEPT the build id. Throws if the
 // entered string was invalid.
 PV.getValidServerVersion = function (meteorVersionString) {
-
-  // Strip out the wrapper num, if present and check that it is valid.
-  var version = extractSemverPart(meteorVersionString);
-
-  var versionString = version.semver;
-  // NPM's semver spec supports things like 'v1.0.0' and considers them valid,
-  // but we don't. Everything before the + or - should be of the x.x.x form.
-  var mainVersion = versionString.split('+')[0].split('-')[0];
-  if (! /^\d+\.\d+\.\d+$/.test(mainVersion)) {
-      throwVersionParserError(
-        "Version string must look like semver (eg '1.2.3'), not '"
-          + versionString + "'.");
-  };
-
-  var cleanVersion = semver.valid(versionString);
-  if (! cleanVersion ) {
-    throwVersionParserError(
-      "Version string must look like semver (eg '1.2.3'), not '"
-        + versionString + "'.");
-  }
-
-  if (version.wrapNum) {
-    cleanVersion = cleanVersion + "_" + version.wrapNum;
-  }
-
-  return cleanVersion;
+  return PV.parse(meteorVersionString).version;
 };
 
+PV.VersionConstraint = function (vConstraintString) {
+  var alternatives;
+  // If there is no version string ("" or null), then our only
+  // constraint is any-reasonable.
+  if (! vConstraintString) {
+    // .versionString === null is relied on in the tool
+    alternatives =
+      [ { type: "any-reasonable", versionString: null } ];
+    vConstraintString = "";
+  } else {
+    // Parse out the versionString.
+    var parts = vConstraintString.split(/ *\|\| */);
+    alternatives = __.map(parts, function (alt) {
+      if (! alt) {
+        throwVersionParserError("Invalid constraint string: " +
+                                vConstraintString);
+      }
+      return parseSimpleConstraint(alt);
+    });
+  }
 
-PV.parseConstraint = function (constraintString, options) {
-  if (typeof constraintString !== "string")
-    throw new TypeError("constraintString must be a string");
-  options = options || {};
+  this.raw = vConstraintString;
+  this.alternatives = alternatives;
+};
 
-  var splitted = constraintString.split('@');
+PV.parseVersionConstraint = function (constraintString) {
+  return new PV.VersionConstraint(constraintString);
+};
 
-  var name = splitted[0];
-  var versionString = splitted[1] || '';
+// A PackageConstraint consists of a package name and a version constraint.
+// Call either with args (name, vConstraintString) or (pConstraintString),
+// or (name, vConstraint).
+// That is, ("foo", "1.2.3") or ("foo@1.2.3"), or ("foo", vc) where vc
+// is instanceof PV.VersionConstraint.
+PV.PackageConstraint = function (part1, part2) {
+  if ((typeof part1 !== "string") ||
+      (part2 && (typeof part2 !== "string") &&
+       ! (part2 instanceof PV.VersionConstraint))) {
+    throw new Error("constraintString must be a string");
+  }
 
-  if (splitted.length > 2) {
-    // throw error complaining about @
-    PV.validatePackageName('a@');
+  var name, vConstraint, vConstraintString;
+  if (part2) {
+    name = part1;
+    if (part2 instanceof PV.VersionConstraint) {
+      vConstraint = part2;
+    } else {
+      vConstraintString = part2;
+    }
+  } else if (part1.indexOf("@") >= 0) {
+    // Shave off last part after @, with "a@b@c" becoming ["a@b", "c"].
+    // Validating the package name will catch extra @.
+    var parts = part1.match(/^(.*)@([^@]*)$/).slice(1);
+    name = parts[0];
+    vConstraintString = parts[1];
+    if (! vConstraintString) {
+      throwVersionParserError(
+        "Version constraint for package '" + name +
+          "' cannot be empty; leave off the @ if you don't want to constrain " +
+          "the version.");
+    }
+  } else {
+    name = part1;
+    vConstraintString = "";
   }
 
   PV.validatePackageName(name);
-
-  if (splitted.length === 2 && !versionString) {
-    throwVersionParserError(
-      "Version constraint for package '" + name +
-        "' cannot be empty; leave off the @ if you don't want to constrain " +
-        "the version.");
+  if (vConstraint) {
+    vConstraintString = vConstraint.raw;
+  } else {
+    vConstraint = PV.parseVersionConstraint(vConstraintString);
   }
 
-  var constraint = {
-    name: name
-  };
+  this.name = name;
+  this.constraintString = vConstraintString;
+  this.vConstraint = vConstraint;
+};
 
-  // Before we parse through versionString, we save it for future output.
-  constraint.constraintString = versionString;
-
-  // If we did not specify a version string, then our only constraint is
-  // any-reasonable, so we are going to return that.
-  if (!versionString) {
-    constraint.constraints =
-      [ { version: null, type: "any-reasonable" } ];
-    return constraint;
+PV.PackageConstraint.prototype.toString = function () {
+  var ret = this.name;
+  if (this.constraintString) {
+    ret += "@" + this.constraintString;
   }
+  return ret;
+};
 
-  // Let's parse out the versionString.
-  var versionConstraints = versionString.split(/ *\|\| */);
-  constraint.constraints = [];
-  __.each(versionConstraints, function (versionCon) {
-    constraint.constraints.push(
-      PV.parseVersionConstraint(versionCon, options));
-  });
-
-  return constraint;
+// Structure of a parsed constraint:
+//
+// { name: String,
+//   constraintString: String,
+//   vConstraint: {
+//     raw: String,
+//     alternatives: [{versionString: String|null,
+//                     type: String}]}}
+//
+// The returned object is instanceof PackageConstraint, and
+// vConstraint is instanceof VersionConstraint.
+PV.parseConstraint = function (part1, part2) {
+  return new PV.PackageConstraint(part1, part2);
 };
 
 PV.validatePackageName = function (packageName, options) {
@@ -338,7 +408,7 @@ PV.invalidFirstFormatConstraint = function (validConstraint) {
           /\|/.test(validConstraint));
 };
 
-// Remove a suffix like "+local" if present.
+// Remove a suffix like "+foo" if present.
 PV.removeBuildID = function (versionString) {
   return versionString.replace(/\+.*$/, '');
 };
