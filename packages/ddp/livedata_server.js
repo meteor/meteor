@@ -420,6 +420,10 @@ _.extend(Session.prototype, {
     if (! self.inQueue)
       return;
 
+    // Drop the merge box data immediately.
+    self.inQueue = null;
+    self.collectionViews = {};
+
     if (self.heartbeat) {
       self.heartbeat.stop();
       self.heartbeat = null;
@@ -429,10 +433,6 @@ _.extend(Session.prototype, {
       self.socket.close();
       self.socket._meteorSession = null;
     }
-
-    // Drop the merge box data immediately.
-    self.collectionViews = {};
-    self.inQueue = null;
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "livedata", "sessions", -1);
