@@ -128,7 +128,7 @@ files.addToGitignore = function (dirPath, entry) {
 files.inCheckout = _.once(function () {
   try {
     // can't use files.exists here because not in a fiber
-    if (files.existsSync(files.pathJoin(files.getCurrentToolsDir(), '.git')))
+    if (files.exists(files.pathJoin(files.getCurrentToolsDir(), '.git')))
       return true;
   } catch (e) { console.log(e); }
 
