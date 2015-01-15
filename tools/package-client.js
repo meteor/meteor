@@ -13,6 +13,7 @@ var packageVersionParser = require('./package-version-parser.js');
 var authClient = require('./auth-client.js');
 var catalog = require('./catalog.js');
 var projectContextModule = require('./project-context.js');
+var colonConverter = require("./metadata-colon-converter.js");
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -249,11 +250,12 @@ var bundleSource = function (isopack, includeSources, packageDir) {
 
   var tempDir = files.mkdtemp('build-source-package-');
   var packageTarName = name + '-' + isopack.version + '-source';
-  var dirToTar = files.pathJoin(tempDir, 'source', packageTarName);
+  var dirToTar = files.pathJoin(tempDir, 'source',
+    colonConverter.convert(packageTarName));
   // XXX name probably needs to be escaped for windows?
   // XXX note that publish-for-arch thinks it knows how this tarball is laid
   //     out, which is a bit of a shame
-  var sourcePackageDir = files.pathJoin(dirToTar, name);
+  var sourcePackageDir = files.pathJoin(dirToTar, colonConverter.convert(name));
   if (! files.mkdir_p(sourcePackageDir)) {
     buildmessage.error('Failed to create temporary source directory: ' +
                        sourcePackageDir);
