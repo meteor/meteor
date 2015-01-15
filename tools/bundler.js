@@ -1710,14 +1710,12 @@ _.extend(ServerTarget.prototype, {
                   { file: files.pathJoin(__dirname, 'server', 'shell.js') });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
+    // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
+    // anything anymore
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64',
-      // XXX once we put Windows dev_bundles to warehouse we should fill these
-      // fields in.
-      'os.windows.x86_32': 'XXX',
-      'os.windows.x86_64': 'XXX'
+      'os.osx.x86_64': 'Darwin_x86_64'
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
