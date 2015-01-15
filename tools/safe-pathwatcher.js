@@ -65,35 +65,6 @@ exports.watch = function watch(absPath, callback) {
     }
   };
 
-  var fallBack = function () {
-    // Disallow future uses of pathwatcher.watch.
-    canUsePathwatcher = false;
-
-    // Convert any pathwatcher watchers we previously created to
-    // files.watchFile watchers.
-    _.each(switchFunctions.splice(0), function (switchToPolling) {
-      switchToPolling();
-    });
-
-    require("./console.js").Console.warn(
-      "Falling back to files.watchFile instead of pathwatcher.watch..."
-    );
-  };
-
-  try {
-    // Watch the candidate directory using pathwatcher.watch.
-    var watcher = files.pathwatcherWatch(dir, cleanUp);
-  } catch (err) {
-    // If the directory did not exist, do not treat this failure as
-    // evidence against pathwatcher.watch, but simply return and leave
-    // canUsePathwatcher set to true.
-    if (err instanceof TypeError && err.message === "Unable to watch path") {
-      return;
-    }
-
-    throw err;
-  }
-
   var pollingInterval = watcher
         ? DEFAULT_POLLING_INTERVAL : NO_PATHWATCHER_POLLING_INTERVAL;
 
