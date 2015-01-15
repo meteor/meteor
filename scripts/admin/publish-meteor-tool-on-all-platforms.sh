@@ -37,22 +37,18 @@ main () {
   env METEOR_SESSION_FILE=$SESSION_FILE $METEOR login
 
   echo "${green}Login succeeded.${NC}"
+  echo
+  echo "Run the following commands in separate terminal windows:"
+  echo
 
-  trap - EXIT
-
-  screen -D -RR -m -S buildMeteor
-
-  i=0
-  PLATFORMS=( os.osx.x86_64 os.linux.x86_64 os.linux.x86_32 os.windows.x86_32 os.windows.x86_64 )
+  # XXX there is no os.windows.x86_64 as we don't build for it at the moment
+  PLATFORMS=( os.osx.x86_64 os.linux.x86_64 os.linux.x86_32 os.windows.x86_32 )
   for PLATFORM in ${PLATFORMS[@]}; do
     COMMAND="`dirname $0`/publish-meteor-tool-on-arch.sh $GITSHA $PLATFORM $SESSION_FILE"
-    screen -S buildMeteor -X screen
-    screen -S buildMeteor -p $i -X exec $COMMAND
-
-    (( i++ ))
+    echo $COMMAND
   done
 
-  clean_up
+  trap - EXIT
 }
 
 clean_up () {
