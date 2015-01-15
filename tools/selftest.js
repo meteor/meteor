@@ -18,7 +18,6 @@ var Console = require('./console.js').Console;
 var tropohouseModule = require('./tropohouse.js');
 var packageMapModule = require('./package-map.js');
 var isopackCacheModule = require('./isopack-cache.js');
-var crossSpawn = require("cross-spawn");
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -1112,10 +1111,11 @@ _.extend(Run.prototype, {
     var env = _.clone(process.env);
     _.extend(env, self.env);
 
-    self.proc = crossSpawn(files.convertToOSPath(self.execPath), self._args, {
-      cwd: files.convertToOSPath(self.cwd),
-      env: env
-    });
+    self.proc = child_process.spawn(files.convertToOSPath(self.execPath),
+      self._args, {
+        cwd: files.convertToOSPath(self.cwd),
+        env: env
+      });
 
     self.proc.on('close', function (code, signal) {
       if (self.exitStatus === undefined)
