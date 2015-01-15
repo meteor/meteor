@@ -504,7 +504,7 @@ var copyFileHelper = function (from, to, mode) {
 var tempDirs = [];
 files.mkdtemp = function (prefix) {
   var make = function () {
-    prefix = prefix || 'meteor-temp-';
+    prefix = prefix || 'mt-';
     // find /tmp
     var tmpDir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
       return process.env[t];
