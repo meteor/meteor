@@ -219,7 +219,8 @@ _.extend(exports.Tropohouse.prototype, {
     if (packageMetadata) {
       downloadedArches = _.pluck(packageMetadata.builds, "arch");
     }
-    return { arches: downloadedArches, target: packageLinkTarget };
+
+    return downloadedArches;
   },
 
   _saveIsopack: function (isopack, packageName) {
@@ -272,13 +273,11 @@ _.extend(exports.Tropohouse.prototype, {
     var packageName = options.packageName;
     var version = options.version;
 
-    // Look up the information that we have already downloaded.
-    var downloaded = self._alreadyDownloaded({
+    // Look up which arches we have already downloaded
+    var downloadedArches = self._alreadyDownloaded({
       packageName: packageName,
       version: version
     });
-    var downloadedArches = downloaded.arches;
-    var packageLinkTarget = downloaded.target;
 
     var archesToDownload = _.filter(options.architectures, function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
@@ -313,6 +312,7 @@ _.extend(exports.Tropohouse.prototype, {
         title: "downloading " + packageName + "@" + version + "..."
       }, function() {
         var buildTempDirs = [];
+        var packageLinkTarget = null;
 
         // Find the previous actual directory of the package
         if (process.platform === "win32") {
@@ -322,9 +322,11 @@ _.extend(exports.Tropohouse.prototype, {
             buildTempDirs.push(packagePath);
           }
         } else {
-          var packageLinkTarget = null;
+          // On posix, we have a symlink structure. Get the target of the
+          // symlink so that we can delete it later.
+          var packageLinkFile = self.packagePath(packageName, version);
           try {
-            packageLinkTarget = files.readlink(packagePath);
+            packageLinkTarget = files.readlink(packageLinkFile);
           } catch (e) {
             // Complain about anything other than "we don't have it at all". This
             // includes "not a symlink": The main reason this would not be a symlink
@@ -332,9 +334,8 @@ _.extend(exports.Tropohouse.prototype, {
             // warehouse package not a tropohouse package). But the versions should
             // not overlap: warehouse versions are truncated SHAs whereas tropohouse
             // versions should be semver-like.
-            if (e.code !== 'ENOENT') {
+            if (e.code !== 'ENOENT')
               throw e;
-            }
           }
 
           // If there's already a package in the tropohouse, start with it.
