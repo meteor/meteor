@@ -768,7 +768,7 @@ selftest.define("talk to package server with expired or no accounts token",
 var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   var packageJs = s.read("package.js");
   // XXX Hack
-  var versionMatch = packageJs.match(/version: \'(\d\.\d\.\d)\'/);
+  var versionMatch = packageJs.match(/version: \"(\d\.\d\.\d)\"/);
   if (! versionMatch) {
     selftest.fail("package.js does not match version field: " + packageJs);
   }
