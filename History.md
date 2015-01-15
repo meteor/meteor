@@ -1,25 +1,23 @@
 ## v.NEXT
 
-* meteor show and search: replaced '--show-unmigrated' and '--show-old' flags
+* fix inaccurate session statistics and possible multiple invocation of
+  Connection.onClose callbacks
+
+* meteor show and search: replace '--show-unmigrated' and '--show-old' flags
   with a simple '--show-all' flag. Introduce the --ejson flag.
 
-* meteor show and search shows local package information.
+* meteor show and search to show local package information.
 
-* meteor show indicates if the isopack has been downloaded and can now be used
+* meteor show to indicate if the isopack has been downloaded and can now be used
   offline.
 
-* meteor publish takes a documentation file, set to README.md by default and
-  changeable with the 'documentation' option in Package.describe. Excerpts the
+* meteor publish to take a documentation file, set to README.md by default and
+  changeable with the 'documentation' option in Package.describe. Excerpt the
   first non-header Markdown section as the longform description for use in
   'meteor show'.
 
-* meteor publish --update from a package directory now exists and updates the
+* meteor publish --update from a package directory: update the
   metadata for a previously published version
-
-* Package version parser changes (XXX David Greenspan? Anything user visible?)
-
-* Constraint solver changes (XXX David Greenspan? Anything user visible?  other
-  than the next thing)
 
 * `meteor update foo` should update foo even if it's an indirect dependency of
   your app.  #3282
