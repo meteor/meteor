@@ -1035,35 +1035,7 @@ main.registerCommand({
       } catch (err) {
         Console.error(
           "Failed to push git tag. Please push git tag manually!");
-        Console.error(
-          "If you are publishing a non-prerelease version, then the readme " +
-          "should show up in Atmosphere. To make sure that happens, after " +
-          "pushing the git tag, please run the following:");
-        _.each(toPublish, function (name) {
-          Console.info(
-            Console.command(
-              "meteor admin set-latest-readme " + name + " --tag " + gitTag));
-        });
-        Console.error(
-          "If you are publishing an experimental version, ",
-          "don't worry about it.");
         fail = true;
-      }
-      if (! fail) {
-        _.each(toPublish, function (name) {
-          var isopk = projectContext.isopackCache.getIsopack(name);
-          if (! isopk)
-            throw Error("no isopack for " + name);
-          var url =
-                "https://raw.githubusercontent.com/meteor/meteor/" + gitTag +
-                "/packages/" +
-                name + "/README.md";
-          var version = isopk.version;
-          packageClient.callPackageServer(
-            conn, '_changeReadmeURL', name,  version, url);
-          Console.info(
-            "Setting the readme of", name + "@" + version, "to", Console.url(url));
-        });
       }
     }
 
