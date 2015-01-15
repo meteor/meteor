@@ -635,45 +635,6 @@ files.createTarGzStream = function (dirPath, options) {
   var fstream = require('fstream');
   var zlib = require("zlib");
 
-  if (process.platform === "win32") {
-    // This is a special case for Windows, we need to make sure the directories
-    // that we put into the tarball have execute permissions, which is not a
-    // thing on Windows.
-    //
-    // Unfortunately, this is a partial duplicate of the code below, since we
-    // can't use filter and apply the stream workaround at the same time.
-    // Therefore, we have this block that uses filter and the one below that
-    // uses a single argument to fstream.Reader.
-
-    var maxPath = 260;
-
-    var fixDirPermissions = function (entry) {
-      // Make sure readable directories have execute permission
-      if (entry.props.type === "Directory") {
-        entry.props.mode |= (entry.props.mode >>> 2) & 0111;
-      }
-
-      // Error about long paths on Windows.
-      // As far as we know the tarball creation seems to fail silently when path
-      // is too long (the files don't get copied to tarball). To avoid it, we
-      // shout at the core developer early so she/he takes an action.
-      // When the tarball is created on Mac or Linux it doesn't seem to matter.
-      if (entry.path.length > maxPath &&
-          entry.path.indexOf("test") === -1) {
-        throw new Error("Path too long: " + entry.path + " is " +
-          entry.path.length + " characters.");
-      }
-
-      return true;
-    };
-
-    return fstream.Reader({
-      path: files.convertToOSPath(dirPath),
-      type: 'Directory',
-      filter: fixDirPermissions
-    }).pipe(tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
-  }
-
   // Use `dirPath` as the argument to `fstream.Reader` here instead of
   // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
   // collection of odd behaviors in fstream (which might be bugs or
@@ -699,8 +660,26 @@ files.createTarGzStream = function (dirPath, options) {
   // the first file inside it. This manifests as an EACCESS when
   // untarring if the first file inside the top-level directory is not
   // writeable.
-  return fstream.Reader(dirPath).pipe(
-    tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
+  var tarStream = fstream.Reader(files.convertToOSPath(dirPath))
+    .pipe(tar.Pack({ noProprietary: true }));
+
+  if (process.platform === "win32") {
+    tarStream.on("entry", function () {
+      // Error about long paths on Windows.
+      // As far as we know the tarball creation seems to fail silently when path
+      // is too long (the files don't get copied to tarball). To avoid it, we
+      // shout at the core developer early so she/he takes an action.
+      // When the tarball is created on Mac or Linux it doesn't seem to matter.
+      var maxPath = 260; // Longest allowed path length on Windows
+      if (entry.path.length > maxPath &&
+          entry.path.indexOf("test") === -1) {
+        throw new Error("Path too long: " + entry.path + " is " +
+          entry.path.length + " characters.");
+      }
+    });
+  }
+
+  return tarStream.pipe(zlib.createGzip());
 };
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
