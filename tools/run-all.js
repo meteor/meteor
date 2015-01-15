@@ -83,10 +83,6 @@ var Runner = function (options) {
 
   self.updater = new Updater;
 
-  require("./safe-pathwatcher.js").testDirectory(
-    files.pathJoin(self.projectContext.projectDir, ".meteor", "local")
-  );
-
   self.appRunner = new AppRunner({
     projectContext: self.projectContext,
     port: self.appPort,
