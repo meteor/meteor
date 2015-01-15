@@ -70,7 +70,6 @@ EmailTest.restoreOutputStream = function () {
 
 var devModeSend = function (mc) {
   var devmode_mail_id = next_devmode_mail_id++;
-
   var stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.
@@ -137,6 +136,7 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.subject]  "Subject:" line
  * @param {String} [options.text|html] Mail body (in plain text or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
+ * @param {String} [options.envelope] SMTP envelope
  */
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
@@ -145,10 +145,7 @@ Email.send = function (options) {
 
   var mc = new MailComposer();
 
-  // setup message data
-  // XXX support attachments (once we have a client/server-compatible binary
-  //     Buffer class)
-  mc.setMessageOption({
+  var messageOption = {
     from: options.from,
     to: options.to,
     cc: options.cc,
@@ -157,7 +154,16 @@ Email.send = function (options) {
     subject: options.subject,
     text: options.text,
     html: options.html
-  });
+  };
+
+  if (_.has(options, "envelope")) {
+    messageOption.envelope = options.envelope;
+  }
+
+  // setup message data
+  // XXX support attachments (once we have a client/server-compatible binary
+  //     Buffer class)
+  mc.setMessageOption(messageOption);
 
   _.each(options.headers, function (value, name) {
     mc.addHeader(name, value);

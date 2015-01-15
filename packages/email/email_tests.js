@@ -8,6 +8,7 @@ Tinytest.add("email - dev mode smoke test", function (test) {
     var stream = new streamBuffers.WritableStreamBuffer;
     EmailTest.overrideOutputStream(stream);
     Email.send({
+      envelope: {'from': 'somefoo@example.com'},
       from: "foo@example.com",
       to: "bar@example.com",
       cc: ["friends@example.com", "enemies@example.com"],
