@@ -21,6 +21,7 @@ var utils = require('./utils.js');
 var cleanup = require('./cleanup.js');
 var buildmessage = require('./buildmessage.js');
 var watch = require('./watch.js');
+var fiberHelpers = require('./fiber-helpers.js');
 
 var files = exports;
 
@@ -737,12 +738,14 @@ files.writeFileAtomically = function (filename, contents) {
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 files.symlinkOverSync = function (linkText, file) {
-  file = files.pathResolve(file);
-  var tmpSymlink = files.pathJoin(
-    files.pathDirname(file),
-    "." + files.pathBasename(file) + ".tmp" + utils.randomToken());
-  files.symlinkSync(linkText, tmpSymlink);
-  files.rename(tmpSymlink, file);
+  fiberHelpers.noYieldsAllowed(function () {
+    file = files.pathResolve(file);
+    var tmpSymlink = files.pathJoin(
+      files.pathDirname(file),
+      "." + files.pathBasename(file) + ".tmp" + utils.randomToken());
+    files.symlink(linkText, tmpSymlink);
+    files.rename(tmpSymlink, file);
+  });
 };
 
 // Run a program synchronously and, assuming it returns success (0),
