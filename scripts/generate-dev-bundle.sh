@@ -125,7 +125,8 @@ cd "${DIR}/lib"
 # we can better understand why some users can't use pathwatcher.
 # We have to install from the npm registry in order to get coffeescript
 # output.  The patch is https://github.com/atom/node-pathwatcher/pull/53
-npm install meteor-pathwatcher-tweaks@2.3.5
+# XXX Commented because I can't built it - sashko
+# npm install meteor-pathwatcher-tweaks@2.3.5
 
 # Clean up some bulky stuff.
 cd node_modules
