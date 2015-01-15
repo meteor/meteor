@@ -80,8 +80,8 @@ sourcemap_support.install({
 });
 
 // Only enabled by default in development.
-if (process.env.ENABLE_METEOR_SHELL) {
-  require('./shell.js').listen();
+if (process.env.METEOR_SHELL_DIR) {
+  require('./shell.js').listen(process.env.METEOR_SHELL_DIR);
 }
 
 // As a replacement to the old keepalives mechanism, check for a running

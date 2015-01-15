@@ -130,7 +130,8 @@ _.extend(AppProcess.prototype, {
     // shell clients.
     require("./cleanup.js").onExit(function() {
       require("./server/shell.js").unlinkSocketFile(
-        self.projectContext.projectDir);
+        self.projectContext.getMeteorShellDirectory()
+      );
     });
   },
 
@@ -192,7 +193,9 @@ _.extend(AppProcess.prototype, {
     env.HTTP_FORWARDED_COUNT =
       "" + ((parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0) + 1);
 
-    env.ENABLE_METEOR_SHELL = 'true';
+    var shellDir = self.projectContext.getMeteorShellDirectory();
+    files.mkdir_p(shellDir);
+    env.METEOR_SHELL_DIR = shellDir;
 
     env.METEOR_PARENT_PID =
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;

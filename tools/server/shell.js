@@ -14,16 +14,20 @@ var EXITING_MESSAGE = "Shell exiting...";
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
-exports.listen = function listen() {
-  var socketFile = getSocketFile();
+exports.listen = function listen(shellDir) {
+  var socketFile = getSocketFile(shellDir);
   fs.unlink(socketFile, function() {
-    net.createServer(onConnection)
-      .on("error", function(err){})
-      .listen(socketFile);
+    net.createServer(function(socket) {
+      onConnection(socket, shellDir);
+    }).on("error", function(err) {
+      console.error(
+        "Unable to listen for `meteor shell` connections: " + err
+      );
+    }).listen(socketFile);
   });
 };
 
-function onConnection(socket) {
+function onConnection(socket, shellDir) {
   var dataSoFar = "";
 
   // Let connecting clients configure certain REPL options by sending a
@@ -46,6 +50,7 @@ function onConnection(socket) {
 
     // Immutable options.
     _.extend(options, {
+      shellDir: shellDir,
       input: socket,
       output: socket,
       eval: evalCommand
@@ -75,7 +80,7 @@ function startREPL(options) {
   var repl = require("repl").start(options);
 
   // History persists across shell sessions!
-  initializeHistory(repl);
+  initializeHistory(repl, options.shellDir);
 
   Object.defineProperty(repl.context, "_", {
     // Force the global _ variable to remain bound to underscore.
@@ -128,15 +133,14 @@ function startREPL(options) {
   });
 }
 
-function getSocketFile(appDir) {
-  return path.join(appDir || getAppDir(), ".meteor", "local", "shell.sock");
+function getSocketFile(shellDir) {
+  return path.join(shellDir, "shell.sock");
 }
-exports.getSocketFile = getSocketFile;
 
 // Unlinking the socket file causes all attached shell clients to
 // disconnect and exit.
-exports.unlinkSocketFile = function(appDir) {
-  var socketFile = getSocketFile(appDir);
+exports.unlinkSocketFile = function(shellDir) {
+  var socketFile = getSocketFile(shellDir);
   try {
     fs.unlinkSync(socketFile);
     // Replace the socket file with a regular file so that any connected
@@ -145,23 +149,8 @@ exports.unlinkSocketFile = function(appDir) {
   } catch (ignored) {}
 };
 
-function getHistoryFile(appDir) {
-  return path.join(
-    appDir || getAppDir(),
-    ".meteor", "local", "shell-history"
-  );
-}
-
-function getAppDir() {
-  for (var dir = __dirname, nextDir;
-       path.basename(dir) !== ".meteor";
-       dir = nextDir) {
-    nextDir = path.dirname(dir);
-    if (dir === nextDir) {
-      throw new Error("Not a Meteor app directory");
-    }
-  }
-  return path.dirname(dir);
+function getHistoryFile(shellDir) {
+  return path.join(shellDir, "shell-history");
 }
 
 function getTerminalWidth() {
@@ -198,9 +187,9 @@ function evalCommand(command, context, filename, callback) {
 
 // This function allows a persistent history of shell commands to be saved
 // to and loaded from .meteor/local/shell-history.
-function initializeHistory(repl) {
+function initializeHistory(repl, shellDir) {
   var rli = repl.rli;
-  var historyFile = getHistoryFile();
+  var historyFile = getHistoryFile(shellDir);
   var historyFd = fs.openSync(historyFile, "a+");
   var historyLines = fs.readFileSync(historyFile, "utf8").split(EOL);
   var seenLines = Object.create(null);
@@ -232,8 +221,8 @@ function initializeHistory(repl) {
 
 // Invoked by the process running `meteor shell` to attempt to connect to
 // the server via the socket file.
-exports.connect = function(appDir) {
-  var socketFile = getSocketFile(appDir);
+exports.connect = function(shellDir) {
+  var socketFile = getSocketFile(shellDir);
   var exitOnClose = false;
   var firstTimeConnecting = true;
   var connected = false;

@@ -1,3 +1,4 @@
+var assert = require("assert");
 var _ = require('underscore');
 var files = require('./files.js');
 
@@ -32,14 +33,17 @@ var watch = require('./watch.js');
 //
 // Classes in this file follow the standard protocol where names beginning with
 // _ should not be externally accessed.
-exports.ProjectContext = function (options) {
+function ProjectContext(options) {
   var self = this;
+  assert.ok(self instanceof ProjectContext);
+
   if (!options.projectDir)
     throw Error("missing projectDir!");
 
   self.originalOptions = options;
   self.reset();
-};
+}
+exports.ProjectContext = ProjectContext;
 
 // The value is the name of the method to call to continue.
 var STAGE = {
@@ -52,7 +56,7 @@ var STAGE = {
   SAVE_CHANGED_METADATA: 'DONE'
 };
 
-_.extend(exports.ProjectContext.prototype, {
+_.extend(ProjectContext.prototype, {
   reset: function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset; used by
@@ -217,6 +221,10 @@ _.extend(exports.ProjectContext.prototype, {
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
     return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
+  },
+
+  getMeteorShellDirectory: function(projectDir) {
+    return this.getProjectLocalDirectory("shell");
   },
 
   // You can call this manually if you want to do some work before resolving
