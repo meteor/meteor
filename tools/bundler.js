@@ -1326,7 +1326,9 @@ _.extend(JsImage.prototype, {
               files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
 
             if (files.exists(nodeModuleDir)) {
-              return require(nodeModuleDir);
+              // We need to convert to OS path here because the path is coming
+              // from inside Meteor so it will be posixy.
+              return require(files.convertToOSPath(nodeModuleDir));
             }
 
             try {
