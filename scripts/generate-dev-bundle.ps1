@@ -7,15 +7,15 @@ if (Test-Path variable:global:PLATFORM) {
   $PLATFORM = (get-item env:PLATFORM).Value
 }
 
-$scriptPath = split-path -parent $MyInvocation.MyCommand.Definition
-$CHECKOUT_DIR = split-path -parent $scriptPath
+$script_path = split-path -parent $MyInvocation.MyCommand.Definition
+$CHECKOUT_DIR = split-path -parent $script_path
 
 # extract the bundle version from the meteor bash script
 $BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
 $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 
 # generate-dev-bundle-xxxxxxxx shortly
-$DIR = $scriptPath + "\gdbXXX"
+$DIR = $script_path + "\gdbXXX"
 echo $DIR
 
 # removing folders isn't easy on Windows, try both commands
@@ -115,7 +115,7 @@ Set-Location "$DIR\.."
 # XXX this can generate a path that is too long
 Move-Item "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 
-cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" 
+cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
 del dev_bundle.tar
 rm -Recurse -Force "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
