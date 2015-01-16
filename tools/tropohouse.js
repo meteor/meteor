@@ -187,6 +187,38 @@ _.extend(exports.Tropohouse.prototype, {
       wait: false
     });
     files.extractTarGz(packageTarball, targetDirectory);
+
+    if (process.platform === "win32") {
+      // Packages published before the Windows release might have colons or
+      // other unsavory characters in path names. In hopes of making most of
+      // these packages work on Windows, we will try to automatically convert
+      // them.
+      //
+      // At this location in the code, the metadata inside the isopack is
+      // inconsistent with the actual file paths, since we convert some file
+      // paths inside extractTarGz. Now we need to convert the metadata to match
+      // the files.
+
+      // Step 1. Delete old metadata file unipackage.json
+      // XXX COMPAT WITH 0.9.3 packages
+      files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
+
+      // Step 2. Load the metadata from isopack.json and convert colons in the
+      // file paths. We have already converted the colons in the actual files
+      // while untarring.
+      var metadata = Isopack.readMetadataFromDirectory(targetDirectory);
+      var convertedMetadata = colonConverter.convertIsopack(metadata);
+
+      // Step 3. Write the isopack.json file
+      var isopackFileData = {};
+      isopackFileData[Isopack.currentFormat] = convertedMetadata;
+      files.writeFile(files.pathJoin(targetDirectory, "isopack.json"),
+        isopackFileData);
+
+      // Result: Now we are in a state where the isopack.json file paths are
+      // consistent with the paths in the downloaded tarball.
+    }
+
     return targetDirectory;
   },
 
