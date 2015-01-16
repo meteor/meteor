@@ -382,7 +382,11 @@ _.extend(PackageSource.prototype, {
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
-    self.sourceRoot = options.sourceRoot || '/';
+
+    // sourceRoot is a relative file system path, one slash identifies a root
+    // relative to some starting location
+    self.sourceRoot = options.sourceRoot || files.pathSep;
+    // serveRoot is actually a part of a url path, root here is a forward slash
     self.serveRoot = options.serveRoot || '/';
 
     var nodeModulesPath = null;
