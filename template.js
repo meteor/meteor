@@ -66,7 +66,7 @@ Blaze.isTemplate = function (t) {
  * @name  onCreated
  * @instance
  * @memberOf Template
- * @summary Add a callback when an instance of a template is created.
+ * @summary Register a function to be called when an instance of this template is created.
  * @param {Function} callback A function to be added as a callback.
  * @locus Client
  */
@@ -78,7 +78,7 @@ Template.prototype.onCreated = function (cb) {
  * @name  onRendered
  * @instance
  * @memberOf Template
- * @summary Add a callback when an instance of a template is rendered.
+ * @summary Register a function to be called when an instance of this template is inserted into the DOM.
  * @param {Function} callback A function to be added as a callback.
  * @locus Client
  */
@@ -90,7 +90,7 @@ Template.prototype.onRendered = function (cb) {
  * @name  onDestroyed
  * @instance
  * @memberOf Template
- * @summary Add a callback when an instance of a template is destroyed.
+ * @summary Register a function to be called when an instance of this template is removed from the DOM and destroyed.
  * @param {Function} callback A function to be added as a callback.
  * @locus Client
  */
@@ -101,6 +101,9 @@ Template.prototype.onDestroyed = function (cb) {
 Template.prototype._fireCallbacks = function (template, which) {
   var self = this;
   var callbacks = self[which] ? [self[which]] : [];
+  // Fire all callbacks added with the new API (Template.onRendered())
+  // as well as the old-style callback (e.g. Template.rendered) for
+  // backwards-compatibility.
   callbacks = callbacks.concat(self._callbacks[which]);
 
   for (var i = 0, N = callbacks.length; i < N; i++) {
