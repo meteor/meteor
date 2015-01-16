@@ -598,7 +598,6 @@ _.extend(Isopack.prototype, {
     dir = files.realpath(dir);
 
     var mainJson = Isopack.readMetadataFromDirectory(dir);
-    mainJson = colonConverter.convertIsopack(mainJson);
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
