@@ -19,9 +19,7 @@ exports.listen = function listen() {
   fs.unlink(socketFile, function() {
     net.createServer(onConnection)
       .on("error", function(err) {
-        if (err) {
-          console.log("Meteor shell not started, error in server.");
-        }
+        console.log("Meteor shell not started, error in server.", err.message);
       })
       .listen(socketFile);
   });
