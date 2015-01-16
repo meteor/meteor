@@ -670,7 +670,7 @@ _.extend(Isopack.prototype, {
 
       var unibuildJson = JSON.parse(
         files.readFile(files.pathJoin(dir, unibuildMeta.path)));
-      unibuildJson = colonConverter.convertUnibuild(unibuildJson);
+
       var unibuildBasePath =
         files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
