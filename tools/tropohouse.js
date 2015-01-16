@@ -219,6 +219,25 @@ _.extend(exports.Tropohouse.prototype, {
 
       // Result: Now we are in a state where the isopack.json file paths are
       // consistent with the paths in the downloaded tarball.
+
+      // Now, we have to convert the unibuild files in the same way.
+      _.each(metadata.builds, function (unibuildMeta) {
+        var unibuildJsonPath = files.pathJoin(dir, unibuildMeta.path);
+        var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
+
+        if (unibuildJson.format !== "unipackage-unibuild-pre1") {
+          throw new Error("Unsupported isopack unibuild format: " +
+            JSON.stringify(unibuildJson.format));
+        }
+
+        var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
+
+        files.writeFile(convertedUnibuild,
+          new Buffer(JSON.stringify(unibuildJson, null, 2), 'utf8'),
+          {mode: 0444});
+        // Result: Now we are in a state where the unibuild file paths are
+        // consistent with the paths in the downloaded tarball.
+      });
     }
 
     return targetDirectory;
