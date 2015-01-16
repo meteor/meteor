@@ -27,8 +27,8 @@ namespace LaunchMeteor
 {
     class Program
     {
-        private const string BOOTSTRAP_FILE = "meteor-bootstrap-os.windows.x86_32-__BOOTSTRAP_VERSION__.tar.gz";
-        private const string BOOTSTRAP_URL = "https://warehouse.meteor.com/windows/bootstrap/" + BOOTSTRAP_FILE;
+        private const string BOOTSTRAP_FILE = "meteor-bootstrap-os.windows.x86_32.tar.gz";
+        private const string BOOTSTRAP_URL = "https://s3.amazonaws.com/com.meteor.static/packages-bootstrap/__METEOR_RELEASE__/" + BOOTSTRAP_FILE;
 
         private const string METEOR_WAREHOUSE_DIR = "METEOR_WAREHOUSE_DIR";
 
