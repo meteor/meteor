@@ -68,22 +68,24 @@ selftest.define("can't publish package with colons", ["net", "test-package-serve
 // This test is only for unixy platforms
 if (process.platform !== "win32") {
   selftest.define("package with colons is unpacked as-is on unix", function () {
-    // First, create a tarball of the built package
+    // We have a built package tarball in the git repo
     var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
       "built-packages", "has-colons.tgz");
-    var tarball = files.readFile(tarballPath);
 
+    // Use regular tar to unpack the archive
     var extractPath = files.mkdtemp();
     utils.execFileSync("tar",
       ["-xzf", tarballPath, "-C", extractPath, "--strip", "1"]);
 
     // Next, unpack it using our tropohouse code
+    var tarball = files.readFile(tarballPath);
     var targetDirectory = tropohouse._extractAndConvert(tarball);
 
     // Now, compare all of the filepaths and file contents
     var startingTreeHash = files.treeHash(extractPath);
     var finalTreeHash = files.treeHash(targetDirectory);
 
+    // Nothing should be different
     selftest.expectEqual(finalTreeHash, startingTreeHash);
   });
 }
