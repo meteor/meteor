@@ -3,7 +3,8 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var testUtils = require('../test-utils.js');
 var utils = require('../utils.js');
-var _= require('underscore');
+var _ = require('underscore');
+var tropohouse = require('../tropohouse.js');
 
 var username = "test";
 var password = "testtest";
@@ -35,7 +36,7 @@ converted to have no colons, and the metadata files are converted properly as
 well.
 */
 
-// Package publishing tests
+// Tests step 1: publishing tarball with colons
 
 // Returns a random package name.
 var randomizedPackageName = function (username, start) {
@@ -61,3 +62,32 @@ selftest.define("can't publish package with colons", ["net", "test-package-serve
     run.matchErr("./npm/node_modules");
   });
 });
+
+// Tests step 2: old packages downloaded as-is
+
+// This test is only for unixy platforms
+if (process.platform !== "win32") {
+  selftest.define("package with colons is unpacked as-is on unix", function () {
+    // First, create a tarball of the built package
+    var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
+      "built-packages", "has-colons.tgz");
+    var tarball = files.readFile(tarballPath);
+
+    var extractPath = files.mkdtemp();
+    utils.execFileSync("tar",
+      ["-xzf", tarballPath, "-C", extractPath, "--strip", "1"]);
+
+    // Next, unpack it using our tropohouse code
+    var targetDirectory = tropohouse._extractAndConvert(tarball);
+
+    // Now, compare all of the filepaths and file contents
+    var startingTreeHash = files.treeHash(extractPath);
+    var finalTreeHash = files.treeHash(targetDirectory);
+
+    selftest.expectEqual(finalTreeHash, startingTreeHash);
+  });
+}
+
+// Tests step 3: check if old packages are converted properly to have no weird
+// paths for Windows
+

@@ -93,8 +93,7 @@ _.extend(Builder.prototype, {
       // Basic sanitization
       if (part.match(/^\.+$/))
         throw new Error("Path contains forbidden segment '" + part + "'");
-      if (part.match(/:/g))
-        throw new Error("Path contains a colon '" + part + "'");
+
       part = part.replace(/[^a-zA-Z0-9._\-]/g, '');
 
       // If at last component, pull extension (if any) off of part
