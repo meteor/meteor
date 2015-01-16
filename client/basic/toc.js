@@ -48,7 +48,7 @@ var sections = [
       item("Defining templates in HTML", {id: "defining-templates"}),
       item("Template.<em>name</em>.helpers", {longname: "Template#helpers"}),
       item("Template.<em>name</em>.events", {longname: "Template#events"}),
-      item("Template.<em>name</em>.rendered", {longname: "Template#rendered"}),
+      item("Template.<em>name</em>.onRendered", {longname: "Template#onRendered"}),
       item("<em>template</em>.findAll", {longname: "Blaze.TemplateInstance#findAll"}),
       item("<em>template</em>.find", {longname: "Blaze.TemplateInstance#find"})
     ]

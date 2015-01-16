@@ -156,9 +156,9 @@ var toc = [
       {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
         {name: "events", id: "template_events"},
         {name: "helpers", id: "template_helpers"},
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"}
+        {name: "onRendered", id: "template_onRendered"},
+        {name: "onCreated", id: "template_onCreated"},
+        {name: "onDestroyed", id: "template_onDestroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "template", name: "findAll", id: "template_findAll"},

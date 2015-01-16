@@ -6,6 +6,18 @@ Meteor.startup(function () {
       return hash.replace("deps", "tracker");
     }
 
+    if (hash.indexOf("_created") !== -1) {
+      return hash.replace("_created", "_onCreated");
+    }
+
+    if (hash.indexOf("_rendered") !== -1) {
+      return hash.replace("_rendered", "_onRendered");
+    }
+
+    if (hash.indexOf("_destroyed") !== -1) {
+      return hash.replace("_destroyed", "_onDestroyed");
+    }
+
     if (hash === "meteor_collection") {
       return "mongo_collection";
     }
