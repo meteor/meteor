@@ -22,6 +22,7 @@ var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
+var colonConverter = require('./metadata-colon-converter.js');
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.
@@ -440,9 +441,14 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
-    var packageDir = options.appDir
-          ? files.pathResolve(options.appDir, 'packages', packageName)
-          : files.pathResolve(packageName);
+    var packageDir;
+    if (options.appDir) {
+      packageDir = files.pathResolve(options.appDir, 'packages',
+        colonConverter.convert(packageName));
+    } else {
+      packageDir = files.pathResolve(colonConverter.convert(packageName));
+    }
+
     var inYourApp = options.appDir ? " in your app" : "";
 
     if (files.exists(packageDir)) {
