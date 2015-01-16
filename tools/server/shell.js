@@ -87,7 +87,10 @@ function startREPL(options) {
     },
 
     enumerable: true,
-    configurable: false
+
+    // Allow this property to be (re)defined more than once (e.g. each
+    // time the server restarts).
+    configurable: true
   });
 
   // Use the same `require` function and `module` object visible to the
