@@ -20,7 +20,7 @@ exports.listen = function listen() {
     net.createServer(onConnection)
       .on("error", function(err) {
         if (err) {
-          throw err;
+          console.log("Meteor shell not started, error in server.");
         }
       })
       .listen(socketFile);
