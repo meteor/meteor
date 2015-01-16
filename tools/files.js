@@ -10,6 +10,9 @@ var os = require('os');
 var util = require('util');
 var _ = require('underscore');
 var Fiber = require('fibers');
+var crypto = require('crypto');
+
+var rimraf = require('./rimraf');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
@@ -51,7 +54,7 @@ var findUpwards = function (predicate, startPath) {
     if (predicate(testDir)) {
       break;
     }
-    var newDir = path.dirname(testDir);
+    var newDir = files.pathDirname(testDir);
     if (newDir === testDir) {
       testDir = null;
     } else {
@@ -77,7 +80,8 @@ files.findAppDir = function (filepath) {
     // $HOME/.meteor, we want to make sure your home directory (and all
     // subdirectories therein) don't count as being within a meteor app.
     try { // use try/catch to avoid the additional syscall to files.exists
-      return files.stat(path.join(filepath, '.meteor', 'packages')).isFile();
+      return files.stat(
+        files.pathJoin(filepath, '.meteor', 'packages')).isFile();
     } catch (e) {
       return false;
     }
@@ -89,7 +93,7 @@ files.findAppDir = function (filepath) {
 files.findPackageDir = function (filepath) {
   var isPackageDir = function (filepath) {
     try {
-      return files.stat(path.join(filepath, 'package.js')).isFile();
+      return files.stat(files.pathJoin(filepath, 'package.js')).isFile();
     } catch (e) {
       return false;
     }
@@ -102,7 +106,7 @@ files.findPackageDir = function (filepath) {
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
 files.addToGitignore = function (dirPath, entry) {
-  var filepath = path.join(dirPath, ".gitignore");
+  var filepath = files.pathJoin(dirPath, ".gitignore");
   if (files.exists(filepath)) {
     var data = files.readFile(filepath, 'utf8');
     var lines = data.split(/\n/);
@@ -124,7 +128,7 @@ files.addToGitignore = function (dirPath, entry) {
 files.inCheckout = _.once(function () {
   try {
     // can't use files.exists here because not in a fiber
-    if (fs.existsSync(path.join(files.getCurrentToolsDir(), '.git')))
+    if (files.existsSync(files.pathJoin(files.getCurrentToolsDir(), '.git')))
       return true;
   } catch (e) { console.log(e); }
 
@@ -146,7 +150,7 @@ files.usesWarehouse = function () {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 files.getToolsVersion = function () {
   if (! files.inCheckout()) {
-    var isopackJsonPath = path.join(files.getCurrentToolsDir(),
+    var isopackJsonPath = files.pathJoin(files.getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'isopack.json');
 
@@ -162,7 +166,7 @@ files.getToolsVersion = function () {
     }
 
     // XXX COMPAT WITH 0.9.3
-    var unipackageJsonPath = path.join(files.getCurrentToolsDir(),
+    var unipackageJsonPath = files.pathJoin(files.getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'unipackage.json');
     var unipackageJson = files.readFile(unipackageJsonPath);
@@ -177,12 +181,13 @@ files.getToolsVersion = function () {
 // Return the root of dev_bundle (probably /usr/local/meteor in an
 // install, or (checkout root)/dev_bundle in a checkout.).
 files.getDevBundle = function () {
-  return path.join(files.getCurrentToolsDir(), 'dev_bundle');
+  return files.pathJoin(files.getCurrentToolsDir(), 'dev_bundle');
 };
 
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
-  return path.join(__dirname, '..');
+  var dirname = convertToStandardPath(__dirname);
+  return files.pathJoin(dirname, '..');
 };
 
 // Read a settings file and sanity-check it. Returns a string on
@@ -190,7 +195,7 @@ files.getCurrentToolsDir = function () {
 // emitted).
 files.getSettings = function (filename, watchSet) {
   buildmessage.assertInCapture();
-  var absPath = path.resolve(filename);
+  var absPath = files.pathResolve(filename);
   var buffer = watch.readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
@@ -224,13 +229,13 @@ files.getSettings = function (filename, watchSet) {
 // user. Presently, the main thing it does is replace $HOME with ~.
 files.prettyPath = function (p) {
   p = files.realpath(p);
-  var home = process.env.HOME;
+  var home = files.getHomeDir();
   if (! home)
     return p;
-  var relativeToHome = path.relative(home, p);
-  if (relativeToHome.substr(0, 3) === ('..' + path.sep))
+  var relativeToHome = files.pathRelative(home, p);
+  if (relativeToHome.substr(0, 3) === ('..' + files.pathSep))
     return p;
-  return path.join('~', relativeToHome);
+  return files.pathJoin('~', relativeToHome);
 };
 
 // Like statSync, but null if file not found
@@ -247,25 +252,9 @@ files.statOrNull = function (path) {
 
 // Like rm -r.
 files.rm_recursive = function (p) {
-  try {
-    // the l in lstat is critical -- we want to remove symbolic
-    // links, not what they point to
-    var stat = files.lstat(p);
-
-    if (stat.isDirectory()) {
-      _.each(files.readdir(p), function (file) {
-        file = path.join(p, file);
-        files.rm_recursive(file);
-      });
-      files.rmdir(p);
-    } else {
-      files.unlink(p);
-    }
-  } catch (e) {
-    if (e.code == "ENOENT")
-      return;
-    throw e;
-  }
+  var fut = new Future();
+  rimraf(convertToOSPath(p), { busyTries: 10 }, fut.resolver());
+  fut.wait();
 };
 
 // Makes all files in a tree read-only.
@@ -281,7 +270,7 @@ var makeTreeReadOnly = function (p) {
 
   if (stat.isDirectory()) {
     _.each(files.readdir(p), function (file) {
-      makeTreeReadOnly(path.join(p, file));
+      makeTreeReadOnly(files.pathJoin(p, file));
     });
   }
   if (stat.isFile()) {
@@ -292,19 +281,14 @@ var makeTreeReadOnly = function (p) {
   }
 };
 
+var stringHash = function (str) {
+  return crypto.createHash('sha256').update(str, 'utf8').digest('base64');
+};
+
 // Returns the base64 SHA256 of the given file.
 files.fileHash = function (filename) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
-  hash.setEncoding('base64');
-  var rs = files.createReadStream(filename);
-  var fut = new Future();
-  rs.on('end', function () {
-    rs.close();
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  return fut.wait();
+  var contents = files.readFile(filename, "utf-8");
+  return stringHash(contents);
 };
 
 // This is the result of running fileHash on a blank file.
@@ -337,7 +321,7 @@ files.treeHash = function (root, options) {
       return;
     }
 
-    var absPath = path.join(root, relativePath);
+    var absPath = files.pathJoin(root, relativePath);
     var stat = files.lstat(absPath);
 
     if (stat.isDirectory()) {
@@ -345,7 +329,7 @@ files.treeHash = function (root, options) {
         updateHash('dir ' + JSON.stringify(relativePath) + '\n');
       }
       _.each(files.readdir(absPath), function (entry) {
-        traverse(path.join(relativePath, entry));
+        traverse(files.pathJoin(relativePath, entry));
       });
     } else if (stat.isFile()) {
       if (!relativePath) {
@@ -361,7 +345,7 @@ files.treeHash = function (root, options) {
         throw Error("must call files.treeHash on a directory");
       }
       updateHash('symlink ' + JSON.stringify(relativePath) + ' ' +
-                 JSON.stringify(fs.readlinkSync(absPath)) + '\n');
+                 JSON.stringify(files.readlink(absPath)) + '\n');
     }
     // ignore anything weirder
   };
@@ -375,8 +359,8 @@ files.treeHash = function (root, options) {
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.
 files.mkdir_p = function (dir, mode) {
-  var p = path.resolve(dir);
-  var ps = path.normalize(p).split(path.sep);
+  var p = files.pathResolve(dir);
+  var ps = files.pathNormalize(p).split(files.pathSep);
 
   if (files.exists(p)) {
     if (files.stat(p).isDirectory()) { return true;}
@@ -384,15 +368,34 @@ files.mkdir_p = function (dir, mode) {
   }
 
   // doesn't exist. recurse to build parent.
-  var success = files.mkdir_p(ps.slice(0,-1).join(path.sep), mode);
+  // Don't use files.pathJoin here because it can strip off the leading slash
+  // accidentally.
+  var parentPath = ps.slice(0, -1).join(files.pathSep);
+  var success = files.mkdir_p(parentPath, mode);
   // parent is not a directory.
-  if (!success) { return false; }
+  if (! success) { return false; }
 
-  files.mkdir(p, mode);
+  // Sometimes, we get here and the check from the top of the function is stale
+  // because we yielded
+  try {
+    files.mkdir(p, mode);
+  } catch (e) {
+    if (e.code === "EEXIST") {
+      if (files.existsSync(p) && files.statSync(p).isDirectory()) {
+        // all good, someone else created this directory for us while we were
+        // yielding
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      throw e;
+    }
+  }
 
   // double check we exist now
-  if (!files.exists(p) ||
-      !files.stat(p).isDirectory())
+  if (! files.exists(p) ||
+      ! files.stat(p).isDirectory())
     return false; // wtf
   return true;
 };
@@ -416,7 +419,7 @@ files.mkdir_p = function (dir, mode) {
 files.cp_r = function (from, to, options) {
   options = options || {};
 
-  var absFrom = path.resolve(from);
+  var absFrom = files.pathResolve(from);
   files.mkdir_p(to, 0755);
 
   _.each(files.readdir(from), function (f) {
@@ -424,19 +427,19 @@ files.cp_r = function (from, to, options) {
       return f.match(pattern);
     })) return;
 
-    var fullFrom = path.join(from, f);
+    var fullFrom = files.pathJoin(from, f);
     if (options.transformFilename)
       f = options.transformFilename(f);
-    var fullTo = path.join(to, f);
+    var fullTo = files.pathJoin(to, f);
     var stats = options.preserveSymlinks
           ? files.lstat(fullFrom) : files.stat(fullFrom);
     if (stats.isDirectory()) {
       files.cp_r(fullFrom, fullTo, options);
     } else if (stats.isSymbolicLink()) {
-      var linkText = fs.readlinkSync(fullFrom);
-      fs.symlinkSync(linkText, fullTo);
+      var linkText = files.readlink(fullFrom);
+      files.symlink(linkText, fullTo);
     } else {
-      var absFullFrom = path.resolve(fullFrom);
+      var absFullFrom = files.pathResolve(fullFrom);
 
       // Create the file as readable and writable by everyone, and executable by
       // everyone if the original file is executably by owner. (This mode will
@@ -459,7 +462,7 @@ files.cp_r = function (from, to, options) {
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
 files.copyFile = function (from, to) {
-  files.mkdir_p(path.dirname(path.resolve(to)), 0755);
+  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0755);
 
   var stats = files.stat(from);
   if (!stats.isFile()) {
@@ -501,18 +504,25 @@ var copyFileHelper = function (from, to, mode) {
 var tempDirs = [];
 files.mkdtemp = function (prefix) {
   var make = function () {
-    prefix = prefix || 'meteor-temp-';
+    prefix = prefix || 'mt-';
     // find /tmp
     var tmpDir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
       return process.env[t];
-    }).filter(_.identity)) || path.sep + 'tmp';
+    }).filter(_.identity));
+
+    if (! tmpDir && process.platform !== 'win32')
+      tmpDir = files.pathSep + 'tmp';
+
+    if (! tmpDir)
+      throw new Error("Couldn't create a temporary directory.");
+
     tmpDir = files.realpath(tmpDir);
 
     // make the directory. give it 3 tries in case of collisions from
     // crappy random.
     var tries = 3;
     while (tries > 0) {
-      var dirPath = path.join(
+      var dirPath = files.pathJoin(
         tmpDir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
       try {
         files.mkdir(dirPath, 0700);
@@ -561,8 +571,8 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
 // be renamed atomically to destPath. The entire tree will be made
 // readonly.
 files.extractTarGz = function (buffer, destPath) {
-  var parentDir = path.dirname(destPath);
-  var tempDir = path.join(parentDir, '.tmp' + utils.randomToken());
+  var parentDir = files.pathDirname(destPath);
+  var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
   var future = new Future;
@@ -573,7 +583,11 @@ files.extractTarGz = function (buffer, destPath) {
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
     });
-  var extractor = new tar.Extract({ path: tempDir })
+
+  var extractor = new tar.Extract({ path: convertToOSPath(tempDir) })
+    .on('entry', function (e) {
+      e.path = files.adaptLegacyPath(e.path);
+    })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
     })
@@ -594,7 +608,7 @@ files.extractTarGz = function (buffer, destPath) {
     throw new Error(
       "Extracted archive '" + tempDir + "' should only contain one entry");
 
-  var extractDir = path.join(tempDir, topLevelOfArchive[0]);
+  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
   makeTreeReadOnly(extractDir);
   files.rename(extractDir, destPath);
   files.rmdir(tempDir);
@@ -607,6 +621,45 @@ files.createTarGzStream = function (dirPath, options) {
   var tar = require("tar");
   var fstream = require('fstream');
   var zlib = require("zlib");
+
+  if (process.platform === "win32") {
+    // This is a special case for Windows, we need to make sure the directories
+    // that we put into the tarball have execute permissions, which is not a
+    // thing on Windows.
+    //
+    // Unfortunately, this is a partial duplicate of the code below, since we
+    // can't use filter and apply the stream workaround at the same time.
+    // Therefore, we have this block that uses filter and the one below that
+    // uses a single argument to fstream.Reader.
+
+    var maxPath = 260;
+
+    var fixDirPermissions = function (entry) {
+      // Make sure readable directories have execute permission
+      if (entry.props.type === "Directory") {
+        entry.props.mode |= (entry.props.mode >>> 2) & 0111;
+      }
+
+      // Error about long paths on Windows.
+      // As far as we know the tarball creation seems to fail silently when path
+      // is too long (the files don't get copied to tarball). To avoid it, we
+      // shout at the core developer early so she/he takes an action.
+      // When the tarball is created on Mac or Linux it doesn't seem to matter.
+      if (entry.path.length > maxPath &&
+          entry.path.indexOf("test") === -1) {
+        throw new Error("Path too long: " + entry.path + " is " +
+          entry.path.length + " characters.");
+      }
+
+      return true;
+    };
+
+    return fstream.Reader({
+      path: files.convertToOSPath(dirPath),
+      type: 'Directory',
+      filter: fixDirPermissions
+    }).pipe(tar.Pack({ noProprietary: true })).pipe(zlib.createGzip());
+  }
 
   // Use `dirPath` as the argument to `fstream.Reader` here instead of
   // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
@@ -682,9 +735,9 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
 };
 
 files.writeFileAtomically = function (filename, contents) {
-  var tmpFile = path.join(
-    path.dirname(filename),
-    '.' + path.basename(filename) + '.' + utils.randomToken());
+  var tmpFile = files.pathJoin(
+    files.pathDirname(filename),
+    '.' + files.pathBasename(filename) + '.' + utils.randomToken());
   files.writeFile(tmpFile, contents);
   files.rename(tmpFile, filename);
 };
@@ -692,11 +745,11 @@ files.writeFileAtomically = function (filename, contents) {
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 files.symlinkOverSync = function (linkText, file) {
-  file = path.resolve(file);
-  var tmpSymlink = path.join(
-    path.dirname(file),
-    "." + path.basename(file) + ".tmp" + utils.randomToken());
-  fs.symlinkSync(linkText, tmpSymlink);
+  file = files.pathResolve(file);
+  var tmpSymlink = files.pathJoin(
+    files.pathDirname(file),
+    "." + files.pathBasename(file) + ".tmp" + utils.randomToken());
+  files.symlinkSync(linkText, tmpSymlink);
   files.rename(tmpSymlink, file);
 };
 
@@ -733,8 +786,10 @@ files.run = function (command /*, arguments */) {
 
 files.runGitInCheckout = function (/* arguments */) {
   var args = _.toArray(arguments);
-  args.unshift('git',
-               '--git-dir=' + path.join(files.getCurrentToolsDir(), '.git'));
+  args.unshift(
+    'git', '--git-dir=' +
+    files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
+
   var ret = files.run.apply(files, args);
   if (ret === null) {
     // XXX files.run really ought to give us some actual context
@@ -806,7 +861,7 @@ files.runJavaScript = function (code, options) {
     parsedSourceMap = results.map.toJSON();
     if (options.sourceMapRoot) {
       // Add the specified root to any root that may be in the file.
-      parsedSourceMap.sourceRoot = path.join(
+      parsedSourceMap.sourceRoot = files.pathJoin(
         options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
     }
     // source-map-support doesn't ever look at the sourcesContent field, so
@@ -1021,46 +1076,108 @@ _.extend(files.KeyValueFile.prototype, {
   }
 });
 
-/////// Below here are wrappers of fs.* and path.* functions
+files.getHomeDir = function () {
+  var homeDir = process.env.HOME ||
+    process.env.LOCALAPPDATA ||
+    process.env.APPDATA;
+  return convertToStandardPath(homeDir);
+};
 
-var toPosixPath = function (p) {
+files.linkToMeteorScript = function (scriptLocation, linkLocation, argsList) {
+  if (process.platform === "win32") {
+    // Make a meteor batch script that points to current tool
+
+    // add .bat extension to destination if not present
+    if (scriptLocation.indexOf(".bat") !== (scriptLocation.length - 4)) {
+      scriptLocation = scriptLocation + ".bat";
+    }
+
+    // add .bat extension to link file if not present
+    if (linkLocation.indexOf(".bat") !== (linkLocation.length - 4)) {
+      linkLocation = linkLocation + ".bat";
+    }
+
+    var args = "";
+    // Let the link pass arguments to the target script, used for "--release"
+    if (_.isArray(argsList)) {
+      args = argsList.join(" ");
+    }
+
+    var newScript = [
+      "@echo off",
+      "%~dp0\\" + files.convertToOSPath(scriptLocation) + " " + args + " %*"
+    ].join(os.EOL);
+
+    files.writeFile(linkLocation, newScript, {encoding: "ascii"});
+  } else {
+    // Symlink meteor tool
+    files.symlinkOverSync(scriptLocation, linkLocation);
+  }
+};
+
+// In the old World we used to have any paths that worked on unix,
+// but in the new World we restrict the use of characters like ':'.
+files.adaptLegacyPath = function (p) {
+  return p.replace(/:/g, '_');
+};
+
+/////// Below here, functions have been corrected for slashes
+
+var toPosixPath = function (p, notAbsolute) {
+  // Sometimes, you can have a path like \Users\IEUser on windows, and this
+  // actually means you want C:\Users\IEUser
+  if (p[0] === "\\" && (! notAbsolute)) {
+    p = process.env.SystemDrive + p;
+  }
+
   p = p.replace(/\\/g, '/');
-  if (p[1] === ':') {
-    // transform "C:/bla/bla" to "/C/bla/bla"
+  if (p[1] === ':' && ! notAbsolute) {
+    // transform "C:/bla/bla" to "/c/bla/bla"
     p = '/' + p[0] + p.slice(2);
+    p = p.toLowerCase();
   }
 
   return p;
 };
 
-var toDosPath = function (p) {
-  if (p[0] === '/') {
-    if (! /^\/[A-Z]\//.test(p))
+var toDosPath = function (p, notAbsolute) {
+  if (p[0] === '/' && ! notAbsolute) {
+    if (! /^\/[A-Za-z]\//.test(p))
       throw new Error("Surprising path: " + p);
     // transform a previously windows path back
-    // "/C/something" to "C:/something"
+    // "/C/something" to "c:/something"
     p = p[1] + ":" + p.slice(2);
+    p = p.toLowerCase();
   }
 
   p = p.replace(/\//g, '\\');
   return p;
 };
 
-var convertToOSPath = function (standardPath) {
+
+var convertToOSPath = function (standardPath, notAbsolute) {
   if (process.platform === "win32") {
-    return toDosPath(standardPath);
+    return toDosPath(standardPath, notAbsolute);
   }
 
   return standardPath;
 };
 
-var convertToStandardPath = function (osPath) {
+var convertToStandardPath = function (osPath, notAbsolute) {
   if (process.platform === "win32") {
-    return toPosixPath(osPath);
+    return toPosixPath(osPath, notAbsolute);
   }
 
   return osPath;
 }
+
+var convertToOSLineEndings = function (fileContents) {
+  return fileContents.replace(/\n/g, os.EOL);
+};
+
+var convertToStandardLineEndings = function (fileContents) {
+  return fileContents.replace(new RegExp(os.EOL, "g"), "\n");
+};
 
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
@@ -1131,11 +1248,65 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
 wrapFsFunc("writeFile", [0]);
 wrapFsFunc("appendFile", [0]);
-wrapFsFunc("readFile", [0]);
+wrapFsFunc("readFile", [0], {
+  modifyReturnValue: function (fileData) {
+    if (_.isString(fileData)) {
+      return convertToStandardLineEndings(fileData);
+    }
+
+    return fileData;
+  }
+});
 wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
+
+// Automagically convert line endings for writeFile and appendFile
+if (process.platform === "win32") {
+  // File reading and writing; need to convert line endings
+  var writeFile = files.writeFile;
+  var appendFile = files.appendFile;
+  var rename = files.rename;
+
+  files.writeFile = function (filename, data, options) {
+    if (_.isString(data)) {
+      // on windows, replace line endings
+      data = convertToOSLineEndings(data);
+    }
+
+    writeFile(filename, data, options);
+  };
+
+  files.appendFile = function (filename, data, options) {
+    if (_.isString(data)) {
+      // on windows, replace line endings
+      data = convertToOSLineEndings(data);
+    }
+
+    appendFile(filename, data, options);
+  };
+
+  files.rename = function (from, to) {
+    // retries are necessarily only on Windows, because the rename call can fail
+    // with EBUSY, which means the file is "busy"
+    var maxTries = 10;
+    var success = false;
+    while (! success && maxTries-- > 0) {
+      try {
+        rename(from, to);
+        success = true;
+      } catch (err) {
+        if (err.code !== 'EPERM')
+          throw err;
+      }
+    }
+    if (! success) {
+      files.cp_r(from, to);
+      files.rm_recursive(from);
+    }
+  };
+}
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
@@ -1161,6 +1332,7 @@ wrapFsFunc("close", []);
 wrapFsFunc("symlink", [0, 1]);
 wrapFsFunc("readlink", [0]);
 
+// These don't need to be Fiberized
 files.createReadStream = function () {
   var args = _.toArray(arguments);
   args[0] = convertToOSPath(args[0]);
@@ -1187,20 +1359,24 @@ files.unwatchFile = function () {
 
 // wrappings for path functions that always run as they were on unix (using
 // forward slashes)
-var wrapPathFunction = function (name) {
+var wrapPathFunction = function (name, partialPaths) {
   var f = path[name];
-
   return function (/* args */) {
     if (process.platform === 'win32') {
       var args = _.toArray(arguments);
-      return toPosixPath(f.apply(path, _.map(args, toDosPath)));
+      args = _.map(args, function (p, i) {
+        // if partialPaths is turned on (for path.join mostly)
+        // forget about conversion of absolute paths for Windows
+        return toDosPath(p, partialPaths);
+      });
+      return toPosixPath(f.apply(path, args), partialPaths);
     } else {
       return f.apply(path, arguments);
     }
   };
 };
 
-files.pathJoin = wrapPathFunction("join");
+files.pathJoin = wrapPathFunction("join", true);
 files.pathNormalize = wrapPathFunction("normalize");
 files.pathRelative = wrapPathFunction("relative");
 files.pathResolve = wrapPathFunction("resolve");
@@ -1221,3 +1397,10 @@ files.pathwatcherWatch = function () {
   var pathwatcher = require('meteor-pathwatcher-tweaks');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
+
+files.convertToStandardPath = convertToStandardPath;
+files.convertToOSPath = convertToOSPath;
+files.convertToPosixPath = toPosixPath;
+
+files.convertToStandardLineEndings = convertToStandardLineEndings;
+files.convertToOSLineEndings = convertToOSLineEndings;

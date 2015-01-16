@@ -34,7 +34,9 @@ var DEFAULT_PORT = '3000';
 var VALID_ARCHITECTURES = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32": true
+  "os.linux.x86_32": true,
+  "os.windows.x86_64": true,
+  "os.windows.x86_32": true
 };
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -391,7 +393,7 @@ main.registerCommand({
       "in a Meteor app directory."
     );
   } else {
-    require('./server/shell.js').connect(options.appDir);
+    require('./server/shell.js').connect(files.convertToOSPath(options.appDir));
     throw new main.WaitForExit;
   }
 });

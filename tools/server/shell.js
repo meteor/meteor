@@ -18,7 +18,11 @@ exports.listen = function listen() {
   var socketFile = getSocketFile();
   fs.unlink(socketFile, function() {
     net.createServer(onConnection)
-      .on("error", function(err){})
+      .on("error", function(err) {
+        if (err) {
+          throw err;
+        }
+      })
       .listen(socketFile);
   });
 };
@@ -129,6 +133,15 @@ function startREPL(options) {
 }
 
 function getSocketFile(appDir) {
+  if (process.platform === "win32") {
+    // Make a Windows named pipe based on the app's path
+    // Replace the colon with an underscore to avoid "C:" appearing in the pipe
+    // name, and replace slashes to avoid weird naming collisions with
+    // directories: http://stackoverflow.com/questions/3571422/can-named-pipe-names-have-backslashes
+    return "\\\\.\\pipe\\" +
+      (appDir || getAppDir()).replace(/[:\\]/g, "_");
+  }
+
   return path.join(appDir || getAppDir(), ".meteor", "local", "shell.sock");
 }
 exports.getSocketFile = getSocketFile;

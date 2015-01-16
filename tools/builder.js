@@ -3,6 +3,8 @@ var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
 var _ = require('underscore');
 
+var longest = 0;
+
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
 // packages). It can create a temporary directory in which to build
@@ -93,7 +95,9 @@ _.extend(Builder.prototype, {
       // Basic sanitization
       if (part.match(/^\.+$/))
         throw new Error("Path contains forbidden segment '" + part + "'");
-      part = part.replace(/[^a-zA-Z0-9._\:-]/g, '');
+      if (part.match(/:/g))
+        throw new Error("Path contains a colon '" + part + "'");
+      part = part.replace(/[^a-zA-Z0-9._\-]/g, '');
 
       // If at last component, pull extension (if any) off of part
       var ext = '';
@@ -177,6 +181,7 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(files.pathDirname(relPath));
     var absPath = files.pathJoin(self.buildPath, relPath);
+    
     if (options.symlink) {
       files.symlink(options.symlink, absPath);
     } else {
@@ -323,10 +328,16 @@ _.extend(Builder.prototype, {
         throw new Error("can't copy only specific paths with a single symlink");
       }
 
-      var canSymlink = true;
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
                         " but it is is already a file");
+      }
+
+      var canSymlink = true;
+      // Symlinks don't work exactly the same way on Windows, and furthermore
+      // they request Admin permissions to set.
+      if (process.platform === 'win32') {
+        canSymlink = false;
       } else if (normOptionsTo in self.usedAsFile) {
         // It's already here and is a directory, maybe because of a call to
         // reserve with {directory: true}. If it's an empty directory, this is

@@ -206,25 +206,32 @@ _.extend(AppProcess.prototype, {
   _spawn: function () {
     var self = this;
 
-    var child_process = require('child_process');
+    // Path conversions
+    var nodePath = process.execPath; // This path is an OS path already
+    var entryPoint = files.convertToOSPath(
+      files.pathJoin(self.bundlePath, 'main.js'));
 
+    // Setting options
     var opts = _.clone(self.nodeOptions);
-    var entryPoint = files.pathJoin(self.bundlePath, 'main.js');
 
+    var attach;
     if (self.debugPort) {
-      var attach = require("./inspector.js").start(
-        self.debugPort,
-        entryPoint
-      );
+      attach = require("./inspector.js").start(self.debugPort, entryPoint);
+
+      // If you do opts.push("--debug-brk", port) it doesn't work on Windows
+      // for some reason
       opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
     }
 
     opts.push(entryPoint);
 
-    var child = child_process.spawn(process.execPath, opts, {
+    // Call node
+    var child_process = require('child_process');
+    var child = child_process.spawn(nodePath, opts, {
       env: self._computeEnvironment()
     });
 
+    // Attach inspector
     if (attach) {
       attach(child);
     }
@@ -708,7 +715,11 @@ _.extend(AppRunner.prototype, {
 
         // Notify the server that new client assets have been added to the
         // build.
-        appProcess.proc.kill('SIGUSR2');
+        if (process.platform === "win32") {
+          appProcess.proc.kill();
+        } else {
+          appProcess.proc.kill('SIGUSR2');
+        }
 
         // Establish a watcher on the new files.
         setupClientWatcher();

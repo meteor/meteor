@@ -382,8 +382,8 @@ _.extend(PackageSource.prototype, {
         (! options.sourceRoot || ! options.serveRoot))
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
-    self.sourceRoot = options.sourceRoot || files.pathSep;
-    self.serveRoot = options.serveRoot || files.pathSep;
+    self.sourceRoot = options.sourceRoot || '/';
+    self.serveRoot = options.serveRoot || '/';
 
     var nodeModulesPath = null;
     utils.ensureOnlyExactVersions(options.npmDependencies);
@@ -814,7 +814,7 @@ _.extend(PackageSource.prototype, {
           return require(nodeModuleDir);
         } else {
           try {
-            return require(name); // from the dev bundle
+            return require(files.convertToOSPath(name)); // from the dev bundle
           } catch (e) {
             buildmessage.error("can't find npm module '" + name +
                                "'. Did you forget to call 'Npm.depends'?",
@@ -1220,6 +1220,18 @@ _.extend(PackageSource.prototype, {
           paths = toArray(paths);
           arch = toArchArray(arch);
 
+          // Convert Dos-style paths to Unix-style paths.
+          // XXX it is possible to convert an already Unix-style path by mistake
+          // and break it. e.g.: 'some\folder/anotherFolder' is a valid path
+          // consisting of two components. #WindowsPathApi
+          paths = _.map(paths, function (p) {
+            if (p.indexOf('/') !== -1) {
+              // it is already a Unix-style path most likely
+              return p;
+            }
+            return files.convertToPosixPath(p, true);
+          });
+
           _.each(paths, function (path) {
             forAllMatchingArchs(arch, function (a) {
               var source = {relPath: path};
@@ -1481,7 +1493,7 @@ _.extend(PackageSource.prototype, {
     });
 
     // Serve root of the package.
-    self.serveRoot = files.pathJoin(files.pathSep, 'packages', self.name);
+    self.serveRoot = files.pathJoin('/packages/', self.name);
 
     // Name of the test.
     if (hasTests) {
@@ -1495,7 +1507,7 @@ _.extend(PackageSource.prototype, {
     var appDir = projectContext.projectDir;
     self.name = null;
     self.sourceRoot = appDir;
-    self.serveRoot = files.pathSep;
+    self.serveRoot = '/';
 
     // special files those are excluded from app's top-level sources
     var controlFiles = ['mobile-config.js'];

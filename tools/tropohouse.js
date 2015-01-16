@@ -23,7 +23,7 @@ var defaultWarehouseDir = function () {
     return process.env.METEOR_WAREHOUSE_DIR;
 
   var warehouseBase = files.inCheckout()
-     ? files.getCurrentToolsDir() : process.env.HOME;
+     ? files.getCurrentToolsDir() : files.getHomeDir();
   // XXX This will be `.meteor` soon, once we've written the code to make the
   // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
   // tools to springboard to warehouse tools).
@@ -187,7 +187,6 @@ _.extend(exports.Tropohouse.prototype, {
       wait: false
     });
     files.extractTarGz(packageTarball, targetDirectory);
-
     return targetDirectory;
   },
 
@@ -210,34 +209,44 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
-    var packageLinkFile = self.packagePath(packageName, version);
+    var packagePath = self.packagePath(packageName, version);
     var downloadedArches = [];
-    var packageLinkTarget = null;
-    try {
-      packageLinkTarget = files.readlink(packageLinkFile);
-    } catch (e) {
-      // Complain about anything other than "we don't have it at all". This
-      // includes "not a symlink": The main reason this would not be a symlink
-      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
-      // warehouse package not a tropohouse package). But the versions should
-      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-      // versions should be semver-like.
-      if (e.code !== 'ENOENT')
-        throw e;
-    }
-    if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
-      // so this strips off the part before the '++'.
-      // XXX maybe we should just read the isopack.json instead of
-      //     depending on the symlink?
-      var archPart = packageLinkTarget.split('++')[1];
-      if (!archPart)
-        throw Error("unexpected symlink target for " + packageName + "@" +
-                    version + ": " + packageLinkTarget);
-      downloadedArches = archPart.split('+');
+
+    // Find out which arches we have by reading the isopack metadata
+    var packageMetadata = Isopack.readMetadataFromDirectory(packagePath);
+
+    // packageMetadata is null if there is no package at packagePath
+    if (packageMetadata) {
+      downloadedArches = _.pluck(packageMetadata.builds, "arch");
     }
     return { arches: downloadedArches, target: packageLinkTarget };
   },
+
+  _saveIsopack: function (isopack, packageName) {
+    // XXX does this actually need the name as an argument or can we just get
+    // it from isopack?
+
+    var self = this;
+
+    if (process.platform === "win32") {
+      // XXX wipeAllPackages won't work on Windows until we fix that function
+      isopack.saveToPath(self.packagePath(packageName, isopack.version));
+    } else {
+      // Note: wipeAllPackages depends on this filename structure, as does the
+      // part above which readlinks.
+      var newPackageLinkTarget = '.' + isopack.version + '.' +
+        utils.randomToken() + '++' + isopack.buildArchitectures();
+
+      var combinedDirectory = self.packagePath(
+        packageName, newPackageLinkTarget);
+
+      isopack.saveToPath(combinedDirectory);
+
+      files.symlinkOverSync(newPackageLinkTarget,
+        self.packagePath(packageName, isopack.version));
+    }
+  },
+
   // Given a package name, version, and required architectures, checks to make
   // sure that we have the package downloaded at the requested arch. If we do,
   // returns null.
@@ -304,12 +313,38 @@ _.extend(exports.Tropohouse.prototype, {
         title: "downloading " + packageName + "@" + version + "..."
       }, function() {
         var buildTempDirs = [];
-        // If there's already a package in the tropohouse, start with it.
-        if (packageLinkTarget) {
-          buildTempDirs.push(
-            files.pathResolve(files.pathDirname(packageLinkFile),
-                              packageLinkTarget));
+
+        // Find the previous actual directory of the package
+        if (process.platform === "win32") {
+          // On Windows, we don't use symlinks.
+          // If there's already a package in the tropohouse, start with it.
+          if (files.exists(packagePath)) {
+            buildTempDirs.push(packagePath);
+          }
+        } else {
+          var packageLinkTarget = null;
+          try {
+            packageLinkTarget = files.readlink(packagePath);
+          } catch (e) {
+            // Complain about anything other than "we don't have it at all". This
+            // includes "not a symlink": The main reason this would not be a symlink
+            // is if it's a directory containing a pre-0.9.0 package (ie, this is a
+            // warehouse package not a tropohouse package). But the versions should
+            // not overlap: warehouse versions are truncated SHAs whereas tropohouse
+            // versions should be semver-like.
+            if (e.code !== 'ENOENT') {
+              throw e;
+            }
+          }
+
+          // If there's already a package in the tropohouse, start with it.
+          if (packageLinkTarget) {
+            buildTempDirs.push(
+              files.pathResolve(files.pathDirname(packagePath),
+                                packageLinkTarget));
+          }
         }
+        
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
@@ -334,14 +369,8 @@ _.extend(exports.Tropohouse.prototype, {
             buildTempDir,
             {firstIsopack: i === 0});
         });
-        // Note: wipeAllPackages depends on this filename structure, as does the
-        // part above which readlinks.
-        var newPackageLinkTarget = '.' + version + '.'
-              + utils.randomToken() + '++' + isopack.buildArchitectures();
-        var combinedDirectory = self.packagePath(
-          packageName, newPackageLinkTarget);
-        isopack.saveToPath(combinedDirectory);
-        files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+        self._saveIsopack(isopack, packageName, version);
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {
@@ -432,9 +461,9 @@ _.extend(exports.Tropohouse.prototype, {
     return files.readlink(linkPath);
   },
 
-  replaceLatestMeteorSymlink: function (linkText) {
+  linkToLatestMeteor: function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.symlinkOverSync(linkText, linkPath);
+    files.linkToMeteorScript(scriptLocation, linkPath);
   }
 });

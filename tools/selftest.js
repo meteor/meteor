@@ -18,6 +18,7 @@ var Console = require('./console.js').Console;
 var tropohouseModule = require('./tropohouse.js');
 var packageMapModule = require('./package-map.js');
 var isopackCacheModule = require('./isopack-cache.js');
+var crossSpawn = require("cross-spawn");
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -154,13 +155,7 @@ var setUpBuiltPackageTropohouse = function () {
   // though some tests will want them to be under
   // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
   tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
-    // XXX we should stop relying on symlinks and just parse isopack.json (we
-    // need to do this for Windows anyway).
-    var directPath = '.' + isopack.version + '.XXX++' +
-          isopack.buildArchitectures();
-    isopack.saveToPath(tropohouse.packagePath(name, directPath));
-    files.symlinkOverSync(directPath,
-                          tropohouse.packagePath(name, isopack.version));
+    tropohouse._saveIsopack(isopack, name);
   });
 };
 
@@ -838,10 +833,10 @@ _.extend(Sandbox.prototype, {
 
     // And a cherry on top
     // XXX this is hacky
-    files.symlink(files.pathJoin(packagesDirectoryName,
-                                  "meteor-tool", toolPackageVersion,
-                                  'meteor-tool-' + archinfo.host(), 'meteor'),
-                  files.pathJoin(self.warehouse, 'meteor'));
+    files.linkToMeteorScript(
+      files.pathJoin(packagesDirectoryName, "meteor-tool", toolPackageVersion,
+        'meteor-tool-' + archinfo.host(), 'meteor'),
+      files.pathJoin(self.warehouse, 'meteor'));
   }
 });
 
@@ -1117,9 +1112,8 @@ _.extend(Run.prototype, {
     var env = _.clone(process.env);
     _.extend(env, self.env);
 
-    var child_process = require('child_process');
-    self.proc = child_process.spawn(self.execPath, self._args, {
-      cwd: self.cwd,
+    self.proc = crossSpawn(files.convertToOSPath(self.execPath), self._args, {
+      cwd: files.convertToOSPath(self.cwd),
       env: env
     });
 
@@ -1629,7 +1623,7 @@ TestList.prototype.generateSkipReport = function () {
 };
 
 var getTestStateFilePath = function () {
-  return files.pathJoin(process.env.HOME, '.meteortest');
+  return files.pathJoin(files.getHomeDir(), '.meteortest');
 };
 
 var readTestState = function () {

@@ -165,6 +165,7 @@ var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
+var colonConverter = require('./metadata-colon-converter.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -180,9 +181,11 @@ var rejectBadPath = function (p) {
 };
 
 var stripLeadingSlash = function (p) {
-  if (p.charAt(0) !== '/')
-    throw new Error("bad path: " + p);
-  return p.slice(1);
+  if (p.charAt(0) === '/') {
+    return p.slice(1);
+  }
+
+  return p;
 };
 
 
@@ -748,7 +751,9 @@ _.extend(Target.prototype, {
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: files.pathJoin(
-                    'npm', unibuild.pkg.name, 'node_modules'),
+                    'npm',
+                    colonConverter.convert(unibuild.pkg.name),
+                    'node_modules'),
                   npmDiscards: unibuild.pkg.npmDiscards
                 });
                 self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
@@ -1522,6 +1527,7 @@ _.extend(JsImage.prototype, {
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(files.readFile(controlFilePath));
+  json = colonConverter.convertJSImage(json);
   var dir = files.pathDirname(controlFilePath);
 
   if (json.format !== "javascript-image-pre1")
@@ -1682,8 +1688,9 @@ _.extend(ServerTarget.prototype, {
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
     if (options.includeNodeModulesSymlink) {
-      builder.write('node_modules', {
-        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
+      builder.copyDirectory({
+        from: files.pathJoin(files.getDevBundle(), 'lib', 'node_modules'),
+        to: 'node_modules'
       });
     }
 
@@ -1704,14 +1711,16 @@ _.extend(ServerTarget.prototype, {
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64'
+      'os.osx.x86_64': 'Darwin_x86_64',
+      // XXX once we put Windows dev_bundles to warehouse we should fill these
+      // fields in.
+      'os.windows.x86_32': 'XXX',
+      'os.windows.x86_64': 'XXX'
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
-      buildmessage.error("MDG does not publish dev_bundles for arch: " +
+      throw new Error("MDG does not publish dev_bundles for arch: " +
                          self.arch);
-      // Recover by bailing out and leaving a partially built target
-      return;
     }
 
     var devBundleVersion =
@@ -2156,7 +2165,9 @@ exports.buildJsImage = function (options) {
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],
-    serveRoot: files.pathSep,
+    // it is correct to set slash and not files.pathSep because serverRoot is a
+    // url path and not a file system path
+    serveRoot: '/',
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });

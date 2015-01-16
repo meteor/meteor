@@ -273,7 +273,7 @@ _.extend(Db.prototype, {
     }
 
     Console.debug("Opening db file", dbFile);
-    return new sqlite3.Database(dbFile);
+    return new sqlite3.Database(files.convertToOSPath(dbFile));
   },
 
   // Runs a query synchronously, returning all rows
@@ -810,11 +810,19 @@ _.extend(RemoteCatalog.prototype, {
     // 'recommended' and 'orderKey' in their own columns this could be faster
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
-    var recommended = _.filter(result, function (v) {
-      if (!v.recommended)
-        return false;
-      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
-    });
+
+    // XXX HACK for windows previews, since none of them are recommended,
+    // we should just pick the latest one
+    var recommended;
+    if (process.platform === "win32") {
+      recommended = result;
+    } else {
+      recommended = _.filter(result, function (v) {
+        if (!v.recommended)
+          return false;
+        return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
+      });
+    }
 
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
@@ -852,6 +860,12 @@ _.extend(RemoteCatalog.prototype, {
   // given release track.
   getDefaultReleaseVersionRecord: function (track) {
     var self = this;
+
+    // XXX HACK for windows, because we don't have any working releases
+    // in other tracks
+    if (process.platform === "win32") {
+      track = "WINDOWS-PREVIEW";
+    }
 
     if (!track)
       track = exports.DEFAULT_TRACK;
