@@ -589,7 +589,13 @@ files.extractTarGz = function (buffer, destPath) {
 
   var extractor = new tar.Extract({ path: convertToOSPath(tempDir) })
     .on('entry', function (e) {
-      e.path = files.adaptLegacyPath(e.path);
+      if (process.platform === "win32") {
+        // On Windows, try to convert old packages that have colons in paths
+        // by blindly replacing all of the paths. Otherwise, we can't exen
+        // extract the tarball
+        e.path = files.adaptLegacyPath(e.path);
+      }
+
       // Refuse to create a directory that isn't listable. Tarballs
       // created on Windows will have non-executable directories (since
       // executable isn't a thing in Windows directory permissions), and

@@ -8,6 +8,7 @@ var Isopack = require('./isopack.js').Isopack;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
+var colonConverter = require('./metadata-colon-converter.js');
 
 exports.Tropohouse = function (root) {
   var self = this;
@@ -33,6 +34,73 @@ var defaultWarehouseDir = function () {
 // The default tropohouse is on disk at defaultWarehouseDir(); you can make your
 // own Tropohouse to override these things.
 exports.default = new exports.Tropohouse(defaultWarehouseDir());
+
+/**
+ * Extract a package tarball, and on Windows convert file paths and metadata
+ * @param  {String} packageTarball path to tarball
+ * @return {String}                Temporary directory with contents of package
+ */
+exports._extractAndConvert = function (packageTarball) {
+  var targetDirectory = files.mkdtemp();
+  files.extractTarGz(packageTarball, targetDirectory);
+
+  if (process.platform === "win32") {
+    // Packages published before the Windows release might have colons or
+    // other unsavory characters in path names. In hopes of making most of
+    // these packages work on Windows, we will try to automatically convert
+    // them.
+    //
+    // At this location in the code, the metadata inside the isopack is
+    // inconsistent with the actual file paths, since we convert some file
+    // paths inside extractTarGz. Now we need to convert the metadata to match
+    // the files.
+
+    // Step 1. Load the metadata from isopack.json and convert colons in the
+    // file paths. We have already converted the colons in the actual files
+    // while untarring.
+    var metadata = Isopack.readMetadataFromDirectory(targetDirectory);
+    console.log(files.readdir(targetDirectory));
+    var convertedMetadata = colonConverter.convertIsopack(metadata);
+
+    // Step 2. Write the isopack.json file
+    var isopackFileData = {};
+    isopackFileData[Isopack.currentFormat] = convertedMetadata;
+
+    var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
+    files.chmod(isopackJsonPath, 0777);
+    files.writeFile(isopackJsonPath,
+      new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
+      {mode: 0444});
+
+    // Step 3. Clean up old unipackage.json file if it exists
+    files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
+
+    // Result: Now we are in a state where the isopack.json file paths are
+    // consistent with the paths in the downloaded tarball.
+
+    // Now, we have to convert the unibuild files in the same way.
+    _.each(metadata.builds, function (unibuildMeta) {
+      var unibuildJsonPath = files.pathJoin(targetDirectory, unibuildMeta.path);
+      var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
+
+      if (unibuildJson.format !== "unipackage-unibuild-pre1") {
+        throw new Error("Unsupported isopack unibuild format: " +
+          JSON.stringify(unibuildJson.format));
+      }
+
+      var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
+
+      files.chmod(unibuildJsonPath, 0777);
+      files.writeFile(unibuildJsonPath,
+        new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
+        {mode: 0444});
+      // Result: Now we are in a state where the unibuild file paths are
+      // consistent with the paths in the downloaded tarball.
+    });
+  }
+
+  return targetDirectory;
+};
 
 _.extend(exports.Tropohouse.prototype, {
   // Returns the load path where one can expect to find the package, at a given
@@ -166,14 +234,13 @@ _.extend(exports.Tropohouse.prototype, {
       return archinfo.mostSpecificMatch(requiredArch, downloaded.arches);
     });
   },
+
   // Contacts the package server, downloads and extracts a tarball for a given
   // buildRecord into a temporary directory, whose path is returned.
   //
   // XXX: Error handling.
   _downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
-    var targetDirectory = files.mkdtemp();
-
     var url = buildRecord.build.url;
 
     // XXX: We use one progress for download & untar; this isn't ideal:
@@ -186,61 +253,8 @@ _.extend(exports.Tropohouse.prototype, {
       progress: buildmessage.getCurrentProgressTracker(),
       wait: false
     });
-    files.extractTarGz(packageTarball, targetDirectory);
 
-    if (process.platform === "win32") {
-      // Packages published before the Windows release might have colons or
-      // other unsavory characters in path names. In hopes of making most of
-      // these packages work on Windows, we will try to automatically convert
-      // them.
-      //
-      // At this location in the code, the metadata inside the isopack is
-      // inconsistent with the actual file paths, since we convert some file
-      // paths inside extractTarGz. Now we need to convert the metadata to match
-      // the files.
-
-      // Step 1. Delete old metadata file unipackage.json
-      // XXX COMPAT WITH 0.9.3 packages
-      files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
-
-      // Step 2. Load the metadata from isopack.json and convert colons in the
-      // file paths. We have already converted the colons in the actual files
-      // while untarring.
-      var metadata = Isopack.readMetadataFromDirectory(targetDirectory);
-      var convertedMetadata = colonConverter.convertIsopack(metadata);
-
-      // Step 3. Write the isopack.json file
-      var isopackFileData = {};
-      isopackFileData[Isopack.currentFormat] = convertedMetadata;
-
-      files.writeFile(files.pathJoin(targetDirectory, "isopack.json"),
-        new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
-        {mode: 0444});
-
-      // Result: Now we are in a state where the isopack.json file paths are
-      // consistent with the paths in the downloaded tarball.
-
-      // Now, we have to convert the unibuild files in the same way.
-      _.each(metadata.builds, function (unibuildMeta) {
-        var unibuildJsonPath = files.pathJoin(dir, unibuildMeta.path);
-        var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
-
-        if (unibuildJson.format !== "unipackage-unibuild-pre1") {
-          throw new Error("Unsupported isopack unibuild format: " +
-            JSON.stringify(unibuildJson.format));
-        }
-
-        var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
-
-        files.writeFile(convertedUnibuild,
-          new Buffer(JSON.stringify(unibuildJson, null, 2), 'utf8'),
-          {mode: 0444});
-        // Result: Now we are in a state where the unibuild file paths are
-        // consistent with the paths in the downloaded tarball.
-      });
-    }
-
-    return targetDirectory;
+    return self._extractAndConvert(packageTarball);
   },
 
   // Given a package name and version, returns a survey of what we have
