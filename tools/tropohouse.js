@@ -38,13 +38,16 @@ exports.default = new exports.Tropohouse(defaultWarehouseDir());
 /**
  * Extract a package tarball, and on Windows convert file paths and metadata
  * @param  {String} packageTarball path to tarball
+ * @param {Boolean} forceConvert Convert paths even on unix, for testing
  * @return {String}                Temporary directory with contents of package
  */
-exports._extractAndConvert = function (packageTarball) {
+exports._extractAndConvert = function (packageTarball, forceConvert) {
   var targetDirectory = files.mkdtemp();
-  files.extractTarGz(packageTarball, targetDirectory);
+  files.extractTarGz(packageTarball, targetDirectory, {
+    forceConvert: forceConvert
+  });
 
-  if (process.platform === "win32") {
+  if (process.platform === "win32" || forceConvert) {
     // Packages published before the Windows release might have colons or
     // other unsavory characters in path names. In hopes of making most of
     // these packages work on Windows, we will try to automatically convert
@@ -59,7 +62,6 @@ exports._extractAndConvert = function (packageTarball) {
     // file paths. We have already converted the colons in the actual files
     // while untarring.
     var metadata = Isopack.readMetadataFromDirectory(targetDirectory);
-    console.log(files.readdir(targetDirectory));
     var convertedMetadata = colonConverter.convertIsopack(metadata);
 
     // Step 2. Write the isopack.json file
@@ -95,6 +97,26 @@ exports._extractAndConvert = function (packageTarball) {
         new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
         {mode: 0444});
       // Result: Now we are in a state where the unibuild file paths are
+      // consistent with the paths in the downloaded tarball.
+    });
+
+    // Lastly, convert the build plugins, which are in the JSImage format
+    _.each(metadata.plugins, function (pluginMeta) {
+      var programJsonPath = files.pathJoin(targetDirectory, pluginMeta.path);
+      var programJson = JSON.parse(files.readFile(programJsonPath));
+
+      if (programJson.format !== "javascript-image-pre1") {
+        throw new Error("Unsupported plugin format: " +
+          JSON.stringify(programJson.format));
+      }
+
+      var convertedPlugin = colonConverter.convertJSImage(programJson);
+
+      files.chmod(programJsonPath, 0777);
+      files.writeFile(programJsonPath,
+        new Buffer(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
+        {mode: 0444});
+      // Result: Now we are in a state where the build plugin file paths are
       // consistent with the paths in the downloaded tarball.
     });
   }

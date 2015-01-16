@@ -93,3 +93,23 @@ if (process.platform !== "win32") {
 // Tests step 3: check if old packages are converted properly to have no weird
 // paths for Windows
 
+selftest.define("package with colons is converted on Windows", function () {
+  // We have a built package tarball in the git repo
+  var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
+    "built-packages", "has-colons.tgz");
+
+  // Unpack it using our tropohouse code
+  var tarball = files.readFile(tarballPath);
+
+  // Force conversion of file paths with second argument
+  var targetDirectory = tropohouse._extractAndConvert(tarball, true);
+
+  // Uncomment below to check results
+  // console.log(utils.execFileSync("find", [targetDirectory], {
+  //   cwd: targetDirectory
+  // }).stdout);
+  
+  // Saved tree hash of the correct result
+  selftest.expectEqual(files.treeHash(targetDirectory),
+    "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=");
+});
