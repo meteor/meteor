@@ -250,12 +250,15 @@ files.statOrNull = function (path) {
   }
 };
 
-
 // Like rm -r.
 files.rm_recursive = function (p) {
-  var fut = new Future();
-  rimraf(convertToOSPath(p), { busyTries: 10 }, fut.resolver());
-  fut.wait();
+  if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
+    var fut = new Future();
+    rimraf(convertToOSPath(p), { busyTries: 10 }, fut.resolver());
+    fut.wait();
+  } else {
+    rimraf.sync(convertToOSPath(p));
+  }
 };
 
 // Makes all files in a tree read-only.
