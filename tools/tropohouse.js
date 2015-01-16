@@ -212,8 +212,10 @@ _.extend(exports.Tropohouse.prototype, {
       // Step 3. Write the isopack.json file
       var isopackFileData = {};
       isopackFileData[Isopack.currentFormat] = convertedMetadata;
+
       files.writeFile(files.pathJoin(targetDirectory, "isopack.json"),
-        isopackFileData);
+        new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
+        {mode: 0444});
 
       // Result: Now we are in a state where the isopack.json file paths are
       // consistent with the paths in the downloaded tarball.
