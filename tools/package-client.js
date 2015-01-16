@@ -1,15 +1,14 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
-var auth = require('./auth.js');
+var child_process = require("child_process");
+
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
-var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
-var packageVersionParser = require('./package-version-parser.js');
 var authClient = require('./auth-client.js');
 var catalog = require('./catalog.js');
 var projectContextModule = require('./project-context.js');
@@ -353,6 +352,28 @@ var bundleBuild = function (isopack) {
   isopack.saveToPath(tarInputDir);
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
+
+  if (process.platform !== "win32") {
+    // If we are on a unixy file system, we should not publish a package that
+    // can't be unpacked reliably on Windows.
+    var output = utils.execFileSync("bash", ["-c", "find . | grep ':'"],
+      {cwd: tarInputDir});
+
+    if (output.success) {
+      var lines = output.stdout.split("\n");
+
+      var firstTen = lines.slice(0, 10);
+      if (lines.length > 10) {
+        firstTen.push("... " + (lines.length - 10) + " paths omitted.");
+      }
+
+      buildmessage.error(
+"Some filenames in your package have invalid characters.\n" +
+"The following file paths have colons, ':', which won't work on Windows:\n" +
+firstTen.join("\n"));
+    }
+  }
+
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
@@ -702,6 +723,12 @@ exports.publishPackage = function (options) {
       return;
     }
 
+    if (! options.doNotPublishBuild) {
+      createAndPublishBuiltPackage(conn, isopack);
+      if (buildmessage.jobHasMessages())
+        return;
+    }
+
     // XXX check that we're actually providing something new?
   } else {
     var uploadInfo;
@@ -742,6 +769,12 @@ exports.publishPackage = function (options) {
     if (buildmessage.jobHasMessages())
       return;
 
+    if (! options.doNotPublishBuild) {
+      createAndPublishBuiltPackage(conn, isopack);
+      if (buildmessage.jobHasMessages())
+        return;
+    }
+
     var hashes = {
       tarballHash: sourceBundleResult.tarballHash,
       treeHash: sourceBundleResult.treeHash,
@@ -751,11 +784,6 @@ exports.publishPackage = function (options) {
       callPackageServerBM(
         conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);
     });
-    if (buildmessage.jobHasMessages())
-      return;
-  }
-  if (! options.doNotPublishBuild) {
-    createAndPublishBuiltPackage(conn, isopack);
     if (buildmessage.jobHasMessages())
       return;
   }
