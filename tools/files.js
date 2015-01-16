@@ -573,7 +573,7 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
 // the archive should contain a single top-level directory, which will
 // be renamed atomically to destPath. The entire tree will be made
 // readonly.
-files.extractTarGz = function (buffer, destPath) {
+files.extractTarGz = function (buffer, destPath, options) {
   var parentDir = files.pathDirname(destPath);
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
@@ -589,7 +589,7 @@ files.extractTarGz = function (buffer, destPath) {
 
   var extractor = new tar.Extract({ path: convertToOSPath(tempDir) })
     .on('entry', function (e) {
-      if (process.platform === "win32") {
+      if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in paths
         // by blindly replacing all of the paths. Otherwise, we can't exen
         // extract the tarball
