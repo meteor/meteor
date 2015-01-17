@@ -8,7 +8,7 @@ and manipulate "Views," the building blocks of reactive templates.
 
 {{> autoApiBox "Blaze.render"}}
 
-When you render a template, the template's callbacks added with
+When you render a template, the callbacks added with
 [`onCreated`](#template_onCreated) are invoked immediately, before evaluating
 the content of the template.  The callbacks added with
 [`onRendered`](#template_onRendered) are invoked after the View is rendered and

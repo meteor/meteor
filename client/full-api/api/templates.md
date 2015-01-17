@@ -67,13 +67,9 @@ instance](#template_inst) object. Properties you set on this object will be
 visible from the callbacks added with `onRendered` and `onDestroyed` methods and
 from event handlers.
 
-These callbacks fire once and are the first group of callbacks to fire. Every
-`created` callbacks group has a corresponding `destroyed` group; that is, if you
-get a `created` event with a certain template instance object in `this`, you
-will eventually get a `destroyed` event for the same object.
-
-Handling `created` event is a useful way to set up values on template instance
-that are read from template helpers using `Template.instance()`.
+These callbacks fire once and are the first group of callbacks to fire.
+Handling the `created` event is a useful way to set up values on template
+instance that are read from template helpers using `Template.instance()`.
 
 {{> autoApiBox "Template#onDestroyed"}}
 
