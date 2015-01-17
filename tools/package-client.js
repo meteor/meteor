@@ -399,7 +399,7 @@ firstTen.join("\n"));
 
 exports.bundleBuild = bundleBuild;
 
-var createAndPublishBuiltPackage = function (conn, isopack) {
+var createBuiltPackage = function (conn, isopack) {
   buildmessage.assertInJob();
   var name = isopack.name;
 
@@ -411,6 +411,13 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
   });
   if (buildmessage.jobHasMessages())
     return;
+
+  return bundleResult;
+};
+
+var publishBuiltPackage = function (conn, isopack, bundleResult) {
+  buildmessage.assertInJob();
+  var name = isopack.name;
 
   var uploadInfo;
   buildmessage.enterJob('creating package build for ' + name, function () {
@@ -438,6 +445,10 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
   });
   if (buildmessage.jobHasMessages())
     return;
+};
+
+var createAndPublishBuiltPackage = function (conn, isopack) {
+  publishBuiltPackage(conn, isopack, createBuiltPackage(conn, isopack));
 };
 
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
@@ -770,7 +781,7 @@ exports.publishPackage = function (options) {
       return;
 
     if (! options.doNotPublishBuild) {
-      createAndPublishBuiltPackage(conn, isopack);
+      var bundleResult = createBuiltPackage(conn, isopack);
       if (buildmessage.jobHasMessages())
         return;
     }
@@ -786,6 +797,12 @@ exports.publishPackage = function (options) {
     });
     if (buildmessage.jobHasMessages())
       return;
+
+    if (! options.doNotPublishBuild) {
+      publishBuiltPackage(conn, isopack, bundleResult);
+      if (buildmessage.jobHasMessages())
+        return;
+    }
   }
 
   return;
