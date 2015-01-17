@@ -1,7 +1,7 @@
 {
  "track": "WINDOWS-PREVIEW",
- "version": "0.0.37",
+ "version": "0.0.38",
  "recommended": false,
  "official": false,
- "description": "An RC of Meteor 1.0.3"
+ "description": "Preview of Meteor on Windows."
 }
