@@ -215,12 +215,12 @@ for details.
 The functions added with this method are called once for every instance of
 *Template.myTemplate* when it is inserted into the page for the first time.
 
-These _rendered_ callbacks can be used to integrate external libraries that
+These callbacks can be used to integrate external libraries that
 aren't familiar with Meteor's automatic view rendering, and need to be
-initialized every time HTML is inserted into the page. Use the callbacks added
-with [`onCreated`](#template_oncreated) and
-[`onDestroyed`](#template_ondestroyed) to perform initialization or clean-up on
-any objects.
+initialized every time HTML is inserted into the page.
+You can perform initialization or clean-up on any objects in
+[`onCreated`](#template_oncreated) and [`onDestroyed`](#template_ondestroyed)
+callbacks.
 
 For example, to use the HighlightJS library to apply code highlighting to
 all `<pre>` elements inside the `codeSample` template, you might assign
