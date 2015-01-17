@@ -404,6 +404,7 @@ main.registerCommand({
   name: 'create',
   maxArgs: 1,
   options: {
+    clientserver: { type: Boolean },
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean }

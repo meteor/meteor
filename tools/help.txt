@@ -109,6 +109,7 @@ Options:
   --package  Create a new meteor package instead of an app.
   --example  Example template to use.
   --list     Show list of available examples.
+  --clientserver Create new meteor app using client/server folder structure
 
 
 >>> update
