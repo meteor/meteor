@@ -6,7 +6,7 @@ var firstRender = true;
 var listRenderHold = LaunchScreen.hold();
 listFadeInHold = null;
 
-Template.listsShow.rendered = function() {
+Template.listsShow.onRendered(function() {
   if (firstRender) {
     // Released in app-body.js
     listFadeInHold = LaunchScreen.hold();
@@ -30,7 +30,7 @@ Template.listsShow.rendered = function() {
       });
     }
   };
-};
+});
 
 Template.listsShow.helpers({
   editing: function() {

@@ -32,7 +32,7 @@ Meteor.startup(function () {
   }, CONNECTION_ISSUE_TIMEOUT);
 });
 
-Template.appBody.rendered = function() {
+Template.appBody.onRendered(function() {
   this.find('#content-container')._uihooks = {
     insertElement: function(node, next) {
       $(node)
@@ -48,7 +48,7 @@ Template.appBody.rendered = function() {
       });
     }
   };
-};
+});
 
 Template.appBody.helpers({
   // We use #each on an array of one item so that the "list" template is

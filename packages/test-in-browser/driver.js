@@ -339,7 +339,7 @@ Template.groupNav.events({
   }
 });
 
-Template.groupNav.rendered = function () {
+Template.groupNav.onRendered(function () {
   Tinytest._onCurrentClientTest = function (name) {
     name = (name ? 'C: '+name : '');
     // Set the DOM directly so that it's immediate and we
@@ -350,7 +350,7 @@ Template.groupNav.rendered = function () {
       span.appendChild(document.createTextNode(name));
     }
   };
-};
+});
 
 
 //// Template - failedTests

@@ -1,8 +1,8 @@
 var ERRORS_KEY = 'signinErrors';
 
-Template.signin.created = function() {
+Template.signin.onCreated(function() {
   Session.set(ERRORS_KEY, {});
-};
+});
 
 Template.signin.helpers({
   errorMessages: function() {

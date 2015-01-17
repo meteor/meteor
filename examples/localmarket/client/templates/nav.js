@@ -1,4 +1,4 @@
-Template.nav.rendered = function() {
+Template.nav.onRendered(function() {
   var $nav = this.$('nav');
   $nav.siblings('.content-scrollable:not(.static-nav)').children().first().waypoint(function(direction) {
     $nav.toggleClass('scrolled', direction === 'down');
@@ -6,7 +6,7 @@ Template.nav.rendered = function() {
     context: '.content-scrollable',
     offset: -200
   });
-}
+});
 
 Template.nav.helpers({
   // Iron Router stores {initial: true} in history state if this is

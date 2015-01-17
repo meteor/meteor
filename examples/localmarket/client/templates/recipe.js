@@ -1,13 +1,13 @@
 var TAB_KEY = 'recipeShowTab';
 
-Template.recipe.created = function() {
+Template.recipe.onCreated(function() {
   if (Router.current().params.activityId)
     Template.recipe.setTab('feed');
   else
     Template.recipe.setTab('recipe');
-}
+});
 
-Template.recipe.rendered = function () {
+Template.recipe.onRendered(function () {
   this.$('.recipe').touchwipe({
     wipeDown: function () {
       if (Session.equals(TAB_KEY, 'recipe'))
@@ -22,7 +22,7 @@ Template.recipe.rendered = function () {
     },
     preventDefaultEvents: false
   });
-}
+});
 
 // CSS transitions can't tell the difference between e.g. reaching
 //   the "make" tab from the expanded state or the "feed" tab

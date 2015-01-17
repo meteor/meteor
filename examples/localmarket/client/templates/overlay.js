@@ -24,31 +24,31 @@ Overlay = {
   }
 }
 
-Template.overlay.rendered = function() {
+Template.overlay.onRendered(function() {
   this.find('#overlay-hook')._uihooks = {
     insertElement: function(node, next, done) {
       var $node = $(node);
 
       $node
-        .hide()
-        .insertBefore(next)
-        .velocity('fadeIn', {
-          duration: ANIMATION_DURATION
-        });
+      .hide()
+      .insertBefore(next)
+      .velocity('fadeIn', {
+        duration: ANIMATION_DURATION
+      });
     },
     removeElement: function(node, done) {
       var $node = $(node);
 
       $node
-        .velocity("fadeOut", {
-          duration: ANIMATION_DURATION,
-          complete: function() {
-            $node.remove();
-          }
-        });
+      .velocity("fadeOut", {
+        duration: ANIMATION_DURATION,
+        complete: function() {
+          $node.remove();
+        }
+      });
     }
   }
-}
+});
 
 Template.overlay.helpers({
   template: function() {
