@@ -562,6 +562,19 @@ main.registerCommand({
         ignore: [/^local$/, /^\.id$/]
       });
     }
+  } else if (options.clientserver) {
+    files.cp_r(path.join(__dirname, 'skel-clientserver'), appPath, {
+      transformFilename: function (f) {
+        return transform(f);
+      },
+      transformContents: function (contents, f) {
+        if ((/(\.html|\.js|\.css)/).test(f))
+          return new Buffer(transform(contents.toString()));
+        else
+          return contents;
+      },
+      ignore: [/^local$/, /^\.id$/]
+    });
   } else {
     files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
       transformFilename: function (f) {
