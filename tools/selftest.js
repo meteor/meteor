@@ -1691,7 +1691,7 @@ var runTests = function (options) {
 
   _.each(testList.filteredTests, function (test) {
     totalRun++;
-    process.stderr.write(test.file + ": " + test.name + " ... ");
+    Console.error(test.file + ": " + test.name + " ... ");
 
     var failure = null;
     try {
@@ -1711,7 +1711,7 @@ var runTests = function (options) {
     }
 
     if (failure) {
-      Console.error("fail!");
+      Console.error("... fail!", Console.options({ indent: 2 }));
       failedTests.push(test);
       testList.notifyFailed(test);
 
@@ -1764,7 +1764,9 @@ var runTests = function (options) {
       }
     } else {
       var durationMs = +(new Date) - startTime;
-      Console.error("ok (" + durationMs + " ms)");
+      Console.error(
+        "... ok (" + durationMs + " ms)",
+        Console.options({ indent: 2 }));
     }
   });
 
