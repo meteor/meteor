@@ -10,12 +10,11 @@ _.each(packageNames, function (name) {
 
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 
-  match = content.match(/\d+\.\d+\.\d+-rc\.\d+/);
+  match = content.match(/\d+\.\d+\.\d+-winr\.\d+/);
   if (match) {
     var versionNumber = match[0];
     var s = versionNumber.split(".");
-    s[2] = s[2].split("-")[0];
-    s = s.slice(0, 3);
+    s[4] = (parseInt(s[4], 10) + 1);
     var incremented = s.join(".");
 
     content = content.replace(versionNumber, incremented);
