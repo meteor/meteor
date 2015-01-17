@@ -22,7 +22,7 @@ Package.onUse(function (api) {
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'renderToDiv',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
-    'makeTestConnection', 'DomUtils'], {testOnly: true});
+    'makeTestConnection', 'DomUtils']);
 
   api.addFiles('try_all_permutations.js');
   api.addFiles('async_multi.js');
