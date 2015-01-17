@@ -276,7 +276,7 @@ _.extend(exports.Tropohouse.prototype, {
       wait: false
     });
 
-    return self._extractAndConvert(packageTarball);
+    return exports._extractAndConvert(packageTarball);
   },
 
   // Given a package name and version, returns a survey of what we have
