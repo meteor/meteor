@@ -81,7 +81,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
     // consistent with the paths in the downloaded tarball.
 
     // Now, we have to convert the unibuild files in the same way.
-    _.each(metadata.builds, function (unibuildMeta) {
+    _.each(convertedMetadata.builds, function (unibuildMeta) {
       var unibuildJsonPath = files.pathJoin(targetDirectory, unibuildMeta.path);
       var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
 
@@ -101,7 +101,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
     });
 
     // Lastly, convert the build plugins, which are in the JSImage format
-    _.each(metadata.plugins, function (pluginMeta) {
+    _.each(convertedMetadata.plugins, function (pluginMeta) {
       var programJsonPath = files.pathJoin(targetDirectory, pluginMeta.path);
       var programJson = JSON.parse(files.readFile(programJsonPath));
 
