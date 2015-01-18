@@ -174,7 +174,7 @@ html_scanner = {
         if (hasAttribs) {
           for(var attr in attribs) {
             if (this.bodyAttributes.indexOf(attr) !== -1) {
-              console.log('WARNING: tag ' + attr + ' already defined on body.');
+              throwParseError('Tag ' + attr + ' already defined on body.');
             }
             this.bodyAttributes.push(attr);
           }
