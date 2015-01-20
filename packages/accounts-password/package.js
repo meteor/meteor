@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.0.6-winr.4"
+  version: "1.0.6-winr.5"
 });
 
 Package.onUse(function(api) {

@@ -19,6 +19,6 @@ _.each(packageNames, function (name) {
 
     content = content.replace(versionNumber, incremented);
     console.log(match[0], match[1], incremented);
-    //fs.writeFileSync(name, content);
+    fs.writeFileSync(name, content);
   }
 });

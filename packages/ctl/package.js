@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Default control program for an application",
-  version: "1.0.4-winr.1"
+  version: "1.0.4-winr.2"
 });
 
 Package.onUse(function (api) {
