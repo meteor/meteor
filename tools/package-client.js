@@ -509,13 +509,6 @@ exports.updatePackageMetadata = function (options) {
     buildmessage.error("Summary must be under 100 chars.");
     return;
   }
-  if (dataToUpdate["longDescription"].length > 1500) {
-    buildmessage.error(
-      "Longform package description is too long. Meteor uses the section of",
-      "the Markdown documentation file between the first and second",
-      "headings. That section must be less than 1500 characters long.");
-    return;
-  }
 
   // Update the general metadata.
   var versionIdentifier = { packageName: name, version: version };
@@ -627,13 +620,6 @@ exports.publishPackage = function (options) {
       "Your documentation file is blank, so users may have trouble figuring " +
       "out how to use your package. Please fill it out, or " +
       "set 'documentation: null' in your Package.describe");
-    return;
-  }
-  if (readmeInfo && readmeInfo.excerpt.length > 1500) {
-    buildmessage.error(
-      "Longform package description is too long. Meteor uses the section of",
-      "the Markdown documentation file between the first and second",
-      "headings. That section must be less than 1500 characters long.");
     return;
   }
 
