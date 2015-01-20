@@ -17,8 +17,9 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DIRNAME=$(s3cmd ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(installer-windows-.+-.+-.+--'$1'--.+)/!')
-RELEASE=$(echo $DIRNAME | perl -pe 's/^installer-windows-([^-]+)-.*$/$1/')
+# installer-windows--${METEOR_RELEASE}--${BUILD_ID}--${BUILD_NUMBER}--${GIT_COMMIT}
+DIRNAME=$(s3cmd ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(installer-windows--.+--.+--'$1'--.+)/!')
+RELEASE=$(echo $DIRNAME | perl -pe 's/^installer-windows--(.+)--.+--.+--.+$/$1/')
 
 if [ -z "$DIRNAME" ]; then
     echo "build not found" 1>&2
