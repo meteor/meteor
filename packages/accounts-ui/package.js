@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Simple templates to add login widgets to an app",
-  version: "1.1.5-winr.2"
+  version: "1.1.5-winr.2",
+  documentation: null // XXX DON"T MERGE THIS
 });
 
 Package.onUse(function (api) {
