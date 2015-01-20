@@ -388,13 +388,21 @@ files.mkdir_p = function (dir, mode) {
   // parent is not a directory.
   if (!success) { return false; }
 
-  files.mkdir(p, mode);
+  var checkDirectoryExists = function (path) {
+    return files.exists(path) && files.stat(path).isDirectory();
+  };
+
+  try {
+    files.mkdir(p, mode);
+  } catch (err) {
+    if (err.code !== "EEXIST") {
+      throw err;
+    }
+    return checkDirectoryExists(p);
+  }
 
   // double check we exist now
-  if (!files.exists(p) ||
-      !files.stat(p).isDirectory())
-    return false; // wtf
-  return true;
+  return checkDirectoryExists(p);
 };
 
 // Roughly like cp -R. 'from' should be a directory. 'to' can either
