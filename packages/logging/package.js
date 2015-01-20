@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.0.6-winr.1'
+  version: '1.0.6-winr.1',
+  documentation: null
 });
 
 Npm.depends({
