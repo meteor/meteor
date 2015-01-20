@@ -378,9 +378,9 @@ files.mkdir_p = function (dir, mode) {
   var p = path.resolve(dir);
   var ps = path.normalize(p).split(path.sep);
 
-  if (files.exists(p)) {
-    if (files.stat(p).isDirectory()) { return true;}
-    return false;
+  var stat = files.statOrNull(p);
+  if (stat) {
+    return stat.isDirectory();
   }
 
   // doesn't exist. recurse to build parent.
@@ -388,8 +388,9 @@ files.mkdir_p = function (dir, mode) {
   // parent is not a directory.
   if (!success) { return false; }
 
-  var checkDirectoryExists = function (path) {
-    return files.exists(path) && files.stat(path).isDirectory();
+  var pathIsDirectory = function (path) {
+    var stat = files.statOrNull(path);
+    return stat && stat.isDirectory();
   };
 
   try {
@@ -398,11 +399,11 @@ files.mkdir_p = function (dir, mode) {
     if (err.code !== "EEXIST") {
       throw err;
     }
-    return checkDirectoryExists(p);
+    return pathIsDirectory(p);
   }
 
   // double check we exist now
-  return checkDirectoryExists(p);
+  return pathIsDirectory(p);
 };
 
 // Roughly like cp -R. 'from' should be a directory. 'to' can either
