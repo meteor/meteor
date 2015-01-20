@@ -1,7 +1,6 @@
 Package.describe({
   summary: "Login service for Sina Weibo accounts",
-  version: "1.0.4-winr.2",
-  documentation: null // XXX REMOVE
+  version: "1.0.4-winr.2"
 });
 
 Package.onUse(function(api) {
