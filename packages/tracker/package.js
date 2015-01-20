@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.0.5-winr.3'
+  version: '1.0.5-winr.4
 });
 
 Package.onUse(function (api) {
