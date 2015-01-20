@@ -871,23 +871,24 @@ main.registerCommand({
           // Include this package in our release.
           relConf.packages[packageName] = packageSource.version;
 
+          // We are going to check if we are publishing an official
+          // release. If this is an experimental or pre-release, then we are
+          // not ready to commit to these package semver versions either. Any
+          // packages that we should publish as part of this release should
+          // have a -(something) at the end.
+          var newVersion = packageSource.version;
+          if (! relConf.official && newVersion.split("-").length < 2) {
+            buildmessage.error(
+              "It looks like you are building an experimental release or " +
+                "pre-release. Any packages we publish here should have an " +
+                "pre-release identifier at the end (eg, 1.0.0-dev). If " +
+                "this is an official release, please set official to true " +
+                "in the release configuration file.");
+            return;
+          }
+
           // If there is no old version, then we need to publish this package.
           if (! oldVersionRecord) {
-            // We are going to check if we are publishing an official
-            // release. If this is an experimental or pre-release, then we are
-            // not ready to commit to these package semver versions either. Any
-            // packages that we should publish as part of this release should
-            // have a -(something) at the end.
-            var newVersion = packageSource.version;
-            if (! relConf.official && newVersion.split("-").length < 2) {
-              buildmessage.error(
-                "It looks like you are building an experimental release or " +
-                  "pre-release. Any packages we publish here should have an " +
-                  "pre-release identifier at the end (eg, 1.0.0-dev). If " +
-                  "this is an official release, please set official to true " +
-                  "in the release configuration file.");
-              return;
-            }
             toPublish.push(packageName);
             Console.info("Will publish new version for " + packageName);
             return;
