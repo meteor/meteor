@@ -435,12 +435,12 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
+    var fsName = colonConverter.convert(packageName);
     var packageDir;
     if (options.appDir) {
-      packageDir = files.pathResolve(options.appDir, 'packages',
-        colonConverter.convert(packageName));
+      packageDir = files.pathResolve(options.appDir, 'packages', fsName);
     } else {
-      packageDir = files.pathResolve(colonConverter.convert(packageName));
+      packageDir = files.pathResolve(fsName);
     }
 
     var inYourApp = options.appDir ? " in your app" : "";
@@ -451,7 +451,8 @@ main.registerCommand({
     }
 
     var transform = function (x) {
-      var xn = x.replace(/~name~/g, packageName);
+      var xn =
+        x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
       // If we are running from checkout, comment out the line sourcing packages
       // from a release, with the latest release filled in (in case they do want
@@ -489,7 +490,10 @@ main.registerCommand({
      return 1;
    }
 
-    Console.info(packageName + ": created" + inYourApp);
+    Console.info(packageName + ": created" + inYourApp + "\n");
+    Console.info("To publish your new package:");
+    Console.info("  cd " + files.pathRelative(files.cwd(), packageDir));
+    Console.info("  meteor publish --create");
     return 0;
   }
 

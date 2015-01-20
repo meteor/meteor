@@ -12,11 +12,11 @@ Package.describe({
 
 Package.onUse(function(api) {
 ~cc~  api.versionsFrom('~release~');
-  api.addFiles('~name~.js');
+  api.addFiles('~fs-name~.js');
 });
 
 Package.onTest(function(api) {
   api.use('tinytest');
-  api.use('~name~');
-  api.addFiles('~name~-tests.js');
+  api.use('~fs-name~');
+  api.addFiles('~fs-name~-tests.js');
 });

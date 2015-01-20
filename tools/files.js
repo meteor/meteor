@@ -50,7 +50,7 @@ sourcemap_support.install({
 // the test or null for none found. if starting path isn't given, use
 // cwd.
 var findUpwards = function (predicate, startPath) {
-  var testDir = startPath || process.cwd();
+  var testDir = startPath || files.cwd();
   while (testDir) {
     if (predicate(testDir)) {
       break;
@@ -66,6 +66,10 @@ var findUpwards = function (predicate, startPath) {
     return null;
 
   return testDir;
+};
+
+files.cwd = function () {
+  return files.convertToStandardLineEndings(process.cwd());
 };
 
 // Determine if 'filepath' (a path, or omit for cwd) is within an app
