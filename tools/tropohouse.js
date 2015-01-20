@@ -390,7 +390,7 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
-    var packageLinkFile = self.packagePath(packageName, version);
+    var packagePath = self.packagePath(packageName, version);
     var download = function download () {
       buildmessage.assertInCapture();
 
@@ -413,9 +413,8 @@ _.extend(exports.Tropohouse.prototype, {
         } else {
           // On posix, we have a symlink structure. Get the target of the
           // symlink so that we can delete it later.
-          var packageLinkFile = self.packagePath(packageName, version);
           try {
-            packageLinkTarget = files.readlink(packageLinkFile);
+            packageLinkTarget = files.readlink(packagePath);
           } catch (e) {
             // Complain about anything other than "we don't have it at all". This
             // includes "not a symlink": The main reason this would not be a symlink
