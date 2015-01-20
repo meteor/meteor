@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Small library for expressing HTML trees",
-  version: '1.0.4-winr.2
+  version: '1.0.4-winr.1'
 });
 
 Package.onUse(function (api) {
