@@ -108,7 +108,7 @@ selftest.define("package with colons is converted on Windows", function () {
   // console.log(utils.execFileSync("find", [targetDirectory], {
   //   cwd: targetDirectory
   // }).stdout);
-  
+
   // Saved tree hash of the correct result
   selftest.expectEqual(files.treeHash(targetDirectory),
     "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=");

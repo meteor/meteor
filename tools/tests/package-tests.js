@@ -857,13 +857,15 @@ selftest.define("add package with no builds", ["net"], function () {
 
 selftest.define("package skeleton creates correct versionsFrom", function () {
   var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
-  var fullPackageName = "test:" + utils.randomToken();
+  var token = utils.randomToken();
+  var fullPackageName = "test:" + token;
+  var fsPackageName = "test_" + token;
 
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
   run.expectExit(0);
 
-  s.cd(fullPackageName);
+  s.cd(fsPackageName);
   var packageJs = s.read("package.js");
   if (! packageJs.match(/api.versionsFrom\('v1'\);/)) {
     selftest.fail("package.js missing correct 'api.versionsFrom':\n" +
