@@ -1,28 +1,28 @@
-## v.NEXT
+## v.1.0.3, 2015-Jan-20
 
-* fix inaccurate session statistics and possible multiple invocation of
-  Connection.onClose callbacks
+* Rewrite `meteor show` and `meteor search` to show package information for
+  local packages and to show if the package is installed for non-local
+  packages. Introduce the `--show-all` flag, and deprecate the
+  `--show-unmigrated` and `--show-old flags`.  Introduce the `--ejson` flag to
+  output an EJSON object.
 
-* meteor show and search: replace '--show-unmigrated' and '--show-old' flags
-  with a simple '--show-all' flag. Introduce the --ejson flag.
+* Support README.md files in`meteor publish`. Take in the documentation file in
+  `package.js` (set to `README.md` by default) and upload it to the server at
+  publication time. Excerpt the first non-header Markdown section for use in
+  `meteor show`.
 
-* meteor show and search to show local package information.
+* Support updates of package version metadata after that version has been
+  published by running `meteor publish --update` from the package directory.
 
-* meteor show to indicate if the isopack has been downloaded and can now be used
-  offline.
+* Add `meteor test-packages --velocity` (similar to `meteor run --test`).  #3330
 
-* meteor publish to take a documentation file, set to README.md by default and
-  changeable with the 'documentation' option in Package.describe. Excerpt the
-  first non-header Markdown section as the longform description for use in
-  'meteor show'.
-
-* meteor publish --update from a package directory: update the
-  metadata for a previously published version
-
-* `meteor update foo` should update foo even if it's an indirect dependency of
-  your app.  #3282
+* Fix `meteor update <packageName>` to update <packageName> even if it's an
+  indirect dependency of your app.  #3282
 
 * Fix stack trace when a browser tries to use the server like a proxy.  #1212
+
+* Fix inaccurate session statistics and possible multiple invocation of
+  Connection.onClose callbacks.
 
 * Switch CLI tool filesystem calls from synchronous to yielding (pro: more
   concurrency, more responsive to signals; con: could introduce concurrency
@@ -31,13 +31,11 @@
 * Don't apply CDN prefix on Cordova. #3278 #3311
 
 * Don't try to refresh client app in the runner unless the app actually has the
-autoupdate package. #3365
+  autoupdate package. #3365
 
 * Fix custom release banner logic. #3353
 
-* Add `meteor test-packages --velocity` (similar to `meteor run --test).  #3330
-
-* HTTP followRedirects option should also apply to non-GET requests.  #2808
+* Apply HTTP followRedirects option to non-GET requests.  #2808
 
 * Clean up temporary directories used by package downloads sooner.  #3324
 
@@ -45,7 +43,7 @@ autoupdate package. #3365
   of its tool for the platform, refresh the catalog rather than failing
   immediately.  #3317
 
-* `meteor --get-ready` shouldn't add packages to your app.
+* Fix `meteor --get-ready` to not add packages to your app.
 
 * Fix some corner cases in cleaning up app processes in the runner. Drop
   undocumented `--keepalive` support. #3315
@@ -58,8 +56,13 @@ autoupdate package. #3365
 
 * Correctly catch a case of illegal `Tracker.flush` during `Tracker.autorun`.  #3037
 
-* Upgraded dependencies:
+* Upgraded dependencies
+
   - jquery: 1.11.2 (from 1.11.0)
+
+Patches by GitHub users DanielDent, DanielDornhardt, PooMaster, Primigenus,
+Tarang, TomFreudenberg, adnissen, dandv, fay-jai, knownasilya, mquandalle,
+ogourment, restebanez, rissem, smallhelm and tmeasday.
 
 ## v1.0.2.1, 2014-Dec-22
 
