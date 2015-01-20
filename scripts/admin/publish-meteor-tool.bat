@@ -2,9 +2,9 @@ REM This file is copied line by line by the publish-meteor-tool-on-arch.sh scrip
 IF EXIST C:\tmp ( rmdir /s /q C:\tmp )
 md C:\tmp
 cd C:\tmp
-C:\git\bin\git.exe config --global core.autocrlf input
 C:\git\bin\git.exe clone https://github.com/meteor/meteor.git
 cd meteor
+C:\git\bin\git.exe config core.autocrlf input
 C:\git\bin\git.exe fetch --tags
 C:\git\bin\git.exe checkout $GITSHA
 cd C:\tmp\meteor\packages\meteor-tool
