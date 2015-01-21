@@ -7,12 +7,12 @@ var httpHelpers = require('../http-helpers.js');
 
 // Poll the given app looking for the correct settings. Throws an error
 // if the settings aren't found after a timeout.
-var checkForSettings = function (appName, settings, timeoutSecs) {
-  var timer = setTimeout(function () {
-    throw new Error('Expected settings not found on app ', appName);
-  }, timeoutSecs * 1000);
+var checkForSettings = selftest.markStack(function (appName, settings, timeoutSecs) {
+  var timer = setTimeout(selftest.markStack(function () {
+    selftest.fail('Expected settings not found on app ' + appName);
+  }), timeoutSecs * 1000);
   while (true) {
-    var result = httpHelpers.request('http://' + appName + '.meteor.com');
+    var result = httpHelpers.request('http://' + appName);
 
     // XXX This is brittle; the test will break if we start formatting the
     // __meteor_runtime_config__ JS differently. Ideally we'd do something
@@ -29,7 +29,7 @@ var checkForSettings = function (appName, settings, timeoutSecs) {
       }
     }
   }
-};
+});
 
 selftest.define('deploy - with settings', ['net', 'slow'], function () {
   var s = new Sandbox;

@@ -1,41 +1,63 @@
 var _ = require('underscore');
-var path = require('path');
-var fs = require('fs');
 var assert = require('assert');
 var Future = require('fibers/future');
 var files = require('../../files.js');
 var bundler = require('../../bundler.js');
-var unipackage = require('../../unipackage.js');
+var isopackets = require("../../isopackets.js");
 var release = require('../../release.js');
-
-var appWithPublic = path.join(__dirname, 'app-with-public');
-var appWithPrivate = path.join(__dirname, 'app-with-private');
+var catalog = require('../../catalog.js');
+var buildmessage = require('../../buildmessage.js');
+var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-assets");
+  files.cp_r(files.pathJoin(__dirname, appName), projectDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: projectDir
+  });
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return projectContext;
+};
+
+var doOrThrow = function (f) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+  return ret;
+};
+
 // These tests make some assumptions about the structure of stars: that there
 // are client and server programs inside programs/.
 
 var runTest = function () {
+  // As preparation, we need to initialize the official catalog, which serves
+  // as our sql data store.
+  catalog.official.initialize();
+
   console.log("Bundle app with public/ directory");
   assert.doesNotThrow(function () {
+    var projectContext = makeProjectContext("app-with-public");
+
     var tmpOutputDir = tmpDir();
-
-    // XXX This (and other calls to this function in the file) is
-    // pretty terrible. see release.js, #HandlePackageDirsDifferently
-    release._resetPackageDirs();
-
     var result = bundler.bundle({
-      appDir: appWithPublic,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
-    })
+      projectContext: projectContext,
+      outputPath: tmpOutputDir
+    });
     var clientManifest = JSON.parse(
-      fs.readFileSync(
-        path.join(tmpOutputDir, "programs", "client", "program.json")
+      files.readFile(
+        files.pathJoin(tmpOutputDir, "programs", "web.browser", "program.json")
       )
     );
 
@@ -46,29 +68,27 @@ var runTest = function () {
         return m.url === file[0];
       });
       assert(manifestItem);
-      var diskPath = path.join(tmpOutputDir, "programs", "client",
+      var diskPath = files.pathJoin(tmpOutputDir, "programs", "web.browser",
                                manifestItem.path);
-      assert(fs.existsSync(diskPath));
-      assert.strictEqual(fs.readFileSync(diskPath, "utf8"), file[1]);
+      assert(files.exists(diskPath));
+      assert.strictEqual(files.readFile(diskPath, "utf8"), file[1]);
     });
   });
 
   console.log("Bundle app with private/ directory and package asset");
   assert.doesNotThrow(function () {
-    // Make sure we rebuild this app package.
-    files.rm_recursive(
-      path.join(appWithPrivate, "packages", "test-package", ".build"));
+    var projectContext = makeProjectContext("app-with-private");
 
     var tmpOutputDir = tmpDir();
-    release._resetPackageDirs([ path.join(appWithPrivate, "packages") ]);
+
     var result = bundler.bundle({
-      appDir: appWithPrivate,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip'
-    })
+      projectContext: projectContext,
+      outputPath: tmpOutputDir
+    });
+
     var serverManifest = JSON.parse(
-      fs.readFileSync(
-        path.join(tmpOutputDir, "programs", "server",
+      files.readFile(
+        files.pathJoin(tmpOutputDir, "programs", "server",
                   "program.json")
       )
     );
@@ -78,28 +98,28 @@ var runTest = function () {
     var unregisteredExtensionPath;
     _.each(serverManifest.load, function (item) {
       if (item.path === "packages/test-package.js") {
-        packageTxtPath = path.join(
+        packageTxtPath = files.pathJoin(
           tmpOutputDir, "programs", "server", item.assets['test-package.txt']);
-        unregisteredExtensionPath = path.join(
+        unregisteredExtensionPath = files.pathJoin(
           tmpOutputDir, "programs", "server", item.assets["test.notregistered"]);
       }
       if (item.path === "app/test.js") {
-        testTxtPath = path.join(
+        testTxtPath = files.pathJoin(
           tmpOutputDir, "programs", "server", item.assets['test.txt']);
-        nestedTxtPath = path.join(
+        nestedTxtPath = files.pathJoin(
           tmpOutputDir, "programs", "server", item.assets["nested/test.txt"]);
       }
     });
     // check that the files are where the manifest says they are
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
-    assert(fs.existsSync(testTxtPath));
-    assert(fs.existsSync(nestedTxtPath));
-    assert(fs.existsSync(packageTxtPath));
-    assert(fs.existsSync(unregisteredExtensionPath));
-    assert.strictEqual(fs.readFileSync(testTxtPath, "utf8"), "Test\n");
-    assert.strictEqual(fs.readFileSync(nestedTxtPath, "utf8"), "Nested\n");
-    assert.strictEqual(fs.readFileSync(packageTxtPath, "utf8"), "Package\n");
-    assert.strictEqual(fs.readFileSync(unregisteredExtensionPath, "utf8"),
+    assert(files.exists(testTxtPath));
+    assert(files.exists(nestedTxtPath));
+    assert(files.exists(packageTxtPath));
+    assert(files.exists(unregisteredExtensionPath));
+    assert.strictEqual(files.readFile(testTxtPath, "utf8"), "Test\n");
+    assert.strictEqual(files.readFile(nestedTxtPath, "utf8"), "Nested\n");
+    assert.strictEqual(files.readFile(packageTxtPath, "utf8"), "Package\n");
+    assert.strictEqual(files.readFile(unregisteredExtensionPath, "utf8"),
                        "No extension handler\n");
 
     // Run the app to check that Assets.getText/Binary do the right things.
@@ -108,7 +128,7 @@ var runTest = function () {
     var fut = new Future();
     // use a non-default port so we don't fail if someone is running an app now
     var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
-      cwd: path.join(__dirname, "app-with-private"),
+      cwd: projectContext.projectDir,
       stdio: 'inherit'
     });
     proc.on("exit", function (code) {
@@ -116,26 +136,17 @@ var runTest = function () {
     });
     assert.strictEqual(fut.wait(), 0);
   });
-
-  console.log("Use Assets API from unipackage");
-  assert.doesNotThrow(function () {
-    release._resetPackageDirs([ path.join(appWithPrivate, "packages") ]);
-    var testPackage = unipackage.load({
-      library: release.current.library,
-      packages: ['test-package']
-    })['test-package'].TestAsset;
-    testPackage.go(false /* don't exit when done */);
-  });
-
-  // Be sure to clean up!
-  release._resetPackageDirs();
 };
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
 
   try {
+    release.setCurrent(release.load(null));
+    isopackets.ensureIsopacketsLoadable();
     runTest();
   } catch (err) {
     console.log(err.stack);

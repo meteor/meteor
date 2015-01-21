@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "less": {
-      "version": "1.7.1",
+      "version": "https://github.com/meteor/less.js/tarball/4ccb7fc94321a6a85d592cdf46579425add1570f",
       "dependencies": {
         "graceful-fs": {
           "version": "2.0.3"
@@ -28,15 +28,15 @@
               "version": "0.12.1",
               "dependencies": {
                 "punycode": {
-                  "version": "1.2.4"
+                  "version": "1.3.0"
                 }
               }
             },
             "form-data": {
-              "version": "0.1.3",
+              "version": "0.1.4",
               "dependencies": {
                 "combined-stream": {
-                  "version": "0.0.4",
+                  "version": "0.0.5",
                   "dependencies": {
                     "delayed-stream": {
                       "version": "0.0.5"
@@ -102,7 +102,7 @@
           }
         },
         "source-map": {
-          "version": "0.1.34",
+          "version": "0.1.38",
           "dependencies": {
             "amdefine": {
               "version": "0.1.0"

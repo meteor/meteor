@@ -1,0 +1,1 @@
+NpmModuleBcrypt = Npm.require('bcrypt');

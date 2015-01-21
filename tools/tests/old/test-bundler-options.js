@@ -1,46 +1,77 @@
 var _ = require('underscore');
-var path = require('path');
-var fs = require('fs');
 var assert = require('assert');
 var bundler = require('../../bundler.js');
 var release = require('../../release.js');
 var files = require('../../files.js');
+var catalog = require('../../catalog.js');
+var buildmessage = require('../../buildmessage.js');
+var isopackets = require("../../isopackets.js");
+var projectContextModule = require('../../project-context.js');
 
-// an empty app. notably this app has no .meteor/release file.
-var emptyAppDir = path.join(__dirname, 'empty-app');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-options");
+  files.cp_r(files.pathJoin(__dirname, appName), projectDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: projectDir
+  });
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return projectContext;
+};
+
+var doOrThrow = function (f) {
+  var ret;
+  var messages = buildmessage.capture(function () {
+    ret = f();
+  });
+  if (messages.hasMessages()) {
+    throw Error(messages.formatMessages());
+  }
+  return ret;
+};
+
 var runTest = function () {
+  // As preparation, let's initialize the official catalog. It servers as our
+  // data store, so we will probably need it.
+  catalog.official.initialize();
+
   var readManifest = function (tmpOutputDir) {
-    return JSON.parse(fs.readFileSync(
-      path.join(tmpOutputDir, "programs", "client", "program.json"),
+    return JSON.parse(files.readFile(
+      files.pathJoin(tmpOutputDir, "programs", "web.browser", "program.json"),
       "utf8")).manifest;
   };
 
-  console.log("nodeModules: 'skip'");
+  // an empty app. notably this app has no .meteor/release file.
+  var projectContext = makeProjectContext('empty-app');
+
+  console.log("basic version");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
       buildOptions: { minify: true }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
     // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
+    assert.strictEqual(
+      files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
+      bundler._mainJsContents);
     // no top level node_modules directory
-    assert(!fs.existsSync(path.join(tmpOutputDir,
-                                    "programs", "server", "node_modules")));
+    assert(!files.exists(files.pathJoin(tmpOutputDir,
+                                        "programs", "server", "node_modules")));
     // yes package node_modules directory
-    assert(fs.lstatSync(path.join(
-      tmpOutputDir, "programs", "server", "npm", "livedata"))
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "npm", "ddp"))
            .isDirectory());
 
     // verify that contents are minified
@@ -53,25 +84,24 @@ var runTest = function () {
     });
   });
 
-  console.log("nodeModules: 'skip', no minify");
+  console.log("no minify");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
       buildOptions: { minify: false }
     });
     assert.strictEqual(result.errors, false);
 
     // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
+    assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
                        bundler._mainJsContents);
 
     // verify that contents are not minified
     var manifest = readManifest(tmpOutputDir);
     var foundMeteor = false;
-    var foundDeps = false;
+    var foundTracker = false;
     _.each(manifest, function (item) {
       if (item.type !== 'js')
         return;
@@ -81,75 +111,34 @@ var runTest = function () {
       assert(!/:tests/.test(item.path));
       if (item.path === 'packages/meteor.js')
         foundMeteor = true;
-      if (item.path === 'packages/deps.js')
-        foundDeps = true;
+      if (item.path === 'packages/tracker.js')
+        foundTracker = true;
     });
     assert(foundMeteor);
-    assert(foundDeps);
+    assert(foundTracker);
   });
 
-  console.log("nodeModules: 'skip', no minify, testPackages: ['meteor']");
+  console.log("includeNodeModulesSymlink");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
-      appDir: emptyAppDir,
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      nodeModulesMode: 'skip',
-      buildOptions: { minify: false, testPackages: ['meteor'] }
+      includeNodeModulesSymlink: true
     });
     assert.strictEqual(result.errors, false);
 
     // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-
-    // verify that tests for the meteor package are included
-    var manifest = readManifest(tmpOutputDir);
-    assert(_.find(manifest, function (item) {
-      return item.type === 'js' && item.path === 'packages/meteor:tests.js';
-    }));
-  });
-
-  console.log("nodeModules: 'copy'");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      appDir: emptyAppDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'copy'
-    });
-    assert.strictEqual(result.errors, false);
-
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-    // node_modules directory exists and is not a symlink
-    assert(!fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-    // node_modules contains fibers
-    assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-  });
-
-  console.log("nodeModules: 'symlink'");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      appDir: emptyAppDir,
-      outputPath: tmpOutputDir,
-      nodeModulesMode: 'symlink'
-    });
-    assert.strictEqual(result.errors, false);
-
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
+    assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
                        bundler._mainJsContents);
     // node_modules directory exists and is a symlink
-    assert(fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
+    assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
     // node_modules contains fibers
-    assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-
+    assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
     // package node_modules directory also a symlink
-    assert(fs.lstatSync(path.join(
-      tmpOutputDir, "programs", "server", "npm", "livedata", "main", "node_modules"))
+    // XXX might be breaking this
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
            .isSymbolicLink());
   });
 };
@@ -157,7 +146,12 @@ var runTest = function () {
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
+
+  release.setCurrent(release.load(null));
+  isopackets.ensureIsopacketsLoadable();
 
   try {
     runTest();

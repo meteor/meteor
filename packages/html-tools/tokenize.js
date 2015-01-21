@@ -20,7 +20,8 @@
 //   isEnd: Boolean (optional),
 //   isSelfClosing: Boolean (optional),
 //   n: String (tag name, in lowercase or camel case),
-//   attrs: { String: [zero or more 'Chars' or 'CharRef' objects] }
+//   attrs: dictionary of { String: [tokens] }
+//          OR [{ String: [tokens] }, TemplateTag tokens...]
 //     (only for start tags; required)
 // }
 //
@@ -37,8 +38,8 @@
 // Most named entities and all numeric character references are one codepoint
 // (e.g. "&amp;" is [38]), but a few are two codepoints.
 //
-// { t: 'Special',
-//   v: { ... anything ... }
+// { t: 'TemplateTag',
+//   v: HTMLTools.TemplateTag
 // }
 
 // The HTML tokenization spec says to preprocess the input stream to replace
@@ -199,31 +200,38 @@ getDoctype = HTMLTools.Parse.getDoctype = function (scanner) {
 // of a Chars, so that we have a chance to detect template tags.
 var getChars = makeRegexMatcher(/^[^&<\u0000][^&<\u0000{]*/);
 
+var assertIsTemplateTag = function (x) {
+  if (! (x instanceof HTMLTools.TemplateTag))
+    throw new Error("Expected an instance of HTMLTools.TemplateTag");
+  return x;
+};
+
 // Returns the next HTML token, or `null` if we reach EOF.
 //
-// Note that if we have a `getSpecialTag` function that sometimes
+// Note that if we have a `getTemplateTag` function that sometimes
 // consumes characters and emits nothing (e.g. in the case of template
 // comments), we may go from not-at-EOF to at-EOF and return `null`,
 // while otherwise we always find some token to return.
 getHTMLToken = HTMLTools.Parse.getHTMLToken = function (scanner, dataMode) {
   var result = null;
-  if (scanner.getSpecialTag) {
-    // Try to parse a "special tag" by calling out to the provided
-    // `getSpecialTag` function.  If the function returns `null` but
-    // consumes characters, it must have parsed a comment, so we return null
-    // and allow the lexer to continue.  If it ever returns `null` without
+  if (scanner.getTemplateTag) {
+    // Try to parse a template tag by calling out to the provided
+    // `getTemplateTag` function.  If the function returns `null` but
+    // consumes characters, it must have parsed a comment or something,
+    // so we loop and try it again.  If it ever returns `null` without
     // consuming anything, that means it didn't see anything interesting
     // so we look for a normal token.  If it returns a truthy value,
-    // the value must be an object.  We wrap it in a Special token.
+    // the value must be instanceof HTMLTools.TemplateTag.  We wrap it
+    // in a Special token.
     var lastPos = scanner.pos;
-    result = scanner.getSpecialTag(
+    result = scanner.getTemplateTag(
       scanner,
       (dataMode === 'rcdata' ? TEMPLATE_TAG_POSITION.IN_RCDATA :
        (dataMode === 'rawtext' ? TEMPLATE_TAG_POSITION.IN_RAWTEXT :
         TEMPLATE_TAG_POSITION.ELEMENT)));
 
     if (result)
-      return { t: 'Special', v: result };
+      return { t: 'TemplateTag', v: assertIsTemplateTag(result) };
     else if (scanner.pos > lastPos)
       return null;
   }
@@ -293,10 +301,13 @@ var handleEndOfTag = function (scanner, tag) {
   return null;
 };
 
-var getQuotedAttributeValue = function (scanner, quote) {
-  if (scanner.peek() !== quote)
-    return null;
-  scanner.pos++;
+// Scan a quoted or unquoted attribute value (omit `quote` for unquoted).
+var getAttributeValue = function (scanner, quote) {
+  if (quote) {
+    if (scanner.peek() !== quote)
+      return null;
+    scanner.pos++;
+  }
 
   var tokens = [];
   var charsTokenToExtend = null;
@@ -304,27 +315,29 @@ var getQuotedAttributeValue = function (scanner, quote) {
   var charRef;
   while (true) {
     var ch = scanner.peek();
-    var special;
+    var templateTag;
     var curPos = scanner.pos;
-    if (ch === quote) {
+    if (quote && ch === quote) {
       scanner.pos++;
       return tokens;
+    } else if ((! quote) && (HTML_SPACE.test(ch) || ch === '>')) {
+      return tokens;
     } else if (! ch) {
-      scanner.fatal("Unclosed quoted attribute in tag");
-    } else if (ch === '\u0000') {
-      scanner.fatal("Unexpected NULL character in attribute value");
-    } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, quote))) {
+      scanner.fatal("Unclosed attribute in tag");
+    } else if (quote ? ch === '\u0000' : ('\u0000"\'<=`'.indexOf(ch) >= 0)) {
+      scanner.fatal("Unexpected character in attribute value");
+    } else if (ch === '&' &&
+               (charRef = getCharacterReference(scanner, true,
+                                                quote || '>'))) {
       tokens.push(charRef);
       charsTokenToExtend = null;
-    } else if (scanner.getSpecialTag &&
-               ((special = scanner.getSpecialTag(scanner,
-                                                 TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
+    } else if (scanner.getTemplateTag &&
+               ((templateTag = scanner.getTemplateTag(
+                 scanner, TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
                 scanner.pos > curPos /* `{{! comment}}` */)) {
-      // note: this code is messy because it turns out to be annoying for getSpecialTag
-      // to return `null` when it scans a comment.  Also, this code should be de-duped
-      // with getUnquotedAttributeValue
-      if (special) {
-        tokens.push({t: 'Special', v: special});
+      if (templateTag) {
+        tokens.push({t: 'TemplateTag',
+                     v: assertIsTemplateTag(templateTag)});
         charsTokenToExtend = null;
       }
     } else {
@@ -334,48 +347,13 @@ var getQuotedAttributeValue = function (scanner, quote) {
       }
       charsTokenToExtend.v += (ch === '\r' ? '\n' : ch);
       scanner.pos++;
-      if (ch === '\r' && scanner.peek() === '\n')
+      if (quote && ch === '\r' && scanner.peek() === '\n')
         scanner.pos++;
     }
   }
 };
 
-var getUnquotedAttributeValue = function (scanner) {
-  var tokens = [];
-  var charsTokenToExtend = null;
-
-  var charRef;
-  while (true) {
-    var ch = scanner.peek();
-    var special;
-    var curPos = scanner.pos;
-    if (HTML_SPACE.test(ch) || ch === '>') {
-      return tokens;
-    } else if (! ch) {
-      scanner.fatal("Unclosed attribute in tag");
-    } else if ('\u0000"\'<=`'.indexOf(ch) >= 0) {
-      scanner.fatal("Unexpected character in attribute value");
-    } else if (ch === '&' && (charRef = getCharacterReference(scanner, true, '>'))) {
-      tokens.push(charRef);
-      charsTokenToExtend = null;
-    } else if (scanner.getSpecialTag &&
-               ((special = scanner.getSpecialTag(scanner,
-                                                 TEMPLATE_TAG_POSITION.IN_ATTRIBUTE)) ||
-                scanner.pos > curPos /* `{{! comment}}` */)) {
-      if (special) {
-        tokens.push({t: 'Special', v: special});
-        charsTokenToExtend = null;
-      }
-    } else {
-      if (! charsTokenToExtend) {
-        charsTokenToExtend = { t: 'Chars', v: '' };
-        tokens.push(charsTokenToExtend);
-      }
-      charsTokenToExtend.v += ch;
-      scanner.pos++;
-    }
-  }
-};
+var hasOwnProperty = Object.prototype.hasOwnProperty;
 
 getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
   if (! (scanner.peek() === '<' && scanner.rest().charAt(1) !== '!'))
@@ -419,6 +397,7 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
     scanner.fatal("End tag can't have attributes");
 
   tag.attrs = {};
+  var nondynamicAttrs = tag.attrs;
 
   while (true) {
     // Note: at the top of this loop, we've already skipped any spaces.
@@ -427,15 +406,17 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
     // require spaces (or else an end of tag, i.e. `>` or `/>`).
     var spacesRequiredAfter = false;
 
-    // first, try for a special tag.
+    // first, try for a template tag.
     var curPos = scanner.pos;
-    var special = (scanner.getSpecialTag &&
-                   scanner.getSpecialTag(scanner,
-                                         TEMPLATE_TAG_POSITION.IN_START_TAG));
-    if (special || (scanner.pos > curPos)) {
-      if (special) {
-        tag.attrs.$specials = (tag.attrs.$specials || []);
-        tag.attrs.$specials.push({ t: 'Special', v: special });
+    var templateTag = (scanner.getTemplateTag &&
+                       scanner.getTemplateTag(
+                         scanner, TEMPLATE_TAG_POSITION.IN_START_TAG));
+    if (templateTag || (scanner.pos > curPos)) {
+      if (templateTag) {
+        if (tag.attrs === nondynamicAttrs)
+          tag.attrs = [nondynamicAttrs];
+        tag.attrs.push({ t: 'TemplateTag',
+                         v: assertIsTemplateTag(templateTag) });
       } // else, must have scanned a `{{! comment}}`
 
       spacesRequiredAfter = true;
@@ -452,10 +433,10 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
         scanner.fatal("Unexpected `{` in attribute name.");
       attributeName = HTMLTools.properCaseAttributeName(attributeName);
 
-      if (tag.attrs.hasOwnProperty(attributeName))
+      if (hasOwnProperty.call(nondynamicAttrs, attributeName))
         scanner.fatal("Duplicate attribute in tag: " + attributeName);
 
-      tag.attrs[attributeName] = [];
+      nondynamicAttrs[attributeName] = [];
 
       skipSpaces(scanner);
 
@@ -480,15 +461,15 @@ getTagToken = HTMLTools.Parse.getTagToken = function (scanner) {
           scanner.fatal("Unexpected character after = in tag");
 
         if ((ch === '"') || (ch === "'"))
-          tag.attrs[attributeName] = getQuotedAttributeValue(scanner, ch);
+          nondynamicAttrs[attributeName] = getAttributeValue(scanner, ch);
         else
-          tag.attrs[attributeName] = getUnquotedAttributeValue(scanner);
+          nondynamicAttrs[attributeName] = getAttributeValue(scanner);
 
         spacesRequiredAfter = true;
       }
     }
-    // now we are in the "post-attribute" position, whether it was a special attribute
-    // (like `{{x}}`) or a normal one (like `x` or `x=y`).
+    // now we are in the "post-attribute" position, whether it was a template tag
+    // attribute (like `{{x}}`) or a normal one (like `x` or `x=y`).
 
     if (handleEndOfTag(scanner, tag))
       return tag;

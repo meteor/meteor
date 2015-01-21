@@ -1,0 +1,50 @@
+#admin {
+  .position(absolute, 0, 0, 0, 0);
+  background: @color-raw;
+
+  .back-desktop {
+    .font-s2;
+    .title-caps;
+    .type-black;
+    .position(absolute, 1.5rem, auto, auto, 1.5rem);
+  }
+
+  .wrapper-admin {
+    text-align: center;
+    margin: 5rem 5%;
+    @media screen and (min-width: 30em) { margin: 7rem 15%; }
+  }
+
+  .title-admin {
+    .font-m3;
+    .title-caps;
+    .type-black;
+    margin-bottom: 2rem;
+  }
+
+  label {
+    .font-s3;
+    .type-bold;
+    display: block;
+    margin-bottom: .75rem;
+    padding-left: 1.25rem;
+  }
+
+  form {
+    .font-s3;
+    background: @color-empty;
+    padding: .75rem 0 0;
+    text-align: left;
+  }
+
+  textarea {
+    border-bottom: 1px solid @color-raw;
+    border-top: 1px solid @color-raw;
+    resize: none;
+    width: 100%;
+  }
+
+  .btn-primary {
+    width: 100%;
+  }
+}

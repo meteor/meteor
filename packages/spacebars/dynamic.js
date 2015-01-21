@@ -1,21 +1,34 @@
-Template.__dynamicWithDataContext.chooseTemplate = function (name) {
-  return Template[name] || null;
-};
+/**
+ * @isTemplate true
+ * @memberOf Template
+ * @function dynamic
+ * @summary Choose a template to include dynamically, by name.
+ * @locus Templates
+ * @param {String} template The name of the template to include.
+ * @param {Object} [data] Optional. The data context in which to include the template.
+ */
 
-Template.__dynamic.dataContextPresent = function () {
-  return _.has(this, "data");
-};
-
-Template.__dynamic.checkContext = function () {
-  if (! _.has(this, "template")) {
-    throw new Error("Must specify name in the 'template' argument " +
-                    "to {{> UI.dynamic}}.");
+Template.__dynamicWithDataContext.helpers({
+  chooseTemplate: function (name) {
+    return Template[name] || null;
   }
+});
 
-  _.each(this, function (v, k) {
-    if (k !== "template" && k !== "data") {
-      throw new Error("Invalid argument to {{> UI.dynamic}}: " +
-                      k);
+Template.__dynamic.helpers({
+  dataContextPresent: function () {
+    return _.has(this, "data");
+  },
+  checkContext: function () {
+    if (! _.has(this, "template")) {
+      throw new Error("Must specify name in the 'template' argument " +
+                      "to {{> Template.dynamic}}.");
     }
-  });
-};
+
+    _.each(this, function (v, k) {
+      if (k !== "template" && k !== "data") {
+        throw new Error("Invalid argument to {{> Template.dynamic}}: " +
+                        k);
+      }
+    });
+  }
+});

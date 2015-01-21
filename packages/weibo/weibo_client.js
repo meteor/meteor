@@ -20,16 +20,22 @@ Weibo.requestCredential = function (options, credentialRequestCompleteCallback) 
   }
 
   var credentialToken = Random.secret();
+
+  var loginStyle = OAuth._loginStyle('weibo', config, options);
+
   // XXX need to support configuring access_type and scope
   var loginUrl =
         'https://api.weibo.com/oauth2/authorize' +
         '?response_type=code' +
         '&client_id=' + config.clientId +
-        '&redirect_uri=' + Meteor.absoluteUrl('_oauth/weibo?close', {replaceLocalhost: true}) +
-        '&state=' + credentialToken;
+        '&redirect_uri=' + OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}) +
+        '&state=' + OAuth._stateParam(loginStyle, credentialToken);
 
-  OAuth.showPopup(
-    loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken)
-  );
+  OAuth.launchLogin({
+    loginService: "weibo",
+    loginStyle: loginStyle,
+    loginUrl: loginUrl,
+    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
+    credentialToken: credentialToken
+  });
 };

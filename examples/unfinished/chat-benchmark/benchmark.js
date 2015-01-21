@@ -42,8 +42,8 @@ var randomString = function (length) {
 //////////////////////////////
 
 
-Rooms = new Meteor.Collection("rooms");
-Messages = new Meteor.Collection("messages");
+Rooms = new Mongo.Collection("rooms");
+Messages = new Mongo.Collection("messages");
 
 
 if (Meteor.isServer) {

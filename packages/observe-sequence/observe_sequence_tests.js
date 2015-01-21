@@ -54,7 +54,7 @@ runOneObserveSequenceTestCase = function (test, sequenceFunc,
   });
 
   run();
-  Deps.flush();
+  Tracker.flush();
   handle.stop();
 
   test.equal(ObserveSequence._suppressWarnings, 0);
@@ -93,7 +93,7 @@ runOneObserveSequenceTestCase = function (test, sequenceFunc,
              compress(EJSON.stringify(expectedCallbacks, {canonical: true, indent: true})));
 };
 
-Tinytest.add('observe sequence - initial data for all sequence types', function (test) {
+Tinytest.add('observe-sequence - initial data for all sequence types', function (test) {
   runOneObserveSequenceTestCase(test, function () {
     return null;
   }, function () {}, []);
@@ -117,7 +117,7 @@ Tinytest.add('observe sequence - initial data for all sequence types', function 
   ]);
 
   runOneObserveSequenceTestCase(test, function () {
-    var coll = new Meteor.Collection(null);
+    var coll = new Mongo.Collection(null);
     coll.insert({_id: "13", foo: 1});
     coll.insert({_id: "37", bar: 2});
     var cursor = coll.find({}, {sort: {_id: 1}});
@@ -140,8 +140,8 @@ Tinytest.add('observe sequence - initial data for all sequence types', function 
   ], /*numExpectedWarnings = */1);
 });
 
-Tinytest.add('observe sequence - array to other array', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to other array', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
   runOneObserveSequenceTestCase(test, function () {
@@ -159,8 +159,8 @@ Tinytest.add('observe sequence - array to other array', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, strings', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to other array, strings', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = ["A", "B"];
 
   runOneObserveSequenceTestCase(test, function () {
@@ -177,8 +177,8 @@ Tinytest.add('observe sequence - array to other array, strings', function (test)
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, objects without ids', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to other array, objects without ids', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = [{foo: 1}, {bar: 2}];
 
   runOneObserveSequenceTestCase(test, function () {
@@ -195,8 +195,8 @@ Tinytest.add('observe sequence - array to other array, objects without ids', fun
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, changes', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to other array, changes', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}];
 
   runOneObserveSequenceTestCase(test, function () {
@@ -218,8 +218,8 @@ Tinytest.add('observe sequence - array to other array, changes', function (test)
   ]);
 });
 
-Tinytest.add('observe sequence - array to other array, movedTo', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to other array, movedTo', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}, {_id: "42", baz: 42}, {_id: "43", baz: 43}];
 
   runOneObserveSequenceTestCase(test, function () {
@@ -244,8 +244,8 @@ Tinytest.add('observe sequence - array to other array, movedTo', function (test)
   ]);
 });
 
-Tinytest.add('observe sequence - array to null', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to null', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
   runOneObserveSequenceTestCase(test, function () {
@@ -262,15 +262,15 @@ Tinytest.add('observe sequence - array to null', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - array to cursor', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - array to cursor', function (test) {
+  var dep = new Tracker.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
 
   runOneObserveSequenceTestCase(test, function () {
     dep.depend();
     return seq;
   }, function () {
-    var coll = new Meteor.Collection(null);
+    var coll = new Mongo.Collection(null);
     coll.insert({_id: "13", foo: 1});
     coll.insert({_id: "38", bar: 2});
     var cursor = coll.find({}, {sort: {_id: 1}});
@@ -286,9 +286,9 @@ Tinytest.add('observe sequence - array to cursor', function (test) {
 });
 
 
-Tinytest.add('observe sequence - cursor to null', function (test) {
-  var dep = new Deps.Dependency;
-  var coll = new Meteor.Collection(null);
+Tinytest.add('observe-sequence - cursor to null', function (test) {
+  var dep = new Tracker.Dependency;
+  var coll = new Mongo.Collection(null);
   coll.insert({_id: "13", foo: 1});
   coll.insert({_id: "37", bar: 2});
   var cursor = coll.find({}, {sort: {_id: 1}});
@@ -308,9 +308,9 @@ Tinytest.add('observe sequence - cursor to null', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to array', function (test) {
-  var dep = new Deps.Dependency;
-  var coll = new Meteor.Collection(null);
+Tinytest.add('observe-sequence - cursor to array', function (test) {
+  var dep = new Tracker.Dependency;
+  var coll = new Mongo.Collection(null);
   coll.insert({_id: "13", foo: 1});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
@@ -331,8 +331,8 @@ Tinytest.add('observe sequence - cursor to array', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor', function (test) {
-  var coll = new Meteor.Collection(null);
+Tinytest.add('observe-sequence - cursor', function (test) {
+  var coll = new Mongo.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
@@ -361,9 +361,9 @@ Tinytest.add('observe sequence - cursor', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor', function (test) {
-  var dep = new Deps.Dependency;
-  var coll = new Meteor.Collection(null);
+Tinytest.add('observe-sequence - cursor to other cursor', function (test) {
+  var dep = new Tracker.Dependency;
+  var coll = new Mongo.Collection(null);
   coll.insert({_id: "13", foo: 1});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
@@ -374,7 +374,7 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
   }, function () {
     coll.insert({_id: "37", bar: 2});
 
-    var newColl = new Meteor.Collection(null);
+    var newColl = new Mongo.Collection(null);
     newColl.insert({_id: "13", foo: 1});
     newColl.insert({_id: "38", bar: 2});
     var newCursor = newColl.find({}, {sort: {_id: 1}});
@@ -389,13 +389,13 @@ Tinytest.add('observe sequence - cursor to other cursor', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor with transform', function (test) {
-  var dep = new Deps.Dependency;
+Tinytest.add('observe-sequence - cursor to other cursor with transform', function (test) {
+  var dep = new Tracker.Dependency;
   var transform = function(doc) {
     return _.extend({idCopy: doc._id}, doc);
   };
 
-  var coll = new Meteor.Collection(null, {transform: transform});
+  var coll = new Mongo.Collection(null, {transform: transform});
   coll.insert({_id: "13", foo: 1});
   var cursor = coll.find({}, {sort: {_id: 1}});
   var seq = cursor;
@@ -406,7 +406,7 @@ Tinytest.add('observe sequence - cursor to other cursor with transform', functio
   }, function () {
     coll.insert({_id: "37", bar: 2});
 
-    var newColl = new Meteor.Collection(null, {transform: transform});
+    var newColl = new Mongo.Collection(null, {transform: transform});
     newColl.insert({_id: "13", foo: 1});
     newColl.insert({_id: "38", bar: 2});
     var newCursor = newColl.find({}, {sort: {_id: 1}});
@@ -421,12 +421,12 @@ Tinytest.add('observe sequence - cursor to other cursor with transform', functio
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to same cursor', function (test) {
-  var coll = new Meteor.Collection(null);
+Tinytest.add('observe-sequence - cursor to same cursor', function (test) {
+  var coll = new Mongo.Collection(null);
   coll.insert({_id: "13", rank: 1});
   var cursor = coll.find({}, {sort: {rank: 1}});
   var seq = cursor;
-  var dep = new Deps.Dependency;
+  var dep = new Tracker.Dependency;
 
   runOneObserveSequenceTestCase(test, function () {
     dep.depend();
@@ -434,23 +434,22 @@ Tinytest.add('observe sequence - cursor to same cursor', function (test) {
   }, function () {
     coll.insert({_id: "24", rank: 2});
     dep.changed();
-    Deps.flush();
+    Tracker.flush();
     coll.insert({_id: "78", rank: 3});
   }, [
     {addedAt: ["13", {_id: "13", rank: 1}, 0, null]},
     {addedAt: ["24", {_id: "24", rank: 2}, 1, null]},
-    // even if the cursor changes to the same cursor, we diff to see if we
-    // missed anything during the invalidation, which leads to these
-    // 'changedAt' events.
+    // even if the cursor changes to the same cursor, we do a diff,
+    // which leads to these 'changedAt' events.
     {changedAt: ["13", {_id: "13", rank: 1}, {_id: "13", rank: 1}, 0]},
     {changedAt: ["24", {_id: "24", rank: 2}, {_id: "24", rank: 2}, 1]},
     {addedAt: ["78", {_id: "78", rank: 3}, 2, null]}
   ]);
 });
 
-Tinytest.add('observe sequence - string arrays', function (test) {
+Tinytest.add('observe-sequence - string arrays', function (test) {
   var seq = ['A', 'B'];
-  var dep = new Deps.Dependency;
+  var dep = new Tracker.Dependency;
 
   runOneObserveSequenceTestCase(test, function () {
     dep.depend();
@@ -466,9 +465,9 @@ Tinytest.add('observe sequence - string arrays', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - number arrays', function (test) {
+Tinytest.add('observe-sequence - number arrays', function (test) {
   var seq = [1, 1, 2];
-  var dep = new Deps.Dependency;
+  var dep = new Tracker.Dependency;
 
   runOneObserveSequenceTestCase(test, function () {
     dep.depend();
@@ -486,9 +485,9 @@ Tinytest.add('observe sequence - number arrays', function (test) {
   ]);
 });
 
-Tinytest.add('observe sequence - cursor to other cursor, same collection', function (test) {
-  var dep = new Deps.Dependency;
-  var coll = new Meteor.Collection(null);
+Tinytest.add('observe-sequence - cursor to other cursor, same collection', function (test) {
+  var dep = new Tracker.Dependency;
+  var coll = new Mongo.Collection(null);
   coll.insert({_id: "13", foo: 1});
   coll.insert({_id: "37", foo: 2});
   var cursor = coll.find({foo: 1});
@@ -501,7 +500,7 @@ Tinytest.add('observe sequence - cursor to other cursor, same collection', funct
     var newCursor = coll.find({foo: 2});
     seq = newCursor;
     dep.changed();
-    Deps.flush();
+    Tracker.flush();
     coll.insert({_id: "38", foo: 1});
     coll.insert({_id: "39", foo: 2});
   }, [

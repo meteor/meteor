@@ -1,11 +1,10 @@
 Package.describe({
   summary: "Dictionary data structure allowing non-string keys",
-  internal: true
+  version: '1.0.2'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('IdMap');
   api.use(['underscore', 'json', 'ejson']);
-  api.add_files([ 'id-map.js' ]);
+  api.addFiles([ 'id-map.js' ]);
 });
-

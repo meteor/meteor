@@ -1,4 +1,4 @@
-Items = new Meteor.Collection("items");
+Items = new Mongo.Collection("items");
 
 if (Meteor.isServer) {
   if (Items.find().count() === 0) {

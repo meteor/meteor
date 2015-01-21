@@ -11,10 +11,26 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
-// migrationData, if present, should be data previously returned from
-// getMigrationData()
-ReactiveDict = function (migrationData) {
-  this.keys = migrationData || {}; // key -> value
+// XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
+ReactiveDict = function (dictName) {
+  // this.keys: key -> value
+  if (dictName) {
+    if (typeof dictName === 'string') {
+      // the normal case, argument is a string name.
+      // _registerDictForMigrate will throw an error on duplicate name.
+      ReactiveDict._registerDictForMigrate(dictName, this);
+      this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
+    } else if (typeof dictName === 'object') {
+      // back-compat case: dictName is actually migrationData
+      this.keys = dictName;
+    } else {
+      throw new Error("Invalid ReactiveDict argument: " + dictName);
+    }
+  } else {
+    // no name given; no migration will be performed
+    this.keys = {};
+  }
+
   this.keyDeps = {}; // key -> Dependency
   this.keyValueDeps = {}; // key -> Dependency
 };
@@ -62,8 +78,11 @@ _.extend(ReactiveDict.prototype, {
   equals: function (key, value) {
     var self = this;
 
-    // XXX hardcoded awareness of the 'mongo-livedata' package is not ideal
-    var ObjectID = Package['mongo-livedata'] && Meteor.Collection.ObjectID;
+    // Mongo.ObjectID is in the 'mongo' package
+    var ObjectID = null;
+    if (typeof Mongo !== 'undefined') {
+      ObjectID = Mongo.ObjectID;
+    }
 
     // We don't allow objects (or arrays that might include objects) for
     // .equals, because JSON.stringify doesn't canonicalize object key
@@ -84,15 +103,15 @@ _.extend(ReactiveDict.prototype, {
       throw new Error("ReactiveDict.equals: value must be scalar");
     var serializedValue = stringify(value);
 
-    if (Deps.active) {
+    if (Tracker.active) {
       self._ensureKey(key);
 
       if (! _.has(self.keyValueDeps[key], serializedValue))
-        self.keyValueDeps[key][serializedValue] = new Deps.Dependency;
+        self.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
 
       var isNew = self.keyValueDeps[key][serializedValue].depend();
       if (isNew) {
-        Deps.onInvalidate(function () {
+        Tracker.onInvalidate(function () {
           // clean up [key][serializedValue] if it's now empty, so we don't
           // use O(n) memory for n = values seen ever
           if (! self.keyValueDeps[key][serializedValue].hasDependents())
@@ -109,14 +128,14 @@ _.extend(ReactiveDict.prototype, {
   _ensureKey: function (key) {
     var self = this;
     if (!(key in self.keyDeps)) {
-      self.keyDeps[key] = new Deps.Dependency;
+      self.keyDeps[key] = new Tracker.Dependency;
       self.keyValueDeps[key] = {};
     }
   },
 
   // Get a JSON value that can be passed to the constructor to
   // create a new ReactiveDict with the same contents as this one
-  getMigrationData: function () {
+  _getMigrationData: function () {
     // XXX sanitize and make sure it's JSONible?
     return this.keys;
   }

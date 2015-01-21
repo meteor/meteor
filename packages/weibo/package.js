@@ -1,11 +1,9 @@
 Package.describe({
   summary: "Weibo OAuth flow",
-  // internal for now. Should be external when it has a richer API to do
-  // actual API things with the service, not just handle the OAuth flow.
-  internal: true
+  version: '1.1.2'
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
@@ -15,10 +13,10 @@ Package.on_use(function(api) {
 
   api.export('Weibo');
 
-  api.add_files(
+  api.addFiles(
     ['weibo_configure.html', 'weibo_configure.js'],
     'client');
 
-  api.add_files('weibo_server.js', 'server');
-  api.add_files('weibo_client.js', 'client');
+  api.addFiles('weibo_server.js', 'server');
+  api.addFiles('weibo_client.js', 'client');
 });

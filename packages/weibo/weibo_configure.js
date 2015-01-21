@@ -1,7 +1,9 @@
-Template.configureLoginServiceDialogForWeibo.siteUrl = function () {
-  // Weibo doesn't recognize localhost as a domain
-  return Meteor.absoluteUrl({replaceLocalhost: true});
-};
+Template.configureLoginServiceDialogForWeibo.helpers({
+  siteUrl: function () {
+    // Weibo doesn't recognize localhost as a domain
+    return Meteor.absoluteUrl({replaceLocalhost: true});
+  }
+});
 
 Template.configureLoginServiceDialogForWeibo.fields = function () {
   return [

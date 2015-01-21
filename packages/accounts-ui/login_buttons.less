@@ -265,7 +265,13 @@
     margin-top: 7px;
     margin-bottom: -2px;
   }
-  input {
+
+  label {
+    // Bootstrap sets labels as 'display: block;'. Undo that.
+    display: inline;
+  }
+
+  input[type=text], input[type=email], input[type=password] {
     // Be pixel-accurate in IE 8+ regardless of our borders and
     // paddings, at the expense of IE 7.
     // Any heights or widths applied to this element will set the
@@ -353,10 +359,10 @@
   width: @configure-login-service-dialog-width;
   margin-left: -(@configure-login-service-dialog-width
                + @meteor-accounts-base-padding) / 2;
-  margin-top: -220px; /* = approximately -height/2, though height can change */
+  margin-top: -300px; /* = approximately -height/2, though height can change */
 
   table { width: 100%; }
-  input {
+  input[type=text] {
     width: 100%;
     font-family: "Courier New", Courier, monospace;
   }

@@ -7,6 +7,14 @@
 //     it contains "@".
 // @param password {String}
 // @param callback {Function(error|undefined)}
+
+/**
+ * @summary Log the user in with a password.
+ * @locus Client
+ * @param {Object | String} user Either a string interpreted as a username or an email; or an object with a single key: `email`, `username` or `id`.
+ * @param {String} password The user's password.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Meteor.loginWithPassword = function (selector, password, callback) {
   if (typeof selector === 'string')
     if (selector.indexOf('@') === -1)
@@ -17,7 +25,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      password: hashPassword(password)
+      password: Accounts._hashPassword(password)
     }],
     userCallback: function (error, result) {
       if (error && error.error === 400 &&
@@ -49,7 +57,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
-var hashPassword = function (password) {
+Accounts._hashPassword = function (password) {
   return {
     digest: SHA256(password),
     algorithm: "sha-256"
@@ -77,7 +85,7 @@ var srpUpgradePath = function (options, callback) {
       methodArguments: [{
         user: options.userSelector,
         srp: SHA256(details.identity + ":" + options.plaintextPassword),
-        password: hashPassword(options.plaintextPassword)
+        password: Accounts._hashPassword(options.plaintextPassword)
       }],
       userCallback: callback
     });
@@ -86,14 +94,29 @@ var srpUpgradePath = function (options, callback) {
 
 
 // Attempt to log in as a new user.
+
+/**
+ * @summary Create a new user.
+ * @locus Anywhere
+ * @param {Object} options
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @param {Function} [callback] Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
-  if (!options.password)
+  if (typeof options.password !== 'string')
     throw new Error("Must set options.password");
+  if (!options.password) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
 
   // Replace password with the hashed password.
-  options.password = hashPassword(options.password);
+  options.password = Accounts._hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
@@ -111,15 +134,30 @@ Accounts.createUser = function (options, callback) {
 //   support passing no password to the server and letting it decide.
 // @param newPassword {String}
 // @param callback {Function(error|undefined)}
+
+/**
+ * @summary Change the current user's password. Must be logged in.
+ * @locus Client
+ * @param {String} oldPassword The user's current password. This is __not__ sent in plain text over the wire.
+ * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.changePassword = function (oldPassword, newPassword, callback) {
   if (!Meteor.user()) {
     callback && callback(new Error("Must be logged in to change password."));
     return;
   }
 
+  check(newPassword, String);
+  if (!newPassword) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
+
   Accounts.connection.apply(
     'changePassword',
-    [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
+    [oldPassword ? Accounts._hashPassword(oldPassword) : null,
+     Accounts._hashPassword(newPassword)],
     function (error, result) {
       if (error || !result) {
         if (error && error.error === 400 &&
@@ -158,6 +196,14 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 // @param options {Object}
 //   - email: (email)
 // @param callback (optional) {Function(error|undefined)}
+
+/**
+ * @summary Request a forgot password email.
+ * @locus Client
+ * @param {Object} options
+ * @param {String} options.email The email address to send a password reset link.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.forgotPassword = function(options, callback) {
   if (!options.email)
     throw new Error("Must pass options.email");
@@ -170,15 +216,26 @@ Accounts.forgotPassword = function(options, callback) {
 // @param token {String}
 // @param newPassword {String}
 // @param callback (optional) {Function(error|undefined)}
+
+/**
+ * @summary Reset the password for a user using a token received in email. Logs the user in afterwards.
+ * @locus Client
+ * @param {String} token The token retrieved from the reset password URL.
+ * @param {String} newPassword A new password for the user. This is __not__ sent in plain text over the wire.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.resetPassword = function(token, newPassword, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
-  if (!newPassword)
-    throw new Error("Need to pass newPassword");
+  check(token, String);
+  check(newPassword, String);
+
+  if (!newPassword) {
+    callback(new Meteor.Error(400, "Password may not be empty"));
+    return;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
-    methodArguments: [token, hashPassword(newPassword)],
+    methodArguments: [token, Accounts._hashPassword(newPassword)],
     userCallback: callback});
 };
 
@@ -187,6 +244,13 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 //
 // @param token {String}
 // @param callback (optional) {Function(error|undefined)}
+
+/**
+ * @summary Marks the user's email address as verified. Logs the user in afterwards.
+ * @locus Client
+ * @param {String} token The token retrieved from the verification URL.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Accounts.verifyEmail = function(token, callback) {
   if (!token)
     throw new Error("Need to pass token");

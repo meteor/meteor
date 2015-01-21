@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Helpers for control programs",
-  internal: true
+  version: "1.0.5"
 });
 
 Npm.depends({optimist: '0.6.0'});
 
-Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'livedata', 'mongo-livedata', 'follower-livedata', 'application-configuration'], 'server');
+Package.onUse(function (api) {
+  api.use(['logging', 'underscore', 'ddp', 'mongo', 'follower-livedata', 'application-configuration'], 'server');
   api.export('Ctl', 'server');
-  api.add_files('ctl-helper.js', 'server');
+  api.addFiles('ctl-helper.js', 'server');
 });

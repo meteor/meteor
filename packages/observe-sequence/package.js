@@ -1,21 +1,21 @@
 Package.describe({
   summary: "Observe changes to various sequence types such as arrays, cursors and objects",
-  internal: true
+  version: "1.0.4"
 });
 
-Package.on_use(function (api) {
-  api.use('deps');
+Package.onUse(function (api) {
+  api.use('tracker');
   api.use('minimongo');  // for idStringify
   api.use('underscore');
   api.use('random');
   api.export('ObserveSequence');
-  api.add_files(['observe_sequence.js']);
+  api.addFiles(['observe_sequence.js']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('observe-sequence');
   api.use('underscore');
   api.use('ejson');
-  api.add_files(['observe_sequence_tests.js'], 'client');
+  api.addFiles(['observe_sequence_tests.js'], 'client');
 });

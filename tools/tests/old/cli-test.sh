@@ -41,15 +41,16 @@ cd "$TEST_TMPDIR"
 ## Begin actual tests
 
 echo "... --help"
-$METEOR --help | grep "List available" >> $OUTPUT
+$METEOR --help | grep "List the packages explicitly used" >> $OUTPUT
 $METEOR run --help | grep "Port to listen" >> $OUTPUT
 $METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
 $METEOR create --help | grep "Make a subdirectory" >> $OUTPUT
-$METEOR update --help | grep "Sets the version" >> $OUTPUT
+$METEOR update --help | grep "Updates the meteor release" >> $OUTPUT
 $METEOR add --help | grep "Adds packages" >> $OUTPUT
 $METEOR remove --help | grep "Removes a package" >> $OUTPUT
-$METEOR list --help | grep "Without arguments" >> $OUTPUT
-$METEOR bundle --help | grep "Package this project" >> $OUTPUT
+$METEOR list --help | grep "This will not list transitive dependencies" >> $OUTPUT
+$METEOR bundle --help | grep "command has been deprecated" >> $OUTPUT
+$METEOR build --help | grep "Package this project" >> $OUTPUT
 $METEOR mongo --help | grep "Opens a Mongo" >> $OUTPUT
 $METEOR deploy --help | grep "Deploys the project" >> $OUTPUT
 $METEOR logs --help | grep "Retrieves the" >> $OUTPUT
@@ -62,8 +63,9 @@ $METEOR 2>&1 | grep "run: You're not in" >> $OUTPUT
 $METEOR run 2>&1 | grep "run: You're not in" >> $OUTPUT
 $METEOR add foo 2>&1 | grep "add: You're not in" >> $OUTPUT
 $METEOR remove foo 2>&1 | grep "remove: You're not in" >> $OUTPUT
-$METEOR list --using 2>&1 | grep "list: You're not in" >> $OUTPUT
+$METEOR list 2>&1 | grep "list: You're not in" >> $OUTPUT
 $METEOR bundle foo.tar.gz 2>&1 | grep "bundle: You're not in" >> $OUTPUT
+$METEOR build foo.tar.gz 2>&1 | grep "build: You're not in" >> $OUTPUT
 $METEOR mongo 2>&1 | grep "mongo: You're not in" >> $OUTPUT
 $METEOR deploy automated-test 2>&1 | grep "deploy: You're not in" >> $OUTPUT
 $METEOR reset 2>&1 | grep "reset: You're not in" >> $OUTPUT
@@ -82,18 +84,23 @@ cd .meteor
 
 echo "... add/remove/list"
 
-$METEOR list | grep "backbone" >> $OUTPUT
-! $METEOR list --using 2>&1 | grep "backbone" >> $OUTPUT
+$METEOR search backbone | grep "backbone" >> $OUTPUT
+! $METEOR list 2>&1 | grep "backbone" >> $OUTPUT
 $METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
-$METEOR list --using | grep "backbone" >> $OUTPUT
+$METEOR list | grep "backbone" >> $OUTPUT
 grep backbone packages >> $OUTPUT # remember, we are already in .meteor
-$METEOR remove backbone 2>&1 | grep "backbone: removed" >> $OUTPUT
-! $METEOR list --using 2>&1 | grep "backbone" >> $OUTPUT
+$METEOR remove backbone 2>&1 | grep "backbone: removed dependency" >> $OUTPUT
+! $METEOR list 2>&1 | grep "backbone" >> $OUTPUT
 
 echo "... bundle"
 
 $METEOR bundle foo.tar.gz
 tar tvzf foo.tar.gz >>$OUTPUT
+
+rm foo.tar.gz
+
+$METEOR build .
+tar tvzf "$DIR.tar.gz" >>$OUTPUT
 
 cd .. # we're now back to $DIR
 echo "... run"
@@ -114,7 +121,7 @@ PORT=9100
 $METEOR -p $PORT >> $OUTPUT 2>&1 &
 METEOR_PID=$!
 
-sleep 2 # XXX XXX lame
+sleep 5 # XXX XXX lame
 
 test -d .meteor/local/db
 ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
@@ -136,7 +143,7 @@ echo "... rerun"
 $METEOR -p $PORT >> $OUTPUT 2>&1 &
 METEOR_PID=$!
 
-sleep 2 # XXX XXX lame
+sleep 10 # XXX XXX lame
 
 ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
 curl -s "http://localhost:$PORT" >> $OUTPUT
@@ -151,9 +158,13 @@ echo "... test-packages"
 
 mkdir -p "$TEST_TMPDIR/local-packages/die-now/"
 cat > "$TEST_TMPDIR/local-packages/die-now/package.js" <<EOF
-Package.on_test(function (api) {
+Package.describe({
+  summary: "die-now",
+  version: "1.0.0"
+});
+Package.onTest(function (api) {
   api.use('deps'); // try to use a core package
-  api.add_files(['die-now.js'], 'server');
+  api.addFiles(['die-now.js'], 'server');
 });
 EOF
 cat > "$TEST_TMPDIR/local-packages/die-now/die-now.js" <<EOF
@@ -173,7 +184,7 @@ $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
 
 METEOR_PID=$!
 
-sleep 2 # XXX XXX lame
+sleep 10 # XXX XXX lame
 
 ps ax | grep -e "$MONGOMARK" | grep -v grep >> $OUTPUT
 curl -s "http://localhost:$PORT" >> $OUTPUT
@@ -232,10 +243,14 @@ echo "... local-package-sets -- new package"
 
 mkdir -p "$TEST_TMPDIR/local-packages/a-package-named-bar/"
 cat > "$TEST_TMPDIR/local-packages/a-package-named-bar/package.js" <<EOF
+Package.describe({
+  summary: 'a-package-named-bar',
+  version: '1.0.0'
+});
 Npm.depends({gcd: '0.0.0'});
 
-Package.on_use(function(api) {
-  api.add_files(['call_gcd.js'], 'server');
+Package.onUse(function(api) {
+  api.addFiles(['call_gcd.js'], 'server');
 });
 EOF
 
@@ -248,10 +263,12 @@ EOF
 
 ! $METEOR add a-package-named-bar >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
-! $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
+$METEOR -p $PORT --once 2>&1 | grep "unknown package: a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
 tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR build $TEST_TMPDIR/bundle >> $OUTPUT
+tar tvzf "$TEST_TMPDIR/bundle/$DIR.tar.gz" >>$OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "gcd(4,6)=2" >> $OUTPUT
 
 
@@ -260,10 +277,20 @@ echo "... local-package-sets -- overridden package"
 mkdir -p "$TEST_TMPDIR/local-packages/accounts-ui/"
 cat > "$TEST_TMPDIR/local-packages/accounts-ui/package.js" <<EOF
 Package.describe({
-  summary: "accounts-ui - overridden"
+  summary: "accounts-ui - overridden",
+  version: "1.0.0"
 });
 
 EOF
+
+# Remove a-package-named-bar so that the local accounts-ui package is
+# the only thing that determines whether we need to set PACKAGE_DIRS. If
+# we were to leave a-package-named-bar in the app, then we would need to
+# specify PACKAGE_DIRS to get output from 'meteor list', even before
+# adding the local accounts-ui package, and we want to be able to run
+# 'meteor list' without PACKAGE_DIRS set to see that it picks up the
+# core accounts-ui package, not the local one.
+PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR remove a-package-named-bar >> $OUTPUT
 
 ! $METEOR add accounts-ui 2>&1 | grep "accounts-ui - overridden" >> $OUTPUT
 $METEOR remove accounts-ui 2>&1 >> $OUTPUT

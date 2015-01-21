@@ -12,6 +12,53 @@ var files = require('./files.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
 var release = require('./release.js');
+var Console = require('./console.js').Console;
+
+
+// Helper that tracks bytes written to a writable
+var WritableWithProgress = function (writable, listener) {
+  var self = this;
+  self._inner = writable;
+  self._listener = listener;
+};
+
+_.extend(WritableWithProgress.prototype, {
+  write: function (chunk, encoding, callback) {
+    var self = this;
+    self._listener(chunk.length, false);
+    return self._inner.write(chunk, encoding);
+  },
+
+  end: function (chunk, encoding, callback) {
+    var self = this;
+    self._listener(chunk ? chunk.length : 0, true);
+    return self._inner.end(chunk, encoding);
+  },
+
+  _progress: function (n, done) {
+    var self = this;
+
+    var state = self._state;
+    state.current += n;
+    if (done) {
+      state.current.done = true;
+    }
+    self.progress.reportProgress(state);
+  },
+
+  on: function (name, callback) {
+    return this._inner.on(name, callback);
+  },
+
+  once: function () {
+    return this._inner.once.apply(this._inner, arguments);
+  },
+
+  emit: function () {
+    return this._inner.emit.apply(this._inner, arguments);
+  }
+});
+
 
 // Compose a User-Agent header.
 var getUserAgent = function () {
@@ -85,6 +132,37 @@ _.extend(exports, {
       delete options.bodyStream;
     }
 
+    // Body stream length for progress
+    var bodyStreamLength = 0;
+    if (_.has(options, 'bodyStream')) {
+      bodyStreamLength = options.bodyStreamLength;
+      delete options.bodyStreamLength;
+    } else {
+      // Guess the body stream length as 1MB
+      // Hopefully if it's much bigger the caller will set it
+      // If it is much small, we will pleasantly surprise the user!
+      if (bodyStream) {
+        bodyStreamLength = 1024 * 1024;
+      }
+    }
+
+    // Response length for progress
+    var responseLength = 128 * 1024;
+    if (_.has(options, 'responseLength')) {
+      responseLength = options.responseLength;
+      delete options.responseLength;
+    }
+
+    var progress = null;
+    if (_.has(options, 'progress')) {
+      progress = options.progress;
+      delete options.progress;
+
+      if (callback) {
+        throw new Error("Not safe to use progress with callback");
+      }
+    }
+
     options.headers = _.extend({
       'User-Agent': getUserAgent()
     }, options.headers || {});
@@ -146,7 +224,8 @@ _.extend(exports, {
       };
     }
 
-    // try to get proxy from environment
+    // try to get proxy from environment.
+    // similar code is in packages/ddp/stream_client_nodejs.js
     var proxy = process.env.HTTP_PROXY || process.env.http_proxy || null;
     // if we're going to an https url, try the https_proxy env variable first.
     if (/^https/i.test(options.url)) {
@@ -158,16 +237,81 @@ _.extend(exports, {
 
     // request is the most heavy-weight of the tool's npm dependencies; don't
     // require it until we definitely need it.
+    Console.debug("Doing HTTP request: ", options.method || 'GET', options.url);
     var request = require('request');
     var req = request(options, callback);
 
-    if (bodyStream)
-      bodyStream.pipe(req);
 
-    if (fut)
-      return fut.wait();
-    else
+    var totalProgress = { current: 0, end: bodyStreamLength + responseLength, done: false };
+
+    if (bodyStream) {
+      var dest = req;
+      if (progress) {
+        dest = new WritableWithProgress(dest, function (n, done) {
+          if (!totalProgress.done) {
+            totalProgress.current += n;
+            progress.reportProgress(totalProgress);
+          }
+        });
+      }
+      bodyStream.pipe(dest);
+    }
+
+    if (progress) {
+      httpHelpers._addProgressEvents(req);
+      req.on('progress', function (state) {
+        if (!totalProgress.done) {
+          totalProgress.current = bodyStreamLength + state.current;
+          totalProgress.end = bodyStreamLength + state.end;
+          totalProgress.done = state.done;
+
+          progress.reportProgress(totalProgress);
+        }
+      });
+    }
+
+    if (fut) {
+      try {
+        return fut.wait();
+      } finally {
+        if (progress) {
+          progress.reportProgressDone();
+        }
+      }
+    } else {
       return req;
+    }
+  },
+
+  // Adds progress callbacks to a request
+  // Based on request-progress
+  _addProgressEvents: function (request) {
+    var state;
+
+    var emitProgress = function () {
+      request.emit('progress', state);
+    };
+
+    request
+      .on('response', function (response) {
+        state = {};
+        state.end = undefined;
+        state.done = false;
+        state.current = 0;
+        var contentLength = response.headers['content-length'];
+        if (contentLength) {
+          state.end = Number(contentLength);
+        }
+        emitProgress();
+      })
+      .on('data', function (data) {
+        state.current += data.length;
+        emitProgress();
+      })
+      .on('end', function (data) {
+        state.done = true;
+        emitProgress();
+      });
   },
 
   // A synchronous wrapper around request(...) that returns the response "body"
@@ -186,7 +330,7 @@ _.extend(exports, {
     var body = result.body;
 
     if (response.statusCode >= 400 && response.statusCode < 600)
-      throw response;
+      throw body;
     else
       return body;
   }

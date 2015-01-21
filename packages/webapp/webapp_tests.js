@@ -82,7 +82,7 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
-    });
+    }, "web.browser");
 
     // When inline scripts are allowed, the script should be inlined.
     test.isTrue(boilerplate.indexOf(additionalScript) !== -1);
@@ -100,15 +100,18 @@ Tinytest.add("webapp - additional static javascript", function (test) {
         nextCalled = true;
       });
     test.isTrue(nextCalled);
+  });
 
-    // When inline scripts are disallowed, the script body should not be
-    // inlined, and the script should be included in a <script src="..">
-    // tag.
-    WebAppInternals.setInlineScriptsAllowed(false);
-    boilerplate = WebAppInternals.getBoilerplate({
+  // When inline scripts are disallowed, the script body should not be
+  // inlined, and the script should be included in a <script src="..">
+  // tag.
+  WebAppInternals.setInlineScriptsAllowed(false);
+
+  Meteor._noYieldsAllowed(function () {
+    var boilerplate = WebAppInternals.getBoilerplate({
       browser: "doesn't-matter",
       url: "also-doesnt-matter"
-    });
+    }, "web.browser");
 
     // The script contents itself should not be present; the pathname
     // where the script is served should be.
@@ -116,7 +119,11 @@ Tinytest.add("webapp - additional static javascript", function (test) {
     test.isTrue(boilerplate.indexOf(additionalScriptPathname) !== -1);
 
     // And the static file handler should serve the script at that pathname.
-    res = new MockResponse();
+    var res = new MockResponse();
+    var req = new http.IncomingMessage();
+    req.headers = {};
+    req.method = "GET";
+    req.url = "/" + additionalScriptPathname;
     WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
                                      function () { });
     var resBody = res.getBody();
@@ -125,4 +132,26 @@ Tinytest.add("webapp - additional static javascript", function (test) {
   });
 
   WebAppInternals.setInlineScriptsAllowed(origInlineScriptsAllowed);
+});
+
+// Regression test: `generateBoilerplateInstance` should not change
+// `__meteor_runtime_config__`.
+Tinytest.add("webapp - generating boilerplate should not change runtime config", function (test) {
+  // Set a dummy key in the runtime config served in the
+  // boilerplate. Test that the dummy key appears in the boilerplate,
+  // but not in __meteor_runtime_config__ after generating the
+  // boilerplate.
+
+  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
+
+  var boilerplate = WebAppInternals.generateBoilerplateInstance(
+    "web.browser",
+    {}, // empty manifest
+    { runtimeConfigOverrides: { WEBAPP_TEST_KEY: true } }
+  );
+
+  var boilerplateHtml = boilerplate.toHTML();
+  test.isFalse(boilerplateHtml.indexOf("WEBAPP_TEST_KEY") === -1);
+
+  test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
 });

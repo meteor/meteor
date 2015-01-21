@@ -1,7 +1,7 @@
-var fs = require('fs');
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
+var watch = require('./watch.js');
 
 var packageDot = function (name) {
   if (/^[a-zA-Z0-9]*$/.exec(name))
@@ -32,6 +32,7 @@ var Module = function (options) {
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
   self.jsAnalyze = options.jsAnalyze;
+  self.noLineNumbers = options.noLineNumbers;
 };
 
 _.extend(Module.prototype, {
@@ -87,10 +88,10 @@ _.extend(Module.prototype, {
   getPrelinkedFiles: function () {
     var self = this;
 
-    // If there are no files *and* we are a no-exports-at-all slice (eg a test
-    // slice), then generate no prelink output.
+    // If there are no files *and* we are a no-exports-at-all unibuild, then
+    // generate no prelink output.
     //
-    // If there are no files, but we are a use slice (and thus
+    // If there are no files, but we are a non-test package (and thus
     // self.declaredExports is an actual, albeit potentially empty, list), we
     // DON'T want to take this path: we want to return an empty prelink file, so
     // that at link time we end up at least setting `Package.foo = {}`.
@@ -134,7 +135,10 @@ _.extend(Module.prototype, {
     _.each(self.files, function (file) {
       if (!_.isEmpty(chunks))
         chunks.push("\n\n\n\n\n\n");
-      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth }));
+      chunks.push(file.getPrelinkedOutput({
+        sourceWidth: sourceWidth,
+        noLineNumbers: self.noLineNumbers
+      }));
     });
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
@@ -211,6 +215,10 @@ var File = function (inputFile, module) {
   // source code for this file (a string)
   self.source = inputFile.source;
 
+  // hash of source (precalculated for *.js files, calculated here for files
+  // produced by plugins)
+  self.sourceHash = inputFile.sourceHash || watch.sha1(self.source);
+
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
 
@@ -228,6 +236,15 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
+// The JsAnalyze code is somewhat slow, and we often compute assigned variables
+// on the same file multiple times in one process (notably, a single file is
+// often processed for two or three different unibuilds, and is processed again
+// when rebuilding a package when another file has changed). We cache the
+// calculated variables under the source file's hash (calculating the source
+// file's hash is faster than running jsAnalyze, and in the case of *.js files
+// we have the hash already anyway).
+var ASSIGNED_GLOBALS_CACHE = {};
+
 _.extend(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
@@ -243,8 +260,13 @@ _.extend(File.prototype, {
     if (!jsAnalyze)
       return [];
 
+    if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
+      return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
+    }
+
     try {
-      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+      return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
+              _.keys(jsAnalyze.findAssignedGlobals(self.source)));
     } catch (e) {
       if (!e.$ParseError)
         throw e;
@@ -291,6 +313,8 @@ _.extend(File.prototype, {
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
+  // - noLineNumbers: We still include the banners and such, but
+  //   no line number suffix.
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
@@ -355,7 +379,8 @@ _.extend(File.prototype, {
       _.each(lines, function (line) {
         var suffix = "\n";
 
-        if (line.length <= width && line[line.length - 1] !== "\\") {
+        if (! options.noLineNumbers
+            && line.length <= width && line[line.length - 1] !== "\\") {
           suffix = padding.slice(line.length, width) + " // " + num + "\n";
         }
         f(line, suffix, num);
@@ -462,8 +487,8 @@ var bannerPadding = function (bannerWidth) {
 //  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
 //
-// declaredExports: an array of symbols that the module exports.  null if our
-// slice isn't allowed to have exports. Symbols are {name,testOnly} pairs.
+// declaredExports: an array of symbols that the module exports. Symbols are
+// {name,testOnly} pairs.
 //
 // useGlobalNamespace: make the top level namespace be the same as the
 // global namespace, so that symbols are accessible from the
@@ -478,7 +503,7 @@ var bannerPadding = function (bannerWidth) {
 // the servePath to use for it.
 //
 // jsAnalyze: if possible, the JSAnalyze object from the js-analyze
-// package. (This is not possible if we are currently linking the main slice of
+// package. (This is not possible if we are currently linking the main unibuild of
 // the js-analyze package!)
 //
 // Output is an object with keys:
@@ -494,7 +519,8 @@ var prelink = function (options) {
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
-    jsAnalyze: options.jsAnalyze
+    jsAnalyze: options.jsAnalyze,
+    noLineNumbers: options.noLineNumbers
   });
 
   _.each(options.inputFiles, function (inputFile) {
@@ -535,9 +561,6 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 // 'Foo', "Foo.bar", etc) to the module from which it should be
 // imported (which must load before us at runtime)
 //
-// noExports: if true, don't generate an exports section (don't even create
-// `Package.name`).
-//
 // packageVariables: package-scope variables, some of which may be exports.
 //   a list of {name, export} objects; any non-falsy value for "export" means
 //   to export it.
@@ -566,12 +589,9 @@ var link = function (options) {
     packageVariables: options.packageVariables
   });
 
-  var exported;
-  if (!options.noExports) {
-    exported = _.pluck(_.filter(options.packageVariables, function (v) {
-      return v.export;
-    }), 'name');
-  }
+  var exported = _.pluck(_.filter(options.packageVariables, function (v) {
+    return v.export;
+  }), 'name');
 
   var footer = getFooter({
     exported: exported,

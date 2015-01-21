@@ -1,0 +1,129 @@
+// Generic nav positioning and styles
+nav {
+  .position(absolute, 0, 0, auto, 0);
+  .transform(translate3d(0,0,0));
+  .transition( all 200ms ease-out );
+  z-index: 10;
+
+  .nav-item {
+    .font-m1;
+    color: @color-ancillary;
+    display: inline-block;
+    height: 3rem;
+    text-align: center;
+    width: 3rem;
+
+    &:active { opacity: .5; }
+
+    [class^="icon-"],
+    [class*=" icon-"] {
+      line-height: 3rem;
+      vertical-align: middle;
+    }
+  }
+  .nav-group {
+    .position(absolute, 0, auto, auto, 0);
+    z-index: 1;
+
+    &.right {
+      left: auto;
+      right: 0;
+    }
+  }
+}
+
+// Custom nav for lists-show
+.page.lists-show nav {
+  .background-image( linear-gradient(top, #d0edf5, #e1e5f0 100%) );
+  height: 5em;
+
+  text-align: center;
+  @media screen and (min-width: 40em) { text-align: left; }
+
+  .title-page {
+    .position(absolute, 0, 3rem, auto, 3rem);
+    @media screen and (min-width: 40em) {
+      left: 1rem;
+      right: 6rem;
+    }
+
+    cursor: pointer;
+    font-size: 1.125em; // 18px
+    white-space: nowrap;
+
+    .title-wrapper {
+      .ellipsized;
+      color: @color-ancillary;
+      display: inline-block;
+      padding-right: 1.5rem;
+      vertical-align: top;
+      max-width: 100%;
+    }
+
+    .count-list {
+      background: @color-primary;
+      border-radius: 1em;
+      color: @color-empty;
+      display: inline-block;
+      font-size: .7rem;
+      line-height: 1;
+      margin-left: -1.25rem;
+      margin-top: -4px;
+      padding: .3em .5em;
+      vertical-align: middle;
+    }
+  }
+  form.todo-new {
+    .position(absolute, 3em, 0, auto, 0);
+
+    input[type="text"] {
+      background: transparent;
+      padding-bottom: .25em;
+      padding-left: 44px !important;
+      padding-top: .25em;
+    }
+  }
+  form.list-edit-form {
+    position: relative;
+
+    input[type="text"] {
+      background: transparent;
+      font-size: 1.125em; // 18px
+      width: 100%;
+      padding-right: 3em;
+      padding-left: 1rem;
+    }
+  }
+
+  select.list-edit {
+    .font-s2;
+    .position(absolute, 0,0,0,0);
+    background: transparent;
+    opacity: 0; // allows the cog to appear
+  }
+
+  .options-web {
+    display: none;
+
+    .nav-item {
+      .font-s3;
+      width: 2rem;
+
+      &:last-child { margin-right: .5rem; }
+    }
+  }
+
+  // Hide & show options and nav icons
+  @media screen and (min-width: 40em) {
+    .nav-group:not(.right) { display: none !important; }
+    .options-mobile { display: none; }
+    .options-web {  display: block; }
+  }
+}
+
+
+// Custom nav for auth
+@media screen and (min-width: 40em) {
+  .page.auth .nav-group { display: none; }
+  .page.not-found .nav-group { display: none; }
+}

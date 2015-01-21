@@ -2,25 +2,15 @@ var Future = require('fibers/future');
 var files = require('./files.js');
 var config = require('./config.js');
 var path = require('path');
-var fs = require('fs');
-var unipackage = require('./unipackage.js');
-var fiberHelpers = require('./fiber-helpers.js');
-var Fiber = require('fibers');
+var isopackets = require("./isopackets.js");
 var httpHelpers = require('./http-helpers.js');
 var auth = require('./auth.js');
-var release = require('./release.js');
 var url = require('url');
 var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
-
-// a bit of a hack
-var getPackage = _.once(function () {
-  return unipackage.load({
-    library: release.current.library,
-    packages: [ 'meteor', 'livedata' ],
-    release: release.current.name
-  });
-});
+var ServiceConnection = require('./service-connection.js');
+var stats = require('./stats.js');
+var Console = require('./console.js').Console;
 
 // If 'error' is an exception that we know how to report in a
 // user-friendly way, print an approprite message to stderr and return
@@ -30,17 +20,16 @@ var getPackage = _.once(function () {
 // If messages is provided, it is a map from DDP error names to
 // human-readable explanation to use.
 var handleError = function (error, galaxyName, messages) {
-  var Package = getPackage();
   messages = messages || {};
 
-  if (error instanceof Package.meteor.Meteor.Error) {
+  if (error.errorType === "Meteor.Error") {
     var msg = messages[error.error];
     if (msg)
-      process.stderr.write(msg + "\n");
+      Console.error(msg);
     else if (error.message)
-      process.stderr.write("Denied: " + error.message + "\n");
+      Console.error("Denied: " + error.message);
     return 1;
-  } else if (error instanceof ConnectionTimeoutError) {
+  } else if (error.errorType === "DDP.ConnectionError") {
     // If we have an http/https URL for a galaxyName instead of a
     // proper galaxyName (which is what the code in this file
     // currently passes), strip off the scheme and trailing slash.
@@ -48,28 +37,22 @@ var handleError = function (error, galaxyName, messages) {
     if (m)
       galaxyName = m[1];
 
-    process.stderr.write(galaxyName + ": connection failed");
+    Console.error(galaxyName + ": connection failed");
     return 1;
   } else {
     throw error;
   }
 };
 
-// Wrapper to manage a DDP connection to a service within a
-// Galaxy. Provides (1) authentication from the credential cache, (2)
-// failing method calls and subscriptions if, after 10 seconds, we're
-// not connected. This functionality should eventually end up in the
-// DDP client in one form or other.
+// Returns a ServiceConnection to a galaxy service that is authenticated
+// from the credential cache.
 //
 // - galaxy: the name of the galaxy to connect to, as returned by
 //   discoverGalaxy (as described there, should probably be a galaxy
 //   name, but currently is a https or http URL)
 // - service: the service to connect to within the Galaxy, such as
 //   'ultraworld' or 'log-reader'.
-var ConnectionTimeoutError = function () {};
-var ServiceConnection = function (galaxy, service) {
-  var self = this;
-  var Package = getPackage();
+var galaxyServiceConnection = function (galaxy, service) {
   var endpointUrl = galaxy + "/" + service;
   var parsedEndpoint = url.parse(endpointUrl);
   var authToken = auth.getSessionToken(parsedEndpoint.hostname);
@@ -80,105 +63,12 @@ var ServiceConnection = function (galaxy, service) {
   if (! authToken)
     throw new Error("not logged in to galaxy?");
 
-  self.connection = Package.livedata.DDP.connect(endpointUrl, {
+  return new ServiceConnection(endpointUrl, {
     headers: {
       cookie: "GALAXY_AUTH=" + authToken
     }
   });
-
-  self.connectionTimeoutCallbacks = [];
-  self.connectionTimer = Package.meteor.Meteor.setTimeout(function () {
-    if (self.connection.status().status !== "connected") {
-      self.connection = null;
-      _.each(self.connectionTimeoutCallbacks, function (f) {
-        f();
-      });
-      self.connectionTimeoutCallbacks = [];
-    }
-  }, 10*1000);
 };
-
-_.extend(ServiceConnection.prototype, {
-  _onConnectionTimeout: function (f) {
-    var self = this;
-    if (! self.connection)
-      f();
-    else
-      self.connectionTimeoutCallbacks.push(f);
-  },
-
-  call: function (/* arguments */) {
-    var self = this;
-    var fut = new Future;
-    self._onConnectionTimeout(function () {
-      fut['throw'](new ConnectionTimeoutError);
-    });
-
-    var args = _.toArray(arguments);
-    var name = args.shift();
-    self.connection.apply(name, args, function (err, result) {
-      if (err) {
-        fut['throw'](err);
-      } else {
-        self._cleanUpTimer();
-        fut['return'](result);
-      }
-    });
-
-    return fut.wait();
-  },
-
-  // XXX derived from _subscribeAndWait in livedata_connection.js
-  // -- but with a different signature..
-  subscribeAndWait: function (/* arguments */) {
-    var self = this;
-
-    var fut = new Future();
-    self._onConnectionTimeout(function () {
-      fut['throw'](new ConnectionTimeoutError);
-    });
-
-    var ready = false;
-    var args = _.toArray(arguments);
-    args.push({
-      onReady: function () {
-        ready = true;
-        self._cleanUpTimer();
-        fut['return']();
-      },
-      onError: function (e) {
-        if (! ready)
-          fut['throw'](e);
-        else
-          /* XXX handle post-ready error */;
-      }
-    });
-
-    var sub = self.connection.subscribe.apply(self.connection, args);
-    fut.wait();
-    return sub;
-  },
-
-  _cleanUpTimer: function () {
-    var self = this;
-    var Package = getPackage();
-    Package.meteor.Meteor.clearTimeout(self.connectionTimer);
-    self.connectionTimer = null;
-  },
-
-  close: function () {
-    var self = this;
-    if (self.connection) {
-      self.connection.close();
-      self.connection = null;
-    }
-    if (self.connectionTimer) {
-      // Clean up the timer so that Node can exit cleanly
-      self._cleanUpTimer();
-    }
-  }
-});
-
 
 // Determine if a particular site is hosted by Galaxy, and if so, by
 // which Galaxy. 'app' should be a hostname, like 'myapp.meteor.com'
@@ -251,11 +141,11 @@ exports.discoverGalaxy = function (app) {
 
 exports.deleteApp = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = new ServiceConnection(galaxy, "ultraworld");
+  var conn = galaxyServiceConnection(galaxy, "ultraworld");
 
   try {
     conn.call("destroyApp", app);
-    process.stdout.write("Deleted.\n");
+    Console.info("Deleted.");
   } catch (e) {
     return handleError(e, galaxy);
   } finally {
@@ -301,17 +191,23 @@ exports.deploy = function (options) {
     // concurrent with bundling.
 
     if (! options.starball && ! messages.hasMessages()) {
-      process.stdout.write('Deploying ' + options.app + '. Bundling...\n');
+      Console.info('Deploying ' + options.app + '. Bundling...');
       var bundleResult = bundler.bundle({
-        appDir: options.appDir,
+        projectContext: options.projectContext,
         outputPath: bundlePath,
-        nodeModulesMode: 'skip',
-        buildOptions: options.buildOptions
+        buildOptions: options.buildOptions,
+        requireControlProgram: true
       });
 
       if (bundleResult.errors) {
-        messages.merge(bundleResult.errors);
+        messages = bundleResult.errors;
       } else {
+        stats.recordPackages({
+          what: "sdk.deploy",
+          projectContext: options.projectContext,
+          site: options.app
+        });
+
         // S3 (which is what's likely on the other end our upload)
         // requires a content-length header for HTTP PUT uploads. That
         // means that we have to actually tgz up the bundle before we
@@ -332,16 +228,15 @@ exports.deploy = function (options) {
     }
 
     if (messages.hasMessages()) {
-      process.stdout.write("\nErrors prevented deploying:\n");
-      process.stdout.write(messages.formatMessages());
+      Console.info("\nErrors prevented deploying:");
+      Console.info(messages.formatMessages());
       return 1;
     }
 
-    process.stdout.write('Uploading...\n');
+    Console.info('Uploading...');
 
     var galaxy = exports.discoverGalaxy(options.app);
-    conn = new ServiceConnection(galaxy, "ultraworld");
-    var Package = getPackage();
+    conn = galaxyServiceConnection(galaxy, "ultraworld");
 
     var created = true;
     var appConfig = {};
@@ -354,8 +249,7 @@ exports.deploy = function (options) {
     try {
       conn.call('createApp', options.app, appConfig);
     } catch (e) {
-      if (e instanceof Package.meteor.Meteor.Error &&
-          e.error === 'already-exists') {
+      if (e.errorType === 'Meteor.Error' && e.error === 'already-exists') {
         // Cool, it already exists. No problem. Just set the settings
         // if they were passed. We explicitly check for undefined
         // because we want to allow you to unset settings by passing
@@ -380,8 +274,8 @@ exports.deploy = function (options) {
 
     // Upload
     // XXX copied from galaxy/tool/galaxy.js
-    var fileSize = fs.statSync(starball).size;
-    var fileStream = fs.createReadStream(starball);
+    var fileSize = files.stat(starball).size;
+    var fileStream = files.createReadStream(starball);
     var future = new Future;
     var req = httpHelpers.request({
       method: "PUT",
@@ -393,11 +287,11 @@ exports.deploy = function (options) {
       if (error || ((response.statusCode !== 200)
                     && (response.statusCode !== 201))) {
         if (error && error.message)
-          process.stderr.write("Upload failed: " + error.message + "\n");
+          Console.error("Upload failed: " + error.message);
         else
-          process.stderr.write("Upload failed" +
-                               (response.statusCode ?
-                                " (" + response.statusCode + ")\n" : "\n"));
+          Console.error("Upload failed" +
+                        (response.statusCode ?
+                        " (" + response.statusCode + ")" : ""));
         future['return'](false);
       } else
         future['return'](true);
@@ -417,10 +311,10 @@ exports.deploy = function (options) {
     }
 
     if (created)
-      process.stderr.write(options.app + ": created app\n");
+      Console.error(options.app + ": created app\n");
 
-    process.stderr.write(options.app + ": " +
-                         "pushed revision " + result.serial + "\n");
+    Console.error(options.app + ": " +
+                  "pushed revision " + result.serial);
     return 0;
   } finally {
     // Close the connection to Galaxy (otherwise Node will continue running).
@@ -437,15 +331,11 @@ exports.deploy = function (options) {
 // null.
 exports.logs = function (options) {
   var galaxy = exports.discoverGalaxy(options.app);
-  var logReader = new ServiceConnection(galaxy, "log-reader");
+  var logReader = galaxyServiceConnection(galaxy, "log-reader");
 
   try {
     var lastLogId = null;
-    var Log = unipackage.load({
-      library: release.current.library,
-      packages: [ 'logging' ],
-      release: release.current.name
-    }).logging.Log;
+    var Log = isopackets.load('logging').logging.Log;
 
     // XXX we're cheating a bit here, relying on the server sending
     // the log messages in order
@@ -514,7 +404,7 @@ exports.logs = function (options) {
 // site's database.
 exports.temporaryMongoUrl = function (app) {
   var galaxy = exports.discoverGalaxy(app);
-  var conn = new ServiceConnection(galaxy, "ultraworld");
+  var conn = galaxyServiceConnection(galaxy, "ultraworld");
 
   try {
     var mongoUrl = conn.call('getTemporaryMongoUrl', app);

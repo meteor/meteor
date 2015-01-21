@@ -7,13 +7,14 @@
 var path = Npm.require('path');
 
 Package.describe({
-  summary: "Syntax highlighting of code, from Google"
+  summary: "Syntax highlighting of code, from Google",
+  version: "1.0.2"
 });
 
 // XXX this code dumps symbols into the global namespace (directly
 // onto 'window'.) we need to fix that.
-Package.on_use(function (api) {
-  api.add_files([
+Package.onUse(function (api) {
+  api.addFiles([
     'prettify.js',
     'prettify.css',
     path.join('styles', 'sunburst.css')], "client");

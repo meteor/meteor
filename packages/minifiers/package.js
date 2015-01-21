@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript and CSS minifiers",
-  internal: true
+  version: "1.1.3"
 });
 
 Npm.depends({
@@ -9,17 +9,23 @@ Npm.depends({
   "css-stringify": "https://github.com/reworkcss/css-stringify/tarball/a7fe6de82e055d41d1c5923ec2ccef06f2a45efa"
 });
 
-Package.on_use(function (api) {
-  api.use('underscore', 'server');
-  api.export(['CssTools', 'UglifyJSMinify']);
-  api.add_files(['minification.js', 'minifiers.js'], 'server');
+Npm.strip({
+  "uglify-js": ["test/"],
+  "css-parse": ["test/"],
+  "css-stringify": ["test/"],
 });
 
-Package.on_test(function (api) {
+Package.onUse(function (api) {
+  api.use('underscore', 'server');
+  api.export(['CssTools', 'UglifyJSMinify', 'UglifyJS']);
+  api.addFiles(['minification.js', 'minifiers.js'], 'server');
+});
+
+Package.onTest(function (api) {
   api.use('minifiers', 'server');
   api.use('tinytest');
 
-  api.add_files([
+  api.addFiles([
     'beautify-tests.js',
     'minifiers-tests.js',
     'urlrewriting-tests.js'

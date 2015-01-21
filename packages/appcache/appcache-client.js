@@ -13,7 +13,7 @@ var updatingAppcache = false;
 var reloadRetry = null;
 var appcacheUpdated = false;
 
-Reload._onMigrate('appcache', function(retry) {
+Reload._onMigrate('appcache', function (retry) {
   if (appcacheUpdated)
     return [true];
 
@@ -40,7 +40,7 @@ Reload._onMigrate('appcache', function(retry) {
 
 // If we're migrating and the app cache is now up to date, signal that
 // we're now ready to migrate.
-var cacheIsNowUpToDate = function() {
+var cacheIsNowUpToDate = function () {
   if (!updatingAppcache)
     return;
   appcacheUpdated = true;
@@ -55,7 +55,7 @@ window.applicationCache.addEventListener('noupdate', cacheIsNowUpToDate, false);
 // cache has now been disabled or the appcache package removed.
 // Reload to get the new non-cached code.
 
-window.applicationCache.addEventListener('obsolete', (function() {
+window.applicationCache.addEventListener('obsolete', (function () {
   if (reloadRetry) {
     cacheIsNowUpToDate();
   } else {

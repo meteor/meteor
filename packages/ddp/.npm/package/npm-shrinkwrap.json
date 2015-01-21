@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "faye-websocket": {
+      "version": "0.8.1",
+      "dependencies": {
+        "websocket-driver": {
+          "version": "0.4.0"
+        }
+      }
+    },
+    "sockjs": {
+      "version": "0.3.11",
+      "dependencies": {
+        "node-uuid": {
+          "version": "1.4.1"
+        }
+      }
+    }
+  }
+}

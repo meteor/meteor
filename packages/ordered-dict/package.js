@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Ordered traversable dictionary with a mutable ordering",
-  internal: true
+  version: '1.0.2'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('underscore');
   api.export('OrderedDict');
-  api.add_files('ordered_dict.js', ['client', 'server']);
+  api.addFiles('ordered_dict.js', ['client', 'server']);
 });

@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Maintain a connection to the leader of an election set",
-  internal: true
+  version: '1.0.3'
 });
 
-Package.on_use(function (api) {
-  api.use(['logging', 'underscore', 'livedata', 'ejson']);
-  api.add_files(['follower.js'], 'server');
+Package.onUse(function (api) {
+  api.use(['logging', 'underscore', 'ddp', 'ejson']);
+  api.addFiles(['follower.js'], 'server');
   api.export('Follower');
 });

@@ -1,6 +1,7 @@
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
+var config = require("../config.js");
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 
@@ -128,12 +129,12 @@ selftest.define('authorized - no username', ['net', 'slow'], function () {
   // username.
   var email = testUtils.randomUserEmail();
   var username = testUtils.randomString(10);
-  var appName = testUtils.randomAppName();
+  var appName = testUtils.randomAppName() + "." +
+        (process.env.DEPLOY_HOSTNAME || config.getDeployHostname());
   var token = testUtils.deployWithNewEmail(s, email, appName);
   var run = s.run('authorized', appName, '--add', 'test');
   run.waitSecs(commandTimeoutSecs);
-  run.matchErr('You must set a password on your account before ' +
-               'you can authorize other users');
+  run.matchErr('You must set a password on your account');
   run.expectExit(1);
   // After we set a username, we should be able to authorize others.
   testUtils.registerWithToken(token, username, 'testtest', email);

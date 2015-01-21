@@ -192,7 +192,7 @@ Block tags invoke built-in directives or custom block helpers, passing a block o
 {{/block}}
 ```
 
-Block tags may also have specify "else" content, separated from the main content by the special template tag `{{else}}`. 
+Block tags may also specify "else" content, separated from the main content by the special template tag `{{else}}`. 
 
 A block tag's content must consist of HTML with balanced tags.
 
@@ -268,20 +268,20 @@ Things are more complicated if the argument to the `#each` reactively changes be
 2. For objects with no `_id` field, use the array index as the identification key. In this case, appends are fast but prepends are slower.
 3. For numbers or strings, use their value as the identification key.
 
-Regardless of the strategy used, keys are deduplicated so that arrays with repeating items work fine.
+In case of duplicate identification keys, all duplicates after the first are replaced with random ones. Using objects with unique `_id` fields is the way to get full control over the identity of rendered elements.
 
 ## Custom Block Helpers
 
 To define your own block helper, simply declare a template, and then invoke it using `{{#someTemplate}}` (block) instead of `{{> someTemplate}}` (inclusion) syntax.
 
-When a template is invoked as a block helper, it can use `{{> UI.contentBlock}}` and `{{> UI.elseBlock}}` to include the block content it was passed.
+When a template is invoked as a block helper, it can use `{{> Template.contentBlock}}` and `{{> Template.elseBlock}}` to include the block content it was passed.
 
 Here is a simple block helper that wraps its content in a div:
 
 ```
 <template name="note">
   <div class="note">
-    {{> UI.contentBlock}}
+    {{> Template.contentBlock}}
   </div>
 </template>
 ```
@@ -299,9 +299,9 @@ Here is an example of implementing `#unless` in terms of `#if` (ignoring for the
 ```
 <template name="unless">
   {{#if this}}
-    {{> UI.elseBlock}}
+    {{> Template.elseBlock}}
   {{else}}
-    {{> UI.contentBlock}}
+    {{> Template.contentBlock}}
   {{/if}}
 </template>
 ```
@@ -309,18 +309,18 @@ Here is an example of implementing `#unless` in terms of `#if` (ignoring for the
 Note that the argument to `#unless` (the condition) becomes the data
 context in the `unless` template and is accessed via `this`.  However,
 it would not work very well if this data context was visible to
-`UI.contentBlock`, which is supplied by the user of `unless`.
+`Template.contentBlock`, which is supplied by the user of `unless`.
 
-Therefore, when you include `{{> UI.contentBlock}}`, Spacebars hides the data
+Therefore, when you include `{{> Template.contentBlock}}`, Spacebars hides the data
 context of the calling template, and any data contexts established in
 the template by `#each` and `#with`.  They are not visible to the
 content block, even via `..`.  Put another way, it's as if the `{{>
-UI.contentBlock}}` inclusion occurred at the location where `{{#unless}}` was
+Template.contentBlock}}` inclusion occurred at the location where `{{#unless}}` was
 invoked, as far as the data context stack is concerned.
 
-You can pass an argument to `{{> UI.contentBlock}}` or `{{> UI.elseBlock}}` to
+You can pass an argument to `{{> Template.contentBlock}}` or `{{> Template.elseBlock}}` to
 invoke it with a data context of your choice.  You can also use `{{#if
-UI.contentBlock}}` to see if the current template was invoked as a block
+Template.contentBlock}}` to see if the current template was invoked as a block
 helper rather than an inclusion.
 
 ## Comment Tags
@@ -388,7 +388,7 @@ following elements:
   `<head>` elements are concatenated.
 
 * `<body>` - A template that will be inserted into the `<body>` of the main
-  page.  It will be compiled to the `UI.body` component. If `<body>` is used
+  page.  It will be compiled to the `Template.body` component. If `<body>` is used
   multiple times (perhaps in different files), the contents of all of the
   `<body>` elements are concatenated.
 

@@ -1,5 +1,3 @@
-MeteorDeveloperAccounts = {};
-
 // Request Meteor developer account credentials for the user
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on
@@ -22,25 +20,28 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
 
   var credentialToken = Random.secret();
 
+  var loginStyle = OAuth._loginStyle('meteor-developer', config, options);
+
   var loginUrl =
-        METEOR_DEVELOPER_URL + "/oauth2/authorize?" +
-        "state=" + credentialToken +
+        MeteorDeveloperAccounts._server +
+        "/oauth2/authorize?" +
+        "state=" + OAuth._stateParam(loginStyle, credentialToken) +
         "&response_type=code&" +
         "client_id=" + config.clientId;
 
   if (options && options.userEmail)
     loginUrl += '&user_email=' + encodeURIComponent(options.userEmail);
 
-  loginUrl += "&redirect_uri=" + Meteor.absoluteUrl("_oauth/meteor-developer?close");
+  loginUrl += "&redirect_uri=" + OAuth._redirectUri('meteor-developer', config);
 
-  OAuth.showPopup(
-    loginUrl,
-    _.bind(credentialRequestCompleteCallback, null, credentialToken),
-    {
-      width: 470,
-      height: 420
-    }
-  );
+  OAuth.launchLogin({
+    loginService: "meteor-developer",
+    loginStyle: loginStyle,
+    loginUrl: loginUrl,
+    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
+    credentialToken: credentialToken,
+    popupOptions: {width: 470, height: 420}
+  });
 };
 
 MeteorDeveloperAccounts.requestCredential = requestCredential;

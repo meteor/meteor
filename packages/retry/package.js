@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Retry logic with exponential backoff",
-  internal: true
+  version: '1.0.2'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['underscore', 'random'], ['client', 'server']);
   api.export('Retry');
-  api.add_files('retry.js', ['client', 'server']);
+  api.addFiles('retry.js', ['client', 'server']);
 });

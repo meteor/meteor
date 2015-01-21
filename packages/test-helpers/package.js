@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Utility functions for tests",
-  internal: true
+  version: '1.0.3'
 });
 
-Package.on_use(function (api) {
-  api.use(['underscore', 'deps', 'ejson', 'tinytest', 'random']);
+Package.onUse(function (api) {
+  api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random']);
   api.use(['jquery'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in
@@ -13,33 +13,32 @@ Package.on_use(function (api) {
   // other package tests and not included in the non-test bundle. One
   // idea would be to make a new separate package 'ddp-test-helpers' or
   // the like.
-  api.use('livedata');
+  api.use('ddp');
 
 
   api.export([
     'pollUntil', 'try_all_permutations',
-    'SeededRandom', 'ReactiveVar', 'clickElement', 'blurElement',
+    'SeededRandom', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'renderToDiv',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
     'makeTestConnection', 'DomUtils'], {testOnly: true});
 
-  api.add_files('try_all_permutations.js');
-  api.add_files('async_multi.js');
-  api.add_files('event_simulation.js');
-  api.add_files('seeded_random.js');
-  api.add_files('canonicalize_html.js');
-  api.add_files('render_div.js');
-  api.add_files('current_style.js');
-  api.add_files('reactivevar.js');
-  api.add_files('callback_logger.js');
-  api.add_files('domutils.js', 'client');
-  api.add_files('connection.js', 'server');
+  api.addFiles('try_all_permutations.js');
+  api.addFiles('async_multi.js');
+  api.addFiles('event_simulation.js');
+  api.addFiles('seeded_random.js');
+  api.addFiles('canonicalize_html.js');
+  api.addFiles('render_div.js');
+  api.addFiles('current_style.js');
+  api.addFiles('callback_logger.js');
+  api.addFiles('domutils.js', 'client');
+  api.addFiles('connection.js', 'server');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use(['test-helpers', 'underscore']);
-  api.add_files('try_all_permutations_test.js', 'client');
-  api.add_files('seeded_random_test.js');
+  api.addFiles('try_all_permutations_test.js', 'client');
+  api.addFiles('seeded_random_test.js');
 });

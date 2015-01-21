@@ -1,7 +1,8 @@
 # HTMLjs
 
-A small (500-line) library for expressing HTML trees in a concise
-syntax.  This library is used at compile time and run time by Meteor UI.
+HTMLjs is a small library for expressing HTML trees with a concise
+syntax.  It is used to render content in Blaze and to represent
+templates during compilation.
 
 ```
 var UL = HTML.UL, LI = HTML.LI, B = HTML.B;
@@ -19,219 +20,408 @@ HTML.toHTML(
 </ul>
 ```
 
-The functions `UL`, `LI`, and so on are "tag constructors" which
-return an object representation that can be used to generate HTML, or,
-via other packages, be used to generate DOM (`ui`), be parsed from
-HTML (`html-tools`), or serve as the backbone of the intermediate
-representation for a template compiler (`spacebars-compiler`).
+The functions `UL`, `LI`, and `B` are constructors which
+return instances of `HTML.Tag`.  These tag objects can
+then be converted to an HTML string or directly into DOM nodes.
 
-## Syntax
+The flexible structure of HTMLjs allows different kinds of Blaze
+directives to be embedded in the tree.  HTMLjs does not know about
+these directives, which are considered "foreign objects."
 
-Tag constructors take an optional first argument `attrs` followed by
-zero or more arguments, the `children`.  The first argument is taken
-to be `attrs` if it is a "vanilla" JavaScript object such as an object
-literal.
+# Built-in Types
 
-> Ideally, a "vanilla" object would be one whose direct prototype is
-> `Object.prototype`.  Since this test is impossible in IE 8, we test
-> `obj.constructor === Object`, which is true for object literals
-> (except ones like `{constructor: blah}`!) and false for most objects
-> with custom prototypes (because JavaScript sets
-> `MyClass.prototype.constructor = MyClass` when you create a function
-> `MyClass`).
+The following types are built into HTMLjs.  Built-in methods like
+`HTML.toHTML` require a tree consisting only of these types.
 
-Children of a tag may be of any of several built-in types:
+* __`null`, `undefined`__ - Render to nothing.
 
-* Tag (HTML.Tag)
-* HTML.CharRef
-* HTML.Comment
-* HTML.Raw
-* String
-* Boolean or Number (which will be converted to String)
-* Array (which will be flattened)
-* Null or undefined (which will be ignored)
-* Template/Component
-* Function returning one of these types
+* __boolean, number__ - Render to the string form of the boolean or number.
 
-The set of allowed types is *open* in that any object may be included
-in the tree as long as the code consuming the tree can handle it.
+* __string__ - Renders to a text node (or part of an attribute value).  All characters are safe, and no HTML injection is possible.  The string `"<a>"` renders `&lt;a>` in HTML, and `document.createTextNode("<a>")` in DOM.
 
-Character references (like `&amp;`) are *not* interpreted in strings.
-To include a character reference, use `HTML.CharRef({html:
-'&amp;', str: '&'})`, specifying both the raw HTML form and the string
-form of the character.
+* __Array__ - Renders to its elements in order.  An array may be empty.  Arrays are detected using `HTML.isArray(...)`.
 
-> In other words, string values are of the form you would pass to
-`document.createTextNode`, not of the form you would see in an HTML
-document.  The intent here is to only need to parse and interpret
-character references at compile time, making the representation
-maximally flexible easy to consume at runtime.
->
-> The reason we represent character references at all, rather than
-> simply converting them to Unicode when parsing the source HTML
-> (and then escaping `&` and `<` at the very end)
-> is 1) to preserve the HTML author's intent, and 2) in case there
-> is a character-encoding-related reason that a character reference
-> is being used.
+* __`HTML.Tag`__ - Renders to an HTML element (including start tag, contents, and end tag).
 
-Attribute values can contain character references, using arrays to
-hold the string and CharRef parts:
+* __`HTML.CharRef({html: ..., str: ...})`__ - Renders to a character reference (such as `&nbsp`) when generating HTML.
+
+* __`HTML.Comment(text)`__ - Renders to an HTML comment.
+
+* __`HTML.Raw(html)`__ - Renders to a string of HTML to include verbatim.
+
+The `new` keyword is not required before constructors of HTML object types.
+
+All objects and arrays should be considered immutable.  Instance properties
+are public, but they should only be read, not written.  Arrays should not
+be spliced in place.  This convention allows for clean patterns of
+processing and transforming HTMLjs trees.
+
+
+## HTML.Tag
+
+An `HTML.Tag` is created using a tag-specific constructor, like
+`HTML.P` for a `<p>` tag or `HTML.INPUT` for an `<input>` tag.  The
+resulting object is `instanceof HTML.Tag`.  (The `HTML.Tag`
+constructor should not be called directly.)
+
+Tag constructors take an optional attributes dictionary followed
+by zero or more children:
 
 ```
-var amp = HTML.CharRef({html: '&amp;', str: '&'});
+HTML.HR()
 
-HTML.toHTML(HTML.SPAN({title: ['M', amp, 'Ms']},
-                      'M', amp, 'M candies'))
+HTML.DIV(HTML.P("First paragraph"),
+         HTML.P("Second paragraph"))
+
+HTML.INPUT({type: "text"})
+
+HTML.SPAN({'class': "foo"}, "Some text")
 ```
 
-```
-<span title="M&amp;Ms">M&amp;M candies</span>
-```
+### Instance properties
 
-A comment looks like `HTML.Comment("value here")`, where the value
-should not contain two consecutive hyphen (`-`) characters or an
-initial or final hyphen (or they will be stripped out).
+Tags have the following properties:
 
-A "raw" object like `HTML.Raw("<br>")` represents raw HTML to insert
-into the document.  The HTML should be known to be safe and contain
-balanced tags!  It will be injected without any parsing or checking
-when the representation is converted to an HTML string.  If the
-representation is used to generate DOM directly, the "raw" node will
-be materialized using an innerHTML-like method.
+* `tagName` - The tag name in lowercase (or camelCase)
+* `children` - An array of children (always present)
+* `attrs` - An attributes dictionary, `null`, or an array (see below)
 
-Functions in the tree are used as reactivity boundaries when
-generating DOM directly.  When generating HTML, they are simply called
-for their return value.  Functions are passed no arguments and are
-given no particular value of `this`.
 
-Templates/components like `Template.foo` can also be included in the
-representation.  HTMLjs has very limited knowledge of what a component
-is.  It knows components have an `instantiate` method that returns
-something with a `render` method.  Operations that realize an HTMLjs
-tree as HTML, DOM, or some other form have a bit of boilerplate that
-they use to detect and instantiate components:
+### Special forms of attributes
+
+The attributes of a Tag may be an array of dictionaries.  In order
+for a tag constructor to recognize an array as the attributes argument,
+it must be written as `HTML.Attrs(attrs1, attrs2, ...)`, as in this
+example:
 
 ```
-HTML.toHTML = function (node, parentComponent) {
-  // ... handle various types of `node`
-  if (typeof node.instantiate === 'function') {
-    // component
-    var instance = node.instantiate(parentComponent || null);
-    var content = instance.render();
-    // recurse with a new value for parentComponent
-    return HTML.toHTML(content, instance);
-  }
-  // ...
-};
+var extraAttrs = {'class': "container"};
+
+var div = HTML.DIV(HTML.Attrs({id: "main"}, extraAttrs),
+                   "This is the content.");
+
+div.attrs // => [{id: "main"}, {'class': "container"}]
 ```
 
-The argument `parentComponent` is used to set a pointer that points
-from each component to its parent, used for name lookups.
+`HTML.Attrs` may also be used to pass a foreign object in place of
+an attributes dictionary of a tag.
 
-## "Known" and Custom Tags
 
-All the usual HTML and HTML5 tags are available as `HTML.A`,
-`HTML.ABBR`, `HTML.ADDRESS`, etc.  These tags are called "known" tags
-and have predefined tag constructors.  If you want to use a custom
-tag, you'll have to create the tag constructor using `getTag` or `ensureTag`.
+
+### Normalized Case for Tag Names
+
+The `tagName` field is always in "normalized case," which is the
+official case for that particular element name (usually lowercase).
+For example, `HTML.DIV().tagName` is `"div"`.  For some elements
+used in inline SVG graphics, the correct case is "camelCase."  For
+example, there is an element named `clipPath`.
+
+Web browsers have a confusing policy about case.  They perform case
+normalization when parsing HTML, but not when creating SVG elements
+at runtime; the correct case is required.
+
+Therefore, in order to avoid ever having to normalize case at
+runtime, the policy of HTMLjs is to put the burden on the caller
+of functions like `HTML.ensureTag` -- for example, a template
+engine -- of supplying correct normalized case.
+
+Briefly put, normlized case is usually lowercase, except for certain
+elements where it is camelCase.
+
+
+### Known Elements
+
+HTMLjs comes preloaded with constructors for all "known" HTML and
+SVG elements.  You can use `HTML.P`, `HTML.DIV`, and so on out of
+the box.  If you want to create a tag like `<foo>` for some reason,
+you have to tell HTMLjs to create the `HTML.FOO` constructor for you
+using `HTML.ensureTag` or `HTML.getTag`.
+
+HTMLjs's lists of known elements are public because they are useful to
+other packages that provide additional functions not found here, like
+functions for normalizing case.
+
+
+
+## Foreign objects
+
+Arbitrary objects are allowed in HTMLjs trees, which is useful for
+adapting HTMLjs to a wide variety of uses.  Such objects are called
+foreign objects.
+
+The one restriction on foreign objects is that they must be
+instances of a class -- so-called "constructed objects" (see
+`HTML.isConstructedObject`) -- so that they can be distinguished
+from the vanilla JS objects that represent attributes dictionaries
+when constructing Tags.
+
+Functions are also considered foreign objects.
+
+## HTML.getTag(tagName)
+
+* `tagName` - A string in normalized case
+
+Creates a tag constructor for `tagName`, assigns it to the `HTML`
+namespace object, and returns it.
+
+For example, `HTML.getTag("p")` returns `HTML.P`.  `HTML.getTag("foo")`
+will create and return `HTML.FOO`.
+
+It's very important that `tagName` be in normalized case, or else
+an incorrect tag constructor will be registered and used henceforth.
+
+
+## HTML.ensureTag(tagName)
+
+* `tagName` - A string in normalized case
+
+Ensures that a tag constructor (like `HTML.FOO`) exists for a tag
+name (like `"foo"`), creating it if necessary.  Like `HTML.getTag`
+but does not return the tag constructor.
+
+
+## HTML.isTagEnsured(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether a particular tag is guaranteed to be available on
+the `HTML` object (under the name returned by `HTML.getSymbolName`).
+
+Useful for code generators.
+
+
+## HTML.getSymbolName(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns the name of the all-caps constructor (like `"FOO"`) for a
+tag name in normalized case (like `"foo"`).
+
+In addition to converting `tagName` to all-caps, hyphens (`-`) in
+tag names are converted to underscores (`_`).
+
+Useful for code generators.
+
+
+## HTML.knownElementNames
+
+An array of all known HTML5 and SVG element names in normalized case.
+
+
+## HTML.knownSVGElementNames
+
+An array of all known SVG element names in normalized case.
+
+The `"a"` element is not included because it is primarily a non-SVG
+element.
+
+
+## HTML.voidElementNames
+
+An array of all "void" element names in normalized case.  Void
+elements are elements with a start tag and no end tag, such as BR,
+HR, IMG, and INPUT.
+
+The HTML spec defines a closed class of void elements.
+
+
+## HTML.isKnownElement(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether `tagName` is a known HTML5 or SVG element.
+
+
+## HTML.isKnownSVGElement(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether `tagName` is the name of a known SVG element.
+
+
+## HTML.isVoidElement(tagName)
+
+* `tagName` - A string in normalized case
+
+Returns whether `tagName` is the name of a void element.
+
+
+## HTML.CharRef({html: ..., str: ...})
+
+Represents a character reference like `&nbsp;`.
+
+A CharRef is not required for escaping special characters like `<`,
+which are automatically escaped by HTMLjs.  For example,
+`HTML.toHTML("<")` is `"&lt;"`.  Also, now that browsers speak
+Unicode, non-ASCII characters typically do not need to be expressed
+as character references either.  The purpose of `CharRef` is offer
+control over the generated HTML, allowing template engines to
+preserve any character references that they come across.
+
+Constructing a CharRef requires two strings, the uninterpreted
+"HTML" form and the interpreted "string" form.  Both are required
+to be present, and it is up to the caller to make sure the
+information is accurate.
+
+Examples of valid CharRefs:
+
+* `HTML.CharRef({html: '&amp;', str: '&'})`
+* `HTML.CharRef({html: '&nbsp;', str: '\u00A0'})
+
+Instance properties: `.html`, `.str`
+
+
+## HTML.Comment(value)
+
+* `value` - String
+
+Represents an HTML Comment.  For example, `HTML.Comment("foo")` represents
+the comment `<!--foo-->`.
+
+The value string should not contain two consecutive hyphens (`--`) or start
+or end with a hyphen.  If it does, the offending hyphens will be stripped
+before generating HTML.
+
+Instance properties: `value`
+
+
+## HTML.Raw(value)
+
+* `value` - String
+
+Represents HTML code to be inserted verbatim.  `value` must consist
+of a valid, complete fragment of HTML, with all tags closed and
+all required end tags present.
+
+No security checks are performed, and no special characters are
+escaped.  `Raw` should not be used if there are other ways of
+accomplishing the same result.  HTML supplied by an application
+user should not be rendered unless the user is trusted, and even
+then, there could be strange results if required end tags are
+missing.
+
+Instance properties: `value`
+
+
+## HTML.isArray(x)
+
+Returns whether `x` is considered an array for the purposes of
+HTMLjs.  An array is an object created using `[...]` or
+`new Array`.
+
+This function is provided because there are several common ways to
+determine whether an object should be treated as an array in
+JavaScript.
+
+
+## HTML.isConstructedObject(x)
+
+Returns whether `x` is a "constructed object," which is (loosely
+speaking) an object that was created with `new Foo` (for some `Foo`)
+rather than with `{...}` (a vanilla object).  Vanilla objects are used
+as attribute dictionaries when constructing tags, while constructed
+objects are used as children.
+
+For example, in `HTML.DIV({id:"foo"})`, `{id:"foo"}` is a vanilla
+object.  In `HTML.DIV(HTML.SPAN("text"))`, the `HTML.SPAN` is a
+constructed object.
+
+A simple constructed object can be created as follows:
 
 ```
-var SPAN = HTML.SPAN;
-var FOO = HTML.getTag('FOO');
+var Foo = function () {};
+var x = new Foo; // x is a constructed object
 ```
 
+In particular, the test is that `x` is an object and `x.constructor`
+is set, but on a prototype of the object, not the object itself.
+The above example works because JavaScript sets
+`Foo.prototype.constructor = Foo` when you create a function `Foo`.
+
+
+## HTML.isNully(content)
+
+Returns true if `content` is `null`, `undefined`, an empty array,
+or an array of only "nully" elements.
+
+
+## HTML.isValidAttributeName(name)
+
+Returns whether `name` is a valid name for an attribute of an HTML tag
+or element.  `name` must:
+
+* Start with `:`, `_`, `A-Z` or `a-z`
+* Consist only of those characters plus `-`, `.`, and `0-9`.
+
+Discussion: The HTML spec and the DOM API (`setAttribute`) have different
+definitions of what characters are legal in an attribute.  The HTML
+parser is extremely permissive (allowing, for example, `<a %=%>`), while
+`setAttribute` seems to use something like the XML grammar for names (and
+throws an error if a name is invalid, making that attribute unsettable).
+If we knew exactly what grammar browsers used for `setAttribute`, we could
+include various Unicode ranges in what's legal.  For now, we allow ASCII chars
+that are known to be valid XML, valid HTML, and settable via `setAttribute`.
+
+See <http://www.w3.org/TR/REC-xml/#NT-Name> and
+<http://dev.w3.org/html5/markup/syntax.html#syntax-attributes>.
+
+
+## HTML.flattenAttributes(attrs)
+
+If `attrs` is an array, the attribute dictionaries in the array are
+combined into a single attributes dictionary, which is returned.
+Any "nully" attribute values (see `HTML.isNully`) are ignored in
+the process.  If `attrs` is a single attribute dictionary, a copy
+is returned with any nully attributes removed.  If `attrs` is
+equal to null or an empty array, `null` is returned.
+
+Attribute dictionaries are combined by assigning the name/value
+pairs in array order, with later values overwriting previous
+values.
+
+`attrs` must not contain any foreign objects.
+
+
+## HTML.toHTML(content)
+
+* `content` - any HTMLjs content
+
+Returns a string of HTML generated from `content`.
+
+For example:
+
 ```
-HTML.ensureTag('FOO');
-var SPAN = HTML.SPAN;
-var FOO = HTML.FOO;
+HTML.toHTML(HTML.HR()) // => "<hr>"
 ```
 
-All of these functions handle case conversion of `tagName` as
-appropriate, so whether you provide `foo` or `Foo` or `FOO`, the
-symbol on `HTML` will be `HTML.FOO`, while generated HTML and DOM will use
-the lowercase name `foo`.
+Foreign objects are not allowed in `content`.  To generate HTML
+containing foreign objects, create a subclass of
+`HTML.ToHTMLVisitor` and override `visitObject`.
 
-`HTML.getTag(tagName)` - Returns a tag constructor for `tagName`, calling `ensureTag` if it doesn't exist.
 
-`HTML.ensureTag(tagName)` - Creates a tag constructor for `tagName` if one doesn't exist and attaches it to the `HTML` object.
+## HTML.toText(content, textMode)
 
-`HTML.isTagEnsured(tagName)` - Returns true if `tagName` has a built-in, predefined constructor.  Useful for code generators that want to know if they should emit a call to `ensureTag`.
+* `content` - any HTMLjs content
+* `textMode` - the type of text to generate; one of
+  `HTML.TEXTMODE.STRING`, `HTML.TEXTMODE.RCDATA`, or
+  `HTML.TEXTMODE.ATTRIBUTE`
 
-## Object Representation
+Generating HTML or DOM from HTMLjs content requires generating text
+for attribute values and for the contents of TEXTAREA elements,
+among others.  The input content may contain strings, arrays,
+booleans, numbers, nulls, and CharRefs.  Behavior on other types
+is undefined.
 
-Tag constructors follow an object-oriented paradigm with optional
-`new`.  The returned objects are `instanceof` the tag constructor and
-also of `HTML.Tag`.  In other words, all of the following are true:
+The required `textMode` argument specifies the type of text to
+generate:
 
-```
-HTML.P() instanceof HTML.P
-HTML.P() instanceof HTML.Tag
-(new HTML.P) instanceof HTML.P
-(new HTML.P) instanceof HTML.Tag
-```
-
-Similarly, objects constructed with `HTML.Comment` are instances of `HTML.Comment`, and so on.
-
-In general, HTMLjs objects should be considered immutable.
-
-HTML.Tag objects have these properties:
-
-* `tagName` - the uppercase tag name
-* `attrs` - an object or null
-* `children` - an array of zero or more children
-
-HTML.CharRef objects have `html` and `str` properties, specified by
-the object passed to the constructor.
-
-HTML.Comment and HTML.Raw objects have a `value` property.
-
-### Attributes
-
-Attribute values can contain most kinds of HTMLjs content, but not Tag, Comment, or Raw.  They may contain functions and components, even though these functions won't ever establish reactivity boundaries at a finer level than an entire attribute value.
-
-The attributes dictionary of a tag can have a special entry `$dynamic`, which holds additional attributes dictionaries to combine with the main dictionary.  These additional dictionaries may be computed by functions, lending generality to the calculation of the attributes dictionary that would not otherwise be present.
-
-Specifically, the value of `$dynamic` must be an array, each element of which is either an attributes dictionary or a function returning an attributes dictionary.  (These dictionaries may not themselves have a `$dynamic` key.)  When calculating the final attributes dictionary for a tag, each dictionary obtained from the `$dynamic` array is used to modify the existing dictionary by copying the new attribute entries over it, except for entries with a "nully" value.  A "nully" value is one that is either `null`, `undefined`, `[]`, or an array of nully values.  Before checking if the dynamic attribute value is nully, all functions and components are evaluated (i.e. the functions are called and the components are instantiated, such that no functions or components remain).
-
-The `$dynamic` feature is designed to support writing `<div class="myClass" {{moreAttrs1}} {{moreAttrs2}}>` in templates.
-
-`HTML.evaluateDynamicAttributes(attrs, parentComponent)` - Returns the final attributes dictionary for a tag after interpreting the `$dynamic` property, if present.  Takes a tag's `attrs` property and a `parentComponent` (used to instantiate any components in the attributes).  `attrs` may be null.
-
-`tag.evaluateDynamicAttributes(parentComponent)` - Shorthand for `HTML.evaluateDynamicAttributes(tag.attrs, parentComponent)`.
-
-`HTML.isNully(value)` - Returns true if `value` is a nully value, i.e. one of `null`, `undefined`, `[]`, or an array of nully values.
-
-`HTML.evaluate(node, parentComponent)` - Calls all functions and instantiates all components in an HTMLjs tree.
-
-## toHTML and toText
-
-`HTML.toHTML(node, parentComponent)` - Converts the HTMLjs content `node` to an HTML string, using `parentComponent` as the parent scope pointer when instantiating components.
-
-`HTML.toText(node, textMode, parentComponent)` - Converts the HTMLjs content `node` into text, suitable for being included as part of an attribute value or textarea, for example.  `node` must not contain Tags or Comments, but may contain CharRefs, functions, and components.  The required argument `textMode` specifies what sort of text to generate, which affects how charater references are handled and which characters are escaped.
-
-* `HTML.TEXTMODE.STRING` - JavaScript string suitable for `document.createTextNode` or `element.setAttribute`.  Character references are replaced by the characters they represent.  No escaping is performed.
-
-* `HTML.TEXTMODE.ATTRIBUTE` - HTML string suitable for a quoted attribute.  Character references are included in raw HTML form (i.e. `&foo;`).  `&` and `"` are escaped when found in strings in the HTMLjs tree.
-
-* `HTML.TEXTMODE.RCDATA` - HTML string suitable for the content of a TEXTAREA element, for example.  (RCDATA stands for "replaced character data" as in the HTML syntax spec.)  Character references are included in raw HTML form.  `&` and `<` are escaped when found in strings in the HTMLjs tree.
-
-> The reason to perform the escaping as part of `HTML.toText` rather than as a post-processing step is in order to support `HTML.CharRef`, allowing the HTML author's choice of character reference encoding to be passed through.  If we only had `STRING` mode, we would lose the original form of the character references.  If we only had `RCDATA` mode, say, we would have to interpret the character references at runtime to use the DOM API.  On a related note, we don't allow `HTML.Raw` because character references are the only "raw" thing there is in text mode (and, again, we don't want to interpret them at runtime).  `HTML.CharRef` is sort of like a one-character version of `Raw`.
-
-## Name Utilities
-
-All of these functions take case-insensitive input.
-
-`HTML.properCaseTagName(tagName)` - Case-convert a tag name for inclusion in HTML or passing to `document.createElement`.  Most tags belong in lowercase, but there are some camel-case SVG tags.  HTML processors must know the proper case for tag names, because HTML is case-insensitive but the DOM is sometimes case-sensitive.
-
-`HTML.properCaseAttributeName(name)` - Case-convert an attribute name for inclusion in HTML or passing to `element.setAttribute`.  See `HTML.properCaseTagName`.
-
-`HTML.isValidAttributeName(name)` - Returns true if `name` conforms to a restricted set of legal characters known to work both in HTML and the DOM APIs.  Allows at least ASCII numbers and letters, hyphens, and underscores, where the first character can't be a number or a hyphen.
-
-`HTML.isKnownElement(tagName)` - Returns true if `tagName` is a known HTML/HTML5 element, excluding SVG and other foreign elements.
-
-`HTML.isKnownSVGElement(tagName)` - Returns true if `tagName` is a known SVG element.
-
-`HTML.isVoidElement(tagName)` - Returns true if `tagName` is a known void element such as `BR`, `HR`, or `INPUT`.  Void elements are output as `<br>` instead of `<br></br>`.  Note that neither HTML4 nor HTML5 has true self-closing tags (except when parsing SVG).  `<br/>` is the same as `<br>` and `<div/>` is the same as `<div>`.  It was only the now-abandoned XHTML standard that said otherwise, which was a backwards-incompatible change.  Modern browsers refer to the list of void elements instead.
-
-`HTML.asciiLowerCase(str)` - "ASCII-lowercases" `str`, converting `A-Z` to `a-z`.  The case-insensitive parts of the HTML spec use this operation for case folding.
-
+* `HTML.TEXTMODE.STRING` - a string with no special
+  escaping or encoding performed, suitable for passing to
+  `setAttribute` or `document.createTextNode`.
+* `HTML.TEXTMODE.RCDATA` - a string with `<` and `&` encoded
+  as character references (and CharRefs included in their
+  "HTML" form), suitable for including in a string of HTML
+* `HTML.TEXTMODE.ATTRIBUTE` - a string with `"` and `&` encoded
+  as character references (and CharRefs included in their
+  "HTML" form), suitable for including in an HTML attribute
+  value surrounded by double quotes

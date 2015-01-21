@@ -695,6 +695,19 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   nomatch({a: /xxx/}, {});
   nomatch({a: {$regex: 'xxx'}}, {});
 
+  // GitHub issue #2817:
+  // Regexps with a global flag ('g') keep a state when tested against the same
+  // string. Selector shouldn't return different result for similar documents
+  // because of this state.
+  var reusedRegexp = /sh/ig;
+  match({a: reusedRegexp}, {a: 'Shorts'});
+  match({a: reusedRegexp}, {a: 'Shorts'});
+  match({a: reusedRegexp}, {a: 'Shorts'});
+
+  match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
+  match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
+  match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
+
   test.throws(function () {
     match({a: {$options: 'i'}}, {a: 12});
   });
@@ -1705,6 +1718,11 @@ Tinytest.add("minimongo - ordering", function (test) {
     {a: [{x: 0, y: 4}]},
     {a: [{x: 0, y: 5}, {x: 1, y: 3}]}
   ]);
+
+  verify({'a.0.s': 1}, [
+    {a: [ {s: 1} ]},
+    {a: [ {s: 2} ]}
+  ]);
 });
 
 Tinytest.add("minimongo - sort", function (test) {
@@ -2249,6 +2267,8 @@ Tinytest.add("minimongo - modify", function (test) {
          {a: [1, 2, 3, 4]}); // tested
   modify({a: [1, 2]}, {$addToSet: {a: {b: 12, $each: [3, 1, 4]}}},
          {a: [1, 2, {b: 12, $each: [3, 1, 4]}]}); // tested
+  modify({}, {$addToSet: {a: {$each: []}}}, {a: []});
+  modify({}, {$addToSet: {a: {$each: [1]}}}, {a: [1]});
   modify({a: []}, {$addToSet: {'a.1': 99}}, {a: [null, [99]]});
   modify({a: {}}, {$addToSet: {'a.x': 99}}, {a: {x: [99]}});
 
@@ -2831,7 +2851,7 @@ Tinytest.add("minimongo - reactive stop", function (test) {
   var x, y;
   var sortOrder = ReactiveVar(1);
 
-  var c = Deps.autorun(function () {
+  var c = Tracker.autorun(function () {
     var q = coll.find({}, {sort: {_id: sortOrder.get()}});
     x = "";
     q.observe({ addedAt: function (doc, atIndex, before) {
@@ -2849,7 +2869,7 @@ Tinytest.add("minimongo - reactive stop", function (test) {
   sortOrder.set(-1);
   test.equal(x, "ABC");
   test.equal(y, "ABC");
-  Deps.flush();
+  Tracker.flush();
   test.equal(x, "CBA");
   test.equal(y, "CBA");
 
@@ -2875,7 +2895,7 @@ Tinytest.add("minimongo - immediate invalidate", function (test) {
   // recomputed, then recompute them one by one, without checking to see if the
   // callbacks from recomputing one query stopped the second query, which
   // crashed.
-  var c = Deps.autorun(function () {
+  var c = Tracker.autorun(function () {
     coll.findOne('A');
     coll.findOne('A');
   });
@@ -2894,7 +2914,7 @@ Tinytest.add("minimongo - count on cursor with limit", function(test){
   coll.insert({_id: 'C'});
   coll.insert({_id: 'D'});
 
-  var c = Deps.autorun(function (c) {
+  var c = Tracker.autorun(function (c) {
     var cursor = coll.find({_id: {$exists: true}}, {sort: {_id: 1}, limit: 3});
     count = cursor.count();
   });
@@ -2902,20 +2922,20 @@ Tinytest.add("minimongo - count on cursor with limit", function(test){
   test.equal(count, 3);
 
   coll.remove('A'); // still 3 in the collection
-  Deps.flush();
+  Tracker.flush();
   test.equal(count, 3);
 
   coll.remove('B'); // expect count now 2
-  Deps.flush();
+  Tracker.flush();
   test.equal(count, 2);
 
 
   coll.insert({_id: 'A'}); // now 3 again
-  Deps.flush();
+  Tracker.flush();
   test.equal(count, 3);
 
   coll.insert({_id: 'B'}); // now 4 entries, but count should be 3 still
-  Deps.flush();
+  Tracker.flush();
   test.equal(count, 3);
 
   c.stop();
@@ -2925,10 +2945,10 @@ Tinytest.add("minimongo - reactive count with cached cursor", function (test) {
   var coll = new LocalCollection;
   var cursor = coll.find({});
   var firstAutorunCount, secondAutorunCount;
-  Deps.autorun(function(){
+  Tracker.autorun(function(){
     firstAutorunCount = cursor.count();
   });
-  Deps.autorun(function(){
+  Tracker.autorun(function(){
     secondAutorunCount = coll.find({}).count();
   });
   test.equal(firstAutorunCount, 0);
@@ -2936,7 +2956,7 @@ Tinytest.add("minimongo - reactive count with cached cursor", function (test) {
   coll.insert({i: 1});
   coll.insert({i: 2});
   coll.insert({i: 3});
-  Deps.flush();
+  Tracker.flush();
   test.equal(firstAutorunCount, 3);
   test.equal(secondAutorunCount, 3);
 });
@@ -3086,3 +3106,26 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   handle.stop();
 });
 
+// See #2275.
+Tinytest.add("minimongo - fetch in observe", function (test) {
+  var coll = new LocalCollection;
+  var callbackInvoked = false;
+  var observe = coll.find().observeChanges({
+    added: function (id, fields) {
+      callbackInvoked = true;
+      test.equal(fields, {foo: 1});
+      var doc = coll.findOne({foo: 1});
+      test.isTrue(doc);
+      test.equal(doc.foo, 1);
+    }
+  });
+  test.isFalse(callbackInvoked);
+  var computation = Tracker.autorun(function (computation) {
+    if (computation.firstRun) {
+      coll.insert({foo: 1});
+    }
+  });
+  test.isTrue(callbackInvoked);
+  observe.stop();
+  computation.stop();
+});

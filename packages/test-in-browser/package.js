@@ -1,26 +1,26 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  internal: true
+  version: '1.0.6'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   // XXX this should go away, and there should be a clean interface
   // that tinytest and the driver both implement?
   api.use('tinytest');
-  api.use('bootstrap');
+  api.use('bootstrap@1.0.1');
   api.use('underscore');
 
   api.use('session');
   api.use('reload');
 
-  api.use(['ui', 'templating', 'spacebars',
-           'livedata', 'deps'], 'client');
+  api.use(['blaze', 'templating', 'spacebars',
+           'ddp', 'tracker'], 'client');
 
-  api.add_files('diff_match_patch_uncompressed.js', 'client');
+  api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
-  api.add_files('diff_match_patch_uncompressed.js', 'client');
+  api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
-  api.add_files([
+  api.addFiles([
     'driver.css',
     'driver.html',
     'driver.js'
@@ -28,5 +28,5 @@ Package.on_use(function (api) {
 
   api.use('autoupdate', 'server', {weak: true});
   api.use('random', 'server');
-  api.add_files('autoupdate.js', 'server');
+  api.addFiles('autoupdate.js', 'server');
 });

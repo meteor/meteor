@@ -1,0 +1,11 @@
+ {
+  "params": {
+    "numCollections": 1,
+    "maxAgeSeconds": 60,
+    "insertsPerSecond": 40,
+    "updatesPerSecond": 40,
+    "removesPerSecond": 4,
+    "documentSize": 128,
+    "documentNumFields": 2
+  }
+}

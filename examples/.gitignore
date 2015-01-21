@@ -9,3 +9,9 @@
 
 */.meteor/local
 */*/.meteor/local
+
+# We don't want to check example project id files into the main meteor
+# repo... but we do want users who create apps from the examples to check
+# *their* project id files into their repos, so we put this ignore line
+# here rather than in the examples/FOO/.meteor/.gitignore.
+*/.meteor/.id

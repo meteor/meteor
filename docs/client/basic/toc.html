@@ -1,0 +1,31 @@
+<template name="basicTableOfContents">
+  <div class="basic-toc {{layoutHidden 'basic'}}">
+    {{#each sections}}
+      <section>
+        {{#each subsections}}
+          <h2><a href="{{linkForItem}}"
+              class="{{maybeCurrent}}">{{title}}
+          </a></h2>
+        {{/each}}
+        {{#if title}}
+          <h2><a href="{{linkForItem}}"
+              class="{{maybeCurrent}}">{{title}}
+          </a></h2>
+        {{/if}}
+        {{#if subtitle}}
+          <p class="subtitle">{{subtitle}}</p>
+        {{/if}}
+
+        {{#if items}}
+          <ul>
+            {{#each items}}
+              <li>
+                <a href="{{linkForItem}}" class="{{maybeCurrent}}">{{{name}}}</a>
+              </li>
+            {{/each}}
+          </ul>
+        {{/if}}
+      </section>
+    {{/each}}
+  </div>
+</template>

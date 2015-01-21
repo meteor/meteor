@@ -1,23 +1,17 @@
-var fs = require("fs");
-var path = require("path");
-
 var files = require('./files.js');
 var utils = require('./utils.js');
-var release = require('./release.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var inFiber = fiberHelpers.inFiber;
 var runLog = require('./run-log.js');
 
 var _ = require('underscore');
-var unipackage = require('./unipackage.js');
-var Fiber = require('fibers');
+var isopackets = require("./isopackets.js");
 var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
 var runMongoShell = function (url) {
-  var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  var mongoPath = files.pathJoin(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
   // XXX mongo URLs are not real URLs (notably, the comma-separation for
   // multiple hosts). We've had a little better luck using the mongodb-uri npm
   // package.
@@ -174,7 +168,7 @@ var launchMongo = function (options) {
   var onExit = options.onExit || function () {};
 
   var noOplog = false;
-  var mongod_path = path.join(
+  var mongod_path = files.pathJoin(
     files.getDevBundle(), 'mongodb', 'bin', 'mongod');
   var replSetName = 'meteor';
 
@@ -185,8 +179,9 @@ var launchMongo = function (options) {
     if (options.multiple)
       throw Error("Can't specify multiple with fake mongod");
 
-    mongod_path = path.join(files.getCurrentToolsDir(),
-                            'tools', 'tests', 'fake-mongod', 'fake-mongod');
+    mongod_path = files.pathJoin(
+      files.getCurrentToolsDir(), 'tools',
+      'tests', 'fake-mongod', 'fake-mongod');
 
     // oplog support requires sending admin commands to mongod, so
     // it'd be hard to make fake-mongod support it.
@@ -194,7 +189,7 @@ var launchMongo = function (options) {
   }
 
   // add .gitignore if needed.
-  files.addToGitignore(path.join(options.appDir, '.meteor'), 'local');
+  files.addToGitignore(files.pathJoin(options.appDir, '.meteor'), 'local');
 
   var subHandles = [];
   var stopped = false;
@@ -231,7 +226,9 @@ var launchMongo = function (options) {
     var proc = null;
     var procExitHandler;
 
-    findMongoAndKillItDead(port);
+    if (options.allowKilling) {
+      findMongoAndKillItDead(port);
+    }
 
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
@@ -242,7 +239,7 @@ var launchMongo = function (options) {
       var portFileExists = false;
       var matchingPortFileExists = false;
       try {
-        matchingPortFileExists = +(fs.readFileSync(portFile)) === port;
+        matchingPortFileExists = +(files.readFile(portFile)) === port;
         portFileExists = true;
       } catch (e) {
         if (!e || e.code !== 'ENOENT')
@@ -262,17 +259,17 @@ var launchMongo = function (options) {
         // Delete the port file if it exists, so we don't mistakenly believe
         // that the DB is still configured.
         if (portFileExists)
-          fs.unlinkSync(portFile);
+          files.unlink(portFile);
 
         try {
-          var dbFiles = fs.readdirSync(dbPath);
+          var dbFiles = files.readdir(dbPath);
         } catch (e) {
           if (!e || e.code !== 'ENOENT')
             throw e;
         }
         _.each(dbFiles, function (dbFile) {
           if (/^local\./.test(dbFile)) {
-            fs.unlinkSync(path.join(dbPath, dbFile));
+            files.unlink(files.pathJoin(dbPath, dbFile));
           }
         });
       }
@@ -309,7 +306,7 @@ var launchMongo = function (options) {
       }
     });
 
-    procExitHandler = inFiber(function (code, signal) {
+    procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
@@ -338,7 +335,7 @@ var launchMongo = function (options) {
       }
     };
 
-    var stdoutOnData = inFiber(function (data) {
+    var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
       if (/config from self or any seed \(EMPTYCONFIG\)/.test(data)) {
@@ -371,12 +368,9 @@ var launchMongo = function (options) {
 
   var initiateReplSetAndWaitForReady = function () {
     try {
-      // Load mongo-livedata so we'll be able to talk to it.
-      var mongoNpmModule = unipackage.load({
-        library: release.current.library,
-        packages: [ 'mongo-livedata' ],
-        release: release.current.name
-      })['mongo-livedata'].MongoInternals.NpmModule;
+      // Load mongo so we'll be able to talk to it.
+      var mongoNpmModule =
+            isopackets.load('mongo').mongo.MongoInternals.NpmModule;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(
@@ -478,27 +472,27 @@ var launchMongo = function (options) {
 
   try {
     if (options.multiple) {
-      var dbBasePath = path.join(options.appDir, '.meteor', 'local', 'dbs');
+      var dbBasePath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs');
       _.each(_.range(3), function (i) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
         if (stopped)
           return;
-        var dbPath = path.join(options.appDir, '.meteor', 'local', 'dbs', ''+i);
+        var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs', ''+i);
         launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
       });
       if (!stopped) {
         initiateReplSetAndWaitForReady();
       }
     } else {
-      var dbPath = path.join(options.appDir, '.meteor', 'local', 'db');
-      var portFile = !noOplog && path.join(dbPath, 'METEOR-PORT');
+      var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'db');
+      var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
-          fs.writeFileSync(portFile, options.port);
+          files.writeFile(portFile, options.port);
         }
       }
     }
@@ -532,16 +526,19 @@ var MongoRunner = function (options) {
   self.errorCount = 0;
   self.errorTimer = null;
   self.restartTimer = null;
+  self.firstStart = true;
+  self.suppressExitMessage = false;
 };
 
-_.extend(MongoRunner.prototype, {
-  // Blocks (yields) until the server has started for the first time
-  // and is accepting connections. (It might subsequently die and be
-  // restarted; we won't tell you about that.) Returns true if we were
-  // able to get it to start at least once.
+var MRp = MongoRunner.prototype;
+
+_.extend(MRp, {
+  // Blocks (yields) until the server has started for the first time and
+  // is accepting connections. (It might subsequently die and be
+  // restarted; we won't tell you about that.)
   //
   // If the server fails to start for the first time (after a few
-  // restarts), we'll print a message and give up, returning false.
+  // restarts), we'll print a message and give up.
   start: function () {
     var self = this;
 
@@ -582,12 +579,26 @@ _.extend(MongoRunner.prototype, {
     if (self.handle)
       throw new Error("already running?");
 
+    var allowKilling = self.multiple || self.firstStart;
+    self.firstStart = false;
+    if (! allowKilling) {
+      // If we're not going to try to kill an existing mongod first, then we
+      // shouldn't annoy the user by telling it that we couldn't start up.
+      self.suppressExitMessage = true;
+    }
+
     self.handle = launchMongo({
       appDir: self.appDir,
       port: self.port,
       multiple: self.multiple,
+      allowKilling: allowKilling,
       onExit: _.bind(self._exited, self)
     });
+
+    // It has successfully started up, so if it exits after this point, that
+    // actually is an interesting fact and we shouldn't suppress it.
+    self.suppressExitMessage = false;
+
     if (self.handle) {
       self._allowStartupToReturn();
     }
@@ -604,11 +615,17 @@ _.extend(MongoRunner.prototype, {
     if (self.shuttingDown)
       return;
 
-    // Print the last 20 lines of stderr.
-    runLog.log(
-      stderr.split('\n').slice(-20).join('\n') +
-      "Unexpected mongo exit code " + code +
-        (self.multiple ? "." : ". Restarting."));
+    // Only print an error if we tried to kill Mongo and something went
+    // wrong. If we didn't try to kill Mongo, we'll do that on the next
+    // restart. Not killing it on the first try is important for speed,
+    // since findMongoAndKillItDead is a very slow operation.
+    if (! self.suppressExitMessage) {
+      // Print the last 20 lines of stderr.
+      runLog.log(
+        stderr.split('\n').slice(-20).join('\n') +
+          "Unexpected mongo exit code " + code +
+          (self.multiple ? "." : ". Restarting."));
+    }
 
     // If we're in multiple mode, we never try to restart. That's to keep the
     // test-only multiple code simple.
@@ -631,7 +648,7 @@ _.extend(MongoRunner.prototype, {
 
     if (self.errorCount < 3) {
       // Wait a second, then restart.
-      self.restartTimer = setTimeout(inFiber(function () {
+      self.restartTimer = setTimeout(fiberHelpers.bindEnvironment(function () {
         self.restartTimer = null;
         self._startOrRestart();
       }), 1000);

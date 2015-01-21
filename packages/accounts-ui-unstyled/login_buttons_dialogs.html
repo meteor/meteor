@@ -4,8 +4,9 @@
   {{> _enrollAccountDialog}}
   {{> _justVerifiedEmailDialog}}
   {{> _configureLoginServiceDialog}}
+  {{> _configureLoginOnDesktopDialog}}
 
-  <!-- if we're not showing a dropdown, we need some other place to show messages -->
+  {{! if we're not showing a dropdown, we need some other place to show messages }}
   {{> _loginButtonsMessagesDialog}}
 </body>
 
@@ -103,6 +104,20 @@
           {{/each}}
         </table>
       </p>
+      <p class="new-section">
+        Choose the login style:
+      </p>
+      <p>
+        &emsp;<input id="configure-login-service-dialog-popupBasedLogin" type="radio" checked="checked" name="loginStyle" value="popup">
+        <label for="configure-login-service-dialog-popupBasedLogin">Popup-based login (recommended for most applications)</label>
+
+        <br>&emsp;<input id="configure-login-service-dialog-redirectBasedLogin" type="radio" name="loginStyle" value="redirect">
+        <label for="configure-login-service-dialog-redirectBasedLogin">
+          Redirect-based login (special cases explained
+          <a href="https://github.com/meteor/meteor/wiki/OAuth-for-mobile-Meteor-clients#popup-versus-redirect-flow"
+             target="_blank">here</a>)
+        </label>
+      </p>
       <div class="new-section">
         <div class="login-button configure-login-service-dismiss-button">
           I'll do this later
@@ -123,6 +138,17 @@
     <div class="accounts-dialog accounts-centered-dialog" id="login-buttons-message-dialog">
       {{> _loginButtonsMessages}}
       <div class="login-button" id="messages-dialog-dismiss-button">Dismiss</div>
+    </div>
+  {{/if}}
+</template>
+
+<template name="_configureLoginOnDesktopDialog">
+  {{#if visible}}
+    <div class="accounts-dialog accounts-centered-dialog" id="configure-on-desktop-dialog">
+      <p>
+        Please configure login on a desktop browser.
+      </p>
+      <div class="login-button" id="configure-on-desktop-dismiss-button">Dismiss</div>
     </div>
   {{/if}}
 </template>

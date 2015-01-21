@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.38  # warning! 0.3.39-43 used on packaging branch
+BUNDLE_VERSION=0.3.84
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -29,14 +29,23 @@ elif [ "$UNAME" = "Linux" ] ; then
 fi
 PLATFORM="${UNAME}_${ARCH}"
 
-# Find the script dir, following one level of symlink. Note that symlink
-# can be relative or absolute. Too bad 'readlink -f' is not portable.
-ORIG_DIR=$(pwd)
-cd "$(dirname "$0")"
-if [ -L "$(basename "$0")" ] ; then
-    cd "$(dirname $(readlink $(basename "$0") ) )"
-fi
-SCRIPT_DIR=$(pwd -P)
+# Find the script dir, following symlinks. Note that symlink can be relative or
+# absolute. Too bad 'readlink -f' and 'realpath' (the command-line program) are
+# not portable.  We don't stress about infinite loops or bad links, because the
+# OS has already resolved this symlink chain once in order to actually run the
+# shell script.
+ORIG_DIR="$(pwd)"
+SCRIPT="$0"
+while true; do
+  # The symlink might be relative, so we have to actually cd to the right place
+  # each time in order to resolve it.
+  cd "$(dirname "$SCRIPT")"
+  if [ ! -L "$(basename "$SCRIPT")" ]; then
+    SCRIPT_DIR="$(pwd -P)"
+    break
+  fi
+  SCRIPT="$(readlink "$(basename "$SCRIPT")")"
+done
 cd "$ORIG_DIR"
 
 
@@ -58,7 +67,7 @@ function install_dev_bundle {
     # It still only does this if the version number has changed
     # (setting it won't cause it to automatically delete a prod dev bundle).
     if [ -n "$USE_TEST_DEV_BUNDLE_SERVER" ] ; then
-        DEV_BUNDLE_URL_ROOT="https://com.meteor.static.s3.amazonaws.com/test/"
+        DEV_BUNDLE_URL_ROOT="https://s3.amazonaws.com/com.meteor.static/test/"
     fi
 
     if [ -f "$SCRIPT_DIR/$TARBALL" ] ; then
@@ -97,14 +106,10 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
-
-    DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-    METEOR="$SCRIPT_DIR/tools/main.js"
-else
-    # In an install
-    DEV_BUNDLE=$(dirname "$SCRIPT_DIR")
-    METEOR="$DEV_BUNDLE/tools/main.js"
 fi
+
+DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
+METEOR="$SCRIPT_DIR/tools/main.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a
@@ -119,5 +124,10 @@ if [ "$(ulimit -n)" != "unlimited" ] ; then
     ulimit -n 512 > /dev/null 2>&1
 fi
 
-export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
+# We used to set $NODE_PATH here to include the node_modules from the dev
+# bundle, but now we just get them from the symlink at tools/node_modules. This
+# is better because node_modules directories found via the ancestor walk from
+# the script take precedence over $NODE_PATH; it used to be that users would
+# screw up their meteor installs by have a ~/node_modules
+
 exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"

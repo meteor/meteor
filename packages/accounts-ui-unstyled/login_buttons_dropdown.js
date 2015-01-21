@@ -6,7 +6,7 @@ var loginButtonsSession = Accounts._loginButtonsSession;
 Template.loginButtons.events({
   'click #login-name-link, click #login-sign-in-link': function () {
     loginButtonsSession.set('dropdownVisible', true);
-    Deps.flush();
+    Tracker.flush();
     correctDropdownZIndexes();
   },
   'click .login-close-text': function () {
@@ -26,29 +26,33 @@ Template._loginButtonsLoggedInDropdown.events({
   }
 });
 
-Template._loginButtonsLoggedInDropdown.displayName = displayName;
+Template._loginButtonsLoggedInDropdown.helpers({
+  displayName: displayName,
 
-Template._loginButtonsLoggedInDropdown.inChangePasswordFlow = function () {
-  return loginButtonsSession.get('inChangePasswordFlow');
-};
+  inChangePasswordFlow: function () {
+    return loginButtonsSession.get('inChangePasswordFlow');
+  },
 
-Template._loginButtonsLoggedInDropdown.inMessageOnlyFlow = function () {
-  return loginButtonsSession.get('inMessageOnlyFlow');
-};
+  inMessageOnlyFlow: function () {
+    return loginButtonsSession.get('inMessageOnlyFlow');
+  },
 
-Template._loginButtonsLoggedInDropdown.dropdownVisible = function () {
-  return loginButtonsSession.get('dropdownVisible');
-};
+  dropdownVisible: function () {
+    return loginButtonsSession.get('dropdownVisible');
+  }
+});
 
-Template._loginButtonsLoggedInDropdownActions.allowChangingPassword = function () {
-  // it would be more correct to check whether the user has a password set,
-  // but in order to do that we'd have to send more data down to the client,
-  // and it'd be preferable not to send down the entire service.password document.
-  //
-  // instead we use the heuristic: if the user has a username or email set.
-  var user = Meteor.user();
-  return user.username || (user.emails && user.emails[0] && user.emails[0].address);
-};
+Template._loginButtonsLoggedInDropdownActions.helpers({
+  allowChangingPassword: function () {
+    // it would be more correct to check whether the user has a password set,
+    // but in order to do that we'd have to send more data down to the client,
+    // and it'd be preferable not to send down the entire service.password document.
+    //
+    // instead we use the heuristic: if the user has a username or email set.
+    var user = Meteor.user();
+    return user.username || (user.emails && user.emails[0] && user.emails[0].address);
+  }
+});
 
 
 //
@@ -82,7 +86,7 @@ Template._loginButtonsLoggedOutDropdown.events({
     loginButtonsSession.set('inSignupFlow', true);
     loginButtonsSession.set('inForgotPasswordFlow', false);
     // force the ui to update so that we have the approprate fields to fill in
-    Deps.flush();
+    Tracker.flush();
 
     // update new fields with appropriate defaults
     if (username !== null)
@@ -120,7 +124,7 @@ Template._loginButtonsLoggedOutDropdown.events({
     loginButtonsSession.set('inSignupFlow', false);
     loginButtonsSession.set('inForgotPasswordFlow', true);
     // force the ui to update so that we have the approprate fields to fill in
-    Deps.flush();
+    Tracker.flush();
 
     // update new fields with appropriate defaults
     if (email !== null)
@@ -142,7 +146,7 @@ Template._loginButtonsLoggedOutDropdown.events({
     loginButtonsSession.set('inSignupFlow', false);
     loginButtonsSession.set('inForgotPasswordFlow', false);
     // force the ui to update so that we have the approprate fields to fill in
-    Deps.flush();
+    Tracker.flush();
 
     if (document.getElementById('login-username'))
       document.getElementById('login-username').value = username;
@@ -161,124 +165,131 @@ Template._loginButtonsLoggedOutDropdown.events({
   }
 });
 
-// additional classes that can be helpful in styling the dropdown
-Template._loginButtonsLoggedOutDropdown.additionalClasses = function () {
-  if (!hasPasswordService()) {
-    return false;
-  } else {
-    if (loginButtonsSession.get('inSignupFlow')) {
-      return 'login-form-create-account';
-    } else if (loginButtonsSession.get('inForgotPasswordFlow')) {
-      return 'login-form-forgot-password';
+Template._loginButtonsLoggedOutDropdown.helpers({
+  // additional classes that can be helpful in styling the dropdown
+  additionalClasses: function () {
+    if (!hasPasswordService()) {
+      return false;
     } else {
-      return 'login-form-sign-in';
+      if (loginButtonsSession.get('inSignupFlow')) {
+        return 'login-form-create-account';
+      } else if (loginButtonsSession.get('inForgotPasswordFlow')) {
+        return 'login-form-forgot-password';
+      } else {
+        return 'login-form-sign-in';
+      }
     }
-  }
-};
+  },
 
-Template._loginButtonsLoggedOutDropdown.dropdownVisible = function () {
-  return loginButtonsSession.get('dropdownVisible');
-};
+  dropdownVisible: function () {
+    return loginButtonsSession.get('dropdownVisible');
+  },
 
-Template._loginButtonsLoggedOutDropdown.hasPasswordService = hasPasswordService;
+  hasPasswordService: hasPasswordService
+});
 
 // return all login services, with password last
-Template._loginButtonsLoggedOutAllServices.services = getLoginServices;
+Template._loginButtonsLoggedOutAllServices.helpers({
+  services: getLoginServices,
 
-Template._loginButtonsLoggedOutAllServices.isPasswordService = function () {
-  return this.name === 'password';
-};
+  isPasswordService: function () {
+    return this.name === 'password';
+  },
 
-Template._loginButtonsLoggedOutAllServices.hasOtherServices = function () {
-  return getLoginServices().length > 1;
-};
+  hasOtherServices: function () {
+    return getLoginServices().length > 1;
+  },
 
-Template._loginButtonsLoggedOutAllServices.hasPasswordService =
-  hasPasswordService;
+  hasPasswordService: hasPasswordService
+});
 
-Template._loginButtonsLoggedOutPasswordService.fields = function () {
-  var loginFields = [
-    {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
-     visible: function () {
-       return _.contains(
-         ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL"],
-         passwordSignupFields());
-     }},
-    {fieldName: 'username', fieldLabel: 'Username',
-     visible: function () {
-       return passwordSignupFields() === "USERNAME_ONLY";
-     }},
-    {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
-     visible: function () {
-       return passwordSignupFields() === "EMAIL_ONLY";
-     }},
-    {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
-     visible: function () {
-       return true;
-     }}
-  ];
+Template._loginButtonsLoggedOutPasswordService.helpers({
+  fields: function () {
+    var loginFields = [
+      {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
+       visible: function () {
+         return _.contains(
+           ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL"],
+           passwordSignupFields());
+       }},
+      {fieldName: 'username', fieldLabel: 'Username',
+       visible: function () {
+         return passwordSignupFields() === "USERNAME_ONLY";
+       }},
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
+       visible: function () {
+         return passwordSignupFields() === "EMAIL_ONLY";
+       }},
+      {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }}
+    ];
 
-  var signupFields = [
-    {fieldName: 'username', fieldLabel: 'Username',
-     visible: function () {
-       return _.contains(
-         ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
-         passwordSignupFields());
-     }},
-    {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
-     visible: function () {
-       return _.contains(
-         ["USERNAME_AND_EMAIL", "EMAIL_ONLY"],
-         passwordSignupFields());
-     }},
-    {fieldName: 'email', fieldLabel: 'Email (optional)', inputType: 'email',
-     visible: function () {
-       return passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL";
-     }},
-    {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
-     visible: function () {
-       return true;
-     }},
-    {fieldName: 'password-again', fieldLabel: 'Password (again)',
-     inputType: 'password',
-     visible: function () {
-       // No need to make users double-enter their password if
-       // they'll necessarily have an email set, since they can use
-       // the "forgot password" flow.
-       return _.contains(
-         ["USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
-         passwordSignupFields());
-     }}
-  ];
+    var signupFields = [
+      {fieldName: 'username', fieldLabel: 'Username',
+       visible: function () {
+         return _.contains(
+           ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
+           passwordSignupFields());
+       }},
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
+       visible: function () {
+         return _.contains(
+           ["USERNAME_AND_EMAIL", "EMAIL_ONLY"],
+           passwordSignupFields());
+       }},
+      {fieldName: 'email', fieldLabel: 'Email (optional)', inputType: 'email',
+       visible: function () {
+         return passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL";
+       }},
+      {fieldName: 'password', fieldLabel: 'Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }},
+      {fieldName: 'password-again', fieldLabel: 'Password (again)',
+       inputType: 'password',
+       visible: function () {
+         // No need to make users double-enter their password if
+         // they'll necessarily have an email set, since they can use
+         // the "forgot password" flow.
+         return _.contains(
+           ["USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
+           passwordSignupFields());
+       }}
+    ];
 
-  return loginButtonsSession.get('inSignupFlow') ? signupFields : loginFields;
-};
+    return loginButtonsSession.get('inSignupFlow') ? signupFields : loginFields;
+  },
 
-Template._loginButtonsLoggedOutPasswordService.inForgotPasswordFlow = function () {
-  return loginButtonsSession.get('inForgotPasswordFlow');
-};
+  inForgotPasswordFlow: function () {
+    return loginButtonsSession.get('inForgotPasswordFlow');
+  },
 
-Template._loginButtonsLoggedOutPasswordService.inLoginFlow = function () {
-  return !loginButtonsSession.get('inSignupFlow') && !loginButtonsSession.get('inForgotPasswordFlow');
-};
+  inLoginFlow: function () {
+    return !loginButtonsSession.get('inSignupFlow') && !loginButtonsSession.get('inForgotPasswordFlow');
+  },
 
-Template._loginButtonsLoggedOutPasswordService.inSignupFlow = function () {
-  return loginButtonsSession.get('inSignupFlow');
-};
+  inSignupFlow: function () {
+    return loginButtonsSession.get('inSignupFlow');
+  },
 
-Template._loginButtonsLoggedOutPasswordService.showCreateAccountLink = function () {
-  return !Accounts._options.forbidClientAccountCreation;
-};
+  showCreateAccountLink: function () {
+    return !Accounts._options.forbidClientAccountCreation;
+  },
 
-Template._loginButtonsLoggedOutPasswordService.showForgotPasswordLink = function () {
-  return _.contains(
-    ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "EMAIL_ONLY"],
-    passwordSignupFields());
-};
+  showForgotPasswordLink: function () {
+    return _.contains(
+      ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL", "EMAIL_ONLY"],
+      passwordSignupFields());
+  }
+});
 
-Template._loginButtonsFormField.inputType = function () {
-  return this.inputType || "text";
-};
+Template._loginButtonsFormField.helpers({
+  inputType: function () {
+    return this.inputType || "text";
+  }
+});
 
 
 //
@@ -295,28 +306,30 @@ Template._loginButtonsChangePassword.events({
   }
 });
 
-Template._loginButtonsChangePassword.fields = function () {
-  return [
-    {fieldName: 'old-password', fieldLabel: 'Current Password', inputType: 'password',
-     visible: function () {
-       return true;
-     }},
-    {fieldName: 'password', fieldLabel: 'New Password', inputType: 'password',
-     visible: function () {
-       return true;
-     }},
-    {fieldName: 'password-again', fieldLabel: 'New Password (again)',
-     inputType: 'password',
-     visible: function () {
-       // No need to make users double-enter their password if
-       // they'll necessarily have an email set, since they can use
-       // the "forgot password" flow.
-       return _.contains(
-         ["USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
-         passwordSignupFields());
-     }}
-  ];
-};
+Template._loginButtonsChangePassword.helpers({
+  fields: function () {
+    return [
+      {fieldName: 'old-password', fieldLabel: 'Current Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }},
+      {fieldName: 'password', fieldLabel: 'New Password', inputType: 'password',
+       visible: function () {
+         return true;
+       }},
+      {fieldName: 'password-again', fieldLabel: 'New Password (again)',
+       inputType: 'password',
+       visible: function () {
+         // No need to make users double-enter their password if
+         // they'll necessarily have an email set, since they can use
+         // the "forgot password" flow.
+         return _.contains(
+           ["USERNAME_AND_OPTIONAL_EMAIL", "USERNAME_ONLY"],
+           passwordSignupFields());
+       }}
+    ];
+  }
+});
 
 
 //

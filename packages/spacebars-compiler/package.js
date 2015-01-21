@@ -1,28 +1,30 @@
 Package.describe({
-  summary: "Compiler for Spacebars template language"
+  summary: "Compiler for Spacebars template language",
+  version: '1.0.4'
 });
 
-Package.on_use(function (api) {
-  api.use('spacebars-common');
-  api.imply('spacebars-common');
+Package.onUse(function (api) {
+  api.export('SpacebarsCompiler');
 
-  // we attach stuff to the global symbol `HTML`, exported
-  // by `htmljs` via `html-tools`, so we both use and effectively
-  // imply it.
+  api.use('htmljs');
   api.use('html-tools');
-  api.imply('html-tools');
+  api.use('blaze-tools');
 
   api.use('underscore');
   api.use('minifiers', ['server']);
-  api.add_files(['tokens.js', 'tojs.js', 'templatetag.js',
-                 'spacebars-compiler.js']);
+  api.addFiles(['templatetag.js',
+                 'optimizer.js',
+                 'codegen.js',
+                 'compiler.js']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('underscore');
   api.use('spacebars-compiler');
   api.use('tinytest');
-  api.add_files('spacebars_tests.js');
-  api.add_files('compile_tests.js');
-  api.add_files('token_tests.js');
+  api.use('blaze-tools');
+  api.use('coffeescript');
+  api.addFiles('spacebars_tests.js');
+  api.addFiles('compile_tests.js');
+  api.addFiles('compiler_output_tests.coffee');
 });

@@ -224,10 +224,17 @@ var leastSpecificDescription = function (programs) {
   return longest;
 };
 
+var withoutSpecificOs = function (arch) {
+  if (arch.substr(0, 3) === 'os.')
+    return 'os';
+  return arch;
+};
+
 var archinfo = exports;
 _.extend(archinfo, {
   host: host,
   matches: matches,
   mostSpecificMatch: mostSpecificMatch,
-  leastSpecificDescription: leastSpecificDescription
+  leastSpecificDescription: leastSpecificDescription,
+  withoutSpecificOs: withoutSpecificOs
 });

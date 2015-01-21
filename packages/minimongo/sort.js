@@ -24,7 +24,7 @@ Minimongo.Sorter = function (spec, options) {
       throw Error("unsupported sort key: " + path);
     self._sortSpecParts.push({
       path: path,
-      lookup: makeLookupFunction(path),
+      lookup: makeLookupFunction(path, {forSort: true}),
       ascending: ascending
     });
   };

@@ -1,6 +1,8 @@
-Template.configureLoginServiceDialogForFacebook.siteUrl = function () {
-  return Meteor.absoluteUrl();
-};
+Template.configureLoginServiceDialogForFacebook.helpers({
+  siteUrl: function () {
+    return Meteor.absoluteUrl();
+  }
+});
 
 Template.configureLoginServiceDialogForFacebook.fields = function () {
   return [

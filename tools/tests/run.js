@@ -10,9 +10,9 @@ var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
 var SIMPLE_WAREHOUSE = {
-  v1: { tools: 'tools1' },
-  v2: { tools: 'tools1', latest: true },
-  v3: { tools: 'tools1' }
+  v1: { },
+  v2: { recommended: true },
+  v3: { }
 };
 
 selftest.define("run", function () {
@@ -35,11 +35,11 @@ selftest.define("run", function () {
 
   // File change
   s.write("empty.js", "");
-  run.waitSecs(1);
+  run.waitSecs(2);
   run.match("restarted");
   s.write("empty.js", " ");
-  run.waitSecs(1);
-  run.match("restarted (x2)");
+  run.waitSecs(2);
+  run.match("restarted");
   // XXX want app to generate output so that we can see restart counter reset
 
   // Crashes
@@ -55,7 +55,9 @@ selftest.define("run", function () {
   run.match("restarted");
   s.write("empty.js", "");
   run.waitSecs(5);
-  run.match("restarted (x2)"); // see that restart counter reset
+  // We used to see the restart counter reset but right now restart messages
+  // don't coalesce due to intermediate use of the progress bar.
+  run.match("restarted");
   s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
   run.waitSecs(5);
   run.match("from signal: SIGKILL");
@@ -138,7 +140,6 @@ selftest.define("run --once", function () {
   s.set("RUN_ONCE_OUTCOME", "exit");
   s.write("junk.js", "]");
   run = s.run("--once");
-  run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.matchErr("Build failed");
   run.matchErr("Unexpected token");
@@ -159,20 +160,6 @@ selftest.define("run --once", function () {
   run.forbidAll("updated");
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
-
-  // running a different program
-  run = s.run("--once", "--program", "other");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
-  run.match("other program\n");
-  run.expectExit(44);
-
-  // bad program name
-  run = s.run("--once", "--program", "xyzzy");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
-  run.match("'xyzzy' not found");
-  run.expectExit(254);
 
   // Try it with a real Mongo. Make sure that it actually starts one.
   s = new Sandbox;
@@ -198,7 +185,7 @@ selftest.define("run errors", function () {
   f.wait();
 
   var run = s.run("-p", proxyPort);
-  _.times(3, function () {
+  _.times(2, function () {
     run.waitSecs(30);
     run.match("Unexpected mongo exit code 48. Restarting.");
   });
@@ -237,41 +224,40 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "standard-app");
+  s.createApp("myapp", "packageless", { release: 'METEOR@v1' });
   s.cd("myapp");
 
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(10);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   run.matchErr('to Meteor v2 from Meteor v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
-  s.write('.meteor/release', 'v1');
-  run = s.run("--release", "v3");
+  s.write('.meteor/release', 'METEOR@v1');
+  run = s.run("--release", "METEOR@v3");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");
 
   // But not if the release was forced (case 2)
-  s.write('.meteor/release', 'v1');
-  run = s.run("--release", "v1");
+  s.write('.meteor/release', 'METEOR@v1');
+  run = s.run("--release", "METEOR@v1");
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");
@@ -281,14 +267,14 @@ selftest.define("update during run", ["checkout"], function () {
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  s.write('.meteor/release', 'v1');
+  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'v2');
+  s.write('.meteor/release', 'METEOR@v2');
   s.write('empty.js', '');
-  run.waitSecs(2)
+  run.waitSecs(2);
   run.match('restarted');
   run.stop();
   run.forbidAll("updated");
@@ -326,7 +312,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.match("prevented startup");
   run.match("file change.\n");
   run.tellMongo({exit: 23});
-  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  run.match('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});
   run.read('Unexpected mongo exit code 46. Restarting.\n');
   run.tellMongo({exit: 47});
@@ -335,4 +321,72 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.read("MongoDB exited due to excess clock skew\n");
   run.expectEnd();
   run.expectExit(254);
+});
+
+// Test that when the parent runner process is SIGKILLed, the child
+// process exits also.
+selftest.define("run and SIGKILL parent process", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "app-prints-pid");
+  s.cd("myapp");
+
+  run = s.run();
+  run.waitSecs(30);
+  var match = run.match(/My pid is (\d+)/);
+  var childPid;
+  if (! match || ! match[1]) {
+    selftest.fail("No pid printed");
+  }
+  childPid = match[1];
+
+  process.kill(run.proc.pid, "SIGKILL");
+  // This sleep should be a little more time than the interval at which
+  // the child checks if the parent is still alive, in
+  // packages/webapp/webapp_server.js.
+  utils.sleepMs(3500);
+
+  // Send the child process a signal of 0. If there is no error, it
+  // means that the process is still running, which is not what we
+  // expect.
+  var caughtError;
+  try {
+    process.kill(childPid, 0);
+  } catch (err) {
+    caughtError = err;
+  }
+
+  if (! caughtError) {
+    selftest.fail("Child process " + childPid + " is still running");
+  }
+
+  run.stop();
+
+  // Test that passing a bad pid in $METEOR_PARENT_PID logs an error and exits
+  // immediately.
+  s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
+  run = s.run();
+  run.waitSecs(30);
+  run.match("must be a valid process ID");
+  run.match("Your application is crashing");
+  run.stop();
+});
+
+selftest.define("'meteor run --port' requires a port", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "app-prints-pid");
+  s.cd("myapp");
+
+  run = s.run("run", "--port", "example.com");
+  run.waitSecs(30);
+  run.matchErr("--port must include a port");
+  run.expectExit(1);
+
+  run = s.run("run", "--port", "http://example.com");
+  run.waitSecs(30);
+  run.matchErr("--port must include a port");
+  run.expectExit(1);
 });

@@ -206,7 +206,7 @@ _.extend(TestCaseResults.prototype, {
       };
     else if (expected instanceof RegExp)
       predicate = function (actual) {
-        return expected.test(actual.message)
+        return expected.test(actual.message);
       };
     else if (typeof expected === 'function')
       predicate = expected;
@@ -522,7 +522,7 @@ _.extend(TestRun.prototype, {
         }, stop_at_offset);
         // Wait for the test to complete or time out.
         future.wait();
-        onComplete & onComplete();
+        onComplete && onComplete();
       });
     } else {
       // client
@@ -535,12 +535,20 @@ _.extend(TestRun.prototype, {
   run: function (onComplete) {
     var self = this;
     var tests = _.clone(self.manager.ordered_tests);
+    var reportCurrent = function (name) {
+      if (Meteor.isClient)
+        Tinytest._onCurrentClientTest(name);
+    };
 
     var runNext = function () {
-      if (tests.length)
-        self._runOne(tests.shift(), runNext);
-      else
+      if (tests.length) {
+        var t = tests.shift();
+        reportCurrent(t.name);
+        self._runOne(t, runNext);
+      } else {
+        reportCurrent(null);
         onComplete && onComplete();
+      }
     };
 
     runNext();
@@ -606,3 +614,9 @@ Tinytest._debugTest = function (cookie, onReport, onComplete) {
   var testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);
 };
+
+// Replace this callback to get called when we run a client test,
+// and then called with `null` when the client tests are
+// done.  This is used to provide a live display of the current
+// running client test on the test results page.
+Tinytest._onCurrentClientTest = function (name) {};

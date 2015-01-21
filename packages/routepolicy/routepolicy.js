@@ -64,16 +64,16 @@ _.extend(RoutePolicyConstructor.prototype, {
     if (type === 'static-online')
       return null;
     if (!Package.webapp || !Package.webapp.WebApp
-        || !Package.webapp.WebApp.clientProgram
-        || !Package.webapp.WebApp.clientProgram.manifest) {
+        || !Package.webapp.WebApp.clientPrograms
+        || !Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest) {
       // Hack: If we don't have a manifest, deal with it
       // gracefully. This lets us load livedata into a nodejs
       // environment that doesn't have a HTTP server (eg, a
       // command-line tool).
       return null;
     }
-    var manifest =
-          _testManifest || Package.webapp.WebApp.clientProgram.manifest;
+    var manifest = _testManifest ||
+      Package.webapp.WebApp.clientPrograms[Package.webapp.WebApp.defaultArch].manifest;
     var conflict = _.find(manifest, function (resource) {
       return (resource.type === 'static' &&
               resource.where === 'client' &&
@@ -95,6 +95,10 @@ _.extend(RoutePolicyConstructor.prototype, {
       throw new Error(problem);
     // TODO overlapping prefixes, e.g. /foo/ and /foo/bar/
     self.urlPrefixTypes[urlPrefix] = type;
+  },
+
+  isValidUrl: function (url) {
+    return url.charAt(0) === '/';
   },
 
   classify: function (url) {

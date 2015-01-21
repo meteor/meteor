@@ -1,12 +1,14 @@
 var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
-var Future = require(path.join("fibers", "future"));
+var Future = require("fibers/future");
 var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
+var bootUtils = require('./boot-utils.js');
+
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.29';
+var MIN_NODE_VERSION = 'v0.10.33';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -77,12 +79,51 @@ sourcemap_support.install({
   handleUncaughtExceptions: false
 });
 
+// Only enabled by default in development.
+if (process.env.METEOR_SHELL_DIR) {
+  require('./shell.js').listen(process.env.METEOR_SHELL_DIR);
+}
+
+// As a replacement to the old keepalives mechanism, check for a running
+// parent every few seconds. Exit if the parent is not running.
+//
+// Two caveats to this strategy:
+// * Doesn't catch the case where the parent is CPU-hogging (but maybe we
+//   don't want to catch that case anyway, since the bundler not yielding
+//   is what caused #2536).
+// * Could be fooled by pid re-use, i.e. if another process comes up and
+//   takes the parent process's place before the child process dies.
+var startCheckForLiveParent = function (parentPid) {
+  if (parentPid) {
+    if (! bootUtils.validPid(parentPid)) {
+      console.error("METEOR_PARENT_PID must be a valid process ID.");
+      process.exit(1);
+    }
+
+    setInterval(function () {
+      try {
+        process.kill(parentPid, 0);
+      } catch (err) {
+        console.error("Parent process is dead! Exiting.");
+        process.exit(1);
+      }
+    }, 3000);
+  }
+};
+
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
     var Npm = {
+      /**
+       * @summary Require a package that was specified using
+       * `Npm.depends()`.
+       * @param  {String} name The name of the package to require.
+       * @locus Server
+       * @memberOf Npm
+       */
       require: function (name) {
         if (! fileInfo.node_modules) {
           return require(name);
@@ -157,6 +198,9 @@ Fiber(function () {
     var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+    // The final 'true' is an undocumented argument to runIn[Foo]Context that
+    // causes it to print out a descriptive error message on parse error. It's
+    // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
@@ -178,7 +222,7 @@ Fiber(function () {
     mains.push(main);
     globalMain = main;
   }
-  _.each(Package, function (p, n) {
+  typeof Package !== 'undefined' && _.each(Package, function (p, n) {
     if ('main' in p && p.main !== globalMain) {
       mains.push(p.main);
     }
@@ -195,4 +239,8 @@ Fiber(function () {
   // XXX hack, needs a better way to keep alive
   if (exitCode !== 'DAEMON')
     process.exit(exitCode);
+
+  if (process.env.METEOR_PARENT_PID) {
+    startCheckForLiveParent(process.env.METEOR_PARENT_PID);
+  }
 }).run();

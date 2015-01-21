@@ -7,25 +7,22 @@
       Visit <a href="https://code.google.com/apis/console/" target="blank">https://code.google.com/apis/console/</a>
     </li>
     <li>
-      If necessary, "Create Project"
+      "Create Project", if needed. Wait for Google to finish provisioning.
     </li>
     <li>
-      Click "APIs &amp; auth" and "Credentials" on the left
+      On the left sidebar, go to "APIs &amp; auth" and, underneath, "Consent Screen". Make sure to enter a product name, and save.
     </li>
     <li>
-      Click the "Create New Client ID" button
+      On the left sidebar, go to "APIs &amp; auth" and then, "Credentials". "Create New Client ID", then select "Web application" as the type.
     </li>
     <li>
-      Choose "Web application" as the type
+     Set Authorized Javascript Origins to: <span class="url">{{siteUrl}}</span>
     </li>
     <li>
-      Set Authorized Javascript Origins to: <span class="url">{{siteUrl}}</span>
+      Set Authorized Redirect URI to: <span class="url">{{siteUrl}}_oauth/google</span>
     </li>
     <li>
-      Set Authorized Redirect URI to: <span class="url">{{siteUrl}}_oauth/google?close</span>
-    </li>
-    <li>
-      Click "Create Client ID"
+      Finish by clicking "Create Client ID".
     </li>
   </ol>
 </template>

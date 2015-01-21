@@ -2,30 +2,6 @@ var _ = require("underscore");
 var Fiber = require("fibers");
 var Future = require("fibers/future");
 
-// Use this to wrap callbacks that need to run in a fiber, when
-// passing callbacks to functions such as setTimeout that aren't
-// callback-aware. (In app code we handle this with Meteor.setTimeout,
-// but we don't have such a thing in the tools code yet.)
-//
-// Specifically, given a function f, this returns a new function that
-// returns immediately but also runs f (with any provided arguments)
-// in a new fiber.
-//
-// NOTE: It's probably better to not use callbacks. Instead you can
-// use Futures to generate synchronous equivalents.
-//
-// XXX just suck it up and replace setTimeout and clearTimeout,
-// globally, with fiberized versions? will this mess up npm dependencies?
-exports.inFiber = function (func) {
-  return function (/*arguments*/) {
-    var self = this;
-    var args = arguments;
-    new Fiber(function () {
-      func.apply(self, args);
-    }).run();
-  };
-};
-
 exports.parallelEach = function (collection, callback, context) {
   var futures = _.map(collection, function () {
     var args = _.toArray(arguments);
@@ -75,4 +51,114 @@ exports.waitForOne = function (/* futures */) {
   }
 
   return combinedFuture.wait();
+};
+
+function disallowedYield() {
+  throw new Error("Can't call yield in a noYieldsAllowed block!");
+}
+// Allow testing Fiber.yield.disallowed.
+disallowedYield.disallowed = true;
+
+exports.noYieldsAllowed = function (f, context) {
+  var savedYield = Fiber.yield;
+  Fiber.yield = disallowedYield;
+  try {
+    return f.call(context || null);
+  } finally {
+    Fiber.yield = savedYield;
+  }
+};
+
+// Borrowed from packages/meteor/dynamics_nodejs.js
+// Used by buildmessage
+
+exports.nodeCodeMustBeInFiber = function () {
+  if (!Fiber.current) {
+    throw new Error("Meteor code must always run within a Fiber. " +
+                    "Try wrapping callbacks that you pass to non-Meteor " +
+                    "libraries with Meteor.bindEnvironment.");
+  }
+};
+
+var nextSlot = 0;
+exports.EnvironmentVariable = function (defaultValue) {
+  var self = this;
+  self.slot = 'slot' + nextSlot++;
+  self.defaultValue = defaultValue;
+};
+
+_.extend(exports.EnvironmentVariable.prototype, {
+  get: function () {
+    var self = this;
+    exports.nodeCodeMustBeInFiber();
+
+    if (!Fiber.current._meteorDynamics)
+      return self.defaultValue;
+    if (!_.has(Fiber.current._meteorDynamics, self.slot))
+      return self.defaultValue;
+    return Fiber.current._meteorDynamics[self.slot];
+  },
+
+  withValue: function (value, func) {
+    var self = this;
+    exports.nodeCodeMustBeInFiber();
+
+    if (!Fiber.current._meteorDynamics)
+      Fiber.current._meteorDynamics = {};
+    var currentValues = Fiber.current._meteorDynamics;
+
+    var saved = _.has(currentValues, self.slot)
+          ? currentValues[self.slot] : self.defaultValue;
+    currentValues[self.slot] = value;
+
+    try {
+      return func();
+    } finally {
+      currentValues[self.slot] = saved;
+    }
+  }
+});
+
+// This is like Meteor.bindEnvironment.
+// Experimentally, we are NOT including onException or _this in this version.
+exports.bindEnvironment = function (func) {
+  exports.nodeCodeMustBeInFiber();
+
+  var boundValues = _.clone(Fiber.current._meteorDynamics || {});
+
+  return function (/* arguments */) {
+    var self = this;
+    var args = _.toArray(arguments);
+
+    var runWithEnvironment = function () {
+      var savedValues = Fiber.current._meteorDynamics;
+      try {
+        // Need to clone boundValues in case two fibers invoke this
+        // function at the same time
+        Fiber.current._meteorDynamics = _.clone(boundValues);
+        return func.apply(self, args);
+      } finally {
+        Fiber.current._meteorDynamics = savedValues;
+      }
+    };
+
+    if (Fiber.current)
+      return runWithEnvironment();
+    Fiber(runWithEnvironment).run();
+  };
+};
+
+// An alternative to bindEnvironment for the rare case where you
+// want the callback you're passing to some Node function to start
+// a new fiber but *NOT* to inherit the current environment.
+// Eg, if you are trying to do the equivalent of start a background
+// thread.
+exports.inBareFiber = function (func) {
+  return function (/*arguments*/) {
+    var self = this;
+    var args = arguments;
+    new Fiber(function () {
+      func.apply(self, args);
+    }).run();
+  };
 };

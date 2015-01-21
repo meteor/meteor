@@ -1,8 +1,8 @@
 /// BCRYPT
 
-var bcrypt = Npm.require('bcrypt');
-var bcryptHash = Meteor._wrapAsync(bcrypt.hash);
-var bcryptCompare = Meteor._wrapAsync(bcrypt.compare);
+var bcrypt = NpmModuleBcrypt;
+var bcryptHash = Meteor.wrapAsync(bcrypt.hash);
+var bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 
 // User records have a 'services.password.bcrypt' field on them to hold
 // their hashed passwords (unless they have a 'services.password.srp'
@@ -307,7 +307,8 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
       $set: { 'services.password.bcrypt': hashed },
       $pull: {
         'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
-      }
+      },
+      $unset: { 'services.password.reset': 1 }
     }
   );
 
@@ -316,6 +317,13 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
 
 
 // Force change the users password.
+
+/**
+ * @summary Forcibly change the password for a user.
+ * @locus Server
+ * @param {String} userId The id of the user to update.
+ * @param {String} newPassword A new password for the user.
+ */
 Accounts.setPassword = function (userId, newPlaintextPassword) {
   var user = Meteor.users.findOne(userId);
   if (!user)
@@ -323,7 +331,12 @@ Accounts.setPassword = function (userId, newPlaintextPassword) {
 
   Meteor.users.update(
     {_id: user._id},
-    { $unset: {'services.password.srp': 1}, // XXX COMPAT WITH 0.8.1.3
+    {
+      $unset: {
+        'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
+        'services.password.reset': 1,
+        'services.resume.loginTokens': 1
+      },
       $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)} }
   );
 };
@@ -347,7 +360,13 @@ Meteor.methods({forgotPassword: function (options) {
 
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.
-//
+
+/**
+ * @summary Send an email with a link the user can use to reset their password.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ */
 Accounts.sendResetPasswordEmail = function (userId, email) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
@@ -396,7 +415,13 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 //
 // This is not called automatically. It must be called manually if you
 // want to use enrollment emails.
-//
+
+/**
+ * @summary Send an email with a link the user can use to set their initial password.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ */
 Accounts.sendEnrollmentEmail = function (userId, email) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
@@ -519,7 +544,13 @@ Meteor.methods({resetPassword: function (token, newPassword) {
 
 // send the user an email with a link that when opened marks that
 // address as verified
-//
+
+/**
+ * @summary Send an email with a link the user can use verify their email address.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
+ */
 Accounts.sendVerificationEmail = function (userId, address) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created

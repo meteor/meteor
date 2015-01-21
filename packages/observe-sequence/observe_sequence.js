@@ -76,17 +76,16 @@ ObserveSequence = {
     // general 'key' argument which could be a function, a dotted
     // field name, or the special @index value.
     var lastSeqArray = []; // elements are objects of form {_id, item}
-    var computation = Deps.autorun(function () {
+    var computation = Tracker.autorun(function () {
       var seq = sequenceFunc();
 
-      Deps.nonreactive(function () {
+      Tracker.nonreactive(function () {
         var seqArray; // same structure as `lastSeqArray` above.
 
-        // If we were previously observing a cursor, replace lastSeqArray with
-        // more up-to-date information (specifically, the state of the observe
-        // before it was stopped, which may be older than the DB).
         if (activeObserveHandle) {
-          lastSeqArray = _.map(activeObserveHandle._fetch(), function (doc) {
+          // If we were previously observing a cursor, replace lastSeqArray with
+          // more up-to-date information.  Then stop the old observe.
+          lastSeqArray = _.map(lastSeq.fetch(), function (doc) {
             return {_id: doc._id, item: doc};
           });
           activeObserveHandle.stop();
@@ -94,78 +93,19 @@ ObserveSequence = {
         }
 
         if (!seq) {
-          seqArray = [];
-          diffArray(lastSeqArray, seqArray, callbacks);
+          seqArray = seqChangedToEmpty(lastSeqArray, callbacks);
         } else if (seq instanceof Array) {
-          var idsUsed = {};
-          seqArray = _.map(seq, function (item, index) {
-            var id;
-            if (typeof item === 'string') {
-              // ensure not empty, since other layers (eg DomRange) assume this as well
-              id = "-" + item;
-            } else if (typeof item === 'number' ||
-                       typeof item === 'boolean' ||
-                       item === undefined) {
-              id = item;
-            } else if (typeof item === 'object') {
-              id = (item && item._id) || index;
-            } else {
-              throw new Error("{{#each}} doesn't support arrays with " +
-                              "elements of type " + typeof item);
-            }
-
-            var idString = idStringify(id);
-            if (idsUsed[idString]) {
-              if (typeof item === 'object' && '_id' in item)
-                warn("duplicate id " + id + " in", seq);
-              id = Random.id();
-            } else {
-              idsUsed[idString] = true;
-            }
-
-            return { _id: id, item: item };
-          });
-
-          diffArray(lastSeqArray, seqArray, callbacks);
+          seqArray = seqChangedToArray(lastSeqArray, seq, callbacks);
         } else if (isStoreCursor(seq)) {
-          var cursor = seq;
-          seqArray = [];
-
-          var initial = true; // are we observing initial data from cursor?
-          activeObserveHandle = cursor.observe({
-            addedAt: function (document, atIndex, before) {
-              if (initial) {
-                // keep track of initial data so that we can diff once
-                // we exit `observe`.
-                if (before !== null)
-                  throw new Error("Expected initial data from observe in order");
-                seqArray.push({ _id: document._id, item: document });
-              } else {
-                callbacks.addedAt(document._id, document, atIndex, before);
-              }
-            },
-            changedAt: function (newDocument, oldDocument, atIndex) {
-              callbacks.changedAt(newDocument._id, newDocument, oldDocument,
-                                  atIndex);
-            },
-            removedAt: function (oldDocument, atIndex) {
-              callbacks.removedAt(oldDocument._id, oldDocument, atIndex);
-            },
-            movedTo: function (document, fromIndex, toIndex, before) {
-              callbacks.movedTo(
-                document._id, document, fromIndex, toIndex, before);
-            }
-          });
-          initial = false;
-
-          // diff the old sequnce with initial data in the new cursor. this will
-          // fire `addedAt` callbacks on the initial data.
-          diffArray(lastSeqArray, seqArray, callbacks);
-
+          var result /* [seqArray, activeObserveHandle] */ =
+                seqChangedToCursor(lastSeqArray, seq, callbacks);
+          seqArray = result[0];
+          activeObserveHandle = result[1];
         } else {
           throw badSequenceError();
         }
 
+        diffArray(lastSeqArray, seqArray, callbacks);
         lastSeq = seq;
         lastSeqArray = seqArray;
       });
@@ -305,4 +245,74 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
           callbacks.changedAt(id, newItem, oldItem, pos);
       }
   });
+};
+
+seqChangedToEmpty = function (lastSeqArray, callbacks) {
+  return [];
+};
+
+seqChangedToArray = function (lastSeqArray, array, callbacks) {
+  var idsUsed = {};
+  var seqArray = _.map(array, function (item, index) {
+    var id;
+    if (typeof item === 'string') {
+      // ensure not empty, since other layers (eg DomRange) assume this as well
+      id = "-" + item;
+    } else if (typeof item === 'number' ||
+               typeof item === 'boolean' ||
+               item === undefined) {
+      id = item;
+    } else if (typeof item === 'object') {
+      id = (item && item._id) || index;
+    } else {
+      throw new Error("{{#each}} doesn't support arrays with " +
+                      "elements of type " + typeof item);
+    }
+
+    var idString = idStringify(id);
+    if (idsUsed[idString]) {
+      if (typeof item === 'object' && '_id' in item)
+        warn("duplicate id " + id + " in", array);
+      id = Random.id();
+    } else {
+      idsUsed[idString] = true;
+    }
+
+    return { _id: id, item: item };
+  });
+
+  return seqArray;
+};
+
+seqChangedToCursor = function (lastSeqArray, cursor, callbacks) {
+  var initial = true; // are we observing initial data from cursor?
+  var seqArray = [];
+
+  var observeHandle = cursor.observe({
+    addedAt: function (document, atIndex, before) {
+      if (initial) {
+        // keep track of initial data so that we can diff once
+        // we exit `observe`.
+        if (before !== null)
+          throw new Error("Expected initial data from observe in order");
+        seqArray.push({ _id: document._id, item: document });
+      } else {
+        callbacks.addedAt(document._id, document, atIndex, before);
+      }
+    },
+    changedAt: function (newDocument, oldDocument, atIndex) {
+      callbacks.changedAt(newDocument._id, newDocument, oldDocument,
+                          atIndex);
+    },
+    removedAt: function (oldDocument, atIndex) {
+      callbacks.removedAt(oldDocument._id, oldDocument, atIndex);
+    },
+    movedTo: function (document, fromIndex, toIndex, before) {
+      callbacks.movedTo(
+        document._id, document, fromIndex, toIndex, before);
+    }
+  });
+  initial = false;
+
+  return [seqArray, observeHandle];
 };

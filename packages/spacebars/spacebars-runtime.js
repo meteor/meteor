@@ -1,42 +1,37 @@
-// * `templateOrFunction` - template (component) or function returning a template
-// or null
-Spacebars.include = function (templateOrFunction, contentBlock, elseContentBlock) {
-  if (contentBlock && ! UI.isComponent(contentBlock))
-    throw new Error('Second argument to Spacebars.include must be a template or UI.block if present');
-  if (elseContentBlock && ! UI.isComponent(elseContentBlock))
-    throw new Error('Third argument to Spacebars.include must be a template or UI.block if present');
+Spacebars = {};
 
-  var props = null;
-  if (contentBlock) {
-    props = (props || {});
-    props.__content = contentBlock;
-  }
-  if (elseContentBlock) {
-    props = (props || {});
-    props.__elseContent = elseContentBlock;
+var tripleEquals = function (a, b) { return a === b; };
+
+Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
+  if (! templateOrFunction)
+    return null;
+
+  if (typeof templateOrFunction !== 'function') {
+    var template = templateOrFunction;
+    if (! Blaze.isTemplate(template))
+      throw new Error("Expected template or null, found: " + template);
+    return templateOrFunction.constructView(contentFunc, elseFunc);
   }
 
-  if (UI.isComponent(templateOrFunction))
-    return templateOrFunction.extend(props);
-
-  var func = templateOrFunction;
-
-  var f = function () {
-    var emboxedFunc = UI.namedEmboxValue('Spacebars.include', func);
-    f.stop = function () {
-      emboxedFunc.stop();
-    };
-    var tmpl = emboxedFunc();
-
-    if (tmpl === null)
+  var templateVar = Blaze.ReactiveVar(null, tripleEquals);
+  var view = Blaze.View('Spacebars.include', function () {
+    var template = templateVar.get();
+    if (template === null)
       return null;
-    if (! UI.isComponent(tmpl))
-      throw new Error("Expected null or template in return value from inclusion function, found: " + tmpl);
 
-    return tmpl.extend(props);
-  };
+    if (! Blaze.isTemplate(template))
+      throw new Error("Expected template or null, found: " + template);
 
-  return f;
+    return template.constructView(contentFunc, elseFunc);
+  });
+  view.__templateVar = templateVar;
+  view.onViewCreated(function () {
+    this.autorun(function () {
+      templateVar.set(templateOrFunction());
+    });
+  });
+
+  return view;
 };
 
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
@@ -209,38 +204,74 @@ Spacebars.dot = function (value, id1/*, id2, ...*/) {
   };
 };
 
-// Implement Spacebars's #with, which renders its else case (or nothing)
-// if the argument is falsy.
-Spacebars.With = function (argFunc, contentBlock, elseContentBlock) {
-  return UI.Component.extend({
-    init: function () {
-      this.v = UI.emboxValue(argFunc, UI.safeEquals);
-    },
-    render: function () {
-      return UI.If(this.v, UI.With(this.v, contentBlock), elseContentBlock);
-    },
-    materialized: (function () {
-      var f = function (range) {
-        var self = this;
-        if (Deps.active) {
-          Deps.onInvalidate(function () {
-            self.v.stop();
-          });
-        }
-        if (range) {
-          range.removed = function () {
-            self.v.stop();
-          };
-        }
-      };
-      f.isWith = true;
-      return f;
-    })()
+// Spacebars.With implements the conditional logic of rendering
+// the `{{else}}` block if the argument is falsy.  It combines
+// a Blaze.If with a Blaze.With (the latter only in the truthy
+// case, since the else block is evaluated without entering
+// a new data context).
+Spacebars.With = function (argFunc, contentFunc, elseFunc) {
+  var argVar = new Blaze.ReactiveVar;
+  var view = Blaze.View('Spacebars_with', function () {
+    return Blaze.If(function () { return argVar.get(); },
+                    function () { return Blaze.With(function () {
+                      return argVar.get(); }, contentFunc); },
+                    elseFunc);
   });
+  view.onViewCreated(function () {
+    this.autorun(function () {
+      argVar.set(argFunc());
+
+      // This is a hack so that autoruns inside the body
+      // of the #with get stopped sooner.  It reaches inside
+      // our ReactiveVar to access its dep.
+
+      Tracker.onInvalidate(function () {
+        argVar.dep.changed();
+      });
+
+      // Take the case of `{{#with A}}{{B}}{{/with}}`.  The goal
+      // is to not re-render `B` if `A` changes to become falsy
+      // and `B` is simultaneously invalidated.
+      //
+      // A series of autoruns are involved:
+      //
+      // 1. This autorun (argument to Spacebars.With)
+      // 2. Argument to Blaze.If
+      // 3. Blaze.If view re-render
+      // 4. Argument to Blaze.With
+      // 5. The template tag `{{B}}`
+      //
+      // When (3) is invalidated, it immediately stops (4) and (5)
+      // because of a Tracker.onInvalidate built into materializeView.
+      // (When a View's render method is invalidated, it immediately
+      // tears down all the subviews, via a Tracker.onInvalidate much
+      // like this one.
+      //
+      // Suppose `A` changes to become falsy, and `B` changes at the
+      // same time (i.e. without an intervening flush).
+      // Without the code above, this happens:
+      //
+      // - (1) and (5) are invalidated.
+      // - (1) runs, invalidating (2) and (4).
+      // - (5) runs.
+      // - (2) runs, invalidating (3), stopping (4) and (5).
+      //
+      // With the code above:
+      //
+      // - (1) and (5) are invalidated, invalidating (2) and (4).
+      // - (1) runs.
+      // - (2) runs, invalidating (3), stopping (4) and (5).
+      //
+      // If the re-run of (5) is originally enqueued before (1), all
+      // bets are off, but typically that doesn't seem to be the
+      // case.  Anyway, doing this is always better than not doing it,
+      // because it might save a bunch of DOM from being updated
+      // needlessly.
+    });
+  });
+
+  return view;
 };
 
-Spacebars.TemplateWith = function (argFunc, contentBlock) {
-  var w = UI.With(argFunc, contentBlock);
-  w.__isTemplateWith = true;
-  return w;
-};
+// XXX COMPAT WITH 0.9.0
+Spacebars.TemplateWith = Blaze._TemplateWith;

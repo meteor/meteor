@@ -3,12 +3,17 @@
 ///
 
 // This is reactive.
+
+/**
+ * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ */
 Meteor.userId = function () {
   return Accounts.connection.userId();
 };
 
 var loggingIn = false;
-var loggingInDeps = new Deps.Dependency;
+var loggingInDeps = new Tracker.Dependency;
 // This is mostly just called within this file, but Meteor.loginWithPassword
 // also uses it to make loggingIn() be true during the beginPasswordExchange
 // method call too.
@@ -18,12 +23,22 @@ Accounts._setLoggingIn = function (x) {
     loggingInDeps.changed();
   }
 };
+
+/**
+ * @summary True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source.
+ * @locus Client
+ */
 Meteor.loggingIn = function () {
   loggingInDeps.depend();
   return loggingIn;
 };
 
 // This calls userId, which is reactive.
+
+/**
+ * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ */
 Meteor.user = function () {
   var userId = Meteor.userId();
   if (!userId)
@@ -62,7 +77,7 @@ Meteor.user = function () {
 Accounts.callLoginMethod = function (options) {
   options = _.extend({
     methodName: 'login',
-    methodArguments: [],
+    methodArguments: [{}],
     _suppressLoggingIn: false
   }, options);
   // Set defaults for callback arguments to no-op functions; make sure we
@@ -203,6 +218,11 @@ makeClientLoggedIn = function(userId, token, tokenExpires) {
   Accounts.connection.setUserId(userId);
 };
 
+/**
+ * @summary Log the user out.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Meteor.logout = function (callback) {
   Accounts.connection.apply('logout', [], {wait: true}, function(error, result) {
     if (error) {
@@ -214,6 +234,11 @@ Meteor.logout = function (callback) {
   });
 };
 
+/**
+ * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
+ * @locus Client
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
 Meteor.logoutOtherClients = function (callback) {
   // We need to make two method calls: one to replace our current token,
   // and another to remove all tokens except the current one. We want to
@@ -267,17 +292,70 @@ Accounts.loginServicesConfigured = function () {
   return loginServicesHandle.ready();
 };
 
+// Some login services such as the redirect login flow or the resume
+// login handler can log the user in at page load time.  The
+// Meteor.loginWithX functions have a callback argument, but the
+// callback function instance won't be in memory any longer if the
+// page was reloaded.  The `onPageLoadLogin` function allows a
+// callback to be registered for the case where the login was
+// initiated in a previous VM, and we now have the result of the login
+// attempt in a new VM.
+
+var pageLoadLoginCallbacks = [];
+var pageLoadLoginAttemptInfo = null;
+
+// Register a callback to be called if we have information about a
+// login attempt at page load time.  Call the callback immediately if
+// we already have the page load login attempt info, otherwise stash
+// the callback to be called if and when we do get the attempt info.
+//
+Accounts.onPageLoadLogin = function (f) {
+  if (pageLoadLoginAttemptInfo)
+    f(pageLoadLoginAttemptInfo);
+  else
+    pageLoadLoginCallbacks.push(f);
+};
+
+
+// Receive the information about the login attempt at page load time.
+// Call registered callbacks, and also record the info in case
+// someone's callback hasn't been registered yet.
+//
+Accounts._pageLoadLogin = function (attemptInfo) {
+  if (pageLoadLoginAttemptInfo) {
+    Meteor._debug("Ignoring unexpected duplicate page load login attempt info");
+    return;
+  }
+  _.each(pageLoadLoginCallbacks, function (callback) { callback(attemptInfo); });
+  pageLoadLoginCallbacks = [];
+  pageLoadLoginAttemptInfo = attemptInfo;
+};
+
+
 ///
 /// HANDLEBARS HELPERS
 ///
 
-// If our app has a UI, register the {{currentUser}} and {{loggingIn}}
+// If our app has a Blaze, register the {{currentUser}} and {{loggingIn}}
 // global helpers.
-if (Package.ui) {
-  Package.ui.UI.registerHelper('currentUser', function () {
+if (Package.blaze) {
+  /**
+   * @global
+   * @name  currentUser
+   * @isHelper true
+   * @summary Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in.
+   */
+  Package.blaze.Blaze.Template.registerHelper('currentUser', function () {
     return Meteor.user();
   });
-  Package.ui.UI.registerHelper('loggingIn', function () {
+
+  /**
+   * @global
+   * @name  loggingIn
+   * @isHelper true
+   * @summary Calls [Meteor.loggingIn()](#meteor_loggingin).
+   */
+  Package.blaze.Blaze.Template.registerHelper('loggingIn', function () {
     return Meteor.loggingIn();
   });
 }

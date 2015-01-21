@@ -1,3 +1,5 @@
+SpacebarsCompiler = {};
+
 // A TemplateTag is the result of parsing a single `{{...}}` tag.
 //
 // The `.type` of a TemplateTag is one of:
@@ -5,10 +7,12 @@
 // - `"DOUBLE"` - `{{foo}}`
 // - `"TRIPLE"` - `{{{foo}}}`
 // - `"COMMENT"` - `{{! foo}}`
+// - `"BLOCKCOMMENT" - `{{!-- foo--}}`
 // - `"INCLUSION"` - `{{> foo}}`
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
 // - `"ELSE"` - `{{else}}`
+// - `"ESCAPE"` - `{{|`, `{{{|`, `{{{{|` and so on
 //
 // Besides `type`, the mandatory properties of a TemplateTag are:
 //
@@ -22,7 +26,8 @@
 //   are `[["STRING", "bar"], ["NUMBER", 3, "x"]]`.  Applies to DOUBLE,
 //   TRIPLE, INCLUSION, and BLOCKOPEN.
 //
-// - `value` - For COMMENT tags, a string of the comment's text.
+// - `value` - A string of the comment's text. Applies to COMMENT and
+//   BLOCKCOMMENT.
 //
 // These additional are typically set during parsing:
 //
@@ -37,14 +42,22 @@
 
 var TEMPLATE_TAG_POSITION = HTMLTools.TEMPLATE_TAG_POSITION;
 
-TemplateTag = Spacebars.TemplateTag = function () {};
+TemplateTag = SpacebarsCompiler.TemplateTag = function () {
+  HTMLTools.TemplateTag.apply(this, arguments);
+};
+TemplateTag.prototype = new HTMLTools.TemplateTag;
+TemplateTag.prototype.constructorName = 'SpacebarsCompiler.TemplateTag';
 
 var makeStacheTagStartRegex = function (r) {
   return new RegExp(r.source + /(?![{>!#/])/.source,
                     r.ignoreCase ? 'i' : '');
 };
 
+// "starts" regexes are used to see what type of template
+// tag the parser is looking at.  They must match a non-empty
+// result, but not the interesting part of the tag.
 var starts = {
+  ESCAPE: /^\{\{(?=\{*\|)/,
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -62,7 +75,7 @@ var ends = {
 
 // Parse a tag from the provided scanner or string.  If the input
 // doesn't start with `{{`, returns null.  Otherwise, either succeeds
-// and returns a Spacebars.TemplateTag, or throws an error (using
+// and returns a SpacebarsCompiler.TemplateTag, or throws an error (using
 // `scanner.fatal` if a scanner is provided).
 TemplateTag.parse = function (scannerOrString) {
   var scanner = scannerOrString;
@@ -88,7 +101,7 @@ TemplateTag.parse = function (scannerOrString) {
   };
 
   var scanIdentifier = function (isFirstInPath) {
-    var id = parseIdentifierName(scanner);
+    var id = BlazeTools.parseIdentifierName(scanner);
     if (! id)
       expected('IDENTIFIER');
     if (isFirstInPath &&
@@ -191,13 +204,13 @@ TemplateTag.parse = function (scannerOrString) {
   var scanArgValue = function () {
     var startPos = scanner.pos;
     var result;
-    if ((result = parseNumber(scanner))) {
+    if ((result = BlazeTools.parseNumber(scanner))) {
       return ['NUMBER', result.value];
-    } else if ((result = parseStringLiteral(scanner))) {
+    } else if ((result = BlazeTools.parseStringLiteral(scanner))) {
       return ['STRING', result.value];
     } else if (/^[\.\[]/.test(scanner.peek())) {
       return ['PATH', scanPath()];
-    } else if ((result = parseIdentifierName(scanner))) {
+    } else if ((result = BlazeTools.parseIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
         return ['NULL', null];
@@ -222,9 +235,10 @@ TemplateTag.parse = function (scannerOrString) {
     error('Expected ' + what);
   };
 
-  // must do ELSE first; order of others doesn't matter
-
-  if (run(starts.ELSE)) type = 'ELSE';
+  // must do ESCAPE first, immediately followed by ELSE
+  // order of others doesn't matter
+  if (run(starts.ESCAPE)) type = 'ESCAPE';
+  else if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
@@ -255,6 +269,9 @@ TemplateTag.parse = function (scannerOrString) {
   } else if (type === 'ELSE') {
     if (! run(ends.DOUBLE))
       expected('`}}`');
+  } else if (type === 'ESCAPE') {
+    var result = run(/^\{*\|/);
+    tag.value = '{{' + result.slice(0, -1);
   } else {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
     tag.path = scanPath();
@@ -290,7 +307,7 @@ TemplateTag.parse = function (scannerOrString) {
   return tag;
 };
 
-// Returns a Spacebars.TemplateTag parsed from `scanner`, leaving scanner
+// Returns a SpacebarsCompiler.TemplateTag parsed from `scanner`, leaving scanner
 // at its original position.
 //
 // An error will still be thrown if there is not a valid template tag at
@@ -361,7 +378,7 @@ TemplateTag.parseCompleteTag = function (scannerOrString, position) {
         textMode = HTML.TEXTMODE.RCDATA;
       }
       var parserOptions = {
-        getSpecialTag: TemplateTag.parseCompleteTag,
+        getTemplateTag: TemplateTag.parseCompleteTag,
         shouldStop: isAtBlockCloseOrElse,
         textMode: textMode
       };
@@ -437,7 +454,7 @@ var validateTag = function (ttag, scanner) {
 
   var position = ttag.position || TEMPLATE_TAG_POSITION.ELEMENT;
   if (position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-    if (ttag.type === 'DOUBLE') {
+    if (ttag.type === 'DOUBLE' || ttag.type === 'ESCAPE') {
       return;
     } else if (ttag.type === 'BLOCKOPEN') {
       var path = ttag.path;

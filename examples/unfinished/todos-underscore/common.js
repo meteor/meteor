@@ -1,6 +1,6 @@
-Lists = new Meteor.Collection("lists");
+Lists = new Mongo.Collection("lists");
 
-Todos = new Meteor.Collection("todos");
+Todos = new Mongo.Collection("todos");
 
 /* Schema support coming soon!
 

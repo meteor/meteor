@@ -1,4 +1,4 @@
-Gizmos = new Meteor.Collection("gizmos");
+Gizmos = new Mongo.Collection("gizmos");
 
 if (Meteor.isClient) {
 

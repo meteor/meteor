@@ -214,6 +214,14 @@ regexpElementMatcher = function (regexp) {
     // Regexps only work against strings.
     if (typeof value !== 'string')
       return false;
+
+    // Reset regexp's state to avoid inconsistent matching for objects with the
+    // same value on consecutive calls of regexp.test. This happens only if the
+    // regexp has the 'g' flag. Also note that ES6 introduces a new flag 'y' for
+    // which we should *not* change the lastIndex but MongoDB doesn't support
+    // either of these flags.
+    regexp.lastIndex = 0;
+
     return regexp.test(value);
   };
 };
@@ -648,7 +656,7 @@ ELEMENT_OPERATORS = {
       if (valueSelector.$options !== undefined) {
         // Options passed in $options (even the empty string) always overrides
         // options in the RegExp object itself. (See also
-        // Meteor.Collection._rewriteSelector.)
+        // Mongo.Collection._rewriteSelector.)
 
         // Be clear that we only support the JS-supported options, not extended
         // ones (eg, Mongo supports x and s). Ideally we would implement x and s
@@ -766,16 +774,18 @@ ELEMENT_OPERATORS = {
 //
 // See the test 'minimongo - lookup' for some examples of what lookup functions
 // return.
-makeLookupFunction = function (key) {
+makeLookupFunction = function (key, options) {
+  options = options || {};
   var parts = key.split('.');
   var firstPart = parts.length ? parts[0] : '';
   var firstPartIsNumeric = isNumericKey(firstPart);
+  var nextPartIsNumeric = parts.length >= 2 && isNumericKey(parts[1]);
   var lookupRest;
   if (parts.length > 1) {
     lookupRest = makeLookupFunction(parts.slice(1).join('.'));
   }
 
-  var elideUnnecessaryFields = function (retVal) {
+  var omitUnnecessaryFields = function (retVal) {
     if (!retVal.dontIterate)
       delete retVal.dontIterate;
     if (retVal.arrayIndices && !retVal.arrayIndices.length)
@@ -818,7 +828,7 @@ makeLookupFunction = function (key) {
     // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.
     // So in that case, we mark the return value as "don't iterate".
     if (!lookupRest) {
-      return [elideUnnecessaryFields({
+      return [omitUnnecessaryFields({
         value: firstLevel,
         dontIterate: isArray(doc) && isArray(firstLevel),
         arrayIndices: arrayIndices})];
@@ -833,7 +843,7 @@ makeLookupFunction = function (key) {
     if (!isIndexable(firstLevel)) {
       if (isArray(doc))
         return [];
-      return [elideUnnecessaryFields({value: undefined,
+      return [omitUnnecessaryFields({value: undefined,
                                       arrayIndices: arrayIndices})];
     }
 
@@ -857,7 +867,12 @@ makeLookupFunction = function (key) {
     // objects. And it would be weird to dig into an array: it's simpler to have
     // a rule that explicit integer indexes only apply to an outer array, not to
     // an array you find after a branching search.
-    if (isArray(firstLevel)) {
+    //
+    // In the special case of a numeric part in a *sort selector* (not a query
+    // selector), we skip the branching: we ONLY allow the numeric part to mean
+    // "look up this index" in that case, not "also look up this index in all
+    // the elements of the array".
+    if (isArray(firstLevel) && !(nextPartIsNumeric && options.forSort)) {
       _.each(firstLevel, function (branch, arrayIndex) {
         if (isPlainObject(branch)) {
           appendToResult(lookupRest(

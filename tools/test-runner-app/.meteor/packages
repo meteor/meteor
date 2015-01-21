@@ -1,4 +1,0 @@
-# In addition to the standard app packages, a driver package will be added by
-# "meteor test-packages".
-
-standard-app-packages

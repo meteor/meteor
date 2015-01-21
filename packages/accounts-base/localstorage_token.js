@@ -100,6 +100,16 @@ if (autoLoginEnabled) {
         Meteor._debug("Error logging in with token: " + err);
         makeClientLoggedOut();
       }
+      Accounts._pageLoadLogin({
+        type: "resume",
+        allowed: !err,
+        error: err,
+        methodName: "login",
+        // XXX This is duplicate code with loginWithToken, but
+        // loginWithToken can also be called at other times besides
+        // page load.
+        methodArguments: [{resume: token}]
+      });
     });
   }
 }

@@ -1,0 +1,77 @@
+nav {
+  .position(absolute, 0, 0, auto, 0, 100%, 3em);
+  .transform(translate3d(0,0,0));
+  .transition( all 200ms ease-out );
+  background: rgba(255,255,255,.97);
+  text-align: center;
+  z-index: 10;
+
+  &.black {
+    background: transparent;
+    color: @color-empty;
+
+    .nav-item {
+      color: @color-empty;
+    }
+
+    // Gradient over image to give nav contrast, extends past nav boundaries
+    &:after {
+      .background-image(linear-gradient(top, rgba(0,0,0,.30), rgba(0,0,0,0) 100%));
+      .position(absolute, 0, 0, auto, 0, 100%, 3.5em);
+      content: '';
+      z-index: -1;
+    }
+  }
+
+  &.scrolled {
+    background: rgba(255,255,255,.97);
+    color: @color-full;
+
+    &:after { opacity: 0; }
+    .nav-item { color: @color-full; }
+  }
+
+  .title-page {
+    .font-s2-alt;
+    .type-secondary;
+    .title-caps;
+    .ellipsized;
+    .position(absolute, 50%, 0, auto, 0);
+    .transform(translate3d(0, -40%, 0));
+    line-height: 1;
+
+    .subtext-page {
+      .font-s1;
+      .type-bold;
+      color: @color-medium;
+      display: block;
+      letter-spacing: 0;
+      line-height: 1;
+      text-transform: none;
+    }
+  }
+  .nav-item {
+    .font-m1;
+    color: @color-full;
+    display: inline-block;
+    height: 3rem;
+    width: 40px;
+
+    &:active { opacity: .5; }
+
+    [class^="icon-"],
+    [class*=" icon-"] {
+      line-height: 3rem;
+      vertical-align: middle;
+    }
+  }
+  .nav-group {
+    .position(absolute, 0, auto, auto, 0);
+    z-index: 1;
+
+    &.right {
+      left: auto;
+      right: 0;
+    }
+  }
+}

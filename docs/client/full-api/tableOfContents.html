@@ -1,0 +1,42 @@
+<template name="tableOfContents">
+  <div class="full-api-toc {{layoutHidden 'full'}}">
+    {{> nav}}
+  </div>
+</template>
+
+
+<template name="nav">
+  {{#each sections}}
+    {{#if type "spacer"}}
+      <div class="spacer"> </div>
+    {{/if}}
+    {{#if type "section"}}
+      {{#nav_section}}
+        <a href="{{link}}" class="{{maybe_current}} {{style}}">
+          {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
+        </a>
+      {{/nav_section}}
+    {{/if}}
+  {{/each}}
+</template>
+
+<template name="nav_section">
+  {{#if depthIs 1}}
+    <h1>{{> UI.contentBlock}}</h1>
+  {{/if}}
+  {{#if depthIs 2}}
+    <h2>{{> UI.contentBlock}}</h2>
+  {{/if}}
+  {{#if depthIs 3}}
+    <h3>{{> UI.contentBlock}}</h3>
+  {{/if}}
+  {{#if depthIs 4}}
+    <h4>{{> UI.contentBlock}}</h4>
+  {{/if}}
+  {{#if depthIs 5}}
+    <h5>{{> UI.contentBlock}}</h5>
+  {{/if}}
+  {{#if depthIs 6}}
+    <h6>{{> UI.contentBlock}}</h6>
+  {{/if}}
+</template>

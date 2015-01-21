@@ -7,9 +7,10 @@ standard-app-packages
 jquery
 underscore
 showdown
-code-prettify
 jquery-waypoints
-less
 spiderable
 appcache
 reload-safetybelt
+simple:markdown-templating
+simple:highlight.js
+less

@@ -21,8 +21,6 @@ var _call = function(method, url, options, callback) {
   if (! /^https?:\/\//.test(url))
     throw new Error("url must be absolute and start with http:// or https://");
 
-  var url_parts = url_util.parse(url);
-
   var headers = {};
 
   var content = options.content;
@@ -38,9 +36,7 @@ var _call = function(method, url, options, callback) {
   else
     params_for_body = options.params;
 
-  var new_url = buildUrl(
-    url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
-    url_parts.search, options.query, params_for_url);
+  var new_url = URL._constructUrl(url, options.query, params_for_url);
 
   if (options.auth) {
     if (options.auth.indexOf(':') < 0)
@@ -50,7 +46,7 @@ var _call = function(method, url, options, callback) {
   }
 
   if (params_for_body) {
-    content = encodeParams(params_for_body);
+    content = URL._encodeParams(params_for_body);
     headers['Content-Type'] = "application/x-www-form-urlencoded";
   }
 
@@ -80,6 +76,9 @@ var _call = function(method, url, options, callback) {
     timeout: options.timeout,
     body: content,
     followRedirect: options.followRedirects,
+    // Follow redirects on non-GET requests
+    // also. (https://github.com/meteor/meteor/issues/2808)
+    followAllRedirects: options.followRedirects,
     headers: headers
   };
 
@@ -104,4 +103,4 @@ var _call = function(method, url, options, callback) {
   });
 };
 
-HTTP.call = Meteor._wrapAsync(_call);
+HTTP.call = Meteor.wrapAsync(_call);

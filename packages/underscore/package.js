@@ -1,8 +1,9 @@
 Package.describe({
-  summary: "Collection of small helpers: _.map, _.each, ..."
+  summary: "Collection of small helpers: _.map, _.each, ...",
+  version: '1.0.2'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   // Like all packages, we have an implicit depedency on the 'meteor'
   // package, which provides such things as the *.js file handler. Use
   // an undocumented API to allow 'meteor' to after us even though we
@@ -25,5 +26,11 @@ Package.on_use(function (api) {
   // return value, document.images, and 'arguments') such that objects with a
   // numeric length field whose constructor === Object are still treated as
   // objects, not as arrays.  Search for looksLikeArray.
-  api.add_files(['pre.js', 'underscore.js', 'post.js']);
+  api.addFiles(['pre.js', 'underscore.js', 'post.js']);
+});
+
+
+Package.onTest(function (api) {
+  // Also turn off the strong 'meteor' dependency in the test slice
+  api.use('meteor', {unordered: true});
 });

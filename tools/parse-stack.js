@@ -26,7 +26,7 @@ exports.parse = function (err) {
       return;
     var m;
     if (m =
-        frame.match(/^\s*at\s*((new )?.+?)\s*(\[as\s*([^\]]*)\]\s*)?\(([^:]*)(:(\d+))?(:(\d+))?\)\s*$/)) {
+        frame.match(/^\s*at\s*((new )?.+?)\s*(\[as\s*([^\]]*)\]\s*)?\((.*?)(:(\d+))?(:(\d+))?\)\s*$/)) {
       // https://code.google.com/p/v8/wiki/JavaScriptStackTraceApi
       // "    at My.Function (/path/to/myfile.js:532:39)"
       // "    at Array.forEach (native)"
@@ -36,11 +36,14 @@ exports.parse = function (err) {
       //
       // In that last example, it is not at all clear to me what the
       // 'as' stanza refers to, but it is in m[3] if you find a use for it.
-      if (m[1] === "__top_mark__") {
+      if (m[1].match(/(?:^|\.)__top_mark__$/)) {
+        // m[1] could be Object.__top_mark__ or something like that
+        // depending on where exactly you put the function returned by
+        // markTop
         ret = [];
         return;
       }
-      if (m[1] === "__bottom_mark__") {
+      if (m[1].match(/(?:^|\.)__bottom_mark__$/)) {
         stop = true;
         return;
       }
@@ -50,7 +53,7 @@ exports.parse = function (err) {
         line: m[7] ? +m[7] : undefined,
         column: m[9] ? +m[9] : undefined
       });
-    } else if (m = frame.match(/^\s*at\s+([^:]+)(:(\d+))?(:(\d+))?\s*$/)) {
+    } else if (m = frame.match(/^\s*at\s+(.+?)(:(\d+))?(:(\d+))?\s*$/)) {
       // "    at /path/to/myfile.js:532:39"
       ret.push({
         file: m[1],
@@ -70,7 +73,6 @@ exports.parse = function (err) {
       // We haven't found any stack frames, so probably we have newlines in the
       // error message. Just skip this line.
     } else {
-      console.log(err.stack);
       throw new Error("Couldn't parse stack frame: '" + frame + "'");
     }
   });

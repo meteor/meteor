@@ -1,16 +1,23 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  internal: true
+  version: '1.1.5'
 });
 
-Package.on_use(function (api) {
+Cordova.depends({
+  'org.apache.cordova.file': '1.3.0',
+  'org.apache.cordova.file-transfer': '0.4.4'
+});
+
+Package.onUse(function (api) {
   api.use('webapp', 'server');
-  api.use(['deps', 'retry'], 'client');
-  api.use(['livedata', 'mongo-livedata'], ['client', 'server']);
-  api.use('deps', 'client');
+  api.use(['tracker', 'retry'], 'client');
+  api.use(['ddp', 'mongo', 'underscore'], ['client', 'server']);
+  api.use('tracker', 'client');
   api.use('reload', 'client', {weak: true});
+  api.use(['http', 'random'], 'web.cordova');
 
   api.export('Autoupdate');
-  api.add_files('autoupdate_server.js', 'server');
-  api.add_files('autoupdate_client.js', 'client');
+  api.addFiles('autoupdate_server.js', 'server');
+  api.addFiles('autoupdate_client.js', 'web.browser');
+  api.addFiles('autoupdate_cordova.js', 'web.cordova');
 });

@@ -5,6 +5,17 @@
 
 var currentArgumentChecker = new Meteor.EnvironmentVariable;
 
+/**
+ * @summary Check that a value matches a [pattern](#matchpatterns).
+ * If the value does not match the pattern, throw a `Match.Error`.
+ *
+ * Particularly useful to assert that arguments to a function have the right
+ * types and structure.
+ * @locus Anywhere
+ * @param {Any} value The value to check
+ * @param {MatchPattern} pattern The pattern to match
+ * `value` against
+ */
 check = function (value, pattern) {
   // Record that check got called, if somebody cared.
   //
@@ -26,6 +37,10 @@ check = function (value, pattern) {
   }
 };
 
+/**
+ * @namespace Match
+ * @summary The namespace for all Match types and methods.
+ */
 Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
@@ -39,6 +54,9 @@ Match = {
   },
   ObjectIncluding: function (pattern) {
     return new ObjectIncluding(pattern);
+  },
+  ObjectWithValues: function (pattern) {
+    return new ObjectWithValues(pattern);
   },
   // Matches only signed 32-bit integers
   Integer: ['__integer__'],
@@ -62,6 +80,13 @@ Match = {
   // XXX maybe also implement a Match.match which returns more information about
   //     failures but without using exception handling or doing what check()
   //     does with _failIfArgumentsAreNotAllChecked and Meteor.Error conversion
+
+  /**
+   * @summary Returns true if the value matches the pattern.
+   * @locus Anywhere
+   * @param {Any} value The value to check
+   * @param {MatchPattern} pattern The pattern to match `value` against
+   */
   test: function (value, pattern) {
     try {
       checkSubtree(value, pattern);
@@ -107,6 +132,10 @@ var ObjectIncluding = function (pattern) {
   this.pattern = pattern;
 };
 
+var ObjectWithValues = function (pattern) {
+  this.pattern = pattern;
+};
+
 var typeofChecks = [
   [String, "string"],
   [Number, "number"],
@@ -135,6 +164,14 @@ var checkSubtree = function (value, pattern) {
     if (value === null)
       return;
     throw new Match.Error("Expected null, got " + EJSON.stringify(value));
+  }
+
+  // Strings and numbers match literally.  Goes well with Match.OneOf.
+  if (typeof pattern === "string" || typeof pattern === "number") {
+    if (value === pattern)
+      return;
+    throw new Match.Error("Expected " + pattern + ", got " +
+                          EJSON.stringify(value));
   }
 
   // Match.Integer is special type encoded with array
@@ -212,14 +249,20 @@ var checkSubtree = function (value, pattern) {
   if (pattern instanceof Function) {
     if (value instanceof pattern)
       return;
-    // XXX what if .name isn't defined
-    throw new Match.Error("Expected " + pattern.name);
+    throw new Match.Error("Expected " + (pattern.name ||
+                                         "particular constructor"));
   }
 
   var unknownKeysAllowed = false;
+  var unknownKeyPattern;
   if (pattern instanceof ObjectIncluding) {
     unknownKeysAllowed = true;
     pattern = pattern.pattern;
+  }
+  if (pattern instanceof ObjectWithValues) {
+    unknownKeysAllowed = true;
+    unknownKeyPattern = [pattern.pattern];
+    pattern = {};  // no required keys
   }
 
   if (typeof pattern !== "object")
@@ -254,6 +297,9 @@ var checkSubtree = function (value, pattern) {
       } else {
         if (!unknownKeysAllowed)
           throw new Match.Error("Unknown key");
+        if (unknownKeyPattern) {
+          checkSubtree(subValue, unknownKeyPattern[0]);
+        }
       }
     } catch (err) {
       if (err instanceof Match.Error)
@@ -297,7 +343,8 @@ _.extend(ArgumentChecker.prototype, {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
-      if (value === self.args[i]) {
+      // (NaN is not === to itself, so we have to check specially.)
+      if (value === self.args[i] || (_.isNaN(value) && _.isNaN(self.args[i]))) {
         self.args.splice(i, 1);
         return true;
       }

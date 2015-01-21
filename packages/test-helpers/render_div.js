@@ -1,5 +1,9 @@
-renderToDiv = function (comp) {
+renderToDiv = function (template, optData) {
   var div = document.createElement("DIV");
-  UI.materialize(comp, div);
+  if (optData == null) {
+    Blaze.render(template, div);
+  } else {
+    Blaze.renderWithData(template, optData, div);
+  }
   return div;
 };

@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
-var inFiber = require('./fiber-helpers.js').inFiber;
+var fiberHelpers = require('./fiber-helpers.js');
+var Console = require("./console.js").Console;
 
 var Updater = function () {
   var self = this;
@@ -17,12 +18,14 @@ _.extend(Updater.prototype, {
     if (self.timer)
       throw new Error("already running?");
 
-    // Check twice a day.
-    self.timer = setInterval(inFiber(function () {
+    // Check every 3 hours. (Should not share buildmessage state with
+    // the main fiber.)
+    self.timer = setInterval(fiberHelpers.inBareFiber(function () {
       self._check();
-    }), 12*60*60*1000);
+    }), 3 * 60 * 60 * 1000);
 
-    // Also start a check now, but don't block on it.
+    // Also start a check now, but don't block on it. (This should
+    // not share buildmessage state with the main fiber.)
     new Fiber(function () {
       self._check();
     }).run();
@@ -34,7 +37,10 @@ _.extend(Updater.prototype, {
     try {
       updater.tryToDownloadUpdate({showBanner: true});
     } catch (e) {
-      // oh well, this was the background. no need to show any errors.
+      // oh well, this was the background. Only show errors if we are in debug
+      // mode.
+      Console.debug("Error inside updater.");
+      Console.debug(e.stack);
       return;
     }
   },

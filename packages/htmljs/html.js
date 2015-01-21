@@ -1,32 +1,10 @@
 
-// Tag instances are `instanceof HTML.Tag`.
-//
-// Tag objects should be considered immutable.
-//
-// This is a private constructor of an abstract class; don't call it.
+
 HTML.Tag = function () {};
 HTML.Tag.prototype.tagName = ''; // this will be set per Tag subclass
 HTML.Tag.prototype.attrs = null;
 HTML.Tag.prototype.children = Object.freeze ? Object.freeze([]) : [];
-
-// Given "p", create and assign `HTML.P` if it doesn't already exist.
-// Then return it.  `tagName` must have proper case (usually all lowercase).
-HTML.getTag = function (tagName) {
-  var symbolName = HTML.getSymbolName(tagName);
-  if (symbolName === tagName) // all-caps tagName
-    throw new Error("Use the lowercase or camelCase form of '" + tagName + "' here");
-
-  if (! HTML[symbolName])
-    HTML[symbolName] = makeTagConstructor(tagName);
-
-  return HTML[symbolName];
-};
-
-// Given "p", make sure `HTML.P` exists.  `tagName` must have proper case
-// (usually all lowercase).
-HTML.ensureTag = function (tagName) {
-  HTML.getTag(tagName); // don't return it
-};
+HTML.Tag.prototype.htmljsType = HTML.Tag.htmljsType = ['Tag'];
 
 // Given "p" create the function `HTML.P`.
 var makeTagConstructor = function (tagName) {
@@ -39,18 +17,29 @@ var makeTagConstructor = function (tagName) {
 
     var i = 0;
     var attrs = arguments.length && arguments[0];
-    if (attrs && (typeof attrs === 'object') &&
-        (attrs.constructor === Object)) {
-      instance.attrs = attrs;
-      i++;
+    if (attrs && (typeof attrs === 'object')) {
+      // Treat vanilla JS object as an attributes dictionary.
+      if (! HTML.isConstructedObject(attrs)) {
+        instance.attrs = attrs;
+        i++;
+      } else if (attrs instanceof HTML.Attrs) {
+        var array = attrs.value;
+        if (array.length === 1) {
+          instance.attrs = array[0];
+        } else if (array.length > 1) {
+          instance.attrs = array;
+        }
+        i++;
+      }
     }
+
 
     // If no children, don't create an array at all, use the prototype's
     // (frozen, empty) array.  This way we don't create an empty array
     // every time someone creates a tag without `new` and this constructor
     // calls itself with no arguments (above).
     if (i < arguments.length)
-      instance.children = Array.prototype.slice.call(arguments, i);
+      instance.children = SLICE.call(arguments, i);
 
     return instance;
   };
@@ -61,42 +50,48 @@ var makeTagConstructor = function (tagName) {
   return HTMLTag;
 };
 
-var CharRef = HTML.CharRef = function (attrs) {
-  if (! (this instanceof CharRef))
-    // called without `new`
-    return new CharRef(attrs);
+// Not an HTMLjs node, but a wrapper to pass multiple attrs dictionaries
+// to a tag (for the purpose of implementing dynamic attributes).
+var Attrs = HTML.Attrs = function (/*attrs dictionaries*/) {
+  // Work with or without `new`.  If not called with `new`,
+  // perform instantiation by recursively calling this constructor.
+  // We can't pass varargs, so pass no args.
+  var instance = (this instanceof Attrs) ? this : new Attrs;
 
-  if (! (attrs && attrs.html && attrs.str))
-    throw new Error(
-      "HTML.CharRef must be constructed with ({html:..., str:...})");
+  instance.value = SLICE.call(arguments);
 
-  this.html = attrs.html;
-  this.str = attrs.str;
+  return instance;
 };
 
-var Comment = HTML.Comment = function (value) {
-  if (! (this instanceof Comment))
-    // called without `new`
-    return new Comment(value);
+////////////////////////////// KNOWN ELEMENTS
 
-  if (typeof value !== 'string')
-    throw new Error('HTML.Comment must be constructed with a string');
+HTML.getTag = function (tagName) {
+  var symbolName = HTML.getSymbolName(tagName);
+  if (symbolName === tagName) // all-caps tagName
+    throw new Error("Use the lowercase or camelCase form of '" + tagName + "' here");
 
-  this.value = value;
-  // Kill illegal hyphens in comment value (no way to escape them in HTML)
-  this.sanitizedValue = value.replace(/^-|--+|-$/g, '');
+  if (! HTML[symbolName])
+    HTML[symbolName] = makeTagConstructor(tagName);
+
+  return HTML[symbolName];
 };
 
+HTML.ensureTag = function (tagName) {
+  HTML.getTag(tagName); // don't return it
+};
 
-//---------- KNOWN ELEMENTS
+HTML.isTagEnsured = function (tagName) {
+  return HTML.isKnownElement(tagName);
+};
 
-// These lists of known elements are public.  You can use them, for example, to
-// write a helper that determines the proper case for an SVG element name.
-// Such helpers that may not be needed at runtime are not provided here.
+HTML.getSymbolName = function (tagName) {
+  // "foo-bar" -> "FOO_BAR"
+  return tagName.toUpperCase().replace(/-/g, '_');
+};
 
-HTML.knownElementNames = 'a abbr acronym address applet area b base basefont bdo big blockquote body br button caption center cite code col colgroup dd del dfn dir div dl dt em fieldset font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex kbd label legend li link map menu meta noframes noscript object ol optgroup option p param pre q s samp script select small span strike strong style sub sup table tbody td textarea tfoot th thead title tr tt u ul var article aside audio bdi canvas command data datagrid datalist details embed eventsource figcaption figure footer header hgroup keygen mark meter nav output progress ruby rp rt section source summary time track video wbr'.split(' ');
+HTML.knownElementNames = 'a abbr acronym address applet area article aside audio b base basefont bdi bdo big blockquote body br button canvas caption center cite code col colgroup command data datagrid datalist dd del details dfn dir div dl dt em embed eventsource fieldset figcaption figure font footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins isindex kbd keygen label legend li link main map mark menu meta meter nav noframes noscript object ol optgroup option output p param pre progress q rp rt ruby s samp script section select small source span strike strong style sub summary sup table tbody td textarea tfoot th thead time title tr track tt u ul var video wbr'.split(' ');
+// (we add the SVG ones below)
 
-// omitted because also an HTML element: "a"
 HTML.knownSVGElementNames = 'altGlyph altGlyphDef altGlyphItem animate animateColor animateMotion animateTransform circle clipPath color-profile cursor defs desc ellipse feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter font font-face font-face-format font-face-name font-face-src font-face-uri foreignObject g glyph glyphRef hkern image line linearGradient marker mask metadata missing-glyph path pattern polygon polyline radialGradient rect script set stop style svg switch symbol text textPath title tref tspan use view vkern'.split(' ');
 // Append SVG element names to list of known element names
 HTML.knownElementNames = HTML.knownElementNames.concat(HTML.knownSVGElementNames);
@@ -116,175 +111,150 @@ var voidElementSet = makeSet(HTML.voidElementNames);
 var knownElementSet = makeSet(HTML.knownElementNames);
 var knownSVGElementSet = makeSet(HTML.knownSVGElementNames);
 
-// Is the given element (in proper case) a known HTML element?
-// This includes SVG elements.
-HTML.isKnownElement = function (name) {
-  return knownElementSet[name] === YES;
+HTML.isKnownElement = function (tagName) {
+  return knownElementSet[tagName] === YES;
 };
 
-// Is the given element (in proper case) an element with no end tag
-// in HTML, like "br", "hr", or "input"?
-HTML.isVoidElement = function (name) {
-  return voidElementSet[name] === YES;
+HTML.isKnownSVGElement = function (tagName) {
+  return knownSVGElementSet[tagName] === YES;
 };
 
-// Is the given element (in proper case) a known SVG element?
-HTML.isKnownSVGElement = function (name) {
-  return knownSVGElementSet[name] === YES;
+HTML.isVoidElement = function (tagName) {
+  return voidElementSet[tagName] === YES;
 };
 
-// For code generators, is a particular tag (in proper case) guaranteed
-// to be available on the HTML object (under the name returned by
-// getSymbolName)?
-HTML.isTagEnsured = function (t) {
-  return HTML.isKnownElement(t);
-};
-
-// For code generators, take a tagName like "p" and return an uppercase
-// symbol name like "P" which is available on the "HTML" object for
-// known elements or after calling getTag or ensureTag.
-HTML.getSymbolName = function (tagName) {
-  // "foo-bar" -> "FOO_BAR"
-  return tagName.toUpperCase().replace(/-/g, '_');
-};
 
 // Ensure tags for all known elements
 for (var i = 0; i < HTML.knownElementNames.length; i++)
   HTML.ensureTag(HTML.knownElementNames[i]);
 
-////////////////////////////////////////////////////////////////////////////////
 
-callReactiveFunction = function (func) {
-  var result;
-  var cc = Deps.currentComputation;
-  var h = Deps.autorun(function (c) {
-    result = func();
-  });
-  h.onInvalidate(function () {
-    if (cc)
-      cc.invalidate();
-  });
-  if (Deps.active) {
-    Deps.onInvalidate(function () {
-      h.stop();
-      func.stop && func.stop();
-    });
-  } else {
-    h.stop();
-    func.stop && func.stop();
-  }
-  return result;
-};
-
-stopWithLater = function (instance) {
-  if (instance.materialized && instance.materialized.isWith) {
-    if (Deps.active) {
-      instance.materialized();
-    } else {
-      if (instance.data) // `UI.With`
-        instance.data.stop();
-      else if (instance.v) // `Spacebars.With`
-        instance.v.stop();
-    }
-  }
-};
-
-// Call all functions and instantiate all components, when fine-grained
-// reactivity is not needed (for example, in attributes).
-HTML.evaluate = function (node, parentComponent) {
-  if (node == null) {
-    return node;
-  } else if (typeof node === 'function') {
-    return HTML.evaluate(callReactiveFunction(node), parentComponent);
-  } else if (node instanceof Array) {
-    var result = [];
-    for (var i = 0; i < node.length; i++)
-      result.push(HTML.evaluate(node[i], parentComponent));
-    return result;
-  } else if (typeof node.instantiate === 'function') {
-    // component
-    var instance = node.instantiate(parentComponent || null);
-    var content = instance.render('STATIC');
-    stopWithLater(instance);
-    return HTML.evaluate(content, instance);
-  }  else if (node instanceof HTML.Tag) {
-    var newChildren = [];
-    for (var i = 0; i < node.children.length; i++)
-      newChildren.push(HTML.evaluate(node.children[i], parentComponent));
-    var newTag = HTML.getTag(node.tagName).apply(null, newChildren);
-    newTag.attrs = {};
-    for (var k in node.attrs)
-      newTag.attrs[k] = HTML.evaluate(node.attrs[k], parentComponent);
-    return newTag;
-  } else {
-    return node;
-  }
-};
-
-var extendAttrs = function (tgt, src, parentComponent) {
-  for (var k in src) {
-    if (k === '$dynamic')
-      continue;
-    if (! HTML.isValidAttributeName(k))
-      throw new Error("Illegal HTML attribute name: " + k);
-    var value = HTML.evaluate(src[k], parentComponent);
-    if (! HTML.isNully(value))
-      tgt[k] = value;
-  }
-};
-
-// Process the `attrs.$dynamic` directive, if present, returning the final
-// attributes dictionary.  The value of `attrs.$dynamic` must be an array
-// of attributes dictionaries or functions returning attribute dictionaries.
-// These attributes are used to extend `attrs` as long as they are non-nully.
-// All attributes are "evaluated," calling functions and instantiating
-// components.
-HTML.evaluateAttributes = function (attrs, parentComponent) {
-  if (! attrs)
-    return attrs;
-
-  var result = {};
-  extendAttrs(result, attrs, parentComponent);
-
-  if ('$dynamic' in attrs) {
-    if (! (attrs.$dynamic instanceof Array))
-      throw new Error("$dynamic must be an array");
-    // iterate over attrs.$dynamic, calling each element if it
-    // is a function and then using it to extend `result`.
-    var dynamics = attrs.$dynamic;
-    for (var i = 0; i < dynamics.length; i++) {
-      var moreAttrs = dynamics[i];
-      if (typeof moreAttrs === 'function')
-        moreAttrs = moreAttrs();
-      extendAttrs(result, moreAttrs, parentComponent);
-    }
-  }
-
-  return result;
-};
-
-HTML.Tag.prototype.evaluateAttributes = function (parentComponent) {
-  return HTML.evaluateAttributes(this.attrs, parentComponent);
-};
-
-HTML.Raw = function (value) {
-  if (! (this instanceof HTML.Raw))
+var CharRef = HTML.CharRef = function (attrs) {
+  if (! (this instanceof CharRef))
     // called without `new`
-    return new HTML.Raw(value);
+    return new CharRef(attrs);
+
+  if (! (attrs && attrs.html && attrs.str))
+    throw new Error(
+      "HTML.CharRef must be constructed with ({html:..., str:...})");
+
+  this.html = attrs.html;
+  this.str = attrs.str;
+};
+CharRef.prototype.htmljsType = CharRef.htmljsType = ['CharRef'];
+
+var Comment = HTML.Comment = function (value) {
+  if (! (this instanceof Comment))
+    // called without `new`
+    return new Comment(value);
+
+  if (typeof value !== 'string')
+    throw new Error('HTML.Comment must be constructed with a string');
+
+  this.value = value;
+  // Kill illegal hyphens in comment value (no way to escape them in HTML)
+  this.sanitizedValue = value.replace(/^-|--+|-$/g, '');
+};
+Comment.prototype.htmljsType = Comment.htmljsType = ['Comment'];
+
+var Raw = HTML.Raw = function (value) {
+  if (! (this instanceof Raw))
+    // called without `new`
+    return new Raw(value);
 
   if (typeof value !== 'string')
     throw new Error('HTML.Raw must be constructed with a string');
 
   this.value = value;
 };
+Raw.prototype.htmljsType = Raw.htmljsType = ['Raw'];
 
-HTML.EmitCode = function (value) {
-  if (! (this instanceof HTML.EmitCode))
-    // called without `new`
-    return new HTML.EmitCode(value);
 
-  if (typeof value !== 'string')
-    throw new Error('HTML.EmitCode must be constructed with a string');
+HTML.isArray = function (x) {
+  // could change this to use the more convoluted Object.prototype.toString
+  // approach that works when objects are passed between frames, but does
+  // it matter?
+  return (x instanceof Array);
+};
 
-  this.value = value;
+HTML.isConstructedObject = function (x) {
+  return (x && (typeof x === 'object') &&
+          (x.constructor !== Object) &&
+          (! Object.prototype.hasOwnProperty.call(x, 'constructor')));
+};
+
+HTML.isNully = function (node) {
+  if (node == null)
+    // null or undefined
+    return true;
+
+  if (HTML.isArray(node)) {
+    // is it an empty array or an array of all nully items?
+    for (var i = 0; i < node.length; i++)
+      if (! HTML.isNully(node[i]))
+        return false;
+    return true;
+  }
+
+  return false;
+};
+
+HTML.isValidAttributeName = function (name) {
+  return /^[:_A-Za-z][:_A-Za-z0-9.\-]*/.test(name);
+};
+
+// If `attrs` is an array of attributes dictionaries, combines them
+// into one.  Removes attributes that are "nully."
+HTML.flattenAttributes = function (attrs) {
+  if (! attrs)
+    return attrs;
+
+  var isArray = HTML.isArray(attrs);
+  if (isArray && attrs.length === 0)
+    return null;
+
+  var result = {};
+  for (var i = 0, N = (isArray ? attrs.length : 1); i < N; i++) {
+    var oneAttrs = (isArray ? attrs[i] : attrs);
+    if ((typeof oneAttrs !== 'object') ||
+        HTML.isConstructedObject(oneAttrs))
+      throw new Error("Expected plain JS object as attrs, found: " + oneAttrs);
+    for (var name in oneAttrs) {
+      if (! HTML.isValidAttributeName(name))
+        throw new Error("Illegal HTML attribute name: " + name);
+      var value = oneAttrs[name];
+      if (! HTML.isNully(value))
+        result[name] = value;
+    }
+  }
+
+  return result;
+};
+
+
+
+////////////////////////////// TOHTML
+
+HTML.toHTML = function (content) {
+  return (new HTML.ToHTMLVisitor).visit(content);
+};
+
+// Escaping modes for outputting text when generating HTML.
+HTML.TEXTMODE = {
+  STRING: 1,
+  RCDATA: 2,
+  ATTRIBUTE: 3
+};
+
+
+HTML.toText = function (content, textMode) {
+  if (! textMode)
+    throw new Error("textMode required for HTML.toText");
+  if (! (textMode === HTML.TEXTMODE.STRING ||
+         textMode === HTML.TEXTMODE.RCDATA ||
+         textMode === HTML.TEXTMODE.ATTRIBUTE))
+    throw new Error("Unknown textMode: " + textMode);
+
+  var visitor = new HTML.ToTextVisitor({textMode: textMode});;
+  return visitor.visit(content);
 };

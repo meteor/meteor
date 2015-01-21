@@ -35,6 +35,16 @@ var randomString = function (length) {
   return ret;
 };
 
+var preCall = function (name) {
+  console.log('> ' + name);
+};
+
+var postCall = function (name) {
+  return function (err, callback) {
+    console.log('< ' + name + ' ' + (err ? 'ERR' : 'OK'));
+  };
+};
+
 var pickCollection = function () {
   return Random.choice(Collections);
 };
@@ -57,7 +67,7 @@ var generateDoc = function () {
 
 var Collections = [];
 _.times(PARAMS.numCollections, function (n) {
-  Collections.push(new Meteor.Collection("Collection" + n));
+  Collections.push(new Mongo.Collection("Collection" + n));
 });
 
 
@@ -96,7 +106,8 @@ if (Meteor.isServer) {
     Meteor.setInterval(function () {
       var when = +(new Date) - PARAMS.maxAgeSeconds*1000;
       _.each(Collections, function (C) {
-        C.remove({when: {$lt: when}});
+        preCall('removeMaxAge');
+        C.remove({when: {$lt: when}}, postCall('removeMaxAge'));
       });
       // Clear out 5% of the DB each time, steady state. XXX parameterize?
     }, 1000*PARAMS.maxAgeSeconds / 20);
@@ -121,7 +132,8 @@ if (Meteor.isServer) {
       doc.when = +(new Date);
 
       var C = pickCollection();
-      C.insert(doc);
+      preCall('insert');
+      C.insert(doc, postCall('insert'));
     },
     update: function (processId, field, value) {
       check([processId, field, value], [String]);
@@ -130,15 +142,18 @@ if (Meteor.isServer) {
 
       var C = pickCollection();
       // update one message.
-      C.update({fromProcess: processId}, {$set: modifer}, {multi: false});
+      preCall('update');
+      C.update({fromProcess: processId}, {$set: modifer}, {multi: false}, postCall('update'));
     },
     remove: function (processId) {
       check(processId, String);
       var C = pickCollection();
       // remove one message.
       var obj = C.findOne({fromProcess: processId});
-      if (obj)
-        C.remove(obj._id);
+      if (obj) {
+        preCall('remove');
+        C.remove(obj._id, postCall('remove'));
+      }
     }
   });
 

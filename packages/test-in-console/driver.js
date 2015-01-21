@@ -8,18 +8,50 @@ TEST_STATUS = {
   FAILURES: null
 };
 
+// xUnit format uses XML output
+var XML_CHAR_MAP = {
+  '<': '&lt;',
+  '>': '&gt;',
+  '&': '&amp;',
+  '"': '&quot;',
+  "'": '&apos;'
+};
 
+// Escapes a string for insertion into XML
+var escapeXml = function (s) {
+  return s.replace(/[<>&"']/g, function (c) {
+    return XML_CHAR_MAP[c];
+  });
+}
+
+// Returns a human name for a test
 var getName = function (result) {
   return (result.server ? "S: " : "C: ") +
     result.groupPath.join(" - ") + " - " + result.test;
 };
 
+// Calls console.log, but returns silently if console.log is not available
 var log = function (/*arguments*/) {
   if (typeof console !== 'undefined') {
     console.log.apply(console, arguments);
   }
 };
 
+var MAGIC_PREFIX = '##_meteor_magic##';
+// Write output so that other tools can read it
+// Output is sent to console.log, prefixed with the magic prefix and then the facility
+// By grepping for the prefix, other tools can get the 'special' output
+var logMagic = function (facility, s) {
+  log(MAGIC_PREFIX + facility + ': ' + s);
+};
+
+// Logs xUnit output, if xunit output is enabled
+// This uses logMagic with a facility of xunit
+var xunit = function (s) {
+  if (xunitEnabled) {
+    logMagic('xunit', s);
+  }
+};
 
 var passed = 0;
 var failed = 0;
@@ -31,6 +63,10 @@ var hrefPath = document.location.href.split("/");
 var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
 if (!platform)
   platform = "local";
+
+// We enable xUnit output when platform is xunit
+var xunitEnabled = (platform == 'xunit');
+
 var doReport = Meteor &&
       Meteor.settings &&
       Meteor.settings.public &&
@@ -82,10 +118,13 @@ Meteor.startup(function () {
           status: "PENDING",
           events: [],
           server: !!results.server,
-          testPath: testPath
+          testPath: testPath,
+          test: results.test
         };
         report(name, false);
       }
+      // Loop through events, and record status for each test
+      // Also log result if test has finished
       _.each(results.events, function (event) {
         resultSet[name].events.push(event);
         switch (event.type) {
@@ -136,6 +175,7 @@ Meteor.startup(function () {
       });
     },
 
+    // After test completion, log a quick summary
     function () {
       if (failed > 0) {
         log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
@@ -153,6 +193,45 @@ Meteor.startup(function () {
           TEST_STATUS.DONE = DONE = true;
         }
       });
+
+      // Also log xUnit output
+      xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
+      _.each(resultSet, function (result, name) {
+        var classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
+        var name = result.test.replace(/ /g, '-') + (result.server ? "-server" : "-client");
+        var time = "";
+        var error = "";
+        _.each(result.events, function (event) {
+          switch (event.type) {
+            case "finish":
+              var timeMs = event.timeMs;
+              if (timeMs !== undefined) {
+                time = (timeMs / 1000) + "";
+              }
+              break;
+            case "exception":
+              var details = event.details || {};
+              error = (details.message || '?') + " filename=" + (details.filename || '?') + " line=" + (details.line || '?');
+              break;
+          }
+        });
+        switch (result.status) {
+          case "FAIL":
+            error = error || '?';
+            break;
+          case "EXPECTED":
+            error = null;
+            break;
+        }
+
+        xunit('<testcase classname="' + escapeXml(classname) + '" name="' + escapeXml(name) + '" time="' + time + '">');
+        if (error) {
+          xunit('  <failure message="test failure">' + escapeXml(error) + '</failure>');
+        }
+        xunit('</testcase>');
+      });
+      xunit('</testsuite>');
+      logMagic('state', 'done');
     },
     ["tinytest"]);
 });

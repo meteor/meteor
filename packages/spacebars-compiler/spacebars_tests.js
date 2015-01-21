@@ -1,4 +1,4 @@
-Tinytest.add("spacebars - stache tags", function (test) {
+Tinytest.add("spacebars-compiler - stache tags", function (test) {
 
   var run = function (input, expected) {
     if (typeof expected === "string") {
@@ -6,7 +6,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
       var msg = '';
       test.throws(function () {
         try {
-          Spacebars.TemplateTag.parse(input);
+          SpacebarsCompiler.TemplateTag.parse(input);
         } catch (e) {
           msg = e.message;
           throw e;
@@ -14,7 +14,7 @@ Tinytest.add("spacebars - stache tags", function (test) {
       });
       test.equal(msg.slice(0, expected.length), expected);
     } else {
-      var result = Spacebars.TemplateTag.parse(input);
+      var result = SpacebarsCompiler.TemplateTag.parse(input);
       test.equal(result, expected);
     }
   };
@@ -164,10 +164,13 @@ Tinytest.add("spacebars - stache tags", function (test) {
   run('{{foo "="}}', {type: 'DOUBLE', path: ['foo'],
                         args: [['STRING', '=']]});
 
+  run('{{| asdf', { type: 'ESCAPE', value: '{{' });
+  run('{{{| asdf', { type: 'ESCAPE', value: '{{{' });
+  run('{{{{| asdf', { type: 'ESCAPE', value: '{{{{' });
 });
 
 
-Tinytest.add("spacebars - Spacebars.dot", function (test) {
+Tinytest.add("spacebars-compiler - Spacebars.dot", function (test) {
   test.equal(Spacebars.dot(null, 'foo'), null);
   test.equal(Spacebars.dot('foo', 'foo'), undefined);
   test.equal(Spacebars.dot({x:1}, 'x'), 1);
@@ -229,61 +232,61 @@ Tinytest.add("spacebars - Spacebars.dot", function (test) {
 
 //////////////////////////////////////////////////
 
-Tinytest.add("spacebars - parse", function (test) {
-  test.equal(HTML.toJS(Spacebars.parse('{{foo}}')),
-             'HTMLTools.Special({type: "DOUBLE", path: ["foo"]})');
+Tinytest.add("spacebars-compiler - parse", function (test) {
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('{{foo}}')),
+             'SpacebarsCompiler.TemplateTag({type: "DOUBLE", path: ["foo"]})');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{!foo}}')), 'null');
-  test.equal(HTML.toJS(Spacebars.parse('x{{!foo}}y')), '"xy"');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('{{!foo}}')), 'null');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('x{{!foo}}y')), '"xy"');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{!--foo--}}')), 'null');
-  test.equal(HTML.toJS(Spacebars.parse('x{{!--foo--}}y')), '"xy"');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('{{!--foo--}}')), 'null');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('x{{!--foo--}}y')), '"xy"');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{#foo}}x{{/foo}}')),
-             'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('{{#foo}}x{{/foo}}')),
+             'SpacebarsCompiler.TemplateTag({type: "BLOCKOPEN", path: ["foo"], content: "x"})');
 
-  test.equal(HTML.toJS(Spacebars.parse('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
-             'HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: HTMLTools.Special({type: "BLOCKOPEN", path: ["bar"]})})');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('{{#foo}}{{#bar}}{{/bar}}{{/foo}}')),
+             'SpacebarsCompiler.TemplateTag({type: "BLOCKOPEN", path: ["foo"], content: SpacebarsCompiler.TemplateTag({type: "BLOCKOPEN", path: ["bar"]})})');
 
-  test.equal(HTML.toJS(Spacebars.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
-             '[HTML.DIV("hello"), " ", HTMLTools.Special({type: "BLOCKOPEN", path: ["foo"], content: HTML.DIV(HTMLTools.Special({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<div>hello</div> {{#foo}}<div>{{#bar}}world{{/bar}}</div>{{/foo}}')),
+             '[HTML.DIV("hello"), " ", SpacebarsCompiler.TemplateTag({type: "BLOCKOPEN", path: ["foo"], content: HTML.DIV(SpacebarsCompiler.TemplateTag({type: "BLOCKOPEN", path: ["bar"], content: "world"}))})]');
 
 
   test.throws(function () {
-    Spacebars.parse('<a {{{x}}}></a>');
+    SpacebarsCompiler.parse('<a {{{x}}}></a>');
   });
   test.throws(function () {
-    Spacebars.parse('<a {{#if x}}{{/if}}></a>');
+    SpacebarsCompiler.parse('<a {{#if x}}{{/if}}></a>');
   });
   test.throws(function () {
-    Spacebars.parse('<a {{k}}={[v}}></a>');
+    SpacebarsCompiler.parse('<a {{k}}={[v}}></a>');
   });
   test.throws(function () {
-    Spacebars.parse('<a x{{y}}></a>');
+    SpacebarsCompiler.parse('<a x{{y}}></a>');
   });
   test.throws(function () {
-    Spacebars.parse('<a x{{y}}=z></a>');
+    SpacebarsCompiler.parse('<a x{{y}}=z></a>');
   });
   test.throws(function () {
-    Spacebars.parse('<a {{> x}}></a>');
+    SpacebarsCompiler.parse('<a {{> x}}></a>');
   });
 
-  test.equal(HTML.toJS(Spacebars.parse('<a {{! x--}} b=c{{! x}} {{! x}}></a>')),
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<a {{! x--}} b=c{{! x}} {{! x}}></a>')),
              'HTML.A({b: "c"})');
 
-  test.equal(HTML.toJS(Spacebars.parse('<a {{!-- x--}} b=c{{ !-- x --}} {{!-- x -- }}></a>')),
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<a {{!-- x--}} b=c{{ !-- x --}} {{!-- x -- }}></a>')),
              'HTML.A({b: "c"})');
 
   // currently, if there are only comments, the attribute is truthy.  This is
   // because comments are stripped during tokenization.  If we include
   // comments in the token stream, these cases will become falsy for selected.
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}>')),
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<input selected={{!foo}}>')),
              'HTML.INPUT({selected: ""})');
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!foo}}{{!bar}}>')),
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<input selected={{!foo}}{{!bar}}>')),
              'HTML.INPUT({selected: ""})');
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!--foo--}}>')),
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<input selected={{!--foo--}}>')),
     'HTML.INPUT({selected: ""})');
-  test.equal(HTML.toJS(Spacebars.parse('<input selected={{!--foo--}}{{!--bar--}}>')),
+  test.equal(BlazeTools.toJS(SpacebarsCompiler.parse('<input selected={{!--foo--}}{{!--bar--}}>')),
     'HTML.INPUT({selected: ""})');
 
 });

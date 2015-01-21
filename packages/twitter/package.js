@@ -1,11 +1,9 @@
 Package.describe({
   summary: "Twitter OAuth flow",
-  // internal for now. Should be external when it has a richer API to do
-  // actual API things with the service, not just handle the OAuth flow.
-  internal: true
+  version: '1.1.3'
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   api.use('http', ['client', 'server']);
   api.use('templating', 'client');
   api.use('oauth1', ['client', 'server']);
@@ -16,10 +14,10 @@ Package.on_use(function(api) {
 
   api.export('Twitter');
 
-  api.add_files(
+  api.addFiles(
     ['twitter_configure.html', 'twitter_configure.js'],
     'client');
 
-  api.add_files('twitter_server.js', 'server');
-  api.add_files('twitter_client.js', 'client');
+  api.addFiles('twitter_server.js', 'server');
+  api.addFiles('twitter_client.js', 'client');
 });

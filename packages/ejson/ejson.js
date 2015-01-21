@@ -1,5 +1,54 @@
+/**
+ * @namespace
+ * @summary Namespace for EJSON functions
+ */
 EJSON = {};
 EJSONTest = {};
+
+
+
+// Custom type interface definition
+/**
+ * @class CustomType
+ * @instanceName customType
+ * @memberOf EJSON
+ * @summary The interface that a class must satisfy to be able to become an
+ * EJSON custom type via EJSON.addType.
+ */
+
+/**
+ * @function typeName
+ * @memberOf EJSON.CustomType
+ * @summary Return the tag used to identify this type.  This must match the tag used to register this type with [`EJSON.addType`](#ejson_add_type).
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function toJSONValue
+ * @memberOf EJSON.CustomType
+ * @summary Serialize this instance into a JSON-compatible value.
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function clone
+ * @memberOf EJSON.CustomType
+ * @summary Return a value `r` such that `this.equals(r)` is true, and modifications to `r` do not affect `this` and vice versa.
+ * @locus Anywhere
+ * @instance
+ */
+
+/**
+ * @function equals
+ * @memberOf EJSON.CustomType
+ * @summary Return `true` if `other` has a value equal to `this`; `false` otherwise.
+ * @locus Anywhere
+ * @param {Object} other Another object to compare this to.
+ * @instance
+ */
+
 
 var customTypes = {};
 // Add a custom type, using a method of your choice to get to and
@@ -14,7 +63,12 @@ var customTypes = {};
 // used instead.
 // Similarly, EJSON.equals will use toJSONValue to make comparisons,
 // but you may provide a method equals() instead.
-//
+/**
+ * @summary Add a custom datatype to EJSON.
+ * @locus Anywhere
+ * @param {String} name A tag for your custom type; must be unique among custom data types defined in your project, and must match the result of your type's `typeName` method.
+ * @param {Function} factory A function that deserializes a JSON-compatible value into an instance of your type.  This should match the serialization performed by your type's `toJSONValue` method.
+ */
 EJSON.addType = function (name, factory) {
   if (_.has(customTypes, name))
     throw new Error("Type " + name + " already present");
@@ -69,10 +123,10 @@ var builtinConverters = [
         || (obj && _.has(obj, '$Uint8ArrayPolyfill'));
     },
     toJSONValue: function (obj) {
-      return {$binary: base64Encode(obj)};
+      return {$binary: Base64.encode(obj)};
     },
     fromJSONValue: function (obj) {
-      return base64Decode(obj.$binary);
+      return Base64.decode(obj.$binary);
     }
   },
   { // Escaping one level
@@ -179,6 +233,11 @@ var toJSONValueHelper = function (item) {
   return undefined;
 };
 
+/**
+ * @summary Serialize an EJSON-compatible value into its plain JSON representation.
+ * @locus Anywhere
+ * @param {EJSON} val A value to serialize to plain JSON.
+ */
 EJSON.toJSONValue = function (item) {
   var changed = toJSONValueHelper(item);
   if (changed !== undefined)
@@ -243,6 +302,11 @@ var fromJSONValueHelper = function (value) {
   return value;
 };
 
+/**
+ * @summary Deserialize an EJSON value from its plain JSON representation.
+ * @locus Anywhere
+ * @param {JSONCompatible} val A value to deserialize into EJSON.
+ */
 EJSON.fromJSONValue = function (item) {
   var changed = fromJSONValueHelper(item);
   if (changed === item && typeof item === 'object') {
@@ -254,6 +318,16 @@ EJSON.fromJSONValue = function (item) {
   }
 };
 
+/**
+ * @summary Serialize a value to a string.
+
+For EJSON values, the serialization fully represents the value. For non-EJSON values, serializes the same way as `JSON.stringify`.
+ * @locus Anywhere
+ * @param {EJSON} val A value to stringify.
+ * @param {Object} [options]
+ * @param {Boolean | Integer | String} options.indent Indents objects and arrays for easy readability.  When `true`, indents by 2 spaces; when an integer, indents by that number of spaces; and when a string, uses the string as the indentation pattern.
+ * @param {Boolean} options.canonical When `true`, stringifies keys in an object in sorted order.
+ */
 EJSON.stringify = function (item, options) {
   var json = EJSON.toJSONValue(item);
   if (options && (options.canonical || options.indent)) {
@@ -263,17 +337,35 @@ EJSON.stringify = function (item, options) {
   }
 };
 
+/**
+ * @summary Parse a string into an EJSON value. Throws an error if the string is not valid EJSON.
+ * @locus Anywhere
+ * @param {String} str A string to parse into an EJSON value.
+ */
 EJSON.parse = function (item) {
   if (typeof item !== 'string')
     throw new Error("EJSON.parse argument should be a string");
   return EJSON.fromJSONValue(JSON.parse(item));
 };
 
+/**
+ * @summary Returns true if `x` is a buffer of binary data, as returned from [`EJSON.newBinary`](#ejson_new_binary).
+ * @param {Object} x The variable to check.
+ * @locus Anywhere
+ */
 EJSON.isBinary = function (obj) {
   return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
     (obj && obj.$Uint8ArrayPolyfill));
 };
 
+/**
+ * @summary Return true if `a` and `b` are equal to each other.  Return false otherwise.  Uses the `equals` method on `a` if present, otherwise performs a deep comparison.
+ * @locus Anywhere
+ * @param {EJSON} a
+ * @param {EJSON} b
+ * @param {Object} [options]
+ * @param {Boolean} options.keyOrderSensitive Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is equal to `{b: 2, a: 1}` only when `keyOrderSensitive` is `false`.  The default is `false`.
+ */
 EJSON.equals = function (a, b, options) {
   var i;
   var keyOrderSensitive = !!(options && options.keyOrderSensitive);
@@ -355,6 +447,11 @@ EJSON.equals = function (a, b, options) {
   }
 };
 
+/**
+ * @summary Return a deep copy of `val`.
+ * @locus Anywhere
+ * @param {EJSON} val A value to copy.
+ */
 EJSON.clone = function (v) {
   var ret;
   if (typeof v !== "object")
@@ -398,3 +495,15 @@ EJSON.clone = function (v) {
   });
   return ret;
 };
+
+/**
+ * @summary Allocate a new buffer of binary data that EJSON can serialize.
+ * @locus Anywhere
+ * @param {Number} size The number of bytes of binary data to allocate.
+ */
+// EJSON.newBinary is the public documented API for this functionality,
+// but the implementation is in the 'base64' package to avoid
+// introducing a circular dependency. (If the implementation were here,
+// then 'base64' would have to use EJSON.newBinary, and 'ejson' would
+// also have to use 'base64'.)
+EJSON.newBinary = Base64.newBinary;

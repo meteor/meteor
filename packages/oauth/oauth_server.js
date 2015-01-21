@@ -11,7 +11,6 @@ var registeredServices = {};
 // Internal: Maps from service version to handler function. The
 // 'oauth1' and 'oauth2' packages manipulate this directly to register
 // for callbacks.
-//
 OAuth._requestHandlers = {};
 
 
@@ -54,6 +53,91 @@ OAuth.retrieveCredential = function(credentialToken, credentialSecret) {
 };
 
 
+// The state parameter is normally generated on the client using
+// `btoa`, but for tests we need a version that runs on the server.
+//
+OAuth._generateState = function (loginStyle, credentialToken, redirectUrl) {
+  return new Buffer(JSON.stringify({
+    loginStyle: loginStyle,
+    credentialToken: credentialToken,
+    redirectUrl: redirectUrl})).toString('base64');
+};
+
+OAuth._stateFromQuery = function (query) {
+  var string;
+  try {
+    string = new Buffer(query.state, 'base64').toString('binary');
+  } catch (e) {
+    Log.warn('Unable to base64 decode state from OAuth query: ' + query.state);
+    throw e;
+  }
+
+  try {
+    return JSON.parse(string);
+  } catch (e) {
+    Log.warn('Unable to parse state from OAuth query: ' + string);
+    throw e;
+  }
+};
+
+OAuth._loginStyleFromQuery = function (query) {
+  var style;
+  // For backwards-compatibility for older clients, catch any errors
+  // that result from parsing the state parameter. If we can't parse it,
+  // set login style to popup by default.
+  try {
+    style = OAuth._stateFromQuery(query).loginStyle;
+  } catch (err) {
+    style = "popup";
+  }
+  if (style !== "popup" && style !== "redirect") {
+    throw new Error("Unrecognized login style: " + style);
+  }
+  return style;
+};
+
+OAuth._credentialTokenFromQuery = function (query) {
+  var state;
+  // For backwards-compatibility for older clients, catch any errors
+  // that result from parsing the state parameter. If we can't parse it,
+  // assume that the state parameter's value is the credential token, as
+  // it used to be for older clients.
+  try {
+    state = OAuth._stateFromQuery(query);
+  } catch (err) {
+    return query.state;
+  }
+  return state.credentialToken;
+};
+
+OAuth._isCordovaFromQuery = function (query) {
+  try {
+    return !! OAuth._stateFromQuery(query).isCordova;
+  } catch (err) {
+    // For backwards-compatibility for older clients, catch any errors
+    // that result from parsing the state parameter. If we can't parse
+    // it, assume that we are not on Cordova, since older Meteor didn't
+    // do Cordova.
+    return false;
+  }
+};
+
+// Checks if the `redirectUrl` matches the app host.
+// We export this function so that developers can override this
+// behavior to allow apps from external domains to login using the
+// redirect OAuth flow.
+OAuth._checkRedirectUrlOrigin = function (redirectUrl) {
+  var appHost = Meteor.absoluteUrl();
+  var appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
+    replaceLocalhost: true
+  });
+  return (
+    redirectUrl.substr(0, appHost.length) !== appHost &&
+    redirectUrl.substr(0, appHostReplacedLocalhost.length) !== appHostReplacedLocalhost
+  );
+};
+
+
 // Listen to incoming OAuth http requests
 WebApp.connectHandlers.use(function(req, res, next) {
   // Need to create a Fiber since we're using synchronous http calls and nothing
@@ -63,7 +147,7 @@ WebApp.connectHandlers.use(function(req, res, next) {
   }).run();
 });
 
-middleware = function (req, res, next) {
+var middleware = function (req, res, next) {
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
@@ -97,7 +181,7 @@ middleware = function (req, res, next) {
     // style the error or react to it in any way.
     if (req.query.state && err instanceof Error) {
       try { // catch any exceptions to avoid crashing runner
-        OAuth._storePendingCredential(req.query.state, err);
+        OAuth._storePendingCredential(OAuth._credentialTokenFromQuery(req.query), err);
       } catch (err) {
         // Ignore the error and just give up. If we failed to store the
         // error, then the login will just fail with a generic error.
@@ -109,10 +193,17 @@ middleware = function (req, res, next) {
     // close the popup. because nobody likes them just hanging
     // there.  when someone sees this multiple times they might
     // think to check server logs (we hope?)
-    OAuth._endOfLoginResponse(res, {
-      query: req.query,
-      error: err
-    });
+    // Catch errors because any exception here will crash the runner.
+    try {
+      OAuth._endOfLoginResponse(res, {
+        query: req.query,
+        loginStyle: OAuth._loginStyleFromQuery(req.query),
+        error: err
+      });
+    } catch (err) {
+      Log.warn("Error generating end of login response\n" +
+               (err && (err.stack || err.message)));
+    }
   }
 };
 
@@ -123,8 +214,13 @@ OAuthTest.middleware = middleware;
 // @returns {String|null} e.g. "facebook", or null if this isn't an
 // oauth request
 var oauthServiceName = function (req) {
-  // req.url will be "/_oauth/<service name>?<action>"
-  var barePath = req.url.substring(0, req.url.indexOf('?'));
+  // req.url will be "/_oauth/<service name>" with an optional "?close".
+  var i = req.url.indexOf('?');
+  var barePath;
+  if (i === -1)
+    barePath = req.url;
+  else
+    barePath = req.url.substring(0, i);
   var splitPath = barePath.split('/');
 
   // Any non-oauth request will continue down the default
@@ -153,25 +249,27 @@ var isSafe = function (value) {
 
 // Internal: used by the oauth1 and oauth2 packages
 OAuth._renderOauthResults = function(res, query, credentialSecret) {
-  // We expect the ?close parameter to be present, in which case we
-  // close the popup at the end of the OAuth flow. Any other query
-  // string should just serve a blank page. For tests, we support the
-  // `only_credential_secret_for_test` parameter, which just returns the
-  // credential secret without any surrounding HTML. (The test needs to
-  // be able to easily grab the secret and use it to log in.)
+  // For tests, we support the `only_credential_secret_for_test`
+  // parameter, which just returns the credential secret without any
+  // surrounding HTML. (The test needs to be able to easily grab the
+  // secret and use it to log in.)
   //
   // XXX only_credential_secret_for_test could be useful for other
   // things beside tests, like command-line clients. We should give it a
   // real name and serve the credential secret in JSON.
+
   if (query.only_credential_secret_for_test) {
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end(credentialSecret, 'utf-8');
   } else {
-    var details = { query: query };
+    var details = {
+      query: query,
+      loginStyle: OAuth._loginStyleFromQuery(query)
+    };
     if (query.error) {
       details.error = query.error;
     } else {
-      var token = query.state;
+      var token = OAuth._credentialTokenFromQuery(query);
       var secret = credentialSecret;
       if (token && secret &&
           isSafe(token) && isSafe(secret)) {
@@ -185,6 +283,70 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
   }
 };
 
+// This "template" (not a real Spacebars template, just an HTML file
+// with some ##PLACEHOLDER##s) communicates the credential secret back
+// to the main window and then closes the popup.
+OAuth._endOfPopupResponseTemplate = Assets.getText(
+  "end_of_popup_response.html");
+
+OAuth._endOfRedirectResponseTemplate = Assets.getText(
+  "end_of_redirect_response.html");
+
+// Renders the end of login response template into some HTML and JavaScript
+// that closes the popup or redirects at the end of the OAuth flow.
+//
+// options are:
+//   - loginStyle ("popup" or "redirect")
+//   - setCredentialToken (boolean)
+//   - credentialToken
+//   - credentialSecret
+//   - redirectUrl
+//   - isCordova (boolean)
+//
+var renderEndOfLoginResponse = function (options) {
+  // It would be nice to use Blaze here, but it's a little tricky
+  // because our mustaches would be inside a <script> tag, and Blaze
+  // would treat the <script> tag contents as text (e.g. encode '&' as
+  // '&amp;'). So we just do a simple replace.
+
+  var escape = function (s) {
+    if (s) {
+      return s.replace(/&/g, "&amp;").
+        replace(/</g, "&lt;").
+        replace(/>/g, "&gt;").
+        replace(/\"/g, "&quot;").
+        replace(/\'/g, "&#x27;").
+        replace(/\//g, "&#x2F;");
+    } else {
+      return s;
+    }
+  };
+
+  // Escape everything just to be safe (we've already checked that some
+  // of this data -- the token and secret -- are safe).
+  var config = {
+    setCredentialToken: !! options.setCredentialToken,
+    credentialToken: escape(options.credentialToken),
+    credentialSecret: escape(options.credentialSecret),
+    storagePrefix: escape(OAuth._storageTokenPrefix),
+    redirectUrl: escape(options.redirectUrl),
+    isCordova: !! options.isCordova
+  };
+
+  var template;
+  if (options.loginStyle === 'popup') {
+    template = OAuth._endOfPopupResponseTemplate;
+  } else if (options.loginStyle === 'redirect') {
+    template = OAuth._endOfRedirectResponseTemplate;
+  } else {
+    throw new Error('invalid loginStyle: ' + options.loginStyle);
+  }
+
+  var result = template.replace(/##CONFIG##/, JSON.stringify(config));
+
+  return "<!DOCTYPE html>\n" + result;
+};
+
 // Writes an HTTP response to the popup window at the end of an OAuth
 // login flow. At this point, if the user has successfully authenticated
 // to the OAuth server and authorized this app, we communicate the
@@ -196,7 +358,7 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 // We export this function so that developers can override this
 // behavior, which is particularly useful in, for example, some mobile
 // environments where popups and/or `window.opener` don't work. For
-// example, an app could override `OAuth._endOfLoginResponse` to put the
+// example, an app could override `OAuth._endOfPopupResponse` to put the
 // credential token and credential secret in the popup URL for the main
 // window to read them there instead of using `window.opener`. If you
 // override this function, you take responsibility for writing to the
@@ -216,42 +378,46 @@ OAuth._renderOauthResults = function(res, query, credentialSecret) {
 //        so shouldn't be trusted for security decisions or included in
 //        the response without sanitizing it first. Only one of `error`
 //        or `credentials` should be set.
-OAuth._endOfLoginResponse = function(res, details) {
-
+OAuth._endOfLoginResponse = function (res, details) {
   res.writeHead(200, {'Content-Type': 'text/html'});
 
-  var content = function (setCredentialSecret) {
-    return '<html><head><script>' +
-      setCredentialSecret +
-      'window.close()</script></head></html>';
-  };
+  var redirectUrl;
+  if (details.loginStyle === 'redirect') {
+    redirectUrl = OAuth._stateFromQuery(details.query).redirectUrl;
+    var appHost = Meteor.absoluteUrl();
+    if (OAuth._checkRedirectUrlOrigin(redirectUrl)) {
+      details.error = "redirectUrl (" + redirectUrl +
+        ") is not on the same host as the app (" + appHost + ")";
+      redirectUrl = appHost;
+    }
+  }
+
+  var isCordova = OAuth._isCordovaFromQuery(details.query);
 
   if (details.error) {
     Log.warn("Error in OAuth Server: " +
              (details.error instanceof Error ?
               details.error.message : details.error));
-    res.end(content(""), 'utf-8');
+    res.end(renderEndOfLoginResponse({
+      loginStyle: details.loginStyle,
+      setCredentialToken: false,
+      redirectUrl: redirectUrl,
+      isCordova: isCordova
+    }), "utf-8");
     return;
   }
 
-  if ("close" in details.query) {
-    // If we have a credentialSecret, report it back to the parent
-    // window, with the corresponding credentialToken. The parent window
-    // uses the credentialToken and credentialSecret to log in over DDP.
-    var setCredentialSecret = '';
-    if (details.credentials.token && details.credentials.secret) {
-      setCredentialSecret = 'var credentialToken = ' +
-        JSON.stringify(details.credentials.token) + ';' +
-        'var credentialSecret = ' +
-        JSON.stringify(details.credentials.secret) + ';' +
-        'window.opener && ' +
-        'window.opener.Package.oauth.OAuth._handleCredentialSecret(' +
-        'credentialToken, credentialSecret);';
-    }
-    res.end(content(setCredentialSecret), "utf-8");
-  } else {
-    res.end("", "utf-8");
-  }
+  // If we have a credentialSecret, report it back to the parent
+  // window, with the corresponding credentialToken. The parent window
+  // uses the credentialToken and credentialSecret to log in over DDP.
+  res.end(renderEndOfLoginResponse({
+    loginStyle: details.loginStyle,
+    setCredentialToken: true,
+    credentialToken: details.credentials.token,
+    credentialSecret: details.credentials.secret,
+    redirectUrl: redirectUrl,
+    isCordova: isCordova
+  }), "utf-8");
 };
 
 

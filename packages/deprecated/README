@@ -1,0 +1,6 @@
+These packages are no longer actively maintained by MDG.  Seek
+community alternatives instead.
+
+Note that these packages still exist in atmosphere, and you can still
+build a package that depends on one of them by specifying an explicit
+package version.

@@ -4,6 +4,10 @@ if (Meteor.isServer) {
   Meteor.methods({
     getUserId: function () {
       return this.userId;
+    },
+    getResetToken: function () {
+      var token = Meteor.users.findOne(this.userId).services.password.reset;
+      return token;
     }
   });
 }
@@ -74,7 +78,7 @@ if (Meteor.isClient) (function () {
       // Set up a reactive context that only refreshes when Meteor.user() is
       // invalidated.
       var loaded = false;
-      var handle = Deps.autorun(function () {
+      var handle = Tracker.autorun(function () {
         if (Meteor.user() && Meteor.user().emails)
           loaded = true;
       });
@@ -86,7 +90,7 @@ if (Meteor.isClient) (function () {
         // By the time of the login callback, the user should be loaded.
         test.isTrue(Meteor.user().emails);
         // Flushing should get us the rerun as well.
-        Deps.flush();
+        Tracker.flush();
         test.isTrue(loaded);
         handle.stop();
       }));
@@ -167,6 +171,21 @@ if (Meteor.isClient) (function () {
         {username: this.username, email: this.email, password: this.password},
         loggedInAs(this.username, test, expect));
     },
+    // Send a password reset email so that we can test that password
+    // reset tokens get deleted on password change.
+    function (test, expect) {
+      Meteor.call("forgotPassword", { email: this.email }, expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call("getResetToken", expect(function (err, token) {
+        test.isFalse(err);
+        test.isTrue(token);
+        self.token = token;
+      }));
+    },
     // change password with bad old password. we stay logged in.
     function (test, expect) {
       var self = this;
@@ -179,6 +198,12 @@ if (Meteor.isClient) (function () {
     function (test, expect) {
       Accounts.changePassword(this.password, this.password2,
                               loggedInAs(this.username, test, expect));
+    },
+    function (test, expect) {
+      Meteor.call("getResetToken", expect(function (err, token) {
+        test.isFalse(err);
+        test.isFalse(token);
+      }));
     },
     logoutStep,
     // old password, failed login
@@ -848,8 +873,9 @@ if (Meteor.isServer) (function () {
     'passwords - setPassword',
     function (test) {
       var username = Random.id();
+      var email = username + '-intercept@example.com';
 
-      var userId = Accounts.createUser({username: username});
+      var userId = Accounts.createUser({username: username, email: email});
 
       var user = Meteor.users.findOne(userId);
       // no services yet.
@@ -861,12 +887,22 @@ if (Meteor.isServer) (function () {
       var oldSaltedHash = user.services.password.bcrypt;
       test.isTrue(oldSaltedHash);
 
+      // Send a reset password email (setting a reset token) and insert a login
+      // token.
+      Accounts.sendResetPasswordEmail(userId, email);
+      Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
+      test.isTrue(Meteor.users.findOne(userId).services.password.reset);
+      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+
       // reset with the same password, see we get a different salted hash
       Accounts.setPassword(userId, 'new password');
       user = Meteor.users.findOne(userId);
       var newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
+      // No more tokens.
+      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
+      test.isFalse(Meteor.users.findOne(userId).services.resume.loginTokens);
 
       // cleanup
       Meteor.users.remove(userId);

@@ -17,10 +17,6 @@ render the template. -->
 the template to render) and a `data` property, which can be falsey. -->
 <template name="__dynamicWithDataContext">
   {{#with chooseTemplate template}}
-    {{#with ../data}}    {{! original 'dataContext' argument to __dynamic}}
-      {{> ..}}           {{! return value from chooseTemplate(template) }}
-    {{else}}             {{! if the 'dataContext' argument was falsey }}
-      {{> .. ../data}}   {{! return value from chooseTemplate(template) }}
-    {{/with}}
+    {{> .. ../data}}    {{!-- The .. is evaluated inside {{#with ../data}} --}}
   {{/with}}
 </template>

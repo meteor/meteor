@@ -42,7 +42,7 @@ var getTokenResponse = function (query) {
         code: query.code,
         client_id: config.clientId,
         client_secret: OAuth.openSecret(config.secret),
-        redirect_uri: Meteor.absoluteUrl("_oauth/weibo?close", {replaceLocalhost: true}),
+        redirect_uri: OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}),
         grant_type: 'authorization_code'
       }});
   } catch (err) {

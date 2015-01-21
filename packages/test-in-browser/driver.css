@@ -5,6 +5,7 @@ body {
 
 #testProgressBar {
     margin-top: 10px;
+    position: relative;
 }
 
 .header {
@@ -128,8 +129,7 @@ body {
 
 .in-progress {
     position: absolute;
-    padding-left: 10px;
-    top: 10px;
+    left: 10px;
     z-index: 2;
 }
 
@@ -146,4 +146,9 @@ body {
 .string_equal_actual ins {
   color: #d00;
   background: #fcc;
+}
+
+#current-client-test {
+  color: #ccc;
+  margin-right: 15px;
 }

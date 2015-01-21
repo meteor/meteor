@@ -56,52 +56,52 @@ selftest.define("argument parsing", function () {
 
   // successful command invocation, correct parsing of arguments
   run = s.run("dummy", "--email", "x");
-  run.read('"x" 3000 none []\n');
+  run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "", "");
-  run.read('"x" 3000 none ["",""]\n');
+  run.read('"x" "3000" none ["",""]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email=");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-e=");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "-");
-  run.read('"x" 3000 none ["-"]\n');
+  run.read('"x" "3000" none ["-"]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-e", "x");
-  run.read('"x" 3000 none []\n');
+  run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-e", "");
-  run.read('"" 3000 none []\n');
+  run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "-exxx");
-  run.read('"xxx" 3000 none []\n');
+  run.read('"xxx" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "-");
-  run.read('"-" 3000 none []\n');
+  run.read('"-" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -121,7 +121,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "--port", "1234", "--changed");
-  run.read('"--port" 3000 true ["1234"]\n');
+  run.read('"--port" "3000" true ["1234"]\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -216,27 +216,38 @@ selftest.define("argument parsing", function () {
 
   run = s.run("bundle");
   run.matchErr("not enough arguments");
-  run.matchErr("Usage: meteor bundle");
+  run.matchErr("This command has been deprecated");
   run.expectExit(1);
 
   run = s.run("bundle", "a", "b");
   run.matchErr("too many arguments");
-  run.matchErr("Usage: meteor bundle");
+  run.matchErr("This command has been deprecated");
+  run.expectExit(1);
+
+
+  run = s.run("build");
+  run.matchErr("not enough arguments");
+  run.matchErr("Usage: meteor build");
+  run.expectExit(1);
+
+  run = s.run("build", "a", "b");
+  run.matchErr("too many arguments");
+  run.matchErr("Usage: meteor build");
   run.expectExit(1);
 
   // '--' to end parsing
   run = s.run("dummy", "--email", "x", "--", "-p", "4000");
-  run.read('"x" 3000 none ["-p","4000"]\n');
+  run.read('"x" "3000" none ["-p","4000"]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "--", "--changed", "--changed");
-  run.read('"x" 3000 none ["--changed","--changed"]\n');
+  run.read('"x" "3000" none ["--changed","--changed"]\n');
   run.expectEnd();
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "--");
-  run.read('"x" 3000 none []\n');
+  run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -247,7 +258,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(0);
 
   run = s.run("dummy", "--email", "x", "-UD", "--changed");
-  run.read('"x" 3000 true []\nurl\n\delete\n');
+  run.read('"x" "3000" true []\nurl\n\delete\n');
   run.expectEnd();
   run.expectExit(0);
 
@@ -283,14 +294,14 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // requiring an app dir
-  run = s.run("list", "--using");
+  run = s.run("list");
   run.matchErr("not in a Meteor project");
   run.matchErr("meteor create"); // new user help
   run.expectExit(1);
 
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
-    run = s.run("list", "--using");
+    run = s.run("list");
     run.expectExit(0);
   });
 });
@@ -305,7 +316,7 @@ selftest.define("command-like options", function () {
     run.matchErr("Unreleased");
     run.expectExit(1);
   } else {
-    run.read("Release " + release.current.name + "\n");
+    run.read(release.current.getDisplayName() + "\n");
     run.expectEnd();
     run.expectExit(0);
   }

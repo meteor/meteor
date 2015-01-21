@@ -152,30 +152,34 @@ html_scanner = {
         if (! name)
           throwParseError("Template has no 'name' attribute");
 
-        if (Spacebars.isReservedName(name))
+        if (SpacebarsCompiler.isReservedName(name))
           throwParseError("Template can't be named \"" + name + "\"");
 
-        var renderFuncCode = Spacebars.compile(
+        var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isTemplate: true,
             sourceName: 'Template "' + name + '"'
           });
 
-        results.js += "\nTemplate.__define__(" + JSON.stringify(name) +
-          ", " + renderFuncCode + ");\n";
+        var nameLiteral = JSON.stringify(name);
+        var templateDotNameLiteral = JSON.stringify("Template." + name);
+
+        results.js += "\nTemplate.__checkName(" + nameLiteral + ");\n" +
+          "Template[" + nameLiteral + "] = new Template(" +
+          templateDotNameLiteral + ", " + renderFuncCode + ");\n";
       } else {
         // <body>
         if (hasAttribs)
           throwParseError("Attributes on <body> not supported");
 
-        var renderFuncCode = Spacebars.compile(
+        var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isBody: true,
             sourceName: "<body>"
           });
 
         // We may be one of many `<body>` tags.
-        results.js += "\nUI.body.contentParts.push(UI.Component.extend({render: " + renderFuncCode + "}));\nMeteor.startup(function () { if (! UI.body.INSTANTIATED) { UI.body.INSTANTIATED = true; UI.DomRange.insert(UI.render(UI.body).dom, document.body); } });\n";
+        results.js += "\nTemplate.body.addContent(" + renderFuncCode + ");\nMeteor.startup(Template.body.renderToDocument);\n";
       }
     } catch (e) {
       if (e.scanner) {

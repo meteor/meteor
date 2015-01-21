@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
-  internal: true
+  version: "1.0.2"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('webapp', 'server');
-  api.add_files('browser-policy-common.js', 'server');
+  api.addFiles('browser-policy-common.js', 'server');
   api.export('BrowserPolicy', 'server');
 });

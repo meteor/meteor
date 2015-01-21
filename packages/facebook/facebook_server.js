@@ -53,7 +53,7 @@ var getTokenResponse = function (query) {
       "https://graph.facebook.com/oauth/access_token", {
         params: {
           client_id: config.appId,
-          redirect_uri: Meteor.absoluteUrl("_oauth/facebook?close"),
+          redirect_uri: OAuth._redirectUri('facebook', config),
           client_secret: OAuth.openSecret(config.secret),
           code: query.code
         }

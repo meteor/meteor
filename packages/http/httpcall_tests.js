@@ -209,24 +209,29 @@ testAsyncMulti("httpcall - redirect", [
     _.each([false, true], function(followRedirects) {
       var do_it = function(should_work) {
         var maybe_expect = should_work ? expect : _.identity;
-        HTTP.call(
-          "GET", url_prefix()+"/redirect",
-          {followRedirects: followRedirects},
-          maybe_expect(function(error, result) {
-            test.isFalse(error);
-            test.isTrue(result);
+        _.each(["GET", "POST"], function (method) {
+          HTTP.call(
+            method, url_prefix()+"/redirect",
+            {followRedirects: followRedirects},
+            maybe_expect(function(error, result) {
+              test.isFalse(error);
+              test.isTrue(result);
 
-            if (followRedirects) {
-              // should be redirected transparently to /foo
-              test.equal(result.statusCode, 200);
-              var data = result.data;
-              test.equal(data.url, "/foo");
-              test.equal(data.method, "GET");
-            } else {
-              // should see redirect
-              test.equal(result.statusCode, 301);
-            }
-          }));
+              if (followRedirects) {
+                // should be redirected transparently to /foo
+                test.equal(result.statusCode, 200);
+                var data = result.data;
+                test.equal(data.url, "/foo");
+                // This is "GET" even when the initial request was a
+                // POST because browsers follow redirects with a GET
+                // even when the initial request was a different method.
+                test.equal(data.method, "GET");
+              } else {
+                // should see redirect
+                test.equal(result.statusCode, 301);
+              }
+            }));
+        });
       };
       if (Meteor.isClient && ! followRedirects) {
         // not supported, should fail
@@ -451,7 +456,7 @@ if (Meteor.isServer) {
       };
 
       // existing static file
-      do_test("/packages/http/test_static.serveme", 200, /static file serving/);
+      do_test("/packages/local-test_http/test_static.serveme", 200, /static file serving/);
 
       // no such file, so return the default app HTML.
       var getsAppHtml = [
