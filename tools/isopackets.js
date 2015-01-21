@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
 var bundler = require('./bundler.js');
 var Builder = require('./builder.js');
 var buildmessage = require('./buildmessage.js');
@@ -10,6 +9,7 @@ var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
+var fiberHelpers = require('./fiber-helpers.js');
 
 // An isopacket is a predefined set of isopackages which the meteor command-line
 // tool can load into its process. This is how we use the DDP client and many
@@ -75,28 +75,30 @@ var loadedIsopackets = {};
 // disk. Does not do a build step: ensureIsopacketsLoadable must be called
 // first!
 var load = function (isopacketName) {
-  if (_.has(loadedIsopackets, isopacketName)) {
-    if (loadedIsopackets[isopacketName]) {
-      return loadedIsopackets[isopacketName];
+  return fiberHelpers.noYieldsAllowed(function () {
+    if (_.has(loadedIsopackets, isopacketName)) {
+      if (loadedIsopackets[isopacketName]) {
+        return loadedIsopackets[isopacketName];
+      }
+
+      // This is the case where the isopacket is up to date on disk but not
+      // loaded.
+      var isopacket = loadIsopacketFromDisk(isopacketName);
+      loadedIsopackets[isopacketName] = isopacket;
+      return isopacket;
     }
 
-    // This is the case where the isopacket is up to date on disk but not
-    // loaded.
-    var isopacket = loadIsopacketFromDisk(isopacketName);
-    loadedIsopackets[isopacketName] = isopacket;
-    return isopacket;
-  }
+    if (_.has(ISOPACKETS, isopacketName)) {
+      throw Error("Can't load isopacket before it has been verified: "
+                  + isopacketName);
+    }
 
-  if (_.has(ISOPACKETS, isopacketName)) {
-    throw Error("Can't load isopacket before it has been verified: "
-                + isopacketName);
-  }
-
-  throw Error("Unknown isopacket: " + isopacketName);
+    throw Error("Unknown isopacket: " + isopacketName);
+  });
 };
 
 var isopacketPath = function (isopacketName) {
-  return path.join(config.getIsopacketRoot(), isopacketName);
+  return files.pathJoin(config.getIsopacketRoot(), isopacketName);
 };
 
 // ensureIsopacketsLoadable is called at startup and ensures that all isopackets
@@ -132,7 +134,7 @@ var ensureIsopacketsLoadable = function () {
 
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
-          path.join(isopacketRoot, 'isopacket-buildinfo.json'));
+          files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
         var needRebuild = ! existingBuildinfo;
         if (! needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
@@ -212,7 +214,7 @@ var newIsopacketBuildingCatalog = function () {
       // expect them to all build, and we're fine with dying if they don't
       // (there's no worries about needing to springboard).
       isopacketCatalog.initialize({
-        localPackageSearchDirs: [path.join(
+        localPackageSearchDirs: [files.pathJoin(
           files.getCurrentToolsDir(), 'packages')],
         buildingIsopackets: true
       });
@@ -254,7 +256,7 @@ var makeIsopacketBuildContext = function () {
 // this function). Does not run a build process; it must already be built.
 var loadIsopacketFromDisk = function (isopacketName) {
   var image = bundler.readJsImage(
-    path.join(isopacketPath(isopacketName), 'program.json'));
+    files.pathJoin(isopacketPath(isopacketName), 'program.json'));
 
   // An incredibly minimalist version of the environment from
   // tools/server/boot.js.  Kind of a hack.

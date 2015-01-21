@@ -1,12 +1,10 @@
 var _ = require('underscore');
-var fs = require('fs');
-var path = require('path');
+var files = require('./files.js');
 
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog.js');
 var catalogLocal = require('./catalog-local.js');
-var catalogRemote = require('./catalog-remote.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var isopackCacheModule = require('./isopack-cache.js');
@@ -67,7 +65,7 @@ _.extend(exports.ProjectContext.prototype, {
     self.tropohouse = options.tropohouse || tropohouse.default;
 
     self._packageMapFilename = options.packageMapFilename ||
-      path.join(self.projectDir, '.meteor', 'versions');
+      files.pathJoin(self.projectDir, '.meteor', 'versions');
 
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
@@ -98,9 +96,11 @@ _.extend(exports.ProjectContext.prototype, {
     // the project's release.
     self._alwaysWritePackageMap = options.alwaysWritePackageMap;
 
-    // Set by 'meteor publish' to ensure that .meteor/packages and
-    // .meteor/versions are not written even though the command adds some
-    // constraints (like making sure the test is built).
+    // Set by a few special-case commands that call
+    // projectConstraintsFile.addConstraints for internal reasons without
+    // intending to actually write .meteor/packages and .meteor/versions (eg,
+    // 'publish' wants to make sure making sure the test is built, and
+    // --get-ready wants to build every conceivable package).
     self._neverWriteProjectConstraintsFile =
       options.neverWriteProjectConstraintsFile;
     self._neverWritePackageMap = options.neverWritePackageMap;
@@ -216,7 +216,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return path.join(self.projectDir, '.meteor', 'local', subdirectory);
+    return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
   },
 
   // You can call this manually if you want to do some work before resolving
@@ -288,18 +288,18 @@ _.extend(exports.ProjectContext.prototype, {
 
   _ensureProjectDir: function () {
     var self = this;
-    files.mkdir_p(path.join(self.projectDir, '.meteor'));
+    files.mkdir_p(files.pathJoin(self.projectDir, '.meteor'));
 
     // This file existing is what makes a project directory a project directory,
     // so let's make sure it exists!
-    var constraintFilePath = path.join(self.projectDir, '.meteor', 'packages');
-    if (! fs.existsSync(constraintFilePath)) {
+    var constraintFilePath = files.pathJoin(self.projectDir, '.meteor', 'packages');
+    if (! files.exists(constraintFilePath)) {
       files.writeFileAtomically(constraintFilePath, '');
     }
 
     // Let's also make sure we have a minimal gitignore.
-    var gitignorePath = path.join(self.projectDir, '.meteor', '.gitignore');
-    if (! fs.existsSync(gitignorePath)) {
+    var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
+    if (! files.exists(gitignorePath)) {
       files.writeFileAtomically(gitignorePath, 'local\n');
     }
   },
@@ -345,7 +345,7 @@ _.extend(exports.ProjectContext.prototype, {
 
   _ensureAppIdentifier: function () {
     var self = this;
-    var identifierFile = path.join(self.projectDir, '.meteor', '.id');
+    var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
 
     // Find the first non-empty line, ignoring comments. We intentionally don't
     // put this in a WatchSet, since changing this doesn't affect the built app
@@ -388,7 +388,7 @@ _.extend(exports.ProjectContext.prototype, {
 
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob("selecting package versions", function () {
         var resolver = self._buildResolver();
 
@@ -432,20 +432,20 @@ _.extend(exports.ProjectContext.prototype, {
 
   _localPackageSearchDirs: function () {
     var self = this;
-    var searchDirs = [path.join(self._projectDirForLocalPackages, 'packages')];
+    var searchDirs = [files.pathJoin(self._projectDirForLocalPackages, 'packages')];
 
     if (! self._ignorePackageDirsEnvVar && process.env.PACKAGE_DIRS) {
       // User can provide additional package directories to search in
       // PACKAGE_DIRS (colon-separated).
       _.each(process.env.PACKAGE_DIRS.split(':'), function (p) {
-        searchDirs.push(path.resolve(p));
+        searchDirs.push(files.pathResolve(p));
       });
     }
 
     if (files.inCheckout()) {
       // Running from a checkout, so use the Meteor core packages from the
       // checkout.
-      searchDirs.push(path.join(files.getCurrentToolsDir(), 'packages'));
+      searchDirs.push(files.pathJoin(files.getCurrentToolsDir(), 'packages'));
     }
     return searchDirs;
   },
@@ -459,7 +459,7 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInJob();
 
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob(
         "scanning local packages",
         function () {
@@ -483,59 +483,6 @@ _.extend(exports.ProjectContext.prototype, {
         }
       );
     });
-  },
-
-  // Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
-  // official catalog, does that and tries again.
-  _runAndRetryWithRefreshIfHelpful: function (attempt) {
-    var self = this;
-    buildmessage.assertInJob();
-
-    // Run `attempt` in a nested buildmessage context.
-    var messages = buildmessage.capture(attempt);
-
-    // Did it work? Great. Move on to the next stage.
-    if (! messages.hasMessages()) {
-      return;
-    }
-
-    // Is refreshing unlikely to be useful, either because the error wasn't
-    // related to that, or because we tried to refresh recently, or because
-    // we're not allowed to refresh? Fail, merging the result of these errors
-    // into the current job (which will cause the _completeStagesThrough loop to
-    // halt).
-    if (! messages.hasMessageWithTag('refreshCouldHelp') ||
-        catalog.triedToRefreshRecently ||
-        catalog.official.offline) {
-      buildmessage.mergeMessagesIntoCurrentJob(messages);
-      return;
-    }
-
-    // Refresh!
-    // XXX This is a little hacky, as it shares a bunch of code with
-    // catalog.refreshOrWarn, which is a higher-level function that's allowed to
-    // log.
-    catalog.triedToRefreshRecently = true;
-    try {
-      catalog.official.refresh();
-      catalog.refreshFailed = false;
-    } catch (err) {
-      if (err.errorType !== 'DDP.ConnectionError')
-        throw err;
-      // First place the previous errors in the capture.
-      buildmessage.mergeMessagesIntoCurrentJob(messages);
-      // Then put an error representing this DDP error.
-      buildmessage.enterJob(
-        "refreshing package catalog to resolve previous errors",
-        function () {
-          buildmessage.error(err.message);
-        }
-      );
-      return;
-    }
-
-    // Try again, this time directly in the current buildmessage job.
-    attempt();
   },
 
   _getRootDepsAndConstraints: function () {
@@ -613,8 +560,8 @@ _.extend(exports.ProjectContext.prototype, {
     // Pre-release versions that are root constraints (in .meteor/packages, in
     // the release, or the version of a local package) are anticipated.
     _.each(rootConstraints, function (constraintObject) {
-      _.each(constraintObject.constraints, function (alternative) {
-        var version = alternative.version;
+      _.each(constraintObject.vConstraint.alternatives, function (alternative) {
+        var version = alternative.versionString;
         version && add(constraintObject.name, version);
       });
     });
@@ -648,7 +595,7 @@ _.extend(exports.ProjectContext.prototype, {
     if (!self.packageMap)
       throw Error("which packages to download?");
 
-    self._runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function () {
       buildmessage.enterJob("downloading missing packages", function () {
         self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
           serverArchitectures: self._serverArchitectures
@@ -712,7 +659,7 @@ exports.ProjectConstraintsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = path.join(options.projectDir, '.meteor', 'packages');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'packages');
   self.watchSet = null;
 
   // Have we modified the in-memory representation since reading from disk?
@@ -920,31 +867,21 @@ _.extend(exports.PackageMapFile.prototype, {
       line = files.trimSpace(line);
       if (line === '')
         return;
-      var constraint = utils.parseConstraint(line, {
+      var packageVersion = utils.parsePackageAtVersion(line, {
         useBuildmessage: true,
         buildmessageFile: self.filename
       });
-      if (!constraint)
+      if (!packageVersion)
         return;  // recover by ignoring
 
       // If a package appears multiple times in .meteor/versions, we just ignore
       // the second one. This file is more meteor-controlled than
       // .meteor/packages and people shouldn't be surprised to see it
       // automatically fixed.
-      if (_.has(self._versions, constraint.name))
+      if (_.has(self._versions, packageVersion.name))
         return;
 
-      // We expect this constraint to be "foo@1.2.3", not a lack of a constraint
-      // or something with "||" or "@=".
-      if (! utils.isSimpleConstraint(constraint)) {
-        buildmessage.error("Bad version: " + line, {
-          // XXX should this be relative?
-          file: self.filename
-        });
-        return;  // recover by ignoring
-      }
-
-      self._versions[constraint.name] = constraint.constraints[0].version;
+      self._versions[packageVersion.name] = packageVersion.version;
     });
   },
 
@@ -991,7 +928,7 @@ _.extend(exports.PackageMapFile.prototype, {
 exports.PlatformList = function (options) {
   var self = this;
 
-  self.filename = path.join(options.projectDir, '.meteor', 'platforms');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'platforms');
   self.watchSet = null;
   self._platforms = null;
 
@@ -1073,7 +1010,7 @@ exports.CordovaPluginsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = path.join(options.projectDir, '.meteor', 'cordova-plugins');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'cordova-plugins');
   self.watchSet = null;
   // Map from plugin name to version.
   self._plugins = null;
@@ -1151,7 +1088,7 @@ _.extend(exports.CordovaPluginsFile.prototype, {
 exports.ReleaseFile = function (options) {
   var self = this;
 
-  self.filename = path.join(options.projectDir, '.meteor', 'release');
+  self.filename = files.pathJoin(options.projectDir, '.meteor', 'release');
   self.watchSet = null;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
@@ -1228,7 +1165,7 @@ _.extend(exports.ReleaseFile.prototype, {
 exports.FinishedUpgraders = function (options) {
   var self = this;
 
-  self.filename = path.join(
+  self.filename = files.pathJoin(
     options.projectDir, '.meteor', '.finished-upgraders');
 };
 
@@ -1251,7 +1188,7 @@ _.extend(exports.FinishedUpgraders.prototype, {
 
     var current = null;
     try {
-      current = fs.readFileSync(self.filename, 'utf8');
+      current = files.readFile(self.filename, 'utf8');
     } catch (e) {
       if (e.code !== 'ENOENT')
         throw e;
@@ -1274,6 +1211,6 @@ _.extend(exports.FinishedUpgraders.prototype, {
       appendText += upgrader + '\n';
     });
 
-    fs.appendFileSync(self.filename, appendText);
+    files.appendFile(self.filename, appendText);
   }
 });

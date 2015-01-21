@@ -1,9 +1,11 @@
 var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
-var Future = require(path.join("fibers", "future"));
+var Future = require("fibers/future");
 var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
+
+var bootUtils = require('./boot-utils.js');
 
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v0.10.33';
@@ -81,6 +83,34 @@ sourcemap_support.install({
 if (process.env.ENABLE_METEOR_SHELL) {
   require('./shell.js').listen();
 }
+
+// As a replacement to the old keepalives mechanism, check for a running
+// parent every few seconds. Exit if the parent is not running.
+//
+// Two caveats to this strategy:
+// * Doesn't catch the case where the parent is CPU-hogging (but maybe we
+//   don't want to catch that case anyway, since the bundler not yielding
+//   is what caused #2536).
+// * Could be fooled by pid re-use, i.e. if another process comes up and
+//   takes the parent process's place before the child process dies.
+var startCheckForLiveParent = function (parentPid) {
+  if (parentPid) {
+    if (! bootUtils.validPid(parentPid)) {
+      console.error("METEOR_PARENT_PID must be a valid process ID.");
+      process.exit(1);
+    }
+
+    setInterval(function () {
+      try {
+        process.kill(parentPid, 0);
+      } catch (err) {
+        console.error("Parent process is dead! Exiting.");
+        process.exit(1);
+      }
+    }, 3000);
+  }
+};
+
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
@@ -209,4 +239,8 @@ Fiber(function () {
   // XXX hack, needs a better way to keep alive
   if (exitCode !== 'DAEMON')
     process.exit(exitCode);
+
+  if (process.env.METEOR_PARENT_PID) {
+    startCheckForLiveParent(process.env.METEOR_PARENT_PID);
+  }
 }).run();

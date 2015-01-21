@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
 var fiberHelpers = require('./fiber-helpers.js');
+var Console = require("./console.js").Console;
 
 var Updater = function () {
   var self = this;
@@ -36,7 +37,10 @@ _.extend(Updater.prototype, {
     try {
       updater.tryToDownloadUpdate({showBanner: true});
     } catch (e) {
-      // oh well, this was the background. no need to show any errors.
+      // oh well, this was the background. Only show errors if we are in debug
+      // mode.
+      Console.debug("Error inside updater.");
+      Console.debug(e.stack);
       return;
     }
   },

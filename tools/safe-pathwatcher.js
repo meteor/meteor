@@ -1,6 +1,6 @@
-var fs = require("fs");
+var files = require("./files.js");
 
-// Set this env variable to a truthy value to force fs.watchFile instead
+// Set this env variable to a truthy value to force files.watchFile instead
 // of pathwatcher.watch.
 var PATHWATCHER_ENABLED = !process.env.METEOR_WATCH_FORCE_POLLING;
 
@@ -17,7 +17,7 @@ exports.watch = function watch(absPath, callback) {
   var lastPathwatcherEventTime = 0;
 
   function pathwatcherWrapper() {
-    // It's tempting to call fs.unwatchFile(absPath, watchFileWrapper)
+    // It's tempting to call files.unwatchFile(absPath, watchFileWrapper)
     // here, but previous pathwatcher success is no guarantee of future
     // pathwatcher reliability. For example, pathwatcher works just fine
     // when file changes originate from within a Vagrant VM, but changes
@@ -29,9 +29,8 @@ exports.watch = function watch(absPath, callback) {
 
   var watcher = null;
   if (PATHWATCHER_ENABLED) {
-    var pathwatcher = require('meteor-pathwatcher-tweaks');
     try {
-      watcher = pathwatcher.watch(absPath, pathwatcherWrapper);
+      watcher = files.pathwatcherWatch(absPath, pathwatcherWrapper);
     } catch (e) {
       // If it isn't an actual pathwatcher failure, rethrow.
       if (e.message !== 'Unable to watch path')
@@ -76,11 +75,11 @@ exports.watch = function watch(absPath, callback) {
     }
   }
 
-  // We use fs.watchFile in addition to pathwatcher.watch as a fail-safe to
+  // We use files.watchFile in addition to pathwatcher.watch as a fail-safe to
   // detect file changes even on network file systems.  However (unless the user
   // disabled pathwatcher or this pathwatcher call failed), we use a relatively
   // long default polling interval of 5000ms to save CPU cycles.
-  fs.watchFile(absPath, {
+  files.watchFile(absPath, {
     persistent: false,
     interval: pollingInterval
   }, watchFileWrapper);
@@ -96,7 +95,7 @@ exports.watch = function watch(absPath, callback) {
 
       if (polling) {
         polling = false;
-        fs.unwatchFile(absPath, watchFileWrapper);
+        files.unwatchFile(absPath, watchFileWrapper);
       }
     }
   };

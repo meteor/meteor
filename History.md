@@ -1,7 +1,70 @@
-## v.NEXT
+## v.1.0.3, 2015-Jan-20
 
+* Rewrite `meteor show` and `meteor search` to show package information for
+  local packages and to show if the package is installed for non-local
+  packages. Introduce the `--show-all` flag, and deprecate the
+  `--show-unmigrated` and `--show-old flags`.  Introduce the `--ejson` flag to
+  output an EJSON object.
 
-## v1.0.2.1
+* Support README.md files in`meteor publish`. Take in the documentation file in
+  `package.js` (set to `README.md` by default) and upload it to the server at
+  publication time. Excerpt the first non-header Markdown section for use in
+  `meteor show`.
+
+* Support updates of package version metadata after that version has been
+  published by running `meteor publish --update` from the package directory.
+
+* Add `meteor test-packages --velocity` (similar to `meteor run --test`).  #3330
+
+* Fix `meteor update <packageName>` to update <packageName> even if it's an
+  indirect dependency of your app.  #3282
+
+* Fix stack trace when a browser tries to use the server like a proxy.  #1212
+
+* Fix inaccurate session statistics and possible multiple invocation of
+  Connection.onClose callbacks.
+
+* Switch CLI tool filesystem calls from synchronous to yielding (pro: more
+  concurrency, more responsive to signals; con: could introduce concurrency
+  bugs)
+
+* Don't apply CDN prefix on Cordova. #3278 #3311
+
+* Don't try to refresh client app in the runner unless the app actually has the
+  autoupdate package. #3365
+
+* Fix custom release banner logic. #3353
+
+* Apply HTTP followRedirects option to non-GET requests.  #2808
+
+* Clean up temporary directories used by package downloads sooner.  #3324
+
+* If the tool knows about the requested release but doesn't know about the build
+  of its tool for the platform, refresh the catalog rather than failing
+  immediately.  #3317
+
+* Fix `meteor --get-ready` to not add packages to your app.
+
+* Fix some corner cases in cleaning up app processes in the runner. Drop
+  undocumented `--keepalive` support. #3315
+
+* Fix CSS autoupdate when `$ROOT_URL` has a non-trivial path.  #3111
+
+* Save Google OAuth idToken to the User service info object.
+
+* Add git info to `meteor --version`.
+
+* Correctly catch a case of illegal `Tracker.flush` during `Tracker.autorun`.  #3037
+
+* Upgraded dependencies
+
+  - jquery: 1.11.2 (from 1.11.0)
+
+Patches by GitHub users DanielDent, DanielDornhardt, PooMaster, Primigenus,
+Tarang, TomFreudenberg, adnissen, dandv, fay-jai, knownasilya, mquandalle,
+ogourment, restebanez, rissem, smallhelm and tmeasday.
+
+## v1.0.2.1, 2014-Dec-22
 
 * Fix crash in file change watcher.  #3336
 
@@ -11,7 +74,7 @@
 * Fix typo in `meteor shell` output. #3326
 
 
-## v1.0.2
+## v1.0.2, 2014-Dec-19
 
 ### Improvements to the `meteor` command-line tool
 
@@ -105,6 +168,9 @@
   means that new versions of these packages can be published outside of the full
   Meteor release cycle.
 
+* Require plain objects as the update parameter when doing replacements
+  in server-side collections.
+
 * Fix audit-argument-checks spurious failure when an argument is NaN. #2914
 
 ### Upgraded dependencies
@@ -127,18 +193,18 @@
 
 Patches by GitHub users andylash, anstarovoyt, benweissmann, chrisbridgett,
 colllin, dandv, ecwyne, graemian, JamesLefrere, kevinchiu, LyuGGang, matteodem,
-mitar, mitar, mquandalle, musically-ut, ograycode, pcjpcj2, physiocoder,
-rgoomar, timhaines, trusktr, Urigo, and zol.
+mitar, mquandalle, musically-ut, ograycode, pcjpcj2, physiocoder, rgoomar,
+timhaines, trusktr, Urigo, and zol.
 
 
-## v1.0.1
+## v1.0.1, 2014-Dec-09
 
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
 
 
-## v1.0
+## v1.0, 2014-Oct-28
 
 ### New Features
 
@@ -243,7 +309,7 @@ Patches by GitHub users DenisGorbachev, ecwyne, mitar, mquandalle,
 Primigenus, svda, yauh, and zol.
 
 
-## v0.9.4.1
+## v0.9.4.1, 2014-Dec-09 (backport)
 
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
@@ -251,7 +317,7 @@ Primigenus, svda, yauh, and zol.
   Backport from 1.0.1.
 
 
-## v0.9.4
+## v0.9.4, 2014-Oct-13
 
 ### New Features
 
@@ -378,14 +444,14 @@ mquandalle, prapicault, pscanf, richguan, rick-golden-healthagen,
 rissem, rosh93, rzymek, and timoabend
 
 
-## v0.9.3.1
+## v0.9.3.1, 2014-Sep-30
 
 * Don't crash when failing to contact the package server. #2713
 
 * Allow more than one dash in package versions. #2715
 
 
-## v0.9.3
+## v0.9.3, 2014-Sep-25
 
 ### More Package Version Number Flexibility
 
@@ -445,7 +511,7 @@ prapicault, waitingkuo, wulfmeister.
 
 
 
-## v0.9.2.2
+## v0.9.2.2, 2014-Sep-17
 
 * Fix regression in 0.9.2 that prevented some users from accessing the
   Meteor development server in their browser. Specifically, 0.9.2
@@ -453,14 +519,14 @@ prapicault, waitingkuo, wulfmeister.
   host to localhost instead of 0.0.0.0. #2596
 
 
-## v0.9.2.1
+## v0.9.2.1, 2014-Sep-15
 
 * Fix versions of packages that were published with `-cordova` versions
   in 0.9.2 (appcache, fastclick, htmljs, logging, mobile-status-bar,
   routepolicy, webapp-hashing).
 
 
-## v0.9.2
+## v0.9.2, 2014-Sep-15
 
 This release contains our first support for building mobile apps in
 Meteor, for both iOS and Android. This support comes via an
@@ -523,7 +589,7 @@ Patches by GitHub users awwx, mizzao, and mquandalle.
 
 
 
-## v0.9.1.1
+## v0.9.1.1, 2014-Sep-06
 
 * Fix backwards compatibility for packages that had weak dependencies
   on packages renamed in 0.9.1 (`ui`, `deps`, `livedata`). #2521
@@ -532,7 +598,7 @@ Patches by GitHub users awwx, mizzao, and mquandalle.
   package.
 
 
-## v0.9.1
+## v0.9.1, 2014-Sep-04
 
 #### Organizations in Meteor developer accounts
 
@@ -612,7 +678,7 @@ prefix instead of your own username.
 Patch by GitHub user mitar.
 
 
-## v0.9.0.1
+## v0.9.0.1, 2014-Aug-27
 
 * Fix issues preventing hot code reload from automatically reloading webapps in
   two cases: when the old app was a pre-0.9.0 app, and when the app used
@@ -639,7 +705,7 @@ Patch by GitHub user mitar.
 * Fix "access-denied" stack trace when publishing packages.
 
 
-## v0.9.0
+## v0.9.0, 2014-Aug-26
 
 Meteor 0.9.0 introduces the Meteor Package Server. Incorporating lessons from
 our community's Meteorite tool, Meteor 0.9.0 allows users to develop and publish
@@ -728,7 +794,7 @@ Patches by GitHub users Cangit, dandv, ImtiazMajeed, MaximDubrovin, mitar,
 mquandalle, rcy, RichardLitt, thatneat, and twhy.
 
 
-## v0.8.3.1
+## v0.8.3.1, 2014-Dec-09 (backport)
 
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
@@ -736,7 +802,7 @@ mquandalle, rcy, RichardLitt, thatneat, and twhy.
   Backport from 1.0.1.
 
 
-## v0.8.3
+## v0.8.3, 2014-Jul-29
 
 #### Blaze
 
@@ -817,7 +883,7 @@ mquandalle, rcy, RichardLitt, thatneat, and twhy.
 Patches contributed by GitHub users Cangit, cmather, duckspeaker, zol.
 
 
-## v0.8.2
+## v0.8.2, 2014-Jun-23
 
 #### Meteor Accounts
 
@@ -1003,7 +1069,7 @@ ducdigital, emgee3, felixrabe, FredericoC, jbruni, kentonv, mizzao,
 mquandalle, subhog, tbjers, tmeasday.
 
 
-## v.0.8.1.3
+## v0.8.1.3, 2014-May-22
 
 * Fix a security issue in the `spiderable` package. `spiderable` now
   uses the ROOT_URL environment variable instead of the Host header to
@@ -1025,7 +1091,7 @@ mquandalle, subhog, tbjers, tmeasday.
   minified. #2037.
 
 
-## v.0.8.1.2
+## v0.8.1.2, 2014-May-12
 
 * Fix memory leak (introduced in 0.8.1) by making sure to unregister
   sessions at the server when they are closed due to heartbeat timeout.
@@ -1038,7 +1104,7 @@ mquandalle, subhog, tbjers, tmeasday.
   prefix. #2109
 
 
-## v0.8.1.1
+## v0.8.1.1, 2014-May-01
 
 * Fix 0.8.1 regression preventing clients from specifying `_id` on insert. #2097
 
@@ -1048,7 +1114,7 @@ mquandalle, subhog, tbjers, tmeasday.
   allow undefined values.
 
 
-## v0.8.1
+## v0.8.1, 2014-Apr-30
 
 #### Meteor Accounts
 
@@ -1183,13 +1249,13 @@ davegonzalez, emgee3, justinsb, mquandalle, Neftedollar, Pent, sdarnell,
 and timhaines.
 
 
-## v0.8.0.1
+## v0.8.0.1, 2014-Apr-21
 
 * Fix security flaw in OAuth1 implementation. Clients can no longer
   choose the callback_url for OAuth1 logins.
 
 
-## v0.8.0
+## v0.8.0, 2014-Mar-27
 
 Meteor 0.8.0 introduces Blaze, a total rewrite of our live templating engine,
 replacing Spark. Advantages of Blaze include:
@@ -1263,25 +1329,25 @@ for full details on upgrading your app to 0.8.0.  This includes:
 Patches contributed by GitHub users cmather and mart-jansink.
 
 
-## v0.7.2.3
+## v0.7.2.3, 2014-Dec-09 (backport)
 
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
   allow/deny rules, we recommend that you update immediately.
   Backport from 1.0.1.
 
-## v0.7.2.2
+## v0.7.2.2, 2014-Apr-21 (backport)
 
 * Fix a security flaw in OAuth1 and OAuth2 implementations.
   Backport from 0.8.1; see its entry for recommended actions to take.
 
-## v0.7.2.1
+## v0.7.2.1, 2014-Apr-30 (backport)
 
 * Fix security flaw in OAuth1 implementation. Clients can no longer
   choose the callback_url for OAuth1 logins.
   Backport from 0.8.0.1.
 
-## v0.7.2
+## v0.7.2, 2014-Mar-18
 
 * Support oplog tailing on queries with the `limit` option. All queries
   except those containing `$near` or `$where` selectors or the `skip`
@@ -1355,7 +1421,7 @@ Patches contributed by GitHub users cmather and mart-jansink.
 Patches contributed by GitHub users awwx, dandv, queso, rgould, timhaines, zol
 
 
-## v0.7.1.2
+## v0.7.1.2, 2014-Feb-27
 
 * Fix bug in tool error handling that caused `meteor` to crash on Mac
   OSX when no computer name is set.
@@ -1364,7 +1430,7 @@ Patches contributed by GitHub users awwx, dandv, queso, rgould, timhaines, zol
   tailable cursors on non-oplog collections.
 
 
-## v0.7.1.1
+## v0.7.1.1, 2014-Feb-24
 
 * Integrate with Meteor developer accounts, a new way of managing your
   meteor.com deployed sites. When you use `meteor deploy`, you will be
@@ -1560,7 +1626,7 @@ dandv, icellan, jfhamlin, marcandre, michaelbishop, mitar, mizzao,
 mquandalle, paulswartz, rdickert, rzymek, timhaines, and yeputons.
 
 
-## v0.7.0.1
+## v0.7.0.1, 2013-Dec-20
 
 * Two fixes to `meteor run` Mongo startup bugs that could lead to hangs with the
   message "Initializing mongo database... this may take a moment.".  #1696
@@ -1570,7 +1636,7 @@ mquandalle, paulswartz, rdickert, rzymek, timhaines, and yeputons.
 * Fix gratuitous IE7 incompatibility.  #1690
 
 
-## v0.7.0
+## v0.7.0, 2013-Dec-17
 
 This version of Meteor contains a patch for a bug in Node 0.10 which
 most commonly affects websockets. The patch is against Node version
@@ -1680,7 +1746,7 @@ Patches contributed by GitHub users AlexeyMK, awwx, dandv, DenisGorbachev,
 emgee3, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
 
 
-## v0.6.6.3
+## v0.6.6.3, 2013-Nov-04
 
 * Fix error when publish function callbacks are called during session
   shutdown.  #1540 #1553
@@ -1689,18 +1755,18 @@ emgee3, FooBarWidget, mitar, mcbain, rzymek, and sdarnell.
   directories.  #1506
 
 
-## v0.6.6.2
+## v0.6.6.2, 2013-Oct-21
 
 * Upgrade Node from 0.10.20 to 0.10.21 (security update).
 
 
-## v0.6.6.1
+## v0.6.6.1, 2013-Oct-12
 
 * Fix file watching on OSX. Work around Node issue #6251 by not using
   fs.watch. #1483
 
 
-## v0.6.6
+## v0.6.6, 2013-Oct-10
 
 
 #### Security
@@ -1867,7 +1933,7 @@ Maxhodges, meawoppl, mitar, mizzao, mquandalle, nathan-muir, RobertLowe, ryw,
 sdarnell, and timhaines.
 
 
-## v0.6.5.3
+## v0.6.5.3, 2014-Dec-09 (backport)
 
 * Fix a security issue in allow/deny rules that could result in data
   loss. If your app uses allow/deny rules, or uses packages that use
@@ -1875,12 +1941,12 @@ sdarnell, and timhaines.
   Backport from 1.0.1.
 
 
-## v0.6.5.2
+## v0.6.5.2, 2013-Oct-21
 
 * Upgrade Node from 0.8.24 to 0.8.26 (security patch)
 
 
-## v0.6.5.1
+## v0.6.5.1, 2013-Aug-28
 
 * Fix syntax errors on lines that end with a backslash. #1326
 
@@ -1899,7 +1965,7 @@ sdarnell, and timhaines.
 * Fix regression when using Mongo ObjectIDs in Spark templates.
 
 
-## v0.6.5
+## v0.6.5, 2013-Aug-14
 
 * New package system with package compiler and linker:
 
@@ -2049,12 +2115,12 @@ sdarnell, and timhaines.
 Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
 
 
-## v0.6.4.1
+## v0.6.4.1, 2013-Jul-19
 
 * Update mongodb driver to use version 0.2.1 of the bson module.
 
 
-## v0.6.4
+## v0.6.4, 2013-Jun-10
 
 * Separate OAuth flow logic from Accounts into separate packages. The
   `facebook`, `github`, `google`, `meetup`, `twitter`, and `weibo`
@@ -2086,7 +2152,7 @@ Patches contributed by GitHub users btipling, mizzao, timhaines and zol.
 Patches contributed by GitHub users awwx, johnston, and timhaines.
 
 
-## v0.6.3
+## v0.6.3, 2013-May-15
 
 * Add new `check` package for ensuring that a value matches a required
   type and structure. This is used to validate untrusted input from the
@@ -2141,7 +2207,7 @@ Patches contributed by GitHub users awwx, johnston, and timhaines.
 Patches contributed by GitHub users awwx, jagill, spang, and timhaines.
 
 
-## v0.6.2.1
+## v0.6.2.1, 2013-Apr-24
 
 * When authenticating with GitHub, include a user agent string. This
   unbreaks "Sign in with GitHub"
@@ -2149,7 +2215,7 @@ Patches contributed by GitHub users awwx, jagill, spang, and timhaines.
 Patch contributed by GitHub user pmark.
 
 
-## v0.6.2
+## v0.6.2, 2013-Apr-16
 
 * Better error reporting:
   * Capture real stack traces for `Meteor.Error`.
@@ -2187,7 +2253,7 @@ Patches contributed by GitHub users andreas-karlsson, awwx, jacott,
 joshuaconner, and timhaines.
 
 
-## v0.6.1
+## v0.6.1, 2013-Apr-08
 
 * Correct NPM behavior in packages in case there is a `node_modules` directory
   somewhere above the app directory. #927
@@ -2197,7 +2263,7 @@ joshuaconner, and timhaines.
 Patches contributed by GitHub users andreas-karlsson and awwx.
 
 
-## v0.6.0
+## v0.6.0, 2013-Apr-04
 
 * Meteor has a brand new distribution system! In this new system, code-named
   Engine, packages are downloaded individually and on demand. All of the
@@ -2262,7 +2328,7 @@ Patches contributed by GitHub users awwx, blackcoat, cmather, estark37,
 mquandalle, Primigenus, raix, reustle, and timhaines.
 
 
-## v0.5.9
+## v0.5.9, 2013-Mar-14
 
 * Fix regression in 0.5.8 that prevented users from editing their own
   profile. #809
@@ -2271,7 +2337,7 @@ mquandalle, Primigenus, raix, reustle, and timhaines.
   reactively. #811
 
 
-## v0.5.8
+## v0.5.8, 2013-Mar-13
 
 * Calls to the `update` and `remove` collection functions in untrusted code may
   no longer use arbitrary selectors. You must specify a single document ID when
@@ -2348,7 +2414,7 @@ Patches contributed by GitHub users awwx, cmather, graemian, jagill,
 jmhredsox, kevinxucs, krizka, mitar, raix, and rasmuserik.
 
 
-## v0.5.7
+## v0.5.7, 2013-Feb-21
 
 * The DDP wire protocol has been redesigned.
 
@@ -2430,7 +2496,7 @@ jmhredsox, kevinxucs, krizka, mitar, raix, and rasmuserik.
 Patches contributed by GitHub users awwx and michaelglenadams.
 
 
-## v0.5.6
+## v0.5.6, 2013-Feb-15
 
 * Fix 0.5.5 regression: Minimongo selectors matching subdocuments under arrays
   did not work correctly.
@@ -2439,7 +2505,7 @@ Patches contributed by GitHub users awwx and michaelglenadams.
 
 Patches contributed by GitHub user benjaminchelli.
 
-## v0.5.5
+## v0.5.5, 2013-Feb-13
 
 * Deprecate `Meteor.autosubscribe`. `Meteor.subscribe` now works within
   `Meteor.autorun`.
@@ -2509,13 +2575,13 @@ danawoodman, dbimmler, Ed-von-Schleck, geoffd123, jperl, kevee,
 milesmatthias, Primigenus, raix, timhaines, and xenolf.
 
 
-## v0.5.4
+## v0.5.4, 2013-Jan-08
 
 * Fix 0.5.3 regression: `meteor run` could fail on OSX 10.8 if environment
   variables such as `DYLD_LIBRARY_PATH` are set.
 
 
-## v0.5.3
+## v0.5.3, 2013-Jan-07
 
 * Add `--settings` argument to `meteor deploy` and `meteor run`. This
   allows you to specify deployment-specific information made available
@@ -2590,11 +2656,11 @@ Patches contributed by GitHub users Ed-von-Schleck, egtann, jwulf, lvbreda,
 martin-naumann, meawoppl, nwmartin, timhaines, and zealoushacker.
 
 
-## v0.5.2
+## v0.5.2, 2012-Nov-27
 
 * Fix 0.5.1 regression: Cursor `observe` works during server startup.  #507
 
-## v0.5.1
+## v0.5.1, 2012-Nov-20
 
 * Speed up server-side subscription handling by avoiding redundant work
   when the same Mongo query is observed multiple times concurrently (eg,
@@ -2679,7 +2745,7 @@ martin-naumann, meawoppl, nwmartin, timhaines, and zealoushacker.
 Patches contributed by GitHub users ayal, dandv, possibilities, TomWij,
 tmeasday, and workmad3.
 
-## v0.5.0
+## v0.5.0, 2012-Oct-17
 
 * This release introduces Meteor Accounts, a full-featured auth system that supports
   - fine-grained user-based control over database reads and writes
@@ -2739,7 +2805,7 @@ Patches contributed by GitHub users bradens, dandv, dybskiy, possibilities,
 zhangcheng, and 75lb.
 
 
-## v0.4.2
+## v0.4.2, 2012-Oct-02
 
 * Fix connection failure on iOS6. SockJS 0.3.3 includes this fix.
 
@@ -2783,7 +2849,7 @@ zhangcheng, and 75lb.
 Patch contributed by GitHub user yanivoliver.
 
 
-## v0.4.1
+## v0.4.1, 2012-Sep-24
 
 * New `email` smart package, with [`Email.send`](http://docs.meteor.com/#email)
   API.
@@ -2841,7 +2907,7 @@ Patch contributed by GitHub user yanivoliver.
 Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 
 
-## v0.4.0
+## v0.4.0, 2012-Aug-30
 
 * Merge Spark, a new live page update engine
   * Breaking API changes
@@ -2879,7 +2945,7 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 * Fix minimingo crash on dotted queries with undefined keys. #126
 
 
-## v0.3.9
+## v0.3.9, 2012-Aug-07
 
 * Add `spiderable` package to allow web crawlers to index Meteor apps.
 
@@ -2888,7 +2954,7 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 * Fix `stopImmediatePropagation()`. #205
 
 
-## v0.3.8
+## v0.3.8, 2012-Jul-12
 
 * HTTPS support
   * Add `force-ssl` package to require site to load over HTTPS.
@@ -2919,7 +2985,7 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 * Fix serving an empty file when no cacheable assets exist. #179
 
 
-## v0.3.7
+## v0.3.7, 2012-Jun-06
 
 * Better parsing of `.html` template files
   * Allow HTML comments (`<!-- -->`) at top level
@@ -2947,7 +3013,7 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
   away.
 
 
-## v0.3.6
+## v0.3.6, 2012-May-16
 
 * Rewrite event handling. `this` in event handlers now refers to the data
   context of the element that generated the event, *not* the top-level data
@@ -2964,12 +3030,12 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 * Update node.js to 0.6.17 to fix potential security issue.
 
 
-## v0.3.5
+## v0.3.5, 2012-Apr-28
 
 * Fix 0.3.4 regression: Call event map handlers on bubbled events. #107
 
 
-## v0.3.4
+## v0.3.4, 2012-Apr-27
 
 * Add Twitter `bootstrap` package. #84
 
@@ -2995,7 +3061,7 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 * Several documentation fixes and test coverage improvements.
 
 
-## v0.3.3
+## v0.3.3, 2012-Apr-20
 
 * Add `http` package for making HTTP requests to remote servers.
 
@@ -3013,6 +3079,6 @@ Patches contributed by GitHub users fivethirty, tmeasday, and xenolf.
 * Many documentation and test fixups.
 
 
-## v0.3.2
+## v0.3.2, 2012-Apr-10
 
 * Initial public launch

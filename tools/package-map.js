@@ -125,12 +125,12 @@ _.extend(exports.PackageMap.prototype, {
 // it should not be used as part of a ProjectContext because it does not allow
 // you to override release packages with local packages.
 exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
-  var toolConstraint = releaseVersion.tool &&
-        utils.parseConstraint(releaseVersion.tool);
-  if (! (toolConstraint && utils.isSimpleConstraint(toolConstraint)))
+  var toolPackageVersion = releaseVersion.tool &&
+        utils.parsePackageAtVersion(releaseVersion.tool);
+  if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseVersion.tool);
-  var toolPackage = toolConstraint.name;
-  var toolVersion = toolConstraint.constraints[0].version;
+  var toolPackage = toolPackageVersion.name;
+  var toolVersion = toolPackageVersion.version;
 
   var versionMap = _.clone(releaseVersion.packages || {});
   versionMap[toolPackage] = toolVersion;

@@ -1,10 +1,10 @@
 var ANIMATION_DURATION = 300;
 var NOTIFICATION_TIMEOUT = 3000;
 var MENU_KEY = 'menuOpen';
-var SHOW_CONNECTION_ISSUE_KEY = 'showConnectionIssue';
+var IGNORE_CONNECTION_ISSUE_KEY = 'ignoreConnectionIssue';
 var CONNECTION_ISSUE_TIMEOUT = 5000;
 
-Session.setDefault(SHOW_CONNECTION_ISSUE_KEY, false);
+Session.setDefault(IGNORE_CONNECTION_ISSUE_KEY, true);
 Session.setDefault(MENU_KEY, false);
 
 // XXX: this work around until IR properly supports this
@@ -47,8 +47,8 @@ Meteor.startup(function () {
     // Launch screen handle created in lib/router.js
     dataReadyHold.release();
 
-    // Show the connection error box
-    Session.set(SHOW_CONNECTION_ISSUE_KEY, true);
+    // Allow the connection error box to be shown if there is an issue
+    Session.set(IGNORE_CONNECTION_ISSUE_KEY, false);
   }, CONNECTION_ISSUE_TIMEOUT);
 });
 
@@ -120,11 +120,8 @@ Template.appBody.helpers({
   },
   
   connected: function() {
-    if (Session.get(SHOW_CONNECTION_ISSUE_KEY)) {
-      return Meteor.status().connected;
-    } else {
-      return true;
-    }
+    return Session.get(IGNORE_CONNECTION_ISSUE_KEY) ||
+      Meteor.status().connected;
   },
   
   notifications: function() {

@@ -45,11 +45,11 @@ NODE_BUILD_NUMBER=8
 NODE_VERSION=0.10.33
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
-    gzip -d <"${CHECKOUT_DIR}/${NODE_TGZ}" | tar x
+    tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
 else
     NODE_URL="http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
     echo "Downloading Node from ${NODE_URL}"
-    curl "${NODE_URL}" | gzip -d | tar x
+    curl "${NODE_URL}" | tar zx
 fi
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
@@ -57,11 +57,11 @@ MONGO_BUILD_NUMBER=3
 MONGO_VERSION=2.4.12
 MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
-    gzip -d <"${CHECKOUT_DIR}/${MONGO_TGZ}" | tar x
+    tar zxf "${CHECKOUT_DIR}/${MONGO_TGZ}"
 else
     MONGO_URL="http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
     echo "Downloading Mongo from ${MONGO_URL}"
-    curl "${MONGO_URL}" | gzip -d | tar x
+    curl "${MONGO_URL}" | tar zx
 fi
 
 cd "$DIR/build"
@@ -146,6 +146,7 @@ delete browserstack-webdriver/lib/test
 
 delete sqlite3/deps
 delete wordwrap/test
+delete moment/min
 
 # dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
 find . -path '*/esprima/test' | xargs rm -rf

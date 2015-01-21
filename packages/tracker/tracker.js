@@ -263,7 +263,7 @@ Tracker.Computation.prototype._compute = function () {
     withNoYieldsAllowed(self._func)(self);
   } finally {
     setCurrentComputation(previous);
-    inCompute = false;
+    inCompute = previousInCompute;
   }
 };
 

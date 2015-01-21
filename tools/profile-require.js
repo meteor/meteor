@@ -26,9 +26,9 @@ RequireInvocation.prototype.isOurCode = function () {
   if (! self.name.match(/\//))
     return false; // we always require our stuff via a path
 
-  var path = require('path');
-  var ourSource = path.resolve(__dirname);
-  var required = path.resolve(path.dirname(self.filename), self.name);
+  var files = require('./files.js');
+  var ourSource = files.pathResolve(__dirname);
+  var required = files.pathResolve(files.pathDirname(self.filename), self.name);
   if (ourSource.length > required.length)
     return false;
   return required.substr(0, ourSource.length) === ourSource;
@@ -44,12 +44,12 @@ RequireInvocation.prototype.why = function () {
     walk = walk.parent;
   }
 
-  var path = require('path');
+  var files = require('./files.js');
   if (! walk)
     return "???";
   if (last)
-    return path.basename(walk.name) + ":" + path.basename(last.name);
-  return path.basename(walk.name);
+    return files.pathBasename(walk.name) + ":" + files.pathBasename(last.name);
+  return files.pathBasename(walk.name);
 };
 
 exports.start = function () {

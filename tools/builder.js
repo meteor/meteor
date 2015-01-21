@@ -1,8 +1,6 @@
-var path = require('path');
 var watch = require('./watch.js');
 var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
-var fs = require('fs');
 var _ = require('underscore');
 
 // Builder encapsulates much of the file-handling logic need to create
@@ -40,9 +38,9 @@ var Builder = function (options) {
   // builds can run in parallel. The disadvantage is that stale build
   // files hang around forever. For now, go with the former.
   var nonce = Math.floor(Math.random() * 999999);
-  self.buildPath = path.join(path.dirname(self.outputPath),
-                             '.build' + nonce + "." +
-                             path.basename(self.outputPath));
+  self.buildPath = files.pathJoin(files.pathDirname(self.outputPath),
+                                  '.build' + nonce + "." +
+                                    files.pathBasename(self.outputPath));
   files.rm_recursive(self.buildPath);
   files.mkdir_p(self.buildPath, 0755);
 
@@ -59,17 +57,17 @@ _.extend(Builder.prototype, {
   _ensureDirectory: function (relPath) {
     var self = this;
 
-    var parts = path.normalize(relPath).split(path.sep);
+    var parts = files.pathNormalize(relPath).split(files.pathSep);
     if (parts.length > 1 && parts[parts.length - 1] === '')
       parts.pop(); // remove trailing slash
 
     var partsSoFar = [];
     _.each(parts, function (part) {
       partsSoFar.push(part);
-      var partial = partsSoFar.join(path.sep);
+      var partial = partsSoFar.join(files.pathSep);
       if (! (partial in self.usedAsFile)) {
         // It's new -- create it
-        fs.mkdirSync(path.join(self.buildPath, partial), 0755);
+        files.mkdir(files.pathJoin(self.buildPath, partial), 0755);
         self.usedAsFile[partial] = false;
       } else if (self.usedAsFile[partial]) {
         // Already exists and is a file. Oops.
@@ -85,7 +83,7 @@ _.extend(Builder.prototype, {
   _sanitize: function (relPath, isDirectory) {
     var self = this;
 
-    var parts = relPath.split(path.sep);
+    var parts = relPath.split(files.pathSep);
     var partsOut = [];
     for (var i = 0; i < parts.length; i++) {
       var part = parts[i];
@@ -109,7 +107,7 @@ _.extend(Builder.prototype, {
       // Make sure it's sufficiently unique
       var suffix = '';
       while (true) {
-        var candidate = path.join(partsOut.join(path.sep), part + suffix + ext);
+        var candidate = files.pathJoin(partsOut.join(files.pathSep), part + suffix + ext);
         if (candidate.length) {
           // If we've never heard of this, then it's unique enough.
           if (!_.has(self.usedAsFile, candidate))
@@ -130,7 +128,7 @@ _.extend(Builder.prototype, {
       partsOut.push(part + suffix + ext);
     }
 
-    return partsOut.join(path.sep);
+    return partsOut.join(files.pathSep);
   },
 
   // Write either a buffer or the contents of a file to `relPath` (a
@@ -157,7 +155,7 @@ _.extend(Builder.prototype, {
     options = options || {};
 
     // Ensure no trailing slash
-    if (relPath.slice(-1) === path.sep)
+    if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
 
     // In sanitize mode, ensure path does not contain segments like
@@ -173,18 +171,19 @@ _.extend(Builder.prototype, {
         throw new Error("May only pass one of data and file, not both");
       data = options.data;
     } else if (options.file) {
-      data = watch.readAndWatchFile(self.watchSet, path.resolve(options.file));
+      data =
+        watch.readAndWatchFile(self.watchSet, files.pathResolve(options.file));
     }
 
-    self._ensureDirectory(path.dirname(relPath));
-    var absPath = path.join(self.buildPath, relPath);
+    self._ensureDirectory(files.pathDirname(relPath));
+    var absPath = files.pathJoin(self.buildPath, relPath);
     if (options.symlink) {
-      fs.symlinkSync(options.symlink, absPath);
+      files.symlink(options.symlink, absPath);
     } else {
       // Builder is used to create build products, which should be read-only;
       // users shouldn't be manually editing automatically generated files and
       // expecting the results to "stick".
-      fs.writeFileSync(absPath, data,
+      files.writeFile(absPath, data,
                        { mode: options.executable ? 0555 : 0444 });
     }
     self.usedAsFile[relPath] = true;
@@ -199,11 +198,11 @@ _.extend(Builder.prototype, {
     var self = this;
 
     // Ensure no trailing slash
-    if (relPath.slice(-1) === path.sep)
+    if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
 
-    self._ensureDirectory(path.dirname(relPath));
-    fs.writeFileSync(path.join(self.buildPath, relPath),
+    self._ensureDirectory(files.pathDirname(relPath));
+    files.writeFile(files.pathJoin(self.buildPath, relPath),
                      new Buffer(JSON.stringify(data, null, 2), 'utf8'),
                      {mode: 0444});
 
@@ -229,22 +228,22 @@ _.extend(Builder.prototype, {
     options = options || {};
 
     // Ensure no trailing slash
-    if (relPath.slice(-1) === path.sep)
+    if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
 
-    var parts = relPath.split(path.sep);
+    var parts = relPath.split(files.pathSep);
     var partsSoFar = [];
     for (var i = 0; i < parts.length; i ++) {
       var part = parts[i];
       partsSoFar.push(part);
-      var soFar = partsSoFar.join(path.sep);
+      var soFar = partsSoFar.join(files.pathSep);
       if (self.usedAsFile[soFar])
         throw new Error("Path reservation conflict: " + relPath);
 
       var shouldBeDirectory = (i < parts.length - 1) || options.directory;
       if (shouldBeDirectory) {
         if (! (soFar in self.usedAsFile)) {
-          fs.mkdirSync(path.join(self.buildPath, soFar), 0755);
+          files.mkdir(files.pathJoin(self.buildPath, soFar), 0755);
           self.usedAsFile[soFar] = false;
         }
       } else {
@@ -253,7 +252,7 @@ _.extend(Builder.prototype, {
     }
 
     // Return the path we reserved.
-    return path.join(self.buildPath, relPath);
+    return files.pathJoin(self.buildPath, relPath);
   },
 
   // Generate and reserve a unique name for a file based on `relPath`,
@@ -315,10 +314,10 @@ _.extend(Builder.prototype, {
     options = options || {};
 
     var normOptionsTo = options.to;
-    if (normOptionsTo.slice(-1) === path.sep)
+    if (normOptionsTo.slice(-1) === files.pathSep)
       normOptionsTo = normOptionsTo.slice(0, -1);
 
-    var absPathTo = path.join(self.buildPath, normOptionsTo);
+    var absPathTo = files.pathJoin(self.buildPath, normOptionsTo);
     if (self.shouldSymlink) {
       if (options.specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
@@ -337,17 +336,17 @@ _.extend(Builder.prototype, {
         // XXX This is somewhat broken: what if the reason we're in
         // self.usedAsFile is because an immediate child of ours was reserved as
         // a file but not actually written yet?
-        var children = fs.readdirSync(absPathTo);
+        var children = files.readdir(absPathTo);
         if (_.isEmpty(children)) {
-          fs.rmdirSync(absPathTo);
+          files.rmdir(absPathTo);
         } else {
           canSymlink = false;
         }
       }
 
       if (canSymlink) {
-        self._ensureDirectory(path.dirname(normOptionsTo));
-        fs.symlinkSync(path.resolve(options.from), absPathTo);
+        self._ensureDirectory(files.pathDirname(normOptionsTo));
+        files.symlink(files.pathResolve(options.from), absPathTo);
         return;
       }
     }
@@ -358,8 +357,8 @@ _.extend(Builder.prototype, {
       specificPaths = {};
       _.each(options.specificFiles, function (f) {
         while (f !== '.') {
-          specificPaths[path.join(normOptionsTo, f)] = true;
-          f = path.dirname(f);
+          specificPaths[files.pathJoin(normOptionsTo, f)] = true;
+          f = files.pathDirname(f);
         }
       });
     }
@@ -367,15 +366,15 @@ _.extend(Builder.prototype, {
     var walk = function (absFrom, relTo) {
       self._ensureDirectory(relTo);
 
-      _.each(fs.readdirSync(absFrom), function (item) {
-        var thisAbsFrom = path.resolve(absFrom, item);
-        var thisRelTo = path.join(relTo, item);
+      _.each(files.readdir(absFrom), function (item) {
+        var thisAbsFrom = files.pathResolve(absFrom, item);
+        var thisRelTo = files.pathJoin(relTo, item);
 
         if (specificPaths && !_.has(specificPaths, thisRelTo)) {
           return;
         }
 
-        var fileStatus = fs.lstatSync(thisAbsFrom);
+        var fileStatus = files.lstat(thisAbsFrom);
 
         var itemForMatch = item;
         var isDirectory = fileStatus.isDirectory();
@@ -395,13 +394,14 @@ _.extend(Builder.prototype, {
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo);
         } else if (fileStatus.isSymbolicLink()) {
-          fs.symlinkSync(fs.readlinkSync(thisAbsFrom),
-                         path.resolve(self.buildPath, thisRelTo));
+          files.symlink(files.readlink(thisAbsFrom),
+                         files.pathResolve(self.buildPath, thisRelTo));
           // A symlink counts as a file, as far as "can you put something under
           // it" goes.
           self.usedAsFile[thisRelTo] = true;
         } else {
-          files.copyFile(thisAbsFrom, path.resolve(self.buildPath, thisRelTo),
+          files.copyFile(thisAbsFrom,
+                         files.pathResolve(self.buildPath, thisRelTo),
                          fileStatus.mode);
           self.usedAsFile[thisRelTo] = true;
         }
@@ -423,7 +423,7 @@ _.extend(Builder.prototype, {
     var methods = ["write", "writeJson", "reserve", "generateFilename",
                    "copyDirectory", "enter"];
     var subBuilder = {};
-    var relPathWithSep = relPath + path.sep;
+    var relPathWithSep = relPath + files.pathSep;
 
     _.each(methods, function (method) {
       subBuilder[method] = function (/* arguments */) {
@@ -432,12 +432,12 @@ _.extend(Builder.prototype, {
         if (method !== "copyDirectory") {
           // Normal method (relPath as first argument)
           args = _.clone(args);
-          args[0] = path.join(relPath, args[0]);
+          args[0] = files.pathJoin(relPath, args[0]);
         } else {
           // with copyDirectory the path we have to fix up is inside
           // an options hash
           args[0] = _.clone(args[0]);
-          args[0].to = path.join(relPath, args[0].to);
+          args[0].to = files.pathJoin(relPath, args[0].to);
         }
 
         var ret = self[method].apply(self, args);

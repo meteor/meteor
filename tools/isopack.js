@@ -3,8 +3,6 @@ var archinfo = require('./archinfo.js');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('./buildmessage.js');
-var fs = require('fs');
-var path = require('path');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('./watch.js');
@@ -310,9 +308,9 @@ _.extend(Isopack.prototype, {
     var addSourceFilesFromWatchSet = function (watchSet) {
       _.each(watchSet.files, function (hash, filename) {
         anySourceFiles = true;
-        var relativePath = path.relative(sourceRoot, filename);
+        var relativePath = files.pathRelative(sourceRoot, filename);
         // We only want files that are actually under sourceRoot.
-        if (relativePath.substr(0, 3) === '..' + path.sep)
+        if (relativePath.substr(0, 3) === '..' + files.pathSep)
           return;
         sourceFiles[relativePath] = true;
       });
@@ -524,14 +522,14 @@ _.extend(Isopack.prototype, {
     // more unibuilds are merged in). For any given call to
     // _loadUnibuildsFromPath, let's ensure we see a consistent isopack by
     // realpath'ing dir.
-    dir = fs.realpathSync(dir);
+    dir = files.realpath(dir);
 
     var mainJson;
 
     // deal with different versions of "isopack.json", backwards compatible
-    var isopackJsonPath = path.join(dir, "isopack.json");
-    if (fs.existsSync(isopackJsonPath)) {
-      var isopackJson = JSON.parse(fs.readFileSync(isopackJsonPath));
+    var isopackJsonPath = files.pathJoin(dir, "isopack.json");
+    if (files.exists(isopackJsonPath)) {
+      var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
 
       if (isopackJson[currentFormat]) {
         mainJson = isopackJson[currentFormat];
@@ -543,9 +541,9 @@ _.extend(Isopack.prototype, {
     } else {
       // super old version with different file name
       // XXX COMPAT WITH 0.9.3
-      var unipackageJsonPath = path.join(dir, "unipackage.json");
-      if (fs.existsSync(unipackageJsonPath)) {
-        mainJson = JSON.parse(fs.readFileSync(unipackageJsonPath));
+      var unipackageJsonPath = files.pathJoin(dir, "unipackage.json");
+      if (files.exists(unipackageJsonPath)) {
+        mainJson = JSON.parse(files.readFile(unipackageJsonPath));
 
         // in the old format, builds were called unibuilds
         // use string to make sure this doesn't get caught in a find/replace
@@ -616,7 +614,7 @@ _.extend(Isopack.prototype, {
     _.each(mainJson.plugins, function (pluginMeta) {
       rejectBadPath(pluginMeta.path);
 
-      var plugin = bundler.readJsImage(path.join(dir, pluginMeta.path));
+      var plugin = bundler.readJsImage(files.pathJoin(dir, pluginMeta.path));
 
       if (!_.has(self.plugins, pluginMeta.name)) {
         self.plugins[pluginMeta.name] = {};
@@ -640,8 +638,9 @@ _.extend(Isopack.prototype, {
         return;
 
       var unibuildJson = JSON.parse(
-        fs.readFileSync(path.join(dir, unibuildMeta.path)));
-      var unibuildBasePath = path.dirname(path.join(dir, unibuildMeta.path));
+        files.readFile(files.pathJoin(dir, unibuildMeta.path)));
+      var unibuildBasePath =
+        files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
       if (unibuildJson.format !== "unipackage-unibuild-pre1")
         throw new Error("Unsupported isopack unibuild format: " +
@@ -650,7 +649,8 @@ _.extend(Isopack.prototype, {
       var nodeModulesPath = null;
       if (unibuildJson.node_modules) {
         rejectBadPath(unibuildJson.node_modules);
-        nodeModulesPath = path.join(unibuildBasePath, unibuildJson.node_modules);
+        nodeModulesPath =
+          files.pathJoin(unibuildBasePath, unibuildJson.node_modules);
       }
 
       var prelinkFiles = [];
@@ -664,12 +664,13 @@ _.extend(Isopack.prototype, {
         // throws instead of acting like POSIX read:
         // https://github.com/joyent/node/issues/5685
         if (resource.length > 0) {
-          var fd = fs.openSync(path.join(unibuildBasePath, resource.file), "r");
+          var fd =
+            files.open(files.pathJoin(unibuildBasePath, resource.file), "r");
           try {
-            var count = fs.readSync(
+            var count = files.read(
               fd, data, 0, resource.length, resource.offset);
           } finally {
-            fs.closeSync(fd);
+            files.close(fd);
           }
           if (count !== resource.length)
             throw new Error("couldn't read entire resource");
@@ -682,8 +683,8 @@ _.extend(Isopack.prototype, {
           };
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
-            prelinkFile.sourceMap = fs.readFileSync(
-              path.join(unibuildBasePath, resource.sourceMap), 'utf8');
+            prelinkFile.sourceMap = files.readFile(
+              files.pathJoin(unibuildBasePath, resource.sourceMap), 'utf8');
           }
           prelinkFiles.push(prelinkFile);
         } else if (_.contains(["head", "body", "css", "js", "asset"],
@@ -877,7 +878,7 @@ _.extend(Isopack.prototype, {
               throw new Error("Resource data must be a Buffer");
             unibuildJson.resources.push({
               type: resource.type,
-              file: path.join(unibuildDir, resource.type),
+              file: files.pathJoin(unibuildDir, resource.type),
               length: resource.data.length,
               offset: offset[resource.type]
             });
@@ -887,7 +888,7 @@ _.extend(Isopack.prototype, {
         });
         _.each(concat, function (parts, type) {
           if (parts.length) {
-            builder.write(path.join(unibuildDir, type), {
+            builder.write(files.pathJoin(unibuildDir, type), {
               data: Buffer.concat(concat[type], offset[type])
             });
           }
@@ -901,7 +902,7 @@ _.extend(Isopack.prototype, {
           unibuildJson.resources.push({
             type: resource.type,
             file: builder.writeToGeneratedFilename(
-              path.join(unibuildDir, resource.servePath),
+              files.pathJoin(unibuildDir, resource.servePath),
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
@@ -916,7 +917,7 @@ _.extend(Isopack.prototype, {
           var resource = {
             type: 'prelink',
             file: builder.writeToGeneratedFilename(
-              path.join(unibuildDir, file.servePath),
+              files.pathJoin(unibuildDir, file.servePath),
               { data: data }),
             length: data.length,
             offset: 0,
@@ -926,7 +927,7 @@ _.extend(Isopack.prototype, {
           if (file.sourceMap) {
             // Write the source map.
             resource.sourceMap = builder.writeToGeneratedFilename(
-              path.join(unibuildDir, file.servePath + '.map'),
+              files.pathJoin(unibuildDir, file.servePath + '.map'),
               { data: new Buffer(file.sourceMap, 'utf8') }
             );
           }
@@ -957,7 +958,7 @@ _.extend(Isopack.prototype, {
           mainJson.plugins.push({
             name: name,
             arch: plugin.arch,
-            path: path.join(pluginDir, relPath)
+            path: files.pathJoin(pluginDir, relPath)
           });
         });
       });
@@ -975,7 +976,7 @@ _.extend(Isopack.prototype, {
         var rootDir = toolMeta.rootDir;
         delete toolMeta.rootDir;
         builder.copyDirectory({
-          from: path.join(rootDir, toolMeta.path),
+          from: files.pathJoin(rootDir, toolMeta.path),
           to: toolMeta.path
         });
         if (!mainJson.tools) {
@@ -1059,7 +1060,7 @@ _.extend(Isopack.prototype, {
     var devBundleIgnore = _.clone(bundler.ignoreFiles);
     devBundleIgnore.push(/BrowserStackLocal/, /browserstack-webdriver/);
     builder.copyDirectory({
-      from: path.join(files.getDevBundle()),
+      from: files.pathJoin(files.getDevBundle()),
       to: 'dev_bundle',
       ignore: devBundleIgnore
     });
@@ -1090,7 +1091,8 @@ _.extend(Isopack.prototype, {
           if (buildmessage.jobHasMessages())
             return;
 
-          image.write(builder.enter(path.join('isopackets', isopacketName)));
+          image.write(
+            builder.enter(files.pathJoin('isopackets', isopacketName)));
         });
       });
     });

@@ -1,5 +1,3 @@
-var fs = require('fs');
-var path = require('path');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var auth = require('./auth.js');
@@ -22,6 +20,29 @@ var projectContextModule = require('./project-context.js');
 var openPackageServerConnection = function (packageServerUrl) {
   var serverUrl = packageServerUrl || config.getPackageServerUrl();
   return authClient.openServiceConnection(serverUrl);
+};
+
+// We don't let the user upload a blank README for UX reasons, but we would
+// prefer that the server move to a world with 'readme' files for everything in
+// the future. As a way to breach these interfaces, for now, we are going to
+// upload blank documentation files when null docs are requested.
+//
+// This function generates a Readme object for a blank readme file, as well as
+// the file itself.
+var generateBlankReadme = function () {
+  return {
+    contents: "",
+    excerpt: "",
+    hash: files.blankHash
+  };
+};
+
+// Save a readme file to a temporary path.
+var saveReadmeToTmp = function (readmeInfo) {
+  var tempReadmeDir = files.mkdtemp('readme');
+  var readmePath = files.pathJoin(tempReadmeDir, "Readme.md");
+  files.writeFileAtomically(readmePath, readmeInfo.contents);
+  return readmePath;
 };
 
 // Given a connection, makes a call to the package server.  (Checks to see if
@@ -228,11 +249,11 @@ var bundleSource = function (isopack, includeSources, packageDir) {
 
   var tempDir = files.mkdtemp('build-source-package-');
   var packageTarName = name + '-' + isopack.version + '-source';
-  var dirToTar = path.join(tempDir, 'source', packageTarName);
+  var dirToTar = files.pathJoin(tempDir, 'source', packageTarName);
   // XXX name probably needs to be escaped for windows?
   // XXX note that publish-for-arch thinks it knows how this tarball is laid
   //     out, which is a bit of a shame
-  var sourcePackageDir = path.join(dirToTar, name);
+  var sourcePackageDir = files.pathJoin(dirToTar, name);
   if (! files.mkdir_p(sourcePackageDir)) {
     buildmessage.error('Failed to create temporary source directory: ' +
                        sourcePackageDir);
@@ -245,8 +266,8 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   // directory structure that we want (<package name>-<version-source/
   // at the top level).
   _.each(includeSources, function (f) {
-    files.copyFile(path.join(packageDir, f),
-                   path.join(sourcePackageDir, f));
+    files.copyFile(files.pathJoin(packageDir, f),
+                   files.pathJoin(sourcePackageDir, f));
   });
 
   // Write a package map to `.versions` inside the source tarball.  Note that
@@ -257,8 +278,8 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   //  (b) It is ALWAYS put into the source tarball, even if the package came
   //      from inside an app, whereas the package-source-tree .versions file
   //      is only used for standalone packages
-  var packageMapFilename = path.join(sourcePackageDir, '.versions');
-  if (fs.existsSync(packageMapFilename))
+  var packageMapFilename = files.pathJoin(sourcePackageDir, '.versions');
+  if (files.exists(packageMapFilename))
     throw Error(".versions file already exists? " + packageMapFilename);
   var pluginProviderPackageMap = isopack.pluginProviderPackageMap;
   if (! pluginProviderPackageMap)
@@ -272,7 +293,7 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   // temp dir gets cleaned up on process exit, so we don't have to worry
   // about cleaning up our tarball (or our copied source files)
   // ourselves.
-  var sourceTarball = path.join(tempDir, packageTarName + '.tgz');
+  var sourceTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
   files.createTarball(dirToTar, sourceTarball);
 
   var tarballHash = files.fileHash(sourceTarball);
@@ -285,9 +306,13 @@ var bundleSource = function (isopack, includeSources, packageDir) {
   };
 };
 
-var uploadTarball = function (putUrl, tarball) {
-  var size = fs.statSync(tarball).size;
-  var rs = fs.createReadStream(tarball);
+// Uploads a file at a filepath to the HTTP put URL.
+//
+// Returns true on success and false on failure.
+var uploadFile = function (putUrl, filepath) {
+  buildmessage.assertInJob();
+  var size = files.stat(filepath).size;
+  var rs = files.createReadStream(filepath);
   try {
     // Use getUrl instead of request, to throw on 4xx/5xx.
     httpHelpers.getUrl({
@@ -301,19 +326,23 @@ var uploadTarball = function (putUrl, tarball) {
       bodyStream: rs,
       bodyStreamLength: size
     });
+  } catch (err) {
+    buildmessage.error(err.error.toString());
+    return false;
   } finally {
     rs.close();
   }
+  return true;
 };
 
-exports.uploadTarball = uploadTarball;
+exports.uploadFile = uploadFile;
 
 var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
 
   var tempDir = files.mkdtemp('build-package-');
   var packageTarName = isopack.tarballName();
-  var tarInputDir = path.join(tempDir, packageTarName);
+  var tarInputDir = files.pathJoin(tempDir, packageTarName);
 
   // Note that we do need to do this even though we already have the isopack on
   // disk in an IsopackCache, because we don't want to include
@@ -321,7 +350,7 @@ var bundleBuild = function (isopack) {
   // includeIsopackBuildInfo to saveToPath here.)
   isopack.saveToPath(tarInputDir);
 
-  var buildTarball = path.join(tempDir, packageTarName + '.tgz');
+  var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
@@ -332,7 +361,7 @@ var bundleBuild = function (isopack) {
     // differences. The tree hash will still notice any actual CODE changes in
     // the npm packages.
     ignore: function (relativePath) {
-      var pieces = relativePath.split(path.sep);
+      var pieces = relativePath.split(files.pathSep);
       return pieces.length && _.last(pieces) === 'package.json'
         && _.contains(pieces, 'npm');
     }
@@ -349,18 +378,19 @@ exports.bundleBuild = bundleBuild;
 
 var createAndPublishBuiltPackage = function (conn, isopack) {
   buildmessage.assertInJob();
+  var name = isopack.name;
 
   // Note: we really want to do this before createPackageBuild, because the URL
   // we get from createPackageBuild will expire!
   var bundleResult;
-  buildmessage.enterJob("bundling build", function () {
+  buildmessage.enterJob("bundling build for " + name, function () {
     bundleResult = bundleBuild(isopack);
   });
   if (buildmessage.jobHasMessages())
     return;
 
   var uploadInfo;
-  buildmessage.enterJob('creating package build', function () {
+  buildmessage.enterJob('creating package build for ' + name, function () {
     uploadInfo = callPackageServerBM(conn, 'createPackageBuild', {
       packageName: isopack.name,
       version: isopack.version,
@@ -371,13 +401,13 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
     return;
 
   buildmessage.enterJob("uploading build", function () {
-    uploadTarball(uploadInfo.uploadUrl,
-                  bundleResult.buildTarball);
+    uploadFile(uploadInfo.uploadUrl,
+               bundleResult.buildTarball);
   });
   if (buildmessage.jobHasMessages())
     return;
 
-  buildmessage.enterJob('publishing package build', function () {
+  buildmessage.enterJob('publishing package build for ' + name, function () {
     callPackageServerBM(conn, 'publishPackageBuild',
                         uploadInfo.uploadToken,
                         bundleResult.tarballHash,
@@ -392,6 +422,88 @@ exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
 // Handle an error thrown on trying to connect to the package server.
 exports.handlePackageServerConnectionError = function (error) {
   authClient.handleConnectionError(error, "package server");
+};
+
+
+// Update the package metdata in the server catalog. Chane the docs,
+// descriptions and the Git URL to new values.
+//
+// options:
+// - packageSource: the packageSource for this package.
+// - readmeInfo: null, or an object containing docs information for this package.
+// - connection: the open, logged-in connection over which we should talk to the
+//   package server. DO NOT CLOSE this connection here.
+//
+// Return true on success and an error code otherwise.
+exports.updatePackageMetadata = function (options) {
+  buildmessage.assertInJob();
+
+  var packageSource = options.packageSource;
+  var conn = options.connection;
+  var readmeInfo = options.readmeInfo;
+
+  var name = packageSource.name;
+  var version = packageSource.version;
+
+  if (! version) {
+    buildmessage.error(
+      "Package cannot be updated because it doesn't have a version");
+    return;
+  }
+
+  // For now, documentation is optional on the client, so we have to give people
+  // a way to remove it with 'documentation: null'.
+  if (! readmeInfo) {
+    readmeInfo = generateBlankReadme();
+  }
+
+  var dataToUpdate = {
+    git: packageSource.metadata.git || "",
+    description: packageSource.metadata.summary,
+    longDescription: readmeInfo.excerpt
+  };
+
+  // Check that the metadata fits under the established limits, and give helpful
+  // feedback.
+  if (! dataToUpdate["description"]) {
+    buildmessage.error("Please provide a short description to use in 'meteor search'");
+    return;
+  }
+
+  if (dataToUpdate["description"] &&
+      dataToUpdate["description"].length > 100) {
+    buildmessage.error("Summary must be under 100 chars.");
+    return;
+  }
+  if (dataToUpdate["longDescription"].length > 1500) {
+    buildmessage.error(
+      "Longform package description is too long. Meteor uses the section of",
+      "the Markdown documentation file between the first and second",
+      "headings. That section must be less than 1500 characters long.");
+    return;
+  }
+
+  // Update the general metadata.
+  var versionIdentifier = { packageName: name, version: version };
+  buildmessage.enterJob('updating metadata', function () {
+    callPackageServerBM(
+      conn, "changeVersionMetadata", versionIdentifier, dataToUpdate);
+  });
+  if (buildmessage.jobHasMessages()) return;
+
+  // Upload the new Readme.
+  buildmessage.enterJob('uploading documentation', function () {
+    var readmePath = saveReadmeToTmp(readmeInfo);
+    var uploadInfo =
+          callPackageServerBM(conn, "createReadme", versionIdentifier);
+    if (! uploadInfo) return;
+    if (! uploadFile(uploadInfo.url, readmePath)) return;
+    callPackageServerBM(
+      conn, "publishReadme", uploadInfo.uploadToken, { hash: readmeInfo.hash });
+  });
+  if (buildmessage.jobHasMessages()) return;
+
+
 };
 
 // Publish the package information into the server catalog. Create new records
@@ -467,6 +579,40 @@ exports.publishPackage = function (options) {
     }
   }
 
+  // Check that our documentation exists (or we know that it doesn't) and has
+  // been filled out.
+  var readmeInfo = buildmessage.enterJob(
+    "processing documentation",
+    function () {
+      return packageSource.processReadme();
+  });
+  if (buildmessage.jobHasMessages())
+    return;
+  if (readmeInfo && (readmeInfo.hash === files.blankHash)) {
+    buildmessage.error(
+      "Your documentation file is blank, so users may have trouble figuring " +
+      "out how to use your package. Please fill it out, or " +
+      "set 'documentation: null' in your Package.describe");
+    return;
+  }
+  if (readmeInfo && readmeInfo.excerpt.length > 1500) {
+    buildmessage.error(
+      "Longform package description is too long. Meteor uses the section of",
+      "the Markdown documentation file between the first and second",
+      "headings. That section must be less than 1500 characters long.");
+    return;
+  }
+
+
+  // We don't let the user upload a blank README for UX reasons, but we would
+  // prefer that the server move to a world with 'readme' files for everything
+  // in the future. This helps unite these interfaces, and makes our code easier
+  // to reason about in the future.
+  if (! readmeInfo) {
+    readmeInfo = generateBlankReadme();
+  }
+  var readmePath = saveReadmeToTmp(readmeInfo);
+
   // Check that the package does not have any unconstrained references.
   var packageDeps = packageSource.getDependencyMetadata();
   _.each(packageDeps, function(refs, label) {
@@ -525,7 +671,7 @@ exports.publishPackage = function (options) {
   }
 
   var sourceBundleResult;
-  buildmessage.enterJob("bundling source", function () {
+  buildmessage.enterJob("bundling source for " + name, function () {
     sourceBundleResult = bundleSource(
       isopack, sourceFiles, packageSource.sourceRoot);
   });
@@ -534,7 +680,7 @@ exports.publishPackage = function (options) {
 
   // Create the package. Check that the metadata exists.
   if (options.new) {
-    buildmessage.enterJob("creating package", function () {
+    buildmessage.enterJob("creating package " + name, function () {
       callPackageServerBM(conn, 'createPackage', {
         name: packageSource.name
       });
@@ -557,15 +703,17 @@ exports.publishPackage = function (options) {
     // XXX check that we're actually providing something new?
   } else {
     var uploadInfo;
-    buildmessage.enterJob("creating package version", function () {
+    buildmessage.enterJob("pre-publishing package " + name, function () {
       var uploadRec = {
         packageName: packageSource.name,
         version: version,
         description: packageSource.metadata.summary,
+        longDescription: readmeInfo.excerpt,
         git: packageSource.metadata.git,
         compilerVersion: compiler.BUILT_BY,
         containsPlugins: packageSource.containsPlugins(),
         debugOnly: packageSource.debugOnly,
+        exports: packageSource.getExports(),
         releaseName: release.current.name,
         dependencies: packageDeps
       };
@@ -578,22 +726,32 @@ exports.publishPackage = function (options) {
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
 
-    buildmessage.enterJob("uploading source", function () {
-      uploadTarball(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+    // Documentation is smaller than the source. Upload it first, to minimize
+    // the chances of PUT URLs expiring. (XXX: in the far future, parallelize this)
+    buildmessage.enterJob("uploading documentation", function () {
+      uploadFile(uploadInfo.readmeUrl, readmePath);
     });
     if (buildmessage.jobHasMessages())
       return;
 
+    buildmessage.enterJob("uploading source", function () {
+      uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
+    });
+    if (buildmessage.jobHasMessages())
+      return;
+
+    var hashes = {
+      tarballHash: sourceBundleResult.tarballHash,
+      treeHash: sourceBundleResult.treeHash,
+      readmeHash: readmeInfo.hash
+    };
     buildmessage.enterJob("publishing package version", function () {
-      callPackageServerBM(conn, 'publishPackageVersion',
-                          uploadInfo.uploadToken,
-                          { tarballHash: sourceBundleResult.tarballHash,
-                            treeHash: sourceBundleResult.treeHash });
+      callPackageServerBM(
+        conn, 'publishPackageVersion', uploadInfo.uploadToken, hashes);
     });
     if (buildmessage.jobHasMessages())
       return;
   }
-
   if (! options.doNotPublishBuild) {
     createAndPublishBuiltPackage(conn, isopack);
     if (buildmessage.jobHasMessages())
@@ -603,7 +761,7 @@ exports.publishPackage = function (options) {
   return;
 };
 
-// Call the server to ask if we are authorized to update this release or
+  // Call the server to ask if we are authorized to update this release or
 // package. This is a way to save time before sending data to the server. It
 // will mostly ignore most errors (just in case we have a flaky network connection or
 // something) and let the method deal with those.

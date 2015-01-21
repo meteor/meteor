@@ -1,3 +1,5 @@
+var PV = PackageVersion;
+var CS = ConstraintSolver;
 
 var makeResolver = function (data) {
   var Versions = new LocalCollection;
@@ -26,12 +28,12 @@ var makeResolver = function (data) {
     getSortedVersionRecords: function (name) {
       var records = Versions.find({packageName: name}).fetch();
       records.sort(function (a, b) {
-        return PackageVersion.compare(a.version, b.version);
+        return PV.compare(a.version, b.version);
       });
       return records;
     }
   };
-  return new ConstraintSolver.PackagesResolver(catalogStub);
+  return new CS.PackagesResolver(catalogStub);
 };
 
 var defaultResolver = makeResolver([
@@ -68,7 +70,7 @@ splitArgs = function (deps) {
       dependencies.push(dep);
     }
     if (constr) {
-      constraints.push(PackageVersion.parseConstraint(dep + "@" + constr));
+      constraints.push(PV.parseConstraint(dep + "@" + constr));
     }
   });
   return {dependencies: dependencies, constraints: constraints};
@@ -88,8 +90,7 @@ var testWithResolver = function (test, resolver, f) {
       var dependencies = splitArgs(deps).dependencies;
       var constraints = splitArgs(deps).constraints;
 
-      var resolvedDeps = resolver.resolve(dependencies, constraints,
-                                          {_testing: true});
+      var resolvedDeps = resolver.resolve(dependencies, constraints);
     }, regexp);
   };
   f(t, FAIL);
@@ -103,7 +104,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
       "sparkle": "2.1.1",
       "jquery-widgets": "1.0.0",
       "jquery": "1.8.2"
-    }, { _testing: true });
+    });
 
     t({ "sparky-forms": "=1.1.2", "awesome-dropdown": "=1.5.0" }, {
       "sparky-forms": "1.1.2",
@@ -113,7 +114,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
       "jquery": "1.8.2",
       "awesome-dropdown": "1.5.0",
       "dropdown": "1.2.2"
-    }, { _testing: true });
+    });
   });
 });
 
@@ -131,7 +132,7 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
       "jquery": "1.8.2",
       "awesome-dropdown": "1.5.0",
       "dropdown": "1.2.2"
-    }, { _testing: true });
+    });
   });
 });
 
@@ -199,7 +200,7 @@ Tinytest.add("constraint solver - any-of constraint", function (test) {
       "one-of": "1.0.0",
       "important": "1.0.0",
       "indirect": "2.0.0"
-    }, { _testing: true });
+    });
   });
 
   resolver = makeResolver([
@@ -216,18 +217,18 @@ Tinytest.add("constraint solver - any-of constraint", function (test) {
       "one-of": "1.0.0",
       "important": "1.0.0",
       "indirect": "1.0.0"
-    }, { _testing: true });
+    });
 
     t({ "one-of-equal": "1.0.0", "indirect": "2.0.0" }, {
       "one-of-equal": "1.0.0",
       "indirect": "2.0.1"
-    }, { _testing: true });
+    });
 
     t({ "one-of-equal": "1.0.0", "one-of": "1.0.0" }, {
       "one-of-equal": "1.0.0",
       "one-of": "1.0.0",
       "indirect": "1.0.0"
-    }, { _testing: true });
+    });
 
     FAIL({"one-of-equal": "1.0.0",
           "one-of": "1.0.0",
@@ -247,7 +248,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "jquery-widgets": "1.0.0",
       "jquery": "1.8.2",
       "sparkle": "2.1.1"
-    }, { _testing: true });
+    });
 
     // If you just requires something compatible with 1.0.0, we end up choosing
     // 1.1.2.
@@ -257,7 +258,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparkle": "2.1.1",
       "jquery-widgets": "1.0.0",
       "jquery": "1.8.2"
-    }, { _testing: true });
+    });
 
     // But if you ask for something compatible with 1.0.0 and have a previous
     // solution with 1.0.0, the previous solution works (since it is achievable).
@@ -268,7 +269,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "jquery-widgets": "1.0.0",
       "jquery": "1.8.2",
       "sparkle": "2.1.1"
-    }, { _testing: true, previousSolution: {
+    }, { previousSolution: {
       "sparky-forms": "1.0.0"
     }});
 
@@ -281,7 +282,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparkle": "2.1.1",
       "jquery-widgets": "1.0.0",
       "jquery": "1.8.2"
-    }, { _testing: true, previousSolution: {
+    }, { previousSolution: {
       "sparky-forms": "1.0.0"
     }});
   });
@@ -289,7 +290,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
 
 
 Tinytest.add("constraint solver - no constraint dependency - anything", function (test) {
-  var versions = defaultResolver.resolve(["sparkle"], [], { _testing: true }).answer;
+  var versions = defaultResolver.resolve(["sparkle"], []).answer;
   test.isTrue(_.isString(versions.sparkle));
 });
 
@@ -297,8 +298,7 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],
-    [PackageVersion.parseConstraint("sparky-forms@1.1.2")],
-    { _testing: true }).answer;
+    [PV.parseConstraint("sparky-forms@1.1.2")]).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
 
@@ -309,6 +309,30 @@ Tinytest.add("constraint solver - build IDs", function (test) {
   ]), function (t) {
     t({ "foo": "1.0.0" }, {
       "foo": "1.0.1"
-    }, { _testing: false });
+    });
   });
+});
+
+Tinytest.add("constraint solver - input serialization", function (test) {
+  var json = '{"dependencies":["sparky-forms"],"constraints":["sparky-forms@1.0.0"],"catalogCache":{"data":{"sparky-forms 1.0.0":["awesome-dropdown@=1.4.0"],"sparky-forms 1.1.2":["forms@=1.0.1","sparkle@=2.1.1"],"sparkle 1.0.0":[],"sparkle 2.1.0":["jquery@1.8.2"],"sparkle 2.1.1":["jquery@1.8.2"],"jquery 1.8.0":[],"jquery 1.8.2":[],"forms 1.0.1":["sparkle@2.1.0","jquery-widgets@1.0.0"],"jquery-widgets 1.0.0":["jquery@1.8.0","sparkle@2.1.1"],"jquery-widgets 1.0.2":["jquery@1.8.0","sparkle@2.1.1"],"awesome-dropdown 1.4.0":["dropdown@=1.2.2"],"awesome-dropdown 1.5.0":["dropdown@=1.2.2"],"dropdown 1.2.2":["jquery-widgets@1.0.0"]}}}';
+
+  var input1 = CS.Input.fromJSONable(JSON.parse(json));
+
+  test.equal(input1.dependencies, ["sparky-forms"]);
+  test.isTrue(input1.constraints[0] instanceof PV.PackageConstraint);
+  test.equal(input1.constraints.toString(), "sparky-forms@1.0.0");
+  test.isTrue(input1.catalogCache instanceof CS.CatalogCache);
+  test.equal(input1.upgrade, []);
+  test.equal(input1.anticipatedPrereleases, {});
+  test.equal(input1.previousSolution, null);
+
+  var obj1 = input1.toJSONable();
+  test.isFalse(_.has(obj1, 'upgrade'));
+  test.isFalse(_.has(obj1, 'anticipatedPrereleases'));
+  test.isFalse(_.has(obj1, 'previousSolution'));
+  var input2 = CS.Input.fromJSONable(obj1);
+  var obj2 = input2.toJSONable();
+
+  test.equal(JSON.stringify(obj1), json);
+  test.equal(JSON.stringify(obj2), json);
 });

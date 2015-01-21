@@ -1,5 +1,3 @@
-var fs = require('fs');
-var path = require('path');
 var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var watch = require('./watch.js');
@@ -83,11 +81,11 @@ _.extend(LocalCatalog.prototype, {
 
     self.localPackageSearchDirs = _.map(
       options.localPackageSearchDirs, function (p) {
-        return path.resolve(p);
+        return files.pathResolve(p);
       });
     self.explicitlyAddedLocalPackageDirs = _.map(
       options.explicitlyAddedLocalPackageDirs, function (p) {
-        return path.resolve(p);
+        return files.pathResolve(p);
       });
 
     self._computeEffectiveLocalPackages();
@@ -204,7 +202,8 @@ _.extend(LocalCatalog.prototype, {
     buildmessage.enterJob("looking for packages", function () {
       _.each(self.explicitlyAddedLocalPackageDirs, function (explicitDir) {
         var packageJs = watch.readAndWatchFile(
-          self.packageLocationWatchSet, path.join(explicitDir, 'package.js'));
+          self.packageLocationWatchSet,
+          files.pathJoin(explicitDir, 'package.js'));
         // We asked specifically for this directory, but it has no package!
         if (packageJs === null) {
           buildmessage.error("package has no package.js file", {
@@ -229,14 +228,14 @@ _.extend(LocalCatalog.prototype, {
           // readAndWatchDirectory adds a slash to the end of directory names to
           // differentiate them from filenames. Remove it.
           subdir = subdir.substr(0, subdir.length - 1);
-          var absPackageDir = path.join(searchDir, subdir);
+          var absPackageDir = files.pathJoin(searchDir, subdir);
 
           // Consider a directory to be a package source tree if it contains
           // 'package.js'. (We used to support isopacks in
           // localPackageSearchDirs, but no longer.)
           var packageJs = watch.readAndWatchFile(
             self.packageLocationWatchSet,
-            path.join(absPackageDir, 'package.js'));
+            files.pathJoin(absPackageDir, 'package.js'));
           if (packageJs !== null) {
             // Let earlier package directories override later package
             // directories.
@@ -309,6 +308,7 @@ _.extend(LocalCatalog.prototype, {
             version: packageSource.version,
             publishedBy: null,
             description: packageSource.metadata.summary,
+            git: packageSource.metadata.git,
             dependencies: packageSource.getDependencyMetadata(),
             source: null,
             lastUpdated: null,

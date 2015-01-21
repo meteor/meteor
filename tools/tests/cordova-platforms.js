@@ -9,7 +9,6 @@ selftest.define("add cordova platforms", function () {
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
 
   run = s.run("run", "android");
   run.matchErr("Please add the Android platform to your project first");

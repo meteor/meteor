@@ -1,16 +1,7 @@
-var fs = require('fs');
-var path = require('path');
 var _ = require('underscore');
-var util = require('util');
-var buildmessage = require('./buildmessage.js');
-var tropohouse = require('./tropohouse.js');
-var localCatalog = require('./catalog-local.js');
 var remoteCatalog = require('./catalog-remote.js');
-var files = require('./files.js');
-var utils = require('./utils.js');
-var config = require('./config.js');
-var packageClient = require('./package-client.js');
 var Console = require('./console.js').Console;
+var buildmessage = require('./buildmessage.js');
 
 var catalog = exports;
 
@@ -92,6 +83,56 @@ catalog.refreshOrWarn = function (options) {
   }
 };
 
+// Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
+// official catalog, does that and tries again.
+catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
+  buildmessage.assertInJob();
+
+  // Run `attempt` in a nested buildmessage context.
+  var messages = buildmessage.capture(attempt);
+
+  // Did it work? Great.
+  if (! messages.hasMessages()) {
+    return;
+  }
+
+  // Is refreshing unlikely to be useful, either because the error wasn't
+  // related to that, or because we tried to refresh recently, or because we're
+  // not allowed to refresh? Fail, merging the result of these errors into the
+  // current job.
+  if (! messages.hasMessageWithTag('refreshCouldHelp') ||
+      catalog.triedToRefreshRecently ||
+      catalog.official.offline) {
+    buildmessage.mergeMessagesIntoCurrentJob(messages);
+    return;
+  }
+
+  // Refresh!
+  // XXX This is a little hacky, as it shares a bunch of code with
+  // catalog.refreshOrWarn, which is a higher-level function that's allowed to
+  // log.
+  catalog.triedToRefreshRecently = true;
+  try {
+    catalog.official.refresh();
+    catalog.refreshFailed = false;
+  } catch (err) {
+    if (err.errorType !== 'DDP.ConnectionError')
+      throw err;
+    // First place the previous errors in the capture.
+    buildmessage.mergeMessagesIntoCurrentJob(messages);
+    // Then put an error representing this DDP error.
+    buildmessage.enterJob(
+      "refreshing package catalog to resolve previous errors",
+      function () {
+        buildmessage.error(err.message);
+      }
+    );
+    return;
+  }
+
+  // Try again, this time directly in the current buildmessage job.
+  attempt();
+};
 
 // As a work-around for [] !== [], we use a function to check whether values are acceptable
 var ACCEPT_NON_EMPTY = function (result) {

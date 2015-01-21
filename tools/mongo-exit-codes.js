@@ -5,7 +5,6 @@
 // Explanations have been rewritten, not copied, for license reasons.
 
 
-var path = require("path");
 var _ = require('underscore');
 
 exports.Codes = {

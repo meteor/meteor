@@ -1,6 +1,3 @@
-var fs = require("fs");
-var path = require("path");
-
 var files = require('./files.js');
 var utils = require('./utils.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
@@ -14,7 +11,7 @@ var Future = require('fibers/future');
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
 var runMongoShell = function (url) {
-  var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  var mongoPath = files.pathJoin(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
   // XXX mongo URLs are not real URLs (notably, the comma-separation for
   // multiple hosts). We've had a little better luck using the mongodb-uri npm
   // package.
@@ -171,7 +168,7 @@ var launchMongo = function (options) {
   var onExit = options.onExit || function () {};
 
   var noOplog = false;
-  var mongod_path = path.join(
+  var mongod_path = files.pathJoin(
     files.getDevBundle(), 'mongodb', 'bin', 'mongod');
   var replSetName = 'meteor';
 
@@ -182,8 +179,9 @@ var launchMongo = function (options) {
     if (options.multiple)
       throw Error("Can't specify multiple with fake mongod");
 
-    mongod_path = path.join(files.getCurrentToolsDir(),
-                            'tools', 'tests', 'fake-mongod', 'fake-mongod');
+    mongod_path = files.pathJoin(
+      files.getCurrentToolsDir(), 'tools',
+      'tests', 'fake-mongod', 'fake-mongod');
 
     // oplog support requires sending admin commands to mongod, so
     // it'd be hard to make fake-mongod support it.
@@ -191,7 +189,7 @@ var launchMongo = function (options) {
   }
 
   // add .gitignore if needed.
-  files.addToGitignore(path.join(options.appDir, '.meteor'), 'local');
+  files.addToGitignore(files.pathJoin(options.appDir, '.meteor'), 'local');
 
   var subHandles = [];
   var stopped = false;
@@ -241,7 +239,7 @@ var launchMongo = function (options) {
       var portFileExists = false;
       var matchingPortFileExists = false;
       try {
-        matchingPortFileExists = +(fs.readFileSync(portFile)) === port;
+        matchingPortFileExists = +(files.readFile(portFile)) === port;
         portFileExists = true;
       } catch (e) {
         if (!e || e.code !== 'ENOENT')
@@ -261,17 +259,17 @@ var launchMongo = function (options) {
         // Delete the port file if it exists, so we don't mistakenly believe
         // that the DB is still configured.
         if (portFileExists)
-          fs.unlinkSync(portFile);
+          files.unlink(portFile);
 
         try {
-          var dbFiles = fs.readdirSync(dbPath);
+          var dbFiles = files.readdir(dbPath);
         } catch (e) {
           if (!e || e.code !== 'ENOENT')
             throw e;
         }
         _.each(dbFiles, function (dbFile) {
           if (/^local\./.test(dbFile)) {
-            fs.unlinkSync(path.join(dbPath, dbFile));
+            files.unlink(files.pathJoin(dbPath, dbFile));
           }
         });
       }
@@ -474,27 +472,27 @@ var launchMongo = function (options) {
 
   try {
     if (options.multiple) {
-      var dbBasePath = path.join(options.appDir, '.meteor', 'local', 'dbs');
+      var dbBasePath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs');
       _.each(_.range(3), function (i) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
         if (stopped)
           return;
-        var dbPath = path.join(options.appDir, '.meteor', 'local', 'dbs', ''+i);
+        var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs', ''+i);
         launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
       });
       if (!stopped) {
         initiateReplSetAndWaitForReady();
       }
     } else {
-      var dbPath = path.join(options.appDir, '.meteor', 'local', 'db');
-      var portFile = !noOplog && path.join(dbPath, 'METEOR-PORT');
+      var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'db');
+      var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
-          fs.writeFileSync(portFile, options.port);
+          files.writeFile(portFile, options.port);
         }
       }
     }

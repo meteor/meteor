@@ -1,5 +1,4 @@
 var _ = require('underscore');
-
 var utils = require('../utils.js');
 var testUtils = require('../test-utils.js');
 var selftest = require('../selftest.js');
@@ -7,7 +6,7 @@ var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 
-selftest.define("publish-and-search",
+selftest.define("create-publish-and-search",
     ["slow", "net", "test-package-server", "checkout"], function () {
   var s = new Sandbox;
 
@@ -18,6 +17,7 @@ selftest.define("publish-and-search",
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
   var githubUrl = "http://github.com/foo/bar";
+  var summary = "Package for test";
 
   // Create a package that has a versionsFrom for a nonexistent release and see
   // that we throw on it.
@@ -42,11 +42,16 @@ selftest.define("publish-and-search",
 
   s.cd(fullPackageName);
 
-  // set a github URL in the package
+  // set a github URL & summary in the package
   var packageJsContents = s.read("package.js");
   var newPackageJsContents = packageJsContents.replace(
       /git: \'.*\'/, "git: \'" + githubUrl + "\'");
+  newPackageJsContents = newPackageJsContents.replace(
+      /summary: \'.*\'/, "summary: \'" + summary + "\'");
   s.write("package.js", newPackageJsContents);
+
+  // Write some documentation.
+  s.write("README.md", "Heading\n==\nDocs here");
 
   run = s.run("publish");
   run.waitSecs(15);
@@ -66,7 +71,7 @@ selftest.define("publish-and-search",
   run = s.run("show", fullPackageName);
   run.waitSecs(15);
   run.expectExit(0);
-  run.match("Maintained");
+  run.match("Git");
   run.match(githubUrl);
 
   // name override.
@@ -75,6 +80,7 @@ selftest.define("publish-and-search",
   var minPack = " Package.describe({ " +
     "summary: 'Test package: " + packageName + "'," +
     "version: '1.0.1'," +
+    "documentation: null," +
     "name: '" + newPackageName + "'});";
 
   s.createPackage(fullPackageName, "package-of-two-versions");
@@ -98,7 +104,7 @@ selftest.define("publish-and-search",
   run = s.run("show", newPackageName);
   run.waitSecs(15);
   run.expectExit(0);
-  run.match("package: " + packageName);
+  run.match("Package: " + newPackageName);
 });
 
 selftest.define("publish-one-arch",
@@ -112,14 +118,10 @@ selftest.define("publish-one-arch",
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
 
-  var run = s.run("create", "--package", fullPackageName);
-  run.waitSecs(15);
-  run.expectExit(0);
-  run.match(fullPackageName);
-
+  s.createPackage(fullPackageName, "package-of-two-versions");
   s.cd(fullPackageName);
 
-  run = s.run("publish", "--create");
+  var run = s.run("publish", "--create");
   run.waitSecs(15);
   run.expectExit(0);
   run.match("Published");
@@ -180,8 +182,8 @@ selftest.define("list-with-a-new-version",
   });
 
   // Change the package to increment version and publish the new package.
-  s.cp(fullPackageName+'/package2.js', fullPackageName+'/package.js');
   s.cd(fullPackageName, function () {
+    setPackageVersion(s, "1.0.1");
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
@@ -233,8 +235,8 @@ selftest.define("list-with-a-new-version",
   });
 
   // Now publish an 1.0.4-rc4.
-  s.cp(fullPackageName+'/packagerc.js', fullPackageName+'/package.js');
   s.cd(fullPackageName, function () {
+    setPackageVersion(s, "1.0.4-rc.4");
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
@@ -256,18 +258,24 @@ selftest.define("list-with-a-new-version",
     run.expectExit(0);
 
     // It works if ask for it, though.
-    run = s.run("add", fullPackageName + "@1.0.4-rc.3");
+    run = s.run("add", fullPackageName + "@1.0.4-rc.4");
     run.waitSecs(100);
     run.expectExit(0);
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.4-rc.3 ");
+    run.match("1.0.4-rc.4 ");
     run.forbidAll("New versions");
     run.expectExit(0);
   });
 });
 
+// Sets the version on the multi-version package.
+var setPackageVersion = function (sandbox, version) {
+  var packOpen = sandbox.read("package-version.js");
+  packOpen = packOpen.replace(/~version~/g, version);
+  sandbox.write("package.js", packOpen);
+};
 
 // Test that we only try to upgrade to pre-release versions of
 // packages (eg 0.0.1-rc, 0.0.2-pre, ...) if there is at least one
@@ -307,7 +315,7 @@ selftest.define("do-not-update-to-rcs",
     run.match("Published " + fullPackageName + "@");
     run.expectExit(0);
 
-    s.cp('package2.js', 'package.js');
+    setPackageVersion(s, "1.1.0");
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
@@ -316,7 +324,7 @@ selftest.define("do-not-update-to-rcs",
 
   // Now publish an 1.0.4-rc.3.
   s.cd(fullPackageName, function () {
-    s.cp('packagerc.js', 'package.js');
+    setPackageVersion(s, "1.0.4-rc.3");
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
@@ -379,7 +387,7 @@ selftest.define("do-not-update-to-rcs",
 
   // Now publish an 1.0.4-rc.4.
   s.cd(fullPackageName, function () {
-    s.cp('packagerc2.js', 'package.js');
+    setPackageVersion(s, "1.0.4-rc.4");
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
@@ -414,7 +422,7 @@ selftest.define("package-depends-on-either-version",
   var packageNameDependent = utils.randomToken();
   var run;
 
-  // First, we publish fullPackageNameDep at 1.0 and publish it..
+  // First, we publish fullPackageNameDep at 1.0.0 and publish it..
   var fullPackageNameDep = username + ":" + packageNameDependent;
   s.createPackage(fullPackageNameDep, "package-of-two-versions");
    s.cd(fullPackageNameDep, function() {
@@ -423,9 +431,9 @@ selftest.define("package-depends-on-either-version",
     run.match("Published");
   });
 
-  // Then, we publish fullPackageNameDep at 2.0.
+  // Then, we publish fullPackageNameDep at 2.0.0
   s.cd(fullPackageNameDep, function() {
-    s.cp("package3.js", "package.js");
+    setPackageVersion(s, "2.0.0");
     run = s.run("publish");
     run.waitSecs(20);
     run.match("Published");
@@ -451,7 +459,6 @@ selftest.define("package-depends-on-either-version",
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
 
   run = s.run("add", fullPackageNameDep + "@=1.0.0");
   run.match(fullPackageNameDep);

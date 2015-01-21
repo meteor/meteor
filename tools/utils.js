@@ -7,9 +7,7 @@ var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
-var fs = require('fs');
 var url = require('url');
-var child_process = require('child_process');
 
 var utils = exports;
 
@@ -200,7 +198,7 @@ exports.randomPort = function () {
 // context uses buildmessage to raise errors.
 exports.parseConstraint = function (constraintString, options) {
   try {
-    return packageVersionParser.parseConstraint(constraintString, options);
+    return packageVersionParser.parseConstraint(constraintString);
   } catch (e) {
     if (! (e.versionParserError && options && options.useBuildmessage))
       throw e;
@@ -208,7 +206,7 @@ exports.parseConstraint = function (constraintString, options) {
     return null;
   }
 };
-exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
+
 exports.validatePackageName = function (name, options) {
   try {
     return packageVersionParser.validatePackageName(name, options);
@@ -220,12 +218,34 @@ exports.validatePackageName = function (name, options) {
   }
 };
 
-// Returns true if the parsed constraint was just a@b with no `=` or `||`.
-exports.isSimpleConstraint = function (parsedConstraint) {
-  return parsedConstraint.constraints.length === 1 &&
-    parsedConstraint.constraints[0].type === "compatible-with";
+// Parse a string of the form package@version into an object of the form
+// {name, version}.
+exports.parsePackageAtVersion = function (packageAtVersionString, options) {
+  // A string that has to look like "package@version" isn't really a
+  // constraint, it's just a string of the form (package + "@" + version).
+  // However, using parseConstraint in the implementation is too convenient
+  // to pass up (especially in terms of error-handling quality).
+  var parsedConstraint = exports.parseConstraint(packageAtVersionString,
+                                                 options);
+  if (! parsedConstraint) {
+    // It must be that options.useBuildmessage and an error has been
+    // registered.  Otherwise, parseConstraint would succeed or throw.
+    return null;
+  }
+  var alternatives = parsedConstraint.vConstraint.alternatives;
+  if (! (alternatives.length === 1 &&
+         alternatives[0].type === 'compatible-with')) {
+    if (options && options.useBuildmessage) {
+      buildmessage.error("Malformed package@version: " + packageAtVersionString,
+                         { file: options.buildmessageFile });
+      return null;
+    } else {
+      throw new Error("Malformed package@version: " + packageAtVersionString);
+    }
+  }
+  return { name: parsedConstraint.name,
+           version: alternatives[0].versionString };
 };
-
 
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
@@ -344,10 +364,11 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   return ret + '$';
 };
 
+// XXX should be in files.js
 exports.isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK
-    var stats = fs.statSync(dir);
+    var stats = files.stat(dir);
   } catch (e) {
     return false;
   }
@@ -641,9 +662,7 @@ exports.mobileServerForRun = function (options) {
     };
   }
 
-
   // we are running a simulator, use localhost:3000
-
   return {
     host: "localhost",
     port: parsedUrl.port,
@@ -651,10 +670,46 @@ exports.mobileServerForRun = function (options) {
   };
 };
 
+// Use this to convert dates into our preferred human-readable format.
+//
+// Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
+// date object and returns a long-form human-readable date (ex: December 9th,
+// 2014) or unknown for null.
+exports.longformDate = function (date) {
+  if (! date) return "Unknown";
+  var moment = require('moment');
+  var pubDate = moment(date).format('MMMM Do, YYYY');
+  return pubDate;
+};
+
+// Length of the longest possible string that could come out of longformDate
+// (September is the longest month name, so "September 24th, 2014" would be an
+// example).
+exports.maxDateLength = "September 24th, 2014".length;
+
 exports.escapePackageNameForPath = function (packageName) {
   return packageName.replace(":", "_");
 };
 
 exports.unescapePackageNameForPath = function (escapedPackageName) {
   return escapedPackageName.replace("_", ":");
+};
+
+// If we have failed to update the catalog, informs the user and advises them to
+// go online for up to date inforation.
+exports.explainIfRefreshFailed = function () {
+  var Console = require("./console.js").Console;
+  var catalog = require('./catalog.js');
+  if (catalog.official.offline || catalog.refreshFailed) {
+    Console.info("Your package catalog may be out of date.\n" +
+      "Please connect to the internet and try again.");
+  }
+};
+
+// Returns a sha256 hash of a given string.
+exports.sha256 = function (contents) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.update(contents);
+  return hash.digest('base64');
 };

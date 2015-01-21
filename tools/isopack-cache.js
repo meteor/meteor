@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
 
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
@@ -289,13 +288,14 @@ _.extend(exports.IsopackCache.prototype, {
 
   _isopackDir: function (packageName) {
     var self = this;
-    return path.join(self.cacheDir,
-                     utils.escapePackageNameForPath(packageName));
+    return files.pathJoin(self.cacheDir,
+                          utils.escapePackageNameForPath(packageName));
   },
 
   _isopackBuildInfoPath: function (packageName) {
     var self = this;
-    return path.join(self._isopackDir(packageName), 'isopack-buildinfo.json');
+    return files.pathJoin(
+      self._isopackDir(packageName), 'isopack-buildinfo.json');
   },
 
   forgetPreviousIsopackCache: function () {

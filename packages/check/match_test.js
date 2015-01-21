@@ -101,6 +101,10 @@ Tinytest.add("check - check", function (test) {
   // Match.Optional means "or undefined" at the top level but "or absent" in
   // objects.
   fails({a: undefined}, {a: Match.Optional(Number)});
+  var F = function () {
+    this.x = 123;
+  };
+  fails(new F, { x: 123 });
 
   matches({}, Match.ObjectWithValues(Number));
   matches({x: 1}, Match.ObjectWithValues(Number));

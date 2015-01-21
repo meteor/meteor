@@ -1,10 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var utils = require('../utils.js');
-var Future = require('fibers/future');
-var net = require('net');
-var _ = require('underscore');
-var files = require('../files.js');
 
 selftest.define("css hot code push", function (options) {
   var s = new Sandbox({
@@ -38,6 +34,7 @@ selftest.define("css hot code push", function (options) {
 
     // The server does NOT restart if a new css file is added.
     s.write("test.css", "body { background-color: red; }");
+    run.waitSecs(30);
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);

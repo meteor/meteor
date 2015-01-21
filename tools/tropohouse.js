@@ -1,14 +1,7 @@
-var path = require("path");
-var fs = require("fs");
-var os = require("os");
-var Future = require("fibers/future");
 var _ = require("underscore");
 var files = require('./files.js');
 var utils = require('./utils.js');
-var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
-var fiberHelpers = require('./fiber-helpers.js');
-var release = require('./release.js');
 var archinfo = require('./archinfo.js');
 var catalog = require('./catalog.js');
 var Isopack = require('./isopack.js').Isopack;
@@ -34,7 +27,7 @@ var defaultWarehouseDir = function () {
   // XXX This will be `.meteor` soon, once we've written the code to make the
   // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
   // tools to springboard to warehouse tools).
-  return path.join(warehouseBase, ".meteor");
+  return files.pathJoin(warehouseBase, ".meteor");
 };
 
 // The default tropohouse is on disk at defaultWarehouseDir(); you can make your
@@ -53,10 +46,12 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
-    var relativePath = path.join(config.getPackagesDirectoryName(),
-                                 utils.escapePackageNameForPath(packageName),
-                                 version);
-    return relative ? relativePath : path.join(self.root, relativePath);
+    var relativePath = files.pathJoin(
+      config.getPackagesDirectoryName(),
+      utils.escapePackageNameForPath(packageName),
+      version);
+
+    return relative ? relativePath : files.pathJoin(self.root, relativePath);
   },
 
   // Pretty extreme! We call this when we learn that something has changed on
@@ -66,9 +61,11 @@ _.extend(exports.Tropohouse.prototype, {
 
     var packagesDirectoryName = config.getPackagesDirectoryName();
 
-    var packageRootDir = path.join(self.root, packagesDirectoryName);
+    var packageRootDir = files.pathJoin(self.root, packagesDirectoryName);
     try {
-      var escapedPackages = fs.readdirSync(packageRootDir);
+      // XXX this variable actually can't be accessed from outside this
+      // line, this is definitely a bug
+      var escapedPackages = files.readdir(packageRootDir);
     } catch (e) {
       // No packages at all? We're done.
       if (e.code === 'ENOENT')
@@ -90,9 +87,9 @@ _.extend(exports.Tropohouse.prototype, {
       var toolsDir = files.getCurrentToolsDir();
       // eg, 'meteor-tool'
       currentToolPackageEscaped =
-        path.basename(path.dirname(path.dirname(toolsDir)));
+        files.pathBasename(files.pathDirname(files.pathDirname(toolsDir)));
       // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova'
-      var toolVersionDir = path.basename(path.dirname(toolsDir));
+      var toolVersionDir = files.pathBasename(files.pathDirname(toolsDir));
       var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
       var pieces = toolVersionWithDotAndRandomBit.split('.');
       pieces.shift();
@@ -100,18 +97,20 @@ _.extend(exports.Tropohouse.prototype, {
       currentToolVersion = pieces.join('.');
       var latestMeteorSymlink = self.latestMeteorSymlink();
       if (utils.startsWith(latestMeteorSymlink,
-                           packagesDirectoryName + path.sep)) {
-        var rest = latestMeteorSymlink.substr(packagesDirectoryName.length + path.sep.length);
-        var pieces = rest.split(path.sep);
+                           packagesDirectoryName + files.pathSep)) {
+        var rest = latestMeteorSymlink.substr(
+          packagesDirectoryName.length + files.pathSep.length);
+
+        var pieces = rest.split(files.pathSep);
         latestToolPackageEscaped = pieces[0];
         latestToolVersion = pieces[1];
       }
     }
 
     _.each(escapedPackages, function (packageEscaped) {
-      var packageDir = path.join(packageRootDir, packageEscaped);
+      var packageDir = files.pathJoin(packageRootDir, packageEscaped);
       try {
-        var versions = fs.readdirSync(packageDir);
+        var versions = files.readdir(packageDir);
       } catch (e) {
         // Somebody put a file in here or something? Whatever, ignore.
         if (e.code === 'ENOENT' || e.code === 'ENOTDIR')
@@ -140,11 +139,33 @@ _.extend(exports.Tropohouse.prototype, {
           return;
         }
 
-        files.rm_recursive(path.join(packageDir, version));
+        files.rm_recursive(files.pathJoin(packageDir, version));
       });
     });
   },
+  // Returns true if the given package at the given version exists on disk, or
+  // false otherwise. Takes in the following:
+  //  - packageName: name of the package
+  //  - version: version
+  //  - architectures: (optional) array of architectures. Defaults to
+  //    archinfo.host().
+  installed: function (options) {
+    var self = this;
+    if (!options.packageName)
+      throw Error("Missing required argument: packageName");
+    if (!options.version)
+      throw Error("Missing required argument: version");
+    var architectures = options.architectures || [archinfo.host()];
 
+    var downloaded = self._alreadyDownloaded({
+      packageName: options.packageName,
+      version: options.version
+    });
+
+    return _.every(architectures, function (requiredArch) {
+      return archinfo.mostSpecificMatch(requiredArch, downloaded.arches);
+    });
+  },
   // Contacts the package server, downloads and extracts a tarball for a given
   // buildRecord into a temporary directory, whose path is returned.
   //
@@ -170,6 +191,53 @@ _.extend(exports.Tropohouse.prototype, {
     return targetDirectory;
   },
 
+  // Given a package name and version, returns a survey of what we have
+  // downloaded for this package at this version. Specifically, returns an
+  // object with the following keys:
+  //  - arches: the architectures for which we have downloaded this package
+  //  - target: the target of the symlink at which we store this package
+  //
+  // Throws if the symlink cannot be read for any reason other than ENOENT/
+  _alreadyDownloaded: function (options) {
+    var self = this;
+    var packageName = options.packageName;
+    var version = options.version;
+    if (!options.packageName)
+      throw Error("Missing required argument: packageName");
+    if (!options.version)
+      throw Error("Missing required argument: version");
+
+
+    // Figure out what arches (if any) we have loaded for this package version
+    // already.
+    var packageLinkFile = self.packagePath(packageName, version);
+    var downloadedArches = [];
+    var packageLinkTarget = null;
+    try {
+      packageLinkTarget = files.readlink(packageLinkFile);
+    } catch (e) {
+      // Complain about anything other than "we don't have it at all". This
+      // includes "not a symlink": The main reason this would not be a symlink
+      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
+      // warehouse package not a tropohouse package). But the versions should
+      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
+      // versions should be semver-like.
+      if (e.code !== 'ENOENT')
+        throw e;
+    }
+    if (packageLinkTarget) {
+      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
+      // so this strips off the part before the '++'.
+      // XXX maybe we should just read the isopack.json instead of
+      //     depending on the symlink?
+      var archPart = packageLinkTarget.split('++')[1];
+      if (!archPart)
+        throw Error("unexpected symlink target for " + packageName + "@" +
+                    version + ": " + packageLinkTarget);
+      downloadedArches = archPart.split('+');
+    }
+    return { arches: downloadedArches, target: packageLinkTarget };
+  },
   // Given a package name, version, and required architectures, checks to make
   // sure that we have the package downloaded at the requested arch. If we do,
   // returns null.
@@ -195,34 +263,13 @@ _.extend(exports.Tropohouse.prototype, {
     var packageName = options.packageName;
     var version = options.version;
 
-    // Figure out what arches (if any) we have loaded for this package version
-    // already.
-    var packageLinkFile = self.packagePath(packageName, version);
-    var downloadedArches = [];
-    var packageLinkTarget = null;
-    try {
-      packageLinkTarget = fs.readlinkSync(packageLinkFile);
-    } catch (e) {
-      // Complain about anything other than "we don't have it at all". This
-      // includes "not a symlink": The main reason this would not be a symlink
-      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
-      // warehouse package not a tropohouse package). But the versions should
-      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-      // versions should be semver-like.
-      if (e.code !== 'ENOENT')
-        throw e;
-    }
-    if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
-      // so this strips off the part before the '++'.
-      // XXX maybe we should just read the isopack.json instead of
-      //     depending on the symlink?
-      var archPart = packageLinkTarget.split('++')[1];
-      if (!archPart)
-        throw Error("unexpected symlink target for " + packageName + "@" +
-                    version + ": " + packageLinkTarget);
-      downloadedArches = archPart.split('+');
-    }
+    // Look up the information that we have already downloaded.
+    var downloaded = self._alreadyDownloaded({
+      packageName: packageName,
+      version: version
+    });
+    var downloadedArches = downloaded.arches;
+    var packageLinkTarget = downloaded.target;
 
     var archesToDownload = _.filter(options.architectures, function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
@@ -233,7 +280,6 @@ _.extend(exports.Tropohouse.prototype, {
       Console.debug("Local package version is up-to-date:", packageName + "@" + version);
       return null;
     }
-
 
     // Since we are downloading from the server (and we've already done the
     // local package check), we can use the official catalog here. (This is
@@ -247,6 +293,7 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
+    var packageLinkFile = self.packagePath(packageName, version);
     var download = function download () {
       buildmessage.assertInCapture();
 
@@ -259,8 +306,9 @@ _.extend(exports.Tropohouse.prototype, {
         var buildTempDirs = [];
         // If there's already a package in the tropohouse, start with it.
         if (packageLinkTarget) {
-          buildTempDirs.push(path.resolve(path.dirname(packageLinkFile),
-                                          packageLinkTarget));
+          buildTempDirs.push(
+            files.pathResolve(files.pathDirname(packageLinkFile),
+                              packageLinkTarget));
         }
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
@@ -294,6 +342,11 @@ _.extend(exports.Tropohouse.prototype, {
           packageName, newPackageLinkTarget);
         isopack.saveToPath(combinedDirectory);
         files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+        // Delete temp directories now (asynchronously).
+        _.each(buildTempDirs, function (buildTempDir) {
+          files.freeTempDir(buildTempDir);
+        });
 
         // Clean up old version.
         if (packageLinkTarget) {
@@ -375,13 +428,13 @@ _.extend(exports.Tropohouse.prototype, {
 
   latestMeteorSymlink: function () {
     var self = this;
-    var linkPath = path.join(self.root, 'meteor');
-    return fs.readlinkSync(linkPath);
+    var linkPath = files.pathJoin(self.root, 'meteor');
+    return files.readlink(linkPath);
   },
 
   replaceLatestMeteorSymlink: function (linkText) {
     var self = this;
-    var linkPath = path.join(self.root, 'meteor');
+    var linkPath = files.pathJoin(self.root, 'meteor');
     files.symlinkOverSync(linkText, linkPath);
   }
 });

@@ -20,7 +20,6 @@ var packageJson = {
     underscore: "1.5.2",
     "source-map-support": "0.2.8",
     semver: "4.1.0",
-
     request: "2.47.0",
     fstream: "1.0.2",
     tar: "1.0.2",
@@ -34,6 +33,11 @@ var packageJson = {
     phantomjs: "1.9.12",
     "http-proxy": "1.6.0",
     "wordwrap": "0.0.2",
+    "moment": "2.8.4",
+    // XXX: When we update this, see if it fixes this Github issue:
+    // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
+    // workaround from the tool.
+    "commonmark": "0.15.0",
     // XXX We ought to be able to get this from the copy in js-analyze rather
     // than in the dev bundle.)
     esprima: "1.2.2",

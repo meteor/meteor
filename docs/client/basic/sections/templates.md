@@ -89,7 +89,7 @@ Template.welcomePage.helpers({
 
 then you can display every person's name as a list of `<p>` tags:
 
-```
+```html
 {{dstache}}#each people}}
   <p>{{dstache}}name}}</p>
 {{dstache}}/each}}
@@ -97,9 +97,9 @@ then you can display every person's name as a list of `<p>` tags:
 
 or use the "nametag" template from above instead of `<p>` tags:
 
-```
+```html
 {{dstache}}#each people}}
-  <p>{{dstache}}> nametag}}</p>
+  {{dstache}}> nametag}}
 {{dstache}}/each}}
 ```
 
@@ -170,13 +170,13 @@ To attach event handlers to the following template
 
 ```
 <template name="example">
-  {{#with myHelper}}
+  {{dstache}}#with myHelper}}
     <button class="my-button">My button</button>
     <form>
       <input type="text" name="myInput" />
       <input type="submit" value="Submit Form" />
     </form>
-  {{/with}}
+  {{dstache}}/with}}
 </template>
 ```
 

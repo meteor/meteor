@@ -1,5 +1,3 @@
-var fs = require("fs");
-var path = require("path");
 var _ = require('underscore');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
@@ -86,8 +84,9 @@ _.extend(AppProcess.prototype, {
     var eachline = require('eachline');
     eachline(self.proc.stdout, 'utf8', fiberHelpers.inBareFiber(function (line) {
       if (line.match(/^LISTENING\s*$/)) {
-        // This is the child process telling us that it's ready to
-        // receive connections.
+        // This is the child process telling us that it's ready to receive
+        // connections.  (It does this because we told it to with
+        // $METEOR_PRINT_ON_LISTEN.)
         self.onListen && self.onListen();
 
       } else {
@@ -195,6 +194,11 @@ _.extend(AppProcess.prototype, {
 
     env.ENABLE_METEOR_SHELL = 'true';
 
+    env.METEOR_PARENT_PID =
+      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
+
+    env.METEOR_PRINT_ON_LISTEN = 'true';
+
     return env;
   },
 
@@ -205,7 +209,7 @@ _.extend(AppProcess.prototype, {
     var child_process = require('child_process');
 
     var opts = _.clone(self.nodeOptions);
-    var entryPoint = path.join(self.bundlePath, 'main.js');
+    var entryPoint = files.pathJoin(self.bundlePath, 'main.js');
 
     if (self.debugPort) {
       var attach = require("./inspector.js").start(
@@ -215,10 +219,7 @@ _.extend(AppProcess.prototype, {
       opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
     }
 
-    opts.push(
-      entryPoint, '--parent-pid',
-      process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid
-    );
+    opts.push(entryPoint);
 
     var child = child_process.spawn(process.execPath, opts, {
       env: self._computeEnvironment()
@@ -238,7 +239,7 @@ _.extend(AppProcess.prototype, {
 
 // Given an app, bundle and run the app. If the app's source changes,
 // kill, rebundle, and rerun it. If the app dies, restart it, unless
-// it dies repeatly immediately after being started, in which case
+// it dies repeatedly immediately after being started, in which case
 // wait for source changes to restart.
 //
 // Communicates with a Proxy to tell it when the app is up,
@@ -583,6 +584,15 @@ _.extend(AppRunner.prototype, {
         settings = files.getSettings(self.settingsFile, settingsWatchSet);
     });
 
+    // We only can refresh the client without restarting the server if the
+    // client contains the 'autoupdate' package.
+    var canRefreshClient = self.projectContext.packageMap &&
+          self.projectContext.packageMap.getInfo('autoupdate');
+    if (! canRefreshClient) {
+      // Restart server on client changes if we can't refresh the client.
+      serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
+    }
+
     // HACK: merge the watchset and messages from reading the settings
     // file into those from the build. This works fine but it sort of
     // messy. Maybe clean it up sometime.
@@ -672,7 +682,7 @@ _.extend(AppRunner.prototype, {
          }
       });
     };
-    if (self.watchForChanges) {
+    if (self.watchForChanges && canRefreshClient) {
       setupClientWatcher();
     }
 
@@ -684,6 +694,9 @@ _.extend(AppRunner.prototype, {
 
     try {
       while (ret.outcome === 'changed-refreshable') {
+        if (! canRefreshClient)
+          throw Error("Can't refresh client?");
+
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = bundleApp();

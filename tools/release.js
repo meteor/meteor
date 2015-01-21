@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');

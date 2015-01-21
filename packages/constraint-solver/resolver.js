@@ -77,7 +77,7 @@ ConstraintSolver.Resolver.prototype.getConstraint =
 };
 
 // options: Object:
-// - costFunction: function (state, options) - given a state evaluates its cost
+// - costFunction: function (state) - given a state evaluates its cost
 // - estimateCostFunction: function (state) - given a state, evaluates the
 // estimated cost of the best path from state to a final state
 // - combineCostFunction: function (cost, cost) - given two costs (obtained by
@@ -294,22 +294,15 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 //    new PackageVersion.Constraint("pacakgeA@=2.1.0")
 ConstraintSolver.Constraint = function (name, constraintString) {
   var self = this;
-  if (constraintString) {
-    name = name + "@" + constraintString;
-  }
 
-  // See comment in UnitVersion constructor. We want to strip out build IDs
-  // because the code they represent is considered equivalent.
-  var parsed = PackageVersion.parseConstraint(name, {
-    removeBuildIDs: true
-  });
+  var parsed = PackageVersion.parseConstraint(name, constraintString);
 
   self.name = parsed.name;
   self.constraintString = parsed.constraintString;
-  // The results of parsing are a disjunction (`||`) of simple
-  // constraints like `1.0.0` or `=1.0.1`, which have been parsed into
-  // objects with a `type` and `version` property.
-  self.disjunction = parsed.constraints;
+  // The results of parsing are `||`-separated alternatives, simple
+  // constraints like `1.0.0` or `=1.0.1` which have been parsed into
+  // objects with a `type` and `versionString` property.
+  self.alternatives = parsed.vConstraint.alternatives;
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {
@@ -319,7 +312,7 @@ ConstraintSolver.Constraint.prototype.toString = function (options) {
 
 
 ConstraintSolver.Constraint.prototype.isSatisfied = function (
-  candidateUV, resolver, resolveContext) {
+  candidateUV, resolveContext) {
   var self = this;
   check(candidateUV, ConstraintSolver.UnitVersion);
 
@@ -363,16 +356,16 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
     }
   }
 
-  return _.some(self.disjunction, function (simpleConstraint) {
+  return _.some(self.alternatives, function (simpleConstraint) {
     var type = simpleConstraint.type;
 
     if (type === "any-reasonable") {
       return ! prereleaseNeedingLicense;
     } else if (type === "exactly") {
-      var version = simpleConstraint.version;
+      var version = simpleConstraint.versionString;
       return (version === candidateUV.version);
     } else if (type === 'compatible-with') {
-      var version = simpleConstraint.version;
+      var version = simpleConstraint.versionString;
 
       if (prereleaseNeedingLicense && ! /-/.test(version)) {
         return false;
