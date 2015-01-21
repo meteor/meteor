@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Interaction with the configuration sources for your apps",
-  version: '1.0.4'
+  version: '1.0.5-winr.2'
 });
 
 Package.onUse(function (api) {

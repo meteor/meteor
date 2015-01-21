@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A shell script for downloading the Meteor dev bundle",
-  version: "1.0.2"
+  version: "1.0.3-winr.2"
 });
 
 Package.onUse(function (api) {

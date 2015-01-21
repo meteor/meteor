@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
-  version: "1.0.3"
+  version: "1.0.4-winr.2"
 });
 
 Package.onUse(function (api) {

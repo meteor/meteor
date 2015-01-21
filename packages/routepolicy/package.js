@@ -1,6 +1,6 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '1.0.4-winr.2'
+  version: '1.0.4-winr.4'
 });
 
 Package.onUse(function (api) {

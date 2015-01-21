@@ -10,15 +10,15 @@ _.each(packageNames, function (name) {
 
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 
-  match = content.match(/\d+\.\d+\.\d+-winr\.\d+/);
+  match = content.match(/\d+\.\d+\.\d+-winr.\d+'/);
   if (match) {
     var versionNumber = match[0];
     var s = versionNumber.split(".");
-    s[4] = (parseInt(s[4], 10) + 1);
+    s[3] = (parseInt(s[3], 10) + 1);
     var incremented = s.join(".");
 
     content = content.replace(versionNumber, incremented);
-    //console.log(incremented);
+    console.log(match[0], match[1], incremented);
     fs.writeFileSync(name, content);
   }
 });
