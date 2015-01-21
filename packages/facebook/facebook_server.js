@@ -52,18 +52,7 @@ var getTokenResponse = function (query) {
   try {
     // Request an access token, or request access token info if it was already given
     if (query.accessToken) {
-      var response = HTTP.get(
-        "https://graph.facebook.com/debug_token", {
-          params: {
-            client_id: config.appId,
-            redirect_uri: OAuth._redirectUri('facebook', config),
-            client_secret: OAuth.openSecret(config.secret),
-            input_token: query.accessToken,
-            access_token: query.accessToken
-          }
-        }).content;
-      response = JSON.parse(response);
-      responseContent = "access_token=" + query.accessToken + "&expires=" +
+      responseContent = "access_token=" + query.accessToken + "&expires=5184000000";
         (response.data.expires_at - response.data.issued_at);
     } else {
       responseContent = HTTP.get(
