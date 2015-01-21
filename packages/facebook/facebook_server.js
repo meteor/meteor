@@ -52,7 +52,7 @@ var getTokenResponse = function (query) {
   try {
     // Request an access token, or request access token info if it was already given
     if (query.accessToken) {
-      responseContent = HTTP.get(
+      var response = HTTP.get(
         "https://graph.facebook.com/debug_token", {
           params: {
             client_id: config.appId,
@@ -61,7 +61,12 @@ var getTokenResponse = function (query) {
             input_token: query.accessToken,
             access_token: query.accessToken
           }
-        }).content
+        }).content;
+      response = JSON.parse(response);
+      console.log(response);
+      console.log(response.data);
+      responseContent = "access_token=" + query.accessToken + "&expires=" +
+        (response.data.expires_at - response.data.issued_at);
     } else {
       responseContent = HTTP.get(
         "https://graph.facebook.com/oauth/access_token", {
@@ -72,10 +77,12 @@ var getTokenResponse = function (query) {
             code: query.code
           }
         }).content;
+    }
   } catch (err) {
     throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
                    {response: err.response});
   }
+	console.log(responseContent.data);
 
   // If 'responseContent' parses as JSON, it is an error.
   // XXX which facebook error causes this behvaior?
