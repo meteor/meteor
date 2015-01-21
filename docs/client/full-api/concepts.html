@@ -197,18 +197,20 @@ applicable files in the application, in the priority given below:
 
 1. HTML template files are *always* loaded before everything else
 2. Files beginning with `main.` are loaded last
-3. Files inside *any* `/lib/` directory are loaded next
+3. Files inside *any* `lib/` directory are loaded next
 4. Files with deeper paths are loaded next
 5. Files are then loaded in alphabetical order of the entire path
 
 ```js
 nav.html
 main.html
-/client/lib/methods.js
-/client/lib/styles.js
-/lib/feature/styles.js
-/lib/collections.js
-/client/main.js
+client/lib/methods.js
+client/lib/styles.js
+lib/feature/styles.js
+lib/collections.js
+client/feature-y.js
+feature-x.js
+client/main.js
 ```
 
 For example, the files above are arranged in the correct load order.
@@ -217,8 +219,8 @@ even if it begins with `main.`, since rule 1 has priority over rule 2.
 However, it will be loaded after `nav.html` because rule 2 has priority over
 rule 5.
 
-`/client/lib/styles.js` and `/lib/feature/styles.js` have identical load order
-up to rule 4, however, since `client` comes before `lib`alphabetically,
+`client/lib/styles.js` and `lib/feature/styles.js` have identical load order
+up to rule 4; however, since `client` comes before `lib` alphabetically,
 it will be loaded first.
 
 ### Organizing Your Project
