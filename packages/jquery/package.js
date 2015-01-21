@@ -3,8 +3,7 @@ Package.describe({
   // This matches the upstream version. If you want to publish a new version of
   // the package without pulling a new upstream version, you should call it
   // '1.11.2_1'.
-  // XXX this seems to break if we use _1, change the version number back
-  version: '1.11.3-winr.2'
+  version: '1.11.3-winr.2_1'
 });
 
 Package.onUse(function (api) {
