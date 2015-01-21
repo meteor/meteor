@@ -2,8 +2,8 @@ Facebook = {};
 
 var querystring = Npm.require('querystring');
 
-
 OAuth.registerService('facebook', 2, null, function(query) {
+
 
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
@@ -50,16 +50,28 @@ var getTokenResponse = function (query) {
 
   var responseContent;
   try {
-    // Request an access token
-    responseContent = HTTP.get(
-      "https://graph.facebook.com/v2.2/oauth/access_token", {
-        params: {
-          client_id: config.appId,
-          redirect_uri: OAuth._redirectUri('facebook', config),
-          client_secret: OAuth.openSecret(config.secret),
-          code: query.code
-        }
-      }).content;
+    // Request an access token, or request access token info if it was already given
+    if (query.accessToken) {
+      responseContent = HTTP.get(
+        "https://graph.facebook.com/debug_token", {
+          params: {
+            client_id: config.appId,
+            redirect_uri: OAuth._redirectUri('facebook', config),
+            client_secret: OAuth.openSecret(config.secret),
+            input_token: query.accessToken,
+            access_token: query.accessToken
+          }
+        }).content
+    } else {
+      responseContent = HTTP.get(
+        "https://graph.facebook.com/oauth/access_token", {
+          params: {
+            client_id: config.appId,
+            redirect_uri: OAuth._redirectUri('facebook', config),
+            client_secret: OAuth.openSecret(config.secret),
+            code: query.code
+          }
+        }).content;
   } catch (err) {
     throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
                    {response: err.response});
