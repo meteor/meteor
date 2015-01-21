@@ -5,7 +5,6 @@ var querystring = Npm.require('querystring');
 
 OAuth.registerService('facebook', 2, null, function(query) {
 
-
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
 
@@ -64,8 +63,6 @@ var getTokenResponse = function (query) {
           }
         }).content;
       response = JSON.parse(response);
-      console.log(response);
-      console.log(response.data);
       responseContent = "access_token=" + query.accessToken + "&expires=" +
         (response.data.expires_at - response.data.issued_at);
     } else {
@@ -83,7 +80,6 @@ var getTokenResponse = function (query) {
     throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
                    {response: err.response});
   }
-	console.log(responseContent.data);
 
   // If 'responseContent' parses as JSON, it is an error.
   // XXX which facebook error causes this behvaior?
