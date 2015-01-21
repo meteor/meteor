@@ -1108,7 +1108,7 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, arch) {
 
     var newScript = [
       "@echo off",
-      "%~dp0\\" + files.convertToOSPath(scriptLocation) + " " + args + " %*"
+      "%~dp0\\" + files.convertToOSPath(scriptLocation) + " %*"
     ].join(os.EOL);
 
     files.writeFile(linkLocation, newScript, {encoding: "ascii"});
