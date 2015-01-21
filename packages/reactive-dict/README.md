@@ -5,7 +5,7 @@ datatype for use with
 [tracker](https://atmospherejs.com/meteor/tracker). It provides all of
 the functionality of the `Session` object documented in the [main
 Meteor docs](https://docs.meteor.com/#session), such as reactive
-`get`, `set`, and `equals` functions, except that its contents are not
+`get`, `set`, and `equals` functions, which contents are
 saved across Hot Code Push client code updates.
 
 Example usage:
