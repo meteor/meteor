@@ -13,6 +13,7 @@ var colonConverter = require('./colon-converter.js');
 exports.Tropohouse = function (root) {
   var self = this;
   self.root = root;
+  self.platform = process.platform;
 };
 
 // Return the directory containing our loaded collection of tools, releases and
@@ -318,7 +319,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     var self = this;
 
-    if (process.platform === "win32") {
+    if (self.platform === "win32") {
       // XXX wipeAllPackages won't work on Windows until we fix that function
       isopack.saveToPath(self.packagePath(packageName, isopack.version));
     } else {
@@ -550,9 +551,13 @@ _.extend(exports.Tropohouse.prototype, {
     return files.readlink(linkPath);
   },
 
-  linkToLatestMeteor: function (scriptLocation, arch) {
+  linkToLatestMeteor: function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.linkToMeteorScript(scriptLocation, linkPath, arch);
+    files.linkToMeteorScript(scriptLocation, linkPath, self.platform);
+  },
+
+  _getPlatform: function () {
+    return this.platform;
   }
 });

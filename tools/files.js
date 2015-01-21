@@ -1091,10 +1091,10 @@ files.getHomeDir = function () {
   return convertToStandardPath(homeDir);
 };
 
-files.linkToMeteorScript = function (scriptLocation, linkLocation, arch) {
-  arch = arch || process.platform;
+files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
+  platform = platform || process.platform;
 
-  if (/win/i.test(arch)) {
+  if (platform === 'win32') {
     // Make a meteor batch script that points to current tool
 
     // add .bat extension to destination if not present
