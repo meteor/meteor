@@ -98,14 +98,17 @@ Template.prototype.onDestroyed = function (cb) {
   this._callbacks.destroyed.push(cb);
 };
 
-Template.prototype._fireCallbacks = function (template, which) {
+Template.prototype._getCallbacks = function (which) {
   var self = this;
   var callbacks = self[which] ? [self[which]] : [];
   // Fire all callbacks added with the new API (Template.onRendered())
   // as well as the old-style callback (e.g. Template.rendered) for
   // backwards-compatibility.
   callbacks = callbacks.concat(self._callbacks[which]);
+  return callbacks;
+};
 
+var fireCallbacks = function (callbacks, template) {
   for (var i = 0, N = callbacks.length; i < N; i++) {
     callbacks[i].call(template);
   }
@@ -177,8 +180,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  var createdCallbacks = self._getCallbacks('created');
   view.onViewCreated(function () {
-    self._fireCallbacks(view.templateInstance(), 'created');
+    fireCallbacks(createdCallbacks, view.templateInstance());
   });
 
   /**
@@ -189,8 +193,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  var renderedCallbacks = self._getCallbacks('rendered');
   view.onViewReady(function () {
-    self._fireCallbacks(view.templateInstance(), 'rendered');
+    fireCallbacks(renderedCallbacks, view.templateInstance());
   });
 
   /**
@@ -201,8 +206,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  var destroyedCallbacks = self._getCallbacks('destroyed');
   view.onViewDestroyed(function () {
-    self._fireCallbacks(view.templateInstance(), 'destroyed');
+    fireCallbacks(destroyedCallbacks, view.templateInstance());
   });
 
   return view;
