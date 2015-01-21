@@ -151,8 +151,9 @@ Access is read-only and non-reactive.
 
 You can use `this.autorun` from a [`created`](#template_created) or
 [`rendered`](#template_rendered) callback to reactively update the DOM
-or the template instance.  The Computation is automatically stopped
-when the template is destroyed.
+or the template instance.  You can use `Template.currentData()` inside
+of this callback to access reactive data context of the template instance.
+The Computation is automatically stopped when the template is destroyed.
 
 Alias for `template.view.autorun`.
 
