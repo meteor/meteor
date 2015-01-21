@@ -1108,7 +1108,8 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, arch) {
 
     var newScript = [
       "@echo off",
-      "%~dp0\\" + files.convertToOSPath(scriptLocation) + " %*"
+      // always convert to backslashes as always used on Windows
+      "%~dp0\\" + scriptLocation.replace(/\//g, '\\') + " %*"
     ].join(os.EOL);
 
     files.writeFile(linkLocation, newScript, {encoding: "ascii"});
