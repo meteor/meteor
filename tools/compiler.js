@@ -10,7 +10,7 @@ var meteorNpm = require('./meteor-npm.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
-var colonConverter = require('./metadata-colon-converter.js');
+var colonConverter = require('./colon-converter.js');
 
 var compiler = exports;
 

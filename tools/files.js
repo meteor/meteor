@@ -22,6 +22,7 @@ var cleanup = require('./cleanup.js');
 var buildmessage = require('./buildmessage.js');
 var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
+var colonConverter = require("./colon-converter.js");
 
 var files = exports;
 
@@ -597,7 +598,7 @@ files.extractTarGz = function (buffer, destPath, options) {
         // On Windows, try to convert old packages that have colons in paths
         // by blindly replacing all of the paths. Otherwise, we can't even
         // extract the tarball
-        e.path = files.adaptLegacyPath(e.path);
+        e.path = colonConverter.convert(e.path);
       }
 
       // Refuse to create a directory that isn't listable. Tarballs
@@ -1119,11 +1120,6 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, arch) {
   }
 };
 
-// In the old World we used to have any paths that worked on unix,
-// but in the new World we restrict the use of characters like ':'.
-files.adaptLegacyPath = function (p) {
-  return p.replace(/:/g, '_');
-};
 
 /////// Below here, functions have been corrected for slashes
 
