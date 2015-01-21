@@ -165,6 +165,8 @@ HTML.TransformingVisitor.def({
       var attrArgs = [null, null];
       attrArgs.push.apply(attrArgs, arguments);
       for (var k in oldAttrs) {
+        if (! _hasOwnProperty.call(oldAttrs, k))
+          continue;
         var oldValue = oldAttrs[k];
         attrArgs[0] = k;
         attrArgs[1] = oldValue;

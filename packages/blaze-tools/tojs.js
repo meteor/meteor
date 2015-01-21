@@ -140,6 +140,8 @@ ToJSVisitor.def({
 
     var kvStrs = [];
     for (var k in attrsDict) {
+      if (! attrsDict.hasOwnProperty(k))
+        continue;
       if (! HTML.isNully(attrsDict[k]))
         kvStrs.push(toObjectLiteralKey(k) + ': ' +
                     this.visit(attrsDict[k]));
