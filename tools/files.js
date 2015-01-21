@@ -391,7 +391,7 @@ files.mkdir_p = function (dir, mode) {
   try {
     files.mkdir(p, mode);
   } catch (err) {
-    if (err.code !== "EEXIST") {
+    if (err.code === "EEXIST") {
       if (pathIsDirectory(p)) {
         // all good, someone else created this directory for us while we were
         // yielding
@@ -400,7 +400,7 @@ files.mkdir_p = function (dir, mode) {
         return false;
       }
     } else {
-      throw e;
+      throw err;
     }
   }
 
