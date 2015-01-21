@@ -13,4 +13,4 @@ C:\git\bin\curl -L http://downloads.sourceforge.net/sevenzip/7z920.msi ^> C:\7z.
 msiexec /i C:\7z.msi /quiet /qn /norestart
 set PATH=^%PATH^%;"C:\Program Files\7-Zip"
 powershell "Set-ExecutionPolicy RemoteSigned"
-..\..\meteor.bat publish --existing-version
+..\..\meteor.bat publish --existing-version > C:\log.txt 2>&1
