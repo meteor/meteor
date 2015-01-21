@@ -2153,6 +2153,13 @@ main.registerCommand({
     Console.info("Building tarball for " + osArch);
     // We're going to build and tar up a tropohouse in a temporary directory.
     var tmpTropo = new tropohouse.Tropohouse(files.pathJoin(tmpdir, '.meteor'));
+
+    // when building for Windows architectures, build Windows-specific
+    // tropohouse and bootstrap tarball
+    if (/win/i.test(osArch)) {
+      tmpTropo.platform = "win32";
+    }
+
     main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       function () {
@@ -2183,7 +2190,7 @@ main.registerCommand({
     tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
-        'meteor'), osArch);
+        'meteor'));
 
     if (options.unpacked) {
       files.cp_r(tmpTropo.root, outputDirectory);
