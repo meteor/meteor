@@ -433,7 +433,7 @@ _.extend(exports.Tropohouse.prototype, {
                                 packageLinkTarget));
           }
         }
-        
+
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
