@@ -1120,8 +1120,40 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, arch) {
   }
 };
 
+/*
+Summary of cross platform file system handling strategy
 
-/////// Below here, functions have been corrected for slashes
+There are three main pain points for handling files on Windows: slashes in
+paths, line endings in text files, and colons/invalid characters in paths.
+
+1. Slashes in file paths
+  We have decided to store all paths inside the tool as unix-style paths in the
+  style of CYGWIN. This means that all paths have forward slashes on all
+  platforms, and C:\ is converted to /c/ on Windows.
+
+  All of the methods in files.js know how to convert from these unixy paths
+  to whatever type of path the underlying system prefers.
+
+  The reason we chose this strategy because it was easier to make sure to use
+  files.js everywhere instead of node's fs than to make sure every part of the
+  tool correctly uses system-specific path separators. In addition, there are
+  some parts of the tool where it is very hard to tell which strings are used
+  as URLs and which are used as file paths. In some cases, a string can be
+  used as both, meaning it has to have forward slashes no matter what.
+
+2. Line endings in text files
+  We have decided to convert all files read by the tool to Unix-style line
+  endings for the same reasons as slashes above. In many parts of the tool,
+  we assume that '\n' is the line separator, and it can be hard to find all
+  of the places and decide whether it is appropriate to use os.EOL.
+
+3. Colons and other invalid characters in file paths
+  This is not handled automatically by files.js. You need to be careful to
+  escape any colons in package names, etc, before using a string as a file path.
+
+  A helpful file to import for this purpose is colon-converter.js, which
+  also knows how to convert various configuration file formats.
+ */
 
 var toPosixPath = function (p, notAbsolute) {
   // Sometimes, you can have a path like \Users\IEUser on windows, and this
