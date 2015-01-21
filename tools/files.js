@@ -1166,7 +1166,6 @@ var toPosixPath = function (p, notAbsolute) {
   if (p[1] === ':' && ! notAbsolute) {
     // transform "C:/bla/bla" to "/c/bla/bla"
     p = '/' + p[0] + p.slice(2);
-    p = p.toLowerCase();
   }
 
   return p;
@@ -1179,7 +1178,6 @@ var toDosPath = function (p, notAbsolute) {
     // transform a previously windows path back
     // "/C/something" to "c:/something"
     p = p[1] + ":" + p.slice(2);
-    p = p.toLowerCase();
   }
 
   p = p.replace(/\//g, '\\');
