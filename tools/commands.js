@@ -498,7 +498,8 @@ main.registerCommand({
 
     Console.info(packageName + ": created" + inYourApp + "\n");
     Console.info("To publish your new package:");
-    Console.info("  cd " + files.pathRelative(files.cwd(), packageDir));
+    Console.info("  cd " + files.convertToOSPath(
+      files.pathRelative(files.cwd(), packageDir)));
     Console.info("  meteor publish --create");
     return 0;
   }
