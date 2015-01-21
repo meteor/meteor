@@ -89,7 +89,7 @@ CssTools = {
     };
 
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
-      var basePath = dirnamePath(rule.position.source);
+      var basePath = pathDirname(rule.position.source);
 
       // Set the correct basePath based on how the linked asset will be served.
       // XXX This is wrong. We are coupling the information about how files will
@@ -121,7 +121,7 @@ CssTools = {
           // We don't rewrite urls starting with a protocol definition such as
           // http, https, or data.
           if (isRelative(resource.path) && resource.protocol === null) {
-            absolutePath = joinPath(basePath, resource.path);
+            absolutePath = pathJoin(basePath, resource.path);
             newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
             value = value.replace(oldCssUrl, newCssUrl);
           }
@@ -145,12 +145,12 @@ var toStandardPath = function (p) {
   return p;
 };
 
-var joinPath = function (a, b) {
+var pathJoin = function (a, b) {
   return toStandardPath(path.join(
     toOSPath(a),
     toOSPath(b)));
 };
 
-var dirnamePath = function (p) {
+var pathDirname = function (p) {
   return toStandardPath(path.dirname(toOSPath(p)));
 };
