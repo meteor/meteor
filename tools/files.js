@@ -12,7 +12,7 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var crypto = require('crypto');
 
-var rimraf = require('./rimraf');
+var rimraf = require('./rimraf.js');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
