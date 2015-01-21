@@ -8,7 +8,7 @@ var Isopack = require('./isopack.js').Isopack;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
-var colonConverter = require('./metadata-colon-converter.js');
+var colonConverter = require('./colon-converter.js');
 
 exports.Tropohouse = function (root) {
   var self = this;

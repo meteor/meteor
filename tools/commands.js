@@ -22,7 +22,7 @@ var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
-var colonConverter = require('./metadata-colon-converter.js');
+var colonConverter = require('./colon-converter.js');
 
 // The architecture used by Galaxy servers; it's the architecture used
 // by 'meteor deploy'.

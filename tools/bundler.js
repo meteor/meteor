@@ -165,7 +165,7 @@ var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
-var colonConverter = require('./metadata-colon-converter.js');
+var colonConverter = require('./colon-converter.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [

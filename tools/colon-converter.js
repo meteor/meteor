@@ -41,8 +41,8 @@ var convertByScheme = function (val, scheme) {
   return ret;
 };
 
-var convert = function (str) {
-  return files.adaptLegacyPath(str);
+var convert = function (path) {
+  return path.replace(/:/g, '_');
 };
 
 var ISOPACK_SCHEME = {

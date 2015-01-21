@@ -12,7 +12,7 @@ var compiler = require('./compiler.js');
 var authClient = require('./auth-client.js');
 var catalog = require('./catalog.js');
 var projectContextModule = require('./project-context.js');
-var colonConverter = require("./metadata-colon-converter.js");
+var colonConverter = require("./colon-converter.js");
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
