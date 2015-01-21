@@ -1252,9 +1252,12 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   }});
 
   var div = renderToDiv(tmpl);
-    subtmplCopy.rendered = function () {
+  subtmplCopy.rendered = function () {
     test.fail("shouldn't re-render when same value returned from helper");
   };
+  subtmplCopy.onRendered(function () {
+    test.fail("shouldn't re-render when same value returned from helper");
+  });
 
   dep.changed();
   Tracker.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
