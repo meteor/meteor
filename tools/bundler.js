@@ -1529,7 +1529,6 @@ _.extend(JsImage.prototype, {
 JsImage.readFromDisk = function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(files.readFile(controlFilePath));
-  json = colonConverter.convertJSImage(json);
   var dir = files.pathDirname(controlFilePath);
 
   if (json.format !== "javascript-image-pre1")
