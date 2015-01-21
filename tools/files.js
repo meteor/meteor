@@ -1090,8 +1090,10 @@ files.getHomeDir = function () {
   return convertToStandardPath(homeDir);
 };
 
-files.linkToMeteorScript = function (scriptLocation, linkLocation, argsList) {
-  if (process.platform === "win32") {
+files.linkToMeteorScript = function (scriptLocation, linkLocation, arch) {
+  arch = arch || process.platform;
+
+  if (/win/i.test(arch)) {
     // Make a meteor batch script that points to current tool
 
     // add .bat extension to destination if not present
@@ -1102,12 +1104,6 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, argsList) {
     // add .bat extension to link file if not present
     if (linkLocation.indexOf(".bat") !== (linkLocation.length - 4)) {
       linkLocation = linkLocation + ".bat";
-    }
-
-    var args = "";
-    // Let the link pass arguments to the target script, used for "--release"
-    if (_.isArray(argsList)) {
-      args = argsList.join(" ");
     }
 
     var newScript = [

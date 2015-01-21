@@ -2155,7 +2155,7 @@ main.registerCommand({
     tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
-        'meteor'));
+        'meteor'), osArch);
 
     if (options.unpacked) {
       files.cp_r(tmpTropo.root, outputDirectory);
