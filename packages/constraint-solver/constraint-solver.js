@@ -318,3 +318,79 @@ var getCostFunction = function (resolver, options) {
     }
   };
 };
+
+// - package: String package name
+// - vConstraint: a PackageVersion.VersionConstraint, or an object
+//   with an `alternatives` property lifted from one.
+// - version: version String
+// - options: any object with an "anticipatedPrereleases" property.
+CS.isConstraintSatisfied = function (package, vConstraint, version, options) {
+
+  var prereleaseNeedingLicense = false;
+
+  // We try not to allow "pre-release" versions (versions with a '-') unless
+  // they are explicitly mentioned.  If the `anticipatedPrereleases` option is
+  // `true` set, all pre-release versions are allowed.  Otherwise,
+  // anticipatedPrereleases lists pre-release versions that are always allow
+  // (this corresponds to pre-release versions mentioned explicitly in
+  // *top-level* constraints).
+  //
+  // Otherwise, if `candidateUV` is a pre-release, it needs to be "licensed" by
+  // being mentioned by name in *this* constraint or matched by an inexact
+  // constraint whose version also has a '-'.
+  //
+  // Note that a constraint "@2.0.0" can never match a version "2.0.1-rc.1"
+  // unless anticipatedPrereleases allows it, even if another constraint found
+  // in the graph (but not at the top level) explicitly mentions "2.0.1-rc.1".
+  // Why? The constraint solver assumes that adding a constraint to the resolver
+  // state can't make previously impossible choices now possible.  If
+  // pre-releases mentioned anywhere worked, then applying the constraint
+  // "@2.0.0" followed by "@=2.0.1-rc.1" would result in "2.0.1-rc.1" ruled
+  // first impossible and then possible again. That will break this algorith, so
+  // we have to fix the meaning based on something known at the start of the
+  // search.  (We could try to apply our prerelease-avoidance tactics solely in
+  // the cost functions, but then it becomes a much less strict rule.)
+  if (options.anticipatedPrereleases !== true
+      && /-/.test(version)) {
+    var isAnticipatedPrerelease = (
+      _.has(options.anticipatedPrereleases, package) &&
+        _.has(options.anticipatedPrereleases[package], version));
+    if (! isAnticipatedPrerelease) {
+      prereleaseNeedingLicense = true;
+    }
+  }
+
+  return _.some(vConstraint.alternatives, function (simpleConstraint) {
+    var type = simpleConstraint.type;
+
+    if (type === "any-reasonable") {
+      return ! prereleaseNeedingLicense;
+    } else if (type === "exactly") {
+      var cVersion = simpleConstraint.versionString;
+      return (cVersion === version);
+    } else if (type === 'compatible-with') {
+      var cv = PV.parse(simpleConstraint.versionString);
+      var v = PV.parse(version);
+
+      if (prereleaseNeedingLicense && ! /-/.test(cv.raw)) {
+        return false;
+      }
+
+      // If the candidate version is less than the version named in the
+      // constraint, we are not satisfied.
+      if (PV.lessThan(v, cv)) {
+        return false;
+      }
+
+      // To be compatible, the two versions must have the same major version
+      // number.
+      if (v.major !== cv.major) {
+        return false;
+      }
+
+      return true;
+    } else {
+      throw Error("Unknown constraint type: " + type);
+    }
+  });
+};

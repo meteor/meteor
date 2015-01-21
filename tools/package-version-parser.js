@@ -181,6 +181,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
 };
 
 // Takes in two meteor versions. Returns true if the first one is less than the second.
+// Versions are strings or PackageVersion objects.
 PV.lessThan = function (versionOne, versionTwo) {
   return PV.compare(versionOne, versionTwo) < 0;
 };
@@ -195,10 +196,16 @@ PV.majorVersion = function (versionString) {
 };
 
 // Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
-// v2 is greater.
+// v2 is greater.  Versions are strings or PackageVersion objects.
 PV.compare = function (versionOne, versionTwo) {
-  var v1 = PV.parse(versionOne);
-  var v2 = PV.parse(versionTwo);
+  var v1 = versionOne;
+  if (typeof v1 === 'string') {
+    v1 = PV.parse(v1);
+  }
+  var v2 = versionTwo;
+  if (typeof v2 === 'string') {
+    v2 = PV.parse(v2);
+  }
 
   // If the semver parts are different, use the semver library to compare,
   // ignoring wrap numbers.  (The semver library will ignore the build ID

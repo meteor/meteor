@@ -321,73 +321,8 @@ ConstraintSolver.Constraint.prototype.isSatisfied = function (
                 candidateUV.name);
   }
 
-  var prereleaseNeedingLicense = false;
-
-  // We try not to allow "pre-release" versions (versions with a '-') unless
-  // they are explicitly mentioned.  If the `anticipatedPrereleases` option is
-  // `true` set, all pre-release versions are allowed.  Otherwise,
-  // anticipatedPrereleases lists pre-release versions that are always allow
-  // (this corresponds to pre-release versions mentioned explicitly in
-  // *top-level* constraints).
-  //
-  // Otherwise, if `candidateUV` is a pre-release, it needs to be "licensed" by
-  // being mentioned by name in *this* constraint or matched by an inexact
-  // constraint whose version also has a '-'.
-  //
-  // Note that a constraint "@2.0.0" can never match a version "2.0.1-rc.1"
-  // unless anticipatedPrereleases allows it, even if another constraint found
-  // in the graph (but not at the top level) explicitly mentions "2.0.1-rc.1".
-  // Why? The constraint solver assumes that adding a constraint to the resolver
-  // state can't make previously impossible choices now possible.  If
-  // pre-releases mentioned anywhere worked, then applying the constraint
-  // "@2.0.0" followed by "@=2.0.1-rc.1" would result in "2.0.1-rc.1" ruled
-  // first impossible and then possible again. That will break this algorith, so
-  // we have to fix the meaning based on something known at the start of the
-  // search.  (We could try to apply our prerelease-avoidance tactics solely in
-  // the cost functions, but then it becomes a much less strict rule.)
-  if (resolveContext.anticipatedPrereleases !== true
-      && /-/.test(candidateUV.version)) {
-    var isAnticipatedPrerelease = (
-      _.has(resolveContext.anticipatedPrereleases, self.name) &&
-        _.has(resolveContext.anticipatedPrereleases[self.name],
-              candidateUV.version));
-    if (! isAnticipatedPrerelease) {
-      prereleaseNeedingLicense = true;
-    }
-  }
-
-  return _.some(self.alternatives, function (simpleConstraint) {
-    var type = simpleConstraint.type;
-
-    if (type === "any-reasonable") {
-      return ! prereleaseNeedingLicense;
-    } else if (type === "exactly") {
-      var version = simpleConstraint.versionString;
-      return (version === candidateUV.version);
-    } else if (type === 'compatible-with') {
-      var version = simpleConstraint.versionString;
-
-      if (prereleaseNeedingLicense && ! /-/.test(version)) {
-        return false;
-      }
-
-      // If the candidate version is less than the version named in the
-      // constraint, we are not satisfied.
-      if (PackageVersion.lessThan(candidateUV.version, version)) {
-        return false;
-      }
-
-      // To be compatible, the two versions must have the same major version
-      // number.
-      if (candidateUV.majorVersion !== PackageVersion.majorVersion(version)) {
-        return false;
-      }
-
-      return true;
-    } else {
-      throw Error("Unknown constraint type: " + type);
-    }
-  });
+  return ConstraintSolver.isConstraintSatisfied(
+    self.name, self, candidateUV.version, resolveContext);
 };
 
 // An object that records the general context of a resolve call. It can be
