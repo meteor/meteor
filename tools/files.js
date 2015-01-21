@@ -518,7 +518,7 @@ files.mkdtemp = function (prefix) {
     }).filter(_.identity));
 
     if (! tmpDir && process.platform !== 'win32')
-      tmpDir = files.pathSep + 'tmp';
+      tmpDir = '/tmp';
 
     if (! tmpDir)
       throw new Error("Couldn't create a temporary directory.");
