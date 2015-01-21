@@ -595,7 +595,7 @@ files.extractTarGz = function (buffer, destPath, options) {
     .on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in paths
-        // by blindly replacing all of the paths. Otherwise, we can't exen
+        // by blindly replacing all of the paths. Otherwise, we can't even
         // extract the tarball
         e.path = files.adaptLegacyPath(e.path);
       }
