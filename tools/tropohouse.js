@@ -70,7 +70,11 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
     isopackFileData[Isopack.currentFormat] = convertedMetadata;
 
     var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
-    files.chmod(isopackJsonPath, 0777);
+
+    if (files.exists(isopackJsonPath)) {
+      files.chmod(isopackJsonPath, 0777);
+    }
+
     files.writeFile(isopackJsonPath,
       new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
       {mode: 0444});
