@@ -129,10 +129,11 @@ Fiber(function () {
           return require(name);
         }
 
-        var nodeModuleDir =
-          path.resolve(serverDir, fileInfo.node_modules, name.split("/")[0]);
+        var nodeModuleBase = path.resolve(serverDir, fileInfo.node_modules);
 
-        if (fs.existsSync(nodeModuleDir)) {
+        var nodeModuleDir = path.resolve(nodeModuleBase, name);
+
+        if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
           return require(nodeModuleDir);
           }
         try {
