@@ -130,7 +130,7 @@ Fiber(function () {
         }
 
         var nodeModuleDir =
-          path.resolve(serverDir, fileInfo.node_modules, name);
+          path.resolve(serverDir, fileInfo.node_modules, name.split("/")[0]);
 
         if (fs.existsSync(nodeModuleDir)) {
           return require(nodeModuleDir);
