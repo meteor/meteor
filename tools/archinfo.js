@@ -65,8 +65,10 @@ var os = require('os');
  *   hardware is virtually extinct. Meteor has never supported it and
  *   nobody has asked for it.
  *
- * In the future there will be a os.windows architecture, probably
- * also with x86_64 and x86_32 variants.
+ * os.windows.x86_32
+ *   This is 32 and 64 bit Windows. It seems like there is not much of
+ *   a benefit to using 64 bit Node on Windows, and 32 bit works properly
+ *   even on 64 bit systems.
  *
  * To be (more but far from completely) precise, the ABI for os.*
  * architectures includes a CPU type, a mode in which the code will be
@@ -156,13 +158,8 @@ var host = function () {
     }
 
     else if (platform === "win32") {
-      if (os.arch() === "ia32") {
-        _host = "os.windows.x86_32";
-      } else if (os.arch() === "x64") {
-        _host = "os.windows.x86_64";
-      } else {
-        throw new Error("Unsupported architecture: " + os.arch());
-      }
+      // We also use 32 bit builds on 64 bit Windows architectures.
+      _host = "os.windows.x86_32";
     }
 
     else
