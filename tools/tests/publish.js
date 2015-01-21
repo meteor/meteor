@@ -258,13 +258,13 @@ selftest.define("list-with-a-new-version",
     run.expectExit(0);
 
     // It works if ask for it, though.
-    run = s.run("add", fullPackageName + "@1.0.4-rc.3");
+    run = s.run("add", fullPackageName + "@1.0.4-rc.4");
     run.waitSecs(100);
     run.expectExit(0);
     run = s.run("list");
     run.waitSecs(10);
     run.match(fullPackageName);
-    run.match("1.0.4-rc.3 ");
+    run.match("1.0.4-rc.4 ");
     run.forbidAll("New versions");
     run.expectExit(0);
   });

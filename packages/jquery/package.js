@@ -3,7 +3,7 @@ Package.describe({
   // This matches the upstream version. If you want to publish a new version of
   // the package without pulling a new upstream version, you should call it
   // '1.11.2_1'.
-  version: '1.11.2'
+  version: '1.11.3'
 });
 
 Package.onUse(function (api) {

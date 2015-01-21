@@ -186,7 +186,6 @@ selftest.define("change packages during hot code push", [], function () {
   s.write(".meteor/packages", "meteor-platform \n say-something");
   run.waitSecs(3);
   run.match("initial");
-  run.match("restarted");
 
   // Modify the local package 'say-something'.
   s.cd("packages/say-something", function () {
@@ -194,13 +193,11 @@ selftest.define("change packages during hot code push", [], function () {
   });
   run.waitSecs(12);
   run.match("another");
-  run.match("restarted");
 
   // Add a local package depends-on-plugin.
   s.write(".meteor/packages", "meteor-platform \n depends-on-plugin");
   run.waitSecs(2);
   run.match("foobar");
-  run.match("restarted");
 
   // Change something in the plugin.
   s.cd("packages/contains-plugin/plugin", function () {
@@ -209,7 +206,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(2);
   run.match("edit");
   run.match("foobar!");
-  run.match("restarted");
 
   // In a local package, add a dependency on a different package.  In this case,
   // package2.js contains an onUse call that tells it to use accounts-base (a
@@ -219,7 +215,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(2);
   run.match("edit");
   run.match("foobar!");
-  run.match("restarted");
 
   // Check that we are watching the versions file, as well as the packages file.
   s.unlink('.meteor/versions');
@@ -230,7 +225,6 @@ selftest.define("change packages during hot code push", [], function () {
   s.write(".meteor/packages", "meteor-platform \n say-something");
   run.waitSecs(3);
   run.match("another");
-  run.match("restarted");
   run.stop();
 
   s.rename('packages/say-something', 'packages/shout-something');
@@ -246,10 +240,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("MongoDB");
   run.waitSecs(5);
   run.match("louder");  // the package actually loaded
-  run.waitSecs(5);
-  run.match("your app");
-  run.match("running at");
-  run.match("localhost");
 
   // How about breaking and fixing a package.js?
   s.cd("packages/shout-something", function () {
@@ -696,7 +686,6 @@ selftest.define("package specifying a name",
 
   run.waitSecs(5);
   run.match("overriding accounts-base!");
-  run.match("restarted");
   run.stop();
 
   run = s.run('list');
@@ -768,7 +757,7 @@ selftest.define("talk to package server with expired or no accounts token",
 var changeVersionAndPublish = function (s, expectAuthorizationFailure) {
   var packageJs = s.read("package.js");
   // XXX Hack
-  var versionMatch = packageJs.match(/version: \'(\d\.\d\.\d)\'/);
+  var versionMatch = packageJs.match(/version: \"(\d\.\d\.\d)\"/);
   if (! versionMatch) {
     selftest.fail("package.js does not match version field: " + packageJs);
   }
