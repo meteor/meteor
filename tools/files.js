@@ -600,20 +600,6 @@ files.extractTarGz = function (buffer, destPath, options) {
         // extract the tarball
         e.path = colonConverter.convert(e.path);
       }
-
-      // Refuse to create a directory that isn't listable. Tarballs
-      // created on Windows will have non-executable directories (since
-      // executable isn't a thing in Windows directory permissions), and
-      // so the resulting extracted directories will not be listable on
-      // Linux/Mac unless we explicitly make them executable. We think
-      // this should really be an option that you pass to node tar, but
-      // setting it in an 'entry' handler is the same strategy that npm
-      // does, so we do that here too.
-      if (e.type === "Directory") {
-        var umask = process.platform === "win32" ? 0 : process.umask;
-        e.mode = ((e.mode || e.props.mode) | 0500) & (~umask);
-        e.props.mode = e.mode;
-      }
     })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
@@ -689,6 +675,20 @@ files.createTarGzStream = function (dirPath, options) {
           entry.path.indexOf("test") === -1) {
         throw new Error("Path too long: " + entry.path + " is " +
           entry.path.length + " characters.");
+      }
+
+      if (entry.type === "Directory") {
+        // Refuse to create a directory that isn't listable. Tarballs
+        // created on Windows will have non-executable directories (since
+        // executable isn't a thing in Windows directory permissions), and
+        // so the resulting extracted directories will not be listable on
+        // Linux/Mac unless we explicitly make them executable. We think
+        // this should really be an option that you pass to node tar, but
+        // setting it in an 'entry' handler is the same strategy that npm
+        // does, so we do that here too.
+        var umask = process.platform === "win32" ? 0 : process.umask;
+        entry.mode = ((entry.mode || entry.props.mode) | 0500) & (~umask);
+        entry.props.mode = entry.mode;
       }
     });
   }
