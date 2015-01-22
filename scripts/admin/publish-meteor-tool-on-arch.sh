@@ -46,7 +46,7 @@ main () {
     # copy the meteor session file to the remote host
     scp -oUserKnownHostsFile=$TEMP_KEY -P $PORT -i $TEMP_PRIV_KEY -q $SESSION_FILE $USERNAME@$HOST:~/session
 
-    $METEOR admin get-machine $PLATFORM <<'END'
+    METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM <<'END'
 set -e
 set -u
 if [ -d meteor ]; then
@@ -58,9 +58,9 @@ git fetch --tags
 END
 
     # checkout the SHA1 we want to publish
-    echo "cd meteor; git checkout $GITSHA" | $METEOR admin get-machine $PLATFORM
+    echo "cd meteor; git checkout $GITSHA" | METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM
     # publish the release
-    echo "cd meteor/packages/meteor-tool && env METEOR_SESSION_FILE=~/session ../../meteor publish --existing-version" | $METEOR admin get-machine $PLATFORM
+    echo "cd meteor/packages/meteor-tool && env METEOR_SESSION_FILE=~/session ../../meteor publish --existing-version" | METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM
 
     trap - EXIT
   else
@@ -108,7 +108,7 @@ END
 # get keys from "meteor admin get-machine" command
 parse_keys () {
   trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
-  CREDS=$($METEOR admin get-machine $PLATFORM --json)
+  CREDS=$(METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM --json)
 
   # save host key and login private key to temp files
   echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key_$PLATFORM
