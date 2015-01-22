@@ -195,7 +195,10 @@ _.extend(AppProcess.prototype, {
 
     var shellDir = self.projectContext.getMeteorShellDirectory();
     files.mkdir_p(shellDir);
-    env.METEOR_SHELL_DIR = shellDir;
+
+    // We need to convert to OS path here because the running app doesn't
+    // have access to path translation functions
+    env.METEOR_SHELL_DIR = files.convertToOSPath(shellDir);
 
     env.METEOR_PARENT_PID =
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
