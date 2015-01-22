@@ -24,6 +24,13 @@ if (Package.webapp) {
   Meteor.server = null;
   Meteor.refresh = function (notification) {
   };
+
+  // Make these empty/no-ops too, so that non-webapp apps can still
+  // depend on/use packages that use those functions.
+  _.each(['publish', 'methods', 'onConnection'],
+      function (name) {
+        Meteor[name] = function () { };
+      });
 }
 
 // Meteor.server used to be called Meteor.default_server. Provide
