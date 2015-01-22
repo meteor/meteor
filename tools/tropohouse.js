@@ -468,7 +468,11 @@ _.extend(exports.Tropohouse.prototype, {
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {
-          files.freeTempDir(buildTempDir);
+          // On Windows, the first item added to buildTempDir is actually
+          // not a temporary directory, it's the real package path
+          if (buildTempDir !== packagePath) {
+            files.freeTempDir(buildTempDir);
+          }
         });
 
         // Clean up old version.
