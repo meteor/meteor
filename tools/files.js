@@ -600,20 +600,6 @@ files.extractTarGz = function (buffer, destPath, options) {
         // extract the tarball
         e.path = colonConverter.convert(e.path);
       }
-
-      // Refuse to create a directory that isn't listable. Tarballs
-      // created on Windows will have non-executable directories (since
-      // executable isn't a thing in Windows directory permissions), and
-      // so the resulting extracted directories will not be listable on
-      // Linux/Mac unless we explicitly make them executable. We think
-      // this should really be an option that you pass to node tar, but
-      // setting it in an 'entry' handler is the same strategy that npm
-      // does, so we do that here too.
-      if (e.type === "Directory") {
-        var umask = process.platform === "win32" ? 0 : process.umask;
-        e.mode = ((e.mode || e.props.mode) | 0500) & (~umask);
-        e.props.mode = e.mode;
-      }
     })
     .on('error', function (e) {
       future.isResolved() || future.throw(e);
@@ -649,36 +635,36 @@ files.createTarGzStream = function (dirPath, options) {
   var fstream = require('fstream');
   var zlib = require("zlib");
 
-  // Use `dirPath` as the argument to `fstream.Reader` here instead of
-  // `{ path: dirPath, type: 'Directory' }`. This is a workaround for a
-  // collection of odd behaviors in fstream (which might be bugs or
-  // might just be weirdnesses). First, if we pass an object with `type:
-  // 'Directory'` as an argument, then the resulting tarball has no
-  // entry for the top-level directory, because the reader emits an
-  // entry (with just the path, no permissions or other properties)
-  // before the pipe to gzip is even set up, so that entry gets
-  // lost. Even if we pause the streams until all the pipes are set up,
-  // we'll get the entry in the tarball for the top-level directory
-  // without permissions or other properties, which is problematic. Just
-  // passing `dirPath` appears to cause `fstream` to stat the directory
-  // before emitting an entry for it, so the pipes are set up by the
-  // time the entry is emitted, and the entry has all the right
-  // permissions, etc. from statting it.
+  // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
+  // fstream.Reader. This triggers a collection of odd behaviors in fstream
+  // (which might be bugs or might just be weirdnesses).
   //
-  // The second weird behavior is that we need an entry for the
-  // top-level directory in the tarball to untar it with npm `tar`. (GNU
-  // tar, in contrast, appears to have no problems untarring tarballs
-  // without entries for the top-level directory inside them.) The
-  // problem is that, without an entry for the top-level directory,
-  // `fstream` will create the directory with the same permissions as
-  // the first file inside it. This manifests as an EACCESS when
-  // untarring if the first file inside the top-level directory is not
-  // writeable.
-  var tarStream = fstream.Reader(files.convertToOSPath(dirPath))
-    .pipe(tar.Pack({ noProprietary: true }));
+  // First, if we pass an object with `type: 'Directory'` as an argument, then
+  // the resulting tarball has no entry for the top-level directory, because
+  // the reader emits an entry (with just the path, no permissions or other
+  // properties) before the pipe to gzip is even set up, so that entry gets
+  // lost. Even if we pause the streams until all the pipes are set up, we'll
+  // get the entry in the tarball for the top-level directory without
+  // permissions or other properties, which is problematic. Just passing
+  // `dirPath` appears to cause `fstream` to stat the directory before emitting
+  // an entry for it, so the pipes are set up by the time the entry is emitted,
+  // and the entry has all the right permissions, etc. from statting it.
+  //
+  // The second weird behavior is that we need an entry for the top-level
+  // directory in the tarball to untar it with npm `tar`. (GNU tar, in
+  // contrast, appears to have no problems untarring tarballs without entries
+  // for the top-level directory inside them.) The problem is that, without an
+  // entry for the top-level directory, `fstream` will create the directory
+  // with the same permissions as the first file inside it. This manifests as
+  // an EACCESS when untarring if the first file inside the top-level directory
+  // is not writeable.
+  var fileStream = fstream.Reader({
+    path: files.convertToOSPath(dirPath),
+    filter: function (entry) {
+      if (process.platform !== "win32") {
+        return true;
+      }
 
-  if (process.platform === "win32") {
-    tarStream.on("entry", function () {
       // Error about long paths on Windows.
       // As far as we know the tarball creation seems to fail silently when path
       // is too long (the files don't get copied to tarball). To avoid it, we
@@ -690,8 +676,24 @@ files.createTarGzStream = function (dirPath, options) {
         throw new Error("Path too long: " + entry.path + " is " +
           entry.path.length + " characters.");
       }
-    });
-  }
+
+      // Refuse to create a directory that isn't listable. Tarballs
+      // created on Windows will have non-executable directories (since
+      // executable isn't a thing in Windows directory permissions), and
+      // so the resulting extracted directories will not be listable on
+      // Linux/Mac unless we explicitly make them executable. We think
+      // this should really be an option that you pass to node tar, but
+      // setting it in an 'entry' handler is the same strategy that npm
+      // does, so we do that here too.
+      if (entry.type === "Directory") {
+        entry.mode = (entry.mode || entry.props.mode) | 0500;
+        entry.props.mode = entry.mode;
+      }
+
+      return true;
+    }
+  });
+  var tarStream = fileStream.pipe(tar.Pack({ noProprietary: true }));
 
   return tarStream.pipe(zlib.createGzip());
 };
