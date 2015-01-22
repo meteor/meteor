@@ -696,8 +696,15 @@ files.createTarGzStream = function (dirPath, options) {
         gzipStream.write(entry);
       }
     });
+
+    tarStream.on("end", function () {
+      gzipStream.end();
+    });
+
+    return gzipStream;
   }
 
+  tarStream.pipe(gzipStream);
   return gzipStream;
 };
 
