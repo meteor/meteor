@@ -65,6 +65,10 @@ CS.CatalogCache.prototype.getPackageVersions = function (package) {
           this._versions[package] : []);
 };
 
+CS.CatalogCache.prototype.hasPackage = function (package) {
+  return _.has(this._versions, package);
+};
+
 CS.CatalogCache.prototype.toJSONable = function () {
   var self = this;
   var data = {};

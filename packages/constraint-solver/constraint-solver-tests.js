@@ -77,12 +77,17 @@ splitArgs = function (deps) {
 };
 
 var testWithResolver = function (test, resolver, f) {
+  var answerToString = function (answer) {
+    var pvs = _.map(answer, function (v, p) { return p + ' ' + v; });
+    return pvs.sort().join('\n');
+  };
   var t = function (deps, expected, options) {
     var dependencies = splitArgs(deps).dependencies;
     var constraints = splitArgs(deps).constraints;
 
     var resolvedDeps = resolver.resolve(dependencies, constraints, options);
-    test.equal(resolvedDeps.answer, expected);
+    test.equal(answerToString(resolvedDeps.answer),
+               answerToString(expected));
   };
 
   var FAIL = function (deps, regexp) {
@@ -300,17 +305,6 @@ Tinytest.add("constraint solver - no constraint dependency - transitive dep stil
     ["sparkle", "sparky-forms"],
     [PV.parseConstraint("sparky-forms@1.1.2")]).answer;
   test.equal(versions.sparkle, "2.1.1");
-});
-
-Tinytest.add("constraint solver - build IDs", function (test) {
-  // build IDs in suffixes like "+local" don't show up in output
-  testWithResolver(test, makeResolver([
-    ["foo", "1.0.1+local"]
-  ]), function (t) {
-    t({ "foo": "1.0.0" }, {
-      "foo": "1.0.1"
-    });
-  });
 });
 
 Tinytest.add("constraint solver - input serialization", function (test) {

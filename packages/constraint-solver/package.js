@@ -10,7 +10,7 @@ Npm.depends({
 Package.onUse(function (api) {
   api.export('ConstraintSolver');
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
-           'binary-heap', 'random']);
+           'binary-heap', 'random', 'logic-solver']);
   api.addFiles(['datatypes.js', 'catalog-cache.js', 'catalog-loader.js',
                 'constraint-solver-input.js']);
   api.addFiles(['constraint-solver.js', 'resolver.js', 'constraints-list.js',

@@ -34,7 +34,126 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                            options);
   input.loadFromCatalog(self.catalogLoader);
 
-  return CS.PackagesResolver._resolveWithInput(input, this._options.nudge);
+  return newResolveWithInput(input, this._options.nudge);
+};
+
+var newResolveWithInput = function (input, _nudge) {
+  if (input.previousSolution || input.upgrade.length) {
+    // XXX Bail out to the old solver for now.
+    console.log("Bailing to old solver...");
+    return CS.PackagesResolver._resolveWithInput(input, _nudge);
+  }
+  console.log("Using new solver...");
+
+  // Packages that are mentioned in dependencies but not in the
+  // CatalogCache
+  var unknownPackages = {}; // package name -> true
+  var packageVersionsRequiringPackage = {}; // package -> [package-and-version]
+  var rootDeps = {};
+  _.each(input.dependencies, function (p) {
+    rootDeps[p] = true;
+  });
+
+  var solver = new Logic.Solver;
+
+  var cache = input.catalogCache;
+
+  var resolverOptions = {
+    anticipatedPrereleases: input.anticipatedPrereleases
+  };
+
+  var addConstraint = function (pv, p2, vConstraint) {
+    var p2Versions = cache.getPackageVersions(p2);
+    var okVersions = _.filter(p2Versions, function (v2) {
+      return CS.isConstraintSatisfied(p2, vConstraint,
+                                      v2, resolverOptions);
+    });
+    var okPVersions = _.map(okVersions, function (v2) {
+      return p2 + ' ' + v2;
+    });
+    // If we select this version of `p` and we select some version
+    // of `p2`, we must select an "ok" version.
+    if (pv !== null) {
+      solver.require(Logic.or(Logic.not(pv),
+                              Logic.not(p2),
+                              okPVersions));
+    } else {
+      solver.require(Logic.or(Logic.not(p2),
+                              okPVersions));
+    }
+  };
+
+  cache.eachPackage(function (p, versions) {
+    // ["foo 1.0.0", "foo 1.0.1", ...] for a given "foo"
+    var packageAndVersions = _.map(versions, function (v) {
+      return p + ' ' + v;
+    });
+    // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
+    solver.require(Logic.atMostOne(packageAndVersions));
+    // The variable "foo" is true if and only if at least one of the
+    // variables ["foo 1.0.0", "foo 1.0.1", ...] is true.
+    solver.require(Logic.equiv(p, Logic.or(packageAndVersions)));
+
+    _.each(versions, function (v) {
+      var pv = p + ' ' + v;
+      _.each(cache.getDependencyMap(p, v), function (dep) {
+        // `dep` is a CS.Dependency
+        var p2 = dep.pConstraint.name;
+        if (! cache.hasPackage(p2)) {
+          unknownPackages[p2] = true;
+        }
+        var constr = dep.pConstraint.constraintString;
+        if (! dep.isWeak) {
+          packageVersionsRequiringPackage[p2] =
+            (packageVersionsRequiringPackage[p2] || []);
+          packageVersionsRequiringPackage[p2].push(pv);
+        }
+        if (constr) {
+          addConstraint(pv, p2, dep.pConstraint.vConstraint);
+        }
+      });
+    });
+  });
+
+  _.each(packageVersionsRequiringPackage, function (pvs, p) {
+    // pvs are all the package-and-versions that require p.
+    // We want to select p if-and-only-if we select one of the pvs
+    // (except for top-level dependencies).
+    if (! _.has(rootDeps, p)) {
+      solver.require(Logic.equiv(p, Logic.or(pvs)));
+    }
+  });
+
+  // For good measure, disallow any packages that were mentioned in
+  // dependencies or constraints but aren't available in the catalog.
+  solver.forbid(_.keys(unknownPackages));
+
+  solver.require(input.dependencies);
+
+  _.each(input.constraints, function (c) {
+    addConstraint(null, c.name, c.vConstraint);
+  });
+
+  var solution = solver.solve();
+
+  if (! solution) {
+    var e = new Error("UNSAT"); // XXX
+    e.constraintSolverError = true;
+    throw e;
+  }
+
+  var versionMap = {};
+  _.each(solution.getTrueVars(), function (x) {
+    if (x.indexOf(' ') >= 0) {
+      var pv = CS.PackageAndVersion.fromString(x);
+      versionMap[pv.package] = pv.version;
+    }
+  });
+
+  return {
+    neededToUseUnanticipatedPrereleases: false, // XXX
+    answer: versionMap
+  };
 };
 
 // Exposed for tests.
