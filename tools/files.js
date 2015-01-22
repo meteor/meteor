@@ -663,6 +663,8 @@ files.createTarGzStream = function (dirPath, options) {
   var tarStream = fstream.Reader(files.convertToOSPath(dirPath))
     .pipe(tar.Pack({ noProprietary: true }));
 
+  var gzipStream = zlib.createGzip();
+
   if (process.platform === "win32") {
     tarStream.on("entry", function () {
       // Error about long paths on Windows.
@@ -689,11 +691,14 @@ files.createTarGzStream = function (dirPath, options) {
         var umask = process.platform === "win32" ? 0 : process.umask;
         entry.mode = ((entry.mode || entry.props.mode) | 0500) & (~umask);
         entry.props.mode = entry.mode;
+        gzipStream.write(entry);
+      } else {
+        gzipStream.write(entry);
       }
     });
   }
 
-  return tarStream.pipe(zlib.createGzip());
+  return gzipStream;
 };
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
