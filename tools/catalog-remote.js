@@ -811,18 +811,11 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
-    // XXX HACK for windows previews, since none of them are recommended,
-    // we should just pick the latest one
-    var recommended;
-    if (process.platform === "win32") {
-      recommended = result;
-    } else {
-      recommended = _.filter(result, function (v) {
-        if (!v.recommended)
-          return false;
-        return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
-      });
-    }
+    var recommended = _.filter(result, function (v) {
+      if (!v.recommended)
+        return false;
+      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
+    });
 
     var recSort = _.sortBy(recommended, function (rec) {
       return rec.orderKey;
