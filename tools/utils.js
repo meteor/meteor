@@ -687,14 +687,6 @@ exports.longformDate = function (date) {
 // example).
 exports.maxDateLength = "September 24th, 2014".length;
 
-exports.escapePackageNameForPath = function (packageName) {
-  return packageName.replace(":", "_");
-};
-
-exports.unescapePackageNameForPath = function (escapedPackageName) {
-  return escapedPackageName.replace("_", ":");
-};
-
 // If we have failed to update the catalog, informs the user and advises them to
 // go online for up to date inforation.
 exports.explainIfRefreshFailed = function () {

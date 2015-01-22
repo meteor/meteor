@@ -6,6 +6,7 @@ var files = require('./files.js');
 var isopackModule = require('./isopack.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
+var colonConverter = require("./colon-converter.js");
 
 exports.IsopackCache = function (options) {
   var self = this;
@@ -288,8 +289,7 @@ _.extend(exports.IsopackCache.prototype, {
 
   _isopackDir: function (packageName) {
     var self = this;
-    return files.pathJoin(self.cacheDir,
-                          utils.escapePackageNameForPath(packageName));
+    return files.pathJoin(self.cacheDir, colonConverter.convert(packageName));
   },
 
   _isopackBuildInfoPath: function (packageName) {

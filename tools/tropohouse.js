@@ -143,7 +143,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     var relativePath = files.pathJoin(
       config.getPackagesDirectoryName(),
-      utils.escapePackageNameForPath(packageName),
+      colonConverter.convert(packageName),
       version);
 
     return relative ? relativePath : files.pathJoin(self.root, relativePath);
