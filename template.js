@@ -180,6 +180,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  // To avoid situations when new callbacks are added in between view
+  // instantiation and event being fired, decide on all callbacks to fire
+  // immediately and then fire them on the event.
   var createdCallbacks = self._getCallbacks('created');
   view.onViewCreated(function () {
     fireCallbacks(createdCallbacks, view.templateInstance());
