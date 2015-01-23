@@ -1,3 +1,7 @@
+require("6to5/register")({
+  cache: true
+});
+
 var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
   require('./profile-require.js').start();
