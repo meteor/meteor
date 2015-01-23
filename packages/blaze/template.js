@@ -109,9 +109,11 @@ Template.prototype._getCallbacks = function (which) {
 };
 
 var fireCallbacks = function (callbacks, template) {
-  for (var i = 0, N = callbacks.length; i < N; i++) {
-    callbacks[i].call(template);
-  }
+  Template._withTemplateInstance(template, function () {
+    for (var i = 0, N = callbacks.length; i < N; i++) {
+      callbacks[i].call(template);
+    }
+  });
 };
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
@@ -318,6 +320,19 @@ Template.prototype.helpers = function (dict) {
     this.__helpers.set(k, dict[k]);
 };
 
+// Kind of like Blaze.currentView but for the template instance
+Template._currentTemplateInstance = null;
+
+Template._withTemplateInstance = function (templateInstance, func) {
+  var oldTmplInstance = Template._currentTemplateInstance;
+  try {
+    Template._currentTemplateInstance = templateInstance;
+    return func();
+  } finally {
+    Template._currentTemplateInstance = oldTmplInstance;
+  }
+};
+
 /**
  * @summary Specify event handlers for this template.
  * @locus Client
@@ -336,7 +351,10 @@ Template.prototype.events = function (eventMap) {
         var args = Array.prototype.slice.call(arguments);
         var tmplInstance = view.templateInstance();
         args.splice(1, 0, tmplInstance);
-        return v.apply(data, args);
+
+        return Template._withTemplateInstance(tmplInstance, function () {
+          return v.apply(data, args);
+        });
       };
     })(k, eventMap[k]);
   }
@@ -353,15 +371,7 @@ Template.prototype.events = function (eventMap) {
  * @returns Blaze.TemplateInstance
  */
 Template.instance = function () {
-  var view = Blaze.currentView;
-
-  while (view && ! view.template)
-    view = view.parentView;
-
-  if (! view)
-    return null;
-
-  return view.templateInstance();
+  return Template._currentTemplateInstance;
 };
 
 // Note: Template.currentData() is documented to take zero arguments,
