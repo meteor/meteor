@@ -61,8 +61,19 @@ var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
   return null;
 };
 
-var wrapHelper = function (f) {
-  return Blaze._wrapCatchingExceptions(f, 'template helper');
+var wrapHelper = function (f, template) {
+  if (typeof f !== "function") {
+    return f;
+  }
+
+  return function () {
+    var self = this;
+    var args = arguments;
+
+    return Template._withTemplateInstance(template, function () {
+      return Blaze._wrapCatchingExceptions(f, 'template helper').apply(self, args);
+    });
+  };
 };
 
 // Looks up a name, like "foo" or "..", as a helper of the
@@ -94,12 +105,13 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
   } else if (template &&
              ((helper = getTemplateHelper(template, name)) != null)) {
-    return wrapHelper(bindDataContext(helper));
+    return wrapHelper(bindDataContext(helper), this.templateInstance());
   } else if (lookupTemplate && (name in Blaze.Template) &&
              (Blaze.Template[name] instanceof Blaze.Template)) {
     return Blaze.Template[name];
   } else if (Blaze._globalHelpers[name] != null) {
-    return wrapHelper(bindDataContext(Blaze._globalHelpers[name]));
+    return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
+      this.templateInstance());
   } else {
     return function () {
       var isCalledAsFunction = (arguments.length > 0);
