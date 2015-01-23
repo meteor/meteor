@@ -1,4 +1,4 @@
-## v.1.0.3, 2015-Jan-20
+## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
   local packages and to show if the package is installed for non-local
