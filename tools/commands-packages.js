@@ -1848,17 +1848,17 @@ main.registerCommand({
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
   var packagesToRemove = [];
-  _.each(args, function (package) {
-    if (/@/.test(package)) {
-      Console.error(package + ": do not specify version constraints.");
+  _.each(args, function (pkg) {
+    if (/@/.test(pkg)) {
+      Console.error(pkg + ": do not specify version constraints.");
       exitCode = 1;
-    } else if (! projectContext.projectConstraintsFile.getConstraint(package)) {
+    } else if (! projectContext.projectConstraintsFile.getConstraint(pkg)) {
       // Check that we are using the package. We don't check if the package
       // exists. You should be able to remove non-existent packages.
-      Console.error(package  + " is not in this project.");
+      Console.error(pkg  + " is not in this project.");
       exitCode = 1;
     } else {
-      packagesToRemove.push(package);
+      packagesToRemove.push(pkg);
     }
   });
   if (! packagesToRemove.length)
