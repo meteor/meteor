@@ -244,47 +244,46 @@ DEp.stop = function stop() {
 // A simple wrapper object for writable streams that keeps a backlog of
 // data written before the stream is available, and writes that data to the
 // stream when the stream becomes available.
-function BackloggedStreamWriter(target) {
-  assert.ok(this instanceof BackloggedStreamWriter);
-  this.backlog = [];
-  this.target = target || null;
-}
-
-var BSWp = BackloggedStreamWriter.prototype;
-
-BSWp.write = function write(buffer) {
-  if (this.target) {
-    this.target.write(buffer);
-  } else {
-    this.backlog.push(buffer);
-  }
-};
-
-BSWp.setTarget = function setTarget(target) {
-  if (this.target &&
-      this.target !== target) {
-    this.clear();
+class BackloggedStreamWriter {
+  constructor(target:?string=null) {
+    this.backlog = [];
+    this.target = target || null;
   }
 
-  this.target = target;
-
-  if (target) {
-    var clear = this.clear.bind(this);
-    target.on("close", clear);
-    target.on("end", clear);
-
-    if (this.backlog.length > 0) {
-      _.each(this.backlog.splice(0), this.write, this);
+  write(buffer) {
+    if (this.target) {
+      this.target.write(buffer);
+    } else {
+      this.backlog.push(buffer);
     }
   }
 
-  return target;
-};
+  setTarget(target) {
+    if (this.target &&
+        this.target !== target) {
+      this.clear();
+    }
 
-BSWp.clear = function clear() {
-  this.backlog.length = 0;
-  this.target = null;
-};
+    this.target = target;
+
+    if (target) {
+      var clear = this.clear.bind(this);
+      target.on("close", clear);
+      target.on("end", clear);
+
+      if (this.backlog.length > 0) {
+        _.each(this.backlog.splice(0), this.write, this);
+      }
+    }
+
+    return target;
+  }
+
+  clear() {
+    this.backlog.length = 0;
+    this.target = null;
+  }
+}
 
 function banner(debugPort) {
   debugPort = +(debugPort || 5858);
