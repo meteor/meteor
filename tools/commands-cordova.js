@@ -1618,6 +1618,9 @@ var consumeControlFile = function (
      *   address in the development mode) is used to be able to contact the
      *   Meteor app server.
      *
+     * Read more about domain patterns in [Cordova
+     * docs](http://cordova.apache.org/docs/en/4.0.0/guide_appdev_whitelist_index.md.html).
+     *
      * Starting with Meteor 1.0.3 access rule for all domains and protocols
      * (`<access origin="*"/>`) is no longer set by default due to
      * [certain kind of possible
