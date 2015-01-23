@@ -1439,18 +1439,33 @@ var consumeControlFile = function (
     icon: {},
     splash: {}
   };
+
+  // Default access rules for plain Meteor-Cordova apps.
+  // Rules can be extended with mobile-config API described below.
+  // The value is `true` if the protocol or domain should be allowed,
+  // 'external' if should handled externally.
   var accessRules = {
-    'tel:*': true,
-    'geo:*': true,
-    'mailto:*': true,
-    'sms:*': true,
-    'market:*': true,
-    'file:*': false,
-    'cdv:*': false,
-    'gap:*': false,
-    'http://meteor.local/*': false
+    // Allow external calls to things like email client or maps app or a
+    // phonebook app.
+    'tel:*': 'external',
+    'geo:*': 'external',
+    'mailto:*': 'external',
+    'sms:*': 'external',
+    'market:*': 'external',
+
+    // phonegap/cordova related protocols
+    // "file:" protocol is used to access first files from disk
+    'file:*': true,
+    'cdv:*': true,
+    'gap:*': true,
+
+    // allow Meteor's local emulated server url - this is the url from which the
+    // application loads its assets
+    'http://meteor.local/*': true
   };
 
+  // If the remote server domain is known, allow access to it for xhr and DDP
+  // connections.
   if (serverDomain) {
     accessRules['*://' + serverDomain + '/*'] = false;
   }
@@ -1586,28 +1601,37 @@ var consumeControlFile = function (
     },
 
     /**
-     * @summary Set the access rules based on origin URL for your app.
-     * @param {Object} rules A dictionary where keys are origin URL
-     * patterns affected, and the values are booleans indicating if a
-     * matching URL should be launched externally.
+     * @summary Set a new access rule based on origin domain for your app.
+     * @param {String} domainRule The pattern defining affected domains or URLs.
+     * @param {Object} [options]
+     * @param {Boolean} options.launchExternal Set to true if the matching URL
+     * should be handled externally (e.g. phone app or email client on Android).
      *
      * Default access rules:
-     * - `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` set to true
+     * - `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and
+     *   launch externally (phone app, or an email client on Android)
+     * - `gap:*`, `cdv:*`, `file:` are allowed (protocols required to access
+     *   local file-system)
+     * - `http://meteor.local/*` is allowed (a domain Meteor uses to access
+     *   app's assets)
+     * - The domain of the server passed to the build process (or local ip
+     *   address in the development mode) is used to be able to contact the
+     *   Meteor app server.
      *
-     * Starting with Meteor 1.0.3 (XXX?) access rule for all domains
+     * Starting with Meteor 1.0.3 access rule for all domains and protocols
      * (`<access origin="*"/>`) is no longer set by default due to
      * [certain kind of possible
-     * attacks](https://www.ibm.com/developerworks/community/blogs/worklight/entry/action_required_cordova_android_security_update?lang=en).
-     *
+     * attacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html).
      * @memberOf App
      */
-    accessRules: function (rules) {
-      _.each(rules, function (launchExternal, pattern) {
-        if (! _.isBoolean(launchExternal))
-          throw new Error(
-            "Values of rules passed to accessRules must be booleans.");
-      });
-      _.extend(accessRules, rules);
+    accessRule: function (domainRule, options) {
+      options = options || {};
+      options.launchExternal = !! options.launchExternal;
+      if (options.launchExternal) {
+        accessRules[domainRule] = 'external';
+      } else {
+        accessRules[domainRule] = true;
+      }
     }
   };
 
@@ -1653,9 +1677,9 @@ var consumeControlFile = function (
   config.ele('content', { src: 'index.html' });
 
   // Copy all the access rules
-  _.each(accessRules, function (launchExternal, pattern) {
+  _.each(accessRules, function (rule, pattern) {
     var opts = { origin: pattern };
-    if (launchExternal)
+    if (rule === 'external')
       opts['launch-external'] = true;
 
     config.ele('access', opts);
