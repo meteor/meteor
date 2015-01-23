@@ -3067,3 +3067,20 @@ Tinytest.add("spacebars-tests - template_tests - inclusion with data remove (#31
   test.isTrue(parentView.isDestroyed);
   test.equal(canonicalizeHtml(div.innerHTML), "<span></span>");
 });
+
+Template.spacebars_template_test_template_instance_wrapper_outer.helpers({
+  thisShouldOutputHello: function () {
+    return Template.instance().customProp;
+  }
+});
+
+Template.spacebars_template_test_template_instance_wrapper_outer.created = function () {
+  this.customProp = "hello";
+};
+
+Tinytest.add("spacebars-tests - template_tests - custom block helper doesn't break Template.instance() (#3540)", function (test) {
+  var tmpl = Template.spacebars_template_test_template_instance_wrapper_outer;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "hello hello");
+});

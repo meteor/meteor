@@ -7,19 +7,30 @@
 // defined by the compiler.
 
 /**
+ *
  * @class
- * @summary Constructor for a Template, which is used to construct Views with particular name and content.
+ * @summary Constructor for a Template, which is used to construct Views with
+ * particular name and content.
  * @locus Client
- * @param {String} [viewName] Optional.  A name for Views constructed by this Template.  See [`view.name`](#view_name).
- * @param {Function} renderFunction A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template.
+ * @param {String} [viewName] Optional.  A name for Views constructed by this
+ * Template. See [`view.name`](#view_name).
+ * @param {Function} renderFunction A function that returns [*renderable
+ * content*](#renderable_content). This function is used as the
+ * `renderFunction` for Views constructed by this Template.
+ * @param {Object} options Options for this template
+ * @param {Boolean} options.isContentBlock This is a template that wasn't
+ * actually defined by the user, but was implicitly defined by including a
+ * contentBlock or elseContentBlock. We should skip this and its parent when
+ * looking for Template.instance().
  */
-Blaze.Template = function (viewName, renderFunction) {
+Blaze.Template = function (viewName, renderFunction, options) {
   if (! (this instanceof Blaze.Template))
     // called without `new`
     return new Blaze.Template(viewName, renderFunction);
 
   if (typeof viewName === 'function') {
     // omitted "viewName" argument
+    options = renderFunction;
     renderFunction = viewName;
     viewName = '';
   }
@@ -39,6 +50,8 @@ Blaze.Template = function (viewName, renderFunction) {
     rendered: [],
     destroyed: []
   };
+
+  this.isContentBlock = options && options.isContentBlock;
 };
 var Template = Blaze.Template;
 
@@ -119,10 +132,15 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
   var view = Blaze.View(self.viewName, self.renderFunction);
   view.template = self;
 
-  view.templateContentBlock = (
-    contentFunc ? new Template('(contentBlock)', contentFunc) : null);
-  view.templateElseBlock = (
-    elseFunc ? new Template('(elseBlock)', elseFunc) : null);
+  if (contentFunc) {
+    view.templateContentBlock =
+      new Template('(contentBlock)', contentFunc, { isContentBlock: true });
+  }
+
+  if (elseFunc) {
+    view.templateElseBlock =
+      new Template('(elseBlock)', elseFunc, { isContentBlock: true });
+  }
 
   if (self.__eventMaps || typeof self.events === 'object') {
     view._onViewRendered(function () {
@@ -345,21 +363,34 @@ Template.prototype.events = function (eventMap) {
 };
 
 /**
+ *
  * @function
  * @name instance
  * @memberOf Template
- * @summary The [template instance](#template_inst) corresponding to the current template helper, event handler, callback, or autorun.  If there isn't one, `null`.
+ * @summary The [template instance](#template_inst) corresponding to the
+ * current template helper, event handler, callback, or autorun. If there
+ * isn't one, `null`.
  * @locus Client
  * @returns Blaze.TemplateInstance
  */
 Template.instance = function () {
   var view = Blaze.currentView;
 
-  while (view && ! view.template)
-    view = view.parentView;
+  while (view) {
+    if (view.template) {
+      // Make sure we found a "real" template because we don't want to count
+      // templates implicitly added by using a Template.contentBlock
+      if (! view.template.isContentBlock) {
+        break;
+      }
+    }
 
-  if (! view)
+    view = view.parentView;
+  }
+
+  if (! view) {
     return null;
+  }
 
   return view.templateInstance();
 };
