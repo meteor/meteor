@@ -20,6 +20,7 @@ var packageJson = {
     underscore: "1.5.2",
     "source-map-support": "0.2.8",
     semver: "4.1.0",
+    "6to5": "https://github.com/6to5/6to5/tarball/fe594dfe0c4fcc9f13ee70b32bb7e75c4ee828eb",
     request: "2.47.0",
     fstream: "1.0.2",
     tar: "1.0.2",
