@@ -53,44 +53,44 @@ var pathwatcher = require("./safe-pathwatcher.js");
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
 
-var WatchSet = function () {
-  var self = this;
+class WatchSet {
+  constructor() {
+    var self = this;
 
-  // Set this to true if any Watcher built on this WatchSet must immediately
-  // fire (eg, if this WatchSet was given two different sha1 for the same file).
-  self.alwaysFire = false;
+    // Set this to true if any Watcher built on this WatchSet must immediately
+    // fire (eg, if this WatchSet was given two different sha1 for the same file).
+    self.alwaysFire = false;
 
-  // Map from the absolute path to a file, to a sha1 hash, or null if the file
-  // should not exist. A Watcher created from this set fires when the file
-  // changes from that sha, or is deleted (if non-null) or created (if null).
-  //
-  // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
-  // existing (it's not just an internal implementation detail of watch.js).
-  self.files = {};
+    // Map from the absolute path to a file, to a sha1 hash, or null if the file
+    // should not exist. A Watcher created from this set fires when the file
+    // changes from that sha, or is deleted (if non-null) or created (if null).
+    //
+    // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
+    // existing (it's not just an internal implementation detail of watch.js).
+    self.files = {};
 
-  // Array of object with keys:
-  // - 'absPath': absolute path to a directory
-  // - 'include': array of RegExps
-  // - 'exclude': array of RegExps
-  // - 'contents': array of strings, or null if the directory should not exist
-  //
-  // This represents the assertion that 'absPath' is a directory and that
-  // 'contents' is its immediate contents, as filtered by the regular
-  // expressions.  Entries in 'contents' are file and subdirectory names;
-  // directory names end with '/'. 'contents' is sorted. An entry is in
-  // 'contents' if its value (including the slash, for directories) matches at
-  // least one regular expression in 'include' and no regular expressions in
-  // 'exclude'.
-  //
-  // There is no recursion here: files contained in subdirectories never appear.
-  //
-  // A directory may have multiple entries (presumably with different
-  // include/exclude filters).
-  self.directories = [];
-};
+    // Array of object with keys:
+    // - 'absPath': absolute path to a directory
+    // - 'include': array of RegExps
+    // - 'exclude': array of RegExps
+    // - 'contents': array of strings, or null if the directory should not exist
+    //
+    // This represents the assertion that 'absPath' is a directory and that
+    // 'contents' is its immediate contents, as filtered by the regular
+    // expressions.  Entries in 'contents' are file and subdirectory names;
+    // directory names end with '/'. 'contents' is sorted. An entry is in
+    // 'contents' if its value (including the slash, for directories) matches at
+    // least one regular expression in 'include' and no regular expressions in
+    // 'exclude'.
+    //
+    // There is no recursion here: files contained in subdirectories never appear.
+    //
+    // A directory may have multiple entries (presumably with different
+    // include/exclude filters).
+    self.directories = [];
+  }
 
-_.extend(WatchSet.prototype, {
-  addFile: function (filePath, hash) {
+  addFile(filePath, hash) {
     var self = this;
     // No need to update if this is in always-fire mode already.
     if (self.alwaysFire)
@@ -104,11 +104,11 @@ _.extend(WatchSet.prototype, {
       return;
     }
     self.files[filePath] = hash;
-  },
+  }
 
   // Takes options absPath, include, exclude, and contents, as described
   // above. contents does not need to be pre-sorted.
-  addDirectory: function (options) {
+  addDirectory(options) {
     var self = this;
     if (self.alwaysFire)
       return;
@@ -124,11 +124,11 @@ _.extend(WatchSet.prototype, {
       exclude: options.exclude,
       contents: contents
     });
-  },
+  }
 
   // Merges another WatchSet into this one. This one will now fire if either
   // WatchSet would have fired.
-  merge: function (other) {
+  merge(other) {
     var self = this;
     if (self.alwaysFire)
       return;
@@ -144,9 +144,9 @@ _.extend(WatchSet.prototype, {
       // are never mutated #WatchSetShallowClone
       self.directories.push(dir);
     });
-  },
+  }
 
-  clone: function () {
+  clone() {
     var self = this;
     var ret = new WatchSet();
 
@@ -156,9 +156,9 @@ _.extend(WatchSet.prototype, {
     ret.files = _.clone(self.files);
     ret.directories = _.clone(self.directories);
     return ret;
-  },
+  }
 
-  toJSON: function () {
+  toJSON() {
     var self = this;
     if (self.alwaysFire)
       return {alwaysFire: true};
@@ -188,38 +188,38 @@ _.extend(WatchSet.prototype, {
 
     return ret;
   }
-});
 
-WatchSet.fromJSON = function (json) {
-  var set = new WatchSet();
+  static fromJSON(json) {
+    var set = new WatchSet();
 
-  if (! json)
-    return set;
+    if (! json)
+      return set;
 
-  if (json.alwaysFire) {
-    set.alwaysFire = true;
+    if (json.alwaysFire) {
+      set.alwaysFire = true;
+      return set;
+    }
+
+    set.files = _.clone(json.files);
+
+    var reFromJSON = function (j) {
+      if (_.has(j, '$regex'))
+        return new RegExp(j.$regex, j.$options);
+      return new RegExp(j);
+    };
+
+    set.directories = _.map(json.directories, function (d) {
+      return {
+        absPath: d.absPath,
+        include: _.map(d.include, reFromJSON),
+        exclude: _.map(d.exclude, reFromJSON),
+        contents: d.contents
+      };
+    });
+
     return set;
   }
-
-  set.files = _.clone(json.files);
-
-  var reFromJSON = function (j) {
-    if (_.has(j, '$regex'))
-      return new RegExp(j.$regex, j.$options);
-    return new RegExp(j);
-  };
-
-  set.directories = _.map(json.directories, function (d) {
-    return {
-      absPath: d.absPath,
-      include: _.map(d.include, reFromJSON),
-      exclude: _.map(d.exclude, reFromJSON),
-      contents: d.contents
-    };
-  });
-
-  return set;
-};
+}
 
 var readFile = function (absPath) {
   try {
