@@ -1329,9 +1329,10 @@ _.extend(JsImage.prototype, {
             try {
               return require(name);
             } catch (e) {
-              throw new Error("Can't load npm module '" + name +
-                              "' while loading " + item.targetPath +
-                              ". Check your Npm.depends().'");
+              buildmessage.error(
+                "Can't load npm module '" + name + "' from " +
+                  item.targetPath + ". Check your Npm.depends().");
+              return undefined;
             }
           }
         },
