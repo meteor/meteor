@@ -1319,17 +1319,20 @@ _.extend(JsImage.prototype, {
 
             var nodeModuleDir =
               files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
-
-            if (files.exists(nodeModuleDir)) {
+            var nodeModuleTopDir =
+              files.pathJoin(item.nodeModulesDirectory.sourcePath,
+                             name.split("/")[0]);
+            if (files.exists(nodeModuleTopDir)) {
               return require(nodeModuleDir);
             }
 
             try {
               return require(name);
             } catch (e) {
-              throw new Error("Can't load npm module '" + name +
-                              "' while loading " + item.targetPath +
-                              ". Check your Npm.depends().'");
+              buildmessage.error(
+                "Can't load npm module '" + name + "' from " +
+                  item.targetPath + ". Check your Npm.depends().");
+              return undefined;
             }
           }
         },

@@ -1,3 +1,7 @@
+## vNEXT
+
+* Support `Npm.require('foo/bar')`.  #3505 #3526
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
