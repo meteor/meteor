@@ -299,6 +299,7 @@ var toc = [
     {name: "mobile-config.js", id: "mobileconfigjs"}, [
       {name: "App.info", id: "App-info"},
       {name: "App.setPreference", id: "App-setPreference"},
+      {name: "App.accessRule", id: "App-accessRule"},
       {name: "App.configurePlugin", id: "App-configurePlugin"},
       {name: "App.icons", id: "App-icons"},
       {name: "App.launchScreens", id: "App-launchScreens"}

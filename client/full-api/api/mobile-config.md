@@ -51,6 +51,7 @@ App.configurePlugin('com.phonegap.plugins.facebookconnect', {
 
 {{> autoApiBox "App.info"}}
 {{> autoApiBox "App.setPreference"}}
+{{> autoApiBox "App.accessRule"}}
 {{> autoApiBox "App.configurePlugin"}}
 {{> autoApiBox "App.icons"}}
 {{> autoApiBox "App.launchScreens"}}
