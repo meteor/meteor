@@ -1319,8 +1319,10 @@ _.extend(JsImage.prototype, {
 
             var nodeModuleDir =
               files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
-
-            if (files.exists(nodeModuleDir)) {
+            var nodeModuleTopDir =
+              files.pathJoin(item.nodeModulesDirectory.sourcePath,
+                             name.split("/")[0]);
+            if (files.exists(nodeModuleTopDir)) {
               return require(nodeModuleDir);
             }
 
