@@ -2,6 +2,11 @@
 
 * Support `Npm.require('foo/bar')`.  #3505 #3526
 
+* In `package.js` files, `Npm.require` can only require built-in Node modules
+  (and dev bundle modules, though you shouldn't depend on that), not the modules
+  from its own `Npm.depends`. Previously, such code would work but only on the
+  second time a `package.js` was executed.
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for

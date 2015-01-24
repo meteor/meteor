@@ -808,21 +808,16 @@ _.extend(PackageSource.prototype, {
       },
 
       require: function (name) {
-        var nodeModuleDir = files.pathJoin(self.sourceRoot,
-                                      '.npm', 'package', 'node_modules', name);
-        if (files.exists(nodeModuleDir)) {
-          return require(nodeModuleDir);
-        } else {
-          try {
-            return require(name); // from the dev bundle
-          } catch (e) {
-            buildmessage.error("can't find npm module '" + name +
-                               "'. Did you forget to call 'Npm.depends'?",
-                               { useMyCaller: true });
-            // recover by, uh, returning undefined, which is likely to
-            // have some knock-on effects
-            return undefined;
-          }
+        try {
+          return require(name); // from the dev bundle
+        } catch (e) {
+          buildmessage.error(
+            "can't find npm module '" + name +
+              "'. In package.js, Npm.require can only find built-in modules.",
+            { useMyCaller: true });
+          // recover by, uh, returning undefined, which is likely to
+          // have some knock-on effects
+          return undefined;
         }
       }
     };
