@@ -1602,12 +1602,11 @@ var consumeControlFile = function (
 
     /**
      * @summary Set a new access rule based on origin domain for your app.
-     * @param {String} domainRule The pattern defining affected domains or URLs.
-     * @param {Object} [options]
-     * @param {Boolean} options.launchExternal Set to true if the matching URL
-     * should be handled externally (e.g. phone app or email client on Android).
+     * By default your application has a limited list of servers it can contact.
+     * Use this method to extend this list.
      *
      * Default access rules:
+     *
      * - `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and
      *   launch externally (phone app, or an email client on Android)
      * - `gap:*`, `cdv:*`, `file:` are allowed (protocols required to access
@@ -1625,6 +1624,11 @@ var consumeControlFile = function (
      * (`<access origin="*"/>`) is no longer set by default due to
      * [certain kind of possible
      * attacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html).
+     *
+     * @param {String} domainRule The pattern defining affected domains or URLs.
+     * @param {Object} [options]
+     * @param {Boolean} options.launchExternal Set to true if the matching URL
+     * should be handled externally (e.g. phone app or email client on Android).
      * @memberOf App
      */
     accessRule: function (domainRule, options) {
