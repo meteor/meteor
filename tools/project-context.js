@@ -66,10 +66,12 @@ _.extend(ProjectContext.prototype, {
     resetOptions = resetOptions || {};
 
     self.projectDir = options.projectDir;
+    self.projectMeteorDir = options.projectMeteorDir ||
+      files.pathJoin(self.projectDir, '.meteor');
     self.tropohouse = options.tropohouse || tropohouse.default;
 
     self._packageMapFilename = options.packageMapFilename ||
-      files.pathJoin(self.projectDir, '.meteor', 'versions');
+      files.pathJoin(self.projectMeteorDir, 'versions');
 
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
@@ -234,7 +236,7 @@ _.extend(ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
+    return files.pathJoin(self.projectMeteorDir, 'local', subdirectory);
   },
 
   getMeteorShellDirectory: function(projectDir) {
@@ -258,14 +260,14 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/release.
       self.releaseFile = new exports.ReleaseFile({
-        projectDir: self.projectDir
+        projectMeteorDir: self.projectMeteorDir
       });
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/packages.
       self.projectConstraintsFile = new exports.ProjectConstraintsFile({
-        projectDir: self.projectDir
+        projectMeteorDir: self.projectMeteorDir
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -279,14 +281,14 @@ _.extend(ProjectContext.prototype, {
 
       // Read .meteor/cordova-plugins.
       self.cordovaPluginsFile = new exports.CordovaPluginsFile({
-        projectDir: self.projectDir
+        projectMeteorDir: self.projectMeteorDir
       });
       if (buildmessage.jobHasMessages())
         return;
 
       // Read .meteor/platforms, creating it if necessary.
       self.platformList = new exports.PlatformList({
-        projectDir: self.projectDir
+        projectMeteorDir: self.projectMeteorDir
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -299,7 +301,7 @@ _.extend(ProjectContext.prototype, {
       // Set up an object that knows how to read and write
       // .meteor/.finished-upgraders.
       self.finishedUpgraders = new exports.FinishedUpgraders({
-        projectDir: self.projectDir
+        projectMeteorDir: self.projectMeteorDir
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -310,17 +312,17 @@ _.extend(ProjectContext.prototype, {
 
   _ensureProjectDir: function () {
     var self = this;
-    files.mkdir_p(files.pathJoin(self.projectDir, '.meteor'));
+    files.mkdir_p(self.projectMeteorDir);
 
     // This file existing is what makes a project directory a project directory,
     // so let's make sure it exists!
-    var constraintFilePath = files.pathJoin(self.projectDir, '.meteor', 'packages');
+    var constraintFilePath = files.pathJoin(self.projectMeteorDir, 'packages');
     if (! files.exists(constraintFilePath)) {
       files.writeFileAtomically(constraintFilePath, '');
     }
 
     // Let's also make sure we have a minimal gitignore.
-    var gitignorePath = files.pathJoin(self.projectDir, '.meteor', '.gitignore');
+    var gitignorePath = files.pathJoin(self.projectMeteorDir, '.gitignore');
     if (! files.exists(gitignorePath)) {
       files.writeFileAtomically(gitignorePath, 'local\n');
     }
@@ -367,7 +369,7 @@ _.extend(ProjectContext.prototype, {
 
   _ensureAppIdentifier: function () {
     var self = this;
-    var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
+    var identifierFile = files.pathJoin(self.projectMeteorDir, '.id');
 
     // Find the first non-empty line, ignoring comments. We intentionally don't
     // put this in a WatchSet, since changing this doesn't affect the built app
@@ -701,7 +703,7 @@ exports.ProjectConstraintsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = files.pathJoin(options.projectDir, '.meteor', 'packages');
+  self.filename = files.pathJoin(options.projectMeteorDir, 'packages');
   self.watchSet = null;
 
   // Have we modified the in-memory representation since reading from disk?
@@ -982,7 +984,7 @@ _.extend(exports.PackageMapFile.prototype, {
 exports.PlatformList = function (options) {
   var self = this;
 
-  self.filename = files.pathJoin(options.projectDir, '.meteor', 'platforms');
+  self.filename = files.pathJoin(options.projectMeteorDir, 'platforms');
   self.watchSet = null;
   self._platforms = null;
 
@@ -1064,7 +1066,7 @@ exports.CordovaPluginsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = files.pathJoin(options.projectDir, '.meteor', 'cordova-plugins');
+  self.filename = files.pathJoin(options.projectMeteorDir, 'cordova-plugins');
   self.watchSet = null;
   // Map from plugin name to version.
   self._plugins = null;
@@ -1142,7 +1144,7 @@ _.extend(exports.CordovaPluginsFile.prototype, {
 exports.ReleaseFile = function (options) {
   var self = this;
 
-  self.filename = files.pathJoin(options.projectDir, '.meteor', 'release');
+  self.filename = files.pathJoin(options.projectMeteorDir, 'release');
   self.watchSet = null;
   // The release name actually written in the file.  Null if no fill.  Empty if
   // the file is empty.
@@ -1220,7 +1222,7 @@ exports.FinishedUpgraders = function (options) {
   var self = this;
 
   self.filename = files.pathJoin(
-    options.projectDir, '.meteor', '.finished-upgraders');
+    options.projectMeteorDir, '.finished-upgraders');
 };
 
 _.extend(exports.FinishedUpgraders.prototype, {
