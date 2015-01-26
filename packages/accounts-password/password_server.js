@@ -396,8 +396,9 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 
   var options = {
     to: email,
-    from: Accounts.emailTemplates.resetPassword.from ?
-      Accounts.emailTemplates.resetPassword.from(user) : Accounts.emailTemplates.from,
+    from: Accounts.emailTemplates.resetPassword.from
+      ? Accounts.emailTemplates.resetPassword.from(user)
+      : Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.resetPassword.subject(user),
     text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)
   };
@@ -459,8 +460,9 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 
   var options = {
     to: email,
-    from: Accounts.emailTemplates.enrollAccount.from ?
-      Accounts.emailTemplates.enrollAccount.from(user) : Accounts.emailTemplates.from,
+    from: Accounts.emailTemplates.enrollAccount.from
+      ? Accounts.emailTemplates.enrollAccount.from(user)
+      : Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.enrollAccount.subject(user),
     text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
   };
@@ -600,8 +602,9 @@ Accounts.sendVerificationEmail = function (userId, address) {
 
   var options = {
     to: address,
-    from: Accounts.emailTemplates.verifyEmail.from ?
-      Accounts.emailTemplates.verifyEmail.from(user) : Accounts.emailTemplates.from,
+    from: Accounts.emailTemplates.verifyEmail.from
+      ? Accounts.emailTemplates.verifyEmail.from(user)
+      : Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.verifyEmail.subject(user),
     text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
   };

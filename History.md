@@ -11,6 +11,11 @@
 
 * Ignore vim swap files in the `public` and `private` directories.  #3322
 
+* The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
+  email `headers`.  The `from` address can now be set separately on the
+  individual templates, and is a function there rather than a static string.
+  #2858 #2854
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
