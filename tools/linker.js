@@ -2,6 +2,7 @@ var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
 var watch = require('./watch.js');
+var to5 = require('6to5');
 
 var packageDot = function (name) {
   if (/^[a-zA-Z0-9]*$/.exec(name))
@@ -40,7 +41,15 @@ _.extend(Module.prototype, {
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
     var self = this;
-    self.files.push(new File(inputFile, self));
+    var oldSource = inputFile.source;
+    var result = to5.transform(
+      oldSource,
+      { blacklist: ["useStrict"] });
+    var transpiledFile = _.extend(
+      {}, inputFile,
+      { source: result.code, // source map in result.map
+        sourceMap: null });
+    self.files.push(new File(transpiledFile, self));
   },
 
 
