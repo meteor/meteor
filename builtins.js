@@ -101,7 +101,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
       var arg = argFunc();
       if (_.isObject(arg) && _.has(arg, '_sequence')) {
         eachView.variableName = arg._variable || null;
-        arg = arg._sequence();
+        arg = arg._sequence;
       }
 
       eachView.argVar.set(arg);
@@ -118,7 +118,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             if (! _.isObject(item)) {
               item = {};
             } else {
-              item = _.copy(item);
+              item = _.clone(item);
             }
 
             item[eachView.variableName] = _item;
