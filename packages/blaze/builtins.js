@@ -112,19 +112,20 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     }, {
       addedAt: function (id, item, index) {
         Tracker.nonreactive(function () {
-          // create an alias for the data context defined by argFunc.
+          var newDataContext;
           if (eachView.variableName) {
+            // new-style #each (as in {{#each item in items}})
+            // the new data context is the same but with an extension by
+            // variable name (e.g. 'item')
             var _item = item;
-            if (! _.isObject(item)) {
-              item = {};
-            } else {
-              item = _.clone(item);
-            }
-
-            item[eachView.variableName] = _item;
+            var dataContext = Blaze.getData(eachView);
+            newDataContext = _.clone(dataContext) || {};
+            newDataContext[eachView.variableName] = item;
+          } else {
+            newDataContext = item;
           }
 
-          var newItemView = Blaze.With(item, eachView.contentFunc);
+          var newItemView = Blaze.With(newDataContext, eachView.contentFunc);
           eachView.numItems++;
 
           if (eachView.expandedValueDep) {
