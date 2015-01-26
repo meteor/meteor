@@ -277,6 +277,12 @@ Blaze.TemplateInstance = function (view) {
   this._allSubsReady = false;
 
   this._subscriptionHandles = {};
+
+  /**
+   * A Reactive Dict for storing local template state.
+   * @type {ReactiveDict}
+   */
+  this.state = new ReactiveDict();
 };
 
 /**

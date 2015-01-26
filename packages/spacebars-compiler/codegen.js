@@ -29,7 +29,8 @@ var builtInTemplateMacros = {
   // implements the dynamic template feature.
   'dynamic': 'Template.__dynamic',
 
-  'subscriptionsReady': 'view.templateInstance().subscriptionsReady()'
+  'subscriptionsReady': 'view.templateInstance().subscriptionsReady()',
+  'state': '_.bind(view.templateInstance().state.get, view.templateInstance().state)'
 };
 
 // A "reserved name" can't be used as a <template> name.  This

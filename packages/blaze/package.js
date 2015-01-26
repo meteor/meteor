@@ -12,6 +12,7 @@ Package.onUse(function (api) {
   api.imply('htmljs');
   api.use('observe-sequence');
   api.use('reactive-var');
+  api.use('reactive-dict');
 
   api.addFiles([
     'preamble.js'
