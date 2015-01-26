@@ -75,6 +75,7 @@ _.extend(CodeGen.prototype, {
         return BlazeTools.EmitCode(code);
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
         var path = tag.path;
+        var args = tag.args;
 
         if (tag.type === 'BLOCKOPEN' &&
             builtInBlockHelpers.hasOwnProperty(path[0])) {
@@ -87,11 +88,36 @@ _.extend(CodeGen.prototype, {
           // provide nice line numbers.
           if (path.length > 1)
             throw new Error("Unexpected dotted path beginning with " + path[0]);
-          if (! tag.args.length)
+          if (! args.length)
             throw new Error("#" + path[0] + " requires an argument");
 
-          // `args` must exist (tag.args.length > 0)
-          var dataCode = self.codeGenInclusionDataFunc(tag.args) || 'null';
+          var dataCode = null;
+          // #each has a special treatment as it features two different forms:
+          // - {{#each people}}
+          // - {{#each person in people}}
+          if (path[0] === 'each') {
+            var eachUsage = "Use either {{#each items}} or {{#each item in items}} form of #each.";
+            if (args.length !== 1 && args.length !== 3) {
+              throw new Error("#each has incorrect number of arguments. " + eachUsage);
+            }
+            if (args.length === 3) {
+              // checks for {{#each person in people}} case
+              if (args[1][0] !== "PATH" || args[1][1][0] !== "in") {
+                throw new Error("Missing 'in' operator of #each. " + eachUsage);
+              }
+              // split out the variable name and sequence arguments
+              variable = args[0][1][0];// XXX take name as a string ignoring tag
+              dataCode = 'function () { return { _sequence: ' +
+                self.codeGenPath(args[2][1]) +
+                ', _variable: "' + variable + '" }; }';
+            }
+          }
+
+          if (! dataCode) {
+            // `args` must exist (tag.args.length > 0)
+            dataCode = self.codeGenInclusionDataFunc(args) || 'null';
+          }
+
           // `content` must exist
           var contentBlock = (('content' in tag) ?
                               self.codeGenBlock(tag.content) : null);
