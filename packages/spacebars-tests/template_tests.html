@@ -1035,3 +1035,18 @@ Hi there!
     {{/with}}
   {{/with}}
 </template>
+
+<template name="spacebars_template_test_template_level_subscriptions">
+  {{#if Template.subscriptionsReady}}
+    ready!
+  {{/if}}
+  {{Template.subscriptionsReady}}
+</template>
+
+<template name="spacebars_template_test_template_level_subs_resubscribe">
+  {{#if ifArg}}
+    {{subscribingHelper1}}
+  {{else}}
+    {{subscribingHelper2}}
+  {{/if}}
+</template>
