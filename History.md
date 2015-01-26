@@ -7,6 +7,10 @@
   from its own `Npm.depends`. Previously, such code would work but only on the
   second time a `package.js` was executed.
 
+* Add `onRendered`, `onCreated`, and `onDestroyed` methods to `Template`
+
+* Ignore vim swap files in the `public` and `private` directories.  #3322
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
