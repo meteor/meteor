@@ -174,9 +174,13 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
     throw new Error("Can't call View#autorun from a Tracker Computation; try calling it from the created or rendered callback");
   }
 
+  var templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
+
   var c = Tracker.autorun(function viewAutorun(c) {
     return Blaze._withCurrentView(_inViewScope || self, function () {
-      return f.call(self, c);
+      return Blaze.Template._withTemplateInstanceFunc(templateInstanceFunc, function () {
+        return f.call(self, c);
+      });
     });
   });
   self.onViewDestroyed(function () { c.stop(); });
