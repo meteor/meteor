@@ -42,6 +42,8 @@
   "Blaze.TemplateInstance#findAll",
   "Blaze.TemplateInstance#firstNode",
   "Blaze.TemplateInstance#lastNode",
+  "Blaze.TemplateInstance#subscribe",
+  "Blaze.TemplateInstance#subscriptionsReady",
   "Blaze.TemplateInstance#view",
   "Blaze.Unless",
   "Blaze.View",

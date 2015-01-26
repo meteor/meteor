@@ -168,6 +168,7 @@ var toc = [
         {instance: "template", name: "lastNode", id: "template_lastNode"},
         {instance: "template", name: "data", id: "template_data"},
         {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "subscribe", id: "Blaze-TemplateInstance-subscribe"},
         {instance: "template", name: "view", id: "template_view"}
       ],
       "Template.registerHelper",
