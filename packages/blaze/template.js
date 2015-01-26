@@ -109,11 +109,13 @@ Template.prototype._getCallbacks = function (which) {
 };
 
 var fireCallbacks = function (callbacks, template) {
-  Template._withTemplateInstance(template, function () {
-    for (var i = 0, N = callbacks.length; i < N; i++) {
-      callbacks[i].call(template);
-    }
-  });
+  Template._withTemplateInstanceFunc(
+    function () { return template; },
+    function () {
+      for (var i = 0, N = callbacks.length; i < N; i++) {
+        callbacks[i].call(template);
+      }
+    });
 };
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
@@ -320,16 +322,20 @@ Template.prototype.helpers = function (dict) {
     this.__helpers.set(k, dict[k]);
 };
 
-// Kind of like Blaze.currentView but for the template instance
-Template._currentTemplateInstance = null;
+// Kind of like Blaze.currentView but for the template instance.
+// This is a function, not a value -- so that not all helpers
+// are implicitly dependent on the current template instance.
+Template._currentTemplateInstanceFunc = null;
 
-Template._withTemplateInstance = function (templateInstance, func) {
-  var oldTmplInstance = Template._currentTemplateInstance;
+Template._withTemplateInstanceFunc = function (templateInstanceFunc, func) {
+  if (typeof func !== 'function')
+    throw new Error("Expected function, got: " + func);
+  var oldTmplInstanceFunc = Template._currentTemplateInstanceFunc;
   try {
-    Template._currentTemplateInstance = templateInstance;
+    Template._currentTemplateInstanceFunc = templateInstanceFunc;
     return func();
   } finally {
-    Template._currentTemplateInstance = oldTmplInstance;
+    Template._currentTemplateInstanceFunc = oldTmplInstanceFunc;
   }
 };
 
@@ -349,10 +355,10 @@ Template.prototype.events = function (eventMap) {
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
-        var tmplInstance = view.templateInstance();
-        args.splice(1, 0, tmplInstance);
+        var tmplInstanceFunc = _.bind(view.templateInstance, view);
+        args.splice(1, 0, tmplInstanceFunc());
 
-        return Template._withTemplateInstance(tmplInstance, function () {
+        return Template._withTemplateInstanceFunc(tmplInstanceFunc, function () {
           return v.apply(data, args);
         });
       };
@@ -371,7 +377,8 @@ Template.prototype.events = function (eventMap) {
  * @returns Blaze.TemplateInstance
  */
 Template.instance = function () {
-  return Template._currentTemplateInstance;
+  return Template._currentTemplateInstanceFunc
+    && Template._currentTemplateInstanceFunc();
 };
 
 // Note: Template.currentData() is documented to take zero arguments,

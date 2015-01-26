@@ -6,13 +6,10 @@ Blaze.registerHelper = function (name, func) {
   Blaze._globalHelpers[name] = func;
 };
 
-
 var bindIfIsFunction = function (x, target) {
   if (typeof x !== 'function')
     return x;
-  return function () {
-    return x.apply(target, arguments);
-  };
+  return _.bind(x, target);
 };
 
 // If `x` is a function, binds the value of `this` for that function
@@ -32,7 +29,7 @@ var bindDataContext = function (x) {
 Blaze._OLDSTYLE_HELPER = {};
 
 var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
-  // XXX COMPAT WITH 0.9.3
+  // XXX COMPAT WITH0.9.3
   var isKnownOldStyleHelper = false;
 
   if (template.__helpers.has(name)) {
@@ -61,7 +58,7 @@ var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
   return null;
 };
 
-var wrapHelper = function (f, template) {
+var wrapHelper = function (f, templateFunc) {
   if (typeof f !== "function") {
     return f;
   }
@@ -70,7 +67,7 @@ var wrapHelper = function (f, template) {
     var self = this;
     var args = arguments;
 
-    return Template._withTemplateInstance(template, function () {
+    return Template._withTemplateInstanceFunc(templateFunc, function () {
       return Blaze._wrapCatchingExceptions(f, 'template helper').apply(self, args);
     });
   };
@@ -105,13 +102,13 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
   } else if (template &&
              ((helper = getTemplateHelper(template, name)) != null)) {
-    return wrapHelper(bindDataContext(helper), this.templateInstance());
+    return wrapHelper(bindDataContext(helper), _.bind(this.templateInstance, this));
   } else if (lookupTemplate && (name in Blaze.Template) &&
              (Blaze.Template[name] instanceof Blaze.Template)) {
     return Blaze.Template[name];
   } else if (Blaze._globalHelpers[name] != null) {
     return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
-      this.templateInstance());
+      _.bind(this.templateInstance, this));
   } else {
     return function () {
       var isCalledAsFunction = (arguments.length > 0);
