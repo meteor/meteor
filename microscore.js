@@ -108,3 +108,9 @@ _.each = function (arrayOrObject, func) {
     }
   }
 };
+
+_.bind = function (f, context) {
+  return function () {
+    return f.apply(target, context);
+  };
+};
