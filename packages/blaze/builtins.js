@@ -68,7 +68,7 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
 /**
  * @summary Constructs a View that renders `contentFunc` for each item in a sequence.
  * @locus Client
- * @param {Function} argFunc A function to reactively re-run.  The function may return a Cursor, an array, null, or undefined.
+ * @param {Function} argFunc A function to reactively re-run. The function must return an object with two fields: '_variable' and '_sequence'. '_variable' is an optional alias for an item available from the Each body, '_sequence' may be a Cursor, an array, null, or undefined. For backwards-compitablity, can return just sequence (Cursor, array) not wrapped into an object.
  * @param {Function} contentFunc A Function that returns [*renderable content*](#renderable_content).
  * @param {Function} [elseFunc] Optional.  A Function that returns [*renderable content*](#renderable_content) to display in the case when there are no items to display.
  */
@@ -89,13 +89,22 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.contentFunc = contentFunc;
   eachView.elseFunc = elseFunc;
   eachView.argVar = new ReactiveVar;
+  eachView.variableName = null;
 
   eachView.onViewCreated(function () {
     // We evaluate argFunc in an autorun to make sure
     // Blaze.currentView is always set when it runs (rather than
     // passing argFunc straight to ObserveSequence).
     eachView.autorun(function () {
-      eachView.argVar.set(argFunc());
+      // argFunc can return either a sequence as is or a wrapper object with a
+      // _sequence and _variable fields set.
+      var arg = argFunc();
+      if (_.isObject(arg) && _.has(arg, '_sequence')) {
+        eachView.variableName = arg._variable || null;
+        arg = arg._sequence();
+      }
+
+      eachView.argVar.set(arg);
     }, eachView.parentView, 'collection');
 
     eachView.stopHandle = ObserveSequence.observe(function () {
@@ -103,6 +112,18 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     }, {
       addedAt: function (id, item, index) {
         Tracker.nonreactive(function () {
+          // create an alias for the data context defined by argFunc.
+          if (eachView.variableName) {
+            var _item = item;
+            if (! _.isObject(item)) {
+              item = {};
+            } else {
+              item = _.copy(item);
+            }
+
+            item[eachView.variableName] = _item;
+          }
+
           var newItemView = Blaze.With(item, eachView.contentFunc);
           eachView.numItems++;
 
