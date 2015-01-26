@@ -840,6 +840,18 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       delete self._constraintMap[p];
     });
     self._modified = true;
+  },
+
+  // Removes all constraints. Generally this should only be used in situations
+  // where the project is not a real user app: while you can use
+  // removeAllPackages followed by addConstraints to fully replace the
+  // constraints in a project, this will also lose all user comments and
+  // (cosmetic) ordering from the file.
+  removeAllPackages: function () {
+    var self = this;
+    self._constraintLines = [];
+    self._constraintMap = {};
+    self._modified = true;
   }
 });
 
