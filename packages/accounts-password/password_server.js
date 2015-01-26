@@ -366,8 +366,9 @@ Meteor.methods({forgotPassword: function (options) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {Object} [headers] Optional. Additional headers to include in the Email.send function. Useful for sending via third-party email apis.
  */
-Accounts.sendResetPasswordEmail = function (userId, email) {
+Accounts.sendResetPasswordEmail = function (userId, email, headers) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
@@ -405,6 +406,9 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     options.html =
       Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
 
+  if (typeof headers === 'object')
+    options.headers = headers;
+
   Email.send(options);
 };
 
@@ -421,8 +425,9 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {Object} [headers] Optional. Additional headers to include in the Email.send function. Useful for sending via third-party email apis.
  */
-Accounts.sendEnrollmentEmail = function (userId, email) {
+Accounts.sendEnrollmentEmail = function (userId, email, headers) {
   // XXX refactor! This is basically identical to sendResetPasswordEmail.
 
   // Make sure the user exists, and email is in their addresses.
@@ -462,6 +467,9 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
+
+  if (typeof headers === 'object')
+    options.headers = headers;
 
   Email.send(options);
 };
@@ -550,8 +558,9 @@ Meteor.methods({resetPassword: function (token, newPassword) {
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
+ * @param {Object} [headers] Optional. Additional headers to include in the Email.send function. Useful for sending via third-party email apis.
  */
-Accounts.sendVerificationEmail = function (userId, address) {
+Accounts.sendVerificationEmail = function (userId, address, headers) {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
@@ -598,6 +607,9 @@ Accounts.sendVerificationEmail = function (userId, address) {
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
       Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);
+
+  if (typeof headers === 'object')
+    options.headers = headers;
 
   Email.send(options);
 };
