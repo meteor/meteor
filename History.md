@@ -16,6 +16,9 @@
   individual templates, and is a function there rather than a static string.
   #2858 #2854
 
+* The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
+  clone of what the function returned rather than sharing mutable state.  #3201
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
