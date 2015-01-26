@@ -106,9 +106,9 @@ _.extend(CodeGen.prototype, {
               }
               // split out the variable name and sequence arguments
               variable = args[0][1][0];// XXX take name as a string ignoring tag
-              dataCode = 'function () { return { _sequence: ' +
+              dataCode = 'function () { return { _sequence: Spacebars.call(' +
                 self.codeGenPath(args[2][1]) +
-                ', _variable: "' + variable + '" }; }';
+                '), _variable: "' + variable + '" }; }';
             }
           }
 
