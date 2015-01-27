@@ -3,7 +3,7 @@
 set -e
 set -u
 
-NODE_VERSION=0.10.35
+NODE_VERSION=0.10.36
 
 source "$(dirname $0)/build-dev-bundle-common.sh"
 echo CHECKOUT DIR IS "$CHECKOUT_DIR"
