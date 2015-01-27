@@ -49,7 +49,7 @@ var newResolveWithInput = function (input, _nudge) {
   // CatalogCache
   var unknownPackages = {}; // package name -> true
   var packageVersionsRequiringPackage = {}; // package -> [package-and-version]
-  var rootDeps = {};
+  var rootDeps = {}; // package name -> true
   _.each(input.dependencies, function (p) {
     rootDeps[p] = true;
   });
@@ -142,6 +142,55 @@ var newResolveWithInput = function (input, _nudge) {
     throw e;
   }
 
+  // optimize
+  _.each(solution.getTrueVars(), function (x) {
+    if (x.indexOf(' ') >= 0) {
+      var pv = CS.PackageAndVersion.fromString(x);
+      var package = pv.package;
+      var version = pv.version;
+      var otherVersions = cache.getPackageVersions(package); // sorted
+
+      if (_.has(rootDeps, package)) {
+        // try to make newer
+        _.find(otherVersions, function (v) {
+          var trialPV = package + ' ' + v;
+          if (PV.lessThan(v, version)) {
+            solver.forbid(trialPV);
+          } else {
+            var newSolution = solver.solveAssuming(Logic.not(trialPV));
+            if (newSolution) {
+              solution = newSolution;
+              solver.forbid(trialPV);
+            } else {
+              return true;
+            }
+          }
+          return false;
+        });
+      } else {
+        // try to make older
+        otherVersions = _.clone(otherVersions);
+        otherVersions.reverse();
+        _.find(otherVersions, function (v) {
+          var trialPV = package + ' ' + v;
+          if (PV.lessThan(version, v)) {
+            solver.forbid(trialPV);
+          } else {
+            var newSolution = solver.solveAssuming(Logic.not(trialPV));
+            if (newSolution) {
+              solution = newSolution;
+              solver.forbid(trialPV);
+            } else {
+              return true;
+            }
+          }
+          return false;
+        });
+      }
+    }
+  });
+
+  // read out solution
   var versionMap = {};
   _.each(solution.getTrueVars(), function (x) {
     if (x.indexOf(' ') >= 0) {
