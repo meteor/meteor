@@ -21,7 +21,7 @@ ServiceConfiguration.configurations = new Mongo.Collection(
 // to use the feature while it remains available.    
 ServiceConfiguration.configurations._ensureIndex(
     { "service": 1 },
-    { unique: true, dropDups: true }
+    { unique: true }
 );
 
 // Thrown when trying to use a login service which is not configured
