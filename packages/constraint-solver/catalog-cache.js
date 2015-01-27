@@ -1,4 +1,5 @@
 var CS = ConstraintSolver;
+var PV = PackageVersion;
 
 var pvkey = function (package, version) {
   return package + " " + version;
@@ -11,7 +12,8 @@ CS.CatalogCache = function () {
   this._dependencies = {};
   // A map derived from the keys of _dependencies, for ease of iteration.
   // "package" -> ["versions", ...]
-  // Versions in the array are unique but not sorted.
+  // Versions in the array are unique but not sorted, unless the `.sorted`
+  // property is set on the array.
   this._versions = {};
 };
 
@@ -34,6 +36,7 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
     this._versions[p] = [];
   }
   this._versions[p].push(v);
+  this._versions[p].sorted = false;
 
   var depsByPackage = {};
   this._dependencies[key] = depsByPackage;
@@ -58,11 +61,20 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
   return this._dependencies[key];
 };
 
-// Returns an array of version strings, unsorted, possibly empty.
+// Returns an array of version strings, sorted, possibly empty.
 // (Don't mutate the result.)
 CS.CatalogCache.prototype.getPackageVersions = function (package) {
-  return (_.has(this._versions, package) ?
-          this._versions[package] : []);
+  var result = (_.has(this._versions, package) ?
+                this._versions[package] : []);
+  if ((!result.length) || result.sorted) {
+    return result;
+  } else {
+    // sort in place, and record so that we don't sort redundantly
+    // (we'll sort again if more versions are pushed onto the array)
+    result.sort(PV.compare);
+    result.sorted = true;
+    return result;
+  }
 };
 
 CS.CatalogCache.prototype.hasPackage = function (package) {
@@ -100,7 +112,7 @@ CS.CatalogCache.fromJSONable = function (obj) {
 
 // Calls `iter` on each PackageAndVersion, with the second argument being
 // a map from package name to Dependency.  If `iter` returns true,
-// iteration is stopped.
+// iteration is stopped.  There's no particular order to the iteration.
 CS.CatalogCache.prototype.eachPackageVersion = function (iter) {
   var self = this;
   for (var key in self._dependencies) {
@@ -113,7 +125,7 @@ CS.CatalogCache.prototype.eachPackageVersion = function (iter) {
 };
 
 // Calls `iter` on each package name, with the second argument being
-// a list of versions present for that package (unique but not sorted).
+// a list of versions present for that package (unique and sorted).
 // If `iter` returns true, iteration is stopped.
 ConstraintSolver.CatalogCache.prototype.eachPackage = function (iter) {
   var self = this;
