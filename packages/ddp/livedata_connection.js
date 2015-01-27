@@ -180,7 +180,9 @@ var Connection = function (url, options) {
   //   - ready (has the 'ready' message been received?)
   //   - readyCallback (an optional callback to call when ready)
   //   - errorCallback (an optional callback to call if the sub terminates with
-  //                    an error)
+  //                    an error, XXX COMPAT WITH 1.0.3.1)
+  //   - stopCallback (an optional callback to call when the sub terminates
+  //     for any reason, with an error argument if an error triggered the stop)
   self._subscriptions = {};
 
   // Reactive userId.
@@ -462,11 +464,17 @@ _.extend(Connection.prototype, {
 
   /**
    * @memberOf Meteor
-   * @summary Subscribe to a record set.  Returns a handle that provides `stop()` and `ready()` methods.
+   * @summary Subscribe to a record set.  Returns a handle that provides
+   * `stop()` and `ready()` methods.
    * @locus Client
-   * @param {String} name Name of the subscription.  Matches the name of the server's `publish()` call.
-   * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function on server.
-   * @param {Function|Object} [callbacks] Optional. May include `onError` and `onReady` callbacks. If a function is passed instead of an object, it is interpreted as an `onReady` callback.
+   * @param {String} name Name of the subscription.  Matches the name of the
+   * server's `publish()` call.
+   * @param {Any} [arg1,arg2...] Optional arguments passed to publisher
+   * function on server.
+   * @param {Function|Object} [callbacks] Optional. May include `onStop`
+   * and `onReady` callbacks. If there is an error, it is passed as an
+   * argument to `onStop`. If a function is passed instead of an object, it
+   * is interpreted as an `onReady` callback.
    */
   subscribe: function (name /* .. [arguments] .. (callback|callbacks) */) {
     var self = this;
@@ -475,10 +483,13 @@ _.extend(Connection.prototype, {
     var callbacks = {};
     if (params.length) {
       var lastParam = params[params.length - 1];
-      if (typeof lastParam === "function") {
+      if (_.isFunction(lastParam)) {
         callbacks.onReady = params.pop();
-      } else if (lastParam && (typeof lastParam.onReady === "function" ||
-                               typeof lastParam.onError === "function")) {
+      } else if (lastParam &&
+        // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use
+        // onStop with an error callback instead.
+        _.any([lastParam.onReady, lastParam.onError, lastParam.onStop],
+          _.isFunction)) {
         callbacks = params.pop();
       }
     }
@@ -520,10 +531,17 @@ _.extend(Connection.prototype, {
         if (!existing.ready)
           existing.readyCallback = callbacks.onReady;
       }
+
+      // XXX COMPAT WITH 1.0.3.1 we used to have onError but now we call
+      // onStop with an optional error argument
       if (callbacks.onError) {
         // Replace existing callback if any, so that errors aren't
         // double-reported.
         existing.errorCallback = callbacks.onError;
+      }
+
+      if (callbacks.onStop) {
+        existing.stopCallback = callbacks.onStop;
       }
     } else {
       // New sub! Generate an id, save it locally, and send message.
@@ -536,7 +554,9 @@ _.extend(Connection.prototype, {
         ready: false,
         readyDeps: new Tracker.Dependency,
         readyCallback: callbacks.onReady,
+        // XXX COMPAT WITH 1.0.3.1 #errorCallback
         errorCallback: callbacks.onError,
+        stopCallback: callbacks.onStop,
         connection: self,
         remove: function() {
           delete this.connection._subscriptions[this.id];
@@ -545,6 +565,10 @@ _.extend(Connection.prototype, {
         stop: function() {
           this.connection._send({msg: 'unsub', id: id});
           this.remove();
+
+          if (callbacks.onStop) {
+            callbacks.onStop();
+          }
         }
       };
       self._send({msg: 'sub', id: id, name: name, params: params});
@@ -565,7 +589,8 @@ _.extend(Connection.prototype, {
         var record = self._subscriptions[id];
         record.readyDeps.depend();
         return record.ready;
-      }
+      },
+      subscriptionId: id
     };
 
     if (Tracker.active) {
@@ -1406,11 +1431,25 @@ _.extend(Connection.prototype, {
     // we weren't subbed anyway, or we initiated the unsub.
     if (!_.has(self._subscriptions, msg.id))
       return;
+
+    // XXX COMPAT WITH 1.0.3.1 #errorCallback
     var errorCallback = self._subscriptions[msg.id].errorCallback;
+    var stopCallback = self._subscriptions[msg.id].stopCallback;
+
     self._subscriptions[msg.id].remove();
+
+    var meteorErrorFromMsg = function (msgArg) {
+      return msgArg && msgArg.error && new Meteor.Error(
+        msgArg.error.error, msgArg.error.reason, msgArg.error.details);
+    }
+
+    // XXX COMPAT WITH 1.0.3.1 #errorCallback
     if (errorCallback && msg.error) {
-      errorCallback(new Meteor.Error(
-        msg.error.error, msg.error.reason, msg.error.details));
+      errorCallback(meteorErrorFromMsg(msg));
+    }
+
+    if (stopCallback) {
+      stopCallback(meteorErrorFromMsg(msg));
     }
   },
 

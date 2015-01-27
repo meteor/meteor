@@ -1682,17 +1682,32 @@ Tinytest.add("livedata stub - subscribe errors", function (test) {
 
   // subscribe
   var onReadyFired = false;
-  var subError = null;
-  var sub = conn.subscribe('unknownSub', {
+  var subErrorInStopped = null;
+  var subErrorInError = null;
+
+  conn.subscribe('unknownSub', {
     onReady: function () {
       onReadyFired = true;
     },
+
+    // We now have two ways to get the error from a subscription:
+    // 1. onStop, which is called no matter what when the subscription is
+    //    stopped (a lifecycle callback)
+    // 2. onError, which is deprecated and is called only if there is an
+    //    error
+    onStop: function (error) {
+      subErrorInStopped = error;
+    },
     onError: function (error) {
-      subError = error;
+      subErrorInError = error;
     }
   });
+
   test.isFalse(onReadyFired);
-  test.equal(subError, null);
+  test.equal(subErrorInStopped, null);
+
+  // XXX COMPAT WITH 1.0.3.1 #errorCallback
+  test.equal(subErrorInError, null);
 
   var subMessage = JSON.parse(stream.sent.shift());
   test.equal(subMessage, {msg: 'sub', name: 'unknownSub', params: [],
@@ -1702,9 +1717,17 @@ Tinytest.add("livedata stub - subscribe errors", function (test) {
   stream.receive({msg: 'nosub', id: subMessage.id,
                   error: new Meteor.Error(404, "Subscription not found")});
   test.isFalse(onReadyFired);
-  test.instanceOf(subError, Meteor.Error);
-  test.equal(subError.error, 404);
-  test.equal(subError.reason, "Subscription not found");
+
+  // Check the error passed to the stopped callback was correct
+  test.instanceOf(subErrorInStopped, Meteor.Error);
+  test.equal(subErrorInStopped.error, 404);
+  test.equal(subErrorInStopped.reason, "Subscription not found");
+
+  // Check the error passed to the error callback was correct
+  // XXX COMPAT WITH 1.0.3.1 #errorCallback
+  test.instanceOf(subErrorInError, Meteor.Error);
+  test.equal(subErrorInError.error, 404);
+  test.equal(subErrorInError.reason, "Subscription not found");
 
   // stream reset: reconnect!
   stream.reset();
@@ -1713,6 +1736,32 @@ Tinytest.add("livedata stub - subscribe errors", function (test) {
   // We should NOT re-sub to the sub, because we processed the error.
   test.length(stream.sent, 0);
   test.isFalse(onReadyFired);
+});
+
+Tinytest.add("livedata stub - subscribe stop", function (test) {
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  // subscribe
+  var onReadyFired = false;
+  var onStopFired = false;
+  var subErrorInStopped = null;
+
+  var sub = conn.subscribe('my_data', {
+    onStop: function (error) {
+      onStopFired = true;
+      subErrorInStopped = error;
+    }
+  });
+
+  test.equal(subErrorInStopped, null);
+
+  sub.stop();
+
+  test.isTrue(onStopFired);
+  test.equal(subErrorInStopped, undefined);
 });
 
 if (Meteor.isClient) {
