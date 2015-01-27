@@ -21,6 +21,8 @@
 
 * `spiderable` now supports escaped `#!` fragments.  #2938
 
+* `meteor login --email` no longer takes an ignored argument.  #3532
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for

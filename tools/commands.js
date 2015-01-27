@@ -1587,7 +1587,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'login',
   options: {
-    email: { type: String },
+    email: { type: Boolean },
     // Undocumented: get credentials on a specific Galaxy. Do we still
     // need this?
     galaxy: { type: String }
@@ -2022,7 +2022,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'dummy',
   options: {
-    email: { type: String, short: "e", required: true },
+    ething: { type: String, short: "e", required: true },
     port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
@@ -2039,7 +2039,7 @@ main.registerCommand({
     return 'none';
   };
 
-  Console.info(p('email') + " " + p('port') + " " + p('changed') +
+  Console.info(p('ething') + " " + p('port') + " " + p('changed') +
                        " " + p('args'));
   if (options.url)
     Console.info('url');
