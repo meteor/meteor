@@ -1,5 +1,6 @@
 require("6to5/register")({
-  cache: true
+  cache: true,
+  blacklist: ["useStrict"]
 });
 
 var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
