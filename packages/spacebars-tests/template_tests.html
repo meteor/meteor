@@ -1050,3 +1050,18 @@ Hi there!
     {{subscribingHelper2}}
   {{/if}}
 </template>
+
+<template name="spacebars_template_test_old_each_data_context">
+  {{#each items}}
+    <div>{{text}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_new_each_data_context">
+  {{#with dataContext}}
+    {{#each item in items}}
+      <div>{{item.text}} -- {{toplevel}}</div>
+    {{/each}}
+  {{/with}}
+</template>
+
