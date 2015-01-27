@@ -21,8 +21,8 @@ var convertByScheme = function (val, scheme) {
     return val;
 
   if (_.isArray(scheme)) {
-    if (! _.isArray(val))
-      throw new Error("Expected an array");
+    if (! _.isArray(val) || val.length !== 1)
+      throw new Error("Expected an array with one element");
 
     return _.map(val, function (subval, i) {
       return convertByScheme(subval, scheme[0]);
