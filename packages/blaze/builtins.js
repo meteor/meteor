@@ -68,9 +68,22 @@ Blaze.Unless = function (conditionFunc, contentFunc, elseFunc) {
 /**
  * @summary Constructs a View that renders `contentFunc` for each item in a sequence.
  * @locus Client
- * @param {Function} argFunc A function to reactively re-run. The function must return an object with two fields: '_variable' and '_sequence'. '_variable' is an optional alias for an item available from the Each body, '_sequence' may be a Cursor, an array, null, or undefined. For backwards-compitablity, can return just sequence (Cursor, array) not wrapped into an object.
- * @param {Function} contentFunc A Function that returns [*renderable content*](#renderable_content).
- * @param {Function} [elseFunc] Optional.  A Function that returns [*renderable content*](#renderable_content) to display in the case when there are no items to display.
+ * @param {Function} argFunc A function to reactively re-run. The function can
+ * return one of two options:
+ *
+ * 1. An object with two fields: '_variable' and '_sequence'. Each iterates over
+ *   '_sequence', it may be a Cursor, an array, null, or undefined. Inside the
+ *   Each body you will be able to get the current item from the sequence using
+ *   the name specified in the '_variable' field.
+ *
+ * 2. Just a sequence (Cursor, array, null, or undefined) not wrapped into an
+ *   object. Inside the Each body, the current item will be set as the data
+ *   context.
+ * @param {Function} contentFunc A Function that returns  [*renderable
+ * content*](#renderable_content).
+ * @param {Function} [elseFunc] A Function that returns [*renderable
+ * content*](#renderable_content) to display in the case when there are no items
+ * in the sequence.
  */
 Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   var eachView = Blaze.View('each', function () {
