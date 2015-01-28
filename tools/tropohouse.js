@@ -327,8 +327,12 @@ _.extend(exports.Tropohouse.prototype, {
       // XXX wipeAllPackages won't work on Windows until we fix that function
       isopack.saveToPath(self.packagePath(packageName, isopack.version));
     } else {
-      // Note: wipeAllPackages depends on this filename structure, as does the
-      // part above which readlinks.
+      // Note: wipeAllPackages depends on this filename structure
+      // On Mac and Linux, we used to use a filename structure that used the
+      // names of symlinks to determine which builds we have downloaded. We no
+      // longer need this because we now parse package metadata, but we still
+      // need to write the symlinks correctly so that old meteor tools can
+      // still read newly downloaded packages.
       var newPackageLinkTarget = '.' + isopack.version + '.' +
         utils.randomToken() + '++' + isopack.buildArchitectures();
 
