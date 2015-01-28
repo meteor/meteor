@@ -1111,7 +1111,7 @@ _.extend(Run.prototype, {
     var env = _.clone(process.env);
     _.extend(env, self.env);
 
-    self.proc = child_process.execFile(files.convertToOSPath(self.execPath),
+    self.proc = child_process.spawn(files.convertToOSPath(self.execPath),
       self._args, {
         cwd: files.convertToOSPath(self.cwd),
         env: env
