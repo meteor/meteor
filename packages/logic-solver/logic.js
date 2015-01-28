@@ -1041,6 +1041,10 @@ var pushToNth = function (arrayOfArrays, n, newItem) {
 
 Logic.weightedSum = function (formulas, weights) {
   _check(formulas, [Logic.FormulaOrTerm]);
+  if (typeof weights === 'number') {
+    _check(weights, Logic.WholeNumber);
+    weights = _.map(formulas, function () { return weights; });
+  }
   _check(weights, [Logic.WholeNumber]);
   if (! (formulas.length === weights.length && formulas.length)) {
     throw new Error("Formula array and weight array must be same length (> 0)");
@@ -1295,6 +1299,10 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
 
 Logic.Solution.prototype.getWeightedSum = function (formulas, weights) {
   _check(formulas, [Logic.FormulaOrTerm]);
+  if (typeof weights === 'number') {
+    _check(weights, Logic.WholeNumber);
+    weights = _.map(formulas, function () { return weights; });
+  }
   _check(weights, [Logic.WholeNumber]);
   var total = 0;
   if (formulas.length !== weights.length) {

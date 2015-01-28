@@ -1643,7 +1643,7 @@ Tinytest.add("logic-solver - minimize", function (test) {
   s.require(Logic.or("A", "B", "C", "D"));
   // cost is equal to the number of false variables
   var costTerms = ["-A", "-B", "-C", "-D"];
-  var costWeights = [1, 1, 1, 1];
+  var costWeights = 1;
   var solution1 = s.solve();
   // nothing forces the cost (= the number of false variables)
   // to be greater than 0, but MiniSat will always discover
