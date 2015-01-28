@@ -34,7 +34,7 @@ main () {
   echo "publish the release from the remote machines.${NC}"
 
   SESSION_FILE="$CHECKOUT_DIR/publish-meteor-tool-session"
-  env METEOR_SESSION_FILE=$SESSION_FILE $METEOR login
+  env METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" login
 
   echo "${green}Login succeeded.${NC}"
   echo

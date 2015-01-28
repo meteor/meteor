@@ -44,9 +44,9 @@ main () {
     echo "${green}Going to ssh into machine running $PLATFORM and publish the release${NC}"
     trap 'echo "${red}Failed to publish from $PLATFORM${NC}"; clean_up' EXIT
     # copy the meteor session file to the remote host
-    scp -oUserKnownHostsFile=$TEMP_KEY -P $PORT -i $TEMP_PRIV_KEY -q $SESSION_FILE $USERNAME@$HOST:~/session
+    scp -oUserKnownHostsFile="$TEMP_KEY" -P "$PORT" -i "$TEMP_PRIV_KEY" -q "$SESSION_FILE" $USERNAME@$HOST:~/session
 
-    METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM <<'END'
+    METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine $PLATFORM <<'END'
 set -e
 set -u
 if [ -d meteor ]; then
@@ -58,7 +58,7 @@ git fetch --tags
 END
 
     # checkout the SHA1 we want to publish
-    echo "cd meteor; git checkout $GITSHA" | METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM
+    echo "cd meteor; git checkout $GITSHA" | METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine "$PLATFORM"
     # publish the release
     echo "cd meteor/packages/meteor-tool && env METEOR_SESSION_FILE=~/session ../../meteor publish --existing-version" | METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM
 
@@ -73,10 +73,10 @@ END
 
     # copy the meteor session file to the remote host
     SESSION_CONTENT=$(cat $SESSION_FILE | tr '\n' ' ')
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $SESSION_CONTENT > C:\\meteor-session" 2>/dev/null
+    ssh $USERNAME@$HOST -oUserKnownHostsFile="$TEMP_KEY" -p "$PORT" -i "$TEMP_PRIV_KEY" "cmd /c echo $SESSION_CONTENT > C:\\meteor-session" 2>/dev/null
 
     # delete existing batch script if it exists
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c del C:\\publish-tool.bat || exit 0" 2>/dev/null
+    ssh $USERNAME@$HOST -oUserKnownHostsFile="$TEMP_KEY" -p "$PORT" -i "$TEMP_PRIV_KEY" "cmd /c del C:\\publish-tool.bat || exit 0" 2>/dev/null
 
     # copy batch script to windows machine
     BAT_FILENAME="$ADMIN_DIR/publish-meteor-tool.bat"
@@ -87,8 +87,8 @@ END
     do
       line="${line/\$GITSHA/$GITSHA}"
       echo $line
-      ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $line>> C:\\publish-tool.bat" 2>/dev/null
-    done 10< $BAT_FILENAME
+      ssh $USERNAME@$HOST -oUserKnownHostsFile="$TEMP_KEY" -p "$PORT" -i "$TEMP_PRIV_KEY" "cmd /c echo $line>> C:\\publish-tool.bat" 2>/dev/null
+    done 10< "$BAT_FILENAME"
 
     # since running the script remotely fails for an unknown reason, we just
     # prompt user to run this generated script themselves
@@ -97,7 +97,7 @@ END
     echo "* (Look at the top of your window, the output might be weirdly overlaying your terminal)"
     echo "* Please run the C:\\publish-tool.bat script to publish the release."
     echo "*******************************************************************"
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY 2> /dev/null
+    ssh $USERNAME@$HOST -oUserKnownHostsFile="$TEMP_KEY" -p "$PORT" -i "$TEMP_PRIV_KEY" 2> /dev/null
 
     trap - EXIT
   fi
@@ -108,20 +108,20 @@ END
 # get keys from "meteor admin get-machine" command
 parse_keys () {
   trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
-  CREDS=$(METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM --json)
+  CREDS=$(METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine $PLATFORM --json)
 
   # save host key and login private key to temp files
-  echo $CREDS | get_from_json "key" > $CHECKOUT_DIR/temp_priv_key_$PLATFORM
-  TEMP_PRIV_KEY=$CHECKOUT_DIR/temp_priv_key_$PLATFORM
-  chmod 600 $TEMP_PRIV_KEY
+  echo "$CREDS" | get_from_json "key" > "$CHECKOUT_DIR/temp_priv_key_$PLATFORM"
+  TEMP_PRIV_KEY="$CHECKOUT_DIR/temp_priv_key_$PLATFORM"
+  chmod 600 "$TEMP_PRIV_KEY"
 
   USERNAME=$(echo $CREDS | get_from_json "username")
   HOST=$(echo $CREDS | get_from_json "host")
   PORT=$(echo $CREDS | get_from_json "port")
-  echo -n "$HOST " > $CHECKOUT_DIR/temp_key_$PLATFORM
-  echo $CREDS | get_from_json "hostKey" >> $CHECKOUT_DIR/temp_key_$PLATFORM
+  echo -n "$HOST " > "$CHECKOUT_DIR/temp_key_$PLATFORM"
+  echo $CREDS | get_from_json "hostKey" >> "$CHECKOUT_DIR/temp_key_$PLATFORM"
 
-  TEMP_KEY=$CHECKOUT_DIR/temp_key_$PLATFORM
+  TEMP_KEY="$CHECKOUT_DIR/temp_key_$PLATFORM"
 
   trap - EXIT
 }
@@ -132,12 +132,12 @@ get_from_json () {
 }
 
 clean_up () {
-  if [[ x$TEMP_KEY != x ]]; then
+  if [[ "x$TEMP_KEY" != x ]]; then
     echo "Removing remaining keys"
-    rm $TEMP_KEY
+    rm "$TEMP_KEY"
   fi
-  if [[ x$TEMP_KEY != x ]]; then
-    rm $TEMP_PRIV_KEY
+  if [[ "x$TEMP_KEY" != x ]]; then
+    rm "$TEMP_PRIV_KEY"
   fi
 
   exit 1
