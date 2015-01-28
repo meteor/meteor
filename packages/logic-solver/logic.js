@@ -1152,6 +1152,7 @@ Logic.Solver.prototype.solveAssuming = function (formula) {
   // The formula may be used again, however.  (For example, you
   // can solve assuming a formula F, and if it works, require F.)
   this._minisat.retireVar(assumpVar);
+
   return result;
 };
 

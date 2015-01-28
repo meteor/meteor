@@ -72,3 +72,17 @@ MiniSat.prototype.getSolution = function () {
 MiniSat.prototype.retireVar = function (v) {
   this._C._retireVar(v);
 };
+
+MiniSat.prototype.getConflictClause = function () {
+  var C = this._C;
+  var numTerms = C._getConflictClauseSize();
+  var clausePtr = C._getConflictClause();
+  var terms = [];
+  for (var i = 0; i < numTerms; i++) {
+    var t = C.getValue(clausePtr + i*4, 'i32');
+    var v = (t >>> 1) + 1;
+    var s = (t & 1) ? -1 : 1;
+    terms[i] = v * s;
+  }
+  return terms;
+};
