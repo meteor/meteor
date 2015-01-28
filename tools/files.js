@@ -1295,7 +1295,6 @@ wrapFsFunc("lstat", [0]);
 wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
 
-// Automagically convert line endings for writeFile and appendFile
 if (process.platform === "win32") {
   // File reading and writing; need to convert line endings
   var writeFile = files.writeFile;
