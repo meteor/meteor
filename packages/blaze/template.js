@@ -324,7 +324,9 @@ Template.prototype.helpers = function (dict) {
 
 // Kind of like Blaze.currentView but for the template instance.
 // This is a function, not a value -- so that not all helpers
-// are implicitly dependent on the current template instance.
+// are implicitly dependent on the current template instance's `data` property,
+// which would make them dependenct on the data context of the template
+// inclusion.
 Template._currentTemplateInstanceFunc = null;
 
 Template._withTemplateInstanceFunc = function (templateInstanceFunc, func) {
