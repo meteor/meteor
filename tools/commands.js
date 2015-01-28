@@ -23,8 +23,8 @@ var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
 
-// The architecture used by Galaxy servers; it's the architecture used
-// by 'meteor deploy'.
+// The architecture used by MDG's hosted servers; it's the architecture used by
+// 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -53,14 +53,6 @@ var qualifySitename = function (site) {
   while (site.length && site[site.length - 1] === ".")
     site = site.substring(0, site.length - 1);
   return site;
-};
-
-// Given a (non necessarily fully qualified) site name from the
-// command line, return true if the site is hosted by a Galaxy, else
-// false.
-var hostedWithGalaxy = function (site) {
-  var site = qualifySitename(site);
-  return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
 // Display a message showing valid Meteor architectures.
@@ -917,13 +909,8 @@ main.registerCommand({
     var site = qualifySitename(options.args[0]);
     config.printUniverseBanner();
 
-    if (hostedWithGalaxy(site)) {
-      var deployGalaxy = require('./deploy-galaxy.js');
-      mongoUrl = deployGalaxy.temporaryMongoUrl(site);
-    } else {
-      mongoUrl = deploy.temporaryMongoUrl(site);
-      usedMeteorAccount = true;
-    }
+    mongoUrl = deploy.temporaryMongoUrl(site);
+    usedMeteorAccount = true;
 
     if (! mongoUrl)
       // temporaryMongoUrl() will have printed an error message
@@ -997,14 +984,9 @@ main.registerCommand({
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
     settings: { type: String },
-    star: { type: String },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
     password: { type: String },
-    // Shouldn't be documented until the Galaxy release. Marks the
-    // application as an admin app, so that it will be available in
-    // Galaxy admin interface.
-    admin: { type: Boolean },
     // Override architecture to deploy whatever stuff we have locally, even if
     // it contains binary packages that should be incompatible. A hack to allow
     // people to deploy from checkout or do other weird shit. We are not
@@ -1012,42 +994,24 @@ main.registerCommand({
     'override-architecture-with-local' : { type: Boolean }
   },
   requiresApp: function (options) {
-    return options.delete || options.star ? false : true;
+    return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
-  var useGalaxy = hostedWithGalaxy(site);
-  var deployGalaxy;
 
   if (options.delete) {
-    if (useGalaxy) {
-      deployGalaxy = require('./deploy-galaxy.js');
-      return deployGalaxy.deleteApp(site);
-    } else {
-      return deploy.deleteApp(site);
-    }
+    return deploy.deleteApp(site);
   }
 
   if (options.password) {
-    if (useGalaxy) {
-      Console.error("Galaxy does not support --password.");
-    } else {
-      Console.error(
-        "Setting passwords on apps is no longer supported. Now there are " +
+    Console.error(
+      "Setting passwords on apps is no longer supported. Now there are " +
         "user accounts and your apps are associated with your account so " +
         "that only you (and people you designate) can access them. See the " +
         Console.command("'meteor claim'") + " and " +
         Console.command("'meteor authorized'") + " commands.");
-    }
-    return 1;
-  }
-
-  var starball = options.star;
-  if (starball && ! useGalaxy) {
-    // XXX it would be nice to support this for non-Galaxy deploys too
-    Console.error("--star: only supported when deploying to Galaxy.");
     return 1;
   }
 
@@ -1088,25 +1052,12 @@ main.registerCommand({
     serverArch: buildArch
   };
 
-  var deployResult;
-  if (useGalaxy) {
-    deployGalaxy = require('./deploy-galaxy.js');
-    deployResult = deployGalaxy.deploy({
-      projectContext: projectContext,
-      app: site,
-      settingsFile: options.settings,
-      starball: starball,
-      buildOptions: buildOptions,
-      admin: options.admin
-    });
-  } else {
-    deployResult = deploy.bundleAndDeploy({
-      projectContext: projectContext,
-      site: site,
-      settingsFile: options.settings,
-      buildOptions: buildOptions
-    });
-  }
+  var deployResult = deploy.bundleAndDeploy({
+    projectContext: projectContext,
+    site: site,
+    settingsFile: options.settings,
+    buildOptions: buildOptions
+  });
 
   if (deployResult === 0) {
     auth.maybePrintRegistrationLink({
@@ -1129,27 +1080,11 @@ main.registerCommand({
   name: 'logs',
   minArgs: 1,
   maxArgs: 1,
-  options: {
-    // XXX once Galaxy is released, document this
-    stream: { type: Boolean, short: 'f' }
-  },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
 
-  if (hostedWithGalaxy(site)) {
-    var deployGalaxy = require('./deploy-galaxy.js');
-    var ret = deployGalaxy.logs({
-      app: site,
-      streaming: options.stream
-    });
-    if (options.stream && ret === null) {
-      throw new main.WaitForExit;
-    }
-    return ret;
-  } else {
-    return deploy.logs(site);
-  }
+  return deploy.logs(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1190,14 +1125,6 @@ main.registerCommand({
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
-  if (hostedWithGalaxy(site)) {
-    Console.error(
-      "Sites hosted on Galaxy do not have an authorized user list. " +
-      "Instead, go to your Galaxy dashboard to change the authorized users " +
-      "of your Galaxy.\n");
-    return 1;
-  }
-
   if (! auth.isLoggedIn()) {
     Console.error(
       "You must be logged in for that. Try " +
@@ -1235,12 +1162,6 @@ main.registerCommand({
       Console.command("'Sign in'") + " and then " +
       Console.command("'Create account'") + " at www.meteor.com.");
     Console.error();
-    return 1;
-  }
-
-  if (hostedWithGalaxy(site)) {
-    Console.error(
-      "Sorry, you can't claim sites that are hosted on Galaxy.");
     return 1;
   }
 
