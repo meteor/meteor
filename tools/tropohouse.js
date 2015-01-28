@@ -153,14 +153,14 @@ _.extend(exports.Tropohouse.prototype, {
   // the server in a way that our sync protocol doesn't understand well.
   wipeAllPackages: function () {
     var self = this;
-
     var packagesDirectoryName = config.getPackagesDirectoryName();
-
     var packageRootDir = files.pathJoin(self.root, packagesDirectoryName);
+    var escapedPackages;
+
     try {
       // XXX this variable actually can't be accessed from outside this
       // line, this is definitely a bug
-      var escapedPackages = files.readdir(packageRootDir);
+      escapedPackages = files.readdir(packageRootDir);
     } catch (e) {
       // No packages at all? We're done.
       if (e.code === 'ENOENT')
@@ -204,8 +204,10 @@ _.extend(exports.Tropohouse.prototype, {
 
     _.each(escapedPackages, function (packageEscaped) {
       var packageDir = files.pathJoin(packageRootDir, packageEscaped);
+      var versions;
+
       try {
-        var versions = files.readdir(packageDir);
+        versions = files.readdir(packageDir);
       } catch (e) {
         // Somebody put a file in here or something? Whatever, ignore.
         if (e.code === 'ENOENT' || e.code === 'ENOTDIR')
