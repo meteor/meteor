@@ -601,6 +601,15 @@ _.extend(AppRunner.prototype, {
     // client contains the 'autoupdate' package.
     var canRefreshClient = self.projectContext.packageMap &&
           self.projectContext.packageMap.getInfo('autoupdate');
+
+    if (process.platform === "win32") {
+      // XXX On Windows, we can't send custom signals, so we have to just
+      // kill the server and restart. We can improve this performance by
+      // using a named pipe to communicate to the child process on Windows,
+      // but it's not the lowest hanging fruit for performance right now.
+      canRefreshClient = false;
+    }
+
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
@@ -721,15 +730,7 @@ _.extend(AppRunner.prototype, {
 
         // Notify the server that new client assets have been added to the
         // build.
-        if (process.platform === "win32") {
-          // XXX On Windows, we can't send custom signals, so we have to just
-          // kill the server and restart. We can improve this performance by
-          // using a named pipe to communicate to the child process on Windows,
-          // but it's not the lowest hanging fruit for performance right now.
-          appProcess.proc.kill();
-        } else {
-          appProcess.proc.kill('SIGUSR2');
-        }
+        appProcess.proc.kill('SIGUSR2');
 
         // Establish a watcher on the new files.
         setupClientWatcher();
