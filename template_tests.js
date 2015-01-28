@@ -3099,7 +3099,7 @@ Tinytest.add("spacebars-tests - template_tests - custom block helper doesn't bre
 });
 
 Tinytest.add(
-  "spacebars-tests - template_tests - currentData and parentData in event handlers",
+  "spacebars-tests - template_tests - currentData and parentData in event handlers and helpers",
   function (test) {
     var tmpl = Template.spacebars_template_test_currentData_and_parentData_in_events;
 
