@@ -26,9 +26,10 @@
 * Make it easier to use the Node DDP client implementation without running a web
   server too.  #3452
 
-* Fix bug where `Template.instance()` returned the wrong thing from inside a
-  custom block helper template, making it difficult to use Template.instance()
-  for local template state.
+* Fix bug where, when a helper or event handler was called from inside a custom
+  block helper,  `Template.instance()` returned the `Template.contentBlock`
+  template instead of the actual user-defined template, making it difficult to
+  use `Template.instance()` for local template state.
 
 * Fix/change behavior of `Template.currentData` and `Template.parentData`
   inside event handlers. Previously, they returned the data context of the
