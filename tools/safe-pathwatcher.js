@@ -3,7 +3,10 @@ var files = require("./files.js");
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of pathwatcher.watch.
 // Enabled on Mac and Linux and disabled on Windows by default.
-var PATHWATCHER_ENABLED = false;
+var PATHWATCHER_ENABLED = !process.env.METEOR_WATCH_FORCE_POLLING;
+if (process.platform === "win32") {
+  PATHWATCHER_ENABLED = false;
+}
 
 var DEFAULT_POLLING_INTERVAL =
       ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
