@@ -1507,10 +1507,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'login',
   options: {
-    email: { type: Boolean },
-    // Undocumented: get credentials on a specific Galaxy. Do we still
-    // need this?
-    galaxy: { type: String }
+    email: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
