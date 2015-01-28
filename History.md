@@ -33,7 +33,11 @@
 
 * Fix/change behavior of `Template.currentData` and `Template.parentData`
   inside event handlers. Previously, they returned the data context of the
-  template, but now they return the data context of the target element.
+  enclosing template, but now they return the data context of the target
+  element.
+
+  The previous functionality can be reproduced by using
+  `Template.instance().data` instead of `Template.currentData()`.
 
 
 
