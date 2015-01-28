@@ -60,11 +60,11 @@ var getTokenResponse = function (query) {
           }
         }).content;
       response = JSON.parse(response);
-			if (response.id == config.appId) {
+	  if (response.id == config.appId) {
         responseContent = "access_token=" + query.accessToken + "&expires=5184000";
-			} else {
-				throw new Error("Failed to complete OAuth handshake with Facebook. The access token's app ID and the server's app ID did not match.");
-			}
+	  } else {
+		throw new Error("Failed to complete OAuth handshake with Facebook. The access token's app ID and the server's app ID did not match.");
+	  }
     } else {
       responseContent = HTTP.get(
         "https://graph.facebook.com/oauth/access_token", {
