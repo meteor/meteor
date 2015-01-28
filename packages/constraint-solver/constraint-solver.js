@@ -167,7 +167,17 @@ var newResolveWithInput = function (input, _nudge) {
           }
           return false;
         });
-      } else {
+      }
+    }
+  });
+  _.each(solution.getTrueVars(), function (x) {
+    if (x.indexOf(' ') >= 0) {
+      var pv = CS.PackageAndVersion.fromString(x);
+      var package = pv.package;
+      var version = pv.version;
+      var otherVersions = cache.getPackageVersions(package); // sorted
+
+      if (! _.has(rootDeps, package)) {
         // try to make older
         otherVersions = _.clone(otherVersions);
         otherVersions.reverse();
