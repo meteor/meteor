@@ -146,13 +146,14 @@ Tinytest.add("constraint solver - no results", function (test) {
     ["bad-1", "1.0.0", {indirect: "1.0.0"}],
     ["bad-2", "1.0.0", {indirect: "2.0.0"}],
     ["indirect", "1.0.0"],
-    ["indirect", "2.0.0"]
+    ["indirect", "2.0.0"],
+    ["mytoplevel", "1.0.0", {"bad-1": "1.0.0", "bad-2": ""}]
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
-    FAIL({ "bad-1": "1.0.0", "bad-2": "" }, function (error) {
+    FAIL({ "mytoplevel": "" }, function (error) {
       return error.message.match(/indirect@2\.0\.0 is not satisfied by 1\.0\.0/)
-        && error.message.match(/bad-1@1\.0\.0/)
-        && error.message.match(/bad-2@1\.0\.0/)
+        && error.message.match(/mytoplevel@1.0.0 -> bad-1@1\.0\.0/)
+        && error.message.match(/mytoplevel@1.0.0 -> bad-2@1\.0\.0/)
         // We shouldn't get shown indirect itself in a pathway: that would just
         // be an artifact of there being a path that passes through another
         // package.  (Note: we might change our mind and decide that all these
@@ -329,4 +330,15 @@ Tinytest.add("constraint solver - input serialization", function (test) {
 
   test.equal(JSON.stringify(obj1), json);
   test.equal(JSON.stringify(obj2), json);
+});
+
+Tinytest.add("constraint solver - non-existent indirect package", function (test) {
+  var resolver = makeResolver([
+    ["foo", "1.0.0", {bar: "1.0.0"}]
+  ]);
+  testWithResolver(test, resolver, function (t, FAIL) {
+    FAIL({ "foo": "1.0.0" }, function (error) {
+      return error.message.match(/unknown package: bar/);
+    });
+  });
 });
