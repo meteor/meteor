@@ -1158,15 +1158,15 @@ paths, line endings in text files, and colons/invalid characters in paths.
   also knows how to convert various configuration file formats.
  */
 
-var toPosixPath = function (p, notAbsolute) {
+var toPosixPath = function (p, partialPath) {
   // Sometimes, you can have a path like \Users\IEUser on windows, and this
   // actually means you want C:\Users\IEUser
-  if (p[0] === "\\" && (! notAbsolute)) {
+  if (p[0] === "\\" && (! partialPath)) {
     p = process.env.SystemDrive + p;
   }
 
   p = p.replace(/\\/g, '/');
-  if (p[1] === ':' && ! notAbsolute) {
+  if (p[1] === ':' && ! partialPath) {
     // transform "C:/bla/bla" to "/c/bla/bla"
     p = '/' + p[0] + p.slice(2);
   }
@@ -1174,8 +1174,8 @@ var toPosixPath = function (p, notAbsolute) {
   return p;
 };
 
-var toDosPath = function (p, notAbsolute) {
-  if (p[0] === '/' && ! notAbsolute) {
+var toDosPath = function (p, partialPath) {
+  if (p[0] === '/' && ! partialPath) {
     if (! /^\/[A-Za-z](\/|$)/.test(p))
       throw new Error("Surprising path: " + p);
     // transform a previously windows path back
@@ -1188,17 +1188,17 @@ var toDosPath = function (p, notAbsolute) {
 };
 
 
-var convertToOSPath = function (standardPath, notAbsolute) {
+var convertToOSPath = function (standardPath, partialPath) {
   if (process.platform === "win32") {
-    return toDosPath(standardPath, notAbsolute);
+    return toDosPath(standardPath, partialPath);
   }
 
   return standardPath;
 };
 
-var convertToStandardPath = function (osPath, notAbsolute) {
+var convertToStandardPath = function (osPath, partialPath) {
   if (process.platform === "win32") {
-    return toPosixPath(osPath, notAbsolute);
+    return toPosixPath(osPath, partialPath);
   }
 
   return osPath;
