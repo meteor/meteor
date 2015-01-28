@@ -1123,17 +1123,17 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
   var redirectUri = url + '/_oauth/meteor-developer';
 
   // Duplicate login from packages/oauth/oauth_common.js. If we are
-  // authenticating against a <=0.9.0 app server, then the app server
+  // authenticating against a <=0.9.1 app server, then the app server
   // uses a redirect URL with a "?close" query parameter, and we have to
-  // match the server's redirect URL. After 0.9.0, we deprecated the
-  // "?close" query parameter, so >0.9.0 app servers will use a redirect
+  // match the server's redirect URL. After 0.9.1, we deprecated the
+  // "?close" query parameter, so >0.9.1 app servers will use a redirect
   // URL with no query parameters. The app server uses the presence of
   // the 'loginStyle' configuration option to decide whether its
   // configuration is new-style or old-style, so we use that option here
   // to match the server's redirect URL.
   //
   // tl;dr this code is for compatibility with app servers that did
-  // their oauth configuration with <= 0.9.0.
+  // their oauth configuration with <= 0.9.1.
   if (! accountsConfiguration.loginStyle) {
     redirectUri = redirectUri + "?close";
   }
