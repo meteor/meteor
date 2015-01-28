@@ -1793,7 +1793,6 @@ var writeTargetToPath = function (name, target, outputPath, options) {
 // options:
 // - includeNodeModulesSymlink: bool
 // - builtBy: vanity identification string to write into metadata
-// - controlProgram: name of the control program (should be a target name)
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
 var writeSiteArchive = function (targets, outputPath, options) {
@@ -1804,16 +1803,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
     symlink: options.includeNodeModulesSymlink
   });
 
-  if (options.controlProgram && ! (options.controlProgram in targets))
-    throw new Error("controlProgram '" + options.controlProgram +
-                    "' is not the name of a target?");
-
   try {
     var json = {
       format: "site-archive-pre1",
       builtBy: options.builtBy,
       programs: [],
-      control: options.controlProgram || undefined,
       meteorRelease: options.releaseName
     };
 
@@ -1868,7 +1862,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
       json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModulesSymlink: options.includeNodeModulesSymlink,
         builtBy: options.builtBy,
-        controlProgram: options.controlProgram,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
       }));
@@ -1924,9 +1917,6 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
- *
- * - requireControlProgram: true if we need to include a "ctl" program in
- *   the bundle.  This is required for an old prototype of Galaxy.
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -2044,15 +2034,6 @@ exports.bundle = function (options) {
       targets.server = server;
     }
 
-    // Create a "control program". This is required for an old version of
-    // Galaxy.
-    var controlProgram = null;
-    if (options.requireControlProgram) {
-      var target = makeServerTarget("ctl");
-      targets["ctl"] = target;
-      controlProgram = "ctl";
-    }
-
     // Hack to let servers find relative paths to clients. Should find
     // another solution eventually (probably some kind of mount
     // directive that mounts the client bundle in the server at runtime)
@@ -2076,7 +2057,6 @@ exports.bundle = function (options) {
     var writeOptions = {
       includeNodeModulesSymlink: includeNodeModulesSymlink,
       builtBy: builtBy,
-      controlProgram: controlProgram,
       releaseName: releaseName,
       getRelativeTargetPath: getRelativeTargetPath
     };

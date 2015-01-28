@@ -113,9 +113,6 @@ _.extend(ProjectContext.prototype, {
     // package names.
     self._upgradePackageNames = options.upgradePackageNames;
 
-    // Set when deploying to a previous Galaxy prototype.
-    self._requireControlProgram = options.requireControlProgram;
-
     // Set by publishing commands to ensure that published packages always have
     // a web.cordova slice (because we aren't yet smart enough to just default
     // to using the web.browser slice instead or make a common 'web' slice).
@@ -501,7 +498,6 @@ _.extend(ProjectContext.prototype, {
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
     self._addReleaseConstraints(depsAndConstraints);
-    self._addGalaxyPrototypeConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
@@ -538,17 +534,6 @@ _.extend(ProjectContext.prototype, {
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
     });
-  },
-
-  // We only need to build ctl if deploying to the legacy Galaxy
-  // prototype. (Note that this means that we will need a new constraint
-  // solution when deploying vs when running locally. This code will be deleted
-  // soon anyway.)
-  _addGalaxyPrototypeConstraints: function (depsAndConstraints) {
-    var self = this;
-    if (self._requireControlProgram) {
-      depsAndConstraints.deps.push('ctl');
-    }
   },
 
   _getAnticipatedPrereleases: function (rootConstraints, cachedVersions) {
