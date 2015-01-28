@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Run this script on Mac/Linux, not on Windows
 # Requires s3cmd to be installed and an appropriate ~/.s3cfg.
 # Usage:
 #    scripts/admin/copy-windows-installer-from-jenkins.sh BUILDNUMBER
@@ -8,7 +9,7 @@
 set -e
 set -u
 
-cd "`dirname "$0"`"
+cd "$(dirname "$0")"
 
 TARGET="s3://meteor-windows/installers/"
 
@@ -28,7 +29,7 @@ fi
 
 echo Found build $DIRNAME
 
-if ! s3cmd info s3://com.meteor.jenkins/$DIRNAME/InstallMeteor.exe
+if ! s3cmd info "s3://com.meteor.jenkins/$DIRNAME/InstallMeteor.exe"
 then
   echo "InstallMeteor.exe wasn't found in $DIRNAME, did Jenkins job fail?"
   exit 1
