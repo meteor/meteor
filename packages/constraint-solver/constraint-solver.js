@@ -45,22 +45,26 @@ var newResolveWithInput = function (input, _nudge) {
   }
   console.log("Using new solver...");
 
-  // Packages that are mentioned in dependencies but not in the
-  // CatalogCache
+  var cache = input.catalogCache;
+
+  // Packages that are mentioned but aren't found in the CatalogCache
   var unknownPackages = {}; // package name -> true
   var packageVersionsRequiringPackage = {}; // package -> [package-and-version]
   var rootDeps = {}; // package name -> true
   _.each(input.dependencies, function (p) {
+    if (! cache.hasPackage(p)) {
+      unknownPackages[p] = true;
+    }
     rootDeps[p] = true;
   });
 
   var solver = new Logic.Solver;
 
-  var cache = input.catalogCache;
-
   var resolverOptions = {
     anticipatedPrereleases: input.anticipatedPrereleases
   };
+
+  var allConstraints = [];
 
   var addConstraint = function (pv, p2, vConstraint) {
     var p2Versions = cache.getPackageVersions(p2);
@@ -73,13 +77,17 @@ var newResolveWithInput = function (input, _nudge) {
     });
     // If we select this version of `p` and we select some version
     // of `p2`, we must select an "ok" version.
+    var constraintName = "constraint#" + allConstraints.length;
+    allConstraints.push([pv, p2, vConstraint]);
     if (pv !== null) {
-      solver.require(Logic.or(Logic.not(pv),
-                              Logic.not(p2),
-                              okPVersions));
+      solver.require(Logic.implies(constraintName,
+                                   Logic.or(Logic.not(pv),
+                                            Logic.not(p2),
+                                            okPVersions)));
     } else {
-      solver.require(Logic.or(Logic.not(p2),
-                              okPVersions));
+      solver.require(Logic.implies(constraintName,
+                                   Logic.or(Logic.not(p2),
+                                            okPVersions)));
     }
   };
 
@@ -134,13 +142,38 @@ var newResolveWithInput = function (input, _nudge) {
     addConstraint(null, c.name, c.vConstraint);
   });
 
-  var solution = solver.solve();
+  var allConstraintVars = _.map(allConstraints, function (c, i) {
+      return "constraint#" + i;
+  });
+  var allConstraintsOn = Logic.and(allConstraintVars);
+
+  var solution = solver.solveAssuming(allConstraintsOn);
 
   if (! solution) {
-    var e = new Error("UNSAT"); // XXX
+    var errorMessage;
+    var looseSolution = solver.solve();
+    if (! looseSolution) {
+      errorMessage = 'unknown package';
+    } else {
+      // try to use as many constraints as possible
+      looseSolution = solver.maximize(looseSolution, allConstraintVars, 1);
+      var numConstraintsOn = looseSolution.getWeightedSum(allConstraintVars, 1);
+      console.log(">>> Needed to remove " + (allConstraints.length -
+                                             numConstraintsOn) + " constraints" +
+                  " to get a solution.");
+      for (var i = 0; i < allConstraints.length; i++) {
+        if (! looseSolution.evaluate("constraint#" + i)) {
+          console.log("Skipped: " + JSON.stringify(allConstraints[i]));
+        }
+      }
+      errorMessage = 'conflict';
+    }
+    var e = new Error(errorMessage);
     e.constraintSolverError = true;
     throw e;
   }
+
+  solver.require(allConstraintsOn);
 
   // optimize
   _.each(solution.getTrueVars(), function (x) {
