@@ -752,6 +752,7 @@ files.writeFileAtomically = function (filename, contents) {
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
+// Do not use this function on Windows, it won't work.
 files.symlinkOverSync = function (linkText, file) {
   fiberHelpers.noYieldsAllowed(function () {
     file = files.pathResolve(file);
