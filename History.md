@@ -23,6 +23,10 @@
 
 * `meteor login --email` no longer takes an ignored argument.  #3532
 
+* Make it easier to use the Node DDP client implementation without running a web
+  server too.  #3452
+
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
