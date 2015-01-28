@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.7-blz.0'
+  version: '1.0.7-blz.0',
+  documentation: null
 });
 
 Package.onUse(function (api) {
