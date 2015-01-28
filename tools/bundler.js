@@ -36,10 +36,9 @@
 //   running in standalone mode (after setting appropriate environment
 //   variables as documented in README)
 //
-// /server/.bundle_version.txt: contains the dev_bundle version that
-//   legacy (read: current) Galaxy version read in order to set
-//   NODE_PATH to point to arch-specific builds of binary node modules
-//   (primarily this is for node-fibers)
+// /server/.bundle_version.txt: contains the dev_bundle version that the meteor
+//   deploy server reads in order to set NODE_PATH to point to arch-specific
+//   builds of binary node modules
 //
 // XXX in the future one program (which must be a server-type
 // architecture) will be designated as the 'init' program. The
@@ -1811,12 +1810,11 @@ var writeSiteArchive = function (targets, outputPath, options) {
       meteorRelease: options.releaseName
     };
 
-    // Tell Galaxy what version of the dependency kit we're using, so
-    // it can load the right modules. (Include this even if we copied
-    // or symlinked a node_modules, since that's probably enough for
-    // it to work in spite of the presence of node_modules for the
-    // wrong arch). The place we stash this is grody for temporary
-    // reasons of backwards compatibility.
+    // Tell the deploy server what version of the dependency kit we're using, so
+    // it can load the right modules. (Include this even if we copied or
+    // symlinked a node_modules, since that's probably enough for it to work in
+    // spite of the presence of node_modules for the wrong arch). The place we
+    // stash this is grody for temporary reasons of backwards compatibility.
     builder.write(files.pathJoin('server', '.bundle_version.txt'), {
       file: files.pathJoin(files.getDevBundle(), '.bundle_version.txt')
     });
