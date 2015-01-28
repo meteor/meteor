@@ -29,7 +29,7 @@ var bindDataContext = function (x) {
 Blaze._OLDSTYLE_HELPER = {};
 
 var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
-  // XXX COMPAT WITH0.9.3
+  // XXX COMPAT WITH 0.9.3
   var isKnownOldStyleHelper = false;
 
   if (template.__helpers.has(name)) {
