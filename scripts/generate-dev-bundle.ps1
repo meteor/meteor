@@ -4,14 +4,14 @@ $PLATFORM = "windows_x86"
 
 # take it form the environment if exists
 if (Test-Path variable:global:PLATFORM) {
-  $PLATFORM = (get-item env:PLATFORM).Value
+  $PLATFORM = (Get-Item env:PLATFORM).Value
 }
 
-$script_path = split-path -parent $MyInvocation.MyCommand.Definition
-$CHECKOUT_DIR = split-path -parent $script_path
+$script_path = Split-Path -parent $MyInvocation.MyCommand.Definition
+$CHECKOUT_DIR = Split-Path -parent $script_path
 
 # extract the bundle version from the meteor bash script
-$BUNDLE_VERSION = select-string -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | select-object -First 1
+$BUNDLE_VERSION = Select-String -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | Select-Object -First 1
 $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 
 # generate-dev-bundle-xxxxxxxx shortly
@@ -19,11 +19,11 @@ $DIR = $script_path + "\gdbXXX"
 echo $DIR
 
 # removing folders isn't easy on Windows, try both commands
-Remove-Item -Recurse -Force "${DIR}"
+rm -Recurse -Force "${DIR}"
 cmd /C "rmdir /S /Q ${DIR}"
 
-New-Item -Type Directory "$DIR"
-Set-Location "$DIR"
+mkdir "$DIR"
+cd "$DIR"
 
 # install dev-bundle-package.json
 # use short folder names
@@ -33,7 +33,7 @@ mkdir t
 cd t
 
 npm config set loglevel error
-node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | out-file -FilePath package.json -Encoding ascii
+node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
 npm shrinkwrap
 
@@ -42,7 +42,7 @@ cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
 
 mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
-node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | out-file -FilePath package.json -Encoding ascii
+node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
 npm dedupe
 # install the latest flatten-packages
@@ -72,7 +72,7 @@ $mongo_zip = "$DIR\mongodb\mongo.zip"
 
 $webclient.DownloadFile($mongo_link, $mongo_zip)
 
-$shell = new-object -com shell.application
+$shell = New-Object -com shell.application
 $zip = $shell.NameSpace($mongo_zip)
 foreach($item in $zip.items()) {
   $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
@@ -85,7 +85,7 @@ rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
 
 mkdir bin
-Set-Location bin
+cd bin
 
 # download node
 # same node on 32bit vs 64bit?
@@ -104,12 +104,12 @@ cd ..\..
 
 cp node_modules\npm\bin\npm.cmd .
 
-Set-Location $DIR
+cd $DIR
 
 # mark the version
 echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
 
-Set-Location "$DIR\.."
+cd "$DIR\.."
 
 # rename and move the folder with the devbundle
 # XXX this can generate a path that is too long
