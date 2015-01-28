@@ -1,12 +1,16 @@
 Logic = {};
 
 // Disabling type checks speeds things up a LOT (several times faster).
+// Type checks are disabled when `_check` is set to a no-op function
+// instead of `check`.
 _check = check;
-// defaults to true.  Returns the old value.
-Logic._setAssertionsEnabled = function (areThey) {
-  var oldAreThey = (_check === check);
-  _check = areThey ? check : function () {};
-  return oldAreThey;
+Logic._disablingTypeChecks = function (f) {
+  try {
+    _check = function () {};
+    return f();
+  } finally {
+    _check = check;
+  }
 };
 
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
@@ -489,6 +493,7 @@ Logic.or = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.FALSE;
   } else if (args.length === 1) {
+    _check(args[0], Logic.FormulaOrTerm);
     return args[0];
   } else {
     return new Logic.OrFormula(args);
@@ -530,6 +535,7 @@ Logic.and = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.TRUE;
   } else if (args.length === 1) {
+    _check(args[0], Logic.FormulaOrTerm);
     return args[0];
   } else {
     return new Logic.AndFormula(args);
@@ -572,6 +578,7 @@ Logic.xor = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.FALSE;
   } else if (args.length === 1) {
+    _check(args[0], Logic.FormulaOrTerm);
     return args[0];
   } else {
     return new Logic.XorFormula(args);
@@ -735,6 +742,7 @@ Logic.exactlyOne = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.FALSE;
   } else if (args.length === 1) {
+    _check(args[0], Logic.FormulaOrTerm);
     return args[0];
   } else {
     return new Logic.ExactlyOneFormula(args);
