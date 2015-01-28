@@ -672,10 +672,9 @@ debugging the Meteor packaging tools themselves.
 Search through the package server database.
 Usage: meteor search <regex> [--maintainer <username>] [--show-all]
 
-Searches through the Meteor package and release database for items whose
-names or descriptions match the regular expression. You can use the
---maintainer option to filter for items maintained by a particular
-developer.
+Searches through the Meteor package and release database for items whose names
+match the regular expression. You can use the --maintainer option to filter for
+items maintained by a particular developer.
 
 By default, this will not show packages that have no official versions
 (for example, those that have only prereleases). It will also hide packages
