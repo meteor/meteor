@@ -70,7 +70,7 @@ var findUpwards = function (predicate, startPath) {
 };
 
 files.cwd = function () {
-  return files.convertToStandardLineEndings(process.cwd());
+  return files.convertToStandardPath(process.cwd());
 };
 
 // Determine if 'filepath' (a path, or omit for cwd) is within an app
