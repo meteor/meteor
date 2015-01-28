@@ -508,11 +508,13 @@ var Sandbox = function (options) {
     });
   }
 
+  var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
+
   // Figure out the 'meteor' to run
   if (self.warehouse)
-    self.execPath = files.pathJoin(self.warehouse, 'meteor');
+    self.execPath = files.pathJoin(self.warehouse, meteorScript);
   else
-    self.execPath = files.pathJoin(files.getCurrentToolsDir(), 'meteor');
+    self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
 };
 
 _.extend(Sandbox.prototype, {
