@@ -24,8 +24,8 @@ var compiler = exports;
 // You should also update this whenever you update any of the packages used
 // directly by the isopack creation process (eg js-analyze) since they do not
 // end up as watched dependencies. (At least for now, packages only used in
-// target creation (eg minifiers and dev-bundle-fetcher) don't require you to
-// update BUILT_BY, though you will need to quit and rerun "meteor run".)
+// target creation (eg minifiers) don't require you to update BUILT_BY, though
+// you will need to quit and rerun "meteor run".)
 compiler.BUILT_BY = 'meteor/15';
 
 // This is a list of all possible architectures that a build can target. (Client

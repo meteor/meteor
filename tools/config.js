@@ -19,8 +19,7 @@ var tropohouse = require('./tropohouse.js');
 // We're not quite there yet though:
 // - When developing locally, you may need to set DISCOVERY_PORT (see
 //   getDiscoveryPort below)
-// - GALAXY can still be used to override Galaxy discovery, and
-//   DELPOY_HOSTNAME can still be set to override classic-style
+// - DEPLOY_HOSTNAME can still be set to override classic-style
 //   deploys
 // - The update/warehouse system hasn't been touched and still has its
 //   hardcoded URLs for now (update.meteor.com and

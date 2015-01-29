@@ -359,7 +359,6 @@ Options:
   --delete, -D  permanently delete this deployment
   --debug       deploy in debug mode (don't minify, etc)
   --settings    set optional data for Meteor.settings
-  --star        a star (tarball) to deploy instead of the current Meteor app
 
 
 >>> logs
