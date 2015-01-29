@@ -36,25 +36,40 @@ ReactiveDict = function (dictName) {
 };
 
 _.extend(ReactiveDict.prototype, {
-  set: function (key, value) {
+  // set began as a key/value method, but we are now overloading it
+  // to take an object of key/value pairs, similar to backbone
+  // http://backbonejs.org/#Model-set
+
+  set: function (key_or_object, value) {
     var self = this;
 
-    value = stringify(value);
+    // if the first argument is a string, use the original key/value method
+    if (typeof key_or_object === 'string') {
 
-    var oldSerializedValue = 'undefined';
-    if (_.has(self.keys, key)) oldSerializedValue = self.keys[key];
-    if (value === oldSerializedValue)
-      return;
-    self.keys[key] = value;
+      value = stringify(value);
 
-    var changed = function (v) {
-      v && v.changed();
-    };
+      var oldSerializedValue = 'undefined';
+      if (_.has(self.keys, key_or_object)) oldSerializedValue = self.keys[key_or_object];
+      if (value === oldSerializedValue)
+        return;
+      self.keys[key_or_object] = value;
 
-    changed(self.keyDeps[key]);
-    if (self.keyValueDeps[key]) {
-      changed(self.keyValueDeps[key][oldSerializedValue]);
-      changed(self.keyValueDeps[key][value]);
+      var changed = function (v) {
+        v && v.changed();
+      };
+
+      changed(self.keyDeps[key_or_object]);
+      if (self.keyValueDeps[key_or_object]) {
+        changed(self.keyValueDeps[key_or_object][oldSerializedValue]);
+        changed(self.keyValueDeps[key_or_object][value]);
+      }
+
+    // if the first argument is an object and the second is undefined
+    // we treat it as an object of key/value pairs, and iterate through it
+    } else if ((typeof key_or_object === 'object') && (value === undefined)) {
+      self._setObject(key_or_object);
+    } else {
+      throw new Error("Key must be a string or object of key/value pairs: " + key);
     }
   },
 
@@ -138,7 +153,7 @@ _.extend(ReactiveDict.prototype, {
       Session.set(key, true);
     }
   },
-  
+
   _remove: function(key){
     // making a distinction between null and undefined here
 
