@@ -7,3 +7,4 @@ scripts/
 
 tools/
 !tools/*.js
+tools/warehouse.js
