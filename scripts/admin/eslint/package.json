@@ -1,0 +1,10 @@
+{
+  "name": "meteor-jsdoc",
+  "version": "0.0.0",
+  "description": "no warn",
+  "readme": "no warn",
+  "repository": "no warn",
+  "dependencies": {
+    "eslint": "0.13.0"
+  }
+}
