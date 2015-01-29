@@ -47,23 +47,26 @@ _.extend(ReactiveDict.prototype, {
       self._setObject(key_or_object);
       return;
     }
+    // the input isn't an object, so it must be a key
+    // and we resume with the rest of the function
+    var key = key_or_object;
 
     value = stringify(value);
 
     var oldSerializedValue = 'undefined';
-    if (_.has(self.keys, key_or_object)) oldSerializedValue = self.keys[key_or_object];
+    if (_.has(self.keys, key)) oldSerializedValue = self.keys[key];
     if (value === oldSerializedValue)
       return;
-    self.keys[key_or_object] = value;
+    self.keys[key] = value;
 
     var changed = function (v) {
       v && v.changed();
     };
 
-    changed(self.keyDeps[key_or_object]);
-    if (self.keyValueDeps[key_or_object]) {
-      changed(self.keyValueDeps[key_or_object][oldSerializedValue]);
-      changed(self.keyValueDeps[key_or_object][value]);
+    changed(self.keyDeps[key]);
+    if (self.keyValueDeps[key]) {
+      changed(self.keyValueDeps[key][oldSerializedValue]);
+      changed(self.keyValueDeps[key][value]);
     }
   },
 
@@ -103,19 +106,19 @@ _.extend(ReactiveDict.prototype, {
     // XXX we could allow arrays as long as we recursively check that there
     // are no objects
     if (typeof value !== 'string' &&
-      typeof value !== 'number' &&
-      typeof value !== 'boolean' &&
-      typeof value !== 'undefined' &&
-      !(value instanceof Date) &&
-      !(ObjectID && value instanceof ObjectID) &&
-      value !== null)
+        typeof value !== 'number' &&
+        typeof value !== 'boolean' &&
+        typeof value !== 'undefined' &&
+        !(value instanceof Date) &&
+        !(ObjectID && value instanceof ObjectID) &&
+        value !== null)
       throw new Error("ReactiveDict.equals: value must be scalar");
     var serializedValue = stringify(value);
 
     if (Tracker.active) {
       self._ensureKey(key);
 
-      if (!_.has(self.keyValueDeps[key], serializedValue))
+      if (! _.has(self.keyValueDeps[key], serializedValue))
         self.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
 
       var isNew = self.keyValueDeps[key][serializedValue].depend();
@@ -123,7 +126,7 @@ _.extend(ReactiveDict.prototype, {
         Tracker.onInvalidate(function () {
           // clean up [key][serializedValue] if it's now empty, so we don't
           // use O(n) memory for n = values seen ever
-          if (!self.keyValueDeps[key][serializedValue].hasDependents())
+          if (! self.keyValueDeps[key][serializedValue].hasDependents())
             delete self.keyValueDeps[key][serializedValue];
         });
       }
@@ -153,19 +156,6 @@ _.extend(ReactiveDict.prototype, {
     return true;
   },
 
-  _remove: function (key) {
-    var self = this;
-
-    // making a distinction between null and undefined here
-
-    // inspired by the following pattern seen in the Session package tinytests
-    // delete Session.keys['foo']
-
-    // might be better implemented along the lines of
-    // delete self.keyValueDeps[key][serializedValue];
-
-    self.set(key, undefined);
-  },
   _setObject: function (object) {
     var self = this;
 
