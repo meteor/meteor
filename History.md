@@ -102,6 +102,9 @@
 * Don't overly escape `Meteor.settings.public` and other parts of
   `__meteor_runtime_config__`.  #3730
 
+* Add login hooks on the client: `Accounts.onLogin` and
+  `Accounts.onLoginFailure`. #3572
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
@@ -137,7 +140,6 @@
   - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
 
 * Use the newer `ios-sim` binary, compiled with Xcode 6 on OS X Mavericks.
-
 
 ## v.1.0.3.1, 2015-Jan-20
 
