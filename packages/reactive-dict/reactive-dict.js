@@ -124,6 +124,39 @@ _.extend(ReactiveDict.prototype, {
     if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
     return EJSON.equals(oldValue, value);
   },
+  clear: function(key){
+    self.set(key, null);
+  },
+  remove: function(key){
+    // making a distinction between null and undefined here
+
+    // inspired by the following pattern seen in the Session package tinytests
+    // delete Session.keys['foo']
+
+    // might be better implemented along the lines of
+    // delete self.keyValueDeps[key][serializedValue];
+
+    self.set(key, undefined);
+  },
+  toggle: function(key){
+    // toggle currently only works on boolean values
+    // an elseif is used without a terminating else so that we can
+    // explicitely handle the true and false cases
+    // while leaving null and undefined cases alone
+    if(Session.get(key) === true){
+      Session.set(key, false);
+    }else if(Session.get(key) === false){
+      Session.set(key, true);
+    }
+  },
+
+  _setObject: function(object){
+    for (var key in object) {
+      if(object.hasOwnProperty(key)){
+        Session.set(key, object[key]);
+      }
+    }
+  }
 
   _ensureKey: function (key) {
     var self = this;
