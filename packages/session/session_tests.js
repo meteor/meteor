@@ -182,45 +182,45 @@ Tinytest.add(
   });
 
 
-  Tinytest.add('session - toggle a boolean value', function (test) {
-    Session.setDefault('parsnip', true);
-    test.equal(Session.get('parsnip'), true);
-    Session.set('parsnip', false);
-    test.equal(Session.get('parsnip'), false);
-    Session.set('parsnip', true);
+Tinytest.add('session - toggle a boolean value', function (test) {
+  Session.setDefault('parsnip', true);
+  test.equal(Session.get('parsnip'), true);
+  Session.set('parsnip', false);
+  test.equal(Session.get('parsnip'), false);
+  Session.set('parsnip', true);
 
-    Session.toggle('parsnip');
-    test.equal(Session.get('parsnip'), false);
+  Session.toggle('parsnip');
+  test.equal(Session.get('parsnip'), false);
 
-    Session.toggle('parsnip');
-    test.equal(Session.get('parsnip'), true);
+  Session.toggle('parsnip');
+  test.equal(Session.get('parsnip'), true);
 
-    // This is so the test passes the next time, after hot code push.  I know it
-    // doesn't return it to the completely untouched state, but we don't have
-    // Session.clear() yet.  When we do, this should be that.
-    delete Session.keys['parsnip'];
-  });
+  // This is so the test passes the next time, after hot code push.  I know it
+  // doesn't return it to the completely untouched state, but we don't have
+  // Session.clear() yet.  When we do, this should be that.
+  delete Session.keys['parsnip'];
+});
 
-  Tinytest.add('session - clear a context and set it to null', function (test) {
-    Session.set('noodle', 'argyle');
-    test.equal(Session.get('noodle'), 'argyle');
+Tinytest.add('session - clear a context and set it to null', function (test) {
+  Session.set('noodle', 'argyle');
+  test.equal(Session.get('noodle'), 'argyle');
 
-    Session.set('noodle', false);
-    test.equal(Session.get('noodle'), false);
+  Session.set('noodle', false);
+  test.equal(Session.get('noodle'), false);
 
-    Session.clear('noodle');
-    test.equal(Session.get('noodle'), null);
+  Session.clear('noodle');
+  test.equal(Session.get('noodle'), null);
 
-    delete Session.keys['noodle'];
-  });
+  delete Session.keys['noodle'];
+});
 
 
-  Tinytest.add('session - parse an object of key/value pairs', function (test) {
-    Session._setObject({fruit: 'apple', vegetable: 'potato'});
+Tinytest.add('session - parse an object of key/value pairs', function (test) {
+  Session._setObject({fruit: 'apple', vegetable: 'potato'});
 
-    test.equal(Session.get('fruit'), 'apple');
-    test.equal(Session.get('vegetable'), 'potato');
+  test.equal(Session.get('fruit'), 'apple');
+  test.equal(Session.get('vegetable'), 'potato');
 
-    delete Session.keys['fruit'];
-    delete Session.keys['vegetable'];
-  });
+  delete Session.keys['fruit'];
+  delete Session.keys['vegetable'];
+});

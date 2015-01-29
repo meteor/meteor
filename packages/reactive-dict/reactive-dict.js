@@ -36,7 +36,7 @@ ReactiveDict = function (dictName) {
 };
 
 _.extend(ReactiveDict.prototype, {
-  // set began as a key/value method, but we are now overloading it
+  // set() began as a key/value method, but we are now overloading it
   // to take an object of key/value pairs, similar to backbone
   // http://backbonejs.org/#Model-set
 
@@ -140,21 +140,28 @@ _.extend(ReactiveDict.prototype, {
     return EJSON.equals(oldValue, value);
   },
   clear: function(key){
+    var self = this;
     self.set(key, null);
+    return true;
   },
   toggle: function(key){
+    var self = this;
+
     // toggle currently only works on boolean values
     // an elseif is used without a terminating else so that we can
     // explicitely handle the true and false cases
     // while leaving null and undefined cases alone
-    if(Session.get(key) === true){
-      Session.set(key, false);
-    }else if(Session.get(key) === false){
-      Session.set(key, true);
+    if(self.get(key) === true){
+      self.set(key, false);
+    }else if(self.get(key) === false){
+      self.set(key, true);
     }
+    return true;
   },
 
   _remove: function(key){
+    var self = this;
+
     // making a distinction between null and undefined here
 
     // inspired by the following pattern seen in the Session package tinytests
@@ -166,9 +173,10 @@ _.extend(ReactiveDict.prototype, {
     self.set(key, undefined);
   },
   _setObject: function(object){
+    var self = this;
     for (var key in object) {
       if(object.hasOwnProperty(key)){
-        Session.set(key, object[key]);
+        self.set(key, object[key]);
       }
     }
   }
