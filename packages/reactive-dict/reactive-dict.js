@@ -127,17 +127,6 @@ _.extend(ReactiveDict.prototype, {
   clear: function(key){
     self.set(key, null);
   },
-  remove: function(key){
-    // making a distinction between null and undefined here
-
-    // inspired by the following pattern seen in the Session package tinytests
-    // delete Session.keys['foo']
-
-    // might be better implemented along the lines of
-    // delete self.keyValueDeps[key][serializedValue];
-
-    self.set(key, undefined);
-  },
   toggle: function(key){
     // toggle currently only works on boolean values
     // an elseif is used without a terminating else so that we can
@@ -149,7 +138,18 @@ _.extend(ReactiveDict.prototype, {
       Session.set(key, true);
     }
   },
+  
+  _remove: function(key){
+    // making a distinction between null and undefined here
 
+    // inspired by the following pattern seen in the Session package tinytests
+    // delete Session.keys['foo']
+
+    // might be better implemented along the lines of
+    // delete self.keyValueDeps[key][serializedValue];
+
+    self.set(key, undefined);
+  },
   _setObject: function(object){
     for (var key in object) {
       if(object.hasOwnProperty(key)){
