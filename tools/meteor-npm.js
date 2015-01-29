@@ -499,7 +499,7 @@ var installNpmModule = function (name, version, dir) {
     // can't be used on Windows.
 
     var pathsWithColons = files.findPathsWithRegex(".", new RegExp(":"),
-      { cwd: dir });
+      { cwd: files.pathJoin(dir, "node_modules") });
 
     if (pathsWithColons.length) {
       var firstTen = pathsWithColons.slice(0, 10);

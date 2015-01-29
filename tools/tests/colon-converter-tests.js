@@ -66,7 +66,7 @@ selftest.define("can't publish package with colons", ["net", "test-package-serve
     run.matchErr("invalid characters");
 
     // This error can basically only occur on files from npm
-    run.matchErr("./npm/node_modules");
+    run.matchErr("NPM module");
   });
 });
 
