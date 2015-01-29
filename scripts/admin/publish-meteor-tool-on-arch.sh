@@ -90,14 +90,7 @@ END
       ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $line>> C:\\publish-tool.bat" 2>/dev/null
     done 10< $BAT_FILENAME
 
-    # since running the script remotely fails for an unknown reason, we just
-    # prompt user to run this generated script themselves
-    echo "*******************************************************************"
-    echo "* You will be dropped into remote Windows host's ssh prompt."
-    echo "* (Look at the top of your window, the output might be weirdly overlaying your terminal)"
-    echo "* Please run the C:\\publish-tool.bat script to publish the release."
-    echo "*******************************************************************"
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY 2> /dev/null
+    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "C:\\publish-tool.bat" 2> /dev/null
 
     trap - EXIT
   fi
