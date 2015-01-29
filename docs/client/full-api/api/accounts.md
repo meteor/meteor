@@ -318,7 +318,8 @@ are called with a single argument, the attempt info object:
 
 <dl class="objdesc">
 {{#dtdd name="type" type="String"}}
-  The service name, such as "password" or "twitter".
+  The service name, such as "password" or "twitter".  For `Accounts.onLogin`
+  and `Accounts.onLoginFailure`, this data is only passed on the server.
 {{/dtdd}}
 
 {{#dtdd name="allowed" type="Boolean"}}
@@ -336,13 +337,16 @@ are called with a single argument, the attempt info object:
 {{/dtdd}}
 
 {{#dtdd name="user" type="Object"}}
-  When it is known which user was attempting to login, the Meteor user
-  object.  This will always be present for successful logins.
+  When it is known which user was attempting to login, the Meteor user object.
+  This will always be present for successful logins.  For `Accounts.onLogin`
+  and `Accounts.onLoginFailure`, this data is only passed on the server.
 {{/dtdd}}
 
 {{#dtdd name="connection" type="Object"}}
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
+  For `Accounts.onLogin` and `Accounts.onLoginFailure`, this data is only
+  passed on the server.
 {{/dtdd}}
 
 {{#dtdd name="methodName" type="String"}}

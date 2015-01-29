@@ -35,14 +35,6 @@ Meteor.user = function () {
 // Exceptions inside the hook callback are passed up to us.
 var validateLoginHook = new Hook();
 
-// Callback exceptions are printed with Meteor._debug and ignored.
-var onLoginHook = new Hook({
-  debugPrintExceptions: "onLogin callback"
-});
-var onLoginFailureHook = new Hook({
-  debugPrintExceptions: "onLoginFailure callback"
-});
-
 /**
  * @summary Validate login attempts.
  * @locus Server
@@ -52,23 +44,6 @@ Accounts.validateLoginAttempt = function (func) {
   return validateLoginHook.register(func);
 };
 
-/**
- * @summary Register a callback to be called after a login attempt succeeds.
- * @locus Server
- * @param {Function} func The callback to be called when login is successful.
- */
-Accounts.onLogin = function (func) {
-  return onLoginHook.register(func);
-};
-
-/**
- * @summary Register a callback to be called after a login attempt fails.
- * @locus Server
- * @param {Function} func The callback to be called after the login has failed.
- */
-Accounts.onLoginFailure = function (func) {
-  return onLoginFailureHook.register(func);
-};
 
 
 // Give each login hook callback a fresh cloned copy of the attempt

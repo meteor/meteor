@@ -671,7 +671,7 @@ if (Meteor.isClient) (function () {
     validateLoginsStep
   ]);
 
-  testAsyncMulti("passwords - onLogin hook", [
+  testAsyncMulti("passwords - server onLogin hook", [
     function (test, expect) {
       Meteor.call("testCaptureLogins", expect(function (error) {
         test.isFalse(error);
@@ -695,13 +695,36 @@ if (Meteor.isClient) (function () {
         var attempt = login.attempt;
         test.equal(attempt.type, "password");
         test.isTrue(attempt.allowed);
-        test.equal(attempt.methodName, "createUser");
         test.equal(attempt.methodArguments[0].username, self.username);
       }));
     }
   ]);
 
-  testAsyncMulti("passwords - onLoginFailed hook", [
+  testAsyncMulti("passwords - client onLogin hook", [
+    function (test, expect) {
+      var self = this;
+      this.username = Random.id();
+      this.password = "password";
+
+      this.onLogin = Accounts.onLogin(function (attempt) {
+        self.attempt = attempt;
+      });
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    function (test, expect) {
+      this.onLogin.stop();
+      test.isNotNull(this.attempt, "onLogin hook not called");
+      test.isTrue(this.attempt.allowed);
+      test.equal(this.attempt.methodName, "createUser");
+      test.equal(this.attempt.methodArguments[0].username, this.username);
+      expect(function () {})();
+    }
+  ]);
+
+  testAsyncMulti("passwords - server onLoginFailure hook", [
     function (test, expect) {
       this.username = Random.id();
       this.password = "password";
@@ -754,6 +777,41 @@ if (Meteor.isClient) (function () {
         test.isFalse(attempt.allowed);
         test.equal(attempt.error.reason, "User not found");
       }));
+    }
+  ]);
+
+  testAsyncMulti("passwords - client onLoginFailure hook", [
+    function (test, expect) {
+      var self = this;
+      this.username = Random.id();
+      this.password = "password";
+
+      this.onLoginFailure = Accounts.onLoginFailure(function (attempt) {
+        self.attempt = attempt;
+      })
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    function (test, expect) {
+      Meteor.call("testCaptureLogins", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.loginWithPassword(this.username, "incorrect", expect(function (error) {
+        test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      this.onLoginFailure.stop();
+      test.isNotNull(this.attempt, "onLogin hook not called");
+      test.equal(this.attempt.methodName, "login");
+      test.isFalse(this.attempt.allowed);
+      test.equal(this.attempt.error.reason, "Incorrect password");
+      expect(function () {})();
     }
   ]);
 
