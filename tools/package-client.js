@@ -353,27 +353,6 @@ var bundleBuild = function (isopack) {
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
 
-  if (process.platform !== "win32") {
-    // If we are on a unixy file system, we should not publish a package that
-    // can't be unpacked reliably on Windows.
-    var output = utils.execFileSync("bash", ["-c", "find . | grep ':'"],
-      {cwd: tarInputDir});
-
-    if (output.success) {
-      var lines = output.stdout.split("\n");
-
-      var firstTen = lines.slice(0, 10);
-      if (lines.length > 10) {
-        firstTen.push("... " + (lines.length - 10) + " paths omitted.");
-      }
-
-      buildmessage.error(
-"Some filenames in your package have invalid characters.\n" +
-"The following file paths have colons, ':', which won't work on Windows:\n" +
-firstTen.join("\n"));
-    }
-  }
-
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);

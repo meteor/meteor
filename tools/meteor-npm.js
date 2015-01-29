@@ -493,6 +493,31 @@ var installNpmModule = function (name, version, dir) {
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
   }
+
+  if (process.platform !== "win32") {
+    // If we are on a unixy file system, we should not build a package that
+    // can't be used on Windows.
+    var output = utils.execFileSync("bash", ["-c", "find . | grep ':'"],
+      {cwd: files.pathJoin(dir, "node_modules", name)});
+
+    console.log(files.pathJoin(dir, name));
+
+    if (output.success) {
+      var lines = output.stdout.split("\n");
+
+      var firstTen = lines.slice(0, 10);
+      if (lines.length > 10) {
+        firstTen.push("... " + (lines.length - 10) + " paths omitted.");
+      }
+
+      buildmessage.error(
+"Some filenames in your package have invalid characters.\n" +
+"The following file paths in the NPM module '" + name + "' have colons, ':', which won't work on Windows:\n" +
+firstTen.join("\n"));
+
+      throw new NpmFailure;
+    }
+  }
 };
 
 var installFromShrinkwrap = function (dir) {
