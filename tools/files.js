@@ -466,6 +466,51 @@ files.cp_r = function (from, to, options) {
   });
 };
 
+// Get every path in dir recursively
+files.getPathsInDir = function (dir, options) {
+  if (! files.exists(dir)) {
+    // There are no paths in this dir, so don't do anything
+    return;
+  }
+
+  var oldCwd = process.cwd();
+
+  var cwd = options && options.cwd;
+  if (cwd) {
+    if (! files.exists(cwd)) {
+      throw new Error("Specified current working directory doesn't exist:" +
+        cwd);
+    }
+
+    process.chdir(cwd);
+  }
+
+  var output = [];
+
+  _.each(files.readdir(dir), function (entry) {
+    var newPath = files.pathJoin(dir, entry);
+    output.push(newPath);
+
+    if (files.stat(newPath).isDirectory()) {
+      output = output.concat(files.getPathsInDir(newPath));
+    }
+  });
+
+  process.chdir(oldCwd);
+
+  return output;
+};
+
+files.findPathsWithRegex = function (dir, regex, options) {
+  var allPaths = files.getPathsInDir(dir, {
+    cwd: options.cwd
+  });
+
+  return _.filter(allPaths, function (path) {
+    return path.match(regex);
+  });
+};
+
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
