@@ -127,7 +127,7 @@
         "max-params": [0, 3],
         "max-statements": [0, 10],
         "new-cap": 2,
-        "new-parens": 2,
+        "new-parens": 0,
         "one-var": 0,
         "operator-assignment": [0, "always"],
         "padded-blocks": 0,
