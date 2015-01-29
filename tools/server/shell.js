@@ -14,15 +14,22 @@ var EXITING_MESSAGE = "Shell exiting...";
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
-exports.listen = function listen(shellDir) {
+exports.listen = function listen(shellDir, retryCount) {
   var socketFile = getSocketFile(shellDir);
+  retryCount |= 0;
   fs.unlink(socketFile, function() {
     net.createServer(function(socket) {
       onConnection(socket, shellDir);
     }).on("error", function(err) {
-      console.error(
-        "Unable to listen for `meteor shell` connections: " + err
-      );
+      if (err.errno === "EADDRINUSE" && retryCount < 5) {
+        setTimeout(function() {
+          listen(shellDir, retryCount + 1);
+        }, 500);
+      } else {
+        console.error(
+          "Unable to listen for `meteor shell` connections: " + err
+        );
+      }
     }).listen(socketFile);
   });
 };
