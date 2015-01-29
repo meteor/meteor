@@ -114,7 +114,6 @@ var replaceTypes = function (document, atomTransformer) {
 MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
-  self._connectCallbacks = [];
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
@@ -148,9 +147,13 @@ MongoConnection = function (url, options) {
     mongoOptions.replSet.poolSize = options.poolSize;
   }
 
-  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
-    if (err)
-      throw err;
+  var connectFuture = new Future;
+  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function (err, db) {
+    if (err) {
+      connectFuture['throw'](err);
+      return;
+    }
+
     self.db = db;
     // We keep track of the ReplSet's primary, so that we can trigger hooks when
     // it changes.  The Node driver's joined callback seems to fire way too
@@ -179,26 +182,30 @@ MongoConnection = function (url, options) {
         }
     }));
 
-    // drain queue of pending callbacks
-    _.each(self._connectCallbacks, function (c) {
-      c(db);
-    });
+    // Allow the constructor to return.
+    connectFuture['return']();
   }));
 
-  self._docFetcher = new DocFetcher(self);
   self._oplogHandle = null;
+  self._docFetcher = null;
 
-  if (options.oplogUrl && !Package['disable-oplog']) {
-    var dbNameFuture = new Future;
-    self._withDb(function (db) {
-      dbNameFuture.return(db.databaseName);
-    });
-    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
+  // Wait for the connection to be successful; throws on failure.
+  connectFuture.wait();
+
+  if (! self.db)
+    throw Error("connected without db?");
+
+  if (options.oplogUrl && ! Package['disable-oplog']) {
+    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._docFetcher = new DocFetcher(self);
   }
 };
 
 MongoConnection.prototype.close = function() {
   var self = this;
+
+  if (! self.db)
+    throw Error("close called before Connection created?");
 
   // XXX probably untested
   var oplogHandle = self._oplogHandle;
@@ -212,34 +219,30 @@ MongoConnection.prototype.close = function() {
   Future.wrap(_.bind(self.db.close, self.db))(true).wait();
 };
 
-MongoConnection.prototype._withDb = function (callback) {
-  var self = this;
-  if (self.db) {
-    callback(self.db);
-  } else {
-    self._connectCallbacks.push(callback);
-  }
-};
-
 // Returns the Mongo Collection object; may yield.
 MongoConnection.prototype._getCollection = function (collectionName) {
   var self = this;
 
+  if (! self.db)
+    throw Error("_getCollection called before Connection created?");
+
   var future = new Future;
-  self._withDb(function (db) {
-    db.collection(collectionName, future.resolver());
-  });
+  self.db.collection(collectionName, future.resolver());
   return future.wait();
 };
 
-MongoConnection.prototype._createCappedCollection = function (collectionName,
-                                                              byteSize, maxDocuments) {
+MongoConnection.prototype._createCappedCollection = function (
+    collectionName, byteSize, maxDocuments) {
   var self = this;
+
+  if (! self.db)
+    throw Error("_createCappedCollection called before Connection created?");
+
   var future = new Future();
-  self._withDb(function (db) {
-    db.createCollection(collectionName, {capped: true, size: byteSize, max: maxDocuments},
-                        future.resolver());
-  });
+  self.db.createCollection(
+    collectionName,
+    { capped: true, size: byteSize, max: maxDocuments },
+    future.resolver());
   future.wait();
 };
 
