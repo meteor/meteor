@@ -153,65 +153,32 @@ Tinytest.add('session - context invalidation for equals', function (test) {
 });
 
 Tinytest.add(
-  'session - context invalidation for equals with undefined',
-  function (test) {
-    // Make sure the special casing for equals undefined works.
-    var yEqualsExecutions = 0;
-    Tracker.autorun(function () {
-      ++yEqualsExecutions;
-      Session.equals('y', undefined);
-    });
-    test.equal(yEqualsExecutions, 1);
-    Session.set('y', undefined);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 1);
-    Session.set('y', 5);
-    test.equal(yEqualsExecutions, 1);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', 3);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', 'undefined');
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', undefined);
-    test.equal(yEqualsExecutions, 2);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 3);
+'session - context invalidation for equals with undefined',
+function (test) {
+  // Make sure the special casing for equals undefined works.
+  var yEqualsExecutions = 0;
+  Tracker.autorun(function () {
+    ++yEqualsExecutions;
+    Session.equals('y', undefined);
   });
-
-
-Tinytest.add('session - toggle a boolean value', function (test) {
-  Session.setDefault('parsnip', true);
-  test.equal(Session.get('parsnip'), true);
-  Session.set('parsnip', false);
-  test.equal(Session.get('parsnip'), false);
-  Session.set('parsnip', true);
-
-  Session.toggle('parsnip');
-  test.equal(Session.get('parsnip'), false);
-
-  Session.toggle('parsnip');
-  test.equal(Session.get('parsnip'), true);
-
-  // This is so the test passes the next time, after hot code push.  I know it
-  // doesn't return it to the completely untouched state, but we don't have
-  // Session.clear() yet.  When we do, this should be that.
-  delete Session.keys['parsnip'];
-});
-
-Tinytest.add('session - clear a context and set it to null', function (test) {
-  Session.set('noodle', 'argyle');
-  test.equal(Session.get('noodle'), 'argyle');
-
-  Session.set('noodle', false);
-  test.equal(Session.get('noodle'), false);
-
-  Session.clear('noodle');
-  test.equal(Session.get('noodle'), null);
-
-  delete Session.keys['noodle'];
+  test.equal(yEqualsExecutions, 1);
+  Session.set('y', undefined);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 1);
+  Session.set('y', 5);
+  test.equal(yEqualsExecutions, 1);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set('y', 3);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set('y', 'undefined');
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set('y', undefined);
+  test.equal(yEqualsExecutions, 2);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 3);
 });
 
 

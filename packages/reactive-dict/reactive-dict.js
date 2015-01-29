@@ -136,25 +136,6 @@ _.extend(ReactiveDict.prototype, {
     if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
     return EJSON.equals(oldValue, value);
   },
-  clear: function (key) {
-    var self = this;
-    self.set(key, null);
-    return true;
-  },
-  toggle: function (key) {
-    var self = this;
-
-    // toggle currently only works on boolean values
-    // an elseif is used without a terminating else so that we can
-    // explicitely handle the true and false cases
-    // while leaving null and undefined cases alone
-    if (self.get(key) === true) {
-      self.set(key, false);
-    } else if (self.get(key) === false) {
-      self.set(key, true);
-    }
-    return true;
-  },
 
   _setObject: function (object) {
     var self = this;
