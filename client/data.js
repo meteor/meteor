@@ -294,7 +294,7 @@ DocsData = {
   },
   "Accounts.onLogin": {
     "kind": "function",
-    "locus": "Server",
+    "locus": "Anywhere",
     "longname": "Accounts.onLogin",
     "memberof": "Accounts",
     "name": "onLogin",
@@ -315,7 +315,7 @@ DocsData = {
   },
   "Accounts.onLoginFailure": {
     "kind": "function",
-    "locus": "Server",
+    "locus": "Anywhere",
     "longname": "Accounts.onLoginFailure",
     "memberof": "Accounts",
     "name": "onLoginFailure",
