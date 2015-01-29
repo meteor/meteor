@@ -40,16 +40,16 @@ _.extend(ReactiveDict.prototype, {
   // to take an object of key/value pairs, similar to backbone
   // http://backbonejs.org/#Model-set
 
-  set: function (key_or_object, value) {
+  set: function (keyOrObject, value) {
     var self = this;
 
-    if ((typeof key_or_object === 'object') && (value === undefined)) {
-      self._setObject(key_or_object);
+    if ((typeof keyOrObject === 'object') && (value === undefined)) {
+      self._setObject(keyOrObject);
       return;
     }
     // the input isn't an object, so it must be a key
     // and we resume with the rest of the function
-    var key = key_or_object;
+    var key = keyOrObject;
 
     value = stringify(value);
 
