@@ -21,7 +21,7 @@ exports.listen = function listen(shellDir, retryCount) {
     net.createServer(function(socket) {
       onConnection(socket, shellDir);
     }).on("error", function(err) {
-      if (err.errno === "EADDRINUSE" && retryCount < 5) {
+      if (err.code === "EADDRINUSE" && retryCount < 5) {
         setTimeout(function() {
           listen(shellDir, retryCount + 1);
         }, 500);
@@ -304,13 +304,13 @@ exports.connect = function(shellDir) {
     function onError(err) {
       tearDown();
 
-      if (err.errno === "ENOENT" ||
-          err.errno === "ECONNREFUSED") {
+      if (err.code === "ENOENT" ||
+          err.code === "ECONNREFUSED") {
         // If the shell.sock file is missing or looks like a socket but is
         // not accepting connections, keep trying to connect.
         reconnect();
 
-      } else if (err.errno === "ENOTSOCK") {
+      } else if (err.code === "ENOTSOCK") {
         // When the server shuts down completely, it replaces the
         // shell.sock file with a regular file to force connected shell
         // clients to disconnect and exit. If this shell client is
