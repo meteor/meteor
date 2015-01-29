@@ -24,7 +24,7 @@ $webclient.DownloadFile($devbundle_link, $devbundle_zip)
 
 echo "... downloaded"
 
-cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX"
+cmd /C "7z.exe e $devbundle_zip -so | 7z.exe e -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX"
 
 $downloaded_tmp = $CHECKOUT_DIR + "\dev_bundle_XXX"
 $downloaded_path = $downloaded_tmp + "\dev_bundle_" + $PLATFORM + "_" + $BUNDLE_VERSION
