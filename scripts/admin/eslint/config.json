@@ -111,7 +111,7 @@
         "consistent-this": [0, "that"],
         "curly": [0, "multi"],
         "default-case": 0,
-        "dot-notation": [2, { "allowKeywords": true }],
+        "dot-notation": [0, { "allowKeywords": true }],
         "eol-last": 2,
         "eqeqeq": 2,
         "func-names": 0,
