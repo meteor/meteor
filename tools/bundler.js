@@ -1647,11 +1647,6 @@ _.extend(ServerTarget.prototype, {
   write: function (builder, options) {
     var self = this;
 
-    // Pick a start script name
-    // XXX base it on the name of the target
-    var scriptName = 'start.sh';
-    builder.reserve(scriptName);
-
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
@@ -1717,21 +1712,10 @@ _.extend(ServerTarget.prototype, {
       return;
     }
 
-    var devBundleVersion =
-      files.readFile(
-        files.pathJoin(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
-    devBundleVersion = devBundleVersion.split('\n')[0];
-
-    var Packages = isopackets.load('dev-bundle-fetcher');
-    var script = Packages["dev-bundle-fetcher"].DevBundleFetcher.script();
-    script = script.replace(/##PLATFORM##/g, platform);
-    script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
-    script = script.replace(/##IMAGE##/g, imageControlFile);
-    script = script.replace(/##RUN_FILE##/g, 'boot.js');
-    builder.write(scriptName, { data: new Buffer(script, 'utf8'),
-                                executable: true });
-
-    return scriptName;
+    // Nothing actually pays attention to the `path` field for a server program
+    // in star.json any more, so it might as well be boot.js. (It used to be
+    // start.sh, a script included for the legacy Galaxy prototype.)
+    return 'boot.js';
   }
 });
 
