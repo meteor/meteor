@@ -17,4 +17,4 @@ powershell "Set-ExecutionPolicy ByPass"
 .\meteor.bat --help ^> nul 2^>^&^1 || echo "First npm failure is expected"
 cd C:\tmp\meteor\packages\meteor-tool
 set METEOR_SESSION_FILE=C:\meteor-session
-..\..\meteor.bat publish --existing-version
+..\..\meteor.bat publish --existing-version ^> C:\log.txt 2^>^&^1 ^|^| type C:\log.txt
