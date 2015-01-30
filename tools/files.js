@@ -497,7 +497,7 @@ files.getPathsInDir = function (dir, options) {
     var newPath = files.pathJoin(dir, entry);
     output.push(newPath);
 
-    if (files.stat(newPath).isDirectory()) {
+    if (files.exists(newPath) && files.stat(newPath).isDirectory()) {
       output = output.concat(files.getPathsInDir(newPath));
     }
   });
