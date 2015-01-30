@@ -1350,28 +1350,7 @@ wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
 
 if (process.platform === "win32") {
-  // File reading and writing; need to convert line endings
-  var writeFile = files.writeFile;
-  var appendFile = files.appendFile;
   var rename = files.rename;
-
-  files.writeFile = function (filename, data, options) {
-    if (_.isString(data)) {
-      // on windows, replace line endings
-      data = convertToOSLineEndings(data);
-    }
-
-    writeFile(filename, data, options);
-  };
-
-  files.appendFile = function (filename, data, options) {
-    if (_.isString(data)) {
-      // on windows, replace line endings
-      data = convertToOSLineEndings(data);
-    }
-
-    appendFile(filename, data, options);
-  };
 
   files.rename = function (from, to) {
     // retries are necessarily only on Windows, because the rename call can fail
