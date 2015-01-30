@@ -40,18 +40,8 @@ _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
-    var self = this;
-    var oldSource = inputFile.source;
-    var result = to5.transform(
-      oldSource,
-      { blacklist: ["useStrict"] });
-    var transpiledFile = _.extend(
-      {}, inputFile,
-      { source: result.code, // source map in result.map
-        sourceMap: null });
-    self.files.push(new File(transpiledFile, self));
+    this.files.push(new File(inputFile, this));
   },
-
 
   maxLineLength: function (ignoreOver) {
     var self = this;
@@ -330,27 +320,30 @@ _.extend(File.prototype, {
   getPrelinkedOutput: function (options) {
     var self = this;
 
+    var result = to5.transform(self.source, {
+      sourceMap: true,
+      sourceFileName: self._pathForSourceMap(),
+      blacklist: ["useStrict"]
+    });
+
+    if (self.sourceMap) {
+      var smg = sourcemap.SourceMapGenerator.fromSourceMap(
+        new sourcemap.SourceMapConsumer(result.map)
+      );
+      smg.applySourceMap(self.sourceMap);
+      result.map = smg.toJSON();
+    }
+
     // The newline after the source closes a '//' comment.
     if (options.preserveLineNumbers) {
-      // Ugly version
-      var mapNode;
-      if (self.sourceMap) {
-        mapNode = sourcemap.SourceNode.fromStringWithSourceMap(
-          self.source, new sourcemap.SourceMapConsumer(self.sourceMap));
-      } else {
-        // This is an app file that was always JS. The output file here is going
-        // to be the same name as the input file (because _pathForSourceMap in
-        // apps is the basename of the source file), and having a JS file
-        // pointing to a source map pointing to a JS file of the same name will
-        // (a) be confusing (b) be unnecessary since we aren't renumbering
-        // anything and (c) confuse at least Chrome.
-        mapNode = self.source;
-      }
+      var mapNode = sourcemap.SourceNode.fromStringWithSourceMap(
+        result.code, new sourcemap.SourceMapConsumer(result.map)
+      );
 
       return new sourcemap.SourceNode(null, null, null, [
         self.bare ? "" : "(function(){",
         mapNode,
-        (self.source.length && self.source[self.source.length - 1] !== '\n'
+        (result.code.length && result.code[result.code.length - 1] !== '\n'
          ? "\n" : ""),
         self.bare ? "" : "\n})();\n"
       ]);
@@ -376,71 +369,22 @@ _.extend(File.prototype, {
     var blankLine = new Array(width + 1).join(' ') + " //\n";
     chunks.push(blankLine);
 
-    // Code, with line numbers
-    // You might prefer your line numbers at the beginning of the
-    // line, with /* .. */. Well, that requires parsing the source for
-    // comments, because you have to do something different if you're
-    // already inside a comment.
-
-    var numberifyLines = function (f) {
-      var num = 1;
-      var lines = self.source.split('\n');
-      _.each(lines, function (line) {
-        var suffix = "\n";
-
-        if (! options.noLineNumbers
-            && line.length <= width && line[line.length - 1] !== "\\") {
-          suffix = padding.slice(line.length, width) + " // " + num + "\n";
-        }
-        f(line, suffix, num);
-        num++;
-      });
-    };
-
-    var lines = self.source.split('\n');
-
-    if (self.sourceMap) {
-      var buf = "";
-      numberifyLines(function (line, suffix) {
-        buf += line;
-        buf += suffix;
-      });
-      // The existing source map is valid because all we're doing is adding
-      // things to the end of lines, which doesn't affect the source map.  (If
-      // we wanted to be picky, we could add some explicitly non-mapped regions
-      // to the source map to cover the suffixes, which would make this
-      // equivalent to the "no source map coming in" case, but this doesn't seem
-      // that important.)
-      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-        self.source,
-        new sourcemap.SourceMapConsumer(self.sourceMap)));
-    } else {
-      // There are probably ways to make a more compact source map. For example,
-      // the only change we make is to append a comment, so we can probably emit
-      // one mapping for the whole file. For the moment, we'll do it by the book
-      // just to see how it goes.
-      numberifyLines(function (line, suffix, num) {
-        chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
-                                             line));
-        chunks.push(suffix);
-      });
-    }
+    // The existing source map is valid because all we're doing is adding
+    // things to the end of lines, which doesn't affect the source map.  (If
+    // we wanted to be picky, we could add some explicitly non-mapped regions
+    // to the source map to cover the suffixes, which would make this
+    // equivalent to the "no source map coming in" case, but this doesn't seem
+    // that important.)
+    chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+      result.code,
+      new sourcemap.SourceMapConsumer(result.map)
+    ));
 
     // Footer
     if (! self.bare)
       chunks.push(dividerLine(bannerWidth) + "\n}).call(this);\n");
 
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-
-    // If we're working directly from the original source here (and not from the
-    // output of a transformation that had a source map), include the original
-    // source in the source map. (If we are working on generated code, the
-    // source map we received should have already contained the original
-    // source.)
-    if (!self.sourceMap)
-      node.setSourceContent(self._pathForSourceMap(), self.source);
-
-    return node;
+    return new sourcemap.SourceNode(null, null, null, chunks);
   }
 });
 
