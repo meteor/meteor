@@ -6,6 +6,7 @@ var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
+var files = require('./mini-files.js');
 
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v0.10.33';
@@ -130,17 +131,20 @@ Fiber(function () {
         }
 
         var nodeModuleDir =
-          path.resolve(serverDir, fileInfo.node_modules, name);
+          path.resolve(serverDir, fileInfo.node_modules,
+            files.convertToOSPath(name));
 
         if (fs.existsSync(nodeModuleDir)) {
           return require(nodeModuleDir);
-          }
+        }
+
         try {
           return require(name);
         } catch (e) {
           // Try to guess the package name so we can print a nice
           // error message
-          var filePathParts = fileInfo.path.split(path.sep);
+          // fileInfo.path is a standard path, use files.pathSep
+          var filePathParts = fileInfo.path.split(files.pathSep);
           var packageName = filePathParts[1].replace(/\.js$/, '');
 
           // XXX better message
@@ -172,18 +176,13 @@ Fiber(function () {
 
       // Convert a DOS-style path to Unix-style in case the application code was
       // written on Windows.
-      // XXX note that we can't always correctly convert #WindowsPathApi
-      if (assetPath.indexOf('/') !== -1) {
-        // it is already a Unix-style path most likely
-      } else {
-        assetPath = assetPath.replace(/\\/g, '/');
-      }
+      assetPath = files.convertToStandardPath(assetPath);
 
       if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
-        fs.readFile(filePath, encoding, _callback);
+        fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
       if (fut)
         return fut.wait();
@@ -204,9 +203,14 @@ Fiber(function () {
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
     // urls.
-    var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
+
+    // fileInfo.path is a standard path, convert it to OS path to join with
+    // __dirname
+    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
+    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+
     var scriptPath =
-      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
     // The final 'true' is an undocumented argument to runIn[Foo]Context that
     // causes it to print out a descriptive error message on parse error. It's
     // what require() uses to generate its errors.
