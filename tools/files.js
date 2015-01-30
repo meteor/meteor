@@ -24,7 +24,11 @@ var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var colonConverter = require("./colon-converter.js");
 
+var miniFiles = require("./server/mini-files.js");
+
+// Attach all exports of miniFiles here to avoid code duplication
 var files = exports;
+_.extend(files, miniFiles);
 
 var parsedSourceMaps = {};
 var nextStackFilenameCounter = 1;
@@ -191,7 +195,7 @@ files.getDevBundle = function () {
 
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
-  var dirname = convertToStandardPath(__dirname);
+  var dirname = files.convertToStandardPath(__dirname);
   return files.pathJoin(dirname, '..');
 };
 
@@ -258,10 +262,10 @@ files.statOrNull = function (path) {
 files.rm_recursive = function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
     var fut = new Future();
-    rimraf(convertToOSPath(p), { busyTries: 10 }, fut.resolver());
+    rimraf(files.convertToOSPath(p), { busyTries: 10 }, fut.resolver());
     fut.wait();
   } else {
-    rimraf.sync(convertToOSPath(p));
+    rimraf.sync(files.convertToOSPath(p));
   }
 };
 
@@ -643,7 +647,7 @@ files.extractTarGz = function (buffer, destPath, options) {
       future.isResolved() || future.throw(e);
     });
 
-  var extractor = new tar.Extract({ path: convertToOSPath(tempDir) })
+  var extractor = new tar.Extract({ path: files.convertToOSPath(tempDir) })
     .on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in paths
@@ -1141,7 +1145,7 @@ files.getHomeDir = function () {
   var homeDir = process.env.HOME ||
     process.env.LOCALAPPDATA ||
     process.env.APPDATA;
-  return convertToStandardPath(homeDir);
+  return files.convertToStandardPath(homeDir);
 };
 
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
@@ -1173,7 +1177,6 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
   }
 };
 
-
 // Summary of cross platform file system handling strategy
 
 // There are three main pain points for handling files on Windows: slashes in
@@ -1200,7 +1203,8 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
 //   We have decided to convert all files read by the tool to Unix-style line
 //   endings for the same reasons as slashes above. In many parts of the tool,
 //   we assume that '\n' is the line separator, and it can be hard to find all
-//   of the places and decide whether it is appropriate to use os.EOL.
+//   of the places and decide whether it is appropriate to use os.EOL. We do not
+//   convert anything on write. We will wait and see if anyone complains.
 
 // 3. Colons and other invalid characters in file paths
 
@@ -1210,61 +1214,6 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
 
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
-
-
-var toPosixPath = function (p, partialPath) {
-  // Sometimes, you can have a path like \Users\IEUser on windows, and this
-  // actually means you want C:\Users\IEUser
-  if (p[0] === "\\" && (! partialPath)) {
-    p = process.env.SystemDrive + p;
-  }
-
-  p = p.replace(/\\/g, '/');
-  if (p[1] === ':' && ! partialPath) {
-    // transform "C:/bla/bla" to "/c/bla/bla"
-    p = '/' + p[0] + p.slice(2);
-  }
-
-  return p;
-};
-
-var toDosPath = function (p, partialPath) {
-  if (p[0] === '/' && ! partialPath) {
-    if (! /^\/[A-Za-z](\/|$)/.test(p))
-      throw new Error("Surprising path: " + p);
-    // transform a previously windows path back
-    // "/C/something" to "c:/something"
-    p = p[1] + ":" + p.slice(2);
-  }
-
-  p = p.replace(/\//g, '\\');
-  return p;
-};
-
-
-var convertToOSPath = function (standardPath, partialPath) {
-  if (process.platform === "win32") {
-    return toDosPath(standardPath, partialPath);
-  }
-
-  return standardPath;
-};
-
-var convertToStandardPath = function (osPath, partialPath) {
-  if (process.platform === "win32") {
-    return toPosixPath(osPath, partialPath);
-  }
-
-  return osPath;
-}
-
-var convertToOSLineEndings = function (fileContents) {
-  return fileContents.replace(/\n/g, os.EOL);
-};
-
-var convertToStandardLineEndings = function (fileContents) {
-  return fileContents.replace(new RegExp(os.EOL, "g"), "\n");
-};
 
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
@@ -1297,7 +1246,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
     for (var j = pathArgIndices.length - 1; j >= 0; --j) {
       i = pathArgIndices[j];
-      args[i] = convertToOSPath(args[i]);
+      args[i] = files.convertToOSPath(args[i]);
     }
 
     if (Fiber.current &&
@@ -1338,7 +1287,7 @@ wrapFsFunc("appendFile", [0]);
 wrapFsFunc("readFile", [0], {
   modifyReturnValue: function (fileData) {
     if (_.isString(fileData)) {
-      return convertToStandardLineEndings(fileData);
+      return files.convertToStandardLineEndings(fileData);
     }
 
     return fileData;
@@ -1375,12 +1324,12 @@ if (process.platform === "win32") {
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
-  modifyReturnValue: convertToStandardPath
+  modifyReturnValue: files.convertToStandardPath
 });
 
 wrapFsFunc("readdir", [0], {
-  modifyReturnValue: function (files) {
-    return _.map(files, convertToStandardPath);
+  modifyReturnValue: function (entries) {
+    return _.map(entries, files.convertToStandardPath);
   }
 });
 
@@ -1400,72 +1349,36 @@ wrapFsFunc("readlink", [0]);
 // These don't need to be Fiberized
 files.createReadStream = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.createReadStream.apply(fs, args);
 };
 
 files.createWriteStream = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.createWriteStream.apply(fs, args);
 };
 
 files.watchFile = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.watchFile.apply(fs, args);
 };
 
 files.unwatchFile = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.unwatchFile.apply(fs, args);
 };
-
-// wrappings for path functions that always run as they were on unix (using
-// forward slashes)
-var wrapPathFunction = function (name, partialPaths) {
-  var f = path[name];
-  return function (/* args */) {
-    if (process.platform === 'win32') {
-      var args = _.toArray(arguments);
-      args = _.map(args, function (p, i) {
-        // if partialPaths is turned on (for path.join mostly)
-        // forget about conversion of absolute paths for Windows
-        return toDosPath(p, partialPaths);
-      });
-      return toPosixPath(f.apply(path, args), partialPaths);
-    } else {
-      return f.apply(path, arguments);
-    }
-  };
-};
-
-files.pathJoin = wrapPathFunction("join", true);
-files.pathNormalize = wrapPathFunction("normalize");
-files.pathRelative = wrapPathFunction("relative");
-files.pathResolve = wrapPathFunction("resolve");
-files.pathDirname = wrapPathFunction("dirname");
-files.pathBasename = wrapPathFunction("basename");
-files.pathExtname = wrapPathFunction("extname");
-files.pathSep = '/';
-files.pathDelimiter = ':';
 
 // wrap pathwatcher because it works with file system paths
 // XXX we don't currently convert the path argument passed to the watch
 //     callback, but we currently don't use the argument either
 files.pathwatcherWatch = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
   var pathwatcher = require('meteor-pathwatcher-tweaks');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
-
-files.convertToStandardPath = convertToStandardPath;
-files.convertToOSPath = convertToOSPath;
-files.convertToPosixPath = toPosixPath;
-
-files.convertToStandardLineEndings = convertToStandardLineEndings;
-files.convertToOSLineEndings = convertToOSLineEndings;
