@@ -90,7 +90,7 @@ END
       ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "cmd /c echo $line>> C:\\publish-tool.bat" 2>/dev/null
     done 10< $BAT_FILENAME
 
-    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "C:\\publish-tool.bat" 2> /dev/null
+    ssh $USERNAME@$HOST -oUserKnownHostsFile=$TEMP_KEY -p $PORT -i $TEMP_PRIV_KEY "C:\\publish-tool.bat"
 
     trap - EXIT
   fi
