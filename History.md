@@ -1,5 +1,9 @@
 ## vNEXT
 
+* Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
+  message but otherwise be ignored. Now it crashes the process, as it did before
+  0.8.1.  #3038
+
 * Support `Npm.require('foo/bar')`.  #3505 #3526
 
 * In `package.js` files, `Npm.require` can only require built-in Node modules
@@ -39,6 +43,9 @@
   The previous functionality can be reproduced by using
   `Template.instance().data` instead of `Template.currentData()`.
 
+* Remove some packages used internally to support legacy MDG systems
+  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
+  `dev-bundle-fetcher`, and `star-translate`).
 
 
 ## v.1.0.3.1, 2015-Jan-20
