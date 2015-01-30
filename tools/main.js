@@ -413,7 +413,7 @@ var springboard = function (rel, options) {
       if (options.fromApp) {
         if (process.platform === "win32") {
           // XXX improve this message for real release
-          var release = catalogRemote.getDefaultReleaseVersion();
+          var release = catalogRemote.official.getDefaultReleaseVersion();
           var releaseName = release.track + "@" + release.version;
 
           Console.error(
