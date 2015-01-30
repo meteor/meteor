@@ -478,16 +478,17 @@ files.getPathsInDir = function (dir, options) {
     return;
   }
 
+  // Don't use files.cwd() because we will use process.chdir later
   var oldCwd = process.cwd();
-
   var cwd = options && options.cwd;
+
   if (cwd) {
     if (! files.exists(cwd)) {
       throw new Error("Specified current working directory doesn't exist:" +
         cwd);
     }
 
-    process.chdir(cwd);
+    process.chdir(files.convertToOSPath(cwd));
   }
 
   var output = [];
