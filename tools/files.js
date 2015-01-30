@@ -722,8 +722,7 @@ files.createTarGzStream = function (dirPath, options) {
       // shout at the core developer early so she/he takes an action.
       // When the tarball is created on Mac or Linux it doesn't seem to matter.
       var maxPath = 260; // Longest allowed path length on Windows
-      if (entry.path.length > maxPath &&
-          entry.path.indexOf("test") === -1) {
+      if (entry.path.length > maxPath) {
         throw new Error("Path too long: " + entry.path + " is " +
           entry.path.length + " characters.");
       }
