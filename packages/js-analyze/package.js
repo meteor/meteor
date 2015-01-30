@@ -11,7 +11,7 @@ Package.describe({
 // the client too, can copy them in (or implement a way to serve files out of
 // Npm modules).
 Npm.depends({
-  esprima: "1.2.2",
+  "esprima-fb": "10001.1.0-dev-harmony-fb",
   escope: "1.0.1"
 });
 

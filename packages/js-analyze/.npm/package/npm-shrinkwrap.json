@@ -8,8 +8,8 @@
         }
       }
     },
-    "esprima": {
-      "version": "1.2.2"
+    "esprima-fb": {
+      "version": "10001.1.0-dev-harmony-fb"
     }
   }
 }

@@ -1,4 +1,4 @@
-var esprima = Npm.require('esprima');
+var esprima = Npm.require('esprima-fb');
 var escope = Npm.require('escope');
 
 JSAnalyze = {};
