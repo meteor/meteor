@@ -26,10 +26,7 @@ Tinytest.add("constraint solver - input - upgrade indirect dependency", function
     }));
 });
 
-var runSlowTests = !!process.env.CONSTRAINT_SOLVER_SLOW_TESTS;
-var slow = runSlowTests;
-
-slow && Tinytest.add("constraint solver - input - slow solve", function (test) {
+Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({
     "dependencies": [
       "meteor-platform",
