@@ -1,5 +1,25 @@
 var CS = ConstraintSolver;
 
+// Yeah, we really on object key order here.  Specifically that
+// if you add a bunch of keys to an object (that look like package
+// names) and then JSON.stringify the object, the keys will appear
+// in that order.  If that's not true, these tests will break.
+var sortKeys = function (obj) {
+  var result = {};
+  _.each(_.keys(obj).sort(), function (k) {
+    result[k] = obj[k];
+  });
+  return result;
+};
+var formatSolution = function (obj) {
+  // Note that we use JSON so that it's easy to copy-and-paste test
+  // results into tests.
+  return JSON.stringify({
+    answer: sortKeys(obj.answer),
+    neededToUseUnanticipatedPrereleases: obj.neededToUseUnanticipatedPrereleases
+  }, null, 2);
+};
+
 Tinytest.add("constraint solver - input - upgrade indirect dependency", function (test) {
   var input = CS.Input.fromJSONable({
     dependencies: ["foo"],
@@ -16,8 +36,8 @@ Tinytest.add("constraint solver - input - upgrade indirect dependency", function
   });
 
   test.equal(
-    JSON.stringify(CS.PackagesResolver._resolveWithInput(input)),
-    JSON.stringify({
+    formatSolution(CS.PackagesResolver._resolveWithInput(input)),
+    formatSolution({
       answer: {
         foo: "1.0.0",
         bar: "2.0.1"
@@ -3695,8 +3715,8 @@ Tinytest.add("constraint solver - input - slow solve", function (test) {
   });
 
   test.equal(
-    JSON.stringify(CS.PackagesResolver._resolveWithInput(input)),
-    JSON.stringify({
+    formatSolution(CS.PackagesResolver._resolveWithInput(input)),
+    formatSolution({
       "answer":{
         "autopublish":"1.0.2",
         "u2622:persistent-session":"0.2.1",
