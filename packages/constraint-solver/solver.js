@@ -65,6 +65,23 @@ CS.Solver.prototype.getSolution = function () {
   };
 };
 
+CS.Solver.prototype.getCostReport = function () {
+  var self = this;
+  var solution = self._solution;
+  return _.map(self._costFunction.components, function (comp) {
+    var total = 0;
+    var terms = {};
+    _.each(comp.terms, function (t, i) {
+      var w = comp.weights[i];
+      if (w && solution.evaluate(t)) {
+        total += w;
+        terms[t] = w;
+      }
+    });
+    return [comp.name, total, terms];
+  });
+};
+
 var getVersionInfo = _.memoize(PV.parse);
 
 var pvVar = function (p, v) {
