@@ -20,6 +20,7 @@ var catalog = require('./catalog.js');
 var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
+var updater = require('./updater.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
@@ -1609,6 +1610,22 @@ main.registerCommand({
   console.log("%s: running upgrader %s.",
               files.pathBasename(options.appDir), upgrader);
   upgraders.runUpgrader(projectContext, upgrader);
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// admin run-background-updater
+///////////////////////////////////////////////////////////////////////////////
+
+// For testing the background updater during development.
+main.registerCommand({
+  name: 'admin run-background-updater',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  updater.tryToDownloadUpdate({
+    showBanner: true,
+    printErrors: true
+  });
 });
 
 ///////////////////////////////////////////////////////////////////////////////
