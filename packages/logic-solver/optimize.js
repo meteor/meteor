@@ -3,6 +3,10 @@ var minMax = function (solver, solution, costTerms, costWeights, optFormula, isM
   var curCost = curSolution.getWeightedSum(costTerms, costWeights);
 
   var weightedSum = (optFormula || Logic.weightedSum(costTerms, costWeights));
+
+  solver.require((isMin ? Logic.lessThanOrEqual : Logic.greaterThanOrEqual)(
+    weightedSum, Logic.constantBits(curCost)));
+
   while (isMin ? curCost > 0 : true) {
     var improvement = (isMin ? Logic.lessThan : Logic.greaterThan)(
       weightedSum, Logic.constantBits(curCost));

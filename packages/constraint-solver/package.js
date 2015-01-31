@@ -12,7 +12,7 @@ Package.onUse(function (api) {
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random', 'logic-solver']);
   api.addFiles(['datatypes.js', 'catalog-cache.js', 'catalog-loader.js',
-                'constraint-solver-input.js']);
+                'constraint-solver-input.js', 'solver.js']);
   api.addFiles(['constraint-solver.js', 'resolver.js', 'constraints-list.js',
                 'resolver-state.js', 'priority-queue.js'], ['server']);
 });

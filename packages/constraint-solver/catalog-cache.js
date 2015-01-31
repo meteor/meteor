@@ -13,7 +13,7 @@ CS.CatalogCache = function () {
   // A map derived from the keys of _dependencies, for ease of iteration.
   // "package" -> ["versions", ...]
   // Versions in the array are unique but not sorted, unless the `.sorted`
-  // property is set on the array.
+  // property is set on the array.  The array is never empty.
   this._versions = {};
 };
 

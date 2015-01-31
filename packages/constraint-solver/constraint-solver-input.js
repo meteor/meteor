@@ -5,22 +5,48 @@ var CS = ConstraintSolver;
 // and it holds the data loaded from the Catalog as well.  It can be
 // serialized to JSON and read back in for testing purposes.
 CS.Input = function (dependencies, constraints, catalogCache, options) {
+  var self = this;
   options = options || {};
 
-  this.dependencies = dependencies;
-  this.constraints = constraints;
-  this.upgrade = options.upgrade || [];
-  this.anticipatedPrereleases = options.anticipatedPrereleases || {};
-  this.previousSolution = options.previousSolution || null;
+  self.dependencies = dependencies;
+  self.constraints = constraints;
+  self.upgrade = options.upgrade || [];
+  self.anticipatedPrereleases = options.anticipatedPrereleases || {};
+  self.previousSolution = options.previousSolution || null;
 
-  check(this.dependencies, [String]);
-  check(this.constraints, [PackageConstraintType]);
-  check(this.upgrade, [String]);
-  check(this.anticipatedPrereleases,
+  check(self.dependencies, [String]);
+  check(self.constraints, [PackageConstraintType]);
+  check(self.upgrade, [String]);
+  check(self.anticipatedPrereleases,
         Match.ObjectWithValues(Match.ObjectWithValues(Boolean)));
-  check(this.previousSolution, Match.OneOf(Object, null));
+  check(self.previousSolution, Match.OneOf(Object, null));
 
-  this.catalogCache = catalogCache;
+  self.catalogCache = catalogCache;
+
+  self._dependencySet = {}; // package name -> true
+  _.each(self.dependencies, function (d) {
+    self._dependencySet[d] = true;
+  });
+  self._upgradeSet = {};
+  _.each(self.upgrade, function (u) {
+    self._upgradeSet[u] = true;
+  });
+};
+
+CS.Input.prototype.isKnownPackage = function (p) {
+  return this.catalogCache.hasPackage(p);
+};
+
+CS.Input.prototype.isRootDependency = function (p) {
+  return _.has(this._dependencySet, p);
+};
+
+CS.Input.prototype.isUpgrading = function (p) {
+  return _.has(this._upgradeSet, p);
+};
+
+CS.Input.prototype.isInPreviousSolution = function (p) {
+  return !! (this.previousSolution && _.has(this.previousSolution, p));
 };
 
 CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
@@ -34,9 +60,11 @@ CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
   _.each(self.constraints, function (constraint) {
     packagesToLoad[constraint.name] = true;
   });
-  _.each(self.previousSolution, function (version, package) {
-    packagesToLoad[package] = true;
-  });
+  if (self.previousSolution) {
+    _.each(self.previousSolution, function (version, package) {
+      packagesToLoad[package] = true;
+    });
+  }
 
   // Load packages into the cache (if they aren't loaded already).
   catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
@@ -114,3 +142,6 @@ var PackageConstraintType = Match.OneOf(
     check(c.vConstraint, VersionConstraintType);
     return c.constructor !== Object;
   }));
+
+CS.Input.VersionConstraintType = VersionConstraintType;
+CS.Input.PackageConstraintType = PackageConstraintType;

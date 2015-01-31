@@ -1054,9 +1054,15 @@ Logic.weightedSum = function (formulas, weights) {
     weights = _.map(formulas, function () { return weights; });
   }
   _check(weights, [Logic.WholeNumber]);
-  if (! (formulas.length === weights.length && formulas.length)) {
-    throw new Error("Formula array and weight array must be same length (> 0)");
+  if (formulas.length !== weights.length) {
+    throw new Error("Formula array and weight array must be same length" +
+                    "; they are " + formulas.length + " and " + weights.length);
   }
+
+  if (formulas.length === 0) {
+    return new Logic.Bits([]);
+  }
+
   var binaryWeighted = [];
   _.each(formulas, function (f, i) {
     var w = weights[i];
