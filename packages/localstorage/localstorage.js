@@ -7,6 +7,9 @@
 
 var key = '_localstorage_test_' + Random.id();
 var retrieved;
+// Capture the first argument in the current URL to prevent localstorage 
+// collisions for multiple Meteor applications running on the same domain.
+var path = window.location.pathname.replace(/^\/([^\/]*).*$/, '$1') + '.';
 try {
   if (window.localStorage) {
     window.localStorage.setItem(key, key);
@@ -19,13 +22,17 @@ try {
 if (key === retrieved) {
   Meteor._localStorage = {
     getItem: function (key) {
-      return window.localStorage.getItem(key);
+      // Fetch the data the current application set by using the path variable.
+      return window.localStorage.getItem(path + key);
     },
     setItem: function (key, value) {
-      window.localStorage.setItem(key, value);
+      // Save the value using the path variable to avoid overwriting data
+      // stored by other applications running on the same domain.
+      window.localStorage.setItem(path + key, value);
     },
     removeItem: function (key) {
-      window.localStorage.removeItem(key);
+      // Delete the value the current application set using the path variable.
+      window.localStorage.removeItem(path + key);
     }
   };
 }
