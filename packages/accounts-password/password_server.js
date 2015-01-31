@@ -706,7 +706,7 @@ var createUser = function (options) {
   if (username)
     user.username = username;
   if (email)
-    user.emails = [{address: email, verified: false}];
+    user.emails = [{address: email.toLowerCase(), verified: false}];
 
   return Accounts.insertUserDoc(options, user);
 };
