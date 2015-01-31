@@ -34,17 +34,20 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                            options);
   input.loadFromCatalog(self.catalogLoader);
 
-  return newResolveWithInput(input, this._options.nudge);
-};
-
-var newResolveWithInput = function (input, _nudge) {
-  var solver = new CS.Solver(input);
-
-  return solver.getSolution();
+  return CS.PackagesResolver._resolveWithInput(input, this._options.nudge);
 };
 
 // Exposed for tests.
 CS.PackagesResolver._resolveWithInput = function (input, _nudge) {
+  var solver = new CS.Solver(input);
+
+  // Disable runtime type checks (they slow things down by a factor of 3)
+  return Logic._disablingTypeChecks(function () {
+    return solver.getSolution();
+  });
+};
+
+CS.PackagesResolver._oldResolveWithInput =function (input, _nudge) {
   check(input, CS.Input);
 
   // Dump the input to the console!  XXX Put this behind a flag.
