@@ -98,17 +98,24 @@ Template.prototype.onDestroyed = function (cb) {
   this._callbacks.destroyed.push(cb);
 };
 
-Template.prototype._fireCallbacks = function (template, which) {
+Template.prototype._getCallbacks = function (which) {
   var self = this;
   var callbacks = self[which] ? [self[which]] : [];
   // Fire all callbacks added with the new API (Template.onRendered())
   // as well as the old-style callback (e.g. Template.rendered) for
   // backwards-compatibility.
   callbacks = callbacks.concat(self._callbacks[which]);
+  return callbacks;
+};
 
-  for (var i = 0, N = callbacks.length; i < N; i++) {
-    callbacks[i].call(template);
-  }
+var fireCallbacks = function (callbacks, template) {
+  Template._withTemplateInstanceFunc(
+    function () { return template; },
+    function () {
+      for (var i = 0, N = callbacks.length; i < N; i++) {
+        callbacks[i].call(template);
+      }
+    });
 };
 
 Template.prototype.constructView = function (contentFunc, elseFunc) {
@@ -177,8 +184,12 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  // To avoid situations when new callbacks are added in between view
+  // instantiation and event being fired, decide on all callbacks to fire
+  // immediately and then fire them on the event.
+  var createdCallbacks = self._getCallbacks('created');
   view.onViewCreated(function () {
-    self._fireCallbacks(view.templateInstance(), 'created');
+    fireCallbacks(createdCallbacks, view.templateInstance());
   });
 
   /**
@@ -189,8 +200,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  var renderedCallbacks = self._getCallbacks('rendered');
   view.onViewReady(function () {
-    self._fireCallbacks(view.templateInstance(), 'rendered');
+    fireCallbacks(renderedCallbacks, view.templateInstance());
   });
 
   /**
@@ -201,8 +213,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
    * @locus Client
    * @deprecated in 1.1
    */
+  var destroyedCallbacks = self._getCallbacks('destroyed');
   view.onViewDestroyed(function () {
-    self._fireCallbacks(view.templateInstance(), 'destroyed');
+    fireCallbacks(destroyedCallbacks, view.templateInstance());
   });
 
   return view;
@@ -309,6 +322,25 @@ Template.prototype.helpers = function (dict) {
     this.__helpers.set(k, dict[k]);
 };
 
+// Kind of like Blaze.currentView but for the template instance.
+// This is a function, not a value -- so that not all helpers
+// are implicitly dependent on the current template instance's `data` property,
+// which would make them dependenct on the data context of the template
+// inclusion.
+Template._currentTemplateInstanceFunc = null;
+
+Template._withTemplateInstanceFunc = function (templateInstanceFunc, func) {
+  if (typeof func !== 'function')
+    throw new Error("Expected function, got: " + func);
+  var oldTmplInstanceFunc = Template._currentTemplateInstanceFunc;
+  try {
+    Template._currentTemplateInstanceFunc = templateInstanceFunc;
+    return func();
+  } finally {
+    Template._currentTemplateInstanceFunc = oldTmplInstanceFunc;
+  }
+};
+
 /**
  * @summary Specify event handlers for this template.
  * @locus Client
@@ -325,9 +357,12 @@ Template.prototype.events = function (eventMap) {
         if (data == null)
           data = {};
         var args = Array.prototype.slice.call(arguments);
-        var tmplInstance = view.templateInstance();
-        args.splice(1, 0, tmplInstance);
-        return v.apply(data, args);
+        var tmplInstanceFunc = _.bind(view.templateInstance, view);
+        args.splice(1, 0, tmplInstanceFunc());
+
+        return Template._withTemplateInstanceFunc(tmplInstanceFunc, function () {
+          return v.apply(data, args);
+        });
       };
     })(k, eventMap[k]);
   }
@@ -344,22 +379,24 @@ Template.prototype.events = function (eventMap) {
  * @returns Blaze.TemplateInstance
  */
 Template.instance = function () {
-  var view = Blaze.currentView;
-
-  while (view && ! view.template)
-    view = view.parentView;
-
-  if (! view)
-    return null;
-
-  return view.templateInstance();
+  return Template._currentTemplateInstanceFunc
+    && Template._currentTemplateInstanceFunc();
 };
 
 // Note: Template.currentData() is documented to take zero arguments,
 // while Blaze.getData takes up to one.
 
 /**
- * @summary Returns the data context of the current helper, or the data context of the template that declares the current event handler or callback.  Establishes a reactive dependency on the result.
+ * @summary
+ *
+ * - Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns
+ * the data context of the template.
+ * - Inside a helper, returns the data context of the DOM node where the helper
+ * was used.
+ * - Inside an event handler, returns the data context of the element that fired
+ * the event.
+ *
+ * Establishes a reactive dependency on the result.
  * @locus Client
  * @function
  */

@@ -719,6 +719,28 @@ if (Meteor.isServer) {
   ]);
 }
 
+testAsyncMulti("livedata - result by value", [
+  function (test, expect) {
+    var self = this;
+    self.testId = Random.id();
+    Meteor.call('getArray', self.testId, expect(function (error, firstResult) {
+      test.isFalse(error);
+      test.isTrue(firstResult);
+      self.firstResult = firstResult;
+    }));
+  }, function (test, expect) {
+    var self = this;
+    Meteor.call('pushToArray', self.testId, 'xxx', expect(function (error) {
+      test.isFalse(error);
+    }));
+  }, function (test, expect) {
+    var self = this;
+    Meteor.call('getArray', self.testId, expect(function (error, secondResult) {
+      test.isFalse(error);
+      test.equal(self.firstResult.length + 1, secondResult.length);
+    }));
+  }
+]);
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

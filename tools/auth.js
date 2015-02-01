@@ -181,7 +181,8 @@ var getSession = function (sessionData, domain) {
 
 // types:
 // - "meteor-account": a login to your Meteor Account
-// - "galaxy": a login to a Galaxy
+// We previously used:
+// - "galaxy": a login to a legacy Galaxy prototype server
 var ensureSessionType = function (session, type) {
   if (! _.has(session, 'type'))
     session.type = type;
@@ -259,53 +260,6 @@ var removePendingRevoke = function (domain, tokenIds) {
   writeSessionData(data);
 };
 
-var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
-  var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
-  if (oauthInfo) {
-    url = oauthInfo.revokeUri;
-  } else {
-    return false;
-  }
-
-  try {
-    var result = httpHelpers.request({
-      url: url,
-      method: "POST",
-      form: {
-        tokenId: tokenIds.join(',')
-      },
-      useSessionHeader: true,
-      timeout: options.timeout
-    });
-  } catch (e) {
-    // most likely we don't have a net connection
-    return false;
-  }
-  var response = result.response;
-
-  if (response.statusCode === 200 &&
-      response.body) {
-    try {
-      var body = JSON.parse(response.body);
-      if (body.tokenRevoked) {
-        // Server confirms that the tokens have been revoked. Checking for a
-        // `tokenRevoked` key in the response confirms that we hit an actual
-        // galaxy auth server that understands that we were trying to revoke some
-        // tokens, not just a random URL that happened to return a 200
-        // response.
-
-        // (Be careful to reread session data in case httpHelpers changed it)
-        removePendingRevoke(domain, tokenIds);
-      }
-    } catch (e) {
-      return false;
-    }
-    return true;
-  } else {
-    return false;
-  }
-};
-
 // If there are any logged out (pendingRevoke) tokens that haven't
 // been sent to the server for revocation yet, try to send
 // them. Reads the session file and then writes it back out to
@@ -364,49 +318,16 @@ var tryRevokeOldTokens = function (options) {
       }
       return;
     } else if (session.type === "galaxy") {
-      if (! tryRevokeGalaxyTokens(domain, tokenIds, options)) {
-        logoutFailWarning(domain);
-      }
+      // These are tokens from a legacy Galaxy prototype, which cannot be
+      // revoked (because the prototype no longer exists), but we can at least
+      // remove them from the file.
+      removePendingRevoke(domain, tokenIds);
     } else {
       // don't know how to revoke tokens of this type
       logoutFailWarning(domain);
       return;
     }
   });
-};
-
-// Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
-// galaxy's OAuth client id and redirect_uri that should be used for
-// authorization codes for this galaxy. Returns an object with keys
-// 'oauthClientId', 'redirectUri', and 'revokeUri', or null if the
-// request failed.
-//
-// 'timeout' is an optional request timeout in milliseconds.
-var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
-  var galaxyAuthUrl = 'https://' + galaxyName + ':' +
-    config.getDiscoveryPort() + '/_GALAXYAUTH_';
-  try {
-    var result = httpHelpers.request({
-      url: galaxyAuthUrl,
-      json: true,
-      // on by default in our version of request, but just in case
-      strictSSL: true,
-      followRedirect: false,
-      timeout: timeout || 5000
-    });
-  } catch (e) {
-    return null;
-  }
-
-  if (result.response.statusCode === 200 &&
-      result.body &&
-      result.body.oauthClientId &&
-      result.body.redirectUri &&
-      result.body.revokeUri) {
-    return result.body;
-  } else {
-    return null;
-  }
 };
 
 var sendAuthorizeRequest = function (clientId, redirectUri, state) {
@@ -504,77 +425,6 @@ var oauthFlow = function (conn, options) {
   } else {
     throw new Error('login-failed');
   }
-};
-
-// Uses meteor accounts to log in to the specified galaxy. Returns an
-// object with keys `token` and `tokenId` if the login was
-// successful. If an error occurred, returns one of:
-//   { error: 'access-denied' }
-//   { error: 'no-galaxy' }
-//   { error: 'no-account-server' }
-var logInToGalaxy = function (galaxyName) {
-  var oauthInfo = fetchGalaxyOAuthInfo(galaxyName);
-  if (! oauthInfo) {
-    return { error: 'no-galaxy' };
-  }
-
-  var galaxyClientId = oauthInfo.oauthClientId;
-  var galaxyRedirect = oauthInfo.redirectUri;
-
-  // If the redirect URI is not in the DNS namespace that belongs to the
-  // Galaxy, then something is wrong.
-  if (url.parse(galaxyRedirect).hostname !== galaxyName) {
-    // XXX It's more like 'bad-galaxy' than 'no-galaxy'.
-    return { error: 'no-galaxy' };
-  }
-
-  // Ask the accounts server for an authorization code.
-  var crypto = require('crypto');
-  var session = crypto.randomBytes(16).toString('hex');
-  var stateInfo = { session: session };
-
-  var authorizeResult;
-
-  try {
-    authorizeResult = sendAuthorizeRequest(
-      galaxyClientId,
-      galaxyRedirect,
-      encodeURIComponent(JSON.stringify(stateInfo))
-    );
-  } catch (err) {
-    return { error: err.message };
-  }
-
-  // Ask the galaxy to log us in with our auth code.
-  try {
-    var galaxyResult = httpHelpers.request({
-      url: authorizeResult.location,
-      method: 'GET',
-      strictSSL: true,
-      headers: {
-        cookie: 'GALAXY_OAUTH_SESSION=' + session +
-          '; GALAXY_USER_AGENT_TOOL=' +
-          encodeURIComponent(JSON.stringify(utils.getAgentInfo()))
-      }
-    });
-    var body = JSON.parse(galaxyResult.body);
-  } catch (e) {
-    return { error: (body && body.error) || 'no-galaxy' };
-  }
-  var response = galaxyResult.response;
-
-  // 'access-denied' isn't exactly right because it's possible that the galaxy
-  // went down since our last request, but close enough.
-
-  if (response.statusCode !== 200 ||
-      ! body ||
-      ! _.has(galaxyResult.setCookie, 'GALAXY_AUTH'))
-    return { error: (body && body.error) || 'access-denied' };
-
-  return {
-    token: galaxyResult.setCookie.GALAXY_AUTH,
-    tokenId: body.tokenId
-  };
 };
 
 // Prompt the user for a password, and then log in. Returns true if a
@@ -681,11 +531,9 @@ exports.loginCommand = withAccountsConnection(function (options,
   config.printUniverseBanner();
 
   var data = readSessionData();
-  var galaxy = options.galaxy;
 
-  if (! galaxy &&
-      (! getSession(data, config.getAccountsDomain()).token ||
-       options.overwriteExistingToken)) {
+  if (! getSession(data, config.getAccountsDomain()).token ||
+       options.overwriteExistingToken) {
     var loginOptions = {};
 
     if (options.email) {
@@ -707,43 +555,13 @@ exports.loginCommand = withAccountsConnection(function (options,
     }
   }
 
-  // XXX Make the galaxy login not do a login if there is an existing token, just like MA
-  if (galaxy) {
-    var galaxyLoginResult = logInToGalaxy(galaxy);
-    if (galaxyLoginResult.error) {
-      // XXX add human readable error messages
-      var failedLoginMsg = "\nLogin to ' + galaxy + ' failed. ";
-      if (galaxyLoginResult.error === 'unauthorized') {
-        Console.error(
-          failedLoginMsg + 'You are not authorized for this galaxy.');
-      } else if (galaxyLoginResult.error === 'no_oauth_server') {
-        Console.error(
-          failedLoginMsg + 'The galaxy could not contact Meteor Accounts.');
-      } else if (galaxyLoginResult.error === 'no_identity') {
-        Console.error(
-          failedLoginMsg + 'Your login information could not be found.');
-      } else {
-        Console.error(failedLoginMsg + 'Error: ' + galaxyLoginResult.error );
-      }
-
-      return 1;
-    }
-    data = readSessionData(); // be careful to reread data file after RPC
-    var session = getSession(data, galaxy);
-    ensureSessionType(session, "galaxy");
-    session.token = galaxyLoginResult.token;
-    session.tokenId = galaxyLoginResult.tokenId;
-    writeSessionData(data);
-  }
-
   tryRevokeOldTokens({ firstTry: true, connection: connection });
 
   data = readSessionData();
   Console.error();
-  Console.error("Logged in" + (galaxy ? " to " + galaxy : "") +
-                (currentUsername(data) ?
-                 " as " + currentUsername(data) : "") + ".",
-                "Thanks for being a Meteor developer!");
+  Console.error("Logged in" +
+                (currentUsername(data) ? " as " + currentUsername(data) : "") +
+                ". Thanks for being a Meteor developer!");
   return 0;
 });
 

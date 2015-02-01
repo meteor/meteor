@@ -12,7 +12,6 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('underscore', 'server');
-  api.use('application-configuration');
   api.export('Email', 'server');
   api.export('EmailTest', 'server', {testOnly: true});
   api.addFiles('email.js', 'server');

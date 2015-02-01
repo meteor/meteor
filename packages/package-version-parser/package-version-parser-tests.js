@@ -213,10 +213,10 @@ var t = function (pConstraintString, expected, descr) {
     descr);
 };
 
-var FAIL = function (versionString) {
+var FAIL = function (versionString, errorExpect) {
   currentTest.throws(function () {
     PackageVersion.parseConstraint(versionString);
-  });
+  }, errorExpect);
 };
 
 Tinytest.add("package-version-parser - constraints - any-reasonable", function (test) {
@@ -250,8 +250,9 @@ Tinytest.add("package-version-parser - constraints - compatible version, compati
   FAIL("foo@1.2.3_abc");
   FAIL("foo@1.2.3+1234_1");
   FAIL("foo@1.2.3_1-rc1");
-  FAIL("foo-1233@1.2.3_0");
-  FAIL("foo-1233@1.2.3_");
+  FAIL("foo-1233@1.2.3_0", /must not have a leading zero/);
+  FAIL("foo-1233@1.2.3_a", /must contain only digits/);
+  FAIL("foo-1233@1.2.3_", /wrap number must follow/);
   FAIL("foo-1233@1.2.3_0123");
 
   t("foo@1.2.3_1", { name: "foo", alternatives: [{

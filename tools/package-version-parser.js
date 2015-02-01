@@ -52,7 +52,9 @@ var PV = function (versionString) {
   }
   if (wrapSplit.length > 1) {
     wrapNum = wrapSplit[1];
-    if (!/^\d+$/.test(wrapNum)) {
+    if (! wrapNum) {
+      throwVersionParserError("A wrap number must follow _");
+    } else if (!/^\d+$/.test(wrapNum)) {
       throwVersionParserError(
         "The wrap number (after _) must contain only digits, so " +
           versionString + " is invalid.");
@@ -195,8 +197,10 @@ PV.majorVersion = function (versionString) {
   return PV.parse(versionString).major;
 };
 
-// Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
-// v2 is greater.  Versions are strings or PackageVersion objects.
+
+// Takes in two meteor versions. Returns 0 if equal, a positive number if v1
+// is greater, a negative number if v2 is greater.
+// Versions are strings or PackageVersion objects.
 PV.compare = function (versionOne, versionTwo) {
   var v1 = versionOne;
   if (typeof v1 === 'string') {

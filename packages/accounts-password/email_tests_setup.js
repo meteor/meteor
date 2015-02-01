@@ -12,6 +12,18 @@ Accounts.emailTemplates.resetPassword.html =
     return url;
   };
 
+// override the from address
+Accounts.emailTemplates.resetPassword.from =
+  Accounts.emailTemplates.enrollAccount.from =
+    Accounts.emailTemplates.verifyEmail.from = function (user) {
+      return 'test@meteor.com';
+    };
+
+// add a custom header to check against
+Accounts.emailTemplates.headers = {
+  'My-Custom-Header' : 'Cool'
+};
+
 EmailTest.hookSend(function (options) {
   var to = options.to;
   if (to.indexOf('intercept') === -1) {

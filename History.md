@@ -1,4 +1,54 @@
-## v.1.0.3, 2015-Jan-20
+## vNEXT
+
+* Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
+  message but otherwise be ignored. Now it crashes the process, as it did before
+  0.8.1.  #3038
+
+* Support `Npm.require('foo/bar')`.  #3505 #3526
+
+* In `package.js` files, `Npm.require` can only require built-in Node modules
+  (and dev bundle modules, though you shouldn't depend on that), not the modules
+  from its own `Npm.depends`. Previously, such code would work but only on the
+  second time a `package.js` was executed.
+
+* Add `onRendered`, `onCreated`, and `onDestroyed` methods to `Template`
+
+* Ignore vim swap files in the `public` and `private` directories.  #3322
+
+* The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
+  email `headers`.  The `from` address can now be set separately on the
+  individual templates, and is a function there rather than a static string.
+  #2858 #2854
+
+* The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
+  clone of what the function returned rather than sharing mutable state.  #3201
+
+* `spiderable` now supports escaped `#!` fragments.  #2938
+
+* `meteor login --email` no longer takes an ignored argument.  #3532
+
+* Make it easier to use the Node DDP client implementation without running a web
+  server too.  #3452
+
+* Fix bug where, when a helper or event handler was called from inside a custom
+  block helper,  `Template.instance()` returned the `Template.contentBlock`
+  template instead of the actual user-defined template, making it difficult to
+  use `Template.instance()` for local template state.
+
+* Fix/change behavior of `Template.currentData` and `Template.parentData`
+  inside event handlers. Previously, they returned the data context of the
+  enclosing template, but now they return the data context of the target
+  element.
+
+  The previous functionality can be reproduced by using
+  `Template.instance().data` instead of `Template.currentData()`.
+
+* Remove some packages used internally to support legacy MDG systems
+  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
+  `dev-bundle-fetcher`, and `star-translate`).
+
+
+## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
   local packages and to show if the package is installed for non-local

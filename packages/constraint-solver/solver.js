@@ -142,7 +142,7 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
       var pv = pvVar(p, v);
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
-        var p2 = dep.pConstraint.name;
+        var p2 = dep.packageConstraint.name;
         if (! input.isKnownPackage(p2)) {
           unknownPackages[p2] = true;
         }
@@ -444,9 +444,9 @@ CS.Solver.prototype._enforceConstraints = function () {
       var pv = pvVar(p, v);
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
-        var p2 = dep.pConstraint.name;
+        var p2 = dep.packageConstraint.name;
         if (self.input.isKnownPackage(p2)) {
-          self._addConstraint(pv, p2, dep.pConstraint.vConstraint);
+          self._addConstraint(pv, p2, dep.packageConstraint.vConstraint);
         }
       });
     });

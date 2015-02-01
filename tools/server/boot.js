@@ -129,12 +129,17 @@ Fiber(function () {
           return require(name);
         }
 
-        var nodeModuleDir =
-          path.resolve(serverDir, fileInfo.node_modules, name);
+        var nodeModuleBase = path.resolve(serverDir, fileInfo.node_modules);
 
-        if (fs.existsSync(nodeModuleDir)) {
+        var nodeModuleDir = path.resolve(nodeModuleBase, name);
+
+        // If the user does `Npm.require('foo/bar')`, then we should resolve to
+        // the package's node modules if `foo` was one of the modules we
+        // installed.  (`foo/bar` might be implemented as `foo/bar.js` so we
+        // can't just naively see if all of nodeModuleDir exists.
+        if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
           return require(nodeModuleDir);
-          }
+        }
         try {
           return require(name);
         } catch (e) {
