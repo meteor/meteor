@@ -151,18 +151,13 @@ Tinytest.add("constraint solver - no results", function (test) {
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({ "mytoplevel": "" }, function (error) {
-      return error.message.match(/indirect@2\.0\.0 is not satisfied by 1\.0\.0/)
-        && error.message.match(/mytoplevel@1.0.0 -> bad-1@1\.0\.0/)
-        && error.message.match(/mytoplevel@1.0.0 -> bad-2@1\.0\.0/)
-        // We shouldn't get shown indirect itself in a pathway: that would just
-        // be an artifact of there being a path that passes through another
-        // package.  (Note: we might change our mind and decide that all these
-        // lines should end in the relevant constraint, which would probably be
-        // nice! But in that case, we should test that no line ends with TWO
-        // mentions of indirect.)
-        && ! error.message.match(/-> indirect/)
-        // Lines should be unique.
-        && ! error.message.match(/bad-1[^]+bad-1/);
+      return error.message.match(/indirect@2\.0\.0 is not satisfied by indirect 1\.0\.0/)
+        && error.message.match(/^ *indirect@1\.0\.0 <- bad-1 1\.0\.0 <- mytoplevel 1.0.0$/m)
+        && error.message.match(/^ *indirect@2\.0\.0 <- bad-2 1\.0\.0 <- mytoplevel 1.0.0$/m)
+      // Lines should be unique.
+        && ! error.message.match(/bad-1[^]+bad-1/)
+      // only two constraints listed
+        && ! error.message.match(/onstraints:[^+]@[^]+@[^]+@/);
     });
   });
 
@@ -174,8 +169,10 @@ Tinytest.add("constraint solver - no results", function (test) {
     ["bar", "1.0.0", {foo: "1.0.0"}]
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
-    FAIL({foo: "2.0.0", bar: "1.0.0"},
-         /constraints on foo[^]+top level[^]+bar@1.0.0/);
+    FAIL({foo: "2.0.0", bar: "1.0.0"}, function (error) {
+      return error.message.match(/Constraints:[^]+top level/) &&
+        error.message.match(/Constraints:[^]+bar 1.0.0/);
+    });
   });
 
   testWithResolver(test, makeResolver([]), function (t, FAIL) {
@@ -188,7 +185,7 @@ Tinytest.add("constraint solver - no results", function (test) {
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({foo: "w1.0.0", bar: "1.0.0"},
-         /constraints on foo[^]+top level/);
+         /Constraints:[^]+top level/);
   });
 });
 
@@ -238,9 +235,10 @@ Tinytest.add("constraint solver - any-of constraint", function (test) {
 
     FAIL({"one-of-equal": "1.0.0",
           "one-of": "1.0.0",
-          "indirect" : "=2.0.0"},
-         /constraints on indirect[^]+top level[^]+one-of-equal@1.0.0/
-    );
+          "indirect" : "=2.0.0"}, function (error) {
+            return error.message.match(/Constraints:[^]+top level/) &&
+              error.message.match(/Constraints:[^]+one-of-equal 1.0.0/);
+          });
   });
 });
 

@@ -532,14 +532,29 @@ CS.Solver.prototype._throwConflicts = function () {
         throw new Error("Internal error: Version not found");
       }
       var error = (
-        'conflict: constraint ' + c.toPackage + '@' + c.vConstraint.raw +
+        'conflict: constraint ' + (new PV.PackageConstraint(
+          c.toPackage, c.vConstraint)) +
           ' is not satisfied by ' + c.toPackage + ' ' + chosenVersion + '.');
 
+      error += '\nConstraints:';
+
+      _.each(allConstraints, function (c2) {
+        if (c2.toPackage === c.toPackage) {
+          var paths;
+          if (c2.fromVar) {
+            paths = self._getAllPathsToPackageVersion(
+              CS.PackageAndVersion.fromString(c2.fromVar));
+          } else {
+            paths = [['top level']];
+          }
+          _.each(paths, function (path) {
+            error += '\n  ' + (new PV.PackageConstraint(
+              c.toPackage, c2.vConstraint)) + ' <- ' + path.join(' <- ');
+          });
+        }
+      });
+
       self.errors.push(error);
-      // XXX explain further -- what are the other constraints that
-      // must have conflicted with this one, and what package versions do
-      // they come from, and by what path were those package versions
-      // reached?
     }
   });
 
@@ -547,6 +562,35 @@ CS.Solver.prototype._throwConflicts = function () {
   self.throwAnyErrors();
 
   throw new Error("Internal error: conflicts could not be explained");
+};
+
+// Takes a PackageVersion and returns an array of arrays of PackageVersions.
+// If the `packageVersion` is not selected in `self._solution`, returns
+// an empty array.  Otherwise, returns an array of all paths from
+// root dependencies to the package, in reverse order.  In other words,
+// the first element of each path is `packageVersion`,
+// and the last element is the selected version of a root dependency.
+CS.Solver.prototype._getAllPathsToPackageVersion = function (packageAndVersion) {
+  check(packageAndVersion, CS.PackageAndVersion);
+  var self = this;
+  var solution = self._solution;
+  if (! solution.evaluate(packageAndVersion.toString())) {
+    return [];
+  } else if (self.input.isRootDependency(packageAndVersion.package)) {
+    return [[packageAndVersion]];
+  } else {
+    var requirers = self._requirers[packageAndVersion.package];
+    var paths = [];
+    _.each(requirers, function (r) {
+      if (solution.evaluate(r)) {
+        var pv = CS.PackageAndVersion.fromString(r);
+        _.each(self._getAllPathsToPackageVersion(pv), function (path) {
+          paths.push([packageAndVersion].concat(path));
+        });
+      }
+    });
+    return paths;
+  }
 };
 
 CS.Solver.CostFunction = function () {
