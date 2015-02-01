@@ -883,10 +883,10 @@ _.extend(exports.PackageMapFile.prototype, {
       // the second one. This file is more meteor-controlled than
       // .meteor/packages and people shouldn't be surprised to see it
       // automatically fixed.
-      if (_.has(self._versions, packageVersion.name))
+      if (_.has(self._versions, packageVersion.package))
         return;
 
-      self._versions[packageVersion.name] = packageVersion.version;
+      self._versions[packageVersion.package] = packageVersion.version;
     });
   },
 

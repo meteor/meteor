@@ -243,7 +243,7 @@ exports.parsePackageAtVersion = function (packageAtVersionString, options) {
       throw new Error("Malformed package@version: " + packageAtVersionString);
     }
   }
-  return { name: parsedConstraint.name,
+  return { package: parsedConstraint.name,
            version: alternatives[0].versionString };
 };
 

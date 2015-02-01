@@ -2031,7 +2031,7 @@ main.registerCommand({
         utils.parsePackageAtVersion(releaseRecord.tool);
   if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseRecord.tool);
-  var toolPackage = toolPackageVersion.name;
+  var toolPackage = toolPackageVersion.package;
   var toolVersion = toolPackageVersion.version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
