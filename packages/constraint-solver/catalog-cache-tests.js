@@ -20,6 +20,8 @@ Tinytest.add("constraint solver - CatalogCache", function (test) {
       'foo', '1.0.0', [new CS.Dependency('blah@1.0.0')]);
   });
 
+  // for these toJSONable tests, the order the strings in the dependency
+  // arrray is not significant and may change.
   test.equal(cache.toJSONable(), {
     data: {
       'foo 1.0.0': ['bar@=2.0.0'],
