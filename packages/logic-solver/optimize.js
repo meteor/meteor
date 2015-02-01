@@ -4,23 +4,27 @@ var minMax = function (solver, solution, costTerms, costWeights, optFormula, isM
 
   var weightedSum = (optFormula || Logic.weightedSum(costTerms, costWeights));
 
-  solver.require((isMin ? Logic.lessThanOrEqual : Logic.greaterThanOrEqual)(
-    weightedSum, Logic.constantBits(curCost)));
-
   while (isMin ? curCost > 0 : true) {
     var improvement = (isMin ? Logic.lessThan : Logic.greaterThan)(
       weightedSum, Logic.constantBits(curCost));
     var newSolution = solver.solveAssuming(improvement);
     if (! newSolution) {
-      return curSolution;
+      break;
     }
     solver.require(improvement);
     curSolution = newSolution;
     curCost = curSolution.getWeightedSum(costTerms, costWeights);
   }
+
+  solver.require((isMin ? Logic.lessThanOrEqual : Logic.greaterThanOrEqual)(
+    weightedSum, Logic.constantBits(curCost)));
+
   return curSolution;
 };
 
+// Minimize (or maximize) the dot product of costTerms and costWeights,
+// and require that the value of the dot product be the optimum.
+//
 // costWeights is an array (of same length as costTerms) or a single WholeNumber.
 //
 // if the caller passes optFormula, it should be the formula
