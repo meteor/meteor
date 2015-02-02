@@ -126,8 +126,9 @@ var runTest = function () {
     var cp = require('child_process');
     var meteor = process.env.METEOR_TOOL_PATH;
     var fut = new Future();
+
     // use a non-default port so we don't fail if someone is running an app now
-    var proc = cp.spawn(meteor, ["--once", "--port", "4123"], {
+    var proc = cp.exec([files.convertToOSPath(meteor), "--once", "--port", "4123"].join(' '), {
       cwd: projectContext.projectDir,
       stdio: 'inherit'
     });
