@@ -12,6 +12,7 @@ var stats = require('./stats.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var catalog = require('./catalog.js');
+var Profile = require('./profile.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -518,12 +519,15 @@ _.extend(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = bundler.bundle({
-        projectContext: self.projectContext,
-        outputPath: bundlePath,
-        includeNodeModulesSymlink: true,
-        buildOptions: self.buildOptions,
-        hasCachedBundle: !! cachedServerWatchSet
+      Profile.initialize();
+      var bundleResult = Profile.run("Rebuild App", function () {
+        return bundler.bundle({
+          projectContext: self.projectContext,
+          outputPath: bundlePath,
+          includeNodeModulesSymlink: true,
+          buildOptions: self.buildOptions,
+          hasCachedBundle: !! cachedServerWatchSet
+        });
       });
 
       // Keep the server watch set from the initial bundle, because subsequent

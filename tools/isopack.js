@@ -13,6 +13,7 @@ var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
+var Profile = require('./profile.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -772,7 +773,7 @@ _.extend(Isopack.prototype, {
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
-  saveToPath: function (outputDir, options) {
+  saveToPath: Profile("save isopack to path", function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
@@ -1058,7 +1059,7 @@ _.extend(Isopack.prototype, {
       builder.abort();
       throw e;
     }
-  },
+  }),
 
   _writeTool: function (builder) {
     var self = this;
