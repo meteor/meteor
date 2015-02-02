@@ -493,12 +493,10 @@ _.extend(Builder.prototype, {
             " paths omitted.");
         }
 
-        buildmessage.error(
+        throw new Error(
 "Some filenames in your package have invalid characters.\n" +
 "The following file paths have colons, ':', which won't work on Windows:\n" +
 firstTen.join("\n"));
-
-        throw new NpmFailure;
       }
     }
 
