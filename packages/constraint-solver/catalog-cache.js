@@ -24,7 +24,7 @@ CS.CatalogCache.prototype.hasPackageVersion = function (package, version) {
 CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
   check(p, String);
   check(v, String);
-  // `deps` must not have any duplicate values of `.packageConstraint.name`
+  // `deps` must not have any duplicate values of `.packageConstraint.package`
   check(deps, [CS.Dependency]);
 
   var key = pvkey(p, v);
@@ -41,7 +41,7 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
   var depsByPackage = {};
   this._dependencies[key] = depsByPackage;
   _.each(deps, function (d) {
-    var p2 = d.packageConstraint.name;
+    var p2 = d.packageConstraint.package;
     if (_.has(depsByPackage, p2)) {
       throw new Error("Can't have two dependencies on " + p2 +
                       " in " + key);
@@ -52,7 +52,7 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
 
 // Returns the dependencies of a (package, version), stored in a map.
 // The values are Dependency objects; the key for `d` is
-// `d.packageConstraint.name`.  (Don't mutate the map.)
+// `d.packageConstraint.package`.  (Don't mutate the map.)
 CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
   var key = pvkey(p, v);
   if (! _.has(this._dependencies, key)) {
