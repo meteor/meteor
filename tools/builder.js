@@ -94,7 +94,7 @@ _.extend(Builder.prototype, {
       if (part.match(/^\.+$/))
         throw new Error("Path contains forbidden segment '" + part + "'");
 
-      part = part.replace(/[^a-zA-Z0-9._\-]/g, '');
+      part = part.replace(/[^a-zA-Z0-9._\:-]/g, '');
 
       // If at last component, pull extension (if any) off of part
       var ext = '';
@@ -478,6 +478,30 @@ _.extend(Builder.prototype, {
   // Move the completed bundle into its final location (outputPath)
   complete: function () {
     var self = this;
+
+    if (process.platform !== "win32") {
+      // If we are on a unixy file system, we should not build a package that
+      // can't be used on Windows.
+
+      var pathsWithColons = files.findPathsWithRegex(".", new RegExp(":"),
+        { cwd: self.buildPath });
+
+      if (pathsWithColons.length) {
+        var firstTen = pathsWithColons.slice(0, 10);
+        if (pathsWithColons.length > 10) {
+          firstTen.push("... " + (pathsWithColons.length - 10) +
+            " paths omitted.");
+        }
+
+        buildmessage.error(
+"Some filenames in your package have invalid characters.\n" +
+"The following file paths have colons, ':', which won't work on Windows:\n" +
+firstTen.join("\n"));
+
+        throw new NpmFailure;
+      }
+    }
+
     // XXX Alternatively, we could just keep buildPath around, and make
     // outputPath be a symlink pointing to it. This doesn't work for the NPM use
     // case of renameDirAlmostAtomically since that one is constructing files to

@@ -16,7 +16,7 @@ SESSION_FILE=
 main () {
   if [ $# -ne 1 ]; then
     echo "usage: $0 GITSHA" 1>&2
-    echo "The passed sha1 is checked out and published from the remote machines." 1>&2
+    echo "The passed commit is checked out and published from the remote machines." 1>&2
     exit 1
   fi
   GITSHA=$1
@@ -34,7 +34,7 @@ main () {
   echo "publish the release from the remote machines.${NC}"
 
   SESSION_FILE="$CHECKOUT_DIR/publish-meteor-tool-session"
-  env METEOR_SESSION_FILE=$SESSION_FILE $METEOR login
+  env METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" login
 
   echo "${green}Login succeeded.${NC}"
   echo
@@ -52,9 +52,9 @@ main () {
 }
 
 clean_up () {
-  if [[ x$SESSION_FILE != x ]]; then
+  if [[ "x$SESSION_FILE" != x ]]; then
     echo "Removing used session file."
-    rm $SESSION_FILE
+    rm "$SESSION_FILE"
   fi
 
   exit 1

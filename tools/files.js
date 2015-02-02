@@ -12,7 +12,7 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var crypto = require('crypto');
 
-var rimraf = require('./rimraf.js');
+var rimraf = require('rimraf');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourcemap_support = require('source-map-support');
@@ -24,7 +24,11 @@ var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var colonConverter = require("./colon-converter.js");
 
+var miniFiles = require("./server/mini-files.js");
+
+// Attach all exports of miniFiles here to avoid code duplication
 var files = exports;
+_.extend(files, miniFiles);
 
 var parsedSourceMaps = {};
 var nextStackFilenameCounter = 1;
@@ -70,7 +74,7 @@ var findUpwards = function (predicate, startPath) {
 };
 
 files.cwd = function () {
-  return files.convertToStandardLineEndings(process.cwd());
+  return files.convertToStandardPath(process.cwd());
 };
 
 // Determine if 'filepath' (a path, or omit for cwd) is within an app
@@ -191,7 +195,7 @@ files.getDevBundle = function () {
 
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
-  var dirname = convertToStandardPath(__dirname);
+  var dirname = files.convertToStandardPath(__dirname);
   return files.pathJoin(dirname, '..');
 };
 
@@ -258,10 +262,10 @@ files.statOrNull = function (path) {
 files.rm_recursive = function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
     var fut = new Future();
-    rimraf(convertToOSPath(p), { busyTries: 10 }, fut.resolver());
+    rimraf(files.convertToOSPath(p), { busyTries: 10 }, fut.resolver());
     fut.wait();
   } else {
-    rimraf.sync(convertToOSPath(p));
+    rimraf.sync(files.convertToOSPath(p));
   }
 };
 
@@ -289,14 +293,19 @@ var makeTreeReadOnly = function (p) {
   }
 };
 
-var stringHash = function (str) {
-  return crypto.createHash('sha256').update(str, 'utf8').digest('base64');
-};
-
 // Returns the base64 SHA256 of the given file.
 files.fileHash = function (filename) {
-  var contents = files.readFile(filename, "utf-8");
-  return stringHash(contents);
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.setEncoding('base64');
+  var rs = files.createReadStream(filename);
+  var fut = new Future();
+  rs.on('end', function () {
+    rs.close();
+    fut.return(hash.digest('base64'));
+  });
+  rs.pipe(hash, { end: false });
+  return fut.wait();
 };
 
 // This is the result of running fileHash on a blank file.
@@ -466,6 +475,52 @@ files.cp_r = function (from, to, options) {
   });
 };
 
+// Get every path in dir recursively
+files.getPathsInDir = function (dir, options) {
+  if (! files.exists(dir)) {
+    // There are no paths in this dir, so don't do anything
+    return;
+  }
+
+  // Don't use files.cwd() because we will use process.chdir later
+  var oldCwd = process.cwd();
+  var cwd = options && options.cwd;
+
+  if (cwd) {
+    if (! files.exists(cwd)) {
+      throw new Error("Specified current working directory doesn't exist:" +
+        cwd);
+    }
+
+    process.chdir(files.convertToOSPath(cwd));
+  }
+
+  var output = [];
+
+  _.each(files.readdir(dir), function (entry) {
+    var newPath = files.pathJoin(dir, entry);
+    output.push(newPath);
+
+    if (files.exists(newPath) && files.stat(newPath).isDirectory()) {
+      output = output.concat(files.getPathsInDir(newPath));
+    }
+  });
+
+  process.chdir(oldCwd);
+
+  return output;
+};
+
+files.findPathsWithRegex = function (dir, regex, options) {
+  var allPaths = files.getPathsInDir(dir, {
+    cwd: options.cwd
+  });
+
+  return _.filter(allPaths, function (path) {
+    return path.match(regex);
+  });
+};
+
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
@@ -592,7 +647,7 @@ files.extractTarGz = function (buffer, destPath, options) {
       future.isResolved() || future.throw(e);
     });
 
-  var extractor = new tar.Extract({ path: convertToOSPath(tempDir) })
+  var extractor = new tar.Extract({ path: files.convertToOSPath(tempDir) })
     .on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in paths
@@ -671,8 +726,7 @@ files.createTarGzStream = function (dirPath, options) {
       // shout at the core developer early so she/he takes an action.
       // When the tarball is created on Mac or Linux it doesn't seem to matter.
       var maxPath = 260; // Longest allowed path length on Windows
-      if (entry.path.length > maxPath &&
-          entry.path.indexOf("test") === -1) {
+      if (entry.path.length > maxPath) {
         throw new Error("Path too long: " + entry.path + " is " +
           entry.path.length + " characters.");
       }
@@ -752,6 +806,7 @@ files.writeFileAtomically = function (filename, contents) {
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
+// Do not use this function on Windows, it won't work.
 files.symlinkOverSync = function (linkText, file) {
   fiberHelpers.noYieldsAllowed(function () {
     file = files.pathResolve(file);
@@ -1090,7 +1145,7 @@ files.getHomeDir = function () {
   var homeDir = process.env.HOME ||
     process.env.LOCALAPPDATA ||
     process.env.APPDATA;
-  return convertToStandardPath(homeDir);
+  return files.convertToStandardPath(homeDir);
 };
 
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
@@ -1123,94 +1178,43 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
   }
 };
 
-/*
-Summary of cross platform file system handling strategy
+// Summary of cross platform file system handling strategy
 
-There are three main pain points for handling files on Windows: slashes in
-paths, line endings in text files, and colons/invalid characters in paths.
+// There are three main pain points for handling files on Windows: slashes in
+// paths, line endings in text files, and colons/invalid characters in paths.
 
-1. Slashes in file paths
-  We have decided to store all paths inside the tool as unix-style paths in the
-  style of CYGWIN. This means that all paths have forward slashes on all
-  platforms, and C:\ is converted to /c/ on Windows.
+// 1. Slashes in file paths
 
-  All of the methods in files.js know how to convert from these unixy paths
-  to whatever type of path the underlying system prefers.
+//   We have decided to store all paths inside the tool as unix-style paths in
+//   the style of CYGWIN. This means that all paths have forward slashes on all
+//   platforms, and C:\ is converted to /c/ on Windows.
 
-  The reason we chose this strategy because it was easier to make sure to use
-  files.js everywhere instead of node's fs than to make sure every part of the
-  tool correctly uses system-specific path separators. In addition, there are
-  some parts of the tool where it is very hard to tell which strings are used
-  as URLs and which are used as file paths. In some cases, a string can be
-  used as both, meaning it has to have forward slashes no matter what.
+//   All of the methods in files.js know how to convert from these unixy paths
+//   to whatever type of path the underlying system prefers.
 
-2. Line endings in text files
-  We have decided to convert all files read by the tool to Unix-style line
-  endings for the same reasons as slashes above. In many parts of the tool,
-  we assume that '\n' is the line separator, and it can be hard to find all
-  of the places and decide whether it is appropriate to use os.EOL.
+//   The reason we chose this strategy because it was easier to make sure to use
+//   files.js everywhere instead of node's fs than to make sure every part of
+//   the tool correctly uses system-specific path separators. In addition, there
+//   are some parts of the tool where it is very hard to tell which strings are
+//   used as URLs and which are used as file paths. In some cases, a string can
+//   be used as both, meaning it has to have forward slashes no matter what.
 
-3. Colons and other invalid characters in file paths
-  This is not handled automatically by files.js. You need to be careful to
-  escape any colons in package names, etc, before using a string as a file path.
+// 2. Line endings in text files
 
-  A helpful file to import for this purpose is colon-converter.js, which
-  also knows how to convert various configuration file formats.
- */
+//   We have decided to convert all files read by the tool to Unix-style line
+//   endings for the same reasons as slashes above. In many parts of the tool,
+//   we assume that '\n' is the line separator, and it can be hard to find all
+//   of the places and decide whether it is appropriate to use os.EOL. We do not
+//   convert anything on write. We will wait and see if anyone complains.
 
-var toPosixPath = function (p, notAbsolute) {
-  // Sometimes, you can have a path like \Users\IEUser on windows, and this
-  // actually means you want C:\Users\IEUser
-  if (p[0] === "\\" && (! notAbsolute)) {
-    p = process.env.SystemDrive + p;
-  }
+// 3. Colons and other invalid characters in file paths
 
-  p = p.replace(/\\/g, '/');
-  if (p[1] === ':' && ! notAbsolute) {
-    // transform "C:/bla/bla" to "/c/bla/bla"
-    p = '/' + p[0] + p.slice(2);
-  }
+//   This is not handled automatically by files.js. You need to be careful to
+//   escape any colons in package names, etc, before using a string as a file
+//   path.
 
-  return p;
-};
-
-var toDosPath = function (p, notAbsolute) {
-  if (p[0] === '/' && ! notAbsolute) {
-    if (! /^\/[A-Za-z](\/|$)/.test(p))
-      throw new Error("Surprising path: " + p);
-    // transform a previously windows path back
-    // "/C/something" to "c:/something"
-    p = p[1] + ":" + p.slice(2);
-  }
-
-  p = p.replace(/\//g, '\\');
-  return p;
-};
-
-
-var convertToOSPath = function (standardPath, notAbsolute) {
-  if (process.platform === "win32") {
-    return toDosPath(standardPath, notAbsolute);
-  }
-
-  return standardPath;
-};
-
-var convertToStandardPath = function (osPath, notAbsolute) {
-  if (process.platform === "win32") {
-    return toPosixPath(osPath, notAbsolute);
-  }
-
-  return osPath;
-}
-
-var convertToOSLineEndings = function (fileContents) {
-  return fileContents.replace(/\n/g, os.EOL);
-};
-
-var convertToStandardLineEndings = function (fileContents) {
-  return fileContents.replace(new RegExp(os.EOL, "g"), "\n");
-};
+//   A helpful file to import for this purpose is colon-converter.js, which also
+//   knows how to convert various configuration file formats.
 
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
@@ -1243,7 +1247,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
     for (var j = pathArgIndices.length - 1; j >= 0; --j) {
       i = pathArgIndices[j];
-      args[i] = convertToOSPath(args[i]);
+      args[i] = files.convertToOSPath(args[i]);
     }
 
     if (Fiber.current &&
@@ -1284,7 +1288,7 @@ wrapFsFunc("appendFile", [0]);
 wrapFsFunc("readFile", [0], {
   modifyReturnValue: function (fileData) {
     if (_.isString(fileData)) {
-      return convertToStandardLineEndings(fileData);
+      return files.convertToStandardLineEndings(fileData);
     }
 
     return fileData;
@@ -1295,30 +1299,8 @@ wrapFsFunc("lstat", [0]);
 wrapFsFunc("exists", [0], {noErr: true});
 wrapFsFunc("rename", [0, 1]);
 
-// Automagically convert line endings for writeFile and appendFile
 if (process.platform === "win32") {
-  // File reading and writing; need to convert line endings
-  var writeFile = files.writeFile;
-  var appendFile = files.appendFile;
   var rename = files.rename;
-
-  files.writeFile = function (filename, data, options) {
-    if (_.isString(data)) {
-      // on windows, replace line endings
-      data = convertToOSLineEndings(data);
-    }
-
-    writeFile(filename, data, options);
-  };
-
-  files.appendFile = function (filename, data, options) {
-    if (_.isString(data)) {
-      // on windows, replace line endings
-      data = convertToOSLineEndings(data);
-    }
-
-    appendFile(filename, data, options);
-  };
 
   files.rename = function (from, to) {
     // retries are necessarily only on Windows, because the rename call can fail
@@ -1343,12 +1325,12 @@ if (process.platform === "win32") {
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 wrapFsFunc("realpath", [0], {
-  modifyReturnValue: convertToStandardPath
+  modifyReturnValue: files.convertToStandardPath
 });
 
 wrapFsFunc("readdir", [0], {
-  modifyReturnValue: function (files) {
-    return _.map(files, convertToStandardPath);
+  modifyReturnValue: function (entries) {
+    return _.map(entries, files.convertToStandardPath);
   }
 });
 
@@ -1368,72 +1350,36 @@ wrapFsFunc("readlink", [0]);
 // These don't need to be Fiberized
 files.createReadStream = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.createReadStream.apply(fs, args);
 };
 
 files.createWriteStream = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.createWriteStream.apply(fs, args);
 };
 
 files.watchFile = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.watchFile.apply(fs, args);
 };
 
 files.unwatchFile = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   return fs.unwatchFile.apply(fs, args);
 };
-
-// wrappings for path functions that always run as they were on unix (using
-// forward slashes)
-var wrapPathFunction = function (name, partialPaths) {
-  var f = path[name];
-  return function (/* args */) {
-    if (process.platform === 'win32') {
-      var args = _.toArray(arguments);
-      args = _.map(args, function (p, i) {
-        // if partialPaths is turned on (for path.join mostly)
-        // forget about conversion of absolute paths for Windows
-        return toDosPath(p, partialPaths);
-      });
-      return toPosixPath(f.apply(path, args), partialPaths);
-    } else {
-      return f.apply(path, arguments);
-    }
-  };
-};
-
-files.pathJoin = wrapPathFunction("join", true);
-files.pathNormalize = wrapPathFunction("normalize");
-files.pathRelative = wrapPathFunction("relative");
-files.pathResolve = wrapPathFunction("resolve");
-files.pathDirname = wrapPathFunction("dirname");
-files.pathBasename = wrapPathFunction("basename");
-files.pathExtname = wrapPathFunction("extname");
-files.pathSep = '/';
-files.pathDelimiter = ':';
 
 // wrap pathwatcher because it works with file system paths
 // XXX we don't currently convert the path argument passed to the watch
 //     callback, but we currently don't use the argument either
 files.pathwatcherWatch = function () {
   var args = _.toArray(arguments);
-  args[0] = convertToOSPath(args[0]);
+  args[0] = files.convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
   var pathwatcher = require('meteor-pathwatcher-tweaks');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
-
-files.convertToStandardPath = convertToStandardPath;
-files.convertToOSPath = convertToOSPath;
-files.convertToPosixPath = toPosixPath;
-
-files.convertToStandardLineEndings = convertToStandardLineEndings;
-files.convertToOSLineEndings = convertToOSLineEndings;

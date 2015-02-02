@@ -13,7 +13,9 @@ Tinytest.add("minifiers - simple css minification", function (test) {
   t('p > *.my-class { color: #fff; }', 'p>.my-class{color:#fff}', 'removing optional whitespace around ">" in selector');
   t('p +  *.my-class { color: #fff; }', 'p+.my-class{color:#fff}', 'removing optional whitespace around "+" in selector');
   // XXX url parsing is difficult to support at the moment
-  t('a {\nfont:12px \'Helvetica\',"Arial",\'Nautica\';\nbackground:url("/some/nice/picture.png");\n}',
+  t('a {\n\
+  font:12px \'Helvetica\',"Arial",\'Nautica\';\n\
+  background:url("/some/nice/picture.png");\n}',
   'a{font:12px Helvetica,Arial,Nautica;background:url("/some/nice/picture.png")}',  'removing quotes in font and url (if possible)');
   t('/* no comments */ a { color: red; }', 'a{color:red}', 'remove comments');
 });

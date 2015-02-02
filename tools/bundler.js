@@ -1700,13 +1700,17 @@ _.extend(ServerTarget.prototype, {
     var imageControlFile = self.toJsImage().write(builder);
 
     // Server bootstrap
-    builder.write('boot.js',
-                  { file: files.pathJoin(__dirname, 'server', 'boot.js') });
-    builder.write(
-      'boot-utils.js',
-      { file: files.pathJoin(__dirname, 'server', 'boot-utils.js') });
-    builder.write('shell.js',
-                  { file: files.pathJoin(__dirname, 'server', 'shell.js') });
+    _.each([
+      "boot.js",
+      "boot-utils.js",
+      "shell.js",
+      "mini-files.js"
+    ], function (filename) {
+      builder.write(filename, {
+        file: files.pathJoin(files.convertToStandardPath(__dirname),
+          "server", filename)
+      });
+    });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
