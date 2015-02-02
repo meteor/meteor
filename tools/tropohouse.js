@@ -10,10 +10,12 @@ var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
 var colonConverter = require('./colon-converter.js');
 
-exports.Tropohouse = function (root) {
+exports.Tropohouse = function (root, options) {
   var self = this;
+  options = options || {};
+
   self.root = root;
-  self.platform = process.platform;
+  self.platform = options.platform || process.platform;
 };
 
 // Return the directory containing our loaded collection of tools, releases and
@@ -415,7 +417,7 @@ _.extend(exports.Tropohouse.prototype, {
         var packageLinkTarget = null;
 
         // Find the previous actual directory of the package
-        if (process.platform === "win32") {
+        if (self.platform === "win32") {
           // On Windows, we don't use symlinks.
           // If there's already a package in the tropohouse, start with it.
           if (files.exists(packagePath)) {
@@ -563,7 +565,7 @@ _.extend(exports.Tropohouse.prototype, {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
 
-    if (process.platform === 'win32') {
+    if (self.platform === 'win32') {
       var scriptLocation = _.last(
         _.filter(files.readFile(linkPath + '.bat').split('\n'), _.identity)
       ).replace(/^rem /g, '');
