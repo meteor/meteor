@@ -2123,14 +2123,18 @@ main.registerCommand({
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
-    // We're going to build and tar up a tropohouse in a temporary directory.
-    var tmpTropo = new tropohouse.Tropohouse(files.pathJoin(tmpdir, '.meteor'));
 
     // when building for Windows architectures, build Windows-specific
     // tropohouse and bootstrap tarball
+    var targetPlatform;
     if (/win/i.test(osArch)) {
-      tmpTropo.platform = "win32";
+      targetPlatform = "win32";
     }
+
+    // We're going to build and tar up a tropohouse in a temporary directory.
+    var tmpTropo = new tropohouse.Tropohouse(
+      files.pathJoin(tmpdir, '.meteor'),
+      { platform: targetPlatform });
 
     main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",

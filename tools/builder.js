@@ -479,29 +479,6 @@ _.extend(Builder.prototype, {
   complete: function () {
     var self = this;
 
-    if (process.platform !== "win32") {
-      // If we are on a unixy file system, we should not build a package that
-      // can't be used on Windows.
-
-      // Writing a regex like /:/ breaks code highlighting in Sublime,
-      // so we use new RegExp(":")
-      var pathsWithColons = files.findPathsWithRegex(".", new RegExp(":"),
-        { cwd: self.buildPath });
-
-      if (pathsWithColons.length) {
-        var firstTen = pathsWithColons.slice(0, 10);
-        if (pathsWithColons.length > 10) {
-          firstTen.push("... " + (pathsWithColons.length - 10) +
-            " paths omitted.");
-        }
-
-        throw new Error(
-"Some filenames in your package have invalid characters.\n" +
-"The following file paths have colons, ':', which won't work on Windows:\n" +
-firstTen.join("\n"));
-      }
-    }
-
     // XXX Alternatively, we could just keep buildPath around, and make
     // outputPath be a symlink pointing to it. This doesn't work for the NPM use
     // case of renameDirAlmostAtomically since that one is constructing files to
