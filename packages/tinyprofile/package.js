@@ -1,6 +1,8 @@
 Package.describe({
   summary: "Tiny profiler",
-  internal: true
+  internal: true,
+  version: "0.0.1-winr.0",
+  documentation: null
 });
 
 Package.on_use(function (api) {
