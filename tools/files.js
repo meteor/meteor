@@ -1167,7 +1167,7 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
     var newScript = [
       "@echo off",
       // always convert to DOS path as always used on Windows
-      "\"%~dp0\\" + toDosPath(scriptLocation) + "\" %*",
+      "\"%~dp0\\" + files.convertToOSPath(scriptLocation) + "\" %*",
       "rem " + scriptLocation
     ].join(os.EOL);
 
