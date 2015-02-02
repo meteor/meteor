@@ -1457,6 +1457,7 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
+  cordova: 'requires Cordova support in tool (eg not on Windows)',
   // these are pseudo-tags, assigned to tests when you specify
   // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
@@ -1519,6 +1520,9 @@ var getFilteredTests = function (options) {
   }
   if (! options.includeSlowTests) {
     tagsToSkip.push('slow');
+  }
+  if (process.platform === "win32") {
+    tagsToSkip.push("cordova");
   }
 
   return new TestList(allTests, tagsToSkip, testState);
