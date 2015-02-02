@@ -390,11 +390,6 @@ var throwVersionParserError = function (message) {
   throw e;
 };
 
-PV.constraintToFullString = function (parsedConstraint) {
-  return parsedConstraint.name + "@" + parsedConstraint.constraintString;
-};
-
-
 // Return true if the version constraint was invalid prior to 0.9.3
 // (adding _ and || support)
 //
