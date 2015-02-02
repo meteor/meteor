@@ -38,7 +38,7 @@ CS.PackageAndVersion.fromString = function (str) {
 CS.Dependency = function (packageConstraint, flags) {
   check(packageConstraint, Match.OneOf(PV.PackageConstraint, String));
   if (typeof packageConstraint === 'string') {
-    packageConstraint = PV.parseConstraint(packageConstraint);
+    packageConstraint = PV.parsePackageConstraint(packageConstraint);
   }
   if (flags) {
     check(flags, Object);

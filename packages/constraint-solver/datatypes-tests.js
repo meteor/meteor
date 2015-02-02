@@ -3,7 +3,7 @@ var CS = ConstraintSolver;
 
 Tinytest.add("constraint solver - datatypes - Dependency", function (test) {
   _.each(["foo", "foo@1.0.0"], function (foo) {
-    var d1 = new CS.Dependency(PV.parseConstraint(foo));
+    var d1 = new CS.Dependency(PV.parsePackageConstraint(foo));
     test.equal(d1.packageConstraint.toString(), foo);
     test.equal(d1.isWeak, false);
 

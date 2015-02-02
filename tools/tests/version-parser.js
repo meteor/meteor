@@ -9,10 +9,10 @@ var testVersions = function (cases) {
 
     if (expectedOutput === null) {
       selftest.expectThrows(function () {
-        utils.parseConstraint(input);
+        utils.parsePackageConstraint(input);
       });
     } else {
-      var actualOutput = utils.parseConstraint(input);
+      var actualOutput = utils.parsePackageConstraint(input);
       selftest.expectEqual(actualOutput, expectedOutput);
     }
   });

@@ -1294,7 +1294,7 @@ main.registerCommand({
   // Use the driver package and meteor-platform as well.
   packagesToAdd.unshift('meteor-platform', options['driver-package']);
   var constraintsToAdd = _.map(packagesToAdd, function (p) {
-    return utils.parseConstraint(p);
+    return utils.parsePackageConstraint(p);
   });
   // Add the packages to our in-memory representation of .meteor/packages.  (We
   // haven't yet resolved constraints, so this will affect constraint

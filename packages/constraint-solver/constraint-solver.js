@@ -55,7 +55,7 @@ CS.PackagesResolver._resolveWithInput = function (input, _nudge) {
       resolver.addUnitVersion(uv);
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
-        var p2 = dep.packageConstraint.name;
+        var p2 = dep.packageConstraint.package;
         var constr = dep.packageConstraint.constraintString;
         if (! dep.isWeak) {
           uv.addDependency(p2);
@@ -85,7 +85,7 @@ CS.PackagesResolver._resolveWithInput = function (input, _nudge) {
   });
 
   var constraints = _.map(input.constraints, function (c) {
-    return resolver.getConstraint(c.name, c.constraintString);
+    return resolver.getConstraint(c.package, c.constraintString);
   });
 
   var resolverOptions = {
