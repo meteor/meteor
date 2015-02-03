@@ -26,9 +26,10 @@ RequireInvocation.prototype.isOurCode = function () {
   if (! self.name.match(/\//))
     return false; // we always require our stuff via a path
 
-  var files = require('./files.js');
-  var ourSource = files.pathResolve(__dirname);
-  var required = files.pathResolve(files.pathDirname(self.filename), self.name);
+  // it is OK to use path here and not files.js as we are just checking the path
+  var path = require('path');
+  var ourSource = path.resolve(__dirname);
+  var required = path.resolve(path.dirname(self.filename), self.name);
   if (ourSource.length > required.length)
     return false;
   return required.substr(0, ourSource.length) === ourSource;
