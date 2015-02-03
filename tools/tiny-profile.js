@@ -161,6 +161,7 @@
 //
 // In both reports the grand total is 600ms.
 
+var _ = require('underscore');
 
 var enabled = !! process.env['METEOR_PROFILE'];
 
@@ -183,7 +184,7 @@ var start = function () {
   running = true;
 };
 
-Profile = function (bucketName, f) {
+var Profile = function (bucketName, f) {
   if (! enabled)
     return f;
 
@@ -351,6 +352,7 @@ var report = function () {
   if (! enabled)
     return;
   running = false;
+  print(0, '');
   setupReport();
   reportHierarchy();
   print(0, '');
@@ -369,3 +371,6 @@ var run = function (bucketName, f) {
 
 Profile.time = time;
 Profile.run = run;
+
+exports.Profile = Profile;
+

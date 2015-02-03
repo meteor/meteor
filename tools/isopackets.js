@@ -54,8 +54,7 @@ var ISOPACKETS = {
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],
-  'logging': ['logging'],
-  'tinyprofile': ['tinyprofile']
+  'logging': ['logging']
 };
 
 // Caches isopackets in memory (each isopacket only needs to be loaded
