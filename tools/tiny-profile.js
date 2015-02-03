@@ -162,6 +162,7 @@
 // In both reports the grand total is 600ms.
 
 var _ = require('underscore');
+var Fiber = require('fibers');
 
 var enabled = !! process.env['METEOR_PROFILE'];
 
@@ -170,11 +171,11 @@ var bucketTimes = {};
 var spaces = function (x) {
   var s = '';
   for (var i = 0;  i < x;  ++i)
-    s += ' ';
+    s += '  ';
   return s;
 };
 
-var currentEntry = [];
+var globalEntry = [];
 
 var running = false;
 
@@ -198,8 +199,14 @@ var Profile = function (bucketName, f) {
     else
       name = bucketName;
 
-    var parent = currentEntry;
-    currentEntry = _.clone(currentEntry);
+    var currentEntry;
+    if (Fiber.current) {
+      currentEntry =
+        Fiber.current.profilerEntry || (Fiber.current.profilerEntry = []);
+    } else {
+      currentEntry = globalEntry;
+    }
+
     currentEntry.push(name);
     var key = JSON.stringify(currentEntry);
     var start = process.hrtime();
@@ -214,7 +221,7 @@ var Profile = function (bucketName, f) {
       var elapsed = process.hrtime(start);
       bucketTimes[key] = (bucketTimes[key] || 0) +
         (elapsed[0] * 1000 + elapsed[1] / 1000000);
-      currentEntry = parent;
+      currentEntry.pop();
     }
 
     if (err) throw err;
