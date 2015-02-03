@@ -253,10 +253,6 @@ Isopack.convertOneStepForward = function (data, fromFormat) {
   if (fromFormat === "unipackage-pre2") {
     convertedData.builds = convertedData.unibuilds;
     delete convertedData.unibuilds;
-
-    // The new files have the format in the key, not inside the actual data
-    delete convertedData.format;
-
     return convertedData;
   }
 };
