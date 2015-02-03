@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor Reactive Templating library",
-  version: '2.0.5-blz.0'
+  version: '2.0.5-blz.1'
 });
 
 Package.onUse(function (api) {
