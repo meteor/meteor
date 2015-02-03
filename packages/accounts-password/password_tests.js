@@ -705,9 +705,10 @@ if (Meteor.isClient) (function () {
       var self = this;
       this.username = Random.id();
       this.password = "password";
+      this.attempt = false;
 
       this.onLogin = Accounts.onLogin(function (attempt) {
-        self.attempt = attempt;
+        self.attempt = true;
       });
 
       Accounts.createUser(
@@ -716,10 +717,7 @@ if (Meteor.isClient) (function () {
     },
     function (test, expect) {
       this.onLogin.stop();
-      test.isNotNull(this.attempt, "onLogin hook not called");
-      test.isTrue(this.attempt.allowed);
-      test.equal(this.attempt.methodName, "createUser");
-      test.equal(this.attempt.methodArguments[0].username, this.username);
+      test.isTrue(this.attempt);
       expect(function () {})();
     }
   ]);
@@ -785,9 +783,10 @@ if (Meteor.isClient) (function () {
       var self = this;
       this.username = Random.id();
       this.password = "password";
+      this.attempt = false;
 
-      this.onLoginFailure = Accounts.onLoginFailure(function (attempt) {
-        self.attempt = attempt;
+      this.onLoginFailure = Accounts.onLoginFailure(function () {
+        self.attempt = true;
       })
 
       Accounts.createUser(
@@ -807,10 +806,7 @@ if (Meteor.isClient) (function () {
     },
     function (test, expect) {
       this.onLoginFailure.stop();
-      test.isNotNull(this.attempt, "onLogin hook not called");
-      test.equal(this.attempt.methodName, "login");
-      test.isFalse(this.attempt.allowed);
-      test.equal(this.attempt.error.reason, "Incorrect password");
+      test.isTrue(this.attempt);
       expect(function () {})();
     }
   ]);
