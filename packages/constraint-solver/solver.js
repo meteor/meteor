@@ -120,6 +120,10 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
   var requirers = self._requirers;
 
   cache.eachPackage(function (p, versions) {
+    // it's important that every package have a key in `requirers`,
+    // because we iterate over it.
+    requirers[p] = (requirers[p] || []);
+
     // ["foo 1.0.0", "foo 1.0.1", ...] for a given "foo"
     var packageAndVersions = _.map(versions, function (v) {
       return pvVar(p, v);
@@ -158,6 +162,9 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
     });
   });
 
+  // the keys of `requirers` are the union of the packages in the cache
+  // (whether or not anyone requires them) and the packages mentioned
+  // as dependencies (whether or not they exist in the catalog)
   _.each(requirers, function (pvs, p) {
     // pvs are all the package-versions that require p.
     // We want to select p if-and-only-if we select one of the pvs
