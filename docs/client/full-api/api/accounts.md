@@ -318,8 +318,7 @@ are called with a single argument, the attempt info object:
 
 <dl class="objdesc">
 {{#dtdd name="type" type="String"}}
-  The service name, such as "password" or "twitter".  For `Accounts.onLogin`
-  and `Accounts.onLoginFailure`, this data is only passed on the server.
+  The service name, such as "password" or "twitter".
 {{/dtdd}}
 
 {{#dtdd name="allowed" type="Boolean"}}
@@ -338,15 +337,12 @@ are called with a single argument, the attempt info object:
 
 {{#dtdd name="user" type="Object"}}
   When it is known which user was attempting to login, the Meteor user object.
-  This will always be present for successful logins.  For `Accounts.onLogin`
-  and `Accounts.onLoginFailure`, this data is only passed on the server.
+  This will always be present for successful logins.
 {{/dtdd}}
 
 {{#dtdd name="connection" type="Object"}}
   The `connection` object the request came in on. See
   [`Meteor.onConnection`](#meteor_onconnection) for details.
-  For `Accounts.onLogin` and `Accounts.onLoginFailure`, this data is only
-  passed on the server.
 {{/dtdd}}
 
 {{#dtdd name="methodName" type="String"}}
@@ -392,6 +388,7 @@ called after a login attempt is denied.
 These functions return an object with a single method, `stop`.  Calling
 `stop()` unregisters the callback.
 
-The callbacks are called with a single argument, the same attempt info
-object as [`validateLoginAttempt`](#accounts_validateloginattempt).
+The callbacks are called on server with a single argument, the same attempt info
+object as [`validateLoginAttempt`](#accounts_validateloginattempt). On client
+no argument is passed.
 {{/template}}

@@ -90,21 +90,11 @@ Accounts.callLoginMethod = function (options) {
   var loginCallbacks = _.once(function (error) {
     if (!error) {
       onLoginHook.each(function (callback) {
-        callback({
-          allowed: true,
-          error: undefined,
-          methodName: options.methodName,
-          methodArguments: options.methodArguments
-        });
+        callback();
       });
     } else {
       onLoginFailureHook.each(function (callback) {
-        callback({
-          allowed: false,
-          error: error,
-          methodName: options.methodName,
-          methodArguments: options.methodArguments
-        });
+        callback();
       });
     }
     options.userCallback.apply(this, arguments);
