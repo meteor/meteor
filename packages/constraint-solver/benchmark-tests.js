@@ -3,7 +3,9 @@
 // test takes to run.  Because they are slow, they don't run when you
 // run tests unless you turn them on with an environment variable.
 
-var runBenchmarks = !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
+// The benchmarks can totally be run on the client, it's just harder to
+// detect the environment variable.
+var runBenchmarks = Meteor.isServer && !!process.env.CONSTRAINT_SOLVER_BENCHMARK;
 
 var railsCatalog = getCatalogStub(railsGems);
 var sinatraCatalog = getCatalogStub(sinatraGems);
