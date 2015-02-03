@@ -1,6 +1,6 @@
 {
  "track": "TEMPLATE-CURRENT-DATA",
- "version": "0.0.1",
+ "version": "0.0.2",
  "recommended": false,
  "official": false,
  "description": "Preview of a change to Blaze that improves the function of Template.currentData."
