@@ -41,8 +41,8 @@ cd "$DIR"
 S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
-NODE_BUILD_NUMBER=8
-NODE_VERSION=0.10.33
+NODE_BUILD_NUMBER=13
+NODE_VERSION=0.10.36
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
