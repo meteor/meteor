@@ -26,6 +26,8 @@ var colonConverter = require("./colon-converter.js");
 
 var miniFiles = require("./server/mini-files.js");
 
+var Profile = require('./profile.js');
+
 // Attach all exports of miniFiles here to avoid code duplication
 var files = exports;
 _.extend(files, miniFiles);
@@ -1281,7 +1283,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   }
 
   wrapper.displayName = fsFuncName;
-  return files[fsFuncName] = wrapper;
+  return files[fsFuncName] = Profile("files." + fsFuncName, wrapper);
 }
 
 wrapFsFunc("writeFile", [0]);

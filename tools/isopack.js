@@ -119,7 +119,8 @@ _.extend(Unibuild.prototype, {
   // is resolved at bundle time. (On the other hand, when it comes to
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
-  getResources: function (bundleArch, options) {
+  getResources: Profile(
+    "Unibuild#getResources", function (bundleArch, options) {
     var self = this;
     var isopackCache = options.isopackCache;
     if (! isopackCache)
@@ -179,7 +180,7 @@ _.extend(Unibuild.prototype, {
     });
 
     return _.union(self.resources, jsResources); // union preserves order
-  }
+  })
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -265,7 +266,8 @@ Isopack.convertOneStepBackward = function (data, fromFormat) {
     return convertedData;
   }
 };
-Isopack.convertIsopackFormat = function (data, fromFormat, toFormat) {
+Isopack.convertIsopackFormat = Profile(
+  "Isopack.convertIsopackFormat", function (data, fromFormat, toFormat) {
   var fromPos = _.indexOf(Isopack.knownFormats, fromFormat);
   var toPos = _.indexOf(Isopack.knownFormats, toFormat);
   var step = fromPos < toPos ? 1 : -1;
@@ -287,11 +289,12 @@ Isopack.convertIsopackFormat = function (data, fromFormat, toFormat) {
   }
 
   return data;
-};
+});
 
 // Read the correct file from isopackDirectory and convert to current format
 // of the isopack metadata. Returns null if there is no package here.
-Isopack.readMetadataFromDirectory = function (isopackDirectory) {
+Isopack.readMetadataFromDirectory =
+  Profile("Isopack.readMetadataFromDirectory", function (isopackDirectory) {
   var metadata;
 
   // deal with different versions of "isopack.json", backwards compatible
@@ -335,7 +338,7 @@ Isopack.readMetadataFromDirectory = function (isopackDirectory) {
   }
 
   return metadata;
-};
+});
 
 _.extend(Isopack.prototype, {
   // Make a dummy (empty) package that contains nothing of interest.
@@ -375,7 +378,8 @@ _.extend(Isopack.prototype, {
     self.pluginProviderPackageMap = pluginProviderPackageMap;
   },
 
-  getSourceFilesUnderSourceRoot: function (sourceRoot) {
+  getSourceFilesUnderSourceRoot: Profile(
+    "Isopack#getSourceFilesUnderSourceRoot", function (sourceRoot) {
     var self = this;
     var sourceFiles = {};
     var anySourceFiles = false;
@@ -400,10 +404,10 @@ _.extend(Isopack.prototype, {
     if (! anySourceFiles)
       return null;
     return _.keys(sourceFiles);
-  },
+  }),
 
   // An sorted array of all the architectures included in this package.
-  architectures: function () {
+  architectures: Profile("Isopack#architectures", function () {
     var self = this;
     var archSet = {};
     _.each(self.unibuilds, function (unibuild) {
@@ -428,7 +432,7 @@ _.extend(Isopack.prototype, {
       arches = _.without(arches, 'os');
     }
     return arches;
-  },
+  }),
 
   // A sorted plus-separated string of all the architectures included in this
   // package.
@@ -461,7 +465,7 @@ _.extend(Isopack.prototype, {
   // Return the unibuild of the package to use for a given target architecture
   // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
-  getUnibuildAtArch: function (arch) {
+  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(
@@ -475,7 +479,7 @@ _.extend(Isopack.prototype, {
       return null;
     }
     return _.findWhere(self.unibuilds, { arch: chosenArch });
-  },
+  }),
 
   // Load this package's plugins into memory, if they haven't already
   // been loaded, and return the list of source file handlers
@@ -489,7 +493,8 @@ _.extend(Isopack.prototype, {
 
   // If this package has plugins, initialize them (run the startup
   // code in them so that they register their extensions). Idempotent.
-  _ensurePluginsInitialized: function () {
+  _ensurePluginsInitialized: Profile(
+    "Isopack#_ensurePluginsInitialized", function () {
     var self = this;
 
     if (self._pluginsInitialized)
@@ -573,20 +578,21 @@ _.extend(Isopack.prototype, {
     });
 
     self._pluginsInitialized = true;
-  },
+  }),
 
   // Load a Isopack on disk.
   //
   // options:
   // - isopackBuildInfoJson: parsed isopack-buildinfo.json object,
   //   if loading from an IsopackCache.
-  initFromPath: function (name, dir, options) {
+  initFromPath: Profile(
+    "Isopack#initFromPath", function (name, dir, options) {
     var self = this;
     options = _.clone(options || {});
     options.firstIsopack = true;
 
     return self._loadUnibuildsFromPath(name, dir, options);
-  },
+  }),
 
   _loadUnibuildsFromPath: function (name, dir, options) {
     var self = this;
@@ -769,7 +775,7 @@ _.extend(Isopack.prototype, {
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
-  saveToPath: Profile("save isopack to path", function (outputDir, options) {
+  saveToPath: Profile("Isopack#saveToPath", function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
@@ -1057,7 +1063,7 @@ _.extend(Isopack.prototype, {
     }
   }),
 
-  _writeTool: function (builder) {
+  _writeTool: Profile("Isopack#_writeTool", function (builder) {
     var self = this;
 
     var pathsToCopy = files.runGitInCheckout(
@@ -1146,19 +1152,20 @@ _.extend(Isopack.prototype, {
       arch: archinfo.host(),
       path: toolPath
     }];
-  },
+  }),
 
-  getMergedWatchSet: function () {
+  getMergedWatchSet: Profile("Isopack#getMergedWatchSet", function () {
     var self = this;
     var watchSet = self.pluginWatchSet.clone();
     _.each(self.unibuilds, function (unibuild) {
       watchSet.merge(unibuild.watchSet);
     });
     return watchSet;
-  },
+  }),
 
   // Similar to PackageSource.getPackagesToLoadFirst.
-  getStrongOrderedUsedAndImpliedPackages: function () {
+  getStrongOrderedUsedAndImpliedPackages: Profile(
+    "Isopack#getStrongOrderedUsedAndImpliedPackages", function () {
     var self = this;
     var packages = {};
     var processUse = function (use) {
@@ -1172,7 +1179,7 @@ _.extend(Isopack.prototype, {
       _.each(unibuild.implies, processUse);
     });
     return _.keys(packages);
-  }
+  })
 });
 
 exports.Isopack = Isopack;

@@ -163,6 +163,7 @@ var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
+var Profile = require('./profile.js');
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
 var colonConverter = require('./colon-converter.js');
@@ -481,7 +482,7 @@ _.extend(Target.prototype, {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make: function (options) {
+  make: Profile("Target#make", function (options) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -519,7 +520,7 @@ _.extend(Target.prototype, {
       self._addCacheBusters("js");
       self._addCacheBusters("css");
     }
-  },
+  }),
 
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
@@ -792,7 +793,7 @@ _.extend(Target.prototype, {
   },
 
   // Minify the JS in this target
-  minifyJs: function (minifiers) {
+  minifyJs: Profile("Target#minifyJs", function (minifiers) {
     var self = this;
 
     var allJs;
@@ -822,7 +823,7 @@ _.extend(Target.prototype, {
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
-  },
+  }),
 
   // Add a Cordova plugin dependency to the target. If the same plugin
   // has already been added at a different version and `override` is
@@ -1038,7 +1039,7 @@ _.extend(ClientTarget.prototype, {
   // Lints CSS files and merges them into one file, fixing up source maps and
   // pulling any @import directives up to the top since the CSS spec does not
   // allow them to appear in the middle of a file.
-  mergeCss: function () {
+  mergeCss: Profile("ClientTarget#mergeCss", function () {
     var self = this;
     var minifiers = isopackets.load('minifiers').minifiers;
     var CssTools = minifiers.CssTools;
@@ -1108,9 +1109,9 @@ _.extend(ClientTarget.prototype, {
 
     self.css[0].setSourceMap(JSON.stringify(newMap));
     self.css[0].setUrlToHash(".css");
-  },
+  }),
   // Minify the CSS in this target
-  minifyCss: function (minifiers) {
+  minifyCss: Profile("ClientTarget#minifyCss", function (minifiers) {
     var self = this;
     var minifiedCss = '';
 
@@ -1129,13 +1130,13 @@ _.extend(ClientTarget.prototype, {
       self.css = [new File({ info: 'minified css', data: new Buffer(minifiedCss, 'utf8') })];
       self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
     }
-  },
+  }),
 
   // Output the finished target to disk
   //
   // Returns the path (relative to 'builder') of the control file for
   // the target
-  write: function (builder) {
+  write: Profile("ClientTarget#write", function (builder) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1216,7 +1217,7 @@ _.extend(ClientTarget.prototype, {
       manifest: manifest
     });
     return "program.json";
-  }
+  })
 });
 
 
@@ -1270,7 +1271,7 @@ _.extend(JsImage.prototype, {
   // XXX throw an error if the image includes any "app-style" code
   // that is built to put symbols in the global namespace rather than
   // in a compartment of Package
-  load: function (bindings) {
+  load: Profile("JsImage#load", function (bindings) {
     var self = this;
     var ret = {};
 
@@ -1391,13 +1392,13 @@ _.extend(JsImage.prototype, {
     });
 
     return ret;
-  },
+  }),
 
   // Write this image out to disk
   //
   // Returns the path (relative to 'builder') of the control file for
   // the image
-  write: function (builder) {
+  write: Profile("JsImage#write", function (builder) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1520,13 +1521,13 @@ _.extend(JsImage.prototype, {
       load: load
     });
     return "program.json";
-  }
+  })
 });
 
 // Create a JsImage by loading a bundle of format
 // 'javascript-image-pre1' from disk (eg, previously written out with
 // write()). `dir` is the path to the control file.
-JsImage.readFromDisk = function (controlFilePath) {
+JsImage.readFromDisk = Profile("JsImage.readFromDisk", function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(files.readFile(controlFilePath));
   var dir = files.pathDirname(controlFilePath);
@@ -1581,7 +1582,7 @@ JsImage.readFromDisk = function (controlFilePath) {
   });
 
   return ret;
-};
+});
 
 var JsImageTarget = function (options) {
   var self = this;
@@ -1648,7 +1649,7 @@ _.extend(ServerTarget.prototype, {
   //
   // Returns the path (relative to 'builder') of the control file for
   // the plugin
-  write: function (builder, options) {
+  write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
 
     // Pick a start script name
@@ -1742,10 +1743,10 @@ _.extend(ServerTarget.prototype, {
                                 executable: true });
 
     return scriptName;
-  }
+  })
 });
 
-var writeFile = function (file, builder) {
+var writeFile = Profile("bundler..writeFile", function (file, builder) {
   if (! file.targetPath)
     throw new Error("No targetPath?");
   var contents = file.contents();
@@ -1756,10 +1757,11 @@ var writeFile = function (file, builder) {
   // (rather than just serving all of the files in a certain
   // directories)
   builder.write(file.targetPath, { data: file.contents() });
-};
+});
 
 // Writes a target a path in 'programs'
-var writeTargetToPath = function (name, target, outputPath, options) {
+var writeTargetToPath = Profile(
+  "bundler..writeTargetToPath", function (name, target, outputPath, options) {
   var builder = new Builder({
     outputPath: files.pathJoin(outputPath, 'programs', name),
     symlink: options.includeNodeModulesSymlink
@@ -1778,7 +1780,7 @@ var writeTargetToPath = function (name, target, outputPath, options) {
     path: files.pathJoin('programs', name, relControlFilePath),
     cordovaDependencies: target.cordovaDependencies || undefined
   };
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1805,7 +1807,8 @@ var writeTargetToPath = function (name, target, outputPath, options) {
 // - controlProgram: name of the control program (should be a target name)
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
-var writeSiteArchive = function (targets, outputPath, options) {
+var writeSiteArchive = Profile(
+  "bundler..writeSiteArchive", function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
     // This is a bit of a hack, but it means that things like node_modules
@@ -1898,7 +1901,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
     builder.abort();
     throw e;
   }
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main
@@ -1988,7 +1991,8 @@ exports.bundle = function (options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
-    var makeClientTarget = function (app, webArch) {
+    var makeClientTarget = Profile(
+      "bundler.bundle..makeClientTarget", function (app, webArch) {
       var client = new ClientTarget({
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -2005,9 +2009,10 @@ exports.bundle = function (options) {
       });
 
       return client;
-    };
+    });
 
-    var makeServerTarget = function (app, clientTargets) {
+    var makeServerTarget = Profile(
+      "bundler.bundle..makeServerTarget", function (app, clientTargets) {
       var targetOptions = {
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -2026,7 +2031,7 @@ exports.bundle = function (options) {
       });
 
       return server;
-    };
+    });
 
     // Create a Isopack object that represents the app
     // XXX should this be part of prepareProjectForBuild and get cached?
@@ -2155,7 +2160,7 @@ exports.bundle = function (options) {
 // It would be nice to have a way to say "make this package anonymous"
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
-exports.buildJsImage = function (options) {
+exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
   buildmessage.assertInCapture();
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
@@ -2200,11 +2205,12 @@ exports.buildJsImage = function (options) {
     watchSet: target.getWatchSet(),
     usedPackageNames: _.keys(target.usedPackages)
   };
-};
+});
 
 // Load a JsImage from disk (that was previously written by calling
 // write() on a JsImage). `controlFilePath` is the path to the control
 // file (eg, program.json).
-exports.readJsImage = function (controlFilePath) {
+exports.readJsImage = Profile(
+  "bundler.readJsImage", function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
-};
+});
