@@ -12,6 +12,12 @@ CS.Solver = function (input, options) {
   if (options && options.debugLog) {
     self.debugLog = [];
   }
+
+  self._getVersionInfo = _.memoize(PV.parse);
+  self._getConstraintFormula = _.memoize(_getConstraintFormula,
+                                         function (p, vConstraint) {
+                                           return p + "@" + vConstraint.raw;
+                                         });
 };
 
 CS.Solver.prototype.getSolution = function () {
@@ -81,8 +87,6 @@ CS.Solver.prototype.getCostReport = function () {
     return [comp.name, total, terms];
   });
 };
-
-var getVersionInfo = _.memoize(PV.parse);
 
 var pvVar = function (p, v) {
   return p + ' ' + v;
@@ -251,7 +255,7 @@ CS.Solver.prototype._generateCostFunction = function () {
       });
     } else if (input.isInPreviousSolution(p)) {
       var previous = input.previousSolution[p];
-      var previousVInfo = getVersionInfo(previous);
+      var previousVInfo = self._getVersionInfo(previous);
       if (input.isRootDependency(p)) {
         // previous_root
 
@@ -260,7 +264,7 @@ CS.Solver.prototype._generateCostFunction = function () {
         // want to assume that
         var previousFound = false;
         _.each(versions, function (v, i) {
-          var vInfo = getVersionInfo(v);
+          var vInfo = self._getVersionInfo(v);
           var pv = pvVar(p, v);
           if (vInfo.major !== previousVInfo.major) {
             costFunc.addToComponent('previous_root_major', pv, 1);
@@ -298,7 +302,7 @@ CS.Solver.prototype._generateCostFunction = function () {
         // want to assume that
         var previousFound = false;
         _.each(versions, function (v, i) {
-          var vInfo = getVersionInfo(v);
+          var vInfo = self._getVersionInfo(v);
           var pv = pvVar(p, v);
           if (vInfo.major !== previousVInfo.major) {
             costFunc.addToComponent('previous_indirect_major', pv, 1);
@@ -377,6 +381,34 @@ CS.Solver.prototype._minimizeCostFunction = function () {
   });
 };
 
+CS.Solver.prototype._getOkVersions = function (toPackage, vConstraint,
+                                               targetVersions) {
+  var self = this;
+  return _.compact(_.map(targetVersions, function (v) {
+    if (CS.isConstraintSatisfied(
+      toPackage, vConstraint, v, self._constraintSatisfactionOptions)) {
+      return pvVar(toPackage, v);
+    } else {
+      return null;
+    }
+  }));
+};
+
+// The CS.Solver constructor turns this into a memoized method.
+// Memoizing the Formula object reduces clause generation a lot.
+var _getConstraintFormula = function (toPackage, vConstraint) {
+  var self = this;
+
+  var targetVersions = self.input.catalogCache.getPackageVersions(toPackage);
+  var okVersions = self._getOkVersions(toPackage, vConstraint, targetVersions);
+
+  if (okVersions.length === targetVersions.length) {
+    return Logic.TRUE;
+  } else {
+    return Logic.or(Logic.not(toPackage), okVersions);
+  }
+};
+
 CS.Solver.prototype._addConstraint = function (fromVar, toPackage, vConstraint) {
   // fromVar is a return value of pvVar(p, v), or null for a top-level constraint
   check(fromVar, Match.OneOf(String, null));
@@ -389,15 +421,6 @@ CS.Solver.prototype._addConstraint = function (fromVar, toPackage, vConstraint) 
   var newConstraint = new CS.Solver.Constraint(
     "constraint#" + allConstraints.length, fromVar, toPackage, vConstraint);
   allConstraints.push(newConstraint);
-
-  var targetVersions = self.input.catalogCache.getPackageVersions(toPackage);
-  var okVersions = _.compact(_.map(targetVersions, function (v) {
-    if (newConstraint.isSatisfiedBy(v, self._constraintSatisfactionOptions)) {
-      return pvVar(toPackage, v);
-    } else {
-      return null;
-    }
-  }));
 
   // We logically require that IF:
   //
@@ -414,16 +437,20 @@ CS.Solver.prototype._addConstraint = function (fromVar, toPackage, vConstraint) 
   self.logic.require(
     Logic.implies(newConstraint.varName,
                   Logic.or(fromVar ? Logic.not(fromVar) : [],
-                           Logic.not(toPackage),
-                           okVersions)));
+                           self._getConstraintFormula(toPackage, vConstraint))));
+
   if (self.debugLog) {
     var conditions = [newConstraint.varName];
     if (fromVar) {
       conditions.push('(' + fromVar + ')');
     }
     conditions.push(toPackage);
-    self.debugLog.push('IF ' + conditions.join(' AND ') + ' THEN ONE OF: ' +
-                       (okVersions.join(', ') || '[]'));
+    self.debugLog.push(
+      'IF ' + conditions.join(' AND ') + ' THEN ONE OF: ' +
+        (self._getOkVersions(
+          toPackage, vConstraint,
+          self.input.catalogCache.getPackageVersions(toPackage)
+        ).join(', ') || '[]'));
   }
 };
 
@@ -638,9 +665,4 @@ CS.Solver.Constraint = function (varName, fromVar, toPackage, vConstraint) {
   check(this.fromVar, Match.OneOf(String, null));
   check(this.toPackage, String); // package name
   check(this.vConstraint, CS.Input.VersionConstraintType);
-};
-
-CS.Solver.Constraint.prototype.isSatisfiedBy = function (v2, options) {
-  return CS.isConstraintSatisfied(this.toPackage, this.vConstraint,
-                                  v2, options);
 };
