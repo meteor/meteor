@@ -1,6 +1,8 @@
 # determine the platform
 # use 32bit by default
 $PLATFORM = "windows_x86"
+$MONGO_VERSION = "2.6.7"
+$NODE_VERSION = "0.10.36"
 
 # take it form the environment if exists
 if (Test-Path variable:global:PLATFORM) {
@@ -62,10 +64,10 @@ mkdir "$DIR\mongodb\bin"
 $webclient = New-Object System.Net.WebClient
 
 # download Mongo
-$mongo_name = "mongodb-win32-i386-2.4.12"
+$mongo_name = "mongodb-win32-i386-${MONGO_VERSION}"
 If ($PLATFORM -eq 'windows_x86_64') {
-  # 64-bit would be mongodb-win32-x86_64-2008plus-2.4.12.zip
-  $mongo_name = "mongodb-win32-x86_64-2008plus-2.4.12"
+  # 64-bit would be mongodb-win32-x86_64-2008plus-${MONGO_VERSION}.zip
+  $mongo_name = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION}"
 }
 $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
 $mongo_zip = "$DIR\mongodb\mongo.zip"
@@ -89,7 +91,7 @@ cd bin
 
 # download node
 # same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v0.10.33/node.exe"
+$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 # install npm
 echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
