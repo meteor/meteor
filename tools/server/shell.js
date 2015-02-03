@@ -63,6 +63,19 @@ Sp.listen = function listen() {
   var infoFile = getInfoFile(self.shellDir);
   var socketFile = getSocketFile(self.shellDir);
 
+  // See https://bugs.launchpad.net/lsb/+bug/1327331
+  if (socketFile.length + 1 > 104) {
+    fs.writeFileSync(infoFile, JSON.stringify({
+      status: "disabled",
+      // This reason will be displayed to clients who attempt to connect
+      // via `meteor shell`, but it will not clutter the console for the
+      // server process itself.
+      reason: "Socket filename " + JSON.stringify(socketFile) +
+        " too long for some platforms."
+    }) + "\n");
+    return;
+  }
+
   fs.unlink(socketFile, function() {
     self.server.listen(socketFile, function() {
       fs.writeFileSync(infoFile, JSON.stringify({
