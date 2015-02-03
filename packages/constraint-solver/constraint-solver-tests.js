@@ -70,7 +70,7 @@ splitArgs = function (deps) {
       dependencies.push(dep);
     }
     if (constr) {
-      constraints.push(PV.parseConstraint(dep + "@" + constr));
+      constraints.push(PV.parsePackageConstraint(dep + "@" + constr));
     }
   });
   return {dependencies: dependencies, constraints: constraints};
@@ -298,7 +298,7 @@ Tinytest.add("constraint solver - no constraint dependency - anything", function
 Tinytest.add("constraint solver - no constraint dependency - transitive dep still picked right", function (test) {
   var versions = defaultResolver.resolve(
     ["sparkle", "sparky-forms"],
-    [PV.parseConstraint("sparky-forms@1.1.2")]).answer;
+    [PV.parsePackageConstraint("sparky-forms@1.1.2")]).answer;
   test.equal(versions.sparkle, "2.1.1");
 });
 

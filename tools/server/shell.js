@@ -14,15 +14,22 @@ var EXITING_MESSAGE = "Shell exiting...";
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
-exports.listen = function listen(shellDir) {
+exports.listen = function listen(shellDir, retryCount) {
   var socketFile = getSocketFile(shellDir);
+  retryCount |= 0;
   fs.unlink(socketFile, function() {
     net.createServer(function(socket) {
       onConnection(socket, shellDir);
     }).on("error", function(err) {
-      console.error(
-        "Unable to listen for `meteor shell` connections: " + err
-      );
+      if (err.code === "EADDRINUSE" && retryCount < 5) {
+        setTimeout(function() {
+          listen(shellDir, retryCount + 1);
+        }, 500);
+      } else {
+        console.error(
+          "Unable to listen for `meteor shell` connections: " + err
+        );
+      }
     }).listen(socketFile);
   });
 };
@@ -297,13 +304,13 @@ exports.connect = function(shellDir) {
     function onError(err) {
       tearDown();
 
-      if (err.errno === "ENOENT" ||
-          err.errno === "ECONNREFUSED") {
+      if (err.code === "ENOENT" ||
+          err.code === "ECONNREFUSED") {
         // If the shell.sock file is missing or looks like a socket but is
         // not accepting connections, keep trying to connect.
         reconnect();
 
-      } else if (err.errno === "ENOTSOCK") {
+      } else if (err.code === "ENOTSOCK") {
         // When the server shuts down completely, it replaces the
         // shell.sock file with a regular file to force connected shell
         // clients to disconnect and exit. If this shell client is

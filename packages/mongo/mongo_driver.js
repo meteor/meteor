@@ -114,7 +114,6 @@ var replaceTypes = function (document, atomTransformer) {
 MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
-  self._connectCallbacks = [];
   self._observeMultiplexers = {};
   self._onFailoverHook = new Hook;
 
@@ -148,57 +147,69 @@ MongoConnection = function (url, options) {
     mongoOptions.replSet.poolSize = options.poolSize;
   }
 
-  MongoDB.connect(url, mongoOptions, Meteor.bindEnvironment(function(err, db) {
-    if (err)
-      throw err;
-    self.db = db;
-    // We keep track of the ReplSet's primary, so that we can trigger hooks when
-    // it changes.  The Node driver's joined callback seems to fire way too
-    // often, which is why we need to track it ourselves.
-    self._primary = null;
-    // First, figure out what the current primary is, if any.
-    if (self.db.serverConfig._state.master)
-      self._primary = self.db.serverConfig._state.master.name;
-    self.db.serverConfig.on(
-      'joined', Meteor.bindEnvironment(function (kind, doc) {
-        if (kind === 'primary') {
-          if (doc.primary !== self._primary) {
-            self._primary = doc.primary;
-            self._onFailoverHook.each(function (callback) {
-              callback();
-              return true;
-            });
-          }
-        } else if (doc.me === self._primary) {
-          // The thing we thought was primary is now something other than
-          // primary.  Forget that we thought it was primary.  (This means that
-          // if a server stops being primary and then starts being primary again
-          // without another server becoming primary in the middle, we'll
-          // correctly count it as a failover.)
-          self._primary = null;
-        }
-    }));
-
-    // drain queue of pending callbacks
-    _.each(self._connectCallbacks, function (c) {
-      c(db);
-    });
-  }));
-
-  self._docFetcher = new DocFetcher(self);
+  self.db = null;
+  // We keep track of the ReplSet's primary, so that we can trigger hooks when
+  // it changes.  The Node driver's joined callback seems to fire way too
+  // often, which is why we need to track it ourselves.
+  self._primary = null;
   self._oplogHandle = null;
+  self._docFetcher = null;
 
-  if (options.oplogUrl && !Package['disable-oplog']) {
-    var dbNameFuture = new Future;
-    self._withDb(function (db) {
-      dbNameFuture.return(db.databaseName);
-    });
-    self._oplogHandle = new OplogHandle(options.oplogUrl, dbNameFuture.wait());
+
+  var connectFuture = new Future;
+  MongoDB.connect(
+    url,
+    mongoOptions,
+    Meteor.bindEnvironment(
+      function (err, db) {
+        if (err) {
+          throw err;
+        }
+
+        // First, figure out what the current primary is, if any.
+        if (db.serverConfig._state.master)
+          self._primary = db.serverConfig._state.master.name;
+        db.serverConfig.on(
+          'joined', Meteor.bindEnvironment(function (kind, doc) {
+            if (kind === 'primary') {
+              if (doc.primary !== self._primary) {
+                self._primary = doc.primary;
+                self._onFailoverHook.each(function (callback) {
+                  callback();
+                  return true;
+                });
+              }
+            } else if (doc.me === self._primary) {
+              // The thing we thought was primary is now something other than
+              // primary.  Forget that we thought it was primary.  (This means
+              // that if a server stops being primary and then starts being
+              // primary again without another server becoming primary in the
+              // middle, we'll correctly count it as a failover.)
+              self._primary = null;
+            }
+          }));
+
+        // Allow the constructor to return.
+        connectFuture['return'](db);
+      },
+      connectFuture.resolver()  // onException
+    )
+  );
+
+  // Wait for the connection to be successful; throws on failure.
+  self.db = connectFuture.wait();
+
+  if (options.oplogUrl && ! Package['disable-oplog']) {
+    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._docFetcher = new DocFetcher(self);
   }
 };
 
 MongoConnection.prototype.close = function() {
   var self = this;
+
+  if (! self.db)
+    throw Error("close called before Connection created?");
 
   // XXX probably untested
   var oplogHandle = self._oplogHandle;
@@ -212,34 +223,30 @@ MongoConnection.prototype.close = function() {
   Future.wrap(_.bind(self.db.close, self.db))(true).wait();
 };
 
-MongoConnection.prototype._withDb = function (callback) {
-  var self = this;
-  if (self.db) {
-    callback(self.db);
-  } else {
-    self._connectCallbacks.push(callback);
-  }
-};
-
 // Returns the Mongo Collection object; may yield.
 MongoConnection.prototype._getCollection = function (collectionName) {
   var self = this;
 
+  if (! self.db)
+    throw Error("_getCollection called before Connection created?");
+
   var future = new Future;
-  self._withDb(function (db) {
-    db.collection(collectionName, future.resolver());
-  });
+  self.db.collection(collectionName, future.resolver());
   return future.wait();
 };
 
-MongoConnection.prototype._createCappedCollection = function (collectionName,
-                                                              byteSize, maxDocuments) {
+MongoConnection.prototype._createCappedCollection = function (
+    collectionName, byteSize, maxDocuments) {
   var self = this;
+
+  if (! self.db)
+    throw Error("_createCappedCollection called before Connection created?");
+
   var future = new Future();
-  self._withDb(function (db) {
-    db.createCollection(collectionName, {capped: true, size: byteSize, max: maxDocuments},
-                        future.resolver());
-  });
+  self.db.createCollection(
+    collectionName,
+    { capped: true, size: byteSize, max: maxDocuments },
+    future.resolver());
   future.wait();
 };
 
@@ -1229,7 +1236,7 @@ MongoConnection.prototype._observeChangesTailable = function (
 
 // XXX We probably need to find a better way to expose this. Right now
 // it's only used by tests, but in fact you need it in normal
-// operation to interact with capped collections (eg, Galaxy uses it).
+// operation to interact with capped collections.
 MongoInternals.MongoTimestamp = MongoDB.Timestamp;
 
 MongoInternals.Connection = MongoConnection;

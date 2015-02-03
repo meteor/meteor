@@ -129,7 +129,7 @@ main.registerCommand({
   var addPackages = function (packageNames) {
     projectContext.projectConstraintsFile.addConstraints(
       _.map(packageNames, function (p) {
-        return utils.parseConstraint(p);
+        return utils.parsePackageConstraint(p);
       })
     );
   };
@@ -395,7 +395,7 @@ main.registerCommand({
     if (projectContext.projectConstraintsFile.getConstraint(name))
       return;
     projectContext.projectConstraintsFile.addConstraints(
-      [utils.parseConstraint(name)]);
+      [utils.parsePackageConstraint(name)]);
   });
 
   // Now resolve constraints and build packages.
@@ -626,7 +626,7 @@ main.registerCommand({
     projectContext.initializeCatalog();
   });
   projectContext.projectConstraintsFile.addConstraints(
-    [utils.parseConstraint(name + "@=" + versionString)]);
+    [utils.parsePackageConstraint(name + "@=" + versionString)]);
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
@@ -833,7 +833,7 @@ main.registerCommand({
     var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
     projectContext.projectConstraintsFile.addConstraints(
       _.map(allPackagesWithTests, function (p) {
-        return utils.parseConstraint(p);
+        return utils.parsePackageConstraint(p);
       })
     );
 
@@ -1095,7 +1095,7 @@ main.registerCommand({
   // Iterate over packages that are used directly by this app (not indirect
   // dependencies).
   projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-    var packageName = constraint.name;
+    var packageName = constraint.package;
     var mapInfo = projectContext.packageMap.getInfo(packageName);
     if (! mapInfo)
       throw Error("no version for used package " + packageName);
@@ -1526,7 +1526,7 @@ main.registerCommand({
   var upgradePackageNames = [];
   if (options.args.length === 0) {
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-      upgradePackageNames.push(constraint.name);
+      upgradePackageNames.push(constraint.package);
     });
   } else {
     upgradePackageNames = options.args;
@@ -1674,7 +1674,7 @@ main.registerCommand({
   var messages = buildmessage.capture(function () {
     _.each(args, function (packageReq) {
       buildmessage.enterJob("adding package " + packageReq, function () {
-        var constraint = utils.parseConstraint(packageReq, {
+        var constraint = utils.parsePackageConstraint(packageReq, {
           useBuildmessage: true
         });
         if (buildmessage.jobHasMessages())
@@ -1683,37 +1683,37 @@ main.registerCommand({
         // It's OK to make errors based on looking at the catalog, because this
         // is a OnceAtStart command.
         var packageRecord = projectContext.projectCatalog.getPackage(
-          constraint.name);
+          constraint.package);
         if (! packageRecord) {
           buildmessage.error("no such package");
           return;
         }
 
-        _.each(constraint.vConstraint.alternatives, function (subConstraint) {
-          if (subConstraint.versionString === null)
+        _.each(constraint.versionConstraint.alternatives, function (subConstr) {
+          if (subConstr.versionString === null)
             return;
           // Figure out if this version exists either in the official catalog or
           // the local catalog. (This isn't the same as using the combined
           // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
           // package is 1.1.0 as long as 1.0.0 exists.)
           var versionRecord = projectContext.localCatalog.getVersion(
-            constraint.name, subConstraint.versionString);
+            constraint.package, subConstr.versionString);
           if (! versionRecord) {
             // XXX #2846 here's an example of something that might require a
             // refresh
             versionRecord = catalog.official.getVersion(
-              constraint.name, subConstraint.versionString);
+              constraint.package, subConstr.versionString);
           }
           if (! versionRecord) {
-            buildmessage.error("no such version " + constraint.name + "@" +
-                               subConstraint.versionString);
+            buildmessage.error("no such version " + constraint.package + "@" +
+                               subConstr.versionString);
           }
         });
         if (buildmessage.jobHasMessages())
           return;
 
         var current = projectContext.projectConstraintsFile.getConstraint(
-          constraint.name);
+          constraint.package);
 
         // Check that the constraint is new. If we are already using the package
         // at the same constraint in the app, we will log an info message later
@@ -1724,21 +1724,21 @@ main.registerCommand({
         } else if (! current.constraintString &&
                    ! constraint.constraintString) {
           infoMessages.push(
-            constraint.name +
+            constraint.package +
               " without a version constraint has already been added.");
         } else if (current.constraintString === constraint.constraintString) {
           infoMessages.push(
-            constraint.name + " with version constraint " +
+            constraint.package + " with version constraint " +
               constraint.constraintString + " has already been added.");
         } else {
           // We are changing an existing constraint.
           if (current.constraintString) {
             infoMessages.push(
-              "Currently using " + constraint.name +
+              "Currently using " + constraint.package +
                 " with version constraint " + current.constraintString + ".");
           } else {
             infoMessages.push(
-              "Currently using " +  constraint.name +
+              "Currently using " +  constraint.package +
                 " without any version constraint.");
           }
           if (constraint.constraintString) {
@@ -1780,11 +1780,11 @@ main.registerCommand({
   // Show descriptions of directly added packages.
   Console.info();
   _.each(constraintsToAdd, function (constraint) {
-    var version = projectContext.packageMap.getInfo(constraint.name).version;
+    var version = projectContext.packageMap.getInfo(constraint.package).version;
     var versionRecord = projectContext.projectCatalog.getVersion(
-      constraint.name, version);
+      constraint.package, version);
     Console.info(
-      constraint.name +
+      constraint.package +
         (versionRecord.description ? (": " + versionRecord.description) : ""));
   });
 
@@ -2031,7 +2031,7 @@ main.registerCommand({
         utils.parsePackageAtVersion(releaseRecord.tool);
   if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseRecord.tool);
-  var toolPackage = toolPackageVersion.name;
+  var toolPackage = toolPackageVersion.package;
   var toolVersion = toolPackageVersion.version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
