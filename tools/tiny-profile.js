@@ -203,8 +203,12 @@ var Profile = function (bucketName, f) {
     currentEntry.push(name);
     var key = JSON.stringify(currentEntry);
     var start = process.hrtime();
+    var err = null;
     try {
       return f.apply(this, arguments);
+    }
+    catch (e) {
+      err = e;
     }
     finally {
       var elapsed = process.hrtime(start);
@@ -212,6 +216,8 @@ var Profile = function (bucketName, f) {
         (elapsed[0] * 1000 + elapsed[1] / 1000000);
       currentEntry = parent;
     }
+
+    if (err) throw err;
   };
 };
 
