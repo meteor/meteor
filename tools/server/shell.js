@@ -61,26 +61,12 @@ var Sp = Server.prototype;
 Sp.listen = function listen() {
   var self = this;
   var infoFile = getInfoFile(self.shellDir);
-  var socketFile = getSocketFile(self.shellDir);
 
-  // See https://bugs.launchpad.net/lsb/+bug/1327331
-  if (socketFile.length + 1 > 104) {
-    fs.writeFileSync(infoFile, JSON.stringify({
-      status: "disabled",
-      // This reason will be displayed to clients who attempt to connect
-      // via `meteor shell`, but it will not clutter the console for the
-      // server process itself.
-      reason: "Socket filename " + JSON.stringify(socketFile) +
-        " too long for some platforms."
-    }) + "\n");
-    return;
-  }
-
-  fs.unlink(socketFile, function() {
-    self.server.listen(socketFile, function() {
+  fs.unlink(infoFile, function() {
+    self.server.listen(0, "127.0.0.1", function() {
       fs.writeFileSync(infoFile, JSON.stringify({
         status: "enabled",
-        file: socketFile,
+        port: self.server.address().port,
         key: self.key
       }) + "\n", {
         mode: INFO_FILE_MODE
@@ -216,18 +202,6 @@ function getInfoFile(shellDir) {
   return path.join(shellDir, "info.json");
 }
 
-function getSocketFile(shellDir) {
-  if (process.platform === "win32") {
-    // Make a Windows named pipe based on the app's path
-    // Replace the colon with an underscore to avoid "C:" appearing in the pipe
-    // name, and replace slashes to avoid weird naming collisions with
-    // directories: http://stackoverflow.com/questions/3571422/can-named-pipe-names-have-backslashes
-    return "\\\\.\\pipe\\" + shellDir.replace(/[:\\]/g, "_");
-  }
-
-  return path.join(shellDir, "shell.sock");
-}
-
 function getHistoryFile(shellDir) {
   return path.join(shellDir, "history");
 }
@@ -360,7 +334,7 @@ Cp.connect = function connect() {
     }
 
     self.setUpSocket(
-      net.connect(info.file),
+      net.connect(info.port, "127.0.0.1"),
       info.key
     );
   });
