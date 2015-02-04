@@ -1122,18 +1122,15 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
   // OAuth flow to log in.
   var redirectUri = url + '/_oauth/meteor-developer';
 
-  // Duplicate login from packages/oauth/oauth_common.js. If we are
-  // authenticating against a <=0.9.1 app server, then the app server
-  // uses a redirect URL with a "?close" query parameter, and we have to
-  // match the server's redirect URL. After 0.9.1, we deprecated the
-  // "?close" query parameter, so >0.9.1 app servers will use a redirect
-  // URL with no query parameters. The app server uses the presence of
-  // the 'loginStyle' configuration option to decide whether its
-  // configuration is new-style or old-style, so we use that option here
-  // to match the server's redirect URL.
-  //
-  // tl;dr this code is for compatibility with app servers that did
-  // their oauth configuration with <= 0.9.1.
+  // Duplicate code from packages/oauth/oauth_common.js. In Meteor 0.9.1, we
+  // switched to a new URL style for Oauth that no longer has the "?close"
+  // parameter at the end. However, we need all of our backend services to be
+  // compatible with old Meteor tools which were written before 0.9.1. These old
+  // meteor tools only know how to deal with oauth URLs that have the "?close"
+  // query parameter, so our services (packages.meteor.com, etc) have to use the
+  // old-style URL. This means that all new Meteor tools also need to use the
+  // old-style URL to be compatible with the new servers which are backwards-
+  // compatible with the old tool.
   if (! accountsConfiguration.loginStyle) {
     redirectUri = redirectUri + "?close";
   }
