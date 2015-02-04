@@ -1904,7 +1904,7 @@ var writeSiteArchive = Profile(
         getRelativeTargetPath: options.getRelativeTargetPath
       });
 
-      json.programs.push(targetBuild.controlFile);
+      json.programs.push(targetBuild);
       nodePath = nodePath.concat(targetBuild.nodePath);
     });
 
