@@ -336,8 +336,8 @@ are called with a single argument, the attempt info object:
 {{/dtdd}}
 
 {{#dtdd name="user" type="Object"}}
-  When it is known which user was attempting to login, the Meteor user
-  object.  This will always be present for successful logins.
+  When it is known which user was attempting to login, the Meteor user object.
+  This will always be present for successful logins.
 {{/dtdd}}
 
 {{#dtdd name="connection" type="Object"}}
@@ -388,6 +388,7 @@ called after a login attempt is denied.
 These functions return an object with a single method, `stop`.  Calling
 `stop()` unregisters the callback.
 
-The callbacks are called with a single argument, the same attempt info
-object as [`validateLoginAttempt`](#accounts_validateloginattempt).
+The callbacks are called on server with a single argument, the same attempt info
+object as [`validateLoginAttempt`](#accounts_validateloginattempt). On client
+no argument is passed.
 {{/template}}

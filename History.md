@@ -47,6 +47,8 @@
   (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
   `dev-bundle-fetcher`, and `star-translate`).
 
+* Implement login hooks also on client: `Accounts.onLogin`
+  and `Accounts.onLoginFailure`. #3572
 
 ## v.1.0.3.1, 2015-Jan-20
 
