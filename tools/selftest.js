@@ -1010,17 +1010,24 @@ _.extend(BrowserStackClient.prototype, {
 // Run
 ///////////////////////////////////////////////////////////////////////////////
 
-// Represents a test run of the tool. Typically created through the
+// Represents a test run of the tool (except we also use it in
+// tests/old.js to run Node scripts). Typically created through the
 // run() method on Sandbox, but can also be created directly, say if
 // you want to do something other than invoke the 'meteor' command in
 // a nice sandbox.
 //
 // Options: args, cwd, env
+//
+// The 'execPath' argument and the 'cwd' option are assumed to be standard
+// paths.
+//
+// Arguments in the 'args' option are not assumed to be standard paths, so
+// calling any of the 'files.*' methods on them is not safe.
 var Run = function (execPath, options) {
   var self = this;
 
   self.execPath = execPath;
-  self.cwd = options.cwd || process.cwd();
+  self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
   self.env = options.env || {};
   self._args = [];
   self.proc = null;

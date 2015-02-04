@@ -21,8 +21,10 @@ var maybeFixRelease = function (env) {
 // filename is interpreted relative to tools/selftests/old.
 var runOldTest = function (filename, extraEnv) {
   var s = new Sandbox;
-  var run = new Run(process.execPath, {
-    args: [files.convertToOSPath(files.pathResolve(__dirname, 'old', filename))],
+
+  var run = new Run(files.convertToStandardPath(process.execPath), {
+    args: [files.convertToOSPath(files.pathResolve(
+      files.convertToStandardPath(__dirname), 'old', filename))],
     env: maybeFixRelease(_.extend({
       METEOR_TOOL_PATH: s.execPath
     }, extraEnv))
