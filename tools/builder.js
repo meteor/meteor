@@ -32,8 +32,6 @@ var Builder = function (options) {
   // trailing slash) to true for a file, or false for a directory.
   self.usedAsFile = { '': false, '.': false };
 
-  self.shouldSymlink = !! options.symlink;
-
   // foo/bar => foo/.build1234.bar
   // Should we include a random number? The advantage is that multiple
   // builds can run in parallel. The disadvantage is that stale build
@@ -323,7 +321,7 @@ _.extend(Builder.prototype, {
       normOptionsTo = normOptionsTo.slice(0, -1);
 
     var absPathTo = files.pathJoin(self.buildPath, normOptionsTo);
-    if (self.shouldSymlink) {
+    if (options.symlink) {
       if (options.specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
       }

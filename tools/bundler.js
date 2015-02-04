@@ -1402,8 +1402,11 @@ _.extend(JsImage.prototype, {
   //
   // Returns the path (relative to 'builder') of the control file for
   // the image and the required supporting environment.
-  write: Profile("JsImage#write", function (builder) {
+  // options:
+  // - includeNodeModules: falsy or 'symlink' or 'link-to-system-paths'
+  write: Profile("JsImage#write", function (builder, options) {
     var self = this;
+    options = options || {};
 
     builder.reserve("program.json");
 
@@ -1418,9 +1421,18 @@ _.extend(JsImage.prototype, {
       var dirname = files.pathDirname(nmd.preferredBundlePath);
       var base = files.pathBasename(nmd.preferredBundlePath);
       var generatedDir = builder.generateFilename(dirname, {directory: true});
+      // where does the node_modules directory *actually* ends up being? either
+      // copied or linked to in a file or symlinked to.
+      var modulesPhysicalLocation;
+      if (! options.includeNodeModules || options.includeNodeModules === 'symlink') {
+        modulesPhysicalLocation = files.pathJoin(generatedDir, base);
+      } else {
+        modulesPhysicalLocation = nmd.sourcePath;
+      }
+
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: files.pathJoin(generatedDir, base),
+        preferredBundlePath: modulesPhysicalLocation,
         npmDiscards: nmd.npmDiscards
       }));
     });
@@ -1511,11 +1523,14 @@ _.extend(JsImage.prototype, {
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
-      builder.copyDirectory({
-        from: nmd.sourcePath,
-        to: nmd.preferredBundlePath,
-        npmDiscards: nmd.npmDiscards
-      });
+      if (nmd.sourcePath !== nmd.preferredBundlePath) {
+        builder.copyDirectory({
+          from: nmd.sourcePath,
+          to: nmd.preferredBundlePath,
+          npmDiscards: nmd.npmDiscards,
+          symlink: (options.includeNodeModules === 'symlink')
+        });
+      }
     });
 
     // Control file
@@ -1649,7 +1664,7 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - includeNodeModules: falsy, 'symlink' or 'NODE_PATH'
+  // - includeNodeModules: falsy, 'symlink' or 'link-to-system-paths'
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
@@ -1702,7 +1717,7 @@ _.extend(ServerTarget.prototype, {
       builder.write('node_modules', {
         symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
-    } else if (options.includeNodeModules === 'NODE_PATH') {
+    } else if (options.includeNodeModules === 'link-to-system-paths') {
       nodePath.push(
         files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       );
@@ -1710,7 +1725,9 @@ _.extend(ServerTarget.prototype, {
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
-    var imageControlFile = self.toJsImage().write(builder).controlFile;
+    var jsImage = self.toJsImage();
+    var imageControlFile = jsImage.write(
+      builder, { includeNodeModules: options.includeNodeModules }).controlFile;
 
     // Server bootstrap
     _.each([
@@ -1950,10 +1967,14 @@ var writeSiteArchive = Profile(
  *   $NODE_PATH because then random node_modules directories above cwd take
  *   precedence.) To make it even hackier, this also means we make node_modules
  *   directories for packages symlinks instead of copies.
- *   + 'NODE_PATH' - don't copy the files but return the NODE_PATH string with
- *   the resulting bundle that would be set as the NODE_PATH environment
- *   variable when the node process is running. (The fallback option for
- *   Windows).
+ *   + 'link-to-system-paths' - don't copy the files of node modules.
+ *   Instead, reuse the paths to files we already have on the file-system: in
+ *   package catalog, isopacks folder or the dev_bundle folder.
+ *   return the NODE_PATH string with the resulting bundle that would be set as
+ *   the NODE_PATH environment variable when the node process is running. (The
+ *   fallback option for Windows). For isopacks (meteor packages), link to the
+ *   location of the locally stored isopack build (e.g.
+ *   ~/.meteor/packages/package/version/npm)
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)

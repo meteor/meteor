@@ -991,7 +991,8 @@ _.extend(Isopack.prototype, {
           builder.copyDirectory({
             from: unibuild.nodeModulesPath,
             to: nodeModulesPath,
-            npmDiscards: self.npmDiscards
+            npmDiscards: self.npmDiscards,
+            symlink: false
           });
         }
 
