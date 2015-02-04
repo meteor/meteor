@@ -27,7 +27,7 @@ if [ -z "$DIRNAME" ]; then
     exit 1
 fi
 
-echo Found build $DIRNAME
+echo Found build "$DIRNAME"
 
 if ! s3cmd info "s3://com.meteor.jenkins/$DIRNAME/InstallMeteor.exe"
 then
@@ -35,5 +35,5 @@ then
   exit 1
 fi
 
-s3cmd -P cp -r s3://com.meteor.jenkins/$DIRNAME/ $TARGET$RELEASE/
+s3cmd -P cp -r "s3://com.meteor.jenkins/$DIRNAME/" "$TARGET$RELEASE/"
 
