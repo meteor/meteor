@@ -22,7 +22,7 @@ Npm.strip({
 
 Package.onUse(function (api) {
   api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'ddp', 'tracker', 'application-configuration'],
+           'ddp', 'tracker'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 

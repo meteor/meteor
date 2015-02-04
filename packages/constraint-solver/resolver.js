@@ -295,14 +295,14 @@ _.extend(ConstraintSolver.UnitVersion.prototype, {
 ConstraintSolver.Constraint = function (name, constraintString) {
   var self = this;
 
-  var parsed = PackageVersion.parseConstraint(name, constraintString);
+  var parsed = PackageVersion.parsePackageConstraint(name, constraintString);
 
-  self.name = parsed.name;
+  self.name = parsed.package;
   self.constraintString = parsed.constraintString;
   // The results of parsing are `||`-separated alternatives, simple
   // constraints like `1.0.0` or `=1.0.1` which have been parsed into
   // objects with a `type` and `versionString` property.
-  self.alternatives = parsed.vConstraint.alternatives;
+  self.alternatives = parsed.versionConstraint.alternatives;
 };
 
 ConstraintSolver.Constraint.prototype.toString = function (options) {

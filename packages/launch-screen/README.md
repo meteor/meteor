@@ -32,9 +32,9 @@ For example, to wait for a template to be rendered:
 // in a client-only javascript file
 var handle = LaunchScreen.hold();
 
-Template.myUI.rendered = function () {
+Template.myUI.onRendered(function () {
   handle.release();
-};
+});
 ```
 
 Your app, or packages used in your app, can call `LaunchScreen.hold()`

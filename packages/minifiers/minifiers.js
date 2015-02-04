@@ -133,6 +133,10 @@ CssTools = {
   }
 };
 
+// These are duplicates of functions in tools/files.js, because we don't have
+// a good way of exporting them into packages.
+// XXX deduplicate files.js into a package at somepoint so that we can use it
+// in core
 var toOSPath = function (p) {
   if (process.platform === 'win32')
     return p.replace(/\//g, '\\');

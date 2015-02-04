@@ -1,7 +1,6 @@
 var _ = require('underscore');
-var files = require('./files.js');
 
-// scheme - Object, representing paths to correct. Ex.:
+// schema - Object, representing paths to correct. Ex.:
 // {
 //   format: false,
 //   arch: false,
@@ -14,33 +13,33 @@ var files = require('./files.js');
 //     }
 //   ]
 // }
-var convertByScheme = function (val, scheme) {
-  if (scheme === true)
+var convertBySchema = function (val, schema) {
+  if (schema === true)
     return convert(val);
-  else if (scheme === false)
+  else if (schema === false)
     return val;
 
-  if (_.isArray(scheme)) {
-    if (scheme.length !== 1) {
-      throw new Error("Expected an array with one element in scheme");
+  if (_.isArray(schema)) {
+    if (schema.length !== 1) {
+      throw new Error("Expected an array with one element in schema");
     }
 
     if (! _.isArray(val)) {
       throw new Error("Expected an array in value, got " + typeof val);
     }
 
-    return _.map(val, function (subval, i) {
-      return convertByScheme(subval, scheme[0]);
+    return _.map(val, function (subval) {
+      return convertBySchema(subval, schema[0]);
     });
   }
 
-  if (! _.isObject(scheme))
-    throw new Error("Unexpected type of scheme: " + typeof(scheme));
+  if (! _.isObject(schema))
+    throw new Error("Unexpected type of schema: " + typeof(schema));
 
   var ret = _.clone(val);
-  _.each(scheme, function (subscheme, key) {
+  _.each(schema, function (subschema, key) {
     if (_.has(ret, key))
-      ret[key] = convertByScheme(val[key], subscheme);
+      ret[key] = convertBySchema(val[key], subschema);
   });
 
   return ret;
@@ -78,15 +77,15 @@ var JAVASCRIPT_IMAGE_SCHEME = {
 };
 
 exports.convertIsopack = function (data) {
-  return convertByScheme(data, ISOPACK_SCHEME);
+  return convertBySchema(data, ISOPACK_SCHEME);
 };
 
 exports.convertUnibuild = function (data) {
-  return convertByScheme(data, UNIBUILD_SCHEME);
+  return convertBySchema(data, UNIBUILD_SCHEME);
 };
 
 exports.convertJSImage = function (data) {
-  return convertByScheme(data, JAVASCRIPT_IMAGE_SCHEME);
+  return convertBySchema(data, JAVASCRIPT_IMAGE_SCHEME);
 };
 
 exports.convert = convert;

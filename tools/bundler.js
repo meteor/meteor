@@ -36,10 +36,9 @@
 //   running in standalone mode (after setting appropriate environment
 //   variables as documented in README)
 //
-// /server/.bundle_version.txt: contains the dev_bundle version that
-//   legacy (read: current) Galaxy version read in order to set
-//   NODE_PATH to point to arch-specific builds of binary node modules
-//   (primarily this is for node-fibers)
+// /server/.bundle_version.txt: contains the dev_bundle version that the meteor
+//   deploy server reads in order to set NODE_PATH to point to arch-specific
+//   builds of binary node modules
 //
 // XXX in the future one program (which must be a server-type
 // architecture) will be designated as the 'init' program. The
@@ -170,7 +169,8 @@ var colonConverter = require('./colon-converter.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
-    /~$/, /^\.#/, /^#.*#$/,
+    /~$/, /^\.#/, /^#.*#$/,  // emacs swap files
+    /^\..*\.sw.$/,  // vim swap files
     /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
     /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git\/$/ /* often has too many files to watch */
@@ -1329,19 +1329,21 @@ _.extend(JsImage.prototype, {
 
             var nodeModuleDir =
               files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
+            var nodeModuleTopDir =
+              files.pathJoin(item.nodeModulesDirectory.sourcePath,
+                             name.split("/")[0]);
 
-            if (files.exists(nodeModuleDir)) {
-              // We need to convert to OS path here because the path is coming
-              // from inside Meteor so it will be posixy.
+            if (files.exists(nodeModuleTopDir)) {
               return require(files.convertToOSPath(nodeModuleDir));
             }
 
             try {
               return require(name);
             } catch (e) {
-              throw new Error("Can't load npm module '" + name +
-                              "' while loading " + item.targetPath +
-                              ". Check your Npm.depends().'");
+              buildmessage.error(
+                "Can't load npm module '" + name + "' from " +
+                  item.targetPath + ". Check your Npm.depends().");
+              return undefined;
             }
           }
         },
@@ -1675,12 +1677,6 @@ _.extend(ServerTarget.prototype, {
   write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
 
-    // Pick a start script name
-    // XXX base it on the name of the target
-    var scriptName = 'start.sh';
-    var nodePath = [];
-    builder.reserve(scriptName);
-
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
@@ -1757,25 +1753,11 @@ _.extend(ServerTarget.prototype, {
                          self.arch);
     }
 
-    var devBundleVersion =
-      files.readFile(
-        files.pathJoin(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
-    devBundleVersion = devBundleVersion.split('\n')[0];
-
-    var Packages = isopackets.load('dev-bundle-fetcher');
-    var script = Packages["dev-bundle-fetcher"].DevBundleFetcher.script();
-    script = script.replace(/##PLATFORM##/g, platform);
-    script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
-    script = script.replace(/##IMAGE##/g, imageControlFile);
-    script = script.replace(/##RUN_FILE##/g, 'boot.js');
-    builder.write(scriptName, { data: new Buffer(script, 'utf8'),
-                                executable: true });
-
-    return {
-      controlFile: scriptName,
-      nodePath: nodePath
-    };
-  })
+    // Nothing actually pays attention to the `path` field for a server program
+    // in star.json any more, so it might as well be boot.js. (It used to be
+    // start.sh, a script included for the legacy Galaxy prototype.)
+    return 'boot.js';
+  }
 });
 
 var writeFile = Profile("bundler..writeFile", function (file, builder) {
@@ -1837,7 +1819,6 @@ var writeTargetToPath = Profile(
 // options:
 // - includeNodeModules: string or falsy
 // - builtBy: vanity identification string to write into metadata
-// - controlProgram: name of the control program (should be a target name)
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
 // - nodePath: an array of paths required to be set in NODE_PATH
@@ -1851,26 +1832,20 @@ var writeSiteArchive = Profile(
     symlink: options.includeNodeModules === 'symlink'
   });
 
-  if (options.controlProgram && ! (options.controlProgram in targets))
-    throw new Error("controlProgram '" + options.controlProgram +
-                    "' is not the name of a target?");
-
   try {
     var json = {
       format: "site-archive-pre1",
       builtBy: options.builtBy,
       programs: [],
-      control: options.controlProgram || undefined,
       meteorRelease: options.releaseName
     };
     var nodePath = [];
 
-    // Tell Galaxy what version of the dependency kit we're using, so
-    // it can load the right modules. (Include this even if we copied
-    // or symlinked a node_modules, since that's probably enough for
-    // it to work in spite of the presence of node_modules for the
-    // wrong arch). The place we stash this is grody for temporary
-    // reasons of backwards compatibility.
+    // Tell the deploy server what version of the dependency kit we're using, so
+    // it can load the right modules. (Include this even if we copied or
+    // symlinked a node_modules, since that's probably enough for it to work in
+    // spite of the presence of node_modules for the wrong arch). The place we
+    // stash this is grody for temporary reasons of backwards compatibility.
     builder.write(files.pathJoin('server', '.bundle_version.txt'), {
       file: files.pathJoin(files.getDevBundle(), '.bundle_version.txt')
     });
@@ -1916,7 +1891,6 @@ var writeSiteArchive = Profile(
       var targetBuild = writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModules: options.includeNodeModules,
         builtBy: options.builtBy,
-        controlProgram: options.controlProgram,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
       });
@@ -1986,9 +1960,6 @@ var writeSiteArchive = Profile(
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
- *
- * - requireControlProgram: true if we need to include a "ctl" program in
- *   the bundle.  This is required for an old prototype of Galaxy.
  *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
@@ -2109,15 +2080,6 @@ exports.bundle = function (options) {
       targets.server = server;
     }
 
-    // Create a "control program". This is required for an old version of
-    // Galaxy.
-    var controlProgram = null;
-    if (options.requireControlProgram) {
-      var target = makeServerTarget("ctl");
-      targets["ctl"] = target;
-      controlProgram = "ctl";
-    }
-
     // Hack to let servers find relative paths to clients. Should find
     // another solution eventually (probably some kind of mount
     // directive that mounts the client bundle in the server at runtime)
@@ -2141,7 +2103,6 @@ exports.bundle = function (options) {
     var writeOptions = {
       includeNodeModules: includeNodeModules,
       builtBy: builtBy,
-      controlProgram: controlProgram,
       releaseName: releaseName,
       getRelativeTargetPath: getRelativeTargetPath
     };

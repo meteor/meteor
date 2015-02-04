@@ -60,7 +60,6 @@ function install_dev_bundle {
     rm -rf "$BUNDLE_TMPDIR"
     mkdir "$BUNDLE_TMPDIR"
 
-    # fyi: URL duplicated in packages/dev-bundle-fetcher/dev-bundle
     DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
     # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
     # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.

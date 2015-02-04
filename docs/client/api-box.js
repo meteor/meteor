@@ -171,9 +171,9 @@ Template.apiBoxTitle.helpers({
   }
 });
 
-Template.autoApiBox.rendered = function () {
+Template.autoApiBox.onRendered(function () {
   this.$('pre code').each(function(i, block) {
     hljs.highlightBlock(block);
   });
-};
+});
 

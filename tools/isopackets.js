@@ -53,7 +53,6 @@ var ISOPACKETS = {
   'mongo': ['mongo'],
   'ejson': ['ejson'],
   'minifiers': ['minifiers'],
-  'dev-bundle-fetcher': ['dev-bundle-fetcher'],
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],

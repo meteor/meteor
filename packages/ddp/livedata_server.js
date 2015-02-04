@@ -1514,6 +1514,7 @@ _.extend(Server.prototype, {
             handler, invocation, EJSON.clone(args), "internal call to '" +
               name + "'");
         });
+        result = EJSON.clone(result);
       } catch (e) {
         exception = e;
       }

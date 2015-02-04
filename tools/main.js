@@ -14,7 +14,6 @@ var release = require('./release.js');
 var projectContextModule = require('./project-context.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
-var catalogRemote = require('./catalog-remote.js');
 var main = exports;
 
 require('./flush-buffers-on-exit-in-windows.js');
@@ -326,15 +325,12 @@ var longHelp = exports.longHelp = function (commandName) {
     _.each(node, function (n, shortName) {
       var fullName = commandName + (commandName.length > 0 ? " " : "") +
         shortName;
-      // For now, we don't include commands with subcommands in the
-      // list -- if you have a command 'admin grant' then 'admin' does
-      // not appear in the top-level help. If we one day want to make
-      // these kinds of commands visible to casual users, we'll need a
-      // way to mark them as visible or hidden.
 
-      // Also, use helpDict to only include commands that have help text,
-      // otherwise there is nothing to display
-      if (n instanceof Command && ! n.hidden && helpDict[fullName])
+      // Use helpDict to only include commands that have help text, otherwise
+      // there is nothing to display.
+      // For now, there's no way to mark commands with subcommands (eg 'admin')
+      // as hidden.
+      if (! n.hidden && helpDict[fullName])
         commandsWanted[fullName] = { name: shortName };
     });
 
@@ -415,7 +411,7 @@ var springboard = function (rel, options) {
       if (options.fromApp) {
         if (process.platform === "win32") {
           // XXX improve this message for real release
-          var release = catalogRemote.official.getDefaultReleaseVersion();
+          var release = catalog.official.getDefaultReleaseVersion();
           var releaseName = release.track + "@" + release.version;
 
           Console.error(

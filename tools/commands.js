@@ -24,8 +24,8 @@ var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
 var colonConverter = require('./colon-converter.js');
 
-// The architecture used by Galaxy servers; it's the architecture used
-// by 'meteor deploy'.
+// The architecture used by MDG's hosted servers; it's the architecture used by
+// 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -55,14 +55,6 @@ var qualifySitename = function (site) {
   while (site.length && site[site.length - 1] === ".")
     site = site.substring(0, site.length - 1);
   return site;
-};
-
-// Given a (non necessarily fully qualified) site name from the
-// command line, return true if the site is hosted by a Galaxy, else
-// false.
-var hostedWithGalaxy = function (site) {
-  var site = qualifySitename(site);
-  return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
 // Display a message showing valid Meteor architectures.
@@ -479,29 +471,36 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
+
     try {
       files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
-   } catch (err) {
-     Console.error("Could not create package: " + err.message);
-     return 1;
-   }
+        },
+        transformContents: function (contents, f) {
+          if ((/(\.html|\.js|\.css)/).test(f))
+            return new Buffer(transform(contents.toString()));
+          else
+            return contents;
+        },
+        ignore: [/^local$/]
+      });
+    } catch (err) {
+      Console.error("Could not create package: " + err.message);
+      return 1;
+    }
 
-    Console.info(packageName + ": created" + inYourApp + "\n");
-    Console.info("To publish your new package:");
-    Console.info("  cd " + files.convertToOSPath(
-      files.pathRelative(files.cwd(), packageDir)));
-    Console.info("  meteor publish --create");
+    var displayPackageDir =
+      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+
+    // Since the directory can't have colons, the directory name will often not
+    // match the name of the package exactly, therefore we should tell people
+    // where it was created.
+    Console.info(
+      packageName + ": created in ",
+      Console.path(displayPackageDir)
+    );
+
     return 0;
   }
 
@@ -933,13 +932,8 @@ main.registerCommand({
     var site = qualifySitename(options.args[0]);
     config.printUniverseBanner();
 
-    if (hostedWithGalaxy(site)) {
-      var deployGalaxy = require('./deploy-galaxy.js');
-      mongoUrl = deployGalaxy.temporaryMongoUrl(site);
-    } else {
-      mongoUrl = deploy.temporaryMongoUrl(site);
-      usedMeteorAccount = true;
-    }
+    mongoUrl = deploy.temporaryMongoUrl(site);
+    usedMeteorAccount = true;
 
     if (! mongoUrl)
       // temporaryMongoUrl() will have printed an error message
@@ -1013,14 +1007,9 @@ main.registerCommand({
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
     settings: { type: String },
-    star: { type: String },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
     password: { type: String },
-    // Shouldn't be documented until the Galaxy release. Marks the
-    // application as an admin app, so that it will be available in
-    // Galaxy admin interface.
-    admin: { type: Boolean },
     // Override architecture to deploy whatever stuff we have locally, even if
     // it contains binary packages that should be incompatible. A hack to allow
     // people to deploy from checkout or do other weird shit. We are not
@@ -1028,42 +1017,24 @@ main.registerCommand({
     'override-architecture-with-local' : { type: Boolean }
   },
   requiresApp: function (options) {
-    return options.delete || options.star ? false : true;
+    return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
-  var useGalaxy = hostedWithGalaxy(site);
-  var deployGalaxy;
 
   if (options.delete) {
-    if (useGalaxy) {
-      deployGalaxy = require('./deploy-galaxy.js');
-      return deployGalaxy.deleteApp(site);
-    } else {
-      return deploy.deleteApp(site);
-    }
+    return deploy.deleteApp(site);
   }
 
   if (options.password) {
-    if (useGalaxy) {
-      Console.error("Galaxy does not support --password.");
-    } else {
-      Console.error(
-        "Setting passwords on apps is no longer supported. Now there are " +
+    Console.error(
+      "Setting passwords on apps is no longer supported. Now there are " +
         "user accounts and your apps are associated with your account so " +
         "that only you (and people you designate) can access them. See the " +
         Console.command("'meteor claim'") + " and " +
         Console.command("'meteor authorized'") + " commands.");
-    }
-    return 1;
-  }
-
-  var starball = options.star;
-  if (starball && ! useGalaxy) {
-    // XXX it would be nice to support this for non-Galaxy deploys too
-    Console.error("--star: only supported when deploying to Galaxy.");
     return 1;
   }
 
@@ -1090,8 +1061,7 @@ main.registerCommand({
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
-    requireControlProgram: useGalaxy
+    serverArchitectures: _.uniq([buildArch, archinfo.host()])
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -1105,25 +1075,12 @@ main.registerCommand({
     serverArch: buildArch
   };
 
-  var deployResult;
-  if (useGalaxy) {
-    deployGalaxy = require('./deploy-galaxy.js');
-    deployResult = deployGalaxy.deploy({
-      projectContext: projectContext,
-      app: site,
-      settingsFile: options.settings,
-      starball: starball,
-      buildOptions: buildOptions,
-      admin: options.admin
-    });
-  } else {
-    deployResult = deploy.bundleAndDeploy({
-      projectContext: projectContext,
-      site: site,
-      settingsFile: options.settings,
-      buildOptions: buildOptions
-    });
-  }
+  var deployResult = deploy.bundleAndDeploy({
+    projectContext: projectContext,
+    site: site,
+    settingsFile: options.settings,
+    buildOptions: buildOptions
+  });
 
   if (deployResult === 0) {
     auth.maybePrintRegistrationLink({
@@ -1146,27 +1103,11 @@ main.registerCommand({
   name: 'logs',
   minArgs: 1,
   maxArgs: 1,
-  options: {
-    // XXX once Galaxy is released, document this
-    stream: { type: Boolean, short: 'f' }
-  },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
 
-  if (hostedWithGalaxy(site)) {
-    var deployGalaxy = require('./deploy-galaxy.js');
-    var ret = deployGalaxy.logs({
-      app: site,
-      streaming: options.stream
-    });
-    if (options.stream && ret === null) {
-      throw new main.WaitForExit;
-    }
-    return ret;
-  } else {
-    return deploy.logs(site);
-  }
+  return deploy.logs(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1207,14 +1148,6 @@ main.registerCommand({
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
-  if (hostedWithGalaxy(site)) {
-    Console.error(
-      "Sites hosted on Galaxy do not have an authorized user list. " +
-      "Instead, go to your Galaxy dashboard to change the authorized users " +
-      "of your Galaxy.\n");
-    return 1;
-  }
-
   if (! auth.isLoggedIn()) {
     Console.error(
       "You must be logged in for that. Try " +
@@ -1252,12 +1185,6 @@ main.registerCommand({
       Console.command("'Sign in'") + " and then " +
       Console.command("'Create account'") + " at www.meteor.com.");
     Console.error();
-    return 1;
-  }
-
-  if (hostedWithGalaxy(site)) {
-    Console.error(
-      "Sorry, you can't claim sites that are hosted on Galaxy.");
     return 1;
   }
 
@@ -1390,16 +1317,15 @@ main.registerCommand({
   // Use the driver package and meteor-platform as well.
   packagesToAdd.unshift('meteor-platform', options['driver-package']);
   var constraintsToAdd = _.map(packagesToAdd, function (p) {
-    return utils.parseConstraint(p);
+    return utils.parsePackageConstraint(p);
   });
   // Add the packages to our in-memory representation of .meteor/packages.  (We
   // haven't yet resolved constraints, so this will affect constraint
   // resolution.)  This will get written to disk once we prepareProjectForBuild,
   // either in the Cordova code below, right before deploying below, or in the
-  // app runner.
-  // XXX We need to also remove all other constraints from the file, or else
-  //     if you use --test-app-path twice it will keep testing stuff from the
-  //     previous iteration!  #3446
+  // app runner.  (Note that removeAllPackages removes any comments from
+  // .meteor/packages, but that's OK since this isn't a real user project.)
+  projectContext.projectConstraintsFile.removeAllPackages();
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
   // The rest of the projectContext preparation process will happen inside the
@@ -1604,10 +1530,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'login',
   options: {
-    email: { type: String },
-    // Undocumented: get credentials on a specific Galaxy. Do we still
-    // need this?
-    galaxy: { type: String }
+    email: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -2039,7 +1962,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'dummy',
   options: {
-    email: { type: String, short: "e", required: true },
+    ething: { type: String, short: "e", required: true },
     port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
@@ -2056,7 +1979,7 @@ main.registerCommand({
     return 'none';
   };
 
-  Console.info(p('email') + " " + p('port') + " " + p('changed') +
+  Console.info(p('ething') + " " + p('port') + " " + p('changed') +
                        " " + p('args'));
   if (options.url)
     Console.info('url');

@@ -3072,3 +3072,12 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
     test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
   }
 ]);
+
+Meteor.isServer && Tinytest.add(
+  "mongo-livedata - connection failure throws",
+  function (test) {
+    test.throws(function () {
+      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+    });
+  }
+);

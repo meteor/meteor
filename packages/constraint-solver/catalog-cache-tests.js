@@ -39,12 +39,12 @@ Tinytest.add("constraint solver - CatalogCache", function (test) {
   test.equal(pvs, [['foo', '1.0.0', ['bar']],
                    ['foo', '1.0.1', ['bar', 'bzzz', 'weakly1', 'weakly2']]]);
 
-  var count = 0;
+  var oneVersion = [];
   cache.eachPackageVersion(function (pv) {
-    count++;
+    oneVersion.push(pv.toString());
     return true; // stop
   });
-  test.equal(count, 1);
+  test.equal(oneVersion, ["foo 1.0.0"]);
 
   var foos = [];
   _.each(cache.getPackageVersions('foo'), function (v) {
@@ -61,4 +61,12 @@ Tinytest.add("constraint solver - CatalogCache", function (test) {
     cache.getDependencyMap('foo', '7.0.0');
   });
 
+  cache.addPackageVersion('bar', '1.0.0', []);
+  var onePackage = [];
+  cache.eachPackage(function (p) {
+    test.isTrue(p === 'foo' || p === 'bar');
+    onePackage.push(p);
+    return true;
+  });
+  test.equal(onePackage.length, 1); // don't know which package it is
 });

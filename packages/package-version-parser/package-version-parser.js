@@ -5,6 +5,7 @@
 // true).
 var inTool = typeof Package === 'undefined';
 
+
 var semver = inTool ?
   require ('../../dev_bundle/lib/node_modules/semver') : SemVer410;
 var __ = inTool ? require('../../dev_bundle/lib/node_modules/underscore') : _;
@@ -53,7 +54,9 @@ var PV = function (versionString) {
   }
   if (wrapSplit.length > 1) {
     wrapNum = wrapSplit[1];
-    if (!/^\d+$/.test(wrapNum)) {
+    if (! wrapNum) {
+      throwVersionParserError("A wrap number must follow _");
+    } else if (!/^\d+$/.test(wrapNum)) {
       throwVersionParserError(
         "The wrap number (after _) must contain only digits, so " +
           versionString + " is invalid.");
@@ -195,8 +198,8 @@ PV.majorVersion = function (versionString) {
   return PV.parse(versionString).major;
 };
 
-// Takes in two meteor versions. Returns 0 if equal, 1 if v1 is greater, -1 if
-// v2 is greater.
+// Takes in two meteor versions. Returns 0 if equal, a positive number if v1
+// is greater, a negative number if v2 is greater.
 PV.compare = function (versionOne, versionTwo) {
   var v1 = PV.parse(versionOne);
   var v2 = PV.parse(versionTwo);
@@ -288,8 +291,8 @@ PV.parseVersionConstraint = function (constraintString) {
 };
 
 // A PackageConstraint consists of a package name and a version constraint.
-// Call either with args (name, vConstraintString) or (pConstraintString),
-// or (name, vConstraint).
+// Call either with args (package, versionConstraintString) or
+// (packageConstraintString), or (package, versionConstraint).
 // That is, ("foo", "1.2.3") or ("foo@1.2.3"), or ("foo", vc) where vc
 // is instanceof PV.VersionConstraint.
 PV.PackageConstraint = function (part1, part2) {
@@ -299,11 +302,11 @@ PV.PackageConstraint = function (part1, part2) {
     throw new Error("constraintString must be a string");
   }
 
-  var name, vConstraint, vConstraintString;
+  var packageName, versionConstraint, vConstraintString;
   if (part2) {
-    name = part1;
+    packageName = part1;
     if (part2 instanceof PV.VersionConstraint) {
-      vConstraint = part2;
+      versionConstraint = part2;
     } else {
       vConstraintString = part2;
     }
@@ -311,33 +314,33 @@ PV.PackageConstraint = function (part1, part2) {
     // Shave off last part after @, with "a@b@c" becoming ["a@b", "c"].
     // Validating the package name will catch extra @.
     var parts = part1.match(/^(.*)@([^@]*)$/).slice(1);
-    name = parts[0];
+    packageName = parts[0];
     vConstraintString = parts[1];
     if (! vConstraintString) {
       throwVersionParserError(
-        "Version constraint for package '" + name +
+        "Version constraint for package '" + packageName +
           "' cannot be empty; leave off the @ if you don't want to constrain " +
           "the version.");
     }
   } else {
-    name = part1;
+    packageName = part1;
     vConstraintString = "";
   }
 
-  PV.validatePackageName(name);
-  if (vConstraint) {
-    vConstraintString = vConstraint.raw;
+  PV.validatePackageName(packageName);
+  if (versionConstraint) {
+    vConstraintString = versionConstraint.raw;
   } else {
-    vConstraint = PV.parseVersionConstraint(vConstraintString);
+    versionConstraint = PV.parseVersionConstraint(vConstraintString);
   }
 
-  this.name = name;
+  this.package = packageName;
   this.constraintString = vConstraintString;
-  this.vConstraint = vConstraint;
+  this.versionConstraint = versionConstraint;
 };
 
 PV.PackageConstraint.prototype.toString = function () {
-  var ret = this.name;
+  var ret = this.package;
   if (this.constraintString) {
     ret += "@" + this.constraintString;
   }
@@ -346,16 +349,14 @@ PV.PackageConstraint.prototype.toString = function () {
 
 // Structure of a parsed constraint:
 //
-// { name: String,
+// /*PV.PackageConstraint*/
+// { package: String,
 //   constraintString: String,
-//   vConstraint: {
+//   versionConstraint: /*PV.VersionConstraint*/ {
 //     raw: String,
 //     alternatives: [{versionString: String|null,
 //                     type: String}]}}
-//
-// The returned object is instanceof PackageConstraint, and
-// vConstraint is instanceof VersionConstraint.
-PV.parseConstraint = function (part1, part2) {
+PV.parsePackageConstraint = function (part1, part2) {
   return new PV.PackageConstraint(part1, part2);
 };
 
@@ -388,11 +389,6 @@ var throwVersionParserError = function (message) {
   e.versionParserError = true;
   throw e;
 };
-
-PV.constraintToFullString = function (parsedConstraint) {
-  return parsedConstraint.name + "@" + parsedConstraint.constraintString;
-};
-
 
 // Return true if the version constraint was invalid prior to 0.9.3
 // (adding _ and || support)

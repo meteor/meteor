@@ -477,40 +477,55 @@ files.cp_r = function (from, to, options) {
   });
 };
 
-// Get every path in dir recursively
+/**
+ * Get every path in a directory recursively, treating symlinks as files
+ * @param  {String} dir     The directory to walk, either relative to options.cwd or completely absolute
+ * @param  {Object} options Some options
+ * @param {String} options.cwd The directory that paths should be relative to
+ * @param {String[]} options.output An array to push results to
+ * @return {String[]}         All of the paths in the directory recursively
+ */
 files.getPathsInDir = function (dir, options) {
-  if (! files.exists(dir)) {
-    // There are no paths in this dir, so don't do anything
-    return;
-  }
+  // Don't let this function yield so that the file system doesn't get changed
+  // underneath us
+  return fiberHelpers.noYieldsAllowed(function () {
+    var cwd = options.cwd || files.convertToStandardPath(process.cwd());
 
-  // Don't use files.cwd() because we will use process.chdir later
-  var oldCwd = process.cwd();
-  var cwd = options && options.cwd;
-
-  if (cwd) {
     if (! files.exists(cwd)) {
-      throw new Error("Specified current working directory doesn't exist:" +
+      throw new Error("Specified current working directory doesn't exist: " +
         cwd);
     }
 
-    process.chdir(files.convertToOSPath(cwd));
-  }
+    var absoluteDir = files.pathResolve(cwd, dir);
 
-  var output = [];
-
-  _.each(files.readdir(dir), function (entry) {
-    var newPath = files.pathJoin(dir, entry);
-    output.push(newPath);
-
-    if (files.exists(newPath) && files.stat(newPath).isDirectory()) {
-      output = output.concat(files.getPathsInDir(newPath));
+    if (! files.exists(absoluteDir)) {
+      // There are no paths in this dir, so don't do anything
+      return;
     }
+
+    var output = options.output || [];
+
+    var pathIsDirectory = function (path) {
+      var stat = files.lstat(path);
+      return stat.isDirectory();
+    };
+
+    _.each(files.readdir(absoluteDir), function (entry) {
+      var newPath = files.pathJoin(dir, entry);
+      var newAbsPath = files.pathJoin(absoluteDir, entry);
+
+      output.push(newPath);
+
+      if (pathIsDirectory(newAbsPath)) {
+        files.getPathsInDir(newPath, {
+          cwd: cwd,
+          output: output
+        });
+      }
+    });
+
+    return output;
   });
-
-  process.chdir(oldCwd);
-
-  return output;
 };
 
 files.findPathsWithRegex = function (dir, regex, options) {

@@ -10,7 +10,20 @@ var nodesToArray = function (array) {
   return _.map(array, _.identity);
 };
 
+var inDocument = function (elem) {
+  while ((elem = elem.parentNode)) {
+    if (elem == document) {
+      return true;
+    }
+  }
+  return false;
+};
+
+
 var clickIt = function (elem) {
+  if (!inDocument(elem))
+    throw new Error("Can't click on elements without first adding them to the document");
+
   // jQuery's bubbling change event polyfill for IE 8 seems
   // to require that the element in question have focus when
   // it receives a simulated click.
@@ -1252,9 +1265,12 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   }});
 
   var div = renderToDiv(tmpl);
-    subtmplCopy.rendered = function () {
+  subtmplCopy.rendered = function () {
     test.fail("shouldn't re-render when same value returned from helper");
   };
+  subtmplCopy.onRendered(function () {
+    test.fail("shouldn't re-render when same value returned from helper");
+  });
 
   dep.changed();
   Tracker.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
@@ -3064,3 +3080,59 @@ Tinytest.add("spacebars-tests - template_tests - inclusion with data remove (#31
   test.isTrue(parentView.isDestroyed);
   test.equal(canonicalizeHtml(div.innerHTML), "<span></span>");
 });
+
+Tinytest.add("spacebars-tests - template_tests - custom block helper doesn't break Template.instance() (#3540)", function (test) {
+  var tmpl = Template.spacebars_template_test_template_instance_wrapper_outer;
+
+  tmpl.helpers({
+    thisShouldOutputHello: function () {
+      return Template.instance().customProp;
+    }
+  });
+
+  tmpl.created = function () {
+    this.customProp = "hello";
+  };
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "hello hello");
+});
+
+Tinytest.add(
+  "spacebars-tests - template_tests - currentData and parentData in event handlers and helpers",
+  function (test) {
+    var tmpl = Template.spacebars_template_test_currentData_and_parentData_in_events;
+
+    var clicked = false;
+    var currentInEvent;
+    var parentInEvent;
+    var currentInHelper;
+    var parentInHelper;
+
+    tmpl.events({
+      'click button': function () {
+        currentInEvent = Template.currentData();
+        parentInEvent = Template.parentData(1);
+      }
+    });
+
+    tmpl.helpers({
+      label: function () {
+        currentInHelper = Template.currentData();
+        parentInHelper = Template.parentData(1);
+      }
+    });
+
+    var div = renderToDiv(tmpl);
+    var button = div.querySelector('button');
+    document.body.appendChild(div);
+
+    clickIt(button);
+
+    test.equal(currentInEvent, {y: 2});
+    test.equal(parentInEvent, {x: 1});
+    test.equal(currentInHelper, {y: 2});
+    test.equal(parentInHelper, {x: 1});
+
+    document.body.removeChild(div);
+  });
