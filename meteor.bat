@@ -2,6 +2,13 @@
 
 rem only if we are running from a checkout
 IF EXIST "%~dp0\.git" (
+  rem verify that we have 7zip in the path
+  7z.exe --help > con
+  IF errorlevel 1 (
+    echo "Please install 7z.exe (7-Zip) and put it into your PATH"
+    exit 1
+  )
+
   rem if dev_bundle is not present, get it
   IF NOT EXIST "%~dp0\dev_bundle" (
     REM need `< con` so that we can run this file from Node
