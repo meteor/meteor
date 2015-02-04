@@ -400,6 +400,7 @@ main.registerCommand({
   name: 'create',
   maxArgs: 1,
   options: {
+    clientserver: { type: Boolean },
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean }
@@ -407,6 +408,20 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
+  var createFromTemplate = function(templateName, outputFolder, transformFunc) {
+    files.cp_r(files.join(__dirname, templateName), outputFolder, {
+      transformFilename: function (f) {
+        return transformFunc(f);
+      },
+      transformContents: function (contents, f) {
+        if ((/(\.html|\.js|\.css)/).test(f))
+          return new Buffer(transformFunc(contents.toString()));
+        else
+          return contents;
+      },
+      ignore: [/^local$/, /^\.id$/]
+    });
+  };
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -460,18 +475,7 @@ main.registerCommand({
       return xn.replace(/~release~/g, relString);
     };
     try {
-      files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
-        transformFilename: function (f) {
-          return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
+      createFromTemplate('skel-pack', packageDir, transform);
    } catch (err) {
      Console.error("Could not create package: " + err.message);
      return 1;
@@ -557,7 +561,10 @@ main.registerCommand({
         ignore: [/^local$/, /^\.id$/]
       });
     }
+  } else if(options.clientserver) {
+    createFromTemplate('skel-clientserver', appPath, transform);
   } else {
+<<<<<<< HEAD
     files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
@@ -570,6 +577,9 @@ main.registerCommand({
       },
       ignore: [/^local$/, /^\.id$/]
     });
+=======
+    createFromTemplate('skel', appPath, transform);
+>>>>>>> refactor template creation function to avoid copycat 😾
   }
 
   // We are actually working with a new meteor project at this point, so
