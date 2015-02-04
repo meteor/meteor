@@ -479,29 +479,36 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
+
     try {
       files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
-   } catch (err) {
-     Console.error("Could not create package: " + err.message);
-     return 1;
-   }
+        },
+        transformContents: function (contents, f) {
+          if ((/(\.html|\.js|\.css)/).test(f))
+            return new Buffer(transform(contents.toString()));
+          else
+            return contents;
+        },
+        ignore: [/^local$/]
+      });
+    } catch (err) {
+      Console.error("Could not create package: " + err.message);
+      return 1;
+    }
 
-    Console.info(packageName + ": created" + inYourApp + "\n");
-    Console.info("To publish your new package:");
-    Console.info("  cd " + files.convertToOSPath(
-      files.pathRelative(files.cwd(), packageDir)));
-    Console.info("  meteor publish --create");
+    var displayPackageDir =
+      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+
+    // Since the directory can't have colons, the directory name will often not
+    // match the name of the package exactly, therefore we should tell people
+    // where it was created.
+    Console.info(
+      packageName + ": created in ",
+      Console.path(displayPackageDir)
+    );
+
     return 0;
   }
 
