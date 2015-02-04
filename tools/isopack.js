@@ -187,7 +187,19 @@ _.extend(Unibuild.prototype, {
 // Isopack
 ///////////////////////////////////////////////////////////////////////////////
 
-// XXX document
+// Meteor has a packaging system called "Isobuild". Isobuild knows how to
+// compile the same JavaScript code-base to different architectures: browser,
+// node.js-like server environment (could be Rhino or other) or a webview in a
+// Cordova mobile app.
+//
+// Each package used by Isobuild forms an Isopack. Isopack is a package format
+// containing source code for each architecture it can be ran on.
+// Each separate part built for a separate architecture is called "Unibuild".
+//
+// There are multiple reasons why we can't call it just "build" and historically
+// the name "Unibuild" has been associated with parts of Isopacks. We also can't
+// call it "Isobuild" because this is the brand-name of the whole
+// build/packaging system.
 var Isopack = function () {
   var self = this;
 
