@@ -2027,7 +2027,9 @@ main.registerCommand({
   options: {
     // Copy the tarball contents to the output directory instead of making a
     // tarball (useful for testing the release process)
-    "unpacked": { type: Boolean, required: false }
+    "unpacked": { type: Boolean, required: false },
+    // Build a tarball only for a specific arch
+    "target-arch": { type: String, required: false }
   },
 
   // In this function, we want to use the official catalog everywhere, because
@@ -2085,6 +2087,19 @@ main.registerCommand({
     }
     return osArches[0];
   });
+
+  if (options['target-arch']) {
+    // check if the passed arch is in the list
+    var arch = options['target-arch'];
+    if (! _.contains(osArches, arch)) {
+      throw new Error(
+        arch + ": the arch is not available for the release. Available arches: "
+        + osArches.join(', '));
+    }
+
+    // build only for the selected arch
+    osArches = [arch];
+  }
 
   Console.error(
     'Building bootstrap tarballs for architectures ' + osArches.join(', '));
