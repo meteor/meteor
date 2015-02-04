@@ -1537,8 +1537,9 @@ main.registerCommand({
       } else {
         record = catalog.official.getPackage(name);
       }
-      return filterBroken((name.match(search) &&
-        !!_.findWhere(record.maintainers, {username: username})),
+      return filterBroken(
+        (name.match(search) &&
+         record && !!_.findWhere(record.maintainers, {username: username})),
         isRelease, name);
     };
   } else {
