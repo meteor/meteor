@@ -14,7 +14,6 @@ var release = require('./release.js');
 var projectContextModule = require('./project-context.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
-var catalogRemote = require('./catalog-remote.js');
 var main = exports;
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -413,7 +412,7 @@ var springboard = function (rel, options) {
       if (options.fromApp) {
         if (process.platform === "win32") {
           // XXX improve this message for real release
-          var release = catalogRemote.official.getDefaultReleaseVersion();
+          var release = catalog.official.getDefaultReleaseVersion();
           var releaseName = release.track + "@" + release.version;
 
           Console.error(
