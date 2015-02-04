@@ -79,11 +79,19 @@ Sp.onConnection = function onConnection(socket) {
   var self = this;
   var dataSoFar = "";
 
+  // Make sure this function doesn't try to write anything to the socket
+  // after it has been closed.
+  socket.on("close", function() {
+    socket = null;
+  });
+
   // If communication is not established within 1000ms of the first
   // connection, forcibly close the socket.
   var timeout = setTimeout(function() {
-    socket.removeAllListeners("data");
-    socket.end(EXITING_MESSAGE + "\n");
+    if (socket) {
+      socket.removeAllListeners("data");
+      socket.end(EXITING_MESSAGE + "\n");
+    }
   }, 1000);
 
   // Let connecting clients configure certain REPL options by sending a
@@ -102,10 +110,14 @@ Sp.onConnection = function onConnection(socket) {
       }
     }
 
-    socket.removeListener("data", onData);
+    if (socket) {
+      socket.removeListener("data", onData);
+    }
 
     if (options.key !== self.key) {
-      socket.end(EXITING_MESSAGE + "\n");
+      if (socket) {
+        socket.end(EXITING_MESSAGE + "\n");
+      }
       return;
     }
     delete options.key;
@@ -141,6 +153,12 @@ Sp.startREPL = function startREPL(options) {
     // completion to behave correctly if we fake the .columns property.
     options.output.columns = getTerminalWidth();
   }
+
+  // Make sure this function doesn't try to write anything to the output
+  // stream after it has been closed.
+  options.output.on("close", function() {
+    options.output = null;
+  });
 
   var repl = self.repl = require("repl").start(options);
 
@@ -178,14 +196,18 @@ Sp.startREPL = function startREPL(options) {
   // When the REPL exits, signal the attached client to exit by sending it
   // the special EXITING_MESSAGE.
   repl.on("exit", function() {
-    options.output.write(EXITING_MESSAGE + "\n");
-    options.output.end();
+    if (options.output) {
+      options.output.write(EXITING_MESSAGE + "\n");
+      options.output.end();
+    }
   });
 
   // When the server process exits, end the output stream but do not
   // signal the attached client to exit.
   process.on("exit", function() {
-    options.output.end();
+    if (options.output) {
+      options.output.end();
+    }
   });
 
   // This Meteor-specific shell command rebuilds the application as if a
