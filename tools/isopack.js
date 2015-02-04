@@ -995,11 +995,11 @@ _.extend(Isopack.prototype, {
           var pluginDir = builder.generateFilename(
             'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
             { directory: true });
-          var relPath = plugin.write(builder.enter(pluginDir));
+          var pluginBuild = plugin.write(builder.enter(pluginDir));
           mainJson.plugins.push({
             name: name,
             arch: plugin.arch,
-            path: files.pathJoin(pluginDir, relPath)
+            path: files.pathJoin(pluginDir, pluginBuild.controlFile)
           });
         });
       });

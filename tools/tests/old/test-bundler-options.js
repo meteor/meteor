@@ -119,13 +119,13 @@ var runTest = function () {
   });
 
   if (process.platform !== "win32") { // Windows doesn't have symlinks
-    console.log("includeNodeModulesSymlink");
+    console.log("includeNodeModules");
     assert.doesNotThrow(function () {
       var tmpOutputDir = tmpDir();
       var result = bundler.bundle({
         projectContext: projectContext,
         outputPath: tmpOutputDir,
-        includeNodeModulesSymlink: true
+        includeNodeModules: 'symlink'
       });
       assert.strictEqual(result.errors, false);
 
