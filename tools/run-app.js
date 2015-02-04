@@ -63,6 +63,7 @@ var AppProcess = function (options) {
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
+  self.nodePath = options.nodePath || [];
   self.debugPort = options.debugPort;
   self.settings = options.settings;
 
@@ -205,6 +206,9 @@ _.extend(AppProcess.prototype, {
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
+
+    env.NODE_PATH =
+      self.nodePath.join(process.platform === 'win32' ? ';' : ':');
 
     return env;
   },
@@ -521,10 +525,19 @@ _.extend(AppRunner.prototype, {
 
       Profile.initialize();
       var bundleResult = Profile.run("Rebuild App", function () {
+        var includeNodeModules = 'symlink';
+
+        // On Windows we cannot symlink node_modules. Copying them is too slow.
+        // Instead receive the NODE_PATH env that we need to set and set it
+        // later on running.
+        if (process.platform === 'win32') {
+          includeNodeModules = 'NODE_PATH';
+        }
+
         return bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
-          includeNodeModulesSymlink: true,
+          includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet
         });
@@ -665,6 +678,7 @@ _.extend(AppRunner.prototype, {
           self.startFuture['return']();
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
+      nodePath: bundleResult.nodePath,
       settings: settings
     });
 

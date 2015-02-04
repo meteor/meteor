@@ -1135,7 +1135,7 @@ _.extend(ClientTarget.prototype, {
   // Output the finished target to disk
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the target
+  // the target and the required supporting environment.
   write: Profile("ClientTarget#write", function (builder) {
     var self = this;
 
@@ -1216,7 +1216,11 @@ _.extend(ClientTarget.prototype, {
       format: "web-program-pre1",
       manifest: manifest
     });
-    return "program.json";
+
+    return {
+      controlFile: "program.json",
+      nodePath: []
+    };
   })
 });
 
@@ -1397,7 +1401,7 @@ _.extend(JsImage.prototype, {
   // Write this image out to disk
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the image
+  // the image and the required supporting environment.
   write: Profile("JsImage#write", function (builder) {
     var self = this;
 
@@ -1520,7 +1524,11 @@ _.extend(JsImage.prototype, {
       arch: self.arch,
       load: load
     });
-    return "program.json";
+
+    return {
+      controlFile: "program.json",
+      nodePath: []
+    };
   })
 });
 
@@ -1641,20 +1649,21 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - includeNodeModulesSymlink: if true, add a node_modules symlink
+  // - includeNodeModules: falsy, 'symlink' or 'NODE_PATH'
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
   //   client target.. we'll find a better solution here eventually
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the plugin
+  // the plugin and the required supporting environment
   write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
 
     // Pick a start script name
     // XXX base it on the name of the target
     var scriptName = 'start.sh';
+    var nodePath = [];
     builder.reserve(scriptName);
 
     // This is where the dev_bundle will be downloaded and unpacked
@@ -1689,16 +1698,19 @@ _.extend(ServerTarget.prototype, {
     // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
-    if (options.includeNodeModulesSymlink) {
-      builder.copyDirectory({
-        from: files.pathJoin(files.getDevBundle(), 'lib', 'node_modules'),
-        to: 'node_modules'
+    if (options.includeNodeModules === 'symlink') {
+      builder.write('node_modules', {
+        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
+    } else if (options.includeNodeModules === 'NODE_PATH') {
+      nodePath.push(
+        files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
+      );
     }
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
-    var imageControlFile = self.toJsImage().write(builder);
+    var imageControlFile = self.toJsImage().write(builder).controlFile;
 
     // Server bootstrap
     _.each([
@@ -1742,7 +1754,10 @@ _.extend(ServerTarget.prototype, {
     builder.write(scriptName, { data: new Buffer(script, 'utf8'),
                                 executable: true });
 
-    return scriptName;
+    return {
+      controlFile: scriptName,
+      nodePath: nodePath
+    };
   })
 });
 
@@ -1764,12 +1779,12 @@ var writeTargetToPath = Profile(
   "bundler..writeTargetToPath", function (name, target, outputPath, options) {
   var builder = new Builder({
     outputPath: files.pathJoin(outputPath, 'programs', name),
-    symlink: options.includeNodeModulesSymlink
+    symlink: options.includeNodeModules === 'symlink'
   });
 
-  var relControlFilePath =
+  var targetBuild =
     target.write(builder, {
-      includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      includeNodeModules: options.includeNodeModules,
       getRelativeTargetPath: options.getRelativeTargetPath });
 
   builder.complete();
@@ -1777,7 +1792,8 @@ var writeTargetToPath = Profile(
   return {
     name: name,
     arch: target.mostCompatibleArch(),
-    path: files.pathJoin('programs', name, relControlFilePath),
+    path: files.pathJoin('programs', name, targetBuild.controlFile),
+    nodePath: targetBuild.nodePath,
     cordovaDependencies: target.cordovaDependencies || undefined
   };
 });
@@ -1802,18 +1818,20 @@ var writeTargetToPath = Profile(
 // }
 //
 // options:
-// - includeNodeModulesSymlink: bool
+// - includeNodeModules: string or falsy
 // - builtBy: vanity identification string to write into metadata
 // - controlProgram: name of the control program (should be a target name)
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
+// - nodePath: an array of paths required to be set in NODE_PATH
+// pulling required NODE_PATH to the caller)
 var writeSiteArchive = Profile(
   "bundler..writeSiteArchive", function (targets, outputPath, options) {
   var builder = new Builder({
     outputPath: outputPath,
     // This is a bit of a hack, but it means that things like node_modules
     // directories for packages end up as symlinks too.
-    symlink: options.includeNodeModulesSymlink
+    symlink: options.includeNodeModules === 'symlink'
   });
 
   if (options.controlProgram && ! (options.controlProgram in targets))
@@ -1828,6 +1846,7 @@ var writeSiteArchive = Profile(
       control: options.controlProgram || undefined,
       meteorRelease: options.releaseName
     };
+    var nodePath = [];
 
     // Tell Galaxy what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied
@@ -1877,13 +1896,16 @@ var writeSiteArchive = Profile(
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
-        includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      var targetBuild = writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModules: options.includeNodeModules,
         builtBy: options.builtBy,
         controlProgram: options.controlProgram,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
-      }));
+      });
+
+      json.programs.push(targetBuild.controlFile);
+      nodePath = nodePath.concat(targetBuild.nodePath);
     });
 
     // Control file
@@ -1895,7 +1917,8 @@ var writeSiteArchive = Profile(
     return {
       clientWatchSet: clientWatchSet,
       serverWatchSet: serverWatchSet,
-      starManifest: json
+      starManifest: json,
+      nodePath: nodePath
     };
   } catch (e) {
     builder.abort();
@@ -1918,13 +1941,19 @@ var writeSiteArchive = Profile(
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
  *
- * - includeNodeModulesSymlink: if set, we create a symlink from
- *   programs/server/node_modules to the dev bundle's server-lib/node_modules.
- *   This is a hack to make 'meteor run' faster. (We can't just set
- *   $NODE_PATH because then random node_modules directories above cwd
- *   take precedence.) To make it even hackier, this also means we
- *   make node_modules directories for packages symlinks instead of
- *   copies.
+ * - includeNodeModules: specifies how node_modules for program should be
+ *   included:
+ *   + false/null/undefined - don't include node_modules
+ *   + 'symlink' - we create a symlink from programs/server/node_modules to the
+ *   dev bundle's server-lib/node_modules.  This is a hack to make 'meteor run'
+ *   faster. (It is preferred on systems with symlinks as we can't just set
+ *   $NODE_PATH because then random node_modules directories above cwd take
+ *   precedence.) To make it even hackier, this also means we make node_modules
+ *   directories for packages symlinks instead of copies.
+ *   + 'NODE_PATH' - don't copy the files but return the NODE_PATH string with
+ *   the resulting bundle that would be set as the NODE_PATH environment
+ *   variable when the node process is running. (The fallback option for
+ *   Windows).
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
@@ -1965,7 +1994,7 @@ exports.bundle = function (options) {
   var projectContext = options.projectContext;
 
   var outputPath = options.outputPath;
-  var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
+  var includeNodeModules = options.includeNodeModules;
   var buildOptions = options.buildOptions || {};
 
   var appDir = projectContext.projectDir;
@@ -1984,6 +2013,7 @@ exports.bundle = function (options) {
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
   var targets = {};
+  var nodePath = [];
 
   if (! release.usingRightReleaseForApp(projectContext))
     throw new Error("running wrong release for app?");
@@ -2088,7 +2118,7 @@ exports.bundle = function (options) {
 
     // Write to disk
     var writeOptions = {
-      includeNodeModulesSymlink: includeNodeModulesSymlink,
+      includeNodeModules: includeNodeModules,
       builtBy: builtBy,
       controlProgram: controlProgram,
       releaseName: releaseName,
@@ -2099,11 +2129,14 @@ exports.bundle = function (options) {
       // If we already have a cached bundle, just recreate the new targets.
       // XXX This might make the contents of "star.json" out of date.
       _.each(targets, function (target, name) {
-        writeTargetToPath(name, target, outputPath, writeOptions);
+        var targetBuild =
+          writeTargetToPath(name, target, outputPath, writeOptions);
+        nodePath = nodePath.concat(targetBuild.nodePath);
         clientWatchSet.merge(target.getWatchSet());
       });
     } else {
       starResult = writeSiteArchive(targets, outputPath, writeOptions);
+      nodePath = nodePath.concat(starResult.nodePath);
       serverWatchSet.merge(starResult.serverWatchSet);
       clientWatchSet.merge(starResult.clientWatchSet);
     }
@@ -2118,7 +2151,8 @@ exports.bundle = function (options) {
     errors: success ? false : messages,
     serverWatchSet: serverWatchSet,
     clientWatchSet: clientWatchSet,
-    starManifest: starResult && starResult.starManifest
+    starManifest: starResult && starResult.starManifest,
+    nodePath: nodePath
   };
 };
 
