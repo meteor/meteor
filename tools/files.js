@@ -484,42 +484,46 @@ files.cp_r = function (from, to, options) {
  * @return {String[]}         All of the paths in the directory recursively
  */
 files.getPathsInDir = function (dir, options) {
-  var cwd = options.cwd || files.convertToStandardPath(process.cwd());
+  // Don't let this function yield so that the file system doesn't get changed
+  // underneath us
+  return fiberHelpers.noYieldsAllowed(function () {
+    var cwd = options.cwd || files.convertToStandardPath(process.cwd());
 
-  if (! files.exists(cwd)) {
-    throw new Error("Specified current working directory doesn't exist: " +
-      cwd);
-  }
-
-  var absoluteDir = files.pathResolve(cwd, dir);
-
-  if (! files.exists(absoluteDir)) {
-    // There are no paths in this dir, so don't do anything
-    return;
-  }
-
-  var output = options.output || [];
-
-  var pathIsDirectory = function (path) {
-    var stat = files.lstat(path);
-    return stat.isDirectory();
-  };
-
-  _.each(files.readdir(absoluteDir), function (entry) {
-    var newPath = files.pathJoin(dir, entry);
-    var newAbsPath = files.pathJoin(absoluteDir, entry);
-
-    output.push(newPath);
-
-    if (pathIsDirectory(newAbsPath)) {
-      files.getPathsInDir(newPath, {
-        cwd: cwd,
-        output: output
-      });
+    if (! files.exists(cwd)) {
+      throw new Error("Specified current working directory doesn't exist: " +
+        cwd);
     }
-  });
 
-  return output;
+    var absoluteDir = files.pathResolve(cwd, dir);
+
+    if (! files.exists(absoluteDir)) {
+      // There are no paths in this dir, so don't do anything
+      return;
+    }
+
+    var output = options.output || [];
+
+    var pathIsDirectory = function (path) {
+      var stat = files.lstat(path);
+      return stat.isDirectory();
+    };
+
+    _.each(files.readdir(absoluteDir), function (entry) {
+      var newPath = files.pathJoin(dir, entry);
+      var newAbsPath = files.pathJoin(absoluteDir, entry);
+
+      output.push(newPath);
+
+      if (pathIsDirectory(newAbsPath)) {
+        files.getPathsInDir(newPath, {
+          cwd: cwd,
+          output: output
+        });
+      }
+    });
+
+    return output;
+  });
 };
 
 files.findPathsWithRegex = function (dir, regex, options) {
