@@ -129,7 +129,7 @@ exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
         utils.parsePackageAtVersion(releaseVersion.tool);
   if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseVersion.tool);
-  var toolPackage = toolPackageVersion.name;
+  var toolPackage = toolPackageVersion.package;
   var toolVersion = toolPackageVersion.version;
 
   var versionMap = _.clone(releaseVersion.packages || {});

@@ -1,4 +1,4 @@
-Template.activity.rendered = function() {
+Template.activity.onRendered(function() {
   var self = this;
 
   // If the activity is in a list, scroll it into view. Note, we can't just use
@@ -11,7 +11,7 @@ Template.activity.rendered = function() {
     var parentTop = $parent.offset().top;
     $parent.scrollTop(top - parentTop);
   }
-}
+});
 
 Template.activity.helpers({
   firstName: function() {

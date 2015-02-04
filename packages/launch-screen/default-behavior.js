@@ -18,22 +18,9 @@ Meteor.startup(function () {
       handle.release();
     });
   } else {
-    // We intentionally don't use `Template.body.rendered = ...` here
-    // since other packages, or your app, may set the same
-    // callback. What we should really have is the ability to set
-    // multiple rendered callbacks (eg
-    // https://github.com/meteor/meteor/issues/2805), while ensuring
-    // that if one adds a callback after rendered already fired, the
-    // callback is called immediately.
-    //
-    // So, instead we poll every 50ms to detect whether
-    // `Template.body` has already been rendered.
-    var checkBody = setInterval(function () {
-      if (Template.body.view && Template.body.view.isRendered) {
-        handle.release();
-        clearInterval(checkBody);
-      }
-    }, 50);
+    Template.body.onRendered(function () {
+      handle.release();
+    });
 
     // In case `Template.body` never gets rendered (due to some bug),
     // hide the launch screen after 6 seconds. This matches the

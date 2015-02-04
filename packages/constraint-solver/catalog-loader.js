@@ -42,9 +42,6 @@ var convertDeps = function (catalogDeps) {
     });
 
     var constraint = (dep.constraint || null);
-    if (constraint === 'none') { // not sure where this comes from
-      constraint = null;
-    }
 
     return new CS.Dependency(new PV.PackageConstraint(package, constraint),
                              isStrong ? null : {isWeak: true});

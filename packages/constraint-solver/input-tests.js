@@ -26,8 +26,8 @@ Tinytest.add("constraint solver - input - upgrade indirect dependency", function
     }));
 });
 
-var runSlowTests = !!process.env.CONSTRAINT_SOLVER_SLOW_TESTS;
-var slow = runSlowTests;
+// whether to run slow tests
+var slow = !!process.env.CONSTRAINT_SOLVER_SLOW_TESTS;
 
 slow && Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({

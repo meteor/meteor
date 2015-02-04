@@ -16,9 +16,7 @@ Package.onUse(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
            'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
-  api.use(['application-configuration', 'follower-livedata'], {
-    unordered: true
-  });
+
   // At response serving time, webapp uses browser-policy if it is loaded. If
   // browser-policy is loaded, then it must be loaded after webapp
   // (browser-policy depends on webapp). So we don't explicitly depend in any

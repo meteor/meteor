@@ -489,6 +489,14 @@ exports.updatePackageMetadata = function (options) {
     return;
   }
 
+  if (dataToUpdate["longDescription"].length > 1500) {
+    buildmessage.error(
+      "Longform package description is too long. Meteor uses the section of " +
+      "the Markdown documentation file between the first and second " +
+      "headings. That section must be less than 1500 characters long.");
+    return;
+  }
+
   // Update the general metadata.
   var versionIdentifier = { packageName: name, version: version };
   buildmessage.enterJob('updating metadata', function () {
@@ -602,6 +610,13 @@ exports.publishPackage = function (options) {
     return;
   }
 
+  if (readmeInfo && readmeInfo.excerpt.length > 1500) {
+    buildmessage.error(
+      "Longform package description is too long. Meteor uses the section of " +
+      "the Markdown documentation file between the first and second " +
+      "headings. That section must be less than 1500 characters long.");
+    return;
+  }
 
   // We don't let the user upload a blank README for UX reasons, but we would
   // prefer that the server move to a world with 'readme' files for everything

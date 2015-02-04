@@ -55,22 +55,22 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // successful command invocation, correct parsing of arguments
-  run = s.run("dummy", "--email", "x");
+  run = s.run("dummy", "--ething", "x");
   run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "");
+  run = s.run("dummy", "--ething", "");
   run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "", "");
+  run = s.run("dummy", "--ething", "x", "", "");
   run.read('"x" "3000" none ["",""]\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email=");
+  run = s.run("dummy", "--ething=");
   run.read('"" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
@@ -80,7 +80,7 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "-");
+  run = s.run("dummy", "--ething", "x", "-");
   run.read('"x" "3000" none ["-"]\n');
   run.expectEnd();
   run.expectExit(0);
@@ -100,86 +100,86 @@ selftest.define("argument parsing", function () {
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "-");
+  run = s.run("dummy", "--ething", "-");
   run.read('"-" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "--port", "1234", "--changed");
+  run = s.run("dummy", "--ething", "x", "--port", "1234", "--changed");
   run.read('"x" 1234 true []\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "--port", "0", "true");
+  run = s.run("dummy", "--ething", "x", "--port", "0", "true");
   run.read('"x" 0 none ["true"]\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "--port", "01234", "12", "0013");
+  run = s.run("dummy", "--ething", "x", "--port", "01234", "12", "0013");
   run.read('"x" 1234 none ["12","0013"]\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "--port", "1234", "--changed");
+  run = s.run("dummy", "--ething", "--port", "1234", "--changed");
   run.read('"--port" "3000" true ["1234"]\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email=x=y=z", "-Up=3000");
+  run = s.run("dummy", "--ething=x=y=z", "-Up=3000");
   run.read('"x=y=z" 3000 none []\nurl\n');
   run.expectEnd();
   run.expectExit(0);
 
   // bad option
-  run = s.run("dummy", "--email", "x", "--foo");
+  run = s.run("dummy", "--ething", "x", "--foo");
   run.matchErr("--foo: unknown option");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "-z");
+  run = s.run("dummy", "--ething", "x", "-z");
   run.matchErr("-z: unknown option");
   run.expectExit(1);
 
   // passing short and long options
-  run = s.run("dummy", "--email", "x", "-p", "2000", "--port", "2000");
+  run = s.run("dummy", "--ething", "x", "-p", "2000", "--port", "2000");
   run.matchErr("can't pass both -p and --port");
   run.expectExit(1);
 
   // multiple values for an option
-  run = s.run("dummy", "--email", "x", "--port", "2000", "--port", "3000");
+  run = s.run("dummy", "--ething", "x", "--port", "2000", "--port", "3000");
   run.matchErr("can only take one --port option");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "-p", "2000", "-p", "2000");
+  run = s.run("dummy", "--ething", "x", "-p", "2000", "-p", "2000");
   run.matchErr("can only take one --port (-p) option");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "--changed", "--changed");
+  run = s.run("dummy", "--ething", "x", "--changed", "--changed");
   run.matchErr("can only take one --changed option");
   run.expectExit(1);
 
   // missing option value
-  run = s.run("dummy", "--email", "x", "--port");
+  run = s.run("dummy", "--ething", "x", "--port");
   run.matchErr("the --port option needs a value");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email");
-  run.matchErr("--email option needs a value");
+  run = s.run("dummy", "--ething");
+  run.matchErr("--ething option needs a value");
   run.expectExit(1);
 
   run = s.run("dummy", "-e");
-  run.matchErr("--email (-e) option needs a value");
+  run.matchErr("--ething (-e) option needs a value");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "--changed", "-p");
+  run = s.run("dummy", "--ething", "x", "--changed", "-p");
   run.matchErr("the --port (-p) option needs a value");
   run.expectExit(1);
 
   // non-numeric value for numeric option
-  run = s.run("dummy", "--email", "x", "--port", "kitten");
+  run = s.run("dummy", "--ething", "x", "--port", "kitten");
   run.matchErr("--port must be a number");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "-p", "1234k");
+  run = s.run("dummy", "--ething", "x", "-p", "1234k");
   run.matchErr("--port (-p) must be a number");
   run.expectExit(1);
 
@@ -209,7 +209,7 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // incorrect number of arguments
-  run = s.run("dummy", "--email", "x", "1", "2", "3");
+  run = s.run("dummy", "--ething", "x", "1", "2", "3");
   run.matchErr("too many arguments");
   run.matchErr("Usage: meteor dummy");
   run.expectExit(1);
@@ -236,60 +236,60 @@ selftest.define("argument parsing", function () {
   run.expectExit(1);
 
   // '--' to end parsing
-  run = s.run("dummy", "--email", "x", "--", "-p", "4000");
+  run = s.run("dummy", "--ething", "x", "--", "-p", "4000");
   run.read('"x" "3000" none ["-p","4000"]\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "--", "--changed", "--changed");
+  run = s.run("dummy", "--ething", "x", "--", "--changed", "--changed");
   run.read('"x" "3000" none ["--changed","--changed"]\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "--");
+  run = s.run("dummy", "--ething", "x", "--");
   run.read('"x" "3000" none []\n');
   run.expectEnd();
   run.expectExit(0);
 
   // compact short options
-  run = s.run("dummy", "--email", "x", "-p4000", "--changed");
+  run = s.run("dummy", "--ething", "x", "-p4000", "--changed");
   run.read('"x" 4000 true []\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "-UD", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UD", "--changed");
   run.read('"x" "3000" true []\nurl\n\delete\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "-UDp4000", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UDp4000", "--changed");
   run.read('"x" 4000 true []\nurl\ndelete\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "-UDp4000", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UDp4000", "--changed");
   run.read('"x" 4000 true []\nurl\ndelete\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "-UDp4000");
+  run = s.run("dummy", "--ething", "x", "-UDp4000");
   run.read('"x" 4000 none []\nurl\ndelete\n');
   run.expectEnd();
   run.expectExit(0);
 
-  run = s.run("dummy", "--email", "x", "-UDkp4000", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UDkp4000", "--changed");
   run.matchErr("-k: unknown option");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "-UDp4000k", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UDp4000k", "--changed");
   run.matchErr("--port (-p) must be a number");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "-UD4000k", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UD4000k", "--changed");
   run.matchErr("-4: unknown option");
   run.expectExit(1);
 
-  run = s.run("dummy", "--email", "x", "-UDDp4000", "--changed");
+  run = s.run("dummy", "--ething", "x", "-UDDp4000", "--changed");
   run.matchErr("one --delete (-D) option");
   run.expectExit(1);
 
