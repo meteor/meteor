@@ -3,7 +3,7 @@ var _ = require('underscore');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
 var files = require('./files.js');
-var isopackModule = require('./isopack.js');
+var Isopack = require('./isopack.js').Isopack;
 var utils = require('./utils.js');
 var watch = require('./watch.js');
 var colonConverter = require("./colon-converter.js");
@@ -168,7 +168,7 @@ _.extend(exports.IsopackCache.prototype, {
           function () {
             var isopackPath = self._tropohouse.packagePath(
               name, packageInfo.version);
-            isopack = new isopackModule.Isopack();
+            isopack = new Isopack();
             isopack.initFromPath(name, isopackPath);
             // If loading the isopack fails, then we don't need to look for more
             // packages to load, but we should still recover by putting it in
@@ -205,7 +205,7 @@ _.extend(exports.IsopackCache.prototype, {
         var upToDate = self._checkUpToDate(isopackBuildInfoJson);
 
         if (upToDate) {
-          isopack = new isopackModule.Isopack;
+          isopack = new Isopack();
           isopack.initFromPath(name, self._isopackDir(name), {
             isopackBuildInfoJson: isopackBuildInfoJson
           });
