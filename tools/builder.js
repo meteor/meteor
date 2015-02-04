@@ -93,6 +93,7 @@ _.extend(Builder.prototype, {
       // Basic sanitization
       if (part.match(/^\.+$/))
         throw new Error("Path contains forbidden segment '" + part + "'");
+
       part = part.replace(/[^a-zA-Z0-9._\:-]/g, '');
 
       // If at last component, pull extension (if any) off of part
@@ -177,6 +178,7 @@ _.extend(Builder.prototype, {
 
     self._ensureDirectory(files.pathDirname(relPath));
     var absPath = files.pathJoin(self.buildPath, relPath);
+
     if (options.symlink) {
       files.symlink(options.symlink, absPath);
     } else {
@@ -323,10 +325,16 @@ _.extend(Builder.prototype, {
         throw new Error("can't copy only specific paths with a single symlink");
       }
 
-      var canSymlink = true;
       if (self.usedAsFile[normOptionsTo]) {
         throw new Error("tried to copy a directory onto " + normOptionsTo +
                         " but it is is already a file");
+      }
+
+      var canSymlink = true;
+      // Symlinks don't work exactly the same way on Windows, and furthermore
+      // they request Admin permissions to set.
+      if (process.platform === 'win32') {
+        canSymlink = false;
       } else if (normOptionsTo in self.usedAsFile) {
         // It's already here and is a directory, maybe because of a call to
         // reserve with {directory: true}. If it's an empty directory, this is
@@ -470,6 +478,7 @@ _.extend(Builder.prototype, {
   // Move the completed bundle into its final location (outputPath)
   complete: function () {
     var self = this;
+
     // XXX Alternatively, we could just keep buildPath around, and make
     // outputPath be a symlink pointing to it. This doesn't work for the NPM use
     // case of renameDirAlmostAtomically since that one is constructing files to

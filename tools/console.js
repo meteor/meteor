@@ -69,6 +69,9 @@ var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
+var CARRIAGE_RETURN =
+  (process.platform === 'win32' ? new Array(249).join('\b') : '\r');
+
 if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
 }
@@ -172,7 +175,7 @@ _.extend(ProgressDisplayStatus.prototype, {
     // clear some characters that we printed with a trailing `\r`.
     if (self._wroteStatusMessage) {
       var spaces = spacesString(TEMP_STATUS_LENGTH + 1);
-      self._stream.write(spaces + '\r');
+      self._stream.write(spaces + CARRIAGE_RETURN);
       self._wroteStatusMessage = false;
     }
   },
@@ -203,7 +206,7 @@ _.extend(ProgressDisplayStatus.prototype, {
     if (text) {
       // the number of characters besides `text` here must
       // be accounted for in TEMP_STATUS_LENGTH.
-      self._stream.write('  (  ' + text + '  ... )\r');
+      self._stream.write('  (  ' + text + '  ... )' + CARRIAGE_RETURN);
       self._wroteStatusMessage = true;
     }
   }
@@ -320,7 +323,7 @@ _.extend(ProgressDisplayFull.prototype, {
   depaint: function () {
     var self = this;
 
-    self._stream.write(spacesString(self._printedLength) + "\r");
+    self._stream.write(spacesString(self._printedLength) + CARRIAGE_RETURN);
   },
 
   updateStatus: function (status) {
@@ -401,7 +404,7 @@ _.extend(ProgressDisplayFull.prototype, {
         length += statusColumns;
       }
 
-      line += progressGraphic + "\r";
+      line += progressGraphic + CARRIAGE_RETURN;
       length += progressGraphic.length;
 
       self.depaint();
@@ -1263,3 +1266,5 @@ Console.prototype.readLine = function (options) {
 
 
 exports.Console = new Console;
+exports.Console.CARRIAGE_RETURN = CARRIAGE_RETURN;
+

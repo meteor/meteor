@@ -10,6 +10,7 @@ var meteorNpm = require('./meteor-npm.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
+var colonConverter = require('./colon-converter.js');
 
 var compiler = exports;
 
@@ -26,7 +27,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers) don't require you to update BUILT_BY, though
 // you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/15';
+compiler.BUILT_BY = 'meteor/16';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -317,9 +318,21 @@ var compileUnibuild = function (options) {
       type: "asset",
       data: contents,
       path: relPath,
-      servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, relPath),
+      servePath: colonConverter.convert(
+        files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
       hash: hash
     });
+  };
+
+  var convertSourceMapPaths = function (sourcemap, f) {
+    if (! sourcemap) {
+      // Don't try to convert it if it doesn't exist
+      return sourcemap;
+    }
+
+    var srcmap = JSON.parse(sourcemap);
+    srcmap.sources = _.map(srcmap.sources, f);
+    return JSON.stringify(srcmap);
   };
 
   _.each(sourceItems, function (source) {
@@ -327,6 +340,9 @@ var compileUnibuild = function (options) {
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = files.pathBasename(relPath);
+    // readAndWatchFileWithHash returns an object carrying a buffer with the
+    // file-contents. The buffer contains the original data of the file (no EOL
+    // transforms from the tools/files.js part).
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var contents = file.contents;
 
@@ -493,7 +509,7 @@ var compileUnibuild = function (options) {
        * @instance
        * @memberOf CompileStep
        */
-      inputPath: relPath,
+      inputPath: files.convertToOSPath(relPath, true),
 
       /**
        * @summary The filename and absolute path of the input file.
@@ -503,11 +519,11 @@ var compileUnibuild = function (options) {
        * @instance
        * @memberOf CompileStep
        */
-      fullInputPath: absPath,
+      fullInputPath: files.convertToOSPath(absPath),
 
       // The below is used in the less and stylus packages... so it should be
       // public API.
-      _fullInputPath: absPath, // avoid, see above..
+      _fullInputPath: files.convertToOSPath(absPath), // avoid, see above..
 
       // Used for one optimization. Don't rely on this otherwise.
       _hash: file.hash,
@@ -520,8 +536,9 @@ var compileUnibuild = function (options) {
        * @memberOf CompileStep
        * @instance
        */
-      pathForSourceMap: (inputSourceArch.pkg.name ?
-        inputSourceArch.pkg.name + "/" + relPath : files.pathBasename(relPath)),
+      pathForSourceMap: files.convertToOSPath(
+        inputSourceArch.pkg.name ?  inputSourceArch.pkg.name + "/" + relPath :
+                                    files.pathBasename(relPath), true),
 
       // null if this is an app. intended to be used for the sources
       // dictionary for source maps.
@@ -541,7 +558,8 @@ var compileUnibuild = function (options) {
        * @memberOf CompileStep
        * @instance
        */
-      rootOutputPath: inputSourceArch.pkg.serveRoot,
+      rootOutputPath: files.convertToOSPath(
+        inputSourceArch.pkg.serveRoot, true),
 
       /**
        * @summary The architecture for which we are building. Can be "os",
@@ -584,6 +602,7 @@ var compileUnibuild = function (options) {
        * @param  {Integer} [n] The number of bytes to return.
        * @instance
        * @memberOf CompileStep
+       * @returns {Buffer}
        */
       read: function (n) {
         if (n === undefined || readOffset + n > contents.length)
@@ -613,7 +632,7 @@ var compileUnibuild = function (options) {
           throw new Error("'data' option to appendDocument must be a string");
         resources.push({
           type: options.section,
-          data: new Buffer(options.data, 'utf8')
+          data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
         });
       },
 
@@ -645,9 +664,13 @@ var compileUnibuild = function (options) {
         resources.push({
           type: "css",
           refreshable: true,
-          data: new Buffer(options.data, 'utf8'),
-          servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, options.path),
-          sourceMap: options.sourceMap
+          data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+          servePath: colonConverter.convert(
+            files.pathJoin(
+              inputSourceArch.pkg.serveRoot,
+              files.convertToStandardPath(options.path, true))),
+          sourceMap: convertSourceMapPaths(options.sourceMap,
+                                           files.convertToStandardPath)
         });
       },
 
@@ -682,11 +705,14 @@ var compileUnibuild = function (options) {
         }
 
         js.push({
-          source: options.data,
-          sourcePath: options.sourcePath,
-          servePath: files.pathJoin(inputSourceArch.pkg.serveRoot, options.path),
+          source: files.convertToStandardLineEndings(options.data),
+          sourcePath: files.convertToStandardPath(options.sourcePath, true),
+          servePath: files.pathJoin(
+            inputSourceArch.pkg.serveRoot,
+            files.convertToStandardPath(options.path, true)),
           bare: !! bare,
-          sourceMap: options.sourceMap,
+          sourceMap: convertSourceMapPaths(options.sourceMap,
+                                           files.convertToStandardPath),
           sourceHash: options._hash
         });
       },
@@ -712,7 +738,7 @@ var compileUnibuild = function (options) {
           }
         }
 
-        addAsset(options.data, options.path);
+        addAsset(options.data, files.convertToStandardPath(options.path, true));
       },
 
       /**
@@ -763,8 +789,10 @@ var compileUnibuild = function (options) {
     // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
     // XXX: If we change this, we can get rid of source arch names!
     combinedServePath: isApp ? null :
-      "/packages/" + inputSourceArch.pkg.name +
-      (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) + ".js",
+      "/packages/" + colonConverter.convert(
+        inputSourceArch.pkg.name +
+        (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) +
+        ".js"),
     name: inputSourceArch.pkg.name || null,
     declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
     jsAnalyze: jsAnalyze,

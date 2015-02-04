@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Deprecated: Use the 'blaze' package",
-  version: '1.0.5'
+  version: '1.0.6-winr.2'
 });
 
 Package.onUse(function (api) {

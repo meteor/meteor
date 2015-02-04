@@ -26,11 +26,31 @@ var runMongoShell = function (url) {
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
   var child_process = require('child_process');
-  var proc = child_process.spawn(mongoPath,
-                                 args,
-                                 { stdio: 'inherit' });
+  var proc = child_process.spawn(files.convertToOSPath(mongoPath),
+    args, { stdio: 'inherit' });
 };
 
+// Start mongod with a dummy replSet and wait for it to listen.
+var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
+  var child_process = require('child_process');
+
+  mongodPath = files.convertToOSPath(mongodPath);
+  dbPath = files.convertToOSPath(dbPath);
+
+  return child_process.spawn(mongodPath, [
+      // nb: cli-test.sh and findMongoPids make strong assumptions about the
+      // order of the arguments! Check them before changing any arguments.
+      '--bind_ip', '127.0.0.1',
+      '--smallfiles',
+      '--nohttpinterface',
+      '--port', port,
+      '--dbpath', dbPath,
+      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
+      // initializes faster. (Not recommended for production!)
+      '--oplogSize', '8',
+      '--replSet', replSetName
+    ]);
+};
 
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
@@ -83,6 +103,65 @@ var findMongoPids = function (appDir, port) {
   return fut.wait();
 };
 
+
+if (process.platform === 'win32') {
+  var child_process = require('child_process');
+  // Windows doesn't have a ps equivalent that (reliably) includes the command
+  // line, so approximate using the combined output of tasklist and netstat.
+  findMongoPids = function (app_dir, port) {
+    var fut = new Future;
+
+    child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
+      function (error, stdout, stderr) {
+        if (error) {
+          fut['throw'](new Error("Couldn't run tasklist: " + JSON.stringify(error)));
+          return;
+        } else {
+          // Find the pids of all mongod processes
+          var mongo_pids = [];
+          _.each(stdout.split('\n'), function (line) {
+            var m = line.match(/^mongod.exe\s+(\d+) /);
+            if (m) {
+              mongo_pids[m[1]] = true;
+            }
+          });
+
+          // Now get the corresponding port numbers
+          child_process.exec('netstat -ano', function (error, stdout, stderr) {
+            if (error) {
+              fut['throw'](new Error("Couldn't run netstat -ano: " + JSON.stringify(error)));
+              return;
+            } else {
+              var pids = [];
+              _.each(stdout.split('\n'), function (line) {
+                var m = line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/);
+                if (m) {
+                  var found_pid =  parseInt(m[2]);
+                  var found_port = parseInt(m[1]);
+
+                  // We can't check the path app_dir so assume it always matches
+                  if (mongo_pids[found_pid] && (!port || port === found_port)) {
+                    // Note that if the mongo rest interface is enabled the
+                    // initial port + 1000 is also likely to be open.
+                    // So remove the pid so we only match it once.
+                    delete mongo_pids[found_pid];
+                    pids.push({
+                      pid: found_pid,
+                      port: found_port,
+                      app_dir: null});
+                  }
+                }
+              });
+
+              fut['return'](pids);
+            }
+          });
+        }
+      });
+
+    return fut.wait();
+  };
+}
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
@@ -275,27 +354,14 @@ var launchMongo = function (options) {
       }
     }
 
-    // Start mongod with a dummy replSet and wait for it to listen.
-    var child_process = require('child_process');
-
     // Let's not actually start a process if we yielded (eg during
     // findMongoAndKillItDead) and we decided to stop in the middle (eg, because
     // we're in multiple mode and another process exited).
     if (stopped)
       return;
-    proc = child_process.spawn(mongod_path, [
-      // nb: cli-test.sh and findMongoPids make strong assumptions about the
-      // order of the arguments! Check them before changing any arguments.
-      '--bind_ip', '127.0.0.1',
-      '--smallfiles',
-      '--nohttpinterface',
-      '--port', port,
-      '--dbpath', dbPath,
-      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
-      // initializes faster. (Not recommended for production!)
-      '--oplogSize', '8',
-      '--replSet', replSetName
-    ]);
+
+    proc = spawnMongod(mongod_path, port, dbPath, replSetName);
+
     subHandles.push({
       stop: function () {
         if (proc) {

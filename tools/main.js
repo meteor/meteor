@@ -5,6 +5,7 @@ if (showRequireProfile)
 var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
+var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
@@ -406,15 +407,29 @@ var springboard = function (rel, options) {
       // We have failed to download the tool that we are supposed to springboard
       // to! That's bad. Let's exit.
       if (options.fromApp) {
-        Console.error(
-          "Sorry, this project uses " + rel.getDisplayName() + ", which is not",
-          "installed and could not be downloaded. Please check to make sure",
-          "that you are online.");
+        if (process.platform === "win32") {
+          // XXX improve this message for real release
+          var release = catalog.official.getDefaultReleaseVersion();
+          var releaseName = release.track + "@" + release.version;
+
+          Console.error(
+            "This project uses " + rel.getDisplayName() + ", which isn't",
+            "available on Windows. To work with this app on all platforms, use",
+            Console.command("meteor update --release " + releaseName),
+            "to pin this app to the newest Windows preview release.");
+        } else {
+          Console.error(
+            "Sorry, this project uses " + rel.getDisplayName() + ", which is",
+            "not installed and could not be downloaded. Please check to make",
+            "sure that you are online.");
+        }
+
       } else {
         Console.error(
           "Sorry, " + rel.getDisplayName() + " is not installed and could not",
           "be downloaded. Please check to make sure that you are online.");
       }
+
       process.exit(1);
     }
   });
@@ -439,6 +454,17 @@ var springboard = function (rel, options) {
     // like other --release options.  So now we use an environment
     // variable. #SpringboardEnvironmentVar
     process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
+  }
+
+  if (process.platform === 'win32') {
+    var ret = new Future();
+    var child = require("child_process").spawn(
+      files.convertToOSPath(executable + ".bat"), newArgv,
+      { env: process.env, stdio: 'inherit' });
+    child.on('exit', function (code) {
+      ret.return(code);
+    });
+    process.exit(ret.wait());
   }
 
   // Now exec; we're not coming back.

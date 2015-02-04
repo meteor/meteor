@@ -8,10 +8,14 @@ var Isopack = require('./isopack.js').Isopack;
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
+var colonConverter = require('./colon-converter.js');
 
-exports.Tropohouse = function (root) {
+exports.Tropohouse = function (root, options) {
   var self = this;
+  options = options || {};
+
   self.root = root;
+  self.platform = options.platform || process.platform;
 };
 
 // Return the directory containing our loaded collection of tools, releases and
@@ -23,7 +27,7 @@ var defaultWarehouseDir = function () {
     return process.env.METEOR_WAREHOUSE_DIR;
 
   var warehouseBase = files.inCheckout()
-     ? files.getCurrentToolsDir() : process.env.HOME;
+     ? files.getCurrentToolsDir() : files.getHomeDir();
   // XXX This will be `.meteor` soon, once we've written the code to make the
   // tropohouse and warehouse live together in harmony (eg, allowing tropohouse
   // tools to springboard to warehouse tools).
@@ -33,6 +37,99 @@ var defaultWarehouseDir = function () {
 // The default tropohouse is on disk at defaultWarehouseDir(); you can make your
 // own Tropohouse to override these things.
 exports.default = new exports.Tropohouse(defaultWarehouseDir());
+
+/**
+ * Extract a package tarball, and on Windows convert file paths and metadata
+ * @param  {String} packageTarball path to tarball
+ * @param {Boolean} forceConvert Convert paths even on unix, for testing
+ * @return {String}                Temporary directory with contents of package
+ */
+exports._extractAndConvert = function (packageTarball, forceConvert) {
+  var targetDirectory = files.mkdtemp();
+  files.extractTarGz(packageTarball, targetDirectory, {
+    forceConvert: forceConvert
+  });
+
+  if (process.platform === "win32" || forceConvert) {
+    // Packages published before the Windows release might have colons or
+    // other unsavory characters in path names. In hopes of making most of
+    // these packages work on Windows, we will try to automatically convert
+    // them.
+    //
+    // At this location in the code, the metadata inside the isopack is
+    // inconsistent with the actual file paths, since we convert some file
+    // paths inside extractTarGz. Now we need to convert the metadata to match
+    // the files.
+
+    // Step 1. Load the metadata from isopack.json and convert colons in the
+    // file paths. We have already converted the colons in the actual files
+    // while untarring.
+    var metadata = Isopack.readMetadataFromDirectory(targetDirectory);
+    var convertedMetadata = colonConverter.convertIsopack(metadata);
+
+    // Step 2. Write the isopack.json file
+    var isopackFileData = {};
+    isopackFileData[Isopack.currentFormat] = convertedMetadata;
+
+    var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
+
+    if (files.exists(isopackJsonPath)) {
+      files.chmod(isopackJsonPath, 0777);
+    }
+
+    files.writeFile(isopackJsonPath,
+      new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
+      {mode: 0444});
+
+    // Step 3. Clean up old unipackage.json file if it exists
+    files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
+
+    // Result: Now we are in a state where the isopack.json file paths are
+    // consistent with the paths in the downloaded tarball.
+
+    // Now, we have to convert the unibuild files in the same way.
+    _.each(convertedMetadata.builds, function (unibuildMeta) {
+      var unibuildJsonPath = files.pathJoin(targetDirectory, unibuildMeta.path);
+      var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
+
+      if (unibuildJson.format !== "unipackage-unibuild-pre1") {
+        throw new Error("Unsupported isopack unibuild format: " +
+          JSON.stringify(unibuildJson.format));
+      }
+
+      var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
+
+      files.chmod(unibuildJsonPath, 0777);
+      files.writeFile(unibuildJsonPath,
+        new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
+        {mode: 0444});
+      // Result: Now we are in a state where the unibuild file paths are
+      // consistent with the paths in the downloaded tarball.
+    });
+
+    // Lastly, convert the build plugins, which are in the JSImage format
+    _.each(convertedMetadata.plugins, function (pluginMeta) {
+      var programJsonPath = files.pathJoin(targetDirectory, pluginMeta.path);
+      var programJson = JSON.parse(files.readFile(programJsonPath));
+
+      if (programJson.format !== "javascript-image-pre1") {
+        throw new Error("Unsupported plugin format: " +
+          JSON.stringify(programJson.format));
+      }
+
+      var convertedPlugin = colonConverter.convertJSImage(programJson);
+
+      files.chmod(programJsonPath, 0777);
+      files.writeFile(programJsonPath,
+        new Buffer(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
+        {mode: 0444});
+      // Result: Now we are in a state where the build plugin file paths are
+      // consistent with the paths in the downloaded tarball.
+    });
+  }
+
+  return targetDirectory;
+};
 
 _.extend(exports.Tropohouse.prototype, {
   // Returns the load path where one can expect to find the package, at a given
@@ -48,7 +145,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     var relativePath = files.pathJoin(
       config.getPackagesDirectoryName(),
-      utils.escapePackageNameForPath(packageName),
+      colonConverter.convert(packageName),
       version);
 
     return relative ? relativePath : files.pathJoin(self.root, relativePath);
@@ -58,14 +155,14 @@ _.extend(exports.Tropohouse.prototype, {
   // the server in a way that our sync protocol doesn't understand well.
   wipeAllPackages: function () {
     var self = this;
-
     var packagesDirectoryName = config.getPackagesDirectoryName();
-
     var packageRootDir = files.pathJoin(self.root, packagesDirectoryName);
+    var escapedPackages;
+
     try {
       // XXX this variable actually can't be accessed from outside this
       // line, this is definitely a bug
-      var escapedPackages = files.readdir(packageRootDir);
+      escapedPackages = files.readdir(packageRootDir);
     } catch (e) {
       // No packages at all? We're done.
       if (e.code === 'ENOENT')
@@ -109,8 +206,10 @@ _.extend(exports.Tropohouse.prototype, {
 
     _.each(escapedPackages, function (packageEscaped) {
       var packageDir = files.pathJoin(packageRootDir, packageEscaped);
+      var versions;
+
       try {
-        var versions = files.readdir(packageDir);
+        versions = files.readdir(packageDir);
       } catch (e) {
         // Somebody put a file in here or something? Whatever, ignore.
         if (e.code === 'ENOENT' || e.code === 'ENOTDIR')
@@ -166,14 +265,13 @@ _.extend(exports.Tropohouse.prototype, {
       return archinfo.mostSpecificMatch(requiredArch, downloaded.arches);
     });
   },
+
   // Contacts the package server, downloads and extracts a tarball for a given
   // buildRecord into a temporary directory, whose path is returned.
   //
   // XXX: Error handling.
   _downloadBuildToTempDir: function (versionInfo, buildRecord) {
     var self = this;
-    var targetDirectory = files.mkdtemp();
-
     var url = buildRecord.build.url;
 
     // XXX: We use one progress for download & untar; this isn't ideal:
@@ -186,9 +284,8 @@ _.extend(exports.Tropohouse.prototype, {
       progress: buildmessage.getCurrentProgressTracker(),
       wait: false
     });
-    files.extractTarGz(packageTarball, targetDirectory);
 
-    return targetDirectory;
+    return exports._extractAndConvert(packageTarball);
   },
 
   // Given a package name and version, returns a survey of what we have
@@ -210,34 +307,49 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Figure out what arches (if any) we have loaded for this package version
     // already.
-    var packageLinkFile = self.packagePath(packageName, version);
+    var packagePath = self.packagePath(packageName, version);
     var downloadedArches = [];
-    var packageLinkTarget = null;
-    try {
-      packageLinkTarget = files.readlink(packageLinkFile);
-    } catch (e) {
-      // Complain about anything other than "we don't have it at all". This
-      // includes "not a symlink": The main reason this would not be a symlink
-      // is if it's a directory containing a pre-0.9.0 package (ie, this is a
-      // warehouse package not a tropohouse package). But the versions should
-      // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-      // versions should be semver-like.
-      if (e.code !== 'ENOENT')
-        throw e;
+
+    // Find out which arches we have by reading the isopack metadata
+    var packageMetadata = Isopack.readMetadataFromDirectory(packagePath);
+
+    // packageMetadata is null if there is no package at packagePath
+    if (packageMetadata) {
+      downloadedArches = _.pluck(packageMetadata.builds, "arch");
     }
-    if (packageLinkTarget) {
-      // The symlink will be of the form '.VERSION.RANDOMTOKEN++web.browser+os',
-      // so this strips off the part before the '++'.
-      // XXX maybe we should just read the isopack.json instead of
-      //     depending on the symlink?
-      var archPart = packageLinkTarget.split('++')[1];
-      if (!archPart)
-        throw Error("unexpected symlink target for " + packageName + "@" +
-                    version + ": " + packageLinkTarget);
-      downloadedArches = archPart.split('+');
-    }
-    return { arches: downloadedArches, target: packageLinkTarget };
+
+    return downloadedArches;
   },
+
+  _saveIsopack: function (isopack, packageName) {
+    // XXX does this actually need the name as an argument or can we just get
+    // it from isopack?
+
+    var self = this;
+
+    if (self.platform === "win32") {
+      // XXX wipeAllPackages won't work on Windows until we fix that function
+      isopack.saveToPath(self.packagePath(packageName, isopack.version));
+    } else {
+      // Note: wipeAllPackages depends on this filename structure
+      // On Mac and Linux, we used to use a filename structure that used the
+      // names of symlinks to determine which builds we have downloaded. We no
+      // longer need this because we now parse package metadata, but we still
+      // need to write the symlinks correctly so that old meteor tools can
+      // still read newly downloaded packages.
+      var newPackageLinkTarget = '.' + isopack.version + '.' +
+        utils.randomToken() + '++' + isopack.buildArchitectures();
+
+      var combinedDirectory = self.packagePath(
+        packageName, newPackageLinkTarget);
+
+      isopack.saveToPath(combinedDirectory);
+
+      files.symlinkOverSync(newPackageLinkTarget,
+        self.packagePath(packageName, isopack.version));
+    }
+  },
+
   // Given a package name, version, and required architectures, checks to make
   // sure that we have the package downloaded at the requested arch. If we do,
   // returns null.
@@ -263,13 +375,11 @@ _.extend(exports.Tropohouse.prototype, {
     var packageName = options.packageName;
     var version = options.version;
 
-    // Look up the information that we have already downloaded.
-    var downloaded = self._alreadyDownloaded({
+    // Look up which arches we have already downloaded
+    var downloadedArches = self._alreadyDownloaded({
       packageName: packageName,
       version: version
     });
-    var downloadedArches = downloaded.arches;
-    var packageLinkTarget = downloaded.target;
 
     var archesToDownload = _.filter(options.architectures, function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
@@ -293,7 +403,7 @@ _.extend(exports.Tropohouse.prototype, {
       return null;
     }
 
-    var packageLinkFile = self.packagePath(packageName, version);
+    var packagePath = self.packagePath(packageName, version);
     var download = function download () {
       buildmessage.assertInCapture();
 
@@ -304,12 +414,39 @@ _.extend(exports.Tropohouse.prototype, {
         title: "downloading " + packageName + "@" + version + "..."
       }, function() {
         var buildTempDirs = [];
-        // If there's already a package in the tropohouse, start with it.
-        if (packageLinkTarget) {
-          buildTempDirs.push(
-            files.pathResolve(files.pathDirname(packageLinkFile),
-                              packageLinkTarget));
+        var packageLinkTarget = null;
+
+        // Find the previous actual directory of the package
+        if (self.platform === "win32") {
+          // On Windows, we don't use symlinks.
+          // If there's already a package in the tropohouse, start with it.
+          if (files.exists(packagePath)) {
+            buildTempDirs.push(packagePath);
+          }
+        } else {
+          // On posix, we have a symlink structure. Get the target of the
+          // symlink so that we can delete it later.
+          try {
+            packageLinkTarget = files.readlink(packagePath);
+          } catch (e) {
+            // Complain about anything other than "we don't have it at all". This
+            // includes "not a symlink": The main reason this would not be a symlink
+            // is if it's a directory containing a pre-0.9.0 package (ie, this is a
+            // warehouse package not a tropohouse package). But the versions should
+            // not overlap: warehouse versions are truncated SHAs whereas tropohouse
+            // versions should be semver-like.
+            if (e.code !== 'ENOENT')
+              throw e;
+          }
+
+          // If there's already a package in the tropohouse, start with it.
+          if (packageLinkTarget) {
+            buildTempDirs.push(
+              files.pathResolve(files.pathDirname(packagePath),
+                                packageLinkTarget));
+          }
         }
+
         // XXX how does concurrency work here?  we could just get errors if we
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
@@ -334,18 +471,16 @@ _.extend(exports.Tropohouse.prototype, {
             buildTempDir,
             {firstIsopack: i === 0});
         });
-        // Note: wipeAllPackages depends on this filename structure, as does the
-        // part above which readlinks.
-        var newPackageLinkTarget = '.' + version + '.'
-              + utils.randomToken() + '++' + isopack.buildArchitectures();
-        var combinedDirectory = self.packagePath(
-          packageName, newPackageLinkTarget);
-        isopack.saveToPath(combinedDirectory);
-        files.symlinkOverSync(newPackageLinkTarget, packageLinkFile);
+
+        self._saveIsopack(isopack, packageName, version);
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {
-          files.freeTempDir(buildTempDir);
+          // On Windows, the first item added to buildTempDir is actually
+          // not a temporary directory, it's the real package path
+          if (buildTempDir !== packagePath) {
+            files.freeTempDir(buildTempDir);
+          }
         });
 
         // Clean up old version.
@@ -429,12 +564,29 @@ _.extend(exports.Tropohouse.prototype, {
   latestMeteorSymlink: function () {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    return files.readlink(linkPath);
+
+    if (self.platform === 'win32') {
+      var scriptLocation = _.last(
+        _.filter(files.readFile(linkPath + '.bat').split('\n'), _.identity)
+      ).replace(/^rem /g, '');
+
+      if (! scriptLocation) {
+        throw new Error('Failed to parse script location from meteor.bat');
+      }
+
+      return scriptLocation;
+    } else {
+      return files.readlink(linkPath);
+    }
   },
 
-  replaceLatestMeteorSymlink: function (linkText) {
+  linkToLatestMeteor: function (scriptLocation) {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-    files.symlinkOverSync(linkText, linkPath);
+    files.linkToMeteorScript(scriptLocation, linkPath, self.platform);
+  },
+
+  _getPlatform: function () {
+    return this.platform;
   }
 });

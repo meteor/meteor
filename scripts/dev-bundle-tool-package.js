@@ -34,6 +34,7 @@ var packageJson = {
     "http-proxy": "1.6.0",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
+    "rimraf": "2.2.8",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
@@ -54,5 +55,13 @@ var packageJson = {
   }
 };
 
+if (process.platform === 'win32') {
+  // Cordova is not supported on Windows
+  delete packageJson.dependencies.cordova;
+  // netroute is only needed for Cordova support
+  delete packageJson.dependencies.netroute;
+  // kexec doesn't work on Windows
+  delete packageJson.dependencies.kexec;
+}
 
 process.stdout.write(JSON.stringify(packageJson, null, 2) + '\n');

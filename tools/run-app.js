@@ -195,7 +195,10 @@ _.extend(AppProcess.prototype, {
 
     var shellDir = self.projectContext.getMeteorShellDirectory();
     files.mkdir_p(shellDir);
-    env.METEOR_SHELL_DIR = shellDir;
+
+    // We need to convert to OS path here because the running app doesn't
+    // have access to path translation functions
+    env.METEOR_SHELL_DIR = files.convertToOSPath(shellDir);
 
     env.METEOR_PARENT_PID =
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
@@ -209,25 +212,32 @@ _.extend(AppProcess.prototype, {
   _spawn: function () {
     var self = this;
 
-    var child_process = require('child_process');
+    // Path conversions
+    var nodePath = process.execPath; // This path is an OS path already
+    var entryPoint = files.convertToOSPath(
+      files.pathJoin(self.bundlePath, 'main.js'));
 
+    // Setting options
     var opts = _.clone(self.nodeOptions);
-    var entryPoint = files.pathJoin(self.bundlePath, 'main.js');
 
+    var attach;
     if (self.debugPort) {
-      var attach = require("./inspector.js").start(
-        self.debugPort,
-        entryPoint
-      );
+      attach = require("./inspector.js").start(self.debugPort, entryPoint);
+
+      // If you do opts.push("--debug-brk", port) it doesn't work on Windows
+      // for some reason
       opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
     }
 
     opts.push(entryPoint);
 
-    var child = child_process.spawn(process.execPath, opts, {
+    // Call node
+    var child_process = require('child_process');
+    var child = child_process.spawn(nodePath, opts, {
       env: self._computeEnvironment()
     });
 
+    // Attach inspector
     if (attach) {
       attach(child);
     }
@@ -591,6 +601,15 @@ _.extend(AppRunner.prototype, {
     // client contains the 'autoupdate' package.
     var canRefreshClient = self.projectContext.packageMap &&
           self.projectContext.packageMap.getInfo('autoupdate');
+
+    if (process.platform === "win32") {
+      // XXX On Windows, we can't send custom signals, so we have to just
+      // kill the server and restart. We can improve this performance by
+      // using a named pipe to communicate to the child process on Windows,
+      // but it's not the lowest hanging fruit for performance right now.
+      canRefreshClient = false;
+    }
+
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);

@@ -22,6 +22,7 @@ var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
+var colonConverter = require('./colon-converter.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -34,7 +35,8 @@ var DEFAULT_PORT = '3000';
 var VALID_ARCHITECTURES = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32": true
+  "os.linux.x86_32": true,
+  "os.windows.x86_32": true
 };
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -383,11 +385,15 @@ main.registerCommand({
       "in a Meteor app directory."
     );
   } else {
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir
+    });
+
+    // We need to convert to OS path here because shell.js doesn't know how
+    // to convert paths, since it exists in the app and in the tool.
     require('./server/shell.js').connect(
-      new projectContextModule.ProjectContext({
-        projectDir: options.appDir
-      }).getMeteorShellDirectory()
-    );
+      files.convertToOSPath(projectContext.getMeteorShellDirectory()));
+
     throw new main.WaitForExit;
   }
 });
@@ -428,9 +434,14 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
-    var packageDir = options.appDir
-          ? files.pathResolve(options.appDir, 'packages', packageName)
-          : files.pathResolve(packageName);
+    var fsName = colonConverter.convert(packageName);
+    var packageDir;
+    if (options.appDir) {
+      packageDir = files.pathResolve(options.appDir, 'packages', fsName);
+    } else {
+      packageDir = files.pathResolve(fsName);
+    }
+
     var inYourApp = options.appDir ? " in your app" : "";
 
     if (files.exists(packageDir)) {
@@ -439,7 +450,8 @@ main.registerCommand({
     }
 
     var transform = function (x) {
-      var xn = x.replace(/~name~/g, packageName);
+      var xn =
+        x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
       // If we are running from checkout, comment out the line sourcing packages
       // from a release, with the latest release filled in (in case they do want
@@ -459,25 +471,36 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
+
     try {
       files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
-   } catch (err) {
-     Console.error("Could not create package: " + err.message);
-     return 1;
-   }
+        },
+        transformContents: function (contents, f) {
+          if ((/(\.html|\.js|\.css)/).test(f))
+            return new Buffer(transform(contents.toString()));
+          else
+            return contents;
+        },
+        ignore: [/^local$/]
+      });
+    } catch (err) {
+      Console.error("Could not create package: " + err.message);
+      return 1;
+    }
 
-    Console.info(packageName + ": created" + inYourApp);
+    var displayPackageDir =
+      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+
+    // Since the directory can't have colons, the directory name will often not
+    // match the name of the package exactly, therefore we should tell people
+    // where it was created.
+    Console.info(
+      packageName + ": created in ",
+      Console.path(displayPackageDir)
+    );
+
     return 0;
   }
 

@@ -164,6 +164,7 @@ var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
+var colonConverter = require('./colon-converter.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -180,9 +181,11 @@ var rejectBadPath = function (p) {
 };
 
 var stripLeadingSlash = function (p) {
-  if (p.charAt(0) !== '/')
-    throw new Error("bad path: " + p);
-  return p.slice(1);
+  if (p.charAt(0) === '/') {
+    return p.slice(1);
+  }
+
+  return p;
 };
 
 
@@ -748,7 +751,9 @@ _.extend(Target.prototype, {
                   // depend on each other, they won't be able to find each
                   // other!
                   preferredBundlePath: files.pathJoin(
-                    'npm', unibuild.pkg.name, 'node_modules'),
+                    'npm',
+                    colonConverter.convert(unibuild.pkg.name),
+                    'node_modules'),
                   npmDiscards: unibuild.pkg.npmDiscards
                 });
                 self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
@@ -1322,8 +1327,9 @@ _.extend(JsImage.prototype, {
             var nodeModuleTopDir =
               files.pathJoin(item.nodeModulesDirectory.sourcePath,
                              name.split("/")[0]);
+
             if (files.exists(nodeModuleTopDir)) {
-              return require(nodeModuleDir);
+              return require(files.convertToOSPath(nodeModuleDir));
             }
 
             try {
@@ -1680,8 +1686,10 @@ _.extend(ServerTarget.prototype, {
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
     if (options.includeNodeModulesSymlink) {
-      builder.write('node_modules', {
-        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
+      builder.copyDirectory({
+        from: files.pathJoin(files.getDevBundle(),
+          'server-lib', 'node_modules'),
+        to: 'node_modules'
       });
     }
 
@@ -1690,26 +1698,31 @@ _.extend(ServerTarget.prototype, {
     var imageControlFile = self.toJsImage().write(builder);
 
     // Server bootstrap
-    builder.write('boot.js',
-                  { file: files.pathJoin(__dirname, 'server', 'boot.js') });
-    builder.write(
-      'boot-utils.js',
-      { file: files.pathJoin(__dirname, 'server', 'boot-utils.js') });
-    builder.write('shell.js',
-                  { file: files.pathJoin(__dirname, 'server', 'shell.js') });
+    _.each([
+      "boot.js",
+      "boot-utils.js",
+      "shell.js",
+      "mini-files.js"
+    ], function (filename) {
+      builder.write(filename, {
+        file: files.pathJoin(files.convertToStandardPath(__dirname),
+          "server", filename)
+      });
+    });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
+    // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
+    // anything anymore
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64'
+      'os.osx.x86_64': 'Darwin_x86_64',
+      'os.windows.x86_32': 'Windows_x86_32'
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
-      buildmessage.error("MDG does not publish dev_bundles for arch: " +
+      throw new Error("MDG does not publish dev_bundles for arch: " +
                          self.arch);
-      // Recover by bailing out and leaving a partially built target
-      return;
     }
 
     // Nothing actually pays attention to the `path` field for a server program
@@ -2122,7 +2135,9 @@ exports.buildJsImage = function (options) {
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],
-    serveRoot: files.pathSep,
+    // it is correct to set slash and not files.pathSep because serverRoot is a
+    // url path and not a file system path
+    serveRoot: '/',
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });
