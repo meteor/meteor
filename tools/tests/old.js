@@ -22,7 +22,10 @@ var maybeFixRelease = function (env) {
 var runOldTest = function (filename, extraEnv) {
   var s = new Sandbox;
 
+  // 'Run' assumes that the first argument is a standard path,
   var run = new Run(files.convertToStandardPath(process.execPath), {
+    // 'args' are treated as-is, so need to be converted before passing into
+    // 'Run'
     args: [files.convertToOSPath(files.pathResolve(
       files.convertToStandardPath(__dirname), 'old', filename))],
     env: maybeFixRelease(_.extend({
