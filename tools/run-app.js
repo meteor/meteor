@@ -678,7 +678,7 @@ _.extend(AppRunner.prototype, {
           self.startFuture['return']();
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      nodePath: bundleResult.nodePath,
+      nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
       settings: settings
     });
 
