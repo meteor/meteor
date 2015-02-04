@@ -483,6 +483,8 @@ _.extend(Builder.prototype, {
       // If we are on a unixy file system, we should not build a package that
       // can't be used on Windows.
 
+      // Writing a regex like /:/ breaks code highlighting in Sublime,
+      // so we use new RegExp(":")
       var pathsWithColons = files.findPathsWithRegex(".", new RegExp(":"),
         { cwd: self.buildPath });
 
