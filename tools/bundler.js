@@ -1690,7 +1690,8 @@ _.extend(ServerTarget.prototype, {
     // rebuild).
     if (options.includeNodeModulesSymlink) {
       builder.copyDirectory({
-        from: files.pathJoin(files.getDevBundle(), 'lib', 'node_modules'),
+        from: files.pathJoin(files.getDevBundle(),
+          'server-lib', 'node_modules'),
         to: 'node_modules'
       });
     }
