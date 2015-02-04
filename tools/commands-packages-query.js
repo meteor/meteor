@@ -1503,7 +1503,7 @@ main.registerCommand({
     } else {
       // We want the latest version of this package, and we don't care if it is
       // a release candidate.
-      vr = projectContext.layeredCatalog.getLatestVersion(name);
+      vr = projectContext.projectCatalog.getLatestVersion(name);
     }
     if (!vr) {
       return false;
@@ -1557,7 +1557,7 @@ main.registerCommand({
             projectContext.localCatalog.getLatestVersion(pack) ||
             catalog.official.getLatestMainlineVersion(pack);
         } else {
-          vr = projectContext.layeredCatalog.getLatestVersion(pack);
+          vr = projectContext.projectCatalog.getLatestVersion(pack);
         }
         if (vr) {
           matchingPackages.push({
