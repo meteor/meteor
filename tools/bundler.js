@@ -1405,7 +1405,8 @@ _.extend(JsImage.prototype, {
   // Returns the path (relative to 'builder') of the control file for
   // the image and the required NODE_PATH.
   // options:
-  // - includeNodeModules: falsy or 'symlink' or 'link-to-system-paths'
+  // - includeNodeModules: falsy or 'symlink' or 'link-to-system-paths'.
+  //   Documented on exports.bundle.
   write: Profile("JsImage#write", function (builder, options) {
     var self = this;
     options = options || {};
@@ -1666,7 +1667,8 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - includeNodeModules: falsy, 'symlink' or 'link-to-system-paths'
+  // - includeNodeModules: falsy, 'symlink' or 'link-to-system-paths',
+  //   documented in exports.bundle
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
@@ -1822,7 +1824,7 @@ var writeTargetToPath = Profile(
 // }
 //
 // options:
-// - includeNodeModules: string or falsy
+// - includeNodeModules: string or falsy, documented on exports.bundle
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
