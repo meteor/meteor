@@ -39,16 +39,35 @@ var VALID_ARCHITECTURES = {
   "os.windows.x86_32": true
 };
 
-// Message to print when we can't Cordova on Windows
-var MESSAGE_NOTHING_ON_WINDOWS = "Currently, it is not possible to build mobile apps on a Windows system.";
+/**
+ * Display a message that we can't do mobile things on Windows, and then
+ * either crash or continue with no mobile platforms.
+ * @param  {String[]} platforms The platforms we are trying to build for. This
+ * function does nothing if this is empty.
+ * @param  {Object} options
+ * @param {Boolean} exit If true, exit if there are any selected platforms.
+ * Use for situations where the program should not continue running if we are
+ * trying to do mobile things on Windows.
+ * @param {Function} messageFunc Print this to warn people that you can't
+ * build for mobile. Takes the platforms as an argument.
+ * @return {String[]} an empty array on Windows, the platforms unchanged
+ * everywhere else
+ */
+var dontBuildMobileOnWindows = function (platforms, options) {
+  options = options || {};
 
-// Pass in the platforms, and replace them with the return value.
-// On Windows, this will return an empty list; on other platforms it
-// is a no-op. Basically a bandaid until we have PhoneGap support on
-// Windows.
-var dontBuildMobileOnWindows = function (platforms) {
   if (! _.isEmpty(platforms) && process.platform === "win32") {
-    Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+    // Default message to print when we can't Cordova on Windows
+    var MESSAGE_NOTHING_ON_WINDOWS =
+      "Currently, it is not possible to build mobile apps on a Windows system.";
+
+    Console.failWarn(options.messageFunc ?
+      options.messageFunc(platforms) : MESSAGE_NOTHING_ON_WINDOWS);
+
+    if (options.exit) {
+      throw new main.ExitWithCode(2);
+    }
+
     return [];
   }
 
@@ -261,7 +280,13 @@ function doRunCommand (options) {
   // XXX We should defer this work until after the proxy is listening!
   //     eg, move it into a CordovaBuildRunner or something.
 
-  options.args = dontBuildMobileOnWindows(options.args);
+  options.args = dontBuildMobileOnWindows(options.args, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run on the following platforms on Windows: " +
+        platforms.join(", ");
+    }
+  });
 
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
@@ -744,7 +769,12 @@ var buildCommand = function (options) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
 
-  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms);
+  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms, {
+    messageFunc: function (platforms) {
+      return "Can't build for mobile on Windows. Skipping the following " +
+        "platforms: " + platforms.join(", ");
+    }
+  });
 
   var appName = files.pathBasename(options.appDir);
 
@@ -1361,7 +1391,13 @@ main.registerCommand({
       mobileTargets.push(option);
   });
 
-  mobileTargets = dontBuildMobileOnWindows(mobileTargets);
+  mobileTargets = dontBuildMobileOnWindows(mobileTargets, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run test-packages on Windows using platforms: " +
+        platforms.join(", ");
+    }
+  });
 
   if (! _.isEmpty(mobileTargets)) {
     var runners = [];
