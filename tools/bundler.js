@@ -1135,7 +1135,7 @@ _.extend(ClientTarget.prototype, {
   // Output the finished target to disk
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the target and the required supporting environment.
+  // the target and the required NODE_PATH.
   write: Profile("ClientTarget#write", function (builder) {
     var self = this;
 
@@ -1403,7 +1403,7 @@ _.extend(JsImage.prototype, {
   // Write this image out to disk
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the image and the required supporting environment.
+  // the image and the required NODE_PATH.
   // options:
   // - includeNodeModules: falsy or 'symlink' or 'link-to-system-paths'
   write: Profile("JsImage#write", function (builder, options) {
@@ -1673,7 +1673,7 @@ _.extend(ServerTarget.prototype, {
   //   client target.. we'll find a better solution here eventually
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the plugin and the required supporting environment
+  // the plugin and the required NODE_PATH.
   write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
     var nodePath = [];
