@@ -1173,6 +1173,38 @@ var ensureBatExtension = function (p) {
   return p;
 };
 
+// Windows-only, generates a bat script that calls the destination bat script
+files._generateScriptLinkToMeteorScript = function (scriptLocation) {
+  var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
+  var scriptLocationConverted = scriptLocationIsAbsolutePath
+    ? files.convertToWindowsPath(scriptLocation)
+    : "%~dp0\\" + files.convertToWindowsPath(scriptLocation);
+
+  var newScript = [
+    "@echo off",
+    // always convert to Windows path since this function can also be
+    // called on Linux or Mac when we are building bootstrap tarballs
+    "\"" + scriptLocationConverted + "\" %*",
+    // add a comment with the destination of the link, so it can be read later
+    // by files.readLinkToMeteorScript
+    "rem " + scriptLocationConverted,
+  ].join(os.EOL);
+
+  return newScript;
+};
+
+files._getLocationFromScriptLinkToMeteorScript = function (script) {
+  var scriptLocation = _.last(
+    _.filter(script.split('\n'), _.identity)
+  ).replace(/^rem /g, '');
+
+  if (! scriptLocation) {
+    throw new Error('Failed to parse script location from meteor.bat');
+  }
+
+  return files.convertToStandardPath(scriptLocation);
+};
+
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
   platform = platform || process.platform;
 
@@ -1181,23 +1213,9 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
 
     linkLocation = ensureBatExtension(linkLocation);
     scriptLocation = ensureBatExtension(scriptLocation);
+    var script = files._generateScriptLinkToMeteorScript(scriptLocation);
 
-    var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
-    var scriptLocationConverted = scriptLocationIsAbsolutePath
-      ? files.convertToWindowsPath(scriptLocation)
-      : "%~dp0\\" + files.convertToWindowsPath(scriptLocation);
-
-    var newScript = [
-      "@echo off",
-      // always convert to Windows path since this function can also be
-      // called on Linux or Mac when we are building bootstrap tarballs
-      "\"" + scriptLocationConverted + "\" %*",
-      // add a comment with the destination of the link, so it can be read later
-      // by files.readLinkToMeteorScript
-      "rem " + scriptLocationConverted,
-    ].join(os.EOL);
-
-    files.writeFile(linkLocation, newScript, {encoding: "ascii"});
+    files.writeFile(linkLocation, script, {encoding: "ascii"});
   } else {
     // Symlink meteor tool
     files.symlinkOverSync(scriptLocation, linkLocation);
@@ -1208,16 +1226,8 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
   platform = platform || process.platform;
   if (platform === 'win32') {
     linkLocation = ensureBatExtension(linkLocation);
-
-    var scriptLocation = _.last(
-      _.filter(files.readFile(linkLocation + '.bat').split('\n'), _.identity)
-    ).replace(/^rem /g, '');
-
-    if (! scriptLocation) {
-      throw new Error('Failed to parse script location from meteor.bat');
-    }
-
-    return scriptLocation;
+    var script = files.readFile(linkLocation);
+    return files._getLocationFromScriptLinkToMeteorScript(script);
   } else {
     return files.readlink(linkLocation);
   }
