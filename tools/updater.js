@@ -27,7 +27,7 @@ exports.tryToDownloadUpdate = function (options) {
   if (checkInProgress)
     return;
   checkInProgress = true;
-  checkForUpdate(!!options.showBanner, !!options.printErrors);
+  checkForUpdate(!! options.showBanner, !! options.printErrors);
   checkInProgress = false;
 };
 
