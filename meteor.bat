@@ -3,7 +3,7 @@
 rem only if we are running from a checkout
 IF EXIST "%~dp0\.git" (
   rem verify that we have 7zip in the path
-  7z.exe --help > con
+  7z.exe --help > nul
   IF errorlevel 1 (
     echo "Please install 7z.exe (7-Zip) and put it into your PATH"
     exit 1
