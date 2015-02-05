@@ -465,7 +465,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
     var isModify = isModificationMod(mongoMod);
-    var knownId = (isModify ? selector._id : mod._id);
+    var knownId = selector._id || mod._id;
 
     if (options._forbidReplace && ! isModify) {
       var e = new Error("Invalid modifier. Replacements are forbidden.");

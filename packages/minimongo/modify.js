@@ -69,11 +69,7 @@ LocalCollection._modify = function (doc, mod, options) {
     // Note: this used to be for (var k in doc) however, this does not
     // work right in Opera. Deleting from a doc while iterating over it
     // would sometimes cause opera to skip some keys.
-
-    // isInsert: if we're constructing a document to insert (via upsert)
-    // and we're in replacement mode, not modify mode, DON'T take the
-    // _id from the query.  This matches mongo's behavior.
-    if (k !== '_id' || options.isInsert)
+    if (k !== '_id')
       delete doc[k];
   });
   _.each(newDoc, function (v, k) {
