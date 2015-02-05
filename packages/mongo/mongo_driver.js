@@ -477,9 +477,18 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     }
 
     if (options.upsert && (! knownId) && options.insertedId) {
-      // XXX In future we could do a real upsert for the mongo id generation
-      // case, if the the node mongo driver gives us back the id of the upserted
-      // doc (which our current version does not).
+      // XXX If we know we're using Mongo 2.6 (and this isn't a replacement)
+      //     we should be able to just use $setOnInsert instead of this
+      //     simulated upsert thing. (We can't use $setOnInsert with
+      //     replacements because there's nowhere to write it, and $setOnInsert
+      //     can't set _id on Mongo 2.4.)
+      //
+      //     Also, in the future we could do a real upsert for the mongo id
+      //     generation case, if the the node mongo driver gives us back the id
+      //     of the upserted doc (which our current version does not).
+      //
+      //     For more context, see
+      //     https://github.com/meteor/meteor/issues/2278#issuecomment-64252706
       simulateUpsertWithInsertedId(
         collection, mongoSelector, mongoMod,
         isModify, options,
