@@ -1134,8 +1134,11 @@ _.extend(ClientTarget.prototype, {
 
   // Output the finished target to disk
   //
-  // Returns the path (relative to 'builder') of the control file for
-  // the target and the required NODE_PATH.
+  // Returns an object with the following keys:
+  // - controlFile: the path (relative to 'builder') of the control file for
+  // the target
+  // - nodePath: an array of paths required to be set in the NODE_PATH
+  // environment variable.
   write: Profile("ClientTarget#write", function (builder) {
     var self = this;
 
@@ -1402,11 +1405,15 @@ _.extend(JsImage.prototype, {
 
   // Write this image out to disk
   //
-  // Returns the path (relative to 'builder') of the control file for
-  // the image and the required NODE_PATH.
   // options:
   // - includeNodeModules: falsy or 'symlink' or 'link-to-system-paths'.
   //   Documented on exports.bundle.
+  //
+  // Returns an object with the following keys:
+  // - controlFile: the path (relative to 'builder') of the control file for
+  // the image
+  // - nodePath: an array of paths required to be set in the NODE_PATH
+  // environment variable.
   write: Profile("JsImage#write", function (builder, options) {
     var self = this;
     options = options || {};

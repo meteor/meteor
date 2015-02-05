@@ -16,12 +16,6 @@ var _ = require('underscore');
 //  - outputPath: Required. Path to the directory that will hold the
 //    bundle when building is complete. It should not exist. Its
 //    parents will be created if necessary.
-//  - symlink: if true, symlink rather than copy files/directories
-//    where possible. This is faster and takes up less disk space but
-//    produces a bundle that can't run elsewhere, and also that will
-//    reflect changes to the input files in realtime (we don't care
-//    about that, at least in development mode, since we reload on
-//    change anyway..)
 var Builder = function (options) {
   var self = this;
   options = options || {};
@@ -312,6 +306,7 @@ _.extend(Builder.prototype, {
   //   symlinks are being used).  Like with WatchSets, they match against
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
+  // - symlink: true if the directory should be symlinked instead of copying
   copyDirectory: Profile("Builder#copyDirectory", function (options) {
     var self = this;
     options = options || {};

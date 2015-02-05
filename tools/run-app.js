@@ -207,8 +207,12 @@ _.extend(AppProcess.prototype, {
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
 
+    // use node's path module and not 'files.js' because NODE_PATH is an
+    // environment variable passed to an external process and needs to be
+    // constructed in the OS-style.
+    var path = require('path');
     env.NODE_PATH =
-      self.nodePath.join(process.platform === 'win32' ? ';' : ':');
+      self.nodePath.join(path.delimiter);
 
     return env;
   },
