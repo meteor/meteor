@@ -1202,7 +1202,7 @@ files._getLocationFromScriptLinkToMeteorScript = function (script) {
     throw new Error('Failed to parse script location from meteor.bat');
   }
 
-  return files.convertToStandardPath(scriptLocation);
+  return files.convertToPosixPath(scriptLocation);
 };
 
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
