@@ -303,10 +303,11 @@ _.extend(exports.Tropohouse.prototype, {
       buildmessage.enterJob({
         title: "downloading " + packageName + "@" + version + "..."
       }, function() {
+        var buildInputDirs = [];
         var buildTempDirs = [];
         // If there's already a package in the tropohouse, start with it.
         if (packageLinkTarget) {
-          buildTempDirs.push(
+          buildInputDirs.push(
             files.pathResolve(files.pathDirname(packageLinkFile),
                               packageLinkTarget));
         }
@@ -315,20 +316,22 @@ _.extend(exports.Tropohouse.prototype, {
         // warehouse?
         _.each(buildsToDownload, function (build) {
           try {
-            buildTempDirs.push(self._downloadBuildToTempDir(
-              { packageName: packageName, version: version }, build));
+            var buildTempDir = self._downloadBuildToTempDir(
+              { packageName: packageName, version: version }, build);
           } catch (e) {
             if (!(e instanceof files.OfflineError))
               throw e;
             buildmessage.error(e.error.message);
           }
+          buildInputDirs.push(buildTempDir);
+          buildTempDirs.push(buildTempDir);
         });
         if (buildmessage.jobHasMessages())
           return;
 
         // We need to turn our builds into a single isopack.
         var isopack = new Isopack;
-        _.each(buildTempDirs, function (buildTempDir, i) {
+        _.each(buildInputDirs, function (buildTempDir, i) {
           isopack._loadUnibuildsFromPath(
             packageName,
             buildTempDir,
