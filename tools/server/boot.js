@@ -130,7 +130,8 @@ Fiber(function () {
           return require(name);
         }
 
-        var nodeModuleBase = path.resolve(serverDir, fileInfo.node_modules);
+        var nodeModuleBase = path.resolve(serverDir,
+          files.convertToOSPath(fileInfo.node_modules));
         var nodeModuleDir = path.resolve(nodeModuleBase, name);
 
         // If the user does `Npm.require('foo/bar')`, then we should resolve to
