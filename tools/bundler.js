@@ -1757,7 +1757,7 @@ _.extend(ServerTarget.prototype, {
     // in star.json any more, so it might as well be boot.js. (It used to be
     // start.sh, a script included for the legacy Galaxy prototype.)
     return 'boot.js';
-  }
+  })
 });
 
 var writeFile = Profile("bundler..writeFile", function (file, builder) {
