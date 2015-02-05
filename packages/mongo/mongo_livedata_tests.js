@@ -2067,20 +2067,21 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {_id: 'bar', x: 1}]);
 
       coll.remove({});
+      ret = upsert(coll, useUpdate, {_id: 'traq'}, {x: 1});
 
-      ret = upsert(coll, useUpdate, {_id: 'traz'}, {x: 1});
       test.equal(ret.numberAffected, 1);
       var myId = ret.insertedId;
-      if (! useUpdate) {
-        test.isTrue(myId);
-        // upsert with entire document does NOT take _id from
-        // the query.
-        test.notEqual(myId, 'traz');
-      } else {
+      if (useUpdate) {
         myId = coll.findOne()._id;
       }
+      // Starting with Mongo 2.6, upsert with entire document takes _id from the
+      // query, so the above upsert actually does an insert with _id traq
+      // instead of a random _id.  Whenever we are using our simulated upsert,
+      // we have this behavior (whether running against Mongo 2.4 or 2.6).
+      // https://jira.mongodb.org/browse/SERVER-5289
+      test.equal(myId, 'traq');
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId}]);
+                     [{x: 1, _id: 'traq'}]);
 
       // this time, insert as _id 'traz'
       ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 2});
@@ -2088,7 +2089,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       if (! useUpdate)
         test.equal(ret.insertedId, 'traz');
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 2, _id: 'traz'}]);
 
       // now update _id 'traz'
@@ -2096,7 +2097,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 3, _id: 'traz'}]);
 
       // now update, passing _id (which is ok as long as it's the same)
@@ -2104,7 +2105,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 4, _id: 'traz'}]);
 
     });
