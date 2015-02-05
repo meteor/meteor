@@ -1828,8 +1828,8 @@ var writeTargetToPath = Profile(
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
-// - nodePath: an array of paths required to be set in NODE_PATH
-// pulling required NODE_PATH to the caller)
+// - nodePath: an array of paths required to be set in NODE_PATH. It's up to
+//   the called to determine what they should be.
 var writeSiteArchive = Profile(
   "bundler..writeSiteArchive", function (targets, outputPath, options) {
   var builder = new Builder({
