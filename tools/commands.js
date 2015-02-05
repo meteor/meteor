@@ -376,6 +376,8 @@ main.registerCommand(_.extend(
 
 main.registerCommand({
   name: 'shell',
+  requiresRelease: false,
+  requiresApp: true,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
