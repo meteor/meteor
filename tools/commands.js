@@ -242,6 +242,14 @@ function doRunCommand (options) {
     return 1;
   }
 
+  options.args = dontBuildMobileOnWindows(options.args, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run on the following platforms on Windows: " +
+        platforms.join(", ");
+    }
+  });
+
   try {
     var parsedMobileServer = utils.mobileServerForRun(options);
   } catch (err) {
@@ -279,14 +287,6 @@ function doRunCommand (options) {
   // If additional args were specified, then also start a mobile build.
   // XXX We should defer this work until after the proxy is listening!
   //     eg, move it into a CordovaBuildRunner or something.
-
-  options.args = dontBuildMobileOnWindows(options.args, {
-    exit: true,
-    messageFunc: function (platforms) {
-      return "Can't run on the following platforms on Windows: " +
-        platforms.join(", ");
-    }
-  });
 
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
