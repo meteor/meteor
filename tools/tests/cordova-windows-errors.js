@@ -22,12 +22,16 @@ selftest.define("windows prints correct message when it can't do mobile things",
 
   s.run("create", "--example", "todos");
   s.cd("todos", function () {
-    run = s.run("build");
+    run = s.run("build", ".build", "--server", "https://foo.com");
     run.matchErr("Windows");
     _.each(['ios', 'android', 'ios-device', 'android-device'], function (platform) {
       run = s.run('run', platform);
       // We print some warning that involves saying you're on Windows
       run.matchErr("Windows");
+    });
+    _.each(['ios', 'android'], function (platform) {
+      run = s.run('remove-platform', platform);
+      run.match('removed platform');
     });
   });
 });
