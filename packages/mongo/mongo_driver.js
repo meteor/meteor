@@ -541,9 +541,20 @@ var NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
 MongoConnection._isCannotChangeIdError = function (err) {
-  // either of these checks should work, but just to be safe...
-  return (err.code === 13596 ||
-          err.err.indexOf("cannot change _id of a document") === 0);
+  // First check for what this error looked like in Mongo 2.4.  Either of these
+  // checks should work, but just to be safe...
+  if (err.code === 13596)
+    return true;
+  if (err.err.indexOf("cannot change _id of a document") === 0)
+    return true;
+
+  // Now look for what it looks like in Mongo 2.6.  We don't use the error code
+  // here, because the error code we observed it producing (16837) appears to be
+  // a far more generic error code based on examining the source.
+  if (err.err.indexOf("The _id field cannot be changed") === 0)
+    return true;
+
+  return false;
 };
 
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
