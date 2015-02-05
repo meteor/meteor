@@ -261,7 +261,7 @@ files.statOrNull = function (path) {
 };
 
 // Like rm -r.
-files.rm_recursive = function (p) {
+files.rm_recursive = Profile("files.rm_recursive", function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
     var fut = new Future();
     rimraf(files.convertToOSPath(p), { busyTries: 10 }, fut.resolver());
@@ -269,7 +269,7 @@ files.rm_recursive = function (p) {
   } else {
     rimraf.sync(files.convertToOSPath(p));
   }
-};
+});
 
 // Makes all files in a tree read-only.
 var makeTreeReadOnly = function (p) {
