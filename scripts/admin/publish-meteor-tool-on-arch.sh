@@ -86,6 +86,12 @@ END
     while read -u10 -r line
     do
       line="${line/\$GITSHA/$GITSHA}"
+
+      # skip empty lines and comments
+      if [[ x$line == x ]] || [[ $line == "REM "* ]]; then
+        continue
+      fi
+
       echo $line
       ssh $USERNAME@$HOST -oUserKnownHostsFile="$TEMP_KEY" -p "$PORT" -i "$TEMP_PRIV_KEY" "cmd /c echo $line>> C:\\publish-tool.bat" 2>/dev/null
     done 10< "$BAT_FILENAME"
