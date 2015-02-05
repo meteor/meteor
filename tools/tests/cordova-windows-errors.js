@@ -3,7 +3,7 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 
 
-selftest.define("windows prints correct message when it can't do mobile things", function () {
+selftest.define("windows prints correct message when it can't do mobile things", ["windows"], function () {
   var s = new Sandbox();
   
   var run;
