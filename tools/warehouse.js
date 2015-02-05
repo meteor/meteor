@@ -59,7 +59,7 @@ _.extend(warehouse, {
   getWarehouseDir: function () {
     // a hook for tests, or i guess for users.
     if (process.env.METEOR_WAREHOUSE_DIR)
-      return process.env.METEOR_WAREHOUSE_DIR;
+      return files.convertToStandardPath(process.env.METEOR_WAREHOUSE_DIR);
 
     // This function should never be called unless we have a warehouse
     // (an installed version, or with process.env.METEOR_WAREHOUSE_DIR

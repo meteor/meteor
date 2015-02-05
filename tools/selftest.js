@@ -718,11 +718,12 @@ _.extend(Sandbox.prototype, {
   _makeEnv: function () {
     var self = this;
     var env = _.clone(self.env);
-    env.METEOR_SESSION_FILE = files.pathJoin(self.root, '.meteorsession');
+    env.METEOR_SESSION_FILE = files.convertToOSPath(
+      files.pathJoin(self.root, '.meteorsession'));
 
     if (self.warehouse) {
       // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
 
       if (! _.contains(runningTest.tags, 'test-package-server')) {
         // Don't ever try to refresh the stub catalog we made.

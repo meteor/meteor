@@ -1181,12 +1181,17 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
       linkLocation = linkLocation + ".bat";
     }
 
+    var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
+    var scriptLocationConverted = scriptLocationIsAbsolutePath
+      ? files.convertToWindowsPath(scriptLocation)
+      : "%~dp0\\" + files.convertToWindowsPath(scriptLocation);
+
     var newScript = [
       "@echo off",
       // always convert to Windows path since this function can also be
       // called on Linux or Mac when we are building bootstrap tarballs
-      "\"%~dp0\\" + files.convertToWindowsPath(scriptLocation) + "\" %*",
-      "rem " + scriptLocation
+      "\"" + scriptLocationConverted + "\" %*",
+      "rem " + scriptLocationConverted,
     ].join(os.EOL);
 
     files.writeFile(linkLocation, newScript, {encoding: "ascii"});

@@ -863,6 +863,7 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
 
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);
+  run.match(fullPackageName);
   run.expectExit(0);
 
   s.cd(fsPackageName);
