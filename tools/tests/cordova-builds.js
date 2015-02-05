@@ -18,7 +18,7 @@ var cleanUpBuild = function (s) {
   files.unlink(files.pathJoin(s.cwd, "myapp.tar.gz"));
 };
 
-selftest.define("cordova builds with server options", ["slow"], function () {
+selftest.define("cordova builds with server options", ["cordova", "slow"], function () {
   var s = new Sandbox();
   var run;
 
