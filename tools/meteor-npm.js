@@ -348,7 +348,7 @@ var runNpmCommand = function (args, cwd) {
   }
 
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
-    process.stdout.write('cd ' + cwd + ' && ' + file + ' ' +
+    process.stdout.write('cd ' + cwd + ' && ' + npmPath + ' ' +
                          args.join(' ') + ' ...\n');
 
   if (cwd)
