@@ -1165,21 +1165,22 @@ files.getHomeDir = function () {
   return files.convertToStandardPath(homeDir);
 };
 
+// add .bat extension to link file if not present
+var ensureBatExtension = function (p) {
+  if (p.indexOf(".bat") !== p.length - 4) {
+    p = p + ".bat";
+  }
+  return p;
+};
+
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
   platform = platform || process.platform;
 
   if (platform === 'win32') {
     // Make a meteor batch script that points to current tool
 
-    // add .bat extension to destination if not present
-    if (scriptLocation.indexOf(".bat") !== (scriptLocation.length - 4)) {
-      scriptLocation = scriptLocation + ".bat";
-    }
-
-    // add .bat extension to link file if not present
-    if (linkLocation.indexOf(".bat") !== (linkLocation.length - 4)) {
-      linkLocation = linkLocation + ".bat";
-    }
+    linkLocation = ensureBatExtension(linkLocation);
+    scriptLocation = ensureBatExtension(scriptLocation);
 
     var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
     var scriptLocationConverted = scriptLocationIsAbsolutePath
@@ -1191,6 +1192,8 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
       // always convert to Windows path since this function can also be
       // called on Linux or Mac when we are building bootstrap tarballs
       "\"" + scriptLocationConverted + "\" %*",
+      // add a comment with the destination of the link, so it can be read later
+      // by files.readLinkToMeteorScript
       "rem " + scriptLocationConverted,
     ].join(os.EOL);
 
@@ -1198,6 +1201,25 @@ files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
   } else {
     // Symlink meteor tool
     files.symlinkOverSync(scriptLocation, linkLocation);
+  }
+};
+
+files.readLinkToMeteorScript = function (linkLocation, platform) {
+  platform = platform || process.platform;
+  if (platform === 'win32') {
+    linkLocation = ensureBatExtension(linkLocation);
+
+    var scriptLocation = _.last(
+      _.filter(files.readFile(linkLocation + '.bat').split('\n'), _.identity)
+    ).replace(/^rem /g, '');
+
+    if (! scriptLocation) {
+      throw new Error('Failed to parse script location from meteor.bat');
+    }
+
+    return scriptLocation;
+  } else {
+    return files.readlink(linkLocation);
   }
 };
 

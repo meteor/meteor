@@ -564,20 +564,7 @@ _.extend(exports.Tropohouse.prototype, {
   latestMeteorSymlink: function () {
     var self = this;
     var linkPath = files.pathJoin(self.root, 'meteor');
-
-    if (self.platform === 'win32') {
-      var scriptLocation = _.last(
-        _.filter(files.readFile(linkPath + '.bat').split('\n'), _.identity)
-      ).replace(/^rem /g, '');
-
-      if (! scriptLocation) {
-        throw new Error('Failed to parse script location from meteor.bat');
-      }
-
-      return scriptLocation;
-    } else {
-      return files.readlink(linkPath);
-    }
+    return files.readLinkToMeteorScript(linkPath, self.platform);
   },
 
   linkToLatestMeteor: function (scriptLocation) {
