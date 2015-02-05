@@ -413,6 +413,7 @@ _.extend(exports.Tropohouse.prototype, {
       buildmessage.enterJob({
         title: "downloading " + packageName + "@" + version + "..."
       }, function() {
+        var buildInputDirs = [];
         var buildTempDirs = [];
         var packageLinkTarget = null;
 
@@ -421,7 +422,7 @@ _.extend(exports.Tropohouse.prototype, {
           // On Windows, we don't use symlinks.
           // If there's already a package in the tropohouse, start with it.
           if (files.exists(packagePath)) {
-            buildTempDirs.push(packagePath);
+            buildInputDirs.push(packagePath);
           }
         } else {
           // On posix, we have a symlink structure. Get the target of the
@@ -441,7 +442,7 @@ _.extend(exports.Tropohouse.prototype, {
 
           // If there's already a package in the tropohouse, start with it.
           if (packageLinkTarget) {
-            buildTempDirs.push(
+            buildInputDirs.push(
               files.pathResolve(files.pathDirname(packagePath),
                                 packageLinkTarget));
           }
@@ -452,20 +453,22 @@ _.extend(exports.Tropohouse.prototype, {
         // warehouse?
         _.each(buildsToDownload, function (build) {
           try {
-            buildTempDirs.push(self._downloadBuildToTempDir(
-              { packageName: packageName, version: version }, build));
+            var buildTempDir = self._downloadBuildToTempDir(
+              { packageName: packageName, version: version }, build);
           } catch (e) {
             if (!(e instanceof files.OfflineError))
               throw e;
             buildmessage.error(e.error.message);
           }
+          buildInputDirs.push(buildTempDir);
+          buildTempDirs.push(buildTempDir);
         });
         if (buildmessage.jobHasMessages())
           return;
 
         // We need to turn our builds into a single isopack.
         var isopack = new Isopack;
-        _.each(buildTempDirs, function (buildTempDir, i) {
+        _.each(buildInputDirs, function (buildTempDir, i) {
           isopack._loadUnibuildsFromPath(
             packageName,
             buildTempDir,
@@ -476,11 +479,7 @@ _.extend(exports.Tropohouse.prototype, {
 
         // Delete temp directories now (asynchronously).
         _.each(buildTempDirs, function (buildTempDir) {
-          // On Windows, the first item added to buildTempDir is actually
-          // not a temporary directory, it's the real package path
-          if (buildTempDir !== packagePath) {
-            files.freeTempDir(buildTempDir);
-          }
+          files.freeTempDir(buildTempDir);
         });
 
         // Clean up old version.
