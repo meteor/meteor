@@ -603,13 +603,32 @@ _.extend(Sandbox.prototype, {
 
   // Same as createApp, but with a package.
   //
+  // @param packageDir  {String} The directory in which to create the package
+  // @param packageName {String} The package name to create. This string will
+  //                             replace all appearances of ~package-name~
+  //                             in any package*.js files in the template
+  // @param template    {String} The package template to use. Found as a
+  //                             subdirectory in tests/packages/
+  //
   // For example:
-  //   s.createPackage('mypack', 'empty');
-  //   s.cd('mypack');
-  createPackage: function (to, template) {
+  //   s.createPackage('me_mypack', me:mypack', 'empty');
+  //   s.cd('me_mypack');
+  createPackage: function (packageDir, packageName, template) {
     var self = this;
-    files.cp_r(files.pathJoin(__dirname, 'tests', 'packages', template),
-               files.pathJoin(self.cwd, to));
+    var packagePath = files.pathJoin(self.cwd, packageDir);
+    var templatePackagePath = files.pathJoin(
+      files.convertToStandardPath(__dirname), 'tests', 'packages', template);
+    files.cp_r(templatePackagePath, packagePath);
+
+    _.each(files.readdir(packagePath), function (file) {
+      if (file.match(/^package.*\.js$/)) {
+        var packageJsFile = files.pathJoin(packagePath, file);
+        files.writeFile(
+          packageJsFile,
+          files.readFile(packageJsFile, "utf8")
+            .replace("~package-name~", packageName));
+      }
+    });
   },
 
   // Change the cwd to be used for subsequent runs. For example:

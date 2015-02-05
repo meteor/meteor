@@ -58,9 +58,10 @@ selftest.define("can't publish package with colons", ["net", "test-package-serve
 
   testUtils.login(s, username, password);
   var packageName = randomizedPackageName(username, "package-with-colons");
-  s.createPackage(packageName, "package-with-colons");
+  var packageDirName = "package-with-colons";
+  s.createPackage(packageDirName, packageName, "package-with-colons");
 
-  s.cd(packageName, function () {
+  s.cd(packageDirName, function () {
     var run = s.run("publish", "--create");
 
     run.matchErr("invalid characters");
@@ -81,7 +82,7 @@ selftest.define("can't build local packages with colons", function () {
   s.cd(appName, function () {
     s.mkdir("packages");
     s.cd("packages", function () {
-      s.createPackage(packageName, "package-with-colons");
+      s.createPackage("package-with-colons", packageName, "package-with-colons");
     });
 
     var run = s.run("add", packageName);

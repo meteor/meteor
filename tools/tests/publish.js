@@ -16,14 +16,16 @@ selftest.define("create-publish-and-search",
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
+  var fsPackageName = username + "_" + packageName;
   var githubUrl = "http://github.com/foo/bar";
   var summary = "Package for test";
 
   // Create a package that has a versionsFrom for a nonexistent release and see
   // that we throw on it.
   var noPack = fullPackageName + "2";
-  s.createPackage(noPack, "package-of-two-versions");
-  s.cd(noPack, function() {
+  var noPackDirName = fsPackageName + "2";
+  s.createPackage(noPackDirName, noPack, "package-of-two-versions");
+  s.cd(noPackDirName, function() {
     var packOpen = s.read("package.js");
     packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
       "api.versionsFrom(\"THIS-RELEASE-DOES-NOT-EXIST@0.9\");\n" +
@@ -40,7 +42,7 @@ selftest.define("create-publish-and-search",
   run.expectExit(0);
   run.match(fullPackageName);
 
-  s.cd(fullPackageName);
+  s.cd(fsPackageName);
 
   // set a github URL & summary in the package
   var packageJsContents = s.read("package.js");
@@ -77,14 +79,15 @@ selftest.define("create-publish-and-search",
   // name override.
   packageName = utils.randomToken();
   var newPackageName = username + ":" + packageName;
+  var newPackageDirName = packageName;
   var minPack = " Package.describe({ " +
     "summary: 'Test package: " + packageName + "'," +
     "version: '1.0.1'," +
     "documentation: null," +
     "name: '" + newPackageName + "'});";
 
-  s.createPackage(fullPackageName, "package-of-two-versions");
-  s.cd(fullPackageName, function() {
+  s.createPackage(newPackageDirName, newPackageName, "package-of-two-versions");
+  s.cd(newPackageDirName, function() {
     s.write("package.js", minPack);
     // If we manage to publish without the --create flag, that's probably an
     // indicator that we are reading the directory instead of the override, or,
@@ -130,8 +133,8 @@ selftest.define("publish-one-arch",
   packageName = utils.randomToken();
   fullPackageName = username + ":" + packageName;
 
-  s.createPackage(fullPackageName, "package-with-npm");
-  s.cd(fullPackageName);
+  s.createPackage(packageName, fullPackageName, "package-with-npm");
+  s.cd(packageName);
 
   run = s.run("publish", "--create");
   run.waitSecs(15);
@@ -155,9 +158,9 @@ selftest.define("list-with-a-new-version",
   var run;
 
   // Now, create a package.
-  s.createPackage(fullPackageName, "package-of-two-versions");
+  s.createPackage(packageName, fullPackageName, "package-of-two-versions");
   // Publish the first version.
-  s.cd(fullPackageName, function () {
+  s.cd(packageName, function () {
     run = s.run("publish", "--create");
     run.waitSecs(15);
     run.expectExit(0);
@@ -182,7 +185,7 @@ selftest.define("list-with-a-new-version",
   });
 
   // Change the package to increment version and publish the new package.
-  s.cd(fullPackageName, function () {
+  s.cd(packageName, function () {
     setPackageVersion(s, "1.0.1");
     run = s.run("publish");
     run.waitSecs(15);
@@ -235,7 +238,7 @@ selftest.define("list-with-a-new-version",
   });
 
   // Now publish an 1.0.4-rc4.
-  s.cd(fullPackageName, function () {
+  s.cd(packageName, function () {
     setPackageVersion(s, "1.0.4-rc.4");
     run = s.run("publish");
     run.waitSecs(15);
@@ -307,9 +310,9 @@ selftest.define("do-not-update-to-rcs",
   var run;
 
   // Now, create a package.
-  s.createPackage(fullPackageName, "package-of-two-versions");
+  s.createPackage(packageName, fullPackageName, "package-of-two-versions");
   // Publish the first version.
-  s.cd(fullPackageName, function () {
+  s.cd(packageName, function () {
     run = s.run("publish", "--create");
     run.waitSecs(120);
     run.match("Published " + fullPackageName + "@");
@@ -323,7 +326,7 @@ selftest.define("do-not-update-to-rcs",
   });
 
   // Now publish an 1.0.4-rc.3.
-  s.cd(fullPackageName, function () {
+  s.cd(packageName, function () {
     setPackageVersion(s, "1.0.4-rc.3");
     run = s.run("publish");
     run.waitSecs(15);
@@ -386,7 +389,7 @@ selftest.define("do-not-update-to-rcs",
   });
 
   // Now publish an 1.0.4-rc.4.
-  s.cd(fullPackageName, function () {
+  s.cd(packageName, function () {
     setPackageVersion(s, "1.0.4-rc.4");
     run = s.run("publish");
     run.waitSecs(15);
@@ -424,15 +427,15 @@ selftest.define("package-depends-on-either-version",
 
   // First, we publish fullPackageNameDep at 1.0.0 and publish it..
   var fullPackageNameDep = username + ":" + packageNameDependent;
-  s.createPackage(fullPackageNameDep, "package-of-two-versions");
-   s.cd(fullPackageNameDep, function() {
+  s.createPackage(packageNameDependent, fullPackageNameDep, "package-of-two-versions");
+  s.cd(packageNameDependent, function() {
     run = s.run("publish", "--create");
     run.waitSecs(20);
     run.match("Published");
   });
 
   // Then, we publish fullPackageNameDep at 2.0.0
-  s.cd(fullPackageNameDep, function() {
+  s.cd(packageNameDependent, function() {
     setPackageVersion(s, "2.0.0");
     run = s.run("publish");
     run.waitSecs(20);
@@ -442,8 +445,8 @@ selftest.define("package-depends-on-either-version",
   // Then, we make another one that depends on either version and publish.
   var another = utils.randomToken();
   var fullPackageAnother = username + ":" + another;
-  s.createPackage(fullPackageAnother, "package-of-two-versions");
-  s.cd(fullPackageAnother, function() {
+  s.createPackage(another, fullPackageAnother, "package-of-two-versions");
+  s.cd(another, function() {
     var packOpen = s.read("package.js");
    packOpen = packOpen + "\nPackage.onUse(function(api) { \n" +
       "api.use(\"" + fullPackageNameDep +
