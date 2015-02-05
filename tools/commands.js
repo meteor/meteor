@@ -39,6 +39,22 @@ var VALID_ARCHITECTURES = {
   "os.windows.x86_32": true
 };
 
+// Message to print when we can't Cordova on Windows
+var MESSAGE_NOTHING_ON_WINDOWS = "Currently, it is not possible to build mobile apps on a Windows system.";
+
+// Pass in the platforms, and replace them with the return value.
+// On Windows, this will return an empty list; on other platforms it
+// is a no-op. Basically a bandaid until we have PhoneGap support on
+// Windows.
+var dontBuildMobileOnWindows = function (platforms) {
+  if (! _.isEmpty(platforms) && process.platform === "win32") {
+    Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+    return [];
+  }
+
+  return platforms;
+};
+
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
 //
@@ -244,6 +260,9 @@ function doRunCommand (options) {
   // If additional args were specified, then also start a mobile build.
   // XXX We should defer this work until after the proxy is listening!
   //     eg, move it into a CordovaBuildRunner or something.
+
+  options.args = dontBuildMobileOnWindows(options.args);
+
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
@@ -724,6 +743,9 @@ var buildCommand = function (options) {
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
+
+  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms);
+
   var appName = files.pathBasename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
@@ -1338,6 +1360,8 @@ main.registerCommand({
     if (options[option])
       mobileTargets.push(option);
   });
+
+  mobileTargets = dontBuildMobileOnWindows(mobileTargets);
 
   if (! _.isEmpty(mobileTargets)) {
     var runners = [];

@@ -39,7 +39,6 @@ var cordovaWarehouseDir = function () {
 };
 
 var MESSAGE_IOS_ONLY_ON_MAC = "Currently, it is only possible to build iOS apps on an OS X system.";
-var MESSAGE_NOTHING_ON_WINDOWS = "Currently, it is not possible to build mobile apps on a Windows system.";
 
 var splitN = function (s, split, n) {
   if (n <= 1) {
@@ -89,11 +88,7 @@ cordova.buildTargets = function (projectContext, targets, options) {
 
     if (! inProject) {
       if (! supported) {
-        if (Host.isWindows()) {
-          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
-        } else {
-          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
-        }
+        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
       } else {
         Console.warn("Please add the " + displayPlatform +
                      " platform to your project first.");
@@ -115,12 +110,13 @@ cordova.buildTargets = function (projectContext, targets, options) {
         return false;
       }
 
-      if (supported)
+      if (supported) {
         Console.warn("The " + displayPlatform + " platform is not installed;" +
                      " please run: " +
                      Console.command("meteor install-sdk " + platform));
-      else
+      } else {
         Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+      }
 
       throw new main.ExitWithCode(2);
     }
