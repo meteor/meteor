@@ -1676,6 +1676,7 @@ _.extend(ServerTarget.prototype, {
   // the plugin and the required supporting environment
   write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
+    var nodePath = [];
 
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
@@ -1756,7 +1757,11 @@ _.extend(ServerTarget.prototype, {
     // Nothing actually pays attention to the `path` field for a server program
     // in star.json any more, so it might as well be boot.js. (It used to be
     // start.sh, a script included for the legacy Galaxy prototype.)
-    return 'boot.js';
+    var controlFilePath = 'boot.js';
+    return {
+      controlFile: controlFilePath,
+      nodePath: nodePath
+    };
   })
 });
 
