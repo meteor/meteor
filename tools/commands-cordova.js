@@ -82,7 +82,8 @@ cordova.buildTargets = function (projectContext, targets, options) {
   platforms = _.filter(platforms, function (platform) {
     var inProject = _.contains(cordovaPlatforms, platform);
     var hasSdk = checkPlatformRequirements(platform).acceptable;
-    var supported = (!Host.isLinux() || platform !== "ios") && !Host.isWindows();
+    var supported = (! Host.isLinux() || platform !== "ios") &&
+      ! Host.isWindows();
 
     var displayPlatform = platformToHuman(platform);
 
