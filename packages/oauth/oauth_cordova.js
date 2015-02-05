@@ -60,7 +60,7 @@ OAuth.showPopup = function (url, callback, dimensions) {
     popup.removeEventListener('exit', onExit);
   };
 
-  var popup = window.open(url, '_blank', 'location=yes,hidden=yes');
+  var popup = window.open(url, '_blank', 'location=no,hidden=yes');
   popup.addEventListener('loadstop', pageLoaded);
   popup.addEventListener('loaderror', fail);
   popup.addEventListener('exit', onExit);
