@@ -1424,10 +1424,12 @@ _.extend(JsImage.prototype, {
       var dirname = files.pathDirname(nmd.preferredBundlePath);
       var base = files.pathBasename(nmd.preferredBundlePath);
       var generatedDir = builder.generateFilename(dirname, {directory: true});
-      // where does the node_modules directory *actually* ends up being? either
-      // copied or linked to in a file or symlinked to.
+
+      // We need to find the actual file system location for the node modules
+      // this JS Image uses, so that we can add it to nodeModulesDirectories
       var modulesPhysicalLocation;
-      if (! options.includeNodeModules || options.includeNodeModules === 'symlink') {
+      if (! options.includeNodeModules ||
+          options.includeNodeModules === 'symlink') {
         modulesPhysicalLocation = files.pathJoin(generatedDir, base);
       } else {
         modulesPhysicalLocation = nmd.sourcePath;
