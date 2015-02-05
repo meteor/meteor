@@ -26,16 +26,15 @@ if [ -z "$DIRNAME" ]; then
     exit 1
 fi
 
-echo Found build $DIRNAME
+echo "Found build $DIRNAME"
 
 
 trap "echo Found surprising number of tarballs." EXIT
 # Check to make sure the proper number of each kind of file is there.
-s3cmd ls s3://com.meteor.jenkins/$DIRNAME/ | \
+s3cmd ls "s3://com.meteor.jenkins/$DIRNAME/" | \
   perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 4) }'
 
 trap - EXIT
 
-echo Copying to $TARGET
-s3cmd -P cp -r s3://com.meteor.jenkins/$DIRNAME/ $TARGET$RELEASE
-
+echo Copying to "$TARGET"
+s3cmd -P cp -r "s3://com.meteor.jenkins/$DIRNAME/" "$TARGET$RELEASE"
