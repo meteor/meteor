@@ -11,8 +11,8 @@ selftest.define("windows prints correct message when it can't do mobile things",
 
   s.createApp("myapp", "standard-app");
   s.cd("myapp", function () {
-    _.each(['run', 'add-platform'], function (command) {
-      _.each(['ios', 'android', 'ios-device', 'android-device'], function (platform) {
+    _.each(['add-platform'], function (command) {
+      _.each(['ios', 'android'], function (platform) {
         run = s.run(command, platform);
         // We print some warning that involves saying you're on Windows
         run.matchErr("Windows");
@@ -24,5 +24,10 @@ selftest.define("windows prints correct message when it can't do mobile things",
   s.cd("todos", function () {
     run = s.run("build");
     run.matchErr("Windows");
+    _.each(['ios', 'android', 'ios-device', 'android-device'], function (platform) {
+      run = s.run('run', platform);
+      // We print some warning that involves saying you're on Windows
+      run.matchErr("Windows");
+    });
   });
 });
