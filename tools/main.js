@@ -16,7 +16,9 @@ var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var main = exports;
 
-require('./flush-buffers-on-exit-in-windows.js');
+if (process.platform === "win32") {
+  require('./flush-buffers-on-exit-in-windows.js');
+}
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
 // in especially insufficient when using fibers, because you get
