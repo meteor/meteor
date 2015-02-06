@@ -1730,12 +1730,7 @@ var runTests = function (options) {
       var startTime = +(new Date);
       test.f(options);
     } catch (e) {
-      if (e instanceof TestFailure) {
-        failure = e;
-      } else {
-        Console.error("exception\n");
-        throw e;
-      }
+      failure = e;
     } finally {
       runningTest = null;
       test.cleanup();
@@ -1746,52 +1741,56 @@ var runTests = function (options) {
       failedTests.push(test);
       testList.notifyFailed(test);
 
-      var frames = parseStack.parse(failure);
-      var relpath = files.pathRelative(files.getCurrentToolsDir(),
-                                  frames[0].file);
-      Console.rawError("  => " + failure.reason + " at " +
-                    relpath + ":" + frames[0].line + "\n");
-      if (failure.reason === 'no-match') {
-        Console.arrowError("Pattern: " + failure.details.pattern, 2);
-      }
-      if (failure.reason === "wrong-exit-code") {
-        var s = function (status) {
-          return status.signal || ('' + status.code) || "???";
-        };
-
-        Console.rawError("  => " + "Expected: " + s(failure.details.expected) +
-                      "; actual: " + s(failure.details.actual) + "\n");
-      }
-      if (failure.reason === 'expected-exception') {
-      }
-      if (failure.reason === 'not-equal') {
-        Console.rawError(
-          "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
-          "; actual: " + JSON.stringify(failure.details.actual) + "\n");
-      }
-
-      if (failure.details.run) {
-        failure.details.run.outputLog.end();
-        var lines = failure.details.run.outputLog.get();
-        if (! lines.length) {
-          Console.arrowError("No output", 2);
-        } else {
-          var historyLines = options.historyLines || 100;
-
-          Console.arrowError("Last " + historyLines + " lines:", 2
-          );
-          _.each(lines.slice(-historyLines), function (line) {
-            Console.rawError("  " +
-                             (line.channel === "stderr" ? "2| " : "1| ") +
-                             line.text +
-                             (line.bare ? "%" : "") + "\n");
-          });
+      if (failure instanceof TestFailure) {
+        var frames = parseStack.parse(failure);
+        var relpath = files.pathRelative(files.getCurrentToolsDir(),
+                                         frames[0].file);
+        Console.rawError("  => " + failure.reason + " at " +
+                         relpath + ":" + frames[0].line + "\n");
+        if (failure.reason === 'no-match') {
+          Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
-      }
+        if (failure.reason === "wrong-exit-code") {
+          var s = function (status) {
+            return status.signal || ('' + status.code) || "???";
+          };
 
-      if (failure.details.messages) {
-        Console.arrowError("Errors while building:", 2);
-        Console.rawError(failure.details.messages.formatMessages() + "\n");
+          Console.rawError(
+            "  => " + "Expected: " + s(failure.details.expected) +
+              "; actual: " + s(failure.details.actual) + "\n");
+        }
+        if (failure.reason === 'expected-exception') {
+        }
+        if (failure.reason === 'not-equal') {
+          Console.rawError(
+            "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        }
+
+        if (failure.details.run) {
+          failure.details.run.outputLog.end();
+          var lines = failure.details.run.outputLog.get();
+          if (! lines.length) {
+            Console.arrowError("No output", 2);
+          } else {
+            var historyLines = options.historyLines || 100;
+
+            Console.arrowError("Last " + historyLines + " lines:", 2);
+            _.each(lines.slice(-historyLines), function (line) {
+              Console.rawError("  " +
+                               (line.channel === "stderr" ? "2| " : "1| ") +
+                               line.text +
+                               (line.bare ? "%" : "") + "\n");
+            });
+          }
+        }
+
+        if (failure.details.messages) {
+          Console.arrowError("Errors while building:", 2);
+          Console.rawError(failure.details.messages.formatMessages() + "\n");
+        }
+      } else {
+        Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
     } else {
       var durationMs = +(new Date) - startTime;
