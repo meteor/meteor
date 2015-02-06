@@ -2884,8 +2884,6 @@ main.registerCommand({
         buildmessage.error(platform + ': no such platform');
       } else if (platform === "ios" && !Host.isMac()) {
         buildmessage.error(MESSAGE_IOS_ONLY_ON_MAC);
-      } else if (Host.isWindows()) {
-        buildmessage.error(MESSAGE_NOTHING_ON_WINDOWS);
       }
     });
   });
@@ -3103,10 +3101,6 @@ main.registerCommand({
   if (!_.isEmpty(installed.missing)) {
     if (Host.isLinux() && platform === "ios") {
       Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
-      return 1;
-    }
-    if (Host.isWindows()) {
-      Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
       return 1;
     }
 
