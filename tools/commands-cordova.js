@@ -39,6 +39,7 @@ var cordovaWarehouseDir = function () {
 };
 
 var MESSAGE_IOS_ONLY_ON_MAC = "Currently, it is only possible to build iOS apps on an OS X system.";
+var MESSAGE_NOTHING_ON_WINDOWS = "Currently, Meteor Mobile features are not available on Windows.";
 
 var splitN = function (s, split, n) {
   if (n <= 1) {
@@ -82,14 +83,18 @@ cordova.buildTargets = function (projectContext, targets, options) {
   platforms = _.filter(platforms, function (platform) {
     var inProject = _.contains(cordovaPlatforms, platform);
     var hasSdk = checkPlatformRequirements(platform).acceptable;
-    var supported = (! Host.isLinux() || platform !== "ios") &&
-      ! Host.isWindows();
+    var supported =
+      ! ((Host.isLinux() && platform === "ios") || Host.isWindows());
 
     var displayPlatform = platformToHuman(platform);
 
     if (! inProject) {
       if (! supported) {
-        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        if (Host.isWindows()) {
+          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+        } else {
+          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        }
       } else {
         Console.warn("Please add the " + displayPlatform +
                      " platform to your project first.");
@@ -116,7 +121,11 @@ cordova.buildTargets = function (projectContext, targets, options) {
                      " please run: " +
                      Console.command("meteor install-sdk " + platform));
       } else {
-        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        if (Host.isWindows()) {
+          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+        } else {
+          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        }
       }
 
       throw new main.ExitWithCode(2);
@@ -2875,6 +2884,8 @@ main.registerCommand({
         buildmessage.error(platform + ': no such platform');
       } else if (platform === "ios" && !Host.isMac()) {
         buildmessage.error(MESSAGE_IOS_ONLY_ON_MAC);
+      } else if (Host.isWindows()) {
+        buildmessage.error(MESSAGE_NOTHING_ON_WINDOWS);
       }
     });
   });
@@ -3092,6 +3103,10 @@ main.registerCommand({
   if (!_.isEmpty(installed.missing)) {
     if (Host.isLinux() && platform === "ios") {
       Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+      return 1;
+    }
+    if (Host.isWindows()) {
+      Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
       return 1;
     }
 

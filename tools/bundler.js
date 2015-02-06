@@ -1828,6 +1828,8 @@ var writeTargetToPath = Profile(
 //     serverWatchSet: watch.WatchSet for all files and directories that
 //                     ultimately went into all server programs
 //     starManifest: the JSON manifest of the star
+//     nodePath: an array of paths required to be set in NODE_PATH. It's
+//               up to the called to determine what they should be.
 // }
 //
 // options:
@@ -1835,15 +1837,10 @@ var writeTargetToPath = Profile(
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
-// - nodePath: an array of paths required to be set in NODE_PATH. It's up to
-//   the called to determine what they should be.
 var writeSiteArchive = Profile(
   "bundler..writeSiteArchive", function (targets, outputPath, options) {
   var builder = new Builder({
-    outputPath: outputPath,
-    // This is a bit of a hack, but it means that things like node_modules
-    // directories for packages end up as symlinks too.
-    symlink: options.includeNodeModules === 'symlink'
+    outputPath: outputPath
   });
 
   try {
