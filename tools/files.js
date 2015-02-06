@@ -651,6 +651,7 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
 // be renamed atomically to destPath. The entire tree will be made
 // readonly.
 files.extractTarGz = function (buffer, destPath, options) {
+  var options = options || {};
   var parentDir = files.pathDirname(destPath);
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
