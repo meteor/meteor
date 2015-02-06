@@ -157,6 +157,7 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
         if (! dep.isWeak) {
           requirers[p2] = (requirers[p2] || []);
           requirers[p2].push(pv);
+          self.logic.require(Logic.implies(pv, p2));
         }
       });
     });
@@ -165,19 +166,19 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
   // the keys of `requirers` are the union of the packages in the cache
   // (whether or not anyone requires them) and the packages mentioned
   // as dependencies (whether or not they exist in the catalog)
-  _.each(requirers, function (pvs, p) {
-    // pvs are all the package-versions that require p.
-    // We want to select p if-and-only-if we select one of the pvs
-    // (except when p is a root dependency, in which case
-    // we've already required it).
-    if (! input.isRootDependency(p)) {
-      self.logic.require(Logic.equiv(p, Logic.or(pvs)));
-      if (self.debugLog) {
-        self.debugLog.push(p + ' IFF ONE OF: ' +
-                           (pvs.join(', ') || '[]'));
-      }
-    }
-  });
+//  _.each(requirers, function (pvs, p) {
+//    // pvs are all the package-versions that require p.
+//    // We want to select p if-and-only-if we select one of the pvs
+//    // (except when p is a root dependency, in which case
+//    // we've already required it).
+//    if (! input.isRootDependency(p)) {
+//      self.logic.require(Logic.equiv(p, Logic.or(pvs)));
+//      if (self.debugLog) {
+//        self.debugLog.push(p + ' IFF ONE OF: ' +
+//                           (pvs.join(', ') || '[]'));
+//      }
+//    }
+//  });
 };
 
 CS.Solver.prototype.throwAnyErrors = function () {
@@ -250,10 +251,20 @@ CS.Solver.prototype._generateCostFunction = function () {
   // possible, so we penalize newness.
   costFunc.addComponent('upgrade_oldness');
   costFunc.addComponent('new_root_oldness');
+  costFunc.addComponent('new_indirect_major_newness');
+  costFunc.addComponent('new_indirect_minor_newness');
+  costFunc.addComponent('new_indirect_patch_newness');
   costFunc.addComponent('new_indirect_newness');
+
+  // This is purely to forbid packages that aren't really required, so it
+  // comes last.  We don't want to base any real choices on how many
+  // packages they require.
+  costFunc.addComponent('total_packages');
 
   var input = self.input;
   input.catalogCache.eachPackage(function (p, versions) {
+    costFunc.addToComponent('total_packages', p, 1);
+
     if (input.isUpgrading(p)) {
       _.each(versions, function (v, i) {
         var pv = pvVar(p, v);
@@ -351,6 +362,13 @@ CS.Solver.prototype._generateCostFunction = function () {
         // new_indirect
         _.each(versions, function (v, i) {
           var pv = pvVar(p, v);
+          var vInfo = self._getVersionInfo(v);
+          costFunc.addToComponent('new_indirect_major_newness', pv,
+                                  vInfo.major);
+          costFunc.addToComponent('new_indirect_minor_newness', pv,
+                                  vInfo.minor);
+          costFunc.addToComponent('new_indirect_patch_newness', pv,
+                                  vInfo.patch);
           costFunc.addToComponent('new_indirect_newness', pv, i);
         });
       }
