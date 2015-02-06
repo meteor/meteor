@@ -40,6 +40,10 @@ npm shrinkwrap
 mkdir -Force "${DIR}\server-lib\node_modules"
 cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
 
+mkdir -Force "${DIR}\etc"
+Move-Item package.json "${DIR}\etc\"
+Move-Item npm-shrinkwrap.json "${DIR}\etc\"
+
 mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii

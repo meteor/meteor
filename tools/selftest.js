@@ -508,11 +508,13 @@ var Sandbox = function (options) {
     });
   }
 
+  var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
+
   // Figure out the 'meteor' to run
   if (self.warehouse)
-    self.execPath = files.pathJoin(self.warehouse, 'meteor');
+    self.execPath = files.pathJoin(self.warehouse, meteorScript);
   else
-    self.execPath = files.pathJoin(files.getCurrentToolsDir(), 'meteor');
+    self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
 };
 
 _.extend(Sandbox.prototype, {
@@ -601,13 +603,32 @@ _.extend(Sandbox.prototype, {
 
   // Same as createApp, but with a package.
   //
+  // @param packageDir  {String} The directory in which to create the package
+  // @param packageName {String} The package name to create. This string will
+  //                             replace all appearances of ~package-name~
+  //                             in any package*.js files in the template
+  // @param template    {String} The package template to use. Found as a
+  //                             subdirectory in tests/packages/
+  //
   // For example:
-  //   s.createPackage('mypack', 'empty');
-  //   s.cd('mypack');
-  createPackage: function (to, template) {
+  //   s.createPackage('me_mypack', me:mypack', 'empty');
+  //   s.cd('me_mypack');
+  createPackage: function (packageDir, packageName, template) {
     var self = this;
-    files.cp_r(files.pathJoin(__dirname, 'tests', 'packages', template),
-               files.pathJoin(self.cwd, to));
+    var packagePath = files.pathJoin(self.cwd, packageDir);
+    var templatePackagePath = files.pathJoin(
+      files.convertToStandardPath(__dirname), 'tests', 'packages', template);
+    files.cp_r(templatePackagePath, packagePath);
+
+    _.each(files.readdir(packagePath), function (file) {
+      if (file.match(/^package.*\.js$/)) {
+        var packageJsFile = files.pathJoin(packagePath, file);
+        files.writeFile(
+          packageJsFile,
+          files.readFile(packageJsFile, "utf8")
+            .replace("~package-name~", packageName));
+      }
+    });
   },
 
   // Change the cwd to be used for subsequent runs. For example:
@@ -716,11 +737,12 @@ _.extend(Sandbox.prototype, {
   _makeEnv: function () {
     var self = this;
     var env = _.clone(self.env);
-    env.METEOR_SESSION_FILE = files.pathJoin(self.root, '.meteorsession');
+    env.METEOR_SESSION_FILE = files.convertToOSPath(
+      files.pathJoin(self.root, '.meteorsession'));
 
     if (self.warehouse) {
       // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
 
       if (! _.contains(runningTest.tags, 'test-package-server')) {
         // Don't ever try to refresh the stub catalog we made.
@@ -1008,17 +1030,24 @@ _.extend(BrowserStackClient.prototype, {
 // Run
 ///////////////////////////////////////////////////////////////////////////////
 
-// Represents a test run of the tool. Typically created through the
+// Represents a test run of the tool (except we also use it in
+// tests/old.js to run Node scripts). Typically created through the
 // run() method on Sandbox, but can also be created directly, say if
 // you want to do something other than invoke the 'meteor' command in
 // a nice sandbox.
 //
 // Options: args, cwd, env
+//
+// The 'execPath' argument and the 'cwd' option are assumed to be standard
+// paths.
+//
+// Arguments in the 'args' option are not assumed to be standard paths, so
+// calling any of the 'files.*' methods on them is not safe.
 var Run = function (execPath, options) {
   var self = this;
 
   self.execPath = execPath;
-  self.cwd = options.cwd || process.cwd();
+  self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
@@ -1455,6 +1484,8 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
+  cordova: 'requires Cordova support in tool (eg not on Windows)',
+  windows: 'runs only on Windows',
   // these are pseudo-tags, assigned to tests when you specify
   // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
@@ -1517,6 +1548,12 @@ var getFilteredTests = function (options) {
   }
   if (! options.includeSlowTests) {
     tagsToSkip.push('slow');
+  }
+
+  if (process.platform === "win32") {
+    tagsToSkip.push("cordova");
+  } else {
+    tagsToSkip.push("windows");
   }
 
   return new TestList(allTests, tagsToSkip, testState);

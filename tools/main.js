@@ -16,6 +16,10 @@ var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var main = exports;
 
+if (process.platform === "win32") {
+  require('./flush-buffers-on-exit-in-windows.js');
+}
+
 // node (v8) defaults to only recording 10 lines of stack trace. This
 // in especially insufficient when using fibers, because you get
 // proper call stacks instead of only seeing the stack up to the most
@@ -38,7 +42,8 @@ function Command(options) {
     requiresApp: false,
     requiresRelease: true,
     hidden: false,
-    pretty: true
+    pretty: true,
+    notOnWindows: false
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -285,7 +290,8 @@ require('./commands-packages-query.js');
 // - body (contents of body, trimmed to end with a newline but no blank lines)
 var loadHelp = function () {
   var ret = [];
-  var raw = files.readFile(files.pathJoin(__dirname, 'help.txt'), 'utf8');
+  var dirname = files.convertToStandardPath(__dirname);
+  var raw = files.readFile(files.pathJoin(dirname, 'help.txt'), 'utf8');
   return _.map(raw.split(/^>>>/m).slice(1), function (r) {
     var lines = r.split('\n');
     var name = lines.shift().trim();
@@ -1308,6 +1314,11 @@ Fiber(function () {
 
   Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);
+
+  if (command.notOnWindows && process.platform === 'win32') {
+    Console.error('This command is not yet available on Windows.');
+    process.exit(1);
+  }
 
   // Run the command!
   try {

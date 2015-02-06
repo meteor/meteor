@@ -1,6 +1,7 @@
 var watch = require('./watch.js');
 var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
+var Profile = require('./profile.js').Profile;
 var _ = require('underscore');
 
 // Builder encapsulates much of the file-handling logic need to create
@@ -15,12 +16,6 @@ var _ = require('underscore');
 //  - outputPath: Required. Path to the directory that will hold the
 //    bundle when building is complete. It should not exist. Its
 //    parents will be created if necessary.
-//  - symlink: if true, symlink rather than copy files/directories
-//    where possible. This is faster and takes up less disk space but
-//    produces a bundle that can't run elsewhere, and also that will
-//    reflect changes to the input files in realtime (we don't care
-//    about that, at least in development mode, since we reload on
-//    change anyway..)
 var Builder = function (options) {
   var self = this;
   options = options || {};
@@ -30,8 +25,6 @@ var Builder = function (options) {
   // Paths already written to. Map from canonicalized relPath (no
   // trailing slash) to true for a file, or false for a directory.
   self.usedAsFile = { '': false, '.': false };
-
-  self.shouldSymlink = !! options.symlink;
 
   // foo/bar => foo/.build1234.bar
   // Should we include a random number? The advantage is that multiple
@@ -54,7 +47,7 @@ _.extend(Builder.prototype, {
   // Like mkdir_p, but records in self.usedAsFile that we have created
   // the directories, and takes a path relative to the bundle
   // root. Throws an exception on failure.
-  _ensureDirectory: function (relPath) {
+  _ensureDirectory: Profile("Builder#_ensureDirectory", function (relPath) {
     var self = this;
 
     var parts = files.pathNormalize(relPath).split(files.pathSep);
@@ -77,10 +70,10 @@ _.extend(Builder.prototype, {
         // Already exists and is a directory
       }
     });
-  },
+  }),
 
   // isDirectory defaults to false
-  _sanitize: function (relPath, isDirectory) {
+  _sanitize: Profile("Builder#_sanitize", function (relPath, isDirectory) {
     var self = this;
 
     var parts = relPath.split(files.pathSep);
@@ -130,7 +123,7 @@ _.extend(Builder.prototype, {
     }
 
     return partsOut.join(files.pathSep);
-  },
+  }),
 
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
@@ -151,7 +144,7 @@ _.extend(Builder.prototype, {
   // Returns the final canonicalize relPath that was written to.
   //
   // If `file` is used then it will be added to the builder's WatchSet.
-  write: function (relPath, options) {
+  write: Profile("Builder#write", function (relPath, options) {
     var self = this;
     options = options || {};
 
@@ -191,12 +184,12 @@ _.extend(Builder.prototype, {
     self.usedAsFile[relPath] = true;
 
     return relPath;
-  },
+  }),
 
   // Serialize `data` as JSON and write it to `relPath` (a path to a
   // file relative to the bundle root), creating parent directories as
   // necessary. Throw an exception if the file already exists.
-  writeJson: function (relPath, data) {
+  writeJson: Profile("Builder#writeJson", function (relPath, data) {
     var self = this;
 
     // Ensure no trailing slash
@@ -209,7 +202,7 @@ _.extend(Builder.prototype, {
                      {mode: 0444});
 
     self.usedAsFile[relPath] = true;
-  },
+  }),
 
   // Add relPath to the list of "already taken" paths in the
   // bundle. This will cause write, when in sanitize mode, to never
@@ -225,7 +218,7 @@ _.extend(Builder.prototype, {
   // options:
   // - directory: set to true to reserve this relPath to be a
   //   directory rather than a file.
-  reserve: function (relPath, options) {
+  reserve: Profile("Builder#reserve", function (relPath, options) {
     var self = this;
     options = options || {};
 
@@ -255,7 +248,7 @@ _.extend(Builder.prototype, {
 
     // Return the path we reserved.
     return files.pathJoin(self.buildPath, relPath);
-  },
+  }),
 
   // Generate and reserve a unique name for a file based on `relPath`,
   // and return it. If `relPath` is available (there is no file with
@@ -272,14 +265,15 @@ _.extend(Builder.prototype, {
   //
   // - directory: generate (and reserve) a name for a directory,
   //   rather than a file.
-  generateFilename: function (relPath, options) {
+  generateFilename: Profile(
+    "Builder#generateFilename", function (relPath, options) {
     var self = this;
     options = options || {};
 
     relPath = self._sanitize(relPath, options.directory);
     self.reserve(relPath, { directory: options.directory });
     return relPath;
-  },
+  }),
 
   // Convenience wrapper around generateFilename and write.
   //
@@ -287,12 +281,13 @@ _.extend(Builder.prototype, {
   // is patched through directly rather than rewriting its inputs and
   // outputs. This is only valid because it does nothing with its inputs
   // and outputs other than send pass them to other methods.)
-  writeToGeneratedFilename: function (relPath, writeOptions) {
+  writeToGeneratedFilename: Profile(
+    "Builder#writeToGeneratedFilename", function (relPath, writeOptions) {
     var self = this;
     var generated = self.generateFilename(relPath);
     self.write(generated, writeOptions);
     return generated;
-  },
+  }),
 
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
@@ -311,7 +306,8 @@ _.extend(Builder.prototype, {
   //   symlinks are being used).  Like with WatchSets, they match against
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
-  copyDirectory: function (options) {
+  // - symlink: true if the directory should be symlinked instead of copying
+  copyDirectory: Profile("Builder#copyDirectory", function (options) {
     var self = this;
     options = options || {};
 
@@ -320,7 +316,7 @@ _.extend(Builder.prototype, {
       normOptionsTo = normOptionsTo.slice(0, -1);
 
     var absPathTo = files.pathJoin(self.buildPath, normOptionsTo);
-    if (self.shouldSymlink) {
+    if (options.symlink) {
       if (options.specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
       }
@@ -417,7 +413,7 @@ _.extend(Builder.prototype, {
     };
 
     walk(options.from, normOptionsTo);
-  },
+  }),
 
   // Returns a new Builder-compatible object that works just like a
   // Builder, but interprets all paths relative to 'relPath', a path
@@ -426,7 +422,7 @@ _.extend(Builder.prototype, {
   // The sub-builder returned does not have all Builder methods (for
   // example, complete() wouldn't make sense) and you should not rely
   // on it being instanceof Builder.
-  enter: function (relPath) {
+  enter: Profile("Builder#enter", function (relPath) {
     var self = this;
     var methods = ["write", "writeJson", "reserve", "generateFilename",
                    "copyDirectory", "enter"];
@@ -473,10 +469,10 @@ _.extend(Builder.prototype, {
     });
 
     return subBuilder;
-  },
+  }),
 
   // Move the completed bundle into its final location (outputPath)
-  complete: function () {
+  complete: Profile("Builder#complete", function () {
     var self = this;
 
     // XXX Alternatively, we could just keep buildPath around, and make
@@ -484,13 +480,13 @@ _.extend(Builder.prototype, {
     // case of renameDirAlmostAtomically since that one is constructing files to
     // be checked in to version control, but here we could get away with it.
     files.renameDirAlmostAtomically(self.buildPath, self.outputPath);
-  },
+  }),
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
-  abort: function () {
+  abort: Profile("Builder#abort", function () {
     var self = this;
     files.rm_recursive(self.buildPath);
-  },
+  }),
 
   // Returns a WatchSet representing all files that were read from disk by the
   // builder.

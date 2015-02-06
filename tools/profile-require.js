@@ -1,3 +1,7 @@
+// Use path instead of files.js here because we are explicitly trying to
+// track requires, and files.js is often a culprit of slow requires.
+var path = require('path');
+
 // seconds since epoch
 var now = function () {
   return (+ new Date)/1000;
@@ -26,9 +30,8 @@ RequireInvocation.prototype.isOurCode = function () {
   if (! self.name.match(/\//))
     return false; // we always require our stuff via a path
 
-  var files = require('./files.js');
-  var ourSource = files.pathResolve(__dirname);
-  var required = files.pathResolve(files.pathDirname(self.filename), self.name);
+  var ourSource = path.resolve(__dirname);
+  var required = path.resolve(path.dirname(self.filename), self.name);
   if (ourSource.length > required.length)
     return false;
   return required.substr(0, ourSource.length) === ourSource;
@@ -44,12 +47,11 @@ RequireInvocation.prototype.why = function () {
     walk = walk.parent;
   }
 
-  var files = require('./files.js');
   if (! walk)
     return "???";
   if (last)
-    return files.pathBasename(walk.name) + ":" + files.pathBasename(last.name);
-  return files.pathBasename(walk.name);
+    return path.basename(walk.name) + ":" + path.basename(last.name);
+  return path.basename(walk.name);
 };
 
 exports.start = function () {

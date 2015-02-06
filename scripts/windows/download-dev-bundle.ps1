@@ -14,7 +14,7 @@ echo "Will get you a dev_bundle for $PLATFORM version $BUNDLE_VERSION"
 $TARBALL="dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz"
 
 
-echo "Going to download the dev_bundle from the Internet"
+echo "Going to download the dependency kit from the Internet"
 $ErrorActionPreference = "Stop"
 $devbundle_link = "https://d3sqy0vbqsdhku.cloudfront.net/" + $TARBALL
 $devbundle_zip = $CHECKOUT_DIR + "\" + $TARBALL
@@ -24,7 +24,7 @@ $webclient.DownloadFile($devbundle_link, $devbundle_zip)
 
 echo "... downloaded"
 
-cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX"
+cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX" | out-null
 
 $downloaded_tmp = $CHECKOUT_DIR + "\dev_bundle_XXX"
 $downloaded_path = $downloaded_tmp + "\dev_bundle_" + $PLATFORM + "_" + $BUNDLE_VERSION

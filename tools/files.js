@@ -26,6 +26,8 @@ var colonConverter = require("./colon-converter.js");
 
 var miniFiles = require("./server/mini-files.js");
 
+var Profile = require('./profile.js').Profile;
+
 // Attach all exports of miniFiles here to avoid code duplication
 var files = exports;
 _.extend(files, miniFiles);
@@ -259,7 +261,7 @@ files.statOrNull = function (path) {
 };
 
 // Like rm -r.
-files.rm_recursive = function (p) {
+files.rm_recursive = Profile("files.rm_recursive", function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
     var fut = new Future();
     rimraf(files.convertToOSPath(p), { busyTries: 10 }, fut.resolver());
@@ -267,7 +269,7 @@ files.rm_recursive = function (p) {
   } else {
     rimraf.sync(files.convertToOSPath(p));
   }
-};
+});
 
 // Makes all files in a tree read-only.
 var makeTreeReadOnly = function (p) {
@@ -1163,32 +1165,71 @@ files.getHomeDir = function () {
   return files.convertToStandardPath(homeDir);
 };
 
+// add .bat extension to link file if not present
+var ensureBatExtension = function (p) {
+  if (p.indexOf(".bat") !== p.length - 4) {
+    p = p + ".bat";
+  }
+  return p;
+};
+
+// Windows-only, generates a bat script that calls the destination bat script
+files._generateScriptLinkToMeteorScript = function (scriptLocation) {
+  var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
+  var scriptLocationConverted = scriptLocationIsAbsolutePath
+    ? files.convertToWindowsPath(scriptLocation)
+    : "%~dp0\\" + files.convertToWindowsPath(scriptLocation);
+
+  var newScript = [
+    "@echo off",
+    // always convert to Windows path since this function can also be
+    // called on Linux or Mac when we are building bootstrap tarballs
+    "\"" + scriptLocationConverted + "\" %*",
+    // add a comment with the destination of the link, so it can be read later
+    // by files.readLinkToMeteorScript
+    "rem " + scriptLocationConverted,
+  ].join(os.EOL);
+
+  return newScript;
+};
+
+files._getLocationFromScriptLinkToMeteorScript = function (script) {
+  var scriptLocation = _.last(
+    _.filter(script.split('\n'), _.identity)
+  ).replace(/^rem /g, '');
+
+  if (! scriptLocation) {
+    throw new Error('Failed to parse script location from meteor.bat');
+  }
+
+  return files.convertToPosixPath(scriptLocation);
+};
+
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
   platform = platform || process.platform;
 
   if (platform === 'win32') {
     // Make a meteor batch script that points to current tool
 
-    // add .bat extension to destination if not present
-    if (scriptLocation.indexOf(".bat") !== (scriptLocation.length - 4)) {
-      scriptLocation = scriptLocation + ".bat";
-    }
+    linkLocation = ensureBatExtension(linkLocation);
+    scriptLocation = ensureBatExtension(scriptLocation);
+    var script = files._generateScriptLinkToMeteorScript(scriptLocation);
 
-    // add .bat extension to link file if not present
-    if (linkLocation.indexOf(".bat") !== (linkLocation.length - 4)) {
-      linkLocation = linkLocation + ".bat";
-    }
-
-    var newScript = [
-      "@echo off",
-      // always convert to backslashes as always used on Windows
-      "\"%~dp0\\" + scriptLocation.replace(/\//g, '\\') + "\" %*"
-    ].join(os.EOL);
-
-    files.writeFile(linkLocation, newScript, {encoding: "ascii"});
+    files.writeFile(linkLocation, script, {encoding: "ascii"});
   } else {
     // Symlink meteor tool
     files.symlinkOverSync(scriptLocation, linkLocation);
+  }
+};
+
+files.readLinkToMeteorScript = function (linkLocation, platform) {
+  platform = platform || process.platform;
+  if (platform === 'win32') {
+    linkLocation = ensureBatExtension(linkLocation);
+    var script = files.readFile(linkLocation);
+    return files._getLocationFromScriptLinkToMeteorScript(script);
+  } else {
+    return files.readlink(linkLocation);
   }
 };
 
@@ -1294,7 +1335,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   }
 
   wrapper.displayName = fsFuncName;
-  return files[fsFuncName] = wrapper;
+  return files[fsFuncName] = Profile("files." + fsFuncName, wrapper);
 }
 
 wrapFsFunc("writeFile", [0]);

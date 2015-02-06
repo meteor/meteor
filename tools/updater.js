@@ -27,13 +27,13 @@ exports.tryToDownloadUpdate = function (options) {
   if (checkInProgress)
     return;
   checkInProgress = true;
-  checkForUpdate(!!options.showBanner);
+  checkForUpdate(!! options.showBanner, !! options.printErrors);
   checkInProgress = false;
 };
 
 var firstCheck = true;
 
-var checkForUpdate = function (showBanner) {
+var checkForUpdate = function (showBanner, printErrors) {
   // While we're doing background stuff, try to revoke any old tokens in our
   // session file.
   auth.tryRevokeOldTokens({timeout: 15*1000});
@@ -58,7 +58,7 @@ var checkForUpdate = function (showBanner) {
   if (!release.current.isProperRelease())
     return;
 
-  updateMeteorToolSymlink();
+  updateMeteorToolSymlink(printErrors);
 
   maybeShowBanners();
 };
@@ -146,7 +146,7 @@ var maybeShowBanners = function () {
 
 // Update ~/.meteor/meteor to point to the tool binary from the tools of the
 // latest recommended release on the default release track.
-var updateMeteorToolSymlink = function () {
+var updateMeteorToolSymlink = function (printErrors) {
   // Get the latest release version of METEOR. (*Always* of the default
   // track, not of whatever we happen to be running: we always want the tool
   // symlink to go to the default track.)
@@ -180,7 +180,12 @@ var updateMeteorToolSymlink = function () {
       tropohouse.default.downloadPackagesMissingFromMap(packageMap);
     });
     if (messages.hasMessages()) {
-      // Ignore errors, because we are running in the background.
+      // Ignore errors because we are running in the background, uness we
+      // specifically requested to print errors because we are testing this
+      // feature.
+      if (printErrors) {
+        Console.printMessages(messages);
+      }
       return;
     }
 

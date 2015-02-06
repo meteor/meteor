@@ -39,6 +39,45 @@ var VALID_ARCHITECTURES = {
   "os.windows.x86_32": true
 };
 
+
+// __dirname - the location of the current executing file
+var __dirnameConverted = files.convertToStandardPath(__dirname);
+
+/**
+ * Display a message that we can't do mobile things on Windows, and then
+ * either crash or continue with no mobile platforms.
+ * @param  {String[]} platforms The platforms we are trying to build for. This
+ * function does nothing if this is empty.
+ * @param  {Object} options
+ * @param {Boolean} exit If true, exit if there are any selected platforms.
+ * Use for situations where the program should not continue running if we are
+ * trying to do mobile things on Windows.
+ * @param {Function} messageFunc Print this to warn people that you can't
+ * build for mobile. Takes the platforms as an argument.
+ * @return {String[]} an empty array on Windows, the platforms unchanged
+ * everywhere else
+ */
+var dontBuildMobileOnWindows = function (platforms, options) {
+  options = options || {};
+
+  if (! _.isEmpty(platforms) && process.platform === "win32") {
+    // Default message to print when we can't Cordova on Windows
+    var MESSAGE_NOTHING_ON_WINDOWS =
+      "Currently, it is not possible to build mobile apps on a Windows system.";
+
+    Console.failWarn(options.messageFunc ?
+      options.messageFunc(platforms) : MESSAGE_NOTHING_ON_WINDOWS);
+
+    if (options.exit) {
+      throw new main.ExitWithCode(2);
+    }
+
+    return [];
+  }
+
+  return platforms;
+};
+
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
 //
@@ -207,6 +246,14 @@ function doRunCommand (options) {
     return 1;
   }
 
+  options.args = dontBuildMobileOnWindows(options.args, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run on the following platforms on Windows: " +
+        platforms.join(", ");
+    }
+  });
+
   try {
     var parsedMobileServer = utils.mobileServerForRun(options);
   } catch (err) {
@@ -244,6 +291,7 @@ function doRunCommand (options) {
   // If additional args were specified, then also start a mobile build.
   // XXX We should defer this work until after the proxy is listening!
   //     eg, move it into a CordovaBuildRunner or something.
+
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
@@ -475,7 +523,7 @@ main.registerCommand({
     };
 
     try {
-      files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirnameConverted, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
         },
@@ -522,7 +570,7 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = files.pathJoin(__dirname, '..', 'examples');
+  var exampleDir = files.pathJoin(__dirnameConverted, '..', 'examples');
   var examples = _.reject(files.readdir(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
   });
@@ -583,7 +631,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirnameConverted, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },
@@ -726,6 +774,14 @@ var buildCommand = function (options) {
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
+
+  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms, {
+    messageFunc: function (platforms) {
+      return "Can't build for mobile on Windows. Skipping the following " +
+        "platforms: " + platforms.join(", ");
+    }
+  });
+
   var appName = files.pathBasename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
@@ -1339,6 +1395,14 @@ main.registerCommand({
   _.each(mobileOptions, function (option) {
     if (options[option])
       mobileTargets.push(option);
+  });
+
+  mobileTargets = dontBuildMobileOnWindows(mobileTargets, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run test-packages on Windows using platforms: " +
+        platforms.join(", ");
+    }
   });
 
   if (! _.isEmpty(mobileTargets)) {

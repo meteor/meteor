@@ -1,4 +1,5 @@
 Package.describe({
+  name: "~package-name~", // replaced via `Sandbox.prototype.createPackage`
   summary: ' /* Fill me in! */ ',
   version: '1.0.19',
   git: ' /* Fill me in! */ ',

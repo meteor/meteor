@@ -12,6 +12,7 @@ var stats = require('./stats.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var catalog = require('./catalog.js');
+var Profile = require('./profile.js').Profile;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -62,6 +63,7 @@ var AppProcess = function (options) {
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
+  self.nodePath = options.nodePath || [];
   self.debugPort = options.debugPort;
   self.settings = options.settings;
 
@@ -204,6 +206,13 @@ _.extend(AppProcess.prototype, {
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
+
+    // use node's path module and not 'files.js' because NODE_PATH is an
+    // environment variable passed to an external process and needs to be
+    // constructed in the OS-style.
+    var path = require('path');
+    env.NODE_PATH =
+      self.nodePath.join(path.delimiter);
 
     return env;
   },
@@ -518,12 +527,23 @@ _.extend(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = bundler.bundle({
-        projectContext: self.projectContext,
-        outputPath: bundlePath,
-        includeNodeModulesSymlink: true,
-        buildOptions: self.buildOptions,
-        hasCachedBundle: !! cachedServerWatchSet
+      var bundleResult = Profile.run("Rebuild App", function () {
+        var includeNodeModules = 'symlink';
+
+        // On Windows we cannot symlink node_modules. Copying them is too slow.
+        // Instead receive the NODE_PATH env that we need to set and set it
+        // later on running.
+        if (process.platform === 'win32') {
+          includeNodeModules = 'reference-directly';
+        }
+
+        return bundler.bundle({
+          projectContext: self.projectContext,
+          outputPath: bundlePath,
+          includeNodeModules: includeNodeModules,
+          buildOptions: self.buildOptions,
+          hasCachedBundle: !! cachedServerWatchSet
+        });
       });
 
       // Keep the server watch set from the initial bundle, because subsequent
@@ -661,6 +681,7 @@ _.extend(AppRunner.prototype, {
           self.startFuture['return']();
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
+      nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
       settings: settings
     });
 

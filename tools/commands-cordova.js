@@ -39,6 +39,7 @@ var cordovaWarehouseDir = function () {
 };
 
 var MESSAGE_IOS_ONLY_ON_MAC = "Currently, it is only possible to build iOS apps on an OS X system.";
+var MESSAGE_NOTHING_ON_WINDOWS = "Currently, Meteor Mobile features are not available on Windows.";
 
 var splitN = function (s, split, n) {
   if (n <= 1) {
@@ -82,13 +83,18 @@ cordova.buildTargets = function (projectContext, targets, options) {
   platforms = _.filter(platforms, function (platform) {
     var inProject = _.contains(cordovaPlatforms, platform);
     var hasSdk = checkPlatformRequirements(platform).acceptable;
-    var supported = !Host.isLinux() || platform !== "ios";
+    var supported =
+      ! ((Host.isLinux() && platform === "ios") || Host.isWindows());
 
     var displayPlatform = platformToHuman(platform);
 
     if (! inProject) {
       if (! supported) {
-        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        if (Host.isWindows()) {
+          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+        } else {
+          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        }
       } else {
         Console.warn("Please add the " + displayPlatform +
                      " platform to your project first.");
@@ -110,12 +116,17 @@ cordova.buildTargets = function (projectContext, targets, options) {
         return false;
       }
 
-      if (supported)
+      if (supported) {
         Console.warn("The " + displayPlatform + " platform is not installed;" +
                      " please run: " +
                      Console.command("meteor install-sdk " + platform));
-      else
-        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+      } else {
+        if (Host.isWindows()) {
+          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+        } else {
+          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        }
+      }
 
       throw new main.ExitWithCode(2);
     }
@@ -1704,13 +1715,15 @@ var Host = function () {
 
 _.extend(Host.prototype, {
   isMac: function () {
-    var self = this;
     return process.platform === 'darwin';
   },
 
   isLinux: function () {
-    var self = this;
     return process.platform === 'linux';
+  },
+
+  isWindows: function () {
+    return process.platform === 'win32';
   },
 
   getName : function () {
@@ -2846,7 +2859,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -2960,10 +2974,11 @@ main.registerCommand({
   }
   projectContext.platformList.write(platforms);
 
-  var appName = files.pathBasename(projectContext.projectDir);
-  ensureCordovaProject(projectContext, appName);
-  ensureCordovaPlatforms(projectContext);
-
+  if (! Host.isWindows()) {
+    var appName = files.pathBasename(projectContext.projectDir);
+    ensureCordovaProject(projectContext, appName);
+    ensureCordovaPlatforms(projectContext);
+  }
   // If this was the last Cordova platform, we may need to rebuild all of the
   // local packages to remove the web.cordova unibuild from the IsopackCache.
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -2996,7 +3011,8 @@ main.registerCommand({
   },
   minArgs: 0,
   maxArgs: Infinity,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -3024,7 +3040,8 @@ main.registerCommand({
   },
   minArgs: 0,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   requirePlatformReady('android');
 
@@ -3065,7 +3082,8 @@ main.registerCommand({
   },
   minArgs: 1,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);

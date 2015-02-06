@@ -96,6 +96,7 @@ files.pathDelimiter = ':';
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
+files.convertToWindowsPath = toDosPath;
 files.convertToPosixPath = toPosixPath;
 
 files.convertToStandardLineEndings = convertToStandardLineEndings;

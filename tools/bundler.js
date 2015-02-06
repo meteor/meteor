@@ -162,6 +162,7 @@ var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
+var Profile = require('./profile.js').Profile;
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
 var colonConverter = require('./colon-converter.js');
@@ -481,7 +482,7 @@ _.extend(Target.prototype, {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make: function (options) {
+  make: Profile("Target#make", function (options) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -519,7 +520,7 @@ _.extend(Target.prototype, {
       self._addCacheBusters("js");
       self._addCacheBusters("css");
     }
-  },
+  }),
 
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
@@ -792,7 +793,7 @@ _.extend(Target.prototype, {
   },
 
   // Minify the JS in this target
-  minifyJs: function (minifiers) {
+  minifyJs: Profile("Target#minifyJs", function (minifiers) {
     var self = this;
 
     var allJs;
@@ -822,7 +823,7 @@ _.extend(Target.prototype, {
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
-  },
+  }),
 
   // Add a Cordova plugin dependency to the target. If the same plugin
   // has already been added at a different version and `override` is
@@ -1038,7 +1039,7 @@ _.extend(ClientTarget.prototype, {
   // Lints CSS files and merges them into one file, fixing up source maps and
   // pulling any @import directives up to the top since the CSS spec does not
   // allow them to appear in the middle of a file.
-  mergeCss: function () {
+  mergeCss: Profile("ClientTarget#mergeCss", function () {
     var self = this;
     var minifiers = isopackets.load('minifiers').minifiers;
     var CssTools = minifiers.CssTools;
@@ -1108,9 +1109,9 @@ _.extend(ClientTarget.prototype, {
 
     self.css[0].setSourceMap(JSON.stringify(newMap));
     self.css[0].setUrlToHash(".css");
-  },
+  }),
   // Minify the CSS in this target
-  minifyCss: function (minifiers) {
+  minifyCss: Profile("ClientTarget#minifyCss", function (minifiers) {
     var self = this;
     var minifiedCss = '';
 
@@ -1129,13 +1130,16 @@ _.extend(ClientTarget.prototype, {
       self.css = [new File({ info: 'minified css', data: new Buffer(minifiedCss, 'utf8') })];
       self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
     }
-  },
+  }),
 
   // Output the finished target to disk
   //
-  // Returns the path (relative to 'builder') of the control file for
+  // Returns an object with the following keys:
+  // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  write: function (builder) {
+  // - nodePath: an array of paths required to be set in the NODE_PATH
+  // environment variable.
+  write: Profile("ClientTarget#write", function (builder) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1215,8 +1219,12 @@ _.extend(ClientTarget.prototype, {
       format: "web-program-pre1",
       manifest: manifest
     });
-    return "program.json";
-  }
+
+    return {
+      controlFile: "program.json",
+      nodePath: []
+    };
+  })
 });
 
 
@@ -1270,7 +1278,7 @@ _.extend(JsImage.prototype, {
   // XXX throw an error if the image includes any "app-style" code
   // that is built to put symbols in the global namespace rather than
   // in a compartment of Package
-  load: function (bindings) {
+  load: Profile("JsImage#load", function (bindings) {
     var self = this;
     var ret = {};
 
@@ -1393,14 +1401,22 @@ _.extend(JsImage.prototype, {
     });
 
     return ret;
-  },
+  }),
 
   // Write this image out to disk
   //
-  // Returns the path (relative to 'builder') of the control file for
+  // options:
+  // - includeNodeModules: falsy or 'symlink' or 'reference-directly'.
+  //   Documented on exports.bundle.
+  //
+  // Returns an object with the following keys:
+  // - controlFile: the path (relative to 'builder') of the control file for
   // the image
-  write: function (builder) {
+  // - nodePath: an array of paths required to be set in the NODE_PATH
+  // environment variable.
+  write: Profile("JsImage#write", function (builder, options) {
     var self = this;
+    options = options || {};
 
     builder.reserve("program.json");
 
@@ -1415,9 +1431,26 @@ _.extend(JsImage.prototype, {
       var dirname = files.pathDirname(nmd.preferredBundlePath);
       var base = files.pathBasename(nmd.preferredBundlePath);
       var generatedDir = builder.generateFilename(dirname, {directory: true});
+
+      // We need to find the actual file system location for the node modules
+      // this JS Image uses, so that we can add it to nodeModulesDirectories
+      var modulesPhysicalLocation;
+      if (! options.includeNodeModules ||
+          options.includeNodeModules === 'symlink') {
+        modulesPhysicalLocation = files.pathJoin(generatedDir, base);
+      } else if (! options.includeNodeModules === 'reference-directly') {
+        modulesPhysicalLocation = nmd.sourcePath;
+      } else {
+        // This is some option we didn't expect - someone has added another case
+        // to the includeNodeModules option but didn't update this if block.
+        // Fail hard.
+        throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
+          "or 'reference-directly'.");
+      }
+
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: files.pathJoin(generatedDir, base),
+        preferredBundlePath: modulesPhysicalLocation,
         npmDiscards: nmd.npmDiscards
       }));
     });
@@ -1508,11 +1541,14 @@ _.extend(JsImage.prototype, {
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
-      builder.copyDirectory({
-        from: nmd.sourcePath,
-        to: nmd.preferredBundlePath,
-        npmDiscards: nmd.npmDiscards
-      });
+      if (nmd.sourcePath !== nmd.preferredBundlePath) {
+        builder.copyDirectory({
+          from: nmd.sourcePath,
+          to: nmd.preferredBundlePath,
+          npmDiscards: nmd.npmDiscards,
+          symlink: (options.includeNodeModules === 'symlink')
+        });
+      }
     });
 
     // Control file
@@ -1521,14 +1557,18 @@ _.extend(JsImage.prototype, {
       arch: self.arch,
       load: load
     });
-    return "program.json";
-  }
+
+    return {
+      controlFile: "program.json",
+      nodePath: []
+    };
+  })
 });
 
 // Create a JsImage by loading a bundle of format
 // 'javascript-image-pre1' from disk (eg, previously written out with
 // write()). `dir` is the path to the control file.
-JsImage.readFromDisk = function (controlFilePath) {
+JsImage.readFromDisk = Profile("JsImage.readFromDisk", function (controlFilePath) {
   var ret = new JsImage;
   var json = JSON.parse(files.readFile(controlFilePath));
   var dir = files.pathDirname(controlFilePath);
@@ -1583,7 +1623,7 @@ JsImage.readFromDisk = function (controlFilePath) {
   });
 
   return ret;
-};
+});
 
 var JsImageTarget = function (options) {
   var self = this;
@@ -1642,16 +1682,18 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - includeNodeModulesSymlink: if true, add a node_modules symlink
+  // - includeNodeModules: falsy, 'symlink' or 'reference-directly',
+  //   documented in exports.bundle
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
   //   client target.. we'll find a better solution here eventually
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the plugin
-  write: function (builder, options) {
+  // the plugin and the required NODE_PATH.
+  write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
+    var nodePath = [];
 
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
@@ -1685,17 +1727,26 @@ _.extend(ServerTarget.prototype, {
     // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
-    if (options.includeNodeModulesSymlink) {
-      builder.copyDirectory({
-        from: files.pathJoin(files.getDevBundle(),
-          'server-lib', 'node_modules'),
-        to: 'node_modules'
+    if (options.includeNodeModules === 'symlink') {
+      builder.write('node_modules', {
+        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
+    } else if (options.includeNodeModules === 'reference-directly') {
+      nodePath.push(
+        files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
+      );
+    } else {
+      // This is some option we didn't expect - someone has added another case
+      // to the includeNodeModules option but didn't update this if block. Fail
+      // hard.
+      throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
+        "or 'reference-directly'.");
     }
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
-    var imageControlFile = self.toJsImage().write(builder);
+    var jsImage = self.toJsImage();
+    jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
 
     // Server bootstrap
     _.each([
@@ -1728,11 +1779,15 @@ _.extend(ServerTarget.prototype, {
     // Nothing actually pays attention to the `path` field for a server program
     // in star.json any more, so it might as well be boot.js. (It used to be
     // start.sh, a script included for the legacy Galaxy prototype.)
-    return 'boot.js';
-  }
+    var controlFilePath = 'boot.js';
+    return {
+      controlFile: controlFilePath,
+      nodePath: nodePath
+    };
+  })
 });
 
-var writeFile = function (file, builder) {
+var writeFile = Profile("bundler..writeFile", function (file, builder) {
   if (! file.targetPath)
     throw new Error("No targetPath?");
   var contents = file.contents();
@@ -1743,18 +1798,18 @@ var writeFile = function (file, builder) {
   // (rather than just serving all of the files in a certain
   // directories)
   builder.write(file.targetPath, { data: file.contents() });
-};
+});
 
 // Writes a target a path in 'programs'
-var writeTargetToPath = function (name, target, outputPath, options) {
+var writeTargetToPath = Profile(
+  "bundler..writeTargetToPath", function (name, target, outputPath, options) {
   var builder = new Builder({
-    outputPath: files.pathJoin(outputPath, 'programs', name),
-    symlink: options.includeNodeModulesSymlink
+    outputPath: files.pathJoin(outputPath, 'programs', name)
   });
 
-  var relControlFilePath =
+  var targetBuild =
     target.write(builder, {
-      includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      includeNodeModules: options.includeNodeModules,
       getRelativeTargetPath: options.getRelativeTargetPath });
 
   builder.complete();
@@ -1762,10 +1817,11 @@ var writeTargetToPath = function (name, target, outputPath, options) {
   return {
     name: name,
     arch: target.mostCompatibleArch(),
-    path: files.pathJoin('programs', name, relControlFilePath),
+    path: files.pathJoin('programs', name, targetBuild.controlFile),
+    nodePath: targetBuild.nodePath,
     cordovaDependencies: target.cordovaDependencies || undefined
   };
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1784,19 +1840,19 @@ var writeTargetToPath = function (name, target, outputPath, options) {
 //     serverWatchSet: watch.WatchSet for all files and directories that
 //                     ultimately went into all server programs
 //     starManifest: the JSON manifest of the star
+//     nodePath: an array of paths required to be set in NODE_PATH. It's
+//               up to the called to determine what they should be.
 // }
 //
 // options:
-// - includeNodeModulesSymlink: bool
+// - includeNodeModules: string or falsy, documented on exports.bundle
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
-var writeSiteArchive = function (targets, outputPath, options) {
+var writeSiteArchive = Profile(
+  "bundler..writeSiteArchive", function (targets, outputPath, options) {
   var builder = new Builder({
-    outputPath: outputPath,
-    // This is a bit of a hack, but it means that things like node_modules
-    // directories for packages end up as symlinks too.
-    symlink: options.includeNodeModulesSymlink
+    outputPath: outputPath
   });
 
   try {
@@ -1806,6 +1862,7 @@ var writeSiteArchive = function (targets, outputPath, options) {
       programs: [],
       meteorRelease: options.releaseName
     };
+    var nodePath = [];
 
     // Tell the deploy server what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied or
@@ -1854,12 +1911,15 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
-        includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      var targetBuild = writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModules: options.includeNodeModules,
         builtBy: options.builtBy,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
-      }));
+      });
+
+      json.programs.push(targetBuild);
+      nodePath = nodePath.concat(targetBuild.nodePath);
     });
 
     // Control file
@@ -1871,13 +1931,14 @@ var writeSiteArchive = function (targets, outputPath, options) {
     return {
       clientWatchSet: clientWatchSet,
       serverWatchSet: serverWatchSet,
-      starManifest: json
+      starManifest: json,
+      nodePath: nodePath
     };
   } catch (e) {
     builder.abort();
     throw e;
   }
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main
@@ -1894,13 +1955,23 @@ var writeSiteArchive = function (targets, outputPath, options) {
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
  *
- * - includeNodeModulesSymlink: if set, we create a symlink from
- *   programs/server/node_modules to the dev bundle's server-lib/node_modules.
- *   This is a hack to make 'meteor run' faster. (We can't just set
- *   $NODE_PATH because then random node_modules directories above cwd
- *   take precedence.) To make it even hackier, this also means we
- *   make node_modules directories for packages symlinks instead of
- *   copies.
+ * - includeNodeModules: specifies how node_modules for program should be
+ *   included:
+ *   + false/null/undefined - don't include node_modules
+ *   + 'symlink' - we create a symlink from programs/server/node_modules to the
+ *   dev bundle's server-lib/node_modules.  This is a hack to make 'meteor run'
+ *   faster. (It is preferred on systems with symlinks as we can't just set
+ *   $NODE_PATH because then random node_modules directories above cwd take
+ *   precedence.) To make it even hackier, this also means we make node_modules
+ *   directories for packages symlinks instead of copies.
+ *   + 'reference-directly' - don't copy the files of node modules.
+ *   Instead, use paths directly to files we already have on the file-system: in
+ *   package catalog, isopacks folder or the dev_bundle folder.
+ *   return the NODE_PATH string with the resulting bundle that would be set as
+ *   the NODE_PATH environment variable when the node process is running. (The
+ *   fallback option for Windows). For isopacks (meteor packages), link to the
+ *   location of the locally stored isopack build (e.g.
+ *   ~/.meteor/packages/package/version/npm)
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
@@ -1938,7 +2009,7 @@ exports.bundle = function (options) {
   var projectContext = options.projectContext;
 
   var outputPath = options.outputPath;
-  var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
+  var includeNodeModules = options.includeNodeModules;
   var buildOptions = options.buildOptions || {};
 
   var appDir = projectContext.projectDir;
@@ -1957,6 +2028,7 @@ exports.bundle = function (options) {
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
   var targets = {};
+  var nodePath = [];
 
   if (! release.usingRightReleaseForApp(projectContext))
     throw new Error("running wrong release for app?");
@@ -1964,7 +2036,8 @@ exports.bundle = function (options) {
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
-    var makeClientTarget = function (app, webArch) {
+    var makeClientTarget = Profile(
+      "bundler.bundle..makeClientTarget", function (app, webArch) {
       var client = new ClientTarget({
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -1981,9 +2054,10 @@ exports.bundle = function (options) {
       });
 
       return client;
-    };
+    });
 
-    var makeServerTarget = function (app, clientTargets) {
+    var makeServerTarget = Profile(
+      "bundler.bundle..makeServerTarget", function (app, clientTargets) {
       var targetOptions = {
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -2002,7 +2076,7 @@ exports.bundle = function (options) {
       });
 
       return server;
-    };
+    });
 
     // Create a Isopack object that represents the app
     // XXX should this be part of prepareProjectForBuild and get cached?
@@ -2050,7 +2124,7 @@ exports.bundle = function (options) {
 
     // Write to disk
     var writeOptions = {
-      includeNodeModulesSymlink: includeNodeModulesSymlink,
+      includeNodeModules: includeNodeModules,
       builtBy: builtBy,
       releaseName: releaseName,
       getRelativeTargetPath: getRelativeTargetPath
@@ -2060,11 +2134,14 @@ exports.bundle = function (options) {
       // If we already have a cached bundle, just recreate the new targets.
       // XXX This might make the contents of "star.json" out of date.
       _.each(targets, function (target, name) {
-        writeTargetToPath(name, target, outputPath, writeOptions);
+        var targetBuild =
+          writeTargetToPath(name, target, outputPath, writeOptions);
+        nodePath = nodePath.concat(targetBuild.nodePath);
         clientWatchSet.merge(target.getWatchSet());
       });
     } else {
       starResult = writeSiteArchive(targets, outputPath, writeOptions);
+      nodePath = nodePath.concat(starResult.nodePath);
       serverWatchSet.merge(starResult.serverWatchSet);
       clientWatchSet.merge(starResult.clientWatchSet);
     }
@@ -2079,7 +2156,8 @@ exports.bundle = function (options) {
     errors: success ? false : messages,
     serverWatchSet: serverWatchSet,
     clientWatchSet: clientWatchSet,
-    starManifest: starResult && starResult.starManifest
+    starManifest: starResult && starResult.starManifest,
+    nodePath: nodePath
   };
 };
 
@@ -2121,7 +2199,7 @@ exports.bundle = function (options) {
 // It would be nice to have a way to say "make this package anonymous"
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
-exports.buildJsImage = function (options) {
+exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
   buildmessage.assertInCapture();
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
@@ -2166,11 +2244,12 @@ exports.buildJsImage = function (options) {
     watchSet: target.getWatchSet(),
     usedPackageNames: _.keys(target.usedPackages)
   };
-};
+});
 
 // Load a JsImage from disk (that was previously written by calling
 // write() on a JsImage). `controlFilePath` is the path to the control
 // file (eg, program.json).
-exports.readJsImage = function (controlFilePath) {
+exports.readJsImage = Profile(
+  "bundler.readJsImage", function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
-};
+});
