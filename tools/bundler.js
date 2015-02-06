@@ -1438,14 +1438,14 @@ _.extend(JsImage.prototype, {
       if (! options.includeNodeModules ||
           options.includeNodeModules === 'symlink') {
         modulesPhysicalLocation = files.pathJoin(generatedDir, base);
-      } else if (! options.includeNodeModules === 'reference-directly') {
+      } else if (options.includeNodeModules === 'reference-directly') {
         modulesPhysicalLocation = nmd.sourcePath;
       } else {
         // This is some option we didn't expect - someone has added another case
         // to the includeNodeModules option but didn't update this if block.
         // Fail hard.
         throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
-          "or 'reference-directly'.");
+          "or 'reference-directly'. It was: " + options.includeNodeModules);
       }
 
       nodeModulesDirectories.push(new NodeModulesDirectory({
