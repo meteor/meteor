@@ -39,6 +39,10 @@ var VALID_ARCHITECTURES = {
   "os.windows.x86_32": true
 };
 
+
+// __dirname - the location of the current executing file
+var __dirnameConverted = files.convertToStandardPath(__dirname);
+
 /**
  * Display a message that we can't do mobile things on Windows, and then
  * either crash or continue with no mobile platforms.
@@ -517,7 +521,7 @@ main.registerCommand({
     };
 
     try {
-      files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirnameConverted, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
         },
@@ -564,7 +568,7 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = files.pathJoin(__dirname, '..', 'examples');
+  var exampleDir = files.pathJoin(__dirnameConverted, '..', 'examples');
   var examples = _.reject(files.readdir(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
   });
@@ -625,7 +629,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirnameConverted, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },
