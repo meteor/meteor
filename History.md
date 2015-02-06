@@ -1,5 +1,30 @@
 ## vNEXT
 
+* Meteor is now tested against MongoDB 2.6 (and the bundled version used by
+  `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
+  Previous versions of Meteor mostly worked with MongoDB 2.6, with a few
+  caveats:
+
+    - Some upsert invocations did not work with MongoDB in previous versions of
+      Meteor.
+    - Previous versions of Meteor required setting up a special "user-defined
+      role" with access to the `system.replset` table to use the oplog observe
+      driver with MongoDB 2.6.  These extra permissions are not required with
+      this version of Meteor.
+
+  The MongoDB command needed to set up user permissions for the oplog observe
+  driver is slightly different in MongoDB 2.6; see
+  https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
+
+  (Meteor does not currently work with MongoDB 3.0 due to using an old version
+  of the Node Mongo driver.)
+
+* `c.upsert({_id: 'x'}, {foo: 1})`, when acting as an insert, now uses the `_id`
+  of `'x'` rather than a random `_id`, in the Minimongo implementation of
+  `upsert`, just like it does for `c.upsert({_id: 'x'}, {$set: {foo: 1}})`.
+  (The previous behavior matched a bug in the MongoDB 2.4 implementation of
+  upsert that is fixed in MongoDB 2.6.)  #2278
+
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
   0.8.1.  #3038
@@ -46,6 +71,14 @@
 * Remove some packages used internally to support legacy MDG systems
   (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
   `dev-bundle-fetcher`, and `star-translate`).
+
+* Upgraded dependencies:
+
+  - node: 0.10.36 (from 0.10.33)
+  - Fibers: 1.0.5 (from 1.0.1)
+  - MongoDB: 2.6.7 (from 2.4.12)
+  - openssl in mongo: 1.0.2 (from 1.0.1j)
+
 
 
 ## v.1.0.3.1, 2015-Jan-20
@@ -106,7 +139,7 @@
 
 * Correctly catch a case of illegal `Tracker.flush` during `Tracker.autorun`.  #3037
 
-* Upgraded dependencies
+* Upgraded dependencies:
 
   - jquery: 1.11.2 (from 1.11.0)
 

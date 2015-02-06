@@ -30,7 +30,7 @@ if [ "$OS" == "osx" ]; then
     # cp -r build/Release/* "$DIR/lib/ios-sim/"
 
     # Download the precompiled tarball
-    IOS_SIM_URL="http://android-bundle.s3.amazonaws.com/ios-sim.tgz"
+    IOS_SIM_URL="https://android-bundle.s3.amazonaws.com/ios-sim.tgz"
     curl "$IOS_SIM_URL" | tar xfz -
     mkdir -p "$DIR/lib/ios-sim"
     cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
@@ -41,25 +41,27 @@ cd "$DIR"
 S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
-NODE_BUILD_NUMBER=8
-NODE_VERSION=0.10.33
+# Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
+NODE_VERSION=0.10.36
+NODE_BUILD_NUMBER=13
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
 else
-    NODE_URL="http://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
+    NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${NODE_TGZ}"
     echo "Downloading Node from ${NODE_URL}"
     curl "${NODE_URL}" | tar zx
 fi
 
 # Update these values after building the dev-bundle-mongo Jenkins project.
-MONGO_BUILD_NUMBER=3
-MONGO_VERSION=2.4.12
+# Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
+MONGO_VERSION=2.6.7
+MONGO_BUILD_NUMBER=6
 MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${MONGO_TGZ}"
 else
-    MONGO_URL="http://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
+    MONGO_URL="https://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
     echo "Downloading Mongo from ${MONGO_URL}"
     curl "${MONGO_URL}" | tar zx
 fi
@@ -168,7 +170,7 @@ cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
 
 # Download BrowserStackLocal binary.
-BROWSER_STACK_LOCAL_URL="http://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
+BROWSER_STACK_LOCAL_URL="https://browserstack-binaries.s3.amazonaws.com/BrowserStackLocal-07-03-14-$OS-$ARCH.gz"
 
 cd "$DIR/build"
 curl -O $BROWSER_STACK_LOCAL_URL

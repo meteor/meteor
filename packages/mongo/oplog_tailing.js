@@ -1,7 +1,6 @@
 var Future = Npm.require('fibers/future');
 
 OPLOG_COLLECTION = 'oplog.rs';
-var REPLSET_COLLECTION = 'system.replset';
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -150,6 +149,13 @@ _.extend(OplogHandle.prototype, {
   },
   _startTailing: function () {
     var self = this;
+    // First, make sure that we're talking to the local database.
+    var mongodbUri = Npm.require('mongodb-uri');
+    if (mongodbUri.parse(self._oplogUrl).database !== 'local') {
+      throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
+                  "a Mongo replica set");
+    }
+
     // We make two separate connections to Mongo. The Node Mongo driver
     // implements a naive round-robin connection pool: each "connection" is a
     // pool of several (5 by default) TCP connections, and each request is
@@ -169,13 +175,17 @@ _.extend(OplogHandle.prototype, {
     self._oplogLastEntryConnection = new MongoConnection(
       self._oplogUrl, {poolSize: 1});
 
-    // First, make sure that there actually is a repl set here. If not, oplog
-    // tailing won't ever find anything! (Blocks until the connection is ready.)
-    var replSetInfo = self._oplogLastEntryConnection.findOne(
-      REPLSET_COLLECTION, {});
-    if (!replSetInfo)
+    // Now, make sure that there actually is a repl set here. If not, oplog
+    // tailing won't ever find anything!
+    var f = new Future;
+    self._oplogLastEntryConnection.db.admin().command(
+      { ismaster: 1 }, f.resolver());
+    var isMasterDoc = f.wait();
+    if (!(isMasterDoc && isMasterDoc.documents && isMasterDoc.documents[0] &&
+          isMasterDoc.documents[0].setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
                   "a Mongo replica set");
+    }
 
     // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(

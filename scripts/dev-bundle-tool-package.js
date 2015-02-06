@@ -9,11 +9,7 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    // Fibers 1.0.2 is out but introduces a bug that's been fixed on master
-    // but unreleased: https://github.com/laverdet/node-fibers/pull/189
-    // We will definitely need to upgrade in order to support Node 0.12 when
-    // it's out, though.
-    fibers: "1.0.1",
+    fibers: "1.0.5",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
