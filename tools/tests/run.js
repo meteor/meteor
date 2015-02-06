@@ -22,7 +22,7 @@ selftest.define("run", function () {
   // Starting a run
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));
   run = s.run();
   run.match("myapp");
   run.match("proxy");
@@ -60,8 +60,7 @@ selftest.define("run", function () {
   run.match("restarted");
   s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
   run.waitSecs(5);
-  run.match("from signal: SIGKILL");
-  run.waitSecs(5);
+  run.match("Exited");
   run.match("is crashing");
 
   // Bundle failure
