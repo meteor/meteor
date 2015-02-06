@@ -1749,15 +1749,22 @@ _.extend(ServerTarget.prototype, {
     jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
 
     // Server bootstrap
-    _.each([
-      "boot.js",
-      "boot-utils.js",
-      "shell.js",
-      "mini-files.js"
-    ], function (filename) {
+    _.each({
+      "boot.js": true,
+      "boot-utils.js": true,
+      "shell-server.js": files.pathJoin("..", "shell", "server.js"),
+      "mini-files.js": true
+    }, function (relativePath, filename) {
+      if (relativePath === true) {
+        relativePath = filename;
+      }
+
       builder.write(filename, {
-        file: files.pathJoin(files.convertToStandardPath(__dirname),
-          "server", filename)
+        file: files.pathJoin(
+          files.convertToStandardPath(__dirname),
+          "server",
+          relativePath
+        )
       });
     });
 
