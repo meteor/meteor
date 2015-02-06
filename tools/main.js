@@ -1316,7 +1316,7 @@ Fiber(function () {
   Console.enableProgressDisplay(true);
 
   if (command.notOnWindows && process.platform === 'win32') {
-    Console.error('This command is not available on Windows.');
+    Console.error('This command is not yet available on Windows.');
     process.exit(1);
   }
 
