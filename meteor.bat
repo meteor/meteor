@@ -5,8 +5,9 @@ IF EXIST "%~dp0\.git" (
   rem verify that we have 7zip in the path
   7z.exe --help > nul
   IF errorlevel 1 (
+    REM For some reason, without quotes this line causes an error
     echo "Please install 7z.exe (7-Zip) and put it into your PATH"
-    exit 1
+    exit /b 1
   )
 
   rem if dev_bundle is not present, get it
@@ -21,6 +22,10 @@ IF EXIST "%~dp0\.git" (
 
   IF errorlevel 1 (
     rmdir /s /q "%~dp0\dev_bundle"
+    IF EXIST "%~dp0\dev_bundle" (
+      echo Couldn't delete old dependency kit. Please try again.
+      exit /b 1
+    )
     PowerShell.exe -executionpolicy ByPass -file "%~dp0\scripts\windows\download-dev-bundle.ps1" < con
   )
 )
