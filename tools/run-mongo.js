@@ -3,6 +3,7 @@ var utils = require('./utils.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');
+var child_process = require('child_process');
 
 var _ = require('underscore');
 var isopackets = require("./isopackets.js");
@@ -25,8 +26,7 @@ var runMongoShell = function (url) {
   if (auth) args.push('-p', auth[1]);
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
-  var child_process = require('child_process');
-  var proc = child_process.spawn(files.convertToOSPath(mongoPath),
+  child_process.spawn(files.convertToOSPath(mongoPath),
     args, { stdio: 'inherit' });
 };
 
@@ -56,55 +56,8 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
 // appDir and port act as filters on the list of running mongos.
 //
 // Yields. Returns an array of objects with keys pid, port, appDir.
-var findMongoPids = function (appDir, port) {
-  var fut = new Future;
-
-  // 'ps ax' should be standard across all MacOS and Linux.
-  var child_process = require('child_process');
-  child_process.exec(
-    'ps ax',
-    // we don't want this to randomly fail just because you're running lots of
-    // processes. 10MB should be more than ps ax will ever spit out; the default
-    // is 200K, which at least one person hit (#2158).
-    {maxBuffer: 1024 * 1024 * 10},
-    function (error, stdout, stderr) {
-      if (error) {
-        fut['throw'](new Error("Couldn't run ps ax: " + JSON.stringify(error) +
-                               "; " + error.message));
-        return;
-      }
-
-      var ret = [];
-      _.each(stdout.split('\n'), function (line) {
-        // Matches mongos we start. Note that this matches
-        // 'fake-mongod' (our mongod stub for automated tests) as well
-        // as 'mongod'.
-        var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db/);
-        if (m && m.length === 4) {
-          var foundPid =  parseInt(m[1]);
-          var foundPort = parseInt(m[2]);
-          var foundPath = m[3];
-
-          if ( (! port || port === foundPort) &&
-               (! appDir || appDir === foundPath)) {
-            ret.push({
-              pid: foundPid,
-              port: foundPort,
-              appDir: foundPath
-            });
-          }
-        }
-      });
-
-      fut['return'](ret);
-    });
-
-  return fut.wait();
-};
-
-
+var findMongoPids;
 if (process.platform === 'win32') {
-  var child_process = require('child_process');
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
   findMongoPids = function (app_dir, port) {
@@ -113,7 +66,8 @@ if (process.platform === 'win32') {
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
       function (error, stdout, stderr) {
         if (error) {
-          fut['throw'](new Error("Couldn't run tasklist: " + JSON.stringify(error)));
+          fut['throw'](new Error("Couldn't run tasklist: " +
+            JSON.stringify(error)));
           return;
         } else {
           // Find the pids of all mongod processes
@@ -128,15 +82,16 @@ if (process.platform === 'win32') {
           // Now get the corresponding port numbers
           child_process.exec('netstat -ano', function (error, stdout, stderr) {
             if (error) {
-              fut['throw'](new Error("Couldn't run netstat -ano: " + JSON.stringify(error)));
+              fut['throw'](new Error("Couldn't run netstat -ano: " +
+                JSON.stringify(error)));
               return;
             } else {
               var pids = [];
               _.each(stdout.split('\n'), function (line) {
                 var m = line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/);
                 if (m) {
-                  var found_pid =  parseInt(m[2]);
-                  var found_port = parseInt(m[1]);
+                  var found_pid =  parseInt(m[2], 10);
+                  var found_port = parseInt(m[1], 10);
 
                   // We can't check the path app_dir so assume it always matches
                   if (mongo_pids[found_pid] && (!port || port === found_port)) {
@@ -156,6 +111,51 @@ if (process.platform === 'win32') {
             }
           });
         }
+      });
+
+    return fut.wait();
+  };
+} else {
+  findMongoPids = function (appDir, port) {
+    var fut = new Future;
+
+    // 'ps ax' should be standard across all MacOS and Linux.
+    child_process.exec(
+      'ps ax',
+      // we don't want this to randomly fail just because you're running lots of
+      // processes. 10MB should be more than ps ax will ever spit out; the default
+      // is 200K, which at least one person hit (#2158).
+      {maxBuffer: 1024 * 1024 * 10},
+      function (error, stdout, stderr) {
+        if (error) {
+          fut['throw'](new Error("Couldn't run ps ax: " +
+            JSON.stringify(error) + "; " + error.message));
+          return;
+        }
+
+        var ret = [];
+        _.each(stdout.split('\n'), function (line) {
+          // Matches mongos we start. Note that this matches
+          // 'fake-mongod' (our mongod stub for automated tests) as well
+          // as 'mongod'.
+          var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db/);
+          if (m && m.length === 4) {
+            var foundPid =  parseInt(m[1], 10);
+            var foundPort = parseInt(m[2], 10);
+            var foundPath = m[3];
+
+            if ( (! port || port === foundPort) &&
+                 (! appDir || appDir === foundPath)) {
+              ret.push({
+                pid: foundPid,
+                port: foundPort,
+                appDir: foundPath
+              });
+            }
+          }
+        });
+
+        fut['return'](ret);
       });
 
     return fut.wait();
