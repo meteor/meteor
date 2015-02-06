@@ -1,3 +1,4 @@
+var files = require('./files.js');
 // seconds since epoch
 var now = function () {
   return (+ new Date)/1000;
@@ -45,7 +46,6 @@ RequireInvocation.prototype.why = function () {
     walk = walk.parent;
   }
 
-  var files = require('./files.js');
   if (! walk)
     return "???";
   if (last)
