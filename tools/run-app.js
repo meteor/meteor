@@ -534,7 +534,7 @@ _.extend(AppRunner.prototype, {
         // Instead receive the NODE_PATH env that we need to set and set it
         // later on running.
         if (process.platform === 'win32') {
-          includeNodeModules = 'link-to-system-paths';
+          includeNodeModules = 'reference-directly';
         }
 
         return bundler.bundle({

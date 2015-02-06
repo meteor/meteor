@@ -1406,7 +1406,7 @@ _.extend(JsImage.prototype, {
   // Write this image out to disk
   //
   // options:
-  // - includeNodeModules: falsy or 'symlink' or 'link-to-system-paths'.
+  // - includeNodeModules: falsy or 'symlink' or 'reference-directly'.
   //   Documented on exports.bundle.
   //
   // Returns an object with the following keys:
@@ -1438,8 +1438,14 @@ _.extend(JsImage.prototype, {
       if (! options.includeNodeModules ||
           options.includeNodeModules === 'symlink') {
         modulesPhysicalLocation = files.pathJoin(generatedDir, base);
-      } else {
+      } else if (! options.includeNodeModules === 'reference-directly') {
         modulesPhysicalLocation = nmd.sourcePath;
+      } else {
+        // This is some option we didn't expect - someone has added another case
+        // to the includeNodeModules option but didn't update this if block.
+        // Fail hard.
+        throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
+          "or 'reference-directly'.");
       }
 
       nodeModulesDirectories.push(new NodeModulesDirectory({
@@ -1676,7 +1682,7 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - includeNodeModules: falsy, 'symlink' or 'link-to-system-paths',
+  // - includeNodeModules: falsy, 'symlink' or 'reference-directly',
   //   documented in exports.bundle
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
@@ -1725,10 +1731,16 @@ _.extend(ServerTarget.prototype, {
       builder.write('node_modules', {
         symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
-    } else if (options.includeNodeModules === 'link-to-system-paths') {
+    } else if (options.includeNodeModules === 'reference-directly') {
       nodePath.push(
         files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       );
+    } else {
+      // This is some option we didn't expect - someone has added another case
+      // to the includeNodeModules option but didn't update this if block. Fail
+      // hard.
+      throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
+        "or 'reference-directly'.");
     }
 
     // Linked JavaScript image (including static assets, assuming that there are
@@ -1952,8 +1964,8 @@ var writeSiteArchive = Profile(
  *   $NODE_PATH because then random node_modules directories above cwd take
  *   precedence.) To make it even hackier, this also means we make node_modules
  *   directories for packages symlinks instead of copies.
- *   + 'link-to-system-paths' - don't copy the files of node modules.
- *   Instead, reuse the paths to files we already have on the file-system: in
+ *   + 'reference-directly' - don't copy the files of node modules.
+ *   Instead, use paths directly to files we already have on the file-system: in
  *   package catalog, isopacks folder or the dev_bundle folder.
  *   return the NODE_PATH string with the resulting bundle that would be set as
  *   the NODE_PATH environment variable when the node process is running. (The
