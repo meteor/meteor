@@ -1151,6 +1151,11 @@ _.extend(Run.prototype, {
         self._exited({ code: code, signal: signal });
     });
 
+    self.proc.on('exit', function (code, signal) {
+      if (self.exitStatus === undefined)
+        self._exited({ code: code, signal: signal });
+    });
+
     self.proc.on('error', function (err) {
       if (self.exitStatus === undefined)
         self._exited(null);
@@ -1303,7 +1308,14 @@ _.extend(Run.prototype, {
     if (self.exitStatus === undefined) {
       self._ensureStarted();
       self.client && self.client.stop();
-      self.proc.kill();
+
+      if (process.platform === "win32") {
+        // looks like in Windows `self.proc.kill()` doesn't kill child
+        // processes.
+        utils.execFileSync("taskkill", ["/pid", self.proc.pid, '/f', '/t']);
+      } else {
+        self.proc.kill();
+      }
       self.expectExit();
     }
   }),

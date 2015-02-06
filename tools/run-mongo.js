@@ -258,9 +258,11 @@ var launchMongo = function (options) {
     if (options.multiple)
       throw Error("Can't specify multiple with fake mongod");
 
+    var fakeMongodCommand =
+      process.platform === "win32" ? "fake-mongod.bat" : "fake-mongod";
     mongod_path = files.pathJoin(
       files.getCurrentToolsDir(), 'tools',
-      'tests', 'fake-mongod', 'fake-mongod');
+      'tests', 'fake-mongod', fakeMongodCommand);
 
     // oplog support requires sending admin commands to mongod, so
     // it'd be hard to make fake-mongod support it.
