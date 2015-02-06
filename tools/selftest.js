@@ -1308,14 +1308,7 @@ _.extend(Run.prototype, {
     if (self.exitStatus === undefined) {
       self._ensureStarted();
       self.client && self.client.stop();
-
-      if (process.platform === "win32") {
-        // looks like in Windows `self.proc.kill()` doesn't kill child
-        // processes.
-        utils.execFileSync("taskkill", ["/pid", self.proc.pid, '/f', '/t']);
-      } else {
-        self.proc.kill();
-      }
+      self._killProcess();
       self.expectExit();
     }
   }),
@@ -1325,7 +1318,20 @@ _.extend(Run.prototype, {
     var self = this;
     if (self.exitStatus === undefined && self.proc) {
       self.client && self.client.stop();
-      self.proc.kill();
+      self._killProcess();
+    }
+  },
+
+  _killProcess: function () {
+    if (!this.proc)
+      throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
+
+    if (process.platform === "win32") {
+      // looks like in Windows `self.proc.kill()` doesn't kill child
+      // processes.
+      utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+    } else {
+      this.proc.kill();
     }
   },
 
