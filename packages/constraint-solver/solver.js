@@ -8,11 +8,6 @@ CS.Solver = function (input, options) {
   self.input = input;
   self.errors = []; // [String]
 
-  self.debugLog = null;
-  if (options && options.debugLog) {
-    self.debugLog = [];
-  }
-
   self._getVersionInfo = _.memoize(PV.parse);
   self._getConstraintFormula = _.memoize(_getConstraintFormula,
                                          function (p, vConstraint) {
@@ -102,9 +97,6 @@ CS.Solver.prototype._requireTopLevelDependencies = function () {
       self.errors.push('unknown package: ' + p);
     } else {
       self.logic.require(p);
-      if (self.debugLog) {
-        self.debugLog.push('REQUIRE ' + p);
-      }
     }
   });
 
@@ -130,10 +122,6 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
     });
     // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
     self.logic.require(Logic.atMostOne(packageAndVersions));
-    if (self.debugLog) {
-      self.debugLog.push("AT MOST ONE: " +
-                         (packageAndVersions.join(', ') || '[]'));
-    }
     // The variable "foo" is true if and only if at least one of the
     // variables ["foo 1.0.0", "foo 1.0.1", ...] is true.
     // Note that this doesn't apply to unknown packages (packages
@@ -141,10 +129,6 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
     // We will forbid them later, and generate a good error message
     // if that leads to unsatisfiability.
     self.logic.require(Logic.equiv(p, Logic.or(packageAndVersions)));
-    if (self.debugLog) {
-      self.debugLog.push(p + ' IFF ONE OF: ' +
-                         (packageAndVersions.join(', ') || '[]'));
-    }
 
     _.each(versions, function (v) {
       var pv = pvVar(p, v);
@@ -162,23 +146,6 @@ CS.Solver.prototype._enforceStrongDependencies = function () {
       });
     });
   });
-
-  // the keys of `requirers` are the union of the packages in the cache
-  // (whether or not anyone requires them) and the packages mentioned
-  // as dependencies (whether or not they exist in the catalog)
-//  _.each(requirers, function (pvs, p) {
-//    // pvs are all the package-versions that require p.
-//    // We want to select p if-and-only-if we select one of the pvs
-//    // (except when p is a root dependency, in which case
-//    // we've already required it).
-//    if (! input.isRootDependency(p)) {
-//      self.logic.require(Logic.equiv(p, Logic.or(pvs)));
-//      if (self.debugLog) {
-//        self.debugLog.push(p + ' IFF ONE OF: ' +
-//                           (pvs.join(', ') || '[]'));
-//      }
-//    }
-//  });
 };
 
 CS.Solver.prototype.throwAnyErrors = function () {
@@ -202,10 +169,6 @@ CS.Solver.prototype._minimizeUnknownPackages = function () {
   }
 
   if (self.logic.solveAssuming(Logic.not(useAnyUnknown))) {
-    if (self.debugLog) {
-      self.debugLog.push('FORBID: ' +
-                         (unknownPackages.join(', ') || '[]'));
-    }
     self.logic.forbid(unknownPackages);
     return [];
   } else {
@@ -216,10 +179,6 @@ CS.Solver.prototype._minimizeUnknownPackages = function () {
     // in the error.
     sol = self.logic.minimize(sol, unknownPackages, 1);
     var result = sol.getWeightedSum(unknownPackages, 1);
-    if (self.debugLog) {
-      self.debugLog.push('AT MOST ' + result + ' OF: ' +
-                         (unknownPackages.join(', ') || '[]'));
-    }
     return result;
   }
 };
@@ -375,15 +334,6 @@ CS.Solver.prototype._generateCostFunction = function () {
   return costFunc;
 };
 
-var getDebugLogForWeightedSum = function (solution, terms, weights) {
-  if (typeof weights === 'number') {
-    weights = _.map(terms, function () { return weights; });
-  }
-  return 'REQUIRE ' + (_.map(terms, function (t, i) {
-    return weights[i] + '*(' + t + ')';
-  }).join(' + ') || '0')+ ' = ' + solution.getWeightedSum(terms, weights);
-};
-
 CS.Solver.prototype._minimizeCostFunction = function () {
   var self = this;
   var sol = self.logic.solve();
@@ -396,10 +346,6 @@ CS.Solver.prototype._minimizeCostFunction = function () {
   var costFunc = self._costFunction;
   _.each(costFunc.components, function (comp) {
     sol = self.logic.minimize(sol, comp.terms, comp.weights);
-    if (self.debugLog) {
-      self.debugLog.push(getDebugLogForWeightedSum(
-        sol, comp.terms, comp.weights));
-    }
   });
 };
 
@@ -460,20 +406,6 @@ CS.Solver.prototype._addConstraint = function (fromVar, toPackage, vConstraint) 
     Logic.implies(newConstraint.varName,
                   Logic.or(fromVar ? Logic.not(fromVar) : [],
                            self._getConstraintFormula(toPackage, vConstraint))));
-
-  if (self.debugLog) {
-    var conditions = [newConstraint.varName];
-    if (fromVar) {
-      conditions.push('(' + fromVar + ')');
-    }
-    conditions.push(toPackage);
-    self.debugLog.push(
-      'IF ' + conditions.join(' AND ') + ' THEN ONE OF: ' +
-        (self._getOkVersions(
-          toPackage, vConstraint,
-          self.input.catalogCache.getPackageVersions(toPackage)
-        ).join(', ') || '[]'));
-  }
 };
 
 // Register the constraints with the logic solver, but don't actually
@@ -510,10 +442,6 @@ CS.Solver.prototype._enforceConstraints = function () {
   var sol = self.logic.solveAssuming(allConstraintsActive);
   if (sol) {
     self.logic.require(allConstraintVars);
-    if (self.debugLog) {
-      self.debugLog.push('REQUIRE: ' +
-                         (allConstraintVars.join(', ') || '[]'));
-    }
     return 0; // no conflicts
   }
 
@@ -530,10 +458,6 @@ CS.Solver.prototype._enforceConstraints = function () {
   }
 
   sol = self.logic.maximize(sol, allConstraintVars, 1);
-  if (self.debugLog) {
-    self.debugLog.push(getDebugLogForWeightedSum(
-      sol, allConstraintVars, 1));
-  }
 
   return allConstraintVars.length - sol.getWeightedSum(allConstraintVars, 1);
 };
