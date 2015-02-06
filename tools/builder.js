@@ -1,7 +1,7 @@
 var watch = require('./watch.js');
 var files = require('./files.js');
 var NpmDiscards = require('./npm-discards.js');
-var Profile = require('./profile.js');
+var Profile = require('./profile.js').Profile;
 var _ = require('underscore');
 
 // Builder encapsulates much of the file-handling logic need to create

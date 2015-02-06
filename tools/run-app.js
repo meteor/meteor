@@ -12,7 +12,7 @@ var stats = require('./stats.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var catalog = require('./catalog.js');
-var Profile = require('./profile.js');
+var Profile = require('./profile.js').Profile;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -527,7 +527,6 @@ _.extend(AppRunner.prototype, {
         });
       }
 
-      Profile.initialize();
       var bundleResult = Profile.run("Rebuild App", function () {
         var includeNodeModules = 'symlink';
 

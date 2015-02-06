@@ -26,7 +26,7 @@ var colonConverter = require("./colon-converter.js");
 
 var miniFiles = require("./server/mini-files.js");
 
-var Profile = require('./profile.js');
+var Profile = require('./profile.js').Profile;
 
 // Attach all exports of miniFiles here to avoid code duplication
 var files = exports;

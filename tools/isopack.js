@@ -13,7 +13,7 @@ var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
-var Profile = require('./profile.js');
+var Profile = require('./profile.js').Profile;
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
