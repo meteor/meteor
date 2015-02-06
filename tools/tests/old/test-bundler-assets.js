@@ -123,19 +123,19 @@ var runTest = function () {
                        "No extension handler\n");
 
     // Run the app to check that Assets.getText/Binary do the right things.
-    var cp = require('child_process');
-    var meteor = process.env.METEOR_TOOL_PATH;
+    var meteorToolPath = files.convertToOSPath(process.env.METEOR_TOOL_PATH);
     var fut = new Future();
-
-    // use a non-default port so we don't fail if someone is running an app now
-    var proc = cp.exec([files.convertToOSPath(meteor), "--once", "--port", "4123"].join(' '), {
-      cwd: projectContext.projectDir,
-      stdio: 'inherit'
-    });
-    proc.on("exit", function (code) {
-      fut.return(code);
-    });
-    assert.strictEqual(fut.wait(), 0);
+    require('child_process').execFile(
+      meteorToolPath,
+      // use a non-default port so we don't fail if someone is running an app
+      // now
+      ["--once", "--port", "4123"], {
+        cwd: projectContext.projectDir,
+        stdio: 'inherit'
+      },
+      fut.resolver()
+    );
+    fut.wait();  // would throw if command failed
   });
 };
 
