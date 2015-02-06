@@ -2788,7 +2788,7 @@ selftest.define("update package metadata",
   var newPackageName = username + ":" + utils.randomToken();
   var newPackageDirName = "packages-for-show";
   s.createPackage(newPackageDirName, newPackageName, "package-for-show");
-  s.cd(newPackageDirName, newPackageName, function () {
+  s.cd(newPackageDirName, function () {
     var run = s.run("publish", "--update");
     run.matchErr("without publishing it first");
     run.expectExit(1);
