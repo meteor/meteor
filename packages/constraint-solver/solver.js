@@ -230,6 +230,9 @@ CS.Solver.prototype._generateCostFunction = function () {
   // are supposed to be optimizing about the version and with what
   // priority.
   var costFunc = new CS.Solver.CostFunction();
+
+  costFunc.addComponent('upgrade_oldness');
+
   // 1 if we change the major version of a root dep with previous version
   costFunc.addComponent('previous_root_major');
   // 1 if we move a root dep backwards in the same major version
@@ -244,12 +247,6 @@ CS.Solver.prototype._generateCostFunction = function () {
   costFunc.addComponent('previous_indirect_change');
   costFunc.addComponent('previous_indirect_distance');
 
-  // XXX probably need some more nuance here.
-  // In general, we want packages we're upgrading and new root dependencies
-  // (just added or in case of no previous solution) to be as new as possible,
-  // so we penalize oldness.  New indirect dependencies should be as old as
-  // possible, so we penalize newness.
-  costFunc.addComponent('upgrade_oldness');
   costFunc.addComponent('new_root_oldness');
   costFunc.addComponent('new_indirect_major_newness');
   costFunc.addComponent('new_indirect_minor_newness');
