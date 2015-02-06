@@ -11,8 +11,8 @@ var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var fiberHelpers = require('./fiber-helpers.js');
 
-// TL;DR: Isopacket is a set of isopacks. It exists purely for faster loading.
-// Isopackets are used only inside meteor-tool.
+// TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
+// meteor-tool.
 
 // An isopacket is a predefined set of isopackages which the meteor command-line
 // tool can load into its process. This is how we use the DDP client and many
