@@ -541,6 +541,7 @@ var createAndPublishPackage = selftest.markStack(function (s, packageName) {
     run.waitSecs(25);
     run.expectExit(0);
   });
+  return packageDirName;
 });
 
 selftest.define("release track defaults to METEOR",
@@ -791,8 +792,8 @@ selftest.define("packages with organizations",
   // Publish a package with 'orgName' as the prefix.
   var packageName = utils.randomToken();
   var fullPackageName = orgName + ":" + packageName;
-  createAndPublishPackage(s, fullPackageName);
-  s.cd(fullPackageName);
+  var packageDirName = createAndPublishPackage(s, fullPackageName);
+  s.cd(packageDirName);
 
   // 'test' should be a maintainer, as well as 'testtest', once
   // 'testtest' is added to the org.
@@ -816,12 +817,12 @@ selftest.define("packages with organizations",
   s.cd("..");
   testUtils.login(s, "test", "testtest");
   fullPackageName = "test:" + utils.randomToken();
-  createAndPublishPackage(s, fullPackageName);
-  s.cd(fullPackageName);
+  var packageDirName2 = createAndPublishPackage(s, fullPackageName);
+  s.cd(packageDirName2);
 
   // Add 'orgName' as a maintainer.
   run = s.run("admin", "maintainers", fullPackageName, "--add", orgName);
-  run.waitSecs(15);
+  run.waitSecs(20);
   run.match("The maintainers for " + fullPackageName + " are");
   run.match(orgName);
   run.expectExit(0);
