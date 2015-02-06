@@ -1547,7 +1547,7 @@ selftest.define("show server package",
     return { placeholder: placeholder, name: name, label: label};
   }), 'name');
 
-  s.cd(fullPackageName, function () {
+  s.cd(packageDirName, function () {
     // Replace the dependencies placeholders in the package.js file with the
     // packages that we have just published.
     s.cp("package-with-implies.js", "package.js");
@@ -1643,7 +1643,7 @@ selftest.define("show server package",
   });
 
   // Publish a pre-release version of the package.
-  s.cd(fullPackageName, function () {
+  s.cd(packageDirName, function () {
     s.cp("package-rc-version.js", "package.js");
     var run = s.run("publish");
     run.waitSecs(30);
