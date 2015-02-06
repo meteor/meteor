@@ -743,17 +743,8 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   if (updateCount === 0 && options.upsert) {
     var newDoc = LocalCollection._removeDollarOperators(selector);
     LocalCollection._modify(newDoc, mod, {isInsert: true});
-    if (! newDoc._id) {
-      if (options.insertedId) {
-        newDoc._id = options.insertedId;
-      } else {
-        // Get the right _id for c.upsert({_id: 'x'}, {replacement: 1})
-        var selectorIds = LocalCollection._idsMatchedBySelector(selector);
-        if (selectorIds && selectorIds.length === 1) {
-          newDoc._id = selectorIds[0];
-        }
-      }
-    }
+    if (! newDoc._id && options.insertedId)
+      newDoc._id = options.insertedId;
     insertedId = self.insert(newDoc);
     updateCount = 1;
   }

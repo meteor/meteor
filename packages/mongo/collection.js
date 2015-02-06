@@ -502,7 +502,7 @@ _.each(["insert", "update", "remove"], function (name) {
             if (!(typeof options.insertedId === 'string'
                   || options.insertedId instanceof Mongo.ObjectID))
               throw new Error("insertedId must be string or ObjectID");
-          } else if (! LocalCollection._idsMatchedBySelector(args[0])) {
+          } else if (! args[0]._id) {
             options.insertedId = self._makeNewID();
           }
         }
