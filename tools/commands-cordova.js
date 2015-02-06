@@ -2850,7 +2850,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -2964,10 +2965,11 @@ main.registerCommand({
   }
   projectContext.platformList.write(platforms);
 
-  var appName = files.pathBasename(projectContext.projectDir);
-  ensureCordovaProject(projectContext, appName);
-  ensureCordovaPlatforms(projectContext);
-
+  if (! Host.isWindows()) {
+    var appName = files.pathBasename(projectContext.projectDir);
+    ensureCordovaProject(projectContext, appName);
+    ensureCordovaPlatforms(projectContext);
+  }
   // If this was the last Cordova platform, we may need to rebuild all of the
   // local packages to remove the web.cordova unibuild from the IsopackCache.
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -3000,7 +3002,8 @@ main.registerCommand({
   },
   minArgs: 0,
   maxArgs: Infinity,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -3028,7 +3031,8 @@ main.registerCommand({
   },
   minArgs: 0,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   requirePlatformReady('android');
 
@@ -3069,7 +3073,8 @@ main.registerCommand({
   },
   minArgs: 1,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);

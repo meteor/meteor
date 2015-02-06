@@ -40,7 +40,8 @@ function Command(options) {
     requiresApp: false,
     requiresRelease: true,
     hidden: false,
-    pretty: true
+    pretty: true,
+    notOnWindows: false
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -1310,6 +1311,11 @@ Fiber(function () {
 
   Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);
+
+  if (command.notOnWindows && process.platform === 'win32') {
+    Console.error('This command is not available on Windows.');
+    process.exit(1);
+  }
 
   // Run the command!
   try {
