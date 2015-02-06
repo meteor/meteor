@@ -1031,7 +1031,8 @@ _.extend(Isopack.prototype, {
         delete toolMeta.rootDir;
         builder.copyDirectory({
           from: files.pathJoin(rootDir, toolMeta.path),
-          to: toolMeta.path
+          to: toolMeta.path,
+          symlink: false
         });
         if (!mainJson.tools) {
           mainJson.tools = [];
@@ -1107,7 +1108,8 @@ _.extend(Isopack.prototype, {
     builder.copyDirectory({
       from: files.getCurrentToolsDir(),
       to: '',
-      specificFiles: pathsToCopy
+      specificFiles: pathsToCopy,
+      symlink: false
     });
 
     // Include the dev bundle, but drop a few things that are only used by
@@ -1117,7 +1119,8 @@ _.extend(Isopack.prototype, {
     builder.copyDirectory({
       from: files.pathJoin(files.getDevBundle()),
       to: 'dev_bundle',
-      ignore: devBundleIgnore
+      ignore: devBundleIgnore,
+      symlink: false
     });
 
     // Build all of the isopackets now, so that no build step is required when
