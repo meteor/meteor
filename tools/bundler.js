@@ -1735,7 +1735,7 @@ _.extend(ServerTarget.prototype, {
       nodePath.push(
         files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       );
-    } else {
+    } else if (options.includeNodeModules) {
       // This is some option we didn't expect - someone has added another case
       // to the includeNodeModules option but didn't update this if block. Fail
       // hard.
