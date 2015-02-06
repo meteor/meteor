@@ -1716,7 +1716,7 @@ selftest.define("show rc-only package",
   var packageDirName = "package-for-show";
 
   // Create a package that has only an rc version.
-  s.createPackage(packageDirName, "package-for-show");
+  s.createPackage(packageDirName, fullPackageName, "package-for-show");
   s.cd(packageDirName, function () {
     s.cp("package-rc-version.js", "package.js");
     var run = s.run("publish", "--create");

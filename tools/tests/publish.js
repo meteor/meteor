@@ -120,9 +120,11 @@ selftest.define("publish-one-arch",
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
+  var newPackageDirName = packageName;
 
-  s.createPackage(fullPackageName, "package-of-two-versions");
-  s.cd(fullPackageName);
+  s.createPackage(newPackageDirName, fullPackageName,
+    "package-of-two-versions");
+  s.cd(newPackageDirName);
 
   var run = s.run("publish", "--create");
   run.waitSecs(15);
