@@ -1734,8 +1734,7 @@ _.extend(ServerTarget.prototype, {
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
     var jsImage = self.toJsImage();
-    var imageControlFile = jsImage.write(
-      builder, { includeNodeModules: options.includeNodeModules }).controlFile;
+    jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
 
     // Server bootstrap
     _.each([
@@ -1793,8 +1792,7 @@ var writeFile = Profile("bundler..writeFile", function (file, builder) {
 var writeTargetToPath = Profile(
   "bundler..writeTargetToPath", function (name, target, outputPath, options) {
   var builder = new Builder({
-    outputPath: files.pathJoin(outputPath, 'programs', name),
-    symlink: options.includeNodeModules === 'symlink'
+    outputPath: files.pathJoin(outputPath, 'programs', name)
   });
 
   var targetBuild =
