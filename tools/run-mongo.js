@@ -381,7 +381,7 @@ var launchMongo = function (options) {
       handle.stop();
 
       // Invoke the outer onExit callback.
-      onExit(code, signal, stderrOutput);
+      onExit(code, signal, stderrOutput, detectedErrors);
     });
     proc.on('exit', procExitHandler);
 
@@ -400,6 +400,7 @@ var launchMongo = function (options) {
       }
     };
 
+    var detectedErrors = {};
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
@@ -416,6 +417,10 @@ var launchMongo = function (options) {
       if (/ \[rsMgr\] replSet (PRIMARY|SECONDARY)/.test(data)) {
         replSetReady = true;
         maybeReadyToTalk();
+      }
+
+      if (/Insufficient free space/.test(data)) {
+        detectedErrors.freeSpace = true;
       }
     });
     proc.stdout.setEncoding('utf8');
@@ -669,7 +674,7 @@ _.extend(MRp, {
     }
   },
 
-  _exited: function (code, signal, stderr) {
+  _exited: function (code, signal, stderr, detectedErrors) {
     var self = this;
 
     self.handle = null;
@@ -725,8 +730,13 @@ _.extend(MRp, {
     var explanation = mongoExitCodes.Codes[code];
     var message = "Can't start Mongo server.";
 
-    if (explanation)
+    if (explanation && explanation.symbol === 'EXIT_UNCAUGHT' &&
+        detectedErrors.freeSpace) {
+      message += "\n\n" +
+        "Looks like you are out of free disk space under .meteor/local.";
+    } else if (explanation) {
       message += "\n" + explanation.longText;
+    }
 
     if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
       message += "\n\n" +
