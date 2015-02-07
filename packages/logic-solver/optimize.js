@@ -1,10 +1,16 @@
-var minMax = function (solver, solution, costTerms, costWeights, optFormula, isMin) {
+var minMax = function (solver, solution, costTerms, costWeights, options, isMin) {
   var curSolution = solution;
   var curCost = curSolution.getWeightedSum(costTerms, costWeights);
 
+  var optFormula = options && options.formula;
   var weightedSum = (optFormula || Logic.weightedSum(costTerms, costWeights));
 
+  var progress = options && options.progress;
+
   while (isMin ? curCost > 0 : true) {
+    if (progress) {
+      progress('improving', curCost);
+    }
     var improvement = (isMin ? Logic.lessThan : Logic.greaterThan)(
       weightedSum, Logic.constantBits(curCost));
     var newSolution = solver.solveAssuming(improvement);
@@ -18,6 +24,10 @@ var minMax = function (solver, solution, costTerms, costWeights, optFormula, isM
 
   solver.require((isMin ? Logic.lessThanOrEqual : Logic.greaterThanOrEqual)(
     weightedSum, Logic.constantBits(curCost)));
+
+  if (progress) {
+    progress('finished', curCost);
+  }
 
   return curSolution;
 };
@@ -34,10 +44,10 @@ var minMax = function (solver, solution, costTerms, costWeights, optFormula, isM
 // more efficient for it to evaluate the current cost using them directly
 // rather than the formula.
 
-Logic.Solver.prototype.minimize = function (solution, costTerms, costWeights, optFormula) {
-  return minMax(this, solution, costTerms, costWeights, optFormula, true);
+Logic.Solver.prototype.minimize = function (solution, costTerms, costWeights, options) {
+  return minMax(this, solution, costTerms, costWeights, options, true);
 };
 
-Logic.Solver.prototype.maximize = function (solution, costTerms, costWeights, optFormula) {
-  return minMax(this, solution, costTerms, costWeights, optFormula, false);
+Logic.Solver.prototype.maximize = function (solution, costTerms, costWeights, options) {
+  return minMax(this, solution, costTerms, costWeights, options, false);
 };

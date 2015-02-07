@@ -107,7 +107,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2"
     });
 
@@ -115,7 +115,7 @@ Tinytest.add("constraint solver - simple exact + regular deps", function (test) 
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "awesome-dropdown": "1.5.0",
       "dropdown": "1.2.2"
@@ -133,7 +133,7 @@ Tinytest.add("constraint solver - non-exact direct dependency", function (test) 
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "awesome-dropdown": "1.5.0",
       "dropdown": "1.2.2"
@@ -249,7 +249,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.0.0",
       "awesome-dropdown": "1.4.0",
       "dropdown": "1.2.2",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "sparkle": "2.1.1"
     });
@@ -260,7 +260,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2"
     });
 
@@ -270,7 +270,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.0.0",
       "awesome-dropdown": "1.4.0",
       "dropdown": "1.2.2",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2",
       "sparkle": "2.1.1"
     }, { previousSolution: {
@@ -284,7 +284,7 @@ Tinytest.add("constraint solver - previousSolution", function (test) {
       "sparky-forms": "1.1.2",
       "forms": "1.0.1",
       "sparkle": "2.1.1",
-      "jquery-widgets": "1.0.0",
+      "jquery-widgets": "1.0.2",
       "jquery": "1.8.2"
     }, { previousSolution: {
       "sparky-forms": "1.0.0"
