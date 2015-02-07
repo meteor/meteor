@@ -13,7 +13,12 @@ Package.describe({
 });
 
 Npm.depends({
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1",
+  // 1.4.30 (and bson 0.2.18) with optional native dependencies (bson native
+  // piece and kerberos) ripped out, which means we don't have to do the
+  // publish-for-arch dance every time we make a Meteor release.
+  // XXX move the npm dependency into a non-core versioned package and allow
+  //     it to use C++ bson
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/fb94f9be1f0d4d5b4d3801fd20e6b00e0df8306e",
   "mongodb-uri": "0.9.7"
 });
 

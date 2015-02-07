@@ -78,7 +78,8 @@
   - Fibers: 1.0.5 (from 1.0.1)
   - MongoDB: 2.6.7 (from 2.4.12)
   - openssl in mongo: 1.0.2 (from 1.0.1j)
-
+  - MongoDB driver: 1.4.30 (from 1.4.1)
+  - bson: 0.2.18 (from 0.2.7)
 
 
 ## v.1.0.3.1, 2015-Jan-20
