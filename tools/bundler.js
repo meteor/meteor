@@ -1285,6 +1285,7 @@ _.extend(JsImage.prototype, {
     // XXX This is mostly duplicated from server/boot.js, as is Npm.require
     // below. Some way to avoid this?
     var getAsset = function (assets, assetPath, encoding, callback) {
+      assetPath = files.convertToStandardPath(assetPath);
       var fut;
       if (! callback) {
         if (! Fiber.current)
