@@ -16,8 +16,9 @@
   driver is slightly different in MongoDB 2.6; see
   https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
 
-  (Meteor does not currently work with MongoDB 3.0 due to using an old version
-  of the Node Mongo driver.)
+  (We have not tested Meteor against the as-yet-unreleased MongoDB 3.0, but as
+  of this release, Meteor uses a version of the Node Mongo driver that is
+  compatible with MongoDB 3.0 and it is likely that it will work.)
 
 * `c.upsert({_id: 'x'}, {foo: 1})`, when acting as an insert, now uses the `_id`
   of `'x'` rather than a random `_id`, in the Minimongo implementation of
