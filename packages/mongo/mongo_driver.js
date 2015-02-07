@@ -1094,8 +1094,8 @@ MongoConnection.prototype._observeChanges = function (
       multiplexer = new ObserveMultiplexer({
         ordered: ordered,
         onStop: function () {
-          observeDriver.stop();
           delete self._observeMultiplexers[observeKey];
+          observeDriver.stop();
         }
       });
       self._observeMultiplexers[observeKey] = multiplexer;
