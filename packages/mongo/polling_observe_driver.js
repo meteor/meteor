@@ -187,6 +187,10 @@ _.extend(PollingObserveDriver.prototype, {
     var self = this;
     self._stopped = true;
     _.each(self._stopCallbacks, function (c) { c(); });
+    // Release any write fences that are waiting on us.
+    _.each(self._pendingWrites, function (w) {
+      w.committed();
+    });
     Package.facts && Package.facts.Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);
   }
