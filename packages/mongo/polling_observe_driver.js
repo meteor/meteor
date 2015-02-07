@@ -146,8 +146,13 @@ _.extend(PollingObserveDriver.prototype, {
       // getRawObjects can throw if we're having trouble talking to the
       // database.  That's fine --- we will repoll later anyway. But we should
       // make sure not to lose track of this cycle's writes.
+      // (It also can throw if there's just something invalid about this query;
+      // unfortunately the ObserveDriver API doesn't provide a good way to
+      // "cancel" the observe from the inside in this case.
       Array.prototype.push.apply(self._pendingWrites, writesForCycle);
-      throw e;
+      Meteor._debug("Exception while polling query " +
+                    JSON.stringify(self._cursorDescription) + ": " + e.stack);
+      return;
     }
 
     // Run diffs.
