@@ -262,7 +262,7 @@ _.extend(exports.Tropohouse.prototype, {
     });
 
     return _.every(architectures, function (requiredArch) {
-      return archinfo.mostSpecificMatch(requiredArch, downloaded.arches);
+      return archinfo.mostSpecificMatch(requiredArch, downloaded);
     });
   },
 
@@ -288,13 +288,11 @@ _.extend(exports.Tropohouse.prototype, {
     return exports._extractAndConvert(packageTarball);
   },
 
-  // Given a package name and version, returns a survey of what we have
-  // downloaded for this package at this version. Specifically, returns an
-  // object with the following keys:
-  //  - arches: the architectures for which we have downloaded this package
-  //  - target: the target of the symlink at which we store this package
+  // Given a package name and version, returns the architectures for
+  // which we have downloaded this package
   //
-  // Throws if the symlink cannot be read for any reason other than ENOENT/
+  // Throws if the symlink cannot be read for any reason other than
+  // ENOENT/
   _alreadyDownloaded: function (options) {
     var self = this;
     var packageName = options.packageName;
