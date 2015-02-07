@@ -20,8 +20,23 @@ var formatSolution = function (obj) {
   }, null, 2);
 };
 
+var doTest = function (test, inputJSONable, outputJSONable) {
+  var input = CS.Input.fromJSONable(inputJSONable);
+
+  if (typeof outputJSONable.neededToUseUnanticipatedPrereleases !== 'boolean') {
+    outputJSONable = _.extend(outputJSONable, {
+      neededToUseUnanticipatedPrereleases: (
+        !! outputJSONable.neededToUseUnanticipatedPrereleases)
+    });
+  }
+
+  test.equal(
+    formatSolution(CS.PackagesResolver._resolveWithInput(input)),
+    formatSolution(outputJSONable));
+};
+
 Tinytest.add("constraint solver - input - upgrade indirect dependency", function (test) {
-  var input = CS.Input.fromJSONable({
+  doTest(test, {
     dependencies: ["foo"],
     constraints: [],
     previousSolution: { foo: "1.0.0", bar: "2.0.0" },
@@ -33,17 +48,35 @@ Tinytest.add("constraint solver - input - upgrade indirect dependency", function
         "bar 2.0.1": []
       }
     }
+  }, {
+    // if you specify an indirect dependency in `meteor update`,
+    // it will get bumped up to a newer version
+    answer: {
+      foo: "1.0.0",
+      bar: "2.0.1"
+    }
   });
+});
 
-  test.equal(
-    formatSolution(CS.PackagesResolver._resolveWithInput(input)),
-    formatSolution({
-      answer: {
-        foo: "1.0.0",
-        bar: "2.0.1"
-      },
-      neededToUseUnanticipatedPrereleases: false
-    }));
+Tinytest.add("constraint solver - input - previous solution no patch", function (test) {
+  doTest(test, {
+    dependencies: ["foo"],
+    constraints: [],
+    previousSolution: { foo: "1.0.0", bar: "2.0.0" },
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar@2.0.0"],
+        "foo 1.0.1": ["bar@2.0.1"],
+        "bar 2.0.0": [],
+        "bar 2.0.1": []
+      }
+    }
+  }, {
+    answer: {
+      foo: "1.0.0",
+      bar: "2.0.0"
+    }
+  });
 });
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {
