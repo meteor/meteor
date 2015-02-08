@@ -19,6 +19,7 @@ Package.onUse(function (api) {
   api.use('blaze');
   api.use('observe-sequence');
   api.use('templating');
+  api.use('underscore');
   api.addFiles(['spacebars-runtime.js']);
   api.addFiles(['dynamic.html', 'dynamic.js'], 'client');
 });
