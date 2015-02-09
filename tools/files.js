@@ -1160,10 +1160,12 @@ _.extend(files.KeyValueFile.prototype, {
 });
 
 files.getHomeDir = function () {
-  var homeDir = process.env.HOME ||
-    process.env.LOCALAPPDATA ||
-    process.env.APPDATA;
-  return files.convertToStandardPath(homeDir);
+  if (process.platform === "win32") {
+    var homeDir = process.env.LOCALAPPDATA || process.env.APPDATA;
+    return files.convertToStandardPath(homeDir);
+  }
+
+  return process.env.HOME;
 };
 
 // add .bat extension to link file if not present
@@ -1195,9 +1197,10 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
 };
 
 files._getLocationFromScriptLinkToMeteorScript = function (script) {
-  var scriptLocation = _.last(
-    _.filter(script.split('\n'), _.identity)
-  ).replace(/^rem /g, '');
+  _.compact(script.toString().split('\n'))
+
+  var scriptLocation = _.last()
+    .replace(/^rem /g, '');
 
   if (! scriptLocation) {
     throw new Error('Failed to parse script location from meteor.bat');
