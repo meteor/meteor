@@ -12,8 +12,8 @@ Package.onUse(function (api) {
   api.use(['underscore', 'ejson', 'check', 'package-version-parser',
            'binary-heap', 'random', 'logic-solver']);
   api.addFiles(['datatypes.js', 'catalog-cache.js', 'catalog-loader.js',
-                'constraint-solver-input.js', 'solver.js',
-                'constraint-solver.js']);
+                'constraint-solver-input.js', 'version-pricer.js',
+                'solver.js', 'constraint-solver.js']);
   api.addFiles(['resolver.js', 'constraints-list.js',
                 'resolver-state.js', 'priority-queue.js'], ['server']);
 });
@@ -37,6 +37,7 @@ Package.onTest(function (api) {
   api.addFiles('constraint-solver-tests.js', where);
   api.addFiles('benchmark-tests.js', where);
   api.addFiles('input-tests.js', where);
+  api.addFiles('version-pricer-tests.js', where);
 
   // tests of old resolver
   api.addFiles('resolver-tests.js', 'server');

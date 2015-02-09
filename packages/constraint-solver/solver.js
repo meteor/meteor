@@ -12,7 +12,7 @@ CS.Solver = function (input, options) {
     anticipatedPrereleases: self.input.anticipatedPrereleases
   };
 
-  self.getVersionInfo = _.memoize(PV.parse);
+  self.pricer = new CS.VersionPricer();
   self.getConstraintFormula = _.memoize(_getConstraintFormula,
                                          function (p, vConstraint) {
                                            return p + "@" + vConstraint.raw;
@@ -251,114 +251,16 @@ CS.Solver.prototype.getAllVersions = function (package) {
                });
 };
 
-// mode is 'update' or 'gravity'
-// optLaterVersion, if provided, is a version that is not in the array
-// but is newer and should be used in initial comparisons.
-var scanVersions = function (self, versions, mode, optLaterVersion) {
-  if (mode !== 'update' && mode !== 'gravity') {
-    throw new Error("Bad mode: " + mode);
-  }
-  var oldnessMajor = 0;
-  var oldnessMinor = 0;
-  var oldnessPatch = 0;
-  var oldnessRest = 0;
-  var lastVInfo = null;
-  if (optLaterVersion) {
-    lastVInfo = self.getVersionInfo(optLaterVersion);
-  }
-  var versionsOut = [];
-  var major = [];
-  var minor = [];
-  var patch = [];
-  var rest = [];
-  var countOfSameMajor = 0;
-  for (var i = versions.length - 1; i >= 0; i--) {
-    var v = versions[i];
-    var vInfo = self.getVersionInfo(v);
-    if (lastVInfo) {
-      if (vInfo.major !== lastVInfo.major) {
-        oldnessMajor++;
-        if (mode === 'gravity') {
-          // flip the last countOfSameMajor minor weights
-          var maxMinorOldness = oldnessMinor;
-          var last = minor.length - 1;
-          for (var i = 0; i < countOfSameMajor; i++) {
-            minor[last - i] = maxMinorOldness - minor[last - i];
-          }
-        }
-        countOfSameMajor = 0;
-        oldnessMinor = oldnessPatch = oldnessRest = 0;
-      } else if (vInfo.minor !== lastVInfo.minor) {
-        oldnessMinor++;
-        oldnessPatch = oldnessRest = 0;
-      } else if (vInfo.patch !== lastVInfo.patch) {
-        oldnessPatch++;
-        oldnessRest = 0;
-      } else {
-        oldnessRest++;
-      }
+var addCostsToSteps = function (package, versions, costs, steps) {
+  var pvs = _.map(versions, function (v) {
+    return pvVar(package, v);
+  });
+  for (var j = 0; j < steps.length; j++) {
+    var step = steps[j];
+    var costList = costs[j];
+    for (var i = 0; i < versions.length; i++) {
+      step.addTerm(pvs[i], costList[i]);
     }
-    versionsOut.push(v);
-    major.push(oldnessMajor);
-    minor.push(oldnessMinor);
-    patch.push(oldnessPatch);
-    rest.push(oldnessRest);
-    countOfSameMajor++;
-    lastVInfo = vInfo;
-  }
-  if (mode === 'gravity') {
-    // flip the last countOfSameMajor minor weights
-    var maxMinorOldness = oldnessMinor;
-    var last = minor.length - 1;
-    for (var i = 0; i < countOfSameMajor; i++) {
-      minor[last - i] = maxMinorOldness - minor[last - i];
-    }
-
-    // flip major weights
-    var maxMajorOldness = oldnessMajor;
-    major = _.map(major, function (w) {
-      return maxMajorOldness - w;
-    });
-  }
-
-  return {
-    versions: versionsOut,
-    major: major,
-    minor: minor,
-    patch: patch,
-    rest: rest
-  };
-};
-
-var scanForOldness = function (self, package, versions, MMPR, optLaterVersion) {
-  var result = scanVersions(self, versions, 'update', optLaterVersion);
-  var versionsOut = result.versions;
-  var major = result.major;
-  var minor = result.minor;
-  var patch = result.patch;
-  var rest = result.rest;
-  for (var i = 0; i < versionsOut.length; i++) {
-    var pv = pvVar(package, versionsOut[i]);
-    MMPR[0].addTerm(pv, major[i]);
-    MMPR[1].addTerm(pv, minor[i]);
-    MMPR[2].addTerm(pv, patch[i]);
-    MMPR[3].addTerm(pv, rest[i]);
-  }
-};
-
-var scanForGravityAndPatches = function (self, package, versions, MMPR) {
-  var result = scanVersions(self, versions, 'gravity');
-  var versionsOut = result.versions;
-  var major = result.major;
-  var minor = result.minor;
-  var patch = result.patch;
-  var rest = result.rest;
-  for (var i = 0; i < versionsOut.length; i++) {
-    var pv = pvVar(package, versionsOut[i]);
-    MMPR[0].addTerm(pv, major[i]);
-    MMPR[1].addTerm(pv, minor[i]);
-    MMPR[2].addTerm(pv, patch[i]);
-    MMPR[3].addTerm(pv, rest[i]);
   }
 };
 
@@ -371,7 +273,10 @@ CS.Solver.prototype.getOldnesses = function (stepBaseName, packages) {
 
   _.each(packages, function (p) {
     var versions = self.input.catalogCache.getPackageVersions(p);
-    scanForOldness(self, p, versions, [major, minor, patch, rest]);
+    var costs = self.pricer.scanVersions(
+      versions, CS.VersionPricer.MODE_UPDATE);
+    addCostsToSteps(p, versions, costs,
+                    [major, minor, patch, rest]);
   });
 
   return [major, minor, patch, rest];
@@ -386,25 +291,13 @@ CS.Solver.prototype.getGravityPotential = function (stepBaseName, packages) {
 
   _.each(packages, function (p) {
     var versions = self.input.catalogCache.getPackageVersions(p);
-    scanForGravityAndPatches(self, p, versions, [major, minor, patch, rest]);
+    var costs = self.pricer.scanVersions(
+      versions, CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES);
+    addCostsToSteps(p, versions, costs,
+                    [major, minor, patch, rest]);
   });
 
   return [major, minor, patch, rest];
-};
-
-var versionsBeforeAndAfter = function (self, versions, pivot) {
-  var firstGteIndex = versions.length;
-  var pivotVInfo = self.getVersionInfo(pivot);
-  _.find(versions, function (v, i) {
-    var vInfo = self.getVersionInfo(v);
-    if (! PV.lessThan(vInfo, pivotVInfo)) {
-      firstGteIndex = i;
-      return true;
-    }
-    return false;
-  });
-  return { before: versions.slice(0, firstGteIndex),
-           after: versions.slice(firstGteIndex) };
 };
 
 CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
@@ -426,20 +319,10 @@ CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
     var package = pvArg.package;
     var previousVersion = pvArg.version;
     var versions = self.input.catalogCache.getPackageVersions(package);
-    var beforeAndAfter = versionsBeforeAndAfter(
-      self, versions, previousVersion);
-    var before = beforeAndAfter.before;
-    var after = beforeAndAfter.after;
-
-    scanForOldness(self, package, before, [major, minor, patch, rest],
-                   previousVersion);
-    _.each(before, function (v) {
-      var pv = pvVar(package, v);
-      incompat.addTerm(pv, 1);
-    });
-
-    scanForGravityAndPatches(self, package, after,
-                             [major, minor, patch, rest]);
+    var costs = self.pricer.scanVersionsWithPrevious(
+      versions, previousVersion);
+    addCostsToSteps(package, versions, costs,
+                    [incompat, major, minor, patch, rest]);
   });
 
   return [incompat, major, minor, patch, rest];
