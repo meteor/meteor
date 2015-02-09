@@ -181,6 +181,7 @@ CS.Solver.prototype.analyzeReachability = function () {
   var cache = input.catalogCache;
   // package name -> true
   var reachablePackages = self.analysis.reachablePackages = {};
+  // package name -> package versions asking for it (in pvVar form)
   var unknownPackages = self.analysis.unknownPackages = {};
 
   var visit = function (p) {
@@ -194,7 +195,10 @@ CS.Solver.prototype.analyzeReachability = function () {
           // record this package so we will generate a variable
           // for it.  we'll try not to select it, and ultimately
           // throw an error if we are forced to.
-          unknownPackages[p2] = true;
+          if (! _.has(unknownPackages, p2)) {
+            unknownPackages[p2] = [];
+          }
+          unknownPackages[p2].push(pvVar(p, v));
         } else {
           if (! dep.isWeak) {
             if (reachablePackages[p2] !== true) {
@@ -484,7 +488,7 @@ CS.Solver.prototype.getSolution = function () {
 
   if (analysis.unknownRootDeps.length) {
     _.each(analysis.unknownRootDeps, function (p) {
-      self.errors.push('unknown package: ' + p);
+      self.errors.push('unknown package in top-level dependencies: ' + p);
     });
     self.throwAnyErrors();
   }
@@ -621,7 +625,14 @@ CS.Solver.prototype.getSolution = function () {
       return self.solution.evaluate(p);
     });
     _.each(unknownPackagesNeeded, function (p) {
-      self.errors.push('unknown package: ' + p);
+      var requirers = _.filter(analysis.unknownPackages[p], function (pv) {
+        return self.solution.evaluate(pv);
+      });
+      var errorStr = 'unknown package: ' + p;
+      _.each(requirers, function (pv) {
+        errorStr += '\nRequired by: ' + pv;
+      });
+      self.errors.push(errorStr);
     });
     self.throwAnyErrors();
   }

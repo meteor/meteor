@@ -176,7 +176,7 @@ Tinytest.add("constraint solver - no results", function (test) {
   });
 
   testWithResolver(test, makeResolver([]), function (t, FAIL) {
-    FAIL({foo: "1.0.0"}, /unknown package: foo/);
+    FAIL({foo: "1.0.0"}, /unknown package in top-level dependencies: foo/);
   });
 
   resolver = makeResolver([
