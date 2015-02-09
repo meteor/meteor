@@ -1,6 +1,8 @@
 Package.describe({
+  name: "stylus",
   summary: 'Expressive, dynamic, robust CSS',
-  version: "1.0.7-winr.3"
+  version: "1.0.7-winr.3",
+  git: "https://github.com/meteor/meteor/tree/devel/packages/stylus"
 });
 
 Package.registerBuildPlugin({
