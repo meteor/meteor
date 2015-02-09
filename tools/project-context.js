@@ -391,6 +391,8 @@ _.extend(ProjectContext.prototype, {
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
+    var isFirstAttempt = true;
+
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
     catalog.runAndRetryWithRefreshIfHelpful(function () {
@@ -399,7 +401,8 @@ _.extend(ProjectContext.prototype, {
 
         var resolveOptions = {
           previousSolution: cachedVersions,
-          anticipatedPrereleases: anticipatedPrereleases
+          anticipatedPrereleases: anticipatedPrereleases,
+          missingPreviousVersionIsError: isFirstAttempt
         };
         if (self._upgradePackageNames)
           resolveOptions.upgrade = self._upgradePackageNames;
@@ -432,6 +435,8 @@ _.extend(ProjectContext.prototype, {
 
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
+
+      isFirstAttempt = false;
     });
   },
 

@@ -27,12 +27,25 @@ CS.PackagesResolver = function (catalog, options) {
 //    included versions are the only pre-releases that are allowed to match
 //    constraints that don't specifically name them during the "try not to
 //    use unanticipated pre-releases" pass
+//  - missingPreviousVersionIsError - throw an error if a package version in
+//    previousSolution is not found in the catalog
 CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                                   options) {
   var self = this;
+  options = options || {};
   var input = new CS.Input(dependencies, constraints, self.catalogCache,
-                           options);
+                           _.pick(options, 'upgrade', 'anticipatedPrereleases',
+                                  'previousSolution'));
   input.loadFromCatalog(self.catalogLoader);
+
+  if (options.previousSolution && options.missingPreviousVersionIsError) {
+    _.each(options.previousSolution, function (version, package) {
+      if (! input.catalogCache.hasPackageVersion(package, version)) {
+        CS.throwConstraintSolverError(
+          "Package version not in catalog: " + package + " " + version);
+      }
+    });
+  }
 
   return CS.PackagesResolver._resolveWithInput(input, this._options.nudge);
 };
