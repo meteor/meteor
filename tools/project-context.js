@@ -402,6 +402,13 @@ _.extend(ProjectContext.prototype, {
         var resolveOptions = {
           previousSolution: cachedVersions,
           anticipatedPrereleases: anticipatedPrereleases,
+          // Not finding an exact match for a previous version in the catalog
+          // is considered an error if we haven't refreshed yet, and will
+          // trigger a refresh and another attempt.  That way, if a previous
+          // version exists, you'll get it, even if we don't have a record
+          // of it yet.  It's not actually fatal, though, for previousSolution
+          // to refer to package versions that we don't have access to or don't
+          // exist.  They'll end up getting changed or removed if possible.
           missingPreviousVersionIsError: isFirstAttempt
         };
         if (self._upgradePackageNames)
