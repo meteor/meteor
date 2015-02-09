@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="WriteVersionFiles" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <MajorBuildNumber>3</MajorBuildNumber>
+    <MinorBuildNumber>7</MinorBuildNumber>
+
+    <CppVersionFile>.\wixver.h</CppVersionFile>
+    <CSharpVersionFile>.\wixver.cs</CSharpVersionFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Base>$([System.DateTime]::new(2000, 1, 1))</Base>
+    <BuildNumber>$([System.Convert]::ToInt32($([System.DateTime]::Now.ToUniversalTime().Subtract($(Base)).TotalDays)))</BuildNumber>
+    <BuildRevision>$([System.Convert]::ToInt32($([MSBuild]::Divide($([System.Convert]::ToInt32($([System.DateTime]::Now.ToUniversalTime().TimeOfDay.TotalSeconds))), 2))))</BuildRevision>
+
+    <FullBuildVersionString>$(MajorBuildNumber).$(MinorBuildNumber).$(BuildNumber).$(BuildRevision)</FullBuildVersionString>
+  </PropertyGroup>
+
+  <!--
+  ================================================================================================
+  VersionPrint
+
+    Displays the versions of this build.
+  ================================================================================================
+  -->
+  <Target Name="VersionPrint">
+    <Message Text="FullBuildVersionString = $(FullBuildVersionString)" />
+  </Target>
+
+  <!--
+  ================================================================================================
+  WriteCppVersionFile
+
+    Creates the wixver.h version file for C++ code.
+  ================================================================================================
+  -->
+  <Target Name="WriteCppVersionFile"
+          Returns="$(CppVersionFile)">
+    <ItemGroup>
+      <CppVersionLines Include="
+// &lt;auto-generated/&gt;
+#ifndef _VERSION_FILE_H_
+#define _VERSION_FILE_H_
+
+#define szVerMajorMinor &quot;$(MajorBuildNumber).$(MinorBuildNumber)&quot;
+#define szVerMajorMinorBuildRev &quot;$(FullBuildVersionString)&quot;
+#define rmj	$(MajorBuildNumber)
+#define rmm	$(MinorBuildNumber)
+#define rbd	$(BuildNumber)
+#define rev	$(BuildRevision)
+#define szVerName	&quot;BalExtensionExt Release&quot;
+
+#endif
+"/>
+    </ItemGroup>
+
+    <WriteLinesToFile Overwrite="true"
+                File="$(CppVersionFile)"
+                Lines="@(CppVersionLines)" />
+    <ItemGroup>
+      <FileWrites Include="$(CppVersionFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+  ================================================================================================
+  WriteCSharpVersionFile
+
+    Creates the wixver.cs version file for C# code.
+  ================================================================================================
+  -->
+  <Target Name="WriteCSharpVersionFile"
+          Returns="$(CSharpVersionFile)">
+    <ItemGroup>
+      <CSharpLines Include="
+// &lt;auto-generated/&gt;
+using System.Reflection%3B
+[assembly:AssemblyVersion(&quot;$(MajorBuildNumber).0.0.0&quot;)]
+[assembly:AssemblyFileVersion(&quot;$(FullBuildVersionString)&quot;)]
+"/>
+    </ItemGroup>
+
+    <WriteLinesToFile Overwrite="true"
+                File="$(CSharpVersionFile)"
+                Lines="@(CSharpLines)" />
+    <ItemGroup>
+      <FileWrites Include="$(CSharpVersionFile)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+  ================================================================================================
+  WriteVersionFiles
+
+    Creates the wixver.* version files.
+  ================================================================================================
+  -->
+  <Target Name="WriteVersionFiles" DependsOnTargets="VersionPrint;WriteCppVersionFile;WriteCSharpVersionFile" />
+
+</Project>
