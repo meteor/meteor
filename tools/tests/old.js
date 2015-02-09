@@ -88,7 +88,9 @@ selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
 
 selftest.define("old cli tests", ["slow", "net"], function () {
   var s = new Sandbox;
-  var run = new Run(files.pathJoin(__dirname, 'old', 'cli-test.sh'), {
+  var scriptToRun = files.pathJoin(files.convertToStandardPath(__dirname),
+    'old', 'cli-test.sh');
+  var run = new Run(scriptToRun, {
     env: maybeFixRelease({
       METEOR_TOOL_PATH: s.execPath,
       NODE: process.execPath

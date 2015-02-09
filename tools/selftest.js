@@ -573,7 +573,8 @@ _.extend(Sandbox.prototype, {
   createApp: function (to, template, options) {
     var self = this;
     options = options || {};
-    files.cp_r(files.pathJoin(__dirname, 'tests', 'apps', template),
+    files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), 'tests',
+                 'apps', template),
                files.pathJoin(self.cwd, to),
                { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps

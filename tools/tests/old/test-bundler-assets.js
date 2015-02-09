@@ -16,7 +16,8 @@ var tmpDir = function () {
 
 var makeProjectContext = function (appName) {
   var projectDir = files.mkdtemp("test-bundler-assets");
-  files.cp_r(files.pathJoin(__dirname, appName), projectDir);
+  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
+    projectDir);
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
