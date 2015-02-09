@@ -131,7 +131,7 @@ _.extend(AppProcess.prototype, {
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
     require("./cleanup.js").onExit(function() {
-      require("./shell/server.js").disable(
+      require("./server/shell-server.js").disable(
         self.projectContext.getMeteorShellDirectory()
       );
     });

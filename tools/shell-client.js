@@ -4,7 +4,7 @@ var net = require("net");
 var eachline = require("eachline");
 var chalk = require("chalk");
 var EOL = require("os").EOL;
-var server = require("./server.js");
+var server = require("./server/shell-server.js");
 var EXITING_MESSAGE = server.EXITING_MESSAGE;
 var getInfoFile = server.getInfoFile;
 
