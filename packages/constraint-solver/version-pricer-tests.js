@@ -10,14 +10,21 @@ Tinytest.add("constraint solver - version pricer", function (test) {
       options = null;
     }
     var pricer = new CS.VersionPricer();
-    var result = pricer.scanVersions(versions, mode, options);
-    var tuples = _.zip(versions, result[0], result[1], result[2], result[3]);
+    var result, tuples;
+    if (_.isObject(mode) && mode.previous) {
+      result = pricer.scanVersionsWithPrevious(versions, mode.previous);
+      tuples = _.zip(versions, result[0], result[1], result[2], result[3],
+                     result[4]);
+    } else {
+      result = pricer.scanVersions(versions, mode, options);
+      tuples = _.zip(versions, result[0], result[1], result[2], result[3]);
+    }
     test.equal(tuples.length, expected.length);
     test.equal(_.pluck(tuples, 0), versions);
     _.each(_.zip(tuples, expected), function (x) {
       var tuple = x[0];
       var expectedTuple = x[1];
-      if (expectedTuple.length === 4) {
+      if (typeof expectedTuple[0] !== 'string') {
         test.equal(tuple.slice(1), expectedTuple);
       } else {
         test.equal(tuple, expectedTuple);
@@ -138,4 +145,42 @@ Tinytest.add("constraint solver - version pricer", function (test) {
                     ["4.0.0-pre.0", 3, 0, 0, 2],
                     ["4.0.0", 3, 0, 0, 1],
                     ["4.0.0_1", 3, 0, 0, 0]]);
+
+
+  testScanVersions(["1.0.0", "1.0.1", "1.0.2", "1.0.3",
+                    "1.1.0", "1.1.1",
+                    "1.2.0-pre.0", "1.2.0", "1.2.1", "1.2.2-pre.0", "1.2.2",
+                    "2.0.0", "2.0.1", "2.0.2",
+                    "2.1.0",
+                    "2.5.0",
+                    "2.5.1",
+                    "3.0.0",
+                    "4.0.0-pre.0", "4.0.0", "4.0.0_1"],
+                   { previous: "1.2.0" },
+                   // This part is like UPDATE, without the major cost
+                   [["1.0.0", 1, 0, 2, 3, 0],
+                    ["1.0.1", 1, 0, 2, 2, 0],
+                    ["1.0.2", 1, 0, 2, 1, 0],
+                    ["1.0.3", 1, 0, 2, 0, 0],
+                    ["1.1.0", 1, 0, 1, 1, 0],
+                    ["1.1.1", 1, 0, 1, 0, 0],
+                    // This part is like UPDATE, without the minor cost
+                    ["1.2.0-pre.0", 1, 0, 0, 0, 1],
+                    // This part is like GRAVITY, without the major/minor cost
+                    ["1.2.0", 0, 0, 0, 0, 0],
+                    ["1.2.1", 0, 0, 0, 1, 0],
+                    ["1.2.2-pre.0", 0, 0, 0, 2, 0],
+                    ["1.2.2", 0, 0, 0, 2, 1],
+                    // This part is like GRAVITY_WITH_PATCHES
+                    ["2.0.0", 1, 1, 0, 2, 0],
+                    ["2.0.1", 1, 1, 0, 1, 0],
+                    ["2.0.2", 1, 1, 0, 0, 0],
+                    ["2.1.0", 1, 1, 1, 0, 0],
+                    ["2.5.0", 1, 1, 2, 1, 0],
+                    ["2.5.1", 1, 1, 2, 0, 0],
+                    ["3.0.0", 1, 2, 0, 0, 0],
+                    ["4.0.0-pre.0", 1, 3, 0, 0, 2],
+                    ["4.0.0", 1, 3, 0, 0, 1],
+                    ["4.0.0_1", 1, 3, 0, 0, 0]]);
+
 });
