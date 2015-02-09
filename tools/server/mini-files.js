@@ -1,13 +1,15 @@
 var _ = require("underscore");
 var os = require("os");
-var fs = require("fs");
 var path = require("path");
-var Fiber = require('fibers');
-var Future = require('fibers/future');
 
-// All of these functions are attached to files.js for the tool,
+// All of these functions are attached to files.js for the tool;
 // they live here because we need them in boot.js as well to avoid duplicating
 // a lot of the code.
+//
+// Note that this file does NOT contain any of the "perform I/O maybe
+// synchronously" functions from files.js; this is intentional, because we want
+// to make it very hard to accidentally use fs.*Sync functions in the app server
+// after bootup (since they block all concurrency!)
 var files = module.exports;
 
 var toPosixPath = function (p, partialPath) {
