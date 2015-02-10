@@ -1,6 +1,6 @@
 {
  "track": "OPLOG-BACKLOG",
- "version": "1",
+ "version": "2",
  "recommended": false,
  "official": false,
  "description": "An RC of Meteor 1.0.3"
