@@ -139,11 +139,11 @@ selftest.define("package with colons is converted on Windows", function () {
   var targetDirectory = tropohouse._extractAndConvert(tarball, true);
 
   // Uncomment below to check results
-  // console.log(utils.execFileSync("find", [targetDirectory], {
+  // console.log(files.getPathsInDir(targetDirectory, {
   //   cwd: targetDirectory
-  // }).stdout);
+  // }));
 
   // Saved tree hash of the correct result
   selftest.expectEqual(files.treeHash(targetDirectory),
-    "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=");
+    "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=");
 });
