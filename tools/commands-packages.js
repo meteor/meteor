@@ -1470,7 +1470,8 @@ main.registerCommand({
   name: 'update',
   options: {
     patch: { type: Boolean, required: false },
-    "packages-only": { type: Boolean, required: false }
+    "packages-only": { type: Boolean, required: false },
+    breaking: { type: Boolean, required: false }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1514,7 +1515,8 @@ main.registerCommand({
   // we're done even if we're not on the matching release!)
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    alwaysWritePackageMap: true
+    alwaysWritePackageMap: true,
+    mayBreakRootDependencies: options.breaking
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
@@ -1617,13 +1619,17 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'add',
+  options: {
+    breaking: { type: Boolean, required: false }
+  },
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    mayBreakRootDependencies: options.breaking
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -1797,13 +1803,17 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 main.registerCommand({
   name: 'remove',
+  options: {
+    breaking: { type: Boolean, required: false }
+  },
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    mayBreakRootDependencies: options.breaking
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve

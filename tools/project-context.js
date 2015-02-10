@@ -139,6 +139,11 @@ _.extend(ProjectContext.prototype, {
       self._cachedVersionsBeforeReset = null;
     }
 
+    // The --breaking command-line switch, which allows the version solver
+    // to choose versions of root dependencies that are incompatible with
+    // the previous solution.
+    self._mayBreakRootDependencies = options.mayBreakRootDependencies;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -402,6 +407,7 @@ _.extend(ProjectContext.prototype, {
         var resolveOptions = {
           previousSolution: cachedVersions,
           anticipatedPrereleases: anticipatedPrereleases,
+          mayBreakRootDependencies: self._mayBreakRootDependencies,
           // Not finding an exact match for a previous version in the catalog
           // is considered an error if we haven't refreshed yet, and will
           // trigger a refresh and another attempt.  That way, if a previous

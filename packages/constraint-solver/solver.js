@@ -175,6 +175,23 @@ CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
   }
 };
 
+// Determine the non-zero contributions to the cost function in `step`
+// based on the current solution, returning a map from term (usually
+// the name of a package or package version) to positive integer cost.
+CS.Solver.prototype.getStepContributions = function (step) {
+  var self = this;
+  var solution = self.solution;
+  var contributions = {};
+  var weights = step.weights;
+  _.each(step.terms, function (t, i) {
+    var w = (typeof weights === 'number' ? weights : weights[i]);
+    if (w && self.solution.evaluate(t)) {
+      contributions[t] = w;
+    }
+  });
+  return contributions;
+};
+
 CS.Solver.prototype.analyzeReachability = function () {
   var self = this;
   var input = self.input;
@@ -445,12 +462,37 @@ CS.Solver.prototype.getSolution = function () {
   // cost function, so we can show a better error.
   self.minimize('conflicts', _.pluck(analysis.constraints, 'conflictVar'));
 
-  // XXX This is where we will enforce that we don't make breaking changes
-  // to your root dependencies, unless you pass --breaking.
+  var previousRootSteps = self.getDistances(
+    'previous_root', analysis.previousRootDepVersions);
+  // the "previous_root_incompat" step
+  var previousRootIncompat = previousRootSteps[0];
+  // the "previous_root_major", "previous_root_minor", etc. steps
+  var previousRootVersionParts = previousRootSteps.slice(1);
 
   var toUpdate = _.filter(input.upgrade, function (p) {
     return analysis.reachablePackages[p] === true;
   });
+
+  if (! input.mayBreakRootDependencies) {
+    // make sure packages that are being updated can still count as
+    // a previous_root for the purposes of previous_root_incompat
+    _.each(toUpdate, function (p) {
+      if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
+        var cats = self.pricer.categorizeVersions(
+          cache.getPackageVersions(p), input.previousSolution[p]);
+        _.each(cats.before.concat(cats.higherMajor), function (v) {
+          previousRootIncompat.addTerm(pvVar(p, v), 1);
+        });
+      }
+    });
+  }
+
+  if (! input.mayBreakRootDependencies) {
+    // Enforce that we don't make breaking changes to your root dependencies,
+    // unless you pass --breaking.  It will actually be enforced farther down,
+    // but for now, we want to apply this constraint before handling updates.
+    self.minimize(previousRootIncompat);
+  }
 
   self.minimize(self.getOldnesses('update', toUpdate));
 
@@ -458,8 +500,10 @@ CS.Solver.prototype.getSolution = function () {
     return ! input.isInPreviousSolution(p);
   });
 
-  self.minimize(self.getDistances(
-    'previous_root', analysis.previousRootDepVersions));
+  if (input.mayBreakRootDependencies) {
+    self.minimize(previousRootIncompat);
+  }
+  self.minimize(previousRootVersionParts);
 
   var otherPrevious = _.filter(_.map(input.previousSolution, function (v, p) {
     return new CS.PackageAndVersion(p, v);
@@ -493,10 +537,6 @@ CS.Solver.prototype.getSolution = function () {
     }
   });
 
-  //_.each(otherPackages, function (package) {
-  //self.minimize(self.getGravityPotential(
-  //'new_indirect(' + package + ')', [package]));
-  //});
   self.minimize(self.getGravityPotential('new_indirect', otherPackages));
 
   self.minimize('total_packages', _.keys(analysis.reachablePackages));
@@ -523,6 +563,23 @@ CS.Solver.prototype.getSolution = function () {
   // throw errors about conflicts
   if (self.stepsByName.conflicts.optimum > 0) {
     self.throwConflicts();
+  }
+
+  if ((! input.mayBreakRootDependencies) &&
+      self.stepsByName.previous_root_incompat.optimum > 0) {
+    _.each(_.keys(
+      self.getStepContributions(self.stepsByName.previous_root_incompat)),
+           function (pvStr) {
+             var pv = CS.PackageAndVersion.fromString(pvStr);
+             var prevVersion = input.previousSolution[pv.package];
+             self.errors.push(
+               'Breaking change required to top-level dependency: ' +
+                 pvStr + ', was ' + prevVersion + '.\n' +
+                 self.listConstraintsOnPackage(pv.package));
+           });
+    self.errors.push('To allow breaking changes to top-level dependencies, you ' +
+                     'must pass --breaking to meteor [run], update, add, or remove.');
+    self.throwAnyErrors();
   }
 
   var versionMap = self.currentVersionMap();
@@ -589,6 +646,30 @@ var _getConstraintFormula = function (toPackage, vConstraint) {
   }
 };
 
+CS.Solver.prototype.listConstraintsOnPackage = function (package) {
+  var self = this;
+  var constraints = self.analysis.constraints;
+
+  var result = 'Constraints:';
+
+  _.each(constraints, function (c) {
+    if (c.toPackage === package) {
+      var paths;
+      if (c.fromVar) {
+        paths = self.getPathsToPackageVersion(
+          CS.PackageAndVersion.fromString(c.fromVar));
+      } else {
+        paths = [['top level']];
+      }
+      _.each(paths, function (path) {
+        result += '\n* ' + (new PV.PackageConstraint(
+          package, c.vConstraint.raw)) + ' <- ' + path.join(' <- ');
+      });
+    }
+  });
+
+  return result;
+};
 
 CS.Solver.prototype.throwConflicts = function () {
   var self = this;
@@ -615,23 +696,7 @@ CS.Solver.prototype.throwConflicts = function () {
           c.toPackage, c.vConstraint)) +
           ' is not satisfied by ' + c.toPackage + ' ' + chosenVersion + '.');
 
-      error += '\nConstraints:';
-
-      _.each(constraints, function (c2) {
-        if (c2.toPackage === c.toPackage) {
-          var paths;
-          if (c2.fromVar) {
-            paths = self.getPathsToPackageVersion(
-              CS.PackageAndVersion.fromString(c2.fromVar));
-          } else {
-            paths = [['top level']];
-          }
-          _.each(paths, function (path) {
-            error += '\n  ' + (new PV.PackageConstraint(
-              c.toPackage, c2.vConstraint)) + ' <- ' + path.join(' <- ');
-          });
-        }
-      });
+      error += '\n' + self.listConstraintsOnPackage(c.toPackage);
 
       self.errors.push(error);
     }

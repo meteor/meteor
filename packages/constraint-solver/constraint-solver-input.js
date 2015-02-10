@@ -13,6 +13,7 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   self.upgrade = options.upgrade || [];
   self.anticipatedPrereleases = options.anticipatedPrereleases || {};
   self.previousSolution = options.previousSolution || null;
+  self.mayBreakRootDependencies = options.mayBreakRootDependencies || false;
 
   check(self.dependencies, [String]);
   check(self.constraints, [PackageConstraintType]);
@@ -89,7 +90,10 @@ CS.Input.prototype.toJSONable = function () {
   }
   if (self.previousSolution !== null) {
     obj.previousSolution = self.previousSolution;
-  };
+  }
+  if (self.mayBreakRootDependencies) {
+    obj.mayBreakRootDependencies = true;
+  }
   return obj;
 };
 
@@ -101,7 +105,8 @@ CS.Input.fromJSONable = function (obj) {
     anticipatedPrereleases: Match.Optional(
       Match.ObjectWithValues(Match.ObjectWithValues(Boolean))),
     previousSolution: Match.Optional(Match.OneOf(Object, null)),
-    upgrade: Match.Optional([String])
+    upgrade: Match.Optional([String]),
+    mayBreakRootDependencies: Match.Optional(Boolean)
   });
 
   return new CS.Input(
@@ -113,7 +118,8 @@ CS.Input.fromJSONable = function (obj) {
     {
       upgrade: obj.upgrade,
       anticipatedPrereleases: obj.anticipatedPrereleases,
-      previousSolution: obj.previousSolution
+      previousSolution: obj.previousSolution,
+      mayBreakRootDependencies: obj.mayBreakRootDependencies
     });
 };
 

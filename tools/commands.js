@@ -173,7 +173,10 @@ var runCommandOptions = {
     // With --clean, meteor cleans the application directory and uses the
     // bundled assets only. Encapsulates the behavior of once (does not rerun)
     // and does not monitor for file changes. Not for end-user use.
-    clean: { type: Boolean}
+    clean: { type: Boolean},
+    // Allow the version solver to make breaking changes to the versions
+    // of top-level dependencies.
+    breaking: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -220,7 +223,8 @@ function doRunCommand (options) {
   options.httpProxyPort = options['http-proxy-port'];
 
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    mayBreakRootDependencies: options.breaking
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {

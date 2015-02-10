@@ -57,6 +57,9 @@ Options:
   --settings       Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
+  --breaking       Allow packages in your project to be upgraded or downgraded
+                   to versions that are not semver-compatible with the current
+                   versions, if required to resolve package version conflicts.
   --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
 >>> debug
@@ -143,6 +146,9 @@ Options:
   --packages-only  Update the package versions only. Do not update the release.
   --patch  Update the release to a patch release only.
   --release  Update to a specific release of meteor.
+  --breaking  Allow packages in your project to be upgraded or downgraded
+              to versions that are not semver-compatible with the current
+              versions, if required to resolve package version conflicts.
 
 
 >>> admin run-upgrader
@@ -161,6 +167,11 @@ Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
 the meteor search command.
 
+Options:
+  --breaking  Allow packages in your project to be upgraded or downgraded
+              to versions that are not semver-compatible with the current
+              versions, if required to resolve package version conflicts.
+
 
 >>> remove
 Remove a package from this project.
@@ -169,6 +180,11 @@ Usage: meteor remove <package> [package..]
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
 'meteor list'.
+
+Options:
+  --breaking  Allow packages in your project to be upgraded or downgraded
+              to versions that are not semver-compatible with the current
+              versions, if required to resolve package version conflicts.
 
 
 >>> list

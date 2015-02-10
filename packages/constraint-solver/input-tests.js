@@ -35,6 +35,21 @@ var doTest = function (test, inputJSONable, outputJSONable) {
     formatSolution(outputJSONable));
 };
 
+var doFailTest = function (test, inputJSONable, messageExpect) {
+  var input = CS.Input.fromJSONable(inputJSONable);
+
+  test.throws(function () {
+    try {
+      CS.PackagesResolver._resolveWithInput(input);
+    } catch (e) {
+      if (! e.constraintSolverError) {
+        test.fail(e.message);
+      }
+      throw e;
+    }
+  }, messageExpect);
+};
+
 Tinytest.add("constraint solver - input - upgrade indirect dependency", function (test) {
   doTest(test, {
     dependencies: ["foo"],
@@ -77,6 +92,42 @@ Tinytest.add("constraint solver - input - previous solution no patch", function 
       bar: "2.0.0"
     }
   });
+});
+
+
+Tinytest.add("constraint solver - input - don't break root dep", function (test) {
+  doTest(test, {
+    dependencies: ["foo", "bar"],
+    constraints: [],
+    previousSolution: { bar: "2.0.0" },
+    upgrade: [],
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar@=2.0.1"],
+        "bar 2.0.0": [],
+        "bar 2.0.1": []
+      }
+    }
+  }, {
+    answer: {
+      foo: "1.0.0",
+      bar: "2.0.1"
+    }
+  });
+
+  doFailTest(test, {
+    dependencies: ["foo", "bar"],
+    constraints: [],
+    previousSolution: { bar: "2.0.1" },
+    upgrade: [],
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar@=2.0.0"],
+        "bar 2.0.0": [],
+        "bar 2.0.1": []
+      }
+    }
+  }, 'Breaking change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints:\n  bar@=2.0.0 <- foo 1.0.0\nTo make breaking changes to top-level dependencies, you must pass --breaking.');
 });
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {
