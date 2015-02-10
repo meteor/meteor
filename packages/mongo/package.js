@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.0.12-oplog-backlog.1'
+  version: '1.0.12-oplog-backlog.2'
 });
 
 Npm.depends({
