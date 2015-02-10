@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.11'
+  version: '1.0.12-oplog-backlog.0'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning

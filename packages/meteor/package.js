@@ -2,7 +2,8 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.4'
+  version: '1.1.5-oplog-backlog.0',
+  documentation: null
 });
 
 Package.registerBuildPlugin({
