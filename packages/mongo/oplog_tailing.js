@@ -266,14 +266,8 @@ _.extend(OplogHandle.prototype, {
           // Are we too far behind? Just tell our observers that they need to
           // repoll, and drop our queue.
           if (self._entryQueue.length > TOO_FAR_BEHIND) {
-            // Instead of dropping all the way down to zero, we leave the final
-            // one on it. This ensures that after calling the skipped entries
-            // callbacks, we'll still process at least one more oplog entry
-            // immediately and thus examine any relevant items in
-            // _catchingUpFutures.
-            var last = self._entryQueue.pop();
+            var lastEntry = self._entryQueue.pop();
             self._entryQueue.clear();
-            self._entryQueue.push(last);
 
             _.each(self._onSkippedEntriesCallbacks, function (cb, id) {
               // Call the onSkippedEntries callbacks, but double-check that they
@@ -283,6 +277,9 @@ _.extend(OplogHandle.prototype, {
               }
             });
 
+            // Free any waitUntilCaughtUp() calls that were waiting for us to
+            // pass something that we just skipped.
+            self._setLastProcessedTS(lastEntry.ts);
             continue;
           }
 
@@ -315,17 +312,21 @@ _.extend(OplogHandle.prototype, {
           // sequencers.
           if (!doc.ts)
             throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-          self._lastProcessedTS = doc.ts;
-          while (!_.isEmpty(self._catchingUpFutures)
-                 && self._catchingUpFutures[0].ts.lessThanOrEqual(
-                   self._lastProcessedTS)) {
-            var sequencer = self._catchingUpFutures.shift();
-            sequencer.future.return();
-          }
+          self._setLastProcessedTS(doc.ts);
         }
       } finally {
         self._workerActive = false;
       }
     });
+  },
+  _setLastProcessedTS: function (ts) {
+    var self = this;
+    self._lastProcessedTS = ts;
+    while (!_.isEmpty(self._catchingUpFutures)
+           && self._catchingUpFutures[0].ts.lessThanOrEqual(
+             self._lastProcessedTS)) {
+      var sequencer = self._catchingUpFutures.shift();
+      sequencer.future.return();
+    }
   }
 });
