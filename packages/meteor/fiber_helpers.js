@@ -14,6 +14,8 @@ Meteor._noYieldsAllowed = function (f) {
   }
 };
 
+Meteor._DoubleEndedQueue = Npm.require('double-ended-queue');
+
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are
 // done when they return.
@@ -37,7 +39,7 @@ Meteor._SynchronousQueue = function () {
   // is an object with field 'task' (the task function to run) and 'future' (the
   // Future associated with the blocking runTask call that queued it, or null if
   // called from queueTask).
-  self._taskHandles = [];
+  self._taskHandles = new Meteor._DoubleEndedQueue();
   // This is true if self._run() is either currently executing or scheduled to
   // do so soon.
   self._runningOrRunScheduled = false;
@@ -105,7 +107,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     if (!self.safeToRunTask())
       return;
     self._draining = true;
-    while (!_.isEmpty(self._taskHandles)) {
+    while (! self._taskHandles.isEmpty()) {
       self.flush();
     }
     self._draining = false;
@@ -130,7 +132,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     if (!self._runningOrRunScheduled)
       throw new Error("expected to be _runningOrRunScheduled");
 
-    if (_.isEmpty(self._taskHandles)) {
+    if (self._taskHandles.isEmpty()) {
       // Done running tasks! Don't immediately schedule another run, but
       // allow future tasks to do so.
       self._runningOrRunScheduled = false;
