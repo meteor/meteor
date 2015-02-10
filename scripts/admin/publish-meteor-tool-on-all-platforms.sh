@@ -60,9 +60,10 @@ clean_up () {
   exit 1
 }
 
-red=`tput setaf 1`
-green=`tput setaf 2`
-NC=`tput sgr0`
+# '|| true' so that we don't fail on terminals without colors
+red=`tput setaf 1 || true`
+green=`tput setaf 2 || true`
+NC=`tput sgr0 || true`
 
 main $@
 
