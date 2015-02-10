@@ -52,6 +52,9 @@ OplogHandle = function (oplogUrl, dbName) {
   // XXX doc
   self._catchingUpFutures = [];
 
+  self._entryQueue = [];
+  self._workerActive = false;
+
   self._startTailing();
 };
 
@@ -196,40 +199,62 @@ _.extend(OplogHandle.prototype, {
 
     self._tailHandle = self._oplogTailConnection.tail(
       cursorDescription, function (doc) {
-        if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
-              doc.ns.substr(0, self._dbName.length + 1) ===
-              (self._dbName + '.'))) {
-          throw new Error("Unexpected ns");
-        }
-
-        var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
-                       dropCollection: false,
-                       op: doc};
-
-        // Is it a special command and the collection name is hidden somewhere
-        // in operator?
-        if (trigger.collection === "$cmd") {
-          trigger.collection = doc.o.drop;
-          trigger.dropCollection = true;
-          trigger.id = null;
-        } else {
-          // All other ops have an id.
-          trigger.id = idForOp(doc);
-        }
-
-        self._crossbar.fire(trigger);
-
-        // Now that we've processed this operation, process pending sequencers.
-        if (!doc.ts)
-          throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-        self._lastProcessedTS = doc.ts;
-        while (!_.isEmpty(self._catchingUpFutures)
-               && self._catchingUpFutures[0].ts.lessThanOrEqual(
-                 self._lastProcessedTS)) {
-          var sequencer = self._catchingUpFutures.shift();
-          sequencer.future.return();
-        }
-      });
+        self._entryQueue.push(doc);
+        self._maybeStartWorker();
+      }
+    );
     self._readyFuture.return();
+  },
+
+  _maybeStartWorker: function () {
+    var self = this;
+    if (self._workerActive)
+      return;
+    self._workerActive = true;
+    Meteor.defer(function () {
+      try {
+        while (! self._stopped && self._entryQueue.length) {
+          // XXX use something like double-ended-queue instead?
+          var doc = self._entryQueue.shift();
+
+          if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
+                doc.ns.substr(0, self._dbName.length + 1) ===
+                (self._dbName + '.'))) {
+            throw new Error("Unexpected ns");
+          }
+
+          var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
+                         dropCollection: false,
+                         op: doc};
+
+          // Is it a special command and the collection name is hidden somewhere
+          // in operator?
+          if (trigger.collection === "$cmd") {
+            trigger.collection = doc.o.drop;
+            trigger.dropCollection = true;
+            trigger.id = null;
+          } else {
+            // All other ops have an id.
+            trigger.id = idForOp(doc);
+          }
+
+          self._crossbar.fire(trigger);
+
+          // Now that we've processed this operation, process pending
+          // sequencers.
+          if (!doc.ts)
+            throw Error("oplog entry without ts: " + EJSON.stringify(doc));
+          self._lastProcessedTS = doc.ts;
+          while (!_.isEmpty(self._catchingUpFutures)
+                 && self._catchingUpFutures[0].ts.lessThanOrEqual(
+                   self._lastProcessedTS)) {
+            var sequencer = self._catchingUpFutures.shift();
+            sequencer.future.return();
+          }
+        }
+      } finally {
+        self._workerActive = false;
+      }
+    });
   }
 });
