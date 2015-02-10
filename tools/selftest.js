@@ -1504,6 +1504,7 @@ var tagDescriptions = {
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
   cordova: 'requires Cordova support in tool (eg not on Windows)',
+  "client-refresh": 'requires client-only refresh (not implemented yet on Windows)',
   windows: 'runs only on Windows',
   // these are pseudo-tags, assigned to tests when you specify
   // --changed, --file, or a pattern argument
@@ -1571,6 +1572,7 @@ var getFilteredTests = function (options) {
 
   if (process.platform === "win32") {
     tagsToSkip.push("cordova");
+    tagsToSkip.push("client-refresh");
   } else {
     tagsToSkip.push("windows");
   }

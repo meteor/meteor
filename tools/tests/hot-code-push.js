@@ -2,7 +2,7 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var utils = require('../utils.js');
 
-selftest.define("css hot code push", function (options) {
+selftest.define("css hot code push", ["client-refresh"], function (options) {
   var s = new Sandbox({
     clients: options.clients
   });
@@ -110,7 +110,8 @@ selftest.define("versioning hot code push", function (options) {
   });
 });
 
-selftest.define("javascript hot code push", function (options) {
+selftest.define("javascript hot code push", ["client-refresh"],
+    function (options) {
   var s = new Sandbox({
     clients: options.clients
   });
