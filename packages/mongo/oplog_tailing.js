@@ -51,14 +51,13 @@ OplogHandle = function (oplogUrl, dbName) {
       { op: 'c', 'o.drop': { $exists: true } }]
   };
   // XXX doc
+  // XXX use a priority queue or something else that's faster than an array
   self._catchingUpFutures = [];
 
   self._nextOnSkippedEntriesCallbackId = 1;
   self._onSkippedEntriesCallbacks = {};
 
-  // XXX use a deque instead? make sure to catch the line where it is replaced
-  // with [] below too
-  self._entryQueue = [];
+  self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
 
   self._startTailing();
@@ -246,11 +245,11 @@ _.extend(OplogHandle.prototype, {
     self._workerActive = true;
     Meteor.defer(function () {
       try {
-        while (! self._stopped && self._entryQueue.length) {
+        while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
           // repoll, and drop our queue.
           if (self._entryQueue.length > TOO_FAR_BEHIND) {
-            self._entryQueue = [];
+            self._entryQueue.clear();
             _.each(self._onSkippedEntriesCallbacks, function (cb, id) {
               // Call the onSkippedEntries callbacks, but double-check that they
               // weren't *just* stopped before calling.
@@ -261,7 +260,6 @@ _.extend(OplogHandle.prototype, {
             continue;
           }
 
-          // XXX use something like double-ended-queue instead?
           var doc = self._entryQueue.shift();
 
           if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&

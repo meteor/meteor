@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "double-ended-queue": {
+      "version": "2.1.0-0"
+    }
+  }
+}

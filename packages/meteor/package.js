@@ -10,6 +10,10 @@ Package.registerBuildPlugin({
   sources: ['plugin/basic-file-types.js']
 });
 
+Npm.depends({
+  "double-ended-queue": "2.1.0-0"
+});
+
 Package.onUse(function (api) {
   api.use('underscore', ['client', 'server']);
 
