@@ -26,6 +26,9 @@
   (The previous behavior matched a bug in the MongoDB 2.4 implementation of
   upsert that is fixed in MongoDB 2.6.)  #2278
 
+* If the oplog observe driver gets too far behind in processing the oplog, skip
+  entries and re-poll queries instead of trying to keep up.  #2668
+
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
   0.8.1.  #3038
