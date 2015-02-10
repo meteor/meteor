@@ -127,7 +127,7 @@ Tinytest.add("constraint solver - input - don't break root dep", function (test)
         "bar 2.0.1": []
       }
     }
-  }, 'Breaking change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints:\n  bar@=2.0.0 <- foo 1.0.0\nTo make breaking changes to top-level dependencies, you must pass --breaking.');
+  }, 'Breaking change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints:\n* bar@=2.0.0 <- foo 1.0.0\nTo allow breaking changes to top-level dependencies, you must pass --breaking to meteor [run], update, add, or remove.');
 });
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {

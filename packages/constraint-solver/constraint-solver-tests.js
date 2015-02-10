@@ -152,8 +152,8 @@ Tinytest.add("constraint solver - no results", function (test) {
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({ "mytoplevel": "" }, function (error) {
       return error.message.match(/indirect@2\.0\.0 is not satisfied by indirect 1\.0\.0/)
-        && error.message.match(/^ *indirect@1\.0\.0 <- bad-1 1\.0\.0 <- mytoplevel 1.0.0$/m)
-        && error.message.match(/^ *indirect@2\.0\.0 <- bad-2 1\.0\.0 <- mytoplevel 1.0.0$/m)
+        && error.message.match(/^\* indirect@1\.0\.0 <- bad-1 1\.0\.0 <- mytoplevel 1.0.0$/m)
+        && error.message.match(/^\* indirect@2\.0\.0 <- bad-2 1\.0\.0 <- mytoplevel 1.0.0$/m)
       // Lines should be unique.
         && ! error.message.match(/bad-1[^]+bad-1/)
       // only two constraints listed
