@@ -100,6 +100,14 @@ OplogObserveDriver = function (options) {
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
 
+  // If the oplog handle tells us that it skipped some entries (because it got
+  // behind, say), re-poll.
+  self._stopHandles.push(self._mongoHandle._oplogHandle.onSkippedEntries(
+    finishIfNeedToPollQuery(function () {
+      self._needToPollQuery();
+    })
+  ));
+
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {

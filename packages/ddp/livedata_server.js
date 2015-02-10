@@ -233,7 +233,7 @@ var Session = function (server, version, socket, options) {
 
   // set to null when the session is destroyed. multiple places below
   // use this to determine if the session is alive or not.
-  self.inQueue = [];
+  self.inQueue = new Meteor._DoubleEndedQueue();
 
   self.blocked = false;
   self.workerRunning = false;
