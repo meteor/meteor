@@ -114,6 +114,13 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       test.isTrue(blueDog5Id);
       test.isFalse(gotSpot);
 
+      self.skipped = false;
+      self.skipHandle =
+        MongoInternals.defaultRemoteCollectionDriver().mongo
+        ._oplogHandle.onSkippedEntries(function () {
+          self.skipped = true;
+        });
+
       // Dye all the cats blue. This adds lots of oplog mentries that look like
       // they might in theory be relevant (since they say "something you didn't
       // know about is now blue", and who knows, maybe it's a dog) which puts
@@ -122,13 +129,6 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
                              {$set: {color: 'blue'}},
                              {multi: true});
       self.collection.update(blueDog5Id, {$set: {name: 'spot'}});
-
-      self.skipped = false;
-      self.skipHandle =
-        MongoInternals.defaultRemoteCollectionDriver().mongo
-        ._oplogHandle.onSkippedEntries(function () {
-          self.skipped = true;
-        });
 
       // We ought to see the spot change soon!  It's important to keep this
       // timeout relatively small (ie, small enough that if we set
