@@ -21,7 +21,6 @@ echo Building custom action collection 32-bit library (WiXHelper project)
 %MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=Win32 /p:DefineConstants="TRACE"%OUTLOG%
 if %errorlevel% neq 0 (
 	echo Build failed
-	pause
 	goto :EOF
 )
 
@@ -31,7 +30,6 @@ echo Building custom action collection 64-bit library (WiXHelper project)
 %MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=x64 /p:DefineConstants="TRACE"%OUTLOG%
 if %errorlevel% neq 0 (
 	echo Build failed
-	pause
 	goto :EOF
 )
 
@@ -42,7 +40,6 @@ echo Building Meteor installer package...
 %MSBUILD% MeteorSetup.sln /t:Rebuild /p:Configuration="Release" /p:Platform="x86" /p:DefineConstants="TRACE"%OUTLOG%
 if %errorlevel% neq 0 (
 	echo Build failed
-	pause
 	goto :EOF
 )
 
