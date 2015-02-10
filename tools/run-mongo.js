@@ -187,14 +187,11 @@ var findMongoPort = function (appDir) {
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
-var findMongoAndKillItDead = function (port) {
+var findMongoAndKillItDead = function (port, dbPath) {
   var pids = findMongoPids(null, port);
 
-  if (! pids.length)
-    return; // nothing to kill
-
   // Go through the list serially. There really should only ever be
-  // one but we're not taking any chances.
+  // at most one but we're not taking any chances.
   _.each(pids, function (processInfo) {
     var pid = processInfo.pid;
 
@@ -224,6 +221,14 @@ var findMongoAndKillItDead = function (port) {
     // for the user.
     throw new Error("Can't kill running mongo (pid " + pid + ").");
   });
+
+  // If we had to kill mongod with SIGKILL, or on Windows where all calls to
+  // `process.kill` work like SIGKILL, mongod will not have the opportunity to
+  // close gracefully. Delete a lock file that may have been left over.
+  var mongodLockFile = files.pathJoin(dbPath, "mongod.lock");
+  if (files.exists(mongodLockFile)) {
+    files.unlink(mongodLockFile)
+  }
 };
 
 var StoppedDuringLaunch = function () {};
@@ -307,7 +312,7 @@ var launchMongo = function (options) {
     var procExitHandler;
 
     if (options.allowKilling) {
-      findMongoAndKillItDead(port);
+      findMongoAndKillItDead(port, dbPath);
     }
 
     if (options.multiple) {
