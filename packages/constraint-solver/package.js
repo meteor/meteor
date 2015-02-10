@@ -38,7 +38,4 @@ Package.onTest(function (api) {
   api.addFiles('benchmark-tests.js', where);
   api.addFiles('input-tests.js', where);
   api.addFiles('version-pricer-tests.js', where);
-
-  // tests of old resolver
-  api.addFiles('resolver-tests.js', 'server');
 });

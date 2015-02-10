@@ -8,10 +8,6 @@ CS.Solver = function (input, options) {
   self.input = input;
   self.errors = []; // [String]
 
-  self.constraintSatisfactionOptions = {
-    anticipatedPrereleases: self.input.anticipatedPrereleases
-  };
-
   self.pricer = new CS.VersionPricer();
   self.getConstraintFormula = _.memoize(_getConstraintFormula,
                                          function (p, vConstraint) {
@@ -462,6 +458,21 @@ CS.Solver.prototype.getSolution = function () {
   // cost function, so we can show a better error.
   self.minimize('conflicts', _.pluck(analysis.constraints, 'conflictVar'));
 
+  // Try not to use "unanticipated" prerelease versions
+  var unanticipatedPrereleases = [];
+  _.each(_.keys(analysis.reachablePackages), function (p) {
+    var anticipatedPrereleases = input.anticipatedPrereleases[p];
+    _.each(cache.getPackageVersions(p), function (v) {
+      if (/-/.test(v) && ! (anticipatedPrereleases &&
+                            _.has(anticipatedPrereleases, v))) {
+        unanticipatedPrereleases.push(pvVar(p, v));
+      }
+    });
+  });
+  analysis.unanticipatedPrereleases = unanticipatedPrereleases;
+
+  self.minimize('unanticipated_prereleases', unanticipatedPrereleases);
+
   var previousRootSteps = self.getDistances(
     'previous_root', analysis.previousRootDepVersions);
   // the "previous_root_incompat" step
@@ -585,7 +596,8 @@ CS.Solver.prototype.getSolution = function () {
   var versionMap = self.currentVersionMap();
 
   return {
-    neededToUseUnanticipatedPrereleases: false, // XXX
+    neededToUseUnanticipatedPrereleases: (
+      self.stepsByName.unanticipated_prereleases.optimum > 0),
     answer: versionMap
   };
 };
@@ -618,12 +630,9 @@ CS.Solver.prototype.throwAnyErrors = function () {
   }
 };
 
-CS.Solver.prototype.getOkVersions = function (toPackage, vConstraint,
-                                               targetVersions) {
-  var self = this;
+var getOkVersions = function (toPackage, vConstraint, targetVersions) {
   return _.compact(_.map(targetVersions, function (v) {
-    if (CS.isConstraintSatisfied(
-      toPackage, vConstraint, v, self.constraintSatisfactionOptions)) {
+    if (CS.isConstraintSatisfied(toPackage, vConstraint, v)) {
       return pvVar(toPackage, v);
     } else {
       return null;
@@ -637,7 +646,7 @@ var _getConstraintFormula = function (toPackage, vConstraint) {
   var self = this;
 
   var targetVersions = self.input.catalogCache.getPackageVersions(toPackage);
-  var okVersions = self.getOkVersions(toPackage, vConstraint, targetVersions);
+  var okVersions = getOkVersions(toPackage, vConstraint, targetVersions);
 
   if (okVersions.length === targetVersions.length) {
     return Logic.TRUE;

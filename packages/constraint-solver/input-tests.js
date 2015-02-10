@@ -130,6 +130,109 @@ Tinytest.add("constraint solver - input - don't break root dep", function (test)
   }, 'Breaking change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints:\n* bar@=2.0.0 <- foo 1.0.0\nTo allow breaking changes to top-level dependencies, you must pass --breaking to meteor [run], update, add, or remove.');
 });
 
+Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
+  // First verify that the solver takes the latest version when
+  // presented with a new root dependency (i.e. one not mentioned in
+  // a previous solution) -- and also that it will take a prerelease if
+  // it has no choice.
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: [],
+    catalogCache: {
+      data: {
+        "a 1.0.0-pre.0": [],
+        "a 1.0.0-pre.1": []
+      }
+    }
+  }, {
+    answer: {
+      a: "1.0.0-pre.1"
+    },
+    neededToUseUnanticipatedPrereleases: true
+  });
+
+  // If we have the option to take a non-pre-release version,
+  // we should.
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: [],
+    catalogCache: {
+      data: {
+        "a 0.9.0": [],
+        "a 1.0.0-pre.0": [],
+        "a 1.0.0-pre.1": []
+      }
+    }
+  }, {
+    answer: {
+      a: "0.9.0"
+    },
+    neededToUseUnanticipatedPrereleases: false
+  });
+
+  // If the prerelease versions are "anticipated", take
+  // the latest one.
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: [],
+    anticipatedPrereleases: { a: {
+      "1.0.0-pre.0": true, "1.0.0-pre.1": true } },
+    catalogCache: {
+      data: {
+        "a 0.9.0": [],
+        "a 1.0.0-pre.0": [],
+        "a 1.0.0-pre.1": []
+      }
+    }
+  }, {
+    answer: {
+      a: "1.0.0-pre.1"
+    },
+    neededToUseUnanticipatedPrereleases: false
+  });
+
+  // Don't take the unanticipated pre-releases here.
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: ["a@1.0.0"],
+    catalogCache: {
+      data: {
+        "a 1.0.0": [],
+        "a 1.0.1-pre.0": [],
+        "a 1.0.1-pre.1": []
+      }
+    }
+  }, {
+    answer: {
+      a: "1.0.0"
+    },
+    neededToUseUnanticipatedPrereleases: false
+  });
+
+  // If we ask for one prerelease, we might get another.
+  // If it isn't anticipated, it sets the flag on the result
+  // (differs from older behavior).
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: ["a@1.0.1-pre.0"],
+    anticipatedPrereleases: { a: {
+      "1.0.0-pre.0": true } },
+    catalogCache: {
+      data: {
+        "a 1.0.0": [],
+        "a 1.0.1-pre.0": [],
+        "a 1.0.1-pre.1": []
+      }
+    }
+  }, {
+    answer: {
+      a: "1.0.1-pre.1"
+    },
+    neededToUseUnanticipatedPrereleases: true
+  });
+
+});
+
 Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({
     "dependencies": [
