@@ -41,10 +41,11 @@ aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | \
 trap - EXIT
 
 for FILE in $(aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nlaF/ -e 'print $F[-1]'); do
-   if [[ $(aws s3 ls $TARGET$FILE >/dev/null | wc -l) != 0 ]]; then
-     echo "$TARGET$FILE already exists (maybe from another branch?)"
-     exit 1
-   fi
+  # aws s3 ls returns 0 when it lists nothing
+  if [[ $(aws s3 ls $TARGET$FILE >/dev/null | wc -l) != 0 ]]; then
+    echo "$TARGET$FILE already exists (maybe from another branch?)"
+    exit 1
+  fi
 done
 
 echo Copying to $TARGET
