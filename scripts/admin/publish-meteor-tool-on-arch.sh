@@ -135,7 +135,7 @@ clean_up () {
     echo "Removing remaining keys"
     rm "$TEMP_KEY"
   fi
-  if [[ "x$TEMP_KEY" != x ]]; then
+  if [[ "x$TEMP_PRIV_KEY" != x ]]; then
     rm "$TEMP_PRIV_KEY"
   fi
 
