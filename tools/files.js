@@ -1197,9 +1197,9 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
 };
 
 files._getLocationFromScriptLinkToMeteorScript = function (script) {
-  _.compact(script.toString().split('\n'))
+  var lines = _.compact(script.toString().split('\n'));
 
-  var scriptLocation = _.last()
+  var scriptLocation = _.last(lines)
     .replace(/^rem /g, '');
 
   if (! scriptLocation) {
