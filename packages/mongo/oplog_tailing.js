@@ -72,8 +72,9 @@ OplogHandle = function (oplogUrl, dbName) {
   self._catchingUpFutures = [];
   self._lastProcessedTS = null;
 
-  self._nextOnSkippedEntriesCallbackId = 1;
-  self._onSkippedEntriesCallbacks = {};
+  self._onSkippedEntriesHook = new Hook({
+    debugPrintExceptions: "onSkippedEntries callback"
+  });
 
   self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
@@ -119,15 +120,7 @@ _.extend(OplogHandle.prototype, {
     var self = this;
     if (self._stopped)
       throw new Error("Called onSkippedEntries on stopped handle!");
-    var id = self._nextOnSkippedEntriesCallbackId++;
-    self._onSkippedEntriesCallbacks[id] = Meteor.bindEnvironment(function () {
-      callback();
-    }, "onSkippedEntries callback");
-    return {
-      stop: function () {
-        delete self._onSkippedEntriesCallbacks[id];
-      }
-    };
+    return self._onSkippedEntriesHook.register(callback);
   },
   // Calls `callback` once the oplog has been processed up to a point that is
   // roughly "now": specifically, once we've processed all ops that are
@@ -259,12 +252,9 @@ _.extend(OplogHandle.prototype, {
             var lastEntry = self._entryQueue.pop();
             self._entryQueue.clear();
 
-            _.each(self._onSkippedEntriesCallbacks, function (cb, id) {
-              // Call the onSkippedEntries callbacks, but double-check that they
-              // weren't *just* stopped before calling.
-              if (_.has(self._onSkippedEntriesCallbacks, id)) {
-                cb();
-              }
+            self._onSkippedEntriesHook.each(function (callback) {
+              callback();
+              return true;
             });
 
             // Free any waitUntilCaughtUp() calls that were waiting for us to
