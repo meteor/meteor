@@ -131,7 +131,7 @@ var runTest = function () {
       // use a non-default port so we don't fail if someone is running an app
       // now
       ["--once", "--port", "4123"], {
-        cwd: projectContext.projectDir,
+        cwd: files.convertToOSPath(projectContext.projectDir),
         stdio: 'inherit'
       },
       fut.resolver()
