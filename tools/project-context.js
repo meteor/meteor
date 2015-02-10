@@ -396,11 +396,9 @@ _.extend(ProjectContext.prototype, {
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
-    var isFirstAttempt = true;
-
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
       buildmessage.enterJob("selecting package versions", function () {
         var resolver = self._buildResolver();
 
@@ -415,7 +413,7 @@ _.extend(ProjectContext.prototype, {
           // of it yet.  It's not actually fatal, though, for previousSolution
           // to refer to package versions that we don't have access to or don't
           // exist.  They'll end up getting changed or removed if possible.
-          missingPreviousVersionIsError: isFirstAttempt
+          missingPreviousVersionIsError: canRetry
         };
         if (self._upgradePackageNames)
           resolveOptions.upgrade = self._upgradePackageNames;
@@ -448,8 +446,6 @@ _.extend(ProjectContext.prototype, {
 
         self._completedStage = STAGE.RESOLVE_CONSTRAINTS;
       });
-
-      isFirstAttempt = false;
     });
   },
 
