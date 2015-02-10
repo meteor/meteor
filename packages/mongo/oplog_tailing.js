@@ -2,6 +2,8 @@ var Future = Npm.require('fibers/future');
 
 OPLOG_COLLECTION = 'oplog.rs';
 
+var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
+
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
 // XXX this is duplicated with accounts_server.js
@@ -51,6 +53,11 @@ OplogHandle = function (oplogUrl, dbName) {
   // XXX doc
   self._catchingUpFutures = [];
 
+  self._nextOnSkippedEntriesCallbackId = 1;
+  self._onSkippedEntriesCallbacks = {};
+
+  // XXX use a deque instead? make sure to catch the line where it is replaced
+  // with [] below too
   self._entryQueue = [];
   self._workerActive = false;
 
@@ -86,6 +93,22 @@ _.extend(OplogHandle.prototype, {
     return {
       stop: function () {
         listenHandle.stop();
+      }
+    };
+  },
+  // Register a callback to be invoked any time we skip oplog entries (eg,
+  // because we are too far behind).
+  onSkippedEntries: function (callback) {
+    var self = this;
+    if (self._stopped)
+      throw new Error("Called onSkippedEntries on stopped handle!");
+    var id = self._nextOnSkippedEntriesCallbackId++;
+    self._onSkippedEntriesCallbacks[id] = Meteor.bindEnvironment(function () {
+      callback();
+    }, "onSkippedEntries callback");
+    return {
+      stop: function () {
+        delete self._onSkippedEntriesCallbacks[id];
       }
     };
   },
@@ -224,6 +247,20 @@ _.extend(OplogHandle.prototype, {
     Meteor.defer(function () {
       try {
         while (! self._stopped && self._entryQueue.length) {
+          // Are we too far behind? Just tell our observers that they need to
+          // repoll, and drop our queue.
+          if (self._entryQueue.length > TOO_FAR_BEHIND) {
+            self._entryQueue = [];
+            _.each(self._onSkippedEntriesCallbacks, function (cb, id) {
+              // Call the onSkippedEntries callbacks, but double-check that they
+              // weren't *just* stopped before calling.
+              if (_.has(self._onSkippedEntriesCallbacks, id)) {
+                cb();
+              }
+            });
+            continue;
+          }
+
           // XXX use something like double-ended-queue instead?
           var doc = self._entryQueue.shift();
 
