@@ -897,13 +897,12 @@ _.extend(PhantomClient.prototype, {
   connect: function () {
     var self = this;
 
-    var phantomScript = "require('webpage').create().open('" + self.url + "');";
     var phantomPath = phantomjs.path;
-    self.process = child_process.execFile(
-      '/bin/bash',
-      ['-c',
-       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "\nEND\n")],
+
+    var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
+      "phantom", "open-url.js");
+    self.process = child_process.execFile(phantomPath, ["--load-images=no",
+      files.convertToOSPath(scriptPath), self.url],
       {}, function (error, stdout, stderr) {
         if (self._logError && error) {
           console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
