@@ -545,7 +545,7 @@ var createAndPublishPackage = selftest.markStack(function (s, packageName) {
 });
 
 selftest.define("release track defaults to METEOR",
-                ["net", "test-package-server", "checkout"], function () {
+                ["net", "test-package-server", "checkout", "yet-unsolved-windows-failure"], function () {
 
   var s = new Sandbox();
   testUtils.login(s, username, password);

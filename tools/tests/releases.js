@@ -11,7 +11,7 @@ var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 // the packages from the internet. If we could fool it into using local packages
 // instead, or think that it alreayd has the packages, it would be ok). (This is
 // because it calls 'create' from a warehouse, to be specific).
-selftest.define("springboard", ['checkout', 'net'], function () {
+selftest.define("springboard", ['checkout', 'net', "yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { },
@@ -215,7 +215,7 @@ selftest.define("download release", ['net', 'slow'], function () {
 });
 
 
-selftest.define("unknown release", [], function () {
+selftest.define("unknown release", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }

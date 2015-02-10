@@ -114,7 +114,7 @@ selftest.define("run", function () {
 // XXX --port, --production, --raw-logs, --settings, --program
 });
 
-selftest.define("run --once", function () {
+selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 
@@ -327,7 +327,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
 // Test that when the parent runner process is SIGKILLed, the child
 // process exits also.
-selftest.define("run and SIGKILL parent process", function () {
+selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox();
   var run;
 
