@@ -243,7 +243,8 @@ _.extend(AppProcess.prototype, {
     // Call node
     var child_process = require('child_process');
     var child = child_process.spawn(nodePath, opts, {
-      env: self._computeEnvironment()
+      env: self._computeEnvironment(),
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc']
     });
 
     // Attach inspector
@@ -751,7 +752,7 @@ _.extend(AppRunner.prototype, {
 
         // Notify the server that new client assets have been added to the
         // build.
-        appProcess.proc.kill('SIGUSR2');
+        appProcess.proc.send({ refresh: 'client' });
 
         // Establish a watcher on the new files.
         setupClientWatcher();
