@@ -203,21 +203,18 @@ namespace LaunchMeteor
 
             Console.WriteLine("Extracting files to {0}", warehouse);
 
-            var tempDir = warehouse + "~";
-            if (File.Exists(tempDir))
-                File.Delete(tempDir);
-            DirectoryDelete(tempDir);
+           if (File.Exists(warehouse))
+                File.Delete(warehouse);
+            DirectoryDelete(warehouse);
 
             try
             {
                 var regex = new Regex(@"^\.meteor\\");
-                ExtractTgz(stream, tempDir, p => regex.Replace(p, ""));
-                DirectoryDelete(warehouse);
-                Directory.Move(tempDir, warehouse);
+                ExtractTgz(stream, warehouse, p => regex.Replace(p, ""));
             }
             catch
             {
-                DirectoryDelete(tempDir);
+                DirectoryDelete(warehouse);
                 throw;
             }
             Console.WriteLine("Files extracted successfully\n");
