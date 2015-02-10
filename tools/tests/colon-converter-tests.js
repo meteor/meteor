@@ -53,42 +53,49 @@ var randomizedPackageName = function (username, start) {
   return username + ":" + startStr + utils.randomToken().substring(0, 6);
 };
 
-selftest.define("can't publish package with colons", ["net", "test-package-server"], function () {
-  var s = new Sandbox();
+// On Mac and Linux, we can add NPM libraries with colons in filenames, but we
+// test that they shouldn't build (since they can later never run on Windows).
+// But we can't run these tests on Windows since when you call `npm install`
+// on a module that has filenames with colons -- the module gets added, but
+// without the colon filenames.
+if (process.platform !== "win32") {
+  selftest.define("can't publish package with colons", ["net", "test-package-server"], function () {
+    var s = new Sandbox();
 
-  testUtils.login(s, username, password);
-  var packageName = randomizedPackageName(username, "package-with-colons");
-  var packageDirName = "package-with-colons";
-  s.createPackage(packageDirName, packageName, "package-with-colons");
+    testUtils.login(s, username, password);
+    var packageName = randomizedPackageName(username, "package-with-colons");
+    var packageDirName = "package-with-colons";
+    s.createPackage(packageDirName, packageName, "package-with-colons");
 
-  s.cd(packageDirName, function () {
-    var run = s.run("publish", "--create");
+    s.cd(packageDirName, function () {
+      var run = s.run("publish", "--create");
 
-    run.matchErr("invalid characters");
+      run.matchErr("invalid characters");
 
-    // This error can basically only occur on files from npm
-    run.matchErr("NPM module");
-  });
-});
-
-selftest.define("can't build local packages with colons", function () {
-  var s = new Sandbox();
-
-  var appName = "test";
-  var packageName = "package-with-colons";
-
-  s.createApp(appName, "standard-app");
-
-  s.cd(appName, function () {
-    s.mkdir("packages");
-    s.cd("packages", function () {
-      s.createPackage("package-with-colons", packageName, "package-with-colons");
+      // This error can basically only occur on files from npm
+      run.matchErr("NPM module");
     });
-
-    var run = s.run("add", packageName);
-    run.matchErr("colons");
   });
-});
+
+  selftest.define("can't build local packages with colons", function () {
+    var s = new Sandbox();
+
+    var appName = "test";
+    var packageName = "package-with-colons";
+
+    s.createApp(appName, "standard-app");
+
+    s.cd(appName, function () {
+      s.mkdir("packages");
+      s.cd("packages", function () {
+        s.createPackage("package-with-colons", packageName, "package-with-colons");
+      });
+
+      var run = s.run("add", packageName);
+      run.matchErr("colons");
+    });
+  });
+}
 
 // Tests step 2: old packages downloaded as-is
 
