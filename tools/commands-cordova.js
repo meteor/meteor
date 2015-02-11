@@ -1620,7 +1620,7 @@ var consumeControlFile = function (
      * Read more about domain patterns in [Cordova
      * docs](http://cordova.apache.org/docs/en/4.0.0/guide_appdev_whitelist_index.md.html).
      *
-     * Starting with Meteor 1.0.3 access rule for all domains and protocols
+     * Starting with Meteor 1.0.4 access rule for all domains and protocols
      * (`<access origin="*"/>`) is no longer set by default due to
      * [certain kind of possible
      * attacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html).
