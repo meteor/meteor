@@ -53,7 +53,6 @@
         </InstallExecuteSequence>
 
         <UI>
-            <ProgressText Action="Download_MeteorPackage">Downloading Meteor package ...</ProgressText>
             <ProgressText Action="Extract_MeteorFiles">Installing Meteor files ...</ProgressText>
         </UI>
     </Product>

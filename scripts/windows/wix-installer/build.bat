@@ -25,13 +25,13 @@ if %errorlevel% neq 0 (
 )
 
 
-
-echo Building custom action collection 64-bit library (WiXHelper project)
-%MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=x64 /p:DefineConstants="TRACE"%OUTLOG%
-if %errorlevel% neq 0 (
-	echo Build failed
-	goto :EOF
-)
+rem We don't have a 64 bit msi package, so I will command this
+rem echo Building custom action collection 64-bit library (WiXHelper project)
+rem %MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=x64 /p:DefineConstants="TRACE"%OUTLOG%
+rem if %errorlevel% neq 0 (
+rem 	echo Build failed
+rem 	goto :EOF
+rem )
 
 
 :Installer

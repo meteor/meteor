@@ -10,13 +10,91 @@
 #include <fileutil.h>
 #include <dirutil.h>
 
-
+#include <urlmon.h>
 #include <winhttp.h>
-#include <dlutil.h>
-
 
 #define BUF_LEN 1024
 #define LOG true
+
+
+
+    
+
+
+
+
+using namespace std;
+
+class MyCallback : public IBindStatusCallback  
+{
+public:
+	MSIHANDLE iHInstall;
+    MyCallback() {}
+
+    ~MyCallback() { }
+
+    // This one is called by URLDownloadToFile
+    STDMETHOD(OnProgress)(/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG ulStatusCode, /* [in] */ LPCWSTR wszStatusText)
+    {
+		PMSIHANDLE hActionRec = MsiCreateRecord(3);
+        PMSIHANDLE hProgressRec = MsiCreateRecord(3);
+
+		DWORD ulPrc = 0;
+		WCHAR wzInfo[1024] = { };
+
+		if (ulProgressMax > 0) 
+		{
+			ulPrc  = static_cast<DWORD>(100 * static_cast<double>(ulProgress) / static_cast<double>(ulProgressMax));
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor package ...  %u%%", ulPrc);
+		}
+		else
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor package ...");
+
+
+ 
+        MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
+        MsiRecordSetString(hActionRec, 2, wzInfo);
+        MsiRecordSetString(hActionRec, 3, NULL);
+        UINT iResult = MsiProcessMessage(iHInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
+        if ((iResult == IDCANCEL) || (iResult == IDABORT))
+            return E_ABORT;
+
+        return S_OK;
+    }
+
+    // The rest  don't do anything...
+    STDMETHOD(OnStartBinding)(/* [in] */ DWORD dwReserved, /* [in] */ IBinding __RPC_FAR *pib)
+    { return E_NOTIMPL; }
+
+    STDMETHOD(GetPriority)(/* [out] */ LONG __RPC_FAR *pnPriority)
+    { return E_NOTIMPL; }
+
+    STDMETHOD(OnLowResource)(/* [in] */ DWORD reserved)
+    { return E_NOTIMPL; }
+
+    STDMETHOD(OnStopBinding)(/* [in] */ HRESULT hresult, /* [unique][in] */ LPCWSTR szError)
+    { return E_NOTIMPL; }
+
+    STDMETHOD(GetBindInfo)(/* [out] */ DWORD __RPC_FAR *grfBINDF, /* [unique][out][in] */ BINDINFO __RPC_FAR *pbindinfo)
+    { return E_NOTIMPL; }
+
+    STDMETHOD(OnDataAvailable)(/* [in] */ DWORD grfBSCF, /* [in] */ DWORD dwSize, /* [in] */ FORMATETC __RPC_FAR *pformatetc, /* [in] */ STGMEDIUM __RPC_FAR *pstgmed)
+    { return E_NOTIMPL; }
+
+    STDMETHOD(OnObjectAvailable)(/* [in] */ REFIID riid, /* [iid_is][in] */ IUnknown __RPC_FAR *punk)
+    { return E_NOTIMPL; }
+
+	// IUnknown stuff
+    STDMETHOD_(ULONG,AddRef)()
+    { return 0; }
+
+    STDMETHOD_(ULONG,Release)()
+    { return 0; }
+
+    STDMETHOD(QueryInterface)(/* [in] */ REFIID riid, /* [iid_is][out] */ void __RPC_FAR *__RPC_FAR *ppvObject)
+    { return E_NOTIMPL; }
+};
+
 
 
 
@@ -227,70 +305,12 @@ LExit:
 }
 
 
-static DWORD CALLBACK CacheProgressRoutine(
-	__in LARGE_INTEGER TotalFileSize,
-	__in LARGE_INTEGER TotalBytesTransferred,
-	__in LARGE_INTEGER /*StreamSize*/,
-	__in LARGE_INTEGER /*StreamBytesTransferred*/,
-	__in DWORD /*dwStreamNumber*/,
-	__in DWORD /*dwCallbackReason*/,
-	__in HANDLE /*hSourceFile*/,
-	__in HANDLE /*hDestinationFile*/,
-	__in_opt LPVOID lpData
-	)
-{
-	DWORD dwResult = PROGRESS_CONTINUE;
-	//BURN_CACHE_ACQUIRE_PROGRESS_CONTEXT* pProgress = static_cast<BURN_CACHE_ACQUIRE_PROGRESS_CONTEXT*>(lpData);
-	//LPCWSTR wzPackageOrContainerId = pProgress->pContainer ? pProgress->pContainer->sczId : pProgress->pPackage ? pProgress->pPackage->sczId : NULL;
-	//LPCWSTR wzPayloadId = pProgress->pPayload ? pProgress->pPayload->sczKey : NULL;
-	//DWORD64 qwCacheProgress = pProgress->qwCacheProgress + TotalBytesTransferred.QuadPart;
-	//if (qwCacheProgress > pProgress->qwTotalCacheSize)
-	//{
-	//	qwCacheProgress = pProgress->qwTotalCacheSize;
-	//}
-	//DWORD dwOverallPercentage = pProgress->qwTotalCacheSize ? static_cast<DWORD>(qwCacheProgress * 100 / pProgress->qwTotalCacheSize) : 0;
-
-	//int nResult = pProgress->pUX->pUserExperience->OnCacheAcquireProgress(wzPackageOrContainerId, wzPayloadId, TotalBytesTransferred.QuadPart, TotalFileSize.QuadPart, dwOverallPercentage);
-	//nResult = UserExperienceCheckExecuteResult(pProgress->pUX, FALSE, MB_OKCANCEL, nResult);
-
-
-	
-	int nResult = PROGRESS_CONTINUE;
-	switch (nResult)
-	{
-	case IDOK: __fallthrough;
-	case IDYES: __fallthrough;
-	case IDRETRY: __fallthrough;
-	case IDIGNORE: __fallthrough;
-	case IDTRYAGAIN: __fallthrough;
-	case IDCONTINUE:
-		dwResult = PROGRESS_CONTINUE;
-		break;
-
-	case IDCANCEL: __fallthrough;
-	case IDABORT: __fallthrough;
-	case IDNO:
-		dwResult = PROGRESS_CANCEL;
-		//pProgress->fCancel = TRUE;
-		break;
-
-	default:
-		dwResult = PROGRESS_CANCEL;
-		//pProgress->fError = TRUE;
-		break;
-	}
-
-	return dwResult;
-}
-
-
 
 HRESULT Download_Package(
 	MSIHANDLE hInstall,
 	__in LPCWSTR wzFriendlyName,
 	__in LPCWSTR wzProperty_DWNURL,
-	__in LPCWSTR wzZipFile,
-	__in_opt DOWNLOAD_CACHE_CALLBACK* pCache)
+	__in LPCWSTR wzZipFile)
 {
 	HRESULT hr = S_OK;
 
@@ -327,10 +347,10 @@ HRESULT Download_Package(
 	}
 	else
 	{
-		DOWNLOAD_SOURCE downloadSource = {szDwnUrl, szDwnUser, szDwnPass};
-		DWORD64 qwDownloadSize = 0;
+		MyCallback pCallback;
+		pCallback.iHInstall = hInstall;
+		hr = URLDownloadToFile(NULL, szDwnUrl, szZipFile, 0, &pCallback);
 
-		hr = DownloadUrl(&downloadSource, qwDownloadSize, szZipFile, pCache, NULL); 
 		if (FAILED(hr))
 			WcaLog(LOGMSG_STANDARD, "Failed to download %S package from url: %S", wzFriendlyName, szDwnUrl);			
 		else
@@ -348,16 +368,11 @@ UINT __stdcall Download_MeteorPackage(MSIHANDLE hInstall)
 {
 	HRESULT hr = S_OK;
 	UINT er = ERROR_SUCCESS;
-	DOWNLOAD_CACHE_CALLBACK cacheCallback = { };
-
-	cacheCallback.pfnProgress = NULL; //CacheProgressRoutine;
-	cacheCallback.pfnCancel = NULL; 
-	cacheCallback.pv = NULL; 
 
 	hr = WcaInitialize(hInstall, "Download_MeteorPackage");
 	ExitOnFailure(hr, "Failed to initialize Download_MeteorPackage");
 
-	hr = Download_Package(hInstall, L"Meteor", L"METEOR_DWN_URL", L"meteor-bootstrap-os.windows.x86_32.tar.gz", &cacheCallback);
+	hr = Download_Package(hInstall, L"Meteor", L"METEOR_DWN_URL", L"meteor-bootstrap-os.windows.x86_32.tar.gz");
 	ExitOnFailure(hr, "Failed to download Meteor package from specified URL."); 
 
 LExit:
