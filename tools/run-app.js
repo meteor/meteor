@@ -69,6 +69,7 @@ var AppProcess = function (options) {
 
   self.proc = null;
   self.madeExitCallback = false;
+  self.ipcPipe = options.ipcPipe;
 };
 
 _.extend(AppProcess.prototype, {
@@ -249,8 +250,7 @@ _.extend(AppProcess.prototype, {
     var child_process = require('child_process');
     // setup the 'ipc' pipe if further communication between app and proxy is
     // expected
-    var ioOptions = self.watchForChanges
-      ? ['pipe', 'pipe', 'pipe', 'ipc'] : 'pipe';
+    var ioOptions = self.ipcPipe ? ['pipe', 'pipe', 'pipe', 'ipc'] : 'pipe';
     var child = child_process.spawn(nodePath, opts, {
       env: self._computeEnvironment(),
       stdio: ioOptions
@@ -688,7 +688,8 @@ _.extend(AppRunner.prototype, {
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
-      settings: settings
+      settings: settings,
+      ipcPipe: self.watchForChanges
     });
 
     // Empty self._beforeStartFutures and await its elements.
