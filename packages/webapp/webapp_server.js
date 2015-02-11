@@ -267,7 +267,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
   var jsCssPrefix;
   if (arch === 'web.cordova') {
     // in cordova we serve assets up directly from disk so it doesn't make
-    // sense to use the prefix (ordinarily something like a CDN) and go out 
+    // sense to use the prefix (ordinarily something like a CDN) and go out
     // to the internet for those files.
     jsCssPrefix = '';
   } else {
