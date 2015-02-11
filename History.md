@@ -64,7 +64,7 @@
 * The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
   email `headers`.  The `from` address can now be set separately on the
   individual templates, and is a function there rather than a static string.
-  #2858 #2854
+  \#2858 #2854
 
 * The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
   clone of what the function returned rather than sharing mutable state.  #3201
