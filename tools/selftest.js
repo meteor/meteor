@@ -1572,7 +1572,6 @@ var getFilteredTests = function (options) {
 
   if (process.platform === "win32") {
     tagsToSkip.push("cordova");
-    tagsToSkip.push("client-refresh");
     tagsToSkip.push("yet-unsolved-windows-failure");
   } else {
     tagsToSkip.push("windows");
