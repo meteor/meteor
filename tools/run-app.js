@@ -623,14 +623,6 @@ _.extend(AppRunner.prototype, {
     var canRefreshClient = self.projectContext.packageMap &&
           self.projectContext.packageMap.getInfo('autoupdate');
 
-    if (process.platform === "win32") {
-      // XXX On Windows, we can't send custom signals, so we have to just
-      // kill the server and restart. We can improve this performance by
-      // using a named pipe to communicate to the child process on Windows,
-      // but it's not the lowest hanging fruit for performance right now.
-      canRefreshClient = false;
-    }
-
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
