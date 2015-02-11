@@ -113,6 +113,11 @@ _.extend(AppProcess.prototype, {
     }));
 
     self.proc.on('error', fiberHelpers.inBareFiber(function (err) {
+      // if the error is the result of .send command over ipc pipe, ignore it
+      if (self._refreshing) {
+        return;
+      }
+
       runLog.log("Couldn't spawn process: " + err.message,  { arrow: true });
 
       // node docs say that it might make both an 'error' and a
@@ -242,9 +247,13 @@ _.extend(AppProcess.prototype, {
 
     // Call node
     var child_process = require('child_process');
+    // setup the 'ipc' pipe if further communication between app and proxy is
+    // expected
+    var ioOptions = self.watchForChanges
+      ? ['pipe', 'pipe', 'pipe', 'ipc'] : 'pipe';
     var child = child_process.spawn(nodePath, opts, {
       env: self._computeEnvironment(),
-      stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+      stdio: ioOptions
     });
 
     // Attach inspector
@@ -371,6 +380,10 @@ var AppRunner = function (options) {
   // If this future is set with self.awaitFutureBeforeStart, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
   self._beforeStartFuture = null;
+  // A hacky state variable that indicates that the proxy process (this process)
+  // is communicating to the app process over ipc. If an error in communication
+  // occurs, we can distinguish it in a callback handling the 'error' event.
+  self._refreshing = false;
 };
 
 _.extend(AppRunner.prototype, {
@@ -744,7 +757,9 @@ _.extend(AppRunner.prototype, {
 
         // Notify the server that new client assets have been added to the
         // build.
+        self._refreshing = true;
         appProcess.proc.send({ refresh: 'client' });
+        self._refreshing = false;
 
         // Establish a watcher on the new files.
         setupClientWatcher();
