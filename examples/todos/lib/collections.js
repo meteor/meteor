@@ -1,4 +1,4 @@
-Lists = new Mongo.Collection.('lists');
+Lists = new Mongo.Collection('lists');
 
 // Calculate a default name for a list in the form of 'List A'
 Lists.defaultName = function() {
@@ -12,4 +12,4 @@ Lists.defaultName = function() {
   return nextName;
 };
 
-Todos = new Mongo.Collection.('todos');
+Todos = new Mongo.Collection('todos');
