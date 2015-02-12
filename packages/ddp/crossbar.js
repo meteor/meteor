@@ -87,6 +87,25 @@ _.extend(DDPServer._Crossbar.prototype, {
   //    (a targeted write to a collection does not match a targeted query
   //     targeted at a different document)
   _matches: function (notification, trigger) {
+    
+    if (typeof(notification.collection) === 'string' &&
+        typeof(trigger.collection) === 'string' &&
+        notification.collection !== trigger.collection) {
+      return false;
+    }
+    
+    if (typeof(notification.id) === 'string' &&
+        typeof(trigger.id) === 'string' &&
+        notification.id !== trigger.id) {
+      return false;
+    }
+    
+    if (notification.id instanceof LocalCollection._ObjectID &&
+        trigger.id instanceof LocalCollection._ObjectID &&
+        ! notification.id.equals(trigger.id)) {
+      return false;
+    }
+    
     return _.all(trigger, function (triggerValue, key) {
       return !_.has(notification, key) ||
         EJSON.equals(triggerValue, notification[key]);
