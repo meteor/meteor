@@ -6,7 +6,7 @@ Spacebars is a Meteor template language inspired by [Handlebars](http://handleba
 
 A Spacebars template consists of HTML interspersed with template tags, which are delimited by `{{` and `}}` (two curly braces).
 
-```
+```handlebars
 <template name="myPage">
   <h1>{{pageTitle}}</h1>
 
@@ -69,10 +69,12 @@ An argument to a helper can be any path or identifier, or a string, boolean, or 
 
 Double-braced and triple-braced template tags take any number of positional and keyword arguments:
 
-```
+```handlebars
 {{frob a b c verily=true}}
-
-calls: frob(a, b, c, Spacebars.kw({verily: true}))
+```
+calls:
+```javascript
+frob(a, b, c, Spacebars.kw({verily: true}))
 ```
 
 `Spacebars.kw` constructs an object that is `instanceof Spacebars.kw` and whose `.hash` property is equal to its argument.
@@ -114,7 +116,7 @@ If a double-braced tag at element level evalutes to an object created with `Spac
 
 A double-braced tag may be part of, or all of, an HTML attribute value:
 
-```
+```handlebars
 <input type="checkbox" class="checky {{moreClasses}}" checked={{isChecked}}>
 ```
 
@@ -124,7 +126,7 @@ An attribute value that consists entirely of template tags that return `null`, `
 
 A double-braced tag can be used in an HTML start tag to specify an arbitrary set of attributes:
 
-```
+```handlebars
 <div {{attrs}}>...</div>
 
 <input type=checkbox {{isChecked}}>
@@ -143,7 +145,7 @@ To summarize:
 
 You can combine multiple dynamic attributes tags with other attributes:
 
-```
+```handlebars
 <div id=foo class={{myClass}} {{attrs1}} {{attrs2}}>...</div>
 ```
 
@@ -154,7 +156,7 @@ Attributes from dynamic attribute tags are combined from left to right, after no
 
 Triple-braced tags are used to insert raw HTML into a template:
 
-```
+```handlebars
 <div class="snippet">
   {{{snippetBody}}}
 </div>
@@ -170,7 +172,7 @@ An inclusion tag takes the form `{{> templateName}}` or `{{> templateName dataOb
 
 An inclusion tag inserts an instantiation of the given template at the current location.  If there is an argument, it becomes the data context, much as if the following code were used:
 
-```
+```handlebars
 {{#with dataObj}}
   {{> templateName}}
 {{/with}}
@@ -186,7 +188,7 @@ If an inclusion tag resolves to a function, the function must return a template 
 
 Block tags invoke built-in directives or custom block helpers, passing a block of template content that may be instantiated once, more than once, or not at all by the directive or helper.
 
-```
+```handlebars
 {{#block}}
   <p>Hello</p>
 {{/block}}
@@ -198,7 +200,7 @@ A block tag's content must consist of HTML with balanced tags.
 
 Block tags can be used inside attribute values:
 
-```
+```handlebars
 <div class="{{#if done}}done{{else}}notdone{{/if}}">
   ...
 </div>
@@ -208,7 +210,7 @@ Block tags can be used inside attribute values:
 
 An `#if` template tag renders either its main content or its "else" content, depending on the value of its data argument.  Any falsy JavaScript value (including `null`, `undefined`, `0`, `""`, and `false`) is considered false, as well as the empty array, while any other value is considered true.
 
-```
+```handlebars
 {{#if something}}
   <p>It's true</p>
 {{else}}
@@ -222,7 +224,7 @@ An `#if` template tag renders either its main content or its "else" content, dep
 
 A `#with` template tag establishes a new data context object for its contents.  The properties of the data context object are where Spacebars looks when resolving template tag names.
 
-```
+```handlebars
 {{#with employee}}
   <div>Name: {{name}}</div>
   <div>Age: {{age}}</div>
@@ -231,7 +233,7 @@ A `#with` template tag establishes a new data context object for its contents.  
 
 We can take advantage of the object specification form of a block tag to define an object with properties we name:
 
-```
+```handlebars
 {{#with x=1 y=2}}
   {{{getHTMLForPoint this}}}
 {{/with}}
@@ -245,7 +247,7 @@ If the argument to `#with` is a string or other non-object value, it may be prom
 
 An `#each` template tag takes a sequence argument and inserts its content for each item in the sequence, setting the data context to the value of that item:
 
-```
+```handlebars
 <ul>
 {{#each people}}
   <li>{{name}}</li>
@@ -278,7 +280,7 @@ When a template is invoked as a block helper, it can use `{{> Template.contentBl
 
 Here is a simple block helper that wraps its content in a div:
 
-```
+```handlebars
 <template name="note">
   <div class="note">
     {{> Template.contentBlock}}
@@ -288,7 +290,7 @@ Here is a simple block helper that wraps its content in a div:
 
 You would invoke it as:
 
-```
+```handlebars
 {{#note}}
   Any content here
 {{/note}}
@@ -296,7 +298,7 @@ You would invoke it as:
 
 Here is an example of implementing `#unless` in terms of `#if` (ignoring for the moment that `unless` is a built-in directive):
 
-```
+```handlebars
 <template name="unless">
   {{#if this}}
     {{> Template.elseBlock}}
@@ -329,7 +331,7 @@ Comment template tags begin with `{{!` and can contain any characters
 except for `}}`.  Comments are removed upon compilation and never
 appear in the compiled template code or the generated HTML.
 
-```
+```handlebars
 {{! Start of a section}}
 <div class="section">
   ...
@@ -338,7 +340,7 @@ appear in the compiled template code or the generated HTML.
 
 Comment tags also come in a "block comment" form.  Block comments may contain `{{` and `}}`:
 
-```
+```handlebars
 {{!-- This is a block comment.
 We can write {{foo}} and it doesn't matter.
 {{#with x}}This code is commented out.{{/with}}
