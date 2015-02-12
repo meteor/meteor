@@ -76,6 +76,9 @@
   (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
   `dev-bundle-fetcher`, and `star-translate`).
 
+* Optimize common cases faced by the "crossbar" data structure (used by oplog
+  tailing and DDP method write tracking).  #3697
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
