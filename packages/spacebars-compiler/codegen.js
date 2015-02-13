@@ -10,7 +10,8 @@ var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
   'unless': 'Blaze.Unless',
   'with': 'Spacebars.With',
-  'each': 'Blaze.Each'
+  'each': 'Blaze.Each',
+  'let': 'Blaze.Let'
 };
 
 

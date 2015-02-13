@@ -30,7 +30,7 @@ Blaze.With = function (data, contentFunc) {
 };
 
 /**
- * @summary Attaches bindings to the instantiated view.
+ * Attaches bindings to the instantiated view.
  * @param {Object} bindings A dictionary of bindings, each binding name
  * corresponds to a value or a function that will be reactively re-run.
  * @param {View} view The target.
@@ -48,6 +48,20 @@ Blaze._attachBindingsToView = function (bindings, view) {
       }
     });
   });
+};
+
+/**
+ * @summary Constructs a View setting the local lexical scope in the block.
+ * @param {Function} bindingsFunc A function to reactively re-run. The returned
+ * dictionary maps names of bindings with values or computations to reactively
+ * re-run.
+ * @param {Function} contentFunc A Function that returns [*renderable content*](#renderable_content).
+ */
+Blaze.Let = function (bindingsFunc, contentFunc) {
+  var view = Blaze.View('let', contentFunc);
+  Blaze._attachBindingsToView(bindingsFunc(), view);
+
+  return view;
 };
 
 /**
