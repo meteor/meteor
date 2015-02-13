@@ -139,6 +139,19 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.argVar = new ReactiveVar;
   eachView.variableName = null;
 
+  // update the @index value in the scope of all subviews in the range
+  var updateIndexes = function (from, to) {
+    if (to === undefined) {
+      to = eachView.numItems - 1;
+    }
+
+    for (var i = from; i <= to; i++) {
+      var view = eachView._domrange.members[i].view;
+      var reactiveVar = view._scopeBindings['@index'];
+      reactiveVar.set(i);
+    }
+  };
+
   eachView.onViewCreated(function () {
     // We evaluate argFunc in an autorun to make sure
     // Blaze.currentView is always set when it runs (rather than
@@ -175,6 +188,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
           if (eachView.variableName) {
             var bindings = {};
             bindings[eachView.variableName] = item;
+            bindings['@index'] = index;
             Blaze._attachBindingsToView(bindings, newItemView);
           }
 
@@ -188,6 +202,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
 
             var range = Blaze._materializeView(newItemView, eachView);
             eachView._domrange.addMember(range, index);
+            updateIndexes(index);
           } else {
             eachView.initialSubviews.splice(index, 0, newItemView);
           }
@@ -200,6 +215,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.expandedValueDep.changed();
           } else if (eachView._domrange) {
             eachView._domrange.removeMember(index);
+            updateIndexes(index);
             if (eachView.elseFunc && eachView.numItems === 0) {
               eachView.inElseMode = true;
               eachView._domrange.addMember(
@@ -236,6 +252,8 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.expandedValueDep.changed();
           } else if (eachView._domrange) {
             eachView._domrange.moveMember(fromIndex, toIndex);
+            updateIndexes(
+              Math.min(fromIndex, toIndex), Math.max(fromIndex, toIndex));
           } else {
             var subviews = eachView.initialSubviews;
             var itemView = subviews[fromIndex];

@@ -22,7 +22,7 @@ var unicodeClass = function (abbrev) {
 // Match one or more characters that can start an identifier.
 // This is IdentifierStart+.
 var rIdentifierPrefix = new RegExp(
-  "^([a-zA-Z$_]+|\\\\u[0-9a-fA-F]{4}|" +
+  "^(@?[a-zA-Z$_]+|\\\\u[0-9a-fA-F]{4}|" +
     [unicodeClass('Lu'), unicodeClass('Ll'), unicodeClass('Lt'),
      unicodeClass('Lm'), unicodeClass('Lo'), unicodeClass('Nl')].join('|') +
     ")+");
