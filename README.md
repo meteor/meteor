@@ -347,6 +347,17 @@ each item in the sequence, setting the data context to the value of that item:
 </ul>
 ```
 
+The newer variant of `#each` doesn't change the data context but introduces a
+new variable that can be used in the body to refer to the current item:
+
+```handlebars
+<ul>
+{{#each person in people}}
+  <li>{{person.name}}</li>
+{{/each}}
+</ul>
+```
+
 The argument is typically a Meteor cursor (the result of `collection.find()`,
 for example), but it may also be a plain JavaScript array, `null`, or
 `undefined`.
