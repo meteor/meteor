@@ -18,13 +18,18 @@ var unicodeClass = function (abbrev) {
     unicodeCategories[abbrev].replace(/[0-9A-F]{4}/ig, "\\u$&") + ']';
 };
 
+// Special handlebars-reserved identifiers, usually starting with '@'
+// Other candidates to be in this list: '@last', '@first', '@key'
+var reservedIds = ['@index'];
+
 // See ECMA-262 spec, 3rd edition, Section 7.6
 // Match one or more characters that can start an identifier.
 // This is IdentifierStart+.
 var rIdentifierPrefix = new RegExp(
-  "^(@?[a-zA-Z$_]+|\\\\u[0-9a-fA-F]{4}|" +
+  "^([a-zA-Z$_]+|\\\\u[0-9a-fA-F]{4}|" +
     [unicodeClass('Lu'), unicodeClass('Ll'), unicodeClass('Lt'),
      unicodeClass('Lm'), unicodeClass('Lo'), unicodeClass('Nl')].join('|') +
+    "|" + reservedIds.join('|') +
     ")+");
 // Match one or more characters that can continue an identifier.
 // This is (IdentifierPart and not IdentifierStart)+.
