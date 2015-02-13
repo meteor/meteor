@@ -140,7 +140,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   eachView.variableName = null;
 
   // update the @index value in the scope of all subviews in the range
-  var updateIndicies = function (from, to) {
+  var updateIndices = function (from, to) {
     if (to === undefined) {
       to = eachView.numItems - 1;
     }
@@ -201,7 +201,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
 
             var range = Blaze._materializeView(newItemView, eachView);
             eachView._domrange.addMember(range, index);
-            updateIndicies(index);
+            updateIndices(index);
           } else {
             eachView.initialSubviews.splice(index, 0, newItemView);
           }
@@ -214,7 +214,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.expandedValueDep.changed();
           } else if (eachView._domrange) {
             eachView._domrange.removeMember(index);
-            updateIndicies(index);
+            updateIndices(index);
             if (eachView.elseFunc && eachView.numItems === 0) {
               eachView.inElseMode = true;
               eachView._domrange.addMember(
@@ -251,7 +251,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
             eachView.expandedValueDep.changed();
           } else if (eachView._domrange) {
             eachView._domrange.moveMember(fromIndex, toIndex);
-            updateIndicies(
+            updateIndices(
               Math.min(fromIndex, toIndex), Math.max(fromIndex, toIndex));
           } else {
             var subviews = eachView.initialSubviews;
