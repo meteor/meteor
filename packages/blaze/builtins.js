@@ -30,6 +30,27 @@ Blaze.With = function (data, contentFunc) {
 };
 
 /**
+ * @summary Attaches bindings to the instantiated view.
+ * @param {Object} bindings A dictionary of bindings, each binding name
+ * corresponds to a value or a function that will be reactively re-run.
+ * @param {View} view The target.
+ */
+Blaze._attachBindingsToView = function (bindings, view) {
+  view.onViewCreated(function () {
+    _.each(bindings, function (binding, name) {
+      view._scopeBindings[name] = new ReactiveVar;
+      if (typeof binding === 'function') {
+        view.autorun(function () {
+          view._scopeBindings[name].set(binding());
+        }, view.parentView);
+      } else {
+        view._scopeBindings[name].set(binding);
+      }
+    });
+  });
+};
+
+/**
  * @summary Constructs a View that renders content conditionally.
  * @locus Client
  * @param {Function} conditionFunc A function to reactively re-run.  Whether the result is truthy or falsy determines whether `contentFunc` or `elseFunc` is shown.  An empty array is considered falsy.
@@ -128,18 +149,20 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
           var newDataContext;
           if (eachView.variableName) {
             // new-style #each (as in {{#each item in items}})
-            // the new data context is the same but with an extension by
-            // variable name (e.g. 'item')
-            var _item = item;
-            var dataContext = Blaze.getData(eachView);
-            newDataContext = _.clone(dataContext) || {};
-            newDataContext[eachView.variableName] = item;
+            // the new data context is the same
+            newDataContext = Blaze.getData(eachView);
           } else {
             newDataContext = item;
           }
 
           var newItemView = Blaze.With(newDataContext, eachView.contentFunc);
           eachView.numItems++;
+
+          if (eachView.variableName) {
+            var bindings = {};
+            bindings[eachView.variableName] = item;
+            Blaze._attachBindingsToView(bindings, newItemView);
+          }
 
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
@@ -185,7 +208,12 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
           } else {
             itemView = eachView.initialSubviews[index];
           }
-          itemView.dataVar.set(newItem);
+
+          if (eachView.variableName) {
+            itemView._scopeBindings[eachView.variableName].set(newItem);
+          } else {
+            itemView.dataVar.set(newItem);
+          }
         });
       },
       movedTo: function (id, item, fromIndex, toIndex) {

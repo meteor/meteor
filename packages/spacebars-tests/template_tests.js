@@ -3256,3 +3256,24 @@ Tinytest.add("spacebars-tests - template_tests - new #each extends data context"
   Blaze.remove(view);
 });
 
+Tinytest.add("spacebars-tests - template_tests - new #each binding lookup is scoped to the template", function (test) {
+  var tmpl = Template.spacebars_template_test_new_each_lookup_top_level;
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        letter_a: ["a"],
+        subcontext: {
+          letter_b: ["b"]
+        }
+      };
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+
