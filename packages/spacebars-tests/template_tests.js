@@ -3264,4 +3264,31 @@ Tinytest.add("spacebars-tests - template_tests - new #each binding lookup is sco
   Blaze.remove(view);
 });
 
+Tinytest.add("spacebars-tests - template_tests - let bindings", function (test) {
+  var tmpl = Template.spacebars_template_test_let_bindings;
+
+  v = new ReactiveVar("var");
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        varFromContext: "from context",
+        anotherVarFromContext: "another var from context"
+      };
+    },
+    helper: function () {
+      return v.get();
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>var -- var -- from context -- override</div>');
+
+  v.set("new var");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>new var -- new var -- from context -- override</div>');
+
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
 
