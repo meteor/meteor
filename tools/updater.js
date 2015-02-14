@@ -114,8 +114,8 @@ var maybeShowBanners = function () {
     var patchRelease = catalog.official.getReleaseVersion(
       track, patchReleaseVersion);
     if (patchRelease && patchRelease.recommended) {
-      var key = "patchrelease-" + track + "-" + patchReleaseVersion;
-      if (shouldShow(key)) {
+      var patchKey = "patchrelease-" + track + "-" + patchReleaseVersion;
+      if (shouldShow(patchKey)) {
         runLog.log(
           "=> A patch (" +
           utils.displayRelease(track, patchReleaseVersion) +
@@ -134,8 +134,8 @@ var maybeShowBanners = function () {
   var futureReleases = catalog.official.getSortedRecommendedReleaseVersions(
     track, currentReleaseOrderKey);
   if (futureReleases.length) {
-    var key = "futurerelease-" + track + "-" + futureReleases[0];
-    if (shouldShow(key)) {
+    var futureReleaseKey = "futurerelease-" + track + "-" + futureReleases[0];
+    if (shouldShow(futureReleaseKey)) {
       runLog.log(
         "=> " + utils.displayRelease(track, futureReleases[0]) +
         " is available. Update this project with 'meteor update'.");
