@@ -1,3 +1,5 @@
+/* eslint no-console: 0 */
+
 var _ = require('underscore');
 var files = require('./files.js');
 
