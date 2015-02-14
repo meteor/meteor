@@ -365,6 +365,9 @@ for example), but it may also be a plain JavaScript array, `null`, or
 An "else" section may be provided, which is used (with no new data
 context) if there are zero items in the sequence at any time.
 
+You can use a special variable `@index` in the body of `#each` to get the
+0-based index of the currently rendered value in the sequence.
+
 ### Reactivity Model for Each
 
 When the argument to `#each` changes, the DOM is always updated to reflect the
