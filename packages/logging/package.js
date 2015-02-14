@@ -12,7 +12,7 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'org.apache.cordova.console': '0.2.12'
+  'org.apache.cordova.console': '0.2.13'
 });
 
 Package.onUse(function (api) {
