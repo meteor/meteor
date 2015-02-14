@@ -409,7 +409,8 @@ data context, another variable) with a short-hand within the template:
 ```
 
 Variables introduced this way take precedence over names of templates, global
-helpers and previously introduced variables with the same name.
+helpers, fields of the current data context and previously introduced
+variables with the same name.
 
 ## Custom Block Helpers
 
