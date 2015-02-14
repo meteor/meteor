@@ -396,6 +396,21 @@ In case of duplicate identification keys, all duplicates after the first are
 replaced with random ones. Using objects with unique `_id` fields is the way to
 get full control over the identity of rendered elements.
 
+## Let
+
+The `#let` tag creates a new alias variable for a given expression. While it
+doesn't change the data context, it allows to refer to an expression (helper,
+data context, another variable) with a short-hand within the template:
+
+```handlebars
+{{#let name=person.bio.firstName color=generateColor}}
+  <div>{{name}} get a {{color}} card!</div>
+{{/each}}
+```
+
+Variables introduced this way take precedence over names of templates, global
+helpers and previously introduced variables with the same name.
+
 ## Custom Block Helpers
 
 To define your own block helper, simply declare a template, and then invoke it
