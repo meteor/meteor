@@ -36,7 +36,7 @@ var firstCheck = true;
 var checkForUpdate = function (showBanner, printErrors) {
   // While we're doing background stuff, try to revoke any old tokens in our
   // session file.
-  auth.tryRevokeOldTokens({timeout: 15*1000});
+  auth.tryRevokeOldTokens({ timeout: 15 * 1000 });
 
   if (firstCheck) {
     // We want to avoid a potential race condition here, because we run an

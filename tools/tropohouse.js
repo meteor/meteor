@@ -198,7 +198,7 @@ _.extend(exports.Tropohouse.prototype, {
         var rest = latestMeteorSymlink.substr(
           packagesDirectoryName.length + files.pathSep.length);
 
-        var pieces = rest.split(files.pathSep);
+        pieces = rest.split(files.pathSep);
         latestToolPackageEscaped = pieces[0];
         latestToolVersion = pieces[1];
       }
@@ -271,7 +271,6 @@ _.extend(exports.Tropohouse.prototype, {
   //
   // XXX: Error handling.
   _downloadBuildToTempDir: function (versionInfo, buildRecord) {
-    var self = this;
     var url = buildRecord.build.url;
 
     // XXX: We use one progress for download & untar; this isn't ideal:
@@ -505,6 +504,7 @@ _.extend(exports.Tropohouse.prototype, {
     options = options || {};
     var serverArchs = options.serverArchitectures || [archinfo.host()];
 
+    var downloader;
     var downloaders = [];
     packageMap.eachPackage(function (packageName, info) {
       if (info.kind !== 'versioned')
@@ -512,7 +512,7 @@ _.extend(exports.Tropohouse.prototype, {
       buildmessage.enterJob(
         "checking for " + packageName + "@" + info.version,
         function () {
-          var downloader = self._makeDownloader({
+          downloader = self._makeDownloader({
             packageName: packageName,
             version: info.version,
             architectures: serverArchs
@@ -537,7 +537,7 @@ _.extend(exports.Tropohouse.prototype, {
 
     // Just one package to download? Use a good message.
     if (downloaders.length === 1) {
-      var downloader = downloaders[0];
+      downloader = downloaders[0];
       buildmessage.enterJob(
         "downloading " + downloader.packageName + "@" + downloader.version,
         function () {
