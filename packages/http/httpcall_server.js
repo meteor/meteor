@@ -75,6 +75,7 @@ var _call = function(method, url, options, callback) {
     jar: false,
     timeout: options.timeout,
     body: content,
+    gzip: options.gzip,
     followRedirect: options.followRedirects,
     // Follow redirects on non-GET requests
     // also. (https://github.com/meteor/meteor/issues/2808)
