@@ -122,14 +122,6 @@ cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
-# TODO Move this into dev-bundle-tool-package.js when it can be safely
-# installed that way (i.e. without build nan/runas build errors).
-# XXX This contains a patch to expose the errno from failed syscalls, so
-# we can better understand why some users can't use pathwatcher.
-# We have to install from the npm registry in order to get coffeescript
-# output.  The patch is https://github.com/atom/node-pathwatcher/pull/53
-npm install meteor-pathwatcher-tweaks@2.3.5
-
 # Clean up some bulky stuff.
 cd node_modules
 
