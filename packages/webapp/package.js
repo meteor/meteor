@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.1.6-winr.6'
+  version: '1.1.6-githubble.0'
 });
 
 Npm.depends({connect: "2.9.0",

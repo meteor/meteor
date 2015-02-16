@@ -1,7 +1,7 @@
 {
- "track": "WINDOWS-PREVIEW",
- "version": "0.1.7",
- "recommended": false,
+ "track": "GITHUBBLE",
+ "version": "1",
+ "recommended": true,
  "official": false,
- "description": "Preview of Meteor on Windows."
+ "description": "Release for githubble.meteor.com."
 }
