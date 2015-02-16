@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run server tests noninteractively, with results going to the console.",
-  version: '1.0.3-winr.2'
+  version: '1.0.3-githubble.0'
 });
 
 Package.onUse(function (api) {

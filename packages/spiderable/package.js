@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.7-winr.3"
+  version: "1.0.7-githubble.0"
 });
 
 Package.onUse(function (api) {

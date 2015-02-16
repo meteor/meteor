@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.0.3-winr.4'
+  version: '1.0.3-githubble.0'
 });
 
 Package.onUse(function (api) {

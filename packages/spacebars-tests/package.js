@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.3-winr.2'
+  version: '1.0.3-githubble.0'
 });
 
 // These tests are in a separate package to avoid a circular dependency

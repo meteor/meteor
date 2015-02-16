@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth2-based login services",
-  version: "1.1.3-winr.2"
+  version: "1.1.3-githubble.0"
 });
 
 Package.onUse(function (api) {

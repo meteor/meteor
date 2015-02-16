@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Tests for JavaScript code analysis for Meteor",
-  version: "1.0.3-winr.2"
+  version: "1.0.3-githubble.0"
 });
 
 // The tests are in a separate package so that it is possible to compile
