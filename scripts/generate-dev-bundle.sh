@@ -154,7 +154,6 @@ find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
 pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
 delete browserify-zlib/node_modules/pako/benchmark
 delete browserify-zlib/node_modules/pako/test
-delete buffer/perf
 delete crypto-browserify/test
 delete umd/node_modules/ruglify/test
 popd
