@@ -1439,6 +1439,6 @@ files.pathwatcherWatch = function () {
   args[0] = files.convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
-  var pathwatcher = require('meteor-pathwatcher-tweaks');
+  var pathwatcher = require('pathwatcher');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
