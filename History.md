@@ -1,5 +1,31 @@
 ## v.NEXT
 
+### Meteor Mobile updates
+
+* Upgrade the Cordova CLI dependency from 3.5.1 to 4.2.0. See the release notes
+  for the 4.x series of the Cordova CLI [on Apache
+  Cordova](http://cordova.apache.org/announcements/2014/10/16/cordova-4.html).
+
+* Related to the recently discovered [attack
+  vectors](http://cordova.apache.org/announcements/2014/08/04/android-351.html)
+  in Android Cordova apps, Meteor Cordova apps no longer allow access to all
+  domains by default. If your app access external resources over XHR, you need
+  to add them to the whitelist of allowed domains with the newly added
+  [`App.accessRule`
+  method](https://docs.meteor.com/#/full/App-accessRule) in your
+  `mobile-config.js` file.
+
+* Upgrade Cordova Plugins dependencies in Meteor Core packages:
+  - `org.apache.cordova.file`: from 1.3.0 to 1.3.3
+  - `org.apache.cordova.file-transfer`: from 0.4.4 to 0.5.0
+  - `org.apache.cordova.splashscreen`: from 0.3.3 to 1.0.0
+  - `org.apache.cordova.console`: from 0.2.10 to 0.2.13
+  - `org.apache.cordova.device`: from 0.2.11 to 0.3.0
+  - `org.apache.cordova.statusbar`: from 0.1.7 to 0.1.10
+  - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
+  - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
+
+* Use the newer `ios-sim` binary, compiled with Xcode 6 on OS X Mavericks.
 
 ## v1.0.2
 
