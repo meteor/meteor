@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Cordova.depends({
-  'org.apache.cordova.splashscreen': '0.3.5'
+  'org.apache.cordova.splashscreen': '1.0.0'
 });
 
 Package.onUse(function(api) {
