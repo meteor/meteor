@@ -52,13 +52,7 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-
-    // XXX We install our own fork of cordova because we need a particular patch that
-    // didn't land to cordova-android yet. As soon as it lands, we can switch back to
-    // upstream.
-    // https://github.com/apache/cordova-android/commit/445ddd89fb3269a772978a9860247065e5886249
-    //    npm install cordova@3.5.0-0.2.6
-    "cordova": "https://github.com/meteor/cordova-cli/tarball/0c9b3362c33502ef8f6dba514b87279b9e440543"
+    cordova: "4.2.0"
   }
 };
 

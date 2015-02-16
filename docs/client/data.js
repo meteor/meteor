@@ -663,6 +663,45 @@ DocsData = {
     "scope": "global",
     "summary": "The App configuration object in mobile-config.js"
   },
+  "App.accessRule": {
+    "kind": "function",
+    "longname": "App.accessRule",
+    "memberof": "App",
+    "name": "accessRule",
+    "options": [
+      {
+        "description": "<p>Set to true if the matching URL\nshould be handled externally (e.g. phone app or email client on Android).</p>",
+        "name": "launchExternal",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>The pattern defining affected domains or URLs.</p>",
+        "name": "domainRule",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Set a new access rule based on origin domain for your app.\nBy default your application has a limited list of servers it can contact.\nUse this method to extend this list.\n\nDefault access rules:\n\n- `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and\n  launch externally (phone app, or an email client on Android)\n- `gap:*`, `cdv:*`, `file:` are allowed (protocols required to access\n  local file-system)\n- `http://meteor.local/*` is allowed (a domain Meteor uses to access\n  app's assets)\n- The domain of the server passed to the build process (or local ip\n  address in the development mode) is used to be able to contact the\n  Meteor app server.\n\nRead more about domain patterns in [Cordova\ndocs](http://cordova.apache.org/docs/en/4.0.0/guide_appdev_whitelist_index.md.html).\n\nStarting with Meteor 1.0.4 access rule for all domains and protocols\n(`<access origin=\"*\"/>`) is no longer set by default due to\n[certain kind of possible\nattacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html)."
+  },
   "App.configurePlugin": {
     "kind": "function",
     "longname": "App.configurePlugin",

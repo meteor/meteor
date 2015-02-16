@@ -30,7 +30,8 @@ if [ "$OS" == "osx" ]; then
     # cp -r build/Release/* "$DIR/lib/ios-sim/"
 
     # Download the precompiled tarball
-    IOS_SIM_URL="https://android-bundle.s3.amazonaws.com/ios-sim.tgz"
+    # See docs on building the new ios_sim: https://mdg.hackpad.com/Building-ios-sim-tarball-9aHVf0rGcwE
+    IOS_SIM_URL="http://android-bundle.s3.amazonaws.com/ios-sim.mavericks.xcode6.tgz"
     curl "$IOS_SIM_URL" | tar xfz -
     mkdir -p "$DIR/lib/ios-sim"
     cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"

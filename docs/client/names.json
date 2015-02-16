@@ -22,6 +22,7 @@
   "Accounts.validateNewUser",
   "Accounts.verifyEmail",
   "App",
+  "App.accessRule",
   "App.configurePlugin",
   "App.icons",
   "App.info",
