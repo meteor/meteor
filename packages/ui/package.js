@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Deprecated: Use the 'blaze' package",
-  version: '1.0.6-githubble.2'
+  version: '1.0.6-githubble.42'
 });
 
 Package.onUse(function (api) {

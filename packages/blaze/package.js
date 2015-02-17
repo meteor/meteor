@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor Reactive Templating library",
-  version: '2.0.5-githubble.2'
+  version: '2.0.5-githubble.42'
 });
 
 Package.onUse(function (api) {

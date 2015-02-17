@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.1.6-githubble.2'
+  version: '1.1.6-githubble.42'
 });
 
 Cordova.depends({

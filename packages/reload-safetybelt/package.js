@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload safety belt for multi-server deployments",
-  version: '1.0.3-githubble.2'
+  version: '1.0.3-githubble.42'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.7-githubble.2',
+  version: '1.0.7-githubble.42',
   documentation: null
 });
 

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility code for constructing URLs",
-  version: "1.0.4-githubble.2"
+  version: "1.0.4-githubble.42"
 });
 
 Package.onUse(function(api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '1.0.7-githubble.2'
+  version: '1.0.7-githubble.42'
 });
 
 Package.onUse(function (api) {

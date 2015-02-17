@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.1.4-githubble.2"
+  version: "1.1.4-githubble.42"
 });
 
 Package.onUse(function (api) {
