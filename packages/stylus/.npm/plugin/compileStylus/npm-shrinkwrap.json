@@ -1,29 +1,53 @@
 {
   "dependencies": {
     "nib": {
-      "version": "1.0.2",
+      "version": "1.0.4",
       "dependencies": {
         "stylus": {
-          "version": "0.37.0",
+          "version": "0.45.1",
           "dependencies": {
-            "cssom": {
-              "version": "0.2.5"
+            "css-parse": {
+              "version": "1.7.0"
             },
             "mkdirp": {
               "version": "0.3.5"
             },
             "debug": {
-              "version": "0.7.4"
+              "version": "2.1.1",
+              "dependencies": {
+                "ms": {
+                  "version": "0.6.2"
+                }
+              }
             },
             "sax": {
               "version": "0.5.8"
+            },
+            "glob": {
+              "version": "3.2.11",
+              "dependencies": {
+                "inherits": {
+                  "version": "2.0.1"
+                },
+                "minimatch": {
+                  "version": "0.3.0",
+                  "dependencies": {
+                    "lru-cache": {
+                      "version": "2.5.0"
+                    },
+                    "sigmund": {
+                      "version": "1.0.0"
+                    }
+                  }
+                }
+              }
             }
           }
         }
       }
     },
     "stylus": {
-      "version": "0.46.3",
+      "version": "0.50.0",
       "dependencies": {
         "css-parse": {
           "version": "1.7.0"
@@ -32,7 +56,7 @@
           "version": "0.3.5"
         },
         "debug": {
-          "version": "1.0.1",
+          "version": "2.1.1",
           "dependencies": {
             "ms": {
               "version": "0.6.2"
@@ -58,6 +82,14 @@
                   "version": "1.0.0"
                 }
               }
+            }
+          }
+        },
+        "source-map": {
+          "version": "0.1.43",
+          "dependencies": {
+            "amdefine": {
+              "version": "0.1.0"
             }
           }
         }
