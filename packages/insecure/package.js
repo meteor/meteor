@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allow all database writes by default",
-  version: '1.0.3-githubble.42'
+  version: '1.0.3-githubble.43'
 });
 
 // This package is empty; its presence is detected by mongo-livedata.

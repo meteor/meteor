@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.0.6-githubble.42'
+  version: '1.0.6-githubble.43'
 });
 
 Npm.depends({

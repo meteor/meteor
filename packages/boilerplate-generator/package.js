@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.3-githubble.42'
+  version: '1.0.3-githubble.43'
 });
 
 Package.onUse(function (api) {

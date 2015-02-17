@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
-  version: "1.0.4-githubble.42"
+  version: "1.0.4-githubble.43"
 });
 
 Package.onUse(function (api) {

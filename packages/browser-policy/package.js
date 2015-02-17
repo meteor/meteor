@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Configure security policies enforced by the browser",
-  version: "1.0.4-githubble.42"
+  version: "1.0.4-githubble.43"
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The dynamic stylesheet language",
-  version: "1.0.13-githubble.42"
+  version: "1.0.13-githubble.43"
 });
 
 Package.registerBuildPlugin({

@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.5-githubble.42'
+  version: '1.1.5-githubble.43'
 });
 
 Package.registerBuildPlugin({

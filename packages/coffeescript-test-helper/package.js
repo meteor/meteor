@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Used by the coffeescript package's tests",
-  version: "1.0.3-githubble.42"
+  version: "1.0.3-githubble.43"
 });
 
 Package.onUse(function (api) {

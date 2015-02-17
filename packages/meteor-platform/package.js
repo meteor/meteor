@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.2.2-githubble.42'
+  version: '1.2.2-githubble.43'
 });
 
 Package.onUse(function(api) {

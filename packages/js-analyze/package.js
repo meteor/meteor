@@ -4,7 +4,7 @@
 
 Package.describe({
   summary: "JavaScript code analysis for Meteor",
-  version: '1.0.5-githubble.42'
+  version: '1.0.5-githubble.43'
 });
 
 // Use some packages from the Esprima project.  If it turns out we need these on

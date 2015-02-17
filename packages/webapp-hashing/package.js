@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Used internally by WebApp. Knows how to hash programs from manifests.",
-  version: "1.0.3-githubble.42"
+  version: "1.0.3-githubble.43"
 });
 
 Package.onUse(function(api) {

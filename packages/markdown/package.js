@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.4-githubble.42"
+  version: "1.0.4-githubble.43"
 });
 
 Package.onUse(function (api) {

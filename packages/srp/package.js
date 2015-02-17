@@ -5,7 +5,7 @@
 
 Package.describe({
   summary: "Library for Secure Remote Password (SRP) exchanges",
-  version: "1.0.3-githubble.42"
+  version: "1.0.3-githubble.43"
 });
 
 Package.onUse(function (api) {

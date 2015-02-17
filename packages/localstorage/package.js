@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Simulates local storage on IE 6,7 using userData",
-  version: "1.0.3-githubble.42"
+  version: "1.0.3-githubble.43"
 });
 
 Package.onUse(function (api) {

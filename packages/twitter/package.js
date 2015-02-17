@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Twitter OAuth flow",
-  version: '1.1.4-githubble.42'
+  version: '1.1.4-githubble.43'
 });
 
 Package.onUse(function(api) {
