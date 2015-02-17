@@ -331,7 +331,8 @@ var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
     urlMapper: _.identity,
     pathMapper: function (p) { return files.pathJoin(clientDir, p); },
     baseDataExtension: {
-      meteorRuntimeConfig: JSON.stringify(runtimeConfig)
+      meteorRuntimeConfig: JSON.stringify(
+        encodeURIComponent(JSON.stringify(runtimeConfig)))
     }
   });
   return boilerplate.toHTML();
