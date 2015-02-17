@@ -14,7 +14,7 @@ Npm.strip({
 
 Package.onUse(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
-           'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');
+           'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If
