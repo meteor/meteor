@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript and CSS minifiers",
-  version: "1.1.4-githubble.0"
+  version: "1.1.4-githubble.2"
 });
 
 Npm.depends({

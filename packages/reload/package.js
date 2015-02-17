@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.1.3-githubble.0'
+  version: '1.1.3-githubble.2'
 });
 
 Package.onUse(function (api) {

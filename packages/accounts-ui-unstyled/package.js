@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.1.6-githubble.0"
+  version: "1.1.6-githubble.2"
 });
 
 Package.onUse(function (api) {

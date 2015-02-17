@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Moved to the 'ddp' package",
-  version: '1.0.13-githubble.0'
+  version: '1.0.13-githubble.2'
 });
 
 Package.onUse(function (api) {

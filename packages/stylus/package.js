@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "1.0.7-githubble.0"
+  version: "1.0.7-githubble.2"
 });
 
 Package.registerBuildPlugin({

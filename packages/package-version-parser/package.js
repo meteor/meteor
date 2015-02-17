@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Parses Meteor Smart Package version strings",
-  version: "3.0.1-githubble.0"
+  version: "3.0.1-githubble.2"
 });
 
 Package.onUse(function (api) {

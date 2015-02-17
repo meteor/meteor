@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Deprecated: Use the 'tracker' package instead.",
-  version: '1.0.7-githubble.0'
+  version: '1.0.7-githubble.2'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Extended and Extensible JSON library",
-  version: '1.0.6-githubble.0'
+  version: '1.0.6-githubble.2'
 });
 
 Package.onUse(function (api) {

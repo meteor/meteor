@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.0.6-githubble.0"
+  version: "1.0.6-githubble.2"
 });
 
 Npm.depends({

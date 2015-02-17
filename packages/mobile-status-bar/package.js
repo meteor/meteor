@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Good defaults for the mobile status bar",
-  version: "1.0.3-githubble.0"
+  version: "1.0.3-githubble.2"
 });
 
 Package.onUse(function(api) {

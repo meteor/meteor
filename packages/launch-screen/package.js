@@ -6,7 +6,7 @@ Package.describe({
   // between such packages and the build tool.
   name: 'launch-screen',
   summary: 'Default and customizable launch screen on mobile.',
-  version: '1.0.1-githubble.0'
+  version: '1.0.1-githubble.2'
 });
 
 Cordova.depends({

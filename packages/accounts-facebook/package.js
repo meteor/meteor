@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Facebook accounts",
-  version: "1.0.4-githubble.0"
+  version: "1.0.4-githubble.2"
 });
 
 Package.onUse(function(api) {

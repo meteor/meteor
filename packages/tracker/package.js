@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.0.5-githubble.0'
+  version: '1.0.5-githubble.2'
 });
 
 Package.onUse(function (api) {

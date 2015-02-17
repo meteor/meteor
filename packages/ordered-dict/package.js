@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Ordered traversable dictionary with a mutable ordering",
-  version: '1.0.3-githubble.0',
+  version: '1.0.3-githubble.2',
   documentation: null
 });
 

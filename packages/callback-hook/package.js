@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Register callbacks on a hook",
-  version: '1.0.3-githubble.0'
+  version: '1.0.3-githubble.2'
 });
 
 Package.onUse(function (api) {

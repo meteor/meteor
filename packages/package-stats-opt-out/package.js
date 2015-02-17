@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Opt out of sending package stats",
-  version: '1.0.3-githubble.0'
+  version: '1.0.3-githubble.2'
 });
 
 Package.onUse(function (api) {

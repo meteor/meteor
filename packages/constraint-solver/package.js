@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.17-githubble.0"
+  version: "1.0.17-githubble.2"
 });
 
 Npm.depends({
