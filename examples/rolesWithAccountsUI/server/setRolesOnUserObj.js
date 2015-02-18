@@ -1,4 +1,4 @@
-Roles.addRolesToUserObj = function (users, roles, group) {
+Roles.setRolesOnUserObj = function (users, roles, group) {
   if (!users) throw new Error ("Missing 'users' param")
   if (!roles) throw new Error ("Missing 'roles' param")
   if (group) {
@@ -47,6 +47,9 @@ Roles.addRolesToUserObj = function (users, roles, group) {
     }
   })
 
+
+  // Set the roles on the actual user object
+
   if (group) {
 
     // roles is a key/value dict object
@@ -66,4 +69,4 @@ Roles.addRolesToUserObj = function (users, roles, group) {
 
   }
 
-}  // end addRolesToUserObj
+}  // end setRolesOnUserObj
