@@ -484,7 +484,7 @@ if (Meteor.isServer) {
       ];
 
       _.each(getsAppHtml, function (x) {
-        do_test(x, 200, /__meteor_runtime_config__ = {/);
+        do_test(x, 200, /__meteor_runtime_config__ = JSON/);
       });
     }
   ]);
