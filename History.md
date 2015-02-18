@@ -99,6 +99,9 @@
 * Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
   reading or parsing the settings file.  #3757
 
+* Don't overly escape `Meteor.settings.public` and other parts of
+  `__meteor_runtime_config__`.  #3730
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
