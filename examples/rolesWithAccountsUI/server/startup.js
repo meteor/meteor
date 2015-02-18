@@ -3,7 +3,7 @@ Meteor.startup(function () {
   console.log('Running server startup code...');
 
   Accounts.onCreateUser(function (options, user) {
-    Roles.addRolesToUserObj(user, ['admin','view-secrets']);
+    Roles.setRolesOnUserObj(user, ['admin','view-secrets']);
 
     if (options.profile) {
       // include the user profile
