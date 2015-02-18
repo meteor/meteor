@@ -592,6 +592,25 @@ _.extend(AppRunner.prototype, {
     if (bundleResultOrRunResult.runResult)
       return bundleResultOrRunResult.runResult;
     bundleResult = bundleResultOrRunResult.bundleResult;
+
+    // Read the settings file, if any
+    var settings = null;
+    var settingsWatchSet = new watch.WatchSet;
+    var settingsMessages = buildmessage.capture({
+      title: "preparing to run",
+      rootPath: process.cwd()
+    }, function () {
+      if (self.settingsFile)
+        settings = files.getSettings(self.settingsFile, settingsWatchSet);
+    });
+    if (settingsMessages.hasMessages()) {
+      return {
+        outcome: 'bundle-fail',
+        errors: settingsMessages,
+        watchSet: settingsWatchSet
+      };
+    }
+
     firstRun = false;
 
     var platforms = self.projectContext.platformList.getCordovaPlatforms();
@@ -619,17 +638,7 @@ _.extend(AppRunner.prototype, {
     self.cordovaPlugins = plugins;
 
     var serverWatchSet = bundleResult.serverWatchSet;
-
-    // Read the settings file, if any
-    var settings = null;
-    var settingsWatchSet = new watch.WatchSet;
-    var settingsMessages = buildmessage.capture({
-      title: "preparing to run",
-      rootPath: process.cwd()
-    }, function () {
-      if (self.settingsFile)
-        settings = files.getSettings(self.settingsFile, settingsWatchSet);
-    });
+    serverWatchSet.merge(settingsWatchSet);
 
     // We only can refresh the client without restarting the server if the
     // client contains the 'autoupdate' package.
@@ -639,17 +648,6 @@ _.extend(AppRunner.prototype, {
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
-    }
-
-    // HACK: merge the watchset and messages from reading the settings
-    // file into those from the build. This works fine but it sort of
-    // messy. Maybe clean it up sometime.
-    serverWatchSet.merge(settingsWatchSet);
-    if (settingsMessages.hasMessages()) {
-      if (! bundleResult.errors)
-        bundleResult.errors = settingsMessages;
-      else
-        bundleResult.errors.merge(settingsMessages);
     }
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a

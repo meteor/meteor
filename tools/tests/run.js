@@ -96,9 +96,20 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("restarted");
   run.stop();
+  s.unlink("crash.js");
+
+  run = s.run('--settings', 's.json');
+  run.waitSecs(5);
+  run.match('s.json: file not found (settings file)');
+  run.match('Waiting for file change');
+  s.write('s.json', '}');
+  run.match('s.json: parse error reading settings file');
+  run.match('Waiting for file change');
+  s.write('s.json', '{}');
+  run.match('App running at');
+  run.stop();
 
   // How about a bundle failure right at startup
-  s.unlink("crash.js");
   s.write("junk.js", "]");
   run = s.run();
   run.tellMongo(MONGO_LISTENING);

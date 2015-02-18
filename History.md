@@ -96,6 +96,9 @@
 * Optimize common cases faced by the "crossbar" data structure (used by oplog
   tailing and DDP method write tracking).  #3697
 
+* Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
+  reading or parsing the settings file.  #3757
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
