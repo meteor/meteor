@@ -289,7 +289,14 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
             };
           }
         ),
-        meteorRuntimeConfig: JSON.stringify(runtimeConfig),
+        // Convert to a JSON string, then get rid of most weird characters, then
+        // wrap in double quotes. (The outermost JSON.stringify really ought to
+        // just be "wrap in double quotes" but we use it to be safe.) This might
+        // end up inside a <script> tag so we need to be careful to not include
+        // "</script>", but normal {{spacebars}} escaping escapes too much! See
+        // https://github.com/meteor/meteor/issues/3730
+        meteorRuntimeConfig: JSON.stringify(
+          encodeURIComponent(JSON.stringify(runtimeConfig))),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
         bundledJsCssPrefix: jsCssPrefix,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),

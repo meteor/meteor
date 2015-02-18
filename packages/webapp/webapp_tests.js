@@ -155,3 +155,6 @@ Tinytest.add("webapp - generating boilerplate should not change runtime config",
 
   test.isFalse(__meteor_runtime_config__.WEBAPP_TEST_KEY);
 });
+
+__meteor_runtime_config__.WEBAPP_TEST_A = '<p>foo</p>';
+__meteor_runtime_config__.WEBAPP_TEST_B = '</script>';
