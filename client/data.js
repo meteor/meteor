@@ -2639,6 +2639,16 @@ DocsData = {
             "Object"
           ]
         }
+      },
+      {
+        "description": "<p>Array of attachment objects, as\ndescribed in the <a href=\"https://github.com/andris9/mailcomposer#add-attachments\">mailcomposer documentation</a>.</p>",
+        "name": "attachments",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array.<Object>"
+          ]
+        }
       }
     ],
     "params": [
