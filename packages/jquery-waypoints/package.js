@@ -6,5 +6,6 @@ Package.describe({
 Package.onUse(function (api) {
   api.use('jquery');
   api.use('coffeescript');
+  api.export('Waypoint', 'client');
   api.addFiles('waypoints.coffee', 'client');
 });
