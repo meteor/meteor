@@ -147,6 +147,10 @@ Email.send = function (options) {
   _.each(options.headers, function (value, name) {
     mc.addHeader(name, value);
   });
+  
+  _.each(options.attachments, function(attachment){
+    mc.addAttachment(attachment);
+  });
 
   var pool = getPool();
   if (pool) {
