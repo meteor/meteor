@@ -122,6 +122,8 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.subject]  "Subject:" line
  * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
+ * @param {Object[]} [options.attachments] Array of attachment objects, as
+ * described in the [mailcomposer documentation](https://github.com/andris9/mailcomposer#add-attachments).
  */
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
@@ -131,8 +133,6 @@ Email.send = function (options) {
   var mc = new MailComposer();
 
   // setup message data
-  // XXX support attachments (once we have a client/server-compatible binary
-  //     Buffer class)
   mc.setMessageOption({
     from: options.from,
     to: options.to,
@@ -146,6 +146,10 @@ Email.send = function (options) {
 
   _.each(options.headers, function (value, name) {
     mc.addHeader(name, value);
+  });
+  
+  _.each(options.attachments, function(attachment){
+    mc.addAttachment(attachment);
   });
 
   var pool = getPool();
