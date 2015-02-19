@@ -1,6 +1,6 @@
 {
  "track": "GITHUBBLE",
- "version": "9",
+ "version": "10",
  "recommended": true,
  "official": false,
  "description": "Release for githubble.meteor.com."
