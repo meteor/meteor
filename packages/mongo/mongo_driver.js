@@ -460,6 +460,10 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
+    // Lets you get a more more full result from MongoDB. Use with caution:
+    // might not work with C.upsert (as opposed to C.update({upsert:true}) or
+    // with simulated upsert.
+    if (options.fullResult) mongoOpts.fullResult = true;
 
     var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
