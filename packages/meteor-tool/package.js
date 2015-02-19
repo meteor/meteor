@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The Meteor command-line tool",
-  version: '1.1.0-githubble.43'
+  version: '1.1.0-githubble.44'
 });
 
 Package.includeTool();
