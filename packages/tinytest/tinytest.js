@@ -272,7 +272,7 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "NaN", message: msg});
   },
 
-  include: function (s, v) {
+  include: function (s, v, not) {
     var pass = false;
     if (s instanceof Array)
       pass = _.any(s, function(it) {return _.isEqual(v, it);});
@@ -284,11 +284,15 @@ _.extend(TestCaseResults.prototype, {
       }
     else
       /* fail -- not something that contains other things */;
-    if (pass)
+    if (pass === !!not)
       this.ok();
     else {
-      this.fail({type: "include", sequence: s, should_contain_value: v});
+      this.fail({type: "include", sequence: s, should_contain_value: v, not: !!not});
     }
+  },
+
+  notInclude: function (s, v) {
+    this.include(s, v, true);
   },
 
   // XXX should change to lengthOf to match vowsjs
