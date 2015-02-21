@@ -234,12 +234,12 @@ _.extend(TestCaseResults.prototype, {
     if (v)
       this.ok();
     else
-      this.fail({type: "true", message: msg});
+      this.fail({type: "true", message: msg, not: false});
   },
 
   isFalse: function (v, msg) {
     if (v)
-      this.fail({type: "true", message: msg});
+      this.fail({type: "true", message: msg, not: true});
     else
       this.ok();
   },
@@ -248,12 +248,12 @@ _.extend(TestCaseResults.prototype, {
     if (v === null)
       this.ok();
     else
-      this.fail({type: "null", message: msg});
+      this.fail({type: "null", message: msg, not: false});
   },
 
   isNotNull: function (v, msg) {
     if (v === null)
-      this.fail({type: "true", message: msg});
+      this.fail({type: "null", message: msg, not: true});
     else
       this.ok();
   },
