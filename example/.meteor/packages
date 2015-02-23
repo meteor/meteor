@@ -6,4 +6,4 @@
 meteor-platform
 autopublish
 insecure
-percolatestudio:percolatestudio-migrations
+percolate:migrations
