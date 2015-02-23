@@ -66,8 +66,8 @@ Migrations.add = function(migration) {
 // e.g 'latest', 'latest,exit', 2
 // use 'XX,rerun' to re-run the migration at that version
 Migrations.migrateTo = function(command) {
-  if (! command || command == '' || this._list.length === 0)
-    return;
+  if (_.isUndefined(command) || command === '' || this._list.length === 0)
+    throw new Error("Cannot migrate using invalid command: " + command);
 
   if (typeof command === 'number') {
     var version = command;

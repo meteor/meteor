@@ -91,6 +91,29 @@ Tinytest.add('Tests migrating down', function(test) {
   test.equal(Migrations.getVersion(), 2);
 });
 
+Tinytest.add('Tests migrating down to version 0', function(test) {
+  var run = []; //keeps track of migrations in here
+  Migrations._reset();
+
+  test.equal(Migrations.getVersion(), 0);
+  
+  Migrations.add({
+    up: function () {run.push('u1');},
+    down: function () {run.push('d1');},
+    version: 1
+  });
+
+  // migrates up
+  Migrations.migrateTo('latest');
+  test.equal(run, ['u1']);
+  test.equal(Migrations.getVersion(), 1);
+
+  // migrates down
+  Migrations.migrateTo(0);
+  test.equal(run, ['u1', 'd1']);
+  test.equal(Migrations.getVersion(), 0);
+});
+
 Tinytest.add('Checks that locking works correctly', function(test) {
   var run = []; //keeps track of migrations in here
   Migrations._reset();
