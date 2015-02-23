@@ -1,4 +1,4 @@
-# percolate:migrations (Meteor package)
+# percolate:migrations
 
 A simple migration system for [Meteor](http://meteor.com) supporting up/downwards migrations and command line usage.
 
@@ -7,7 +7,7 @@ A simple migration system for [Meteor](http://meteor.com) supporting up/downward
 Meteor Migrations can be installed through Meteor's package manager. Type:
 
 ``` sh
-$ meteor add percolatestudio:percolatestudio-migrations
+$ meteor add percolate:migrations
 ```
 
 ## API
@@ -76,6 +76,12 @@ Migrations.migrateTo('3,rerun');
 ```
 
 **NOTE**: You cannot create your own migration at version 0. This version is reserved by migrations for a 'vanilla' system, that is, one without any migrations applied.
+
+To see what version the database is at, call:
+
+``` javascript
+Migrations.getVersion();
+```
 
 ### Command line use
 
