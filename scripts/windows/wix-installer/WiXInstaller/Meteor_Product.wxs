@@ -45,15 +45,22 @@
         </Directory>
 
         
-        <CustomAction Id="Download_MeteorPackage"      BinaryKey="WiXHelper" Return="check" DllEntry="Download_MeteorPackage" />
-        <CustomAction Id="Extract_MeteorFiles"         BinaryKey="WiXHelper" Return="check" DllEntry="Extract_MeteorFiles" />
+        <CustomAction Id="Download_MeteorPackage" BinaryKey="WiXHelper" Return="check" DllEntry="Download_MeteorPackage" />
+        <CustomAction Id="Extract_MeteorFiles"    BinaryKey="WiXHelper" Return="check" DllEntry="Extract_MeteorFiles" />
+        <CustomAction Id="BulkRemoveMeteorFiles"  BinaryKey="WiXHelper" Return="check" DllEntry="BulkRemoveMeteorFiles" />
+        <CustomAction Id="SetFolderPackages"  Property="METEORDIR_PACKAGES" Value="[METEOR_DIR].meteor\packages" />
+        <CustomAction Id="SetFolderPkg_Meta"  Property="METEORDIR_PKG_META" Value="[METEOR_DIR].meteor\package-metadata" />
         <InstallExecuteSequence>
-            <Custom Action="Download_MeteorPackage"      After="InstallFiles">NOT Installed</Custom>
-            <Custom Action="Extract_MeteorFiles"         After="Download_MeteorPackage">NOT Installed</Custom>
+            <Custom Action="Download_MeteorPackage"  After="InstallFiles">NOT Installed</Custom>
+            <Custom Action="Extract_MeteorFiles"     After="Download_MeteorPackage">NOT Installed</Custom>
+            <Custom Action="SetFolderPackages"       After="InstallInitialize">REMOVE~="ALL"</Custom>	
+            <Custom Action="SetFolderPkg_Meta"       After="InstallInitialize">REMOVE~="ALL"</Custom>	
+            <Custom Action="BulkRemoveMeteorFiles"   Before="RemoveFiles">REMOVE~="ALL"</Custom>	
         </InstallExecuteSequence>
 
         <UI>
             <ProgressText Action="Extract_MeteorFiles">Installing Meteor files ...</ProgressText>
+            <ProgressText Action="BulkRemoveMeteorFiles">Removing Meteor files ...</ProgressText>
         </UI>
     </Product>
 
@@ -70,9 +77,9 @@
                 <Environment Id="SystemEnvPATH" Name="PATH" Value="[P_METEOR_DIR]" Separator=";" Action="set" Part="last" Permanent="yes" System="yes" />
             </Component>
 
-            <Component Id="UninstallMeteorFilesAndFolders" Guid="{989BB4D9-78CE-4230-A2AB-292998A88B82}" Directory="P_METEOR_DIR">
-                <CreateFolder />
-                <util:RemoveFolderEx On="uninstall" Property="P_METEOR_DIR"  />
+            <Component Id="UninstallMeteorFilesAndFolders" Guid="{989BB4D9-78CE-4230-A2AB-292998A88B82}" Directory="TARGETDIR">
+				<RemoveFile   Id="RemoveRootBatch" On="uninstall" Directory="P_METEOR_DIR" Name="meteor.bat" />
+				<RemoveFolder Id="RemoveRootFolder" On="uninstall" Directory="P_METEOR_DIR" />
             </Component>
         </ComponentGroup>
 

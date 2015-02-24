@@ -27,6 +27,8 @@ x64/
 *.pgc
 *.pgd
 *.rsp
+*.dll
+*.exe
 *.sbr
 *.tlb
 *.tli

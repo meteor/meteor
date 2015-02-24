@@ -12,8 +12,10 @@
 
 #include <urlmon.h>
 #include <winhttp.h>
+#include <sys/stat.h>
 
 #define BUF_LEN 1024
+#define MAX_LONG_PATH 2048
 #define LOG true
 
 
@@ -383,22 +385,43 @@ LExit:
 
 
 
-//UINT __stdcall CustomAction1(MSIHANDLE hInstall)
-//{
-//	HRESULT hr = S_OK;
-//	UINT er = ERROR_SUCCESS;
-//
-//	hr = WcaInitialize(hInstall, "CustomAction1");
-//	ExitOnFailure(hr, "Failed to initialize CustomAction1");
-//
-//	WcaLog(LOGMSG_STANDARD, "CustomAction1 Initialized.");
-//
-//	// TODO: Add your custom action code here.
-//
-//LExit:
-//	er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
-//	return WcaFinalize(er);
-//}
+UINT __stdcall BulkRemoveMeteorFiles(MSIHANDLE hInstall)
+{
+	HRESULT hr = S_OK;
+	UINT er = ERROR_SUCCESS;
+
+	hr = WcaInitialize(hInstall, "BulkRemoveMeteorFiles");
+	ExitOnFailure(hr, "Failed to initialize BulkRemoveMeteorFiles");
+
+	WcaLog(LOGMSG_STANDARD, "BulkRemoveMeteorFiles Initialized.");
+
+	wchar_t szPathPackages[BUF_LEN] = L"";	DWORD nPathPackages = BUF_LEN;
+	wchar_t szPathPkg_Meta[BUF_LEN]  = L"";	DWORD nPathPkg_Meta  = BUF_LEN;
+
+	MsiGetProperty(hInstall, L"METEORDIR_PACKAGES", szPathPackages, &nPathPackages);
+	MsiGetProperty(hInstall, L"METEORDIR_PKG_META", szPathPkg_Meta, &nPathPkg_Meta);
+	
+	wchar_t szSysDir[BUF_LEN] = L"";	DWORD nSysDirLen = BUF_LEN;
+	wchar_t szCmd1[BUF_LEN] = L"";		
+	wchar_t szCmd2[BUF_LEN] = L"";	
+
+	DWORD nRes=0;
+	
+	
+	MsiGetProperty(hInstall, L"SystemFolder", szSysDir, &nSysDirLen);
+	StringCchPrintf(szCmd1, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\">NUL\"", szSysDir, szPathPackages);
+	StringCchPrintf(szCmd2, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\">NUL\"", szSysDir, szPathPkg_Meta);
+
+	ExecuteCommandLine(szCmd1, nRes);
+	ExecuteCommandLine(szCmd2, nRes);
+
+	WcaLog(LOGMSG_STANDARD, "BulkRemoveMeteorFiles done.");
+
+LExit:
+	er = SUCCEEDED(hr) ? ERROR_SUCCESS : ERROR_INSTALL_FAILURE;
+	return WcaFinalize(er);
+}
+
 
 
 
