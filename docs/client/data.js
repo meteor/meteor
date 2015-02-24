@@ -4523,7 +4523,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A function that takes in the package control 'api' object, which keeps track of dependencies and exports.</p>",
+        "description": "<p>A function that takes in the package control <code>api</code> object, which keeps track of dependencies and exports.</p>",
         "name": "func",
         "type": {
           "names": [
@@ -4602,7 +4602,7 @@ DocsData = {
     "options": [],
     "params": [],
     "scope": "global",
-    "summary": "The API object passed into the Packages.onUse function."
+    "summary": "Type of the API object passed into the `Package.onUse` function."
   },
   "PackageAPI#addFiles": {
     "kind": "function",
