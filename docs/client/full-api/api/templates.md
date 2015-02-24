@@ -45,8 +45,8 @@ Helpers can accept positional and keyword arguments:
 
 ```javascript
 Template.myTemplate.helpers({
-  displayName: function (firstName, lastName, kw) {
-    var prefix = kw.hash.title ? kw.hash.title + " " : "";
+  displayName: function (firstName, lastName, keyword) {
+    var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
     return prefix + firstName + " " + lastName;
   }
 });
@@ -62,9 +62,10 @@ You can learn more about arguments to helpers in [Spacebars
 Readme](https://atmospherejs.com/meteor/spacebars).
 
 Under the hood, each helper starts a new
-[`Tracker.autorun`](#/full/tracker_autorun), when its reactive dependencies
-change, the helper is rerun. Helpers depend on their data context, passed
-arguments and other reactive data sources accessed during execution.
+[`Tracker.autorun`](#/full/tracker_autorun).  When its reactive
+dependencies change, the helper is rerun. Helpers depend on their data
+context, passed arguments and other reactive data sources accessed during
+execution.
 
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
