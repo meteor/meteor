@@ -879,7 +879,10 @@ LocalCollection._removeFromResults = function (query, doc) {
 LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
-  var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
+  var projectionFn = query.projectionFn || _.identity;
+  var changedFields = LocalCollection._makeChangedFields(
+    projectionFn(doc), projectionFn(old_doc));
+
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {
       query.changed(doc._id, changedFields);
