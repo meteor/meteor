@@ -2437,7 +2437,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Mail body (in plain text or HTML)</p>",
+        "description": "<p>Mail body (in plain text and/or HTML)</p>",
         "name": "text, html",
         "optional": true,
         "type": {
@@ -4888,7 +4888,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>The value to test against</p>",
+        "description": "<p>The value to\ntest against</p>",
         "name": "value",
         "type": {
           "names": [
@@ -4902,7 +4902,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Test if a session variable is equal to a value. If inside a [reactive computation](#reactivity), invalidate the computation the next time the variable changes to or from the value."
+    "summary": "Test if a session variable is equal to a value. If inside a\n[reactive computation](#reactivity), invalidate the computation the next\ntime the variable changes to or from the value."
   },
   "Session.get": {
     "kind": "function",
@@ -4923,7 +4923,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Get the value of a session variable. If inside a [reactive computation](#reactivity), invalidate the computation the next time the value of the variable is changed by [`Session.set`](#session_set). This returns a clone of the session value, so if it's an object or an array, mutating the returned value has no effect on the value stored in the session."
+    "summary": "Get the value of a session variable. If inside a [reactive\ncomputation](#reactivity), invalidate the computation the next time the\nvalue of the variable is changed by [`Session.set`](#session_set). This\nreturns a clone of the session value, so if it's an object or an array,\nmutating the returned value has no effect on the value stored in the\nsession."
   },
   "Session.set": {
     "kind": "function",
@@ -4954,7 +4954,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Set a variable in the session. Notify any listeners that the value has changed (eg: redraw templates, and rerun any [`Tracker.autorun`](#tracker_autorun) computations, that called [`Session.get`](#session_get) on this `key`.)"
+    "summary": "Set a variable in the session. Notify any listeners that the value\nhas changed (eg: redraw templates, and rerun any\n[`Tracker.autorun`](#tracker_autorun) computations, that called\n[`Session.get`](#session_get) on this `key`.)"
   },
   "Session.setDefault": {
     "kind": "function",
@@ -4985,7 +4985,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Set a variable in the session if it hasn't been set before. Otherwise works exactly the same as [`Session.set`](#session_set)."
+    "summary": "Set a variable in the session if it hasn't been set before.\nOtherwise works exactly the same as [`Session.set`](#session_set)."
   },
   "Subscription": {
     "instancename": "this",
