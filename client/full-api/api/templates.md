@@ -41,6 +41,32 @@ Example:
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
 
+Helpers can accept positional and keyword arguments:
+
+```javascript
+Template.myTemplate.helpers({
+  displayName: function (firstName, lastName, keyword) {
+    var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
+    return prefix + firstName + " " + lastName;
+  }
+});
+```
+
+Then you can call this helper from template like this:
+
+```
+{{dstache}}displayName "John" "Doe" title="President"}}
+```
+
+You can learn more about arguments to helpers in [Spacebars
+Readme](https://atmospherejs.com/meteor/spacebars).
+
+Under the hood, each helper starts a new
+[`Tracker.autorun`](#/full/tracker_autorun).  When its reactive
+dependencies change, the helper is rerun. Helpers depend on their data
+context, passed arguments and other reactive data sources accessed during
+execution.
+
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
 
