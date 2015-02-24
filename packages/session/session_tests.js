@@ -153,30 +153,41 @@ Tinytest.add('session - context invalidation for equals', function (test) {
 });
 
 Tinytest.add(
-  'session - context invalidation for equals with undefined',
-  function (test) {
-    // Make sure the special casing for equals undefined works.
-    var yEqualsExecutions = 0;
-    Tracker.autorun(function () {
-      ++yEqualsExecutions;
-      Session.equals('y', undefined);
-    });
-    test.equal(yEqualsExecutions, 1);
-    Session.set('y', undefined);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 1);
-    Session.set('y', 5);
-    test.equal(yEqualsExecutions, 1);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', 3);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', 'undefined');
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', undefined);
-    test.equal(yEqualsExecutions, 2);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 3);
+'session - context invalidation for equals with undefined',
+function (test) {
+  // Make sure the special casing for equals undefined works.
+  var yEqualsExecutions = 0;
+  Tracker.autorun(function () {
+    ++yEqualsExecutions;
+    Session.equals('y', undefined);
   });
+  test.equal(yEqualsExecutions, 1);
+  Session.set('y', undefined);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 1);
+  Session.set('y', 5);
+  test.equal(yEqualsExecutions, 1);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set('y', 3);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set('y', 'undefined');
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set('y', undefined);
+  test.equal(yEqualsExecutions, 2);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 3);
+});
+
+
+Tinytest.add('session - parse an object of key/value pairs', function (test) {
+  Session._setObject({fruit: 'apple', vegetable: 'potato'});
+
+  test.equal(Session.get('fruit'), 'apple');
+  test.equal(Session.get('vegetable'), 'potato');
+
+  delete Session.keys['fruit'];
+  delete Session.keys['vegetable'];
+});
