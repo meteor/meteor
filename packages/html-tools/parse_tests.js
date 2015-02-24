@@ -368,4 +368,5 @@ Tinytest.add("html-tools - getTemplateTag", function (test) {
   succeed('<textarea {{a}} x=1 {{b}}></textarea>',
           TEXTAREA(Attrs({x:"1"}, TemplateTag({stuff: 'a'}),
                          TemplateTag({stuff: 'b'}))));
+
 });
