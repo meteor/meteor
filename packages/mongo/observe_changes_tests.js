@@ -327,3 +327,17 @@ if (Meteor.isServer) {
     }
   ]);
 }
+
+
+testAsyncMulti("observeChanges - bad query", [
+  function (test, expect) {
+    var c = makeCollection();
+    test.throws(function () {
+      c.find({__id: {$in: null}}).observeChanges({
+        added: function () {
+          test.fail("added shouldn't be called");
+        }
+      });
+    });
+  }
+]);
