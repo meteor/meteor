@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.1.4-winr.2"
+  version: "1.1.4-winr.3"
 });
 
 Package.onUse(function (api) {
