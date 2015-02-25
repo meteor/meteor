@@ -10,6 +10,8 @@ IF "%1"=="clean" GOTO :CLEAN
 
 :BUILD
 
+if not exist Release md Release
+
 echo Building WiXBalExtension...
 pushd WiXBalExtension
 Call Build
