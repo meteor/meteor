@@ -27,11 +27,11 @@ $7za_url = "https://s3.amazonaws.com/meteor-windows/build-deps/7za.exe"
 $client = new-object System.Net.WebClient
 $client.DownloadFile($7za_url, $script_path + "wix-installer\WiXInstaller\Resources\7za.exe")
 
-Push-Location wix-installer
+Push-Location ($script_path + "wix-installer")
 Invoke-Expression ("cmd /c build.bat")
 Pop-Location
 
-move-item ($script_path + "wix-installer\Release\Setup_Meteor.exe") ($script_path + "InstallMeteor.exe")
+move-item ($script_path + "wix-installer\Release\Setup_Meteor.exe") ($script_path + "InstallMeteor.exe") -force
 
 echo "Clean up"
 rm $conf_path
