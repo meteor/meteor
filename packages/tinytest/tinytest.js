@@ -404,6 +404,10 @@ _.extend(TestManager.prototype, {
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
           test.name + "'");
+    if (process.env.TINYTEST_FILTER &&
+        test.name.indexOf(process.env.TINYTEST_FILTER) === -1) {
+      return;
+    }
     self.tests[test.name] = test;
     self.ordered_tests.push(test);
   },
