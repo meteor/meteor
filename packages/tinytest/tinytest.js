@@ -397,6 +397,10 @@ TestManager = function () {
   self.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
 };
 
+if (Meteor.isServer && process.env.TINYTEST_FILTER) {
+  __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
+}
+
 _.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
@@ -404,8 +408,8 @@ _.extend(TestManager.prototype, {
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
           test.name + "'");
-    if (process.env.TINYTEST_FILTER &&
-        test.name.indexOf(process.env.TINYTEST_FILTER) === -1) {
+    if (__meteor_runtime_config__.tinytestFilter &&
+        test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
       return;
     }
     self.tests[test.name] = test;
