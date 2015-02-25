@@ -172,12 +172,9 @@ html_scanner = {
       } else {
         // <body>
         if (hasAttribs) {
-          for(var attr in attribs) {
-            if (this.bodyAttributes.indexOf(attr) !== -1) {
-              throwParseError('Tag ' + attr + ' already defined on body.');
-            }
-            this.bodyAttributes.push(attr);
-          }
+          // XXX we would want to throw an error here if we have duplicate
+          // attributes, but this is complex to do with the current build system
+          // so we won't.
           results.js += "\nMeteor.startup(function() { $('body').attr(" + JSON.stringify(attribs) + "); });\n";
         }
 
