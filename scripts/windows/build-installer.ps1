@@ -16,7 +16,7 @@ echo ("Bootstrap tarball version " + $Args[0])
 # Set the version
 $version = $Args[0].replace("`n","").replace("`r","")
 # Numeric part of version, like 1.2.3.4
-$semverVersion = $version.Split("@")[1]
+$semverVersion = $version.Split("@")[-1]
 (Get-Content ($conf_path + "_")) | Foreach-Object {
   $_ -replace '__METEOR_RELEASE__',$version `
      -replace '__METEOR_RELEASE_SEMVER__',$semverVersion} | Out-File -Encoding ascii ($conf_path)
