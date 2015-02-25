@@ -15,7 +15,11 @@ echo ("Bootstrap tarball version " + $Args[0])
 
 # Set the version
 $version = $Args[0].replace("`n","").replace("`r","")
-(Get-Content ($conf_path + "_")) | Foreach-Object {$_ -replace '__METEOR_RELEASE__',$version} | Out-File ($conf_path)
+# Numeric part of version, like 1.2.3.4
+$semverVersion = $version.Split("@")[1]
+(Get-Content ($conf_path + "_")) | Foreach-Object {
+  $_ -replace '__METEOR_RELEASE__',$version `
+     -replace '__METEOR_RELEASE_SEMVER__',$semverVersion} | Out-File -Encoding ascii ($conf_path)
 
 # download 7za.exe, build dependency that we don't want to build from scratch
 $7za_url = "https://s3.amazonaws.com/meteor-windows/build-deps/7za.exe"
@@ -26,6 +30,6 @@ Push-Location wix-installer
 Invoke-Expression ("cmd /c build.bat")
 Pop-Location
 
-#rm $conf_path
+rm $conf_path
 echo "Done"
 
