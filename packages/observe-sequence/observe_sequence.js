@@ -176,10 +176,14 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
     addedBefore: function (id, doc, before) {
       var position = before ? posCur[idStringify(before)] : lengthCur;
 
-      _.each(posCur, function (pos, id) {
-        if (pos >= position)
-          posCur[id]++;
-      });
+      if (before) {
+        // If not adding at the end, we need to update indexes.
+        // XXX this can still be improved greatly!
+        _.each(posCur, function (pos, id) {
+          if (pos >= position)
+            posCur[id]++;
+        });
+      }
 
       lengthCur++;
       posCur[idStringify(id)] = position;
