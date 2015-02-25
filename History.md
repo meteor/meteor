@@ -141,6 +141,15 @@
 
 * Use the newer `ios-sim` binary, compiled with Xcode 6 on OS X Mavericks.
 
+
+## v.1.0.3.2, 2015-Feb-25
+
+* Fix regression in 1.0.3 where the `meteor` tool could crash when downloading
+  the second build of a given package version; for example, when running `meteor
+  deploy` on an OSX or 32-bit Linux system for an app containing a binary
+  package.  #3761
+
+
 ## v.1.0.3.1, 2015-Jan-20
 
 * Rewrite `meteor show` and `meteor search` to show package information for
