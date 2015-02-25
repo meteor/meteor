@@ -13,7 +13,7 @@ Call :DeleteDir "ipch"
 %MSBUILD% BalExtensionExt.sln /nologo /verbosity:quiet /t:Rebuild /p:Configuration=Release /p:Platform="Mixed Platforms" /p:RunCodeAnalysis=false /p:DefineConstants="TRACE" /p:OutDir="%outdir%\\" /l:FileLogger,Microsoft.Build.Engine;logfile=build.log
 if %errorlevel% neq 0 (
 	echo Build failed
-	pause
+	rem pause
 	goto :EOF
 )
 
