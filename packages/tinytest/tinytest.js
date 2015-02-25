@@ -284,7 +284,7 @@ _.extend(TestCaseResults.prototype, {
       }
     else
       /* fail -- not something that contains other things */;
-    if (pass === !!not)
+    if (pass === ! not)
       this.ok();
     else {
       this.fail({type: "include", message: message,
