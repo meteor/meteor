@@ -15,7 +15,7 @@ var isReady = function () {
       return false;
     }
     Tracker.flush();
-    return DDP._allSubscriptionsReady();
+    return Spiderable.ready();
   });
 };
 
