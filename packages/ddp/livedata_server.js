@@ -773,7 +773,10 @@ _.extend(Session.prototype, {
   _stopSubscription: function (subId, error) {
     var self = this;
 
+    var subName = null;
+
     if (subId && self._namedSubs[subId]) {
+      subName = self._namedSubs[subId]._name;
       self._namedSubs[subId]._removeAllDocuments();
       self._namedSubs[subId]._deactivate();
       delete self._namedSubs[subId];
@@ -781,8 +784,12 @@ _.extend(Session.prototype, {
 
     var response = {msg: 'nosub', id: subId};
 
-    if (error)
-      response.error = wrapInternalException(error, "from sub " + subId);
+    if (error) {
+      response.error = wrapInternalException(
+        error,
+        subName ? ("from sub " + subName + " id " + subId)
+          : ("from sub id " + subId));
+    }
 
     self.send(response);
   },
@@ -975,7 +982,12 @@ _.extend(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      res._publishCursor(self);
+      try {
+        res._publishCursor(self);
+      } catch (e) {
+        self.error(e);
+        return;
+      }
       // _publishCursor only returns after the initial added callbacks have run.
       // mark subscription as ready.
       self.ready();
@@ -1000,9 +1012,14 @@ _.extend(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      _.each(res, function (cur) {
-        cur._publishCursor(self);
-      });
+      try {
+        _.each(res, function (cur) {
+          cur._publishCursor(self);
+        });
+      } catch (e) {
+        self.error(e);
+        return;
+      }
       self.ready();
     } else if (res) {
       // truthy values other than cursors or arrays are probably a
