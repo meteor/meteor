@@ -773,7 +773,10 @@ _.extend(Session.prototype, {
   _stopSubscription: function (subId, error) {
     var self = this;
 
+    var subName = null;
+
     if (subId && self._namedSubs[subId]) {
+      subName = self._namedSubs[subId]._name;
       self._namedSubs[subId]._removeAllDocuments();
       self._namedSubs[subId]._deactivate();
       delete self._namedSubs[subId];
@@ -781,8 +784,12 @@ _.extend(Session.prototype, {
 
     var response = {msg: 'nosub', id: subId};
 
-    if (error)
-      response.error = wrapInternalException(error, "from sub " + subId);
+    if (error) {
+      response.error = wrapInternalException(
+        error,
+        subName ? ("from sub " + subName + " id " + subId)
+          : ("from sub id " + subId));
+    }
 
     self.send(response);
   },
