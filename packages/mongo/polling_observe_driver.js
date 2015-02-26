@@ -152,7 +152,10 @@ _.extend(PollingObserveDriver.prototype, {
         // successfully. Probably it's a bad selector or something, so we should
         // NOT retry. Instead, we should halt the observe (which ends up calling
         // `stop` on us).
-        self._multiplexer.queryError(e);
+        self._multiplexer.queryError(
+          new Error(
+            "Exception while polling query " +
+              JSON.stringify(self._cursorDescription) + ": " + e.message));
         return;
       }
 
