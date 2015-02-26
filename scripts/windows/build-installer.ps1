@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 $script_path = (split-path -parent $MyInvocation.MyCommand.Definition) + "\"
-$conf_path = $script_path + "wix-installer\WiXInstaller\Configuration.wxi"
+$conf_path = $script_path + "installer\WiXInstaller\Configuration.wxi"
 
 If ($Args.Count -ne 1) {
   echo "Usage:"
@@ -25,13 +25,13 @@ $semverVersion = $version.Split("@")[-1]
 echo "Downloading binary dependencies: 7za"
 $7za_url = "https://s3.amazonaws.com/meteor-windows/build-deps/7za.exe"
 $client = new-object System.Net.WebClient
-$client.DownloadFile($7za_url, $script_path + "wix-installer\WiXInstaller\Resources\7za.exe")
+$client.DownloadFile($7za_url, $script_path + "installer\WiXInstaller\Resources\7za.exe")
 
-Push-Location wix-installer
+Push-Location installer
 Invoke-Expression ("cmd /c build.bat")
 Pop-Location
 
-move-item ($script_path + "wix-installer\Release\Setup_Meteor.exe") ($script_path + "InstallMeteor.exe")
+move-item ($script_path + "installer\Release\Setup_Meteor.exe") ($script_path + "InstallMeteor.exe")
 
 echo "Clean up"
 rm $conf_path
