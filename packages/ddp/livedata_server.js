@@ -975,7 +975,12 @@ _.extend(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      res._publishCursor(self);
+      try {
+        res._publishCursor(self);
+      } catch (e) {
+        self.error(e);
+        return;
+      }
       // _publishCursor only returns after the initial added callbacks have run.
       // mark subscription as ready.
       self.ready();
@@ -1000,9 +1005,14 @@ _.extend(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      _.each(res, function (cur) {
-        cur._publishCursor(self);
-      });
+      try {
+        _.each(res, function (cur) {
+          cur._publishCursor(self);
+        });
+      } catch (e) {
+        self.error(e);
+        return;
+      }
       self.ready();
     } else if (res) {
       // truthy values other than cursors or arrays are probably a
