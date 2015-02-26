@@ -5,15 +5,18 @@ Logic = {};
 // instead of `check`.
 _check = check;
 Logic._disablingTypeChecks = function (f) {
+  var oldCheck = _check;
   try {
     _check = function () {};
     return f();
   } finally {
-    _check = check;
+    _check = oldCheck;
   }
 };
 
 Logic._MiniSat = MiniSat; // Expose for testing and poking around
+
+////////// Type Declarations
 
 // WholeNumber: a non-negative integer (0 is allowed)
 Logic.WholeNumber = Match.Where(function (x) {
@@ -36,6 +39,11 @@ Logic.NameTerm = Match.Where(function (x) {
 // "-" will be parsed in the string form, but we try to
 // keep it to either one or zero of them.
 Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
+
+Logic.FormulaOrTerm = Match.OneOf(Logic.Formula, Logic.Term);
+
+////////// End Type Declarations
+
 
 // Takes a Formula or Term, returns a Formula or Term.
 // Unlike other operators, if you give it a Term,
@@ -60,7 +68,19 @@ Logic.not = function (operand) {
 Logic.TRUE = "$T";
 Logic.FALSE = "$F";
 
+// Abstract base class.  Subclasses are created using _defineFormula.
 Logic.Formula = function () {};
+
+Logic._defineFormula = function (constructor, typeName, methods) {
+  _check(constructor, Function);
+  _check(typeName, String);
+  Meteor._inherits(constructor, Logic.Formula);
+  constructor.prototype.type = typeName;
+  if (methods) {
+    _.extend(constructor.prototype, methods);
+  }
+};
+
 // Returns a list of Clauses that together require the Formula to be
 // true, or false (depending on isTrue; both cases must be
 // implemented).  A single Clause may also be returned.  The
@@ -81,8 +101,11 @@ Logic.Formula.prototype.guid = function () {
   return this._guid;
 };
 
-Logic.FormulaOrTerm = Match.OneOf(Logic.Formula, Logic.Term);
-
+// A "clause" is a disjunction of terms, e.g. "A or B or (not C)",
+// which we write "A v B v -C".  Logic.Clause is mainly an internal
+// Solver data structure, which is the final result of formula
+// generation and mapping variable names to numbers, before passing
+// the clauses to MiniSat.
 Logic.Clause = function (/*formulaOrArray, ...*/) {
   var terms = _.flatten(arguments);
   _check(terms, [Logic.NumTerm]);
@@ -100,12 +123,13 @@ Logic.Solver = function () {
   this._name2num = {}; // (' '+vname) -> vnum
 
   // true and false
-  this._F = this.getVarNum("$F", true); // 1
-  this._T = this.getVarNum("$T", true); // 2
+  this._F = this.getVarNum(Logic.FALSE, true); // 1
+  this._T = this.getVarNum(Logic.TRUE, true); // 2
   this._F_used = false;
   this._T_used = false;
-  // (it's important that these clauses are elements 0 and 1
-  // of the clauses array)
+  // It's important that these clauses are elements 0 and 1
+  // of the clauses array, so that they can optionally be stripped
+  // off.  For example, _clauseData takes advantage of this fact.
   this.clauses.push(new Logic.Clause(-this._F));
   this.clauses.push(new Logic.Clause(this._T));
 
@@ -475,16 +499,6 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   } else {
     // formula is a Term
     return self.toNumTerm(formula);
-  }
-};
-
-Logic._defineFormula = function (constructor, typeName, methods) {
-  _check(constructor, Function);
-  _check(typeName, String);
-  Meteor._inherits(constructor, Logic.Formula);
-  constructor.prototype.type = typeName;
-  if (methods) {
-    _.extend(constructor.prototype, methods);
   }
 };
 
