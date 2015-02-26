@@ -1193,7 +1193,7 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
     "set DOT_METEOR=\"%~dp0%\"",
     "pushd %DOT_METEOR%",
     "cd ..",
-    "set METEOR_INSTALLATION=\"%cd%\"",
+    "set METEOR_INSTALLATION=%cd%",
     "popd",
 
     // always convert to Windows path since this function can also be
