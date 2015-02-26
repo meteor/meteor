@@ -18,7 +18,8 @@ Npm.depends({
   // publish-for-arch dance every time we make a Meteor release.
   // XXX move the npm dependency into a non-core versioned package and allow
   //     it to use C++ bson
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/fb94f9be1f0d4d5b4d3801fd20e6b00e0df8306e",
+  // Also currently contains our PR https://github.com/mongodb/node-mongodb-native/pull/1259/
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/01c0ce83dc3f5ea69b3aea0dfe50345ead270cca",
   "mongodb-uri": "0.9.7"
 });
 

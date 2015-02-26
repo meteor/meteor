@@ -80,11 +80,13 @@ _.extend(ObserveMultiplexer.prototype, {
       self._stop();
     }
   },
-  _stop: function () {
+  _stop: function (options) {
     var self = this;
+    options = options || {};
+
     // It shouldn't be possible for us to stop when all our handles still
     // haven't been returned from observeChanges!
-    if (!self._ready())
+    if (! self._ready() && ! options.fromQueryError)
       throw Error("surprising _stop: not ready");
 
     // Call stop callback (which kills the underlying process which sends us
@@ -97,6 +99,7 @@ _.extend(ObserveMultiplexer.prototype, {
     // callback should make our connection forget about us).
     self._handles = null;
   },
+
   // Allows all addHandleAndSendInitialAdds calls to return, once all preceding
   // adds have been processed. Does not block.
   ready: function () {
@@ -107,6 +110,23 @@ _.extend(ObserveMultiplexer.prototype, {
       self._readyFuture.return();
     });
   },
+
+  // If trying to execute the query results in an error, call this. This is
+  // intended for permanent errors, not transient network errors that could be
+  // fixed. It should only be called before ready(), because if you called ready
+  // that meant that you managed to run the query once. It will stop this
+  // ObserveMultiplex and cause addHandleAndSendInitialAdds calls (and thus
+  // observeChanges calls) to throw the error.
+  queryError: function (err) {
+    var self = this;
+    self._queue.runTask(function () {
+      if (self._ready())
+        throw Error("can't claim query has an error after it worked!");
+      self._stop({fromQueryError: true});
+      self._readyFuture.throw(err);
+    });
+  },
+
   // Calls "cb" once the effects of all "ready", "addHandleAndSendInitialAdds"
   // and observe callbacks which came before this call have been propagated to
   // all handles. "ready" must have already been called on this multiplexer.
