@@ -552,19 +552,26 @@ LocalCollection.prototype.insert = function (docs, callback) {
   var bulkInsert = docs instanceof Array;
   docs = bulkInsert ? docs : [docs];
   var error;
-  var inserts= [];
+  var ids = [];
+  var queriesToRecompute = {};
   _.any(docs, function (doc) {
     try {
-      inserts.push(self._insertSingleDoc(doc));
+      ids.push(self._insertSingleDoc(doc, queriesToRecompute));
       return false;
     } catch (err) {
-      error = err;
-      return true;
+      // Catch minimongo errors. If it is a failed insert, we want to continue
+      // dealing with the recompute queries before we rethrow it.
+      if (err.name ===  "MinimongoError") {
+        error = err;
+        return true;
+      } else {
+        // Something has just gone wrong, throw it now.
+        throw err;
+      }
     }
   });
 
-  var queriesToRecompute = _.union.apply(_, _.pluck(inserts, 'queriesToRecompute'));
-  _.each(queriesToRecompute, function (qid) {
+   _.each(queriesToRecompute, function (v, qid) {
     if (self.queries[qid])
       LocalCollection._recomputeResults(self.queries[qid]);
   });
@@ -577,19 +584,19 @@ LocalCollection.prototype.insert = function (docs, callback) {
   // We return IDs of the inserted documents to the caller. If we are not doing
   // a bulk insert, we return a single ID, otherwise return an array of
   // successfully inserted documents.
-  var idsForCaller = bulkInsert ?
-    _.pluck(inserts, "id") : _.pluck(inserts, "id")[0];
+  var idsForCaller = bulkInsert ? ids : ids[0];
 
   // Defer because the caller likely doesn't expect the callback to be run
   // immediately.
-  if (callback)
+  if (callback) {
     Meteor.defer(function () {
       callback(null, idsForCaller);
     });
+  }
   return idsForCaller;
 };
 
-LocalCollection.prototype._insertSingleDoc = function (doc) {
+LocalCollection.prototype._insertSingleDoc = function (doc, queriesToRecompute) {
   var self = this;
   doc = EJSON.clone(doc);
 
@@ -607,22 +614,23 @@ LocalCollection.prototype._insertSingleDoc = function (doc) {
   self._saveOriginal(id, undefined);
   self._docs.set(id, doc);
 
-  var queriesToRecompute = [];
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
     var matchResult = query.matcher.documentMatches(doc);
     if (matchResult.result) {
-      if (query.distances && matchResult.distance !== undefined)
+      if (query.distances && matchResult.distance !== undefined) {
         query.distances.set(id, matchResult.distance);
-      if (query.cursor.skip || query.cursor.limit)
-        queriesToRecompute.push(qid);
-      else
+      }
+      if (query.cursor.skip || query.cursor.limit) {
+        queriesToRecompute[qid] = true;
+      } else {
         LocalCollection._insertInResults(query, doc);
+      }
     }
   }
 
-  return { id: id, queriesToRecompute: queriesToRecompute };
+  return id;
 };
 
 // Iterates over a subset of documents that could match selector; calls
