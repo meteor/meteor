@@ -6,7 +6,7 @@
 	<Font Id="2" Height="-14" Weight="800" Foreground="333333" >Tahoma</Font>							<!-- Page header big font -->
 	<Font Id="3" Height="-22" Weight="500" Foreground="252525" >Segoe UI</Font>					<!-- Big light font to dispaly product name in welcome and finish pages -->
 	<Font Id="4" Height="-11" Weight="500" Foreground="000000" >Tahoma</Font>
-	<Font Id="5" Height="-10" Weight="500" Foreground="FFFFFF" >Segoe UI</Font>
+	<Font Id="5" Height="-10" Weight="500" Foreground="000000" >Segoe UI</Font>                         <!-- Version number on bottom left corner of all pages -->
 	<Font Id="6" Height="-12" Weight="500" Foreground="0000FF" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
 	<Font Id="7" Height="-12" Weight="500" Foreground="000000" >Segoe UI</Font>							<!-- Same as installer default font but transparent -->
 
