@@ -80,12 +80,11 @@ Building an application with Meteor?
 
 * Announcement list: sign up at http://www.meteor.com/
 * Ask a question: http://stackoverflow.com/questions/tagged/meteor
-* Meteor help and discussion mailing list: https://groups.google.com/group/meteor-talk
-* IRC: `#meteor` on `irc.freenode.net`
+* Discussion forums: https://forums.meteor.com/
 
 Interested in contributing to Meteor?
 
-* Core framework design mailing list: https://groups.google.com/group/meteor-core
+* Issue tracker: https://github.com/meteor/meteor/issues
 * Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
 
 We are hiring!  Visit https://www.meteor.com/jobs to
