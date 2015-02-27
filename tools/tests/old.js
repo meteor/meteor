@@ -67,7 +67,7 @@ selftest.define("watch", ["slow"], function () {
   });
 });
 
-selftest.define("bundler-assets", ["checkout"], function () {
+selftest.define("bundler-assets", ["checkout", "slow"], function () {
   runOldTest('test-bundler-assets.js');
 });
 

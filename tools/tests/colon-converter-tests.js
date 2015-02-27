@@ -59,7 +59,7 @@ var randomizedPackageName = function (username, start) {
 // on a module that has filenames with colons -- the module gets added, but
 // without the colon filenames.
 if (process.platform !== "win32") {
-  selftest.define("can't publish package with colons", ["net", "test-package-server"], function () {
+  selftest.define("can't publish package with colons", ["net", "test-package-server", "slow"], function () {
     var s = new Sandbox();
 
     testUtils.login(s, username, password);
@@ -77,7 +77,7 @@ if (process.platform !== "win32") {
     });
   });
 
-  selftest.define("can't build local packages with colons", function () {
+  selftest.define("can't build local packages with colons", ["slow"], function () {
     var s = new Sandbox();
 
     var appName = "test";
@@ -127,7 +127,7 @@ if (process.platform !== "win32") {
 // Tests step 3: check if old packages are converted properly to have no weird
 // paths for Windows
 
-selftest.define("package with colons is converted on Windows", function () {
+selftest.define("package with colons is converted on Windows", ["slow"], function () {
   // We have a built package tarball in the git repo
   var tarballPath = files.pathJoin(files.convertToStandardPath(__dirname),
     "built-packages", "has-colons.tgz");

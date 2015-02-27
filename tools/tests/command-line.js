@@ -3,7 +3,7 @@ var Sandbox = selftest.Sandbox;
 var archinfo = require('../archinfo.js');
 var release = require('../release.js');
 
-selftest.define("argument parsing", function () {
+selftest.define("argument parsing", ["slow"], function () {
   var s = new Sandbox;
   var run;
 

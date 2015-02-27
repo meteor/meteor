@@ -896,7 +896,7 @@ selftest.define("show unknown version of package", function () {
 
 });
 
-selftest.define("circular dependency errors", function () {
+selftest.define("circular dependency errors", ["slow"], function () {
   var s = new Sandbox();
   // meteor add refreshes, but we don't need anything from the official catalog
   // here.

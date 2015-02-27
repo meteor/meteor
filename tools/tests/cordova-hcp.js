@@ -13,7 +13,7 @@ var config = require("../config.js");
 // it receives a hot code push, it would be connected to whatever
 // ROOT_URL is on the server.
 selftest.define(
-  "cordova --mobile-server argument persists across hot code pushes", ["cordova"], function () {
+  "cordova --mobile-server argument persists across hot code pushes", ["cordova", "slow"], function () {
     var s = new Sandbox();
     var run;
 
