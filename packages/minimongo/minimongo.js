@@ -547,7 +547,49 @@ LocalCollection.Cursor.prototype._depend = function (changers, _allow_unordered)
 // (real mongodb does in fact enforce this)
 // XXX possibly enforce that 'undefined' does not appear (we assume
 // this in our handling of null and $exists)
-LocalCollection.prototype.insert = function (doc, callback) {
+LocalCollection.prototype.insert = function (docs, callback) {
+  var self = this;
+  var bulkInsert = docs instanceof Array;
+  docs = bulkInsert ? docs : [docs];
+  var error;
+  var inserts= [];
+  _.any(docs, function (doc) {
+    try {
+      inserts.push(self._insertSingleDoc(doc));
+      return false;
+    } catch (err) {
+      error = err;
+      return true;
+    }
+  });
+
+  var queriesToRecompute = _.union.apply(_, _.pluck(inserts, 'queriesToRecompute'));
+  _.each(queriesToRecompute, function (qid) {
+    if (self.queries[qid])
+      LocalCollection._recomputeResults(self.queries[qid]);
+  });
+  self._observeQueue.drain();
+
+  if (error) {
+    throw error;
+  }
+
+  // We return IDs of the inserted documents to the caller. If we are not doing
+  // a bulk insert, we return a single ID, otherwise return an array of
+  // successfully inserted documents.
+  var idsForCaller = bulkInsert ?
+    _.pluck(inserts, "id") : _.pluck(inserts, "id")[0];
+
+  // Defer because the caller likely doesn't expect the callback to be run
+  // immediately.
+  if (callback)
+    Meteor.defer(function () {
+      callback(null, idsForCaller);
+    });
+  return idsForCaller;
+};
+
+LocalCollection.prototype._insertSingleDoc = function (doc) {
   var self = this;
   doc = EJSON.clone(doc);
 
@@ -580,19 +622,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
     }
   }
 
-  _.each(queriesToRecompute, function (qid) {
-    if (self.queries[qid])
-      LocalCollection._recomputeResults(self.queries[qid]);
-  });
-  self._observeQueue.drain();
-
-  // Defer because the caller likely doesn't expect the callback to be run
-  // immediately.
-  if (callback)
-    Meteor.defer(function () {
-      callback(null, id);
-    });
-  return id;
+  return { id: id, queriesToRecompute: queriesToRecompute };
 };
 
 // Iterates over a subset of documents that could match selector; calls
