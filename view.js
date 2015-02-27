@@ -322,7 +322,7 @@ Blaze._materializeView = function (view, parentView) {
       Tracker.onInvalidate(function () {
         domrange.destroyMembers();
       });
-    }, undefined, ':materialize');
+    }, undefined, 'materialize');
 
     var teardownHook = null;
 
