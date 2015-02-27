@@ -20,7 +20,7 @@ Blaze.With = function (data, contentFunc) {
       // `data` is a reactive function
       view.autorun(function () {
         view.dataVar.set(data());
-      }, view.parentView);
+      }, view.parentView, 'setData');
     } else {
       view.dataVar.set(data);
     }
@@ -48,7 +48,7 @@ Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
     this.autorun(function () {
       var cond = Blaze._calculateCondition(conditionFunc());
       conditionVar.set(_not ? (! cond) : cond);
-    }, this.parentView);
+    }, this.parentView, 'condition');
   });
 
   return view;
@@ -96,7 +96,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     // passing argFunc straight to ObserveSequence).
     eachView.autorun(function () {
       eachView.argVar.set(argFunc());
-    }, eachView.parentView);
+    }, eachView.parentView, 'collection');
 
     eachView.stopHandle = ObserveSequence.observe(function () {
       return eachView.argVar.get();
