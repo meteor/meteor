@@ -1161,15 +1161,11 @@ _.extend(files.KeyValueFile.prototype, {
 
 files.getHomeDir = function () {
   if (process.platform === "win32") {
-    var homeDir =
-      process.env.METEOR_INSTALLATION ||
-      process.env.LOCALAPPDATA ||
-      process.env.APPDATA;
-
-    return files.convertToStandardPath(homeDir);
+    return files.pathDirname(
+      files.convertToStandardPath(process.env.METEOR_INSTALLATION));
+  } else {
+    return process.env.HOME;
   }
-
-  return process.env.HOME;
 };
 
 // add .bat extension to link file if not present
@@ -1189,12 +1185,7 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
 
   var newScript = [
     "@echo off",
-    // set the installation path to the grand-parent folder of this script
-    "set DOT_METEOR=\"%~dp0%\"",
-    "pushd %DOT_METEOR%",
-    "cd ..",
-    "set METEOR_INSTALLATION=%cd%",
-    "popd",
+    "set METEOR_INSTALLATION=%~dp0%",
 
     // always convert to Windows path since this function can also be
     // called on Linux or Mac when we are building bootstrap tarballs
