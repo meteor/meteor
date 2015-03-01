@@ -1,7 +1,7 @@
 {
- "track": "WINDOWS-PREVIEW",
- "version": "0.1.7",
+ "track": "EACH-IN",
+ "version": "0.0.1",
  "recommended": false,
  "official": false,
- "description": "Preview of Meteor on Windows."
+ "description": "Preview of new Blaze features such as #each-in, #let and @index"
 }
