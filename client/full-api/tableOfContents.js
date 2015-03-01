@@ -315,9 +315,7 @@ var toc = [
     "markdown",
     "oauth-encryption",
     "random",
-    "showdown",
     {name: "spiderable", link: "https://atmospherejs.com/meteor/spiderable"},
-    "stylus",
     "underscore",
     "webapp"
   ] ],
