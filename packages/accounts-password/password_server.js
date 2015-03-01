@@ -323,22 +323,28 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  * @locus Server
  * @param {String} userId The id of the user to update.
  * @param {String} newPassword A new password for the user.
+ * @param {Object} [options]
+ * @param {Object} options.logout Logout all current connections with this userId (default: true)
  */
-Accounts.setPassword = function (userId, newPlaintextPassword) {
+Accounts.setPassword = function (userId, newPlaintextPassword, options) {
+  options = _.extend({logout: true}, options);
+  
   var user = Meteor.users.findOne(userId);
   if (!user)
     throw new Meteor.Error(403, "User not found");
+  
+  var update = {
+    $unset: {
+      'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
+      'services.password.reset': 1
+    },
+    $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)}
+  };
+  
+  if (options.logout)
+    update.$unset['services.resume.loginTokens'] = 1;
 
-  Meteor.users.update(
-    {_id: user._id},
-    {
-      $unset: {
-        'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
-        'services.password.reset': 1,
-        'services.resume.loginTokens': 1
-      },
-      $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)} }
-  );
+  Meteor.users.update({_id: user._id}, update);
 };
 
 
