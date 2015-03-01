@@ -1854,6 +1854,7 @@ _.extend(PackageSource.prototype, {
         // This is the most likely and common case, especially when we are
         // inferring the docs as a default value.
         errorMessage = "Documentation not found: " + self.metadata.documentation;
+        errorMessage = errorMessage + " for " + self.name;
       } else {
         // This is weird, and we don't usually protect the user from errors like
         // this, but maybe we should.

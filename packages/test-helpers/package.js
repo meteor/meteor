@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.4-winr.3'
+  version: '1.0.4-eachin.0'
 });
 
 Package.onUse(function (api) {

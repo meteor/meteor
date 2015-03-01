@@ -1,6 +1,6 @@
 {
  "track": "EACH-IN",
- "version": "0.0.1",
+ "version": "0.0.2",
  "recommended": false,
  "official": false,
  "description": "Preview of new Blaze features such as #each-in, #let and @index"

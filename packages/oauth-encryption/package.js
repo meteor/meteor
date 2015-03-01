@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.0.3-winr.4'
+  version: '1.0.3-eachin.0',
+  documentation: 'README.md'
 });
 
 Package.onUse(function (api) {

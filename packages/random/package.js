@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Random number generator and utilities",
-  version: '1.0.3-winr.2'
+  version: '1.0.3-eachin.0'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.7-winr.3',
+  version: '1.0.7-eachin.0',
   documentation: null
 });
 
