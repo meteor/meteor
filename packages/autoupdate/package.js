@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.1.5-eachin.0'
+  version: '1.1.6-eachin.43'
 });
 
 Cordova.depends({

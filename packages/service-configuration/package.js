@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Manage the configuration for third-party services",
-  version: "1.0.4-winr.2"
+  version: "1.0.4-eachin.43"
 });
 
 Package.onUse(function(api) {

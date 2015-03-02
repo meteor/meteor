@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Session variable",
-  version: '1.0.6-eachin.0'
+  version: '1.0.6-eachin.43'
 });
 
 Package.onUse(function (api) {

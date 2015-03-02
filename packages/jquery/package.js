@@ -5,7 +5,7 @@ Package.describe({
   // naively thought that "call the version '1.11.2', add a comment saying that
   // the next version should be '1.11.2_1'" would be sufficient to not be
   // missed during the semi-automated version number bumping step. Next time, use `_0` from the start so it's obvious that something weird is happening!
-  version: '1.11.3-winr.2_1'  // XXX see above!!!!
+  version: '1.11.3-eachin.43_1'  // XXX see above!!!!
 });
 
 Package.onUse(function (api) {

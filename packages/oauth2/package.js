@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth2-based login services",
-  version: "1.1.3-winr.2"
+  version: "1.1.3-eachin.43"
 });
 
 Package.onUse(function (api) {

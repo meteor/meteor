@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Compile-time tools for Blaze",
-  version: '1.0.3-eachin.0'
+  version: '1.0.3-eachin.43'
 });
 
 Package.onUse(function (api) {

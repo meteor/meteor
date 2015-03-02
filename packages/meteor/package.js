@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.5-eachin.0'
+  version: '1.1.5-eachin.43'
 });
 
 Package.registerBuildPlugin({

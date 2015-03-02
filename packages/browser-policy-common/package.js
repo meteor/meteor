@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
-  version: "1.0.3-winr.2"
+  version: "1.0.3-eachin.43"
 });
 
 Package.onUse(function (api) {

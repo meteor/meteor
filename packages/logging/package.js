@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Logging facility.",
-  version: '1.0.6-eachin.0'
+  version: '1.0.6-eachin.43'
 });
 
 Npm.depends({
