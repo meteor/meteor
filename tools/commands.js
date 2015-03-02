@@ -2021,6 +2021,40 @@ main.registerCommand({
 
 
 ///////////////////////////////////////////////////////////////////////////////
+// admin progressbar-test
+///////////////////////////////////////////////////////////////////////////////
+
+// A test command to print a progressbar. Useful for manual testing.
+main.registerCommand({
+  name: 'admin progressbar-test',
+  options: {
+    secs: { type: Number, default: 20 }
+  },
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  buildmessage.enterJob({ title: "A test progressbar" }, function () {
+    var doneFuture = new Future;
+    var progress = buildmessage.getCurrentProgressTracker();
+    var totalProgress = { current: 0, end: options.secs, done: false };
+    var updateProgress = function () {
+      totalProgress.current++;
+      if (totalProgress.current === totalProgress.end) {
+        totalProgress.done = true;
+        progress.reportProgress(totalProgress);
+        doneFuture.return();
+      } else {
+        progress.reportProgress(totalProgress);
+        setTimeout(updateProgress, 1000);
+      }
+    };
+    setTimeout(updateProgress);
+    doneFuture.wait();
+  });
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
 // dummy
 ///////////////////////////////////////////////////////////////////////////////
 
