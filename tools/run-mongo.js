@@ -66,8 +66,12 @@ if (process.platform === 'win32') {
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
       function (error, stdout, stderr) {
         if (error) {
-          fut['throw'](new Error("Couldn't run tasklist: " +
-            JSON.stringify(error)));
+          var additionalInfo = JSON.stringify(error);
+          if (error.code === 'ENOENT') {
+            additionalInfo = "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
+          }
+          fut['throw'](new Error("Couldn't run tasklist.exe: " +
+            additionalInfo));
           return;
         } else {
           // Find the pids of all mongod processes
