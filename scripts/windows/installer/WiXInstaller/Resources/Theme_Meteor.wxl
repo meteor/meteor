@@ -13,6 +13,8 @@
 
         /passive | /quiet -  displays minimal UI with no prompts or displays no UI and no prompts. By default UI and all prompts are displayed.
 
+        /toconsole   - similar to /quiet except that progress is redirected to console.
+
         /norestart   - suppress any attempts to restart. By default UI will prompt before restart.
 
         /log log.txt - logs to a specific file. By default a log file is created in %TEMP%.
@@ -24,6 +26,7 @@
     <String Id="InstallCloseButton">&amp;Cancel</String>
     <String Id="BackButton">&lt; Back</String>
     <String Id="NextButton">Next &gt;</String>
+    <String Id="SkipButton">Skip</String>
     <String Id="InstallMeteor">Install [WixBundleName]</String>
 
     <String Id="InstallUpgradeLinkText">Version [WixBundleVersion] &lt;a href="#"&gt;upgrade available&lt;/a&gt;</String>
