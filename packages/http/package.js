@@ -3,7 +3,7 @@ Package.describe({
   version: '1.0.11-winr.5'
 });
 
-Npm.depends({request: "2.47.0"});
+Npm.depends({request: "2.53.0"});
 
 Package.onUse(function (api) {
   api.use('underscore');

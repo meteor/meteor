@@ -116,6 +116,7 @@
   - openssl in mongo: 1.0.2 (from 1.0.1j)
   - MongoDB driver: 1.4.32 (from 1.4.1)
   - bson: 0.2.18 (from 0.2.7)
+  - request: 2.53.0 (from 2.47.0)
 
 ### Meteor Mobile updates
 
