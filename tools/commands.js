@@ -2028,7 +2028,8 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin progressbar-test',
   options: {
-    secs: { type: Number, default: 20 }
+    secs: { type: Number, default: 20 },
+    spinner: { type: Boolean, default: false }
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2037,9 +2038,20 @@ main.registerCommand({
     var doneFuture = new Future;
     var progress = buildmessage.getCurrentProgressTracker();
     var totalProgress = { current: 0, end: options.secs, done: false };
+    var i = 0;
+    var n = options.secs;
+
+    if (options.spinner) {
+      totalProgress.end = undefined;
+    }
+
     var updateProgress = function () {
-      totalProgress.current++;
-      if (totalProgress.current === totalProgress.end) {
+      i++;
+      if (! options.spinner) {
+        totalProgress.current = i;
+      }
+
+      if (i === n) {
         totalProgress.done = true;
         progress.reportProgress(totalProgress);
         doneFuture.return();
