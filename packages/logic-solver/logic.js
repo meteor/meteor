@@ -501,7 +501,8 @@ Logic.Solver.prototype._getFormulaInfo = function (formula, _noCreate) {
   return self._formulaInfo[guid];
 };
 
-// Takes a Formula or an array of Formulas, returns a NumTerm.
+// Takes a Formula or an array of Formulas, returns a NumTerm or
+// array of NumTerms.
 Logic.Solver.prototype._formulaToTerm = function (formula) {
   var self = this;
 
@@ -514,7 +515,7 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
 
   if (formula instanceof Logic.NotFormula) {
     // shortcut that avoids creating a variable called
-    // something like "not1" when you use Logic.not(formula).
+    // something like "$not1" when you use Logic.not(formula).
     return Logic.not(self._formulaToTerm(formula.operand));
   } else if (formula instanceof Logic.Formula) {
     var info = this._getFormulaInfo(formula);
@@ -711,7 +712,7 @@ Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
        return []; // always succeed
      } else if (args.length === 2) {
        return t.generate(isTrue, Logic.not(Logic.and(args)));
-     } else if (isTrue && args.length == 3) {
+     } else if (isTrue && args.length === 3) {
        // Pick any two args; at least one is false (they aren't
        // both true).  This strategy would also work for
        // N>3, and could provide a speed-up by having more clauses
@@ -741,7 +742,7 @@ Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
        if (groups[groups.length - 1].length < 2) {
          // Remove final group of length 1 so we don't generate
          // no-op clauses of one sort or another
-         groups.length--;
+         groups.pop();
        }
        var atMostOnes = _.map(groups, function (g) {
          return Logic.atMostOne(g);
@@ -871,7 +872,7 @@ var genLTE = function (bits1, bits2, t, notEqual) {
   while (A.length > B.length) {
     var hi = A.pop();
     ret.push(t.clause(Logic.not(hi)));
-    }
+  }
   // now B.length >= A.length
   // Let xors[i] be (A[i] xor B[i]), or just
   // B[i] if A is too short.
@@ -900,8 +901,13 @@ var genLTE = function (bits1, bits2, t, notEqual) {
   // we would be given [C, B, A] and [Z, Y, X] as input.
   // We iterate over the first argument starting from
   // the right, and build up a clause by iterating over
-  // the xors from the right (note that there may be
-  // more xors, because we may have been given [Z, Y, X, W]).
+  // the xors from the right.
+  //
+  // If we have ABC <= VWXYZ, then we still have three clauses,
+  // but each one is prefixed with "V or W or", because V and W
+  // are at the end of the xors array.  This is equivalent to
+  // padding ABC with two zeros.
+
   for (var i = A.length-1; i >= 0; i--) {
     ret.push(t.clause(xors.slice(i+1), Logic.not(A[i]), B[i]));
   }
@@ -987,6 +993,18 @@ Logic._defineFormula(Logic.EqualBitsFormula, 'equalBits', {
   }
 });
 
+// Definition of full-adder and half-adder:
+//
+// A full-adder is a 3-input, 2-output gate producing the sum of its
+// inputs as a 2-bit binary number. The most significant bit is called
+// "carry", the least significant "sum". A half-adder does the same
+// thing, but has only 2 inputs (and can therefore never output a
+// "3").
+//
+// The half-adder sum bit is really just an XOR, and the carry bit
+// is really just an AND.  However, they get their own formula types
+// here to enhance readability of the generated clauses.
+
 Logic.HalfAdderSum = function (formula1, formula2) {
   _check(formula1, Logic.FormulaOrTerm);
   _check(formula2, Logic.FormulaOrTerm);
@@ -1054,7 +1072,9 @@ Logic._defineFormula(Logic.FullAdderCarry, 'fcarry', {
 //
 // Takes a list of list of Formulas.  The first list is bits
 // to give weight 1; the second is bits to give weight 2;
-// and so on.  Returns a Bits.
+// the third is bits to give weight 4; and so on.
+//
+// Returns an array of Logic.FormulaOrTerm.
 var binaryWeightedSum = function (varsByWeight) {
   _check(varsByWeight, [[Logic.FormulaOrTerm]]);
   // initialize buckets to a two-level clone of varsByWeight
@@ -1279,7 +1299,7 @@ Logic.Solution.prototype.getMap = function () {
 };
 
 // Get an array of variables that are assigned
-// `true` by this solution, in sorted order.
+// `true` by this solution, sorted by name.
 // Internal variables are excluded.
 Logic.Solution.prototype.getTrueVars = function () {
   var solver = this._solver;
@@ -1325,7 +1345,11 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
           ! _.has(self._ungeneratedFormulas, info.varNum)) {
         // as an optimization, read the value of the formula directly
         // from a variable if the formula's clauses were completely
-        // generated at the time of solving.
+        // generated at the time of solving.  (We must be careful,
+        // because if we didn't generate both the positive and the
+        // negative polarity clauses for the formula, then the formula
+        // variable is not actually constrained to have the right
+        // value.)
         value = assignment[info.varNum];
       } else {
         var clauses = solver._generateFormula(true, formula, self._termifier);
