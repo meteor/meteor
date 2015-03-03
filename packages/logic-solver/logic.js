@@ -203,14 +203,7 @@ Logic.Solver.prototype.getVarName = function (vnum) {
 Logic.Solver.prototype.toNumTerm = function (t, _noCreate) {
   var self = this;
 
-  if (_.isArray(t)) {
-    _check(t, [Logic.Term]);
-    return _.map(t, function (x) {
-      return self.toNumTerm(x);
-    });
-  } else {
-    _check(t, Logic.Term);
-  }
+  _check(t, Logic.Term);
 
   if (typeof t === 'number') {
     return t;
@@ -230,12 +223,7 @@ Logic.Solver.prototype.toNumTerm = function (t, _noCreate) {
 Logic.Solver.prototype.toNameTerm = function (t) {
   var self = this;
 
-  if (_.isArray(t)) {
-    _check(t, [Logic.Term]);
-    return _.map(t, _.bind(self.toNameTerm, self));
-  } else {
-    _check(t, Logic.Term);
-  }
+  _check(t, Logic.Term);
 
   if (typeof t === 'string') {
     // canonicalize, removing leading "--"

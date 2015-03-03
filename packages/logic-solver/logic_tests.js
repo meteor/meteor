@@ -58,11 +58,9 @@ Tinytest.add("logic-solver - toNameTerm, toNumTerm", function (test) {
 
   test.equal(s.toNumTerm("foo"), 3);
   test.equal(s.toNumTerm("-foo"), -3);
-  test.equal(s.toNumTerm(["foo", "-bar"]), [3, -4]);
 
   test.equal(s.toNameTerm(3), "foo");
   test.equal(s.toNameTerm(-3), "-foo");
-  test.equal(s.toNameTerm([3, -4]), ["foo", "-bar"]);
 
   test.equal(s.toNameTerm("-----foo"), "-foo");
 });
