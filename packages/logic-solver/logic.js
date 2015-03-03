@@ -121,34 +121,92 @@ Logic.Clause.prototype.append = function (/*formulaOrArray, ...*/) {
   return new Logic.Clause(this.terms.concat(_.flatten(arguments)));
 };
 
+var FormulaInfo = function () {
+  // We generate a variable when a Formula is used.
+  this.varName = null; // string name of variable
+  this.varNum = null; // number of variable (always positive)
+
+  // A formula variable that is used only in the positive or only
+  // in the negative doesn't need the full set of clauses that
+  // establish a bidirectional implication between the formula and the
+  // variable.  For example, in the formula `Logic.or("A", "B")`, with the
+  // formula variable `$or1`, the full set of clauses is `A v B v
+  // -$or1; -A v $or1; -B v $or1`.  If both `$or1` and `-$or1` appear
+  // elsewhere in the set of clauses, then all three of these clauses
+  // are required.  However, somewhat surprisingly, if only `$or1` appears,
+  // then only the first is necessary.  If only `-$or1` appears, then only
+  // the second and third are necessary.
+  //
+  // Suppose the formula A v B is represented by the variable $or1,
+  // and $or1 is only used positively. It's important that A v B being
+  // false forces $or1 to be false, so that when $or1 is used it has
+  // the appropriate effect. For example, if we have the clause $or1 v
+  // C, then A v B being false should force $or1 to be false, which
+  // forces C to be true. So we generate the clause A v B v
+  // -$or1. (The implications of this clause are: If A v B is false,
+  // $or1 must be false. If $or1 is true, A v B must be true.)
+  //
+  // However, in the case where A v B is true, we don't actually
+  // need to insist that the solver set $or1 to true, as long as we
+  // are ok with relaxing the relationship between A v B and $or1
+  // and getting a "wrong" value for $or1 in the solution. Suppose
+  // the solver goes to work and at some point determines A v B to
+  // be true. It could set $or1 to true, satisfying all the clauses
+  // where it appears, or it could set $or1 to false, which only
+  // constraints the solution space and doesn't open up any new
+  // solutions for other variables. If the solver happens to find a
+  // solution where A v B is true and $or1 is false, we know there
+  // is a similar solution that makes all the same assignments
+  // except it assigns $or1 to true.
+  //
+  // If a formula is used only negatively, a similar argument applies
+  // but with signs flipped, and if it is used both positively and
+  // negatively, both kinds of clauses must be generated.
+  //
+  // See the mention of "polarity" in the MiniSat+ paper
+  // (http://minisat.se/downloads/MiniSat+.pdf).
+  //
+  // These flags are set when generation has been done for the positive
+  // case or then negative case, so that we only generate each one once.
+  this.occursPositively = false;
+  this.occursNegatively = false;
+
+  // If a Formula has been directly required or forbidden, we can
+  // replace it by TRUE or FALSE in subsequent clauses.  Track the
+  // information here.
+  this.isRequired = false;
+  this.isForbidden = false;
+};
+
 Logic.Solver = function () {
-  this.clauses = []; // mutable [Clause]
-  this._num2name = [null]; // no 0th var
-  this._name2num = {}; // (' '+vname) -> vnum
+  var self = this;
+
+  self.clauses = []; // mutable [Clause]
+  self._num2name = [null]; // no 0th var
+  self._name2num = {}; // (' '+vname) -> vnum
 
   // true and false
-  this._F = this.getVarNum(Logic.FALSE, true); // 1
-  this._T = this.getVarNum(Logic.TRUE, true); // 2
-  this._F_used = false;
-  this._T_used = false;
+  self._F = self.getVarNum(Logic.FALSE, true); // 1
+  self._T = self.getVarNum(Logic.TRUE, true); // 2
+  self._F_used = false;
+  self._T_used = false;
   // It's important that these clauses are elements 0 and 1
   // of the clauses array, so that they can optionally be stripped
   // off.  For example, _clauseData takes advantage of this fact.
-  this.clauses.push(new Logic.Clause(-this._F));
-  this.clauses.push(new Logic.Clause(this._T));
+  self.clauses.push(new Logic.Clause(-self._F));
+  self.clauses.push(new Logic.Clause(self._T));
 
-  this._formulaInfo = {}; // Formula guid -> info object
-  // For generating formula names like "or1", "or2", "and1", "and2"
-  this._nextFormulaNumByType = {}; // Formula type -> next var id
+  self._formulaInfo = {}; // Formula guid -> FormulaInfo
+  // For generating formula variables like "$or1", "$or2", "$and1", "$and2"
+  self._nextFormulaNumByType = {}; // Formula type -> next var id
   // Map of Formulas whose info has `false` for either
   // `occursPositively` or `occursNegatively`
-  this._ungeneratedFormulas = {}; // varNum -> Formula
+  self._ungeneratedFormulas = {}; // varNum -> Formula
 
-  this._numClausesAddedToMiniSat = 0;
-  this._unsat = false; // once true, no solution henceforth
-  this._minisat = null; // created lazily
+  self._numClausesAddedToMiniSat = 0;
+  self._unsat = false; // once true, no solution henceforth
+  self._minisat = null; // created lazily
 
-  var self = this;
   var termifier = {
     term: function (formula) {
       return self._formulaToTerm(formula);
@@ -227,7 +285,7 @@ Logic.Solver.prototype.toNameTerm = function (t) {
 
   if (typeof t === 'string') {
     // canonicalize, removing leading "--"
-    while (t.slice(0, 2) == '--') {
+    while (t.slice(0, 2) === '--') {
       t = t.slice(2);
     }
     return t;
@@ -253,7 +311,7 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
   var extraTerms = null;
   if (_extraTerms) {
     extraTerms = _extraTerms;
-    _check(extraTerms, [Logic.Term]);
+    _check(extraTerms, [Logic.NumTerm]);
   }
 
   var usedF = false;
@@ -438,19 +496,7 @@ Logic.Solver.prototype._getFormulaInfo = function (formula, _noCreate) {
     if (_noCreate) {
       return null;
     }
-    self._formulaInfo[guid] = {
-      // We generate a variable when a Formula is used.  If the
-      // variable is only used positively or only used negatively, we
-      // can generate fewer clauses, using a method that relies on the
-      // fact that the generated variable is unobservable so we can
-      // get away without a bidirectional implication.
-      varName: null,
-      varNum: null,
-      occursPositively: false,
-      occursNegatively: false,
-      isRequired: false,
-      isForbidden: false
-    };
+    self._formulaInfo[guid] = new FormulaInfo();
   }
   return self._formulaInfo[guid];
 };
@@ -477,7 +523,7 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
     } else if (info.isForbidden) {
       return self._F;
     } else if (info.varNum === null) {
-      // generate a Solver-local formula name like "or1"
+      // generate a Solver-local formula variable like "$or1"
       var type = formula.type;
       if (! this._nextFormulaNumByType[type]) {
         this._nextFormulaNumByType[type] = 1;
