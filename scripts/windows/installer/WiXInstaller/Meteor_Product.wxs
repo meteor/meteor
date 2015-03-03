@@ -59,8 +59,8 @@
         </InstallExecuteSequence>
 
         <UI>
-            <ProgressText Action="Extract_MeteorFiles">Installing Meteor files ...</ProgressText>
-            <ProgressText Action="BulkRemoveMeteorFiles">Removing Meteor files ...</ProgressText>
+            <ProgressText Action="Extract_MeteorFiles">Installing Meteor...</ProgressText>
+            <ProgressText Action="BulkRemoveMeteorFiles">Removing Meteor...</ProgressText>
         </UI>
     </Product>
 

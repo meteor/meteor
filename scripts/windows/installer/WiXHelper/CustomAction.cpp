@@ -47,10 +47,10 @@ public:
 		if (ulProgressMax > 0) 
 		{
 			ulPrc  = static_cast<DWORD>(100 * static_cast<double>(ulProgress) / static_cast<double>(ulProgressMax));
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor package ...  %u%%", ulPrc);
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
 		}
 		else
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor package ...");
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...");
 
 
  
