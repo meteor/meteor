@@ -5,7 +5,7 @@
     <String Id="InstallHeader">Welcome to the [WixBundleName] Setup</String>
     <String Id="InstallMessage">Setup will install [WixBundleName] on your computer. During the wizard, you will be able to adjust product features and settings that fit best to your needs.</String>
     <String Id="InstallVersion">Version [WixBundleVersion]</String>
-    <String Id="InstallLicenseLinkText">By installing this application you have to read, understood and agree [WixBundleName]'s &lt;a href="[TermsUrl]"&gt;Terms of Use&lt;/a&gt; and &lt;a href="[PrivacyUrl]"&gt;Privacy Policy&lt;/a&gt;.</String>
+    <String Id="InstallLicenseLinkText"></String>
     <String Id="ConfirmCancelMessage">Are you sure you want to cancel?</String>
     <String Id="HelpHeader">Setup Help</String>
     <String Id="HelpText">
