@@ -264,7 +264,7 @@ files.statOrNull = function (path) {
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
     var fut = new Future();
-    rimraf(files.convertToOSPath(p), { busyTries: 10 }, fut.resolver());
+    rimraf(files.convertToOSPath(p), fut.resolver());
     fut.wait();
   } else {
     rimraf.sync(files.convertToOSPath(p));
