@@ -632,6 +632,18 @@ _.extend(Console.prototype, {
     if (stream && stream.isTTY && stream.columns) {
       width = stream.columns;
     }
+
+    // On Windows cmd.exe splits long lines into smaller chunks by inserting the
+    // '\r\n' symbols into the stream, this is what cmd.exe does instead of
+    // reflowing the text. We cannot control it. For some unknown reason, even
+    // when the output line is less than number of columns (usually 80), cmd.exe
+    // would still insert new-line chars. These chars break our repainting that
+    // relies on the previous chars to be erasable with '\b' (end-line chars
+    // can't be erased this way). This is why we report a smaller number than it
+    // is in reality, for safety.
+    if (process.platform === 'win32')
+      width -= 5;
+
     return width;
   },
 
