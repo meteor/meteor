@@ -368,7 +368,7 @@ _.extend(ProgressDisplayFull.prototype, {
     // This also means it appears less important, which is good
     var indentColumns = 3;
 
-    var streamColumns = this._stream.columns;
+    var streamColumns = this._console.width();
     var statusColumns;
     var progressColumns;
     if (! streamColumns) {
@@ -1168,7 +1168,7 @@ _.extend(Console.prototype, {
     } else if ((! self._stream.isTTY) || (! self._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(self);
-    } else if (self._stream.isTTY && ! self._stream.columns) {
+    } else if (self._stream.isTTY && ! self.width()) {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
