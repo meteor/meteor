@@ -25,6 +25,34 @@ Tinytest.add("logic-solver - _clauseStrings", function (test) {
   test.equal(s._clauseStrings(), ["foo", '-"myPackage 1.0.0"']);
 });
 
+Tinytest.add("logic-solver - illegal NameTerms", function (test) {
+  var s = new Logic.Solver;
+
+  test.throws(function () {
+    s.require('');
+  });
+
+  test.throws(function () {
+    s.require('-');
+  });
+
+  test.throws(function () {
+    s.require('0');
+  });
+
+  test.throws(function () {
+    s.require('$x');
+  });
+
+  test.throws(function () {
+    s.require('-1');
+  });
+
+  test.throws(function () {
+    s.require('---123');
+  });
+});
+
 Tinytest.add("logic-solver - toNameTerm, toNumTerm", function (test) {
   var s = new Logic.Solver;
 

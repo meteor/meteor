@@ -28,7 +28,11 @@ Logic.NumTerm = Match.Where(function (x) {
 });
 
 Logic.NameTerm = Match.Where(function (x) {
-  return (typeof x === 'string') && (!! x);
+  // NameTerm must not be empty, or just `-` characters, or
+  // look like a number.  Specifically, it can't be zero or
+  // more `-` followed by zero or more digits.
+  return (typeof x === 'string') &&
+    ! /^-*[0-9]*$/.test(x);
 });
 
 // Term: a variable name or variable number, optionally
