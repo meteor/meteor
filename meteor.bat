@@ -31,6 +31,7 @@ IF EXIST "%~dp0\.git" (
 )
 
 SET NODE_PATH=%~dp0\dev_bundle\lib\node_modules
+SET METEOR_INSTALLATION=%~dp0
 
 "%~dp0\dev_bundle\bin\node.exe" "%~dp0\tools\main.js" %*
 
