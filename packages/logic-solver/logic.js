@@ -40,6 +40,9 @@ Logic.NameTerm = Match.Where(function (x) {
 // keep it to either one or zero of them.
 Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
 
+// Abstract base class.  Subclasses are created using _defineFormula.
+Logic.Formula = function () {};
+
 Logic.FormulaOrTerm = Match.OneOf(Logic.Formula, Logic.Term);
 
 ////////// End Type Declarations
@@ -67,9 +70,6 @@ Logic.not = function (operand) {
 
 Logic.TRUE = "$T";
 Logic.FALSE = "$F";
-
-// Abstract base class.  Subclasses are created using _defineFormula.
-Logic.Formula = function () {};
 
 Logic._defineFormula = function (constructor, typeName, methods) {
   _check(constructor, Function);
