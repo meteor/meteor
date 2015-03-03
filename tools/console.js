@@ -1180,7 +1180,7 @@ _.extend(Console.prototype, {
     } else if ((! self._stream.isTTY) || (! self._pretty)) {
       // No progress bar if not in pretty / on TTY.
       newProgressDisplay = new ProgressDisplayNone(self);
-    } else if (self._stream.isTTY && ! self.width()) {
+    } else if (self._stream.isTTY && ! self._stream.columns) {
       // We might be in a pseudo-TTY that doesn't support
       // clearLine() and cursorTo(...).
       // It's important that we only enter status message mode
