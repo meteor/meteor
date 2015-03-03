@@ -154,13 +154,7 @@ var setUpBuiltPackageTropohouse = function () {
   // though some tests will want them to be under
   // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
   tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
-    // XXX we should stop relying on symlinks and just parse isopack.json (we
-    // need to do this for Windows anyway).
-    var directPath = '.' + isopack.version + '.XXX++' +
-          isopack.buildArchitectures();
-    isopack.saveToPath(tropohouse.packagePath(name, directPath));
-    files.symlinkOverSync(directPath,
-                          tropohouse.packagePath(name, isopack.version));
+    tropohouse._saveIsopack(isopack, name);
   });
 };
 
@@ -514,11 +508,13 @@ var Sandbox = function (options) {
     });
   }
 
+  var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
+
   // Figure out the 'meteor' to run
   if (self.warehouse)
-    self.execPath = files.pathJoin(self.warehouse, 'meteor');
+    self.execPath = files.pathJoin(self.warehouse, meteorScript);
   else
-    self.execPath = files.pathJoin(files.getCurrentToolsDir(), 'meteor');
+    self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
 };
 
 _.extend(Sandbox.prototype, {
@@ -577,7 +573,8 @@ _.extend(Sandbox.prototype, {
   createApp: function (to, template, options) {
     var self = this;
     options = options || {};
-    files.cp_r(files.pathJoin(__dirname, 'tests', 'apps', template),
+    files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), 'tests',
+                 'apps', template),
                files.pathJoin(self.cwd, to),
                { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
@@ -607,13 +604,32 @@ _.extend(Sandbox.prototype, {
 
   // Same as createApp, but with a package.
   //
+  // @param packageDir  {String} The directory in which to create the package
+  // @param packageName {String} The package name to create. This string will
+  //                             replace all appearances of ~package-name~
+  //                             in any package*.js files in the template
+  // @param template    {String} The package template to use. Found as a
+  //                             subdirectory in tests/packages/
+  //
   // For example:
-  //   s.createPackage('mypack', 'empty');
-  //   s.cd('mypack');
-  createPackage: function (to, template) {
+  //   s.createPackage('me_mypack', me:mypack', 'empty');
+  //   s.cd('me_mypack');
+  createPackage: function (packageDir, packageName, template) {
     var self = this;
-    files.cp_r(files.pathJoin(__dirname, 'tests', 'packages', template),
-               files.pathJoin(self.cwd, to));
+    var packagePath = files.pathJoin(self.cwd, packageDir);
+    var templatePackagePath = files.pathJoin(
+      files.convertToStandardPath(__dirname), 'tests', 'packages', template);
+    files.cp_r(templatePackagePath, packagePath);
+
+    _.each(files.readdir(packagePath), function (file) {
+      if (file.match(/^package.*\.js$/)) {
+        var packageJsFile = files.pathJoin(packagePath, file);
+        files.writeFile(
+          packageJsFile,
+          files.readFile(packageJsFile, "utf8")
+            .replace("~package-name~", packageName));
+      }
+    });
   },
 
   // Change the cwd to be used for subsequent runs. For example:
@@ -722,11 +738,12 @@ _.extend(Sandbox.prototype, {
   _makeEnv: function () {
     var self = this;
     var env = _.clone(self.env);
-    env.METEOR_SESSION_FILE = files.pathJoin(self.root, '.meteorsession');
+    env.METEOR_SESSION_FILE = files.convertToOSPath(
+      files.pathJoin(self.root, '.meteorsession'));
 
     if (self.warehouse) {
       // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
 
       if (! _.contains(runningTest.tags, 'test-package-server')) {
         // Don't ever try to refresh the stub catalog we made.
@@ -838,10 +855,10 @@ _.extend(Sandbox.prototype, {
 
     // And a cherry on top
     // XXX this is hacky
-    files.symlink(files.pathJoin(packagesDirectoryName,
-                                  "meteor-tool", toolPackageVersion,
-                                  'meteor-tool-' + archinfo.host(), 'meteor'),
-                  files.pathJoin(self.warehouse, 'meteor'));
+    files.linkToMeteorScript(
+      files.pathJoin(self.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
+        'mt-' + archinfo.host(), 'meteor'),
+      files.pathJoin(self.warehouse, 'meteor'));
   }
 });
 
@@ -880,13 +897,12 @@ _.extend(PhantomClient.prototype, {
   connect: function () {
     var self = this;
 
-    var phantomScript = "require('webpage').create().open('" + self.url + "');";
     var phantomPath = phantomjs.path;
-    self.process = child_process.execFile(
-      '/bin/bash',
-      ['-c',
-       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "\nEND\n")],
+
+    var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
+      "phantom", "open-url.js");
+    self.process = child_process.execFile(phantomPath, ["--load-images=no",
+      files.convertToOSPath(scriptPath), self.url],
       {}, function (error, stdout, stderr) {
         if (self._logError && error) {
           console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
@@ -1014,17 +1030,24 @@ _.extend(BrowserStackClient.prototype, {
 // Run
 ///////////////////////////////////////////////////////////////////////////////
 
-// Represents a test run of the tool. Typically created through the
+// Represents a test run of the tool (except we also use it in
+// tests/old.js to run Node scripts). Typically created through the
 // run() method on Sandbox, but can also be created directly, say if
 // you want to do something other than invoke the 'meteor' command in
 // a nice sandbox.
 //
 // Options: args, cwd, env
+//
+// The 'execPath' argument and the 'cwd' option are assumed to be standard
+// paths.
+//
+// Arguments in the 'args' option are not assumed to be standard paths, so
+// calling any of the 'files.*' methods on them is not safe.
 var Run = function (execPath, options) {
   var self = this;
 
   self.execPath = execPath;
-  self.cwd = options.cwd || process.cwd();
+  self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
   self.env = options.env || {};
   self._args = [];
   self.proc = null;
@@ -1117,13 +1140,18 @@ _.extend(Run.prototype, {
     var env = _.clone(process.env);
     _.extend(env, self.env);
 
-    var child_process = require('child_process');
-    self.proc = child_process.spawn(self.execPath, self._args, {
-      cwd: self.cwd,
-      env: env
-    });
+    self.proc = child_process.spawn(files.convertToOSPath(self.execPath),
+      self._args, {
+        cwd: files.convertToOSPath(self.cwd),
+        env: env
+      });
 
     self.proc.on('close', function (code, signal) {
+      if (self.exitStatus === undefined)
+        self._exited({ code: code, signal: signal });
+    });
+
+    self.proc.on('exit', function (code, signal) {
       if (self.exitStatus === undefined)
         self._exited({ code: code, signal: signal });
     });
@@ -1280,7 +1308,7 @@ _.extend(Run.prototype, {
     if (self.exitStatus === undefined) {
       self._ensureStarted();
       self.client && self.client.stop();
-      self.proc.kill();
+      self._killProcess();
       self.expectExit();
     }
   }),
@@ -1290,7 +1318,21 @@ _.extend(Run.prototype, {
     var self = this;
     if (self.exitStatus === undefined && self.proc) {
       self.client && self.client.stop();
-      self.proc.kill();
+      self._killProcess();
+    }
+  },
+
+  // Kills the running process and it's child processes
+  _killProcess: function () {
+    if (!this.proc)
+      throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
+
+    if (process.platform === "win32") {
+      // looks like in Windows `self.proc.kill()` doesn't kill child
+      // processes.
+      utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+    } else {
+      this.proc.kill();
     }
   },
 
@@ -1461,6 +1503,8 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
+  cordova: 'requires Cordova support in tool (eg not on Windows)',
+  windows: 'runs only on Windows',
   // these are pseudo-tags, assigned to tests when you specify
   // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
@@ -1523,6 +1567,13 @@ var getFilteredTests = function (options) {
   }
   if (! options.includeSlowTests) {
     tagsToSkip.push('slow');
+  }
+
+  if (process.platform === "win32") {
+    tagsToSkip.push("cordova");
+    tagsToSkip.push("yet-unsolved-windows-failure");
+  } else {
+    tagsToSkip.push("windows");
   }
 
   return new TestList(allTests, tagsToSkip, testState);
@@ -1629,7 +1680,7 @@ TestList.prototype.generateSkipReport = function () {
 };
 
 var getTestStateFilePath = function () {
-  return files.pathJoin(process.env.HOME, '.meteortest');
+  return files.pathJoin(files.getHomeDir(), '.meteortest');
 };
 
 var readTestState = function () {
@@ -1699,12 +1750,7 @@ var runTests = function (options) {
       var startTime = +(new Date);
       test.f(options);
     } catch (e) {
-      if (e instanceof TestFailure) {
-        failure = e;
-      } else {
-        Console.error("exception\n");
-        throw e;
-      }
+      failure = e;
     } finally {
       runningTest = null;
       test.cleanup();
@@ -1715,52 +1761,56 @@ var runTests = function (options) {
       failedTests.push(test);
       testList.notifyFailed(test);
 
-      var frames = parseStack.parse(failure);
-      var relpath = files.pathRelative(files.getCurrentToolsDir(),
-                                  frames[0].file);
-      Console.rawError("  => " + failure.reason + " at " +
-                    relpath + ":" + frames[0].line + "\n");
-      if (failure.reason === 'no-match') {
-        Console.arrowError("Pattern: " + failure.details.pattern, 2);
-      }
-      if (failure.reason === "wrong-exit-code") {
-        var s = function (status) {
-          return status.signal || ('' + status.code) || "???";
-        };
-
-        Console.rawError("  => " + "Expected: " + s(failure.details.expected) +
-                      "; actual: " + s(failure.details.actual) + "\n");
-      }
-      if (failure.reason === 'expected-exception') {
-      }
-      if (failure.reason === 'not-equal') {
-        Console.rawError(
-          "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
-          "; actual: " + JSON.stringify(failure.details.actual) + "\n");
-      }
-
-      if (failure.details.run) {
-        failure.details.run.outputLog.end();
-        var lines = failure.details.run.outputLog.get();
-        if (! lines.length) {
-          Console.arrowError("No output", 2);
-        } else {
-          var historyLines = options.historyLines || 100;
-
-          Console.arrowError("Last " + historyLines + " lines:", 2
-          );
-          _.each(lines.slice(-historyLines), function (line) {
-            Console.rawError("  " +
-                             (line.channel === "stderr" ? "2| " : "1| ") +
-                             line.text +
-                             (line.bare ? "%" : "") + "\n");
-          });
+      if (failure instanceof TestFailure) {
+        var frames = parseStack.parse(failure);
+        var relpath = files.pathRelative(files.getCurrentToolsDir(),
+                                         frames[0].file);
+        Console.rawError("  => " + failure.reason + " at " +
+                         relpath + ":" + frames[0].line + "\n");
+        if (failure.reason === 'no-match') {
+          Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
-      }
+        if (failure.reason === "wrong-exit-code") {
+          var s = function (status) {
+            return status.signal || ('' + status.code) || "???";
+          };
 
-      if (failure.details.messages) {
-        Console.arrowError("Errors while building:", 2);
-        Console.rawError(failure.details.messages.formatMessages() + "\n");
+          Console.rawError(
+            "  => " + "Expected: " + s(failure.details.expected) +
+              "; actual: " + s(failure.details.actual) + "\n");
+        }
+        if (failure.reason === 'expected-exception') {
+        }
+        if (failure.reason === 'not-equal') {
+          Console.rawError(
+            "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        }
+
+        if (failure.details.run) {
+          failure.details.run.outputLog.end();
+          var lines = failure.details.run.outputLog.get();
+          if (! lines.length) {
+            Console.arrowError("No output", 2);
+          } else {
+            var historyLines = options.historyLines || 100;
+
+            Console.arrowError("Last " + historyLines + " lines:", 2);
+            _.each(lines.slice(-historyLines), function (line) {
+              Console.rawError("  " +
+                               (line.channel === "stderr" ? "2| " : "1| ") +
+                               line.text +
+                               (line.bare ? "%" : "") + "\n");
+            });
+          }
+        }
+
+        if (failure.details.messages) {
+          Console.arrowError("Errors while building:", 2);
+          Console.rawError(failure.details.messages.formatMessages() + "\n");
+        }
+      } else {
+        Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
     } else {
       var durationMs = +(new Date) - startTime;

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.2'
+  version: '1.0.3-winr.2'
 });
 
 // These tests are in a separate package to avoid a circular dependency
@@ -15,6 +15,7 @@ Package.onTest(function (api) {
   api.use('showdown');
   api.use('minimongo');
   api.use('tracker');
+  api.use('mongo');
 
   api.use('templating', 'client');
   api.addFiles([
@@ -36,4 +37,8 @@ Package.onTest(function (api) {
     'assets/markdown_each1.html',
     'assets/markdown_each2.html'
   ], 'server', { isAsset: true });
+
+  // For template level subscriptions, we need tests that can subscribe to
+  // things.
+  api.addFiles('template_tests_collections.js');
 });

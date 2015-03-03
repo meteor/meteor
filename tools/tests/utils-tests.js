@@ -126,7 +126,7 @@ selftest.define("parse url", function () {
   });
 });
 
-selftest.define('get mobile server argument for meteor run', function () {
+selftest.define('get mobile server argument for meteor run', ['cordova'], function () {
   // on emulator
 
   // meteor run -p 3000

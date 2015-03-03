@@ -22,6 +22,7 @@ var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
+var colonConverter = require('./colon-converter.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -34,7 +35,47 @@ var DEFAULT_PORT = '3000';
 var VALID_ARCHITECTURES = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32": true
+  "os.linux.x86_32": true,
+  "os.windows.x86_32": true
+};
+
+
+// __dirname - the location of the current executing file
+var __dirnameConverted = files.convertToStandardPath(__dirname);
+
+/**
+ * Display a message that we can't do mobile things on Windows, and then
+ * either crash or continue with no mobile platforms.
+ * @param  {String[]} platforms The platforms we are trying to build for. This
+ * function does nothing if this is empty.
+ * @param  {Object} options
+ * @param {Boolean} exit If true, exit if there are any selected platforms.
+ * Use for situations where the program should not continue running if we are
+ * trying to do mobile things on Windows.
+ * @param {Function} messageFunc Print this to warn people that you can't
+ * build for mobile. Takes the platforms as an argument.
+ * @return {String[]} an empty array on Windows, the platforms unchanged
+ * everywhere else
+ */
+var dontBuildMobileOnWindows = function (platforms, options) {
+  options = options || {};
+
+  if (! _.isEmpty(platforms) && process.platform === "win32") {
+    // Default message to print when we can't Cordova on Windows
+    var MESSAGE_NOTHING_ON_WINDOWS =
+      "Currently, it is not possible to build mobile apps on a Windows system.";
+
+    Console.failWarn(options.messageFunc ?
+      options.messageFunc(platforms) : MESSAGE_NOTHING_ON_WINDOWS);
+
+    if (options.exit) {
+      throw new main.ExitWithCode(2);
+    }
+
+    return [];
+  }
+
+  return platforms;
 };
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -208,6 +249,14 @@ function doRunCommand (options) {
     return 1;
   }
 
+  options.args = dontBuildMobileOnWindows(options.args, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run on the following platforms on Windows: " +
+        platforms.join(", ");
+    }
+  });
+
   try {
     var parsedMobileServer = utils.mobileServerForRun(options);
   } catch (err) {
@@ -246,6 +295,7 @@ function doRunCommand (options) {
   // If additional args were specified, then also start a mobile build.
   // XXX We should defer this work until after the proxy is listening!
   //     eg, move it into a CordovaBuildRunner or something.
+
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
@@ -326,6 +376,7 @@ function doRunCommand (options) {
   //
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
+    options.once = true;
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
     var velocity = require('./run-velocity.js');
@@ -378,6 +429,8 @@ main.registerCommand(_.extend(
 
 main.registerCommand({
   name: 'shell',
+  requiresRelease: false,
+  requiresApp: true,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -387,11 +440,16 @@ main.registerCommand({
       "in a Meteor app directory."
     );
   } else {
-    require('./server/shell.js').connect(
-      new projectContextModule.ProjectContext({
-        projectDir: options.appDir
-      }).getMeteorShellDirectory()
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir
+    });
+
+    // Convert to OS path here because shell/server.js doesn't know how to
+    // convert paths, since it exists in the app and in the tool.
+    require('./shell-client.js').connect(
+      files.convertToOSPath(projectContext.getMeteorShellDirectory())
     );
+
     throw new main.WaitForExit;
   }
 });
@@ -432,9 +490,14 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
-    var packageDir = options.appDir
-          ? files.pathResolve(options.appDir, 'packages', packageName)
-          : files.pathResolve(packageName);
+    var fsName = colonConverter.convert(packageName);
+    var packageDir;
+    if (options.appDir) {
+      packageDir = files.pathResolve(options.appDir, 'packages', fsName);
+    } else {
+      packageDir = files.pathResolve(fsName);
+    }
+
     var inYourApp = options.appDir ? " in your app" : "";
 
     if (files.exists(packageDir)) {
@@ -443,7 +506,8 @@ main.registerCommand({
     }
 
     var transform = function (x) {
-      var xn = x.replace(/~name~/g, packageName);
+      var xn =
+        x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
       // If we are running from checkout, comment out the line sourcing packages
       // from a release, with the latest release filled in (in case they do want
@@ -463,25 +527,36 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
+
     try {
-      files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirnameConverted, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
-   } catch (err) {
-     Console.error("Could not create package: " + err.message);
-     return 1;
-   }
+        },
+        transformContents: function (contents, f) {
+          if ((/(\.html|\.js|\.css)/).test(f))
+            return new Buffer(transform(contents.toString()));
+          else
+            return contents;
+        },
+        ignore: [/^local$/]
+      });
+    } catch (err) {
+      Console.error("Could not create package: " + err.message);
+      return 1;
+    }
 
-    Console.info(packageName + ": created" + inYourApp);
+    var displayPackageDir =
+      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+
+    // Since the directory can't have colons, the directory name will often not
+    // match the name of the package exactly, therefore we should tell people
+    // where it was created.
+    Console.info(
+      packageName + ": created in ",
+      Console.path(displayPackageDir)
+    );
+
     return 0;
   }
 
@@ -501,7 +576,7 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = files.pathJoin(__dirname, '..', 'examples');
+  var exampleDir = files.pathJoin(__dirnameConverted, '..', 'examples');
   var examples = _.reject(files.readdir(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
   });
@@ -562,7 +637,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirnameConverted, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },
@@ -705,6 +780,14 @@ var buildCommand = function (options) {
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
+
+  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms, {
+    messageFunc: function (platforms) {
+      return "Can't build for mobile on Windows. Skipping the following " +
+        "platforms: " + platforms.join(", ");
+    }
+  });
+
   var appName = files.pathBasename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
@@ -1320,6 +1403,14 @@ main.registerCommand({
       mobileTargets.push(option);
   });
 
+  mobileTargets = dontBuildMobileOnWindows(mobileTargets, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run test-packages on Windows using platforms: " +
+        platforms.join(", ");
+    }
+  });
+
   if (! _.isEmpty(mobileTargets)) {
     var runners = [];
     // For this release; we won't force-enable the httpProxy
@@ -1930,6 +2021,52 @@ main.registerCommand({
   maybeLog("Removing sshkey at " + idpath);
   files.unlink(idpath);
   return sshEnd;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
+// admin progressbar-test
+///////////////////////////////////////////////////////////////////////////////
+
+// A test command to print a progressbar. Useful for manual testing.
+main.registerCommand({
+  name: 'admin progressbar-test',
+  options: {
+    secs: { type: Number, default: 20 },
+    spinner: { type: Boolean, default: false }
+  },
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  buildmessage.enterJob({ title: "A test progressbar" }, function () {
+    var doneFuture = new Future;
+    var progress = buildmessage.getCurrentProgressTracker();
+    var totalProgress = { current: 0, end: options.secs, done: false };
+    var i = 0;
+    var n = options.secs;
+
+    if (options.spinner) {
+      totalProgress.end = undefined;
+    }
+
+    var updateProgress = function () {
+      i++;
+      if (! options.spinner) {
+        totalProgress.current = i;
+      }
+
+      if (i === n) {
+        totalProgress.done = true;
+        progress.reportProgress(totalProgress);
+        doneFuture.return();
+      } else {
+        progress.reportProgress(totalProgress);
+        setTimeout(updateProgress, 1000);
+      }
+    };
+    setTimeout(updateProgress);
+    doneFuture.wait();
+  });
 });
 
 

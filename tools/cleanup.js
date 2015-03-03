@@ -18,15 +18,13 @@ _.extend(exports, {
 });
 
 var runHandlers = function () {
-  Fiber(function () {
-    fiberHelpers.noYieldsAllowed(function () {
-      var handlers = cleanup._exitHandlers;
-      cleanup._exitHandlers = [];
-      _.each(handlers, function (f) {
-        f();
-      });
+  fiberHelpers.noYieldsAllowed(function () {
+    var handlers = cleanup._exitHandlers;
+    cleanup._exitHandlers = [];
+    _.each(handlers, function (f) {
+      f();
     });
-  }).run();
+  });
 };
 
 process.on('exit', runHandlers);

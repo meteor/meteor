@@ -1,7 +1,8 @@
 var Future = Npm.require('fibers/future');
 
 OPLOG_COLLECTION = 'oplog.rs';
-var REPLSET_COLLECTION = 'system.replset';
+
+var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
@@ -41,7 +42,6 @@ OplogHandle = function (oplogUrl, dbName) {
   self._crossbar = new DDPServer._Crossbar({
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
-  self._lastProcessedTS = null;
   self._baseOplogSelector = {
     ns: new RegExp('^' + quotemeta(self._dbName) + '\\.'),
     $or: [
@@ -49,8 +49,34 @@ OplogHandle = function (oplogUrl, dbName) {
       // If it is not db.collection.drop(), ignore it
       { op: 'c', 'o.drop': { $exists: true } }]
   };
-  // XXX doc
+
+  // Data structures to support waitUntilCaughtUp(). Each oplog entry has a
+  // MongoTimestamp object on it (which is not the same as a Date --- it's a
+  // combination of time and an incrementing counter; see
+  // http://docs.mongodb.org/manual/reference/bson-types/#timestamps).
+  //
+  // _catchingUpFutures is an array of {ts: MongoTimestamp, future: Future}
+  // objects, sorted by ascending timestamp. _lastProcessedTS is the
+  // MongoTimestamp of the last oplog entry we've processed.
+  //
+  // Each time we call waitUntilCaughtUp, we take a peek at the final oplog
+  // entry in the db.  If we've already processed it (ie, it is not greater than
+  // _lastProcessedTS), waitUntilCaughtUp immediately returns. Otherwise,
+  // waitUntilCaughtUp makes a new Future and inserts it along with the final
+  // timestamp entry that it read, into _catchingUpFutures. waitUntilCaughtUp
+  // then waits on that future, which is resolved once _lastProcessedTS is
+  // incremented to be past its timestamp by the worker fiber.
+  //
+  // XXX use a priority queue or something else that's faster than an array
   self._catchingUpFutures = [];
+  self._lastProcessedTS = null;
+
+  self._onSkippedEntriesHook = new Hook({
+    debugPrintExceptions: "onSkippedEntries callback"
+  });
+
+  self._entryQueue = new Meteor._DoubleEndedQueue();
+  self._workerActive = false;
 
   self._startTailing();
 };
@@ -86,6 +112,14 @@ _.extend(OplogHandle.prototype, {
         listenHandle.stop();
       }
     };
+  },
+  // Register a callback to be invoked any time we skip oplog entries (eg,
+  // because we are too far behind).
+  onSkippedEntries: function (callback) {
+    var self = this;
+    if (self._stopped)
+      throw new Error("Called onSkippedEntries on stopped handle!");
+    return self._onSkippedEntriesHook.register(callback);
   },
   // Calls `callback` once the oplog has been processed up to a point that is
   // roughly "now": specifically, once we've processed all ops that are
@@ -150,6 +184,13 @@ _.extend(OplogHandle.prototype, {
   },
   _startTailing: function () {
     var self = this;
+    // First, make sure that we're talking to the local database.
+    var mongodbUri = Npm.require('mongodb-uri');
+    if (mongodbUri.parse(self._oplogUrl).database !== 'local') {
+      throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
+                  "a Mongo replica set");
+    }
+
     // We make two separate connections to Mongo. The Node Mongo driver
     // implements a naive round-robin connection pool: each "connection" is a
     // pool of several (5 by default) TCP connections, and each request is
@@ -169,13 +210,17 @@ _.extend(OplogHandle.prototype, {
     self._oplogLastEntryConnection = new MongoConnection(
       self._oplogUrl, {poolSize: 1});
 
-    // First, make sure that there actually is a repl set here. If not, oplog
-    // tailing won't ever find anything! (Blocks until the connection is ready.)
-    var replSetInfo = self._oplogLastEntryConnection.findOne(
-      REPLSET_COLLECTION, {});
-    if (!replSetInfo)
+    // Now, make sure that there actually is a repl set here. If not, oplog
+    // tailing won't ever find anything!
+    var f = new Future;
+    self._oplogLastEntryConnection.db.admin().command(
+      { ismaster: 1 }, f.resolver());
+    var isMasterDoc = f.wait();
+    if (!(isMasterDoc && isMasterDoc.documents && isMasterDoc.documents[0] &&
+          isMasterDoc.documents[0].setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
                   "a Mongo replica set");
+    }
 
     // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
@@ -196,40 +241,82 @@ _.extend(OplogHandle.prototype, {
 
     self._tailHandle = self._oplogTailConnection.tail(
       cursorDescription, function (doc) {
-        if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
-              doc.ns.substr(0, self._dbName.length + 1) ===
-              (self._dbName + '.'))) {
-          throw new Error("Unexpected ns");
-        }
-
-        var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
-                       dropCollection: false,
-                       op: doc};
-
-        // Is it a special command and the collection name is hidden somewhere
-        // in operator?
-        if (trigger.collection === "$cmd") {
-          trigger.collection = doc.o.drop;
-          trigger.dropCollection = true;
-          trigger.id = null;
-        } else {
-          // All other ops have an id.
-          trigger.id = idForOp(doc);
-        }
-
-        self._crossbar.fire(trigger);
-
-        // Now that we've processed this operation, process pending sequencers.
-        if (!doc.ts)
-          throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-        self._lastProcessedTS = doc.ts;
-        while (!_.isEmpty(self._catchingUpFutures)
-               && self._catchingUpFutures[0].ts.lessThanOrEqual(
-                 self._lastProcessedTS)) {
-          var sequencer = self._catchingUpFutures.shift();
-          sequencer.future.return();
-        }
-      });
+        self._entryQueue.push(doc);
+        self._maybeStartWorker();
+      }
+    );
     self._readyFuture.return();
+  },
+
+  _maybeStartWorker: function () {
+    var self = this;
+    if (self._workerActive)
+      return;
+    self._workerActive = true;
+    Meteor.defer(function () {
+      try {
+        while (! self._stopped && ! self._entryQueue.isEmpty()) {
+          // Are we too far behind? Just tell our observers that they need to
+          // repoll, and drop our queue.
+          if (self._entryQueue.length > TOO_FAR_BEHIND) {
+            var lastEntry = self._entryQueue.pop();
+            self._entryQueue.clear();
+
+            self._onSkippedEntriesHook.each(function (callback) {
+              callback();
+              return true;
+            });
+
+            // Free any waitUntilCaughtUp() calls that were waiting for us to
+            // pass something that we just skipped.
+            self._setLastProcessedTS(lastEntry.ts);
+            continue;
+          }
+
+          var doc = self._entryQueue.shift();
+
+          if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
+                doc.ns.substr(0, self._dbName.length + 1) ===
+                (self._dbName + '.'))) {
+            throw new Error("Unexpected ns");
+          }
+
+          var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
+                         dropCollection: false,
+                         op: doc};
+
+          // Is it a special command and the collection name is hidden somewhere
+          // in operator?
+          if (trigger.collection === "$cmd") {
+            trigger.collection = doc.o.drop;
+            trigger.dropCollection = true;
+            trigger.id = null;
+          } else {
+            // All other ops have an id.
+            trigger.id = idForOp(doc);
+          }
+
+          self._crossbar.fire(trigger);
+
+          // Now that we've processed this operation, process pending
+          // sequencers.
+          if (!doc.ts)
+            throw Error("oplog entry without ts: " + EJSON.stringify(doc));
+          self._setLastProcessedTS(doc.ts);
+        }
+      } finally {
+        self._workerActive = false;
+      }
+    });
+  },
+  _setLastProcessedTS: function (ts) {
+    var self = this;
+    self._lastProcessedTS = ts;
+    while (!_.isEmpty(self._catchingUpFutures)
+           && self._catchingUpFutures[0].ts.lessThanOrEqual(
+             self._lastProcessedTS)) {
+      var sequencer = self._catchingUpFutures.shift();
+      sequencer.future.return();
+    }
   }
 });

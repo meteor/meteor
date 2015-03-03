@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.1.5'
+  version: '1.1.6-winr.4'
 });
 
 Cordova.depends({
-  'org.apache.cordova.file': '1.3.0',
-  'org.apache.cordova.file-transfer': '0.4.4'
+  'org.apache.cordova.file': '1.3.3',
+  'org.apache.cordova.file-transfer': '0.5.0'
 });
 
 Package.onUse(function (api) {

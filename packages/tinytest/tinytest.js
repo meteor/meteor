@@ -234,12 +234,12 @@ _.extend(TestCaseResults.prototype, {
     if (v)
       this.ok();
     else
-      this.fail({type: "true", message: msg});
+      this.fail({type: "true", message: msg, not: false});
   },
 
   isFalse: function (v, msg) {
     if (v)
-      this.fail({type: "true", message: msg});
+      this.fail({type: "true", message: msg, not: true});
     else
       this.ok();
   },
@@ -248,12 +248,12 @@ _.extend(TestCaseResults.prototype, {
     if (v === null)
       this.ok();
     else
-      this.fail({type: "null", message: msg});
+      this.fail({type: "null", message: msg, not: false});
   },
 
   isNotNull: function (v, msg) {
     if (v === null)
-      this.fail({type: "true", message: msg});
+      this.fail({type: "null", message: msg, not: true});
     else
       this.ok();
   },
@@ -272,7 +272,7 @@ _.extend(TestCaseResults.prototype, {
       this.fail({type: "NaN", message: msg});
   },
 
-  include: function (s, v) {
+  include: function (s, v, message, not) {
     var pass = false;
     if (s instanceof Array)
       pass = _.any(s, function(it) {return _.isEqual(v, it);});
@@ -284,11 +284,16 @@ _.extend(TestCaseResults.prototype, {
       }
     else
       /* fail -- not something that contains other things */;
-    if (pass)
+    if (pass === ! not)
       this.ok();
     else {
-      this.fail({type: "include", sequence: s, should_contain_value: v});
+      this.fail({type: "include", message: message,
+                 sequence: s, should_contain_value: v, not: !!not});
     }
+  },
+
+  notInclude: function (s, v, message) {
+    this.include(s, v, message, true);
   },
 
   // XXX should change to lengthOf to match vowsjs
@@ -392,6 +397,10 @@ TestManager = function () {
   self.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
 };
 
+if (Meteor.isServer && process.env.TINYTEST_FILTER) {
+  __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
+}
+
 _.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
@@ -399,6 +408,10 @@ _.extend(TestManager.prototype, {
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
           test.name + "'");
+    if (__meteor_runtime_config__.tinytestFilter &&
+        test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
+      return;
+    }
     self.tests[test.name] = test;
     self.ordered_tests.push(test);
   },

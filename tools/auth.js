@@ -748,12 +748,12 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       var spinner = ['-', '\\', '|', '/'];
       lastLinePrinted = "Waiting for you to register on the web... " +
         spinner[animationFrame];
-      Console.rawError(lastLinePrinted + "\r");
+      Console.rawError(lastLinePrinted + Console.CARRIAGE_RETURN);
       animationFrame = (animationFrame + 1) % spinner.length;
     }, 200);
     var stopSpinner = function () {
       Console.rawError(new Array(lastLinePrinted.length + 1).join(' ') +
-                       "\r");
+                       Console.CARRIAGE_RETURN);
       clearInterval(timer);
     };
 
@@ -938,7 +938,20 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 
   // Either we didn't have an existing token, or it didn't work. Do an
   // OAuth flow to log in.
-  var redirectUri = url + '/_oauth/meteor-developer?close';
+  var redirectUri = url + '/_oauth/meteor-developer';
+
+  // Duplicate code from packages/oauth/oauth_common.js. In Meteor 0.9.1, we
+  // switched to a new URL style for Oauth that no longer has the "?close"
+  // parameter at the end. However, we need all of our backend services to be
+  // compatible with old Meteor tools which were written before 0.9.1. These old
+  // meteor tools only know how to deal with oauth URLs that have the "?close"
+  // query parameter, so our services (packages.meteor.com, etc) have to use the
+  // old-style URL. This means that all new Meteor tools also need to use the
+  // old-style URL to be compatible with the new servers which are backwards-
+  // compatible with the old tool.
+  if (! accountsConfiguration.loginStyle) {
+    redirectUri = redirectUri + "?close";
+  }
   loginResult = oauthFlow(conn, {
     clientId: clientId,
     redirectUri: redirectUri,

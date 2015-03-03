@@ -6,6 +6,7 @@ var files = require('./files.js');
 var isopackModule = require('./isopack.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
+var colonConverter = require("./colon-converter.js");
 
 exports.IsopackCache = function (options) {
   var self = this;
@@ -167,7 +168,8 @@ _.extend(exports.IsopackCache.prototype, {
           function () {
             var isopackPath = self._tropohouse.packagePath(
               name, packageInfo.version);
-            isopack = new isopackModule.Isopack();
+            var Isopack = isopackModule.Isopack;
+            isopack = new Isopack();
             isopack.initFromPath(name, isopackPath);
             // If loading the isopack fails, then we don't need to look for more
             // packages to load, but we should still recover by putting it in
@@ -204,7 +206,8 @@ _.extend(exports.IsopackCache.prototype, {
         var upToDate = self._checkUpToDate(isopackBuildInfoJson);
 
         if (upToDate) {
-          isopack = new isopackModule.Isopack;
+          var Isopack = isopackModule.Isopack;
+          isopack = new Isopack();
           isopack.initFromPath(name, self._isopackDir(name), {
             isopackBuildInfoJson: isopackBuildInfoJson
           });
@@ -288,8 +291,7 @@ _.extend(exports.IsopackCache.prototype, {
 
   _isopackDir: function (packageName) {
     var self = this;
-    return files.pathJoin(self.cacheDir,
-                          utils.escapePackageNameForPath(packageName));
+    return files.pathJoin(self.cacheDir, colonConverter.convert(packageName));
   },
 
   _isopackBuildInfoPath: function (packageName) {

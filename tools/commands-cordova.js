@@ -34,11 +34,12 @@ var cordovaWarehouseDir = function () {
     return process.env.METEOR_WAREHOUSE_DIR;
 
   var warehouseBase = files.inCheckout()
-    ? files.getCurrentToolsDir() : process.env.HOME;
+    ? files.getCurrentToolsDir() : files.getHomeDir();
   return files.pathJoin(warehouseBase, ".meteor", "cordova");
 };
 
 var MESSAGE_IOS_ONLY_ON_MAC = "Currently, it is only possible to build iOS apps on an OS X system.";
+var MESSAGE_NOTHING_ON_WINDOWS = "Currently, Meteor Mobile features are not available on Windows.";
 
 var splitN = function (s, split, n) {
   if (n <= 1) {
@@ -82,13 +83,18 @@ cordova.buildTargets = function (projectContext, targets, options) {
   platforms = _.filter(platforms, function (platform) {
     var inProject = _.contains(cordovaPlatforms, platform);
     var hasSdk = checkPlatformRequirements(platform).acceptable;
-    var supported = !Host.isLinux() || platform !== "ios";
+    var supported =
+      ! ((Host.isLinux() && platform === "ios") || Host.isWindows());
 
     var displayPlatform = platformToHuman(platform);
 
     if (! inProject) {
       if (! supported) {
-        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        if (Host.isWindows()) {
+          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+        } else {
+          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        }
       } else {
         Console.warn("Please add the " + displayPlatform +
                      " platform to your project first.");
@@ -110,12 +116,17 @@ cordova.buildTargets = function (projectContext, targets, options) {
         return false;
       }
 
-      if (supported)
+      if (supported) {
         Console.warn("The " + displayPlatform + " platform is not installed;" +
                      " please run: " +
                      Console.command("meteor install-sdk " + platform));
-      else
-        Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+      } else {
+        if (Host.isWindows()) {
+          Console.failWarn(MESSAGE_NOTHING_ON_WINDOWS);
+        } else {
+          Console.failWarn(MESSAGE_IOS_ONLY_ON_MAC);
+        }
+      }
 
       throw new main.ExitWithCode(2);
     }
@@ -320,7 +331,8 @@ var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
     urlMapper: _.identity,
     pathMapper: function (p) { return files.pathJoin(clientDir, p); },
     baseDataExtension: {
-      meteorRuntimeConfig: JSON.stringify(runtimeConfig)
+      meteorRuntimeConfig: JSON.stringify(
+        encodeURIComponent(JSON.stringify(runtimeConfig)))
     }
   });
   return boilerplate.toHTML();
@@ -766,7 +778,11 @@ var buildCordova = function (projectContext, platforms, options) {
     var controlFilePath =
       files.pathJoin(projectContext.projectDir, 'mobile-config.js');
     consumeControlFile(
-      projectContext, controlFilePath, cordovaPath, options.appName);
+      projectContext,
+      controlFilePath,
+      cordovaPath,
+      options.appName,
+      options.host);
 
     ensureCordovaPlatforms(projectContext);
     ensureCordovaPlugins(projectContext, _.extend({}, options, {
@@ -1391,8 +1407,9 @@ var launchAndroidSizes = {
 // Given the mobile control file converts it to the Phongep/Cordova project's
 // config.xml file and copies the necessary files (icons and launch screens) to
 // the correct build location. Replaces all the old resources.
-var consumeControlFile = function (projectContext, controlFilePath,
-                                   cordovaPath, appName) {
+var consumeControlFile = function (
+  projectContext, controlFilePath, cordovaPath, appName, serverDomain) {
+
   verboseLog('Reading the mobile control file');
   // clean up the previous settings and resources
   files.rm_recursive(files.pathJoin(cordovaPath, 'resources'));
@@ -1434,6 +1451,36 @@ var consumeControlFile = function (projectContext, controlFilePath,
     icon: {},
     splash: {}
   };
+
+  // Default access rules for plain Meteor-Cordova apps.
+  // Rules can be extended with mobile-config API described below.
+  // The value is `true` if the protocol or domain should be allowed,
+  // 'external' if should handled externally.
+  var accessRules = {
+    // Allow external calls to things like email client or maps app or a
+    // phonebook app.
+    'tel:*': 'external',
+    'geo:*': 'external',
+    'mailto:*': 'external',
+    'sms:*': 'external',
+    'market:*': 'external',
+
+    // phonegap/cordova related protocols
+    // "file:" protocol is used to access first files from disk
+    'file:*': true,
+    'cdv:*': true,
+    'gap:*': true,
+
+    // allow Meteor's local emulated server url - this is the url from which the
+    // application loads its assets
+    'http://meteor.local/*': true
+  };
+
+  // If the remote server domain is known, allow access to it for xhr and DDP
+  // connections.
+  if (serverDomain) {
+    accessRules['*://' + serverDomain + '/*'] = false;
+  }
 
   var setIcon = function (size, name) {
     imagePaths.icon[name] = files.pathJoin(iconsPath, size + '.png');
@@ -1563,6 +1610,47 @@ var consumeControlFile = function (projectContext, controlFilePath,
           throw new Error(key + ": unknown key in App.launchScreens configuration.");
       });
       _.extend(imagePaths.splash, launchScreens);
+    },
+
+    /**
+     * @summary Set a new access rule based on origin domain for your app.
+     * By default your application has a limited list of servers it can contact.
+     * Use this method to extend this list.
+     *
+     * Default access rules:
+     *
+     * - `tel:*`, `geo:*`, `mailto:*`, `sms:*`, `market:*` are allowed and
+     *   launch externally (phone app, or an email client on Android)
+     * - `gap:*`, `cdv:*`, `file:` are allowed (protocols required to access
+     *   local file-system)
+     * - `http://meteor.local/*` is allowed (a domain Meteor uses to access
+     *   app's assets)
+     * - The domain of the server passed to the build process (or local ip
+     *   address in the development mode) is used to be able to contact the
+     *   Meteor app server.
+     *
+     * Read more about domain patterns in [Cordova
+     * docs](http://cordova.apache.org/docs/en/4.0.0/guide_appdev_whitelist_index.md.html).
+     *
+     * Starting with Meteor 1.0.4 access rule for all domains and protocols
+     * (`<access origin="*"/>`) is no longer set by default due to
+     * [certain kind of possible
+     * attacks](http://cordova.apache.org/announcements/2014/08/04/android-351.html).
+     *
+     * @param {String} domainRule The pattern defining affected domains or URLs.
+     * @param {Object} [options]
+     * @param {Boolean} options.launchExternal Set to true if the matching URL
+     * should be handled externally (e.g. phone app or email client on Android).
+     * @memberOf App
+     */
+    accessRule: function (domainRule, options) {
+      options = options || {};
+      options.launchExternal = !! options.launchExternal;
+      if (options.launchExternal) {
+        accessRules[domainRule] = 'external';
+      } else {
+        accessRules[domainRule] = true;
+      }
     }
   };
 
@@ -1606,8 +1694,15 @@ var consumeControlFile = function (projectContext, controlFilePath,
 
   // load from index.html by default
   config.ele('content', { src: 'index.html' });
-  // allow cors for the initial file
-  config.ele('access', { origin: '*' });
+
+  // Copy all the access rules
+  _.each(accessRules, function (rule, pattern) {
+    var opts = { origin: pattern };
+    if (rule === 'external')
+      opts['launch-external'] = true;
+
+    config.ele('access', opts);
+  });
 
   var iosPlatform = config.ele('platform', { name: 'ios' });
   var androidPlatform = config.ele('platform', { name: 'android' });
@@ -1704,13 +1799,15 @@ var Host = function () {
 
 _.extend(Host.prototype, {
   isMac: function () {
-    var self = this;
     return process.platform === 'darwin';
   },
 
   isLinux: function () {
-    var self = this;
     return process.platform === 'linux';
+  },
+
+  isWindows: function () {
+    return process.platform === 'win32';
   },
 
   getName : function () {
@@ -1760,7 +1857,7 @@ _.extend(Host.prototype, {
   },
 
   getHomeDir: function () {
-    return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+    return files.getHomeDir();
   }
 });
 
@@ -2846,7 +2943,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -2960,10 +3058,11 @@ main.registerCommand({
   }
   projectContext.platformList.write(platforms);
 
-  var appName = files.pathBasename(projectContext.projectDir);
-  ensureCordovaProject(projectContext, appName);
-  ensureCordovaPlatforms(projectContext);
-
+  if (! Host.isWindows()) {
+    var appName = files.pathBasename(projectContext.projectDir);
+    ensureCordovaProject(projectContext, appName);
+    ensureCordovaPlatforms(projectContext);
+  }
   // If this was the last Cordova platform, we may need to rebuild all of the
   // local packages to remove the web.cordova unibuild from the IsopackCache.
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -2996,7 +3095,8 @@ main.registerCommand({
   },
   minArgs: 0,
   maxArgs: Infinity,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
@@ -3024,7 +3124,8 @@ main.registerCommand({
   },
   minArgs: 0,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   requirePlatformReady('android');
 
@@ -3065,7 +3166,8 @@ main.registerCommand({
   },
   minArgs: 1,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  notOnWindows: true
 }, function (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);

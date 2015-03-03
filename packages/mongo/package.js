@@ -9,11 +9,17 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.0.12-vs.2'
+  version: '1.0.12-winr.5'
 });
 
 Npm.depends({
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1"
+  // 1.4.32 (and bson 0.2.18) with optional native dependencies (bson native
+  // piece and kerberos) ripped out, which means we don't have to do the
+  // publish-for-arch dance every time we make a Meteor release.
+  // XXX move the npm dependency into a non-core versioned package and allow
+  //     it to use C++ bson
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/634759e6326dc19a228df66ddb309285532f3b8a",
+  "mongodb-uri": "0.9.7"
 });
 
 Npm.strip({

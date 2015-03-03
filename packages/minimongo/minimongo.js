@@ -96,10 +96,10 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self._selectorId = selector;
-    self.matcher = new Minimongo.Matcher(selector, self);
+    self.matcher = new Minimongo.Matcher(selector);
   } else {
     self._selectorId = undefined;
-    self.matcher = new Minimongo.Matcher(selector, self);
+    self.matcher = new Minimongo.Matcher(selector);
     if (self.matcher.hasGeoQuery() || options.sort) {
       self.sorter = new Minimongo.Sorter(options.sort || [],
                                          { matcher: self.matcher });
@@ -641,7 +641,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     return result;
   }
 
-  var matcher = new Minimongo.Matcher(selector, self);
+  var matcher = new Minimongo.Matcher(selector);
   var remove = [];
   self._eachPossiblyMatchingDoc(selector, function (doc, id) {
     if (matcher.documentMatches(doc).result)
@@ -697,7 +697,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var matcher = new Minimongo.Matcher(selector, self);
+  var matcher = new Minimongo.Matcher(selector);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in

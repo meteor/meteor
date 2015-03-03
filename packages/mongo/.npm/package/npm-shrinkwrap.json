@@ -1,17 +1,37 @@
 {
   "dependencies": {
     "mongodb": {
-      "version": "https://github.com/meteor/node-mongodb-native/tarball/cbd6220ee17c3178d20672b4a1df80f82f97d4c1",
+      "version": "https://github.com/meteor/node-mongodb-native/tarball/634759e6326dc19a228df66ddb309285532f3b8a",
       "dependencies": {
         "bson": {
-          "version": "https://github.com/meteor/js-bson/tarball/574c0ee",
+          "version": "https://github.com/meteor/js-bson/tarball/0103b53",
           "dependencies": {
             "nan": {
-              "version": "0.8.0"
+              "version": "1.5.1"
+            }
+          }
+        },
+        "readable-stream": {
+          "version": "1.0.33",
+          "dependencies": {
+            "core-util-is": {
+              "version": "1.0.1"
+            },
+            "isarray": {
+              "version": "0.0.1"
+            },
+            "string_decoder": {
+              "version": "0.10.31"
+            },
+            "inherits": {
+              "version": "2.0.1"
             }
           }
         }
       }
+    },
+    "mongodb-uri": {
+      "version": "0.9.7"
     }
   }
 }

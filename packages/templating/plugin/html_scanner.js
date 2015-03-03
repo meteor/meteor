@@ -10,6 +10,8 @@ html_scanner = {
   ParseError: function () {
   },
 
+  bodyAttributes : [],
+
   scan: function (contents, source_name) {
     var rest = contents;
     var index = 0;
@@ -169,8 +171,12 @@ html_scanner = {
           templateDotNameLiteral + ", " + renderFuncCode + ");\n";
       } else {
         // <body>
-        if (hasAttribs)
-          throwParseError("Attributes on <body> not supported");
+        if (hasAttribs) {
+          // XXX we would want to throw an error here if we have duplicate
+          // attributes, but this is complex to do with the current build system
+          // so we won't.
+          results.js += "\nMeteor.startup(function() { $('body').attr(" + JSON.stringify(attribs) + "); });\n";
+        }
 
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {

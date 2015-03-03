@@ -13,7 +13,7 @@ var config = require("../config.js");
 // it receives a hot code push, it would be connected to whatever
 // ROOT_URL is on the server.
 selftest.define(
-  "cordova --mobile-server argument persists across hot code pushes", function () {
+  "cordova --mobile-server argument persists across hot code pushes", ["cordova"], function () {
     var s = new Sandbox();
     var run;
 
@@ -45,7 +45,7 @@ selftest.define(
     run.stop();
 });
 
-selftest.define("cordova app gets https:// URLs when force-ssl is used", ["net", "slow"], function () {
+selftest.define("cordova app gets https:// URLs when force-ssl is used", ["cordova", "net", "slow"], function () {
   var s = new Sandbox();
   var run;
 

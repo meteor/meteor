@@ -11,13 +11,14 @@ If you provide a name to its constructor, its contents will be saved across Hot
 Code Push client code updates.
 
 Example usage:
-```
-> var dict = new ReactiveDict('myDict');
-> dict.set("weather", "cloudy");
-> Tracker.autorun(function () { console.log("now " + dict.get("weather")); });
-now cloudy
-> dict.set("weather", "sunny");
-now sunny
+
+```js
+var dict = new ReactiveDict('myDict');
+dict.set("weather", "cloudy");
+Tracker.autorun(function () { console.log("now " + dict.get("weather")); });
+// now cloudy
+dict.set("weather", "sunny");
+// now sunny
 ```
 
 For more information, see the [Tracker project

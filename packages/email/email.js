@@ -120,7 +120,7 @@ EmailTest.hookSend = function (f) {
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.subject]  "Subject:" line
- * @param {String} [options.text|html] Mail body (in plain text or HTML)
+ * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
  */
 Email.send = function (options) {

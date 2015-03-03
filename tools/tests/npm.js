@@ -5,7 +5,7 @@ var _ = require('underscore');
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
-selftest.define("npm", ["net"], function () {
+selftest.define("npm", ["net", "yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 

@@ -1,0 +1,10 @@
+LIBRARY "WiXHelper"
+
+EXPORTS
+
+;  DROP_QCloudDatabase
+;  CREATE_QCloudDatabase
+
+Download_MeteorPackage
+Extract_MeteorFiles
+BulkRemoveMeteorFiles

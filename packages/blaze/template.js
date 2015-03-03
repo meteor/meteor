@@ -267,6 +267,16 @@ Blaze.TemplateInstance = function (view) {
    * @type {DOMNode}
    */
   this.lastNode = null;
+
+  // This dependency is used to identify state transitions in
+  // _subscriptionHandles which could cause the result of
+  // TemplateInstance#subscriptionsReady to change. Basically this is triggered
+  // whenever a new subscription handle is added or when a subscription handle
+  // is removed and they are not ready.
+  this._allSubsReadyDep = new Tracker.Dependency();
+  this._allSubsReady = false;
+
+  this._subscriptionHandles = {};
 };
 
 /**
@@ -310,6 +320,95 @@ Blaze.TemplateInstance.prototype.find = function (selector) {
  */
 Blaze.TemplateInstance.prototype.autorun = function (f) {
   return this.view.autorun(f);
+};
+
+/**
+ * @summary A version of [Meteor.subscribe](#meteor_subscribe) that is stopped
+ * when the template is destroyed.
+ * @return {SubscriptionHandle} The subscription handle to the newly made
+ * subscription. Call `handle.stop()` to manually stop the subscription, or
+ * `handle.ready()` to find out if this particular subscription has loaded all
+ * of its inital data.
+ * @locus Client
+ * @param {String} name Name of the subscription.  Matches the name of the
+ * server's `publish()` call.
+ * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function
+ * on server.
+ * @param {Function|Object} [callbacks] Optional. May include `onError` and
+ * `onReady` callbacks. If a function is passed instead of an object, it is
+ * interpreted as an `onReady` callback.
+ */
+Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
+  var self = this;
+
+  var subHandles = self._subscriptionHandles;
+  var args = _.toArray(arguments);
+
+  // Duplicate logic from Meteor.subscribe
+  var callbacks = {};
+  if (args.length) {
+    var lastParam = _.last(args);
+    if (_.isFunction(lastParam)) {
+      callbacks.onReady = args.pop();
+    } else if (lastParam &&
+      // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use
+      // onStop with an error callback instead.
+      _.any([lastParam.onReady, lastParam.onError, lastParam.onStop],
+        _.isFunction)) {
+      callbacks = args.pop();
+    }
+  }
+
+  var subHandle;
+  var oldStopped = callbacks.onStop;
+  callbacks.onStop = function (error) {
+    // When the subscription is stopped, remove it from the set of tracked
+    // subscriptions to avoid this list growing without bound
+    delete subHandles[subHandle.subscriptionId];
+
+    // Removing a subscription can only change the result of subscriptionsReady
+    // if we are not ready (that subscription could be the one blocking us being
+    // ready).
+    if (! self._allSubsReady) {
+      self._allSubsReadyDep.changed();
+    }
+
+    if (oldStopped) {
+      oldStopped(error);
+    }
+  };
+  args.push(callbacks);
+
+  subHandle = self.view.subscribe.call(self.view, args);
+
+  if (! _.has(subHandles, subHandle.subscriptionId)) {
+    subHandles[subHandle.subscriptionId] = subHandle;
+
+    // Adding a new subscription will always cause us to transition from ready
+    // to not ready, but if we are already not ready then this can't make us
+    // ready.
+    if (self._allSubsReady) {
+      self._allSubsReadyDep.changed();
+    }
+  }
+
+  return subHandle;
+};
+
+/**
+ * @summary A reactive function that returns true when all of the subscriptions
+ * called with [this.subscribe](#TemplateInstance-subscribe) are ready.
+ * @return {Boolean} True if all subscriptions on this template instance are
+ * ready.
+ */
+Blaze.TemplateInstance.prototype.subscriptionsReady = function () {
+  this._allSubsReadyDep.depend();
+
+  this._allSubsReady = _.all(this._subscriptionHandles, function (handle) {
+    return handle.ready();
+  });
+
+  return this._allSubsReady;
 };
 
 /**

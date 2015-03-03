@@ -306,23 +306,23 @@ if (Meteor.isClient) {
         restrictedCollectionForFetchTest.update(
           fetchId, {$set: {updated: true}}, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3");
           }));
         restrictedCollectionForFetchTest.remove(
           fetchId, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3");
           }));
 
         restrictedCollectionForFetchAllTest.update(
           fetchAllId, {$set: {updated: true}}, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,field4,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3,field4");
           }));
         restrictedCollectionForFetchAllTest.remove(
           fetchAllId, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,field4,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3,field4");
           }));
       }
     ]);

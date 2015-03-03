@@ -173,13 +173,14 @@ collection name.
 The client will see a document if the document is currently in the published
 record set of any of its subscriptions.
 
-The `onReady` callback is called with no arguments when the server
-[marks the subscription as ready](#publish_ready). The `onError` callback is
-called with a [`Meteor.Error`](#meteor_error) if the subscription fails or is
-terminated by the server.
+The `onReady` callback is called with no arguments when the server [marks the
+subscription as ready](#publish_ready). The `onStop` callback is called with
+a [`Meteor.Error`](#meteor_error) if the subscription fails or is terminated by
+the server. If the subscription is stopped by calling `stop` on the subscription
+handle or inside the publication, `onStop` is called with no arguments.
 
 `Meteor.subscribe` returns a subscription handle, which is an object with the
-following methods:
+following properties:
 
 <dl class="callbacks">
 {{#dtdd "stop()"}}
@@ -190,6 +191,13 @@ client to remove the subscription's data from the client's cache.
 {{#dtdd "ready()"}}
 True if the server has [marked the subscription as ready](#publish_ready). A
 reactive data source.
+{{/dtdd}}
+
+{{#dtdd "subscriptionId"}}
+The `id` of the subscription this handle is for. When you run `Meteor.subscribe`
+inside of `Tracker.autorun`, the handles you get will always have the same
+`subscriptionId` field. You can use this to deduplicate subscription handles
+if you are storing them in some data structure.
 {{/dtdd}}
 </dl>
 

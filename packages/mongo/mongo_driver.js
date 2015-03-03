@@ -460,12 +460,16 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
+    // Lets you get a more more full result from MongoDB. Use with caution:
+    // might not work with C.upsert (as opposed to C.update({upsert:true}) or
+    // with simulated upsert.
+    if (options.fullResult) mongoOpts.fullResult = true;
 
     var mongoSelector = replaceTypes(selector, replaceMeteorAtomWithMongo);
     var mongoMod = replaceTypes(mod, replaceMeteorAtomWithMongo);
 
     var isModify = isModificationMod(mongoMod);
-    var knownId = (isModify ? selector._id : mod._id);
+    var knownId = selector._id || mod._id;
 
     if (options._forbidReplace && ! isModify) {
       var e = new Error("Invalid modifier. Replacements are forbidden.");
@@ -477,9 +481,18 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
     }
 
     if (options.upsert && (! knownId) && options.insertedId) {
-      // XXX In future we could do a real upsert for the mongo id generation
-      // case, if the the node mongo driver gives us back the id of the upserted
-      // doc (which our current version does not).
+      // XXX If we know we're using Mongo 2.6 (and this isn't a replacement)
+      //     we should be able to just use $setOnInsert instead of this
+      //     simulated upsert thing. (We can't use $setOnInsert with
+      //     replacements because there's nowhere to write it, and $setOnInsert
+      //     can't set _id on Mongo 2.4.)
+      //
+      //     Also, in the future we could do a real upsert for the mongo id
+      //     generation case, if the the node mongo driver gives us back the id
+      //     of the upserted doc (which our current version does not).
+      //
+      //     For more context, see
+      //     https://github.com/meteor/meteor/issues/2278#issuecomment-64252706
       simulateUpsertWithInsertedId(
         collection, mongoSelector, mongoMod,
         isModify, options,
@@ -541,9 +554,20 @@ var NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
 MongoConnection._isCannotChangeIdError = function (err) {
-  // either of these checks should work, but just to be safe...
-  return (err.code === 13596 ||
-          err.err.indexOf("cannot change _id of a document") === 0);
+  // First check for what this error looked like in Mongo 2.4.  Either of these
+  // checks should work, but just to be safe...
+  if (err.code === 13596)
+    return true;
+  if (err.err.indexOf("cannot change _id of a document") === 0)
+    return true;
+
+  // Now look for what it looks like in Mongo 2.6.  We don't use the error code
+  // here, because the error code we observed it producing (16837) appears to be
+  // a far more generic error code based on examining the source.
+  if (err.err.indexOf("The _id field cannot be changed") === 0)
+    return true;
+
+  return false;
 };
 
 var simulateUpsertWithInsertedId = function (collection, selector, mod,
@@ -1074,8 +1098,8 @@ MongoConnection.prototype._observeChanges = function (
       multiplexer = new ObserveMultiplexer({
         ordered: ordered,
         onStop: function () {
-          observeDriver.stop();
           delete self._observeMultiplexers[observeKey];
+          observeDriver.stop();
         }
       });
       self._observeMultiplexers[observeKey] = multiplexer;

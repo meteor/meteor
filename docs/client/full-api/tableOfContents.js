@@ -168,6 +168,7 @@ var toc = [
         {instance: "template", name: "lastNode", id: "template_lastNode"},
         {instance: "template", name: "data", id: "template_data"},
         {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "subscribe", id: "Blaze-TemplateInstance-subscribe"},
         {instance: "template", name: "view", id: "template_view"}
       ],
       "Template.registerHelper",
@@ -299,6 +300,7 @@ var toc = [
     {name: "mobile-config.js", id: "mobileconfigjs"}, [
       {name: "App.info", id: "App-info"},
       {name: "App.setPreference", id: "App-setPreference"},
+      {name: "App.accessRule", id: "App-accessRule"},
       {name: "App.configurePlugin", id: "App-configurePlugin"},
       {name: "App.icons", id: "App-icons"},
       {name: "App.launchScreens", id: "App-launchScreens"}

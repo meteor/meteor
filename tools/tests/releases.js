@@ -3,13 +3,15 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var catalog = require('../catalog.js');
 
+var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
+
 // XXX: Why is this an internet using test? Because our warehouse is a
 // hackhackhack. If we clean up the hackhackhackhack, then this does not need
 // the internets. (Or, to be more specific: our warehouse code tries to fetch
 // the packages from the internet. If we could fool it into using local packages
 // instead, or think that it alreayd has the packages, it would be ok). (This is
 // because it calls 'create' from a warehouse, to be specific).
-selftest.define("springboard", ['checkout', 'net'], function () {
+selftest.define("springboard", ['checkout', 'net', "yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { },
@@ -25,7 +27,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--version", "--release", "METEOR@v1");
+  run = s.run("--version", "--release", DEFAULT_RELEASE_TRACK + "@v1");
   run.read('Meteor v1\n');
   run.expectEnd();
   run.expectExit(0);
@@ -41,7 +43,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   });
 
   // ... unless you asked for a different one.
-  run = s.run("create", "myapp2", "--release", "METEOR@v1").expectExit(0);
+  run = s.run("create", "myapp2", "--release", DEFAULT_RELEASE_TRACK + "@v1").expectExit(0);
   s.cd('myapp2', function () {
     run = s.run("--version");
     run.read('Meteor v1\n');
@@ -213,7 +215,7 @@ selftest.define("download release", ['net', 'slow'], function () {
 });
 
 
-selftest.define("unknown release", [], function () {
+selftest.define("unknown release", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }

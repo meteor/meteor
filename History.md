@@ -1,4 +1,50 @@
-## vNEXT
+## v.NEXT
+
+* Subscription handles returned from `Meteor.subscribe` and
+  `TemplateInstance#subscribe` now have a `subscriptionId` property to identify
+  which subscription the handle is for.
+
+* The `onError` callback to `Meteor.subscribe` has been replaced with a more
+  general `onStop` callback that has an error as an optional first argument.
+  The `onStop` callback is called when the subscription is terminated for
+  any reason.
+
+* Template instances now have a `subscribe` method that functions exactly like
+  `Meteor.subscribe`, but stops the subscription when the template is destroyed.
+  There is a new method on Template instances called `subscriptionsReady()`
+  which is a reactive function that returns true when all of the subscriptions
+  made with `TemplateInstance#subscribe` are ready. There is also a built-in
+  helper that returns the same thing and can be accessed with
+  `Template.subscriptionsReady` inside any template.
+
+* Meteor is now tested against MongoDB 2.6 (and the bundled version used by
+  `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
+  Previous versions of Meteor mostly worked with MongoDB 2.6, with a few
+  caveats:
+
+    - Some upsert invocations did not work with MongoDB in previous versions of
+      Meteor.
+    - Previous versions of Meteor required setting up a special "user-defined
+      role" with access to the `system.replset` table to use the oplog observe
+      driver with MongoDB 2.6.  These extra permissions are not required with
+      this version of Meteor.
+
+  The MongoDB command needed to set up user permissions for the oplog observe
+  driver is slightly different in MongoDB 2.6; see
+  https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
+
+  (We have not tested Meteor against the as-yet-unreleased MongoDB 3.0, but as
+  of this release, Meteor uses a version of the Node Mongo driver that is
+  compatible with MongoDB 3.0 and it is likely that it will work.)
+
+* `c.upsert({_id: 'x'}, {foo: 1})`, when acting as an insert, now uses the `_id`
+  of `'x'` rather than a random `_id`, in the Minimongo implementation of
+  `upsert`, just like it does for `c.upsert({_id: 'x'}, {$set: {foo: 1}})`.
+  (The previous behavior matched a bug in the MongoDB 2.4 implementation of
+  upsert that is fixed in MongoDB 2.6.)  #2278
+
+* If the oplog observe driver gets too far behind in processing the oplog, skip
+  entries and re-poll queries instead of trying to keep up.  #2668
 
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
@@ -18,7 +64,7 @@
 * The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
   email `headers`.  The `from` address can now be set separately on the
   individual templates, and is a function there rather than a static string.
-  #2858 #2854
+  \#2858 #2854
 
 * The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
   clone of what the function returned rather than sharing mutable state.  #3201
@@ -46,6 +92,62 @@
 * Remove some packages used internally to support legacy MDG systems
   (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
   `dev-bundle-fetcher`, and `star-translate`).
+
+* Optimize common cases faced by the "crossbar" data structure (used by oplog
+  tailing and DDP method write tracking).  #3697
+
+* Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
+  reading or parsing the settings file.  #3757
+
+* Don't overly escape `Meteor.settings.public` and other parts of
+  `__meteor_runtime_config__`.  #3730
+
+* Add login hooks on the client: `Accounts.onLogin` and
+  `Accounts.onLoginFailure`. #3572
+
+* Upgraded dependencies:
+
+  - node: 0.10.36 (from 0.10.33)
+  - Fibers: 1.0.5 (from 1.0.1)
+  - MongoDB: 2.6.7 (from 2.4.12)
+  - openssl in mongo: 1.0.2 (from 1.0.1j)
+  - MongoDB driver: 1.4.30 (from 1.4.1)
+  - bson: 0.2.18 (from 0.2.7)
+
+### Meteor Mobile updates
+
+* Upgrade the Cordova CLI dependency from 3.5.1 to 4.2.0. See the release notes
+  for the 4.x series of the Cordova CLI [on Apache
+  Cordova](http://cordova.apache.org/announcements/2014/10/16/cordova-4.html).
+
+* Related to the recently discovered [attack
+  vectors](http://cordova.apache.org/announcements/2014/08/04/android-351.html)
+  in Android Cordova apps, Meteor Cordova apps no longer allow access to all
+  domains by default. If your app access external resources over XHR, you need
+  to add them to the whitelist of allowed domains with the newly added
+  [`App.accessRule`
+  method](https://docs.meteor.com/#/full/App-accessRule) in your
+  `mobile-config.js` file.
+
+* Upgrade Cordova Plugins dependencies in Meteor Core packages:
+  - `org.apache.cordova.file`: from 1.3.0 to 1.3.3
+  - `org.apache.cordova.file-transfer`: from 0.4.4 to 0.5.0
+  - `org.apache.cordova.splashscreen`: from 0.3.3 to 1.0.0
+  - `org.apache.cordova.console`: from 0.2.10 to 0.2.13
+  - `org.apache.cordova.device`: from 0.2.11 to 0.3.0
+  - `org.apache.cordova.statusbar`: from 0.1.7 to 0.1.10
+  - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
+  - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
+
+* Use the newer `ios-sim` binary, compiled with Xcode 6 on OS X Mavericks.
+
+
+## v.1.0.3.2, 2015-Feb-25
+
+* Fix regression in 1.0.3 where the `meteor` tool could crash when downloading
+  the second build of a given package version; for example, when running `meteor
+  deploy` on an OSX or 32-bit Linux system for an app containing a binary
+  package.  #3761
 
 
 ## v.1.0.3.1, 2015-Jan-20
@@ -106,7 +208,7 @@
 
 * Correctly catch a case of illegal `Tracker.flush` during `Tracker.autorun`.  #3037
 
-* Upgraded dependencies
+* Upgraded dependencies:
 
   - jquery: 1.11.2 (from 1.11.0)
 

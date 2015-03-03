@@ -12,6 +12,7 @@ var stats = require('./stats.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var catalog = require('./catalog.js');
+var Profile = require('./profile.js').Profile;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -62,11 +63,13 @@ var AppProcess = function (options) {
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
+  self.nodePath = options.nodePath || [];
   self.debugPort = options.debugPort;
   self.settings = options.settings;
 
   self.proc = null;
   self.madeExitCallback = false;
+  self.ipcPipe = options.ipcPipe;
 };
 
 _.extend(AppProcess.prototype, {
@@ -111,6 +114,11 @@ _.extend(AppProcess.prototype, {
     }));
 
     self.proc.on('error', fiberHelpers.inBareFiber(function (err) {
+      // if the error is the result of .send command over ipc pipe, ignore it
+      if (self._refreshing) {
+        return;
+      }
+
       runLog.log("Couldn't spawn process: " + err.message,  { arrow: true });
 
       // node docs say that it might make both an 'error' and a
@@ -129,7 +137,7 @@ _.extend(AppProcess.prototype, {
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
     require("./cleanup.js").onExit(function() {
-      require("./server/shell.js").unlinkSocketFile(
+      require("./server/shell-server.js").disable(
         self.projectContext.getMeteorShellDirectory()
       );
     });
@@ -195,12 +203,22 @@ _.extend(AppProcess.prototype, {
 
     var shellDir = self.projectContext.getMeteorShellDirectory();
     files.mkdir_p(shellDir);
-    env.METEOR_SHELL_DIR = shellDir;
+
+    // We need to convert to OS path here because the running app doesn't
+    // have access to path translation functions
+    env.METEOR_SHELL_DIR = files.convertToOSPath(shellDir);
 
     env.METEOR_PARENT_PID =
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
+
+    // use node's path module and not 'files.js' because NODE_PATH is an
+    // environment variable passed to an external process and needs to be
+    // constructed in the OS-style.
+    var path = require('path');
+    env.NODE_PATH =
+      self.nodePath.join(path.delimiter);
 
     return env;
   },
@@ -209,25 +227,36 @@ _.extend(AppProcess.prototype, {
   _spawn: function () {
     var self = this;
 
-    var child_process = require('child_process');
+    // Path conversions
+    var nodePath = process.execPath; // This path is an OS path already
+    var entryPoint = files.convertToOSPath(
+      files.pathJoin(self.bundlePath, 'main.js'));
 
+    // Setting options
     var opts = _.clone(self.nodeOptions);
-    var entryPoint = files.pathJoin(self.bundlePath, 'main.js');
 
+    var attach;
     if (self.debugPort) {
-      var attach = require("./inspector.js").start(
-        self.debugPort,
-        entryPoint
-      );
+      attach = require("./inspector.js").start(self.debugPort, entryPoint);
+
+      // If you do opts.push("--debug-brk", port) it doesn't work on Windows
+      // for some reason
       opts.push("--debug-brk=" + attach.suggestedDebugBrkPort);
     }
 
     opts.push(entryPoint);
 
-    var child = child_process.spawn(process.execPath, opts, {
-      env: self._computeEnvironment()
+    // Call node
+    var child_process = require('child_process');
+    // setup the 'ipc' pipe if further communication between app and proxy is
+    // expected
+    var ioOptions = self.ipcPipe ? ['pipe', 'pipe', 'pipe', 'ipc'] : 'pipe';
+    var child = child_process.spawn(nodePath, opts, {
+      env: self._computeEnvironment(),
+      stdio: ioOptions
     });
 
+    // Attach inspector
     if (attach) {
       attach(child);
     }
@@ -351,6 +380,10 @@ var AppRunner = function (options) {
   // If this future is set with self.awaitFutureBeforeStart, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
   self._beforeStartFuture = null;
+  // A hacky state variable that indicates that the proxy process (this process)
+  // is communicating to the app process over ipc. If an error in communication
+  // occurs, we can distinguish it in a callback handling the 'error' event.
+  self._refreshing = false;
 };
 
 _.extend(AppRunner.prototype, {
@@ -508,12 +541,23 @@ _.extend(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = bundler.bundle({
-        projectContext: self.projectContext,
-        outputPath: bundlePath,
-        includeNodeModulesSymlink: true,
-        buildOptions: self.buildOptions,
-        hasCachedBundle: !! cachedServerWatchSet
+      var bundleResult = Profile.run("Rebuild App", function () {
+        var includeNodeModules = 'symlink';
+
+        // On Windows we cannot symlink node_modules. Copying them is too slow.
+        // Instead receive the NODE_PATH env that we need to set and set it
+        // later on running.
+        if (process.platform === 'win32') {
+          includeNodeModules = 'reference-directly';
+        }
+
+        return bundler.bundle({
+          projectContext: self.projectContext,
+          outputPath: bundlePath,
+          includeNodeModules: includeNodeModules,
+          buildOptions: self.buildOptions,
+          hasCachedBundle: !! cachedServerWatchSet
+        });
       });
 
       // Keep the server watch set from the initial bundle, because subsequent
@@ -548,6 +592,25 @@ _.extend(AppRunner.prototype, {
     if (bundleResultOrRunResult.runResult)
       return bundleResultOrRunResult.runResult;
     bundleResult = bundleResultOrRunResult.bundleResult;
+
+    // Read the settings file, if any
+    var settings = null;
+    var settingsWatchSet = new watch.WatchSet;
+    var settingsMessages = buildmessage.capture({
+      title: "preparing to run",
+      rootPath: process.cwd()
+    }, function () {
+      if (self.settingsFile)
+        settings = files.getSettings(self.settingsFile, settingsWatchSet);
+    });
+    if (settingsMessages.hasMessages()) {
+      return {
+        outcome: 'bundle-fail',
+        errors: settingsMessages,
+        watchSet: settingsWatchSet
+      };
+    }
+
     firstRun = false;
 
     var platforms = self.projectContext.platformList.getCordovaPlatforms();
@@ -575,36 +638,16 @@ _.extend(AppRunner.prototype, {
     self.cordovaPlugins = plugins;
 
     var serverWatchSet = bundleResult.serverWatchSet;
-
-    // Read the settings file, if any
-    var settings = null;
-    var settingsWatchSet = new watch.WatchSet;
-    var settingsMessages = buildmessage.capture({
-      title: "preparing to run",
-      rootPath: process.cwd()
-    }, function () {
-      if (self.settingsFile)
-        settings = files.getSettings(self.settingsFile, settingsWatchSet);
-    });
+    serverWatchSet.merge(settingsWatchSet);
 
     // We only can refresh the client without restarting the server if the
     // client contains the 'autoupdate' package.
     var canRefreshClient = self.projectContext.packageMap &&
           self.projectContext.packageMap.getInfo('autoupdate');
+
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
-    }
-
-    // HACK: merge the watchset and messages from reading the settings
-    // file into those from the build. This works fine but it sort of
-    // messy. Maybe clean it up sometime.
-    serverWatchSet.merge(settingsWatchSet);
-    if (settingsMessages.hasMessages()) {
-      if (! bundleResult.errors)
-        bundleResult.errors = settingsMessages;
-      else
-        bundleResult.errors.merge(settingsMessages);
     }
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
@@ -642,7 +685,9 @@ _.extend(AppRunner.prototype, {
           self.startFuture['return']();
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      settings: settings
+      nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
+      settings: settings,
+      ipcPipe: self.watchForChanges
     });
 
     // Empty self._beforeStartFutures and await its elements.
@@ -711,7 +756,9 @@ _.extend(AppRunner.prototype, {
 
         // Notify the server that new client assets have been added to the
         // build.
-        appProcess.proc.kill('SIGUSR2');
+        self._refreshing = true;
+        appProcess.proc.send({ refresh: 'client' });
+        self._refreshing = false;
 
         // Establish a watcher on the new files.
         setupClientWatcher();

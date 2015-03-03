@@ -92,7 +92,7 @@ var checkUserPlugins = function(sand, plugins) {
 
 // Add plugins to an app. Change the contents of the plugins and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change cordova plugins", function () {
+selftest.define("change cordova plugins", ["cordova"], function () {
   var s = new Sandbox();
   var run;
 

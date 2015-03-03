@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 
@@ -36,8 +35,8 @@ var Runner = function (options) {
 
   self.stopped = false;
   self.quiet = options.quiet;
-  self.banner =
-    options.banner || files.prettyPath(self.projectContext.projectDir);
+  self.banner = options.banner ||
+    files.convertToOSPath(files.prettyPath(self.projectContext.projectDir));
   if (options.rootUrl) {
     self.rootUrl = options.rootUrl;
   } else if (options.proxyHost) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.1.7-vs.2'
+  version: '1.1.7-winr.6'
 });
 
 Npm.depends({connect: "2.9.0",
@@ -14,7 +14,7 @@ Npm.strip({
 
 Package.onUse(function (api) {
   api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
-           'spacebars', 'htmljs', 'blaze', 'webapp-hashing'], 'server');
+           'webapp-hashing'], 'server');
   api.use(['underscore'], 'client');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If
@@ -31,4 +31,5 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use(['tinytest', 'webapp', 'http']);
   api.addFiles('webapp_tests.js', 'server');
+  api.addFiles('webapp_client_tests.js', 'client');
 });

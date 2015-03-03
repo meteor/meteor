@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Handlebars-like template language for Meteor",
-  version: '1.0.5'
+  version: '1.0.5-winr.5'
 });
 
 // For more, see package `spacebars-compiler`, which is used by
@@ -19,6 +19,7 @@ Package.onUse(function (api) {
   api.use('blaze');
   api.use('observe-sequence');
   api.use('templating');
+  api.use('underscore');
   api.addFiles(['spacebars-runtime.js']);
   api.addFiles(['dynamic.html', 'dynamic.js'], 'client');
 });

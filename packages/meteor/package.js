@@ -2,12 +2,16 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.5-vs.2'
+  version: '1.1.5-winr.6'
 });
 
 Package.registerBuildPlugin({
   name: "basicFileTypes",
   sources: ['plugin/basic-file-types.js']
+});
+
+Npm.depends({
+  "double-ended-queue": "2.1.0-0"
 });
 
 Package.onUse(function (api) {

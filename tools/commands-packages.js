@@ -20,6 +20,7 @@ var catalog = require('./catalog.js');
 var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
+var updater = require('./updater.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
@@ -1614,6 +1615,22 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// admin run-background-updater
+///////////////////////////////////////////////////////////////////////////////
+
+// For testing the background updater during development.
+main.registerCommand({
+  name: 'admin run-background-updater',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  updater.tryToDownloadUpdate({
+    showBanner: true,
+    printErrors: true
+  });
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // add
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2017,13 +2034,23 @@ main.registerCommand({
   maxArgs: 2,
   hidden: true,
 
+  options: {
+    // Copy the tarball contents to the output directory instead of making a
+    // tarball (useful for testing the release process)
+    "unpacked": { type: Boolean, required: false },
+    // Build a tarball only for a specific arch
+    "target-arch": { type: String, required: false }
+  },
+
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   var releaseNameAndVersion = options.args[0];
-  var outputDirectory = options.args[1];
+
+  // We get this as an argument, so it is an OS path. Make it a standard path.
+  var outputDirectory = files.convertToStandardPath(options.args[1]);
 
   var trackAndVersion = utils.splitReleaseName(releaseNameAndVersion);
   var releaseTrack = trackAndVersion[0];
@@ -2070,6 +2097,19 @@ main.registerCommand({
     }
     return osArches[0];
   });
+
+  if (options['target-arch']) {
+    // check if the passed arch is in the list
+    var arch = options['target-arch'];
+    if (! _.contains(osArches, arch)) {
+      throw new Error(
+        arch + ": the arch is not available for the release. Available arches: "
+        + osArches.join(', '));
+    }
+
+    // build only for the selected arch
+    osArches = [arch];
+  }
 
   Console.error(
     'Building bootstrap tarballs for architectures ' + osArches.join(', '));
@@ -2125,8 +2165,19 @@ main.registerCommand({
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
+
+    // when building for Windows architectures, build Windows-specific
+    // tropohouse and bootstrap tarball
+    var targetPlatform;
+    if (/win/i.test(osArch)) {
+      targetPlatform = "win32";
+    }
+
     // We're going to build and tar up a tropohouse in a temporary directory.
-    var tmpTropo = new tropohouse.Tropohouse(files.pathJoin(tmpdir, '.meteor'));
+    var tmpTropo = new tropohouse.Tropohouse(
+      files.pathJoin(tmpdir, '.meteor'),
+      { platform: targetPlatform });
+
     main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       function () {
@@ -2153,16 +2204,20 @@ main.registerCommand({
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
-    files.symlink(
-      files.pathJoin(
+
+    tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
-        'meteor'),
-      files.pathJoin(tmpTropo.root, 'meteor'));
+        'meteor'));
 
-    files.createTarball(
-      tmpTropo.root,
-      files.pathJoin(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
+    if (options.unpacked) {
+      files.cp_r(tmpTropo.root, outputDirectory);
+    } else {
+      files.createTarball(
+        tmpTropo.root,
+        files.pathJoin(outputDirectory,
+          'meteor-bootstrap-' + osArch + '.tar.gz'));
+    }
   });
 
   return 0;

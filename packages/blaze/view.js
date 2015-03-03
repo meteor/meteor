@@ -140,7 +140,7 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
 /// callback.  Autoruns that update the DOM should be started
 /// from either onViewCreated (guarded against the absence of
 /// view._domrange), or onViewReady.
-Blaze.View.prototype.autorun = function (f, _inViewScope) {
+Blaze.View.prototype.autorun = function (f, _inViewScope, displayName) {
   var self = this;
 
   // The restrictions on when View#autorun can be called are in order
@@ -174,18 +174,75 @@ Blaze.View.prototype.autorun = function (f, _inViewScope) {
     throw new Error("Can't call View#autorun from a Tracker Computation; try calling it from the created or rendered callback");
   }
 
-  var templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
+  // Each local variable allocate additional space on each frame of the
+  // execution stack. When too many variables are allocated on stack, you can
+  // run out of memory on stack running a deep recursion (which is typical for
+  // Blaze functions) and get stackoverlow error. (The size of the stack varies
+  // between browsers).
+  // The trick we use here is to allocate only one variable on stack `locals`
+  // that keeps references to all the rest. Since locals is allocated on heap,
+  // we don't take up any space on the stack.
+  var locals = {};
+  locals.templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
 
-  var c = Tracker.autorun(function viewAutorun(c) {
+  locals.f = function viewAutorun(c) {
     return Blaze._withCurrentView(_inViewScope || self, function () {
-      return Blaze.Template._withTemplateInstanceFunc(templateInstanceFunc, function () {
+      return Blaze.Template._withTemplateInstanceFunc(locals.templateInstanceFunc, function () {
         return f.call(self, c);
       });
     });
-  });
-  self.onViewDestroyed(function () { c.stop(); });
+  };
 
-  return c;
+  // Give the autorun function a better name for debugging and profiling.
+  // The `displayName` property is not part of the spec but browsers like Chrome
+  // and Firefox prefer it in debuggers over the name function was declared by.
+  locals.f.displayName =
+    (self.name || 'anonymous') + ':' + (displayName || 'anonymous');
+  locals.c = Tracker.autorun(locals.f);
+
+  self.onViewDestroyed(function () { locals.c.stop(); });
+
+  return locals.c;
+};
+
+Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
+  var self = this;
+
+  if (! self.isCreated) {
+    throw new Error("View#subscribe must be called from the created callback at the earliest");
+  }
+  if (self._isInRender) {
+    throw new Error("Can't call View#subscribe from inside render(); try calling it from the created or rendered callback");
+  }
+  if (self.isDestroyed) {
+    throw new Error("Can't call View#subscribe from inside the destroyed callback, try calling it inside created or rendered.");
+  }
+};
+
+/**
+ * Just like Blaze.View#autorun, but with Meteor.subscribe instead of
+ * Tracker.autorun. Stop the subscription when the view is destroyed.
+ * @return {SubscriptionHandle} A handle to the subscription so that you can
+ * see if it is ready, or stop it manually
+ */
+Blaze.View.prototype.subscribe = function (args, options) {
+  var self = this;
+  options = {} || options;
+
+  self._errorIfShouldntCallSubscribe();
+
+  var subHandle;
+  if (options.connection) {
+    subHandle = options.connection.subscribe.apply(options.connection, args);
+  } else {
+    subHandle = Meteor.subscribe.apply(Meteor, args);
+  }
+
+  self.onViewDestroyed(function () {
+    subHandle.stop();
+  });
+
+  return subHandle;
 };
 
 Blaze.View.prototype.firstNode = function () {
@@ -265,7 +322,7 @@ Blaze._materializeView = function (view, parentView) {
       Tracker.onInvalidate(function () {
         domrange.destroyMembers();
       });
-    });
+    }, undefined, 'materialize');
 
     var teardownHook = null;
 

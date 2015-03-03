@@ -16,7 +16,8 @@ var tmpDir = function () {
 
 var makeProjectContext = function (appName) {
   var projectDir = files.mkdtemp("test-bundler-options");
-  files.cp_r(files.pathJoin(__dirname, appName), projectDir);
+  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
+    projectDir);
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });
@@ -118,29 +119,31 @@ var runTest = function () {
     assert(foundTracker);
   });
 
-  console.log("includeNodeModulesSymlink");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      projectContext: projectContext,
-      outputPath: tmpOutputDir,
-      includeNodeModulesSymlink: true
-    });
-    assert.strictEqual(result.errors, false);
+  if (process.platform !== "win32") { // Windows doesn't have symlinks
+    console.log("includeNodeModules");
+    assert.doesNotThrow(function () {
+      var tmpOutputDir = tmpDir();
+      var result = bundler.bundle({
+        projectContext: projectContext,
+        outputPath: tmpOutputDir,
+        includeNodeModules: 'symlink'
+      });
+      assert.strictEqual(result.errors, false);
 
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-    // node_modules directory exists and is a symlink
-    assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-    // node_modules contains fibers
-    assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-    // package node_modules directory also a symlink
-    // XXX might be breaking this
-    assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
-           .isSymbolicLink());
-  });
+      // sanity check -- main.js has expected contents.
+      assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
+                         bundler._mainJsContents);
+      // node_modules directory exists and is a symlink
+      assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
+      // node_modules contains fibers
+      assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
+      // package node_modules directory also a symlink
+      // XXX might be breaking this
+      assert(files.lstat(files.pathJoin(
+        tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
+             .isSymbolicLink());
+    });
+  }
 };
 
 

@@ -41,6 +41,32 @@ Example:
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
 
+Helpers can accept positional and keyword arguments:
+
+```javascript
+Template.myTemplate.helpers({
+  displayName: function (firstName, lastName, keyword) {
+    var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
+    return prefix + firstName + " " + lastName;
+  }
+});
+```
+
+Then you can call this helper from template like this:
+
+```
+{{dstache}}displayName "John" "Doe" title="President"}}
+```
+
+You can learn more about arguments to helpers in [Spacebars
+Readme](https://atmospherejs.com/meteor/spacebars).
+
+Under the hood, each helper starts a new
+[`Tracker.autorun`](#/full/tracker_autorun).  When its reactive
+dependencies change, the helper is rerun. Helpers depend on their data
+context, passed arguments and other reactive data sources accessed during
+execution.
+
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
 
@@ -152,6 +178,42 @@ or the template instance.  The Computation is automatically stopped
 when the template is destroyed.
 
 Alias for `template.view.autorun`.
+
+{{> autoApiBox "Blaze.TemplateInstance#subscribe"}}
+
+You can use `this.subscribe` from an [`onCreated`](#template_onCreated) callback
+to specify which data publications this template depends on. The subscription is
+automatically stopped when the template is destroyed.
+
+There is a complementary function `Template.instance().subscriptionsReady()`
+which returns true when all of the subscriptions called with `this.subscribe`
+are ready.
+
+Inside the template's HTML, you can use the built-in helper
+`Template.subscriptionsReady`, which is an easy pattern for showing loading
+indicators in your templates when they depend on data loaded from subscriptions.
+
+Example:
+
+```js
+Template.notifications.onCreated(function () {
+  // Use this.subscribe inside onCreated callback
+  this.subscribe("notifications");
+});
+```
+
+```html
+<template name="notifications">
+  {{dstache}}#if Template.subscriptionsReady}}
+    <!-- This is displayed when all data is ready. -->
+    {{dstache}}#each notifications}}
+      {{dstache}}> notification}}
+    {{dstache}}/each}}
+  {{dstache}}else}}
+    Loading...
+  {{dstache}}/if}}
+</template>
+```
 
 {{> autoApiBox "Blaze.TemplateInstance#view"}}
 

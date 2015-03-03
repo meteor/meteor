@@ -3136,3 +3136,91 @@ Tinytest.add(
 
     document.body.removeChild(div);
   });
+
+testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions", [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_template_level_subscriptions;
+    var tmplInstance;
+    var div;
+
+    // Make sure the subscriptions stop when the template is destroyed
+    var stopCallback = expect();
+    var stopCallback2 = expect();
+
+    // Make sure the HTML is what we expect when one subscription is ready
+    var checkOneReady = expect(function () {
+      test.equal(canonicalizeHtml(div.innerHTML), "");
+    });
+
+    // Make sure the HTML is what we expect when both subscriptions are ready
+    var checkBothReady = expect(function () {
+      test.equal(canonicalizeHtml(div.innerHTML), "ready! true");
+
+      // This will call the template's destroyed callback
+      Blaze.remove(tmplInstance.view);
+    });
+
+    var subscriptionsFinished = 0;
+
+    // Manually use the subscribe ready callback to make sure the template is
+    // doing the right thing
+    var subscribeCallback = expect(function () {
+      subscriptionsFinished++;
+
+      if (subscriptionsFinished === 1) {
+        // We need to use Tracker.afterFlush here and Tracker.flush doesn't work
+        // because we need to wait for the other callback to fire (the one that
+        // makes ready return true) _and_ we need the UI to rerender
+        Tracker.afterFlush(checkOneReady);
+      }
+
+      if (subscriptionsFinished === 2) {
+        Tracker.afterFlush(checkBothReady);
+      }
+    });
+
+    tmpl.onCreated(function () {
+      subHandle = this.subscribe("items", subscribeCallback);
+      subHandle2 = this.subscribe("items", 50, subscribeCallback);
+
+      subHandle.stop = stopCallback;
+      subHandle2.stop = stopCallback2;
+
+      tmplInstance = this;
+    });
+
+    // Insertion point
+    div = renderToDiv(tmpl);
+
+    // To start, there is no content because the template isn't ready
+    test.equal(canonicalizeHtml(div.innerHTML), "");
+  }
+]);
+
+testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions don't resubscribe unnecessarily", [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_template_level_subs_resubscribe;
+    var subHandle;
+    var trueThenFalse = new ReactiveVar(true);
+
+    tmpl.helpers({
+      ifArg: function () {
+        return trueThenFalse.get();
+      },
+      subscribingHelper1: expect(function () {
+        subHandle = Template.instance().subscribe("items", 100);
+      }),
+      subscribingHelper2: expect(function () {
+        var subHandle2 = Template.instance().subscribe("items", 100);
+        test.isTrue(subHandle.subscriptionId === subHandle2.subscriptionId);
+
+        // Make sure we didn't add two subscription handles to our internal list
+        test.equal(_.keys(Template.instance()._subscriptionHandles).length, 1);
+      })
+    });
+
+    renderToDiv(tmpl);
+    Tracker.flush();
+    trueThenFalse.set(false);
+  }
+]);
