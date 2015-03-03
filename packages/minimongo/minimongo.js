@@ -582,7 +582,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   _.each(queriesToRecompute, function (qid) {
     if (self.queries[qid])
-      LocalCollection._recomputeResults(self.queries[qid]);
+      self._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
 
@@ -676,7 +676,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
   _.each(queriesToRecompute, function (qid) {
     var query = self.queries[qid];
     if (query)
-      LocalCollection._recomputeResults(query);
+      self._recomputeResults(query);
   });
   self._observeQueue.drain();
   result = remove.length;
@@ -708,7 +708,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   _.each(self.queries, function (query, qid) {
     // XXX for now, skip/limit implies ordered observe, so query.results is
     // always an array
-    if ((query.cursor.skip || query.cursor.limit) && !query.paused)
+    if ((query.cursor.skip || query.cursor.limit) && ! self.paused)
       qidToOriginalResults[qid] = EJSON.clone(query.results);
   });
   var recomputeQids = {};
@@ -731,8 +731,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   _.each(recomputeQids, function (dummy, qid) {
     var query = self.queries[qid];
     if (query)
-      LocalCollection._recomputeResults(query,
-                                        qidToOriginalResults[qid]);
+      self._recomputeResults(query, qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
 
@@ -919,15 +918,18 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 // old results (and there's no need to pass in oldResults), because these
 // operations don't mutate the documents in the collection. Update needs to pass
 // in an oldResults which was deep-copied before the modifier was applied.
-LocalCollection._recomputeResults = function (query, oldResults) {
-  if (!oldResults)
+//
+// oldResults is guaranteed to be ignored if the query is not paused.
+LocalCollection.prototype._recomputeResults = function (query, oldResults) {
+  var self = this;
+  if (! self.paused && ! oldResults)
     oldResults = query.results;
   if (query.distances)
     query.distances.clear();
   query.results = query.cursor._getRawObjects({
     ordered: query.ordered, distances: query.distances});
 
-  if (!query.paused) {
+  if (! self.paused) {
     LocalCollection._diffQueryChanges(
       query.ordered, oldResults, query.results, query);
   }

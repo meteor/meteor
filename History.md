@@ -108,6 +108,8 @@
 * Fix crash in `meteor publish` in some cases when the package is inside an
   app. #3676
 
+* Avoid unnecessary work while paused in minimongo.
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
