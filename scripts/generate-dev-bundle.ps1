@@ -114,6 +114,7 @@ cd $DIR
 
 # mark the version
 echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
+sc "${BUNDLE_VERSION}" ([byte[]][char[]] "$contenttext") -Encoding Byte
 
 cd "$DIR\.."
 
