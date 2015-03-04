@@ -39,13 +39,13 @@ var _call = function(method, url, options, callback) {
   }
 
 
-  var params_for_url, params_for_body;
+  var paramsForUrl, paramsForBody;
   if (content || method === "GET" || method === "HEAD")
-    params_for_url = options.params;
+    paramsForUrl = options.params;
   else
-    params_for_body = options.params;
+    paramsForBody = options.params;
 
-  var new_url = URL._constructUrl(url, options.query, params_for_url);
+  var newUrl = URL._constructUrl(url, options.query, paramsForUrl);
 
   if (options.auth) {
     if (options.auth.indexOf(':') < 0)
@@ -54,8 +54,8 @@ var _call = function(method, url, options, callback) {
       (new Buffer(options.auth, "ascii")).toString("base64");
   }
 
-  if (params_for_body) {
-    content = URL._encodeParams(params_for_body);
+  if (paramsForBody) {
+    content = URL._encodeParams(paramsForBody);
     headers['Content-Type'] = "application/x-www-form-urlencoded";
   }
 
@@ -77,8 +77,10 @@ var _call = function(method, url, options, callback) {
 
   ////////// Kickoff! //////////
 
-  var req_options = {
-    url: new_url,
+  // Allow users to override any request option with the npmRequestOptions
+  // option.
+  var reqOptions = _.extend({
+    url: newUrl,
     method: method,
     encoding: "utf8",
     jar: false,
@@ -89,9 +91,9 @@ var _call = function(method, url, options, callback) {
     // also. (https://github.com/meteor/meteor/issues/2808)
     followAllRedirects: options.followRedirects,
     headers: headers
-  };
+  }, options.npmRequestOptions || {});
 
-  request(req_options, function(error, res, body) {
+  request(reqOptions, function(error, res, body) {
     var response = null;
 
     if (! error) {

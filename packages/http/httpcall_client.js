@@ -51,6 +51,10 @@ HTTP.call = function(method, url, options, callback) {
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
 
+  if (_.has(options, 'npmRequestOptions')) {
+    throw new Error("Option npmRequestOptions not supported on client.");
+  }
+
   var username, password;
   if (options.auth) {
     var colonLoc = options.auth.indexOf(':');
