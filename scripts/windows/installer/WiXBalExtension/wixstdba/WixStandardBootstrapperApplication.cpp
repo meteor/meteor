@@ -793,9 +793,9 @@ LExit:
 
 			WCHAR wzInfo[1024] = { };
 			if (m_fIsUninstall)
-				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s ...", wz);
+				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s...", wz);
 			else
-				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s ...", wz);
+				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s...", wz);
 
 			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_EXECUTE_PROGRESS_PACKAGE_TEXT, wz);
 			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_OVERALL_PROGRESS_PACKAGE_TEXT, wz);
@@ -831,9 +831,9 @@ LExit:
 
 		WCHAR wzInfo[1024] = { };
 		if (m_fIsUninstall)
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s ...  [ %u%% ]", wzPackageName, dwProgressPercentage);
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s...", wzPackageName, dwProgressPercentage);
 		else
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s ...  [ %u%% ]", wzPackageName, dwProgressPercentage);
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s...", wzPackageName, dwProgressPercentage);
 		ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_OVERALL_PROGRESS_PACKAGE_TEXT, wzInfo);
 
 		m_dwCalculatedExecuteProgress = dwOverallProgressPercentage * (100 - WIXSTDBA_ACQUIRE_PERCENTAGE) / 100;
@@ -1892,7 +1892,7 @@ LExit:
 				return 0;
 
 			case WIXSTDBA_CONTROL_INSTALL_BUTTON:
-				pBA->OnClickInstallButton(FALSE);
+				pBA->OnClickInstallButton(TRUE);
 				return 0;
 
 			case WIXSTDBA_CONTROL_REPAIR_BUTTON:
@@ -2191,7 +2191,7 @@ LExit:
 
 		if (m_fAttachedToConsole)
 		{
-			char  szPgLine[] = "\nMeteor setup progress...\n";
+			char  szPgLine[] = "\nInstalling...\n";
 			DWORD dSzWritten;
 			WriteConsole(m_fStdConsoleHandle, szPgLine, strlen(szPgLine), &dSzWritten, NULL);
 		}

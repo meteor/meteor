@@ -30,7 +30,7 @@
         <Hypertext Name="UpgradeHyperlink" X="178" Y="-16" Width="-24" Height="17" TabStop="yes" FontId="4" HideWhenDisabled="yes">#(loc.InstallUpgradeLinkText)</Hypertext>-->
 
 		<Text X="24" Y="-10" Width="100" Height="14" FontId="5" DisablePrefix="yes">#(loc.InstallVersion)</Text>
-		<Button Name="NextButton" X="200" Y="-142" Width="-200" Height="44" TabStop="yes" FontId="3">#(loc.InstallMeteor)</Button>
+		<Button Name="InstallButton" X="200" Y="-142" Width="-200" Height="44" TabStop="yes" FontId="3">#(loc.InstallMeteor)</Button>
 	</Page>
 	<Page Name="InstallDir">
 		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
@@ -79,10 +79,8 @@
 		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
 		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text Name="ProgressHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varProgressHeader]</Text>
-		<Text Name="ProgressInfo" X="24" Y="78" Width="-24" Height="36" FontId="1" DisablePrefix="yes">[varProgressInfo]</Text>
-		<Text Name="OverallProgressPackageText" X="24" Y="161" Width="-24" Height="17" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressText)</Text>
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
-		<Text Name="ExecuteProgressActionDataText" X="98" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
+		<Text Name="ExecuteProgressActionDataText" X="24" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
 		<Button Name="ProgressCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
 	</Page>
 	<Page Name="Modify">

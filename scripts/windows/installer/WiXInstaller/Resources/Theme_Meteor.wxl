@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WixLocalization Culture="en-us" Language="1033" xmlns="http://schemas.microsoft.com/wix/2006/localization">
-    <String Id="Caption">[WixBundleName] Setup</String>
+    <String Id="Caption">Install [WixBundleName]</String>
     <String Id="Title">[WixBundleName]</String>
     <String Id="InstallHeader">Welcome to the [WixBundleName] Setup</String>
     <String Id="InstallMessage">Setup will install [WixBundleName] on your computer. During the wizard, you will be able to adjust product features and settings that fit best to your needs.</String>
@@ -75,14 +75,14 @@
     <String Id="ExecuteProgressActionDataText"></String>
     <String Id="ProgressCancelButton">&amp;Cancel</String>
     <String Id="ModifyHeader">[WixBundleName] Maintenance</String>
-    <String Id="ModifyInfo">The setup wizard allows you to repair or remove the [WixBundleName] on your computer. If you have a previous [WixBundleName] application currently running, it is recommended to close it.&#13;&#13;&#10;Click Repair if you want to repair [WixBundleName], Uninstall to remove it or click Cancel to close this maintenance wizard.</String>
+    <String Id="ModifyInfo">The setup wizard allows you to repair or remove [WixBundleName] from your computer. If you have a [WixBundleName] application currently running, it is recommended to close it.&#13;&#13;&#10;Click Repair if you want to repair [WixBundleName], Uninstall to remove it or click Cancel to close this maintenance wizard.</String>
     <String Id="ModifyRepairButton">&amp;Repair</String>
     <String Id="ModifyUninstallButton">&amp;Uninstall</String>
     <String Id="ModifyCloseButton">&amp;Close</String>
-    <String Id="SuccessHeader">Setup Successful</String>
+    <String Id="SuccessHeader">Meteor Installed</String>
     <String Id="SuccessHeaderRepair">Repair Successful</String>
     <String Id="SuccessHeaderUninstall">Uninstall Successful</String>
-    <String Id="SuccessInfo">Setup has finished installing [WixBundleName] on your computer.&#13;&#10;&#13;&#10;Open a commandprompt window and type "meteor" to start.</String>
+    <String Id="SuccessInfo">Meteor is now installed on your computer.&#13;&#10;&#13;&#10;Open a new command prompt and run "meteor".</String>
     <String Id="SuccessErrorInfoText">Following non critical errors occured:</String>
     <String Id="SuccessInfoRepair">Setup has finished repairing [WixBundleName] installed on your computer. The application may be launched by selecting the installed icons.</String>
     <String Id="SuccessInfoUninstall">[WixBundleName] was successfully removed from your computer.</String>

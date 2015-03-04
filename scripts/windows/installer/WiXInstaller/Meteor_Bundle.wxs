@@ -30,8 +30,8 @@
 		<Variable Name="TermsUrl" 			Type="string" Value="$(var.METEOR_TermsUrl)" />
 		<Variable Name="PrivacyUrl" 		Type="string" Value="$(var.METEOR_PrivacyUrl)" />
 
-        <Variable Name="PerMachineInstall"  Type="numeric" Persisted="yes" Value="1" />
-        <Variable Name="PerUserInstall"     Type="numeric" Persisted="yes" Value="0" />
+        <Variable Name="PerMachineInstall"  Type="numeric" Persisted="yes" Value="0" />
+        <Variable Name="PerUserInstall"     Type="numeric" Persisted="yes" Value="1" />
         <Variable Name="CreateRButton" 		Type="numeric" Persisted="yes" Value="1" />
         <Variable Name="SignInRButton" 		Type="numeric" Persisted="yes" Value="0" />
         <Variable Name="RegisterEmail"   	Type="string"  Persisted="yes" Value="" Hidden="yes" />
@@ -45,7 +45,7 @@
         <Variable Name="UserMeteorSessionFile" 	    Type="string" Persisted="yes" Value="%HOMEPATH%\.meteorsession" />
         <Variable Name="PerMachineInstallFolder"    Type="string" Persisted="yes" Value="[ProgramFilesFolder][WixBundleName]" />
         <Variable Name="PerUserInstallFolder"       Type="string" Persisted="yes" Value="[LocalAppDataFolder]" />
-        <Variable Name="InstallFolder"              Type="string" Persisted="yes" Value="[ProgramFilesFolder][WixBundleName]" />
+        <Variable Name="InstallFolder"              Type="string" Persisted="yes" Value="[PerUserInstallFolder]" />
 
         <Variable Name="InstallRegPath"             Type="string" Persisted="yes" Value="SOFTWARE\$(var.METEOR_Manufacturer)\$(var.METEOR_ProductName)\Install" />
         <Variable Name="MSICustomErrFile" 	        Type="string" Persisted="yes" Value="[WixBundleLog].err" />

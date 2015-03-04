@@ -4,7 +4,7 @@ PowerShell.
 Prerequisites:
 ==============
 
-Installed Visual C++ 2010 Express, which can be found here:
+Install Visual C++ 2010 Express, which can be found here:
 * http://www.visualstudio.com/downloads/download-visual-studio-vs
 
 Then, install Visual Studio 2010 Service Pack 1 here:
