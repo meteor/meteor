@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.17-winr.5"
+  version: "1.0.18-winr.5"
 });
 
 Npm.depends({
