@@ -33,11 +33,7 @@ selftest.define(
     var result = httpHelpers.getUrl(
       "http://localhost:3000/__cordova/index.html");
 
-    var m = result.match(/__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]+?)"\)\)/);
-    if (! m) {
-      selftest.fail("Can't find __meteor_runtime_config__");
-    }
-    var mrc = JSON.parse(decodeURIComponent(m[1]));
+    var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result);
     selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, "http://example.com");
     selftest.expectEqual(mrc.ROOT_URL, "http://example.com");
 
@@ -78,13 +74,7 @@ selftest.define("cordova app gets https:// URLs when force-ssl is used", ["cordo
 
   testUtils.logout(s);
 
-  var ddpRegExp = new RegExp('"DDP_DEFAULT_CONNECTION_URL":"' + url + '/"');
-  var rootUrlRegExp = new RegExp('"ROOT_URL":"' + url + '/"');
-
-  if (! result.match(ddpRegExp)) {
-    selftest.fail("Incorrect DDP_DEFAULT_CONNECTION_URL");
-  }
-  if (! result.match(rootUrlRegExp)) {
-    selftest.fail("Incorrect ROOT_URL");
-  }
+  var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result);
+  selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, url + "/");
+  selftest.expectEqual(mrc.ROOT_URL, url + "/");
 });
