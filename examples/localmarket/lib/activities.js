@@ -39,7 +39,14 @@ Meteor.methods({
 });
 
 if (Meteor.isServer) {
-  // Uses the Npm request module directly as provided by the request local pkg
+  // Uses the Npm request module directly as provided by the http package
+
+  if (! HTTPInternals.NpmModules.request.version.match(/^2\.(\d+)/)) {
+    // maybe it doesn't have the same API any more?
+    throw Error("http upgraded request to a new major version");
+  }
+  var Request = Meteor.wrapAsync(HTTPInternals.NpmModules.request.module);
+  
   var callTwitter = function(options) {
     var config = Meteor.settings.twitter
     var userConfig = Meteor.user().services.twitter;
