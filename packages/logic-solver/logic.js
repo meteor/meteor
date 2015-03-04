@@ -165,7 +165,7 @@ var FormulaInfo = function () {
   // the solver goes to work and at some point determines A v B to
   // be true. It could set $or1 to true, satisfying all the clauses
   // where it appears, or it could set $or1 to false, which only
-  // constraints the solution space and doesn't open up any new
+  // constrains the solution space and doesn't open up any new
   // solutions for other variables. If the solver happens to find a
   // solution where A v B is true and $or1 is false, we know there
   // is a similar solution that makes all the same assignments
@@ -179,7 +179,7 @@ var FormulaInfo = function () {
   // (http://minisat.se/downloads/MiniSat+.pdf).
   //
   // These flags are set when generation has been done for the positive
-  // case or then negative case, so that we only generate each one once.
+  // case or the negative case, so that we only generate each one once.
   this.occursPositively = false;
   this.occursNegatively = false;
 
@@ -307,10 +307,10 @@ Logic.Solver.prototype.getVarName = function (vnum) {
   }
 };
 
-// Converts Terms to NumTerms (if they aren't already).  This is done
+// Converts a Term to a NumTerm (if it isn't already).  This is done
 // when a Formula creates Clauses for a Solver, since Clauses require
-// NumTerms.  Takes a Term or an array.  For example, [-3, "-foo"] might
-// become [-3, -4].
+// NumTerms.  NumTerms stay the same, while a NameTerm like "-foo"
+// might become (say) the number -3.
 Logic.Solver.prototype.toNumTerm = function (t, _noCreate) {
   var self = this;
 
@@ -329,8 +329,7 @@ Logic.Solver.prototype.toNumTerm = function (t, _noCreate) {
   }
 };
 
-// Converts Terms to NameTerms (if they aren't already).
-// Takes a Term or an array.
+// Converts a Term to a NameTerm (if it isn't already).
 Logic.Solver.prototype.toNameTerm = function (t) {
   var self = this;
 
@@ -372,6 +371,9 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
 
   var numRealTerms = cls.terms.length;
   if (extraTerms) {
+    // extraTerms are added to the clause as is.  Formula variables in
+    // extraTerms do not cause Formula clause generation, which is
+    // necessary to implement Formula clause generation.
     cls = cls.append(extraTerms);
   }
 
@@ -400,7 +402,11 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
 // if the Formula `Logic.or("X", "Y")` is represented by `$or1`, which
 // is variable number 5, then when you actually use 5 or -5 in a clause,
 // the clauses "X v Y v -5" (when you use 5) or "-X v 5; -Y v 5"
-// (when you use -5) will be generated.
+// (when you use -5) will be generated.  The clause "X v Y v -5"
+// is equivalent to "5 => X v Y" (or -(X v Y) => -5), while the clauses
+// "-X v 5; -Y v 5" are equivalent to "-5 => -X; -5 => -Y" (or
+// "X => 5; Y => 5").
+
 Logic.Solver.prototype._useFormulaTerm = function (t) {
   var self = this;
   _check(t, Logic.NumTerm);
@@ -416,12 +422,16 @@ Logic.Solver.prototype._useFormulaTerm = function (t) {
       // generate clauses for the formula.
       // Eg, if we use variable `X` which represents the formula
       // `A v B`, add the clause `A v B v -X`.
+      // By using the extraTerms argument to addClauses, we avoid
+      // treating this as a negative occurrence of X.
       info.occursPositively = true;
       var clauses = self._generateFormula(true, formula);
       self._addClauses(clauses, [-v]);
     } else if ((! positive) && ! info.occursNegatively) {
       // Eg, if we have the term `-X` where `X` represents the
       // formula `A v B`, add the clauses `-A v X` and `-B v X`.
+      // By using the extraTerms argument to addClauses, we avoid
+      // treating this as a positive occurrence of X.
       info.occursNegatively = true;
       var clauses = self._generateFormula(false, formula);
       self._addClauses(clauses, [v]);
