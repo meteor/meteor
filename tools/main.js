@@ -404,6 +404,23 @@ var springboard = function (rel, options) {
   versionMap[toolsPkg] = toolsVersion;
   var packageMap = new packageMapModule.PackageMap(versionMap);
 
+  if (process.platform === "win32") {
+    // Make sure the tool we are trying to download has been built for Windows
+    var buildsForHostArch = catalog.official.getBuildsForArches(
+      rel.getToolsPackage(), rel.getToolsVersion(), [archinfo.host()]);
+
+    if (! buildsForHostArch) {
+      var release = catalog.official.getDefaultReleaseVersion();
+      var releaseName = release.track + "@" + release.version;
+
+      Console.error(
+        "This project uses " + rel.getDisplayName() + ", which isn't",
+        "available on Windows. To work with this app on all supported",
+        "platforms, use", Console.command("meteor update --release " + releaseName),
+        "to pin this app to the newest Windows-compatible release.");
+    }
+  }
+
   // XXX split better
   Console.withProgressDisplayVisible(function () {
     var messages = buildmessage.capture(
@@ -413,27 +430,15 @@ var springboard = function (rel, options) {
         });
       }
     );
+
     if (messages.hasMessages()) {
       // We have failed to download the tool that we are supposed to springboard
       // to! That's bad. Let's exit.
       if (options.fromApp) {
-        if (process.platform === "win32") {
-          // XXX improve this message for real release
-          var release = catalog.official.getDefaultReleaseVersion();
-          var releaseName = release.track + "@" + release.version;
-
-          Console.error(
-            "This project uses " + rel.getDisplayName() + ", which isn't",
-            "available on Windows. To work with this app on all platforms, use",
-            Console.command("meteor update --release " + releaseName),
-            "to pin this app to the newest Windows preview release.");
-        } else {
-          Console.error(
-            "Sorry, this project uses " + rel.getDisplayName() + ", which is",
-            "not installed and could not be downloaded. Please check to make",
-            "sure that you are online.");
-        }
-
+        Console.error(
+          "Sorry, this project uses " + rel.getDisplayName() + ", which is",
+          "not installed and could not be downloaded. Please check to make",
+          "sure that you are online.");
       } else {
         Console.error(
           "Sorry, " + rel.getDisplayName() + " is not installed and could not",
