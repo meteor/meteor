@@ -1696,6 +1696,16 @@ Tinytest.add("logic-solver - maximize", function (test) {
   test.equal(sol2.getTrueVars(), ["#11", "#2", "#5"]);
 });
 
+Tinytest.add("logic-solver - weightedSum", function (test) {
+  var s = new Logic.Solver();
+  s.require(Logic.equalBits(
+    Logic.weightedSum(["A", "B"], [1, 4]),
+    Logic.constantBits(5)));
+  var sol = s.solve();
+  test.isTrue(sol);
+  test.equal(sol.getTrueVars(), ["A", "B"]);
+});
+
 Tinytest.add("logic-solver - type-checking", function (test) {
   // on by default
   test.throws(function () {

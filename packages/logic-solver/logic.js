@@ -960,7 +960,7 @@ Logic.greaterThan = function (bits1, bits2) {
 
 Logic.greaterThanOrEqual = function (bits1, bits2) {
   return Logic.lessThanOrEqual(bits2, bits1);
-}
+};
 
 Logic.equalBits = function (bits1, bits2) {
   return new Logic.EqualBitsFormula(bits1, bits2);
@@ -1082,8 +1082,7 @@ var binaryWeightedSum = function (varsByWeight) {
   var lowestWeight = 0; // index of the first non-empty array
   var output = [];
   while (lowestWeight < buckets.length) {
-    var i = lowestWeight;
-    var bucket = buckets[i];
+    var bucket = buckets[lowestWeight];
     if (! bucket.length) {
       output.push(Logic.FALSE);
       lowestWeight++;
@@ -1095,8 +1094,7 @@ var binaryWeightedSum = function (varsByWeight) {
       var carry = new Logic.HalfAdderCarry(bucket[0], bucket[1]);
       bucket.length = 0;
       bucket.push(sum);
-      buckets[i+1] = (buckets[i+1] || []);
-      buckets[i+1].push(carry);
+      pushToNth(buckets, lowestWeight+1, carry);
     } else {
       // Not clear whether it's better to take the three
       // vars from the start or end of the bucket, but
@@ -1107,15 +1105,19 @@ var binaryWeightedSum = function (varsByWeight) {
       var sum = new Logic.FullAdderSum(a, b, c);
       var carry = new Logic.FullAdderCarry(a, b, c);
       bucket.push(sum);
-      buckets[i+1] = (buckets[i+1] || []);
-      buckets[i+1].push(carry);
+      pushToNth(buckets, lowestWeight+1, carry);
     }
   }
   return output;
 };
 
+// Push `newItem` onto the array at arrayOfArrays[n],
+// first ensuring that it exists by pushing empty
+// arrays onto arrayOfArrays.
 var pushToNth = function (arrayOfArrays, n, newItem) {
-  arrayOfArrays[n] = (arrayOfArrays[n] || []);
+  while (n >= arrayOfArrays.length) {
+    arrayOfArrays.push([]);
+  }
   arrayOfArrays[n].push(newItem);
 };
 
@@ -1147,11 +1149,6 @@ Logic.weightedSum = function (formulas, weights) {
       whichBit++;
     }
   });
-  for (var i = 0; i < binaryWeighted.length; i++) {
-    if (! binaryWeighted[i]) {
-      binaryWeighted[i] = [];
-    }
-  }
 
   return new Logic.Bits(binaryWeightedSum(binaryWeighted));
 };
