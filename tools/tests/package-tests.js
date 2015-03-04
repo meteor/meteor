@@ -2825,3 +2825,35 @@ selftest.define("update package metadata",
   run.matchErr("You're not in a Meteor package directory");
   run.expectExit(1);
 });
+
+// Regression test for #3676.
+selftest.define("publish prebuilt package", ["net", "test-package-server", "slow"], function () {
+  var s = new Sandbox();
+  var fullPackageName = randomizedPackageName(username);
+
+  s.createApp("myapp", "empty");
+  s.cd("myapp");
+  // This bug required the app to have a Cordova platform, so that the app's
+  // cache would be built with the cordova unibuild which matches what we're
+  // trying to publish.
+  s.write('.meteor/platforms', 'server\nbrowser\nandroid\n');
+
+  s.mkdir('packages');
+  s.cd('packages');
+  s.createPackage('p', fullPackageName, 'package-for-show');
+
+  // This adds the package and saves a built version of it to the local
+  // IsopackCache.
+  var run = s.run('add', fullPackageName);
+  run.expectExit(0);
+
+  s.cd('p');
+
+  testUtils.login(s, username, password);
+  // Before fixing #3676, this crashed because it didn't read the
+  // pluginProviderPackageMap from the IsopackCache.
+  var run = s.run('publish', '--create');
+  run.waitSecs(30);
+  run.match('Published');
+  run.expectExit(0);
+});

@@ -211,6 +211,14 @@ _.extend(exports.IsopackCache.prototype, {
           isopack.initFromPath(name, self._isopackDir(name), {
             isopackBuildInfoJson: isopackBuildInfoJson
           });
+          // _checkUpToDate already verified that
+          // isopackBuildInfoJson.pluginProviderPackageMap is a subset of
+          // self._packageMap, so this operation is correct. (It can't be done
+          // by isopack.initFromPath, because Isopack doesn't have access to the
+          // PackageMap, and specifically to the local catalog it knows about.)
+          isopack.setPluginProviderPackageMap(
+            self._packageMap.makeSubsetMap(
+              _.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
         } else {
           // Nope! Compile it again.
           isopack = compiler.compile(packageInfo.packageSource, {
