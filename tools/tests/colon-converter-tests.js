@@ -59,7 +59,7 @@ var randomizedPackageName = function (username, start) {
 // on a module that has filenames with colons -- the module gets added, but
 // without the colon filenames.
 if (process.platform !== "win32") {
-  selftest.define("can't publish package with colons", ["net", "test-package-server"], function () {
+  selftest.define("can't publish package with colons", ["net", "test-package-server", "slow"], function () {
     var s = new Sandbox();
 
     testUtils.login(s, username, password);
@@ -77,7 +77,7 @@ if (process.platform !== "win32") {
     });
   });
 
-  selftest.define("can't build local packages with colons", function () {
+  selftest.define("can't build local packages with colons", ["slow"], function () {
     var s = new Sandbox();
 
     var appName = "test";
