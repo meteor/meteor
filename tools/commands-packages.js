@@ -1660,15 +1660,7 @@ main.registerCommand({
     projectContext.initializeCatalog();
   });
 
-  // Ensure that all packages and their tests are built. (We need to build
-  // tests so that we can include their sources in source tarballs.)
-  var allPackagesWithTests = projectContext.localCatalog.getAllPackageNames();
   var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
-  projectContext.projectConstraintsFile.addConstraints(
-    _.map(allPackagesWithTests, function (p) {
-      return utils.parsePackageConstraint(p);
-    })
-  );
 
   Console.info("Listing packages where the checkout version doesn't match the",
     "latest version on the package server.");
