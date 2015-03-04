@@ -114,7 +114,11 @@ cd $DIR
 
 # mark the version
 echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
-sc "${BUNDLE_VERSION}" ([byte[]][char[]] "$contenttext") -Encoding Byte
+# replace the \r\n end-line char with \n
+# we know that the file contains only one line, so let's just remove the a[-2] char
+$a = [System.IO.File]::ReadAllBytes("${BUNDLE_VERSION}")
+$a = $a[0..($a.length - 3) + ($a.length - 1)]
+[System.IO.File]::WriteAllBytes("${BUNDLE_VERSION}", $a)
 
 cd "$DIR\.."
 
