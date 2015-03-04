@@ -2,6 +2,15 @@ var path = Npm.require('path');
 var request = Npm.require('request');
 var url_util = Npm.require('url');
 
+HTTPInternals = {
+  NpmModules: {
+    request: {
+      version: Npm.require('request/package.json').version,
+      module: request
+    }
+  }
+};
+
 // _call always runs asynchronously; HTTP.call, defined below,
 // wraps _call and runs synchronously when no callback is provided.
 var _call = function(method, url, options, callback) {
