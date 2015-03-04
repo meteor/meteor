@@ -9,7 +9,11 @@ if (Meteor.isServer) {
     });
   }
 
-  Meteor.publish("items", function (startIndex) {
-    return Items.find({number: {$gte: startIndex}});
+  Meteor.publish("items", function (sleepTime) {
+    if (sleepTime) {
+      Meteor._sleepForMs(sleepTime);
+    }
+
+    return Items.find();
   });
 }
