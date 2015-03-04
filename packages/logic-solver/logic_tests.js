@@ -1507,7 +1507,9 @@ Tinytest.add("logic-solver - toy packages", function (test) {
         // e.g. implies("bar@1.2.4", "foo")
         solver.require(Logic.implies(packageVersion, package2));
         // Now ban all incompatible versions of package2 if
-        // we select this packageVersion
+        // we select this packageVersion.
+        // NOTE: This is not the best way to express constraints.  It's
+        // not what we do in the real package constraint solver.
         _.each(allPackageVersions[package2], function (v) {
           if (! _.contains(compatibleVersions, v)) {
             solver.require(Logic.implies(packageVersion,
