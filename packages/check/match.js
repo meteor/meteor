@@ -140,6 +140,7 @@ var typeofChecks = [
   [String, "string"],
   [Number, "number"],
   [Boolean, "boolean"],
+  [Function, "function"],
   // While we don't allow undefined in EJSON, this is good for optional
   // arguments with OneOf.
   [undefined, "undefined"]
@@ -379,4 +380,3 @@ var _prependPath = function (key, base) {
     return key + '.' + base;
   return key + base;
 };
-
