@@ -18,10 +18,19 @@ Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
 ////////// Type Declarations
 
-// WholeNumber: a non-negative integer (0 is allowed)
-Logic.WholeNumber = Match.Where(function (x) {
-  return Match.test(x, Match.Integer) && x >= 0;
-});
+// All variables have a name and a number.  The number is mainly used
+// internally, and it's what's given to MiniSat.  Names and numbers
+// are interchangeable, which is convenient for doing manipulation
+// of terms in a way that works before or after variable names are
+// converted to numbers.
+
+// Term: a variable name or variable number, optionally
+// negated (meaning "boolean not").  For example,
+// `1`, `-1`, `"foo"`, or `"-foo"`.  All variables have
+// internal numbers that start at 1, so "foo" might be
+// variable number 1, for example.  Any number of leading
+// "-" will be parsed in the string form, but we try to
+// keep it to either one or zero of them.
 
 Logic.NumTerm = Match.Where(function (x) {
   return Match.test(x, Match.Integer) && x !== 0;
@@ -35,14 +44,12 @@ Logic.NameTerm = Match.Where(function (x) {
     ! /^-*[0-9]*$/.test(x);
 });
 
-// Term: a variable name or variable number, optionally
-// negated (meaning "boolean not").  For example,
-// `1`, `-1`, `"foo"`, or `"-foo"`.  All variables have
-// internal numbers that start at 1, so "foo" might be
-// variable number 1, for example.  Any number of leading
-// "-" will be parsed in the string form, but we try to
-// keep it to either one or zero of them.
 Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
+
+// WholeNumber: a non-negative integer (0 is allowed)
+Logic.WholeNumber = Match.Where(function (x) {
+  return Match.test(x, Match.Integer) && x >= 0;
+});
 
 // Abstract base class.  Subclasses are created using _defineFormula.
 Logic.Formula = function () {};
@@ -72,8 +79,13 @@ Logic.not = function (operand) {
   }
 };
 
-Logic.TRUE = "$T";
-Logic.FALSE = "$F";
+Logic.NAME_FALSE = "$F";
+Logic.NAME_TRUE = "$T";
+Logic.NUM_FALSE = 1;
+Logic.NUM_TRUE = 2;
+
+Logic.TRUE = Logic.NAME_TRUE;
+Logic.FALSE = Logic.NAME_FALSE;
 
 Logic._defineFormula = function (constructor, typeName, methods) {
   _check(constructor, Function);
@@ -178,6 +190,57 @@ var FormulaInfo = function () {
   this.isForbidden = false;
 };
 
+
+// The "termifier" interface is provided to a Formula's
+// generateClauses method, which must use it to generate Clause
+// objects.
+//
+// The reason for this approach is that it gives the Formula control
+// over the clauses returned, but it gives the Solver control over
+// Formula generation.
+Logic.Termifier = function (solver) {
+  this.solver = solver;
+};
+
+// The main entry point, the `clause` method takes a list of
+// FormulaOrTerms and converts it to a Clause containing NumTerms, *by
+// replacing Formulas with their variables*, creating the variable if
+// necessary.  For example, if an OrFormula is represented by the
+// variable `$or1`, it will be replaced by the numeric version of
+// `$or1` to make the Clause.  When the Clause is actually used, it
+// will trigger generation of the clauses that relate `$or1` to the
+// operands of the OrFormula.
+Logic.Termifier.prototype.clause = function (/*args*/) {
+  var self = this;
+  var formulas = _.flatten(arguments);
+  _check(formulas, [Logic.FormulaOrTerm]);
+  return new Logic.Clause(_.map(formulas, function (f) {
+    return self.term(f);
+  }));
+};
+
+// The `term` method performs the mapping from FormulaOrTerm to
+// NumTerm.  It's called by `clause` and could be called directly
+// from a Formula's generateClauses if it was useful for some
+// reason.
+Logic.Termifier.prototype.term = function (formula) {
+  return this.solver._formulaToTerm(formula);
+};
+
+// The `generate` method generates clauses for a Formula (or
+// Term).  It should be used carefully, because it works quite
+// differently from passing a Formula into `clause`, which is the
+// normal way for one Formula to refer to another.  When you use a
+// Formula in `clause`, it is replaced by the Formula's variable,
+// and the Solver handles generating the Formula's clauses once.
+// When you use `generate`, this system is bypassed, and the
+// Formula's generateClauses method is called pretty much directly,
+// returning the array of Clauses.
+Logic.Termifier.prototype.generate = function (isTrue, formula) {
+  return this.solver._generateFormula(isTrue, formula, this);
+};
+
+
 Logic.Solver = function () {
   var self = this;
 
@@ -186,15 +249,18 @@ Logic.Solver = function () {
   self._name2num = {}; // (' '+vname) -> vnum
 
   // true and false
-  self._F = self.getVarNum(Logic.FALSE, true); // 1
-  self._T = self.getVarNum(Logic.TRUE, true); // 2
+  var F = self.getVarNum(Logic.NAME_FALSE, true); // 1
+  var T = self.getVarNum(Logic.NAME_TRUE, true); // 2
+  if (F !== Logic.NUM_FALSE || T !== Logic.NUM_TRUE) {
+    throw new Error("Assertion failure: $T and $F have wrong numeric value");
+  }
   self._F_used = false;
   self._T_used = false;
   // It's important that these clauses are elements 0 and 1
   // of the clauses array, so that they can optionally be stripped
   // off.  For example, _clauseData takes advantage of this fact.
-  self.clauses.push(new Logic.Clause(-self._F));
-  self.clauses.push(new Logic.Clause(self._T));
+  self.clauses.push(new Logic.Clause(-Logic.NUM_FALSE));
+  self.clauses.push(new Logic.Clause(Logic.NUM_TRUE));
 
   self._formulaInfo = {}; // Formula guid -> FormulaInfo
   // For generating formula variables like "$or1", "$or2", "$and1", "$and2"
@@ -207,20 +273,7 @@ Logic.Solver = function () {
   self._unsat = false; // once true, no solution henceforth
   self._minisat = null; // created lazily
 
-  var termifier = {
-    term: function (formula) {
-      return self._formulaToTerm(formula);
-    },
-    clause: function (/*args*/) {
-      var formulas = _.flatten(arguments);
-      _check(formulas, [Logic.FormulaOrTerm]);
-      return new Logic.Clause(_.map(formulas, this.term));
-    },
-    generate: function (isTrue, formula) {
-      return self._generateFormula(isTrue, formula, this);
-    }
-  };
-  self._termifier = termifier;
+  self._termifier = new Logic.Termifier(self);
 };
 
 // Get a var number for vname, assigning it a number if it is new.
@@ -325,9 +378,9 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
   for (var i = 0; i < cls.terms.length; i++) {
     var t = cls.terms[i];
     var v = (t < 0) ? -t : t;
-    if (v === self._F) {
+    if (v === Logic.NUM_FALSE) {
       usedF = true;
-    } else if (v === self._T) {
+    } else if (v === Logic.NUM_TRUE) {
       usedT = true;
     } else if (v < 1 || v >= self._num2name.length) {
       throw new Error("Bad variable number: " + v);
@@ -440,9 +493,9 @@ Logic.Solver.prototype._generateFormula = function (isTrue, formula, _termifier)
   } else { // Term
     var t = self.toNumTerm(formula);
     var sign = isTrue ? 1 : -1;
-    if (t === sign*self._T || t === -sign*self._F) {
+    if (t === sign*Logic.NUM_TRUE || t === -sign*Logic.NUM_FALSE) {
       return [];
-    } else if (t === sign*self._F || t === -sign*self._T) {
+    } else if (t === sign*Logic.NUM_FALSE || t === -sign*Logic.NUM_TRUE) {
       return [new Logic.Clause()]; // never satisfied clause
     } else {
       return [new Logic.Clause(sign*t)];
@@ -520,9 +573,9 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   } else if (formula instanceof Logic.Formula) {
     var info = this._getFormulaInfo(formula);
     if (info.isRequired) {
-      return self._T;
+      return Logic.NUM_TRUE;
     } else if (info.isForbidden) {
-      return self._F;
+      return Logic.NUM_FALSE;
     } else if (info.varNum === null) {
       // generate a Solver-local formula variable like "$or1"
       var type = formula.type;
@@ -1270,13 +1323,16 @@ Logic.Solution = function (_solver, _assignment) {
   self._ungeneratedFormulas = _.clone(_solver._ungeneratedFormulas);
 
   self._formulaValueCache = {};
-  self._termifier = _.extend(
-    {}, _solver._termifier, {
-      term: function (formula) {
-        // numeric $T or $F
-        return self.evaluate(formula) ? 2 : 1;
-      }
-    });
+  self._termifier = new Logic.Termifier(self._solver);
+  // Normally, when a Formula uses a Termifier to generate clauses that
+  // refer to other Formulas, the Termifier replaces the Formulas with
+  // their variables.  We hijack this mechanism to replace the Formulas
+  // with their truth variables instead, leading to recursive evaluation.
+  // Note that we cache the evaluated truth values of Formulas to avoid
+  // redundant evaluation.
+  self._termifier.term = function (formula) {
+    return self.evaluate(formula) ? Logic.NUM_TRUE : Logic.NUM_FALSE;
+  };
 };
 
 // Get a map of variables to their assignments,
