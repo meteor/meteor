@@ -33,14 +33,13 @@ selftest.define(
     var result = httpHelpers.getUrl(
       "http://localhost:3000/__cordova/index.html");
 
-    var ddpRegExp = /"DDP_DEFAULT_CONNECTION_URL":"http:\/\/example.com"/;
-    var rootUrlRegExp = /"ROOT_URL":"http:\/\/example.com"/;
-    if (! result.match(ddpRegExp)) {
-      selftest.fail("Incorrect DDP_DEFAULT_CONNECTION_URL");
+    var m = result.match(/__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]+?)"\)\)/);
+    if (! m) {
+      selftest.fail("Can't find __meteor_runtime_config__");
     }
-    if (! result.match(rootUrlRegExp)) {
-      selftest.fail("Incorrect ROOT_URL");
-    }
+    var mrc = JSON.parse(decodeURIComponent(m[1]));
+    selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, "http://example.com");
+    selftest.expectEqual(mrc.ROOT_URL, "http://example.com");
 
     run.stop();
 });
