@@ -9,6 +9,7 @@ Package.onUse(function (api) {
   api.use('underscore');
   api.use('url');
   api.export('HTTP');
+  api.export('HTTPInternals', 'server');
   api.addFiles('httpcall_common.js', ['client', 'server']);
   api.addFiles('httpcall_client.js', 'client');
   api.addFiles('httpcall_server.js', 'server');
@@ -21,6 +22,7 @@ Package.onTest(function (api) {
   api.use('random');
   api.use('jquery', 'client');
   api.use('http', ['client', 'server']);
+  api.use('tinytest');
   api.use('test-helpers', ['client', 'server']);
 
   api.addFiles('test_responder.js', 'server');
