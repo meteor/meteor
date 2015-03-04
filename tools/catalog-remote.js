@@ -805,23 +805,29 @@ _.extend(RemoteCatalog.prototype, {
   // track, sorted by their orderKey. Returns the empty array if the release
   // track does not exist or does not have any recommended versions.
   getSortedRecommendedReleaseRecords: function (track, laterThanOrderKey) {
+    var allRecords = this.getSortedReleaseRecords(track, laterThanOrderKey);
+
+    return _.where(allRecords, { recommended: true });
+  },
+
+  getSortedReleaseRecords: function (track, laterThanOrderKey) {
     var self = this;
     // XXX releaseVersions content objects are kinda big; if we put
     // 'recommended' and 'orderKey' in their own columns this could be faster
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
 
-    var recommended = _.filter(result, function (v) {
-      if (!v.recommended)
-        return false;
+    var laterThan = _.filter(result, function (v) {
       return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
     });
 
-    var recSort = _.sortBy(recommended, function (rec) {
+    var sorted = _.sortBy(laterThan, function (rec) {
       return rec.orderKey;
     });
-    recSort.reverse();
-    return recSort;
+
+    sorted.reverse();
+
+    return sorted;
   },
 
   // Given a release track, returns all version records for this track.
@@ -854,13 +860,50 @@ _.extend(RemoteCatalog.prototype, {
   getDefaultReleaseVersionRecord: function (track) {
     var self = this;
 
-    if (!track)
+    if (! track)
       track = exports.DEFAULT_TRACK;
 
     var versions = self.getSortedRecommendedReleaseRecords(track);
-    if (!versions.length)
+    if (! versions.length)
       return null;
-    return  versions[0];
+
+    var releaseVersionRecord = versions[0];
+
+    if (process.platform === "win32") {
+      // For a short while, there won't be any recommended releases that work on
+      // Windows.
+      //
+      // XXX this whole special case block can be removed once the first
+      // recommended release for Windows comes out.
+      var hasBuildForWindows = catalog.official.getBuildsForArches(
+        releaseVersionRecord.track, releaseVersionRecord.version,
+        [archinfo.host()]);
+
+      if (! hasBuildForWindows) {
+        // If the newest recommended release doesn't work on Windows, we should
+        // resort to a hacky strategy around version naming.
+        //
+        // Versions named METEOR@x.y.z-win.# will be treated as recommended;
+        // Versions with any other string instead of `win` in that location
+        // will not be treated as recommended.
+
+        var allRecords = self.getSortedReleaseRecords(track);
+
+        for (var i = 0; i < allRecords.length; i++) {
+          var parsedVersion = VersionParser.parse(allRecords[i].version);
+
+          if (parsedVersion.prerelease[0] === "win") {
+            return allRecords[i];
+          }
+        }
+
+        // We should never get here since there should always be at least one
+        // version that matches.
+        throw new Error("couldn't find a release compatible with Windows.");
+      }
+    }
+
+    return releaseVersionRecord;
   },
 
   getBuildWithPreciseBuildArchitectures: function (versionRecord, buildArchitectures) {
