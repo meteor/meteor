@@ -251,6 +251,11 @@ _.extend(exports.IsopackCache.prototype, {
       return false;
     }
 
+    // Was the package built by a different compiler version?
+    if (isopackBuildInfoJson.builtBy !== compiler.BUILT_BY) {
+      return false;
+    }
+
     // If any of the direct dependencies changed their version or location, we
     // aren't up to date.
     if (!self._packageMap.isSupersetOfJSON(
@@ -276,6 +281,9 @@ _.extend(exports.IsopackCache.prototype, {
     if (self._includeCordovaUnibuild !== previousIsopack.hasCordovaUnibuild()) {
       return false;
     }
+
+    // We don't have to check builtBy because we don't change BUILT_BY without
+    // restarting the process.
 
     // If any of the direct dependencies changed their version or location, we
     // aren't up to date.
