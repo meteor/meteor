@@ -430,6 +430,30 @@ testAsyncMulti("httpcall - params", [
   }
 ]);
 
+testAsyncMulti("httpcall - npmRequestOptions", [
+  function (test, expect) {
+    if (Meteor.isClient) {
+      test.throws(function () {
+        HTTP.get(url_prefix() + "/",
+                 { npmRequestOptions: { encoding: null } },
+                 function () {});
+      });
+      return;
+    }
+
+    HTTP.get(
+      url_prefix() + "/",
+      { npmRequestOptions: { encoding: null } },
+      expect(function (error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        test.instanceOf(result.content, Buffer);
+      })
+    );
+  }
+]);
+
 
 if (Meteor.isServer) {
   // This is testing the server's static file sending code, not the http
