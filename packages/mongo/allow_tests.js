@@ -328,8 +328,6 @@ if (Meteor.isClient) {
     ]);
 
     (function(){
-      var item1;
-      var item2;
       testAsyncMulti("collection - restricted factories " + idGeneration, [
         function (test, expect) {
           restrictedCollectionWithTransform.callClearMethod(expect(function () {
@@ -337,12 +335,13 @@ if (Meteor.isClient) {
           }));
         },
         function (test, expect) {
+          var self = this;
           restrictedCollectionWithTransform.insert({
             a: {foo: "foo", bar: "bar", baz: "baz"}
           }, expect(function (e, res) {
             test.isFalse(e);
             test.isTrue(res);
-            item1 = res;
+            self.item1 = res;
           }));
           restrictedCollectionWithTransform.insert({
             a: {foo: "foo", bar: "quux", baz: "quux"},
@@ -350,7 +349,7 @@ if (Meteor.isClient) {
           }, expect(function (e, res) {
             test.isFalse(e);
             test.isTrue(res);
-            item2 = res;
+            self.item2 = res;
           }));
           restrictedCollectionWithTransform.insert({
             a: {foo: "adsfadf", bar: "quux", baz: "quux"},
@@ -364,18 +363,22 @@ if (Meteor.isClient) {
           }, expect(function (e, res) {
             test.isFalse(e);
             test.isTrue(res);
+            self.item3 = res;
           }));
         },
         function (test, expect) {
+          var self = this;
           test.equal(
-            _.omit(restrictedCollectionWithTransform.findOne({"a.bar": "bar"}), '_id'),
-            {foo: "foo", bar: "bar", baz: "baz"});
-          restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
-            test.isFalse(e);
-          }));
-          restrictedCollectionWithTransform.remove(item2, expect(function (e, res) {
-            test.isTrue(e);
-          }));
+            restrictedCollectionWithTransform.findOne(self.item1),
+            {_id: self.item1, foo: "foo", bar: "bar", baz: "baz"});
+          restrictedCollectionWithTransform.remove(
+            self.item1, expect(function (e, res) {
+              test.isFalse(e);
+            }));
+          restrictedCollectionWithTransform.remove(
+            self.item2, expect(function (e, res) {
+              test.isTrue(e);
+            }));
         }
       ]);
     })();
