@@ -31,7 +31,8 @@ var respond = function(req, res) {
     var validate = function(user, pass) {
       return user === username && pass === password;
     };
-    var checker = WebApp.__basicAuth__(validate, realm);
+    var connect = WebAppInternals.NpmModules.connect.module;
+    var checker = connect.basicAuth(validate, realm);
     var success = false;
     checker(req, res, function() {
       success = true;
