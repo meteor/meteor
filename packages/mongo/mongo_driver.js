@@ -307,9 +307,11 @@ var bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
-MongoConnection.prototype._insert = function (collection_name, document,
+MongoConnection.prototype._insert = function (collection_name, documents,
                                               callback) {
   var self = this;
+  var isBulkInsert = (documents instanceof Array);
+  documents = isBulkInsert ? documents : [ documents ];
 
   var sendError = function (e) {
     if (callback)
@@ -324,21 +326,29 @@ MongoConnection.prototype._insert = function (collection_name, document,
     return;
   }
 
-  if (!(LocalCollection._isPlainObject(document) &&
-        !EJSON._isCustomType(document))) {
+  var complexDoc = function (document) {
+    return !LocalCollection._isPlainObject(document) ||
+      EJSON._isCustomType(document);
+  };
+  if (_.any(documents, complexDoc)) {
     sendError(new Error(
-      "Only plain objects may be inserted into MongoDB"));
+      "Only plain objects may be inserted into MongoDB" + documents));
     return;
   }
 
   var write = self._maybeBeginWrite();
   var refresh = function () {
-    Meteor.refresh({collection: collection_name, id: document._id });
+    _.each(documents, function (document) {
+      Meteor.refresh({collection: collection_name, id: document._id });
+    });
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self._getCollection(collection_name);
-    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
+    var filteredMeteor = function (document) {
+      return replaceTypes(document, replaceMeteorAtomWithMongo);
+    };
+    collection.insert(_.map(documents, filteredMeteor),
                       {safe: true}, callback);
   } catch (e) {
     write.committed();

@@ -540,9 +540,17 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
       coll.insert({run: run, abc: abc});
     });
   });
+
+  // Bulk inserts and observe handles.
+  runInFence(function () {
+    coll.insert([
+      { run: run, abc: 012 },
+      { run: run, abc: 345 }]);
+  });
+
   handle.stop();
   // will be 6 (1+2+3) if we broke diffing!
-  test.equal(numAddeds, 3);
+  test.equal(numAddeds, 5);
 
   onComplete();
 });

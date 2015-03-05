@@ -512,36 +512,40 @@ Mongo.Collection.prototype._callToMongo = function(options) {
  * @method  insert
  * @memberOf Mongo.Collection
  * @instance
- * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+ * @param {Object} docs The documents to insert. May be an array of documents, or a single document. Documents may not yet have an _id attribute, in which case Meteor will generate one for you.
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
  */
-Mongo.Collection.prototype.insert = function (doc, callback) {
+Mongo.Collection.prototype.insert = function (docs, callback) {
   var self = this;
+  var isBulkInsert = (docs instanceof Array);
   var insertId;
 
-  // shallow-copy the document and generate an ID
-  doc = _.extend({}, doc);
-  if ('_id' in doc) {
-    insertId = doc._id;
-    if (!insertId ||
-        !(typeof insertId === 'string' || insertId instanceof Mongo.ObjectID)) {
-      throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
-    }
-  } else {
-    var generateId = true;
-    // Don't generate the id if we're the client and the 'outermost' call
-    // This optimization saves us passing both the randomSeed and the id
-    // Passing both is redundant.
-    if (self._connection && self._connection !== Meteor.server) {
-      var enclosing = DDP._CurrentInvocation.get();
-      if (!enclosing) {
-        generateId = false;
+  var formattedDocs = _.map(isBulkInsert ? docs : [docs], function (doc) {
+    // shallow-copy the document and generate an ID
+    doc = _.extend({}, doc);
+    if ('_id' in doc) {
+      insertId = doc._id;
+      if (!insertId ||
+          !(typeof insertId === 'string' || insertId instanceof Mongo.ObjectID)) {
+        throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+      }
+    } else {
+      var generateId = true;
+      // Don't generate the id if we're the client and the 'outermost' call
+      // This optimization saves us passing both the randomSeed and the id
+      // Passing both is redundant.
+      if (self._connection && self._connection !== Meteor.server) {
+        var enclosing = DDP._CurrentInvocation.get();
+        if (!enclosing) {
+          generateId = false;
+        }
+      }
+      if (generateId) {
+        insertId = doc._id = self._makeNewID();
       }
     }
-    if (generateId) {
-      insertId = doc._id = self._makeNewID();
-    }
-  }
+    return doc;
+  });
 
   // On inserts, always return the id that we generated; on all other
   // operations, just return the result from the collection.
@@ -552,9 +556,10 @@ Mongo.Collection.prototype.insert = function (doc, callback) {
     return insertId;
   };
 
+  var args = isBulkInsert ? [formattedDocs] : [formattedDocs[0]];
   return self._callToMongo({
     operation: "insert",
-    args: [doc],
+    args: args,
     callback: callback,
     chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult
   });
@@ -962,30 +967,36 @@ var docToValidate = function (validator, doc, generatedId) {
   return ret;
 };
 
-Mongo.Collection.prototype._validatedInsert = function (userId, doc,
+Mongo.Collection.prototype._validatedInsert = function (userId, docs,
                                                          generatedId) {
   var self = this;
 
-  // call user validators.
-  // Any deny returns true means denied.
-  if (_.any(self._validators.insert.deny, function(validator) {
-    return validator(userId, docToValidate(validator, doc, generatedId));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-  // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.insert.allow, function(validator) {
-    return !validator(userId, docToValidate(validator, doc, generatedId));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
+  var isBulkInsert = (docs instanceof Array);
+  docs = isBulkInsert ? docs : [docs];
 
-  // If we generated an ID above, insert it now: after the validation, but
-  // before actually inserting.
-  if (generatedId !== null)
-    doc._id = generatedId;
+  _.each(docs, function (doc) {
+    // call user validators.
+    // Any deny returns true means denied.
+    if (_.any(self._validators.insert.deny, function(validator) {
+      return validator(userId, docToValidate(validator, doc, generatedId));
+    })) {
+      throw new Meteor.Error(403, "Access denied");
+    }
+    // Any allow returns true means proceed. Throw error if they all fail.
+    if (_.all(self._validators.insert.allow, function(validator) {
+      return !validator(userId, docToValidate(validator, doc, generatedId));
+    })) {
+      throw new Meteor.Error(403, "Access denied");
+    }
 
-  self._collection.insert.call(self._collection, doc);
+    // If we generated an ID above, insert it now: after the validation, but
+    // before actually inserting.
+    if (generatedId !== null) {
+      doc._id = generatedId;
+    }
+  });
+
+  self._collection.insert.call(self._collection, docs);
 };
 
 var transformDoc = function (validator, doc) {
