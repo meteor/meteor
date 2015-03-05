@@ -426,7 +426,7 @@ Mongo.Collection.prototype._callToMongo = function(options) {
   check(options, {
     operation: Match.OneOf("insert", "update", "remove"),
     args: [Match.Any],
-    callback: Match.Optional(Match.OneOf(Function, undefined)),
+    callback: Match.OneOf(Function, undefined),
     chooseReturnValueFromCollectionResult: Match.Optional(Function),
     doNotRequireId: Match.Optional(Boolean)
   });
@@ -506,22 +506,6 @@ Mongo.Collection.prototype._callToMongo = function(options) {
   return ret;
 };
 
-// Extracts a callback from an array of arguments. Mutates arguments to remove
-// it, and returns the callback function (when approporiate). Returns nothing
-// when no callback is provided.
-//
-// This is a helper function for insert, update and remove calls to Mongo. It
-// assumes that if the last argument is a function, it is a callback (and if
-// there is a callback, it is the last argument).
-var extractCallback = function (args) {
-  if (args.length &&
-      (args[args.length - 1] === undefined ||
-       args[args.length - 1] instanceof Function)) {
-    return args.pop();
-  }
-};
-
-
 /**
  * @summary Insert a document in the collection.  Returns its unique _id.
  * @locus Anywhere
@@ -531,7 +515,7 @@ var extractCallback = function (args) {
  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
  */
-Mongo.Collection.prototype.insert = function (doc, callback) {
+Mongo.Collection.prototype.insert = function (docs, callback) {
   var self = this;
   var insertId;
 
@@ -539,9 +523,10 @@ Mongo.Collection.prototype.insert = function (doc, callback) {
   doc = _.extend({}, doc);
   if ('_id' in doc) {
     insertId = doc._id;
-    if (!insertId || !(typeof insertId === 'string'
-                       || insertId instanceof Mongo.ObjectID))
+    if (!insertId ||
+        !(typeof insertId === 'string' || insertId instanceof Mongo.ObjectID)) {
       throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+    }
   } else {
     var generateId = true;
     // Don't generate the id if we're the client and the 'outermost' call
@@ -561,7 +546,7 @@ Mongo.Collection.prototype.insert = function (doc, callback) {
   // On inserts, always return the id that we generated; on all other
   // operations, just return the result from the collection.
   var chooseReturnValueFromCollectionResult = function (result) {
-    if (! insertId) {
+    if (! insertId && result) {
       insertId = result;
     }
     return insertId;
@@ -635,7 +620,8 @@ Mongo.Collection.prototype.remove = function (selector, callback) {
   return self._callToMongo({
     operation: "remove",
     args: [mongoSelector],
-    callback: callback });
+    callback: callback
+  });
 };
 
 /**
