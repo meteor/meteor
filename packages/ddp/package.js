@@ -12,9 +12,9 @@ Package.describe({
 // will prevent a second copy of faye-websocket from being installed inside
 // sockjs.)
 Npm.depends({
-  "faye-websocket": "0.9.2",
+  "faye-websocket": "0.9.3",
   "permessage-deflate": "0.1.2",
-  sockjs: "0.3.12"
+  sockjs: "0.3.14"
 });
 
 Package.onUse(function (api) {

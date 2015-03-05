@@ -1,13 +1,13 @@
 {
   "dependencies": {
     "faye-websocket": {
-      "version": "0.9.2",
+      "version": "0.9.3",
       "dependencies": {
         "websocket-driver": {
-          "version": "0.5.1",
+          "version": "0.5.3",
           "dependencies": {
             "websocket-extensions": {
-              "version": "0.1.0"
+              "version": "0.1.1"
             }
           }
         }
@@ -17,10 +17,10 @@
       "version": "0.1.2"
     },
     "sockjs": {
-      "version": "0.3.12",
+      "version": "0.3.14",
       "dependencies": {
         "node-uuid": {
-          "version": "1.4.2"
+          "version": "1.4.3"
         }
       }
     }
