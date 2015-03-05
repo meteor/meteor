@@ -103,6 +103,7 @@ Mongo.Collection = function (name, options) {
 
   self._collection = options._driver.open(name, self._connection);
   self._name = name;
+  self._driver = options._driver;
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
@@ -636,6 +637,23 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
     throw new Error("Can only call _createCappedCollection on server collections");
   self._collection._createCappedCollection(byteSize, maxDocuments);
 };
+
+Mongo.Collection.prototype.rawCollection = function () {
+  var self = this;
+  if (! self._collection.rawCollection) {
+    throw new Error("Can only call rawCollection on server collections");
+  }
+  return self._collection.rawCollection();
+};
+
+Mongo.Collection.prototype.rawDatabase = function () {
+  var self = this;
+  if (! (self._driver.mongo && self._driver.mongo.db)) {
+    throw new Error("Can only call rawDatabase on server collections");
+  }
+  return self._driver.mongo.db;
+};
+
 
 /**
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).

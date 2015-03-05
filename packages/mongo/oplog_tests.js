@@ -82,10 +82,8 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
         });
       }
       // XXX implement bulk insert #1255
-      var nativeCollection =
-            MongoInternals.defaultRemoteCollectionDriver().mongo._getCollection(
-              self.collectionName);
-      nativeCollection.insert(docs, Meteor.bindEnvironment(expect(function (err) {
+      var rawCollection = self.collection.rawCollection();
+      rawCollection.insert(docs, Meteor.bindEnvironment(expect(function (err) {
         test.isFalse(err);
       })));
     },

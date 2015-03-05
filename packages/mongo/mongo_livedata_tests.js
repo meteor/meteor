@@ -3091,4 +3091,12 @@ Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) 
              'function');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
              'function');
+
+  var c = new Mongo.Collection(Random.id());
+  var rawCollection = c.rawCollection();
+  test.isTrue(rawCollection);
+  test.isTrue(rawCollection.findAndModify);
+  var rawDb = c.rawDatabase();
+  test.isTrue(rawDb);
+  test.isTrue(rawDb.admin);
 });
