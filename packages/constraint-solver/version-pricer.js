@@ -214,9 +214,6 @@ CS.VersionPricer.prototype.categorizeVersions = function (versions, pivot) {
            higherMajor: versions.slice(higherMajorIndex) };
 };
 
-var zeroFunc = function () { return 0; };
-var oneFunc = function () { return 1; };
-
 // Use a combination of calls to scanVersions with different modes in order
 // to generate costs for versions relative to a "previous solution" version
 // (called the "pivot" here).

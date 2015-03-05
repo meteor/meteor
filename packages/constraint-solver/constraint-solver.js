@@ -62,7 +62,6 @@ CS.PackagesResolver._resolveWithInput = function (input, _nudge) {
     var result = solver.getSolution();
     // if we're here, no conflicts were found (or an error would have
     // been thrown)
-    //XXX console.log(solver.getCostReport());
     return result;
   });
 };
