@@ -1,5 +1,19 @@
 MiniSat = function () {
-  var C = this._C = cMinisat();
+  // C is the "module" object created by Emscripten.  We wrap the
+  // output of Emscripten in a closure, so each call to C_MINISAT()
+  // actually instantiates a separate C environment, including
+  // the "native" heap.
+  //
+  // The methods available on `C` include the global functions we
+  // define in `logic-solver.cc`, each prefixed with `_`, and a varied
+  // assortment of helpers put there by Emscripten, some of which are
+  // documented here:
+  // http://kripken.github.io/emscripten-site/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html
+  //
+  // See the README in the meteor/minisat repo for more notes about
+  // our build of MiniSat.
+  var C = this._C = C_MINISAT();
+
   this._native = {
     getStackPointer: function () {
       return C.Runtime.stackSave();
@@ -15,9 +29,11 @@ MiniSat = function () {
     },
     savingStack: function (func) {
       var SP = this.getStackPointer();
-      var ret = func(this, C);
-      this.setStackPointer(SP);
-      return ret;
+      try {
+        return func(this, C);
+      } finally {
+        this.setStackPointer(SP);
+      }
     }
   };
 
