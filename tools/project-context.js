@@ -92,6 +92,13 @@ _.extend(ProjectContext.prototype, {
     // checkout.
     self._ignorePackageDirsEnvVar = options.ignorePackageDirsEnvVar;
 
+    // Set by some tests where we want to pretend that we don't have packages in
+    // the git checkout (because they're using a fake warehouse).
+    self._ignoreCheckoutPackages = options.ignoreCheckoutPackages;
+
+    // Set by some tests to override the official catalog.
+    self._officialCatalog = options.officialCatalog || catalog.official;
+
     if (options.alwaysWritePackageMap && options.neverWritePackageMap)
       throw Error("always or never?");
 
@@ -447,7 +454,7 @@ _.extend(ProjectContext.prototype, {
       });
     }
 
-    if (files.inCheckout()) {
+    if (! self._ignoreCheckoutPackages && files.inCheckout()) {
       // Running from a checkout, so use the Meteor core packages from the
       // checkout.
       searchDirs.push(files.pathJoin(files.getCurrentToolsDir(), 'packages'));
@@ -470,7 +477,7 @@ _.extend(ProjectContext.prototype, {
         function () {
           self.localCatalog = new catalogLocal.LocalCatalog;
           self.projectCatalog = new catalog.LayeredCatalog(
-            self.localCatalog, catalog.official);
+            self.localCatalog, self._officialCatalog);
 
           var searchDirs = self._localPackageSearchDirs();
           self.localCatalog.initialize({

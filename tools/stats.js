@@ -22,6 +22,7 @@ var packageList = function (projectContext) {
     versions.push({
       name: name,
       version: info.version,
+      local: info.kind === 'local',
       direct: !! projectContext.projectConstraintsFile.getConstraint(name)
     });
   });
