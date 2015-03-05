@@ -27,8 +27,9 @@ CS.PackagesResolver = function (catalog, options) {
 //    included versions are the only pre-releases that are allowed to match
 //    constraints that don't specifically name them during the "try not to
 //    use unanticipated pre-releases" pass
-//  - mayBreakRootDependencies: allows choosing versions of
-//    root dependencies that are incompatible with the previous solution
+//  - allowIncompatibleUpdate: allows choosing versions of
+//    root dependencies that are incompatible with the previous solution,
+//    if necessary to satisfy all constraints
 //  - missingPreviousVersionIsError - throw an error if a package version in
 //    previousSolution is not found in the catalog
 CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
@@ -38,7 +39,7 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   var input = new CS.Input(dependencies, constraints, self.catalogCache,
                            _.pick(options, 'upgrade', 'anticipatedPrereleases',
                                   'previousSolution',
-                                  'mayBreakRootDependencies'));
+                                  'allowIncompatibleUpdate'));
   input.loadFromCatalog(self.catalogLoader);
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {

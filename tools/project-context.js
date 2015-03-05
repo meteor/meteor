@@ -139,10 +139,11 @@ _.extend(ProjectContext.prototype, {
       self._cachedVersionsBeforeReset = null;
     }
 
-    // The --breaking command-line switch, which allows the version solver
-    // to choose versions of root dependencies that are incompatible with
-    // the previous solution.
-    self._mayBreakRootDependencies = options.mayBreakRootDependencies;
+    // The --allow-incompatible-update command-line switch, which allows
+    // the version solver to choose versions of root dependencies that are
+    // incompatible with the previously chosen versions (i.e. to downgrade
+    // them or change their major version).
+    self._allowIncompatibleUpdate = options.allowIncompatibleUpdate;
 
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
@@ -405,7 +406,7 @@ _.extend(ProjectContext.prototype, {
         var resolveOptions = {
           previousSolution: cachedVersions,
           anticipatedPrereleases: anticipatedPrereleases,
-          mayBreakRootDependencies: self._mayBreakRootDependencies,
+          allowIncompatibleUpdate: self._allowIncompatibleUpdate,
           // Not finding an exact match for a previous version in the catalog
           // is considered an error if we haven't refreshed yet, and will
           // trigger a refresh and another attempt.  That way, if a previous

@@ -1517,7 +1517,7 @@ main.registerCommand({
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     alwaysWritePackageMap: true,
-    mayBreakRootDependencies: options.breaking
+    allowIncompatibleUpdate: options.breaking
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
@@ -1646,7 +1646,7 @@ main.registerCommand({
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    mayBreakRootDependencies: options.breaking
+    allowIncompatibleUpdate: options.breaking
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -1830,7 +1830,7 @@ main.registerCommand({
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    mayBreakRootDependencies: options.breaking
+    allowIncompatibleUpdate: options.breaking
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve

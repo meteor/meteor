@@ -273,7 +273,7 @@ function doRunCommand (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    mayBreakRootDependencies: options.breaking
+    allowIncompatibleUpdate: options.breaking
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {

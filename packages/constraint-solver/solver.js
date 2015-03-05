@@ -484,7 +484,7 @@ CS.Solver.prototype.getSolution = function () {
     return analysis.reachablePackages[p] === true;
   });
 
-  if (! input.mayBreakRootDependencies) {
+  if (! input.allowIncompatibleUpdate) {
     // make sure packages that are being updated can still count as
     // a previous_root for the purposes of previous_root_incompat
     _.each(toUpdate, function (p) {
@@ -498,10 +498,11 @@ CS.Solver.prototype.getSolution = function () {
     });
   }
 
-  if (! input.mayBreakRootDependencies) {
+  if (! input.allowIncompatibleUpdate) {
     // Enforce that we don't make breaking changes to your root dependencies,
-    // unless you pass --breaking.  It will actually be enforced farther down,
-    // but for now, we want to apply this constraint before handling updates.
+    // unless you pass --allow-incompatible-update.  It will actually be enforced
+    // farther down, but for now, we want to apply this constraint before handling
+    // updates.
     self.minimize(previousRootIncompat);
   }
 
@@ -511,7 +512,7 @@ CS.Solver.prototype.getSolution = function () {
     return ! input.isInPreviousSolution(p);
   });
 
-  if (input.mayBreakRootDependencies) {
+  if (input.allowIncompatibleUpdate) {
     self.minimize(previousRootIncompat);
   }
   self.minimize(previousRootVersionParts);
@@ -576,7 +577,7 @@ CS.Solver.prototype.getSolution = function () {
     self.throwConflicts();
   }
 
-  if ((! input.mayBreakRootDependencies) &&
+  if ((! input.allowIncompatibleUpdate) &&
       self.stepsByName.previous_root_incompat.optimum > 0) {
     _.each(_.keys(
       self.getStepContributions(self.stepsByName.previous_root_incompat)),
@@ -589,7 +590,7 @@ CS.Solver.prototype.getSolution = function () {
                  self.listConstraintsOnPackage(pv.package));
            });
     self.errors.push('To allow breaking changes to top-level dependencies, you ' +
-                     'must pass --breaking to meteor [run], update, add, or remove.');
+                     'must pass --allow-incompatible-update to meteor [run], update, add, or remove.');
     self.throwAnyErrors();
   }
 
