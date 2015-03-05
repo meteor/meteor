@@ -33,11 +33,17 @@ var minMax = function (solver, solution, costTerms, costWeights, options, isMin)
 };
 
 // Minimize (or maximize) the dot product of costTerms and costWeights,
-// and require that the value of the dot product be the optimum.
+// and further, require (as in solver.require) that the value of the dot
+// product be equal to the optimum found.  Returns a valid solution where
+// this optimum is achieved.
+//
+// `solution` must be a current valid solution as returned from `solve`
+// or `solveAssuming`.  It is used as a starting point (to evaluate the
+// current cost).
 //
 // costWeights is an array (of same length as costTerms) or a single WholeNumber.
 //
-// if the caller passes optFormula, it should be the formula
+// if the caller passes options.formula, it should be the formula
 // Logic.weightedSum(costTerms, costWeights).  The optimizer will use
 // this existing formula rather than generating a new one (for efficiency).
 // The optimizer still wants to know the terms and weights, because it is
