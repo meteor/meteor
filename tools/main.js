@@ -418,6 +418,8 @@ var springboard = function (rel, options) {
         "available on Windows. To work with this app on all supported",
         "platforms, use", Console.command("meteor update --release " + releaseName),
         "to pin this app to the newest Windows-compatible release.");
+
+      process.exit(1);
     }
   }
 

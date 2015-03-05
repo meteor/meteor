@@ -875,7 +875,7 @@ _.extend(RemoteCatalog.prototype, {
       //
       // XXX this whole special case block can be removed once the first
       // recommended release for Windows comes out.
-      var hasBuildForWindows = catalog.official.getBuildsForArches(
+      var hasBuildForWindows = self.getBuildsForArches(
         releaseVersionRecord.track, releaseVersionRecord.version,
         [archinfo.host()]);
 
@@ -890,9 +890,16 @@ _.extend(RemoteCatalog.prototype, {
         var allRecords = self.getSortedReleaseRecords(track);
 
         for (var i = 0; i < allRecords.length; i++) {
-          var parsedVersion = VersionParser.parse(allRecords[i].version);
+          if (! allRecords[i].orderKey) { continue; }
 
-          if (parsedVersion.prerelease[0] === "win") {
+          var regexResult = allRecords[i].match(/-(.+)./);
+
+          if (regexResult.length !== 2) {
+            continue;
+          }
+
+          var prereleasePart = regexResult[1];
+          if (prereleasePart === "win") {
             return allRecords[i];
           }
         }
