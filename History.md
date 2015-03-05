@@ -105,8 +105,8 @@
 * Add login hooks on the client: `Accounts.onLogin` and
   `Accounts.onLoginFailure`. #3572
 
-* Fix crash in `meteor publish` when the package is inside an app which uses
-  Cordova. #3676
+* Fix crash in `meteor publish` in some cases when the package is inside an
+  app. #3676
 
 * Upgraded dependencies:
 
