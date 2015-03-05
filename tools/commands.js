@@ -1907,11 +1907,11 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    json: { type: Boolean, required: false },
-    verbose: { type: Boolean, short: "v", required: false },
+    json: { type: Boolean },
+    verbose: { type: Boolean, short: "v" },
     // By default, we give you a machine for 5 minutes. You can request up to
     // 15. (MDG can reserve machines for longer than that.)
-    minutes: { type: Number, required: false }
+    minutes: { type: Number }
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()

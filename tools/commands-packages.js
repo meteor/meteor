@@ -666,8 +666,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    'create-track': { type: Boolean, required: false },
-    'from-checkout': { type: Boolean, required: false }
+    'create-track': { type: Boolean },
+    'from-checkout': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
@@ -1470,9 +1470,9 @@ var maybeUpdateRelease = function (options) {
 main.registerCommand({
   name: 'update',
   options: {
-    patch: { type: Boolean, required: false },
-    "packages-only": { type: Boolean, required: false },
-    breaking: { type: Boolean, required: false }
+    patch: { type: Boolean },
+    "packages-only": { type: Boolean },
+    breaking: { type: Boolean }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1637,7 +1637,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'add',
   options: {
-    breaking: { type: Boolean, required: false }
+    breaking: { type: Boolean }
   },
   minArgs: 1,
   maxArgs: Infinity,
@@ -1821,7 +1821,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'remove',
   options: {
-    breaking: { type: Boolean, required: false }
+    breaking: { type: Boolean }
   },
   minArgs: 1,
   maxArgs: Infinity,
@@ -2037,9 +2037,9 @@ main.registerCommand({
   options: {
     // Copy the tarball contents to the output directory instead of making a
     // tarball (useful for testing the release process)
-    "unpacked": { type: Boolean, required: false },
+    "unpacked": { type: Boolean },
     // Build a tarball only for a specific arch
-    "target-arch": { type: String, required: false }
+    "target-arch": { type: String }
   },
 
   // In this function, we want to use the official catalog everywhere, because
@@ -2377,7 +2377,7 @@ main.registerCommand({
   name: 'admin set-unmigrated',
   minArgs: 1,
   options: {
-    "success" : {type: Boolean, required: false}
+    "success" : {type: Boolean}
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
