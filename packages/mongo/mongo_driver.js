@@ -15,6 +15,19 @@ var Future = Npm.require(path.join('fibers', 'future'));
 MongoInternals = {};
 MongoTest = {};
 
+MongoInternals.NpmModules = {
+  mongodb: {
+    version: Npm.require('mongodb/package.json').version,
+    module: MongoDB
+  }
+};
+
+// Older version of what is now available via
+// MongoInternals.NpmModules.mongodb.module.  It was never documented, but
+// people do use it.
+// XXX COMPAT WITH 1.0.3.2
+MongoInternals.NpmModule = MongoDB;
+
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
@@ -1264,4 +1277,3 @@ MongoConnection.prototype._observeChangesTailable = function (
 MongoInternals.MongoTimestamp = MongoDB.Timestamp;
 
 MongoInternals.Connection = MongoConnection;
-MongoInternals.NpmModule = MongoDB;
