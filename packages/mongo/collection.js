@@ -598,7 +598,7 @@ Mongo.Collection.prototype.update = function (selector, modifier, options, callb
   return self._callToMongo({
     operation: "update",
     args: args,
-    callback : callback,
+    callback: callback,
     requireId: true,
   });
 };
