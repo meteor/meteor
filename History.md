@@ -108,6 +108,17 @@
 * Fix crash in `meteor publish` when the package is inside an app which uses
   Cordova. #3676
 
+* Provide direct access to some npm modules used by core packages on the
+  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
+  `HTTPInternals`.
+
+* Provide direct access to the collection and database objects from the npm
+  Mongo driver via new `rawCollection` and `rawDatabase` methods on
+  `Mongo.Collection`.  #3640
+
+* Provide direct access to all options supported by the `request` npm module via
+  the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
