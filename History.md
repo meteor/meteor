@@ -110,6 +110,9 @@
 
 * Avoid unnecessary work while paused in minimongo.
 
+* Use correct transform for allow/deny rules in `update` when different rules
+  have different transforms.  #3108
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)

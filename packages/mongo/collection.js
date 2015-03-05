@@ -1020,13 +1020,10 @@ Mongo.Collection.prototype._validatedUpdate = function(
   if (!doc)  // none satisfied!
     return 0;
 
-  var factoriedDoc;
-
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
                      factoriedDoc,
                      fields,
@@ -1036,8 +1033,7 @@ Mongo.Collection.prototype._validatedUpdate = function(
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
                       factoriedDoc,
                       fields,

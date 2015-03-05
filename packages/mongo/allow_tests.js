@@ -93,6 +93,9 @@ if (Meteor.isServer) {
         transform: null,
         insert: function (userId, doc) {
           return !!doc.topLevelField;
+        },
+        update: function (userId, doc) {
+          return !!doc.topLevelField;
         }
       });
       restrictedCollectionForInvalidTransformTest.allow({
@@ -365,6 +368,16 @@ if (Meteor.isClient) {
             test.isTrue(res);
             self.item3 = res;
           }));
+        },
+        function (test, expect) {
+          var self = this;
+          // This should work, because there is an update allow for things with
+          // topLevelField.
+          restrictedCollectionWithTransform.update(
+            self.item3, { $set: { xxx: true } }, expect(function (e, res) {
+              test.isFalse(e);
+              test.equal(1, res);
+            }));
         },
         function (test, expect) {
           var self = this;
