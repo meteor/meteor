@@ -1199,14 +1199,14 @@ Tinytest.add("logic-solver - assumptions", function (test) {
   // which of A,B,C,D comes back true is totally arbitrary, but it's
   // deterministic as long as we don't touch anything.
   test.equal(s.solveAssuming(atLeastOne).getMap(),
-             { A: false, B: false, C: true, D: false });
+             { A: false, B: true, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
              formatLines(["A v B v C v D v -$or1",
                           "$or1 v -$assump1"]));
 
   // assume the same thing again
   test.equal(s.solveAssuming(atLeastOne).getMap(),
-             { A: false, B: false, C: true, D: false });
+             { A: false, B: true, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
              formatLines(["A v B v C v D v -$or1",
                           "$or1 v -$assump1",
@@ -1229,7 +1229,7 @@ Tinytest.add("logic-solver - assumptions", function (test) {
   s.require(atLeastOne);
   test.equal(s.solve().getMap(),
              // any one could be true
-             { A: true, B: false, C: false, D: false });
+             { A: false, B: true, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
              formatLines(["A v B v C v D v -$or1",
                           "$or1 v -$assump1",
@@ -1243,7 +1243,7 @@ Tinytest.add("logic-solver - assumptions", function (test) {
 
   test.equal(s.solveAssuming("D").getMap(),
              // at least D is true; other than that, anything goes
-             { A: true, B: false, C: false, D: true });
+             { A: false, B: true, C: false, D: true });
   test.equal(formatLines(s._clauseStrings()),
              formatLines(["A v B v C v D v -$or1",
                           "$or1 v -$assump1",
@@ -1259,12 +1259,13 @@ Tinytest.add("logic-solver - assumptions", function (test) {
   var sum = Logic.sum("A", "B", "C", "D");
   var atLeast2 = Logic.greaterThanOrEqual(sum, Logic.constantBits(2));
   test.equal(s.solveAssuming(atLeast2).getMap(),
-             { A: true, B: false, C: false, D: true });
+             // any two or more, including D
+             { A: false, B: true, C: false, D: true });
   s.require(atLeast2);
   var atLeast3 = Logic.greaterThanOrEqual(sum, Logic.constantBits(3));
   test.equal(s.solveAssuming(atLeast3).getMap(),
              // any three or more, including D
-             { A: true, B: false, C: true, D: true });
+             { A: true, B: true, C: false, D: true });
   s.require(atLeast3);
   var atLeast4 = Logic.greaterThanOrEqual(sum, Logic.constantBits(4));
   test.equal(s.solveAssuming(atLeast4).getMap(),

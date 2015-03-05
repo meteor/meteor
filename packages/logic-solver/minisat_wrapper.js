@@ -103,6 +103,11 @@ MiniSat.prototype.retireVar = function (v) {
   this._C._retireVar(v);
 };
 
+// The "conflict clause" feature of MiniSat is not what it sounds
+// like, unfortunately -- it doesn't help explain conflicts.
+// It only tells us which assumption vars are to blame for a failed
+// solveAssuming (and we only ever pass one var).
+// We keep this function around in case we discover a use for it.
 MiniSat.prototype.getConflictClause = function () {
   var C = this._C;
   var numTerms = C._getConflictClauseSize();
@@ -110,7 +115,7 @@ MiniSat.prototype.getConflictClause = function () {
   var terms = [];
   for (var i = 0; i < numTerms; i++) {
     var t = C.getValue(clausePtr + i*4, 'i32');
-    var v = (t >>> 1) + 1;
+    var v = (t >>> 1);
     var s = (t & 1) ? -1 : 1;
     terms[i] = v * s;
   }
