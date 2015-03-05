@@ -421,12 +421,14 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 //  - callback: an optional callback function (or undefined)
 //  - chooseReturnValueFromCollectionResult: an optional function that does what
 //    it says.
-Mongo.Collection.prototype["_callToMongo"] = function(options) {
+//  - requireIdSelector: optional boolean to throw if the selector is not id.
+Mongo.Collection.prototype._callToMongo = function(options) {
   check(options, {
     operation: Match.OneOf("insert", "update", "remove"),
     args: [Match.Any],
     callback: Match.Optional(Match.OneOf(Function, undefined)),
-    chooseReturnValueFromCollectionResult: Match.Optional(Function)
+    chooseReturnValueFromCollectionResult: Match.Optional(Function),
+    requireIdSelector: Match.Optional(Boolean)
   });
 
   var operation = options.operation;
@@ -468,14 +470,12 @@ Mongo.Collection.prototype["_callToMongo"] = function(options) {
       };
     }
 
-
     if (!alreadyInSimulation && operation !== "insert") {
       // If we're about to actually send an RPC, we should throw an error if
       // this is a non-ID selector, because the mutation methods only allow
       // single-ID selectors. (If we don't throw here, we'll see flicker.)
       throwIfSelectorIsNotId(args[0], operation);
     }
-
 
     ret = chooseReturnValueFromCollectionResult(
       self._connection.apply(self._prefix + operation, args, {returnStubValue: true}, wrappedCallback)
@@ -531,18 +531,14 @@ var extractCallback = function (args) {
  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
  */
-Mongo.Collection.prototype["insert"] = function (/* arguments */) {
+Mongo.Collection.prototype.insert = function (doc, callback) {
   var self = this;
-  var args = _.toArray(arguments);
-  var callback = extractCallback(args);
   var insertId;
 
-  if (!args.length)
-    throw new Error("insert requires an argument");
   // shallow-copy the document and generate an ID
-  args[0] = _.extend({}, args[0]);
-  if ('_id' in args[0]) {
-    insertId = args[0]._id;
+  doc = _.extend({}, doc);
+  if ('_id' in doc) {
+    insertId = doc._id;
     if (!insertId || !(typeof insertId === 'string'
                        || insertId instanceof Mongo.ObjectID))
       throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
@@ -558,7 +554,7 @@ Mongo.Collection.prototype["insert"] = function (/* arguments */) {
       }
     }
     if (generateId) {
-      insertId = args[0]._id = self._makeNewID();
+      insertId = doc._id = self._makeNewID();
     }
   }
 
@@ -573,9 +569,10 @@ Mongo.Collection.prototype["insert"] = function (/* arguments */) {
 
   return self._callToMongo({
     operation: "insert",
-    args: args,
+    args: [doc],
     callback: callback,
-    chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult
+    chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult,
+    requireIdSelector: true
   });
 
 };
@@ -593,29 +590,27 @@ Mongo.Collection.prototype["insert"] = function (/* arguments */) {
  * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
  */
-Mongo.Collection.prototype["update"] = function (/* arguments */) {
+Mongo.Collection.prototype.update = function (selector, modifier, options, callback) {
   var self = this;
-  var args = _.toArray(arguments);
-  var callback = extractCallback(args);
+  if (! callback && options instanceof Function) {
+    callback = options;
+    options = {};
+  }
 
-  args[0] = Mongo.Collection._rewriteSelector(args[0]);
+  selector = Mongo.Collection._rewriteSelector(selector);
 
-  // Mutate args but copy the original options object. We need to add
-  // insertedId to options, but don't want to mutate the caller's options
-  // object. We need to mutate `args` because we pass `args` into the
-  // driver below.
-  var options = args[2] = _.clone(args[2]) || {};
-  if (options && typeof options !== "function" && options.upsert) {
-    // set `insertedId` if absent.  `insertedId` is a Meteor extension.
+  if (options && options.upsert) {
+    options = _.clone(options) || {};
     if (options.insertedId) {
       if (!(typeof options.insertedId === 'string'
             || options.insertedId instanceof Mongo.ObjectID))
         throw new Error("insertedId must be string or ObjectID");
-    } else if (! args[0]._id) {
+    } else if (! selector._id) {
       options.insertedId = self._makeNewID();
     }
-  }
+  };
 
+  var args =  options ? [selector, modifier, options] : [selector, modifier];
   return self._callToMongo({
     operation: "update",
     args: args,
@@ -633,16 +628,13 @@ Mongo.Collection.prototype["update"] = function (/* arguments */) {
  * @param {MongoSelector} selector Specifies which documents to remove
  * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
  */
-Mongo.Collection.prototype["remove"] = function (/* arguments */) {
+Mongo.Collection.prototype.remove = function (selector, callback) {
   var self = this;
-  var args = _.toArray(arguments);
-  var callback = extractCallback(args);
-
-  args[0] = Mongo.Collection._rewriteSelector(args[0]);
+  var mongoSelector = Mongo.Collection._rewriteSelector(selector);
 
   return self._callToMongo({
     operation: "remove",
-    args: args,
+    args: [mongoSelector],
     callback: callback });
 };
 
