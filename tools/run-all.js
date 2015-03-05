@@ -171,7 +171,8 @@ _.extend(Runner.prototype, {
       runLog.log("App running at: " + self.rootUrl,  { arrow: true });
 
       if (process.platform === "win32") {
-        runLog.log("Type Control-C twice to stop.");
+        runLog.log("   Type Control-C twice to stop.");
+        runLog.log("");
       }
     }
 
