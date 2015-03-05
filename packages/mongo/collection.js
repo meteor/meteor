@@ -421,14 +421,14 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 //  - callback: an optional callback function (or undefined)
 //  - chooseReturnValueFromCollectionResult: an optional function that does what
 //    it says.
-//  - requireIdSelector: optional boolean to throw if the selector is not id.
+//  - doNotRequireId: optional boolean to not throw if the selector is not id.
 Mongo.Collection.prototype._callToMongo = function(options) {
   check(options, {
     operation: Match.OneOf("insert", "update", "remove"),
     args: [Match.Any],
     callback: Match.Optional(Match.OneOf(Function, undefined)),
     chooseReturnValueFromCollectionResult: Match.Optional(Function),
-    requireIdSelector: Match.Optional(Boolean)
+    doNotRequireId: Match.Optional(Boolean)
   });
 
   var operation = options.operation;
@@ -470,7 +470,7 @@ Mongo.Collection.prototype._callToMongo = function(options) {
       };
     }
 
-    if (!alreadyInSimulation && operation !== "insert") {
+    if (!alreadyInSimulation && ! options.doNotRequireId) {
       // If we're about to actually send an RPC, we should throw an error if
       // this is a non-ID selector, because the mutation methods only allow
       // single-ID selectors. (If we don't throw here, we'll see flicker.)
@@ -572,7 +572,7 @@ Mongo.Collection.prototype.insert = function (doc, callback) {
     args: [doc],
     callback: callback,
     chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult,
-    requireIdSelector: true
+    doNotRequireId: true
   });
 
 };
