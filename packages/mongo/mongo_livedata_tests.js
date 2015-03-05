@@ -549,7 +549,7 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
   });
 
   handle.stop();
-  // will be 6 (1+2+3) if we broke diffing!
+  // will be 15 (1+2+3+4+5) if we broke diffing!
   test.equal(numAddeds, 5);
 
   onComplete();

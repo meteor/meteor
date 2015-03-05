@@ -332,7 +332,7 @@ MongoConnection.prototype._insert = function (collection_name, documents,
   };
   if (_.any(documents, complexDoc)) {
     sendError(new Error(
-      "Only plain objects may be inserted into MongoDB" + documents));
+      "Only plain objects may be inserted into MongoDB"));
     return;
   }
 
