@@ -421,14 +421,14 @@ var throwIfSelectorIsNotId = function (selector, methodName) {
 //  - callback: an optional callback function (or undefined)
 //  - chooseReturnValueFromCollectionResult: an optional function that does what
 //    it says.
-//  - doNotRequireId: optional boolean to not throw if the selector is not id.
+//  - requireId: optional boolean to throw if the selector is not id.
 Mongo.Collection.prototype._callToMongo = function(options) {
   check(options, {
     operation: Match.OneOf("insert", "update", "remove"),
     args: [Match.Any],
     callback: Match.OneOf(Function, undefined),
     chooseReturnValueFromCollectionResult: Match.Optional(Function),
-    doNotRequireId: Match.Optional(Boolean)
+    requireId: Match.Optional(Boolean)
   });
 
   var operation = options.operation;
@@ -470,7 +470,7 @@ Mongo.Collection.prototype._callToMongo = function(options) {
       };
     }
 
-    if (!alreadyInSimulation && ! options.doNotRequireId) {
+    if (!alreadyInSimulation && options.requireId) {
       // If we're about to actually send an RPC, we should throw an error if
       // this is a non-ID selector, because the mutation methods only allow
       // single-ID selectors. (If we don't throw here, we'll see flicker.)
@@ -556,8 +556,7 @@ Mongo.Collection.prototype.insert = function (docs, callback) {
     operation: "insert",
     args: [doc],
     callback: callback,
-    chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult,
-    doNotRequireId: true
+    chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult
   });
 
 };
@@ -599,7 +598,8 @@ Mongo.Collection.prototype.update = function (selector, modifier, options, callb
   return self._callToMongo({
     operation: "update",
     args: args,
-    callback : callback
+    callback : callback,
+    requireId: true,
   });
 };
 
@@ -620,7 +620,8 @@ Mongo.Collection.prototype.remove = function (selector, callback) {
   return self._callToMongo({
     operation: "remove",
     args: [mongoSelector],
-    callback: callback
+    callback: callback,
+    requireId: true,
   });
 };
 
