@@ -1,4 +1,8 @@
 MiniSat = function () {
+  // A MiniSat object wraps an instance of "native" MiniSat.  You can
+  // have as many MiniSat objects as you want, and they are all
+  // independent.
+  //
   // C is the "module" object created by Emscripten.  We wrap the
   // output of Emscripten in a closure, so each call to C_MINISAT()
   // actually instantiates a separate C environment, including
@@ -43,15 +47,21 @@ MiniSat = function () {
   this._clauses = [];
 };
 
+
 // Make sure MiniSat has allocated space in its model for v,
 // even if v is unused.  If we have variables A,B,C,D which
 // are numbers 1,2,3,4, for example, but we never actually use
 // C and D, calling ensureVar(4) will make MiniSat give us
 // solution values for them anyway.
 MiniSat.prototype.ensureVar = function (v) {
+  _check(v, Logic.WholeNumber);
   this._C._ensureVar(v);
 };
 
+// Add a clause, in the form of an array of Logic.NumTerms.
+// Returns true if the problem is still satisfiable
+// (as far as we know without doing more work), and false if
+// we can already tell that it is unsatisfiable.
 MiniSat.prototype.addClause = function (terms) {
   _check(terms, [Logic.NumTerm]);
   this._clauses.push(terms);
@@ -79,7 +89,11 @@ MiniSat.prototype.getSolution = function () {
   var numVars = C._getNumVars();
   var solPtr = C._getSolution();
   for (var i = 0; i < numVars; i++) {
-    // 0 is Minisat::l_True (lifted "true")
+    // 0 is Minisat::l_True (lifted "true").
+    // Internally, Minisat has three states for a variable:
+    // true, false, and undetermined.  It doesn't distinguish
+    // between "false" and "undetermined" in solutions though
+    // (I think it sets undetermined variables to false).
     solution[i+1] = (C.getValue(solPtr+i, 'i8') === 0);
   }
   return solution;
