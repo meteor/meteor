@@ -216,11 +216,12 @@ BOOL ExecuteCommandLine(LPWSTR CommandLine, DWORD & exitCode)
 		CloseHandle( processInformation.hProcess );
 		CloseHandle( processInformation.hThread );
 
-		if (!result)
+		if (!result) {
 			return FALSE;
-
-		// We succeeded.
-		return TRUE;
+		} else {
+			// We succeeded.
+			return TRUE;
+		}
 	}
 }
 
@@ -262,18 +263,37 @@ HRESULT UnzipToFolder(
 			hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
 		}
 
-		StringCchPrintf(szCommandLine1, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, szSourceDir, szTarGzFilePath);
-		StringCchPrintf(szCommandLine2, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, wzDestPath, szTarFilePath);
 		DWORD nRes=0;
+
+		// Remove old Meteor installs
+		wchar_t szCmdRemoveOld[BUF_LEN] = L"";
+		wchar_t szSysDir[BUF_LEN] = L"";
+		DWORD nSysDirLen = BUF_LEN;
+		MsiGetProperty(hInstall, L"SystemFolder", szSysDir, &nSysDirLen);
+
 		LPTSTR ErrorMessage = NULL;
 
-		ExecuteCommandLine(szCommandLine1, nRes);
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive expanding completed with (%d): %S", nRes, ErrorMessage);
+		StringCchPrintf(szCmdRemoveOld, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\\.meteor\">NUL\"", szSysDir, wzDestPath);
+		StringCchPrintf(szCommandLine1, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, szSourceDir, szTarGzFilePath);
+		StringCchPrintf(szCommandLine2, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, wzDestPath, szTarFilePath);
 
-		ExecuteCommandLine(szCommandLine2, nRes);
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive deployment completed with (%d): %S", nRes, ErrorMessage);
+		if (! ExecuteCommandLine(szCmdRemoveOld, nRes)) {
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Deleting old install completed with (%d): %S", nRes, ErrorMessage);
+			return HRESULT_FROM_WIN32(nRes);
+		}
+
+		if (! ExecuteCommandLine(szCommandLine1, nRes)) {
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive expanding completed with (%d): %S", nRes, ErrorMessage);
+			return HRESULT_FROM_WIN32(nRes);
+		}
+
+		if (! ExecuteCommandLine(szCommandLine2, nRes)) {
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive deployment completed with (%d): %S", nRes, ErrorMessage);
+			return HRESULT_FROM_WIN32(nRes);
+		}
 	}
 	else
 	{

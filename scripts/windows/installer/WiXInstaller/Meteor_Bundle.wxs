@@ -42,7 +42,7 @@
         <Variable Name="SkipRegistrationState"	Type="string"  Persisted="yes" Value="disable"/>
         <Variable Name="SkipRegistration"	    Type="numeric" Persisted="yes" Value="0"/>
 
-        <Variable Name="UserMeteorSessionFile" 	    Type="string" Persisted="yes" Value="%HOMEPATH%\.meteorsession" />
+        <Variable Name="UserMeteorSessionFile" 	    Type="string" Persisted="yes" Value="[LocalAppDataFolder]\.meteorsession" />
         <Variable Name="PerMachineInstallFolder"    Type="string" Persisted="yes" Value="[ProgramFilesFolder][WixBundleName]" />
         <Variable Name="PerUserInstallFolder"       Type="string" Persisted="yes" Value="[LocalAppDataFolder]" />
         <Variable Name="InstallFolder"              Type="string" Persisted="yes" Value="[PerUserInstallFolder]" />

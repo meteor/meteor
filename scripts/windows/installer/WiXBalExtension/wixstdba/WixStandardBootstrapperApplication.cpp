@@ -2191,7 +2191,12 @@ LExit:
 
 		if (m_fAttachedToConsole)
 		{
-			char  szPgLine[] = "\nInstalling...\n";
+			char *szPgLine;
+			if (m_fIsUninstall) {
+				szPgLine = "\nInstalling...\n";
+			} else {
+				szPgLine = "\nUninstalling...\n";
+			}
 			DWORD dSzWritten;
 			WriteConsole(m_fStdConsoleHandle, szPgLine, strlen(szPgLine), &dSzWritten, NULL);
 		}
