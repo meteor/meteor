@@ -515,7 +515,7 @@ Mongo.Collection.prototype._callToMongo = function(options) {
  * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
  * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
  */
-Mongo.Collection.prototype.insert = function (docs, callback) {
+Mongo.Collection.prototype.insert = function (doc, callback) {
   var self = this;
   var insertId;
 
