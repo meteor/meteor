@@ -1,5 +1,21 @@
 var url = Npm.require('url');
 
+var websocketExtensions = [];
+
+// By default, we use the permessage-deflate extension with default
+// configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
+// JSON. If it represents a falsey value, then we do not use permessage-deflate
+// at all; otherwise, the JSON value is used as an argument to deflate's
+// configure method; see
+// https://github.com/faye/permessage-deflate-node/blob/master/README.md
+var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
+      ? JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
+if (websocketCompressionConfig) {
+  websocketExtensions.push(Npm.require('permessage-deflate').configure(
+    websocketCompressionConfig
+  ));
+}
+
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
 StreamServer = function () {
@@ -41,8 +57,13 @@ StreamServer = function () {
   // from ever working, set $DISABLE_WEBSOCKETS and SockJS clients (ie,
   // browsers) will not waste time attempting to use them.
   // (Your server will still have a /websocket endpoint.)
-  if (process.env.DISABLE_WEBSOCKETS)
+  if (process.env.DISABLE_WEBSOCKETS) {
     serverOptions.websocket = false;
+  } else {
+    serverOptions.faye_server_options = {
+      extensions: websocketExtensions
+    };
+  }
 
   self.server = sockjs.createServer(serverOptions);
   if (!Package.webapp) {
