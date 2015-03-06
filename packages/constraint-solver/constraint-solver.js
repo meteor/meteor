@@ -51,16 +51,25 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
     });
   }
 
-  return CS.PackagesResolver._resolveWithInput(input, this._options.nudge);
+  return CS.PackagesResolver._resolveWithInput(input, {
+    nudge: this._options.nudge
+  });
 };
 
 // Exposed for tests.
-CS.PackagesResolver._resolveWithInput = function (input, _nudge) {
+//
+// Options:
+// - nudge (function to be called when possible to "nudge" the progress spinner)
+// - allAnswers (for testing, calculate all possible answers and put an extra
+//   property named "allAnswers" on the result)
+CS.PackagesResolver._resolveWithInput = function (input, options) {
   var solver = new CS.Solver(input);
 
   // Disable runtime type checks (they slow things down by a factor of 3)
   return Logic._disablingTypeChecks(function () {
-    var result = solver.getSolution();
+    var result = solver.getSolution({
+      allAnswers: (options && options.allAnswers)
+    });
     // if we're here, no conflicts were found (or an error would have
     // been thrown)
     return result;

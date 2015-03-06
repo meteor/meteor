@@ -373,11 +373,12 @@ CS.Solver.prototype.currentVersionMap = function () {
   return versionMap;
 };
 
-CS.Solver.prototype.getSolution = function () {
+CS.Solver.prototype.getSolution = function (options) {
   var self = this;
   var input = self.input;
   var analysis = self.analysis;
   var cache = input.catalogCache;
+  var allAnswers = (options && options.allAnswers); // for tests
 
   // populate `analysis.unknownRootDeps`, `analysis.previousRootDepVersions`
   self.analyzeRootDependencies();
@@ -598,13 +599,30 @@ CS.Solver.prototype.getSolution = function () {
     self.throwAnyErrors();
   }
 
-  var versionMap = self.currentVersionMap();
-
-  return {
+  var result = {
     neededToUseUnanticipatedPrereleases: (
       self.stepsByName['unanticipated_prereleases'].optimum > 0),
-    answer: versionMap
+    answer: self.currentVersionMap()
   };
+
+  if (allAnswers) {
+    var allAnswersList = [result.answer];
+    var nextAnswer = function () {
+      var formula = self.solution.getFormula();
+      var newSolution = logic.solveAssuming(Logic.not(formula));
+      if (newSolution) {
+        self.solution = newSolution;
+        logic.forbid(formula);
+      }
+      return newSolution;
+    };
+    while (nextAnswer()) {
+      allAnswersList.push(self.currentVersionMap());
+    }
+    result.allAnswers = allAnswersList;
+  };
+
+  return result;
 };
 
 CS.Solver.prototype.analyzeRootDependencies = function () {

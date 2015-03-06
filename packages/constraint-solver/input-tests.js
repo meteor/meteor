@@ -20,11 +20,12 @@ var formatSolution = function (obj) {
   // results into tests.
   return JSON.stringify({
     answer: sortKeys(obj.answer),
+    allAnswers: obj.allAnswers && _.map(obj.allAnswers, sortKeys),
     neededToUseUnanticipatedPrereleases: obj.neededToUseUnanticipatedPrereleases
   }, null, 2);
 };
 
-var doTest = function (test, inputJSONable, outputJSONable) {
+var doTest = function (test, inputJSONable, outputJSONable, options) {
   var input = CS.Input.fromJSONable(inputJSONable);
 
   if (typeof outputJSONable.neededToUseUnanticipatedPrereleases !== 'boolean') {
@@ -35,7 +36,7 @@ var doTest = function (test, inputJSONable, outputJSONable) {
   }
 
   test.equal(
-    formatSolution(CS.PackagesResolver._resolveWithInput(input)),
+    formatSolution(CS.PackagesResolver._resolveWithInput(input, options)),
     formatSolution(outputJSONable));
 };
 
@@ -277,6 +278,25 @@ Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
     neededToUseUnanticipatedPrereleases: true
   });
 
+});
+
+Tinytest.add("constraint solver - input - previous solution no longer needed", function (test) {
+  doTest(test, {
+    dependencies: ["foo"],
+    constraints: [],
+    previousSolution: { foo: "1.0.0", bar: "1.0.0" },
+    catalogCache: {
+      data: {
+        "foo 0.1.0": ["bar@1.0.0"],
+        "foo 1.0.0": [],
+        "bar 1.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      foo: "1.0.0"
+    }
+  });
 });
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {

@@ -1380,6 +1380,23 @@ Logic.Solution.prototype.getTrueVars = function () {
   return result;
 };
 
+// Get a Formula that says that the variables are assigned
+// according to this solution.  (Internal variables are
+// excluded.)  By forbidding this Formula and solving again,
+// you can see if there are other solutions.
+Logic.Solution.prototype.getFormula = function () {
+  var solver = this._solver;
+  var assignment = this._assignment;
+  var terms = [];
+  for (var i = 1; i < assignment.length; i++) {
+    var name = solver.getVarName(i);
+    if (name && name.charAt(0) !== '$') {
+      terms.push(assignment[i] ? i : -i);
+    }
+  }
+  return Logic.and(terms);
+};
+
 Logic.Solution.prototype.evaluate = function (formulaOrBits) {
   var self = this;
   _check(formulaOrBits, Match.OneOf(Logic.FormulaOrTerm, Logic.Bits));
