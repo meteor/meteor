@@ -234,6 +234,29 @@ Tinytest.addAsync("observeChanges - unordered - specific fields + modify on excl
   });
 });
 
+Tinytest.addAsync(
+  "observeChanges - unordered - unset parent of observed field",
+  function (test, onComplete) {
+    var c = makeCollection();
+    withCallbackLogger(
+      test, ['added', 'changed', 'removed'], Meteor.isServer,
+      function (logger) {
+        var handle = c.find({}, {fields: {'type.name': 1}}).observeChanges(logger);
+        var id = c.insert({ type: { name: 'foobar' } });
+        logger.expectResultOnly('added', [id, { type: { name: 'foobar' } }]);
+
+        c.update(id, { $unset: { type: 1 } });
+        test.equal(c.find().fetch(), [{ _id: id }]);
+        logger.expectResultOnly('changed', [id, { type: undefined }]);
+
+        handle.stop();
+        onComplete();
+      }
+    );
+  }
+);
+
+
 
 Tinytest.addAsync("observeChanges - unordered - enters and exits result set through change", function (test, onComplete) {
   var c = makeCollection();
