@@ -77,7 +77,7 @@
 * The `onError` callback to `Meteor.subscribe` has been replaced with a more
   general `onStop` callback that has an error as an optional first argument.
   The `onStop` callback is called when the subscription is terminated for
-  any reason.  #1461
+  any reason.  `onError` is still supported for backwards compatibility. #1461
 
 * Websockets now support the permessage-deflate option, which compresses data on
   the wire. It is enabled by default on the server. To disable it, set
@@ -626,7 +626,7 @@ Primigenus, svda, yauh, and zol.
 * `Package.registerBuildPlugin` its associated functions have been added
   to the public API, cleaned up, and documented. The new function is
   identical to the earlier _transitional_registerBuildPlugin except for
-  minor backwards- compatible API changes. See
+  minor backwards-compatible API changes. See
   https://docs.meteor.com/#Package-registerBuildPlugin
 
 * Rename the `showdown` package to `markdown`.

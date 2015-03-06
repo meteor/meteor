@@ -1082,7 +1082,7 @@ _.extend(Subscription.prototype, {
   },
 
   /**
-   * @summary Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error).
+   * @summary Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onStop` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error).
    * @locus Server
    * @param {Error} error The error to pass to the client.
    * @instance
@@ -1101,7 +1101,7 @@ _.extend(Subscription.prototype, {
   // triggers if there is an error).
 
   /**
-   * @summary Call inside the publish function.  Stops this client's subscription; the `onError` callback is *not* invoked on the client.
+   * @summary Call inside the publish function.  Stops this client's subscription and invokes the client's `onStop` callback with no error.
    * @locus Server
    * @instance
    * @memberOf Subscription
