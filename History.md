@@ -1,6 +1,6 @@
 ## v.NEXT
 
-### Mongo
+### Mongo Driver and Livequery
 
 * Meteor is now tested against MongoDB 2.6 (and the bundled version used by
   `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
@@ -22,15 +22,9 @@
   of this release, Meteor uses a version of the Node Mongo driver that is
   compatible with MongoDB 3.0 and it is likely that it will work.)
 
-* If the oplog observe driver gets too far behind in processing the oplog, skip
-  entries and re-poll queries instead of trying to keep up.  #2668
-
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
   0.8.1.  #3038
-
-* Optimize common cases faced by the "crossbar" data structure (used by oplog
-  tailing and DDP method write tracking).  #3697
 
 * Use correct transform for allow/deny rules in `update` when different rules
   have different transforms.  #3108
@@ -38,6 +32,18 @@
 * Provide direct access to the collection and database objects from the npm
   Mongo driver via new `rawCollection` and `rawDatabase` methods on
   `Mongo.Collection`.  #3640
+
+* Observing or publishing an invalid query now throws an error instead of
+  effectively hanging the server.  #2534
+
+
+### Livequery
+
+* If the oplog observe driver gets too far behind in processing the oplog, skip
+  entries and re-poll queries instead of trying to keep up.  #2668
+
+* Optimize common cases faced by the "crossbar" data structure (used by oplog
+  tailing and DDP method write tracking).  #3697
 
 * The oplog observe driver recovers from failed attempts to apply the modifier
   from the oplog (eg, because of empty field names).
@@ -71,7 +77,7 @@
 * The `onError` callback to `Meteor.subscribe` has been replaced with a more
   general `onStop` callback that has an error as an optional first argument.
   The `onStop` callback is called when the subscription is terminated for
-  any reason.
+  any reason.  #1461
 
 * Websockets now support the permessage-deflate option, which compresses data on
   the wire. It is enabled by default on the server. To disable it, set
@@ -114,6 +120,12 @@
   The previous functionality can be reproduced by using
   `Template.instance().data` instead of `Template.currentData()`.
 
+* `Template.instance()` now works inside `Template.body`.  #3631
+
+* Allow specifying attributes on `<body>` tags in templates.
+
+* Improve performance of rendering large arrays.  #3596
+
 
 ### Isobuild
 
@@ -125,6 +137,9 @@
   second time a `package.js` was executed.
 
 * Ignore vim swap files in the `public` and `private` directories.  #3322
+
+* Fix regression in 1.0.2 where packages might not be rebuilt when the compiler
+  version changes.
 
 
 ### Meteor Accounts
@@ -145,11 +160,19 @@
 
 * `spiderable` now supports escaped `#!` fragments.  #2938
 
+* Disable `appcache` on Firefox by default.  #3248
+
 * Don't overly escape `Meteor.settings.public` and other parts of
   `__meteor_runtime_config__`.  #3730
 
+* Reload the client program on `SIGHUP` or Node-specific IPC messages, not
+  `SIGUSR2`.
 
 ### `meteor` command-line tool
+
+* Enable tab-completion of global variables in `meteor shell`.  #3227
+
+* Improve the stability of `meteor shell`.  #3437 #3595 #3591
 
 * `meteor login --email` no longer takes an ignored argument.  #3532
 
@@ -159,37 +182,17 @@
 * Fix crash in `meteor publish` in some cases when the package is inside an
   app. #3676
 
+* Fix crashes in `meteor search --show-all` and `meteor search --maintainer`.
+  \#3636
 
-### Utilities
+* Kill PhantomJS processes after `meteor --test`.  #3205
 
-* Provide direct access to all options supported by the `request` npm module via
-  the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
+* Give a better error when Mongo fails to start up due to a full disk.  #2378
+
+* After killing existing `mongod` servers, also clear the `mongod.lock` file.
 
 
-### Other bug fixes and improvements
-
-* Remove some packages used internally to support legacy MDG systems
-  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
-  `dev-bundle-fetcher`, and `star-translate`).
-
-* Provide direct access to some npm modules used by core packages on the
-  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
-  `HTTPInternals`.
-
-* Upgraded dependencies:
-
-  - node: 0.10.36 (from 0.10.33)
-  - Fibers: 1.0.5 (from 1.0.1)
-  - MongoDB: 2.6.7 (from 2.4.12)
-  - openssl in mongo: 1.0.2 (from 1.0.1j)
-  - MongoDB driver: 1.4.32 (from 1.4.1)
-  - bson: 0.2.18 (from 0.2.7)
-  - faye-websocket: 0.9.3 (from 0.8.1)
-  - websocket-driver: 0.5.3 (from 0.4.0)
-  - sockjs server: 0.3.14 (from 0.3.11)
-  - request: 2.53.0 (from 2.47.0)
-
-### Meteor Mobile updates
+### Meteor Mobile
 
 * Upgrade the Cordova CLI dependency from 3.5.1 to 4.2.0. See the release notes
   for the 4.x series of the Cordova CLI [on Apache
@@ -215,6 +218,44 @@
   - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
 
 * Use the newer `ios-sim` binary, compiled with Xcode 6 on OS X Mavericks.
+
+
+### Tracker
+
+* Use `Session.set({k1: v1, k2: v2})` to set multiple values at once.
+
+
+### Utilities
+
+* Provide direct access to all options supported by the `request` npm module via
+  the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
+
+
+### Other bug fixes and improvements
+
+* Many internal refactorings towards supporting Meteor on Windows are in this
+  release.
+
+* Remove some packages used internally to support legacy MDG systems
+  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
+  `dev-bundle-fetcher`, and `star-translate`).
+
+* Provide direct access to some npm modules used by core packages on the
+  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
+  `HTTPInternals`.
+
+* Upgraded dependencies:
+
+  - node: 0.10.36 (from 0.10.33)
+  - Fibers: 1.0.5 (from 1.0.1)
+  - MongoDB: 2.6.7 (from 2.4.12)
+  - openssl in mongo: 1.0.2 (from 1.0.1j)
+  - MongoDB driver: 1.4.32 (from 1.4.1)
+  - bson: 0.2.18 (from 0.2.7)
+  - faye-websocket: 0.9.3 (from 0.8.1)
+  - websocket-driver: 0.5.3 (from 0.4.0)
+  - sockjs server: 0.3.14 (from 0.3.11)
+  - request: 2.53.0 (from 2.47.0)
 
 
 ## v.1.0.3.2, 2015-Feb-25
