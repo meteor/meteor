@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use('npm-bcrypt@0.7.8-winr.3');
+  api.use('npm-bcrypt@=0.7.8_1');
 
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
