@@ -325,6 +325,7 @@ var toc = [
   "Command line", [ [
     "meteor help",
     "meteor run",
+    "meteor debug",
     "meteor create",
     "meteor deploy",
     "meteor logs",
