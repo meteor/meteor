@@ -262,8 +262,10 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       self._published.set(id, self._sharedProjectionFn(newDoc));
-      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-      changed = self._projectionFn(changed);
+      var projectedNew = self._projectionFn(newDoc);
+      var projectedOld = self._projectionFn(oldDoc);
+      var changed = LocalCollection._makeChangedFields(
+        projectedNew, projectedOld);
       if (!_.isEmpty(changed))
         self._multiplexer.changed(id, changed);
     });
