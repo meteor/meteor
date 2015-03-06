@@ -52,7 +52,6 @@ CS.Solver.Step = function (name, terms, weights) {
   // mutable:
   this.terms = terms;
   this.weights = weights;
-  this.zeroGoal = false; // you can set this
   this.optimum = null; // set when optimized
 };
 
@@ -85,10 +84,6 @@ var DEBUG = false;
 // * minimize(step)
 // * minimize([step1, step2, ...])
 // * minimize(stepName, costTerms, costWeights)
-//
-// If you omit costWeights or pass null, it is set to 1 and the
-// step will gain the "zeroGoal" flag, which means the optimizer
-// will try to hit a cost of 0 before trying anything else.
 CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
   var self = this;
 
@@ -102,9 +97,6 @@ CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
   if (typeof step === 'string') {
     var theStep = new CS.Solver.Step(
       step, costTerms_, (costWeights_ == null ? 1 : costWeights_));
-    if (costWeights_ == null) {
-      theStep.zeroGoal = true;
-    }
     self.minimize(theStep);
     return;
   }
@@ -120,44 +112,21 @@ CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
 
   var costWeights = step.weights;
   var costTerms = step.terms;
-  var hitZero = false;
-  if (step.zeroGoal) {
-    // omitting costWeights puts us in a mode where we try to hit 0 right
-    // off the bat, as an optimization
-    if (costTerms.length) {
-      var zeroSolution = logic.solveAssuming(Logic.not(Logic.or(costTerms)));
-      if (zeroSolution) {
-        self.solution = zeroSolution;
-        logic.forbid(costTerms);
-        hitZero = true;
-      }
-    } else {
-      hitZero = true;
-    }
-  }
 
-  if (! hitZero) {
-    var anyWeight =
-          (typeof costWeights === 'number') ? costWeights :
-          _.any(costWeights);
-
-    if (anyWeight) {
-      self.solution = logic.minimize(
-        self.solution, costTerms, costWeights, {
-          progress: function (status, cost) {
-            if (status === 'improving') {
-              if (DEBUG) {
-                console.log(cost + " ... trying to improve ...");
-              }
-            }
+  self.solution = logic.minimize(
+    self.solution, costTerms, costWeights, {
+      progress: function (status, cost) {
+        if (status === 'improving') {
+          if (DEBUG) {
+            console.log(cost + " ... trying to improve ...");
           }
-        });
-
-      if (! self.solution) {
-        // Optimizing shouldn't change satisfiability
-        throw new Error("Unexpected unsatisfiability");
+        }
       }
-    }
+    });
+
+  if (! self.solution) {
+    // Optimizing shouldn't change satisfiability
+    throw new Error("Unexpected unsatisfiability");
   }
 
   step.optimum = self.solution.getWeightedSum(costTerms, costWeights);
@@ -329,12 +298,6 @@ CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
   var minor = new CS.Solver.Step(stepBaseName + '_minor');
   var patch = new CS.Solver.Step(stepBaseName + '_patch');
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
-
-  incompat.zeroGoal = true;
-  major.zeroGoal = true;
-  minor.zeroGoal = true;
-  patch.zeroGoal = true;
-  rest.zeroGoal = true;
 
   _.each(packageAndVersions, function (pvArg) {
     var package = pvArg.package;
