@@ -33,7 +33,7 @@
   driver is slightly different in MongoDB 2.6; see
   https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
 
-  (We have not tested Meteor against the as-yet-unreleased MongoDB 3.0, but as
+  (We have not tested Meteor against the recently-released MongoDB 3.0, but as
   of this release, Meteor uses a version of the Node Mongo driver that is
   compatible with MongoDB 3.0 and it is likely that it will work.)
 
