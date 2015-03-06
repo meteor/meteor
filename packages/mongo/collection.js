@@ -219,7 +219,6 @@ Mongo.Collection = function (name, options) {
     insert: {allow: [], deny: []},
     update: {allow: [], deny: []},
     remove: {allow: [], deny: []},
-    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
     fetch: [],
     fetchAllFields: false
   };
