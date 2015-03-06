@@ -44,6 +44,8 @@ static const LPCWSTR WIXSTDBA_VARIABLE_REG_MAIL     = L"RegisterEmail";
 static const LPCWSTR WIXSTDBA_VARIABLE_REG_USER     = L"RegisterUser";
 static const LPCWSTR WIXSTDBA_VARIABLE_REG_PASS     = L"RegisterPass";
 
+static const LPCWSTR WIXSTDBA_VARIABLE_REG_USER_OR_EMAIL     = L"LoginUsernameOrEmail";
+static const LPCWSTR WIXSTDBA_VARIABLE_LOG_PASS              = L"LoginPass";
 
 
 static const LPCWSTR WIXSTDBA_VARIABLE_LOGSPATH        = L"QCInstallLogsPath";
@@ -146,6 +148,12 @@ enum WIXSTDBA_CONTROL
 	WIXSTDBA_CONTROL_REGMAIL_EDIT,
 	WIXSTDBA_CONTROL_REGUSER_EDIT,
 	WIXSTDBA_CONTROL_REGPASS_EDIT,
+
+	WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL,
+	WIXSTDBA_CONTROL_LOGPASS_LABEL,
+	WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT,
+	WIXSTDBA_CONTROL_LOGPASS_EDIT,
+
 	WIXSTDBA_CONTROL_SKIPREG_CHECKBOX,
 
 
@@ -221,6 +229,12 @@ static THEME_ASSIGN_CONTROL_ID vrgInitControls[] = {
 	{WIXSTDBA_CONTROL_REGMAIL_EDIT, L"RegisterEmail"},
 	{WIXSTDBA_CONTROL_REGUSER_EDIT, L"RegisterUser"},
 	{WIXSTDBA_CONTROL_REGPASS_EDIT, L"RegisterPass"},
+
+	{WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, L"LoginUsernameOrEmailLabel"},
+	{WIXSTDBA_CONTROL_LOGPASS_LABEL, L"LoginPassLabel"},
+	{WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, L"LoginUsernameOrEmail"},
+	{WIXSTDBA_CONTROL_LOGPASS_EDIT, L"LoginPass"},
+
 	{WIXSTDBA_CONTROL_SKIPREG_CHECKBOX, L"SkipRegistration"},
 
 	{ WIXSTDBA_CONTROL_REPAIR_BUTTON, L"RepairButton" },
@@ -1892,7 +1906,7 @@ LExit:
 				return 0;
 
 			case WIXSTDBA_CONTROL_INSTALL_BUTTON:
-				pBA->OnClickInstallButton(TRUE);
+				pBA->OnClickInstallButton(FALSE);
 				return 0;
 
 			case WIXSTDBA_CONTROL_REPAIR_BUTTON:
@@ -2495,8 +2509,21 @@ LExit:
 								ThemeSetTextControl(m_pTheme, pControl->wId, sczText);
 							}
 						}
+
 					}
 				}
+
+				// See #Hidden
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, false);
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_LABEL, false);
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, false);
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_EDIT, false);
+
+				// XXX why do we need this??
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, true);
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_LABEL, true);
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, true);
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_EDIT, true);
 
 				ThemeShowPage(m_pTheme, dwOldPageId, SW_HIDE);
 				ThemeShowPage(m_pTheme, dwNewPageId, SW_SHOW);
@@ -2848,6 +2875,9 @@ LExit:
 
 		switch (m_state)
 		{
+		// this clause is dead code, since we cancelled the "choose an
+		// install directory" screen. but let's leave it in, in case we
+		// bring it back.
 		case WIXSTDBA_STATE_INSTALLDIR:
 			ThemeGetTextControl(m_pTheme, WIXSTDBA_CONTROL_INSTALLFOLDER_EDITBOX, &sczPath);
 			bOkToContinue = CheckInstallPathIsValid(sczPath);
@@ -2867,7 +2897,7 @@ LExit:
 		default:
 			SavePageSettings(WIXSTDBA_PAGE_INSTALL);
 			m_stateInstallPage = m_state;
-			SetState(WIXSTDBA_STATE_INSTALLDIR, S_OK);
+			SetState(WIXSTDBA_STATE_SVC_OPTIONS, S_OK);
 			break;
 		}
 	}
@@ -2902,7 +2932,6 @@ LExit:
 	//
 	void OnClickSkipRegistrationCheckbox()
 	{
-		BOOL fSkipReg = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_SKIPREG_CHECKBOX);
 		BOOL fSignIn = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_REGSIGNIN_RADIO);
 
 		//if (fSkipReg)
@@ -2912,12 +2941,17 @@ LExit:
 		//	ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_DBPASS_EDIT, L"postgres");
 		//}
 
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_LABEL, !fSkipReg && !fSignIn);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGUSER_LABEL, !fSkipReg);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGPASS_LABEL, !fSkipReg);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_EDIT, !fSkipReg && !fSignIn);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGUSER_EDIT, !fSkipReg);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGPASS_EDIT, !fSkipReg);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_LABEL, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGUSER_LABEL, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGPASS_LABEL, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_EDIT, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGUSER_EDIT, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGPASS_EDIT, !fSignIn);
+
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_LABEL, fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_EDIT, fSignIn);
 	}
 
 
@@ -2984,7 +3018,7 @@ LExit:
 
 		case WIXSTDBA_STATE_SVC_OPTIONS:
 			SavePageSettings(WIXSTDBA_PAGE_SVC_OPTIONS);
-			SetState(WIXSTDBA_STATE_INSTALLDIR, S_OK);
+			SetState(WIXSTDBA_STATE_DETECTED, S_OK);
 			break;
 		}
 
@@ -3731,7 +3765,7 @@ BOOL REST_ValidateUserLogin(
     char *pMBDataResponse = NULL;
 	wchar_t wzErrorMessage[BUF_LEN] = L"";
 
-	if (POSTRequest("accounts-stub.meteor.com", "/api/v1/login", pMBFormData, &pMBDataResponse))
+	if (POSTRequest("https://accounts.meteor.com", "/api/v1/login", pMBFormData, &pMBDataResponse))
 	{
 		JSONValue *JSONResponse = JSON::Parse(pMBDataResponse);
 		if (JSONResponse != NULL)
