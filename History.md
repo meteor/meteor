@@ -106,7 +106,9 @@
   helper that returns the same thing and can be accessed with
   `Template.subscriptionsReady` inside any template.
 
-* Add `onRendered`, `onCreated`, and `onDestroyed` methods to `Template`
+* Add `onRendered`, `onCreated`, and `onDestroyed` methods to
+  `Template`. Assignments to `Template.foo.rendered` and so forth are deprecated
+  but are still supported for backwards compatibility.
 
 * Fix bug where, when a helper or event handler was called from inside a custom
   block helper,  `Template.instance()` returned the `Template.contentBlock`
@@ -153,8 +155,8 @@
 * Add login hooks on the client: `Accounts.onLogin` and
   `Accounts.onLoginFailure`. #3572
 
-* Add an index to the collection that stores OAuth login configuration to ensure
-  that only one configuration exists per service.  #3514
+* Add a unique index to the collection that stores OAuth login configuration to
+  ensure that only one configuration exists per service.  #3514
 
 
 ### Webapp
@@ -168,6 +170,7 @@
 
 * Reload the client program on `SIGHUP` or Node-specific IPC messages, not
   `SIGUSR2`.
+
 
 ### `meteor` command-line tool
 
