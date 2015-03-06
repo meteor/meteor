@@ -1,21 +1,6 @@
 ## v.NEXT
 
-* Subscription handles returned from `Meteor.subscribe` and
-  `TemplateInstance#subscribe` now have a `subscriptionId` property to identify
-  which subscription the handle is for.
-
-* The `onError` callback to `Meteor.subscribe` has been replaced with a more
-  general `onStop` callback that has an error as an optional first argument.
-  The `onStop` callback is called when the subscription is terminated for
-  any reason.
-
-* Template instances now have a `subscribe` method that functions exactly like
-  `Meteor.subscribe`, but stops the subscription when the template is destroyed.
-  There is a new method on Template instances called `subscriptionsReady()`
-  which is a reactive function that returns true when all of the subscriptions
-  made with `TemplateInstance#subscribe` are ready. There is also a built-in
-  helper that returns the same thing and can be accessed with
-  `Template.subscriptionsReady` inside any template.
+### Mongo
 
 * Meteor is now tested against MongoDB 2.6 (and the bundled version used by
   `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
@@ -37,12 +22,6 @@
   of this release, Meteor uses a version of the Node Mongo driver that is
   compatible with MongoDB 3.0 and it is likely that it will work.)
 
-* `c.upsert({_id: 'x'}, {foo: 1})`, when acting as an insert, now uses the `_id`
-  of `'x'` rather than a random `_id`, in the Minimongo implementation of
-  `upsert`, just like it does for `c.upsert({_id: 'x'}, {$set: {foo: 1}})`.
-  (The previous behavior matched a bug in the MongoDB 2.4 implementation of
-  upsert that is fixed in MongoDB 2.6.)  #2278
-
 * If the oplog observe driver gets too far behind in processing the oplog, skip
   entries and re-poll queries instead of trying to keep up.  #2668
 
@@ -50,31 +29,77 @@
   message but otherwise be ignored. Now it crashes the process, as it did before
   0.8.1.  #3038
 
-* Support `Npm.require('foo/bar')`.  #3505 #3526
+* Optimize common cases faced by the "crossbar" data structure (used by oplog
+  tailing and DDP method write tracking).  #3697
 
-* In `package.js` files, `Npm.require` can only require built-in Node modules
-  (and dev bundle modules, though you shouldn't depend on that), not the modules
-  from its own `Npm.depends`. Previously, such code would work but only on the
-  second time a `package.js` was executed.
+* Use correct transform for allow/deny rules in `update` when different rules
+  have different transforms.  #3108
 
-* Add `onRendered`, `onCreated`, and `onDestroyed` methods to `Template`
+* Provide direct access to the collection and database objects from the npm
+  Mongo driver via new `rawCollection` and `rawDatabase` methods on
+  `Mongo.Collection`.  #3640
 
-* Ignore vim swap files in the `public` and `private` directories.  #3322
+* The oplog observe driver recovers from failed attempts to apply the modifier
+  from the oplog (eg, because of empty field names).
 
-* The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
-  email `headers`.  The `from` address can now be set separately on the
-  individual templates, and is a function there rather than a static string.
-  \#2858 #2854
+
+### Minimongo
+
+* When acting as an insert, `c.upsert({_id: 'x'}, {foo: 1})` now uses the `_id`
+  of `'x'` rather than a random `_id` in the Minimongo implementation of
+  `upsert`, just like it does for `c.upsert({_id: 'x'}, {$set: {foo: 1}})`.
+  (The previous behavior matched a bug in the MongoDB 2.4 implementation of
+  upsert that is fixed in MongoDB 2.6.)  #2278
+
+* Avoid unnecessary work while paused in minimongo.
+
+* Fix bugs related to observing queries with field filters: `changed` callbacks
+  should not trigger unless a field in the filter has changed, and `changed`
+  callbacks need to trigger when a parent of an included field is
+  unset.  #2254 #3571
+
+* Disallow setting fields with empty names in minimongo, to match MongoDB 2.6
+  semantics.
+
+
+### DDP
+
+* Subscription handles returned from `Meteor.subscribe` and
+  `TemplateInstance#subscribe` now have a `subscriptionId` property to identify
+  which subscription the handle is for.
+
+* The `onError` callback to `Meteor.subscribe` has been replaced with a more
+  general `onStop` callback that has an error as an optional first argument.
+  The `onStop` callback is called when the subscription is terminated for
+  any reason.
+
+* Websockets now support the permessage-deflate option, which compresses data on
+  the wire. It is enabled by default on the server. To disable it, set
+  `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure compression options, set
+  `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that will be used as an
+  argument to
+  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
+  Compression is supported on the client side by Meteor's DDP client and by
+  browsers including Chrome, Safari and Firefox 37.
 
 * The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
   clone of what the function returned rather than sharing mutable state.  #3201
 
-* `spiderable` now supports escaped `#!` fragments.  #2938
-
-* `meteor login --email` no longer takes an ignored argument.  #3532
-
 * Make it easier to use the Node DDP client implementation without running a web
   server too.  #3452
+
+
+### Blaze
+
+* Template instances now have a `subscribe` method that functions exactly like
+  `Meteor.subscribe`, but stops the subscription when the template is destroyed.
+  There is a new method on Template instances called `subscriptionsReady()`
+  which is a reactive function that returns true when all of the subscriptions
+  made with `TemplateInstance#subscribe` are ready. There is also a built-in
+  helper that returns the same thing and can be accessed with
+  `Template.subscriptionsReady` inside any template.
+
+* Add `onRendered`, `onCreated`, and `onDestroyed` methods to `Template`
 
 * Fix bug where, when a helper or event handler was called from inside a custom
   block helper,  `Template.instance()` returned the `Template.contentBlock`
@@ -89,63 +114,67 @@
   The previous functionality can be reproduced by using
   `Template.instance().data` instead of `Template.currentData()`.
 
-* Remove some packages used internally to support legacy MDG systems
-  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
-  `dev-bundle-fetcher`, and `star-translate`).
 
-* Optimize common cases faced by the "crossbar" data structure (used by oplog
-  tailing and DDP method write tracking).  #3697
+### Isobuild
 
-* Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
-  reading or parsing the settings file.  #3757
+* Support `Npm.require('foo/bar')`.  #3505 #3526
 
-* Don't overly escape `Meteor.settings.public` and other parts of
-  `__meteor_runtime_config__`.  #3730
+* In `package.js` files, `Npm.require` can only require built-in Node modules
+  (and dev bundle modules, though you shouldn't depend on that), not the modules
+  from its own `Npm.depends`. Previously, such code would work but only on the
+  second time a `package.js` was executed.
+
+* Ignore vim swap files in the `public` and `private` directories.  #3322
+
+
+### Meteor Accounts
+
+* The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
+  email `headers`.  The `from` address can now be set separately on the
+  individual templates, and is a function there rather than a static
+  string. #2858 #2854
 
 * Add login hooks on the client: `Accounts.onLogin` and
   `Accounts.onLoginFailure`. #3572
 
+* Add an index to the collection that stores OAuth login configuration to ensure
+  that only one configuration exists per service.  #3514
+
+
+### Webapp
+
+* `spiderable` now supports escaped `#!` fragments.  #2938
+
+* Don't overly escape `Meteor.settings.public` and other parts of
+  `__meteor_runtime_config__`.  #3730
+
+
+### `meteor` command-line tool
+
+* `meteor login --email` no longer takes an ignored argument.  #3532
+
+* Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
+  reading or parsing the settings file.  #3757
+
 * Fix crash in `meteor publish` in some cases when the package is inside an
   app. #3676
 
-* Avoid unnecessary work while paused in minimongo.
 
-* Use correct transform for allow/deny rules in `update` when different rules
-  have different transforms.  #3108
-
-* Websockets now support the permessage-deflate option, which compresses data on
-  the wire. It is enabled by default on the server. To disable it, set
-  `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure compression options, set
-  `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that will be used as an
-  argument to
-  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
-  Compression is supported on the client side by Meteor's DDP client and by
-  browsers including Chrome, Safari and Firefox 37.
-
-* Provide direct access to some npm modules used by core packages on the
-  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
-  `HTTPInternals`.
-
-* Provide direct access to the collection and database objects from the npm
-  Mongo driver via new `rawCollection` and `rawDatabase` methods on
-  `Mongo.Collection`.  #3640
+### Utilities
 
 * Provide direct access to all options supported by the `request` npm module via
   the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
 
-* Add an index to the collection that stores OAuth login configuration to ensure
-  that only one configuration exists per service.  #3514
 
-* Fix bugs related to observing queries with field filters: `changed` callbacks
-  should not trigger unless a field in the filter has changed, and `changed`
-  callbacks need to trigger when a parent of an included field is
-  unset.  #2254 #3571
+### Other bug fixes and improvements
 
-* Disallow setting fields with empty names in minimongo, to match MongoDB 2.6
-  semantics.
+* Remove some packages used internally to support legacy MDG systems
+  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
+  `dev-bundle-fetcher`, and `star-translate`).
 
-* The oplog observe driver recovers from failed attempts to apply the modifier
-  from the oplog (eg, because of empty field names).
+* Provide direct access to some npm modules used by core packages on the
+  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
+  `HTTPInternals`.
 
 * Upgraded dependencies:
 
