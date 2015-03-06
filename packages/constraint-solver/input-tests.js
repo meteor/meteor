@@ -4,7 +4,7 @@ var CS = ConstraintSolver;
 // CS.Input (representing a problem statement) and passing it into
 // CS.PackagesResolver.
 
-// Yeah, we really on object key order here.  Specifically that
+// Yeah, we rely on object key order here.  Specifically that
 // if you add a bunch of keys to an object (that look like package
 // names) and then JSON.stringify the object, the keys will appear
 // in that order.  If that's not true, these tests will break.
