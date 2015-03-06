@@ -4,8 +4,11 @@ var PV = PackageVersion;
 CS.VersionPricer = function () {
   var self = this;
 
-  // VersionPricer instance stores a memoization table for parsing
-  // version strings like "1.2.3" into objects.
+  // self.getVersionInfo(versionString) returns an object
+  // that contains at least { major, minor, patch }.
+  //
+  // The VersionPricer instance stores a memoization table for
+  // efficiency.
   self.getVersionInfo = _.memoize(PV.parse);
 };
 
@@ -13,29 +16,31 @@ CS.VersionPricer.MODE_UPDATE = 1;
 CS.VersionPricer.MODE_GRAVITY = 2;
 CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES = 3;
 
-// scanVersions performs the task of assigning small integer costs
-// (penalty weights) to versions based on how new or old
-// their major, minor, patch, and other version parts are.
-// The versions are provided in sorted order (oldest to newest).
-// Conceptually, you could imagine splitting the single array
-// into subarrays with the same major version, and then splitting
-// those arrays by minor version, and then those arrays by patch
-// version.  If you did so, each version would be indexed by a
-// quadruple of small integers.  This leads to four costs for each
-// version, the "major", "minor", "patch", and "rest" costs, where
-// the cost is either the index or the index counted from the end
-// of the array instead of the beginning (depending on the mode
-// parameter).
+// priceVersions(versions, mode, options) calculates small integer
+// costs for each version, based on whether each part of the version
+// is low or high relative to the other versions with the same higher
+// parts.
 //
-// For efficiency of implementation, we don't generate a bunch of
-// nested arrays as described above, but instead perform a single
-// traversal backwards through the array while calculating the
-// indices and accumulating them into an array for each type of
-// index.
+// For example, if "1.2.0" and "1.2.1" are the only 1.2.x versions
+// in the versions array, they will be assigned PATCH costs of
+// 1 and 0 in UPDATE mode (penalizing the older version), or 0 and 1
+// in GRAVITY mode (penalizing the newer version).  When optimizing,
+// the solver will prioritizing minimizing MAJOR costs, then MINOR
+// costs, then PATCH costs, and then "REST" costs (which penalizing
+// being old or new within versions that have the same major, minor,
+// AND patch).
 //
-// The return value is an array of four arrays, each having
-// the same length as the input `versions` array.  The elements of
-// these arrays correspond to the elements of the `versions` array.
+// - `versions` - Array of version strings in sorted order
+// - `mode` - A MODE constant
+// - `options`:
+//   - `versionAfter` - if provided, the next newer version not in the
+//     array but that would come next.
+//   - `versionBefore` - if provided, the next older version not in the
+//     the array but that would come before it.
+//
+// Returns: an array of 4 arrays, each of length versions.length,
+// containing the MAJOR, MINOR, PATCH, and REST costs corresponding
+// to the versions.
 //
 // MODE_UPDATE penalizes versions for being old (because we want
 // them to be new), while the MODE_GRAVITY penalizes versions for
@@ -55,125 +60,121 @@ CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES = 3;
 //
 // `versionBefore` is used in an analogous way with the GRAVITY modes.
 //
-// - `versions` - Array of version strings in sorted order
-// - `mode` - A MODE constant
-// - `options`:
-//   - `versionAfter` - if provided, the next newer version not in the
-//     array but that would come next.
-//   - `versionBefore` - if provided, the next older version not in the
-//     the array but that would come before it.
-CS.VersionPricer.prototype.scanVersions = function (versions, mode, options) {
+// The easiest way to implement this function would be to partition
+// `versions` into subarrays of versions with the same major part,
+// and then partition those arrays based on the minor parts, and
+// so on.  However, that's a lot of array allocations -- O(N) or
+// thereabouts.  So instead we use a linear scan backwards through
+// the versions array.
+CS.VersionPricer.prototype.priceVersions = function (versions, mode, options) {
   var self = this;
 
-  var majorGravity = false;
-  var minorGravity = false;
-  var patchGravity = false;
-  var restGravity = false;
+  var getMajorMinorPatch = function (v) {
+    var vInfo = self.getVersionInfo(v);
+    return [vInfo.major, vInfo.minor, vInfo.patch];
+  };
+
+  var MAJOR = 0, MINOR = 1, PATCH = 2, REST = 3;
+  var gravity; // array of MAJOR, MINOR, PATCH, REST
+
   switch (mode) {
   case CS.VersionPricer.MODE_UPDATE:
+    gravity = [false, false, false, false];
     break;
   case CS.VersionPricer.MODE_GRAVITY:
-    majorGravity = minorGravity = patchGravity = restGravity = true;
+    gravity = [true, true, true, true];
     break;
   case CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES:
-    majorGravity = minorGravity = true;
+    gravity = [true, true, false, false];
     break;
   default:
     throw new Error("Bad mode: " + mode);
   }
-  var oldnessMajor = 0;
-  var oldnessMinor = 0;
-  var oldnessPatch = 0;
-  var oldnessRest = 0;
-  var lastVInfo = null;
+
+  var lastMajorMinorPatch = null;
   if (options && options.versionAfter) {
-    lastVInfo = self.getVersionInfo(options.versionAfter);
+    lastMajorMinorPatch = getMajorMinorPatch(options.versionAfter);
   }
-  var major = [];
-  var minor = [];
-  var patch = [];
-  var rest = [];
-  var countOfSameMajor = 0;
-  var countOfSameMinor = 0;
-  var countOfSamePatch = 0;
+  // `costs` contains arrays of whole numbers, each of which will
+  // have a length of versions.length.  This is what we will return.
+  var costs = [[], [], [], []]; // MAJOR, MINOR, PATCH, REST
+  // How many in a row of the same MAJOR, MINOR, or PATCH have we seen?
+  var countOfSame = [0, 0, 0];
+
+  // Track how old each part of versions[i] is, in terms of how many
+  // greater values there are for that part among versions with the
+  // same higher parts.  For example, oldness[REST] counts the number
+  // of versions after versions[i] with the same MAJOR, MINOR, and REST.
+  // oldness[PATCH] counts the number of *different* higher values for
+  // for PATCH among later versions with the same MAJOR and MINOR parts.
+  var oldness = [0, 0, 0, 0];
+
+  // Walk the array backwards
   for (var i = versions.length - 1; i >= 0; i--) {
     var v = versions[i];
-    var vInfo = self.getVersionInfo(v);
-    if (lastVInfo) {
-      if (vInfo.major !== lastVInfo.major) {
-        oldnessMajor++;
-        if (minorGravity) {
-          flipLastN(minor, countOfSameMajor, oldnessMinor);
+    var majorMinorPatch = getMajorMinorPatch(v);
+    if (lastMajorMinorPatch) {
+      for (var k = MAJOR; k <= REST; k++) {
+        if (k === REST || majorMinorPatch[k] !== lastMajorMinorPatch[k]) {
+          // For the highest part that changed, bumped the oldness
+          // and clear the lower oldnesses.
+          oldness[k]++;
+          for (var m = k+1; m <= REST; m++) {
+            if (gravity[m]) {
+              // if we should actually be counting "newness" instead of
+              // oldness, flip the count.  Instead of [0, 1, 1, 2, 3],
+              // for example, make it [3, 2, 2, 1, 0].  This is the place
+              // to do it, because we have just "closed out" a run.
+              flipLastN(costs[m], countOfSame[m-1], oldness[m]);
+            }
+            countOfSame[m-1] = 0;
+            oldness[m] = 0;
+          }
+          break;
         }
-        if (patchGravity) {
-          flipLastN(patch, countOfSameMinor, oldnessPatch);
-        }
-        if (restGravity) {
-          flipLastN(rest, countOfSamePatch, oldnessRest);
-        }
-        countOfSameMajor = countOfSameMinor = countOfSamePatch = 0;
-        oldnessMinor = oldnessPatch = oldnessRest = 0;
-      } else if (vInfo.minor !== lastVInfo.minor) {
-        oldnessMinor++;
-        if (patchGravity) {
-          flipLastN(patch, countOfSameMinor, oldnessPatch);
-        }
-        if (restGravity) {
-          flipLastN(rest, countOfSamePatch, oldnessRest);
-        }
-        countOfSameMinor = countOfSamePatch = 0;
-        oldnessPatch = oldnessRest = 0;
-      } else if (vInfo.patch !== lastVInfo.patch) {
-        oldnessPatch++;
-        if (restGravity) {
-          flipLastN(rest, countOfSamePatch, oldnessRest);
-        }
-        countOfSamePatch = 0;
-        oldnessRest = 0;
-      } else {
-        oldnessRest++;
       }
     }
-    major.push(oldnessMajor);
-    minor.push(oldnessMinor);
-    patch.push(oldnessPatch);
-    rest.push(oldnessRest);
-    countOfSameMajor++;
-    countOfSameMinor++;
-    countOfSamePatch++;
-    lastVInfo = vInfo;
+    for (var k = MAJOR; k <= REST; k++) {
+      costs[k].push(oldness[k]);
+      if (k !== REST) {
+        countOfSame[k]++;
+      }
+    }
+    lastMajorMinorPatch = majorMinorPatch;
   }
   if (options && options.versionBefore && versions.length) {
-    var vbInfo = self.getVersionInfo(options.versionBefore);
-    if (vbInfo.major !== lastVInfo.major) {
-      oldnessMajor++;
-    } else if (vbInfo.minor !== lastVInfo.minor) {
-      oldnessMinor++;
-    } else if (vbInfo.patch !== lastVInfo.patch) {
-      oldnessPatch++;
-    } else {
-      oldnessRest++;
+    // bump the appropriate value of oldness, as if we ran the loop
+    // one more time
+    majorMinorPatch = getMajorMinorPatch(options.versionBefore);
+    for (var k = MAJOR; k <= REST; k++) {
+      if (k === REST || majorMinorPatch[k] !== lastMajorMinorPatch[k]) {
+        oldness[k]++;
+        break;
+      }
     }
   }
-  if (majorGravity) {
-    flipLastN(major, major.length, oldnessMajor);
-  }
-  if (minorGravity) {
-    flipLastN(minor, countOfSameMajor, oldnessMinor);
-  }
-  if (patchGravity) {
-    flipLastN(patch, countOfSameMinor, oldnessPatch);
-  }
-  if (restGravity) {
-    flipLastN(rest, countOfSamePatch, oldnessRest);
+
+  // Flip the MAJOR costs if we have MAJOR gravity -- subtracting them
+  // all from oldness[MAJOR] -- and likewise for other parts if countOfSame
+  // is > 0 for the next highest part (meaning we didn't get a chance to
+  // flip some of the costs because the loop ended).
+  for (var k = MAJOR; k <= REST; k++) {
+    if (gravity[k]) {
+      flipLastN(costs[k], k === MAJOR ? costs[k].length : countOfSame[k-1],
+                oldness[k]);
+    }
   }
 
-  return [major.reverse(), minor.reverse(), patch.reverse(), rest.reverse()];
+  // We pushed costs onto the arrays in reverse order.  Reverse the cost
+  // arrays in place before returning them.
+  return [costs[MAJOR].reverse(),
+          costs[MINOR].reverse(),
+          costs[PATCH].reverse(),
+          costs[REST].reverse()];
 };
 
 // "Flip" the last N elements of array in place by subtracting each
-// one from their maximum (which is known to the caller and passed in
-// as `max`).  For example, if `a` is `[3,0,1,1,2]`, then calling
+// one from `max`.  For example, if `a` is `[3,0,1,1,2]`, then calling
 // `flipLastN(a, 4, 2)` mutates `a` into `[3,2,1,1,0]`.
 var flipLastN = function (array, N, max) {
   var len = array.length;
@@ -183,62 +184,63 @@ var flipLastN = function (array, N, max) {
   }
 };
 
-// Categorize versions into `before`, `after`, and `higherMajor` groups.
-// Takes a sorted array of versions and a "pivot" version and returns
-// three sorted arrays, obtained by slicing up the original array.
-// `after` actually contains the versions that are greater than or equal
-// to the pivot but do not have a higher major version.
+// Partition a sorted array of versions into three arrays, containing
+// the versions that are `older` than the `target` version,
+// `compatible` with it, or have a `higherMajor` version.
 //
-// For example, `["1.0.0", "2.5.0", "2.6.1", "3.0.0"]` with a pivot of
-// `"2.5.0"` returns `{ before: ["1.0.0"], after: ["2.5.0", "2.6.1"],
+// For example, `["1.0.0", "2.5.0", "2.6.1", "3.0.0"]` with a target of
+// `"2.5.0"` returns `{ older: ["1.0.0"], compatible: ["2.5.0", "2.6.1"],
 // higherMajor: ["3.0.0"] }`.
-CS.VersionPricer.prototype.categorizeVersions = function (versions, pivot) {
+CS.VersionPricer.prototype.partitionVersions = function (versions, target) {
   var self = this;
   var firstGteIndex = versions.length;
   var higherMajorIndex = versions.length;
-  var pivotVInfo = self.getVersionInfo(pivot);
+  var targetVInfo = self.getVersionInfo(target);
   for (var i = 0; i < versions.length; i++) {
     var v = versions[i];
     var vInfo = self.getVersionInfo(v);
     if (firstGteIndex === versions.length &&
-        ! PV.lessThan(vInfo, pivotVInfo)) {
+        ! PV.lessThan(vInfo, targetVInfo)) {
       firstGteIndex = i;
     }
-    if (vInfo.major > pivotVInfo.major) {
+    if (vInfo.major > targetVInfo.major) {
       higherMajorIndex = i;
       break;
     }
   }
-  return { before: versions.slice(0, firstGteIndex),
-           after: versions.slice(firstGteIndex, higherMajorIndex),
+  return { older: versions.slice(0, firstGteIndex),
+           compatible: versions.slice(firstGteIndex, higherMajorIndex),
            higherMajor: versions.slice(higherMajorIndex) };
 };
 
-// Use a combination of calls to scanVersions with different modes in order
+// Use a combination of calls to priceVersions with different modes in order
 // to generate costs for versions relative to a "previous solution" version
-// (called the "pivot" here).
-CS.VersionPricer.prototype.scanVersionsWithPrevious = function (versions, pivot) {
+// (called the "target" here).
+CS.VersionPricer.prototype.priceVersionsWithPrevious = function (versions, target) {
   var self = this;
-  var cats = self.categorizeVersions(versions, pivot);
+  var parts = self.partitionVersions(versions, target);
 
-  var result1 = self.scanVersions(cats.before, CS.VersionPricer.MODE_UPDATE,
-                                  { versionAfter: pivot });
-  var result2 = self.scanVersions(cats.after, CS.VersionPricer.MODE_GRAVITY);
-  var result3 = self.scanVersions(cats.higherMajor,
-                                  CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES,
-                                  // not actually the version right before, but
-                                  // gives the `major` cost the bump it needs
-                                  { versionBefore: pivot });
+  var result1 = self.priceVersions(parts.older, CS.VersionPricer.MODE_UPDATE,
+                                   { versionAfter: target });
+  var result2 = self.priceVersions(parts.compatible,
+                                   CS.VersionPricer.MODE_GRAVITY);
+  var result3 = self.priceVersions(parts.higherMajor,
+                                   CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES,
+                                   // not actually the version right before, but
+                                   // gives the `major` cost the bump it needs
+                                   { versionBefore: target });
 
+  // Generate a fifth array, incompat, which has a 1 for each incompatible
+  // version and a 0 for each compatible version.
   var incompat = [];
   var i;
-  for (i = 0; i < cats.before.length; i++) {
+  for (i = 0; i < parts.older.length; i++) {
     incompat.push(1);
   }
-  for (i = 0; i < cats.after.length; i++) {
+  for (i = 0; i < parts.compatible.length; i++) {
     incompat.push(0);
   }
-  for (i = 0; i < cats.higherMajor.length; i++) {
+  for (i = 0; i < parts.higherMajor.length; i++) {
     incompat.push(1);
   }
 

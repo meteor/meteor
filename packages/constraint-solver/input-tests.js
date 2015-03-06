@@ -1,5 +1,9 @@
 var CS = ConstraintSolver;
 
+// "Input tests" are the new style of tests that operate by creating a
+// CS.Input (representing a problem statement) and passing it into
+// CS.PackagesResolver.
+
 // Yeah, we really on object key order here.  Specifically that
 // if you add a bunch of keys to an object (that look like package
 // names) and then JSON.stringify the object, the keys will appear
@@ -69,6 +73,48 @@ Tinytest.add("constraint solver - input - upgrade indirect dependency", function
     answer: {
       foo: "1.0.0",
       bar: "2.0.1"
+    }
+  });
+});
+
+Tinytest.add("constraint solver - input - upgrade direct, don't break", function (test) {
+  doTest(test, {
+    dependencies: ["foo", "bar"],
+    constraints: [],
+    previousSolution: { foo: "1.0.0", bar: "2.0.0" },
+    upgrade: ["bar"],
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar@2.0.0||3.0.0"],
+        "bar 2.0.0": [],
+        "bar 3.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      foo: "1.0.0",
+      bar: "2.0.0"
+    }
+  });
+
+  // if allowIncompatibleUpdate is set, upgrade bar to 3.0.0
+  doTest(test, {
+    dependencies: ["foo", "bar"],
+    constraints: [],
+    previousSolution: { foo: "1.0.0", bar: "2.0.0" },
+    upgrade: ["bar"],
+    allowIncompatibleUpdate: true,
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar@2.0.0||3.0.0"],
+        "bar 2.0.0": [],
+        "bar 3.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      foo: "1.0.0",
+      bar: "3.0.0"
     }
   });
 });

@@ -4,19 +4,22 @@ var PV = PackageVersion;
 
 Tinytest.add("constraint solver - version pricer", function (test) {
 
+  var pricer = new CS.VersionPricer();
+
   var testScanVersions = function (versions, mode, options, expected) {
     if (options && _.isArray(options)) {
       expected = options;
       options = null;
     }
-    var pricer = new CS.VersionPricer();
     var result, tuples;
+    // Accepts either a mode like CS.VersionPricer.MODE_UPDATE or
+    // an object that looks like `{ previous: version }`
     if (_.isObject(mode) && mode.previous) {
-      result = pricer.scanVersionsWithPrevious(versions, mode.previous);
+      result = pricer.priceVersionsWithPrevious(versions, mode.previous);
       tuples = _.zip(versions, result[0], result[1], result[2], result[3],
                      result[4]);
     } else {
-      result = pricer.scanVersions(versions, mode, options);
+      result = pricer.priceVersions(versions, mode, options);
       tuples = _.zip(versions, result[0], result[1], result[2], result[3]);
     }
     test.equal(tuples.length, expected.length);
@@ -31,6 +34,20 @@ Tinytest.add("constraint solver - version pricer", function (test) {
       }
     });
   };
+
+  test.equal(pricer.partitionVersions(["1.0.0", "2.5.0", "2.6.1", "3.0.0"],
+                                      "2.5.0"),
+             { older: ["1.0.0"],
+               compatible: ["2.5.0", "2.6.1"],
+               higherMajor: ["3.0.0"] });
+
+  test.equal(pricer.priceVersions(["1.0.0", "1.0.1", "2.0.0"],
+                                  CS.VersionPricer.MODE_UPDATE),
+             [[1, 1, 0], [0, 0, 0], [1, 0, 0], [0, 0, 0]]);
+
+  testScanVersions(["1.0.0", "2.0.0"], CS.VersionPricer.MODE_UPDATE,
+                   [["1.0.0",1,0,0,0], // major version behind
+                    ["2.0.0",0,0,0,0]]); // latest version
 
   testScanVersions(["0.0.2", "0.5.0", "7.1.2"], CS.VersionPricer.MODE_UPDATE,
                    [["0.0.2",1,1,0,0], // major and a minor version behind

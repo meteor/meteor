@@ -286,7 +286,7 @@ CS.Solver.prototype.getOldnesses = function (stepBaseName, packages) {
 
   _.each(packages, function (p) {
     var versions = self.input.catalogCache.getPackageVersions(p);
-    var costs = self.pricer.scanVersions(
+    var costs = self.pricer.priceVersions(
       versions, CS.VersionPricer.MODE_UPDATE);
     addCostsToSteps(p, versions, costs,
                     [major, minor, patch, rest]);
@@ -304,7 +304,7 @@ CS.Solver.prototype.getGravityPotential = function (stepBaseName, packages) {
 
   _.each(packages, function (p) {
     var versions = self.input.catalogCache.getPackageVersions(p);
-    var costs = self.pricer.scanVersions(
+    var costs = self.pricer.priceVersions(
       versions, CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES);
     addCostsToSteps(p, versions, costs,
                     [major, minor, patch, rest]);
@@ -332,7 +332,7 @@ CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
     var package = pvArg.package;
     var previousVersion = pvArg.version;
     var versions = self.input.catalogCache.getPackageVersions(package);
-    var costs = self.pricer.scanVersionsWithPrevious(
+    var costs = self.pricer.priceVersionsWithPrevious(
       versions, previousVersion);
     addCostsToSteps(package, versions, costs,
                     [incompat, major, minor, patch, rest]);
@@ -489,9 +489,9 @@ CS.Solver.prototype.getSolution = function () {
     // a previous_root for the purposes of previous_root_incompat
     _.each(toUpdate, function (p) {
       if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
-        var cats = self.pricer.categorizeVersions(
+        var parts = self.pricer.partitionVersions(
           cache.getPackageVersions(p), input.previousSolution[p]);
-        _.each(cats.before.concat(cats.higherMajor), function (v) {
+        _.each(parts.older.concat(parts.higherMajor), function (v) {
           previousRootIncompat.addTerm(pvVar(p, v), 1);
         });
       }
