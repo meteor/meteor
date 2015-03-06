@@ -205,7 +205,38 @@ Mongo.Collection = function (name, options) {
       throw new Error("There is already a collection named '" + name + "'");
   }
 
-  self._defineMutationMethods();
+  // set to true once we call any allow or deny methods. If true, use
+  // allow/deny semantics. If false, use insecure mode semantics.
+  self._restricted = false;
+
+  // Insecure mode (default to allowing writes). Defaults to 'undefined' which
+  // means insecure iff the insecure package is loaded. This property can be
+  // overriden by tests or packages wishing to change insecure mode behavior of
+  // their collections.
+  self._insecure = undefined;
+
+  self._validators = {
+    insert: {allow: [], deny: []},
+    update: {allow: [], deny: []},
+    remove: {allow: [], deny: []},
+    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
+    fetch: [],
+    fetchAllFields: false
+  };
+
+  if (self._name) {
+    // XXX Think about method namespacing. Maybe methods should be
+    // "Meteor:Mongo:insert/NAME"?
+    self._prefix = '/' + self._name + '/';
+
+  // Minimongo on the server gets no stubs; instead, by default
+  // it wait()s until its result is ready, yielding.
+  // This matches the behavior of macromongo on the server better.
+  // XXX see #MeteorServerNull
+    if (self._connection && (Meteor.isClient || self._connection === Meteor.server)) {
+      self._defineMutationMethods();
+    }
+  }
 
   // autopublish
   if (Package.autopublish && !options._preventAutopublish && self._connection
@@ -809,123 +840,137 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
 Mongo.Collection.prototype._defineMutationMethods = function() {
   var self = this;
 
-  // set to true once we call any allow or deny methods. If true, use
-  // allow/deny semantics. If false, use insecure mode semantics.
-  self._restricted = false;
+  var m = {};
 
-  // Insecure mode (default to allowing writes). Defaults to 'undefined' which
-  // means insecure iff the insecure package is loaded. This property can be
-  // overriden by tests or packages wishing to change insecure mode behavior of
-  // their collections.
-  self._insecure = undefined;
-
-  self._validators = {
-    insert: {allow: [], deny: []},
-    update: {allow: [], deny: []},
-    remove: {allow: [], deny: []},
-    upsert: {allow: [], deny: []}, // dummy arrays; can't set these!
-    fetch: [],
-    fetchAllFields: false
+  // Process error, by throwing a 409 on mongo errors, and a normal error
+  // otherwise.
+  var dealWithError = function (e) {
+    if (e.name === 'MongoError' || e.name === 'MinimongoError') {
+      throw new Meteor.Error(409, e.toString());
+    } else {
+      throw e;
+    }
   };
 
-  if (!self._name)
-    return; // anonymous collection
+  // If we are using validators, check that we are even allowed to use this
+  // method. If we are not, throw right there.
+  var checkValidation = function (method) {
+    if (self._validators[method].allow.length === 0) {
+      throw new Meteor.Error(
+        403, "Access denied. No allow validators set on restricted " +
+          "collection for method '" + method + "'.");
+    }
+  };
 
-  // XXX Think about method namespacing. Maybe methods should be
-  // "Meteor:Mongo:insert/NAME"?
-  self._prefix = '/' + self._name + '/';
-
-  // mutation methods
-  if (self._connection) {
-    var m = {};
-
-    _.each(['insert', 'update', 'remove'], function (method) {
-      m[self._prefix + method] = function (/* ... */) {
-        // All the methods do their own validation, instead of using check().
-        check(arguments, [Match.Any]);
-        var args = _.toArray(arguments);
-        try {
-          // For an insert, if the client didn't specify an _id, generate one
-          // now; because this uses DDP.randomStream, it will be consistent with
-          // what the client generated. We generate it now rather than later so
-          // that if (eg) an allow/deny rule does an insert to the same
-          // collection (not that it really should), the generated _id will
-          // still be the first use of the stream and will be consistent.
-          //
-          // However, we don't actually stick the _id onto the document yet,
-          // because we want allow/deny rules to be able to differentiate
-          // between arbitrary client-specified _id fields and merely
-          // client-controlled-via-randomSeed fields.
-          var generatedId = null;
-          if (method === "insert" && !_.has(args[0], '_id')) {
-            generatedId = self._makeNewID();
-          }
-
-          if (this.isSimulation) {
-            // In a client simulation, you can do any mutation (even with a
-            // complex selector).
-            if (generatedId !== null)
-              args[0]._id = generatedId;
-            return self._collection[method].apply(
-              self._collection, args);
-          }
-
-          // This is the server receiving a method call from the client.
-
-          // We don't allow arbitrary selectors in mutations from the client: only
-          // single-ID selectors.
-          if (method !== 'insert')
-            throwIfSelectorIsNotId(args[0], method);
-
-          if (self._restricted) {
-            // short circuit if there is no way it will pass.
-            if (self._validators[method].allow.length === 0) {
-              throw new Meteor.Error(
-                403, "Access denied. No allow validators set on restricted " +
-                  "collection for method '" + method + "'.");
-            }
-
-            var validatedMethodName =
-                  '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
-            args.unshift(this.userId);
-            method === 'insert' && args.push(generatedId);
-            return self[validatedMethodName].apply(self, args);
-          } else if (self._isInsecure()) {
-            if (generatedId !== null)
-              args[0]._id = generatedId;
-            // In insecure mode, allow any mutation (with a simple selector).
-            // XXX This is kind of bogus.  Instead of blindly passing whatever
-            //     we get from the network to this function, we should actually
-            //     know the correct arguments for the function and pass just
-            //     them.  For example, if you have an extraneous extra null
-            //     argument and this is Mongo on the server, the .wrapAsync'd
-            //     functions like update will get confused and pass the
-            //     "fut.resolver()" in the wrong slot, where _update will never
-            //     invoke it. Bam, broken DDP connection.  Probably should just
-            //     take this whole method and write it three times, invoking
-            //     helpers for the common code.
-            return self._collection[method].apply(self._collection, args);
-          } else {
-            // In secure mode, if we haven't called allow or deny, then nothing
-            // is permitted.
-            throw new Meteor.Error(403, "Access denied");
-          }
-        } catch (e) {
-          if (e.name === 'MongoError' || e.name === 'MinimongoError') {
-            throw new Meteor.Error(409, e.toString());
-          } else {
-            throw e;
-          }
+  // Insert -- perform an insert operation into Mongo, either validated or not.
+  // Takes in the document to insert.
+  m[self._prefix + "insert"] = function (doc) {
+    // XXX: validation in individual methods called from here.
+      try {
+        // For an insert, if the client didn't specify an _id, generate one
+        // now; because this uses DDP.randomStream, it will be consistent with
+        // what the client generated. We generate it now rather than later so
+        // that if (eg) an allow/deny rule does an insert to the same
+        // collection (not that it really should), the generated _id will
+        // still be the first use of the stream and will be consistent.
+        //
+        // However, we don't actually stick the _id onto the document yet,
+        // because we want allow/deny rules to be able to differentiate
+        // between arbitrary client-specified _id fields and merely
+        // client-controlled-via-randomSeed fields.
+        var generatedId = null;
+        if (!_.has(doc, '_id')) {
+          generatedId = self._makeNewID();
         }
-      };
-    });
-    // Minimongo on the server gets no stubs; instead, by default
-    // it wait()s until its result is ready, yielding.
-    // This matches the behavior of macromongo on the server better.
-    // XXX see #MeteorServerNull
-    if (Meteor.isClient || self._connection === Meteor.server)
-      self._connection.methods(m);
-  }
+
+        if (this.isSimulation) {
+          // In a client simulation, you can do any mutation (even with a
+          // complex selector).
+          if (generatedId !== null)
+            doc._id = generatedId;
+          return self._collection.insert(doc);
+        }
+
+        if (self._restricted) {
+          checkValidation("insert");
+          return self._validatedInsert(this.userId, doc, generatedId);
+        } else if (self._isInsecure()) {
+          if (generatedId !== null)
+            doc._id = generatedId;
+          // In insecure mode, allow any mutation (with a simple selector).
+          return self._collection.insert(doc);
+        } else {
+          // In secure mode, if we haven't called allow or deny, then nothing
+          // is permitted.
+          throw new Meteor.Error(403, "Access denied");
+        }
+      } catch (e) {
+        dealWithError(e);
+      }
+  };
+
+  // Remove document(s) from the collection. Takes in a selector specifying
+  // documents to remove.
+  m[self._prefix + "remove"] = function (selector) {
+    // XXX: validation in individual methods called from here.
+    try {
+        if (this.isSimulation) {
+          // In a client simulation, you can do any mutation (even with a
+          // complex selector).
+          return self._collection.remove(selector);
+        }
+
+        // We don't allow arbitrary selectors in removes from the client: only
+        // single-ID selectors.
+        throwIfSelectorIsNotId(selector, "remove");
+
+        if (self._restricted) {
+          checkValidation("remove");
+          return self._validatedRemove(this.userId, selector);
+        } else if (self._isInsecure()) {
+          // In insecure mode, allow any mutation (with a simple selector).
+          return self.remove(selector);
+        } else {
+                // In secure mode, if we haven't called allow or deny, then nothing
+          // is permitted.
+          throw new Meteor.Error(403, "Access denied");
+        }
+    } catch (e) {
+      dealWithError(e);
+    }
+  };
+
+  // Update document(s) in the collection. Takes in a selector, modifier and
+  // some options.
+  m[self._prefix + "update"] = function (selector, modifier, options) {
+    // XXX: validation in individual methods called from here.
+    try {
+        if (this.isSimulation) {
+          // In a client simulation, you can do any mutation (even with a
+          // complex selector).
+          return self._collection.update(selector, modifier, options);
+        }
+
+        // We don't allow arbitrary selectors in removes from the client: only
+        // single-ID selectors.
+        throwIfSelectorIsNotId(selector, "update");
+
+        if (self._restricted) {
+          checkValidation("update");
+          return self._validatedUpdate(this.userId, selector, modifier, options);
+        } else if (self._isInsecure()) {
+          // In insecure mode, allow any mutation (with a simple selector).
+          return self.update(selector, modifier, options);
+        } else {
+          // In secure mode, if we haven't called allow or deny, then nothing
+          // is permitted.
+          throw new Meteor.Error(403, "Access denied");
+        }
+    } catch (e) {
+      dealWithError(e);
+    }
+  };
+   self._connection.methods(m);
 };
 
 
