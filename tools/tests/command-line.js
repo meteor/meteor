@@ -24,6 +24,7 @@ selftest.define("argument parsing", function () {
 
   // conflicting command-like options
   run = s.run("aoeuasdf", "--version");
+  run.waitSecs(5);
   run.matchErr("pass anything else along with --version");
   run.expectExit(1);
 
