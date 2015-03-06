@@ -16,5 +16,5 @@ selftest.define('constraint solver benchmark', ['slow', 'checkout'], function ()
 
   run.waitSecs(60*4);
   run.match("ALL TESTS PASSED");
-  run.stop();
+  run.expectExit(0);
 });

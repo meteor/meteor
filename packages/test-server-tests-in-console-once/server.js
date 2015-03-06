@@ -74,9 +74,6 @@ Meteor.startup(function () {
     } else {
       console.log("ALL TESTS PASSED");
     }
-
-    // We used to exit here, but on Windows we can't rely on the console logs
-    // above being printed before exit...
-    // process.exit(failed ? 1 : 0);
+    process.exit(failed ? 1 : 0);
   });
 });
