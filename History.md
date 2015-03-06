@@ -122,17 +122,29 @@
   Compression is supported on the client side by Meteor's DDP client and by
   browsers including Chrome, Safari and Firefox 37.
 
+* Provide direct access to some npm modules used by core packages on the
+  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
+  `HTTPInternals`.
+
+* Provide direct access to the collection and database objects from the npm
+  Mongo driver via new `rawCollection` and `rawDatabase` methods on
+  `Mongo.Collection`.  #3640
+
+* Provide direct access to all options supported by the `request` npm module via
+  the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
   - Fibers: 1.0.5 (from 1.0.1)
   - MongoDB: 2.6.7 (from 2.4.12)
   - openssl in mongo: 1.0.2 (from 1.0.1j)
-  - MongoDB driver: 1.4.30 (from 1.4.1)
+  - MongoDB driver: 1.4.32 (from 1.4.1)
   - bson: 0.2.18 (from 0.2.7)
   - faye-websocket: 0.9.3 (from 0.8.1)
   - websocket-driver: 0.5.3 (from 0.4.0)
   - sockjs server: 0.3.14 (from 0.3.11)
+  - request: 2.53.0 (from 2.47.0)
 
 ### Meteor Mobile updates
 

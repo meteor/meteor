@@ -430,6 +430,30 @@ testAsyncMulti("httpcall - params", [
   }
 ]);
 
+testAsyncMulti("httpcall - npmRequestOptions", [
+  function (test, expect) {
+    if (Meteor.isClient) {
+      test.throws(function () {
+        HTTP.get(url_prefix() + "/",
+                 { npmRequestOptions: { encoding: null } },
+                 function () {});
+      });
+      return;
+    }
+
+    HTTP.get(
+      url_prefix() + "/",
+      { npmRequestOptions: { encoding: null } },
+      expect(function (error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        test.instanceOf(result.content, Buffer);
+      })
+    );
+  }
+]);
+
 
 if (Meteor.isServer) {
   // This is testing the server's static file sending code, not the http
@@ -490,6 +514,13 @@ if (Meteor.isServer) {
   ]);
 }
 
+Meteor.isServer && Tinytest.add("httpcall - npm modules", function (test) {
+  // Make sure the version number looks like a version number. (All published
+  // request version numbers end in ".0".)
+  test.matches(HTTPInternals.NpmModules.request.version, /^2\.(\d+)\.0/);
+  test.equal(typeof(HTTPInternals.NpmModules.request.module), 'function');
+  test.isTrue(HTTPInternals.NpmModules.request.module.get);
+});
 
 // TO TEST/ADD:
 // - https

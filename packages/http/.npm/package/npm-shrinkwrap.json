@@ -1,10 +1,10 @@
 {
   "dependencies": {
     "request": {
-      "version": "2.47.0",
+      "version": "2.53.0",
       "dependencies": {
         "bl": {
-          "version": "0.9.3",
+          "version": "0.9.4",
           "dependencies": {
             "readable-stream": {
               "version": "1.0.33",
@@ -26,17 +26,14 @@
           }
         },
         "caseless": {
-          "version": "0.6.0"
+          "version": "0.9.0"
         },
         "forever-agent": {
           "version": "0.5.2"
         },
         "form-data": {
-          "version": "0.1.4",
+          "version": "0.2.0",
           "dependencies": {
-            "mime": {
-              "version": "1.2.11"
-            },
             "async": {
               "version": "0.9.0"
             }
@@ -46,13 +43,18 @@
           "version": "5.0.0"
         },
         "mime-types": {
-          "version": "1.0.2"
+          "version": "2.0.9",
+          "dependencies": {
+            "mime-db": {
+              "version": "1.7.0"
+            }
+          }
         },
         "node-uuid": {
-          "version": "1.4.1"
+          "version": "1.4.2"
         },
         "qs": {
-          "version": "2.3.2"
+          "version": "2.3.3"
         },
         "tunnel-agent": {
           "version": "0.4.0"
@@ -66,36 +68,36 @@
           }
         },
         "http-signature": {
-          "version": "0.10.0",
+          "version": "0.10.1",
           "dependencies": {
             "assert-plus": {
-              "version": "0.1.2"
+              "version": "0.1.5"
             },
             "asn1": {
               "version": "0.1.11"
             },
             "ctype": {
-              "version": "0.5.2"
+              "version": "0.5.3"
             }
           }
         },
         "oauth-sign": {
-          "version": "0.4.0"
+          "version": "0.6.0"
         },
         "hawk": {
-          "version": "1.1.1",
+          "version": "2.3.1",
           "dependencies": {
             "hoek": {
-              "version": "0.9.1"
+              "version": "2.11.1"
             },
             "boom": {
-              "version": "0.4.2"
+              "version": "2.6.1"
             },
             "cryptiles": {
-              "version": "0.2.2"
+              "version": "2.0.4"
             },
             "sntp": {
-              "version": "0.2.4"
+              "version": "1.0.9"
             }
           }
         },
@@ -106,12 +108,15 @@
           "version": "0.0.4"
         },
         "combined-stream": {
-          "version": "0.0.5",
+          "version": "0.0.7",
           "dependencies": {
             "delayed-stream": {
               "version": "0.0.5"
             }
           }
+        },
+        "isstream": {
+          "version": "0.1.1"
         }
       }
     }
