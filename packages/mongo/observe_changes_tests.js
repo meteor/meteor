@@ -209,30 +209,53 @@ if (Meteor.isServer) {
       onComplete();
     });
   });
-
-  Tinytest.addAsync("observeChanges - unordered - specific fields + modify on excluded fields", function (test, onComplete) {
-    var c = makeCollection();
-    withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
-      var handle = c.find({ mac: 1, cheese: 2 },
-                          {fields:{noodles: 1, bacon: 1, eggs: 1}}).observeChanges(logger);
-      var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
-
-      logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
-
-
-      // Noodles go into shadow, mac appears as eggs
-      c.update(fooid, {$rename: { noodles: 'shadow', apples: 'eggs' }});
-      logger.expectResultOnly("changed",
-                              [fooid, {eggs:"ok", noodles: undefined}]);
-
-      c.remove(fooid);
-      logger.expectResultOnly("removed", [fooid]);
-      logger.expectNoResult();
-      handle.stop();
-      onComplete();
-    });
-  });
 }
+
+Tinytest.addAsync("observeChanges - unordered - specific fields + modify on excluded fields", function (test, onComplete) {
+  var c = makeCollection();
+  withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
+    var handle = c.find({ mac: 1, cheese: 2 },
+                        {fields:{noodles: 1, bacon: 1, eggs: 1}}).observeChanges(logger);
+    var fooid = c.insert({noodles: "good", bacon: "bad", apples: "ok", mac: 1, cheese: 2});
+
+    logger.expectResultOnly("added", [fooid, {noodles: "good", bacon: "bad"}]);
+
+
+    // Noodles go into shadow, mac appears as eggs
+    c.update(fooid, {$rename: { noodles: 'shadow', apples: 'eggs' }});
+    logger.expectResultOnly("changed",
+                            [fooid, {eggs:"ok", noodles: undefined}]);
+
+    c.remove(fooid);
+    logger.expectResultOnly("removed", [fooid]);
+    logger.expectNoResult();
+    handle.stop();
+    onComplete();
+  });
+});
+
+Tinytest.addAsync(
+  "observeChanges - unordered - unset parent of observed field",
+  function (test, onComplete) {
+    var c = makeCollection();
+    withCallbackLogger(
+      test, ['added', 'changed', 'removed'], Meteor.isServer,
+      function (logger) {
+        var handle = c.find({}, {fields: {'type.name': 1}}).observeChanges(logger);
+        var id = c.insert({ type: { name: 'foobar' } });
+        logger.expectResultOnly('added', [id, { type: { name: 'foobar' } }]);
+
+        c.update(id, { $unset: { type: 1 } });
+        test.equal(c.find().fetch(), [{ _id: id }]);
+        logger.expectResultOnly('changed', [id, { type: undefined }]);
+
+        handle.stop();
+        onComplete();
+      }
+    );
+  }
+);
+
 
 
 Tinytest.addAsync("observeChanges - unordered - enters and exits result set through change", function (test, onComplete) {

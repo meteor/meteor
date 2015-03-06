@@ -136,6 +136,11 @@
 * Add an index to the collection that stores OAuth login configuration to ensure
   that only one configuration exists per service.  #3514
 
+* Fix bugs related to observing queries with field filters: `changed` callbacks
+  should not trigger unless a field in the filter has changed, and `changed`
+  callbacks need to trigger when a parent of an included field is
+  unset.  #2254 #3571
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)

@@ -3129,3 +3129,43 @@ Tinytest.add("minimongo - fetch in observe", function (test) {
   observe.stop();
   computation.stop();
 });
+
+// See #2254
+Tinytest.add("minimongo - fine-grained reactivity of observe with fields projection", function (test) {
+  var X = new LocalCollection;
+  var id = "asdf";
+  X.insert({_id: id, foo: {bar: 123}});
+
+  var callbackInvoked = false;
+  var obs = X.find(id, {fields: {'foo.bar': 1}}).observeChanges({
+    changed: function (id, fields) {
+      callbackInvoked = true;
+    }
+  });
+
+  test.isFalse(callbackInvoked);
+  X.update(id, {$set: {'foo.baz': 456}});
+  test.isFalse(callbackInvoked);
+
+  obs.stop();
+});
+Tinytest.add("minimongo - fine-grained reactivity of query with fields projection", function (test) {
+  var X = new LocalCollection;
+  var id = "asdf";
+  X.insert({_id: id, foo: {bar: 123}});
+
+  var callbackInvoked = false;
+  var computation = Tracker.autorun(function () {
+    callbackInvoked = true;
+    return X.findOne(id, { fields: { 'foo.bar': 1 } });
+  });
+  test.isTrue(callbackInvoked);
+  callbackInvoked = false;
+  X.update(id, {$set: {'foo.baz': 456}});
+  test.isFalse(callbackInvoked);
+  X.update(id, {$set: {'foo.bar': 124}});
+  Tracker.flush();
+  test.isTrue(callbackInvoked);
+
+  computation.stop();
+});
