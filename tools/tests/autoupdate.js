@@ -138,7 +138,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.stop();
 
     run = s.run("update");
-    run.read("myapp: updated to Meteor v3.");
+    run.match("myapp: updated to Meteor v3.\n");
     run.match("Your packages are at their latest compatible versions.\n");
     run.expectExit(0);
 

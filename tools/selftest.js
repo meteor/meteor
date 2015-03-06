@@ -807,7 +807,7 @@ _.extend(Sandbox.prototype, {
       stubCatalog.collections.versions.push(versionRec);
 
       stubCatalog.collections.builds.push({
-        architecture: isopack.buildArchitectures(),
+        buildArchitectures: isopack.buildArchitectures(),
         versionId: versionRec._id,
         _id: utils.randomToken()
       });
