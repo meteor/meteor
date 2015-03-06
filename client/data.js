@@ -2548,6 +2548,15 @@ DocsData = {
             "Boolean"
           ]
         }
+      },
+      {
+        "description": "<p>On the server, <code>HTTP.call</code> is implemented by using the <a href=\"https://www.npmjs.com/package/request\">npm <code>request</code> module</a>. Any options in this object will be passed directly to the <code>request</code> invocation.</p>",
+        "name": "npmRequestOptions",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
       }
     ],
     "params": [
@@ -5335,7 +5344,7 @@ DocsData = {
     "memberof": "Template",
     "name": "body",
     "scope": "static",
-    "summary": "The [template object](#templates_api) representing your `<body>` tag."
+    "summary": "The [template object](#templates_api) representing your `<body>`\ntag."
   },
   "Template.currentData": {
     "kind": "function",
