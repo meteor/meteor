@@ -17,6 +17,10 @@ Make a subdirectory called `<name>` and create a new Meteor app there.
 Serve the current app at [http://localhost:3000](http://localhost:3000)
 using Meteor's local development server.
 
+#### `meteor debug`
+
+Run the project with Node Inspector attached, so that you can step through your server code line by line. See [`meteor debug`](#/full/meteordebug) in the full docs for more information.
+
 #### `meteor deploy <site>`
 
 Bundle your app and deploy it to `<site>`. Meteor provides free hosting if

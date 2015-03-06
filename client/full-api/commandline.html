@@ -35,6 +35,22 @@ For example: `NODE_OPTIONS='--debug'` or `NODE_OPTIONS='--debug-brk'`
 Run `meteor help run` to see the full list of options.
 
 
+<h3 id="meteordebug">meteor debug</h3>
+
+Run the project, but suspend the server process for debugging.
+
+The server process will be suspended just before the first statement of
+server code that would normally execute. In order to continue execution of
+server code, use either the web-based Node Inspector or the command-line
+debugger (further instructions will be printed in the console).
+
+Breakpoints can be set using the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger" target="_blank">`debugger` keyword</a>, or through the web UI of Node Inspector ("Sources" tab).
+
+The server process debugger will listen for incoming connections from debugging clients, such as node-inspector, on port 5858 by default. To specify a different port use the `--debug-port <port>` option.
+
+The same debugging functionality can be achieved by adding the `--debug-port <port>` option to other `meteor` tool commands, such as `meteor run` and `meteor test-packages`.
+
+
 <h3 id="meteorcreate">meteor create <i>name</i></h3>
 
 Create a new Meteor project. By default, makes a subdirectory named *name*
