@@ -1783,7 +1783,11 @@ var testShowRelease = selftest.markStack(function (s, options) {
     run.read("\n");
   }
   if (options.addendum) {
-    run.read(options.addendum + "\n");
+    var addendum = options.addendum;
+
+    addendum = addendum.replace(/\s+/g, "\\s+") + "\\s+";
+
+    run.read(new RegExp(addendum));
   }
   run.expectEnd(0);
 });
