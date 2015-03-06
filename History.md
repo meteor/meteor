@@ -141,6 +141,9 @@
   callbacks need to trigger when a parent of an included field is
   unset.  #2254 #3571
 
+* Disallow setting fields with empty names in minimongo, to match MongoDB 2.6
+  semantics.
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)

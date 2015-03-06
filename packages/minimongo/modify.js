@@ -41,16 +41,22 @@ LocalCollection._modify = function (doc, mod, options) {
       if (!modFunc)
         throw MinimongoError("Invalid modifier specified " + op);
       _.each(operand, function (arg, keypath) {
-        // XXX mongo doesn't allow mod field names to end in a period,
-        // but I don't see why.. it allows '' as a key, as does JS
-        if (keypath.length && keypath[keypath.length-1] === '.')
-          throw MinimongoError(
-            "Invalid mod field name, may not end in a period");
+        if (keypath === '') {
+          throw MinimongoError("An empty update path is not valid.");
+        }
 
-        if (keypath === '_id')
+        if (keypath === '_id') {
           throw MinimongoError("Mod on _id not allowed");
+        }
 
         var keyparts = keypath.split('.');
+
+        if (! _.all(keyparts, _.identity)) {
+          throw MinimongoError(
+            "The update path '" + keypath +
+              "' contains an empty field name, which is not allowed.");
+        }
+
         var noCreate = _.has(NO_CREATE_MODIFIERS, op);
         var forbidArray = (op === "$rename");
         var target = findModTarget(newDoc, keyparts, {
