@@ -1,6 +1,10 @@
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
+var pvVar = function (p, v) {
+  return p + ' ' + v;
+};
+
 CS.Solver = function (input, options) {
   var self = this;
   check(input, CS.Input);
@@ -20,6 +24,8 @@ CS.Solver = function (input, options) {
   self.stepsByName = {};
 
   self.analysis = {};
+
+  self.logic = null; // Logic.Solver, initialized later
 };
 
 // A Step consists of a name, an array of terms, and an array of weights.
@@ -59,10 +65,7 @@ CS.Solver.Step.prototype.addTerm = function (term, weight) {
     }
     weight = this.weights;
   }
-  if ((typeof weight !== 'number') || (weight < 0) ||
-      (weight !== (weight | 0))) {
-    throw new Error("Bad weight: " + weight);
-  }
+  check(weight, Logic.WholeNumber);
   if (weight !== 0) {
     this.terms.push(term);
     if (typeof this.weights === 'number') {
@@ -93,80 +96,82 @@ CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
     _.each(step, function (st) {
       self.minimize(st);
     });
-  } else if (typeof step === 'string') {
+    return;
+  }
+
+  if (typeof step === 'string') {
     var theStep = new CS.Solver.Step(
       step, costTerms_, (costWeights_ == null ? 1 : costWeights_));
     if (costWeights_ == null) {
       theStep.zeroGoal = true;
     }
     self.minimize(theStep);
-  } else {
-    var logic = self.logic;
+    return;
+  }
 
-    self.steps.push(step);
-    self.stepsByName[step.name] = step;
+  var logic = self.logic;
 
-    if (DEBUG) {
-      console.log("--- MINIMIZING " + step.name);
-    }
+  self.steps.push(step);
+  self.stepsByName[step.name] = step;
 
-    var costWeights = step.weights;
-    var costTerms = step.terms;
-    var hitZero = false;
-    if (step.zeroGoal) {
-      costWeights = 1;
+  if (DEBUG) {
+    console.log("--- MINIMIZING " + step.name);
+  }
 
-      // omitting costWeights puts us in a mode where we try to hit 0 right
-      // off the bat, as an optimization
-      if (costTerms.length) {
-        var zeroSolution = logic.solveAssuming(Logic.not(Logic.or(costTerms)));
-        if (zeroSolution) {
-          self.solution = zeroSolution;
-          logic.forbid(costTerms);
-          hitZero = true;
-        }
-      } else {
+  var costWeights = step.weights;
+  var costTerms = step.terms;
+  var hitZero = false;
+  if (step.zeroGoal) {
+    // omitting costWeights puts us in a mode where we try to hit 0 right
+    // off the bat, as an optimization
+    if (costTerms.length) {
+      var zeroSolution = logic.solveAssuming(Logic.not(Logic.or(costTerms)));
+      if (zeroSolution) {
+        self.solution = zeroSolution;
+        logic.forbid(costTerms);
         hitZero = true;
       }
+    } else {
+      hitZero = true;
     }
+  }
 
-    if (! hitZero) {
-      var anyWeight =
-            (typeof costWeights === 'number') ? costWeights :
-            _.any(costWeights);
+  if (! hitZero) {
+    var anyWeight =
+          (typeof costWeights === 'number') ? costWeights :
+          _.any(costWeights);
 
-      if (anyWeight) {
-        self.solution = logic.minimize(
-          self.solution, costTerms, costWeights, {
-            progress: function (status, cost) {
-              if (status === 'improving') {
-                if (DEBUG) {
-                  console.log(cost + " ... trying to improve ...");
-                }
+    if (anyWeight) {
+      self.solution = logic.minimize(
+        self.solution, costTerms, costWeights, {
+          progress: function (status, cost) {
+            if (status === 'improving') {
+              if (DEBUG) {
+                console.log(cost + " ... trying to improve ...");
               }
             }
-          });
-
-        if (! self.solution) {
-          // Optimizing shouldn't change satisfiability
-          throw new Error("Unexpected unsatisfiability");
-        }
-      }
-    }
-
-    step.optimum = self.solution.getWeightedSum(costTerms, costWeights);
-    if (DEBUG) {
-      console.log(step.optimum + " is optimal");
-
-      if (step.optimum) {
-        _.each(costTerms, function (t, i) {
-          var w = (typeof costWeights === 'number' ? costWeights :
-                   costWeights[i]);
-          if (w && self.solution.evaluate(t)) {
-            console.log("    " + w + ": " + t);
           }
         });
+
+      if (! self.solution) {
+        // Optimizing shouldn't change satisfiability
+        throw new Error("Unexpected unsatisfiability");
       }
+    }
+  }
+
+  step.optimum = self.solution.getWeightedSum(costTerms, costWeights);
+  if (DEBUG) {
+    console.log(step.optimum + " is optimal");
+
+    if (step.optimum) {
+      _.each(costTerms, function (t, i) {
+        var w = (typeof costWeights === 'number' ? costWeights :
+                 costWeights[i]);
+        if (w && self.solution.evaluate(t)) {
+          console.log("    " + w + ": " + t);
+        }
+      });
     }
   }
 };
@@ -271,6 +276,9 @@ var addCostsToSteps = function (package, versions, costs, steps) {
   for (var j = 0; j < steps.length; j++) {
     var step = steps[j];
     var costList = costs[j];
+    if (costList.length !== versions.length) {
+      throw new Error("Assertion failure: Bad lengths in addCostsToSteps");
+    }
     for (var i = 0; i < versions.length; i++) {
       step.addTerm(pvs[i], costList[i]);
     }
@@ -341,19 +349,6 @@ CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
   return [incompat, major, minor, patch, rest];
 };
 
-CS.Solver.prototype.currentSelectedPVs = function () {
-  var self = this;
-  var result = [];
-  _.each(self.solution.getTrueVars(), function (x) {
-    if (x.indexOf(' ') >= 0) {
-      // all variables with spaces in them are PackageAndVersions
-      var pv = CS.PackageAndVersion.fromString(x);
-      result.push(pv);
-    }
-  });
-  return result;
-};
-
 CS.Solver.prototype.currentVersionMap = function () {
   var self = this;
   var pvs = [];
@@ -367,6 +362,11 @@ CS.Solver.prototype.currentVersionMap = function () {
 
   var versionMap = {};
   _.each(pvs, function (pv) {
+    if (_.has(versionMap, pv.package)) {
+      throw new Error("Assertion failure: Selected two versions of " +
+                      pv.package + ", " +versionMap[pv.package] +
+                      " and " + pv.version);
+    }
     versionMap[pv.package] = pv.version;
   });
 
@@ -426,7 +426,7 @@ CS.Solver.prototype.getSolution = function () {
   });
 
   // generate constraints -- but technically don't enforce them, because
-  // they are guarded by variables that haven't been forced to true
+  // we haven't forced the conflictVars to be false
   _.each(analysis.constraints, function (c) {
     // We logically require that EITHER a constraint is marked as a
     // conflict OR it comes from a package version that is not selected
@@ -443,7 +443,9 @@ CS.Solver.prototype.getSolution = function () {
   self.solution = logic.solve();
   if (! self.solution) {
     // There is always a solution at this point, namely,
-    // select all packages (including unknown packages)!
+    // select all packages (including unknown packages), select
+    // any version of each known package, and set all conflictVars
+    // to true.
     throw new Error("Unexpected unsatisfiability");
   }
 
@@ -496,9 +498,7 @@ CS.Solver.prototype.getSolution = function () {
         });
       }
     });
-  }
 
-  if (! input.allowIncompatibleUpdate) {
     // Enforce that we don't make breaking changes to your root dependencies,
     // unless you pass --allow-incompatible-update.  It will actually be enforced
     // farther down, but for now, we want to apply this constraint before handling
@@ -508,24 +508,28 @@ CS.Solver.prototype.getSolution = function () {
 
   self.minimize(self.getOldnesses('update', toUpdate));
 
-  var newRootDeps = _.filter(input.dependencies, function (p) {
-    return ! input.isInPreviousSolution(p);
-  });
-
   if (input.allowIncompatibleUpdate) {
+    // If you pass `--allow-incompatible-update`, we will still try to minimize
+    // version changes to root deps that break compatibility, but with a lower
+    // priority than taking as-new-as-possible versions for `meteor update`.
     self.minimize(previousRootIncompat);
   }
+
   self.minimize(previousRootVersionParts);
 
   var otherPrevious = _.filter(_.map(input.previousSolution, function (v, p) {
     return new CS.PackageAndVersion(p, v);
   }), function (pv) {
-    var p = pv.p;
+    var p = pv.package;
     return analysis.reachablePackages[p] === true &&
       ! input.isRootDependency(p);
   });
 
   self.minimize(self.getDistances('previous_indirect', otherPrevious));
+
+  var newRootDeps = _.filter(input.dependencies, function (p) {
+    return ! input.isInPreviousSolution(p);
+  });
 
   self.minimize(self.getOldnesses('new_root', newRootDeps));
 
@@ -554,7 +558,7 @@ CS.Solver.prototype.getSolution = function () {
   self.minimize('total_packages', _.keys(analysis.reachablePackages));
 
   // throw errors about unknown packages
-  if (self.stepsByName.unknown_packages.optimum > 0) {
+  if (self.stepsByName['unknown_packages'].optimum > 0) {
     var unknownPackages = _.keys(analysis.unknownPackages);
     var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
       return self.solution.evaluate(p);
@@ -573,14 +577,14 @@ CS.Solver.prototype.getSolution = function () {
   }
 
   // throw errors about conflicts
-  if (self.stepsByName.conflicts.optimum > 0) {
+  if (self.stepsByName['conflicts'].optimum > 0) {
     self.throwConflicts();
   }
 
   if ((! input.allowIncompatibleUpdate) &&
-      self.stepsByName.previous_root_incompat.optimum > 0) {
+      self.stepsByName['previous_root_incompat'].optimum > 0) {
     _.each(_.keys(
-      self.getStepContributions(self.stepsByName.previous_root_incompat)),
+      self.getStepContributions(self.stepsByName['previous_root_incompat'])),
            function (pvStr) {
              var pv = CS.PackageAndVersion.fromString(pvStr);
              var prevVersion = input.previousSolution[pv.package];
@@ -598,7 +602,7 @@ CS.Solver.prototype.getSolution = function () {
 
   return {
     neededToUseUnanticipatedPrereleases: (
-      self.stepsByName.unanticipated_prereleases.optimum > 0),
+      self.stepsByName['unanticipated_prereleases'].optimum > 0),
     answer: versionMap
   };
 };
@@ -618,10 +622,6 @@ CS.Solver.prototype.analyzeRootDependencies = function () {
         p, input.previousSolution[p]));
     }
   });
-};
-
-var pvVar = function (p, v) {
-  return p + ' ' + v;
 };
 
 
@@ -746,6 +746,7 @@ CS.Solver.prototype.getPathsToPackageVersion = function (packageAndVersion) {
     });
   };
   var hasDep = function (p1, p2) {
+    // Include weak dependencies, because their constraints matter.
     return _.has(cache.getDependencyMap(p1, versionMap[p1]), p2);
   };
   var allPackages = _.keys(versionMap);
