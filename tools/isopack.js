@@ -1091,7 +1091,8 @@ _.extend(Isopack.prototype, {
       // The actual trees to copy!
       'tools', 'examples', 'LICENSE.txt', 'meteor', 'meteor.bat',
       'scripts/admin/launch-meteor',
-      'packages/package-version-parser/package-version-parser.js');
+      'packages/package-version-parser/package-version-parser.js',
+      'packages/meteor/flush-buffers-on-exit-in-windows.js');
 
     // Trim blank line and unnecessary examples.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
