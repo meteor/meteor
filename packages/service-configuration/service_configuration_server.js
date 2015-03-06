@@ -15,7 +15,7 @@ try {
         "automatically creates a MongoDB index with a unique constraint on the " +
         " meteor_accounts_loginServiceConfiguration collection. The " +
         "_ensureIndex command which creates that index is failing.\n\n" +
-        "Meteor versions <= 1.0.3.1 did not create this index. If you recently " +
+        "Meteor versions before 1.0.4 did not create this index. If you recently " +
         "upgraded and are seeing this error message for the first time, please " +
         "check your meteor_accounts_loginServiceConfiguration collection for " +
         "multiple configuration entries for the same service and delete " +
