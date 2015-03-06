@@ -5,6 +5,9 @@ var testUtils = require('../test-utils.js');
 var utils = require('../utils.js');
 var _= require('underscore');
 var packageClient = require("../package-client.js");
+var catalog = require('../catalog.js');
+
+var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
 var username = "test";
 var password = "testtest";
@@ -545,7 +548,7 @@ var createAndPublishPackage = selftest.markStack(function (s, packageName) {
 });
 
 selftest.define("release track defaults to METEOR",
-                ["net", "test-package-server", "checkout", "yet-unsolved-windows-failure"], function () {
+                ["net", "test-package-server", "checkout"], function () {
 
   var s = new Sandbox();
   testUtils.login(s, username, password);
@@ -573,7 +576,7 @@ selftest.define("release track defaults to METEOR",
   s.cd(newPackDirName, function() {
     var run = s.run("publish", "--create");
     run.waitSecs(20);
-    run.matchErr("Unknown release METEOR@" + releaseVersion);
+    run.matchErr("Unknown release " + DEFAULT_RELEASE_TRACK + "@" + releaseVersion);
     run.expectExit(1);
   });
 });
