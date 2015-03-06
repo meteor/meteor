@@ -864,7 +864,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
   // Insert -- perform an insert operation into Mongo, either validated or not.
   // Takes in the document to insert.
   m[self._prefix + "insert"] = function (doc) {
-    check(doc, Match.OneOf(Object, Array));
+    check(doc, Match.OneOf(Object, [Object]));
     try {
       // For an insert, if the client didn't specify an _id, generate one
       // now; because this uses DDP.randomStream, it will be consistent with
@@ -911,7 +911,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
   // Remove document(s) from the collection. Takes in a selector specifying
   // documents to remove.
   m[self._prefix + "remove"] = function (selector) {
-    check(selector, Match.OneOf(Object));
+    check(selector, Match.OneOf(Object, String, Mongo.ObjectID));
     try {
       if (this.isSimulation) {
         // In a client simulation, you can do any mutation (even with a
@@ -943,8 +943,8 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
   // some options.
   m[self._prefix + "update"] = function (selector, modifier, options) {
     // XXX: validation in individual methods called from here.
-    check(selector, Match.OneOf(Object));
-    check(modifier, Match.OneOf(Object));
+    check(selector, Match.OneOf(Object, String, Mongo.ObjectID));
+    check(modifier, Match.ObjectIncluding({}));
     check(options, Match.OneOf(Object, undefined));
     try {
       if (this.isSimulation) {
