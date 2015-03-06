@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.0.4, 2015-Mar-??
+
 ### Mongo Driver and Livequery
 
 * Meteor is now tested against MongoDB 2.6 (and the bundled version used by
