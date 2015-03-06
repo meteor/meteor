@@ -191,7 +191,8 @@
 * Fix crashes in `meteor search --show-all` and `meteor search --maintainer`.
   \#3636
 
-* Kill PhantomJS processes after `meteor --test`.  #3205
+* Kill PhantomJS processes after `meteor --test`, and only run the app
+  once. #3205 #3793
 
 * Give a better error when Mongo fails to start up due to a full disk.  #2378
 
