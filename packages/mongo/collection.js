@@ -864,76 +864,76 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
   // Insert -- perform an insert operation into Mongo, either validated or not.
   // Takes in the document to insert.
   m[self._prefix + "insert"] = function (doc) {
-    // XXX: validation in individual methods called from here.
-      try {
-        // For an insert, if the client didn't specify an _id, generate one
-        // now; because this uses DDP.randomStream, it will be consistent with
-        // what the client generated. We generate it now rather than later so
-        // that if (eg) an allow/deny rule does an insert to the same
-        // collection (not that it really should), the generated _id will
-        // still be the first use of the stream and will be consistent.
-        //
-        // However, we don't actually stick the _id onto the document yet,
-        // because we want allow/deny rules to be able to differentiate
-        // between arbitrary client-specified _id fields and merely
-        // client-controlled-via-randomSeed fields.
-        var generatedId = null;
-        if (!_.has(doc, '_id')) {
-          generatedId = self._makeNewID();
-        }
-
-        if (this.isSimulation) {
-          // In a client simulation, you can do any mutation (even with a
-          // complex selector).
-          if (generatedId !== null)
-            doc._id = generatedId;
-          return self._collection.insert(doc);
-        }
-
-        if (self._restricted) {
-          checkValidation("insert");
-          return self._validatedInsert(this.userId, doc, generatedId);
-        } else if (self._isInsecure()) {
-          if (generatedId !== null)
-            doc._id = generatedId;
-          // In insecure mode, allow any mutation (with a simple selector).
-          return self._collection.insert(doc);
-        } else {
-          // In secure mode, if we haven't called allow or deny, then nothing
-          // is permitted.
-          throw new Meteor.Error(403, "Access denied");
-        }
-      } catch (e) {
-        dealWithError(e);
+    check(doc, Match.OneOf(Object, Array));
+    try {
+      // For an insert, if the client didn't specify an _id, generate one
+      // now; because this uses DDP.randomStream, it will be consistent with
+      // what the client generated. We generate it now rather than later so
+      // that if (eg) an allow/deny rule does an insert to the same
+      // collection (not that it really should), the generated _id will
+      // still be the first use of the stream and will be consistent.
+      //
+      // However, we don't actually stick the _id onto the document yet,
+      // because we want allow/deny rules to be able to differentiate
+      // between arbitrary client-specified _id fields and merely
+      // client-controlled-via-randomSeed fields.
+      var generatedId = null;
+      if (!_.has(doc, '_id')) {
+        generatedId = self._makeNewID();
       }
+
+      if (this.isSimulation) {
+        // In a client simulation, you can do any mutation (even with a
+        // complex selector).
+        if (generatedId !== null)
+          doc._id = generatedId;
+        return self._collection.insert(doc);
+      }
+
+      if (self._restricted) {
+        checkValidation("insert");
+        return self._validatedInsert(this.userId, doc, generatedId);
+      } else if (self._isInsecure()) {
+        if (generatedId !== null)
+          doc._id = generatedId;
+        // In insecure mode, allow any mutation (with a simple selector).
+        return self._collection.insert(doc);
+      } else {
+        // In secure mode, if we haven't called allow or deny, then nothing
+        // is permitted.
+        throw new Meteor.Error(403, "Access denied");
+      }
+    } catch (e) {
+      dealWithError(e);
+    }
   };
 
   // Remove document(s) from the collection. Takes in a selector specifying
   // documents to remove.
   m[self._prefix + "remove"] = function (selector) {
-    // XXX: validation in individual methods called from here.
+    check(selector, Match.OneOf(Object));
     try {
-        if (this.isSimulation) {
-          // In a client simulation, you can do any mutation (even with a
-          // complex selector).
-          return self._collection.remove(selector);
-        }
+      if (this.isSimulation) {
+        // In a client simulation, you can do any mutation (even with a
+        // complex selector).
+        return self._collection.remove(selector);
+      }
 
-        // We don't allow arbitrary selectors in removes from the client: only
-        // single-ID selectors.
-        throwIfSelectorIsNotId(selector, "remove");
+      // We don't allow arbitrary selectors in removes from the client: only
+      // single-ID selectors.
+      throwIfSelectorIsNotId(selector, "remove");
 
-        if (self._restricted) {
-          checkValidation("remove");
-          return self._validatedRemove(this.userId, selector);
-        } else if (self._isInsecure()) {
-          // In insecure mode, allow any mutation (with a simple selector).
-          return self.remove(selector);
-        } else {
-                // In secure mode, if we haven't called allow or deny, then nothing
-          // is permitted.
-          throw new Meteor.Error(403, "Access denied");
-        }
+      if (self._restricted) {
+        checkValidation("remove");
+        return self._validatedRemove(this.userId, selector);
+      } else if (self._isInsecure()) {
+        // In insecure mode, allow any mutation (with a simple selector).
+        return self.remove(selector);
+      } else {
+        // In secure mode, if we haven't called allow or deny, then nothing
+        // is permitted.
+        throw new Meteor.Error(403, "Access denied");
+      }
     } catch (e) {
       dealWithError(e);
     }
@@ -943,33 +943,36 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
   // some options.
   m[self._prefix + "update"] = function (selector, modifier, options) {
     // XXX: validation in individual methods called from here.
+    check(selector, Match.OneOf(Object));
+    check(modifier, Match.OneOf(Object));
+    check(options, Match.OneOf(Object, undefined));
     try {
-        if (this.isSimulation) {
-          // In a client simulation, you can do any mutation (even with a
-          // complex selector).
-          return self._collection.update(selector, modifier, options);
-        }
+      if (this.isSimulation) {
+        // In a client simulation, you can do any mutation (even with a
+        // complex selector).
+        return self._collection.update(selector, modifier, options);
+      }
 
-        // We don't allow arbitrary selectors in removes from the client: only
-        // single-ID selectors.
-        throwIfSelectorIsNotId(selector, "update");
+      // We don't allow arbitrary selectors in removes from the client: only
+      // single-ID selectors.
+      throwIfSelectorIsNotId(selector, "update");
 
-        if (self._restricted) {
-          checkValidation("update");
-          return self._validatedUpdate(this.userId, selector, modifier, options);
-        } else if (self._isInsecure()) {
-          // In insecure mode, allow any mutation (with a simple selector).
-          return self.update(selector, modifier, options);
-        } else {
-          // In secure mode, if we haven't called allow or deny, then nothing
-          // is permitted.
-          throw new Meteor.Error(403, "Access denied");
-        }
+      if (self._restricted) {
+        checkValidation("update");
+        return self._validatedUpdate(this.userId, selector, modifier, options);
+      } else if (self._isInsecure()) {
+        // In insecure mode, allow any mutation (with a simple selector).
+        return self.update(selector, modifier, options);
+      } else {
+        // In secure mode, if we haven't called allow or deny, then nothing
+        // is permitted.
+        throw new Meteor.Error(403, "Access denied");
+      }
     } catch (e) {
       dealWithError(e);
     }
   };
-   self._connection.methods(m);
+  self._connection.methods(m);
 };
 
 
