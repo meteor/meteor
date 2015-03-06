@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.0.6-winr.3'
+  version: '1.1.0-rc.0'
 });
 
 Package.onUse(function (api) {

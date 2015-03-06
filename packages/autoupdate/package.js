@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.1.6-winr.4'
+  version: '1.2.0-rc.0'
 });
 
 Cordova.depends({
