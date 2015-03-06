@@ -16,6 +16,7 @@ Package.onTest(function (api) {
   api.use('minimongo');
   api.use('tracker');
   api.use('mongo');
+  api.use('random');
 
   api.use('templating', 'client');
   api.addFiles([
@@ -37,8 +38,4 @@ Package.onTest(function (api) {
     'assets/markdown_each1.html',
     'assets/markdown_each2.html'
   ], 'server', { isAsset: true });
-
-  // For template level subscriptions, we need tests that can subscribe to
-  // things.
-  api.addFiles('template_tests_collections.js');
 });

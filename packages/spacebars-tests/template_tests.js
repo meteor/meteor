@@ -3147,9 +3147,12 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
     var stopCallback = expect();
     var stopCallback2 = expect();
 
+    var futureId = Random.id();
+
     // Make sure the HTML is what we expect when one subscription is ready
     var checkOneReady = expect(function () {
       test.equal(canonicalizeHtml(div.innerHTML), "");
+      Meteor.call('makeTemplateSubReady', futureId);
     });
 
     // Make sure the HTML is what we expect when both subscriptions are ready
@@ -3180,8 +3183,9 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
     });
 
     tmpl.onCreated(function () {
-      subHandle = this.subscribe("items", subscribeCallback);
-      subHandle2 = this.subscribe("items", 50, subscribeCallback);
+      var subHandle = this.subscribe("templateSub", subscribeCallback);
+      var subHandle2 = this.subscribe(
+        "templateSub", futureId, subscribeCallback);
 
       subHandle.stop = stopCallback;
       subHandle2.stop = stopCallback2;
@@ -3208,10 +3212,10 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions 
         return trueThenFalse.get();
       },
       subscribingHelper1: expect(function () {
-        subHandle = Template.instance().subscribe("items", 100);
+        subHandle = Template.instance().subscribe("templateSub");
       }),
       subscribingHelper2: expect(function () {
-        var subHandle2 = Template.instance().subscribe("items", 100);
+        var subHandle2 = Template.instance().subscribe("templateSub");
         test.isTrue(subHandle.subscriptionId === subHandle2.subscriptionId);
 
         // Make sure we didn't add two subscription handles to our internal list
