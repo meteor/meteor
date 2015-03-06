@@ -133,6 +133,9 @@
 * Provide direct access to all options supported by the `request` npm module via
   the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
 
+* Add an index to the collection that stores OAuth login configuration to ensure
+  that only one configuration exists per service.  #3514
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
