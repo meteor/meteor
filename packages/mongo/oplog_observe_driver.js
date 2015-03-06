@@ -604,7 +604,18 @@ _.extend(OplogObserveDriver.prototype, {
           newDoc = EJSON.clone(newDoc);
 
           newDoc._id = id;
-          LocalCollection._modify(newDoc, op.o);
+          try {
+            LocalCollection._modify(newDoc, op.o);
+          } catch (e) {
+            if (e.name !== "MinimongoError")
+              throw e;
+            // We didn't understand the modifier.  Re-fetch.
+            self._needToFetch.set(id, op.ts.toString());
+            if (self._phase === PHASE.STEADY) {
+              self._fetchModifiedDocuments();
+            }
+            return;
+          }
           self._handleDoc(id, self._sharedProjectionFn(newDoc));
         } else if (!canDirectlyModifyDoc ||
                    self._matcher.canBecomeTrueByModifier(op.o) ||

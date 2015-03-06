@@ -144,6 +144,9 @@
 * Disallow setting fields with empty names in minimongo, to match MongoDB 2.6
   semantics.
 
+* The oplog observe driver recovers from failed attempts to apply the modifier
+  from the oplog (eg, because of empty field names).
+
 * Upgraded dependencies:
 
   - node: 0.10.36 (from 0.10.33)
