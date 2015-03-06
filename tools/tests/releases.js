@@ -216,7 +216,7 @@ selftest.define("download release", ['net', 'slow'], function () {
 });
 
 
-selftest.define("unknown release", ["yet-unsolved-windows-failure"], function () {
+selftest.define("unknown release", [], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }
@@ -231,21 +231,21 @@ selftest.define("unknown release", ["yet-unsolved-windows-failure"], function ()
   run.matchErr("Meteor bad: unknown release");
 
   // METEOR in the release file.
-  s.write('.meteor/release', "METEOR@0.9-bad");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + "@0.9-bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor 0.9-bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9-bad,\s+but/);
 
   // No METEOR in the release file.
   s.write('.meteor/release', "0.9.x-bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor 0.9.x-bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9.x-bad,\s+but/);
 
   // Non-standard track
   s.write('.meteor/release', "FOO@bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor release FOO@bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+release\s+FOO@bad,\s+but/);
 
 });
