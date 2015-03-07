@@ -29,6 +29,11 @@ CS.Solver = function (input, options) {
 };
 
 // A Step consists of a name, an array of terms, and an array of weights.
+// Steps are optimized one by one.  Optimizing a Step means to find
+// the minimum whole number value for the weighted sum of the terms,
+// and then to enforce in the solver that the weighted sum be that number.
+// Thus, when the Steps are optimized in sequence, earlier Steps take
+// precedence and will stay minimized while later Steps are optimized.
 //
 // A term can be a package name, a package version, or any other variable
 // name or Logic formula.
@@ -162,6 +167,20 @@ CS.Solver.prototype.getStepContributions = function (step) {
   return contributions;
 };
 
+// A "reachable" package is one that is either a root dependency or
+// a strong dependency of any version of a reachable package.
+// In other words, we walk all strong dependencies starting
+// with the root dependencies, and visiting all versions of each
+// package.
+//
+// This analysis is mainly done for performance, because if there are
+// extraneous packages in the CatalogCache (for whatever reason) we
+// want to spend as little time on them as possible.  It also establishes
+// the universe of possible "known" and "unknown" packages we might
+// come across.
+//
+// A more nuanced reachability analysis that takes versions into account
+// is probably possible.
 CS.Solver.prototype.analyzeReachability = function () {
   var self = this;
   var input = self.input;
