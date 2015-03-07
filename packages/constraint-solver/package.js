@@ -32,6 +32,8 @@ Package.onTest(function (api) {
   // data for big benchmarky tests
   api.addFiles('test-data.js', where);
 
+  api.addFiles('stack-overflow-bug-data.js', where);
+
   api.addFiles('datatypes-tests.js', where);
   api.addFiles('catalog-cache-tests.js', where);
   api.addFiles('constraint-solver-tests.js', where);

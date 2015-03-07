@@ -338,6 +338,13 @@ Tinytest.add("constraint solver - input - fake PackageConstraint", function (tes
              /constraint foo@2.0.0 is not satisfied by foo 1.0.0/);
 });
 
+Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
+  doTest(test, STACK_OVERFLOW_BUG_INPUT, {
+    // XXX put the right answer here, when this test stops throwing an error!
+  });
+});
+
+
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({
