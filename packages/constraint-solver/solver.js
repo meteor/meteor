@@ -799,6 +799,6 @@ CS.Solver.Constraint = function (fromVar, toPackage, vConstraint, conflictVar) {
   // top-level constraint
   check(this.fromVar, Match.OneOf(String, null));
   check(this.toPackage, String); // package name
-  check(this.vConstraint, CS.Input.VersionConstraintType);
+  check(this.vConstraint, PV.VersionConstraint);
   check(this.conflictVar, String);
 };

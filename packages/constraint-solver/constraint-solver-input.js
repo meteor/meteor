@@ -8,6 +8,21 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   var self = this;
   options = options || {};
 
+  // PackageConstraints passed in from the tool to us (where we are a
+  // uniloaded package) will have constructors that we don't recognize
+  // because they come from a different copy of package-version-parser!
+  // Convert them to our PackageConstraint class if necessary.  (This is
+  // just top-level constraints from .meteor/packages or running from
+  // checkout, so it's not a lot of data.)
+  check(constraints, [PackageConstraintType]);
+  constraints = _.map(constraints, function (c) {
+    if (c instanceof PV.PackageConstraint) {
+      return c;
+    } else {
+      return PV.parsePackageConstraint(c.toString());
+    }
+  });
+
   self.dependencies = dependencies;
   self.constraints = constraints;
   self.upgrade = options.upgrade || [];
@@ -16,7 +31,7 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   self.allowIncompatibleUpdate = options.allowIncompatibleUpdate || false;
 
   check(self.dependencies, [String]);
-  check(self.constraints, [PackageConstraintType]);
+  check(self.constraints, [PV.PackageConstraint]);
   check(self.upgrade, [String]);
   check(self.anticipatedPrereleases,
         Match.ObjectWithValues(Match.ObjectWithValues(Boolean)));
@@ -123,12 +138,11 @@ CS.Input.fromJSONable = function (obj) {
     });
 };
 
-// PackageConstraints and VersionConstraints passed in from the tool
-// to us (where we are a uniloaded package) will have constructors
-// that we don't recognize because they come from a different copy of
-// package-version-parser!  In addition, objects with constructors
+// Type description of PackageConstraint that doesn't rely on the constructor
+// being correct.  Unrelatedly, objects with constructors (any constructors)
 // can't be checked by "check" in the same way as plain objects, so we
 // have to resort to examining the fields explicitly.
+
 var VersionConstraintType = Match.OneOf(
   PV.VersionConstraint,
   Match.Where(function (vc) {
@@ -139,7 +153,6 @@ var VersionConstraintType = Match.OneOf(
     }]);
     return vc.constructor !== Object;
   }));
-
 var PackageConstraintType = Match.OneOf(
   PV.PackageConstraint,
   Match.Where(function (c) {
@@ -148,6 +161,3 @@ var PackageConstraintType = Match.OneOf(
     check(c.versionConstraint, VersionConstraintType);
     return c.constructor !== Object;
   }));
-
-CS.Input.VersionConstraintType = VersionConstraintType;
-CS.Input.PackageConstraintType = PackageConstraintType;
