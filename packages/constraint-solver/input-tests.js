@@ -26,7 +26,12 @@ var formatSolution = function (obj) {
 };
 
 var doTest = function (test, inputJSONable, outputJSONable, options) {
-  var input = CS.Input.fromJSONable(inputJSONable);
+  var input;
+  if (inputJSONable instanceof CS.Input) {
+    input = inputJSONable;
+  } else {
+    input = CS.Input.fromJSONable(inputJSONable);
+  }
 
   if (typeof outputJSONable.neededToUseUnanticipatedPrereleases !== 'boolean') {
     outputJSONable = _.extend(outputJSONable, {
@@ -41,7 +46,12 @@ var doTest = function (test, inputJSONable, outputJSONable, options) {
 };
 
 var doFailTest = function (test, inputJSONable, messageExpect) {
-  var input = CS.Input.fromJSONable(inputJSONable);
+  var input;
+  if (inputJSONable instanceof CS.Input) {
+    input = inputJSONable;
+  } else {
+    input = CS.Input.fromJSONable(inputJSONable);
+  }
 
   test.throws(function () {
     try {
@@ -298,6 +308,36 @@ Tinytest.add("constraint solver - input - previous solution no longer needed", f
     }
   });
 });
+
+Tinytest.add("constraint solver - input - fake PackageConstraint", function (test) {
+  // The tool gives us PackageConstraint objects constructed with a different
+  // copy of package-version-parser.  If we're not careful in CS.Input or
+  // CS.Solver, this case will throw an error.  See comments in CS.Input.
+  var fakeConstraint = new (function () {});
+  fakeConstraint.package = 'foo';
+  fakeConstraint.constraintString = '2.0.0';
+  fakeConstraint.toString = function () {
+    return 'foo@2.0.0';
+  };
+  fakeConstraint.versionConstraint = new (function () {});
+  fakeConstraint.versionConstraint.raw = '2.0.0';
+  fakeConstraint.versionConstraint.alternatives = [
+    {type: 'compatible-with', versionString: '2.0.0' }
+  ];
+  fakeConstraint.versionConstraint.toString = function () {
+    return '2.0.0';
+  };
+
+  doFailTest(test,
+             new CS.Input(["foo"], [fakeConstraint],
+                          CS.CatalogCache.fromJSONable({
+                            data: {
+                              "foo 1.0.0": []
+                            }
+                          })),
+             /constraint foo@2.0.0 is not satisfied by foo 1.0.0/);
+});
+
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({
